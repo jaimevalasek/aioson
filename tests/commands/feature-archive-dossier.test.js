@@ -56,6 +56,17 @@ async function seedRootArtifacts(slug = 'feature-x') {
 }
 
 describe('feature:archive — dossier dir extension (AC-F1-08)', () => {
+  beforeEach(async () => {
+    prevCwd = process.cwd();
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-archive-dossier-'));
+    await fs.mkdir(path.join(root, '.aioson', 'context'), { recursive: true });
+    process.chdir(root);
+  });
+  afterEach(async () => {
+    process.chdir(prevCwd);
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
   it('moves features/{slug}/ → done/{slug}/dossier/', async () => {
     await seedFeaturesMd('done');
     await seedRootArtifacts();
@@ -214,5 +225,99 @@ describe('feature:archive --restore — dossier dir', () => {
     assert.equal(restore.ok, false);
     assert.equal(restore.reason, 'restore_conflict');
     assert.ok(restore.conflicts.includes('features/feature-x/'));
+  });
+});
+
+describe('feature:archive — status enforcement', () => {
+  it('blocks in_progress feature without --force', async () => {
+    await seedFeaturesMd('in_progress');
+    await seedRootArtifacts();
+    await seedDossierDir();
+
+    const result = await runFeatureArchive({
+      args: ['.'], options: { feature: 'feature-x', json: true }, logger: silentLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'not_done');
+    assert.equal(result.status, 'in_progress');
+  });
+
+  it('allows non-done feature with --force', async () => {
+    await seedFeaturesMd('in_progress');
+    await seedRootArtifacts();
+    await seedDossierDir();
+
+    const result = await runFeatureArchive({
+      args: ['.'], options: { feature: 'feature-x', json: true, force: true }, logger: silentLogger()
+    });
+
+    assert.equal(result.ok, true);
+  });
+});
+
+describe('feature:archive — restore dry-run', () => {
+  it('dry-run restore reports planned actions without filesystem changes', async () => {
+    await seedFeaturesMd('done');
+    await seedRootArtifacts();
+    await seedDossierDir();
+    await runFeatureArchive({
+      args: ['.'], options: { feature: 'feature-x', json: true }, logger: silentLogger()
+    });
+
+    const result = await runFeatureArchive({
+      args: ['.'], options: { feature: 'feature-x', restore: true, 'dry-run': true, json: true }, logger: silentLogger()
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.dryRun, true);
+    assert.ok(Array.isArray(result.restore));
+    // Source should still be in archive
+    assert.equal(
+      fssync.existsSync(path.join(root, '.aioson', 'context', 'done', 'feature-x')),
+      true
+    );
+    // Target should NOT exist
+    assert.equal(
+      fssync.existsSync(path.join(root, '.aioson', 'context', 'features', 'feature-x')),
+      false
+    );
+  });
+});
+
+describe('feature:archive — belongsToOtherSlug collision', () => {
+  it('excludes files belonging to a longer slug prefix', async () => {
+    // features.md contains both feature-x and feature-x-addon
+    await fs.writeFile(
+      path.join(root, '.aioson', 'context', 'features.md'),
+      [
+        '# Features',
+        '',
+        '| slug | status | started | completed |',
+        '|------|--------|---------|-----------|',
+        '| feature-x | done | 2026-04-01 | 2026-04-28 |',
+        '| feature-x-addon | done | 2026-04-01 | 2026-04-28 |',
+        ''
+      ].join('\n')
+    );
+    // Create files that could match both slugs
+    await fs.writeFile(path.join(root, '.aioson', 'context', 'prd-feature-x.md'), '## Vision\nA thing.\n');
+    await fs.writeFile(path.join(root, '.aioson', 'context', 'prd-feature-x-addon.md'), '## Vision\nAddon.\n');
+    await seedDossierDir();
+
+    const result = await runFeatureArchive({
+      args: ['.'], options: { feature: 'feature-x', json: true }, logger: silentLogger()
+    });
+
+    assert.equal(result.ok, true);
+    // prd-feature-x should be moved
+    assert.ok(result.moved.includes('prd-feature-x.md'), 'should move prd-feature-x.md');
+    // prd-feature-x-addon should NOT be moved (belongs to other slug)
+    assert.ok(!result.moved.includes('prd-feature-x-addon.md'), 'should NOT move prd-feature-x-addon.md');
+    // prd-feature-x-addon should remain in context root
+    assert.equal(
+      fssync.existsSync(path.join(root, '.aioson', 'context', 'prd-feature-x-addon.md')),
+      true
+    );
   });
 });

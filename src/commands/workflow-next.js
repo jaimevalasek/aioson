@@ -10,7 +10,7 @@ const { syncWorkflowRuntime } = require('../execution-gateway');
 const { writeHandoff, buildWorkflowHandoff, buildWorkflowHandoffProtocol } = require('../session-handoff');
 const { runTechnicalGate, formatGateError } = require('../workflow-gates');
 const { buildTestBriefing } = require('../test-briefing');
-const { validateHandoffContract, formatContractError } = require('../handoff-contract');
+const { validateHandoffContract, formatContractError, getBlockingRevisions } = require('../handoff-contract');
 const { buildPathGuardBlock } = require('../path-guard');
 const { logError, buildHealingPrompt } = require('../self-healing');
 const { validateHandoffProtocol } = require('../handoff-validator');
@@ -427,6 +427,23 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
   if (!contractCheck.ok) {
     const errMsg = formatContractError(contractCheck);
     await logError(targetDir, normalizedStage, errMsg, 'contract');
+    throw new Error(errMsg);
+  }
+
+  // ── Revision Gate (Phase 2) ─────────────────────────────────────────────
+  const blockingRevisions = await getBlockingRevisions(targetDir, state.featureSlug);
+  if (blockingRevisions.length > 0) {
+    const ids = blockingRevisions.map((r) => r.id).join(', ');
+    const errMsg = [
+      `[Revision Gate BLOCKED]`,
+      `Feature: ${state.featureSlug}`,
+      ``,
+      `Pending blocking revision(s): ${ids}`,
+      ``,
+      `Resolve each revision before completing this stage:`,
+      ...blockingRevisions.map((r) => `  aioson revision:resolve . --slug=${state.featureSlug} --rev-id=${r.id} --approve|--reject`)
+    ].join('\n');
+    await logError(targetDir, normalizedStage, errMsg, 'revision');
     throw new Error(errMsg);
   }
 

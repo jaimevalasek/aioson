@@ -262,8 +262,22 @@ function formatContractError(result) {
   return lines.join('\n');
 }
 
+// Returns pending blocking revisions for the active feature (or [] for legacy features).
+// Safe to call when dossier feature dir does not exist — returns [] silently.
+async function getBlockingRevisions(targetDir, featureSlug) {
+  if (!featureSlug) return [];
+  try {
+    const { getBlockingRevisions: getBlockers } = require('./dossier/revision-store');
+    const ctxDir = path.join(targetDir, '.aioson', 'context');
+    return await getBlockers({ slug: featureSlug, contextDir: ctxDir });
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   validateHandoffContract,
   formatContractError,
+  getBlockingRevisions,
   CONTRACTS
 };

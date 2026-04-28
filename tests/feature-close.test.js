@@ -161,3 +161,95 @@ test('feature:close: residual is included in spec sign-off', async () => {
   );
   assert.ok(content.includes('Email not tested E2E'));
 });
+
+test('feature:close PASS triggers auto-archive', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 1\n---\n# Spec\n');
+  await writeFile(tmpDir, '.aioson/context/features.md',
+    '| checkout | done | 2026-01-01 | 2026-04-28 |\n');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '## Vision\nA thing.\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.archive !== null, 'archive result should be present');
+  assert.ok(
+    result.updates.some(u => u.includes('archive:')),
+    'updates should mention archive'
+  );
+});
+
+test('feature:close --no-archive skips archive on PASS', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 1\n---\n# Spec\n');
+  await writeFile(tmpDir, '.aioson/context/features.md',
+    '| checkout | done | 2026-01-01 | 2026-04-28 |\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS', 'no-archive': true },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.archive, null);
+  assert.ok(
+    !result.updates.some(u => u.includes('archive:')),
+    'updates should not mention archive'
+  );
+});
+
+test('feature:close re-run replaces existing QA Sign-off', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/spec-feat.md', [
+    '---',
+    'version: 1',
+    'gate_execution: approved',
+    '---',
+    '# Spec',
+    '',
+    '## QA Sign-off',
+    '',
+    '- **Date:** 2026-04-01',
+    '- **Verdict:** PASS',
+    '- **Gate D (execution):** approved',
+    ''
+  ].join('\n'));
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'feat', verdict: 'FAIL', notes: 'Regression found' },
+    logger: makeLogger()
+  });
+
+  const content = await fs.readFile(
+    path.join(tmpDir, '.aioson', 'context', 'spec-feat.md'),
+    'utf8'
+  );
+  // Should contain only one QA Sign-off block
+  const matches = content.match(/## QA Sign-off/g);
+  assert.equal(matches.length, 1, 'should have exactly one QA Sign-off block');
+  assert.ok(content.includes('FAIL'));
+  assert.ok(content.includes('Regression found'));
+});
+
+test('feature:close updates gate_execution frontmatter', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/spec-feat.md', '---\nversion: 1\ngate_execution: pending\n---\n# Spec\n');
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'feat', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  const content = await fs.readFile(
+    path.join(tmpDir, '.aioson', 'context', 'spec-feat.md'),
+    'utf8'
+  );
+  assert.ok(content.includes('gate_execution: approved'));
+});

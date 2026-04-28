@@ -1,36 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-dev-qa-20260424-052131",
-  "created_at": "2026-04-24T05:21:31.000Z",
+  "protocol_id": "hnd-qa-end-1777352623461",
+  "created_at": "2026-04-28T05:03:43.461Z",
   "workflow_mode": "feature",
   "classification": "MEDIUM",
   "feature_slug": "sdlc-process-upgrade",
   "from": {
-    "agent_id": "dev",
-    "capability_transferred": "implement_feature"
+    "agent_id": "qa",
+    "capability_transferred": "verify_feature"
   },
   "to": {
-    "agent_id": "qa",
-    "capability_required": "verify_quality"
+    "agent_id": null,
+    "capability_required": null
   },
   "capabilities_transferred": [
-    "implement_feature"
+    "verify_feature"
   ],
-  "artifact_uris": [
-    ".aioson/context/spec-sdlc-process-upgrade.md",
-    ".aioson/context/qa-report-sdlc-process-upgrade.md",
-    ".aioson/context/dev-state.md"
-  ],
-  "gate_status": {
-    "requirements": "approved",
-    "design": "approved",
-    "plan": "approved",
-    "execution": "pending_qa_confirmation"
-  },
-  "autonomy_mode": "guarded",
+  "artifact_uris": [],
+  "gate_status": {},
+  "autonomy_mode": null,
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-04-24T05:21:31.000Z"
+    "validated_at": "2026-04-28T05:03:43.461Z"
   }
 }

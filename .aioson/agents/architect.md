@@ -37,6 +37,23 @@ This gives you full semantic understanding of the system without reading the cod
 
 Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).
 
+**After defining architecture**, register key modules in the code map:
+```
+aioson dossier:add-codemap . --slug={slug} --file=<path> --role=<role> --coupling=<low|medium|high> --added-by=architect
+```
+
+**Link applicable design-docs and rules:**
+```
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/design-docs/{doc}.md --reason="..."
+```
+
+**After completing architecture**, record in Agent Trail:
+```
+aioson dossier:add-finding . --slug={slug} --agent=architect --section="Agent Trail" --content="Arquitetura definida: {decisions}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Required input
 - `.aioson/context/project.context.md`
 - `.aioson/context/design-doc.md` (if present)

@@ -1,0 +1,462 @@
+---
+feature: feature-dossier
+classification: MEDIUM
+schema_version: "1.0"
+created_by: analyst
+created_at: 2026-04-28
+source: ".aioson/context/requirements-feature-dossier.md § 9"
+---
+
+# Machine-readable acceptance criteria for @dev and @qa.
+# Each AC is structured as: precondition → action → expected → negative.
+
+phase_1_mvp_read_only:
+  AC-F1-01:
+    description: dossier:init creates dossier.md with full frontmatter
+    precondition:
+      - working_directory: ".aioson/context/features/feature-x/ does not exist"
+    action: "aioson dossier:init feature-x"
+    expected:
+      - file_exists: ".aioson/context/features/feature-x/dossier.md"
+      - frontmatter_keys: [feature_slug, schema_version, created_by, created_at, status, classification, last_updated_by, last_updated_at]
+      - schema_version_value: "1.0"
+      - status_value: "active"
+      - exit_code: 0
+    negative: "missing any required frontmatter key fails the test"
+
+  AC-F1-02:
+    description: dossier:init fails if file already exists
+    precondition:
+      - file_exists: ".aioson/context/features/feature-x/dossier.md"
+    action: "aioson dossier:init feature-x"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "already exists"
+    negative: "exit_code 0 fails the test"
+
+  AC-F1-03:
+    description: dossier:init extracts Why/What from prd-{slug}.md when present
+    precondition:
+      - file_exists: ".aioson/context/prd-feature-x.md"
+      - prd_has_sections: ["## Vision", "## Problem"]
+    action: "aioson dossier:init feature-x"
+    expected:
+      - dossier_section_nonempty: "## Why"
+      - dossier_section_nonempty: "## What"
+    negative: "Why/What sections empty fails the test"
+
+  AC-F1-04:
+    description: dossier:init enters interactive prompt when prd-{slug}.md absent
+    precondition:
+      - file_not_exists: ".aioson/context/prd-feature-x.md"
+    action: "aioson dossier:init feature-x"
+    expected:
+      - interactive_prompts: ["Why?", "What?"]
+      - frontmatter_field: "created_by: dossier-init-prompt"
+    negative: "non-interactive completion fails the test"
+
+  AC-F1-05:
+    description: dossier:show renders without error on empty code_map
+    precondition:
+      - dossier_exists: ".aioson/context/features/feature-x/dossier.md"
+      - code_map_files_count: 0
+    action: "aioson dossier:show feature-x"
+    expected:
+      - exit_code: 0
+      - stdout_contains: "## Code Map"
+    negative: "exit_code != 0 fails the test"
+
+  AC-F1-06:
+    description: dossier:show fails on inexistent slug
+    precondition:
+      - dir_not_exists: ".aioson/context/features/inexistent/"
+    action: "aioson dossier:show inexistent"
+    expected:
+      - exit_code: 1
+      - stderr_contains: "not found"
+    negative: "exit_code 0 fails the test"
+
+  AC-F1-07:
+    description: agent prompts read dossier before PRD/spec
+    precondition:
+      - agents_to_check: [analyst, architect, dev]
+    action: "static analysis of .aioson/agents/{agent}.md"
+    expected:
+      - each_agent_file_contains_pattern: "features/\\{slug\\}/dossier.md"
+      - fallback_present: "graceful fallback to legacy flow"
+    negative: "any of the 3 agents missing the dossier read step fails the test"
+
+  AC-F1-08:
+    description: feature:archive moves features/{slug}/ to done/{slug}/dossier/
+    precondition:
+      - feature_dir_exists: ".aioson/context/features/feature-x/"
+      - workflow_verdict: "PASS"
+    action: "aioson feature:close --slug=feature-x --verdict=PASS"
+    expected:
+      - dir_exists: ".aioson/context/done/feature-x/dossier/"
+      - dir_not_exists: ".aioson/context/features/feature-x/"
+      - manifest_updated: ".aioson/context/done/MANIFEST.md"
+    negative: "either the source dir still exists or target dir missing fails the test"
+
+  AC-F1-09:
+    description: dossier.md v1.0 schema validated by golden fixture
+    precondition:
+      - fixture_exists: "tests/fixtures/dossier/feature-x.dossier.md"
+    action: "schema_validate(fixture, schema_v1.0)"
+    expected:
+      - validation_result: pass
+    negative: "schema mismatch fails the test"
+
+  AC-F1-10:
+    description: legacy feature (no features/{slug}/ dir) completes flow without warnings
+    precondition:
+      - dir_not_exists: ".aioson/context/features/legacy-x/"
+      - prd_exists: ".aioson/context/prd-legacy-x.md"
+    action: "run full workflow @setup → @qa for legacy-x"
+    expected:
+      - stderr_contains_no: "dossier"
+      - workflow_completes: true
+    negative: "any dossier-related warning fails the test"
+
+phase_2_write_revisions:
+  AC-F2-01:
+    description: dossier:add-finding is idempotent by hash
+    precondition:
+      - dossier_exists: ".aioson/context/features/feature-x/dossier.md"
+    action_sequence:
+      - "aioson dossier:add-finding feature-x --agent=analyst --section='Code Map' --content='same content'"
+      - "aioson dossier:add-finding feature-x --agent=analyst --section='Code Map' --content='same content'"
+    expected:
+      - agent_trail_entries_count: 1
+      - second_call_exit_code: 0
+    negative: "duplicated entries fail the test"
+
+  AC-F2-02:
+    description: add-finding rejects content > 2KB
+    precondition:
+      - content_size_bytes: 2049
+    action: "aioson dossier:add-finding feature-x --agent=analyst --section='Why' --content=<2KB+>"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "size limit"
+    negative: "exit_code 0 fails the test"
+
+  AC-F2-03:
+    description: lockfile protects concurrent writes; orphan > 60s ignored
+    precondition:
+      - lockfile_exists: ".aioson/context/features/feature-x/.dossier.lock"
+      - lockfile_pid_alive: false
+      - lockfile_age_seconds: 90
+    action: "aioson dossier:add-finding feature-x --agent=analyst --section='What' --content='X'"
+    expected:
+      - exit_code: 0
+      - stderr_contains: "stale lockfile"
+    negative: "blocking on stale lockfile fails the test"
+
+  AC-F2-04:
+    description: revision:open creates entry with sequential id and validates schema
+    precondition:
+      - revisions_json_next_id: 1
+    action: "aioson revision:open feature-x --requested-by=analyst --target=product --target-artifact=.aioson/context/prd-feature-x.md --reason='X' --severity=blocking"
+    expected:
+      - revision_created_with_id: "rev-001"
+      - revisions_json_next_id_after: 2
+      - exit_code: 0
+    negative: "non-canonical target_agent (e.g., 'foobar') exits != 0 with EC-3 message"
+
+  AC-F2-05:
+    description: revision:open updates dossier ## Revision Requests section
+    precondition:
+      - revision_just_opened: "rev-001"
+    action: "read dossier.md"
+    expected:
+      - section_contains: "rev-001"
+      - section_contains: "blocking"
+      - section_contains: "pending_user_approval"
+    negative: "missing rev-id in section fails the test"
+
+  AC-F2-06:
+    description: revision:list filters by status
+    precondition:
+      - revisions_count_pending: 2
+      - revisions_count_resolved: 1
+    action: "aioson revision:list feature-x --status=pending"
+    expected:
+      - returned_count: 2
+      - all_have_status: pending_user_approval
+    negative: "resolved revision in output fails the test"
+
+  AC-F2-07:
+    description: revision:resolve --approve re-runs target agent and increments gate counter
+    precondition:
+      - revision_status: pending_user_approval
+      - revision_target: product
+      - current_gate: requirements
+    action: "aioson revision:resolve rev-001 --approve"
+    expected:
+      - agent_prompt_called: "product"
+      - env_var_set: "AIOSON_REVISION_CONTEXT=rev-001"
+      - workflow_state_field: "gate_revision_rounds.requirements: 1"
+    negative: "missing env var or unchanged counter fails the test"
+
+  AC-F2-08:
+    description: revision:resolve --reject is terminal
+    precondition:
+      - revision_status: rejected
+    action: "aioson revision:resolve rev-001 --approve"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "already rejected"
+    negative: "successful re-approval fails the test"
+
+  AC-F2-09:
+    description: revision:resolve fails on unknown rev-id
+    action: "aioson revision:resolve rev-999 --approve"
+    expected:
+      - exit_code: 1
+      - stderr_contains: "not found"
+
+  AC-F2-10:
+    description: workflow:next blocked when blocking_revisions present
+    precondition:
+      - blocking_revisions_count: 1
+    action: "aioson workflow:next . --complete"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains_each: ["blocked", "rev-001"]
+    negative: "successful handoff fails the test"
+
+  AC-F2-11:
+    description: fourth approve in same gate requires --force-revision
+    precondition:
+      - workflow_state_field: "gate_revision_rounds.requirements: 3"
+    action: "aioson revision:resolve rev-004 --approve"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "force-revision"
+    secondary_action: "aioson revision:resolve rev-004 --approve --force-revision"
+    secondary_expected:
+      - exit_code: 0
+
+  AC-F2-12:
+    description: legacy handoff (no dossier_uri) not broken
+    precondition:
+      - handoff_contract_has_field_dossier_uri: false
+    action: "aioson workflow:next . --complete"
+    expected:
+      - exit_code: 0
+      - no_warnings: true
+
+  AC-F2-13:
+    description: feature:archive snapshots final revisions.json including rejected/resolved
+    precondition:
+      - revisions_with_status_count:
+          rejected: 1
+          resolved: 2
+          pending_user_approval: 0
+    action: "aioson feature:close --slug=feature-x --verdict=PASS"
+    expected:
+      - file_exists: ".aioson/context/done/feature-x/dossier/revisions.json"
+      - archived_revisions_count_total: 3
+
+  AC-F2-14:
+    description: feature:close --verdict=PASS blocked by pending_user_approval
+    precondition:
+      - revisions_with_status_count:
+          pending_user_approval: 1
+    action: "aioson feature:close --slug=feature-x --verdict=PASS"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "pending revisions"
+
+  AC-F2-15:
+    description: agent templates cover 8 MEDIUM-chain agents
+    precondition:
+      - file_exists: ".aioson/docs/dossier/agent-templates.md"
+    action: "static parse of agent-templates.md"
+    expected:
+      - templates_for_agents: [product, sheldon, analyst, architect, ux-ui, pm, orchestrator, dev]
+
+  AC-F2-16:
+    description: telemetry events emitted for revision lifecycle
+    action: "trigger revision:open + revision:resolve + blocked workflow:next"
+    expected:
+      - sqlite_events_emitted:
+          - revision_opened
+          - revision_resolved
+          - handoff_blocked_by_revision
+    note: "operation must NOT fail if SQLite locked (EC-16)"
+
+  AC-F2-17:
+    description: omitted --slug infers active feature
+    precondition:
+      - workflow_state_field: "featureSlug: feature-x"
+    action: "aioson revision:list (no --slug)"
+    expected:
+      - returns_revisions_for_slug: "feature-x"
+    negative: "no active feature → exit_code != 0 with explicit message"
+
+  AC-F2-18:
+    description: corrupted revisions.json blocks commands
+    precondition:
+      - file_content_invalid_json: ".aioson/context/features/feature-x/revisions.json"
+    action: "aioson revision:list feature-x"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains_each: ["revisions.json", "invalid"]
+    negative: "silent auto-recovery fails the test"
+
+phase_3_codemap_bootstrap:
+  AC-F3-01:
+    description: code_map.files schema validated
+    precondition:
+      - dossier_with_code_map_entries: 5
+    action: "schema_validate(dossier.code_map, schema_v1.1)"
+    expected:
+      - all_files_have_keys: [path, lines, role, coupling_risk, added_by, added_at]
+      - role_in_enum: [core-module, command-entry, test, config, integration, util]
+      - coupling_risk_in_enum: [low, medium, high]
+
+  AC-F3-02:
+    description: dossier:add-codemap is idempotent by (path, lines)
+    action_sequence:
+      - "aioson dossier:add-codemap feature-x --file=src/x.js --lines=1-100 --role=core-module --coupling=low"
+      - "aioson dossier:add-codemap feature-x --file=src/x.js --lines=1-100 --role=core-module --coupling=low"
+    expected:
+      - code_map_files_count: 1
+
+  AC-F3-03:
+    description: add-codemap warns but registers for inexistent path
+    precondition:
+      - file_not_exists: "src/planned.js"
+    action: "aioson dossier:add-codemap feature-x --file=src/planned.js --lines=1-50 --role=core-module --coupling=low"
+    expected:
+      - exit_code: 0
+      - stderr_contains: "warning"
+      - code_map_entry_added: true
+
+  AC-F3-04:
+    description: dossier:link-rule rejects inexistent rule
+    precondition:
+      - file_not_exists: ".aioson/rules/fake.md"
+    action: "aioson dossier:link-rule feature-x --rule=.aioson/rules/fake.md --reason='X'"
+    expected:
+      - exit_code_not: 0
+      - stderr_contains: "not found"
+
+  AC-F3-05:
+    description: auto-compaction triggers when active dossier > 15KB
+    precondition:
+      - dossier_size_bytes: 16000
+      - encrypted_gates: ["design", "plan"]  # both already approved
+    action: "aioson dossier:add-finding feature-x --agent=dev --section='Code Map' --content='triggers'"
+    expected:
+      - file_exists: ".aioson/context/features/feature-x/dossier-history.md"
+      - dossier_size_bytes_after_lt: 10000
+
+  AC-F3-06:
+    description: dossier-history.md is append-only and never compacted
+    precondition:
+      - history_file_size_bytes: 50000
+    action: "aioson dossier:compact feature-x"
+    expected:
+      - history_file_size_bytes_unchanged: true
+
+  AC-F3-07:
+    description: context:pack includes active dossier as ranked source with decay
+    precondition:
+      - active_dossiers_count: 3
+      - dossier_a_last_updated_days_ago: 1
+      - dossier_b_last_updated_days_ago: 35
+    action: "aioson context:pack ."
+    expected:
+      - rank_order_includes_dossier_a_above_dossier_b: true
+      - dossier_b_rank_below_generic_prd: true
+
+  AC-F3-08:
+    description: schemas v1.0 and v1.1 both readable by dossier:show
+    precondition:
+      - fixture_v10: "tests/fixtures/dossier/v10.dossier.md"
+      - fixture_v11: "tests/fixtures/dossier/v11.dossier.md"
+    action_sequence:
+      - "aioson dossier:show using fixture_v10"
+      - "aioson dossier:show using fixture_v11"
+    expected:
+      - both_exit_code: 0
+
+  AC-F3-09:
+    description: dossier:init --from-existing fails when no canonical artifacts present
+    precondition:
+      - prd_not_exists: true
+      - spec_not_exists: true
+      - sheldon_enrichment_not_exists: true
+      - done_not_exists: true
+    action: "aioson dossier:init feature-x --from-existing"
+    expected:
+      - exit_code: 1
+      - stderr_contains: "nothing to synthesize"
+
+  AC-F3-10:
+    description: dossier:init --from-existing is idempotent
+    action_sequence:
+      - "aioson dossier:init feature-x --from-existing"
+      - "aioson dossier:init feature-x --from-existing"
+    expected:
+      - second_run_no_op: true
+      - agent_trail_synthetic_entries_count_unchanged: true
+
+  AC-F3-11:
+    description: bootstrap on done/ feature produces closed dossier with synthetic trail
+    precondition:
+      - done_dir_exists: ".aioson/context/done/sdlc-process-upgrade/"
+    action: "aioson dossier:init sdlc-process-upgrade --from-existing"
+    expected:
+      - dossier_status: closed
+      - all_agent_trail_entries_synthetic: true
+
+  AC-F3-12:
+    description: 8 agent prompts updated for add-codemap and link-rule
+    precondition:
+      - agents_to_check: [product, sheldon, analyst, architect, ux-ui, pm, orchestrator, dev]
+    action: "static analysis of .aioson/agents/{agent}.md"
+    expected:
+      - each_agent_contains_pattern_each: ["dossier:add-codemap", "dossier:link-rule"]
+
+  AC-F3-13:
+    description: pathological compaction (>100KB) reduces by >=30% or aborts
+    precondition:
+      - dossier_size_bytes: 120000
+    action: "aioson dossier:compact feature-x"
+    expected_either:
+      - dossier_size_bytes_after_le: 84000  # >=30% reduction
+      - exit_code_not: 0_with_message_about_no_progress
+
+  AC-F3-14:
+    description: context:pack with 20 active features completes in <500ms
+    precondition:
+      - active_features_count: 20
+    action: "time aioson context:pack ."
+    expected:
+      - duration_ms_lt: 500
+
+# Cross-phase invariants (always-on rules)
+invariants:
+  INV-01:
+    description: dossier never copies content from canonical artifacts; only references by path
+    enforcement: "@architect verifies in dossier-store.js implementation"
+
+  INV-02:
+    description: append-only on ## Agent Trail; no rewrites of existing entries
+    enforcement: "static analysis of dossier-store.js — no overwrite operations on Agent Trail"
+
+  INV-03:
+    description: revisions.json is source of truth; SQLite mirror is fire-and-forget
+    enforcement: "operations must succeed even when SQLite is unavailable (EC-16)"
+
+  INV-04:
+    description: gates approved historically remain approved during reverse invocation
+    enforcement: "workflow:execute never decrements completed[] array on revision approve"
+
+  INV-05:
+    description: legacy features (no features/{slug}/ dir) flow unchanged
+    enforcement: "all dossier-aware code paths fall through silently when dir absent"

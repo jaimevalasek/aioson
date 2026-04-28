@@ -34,7 +34,7 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'validator'
 ]));
 
-const ORIGIN_PSEUDO_IDS = Object.freeze(new Set(['dossier-init']));
+const ORIGIN_PSEUDO_IDS = Object.freeze(new Set(['dossier-init', 'dossier-init-prompt']));
 
 const REQUIRED_FRONTMATTER_FIELDS = Object.freeze([
   'feature_slug',
@@ -47,7 +47,7 @@ const REQUIRED_FRONTMATTER_FIELDS = Object.freeze([
   'last_updated_at'
 ]);
 
-const ALLOWED_STATUSES = Object.freeze(new Set(['active', 'completed']));
+const ALLOWED_STATUSES = Object.freeze(new Set(['active', 'paused', 'closed']));
 const ALLOWED_CLASSIFICATIONS = Object.freeze(new Set(['MICRO', 'SMALL', 'MEDIUM']));
 
 const REQUIRED_SECTIONS = Object.freeze([

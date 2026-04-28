@@ -24,6 +24,17 @@ Before orchestrating parallel execution:
 - load `references/approval-gates.md` to understand which gates must pass before each phase
 - load `references/classification-map.md` to calibrate orchestration depth
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before orchestrating — if present, read code map and revision requests to understand blocking issues.
+
+**After parallelization setup**, record:
+```
+aioson dossier:add-finding . --slug={slug} --agent=orchestrator --section="Agent Trail" --content="Orquestração iniciada. Lanes: {n}. Gate C: {status}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Activation condition
 Check classification in `project.context.md`. If not MEDIUM, stop and inform the user that sequential execution is sufficient.
 

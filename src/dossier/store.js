@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
@@ -175,7 +176,9 @@ async function init({
   classification = 'MEDIUM',
   author = DEFAULT_AUTHOR,
   now = () => new Date(),
-  prdContent
+  prdContent,
+  whyText,
+  whatText
 } = {}) {
   if (!isValidSlug(slug)) {
     const err = new Error(`invalid slug (must be kebab-case): ${JSON.stringify(slug)}`);
@@ -197,8 +200,8 @@ async function init({
     }
   }
 
-  const why = extractPrdSection(prd, ['Problem', 'Why', 'Vision']);
-  const what = extractPrdSection(prd, ['Escopo do MVP', 'Scope', 'What']);
+  const why = whyText !== undefined ? whyText : extractPrdSection(prd, ['Problem', 'Why', 'Vision']);
+  const what = whatText !== undefined ? whatText : extractPrdSection(prd, ['Escopo do MVP', 'Scope', 'What']);
 
   const createdAt = now().toISOString();
   const markdown = buildDossierMarkdown({
@@ -291,14 +294,92 @@ async function read({ slug, contextDir } = {}) {
 
 async function show({ slug, contextDir } = {}) {
   const { raw, frontmatter, sections, path: p } = await read({ slug, contextDir });
-  // Phase 1: render is the raw content + a small header for CLI display.
+
+  // Check for corrupted dossier-history.md (if present)
+  let historyWarn = null;
+  const hp = path.join(path.dirname(p), 'dossier-history.md');
+  try {
+    const histRaw = await fs.readFile(hp, 'utf8');
+    if (typeof histRaw !== 'string') historyWarn = 'history_corrupted';
+  } catch (err) {
+    if (err && err.code !== 'ENOENT') historyWarn = 'history_corrupted';
+    // ENOENT = absent, not corrupted — silently ignore
+  }
+
   const header = [
     `# Dossier — ${frontmatter.feature_slug} (${frontmatter.classification})`,
     `status=${frontmatter.status} schema=${frontmatter.schema_version} updated=${frontmatter.last_updated_at}`,
     `path: ${p}`,
     ''
   ].join('\n');
-  return { header, raw, frontmatter, sections, path: p };
+  return { header, raw, frontmatter, sections, path: p, warn: historyWarn };
+}
+
+// Append-only write to a named ## section in dossier.md.
+// Uses SHA-256 of (section + content) for dedup — repeated calls with same args are no-ops.
+async function addFinding({ slug, contextDir, agent, section, content, now = () => new Date() } = {}) {
+  if (!isValidSlug(slug)) {
+    const err = new Error(`invalid slug: ${JSON.stringify(slug)}`);
+    err.code = 'EDOSSIERSLUG';
+    throw err;
+  }
+  const filePath = dossierPath(contextDir, slug);
+  let raw;
+  try {
+    raw = await fs.readFile(filePath, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      const e = new Error(`dossier not found for slug "${slug}" at ${filePath}`);
+      e.code = 'EDOSSIERMISSING';
+      e.path = filePath;
+      throw e;
+    }
+    throw err;
+  }
+
+  const hash = crypto.createHash('sha256').update(`${section}\0${content}`).digest('hex');
+  const hashMarker = `<!-- sha256:${hash} -->`;
+
+  // Idempotency: if hash already present, no-op silently
+  if (raw.includes(hashMarker)) {
+    return { added: false, hash };
+  }
+
+  const timestamp = now().toISOString();
+  const entry = [
+    hashMarker,
+    `**${timestamp}** | @${agent} | _${section}_`,
+    '',
+    content.trim(),
+    ''
+  ].join('\n');
+
+  // Append inside ## Agent Trail (or after it if not found)
+  const lines = raw.split('\n');
+  let trailEnd = lines.length;
+  let inTrail = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trimEnd() === '## Agent Trail') {
+      inTrail = true;
+    } else if (inTrail && /^## /.test(lines[i])) {
+      trailEnd = i;
+      break;
+    }
+  }
+
+  // Insert before the next section (or at end of file)
+  const before = lines.slice(0, trailEnd);
+  const after = lines.slice(trailEnd);
+
+  // Trim trailing blank lines from before to avoid double blanks
+  while (before.length > 0 && before[before.length - 1].trim() === '') before.pop();
+  before.push('', entry.trimEnd());
+
+  const rebuilt = [...before, '', ...after].join('\n');
+  await fs.writeFile(filePath, rebuilt, 'utf8');
+
+  return { added: true, hash };
 }
 
 module.exports = {
@@ -312,6 +393,7 @@ module.exports = {
   parseFrontmatter,
   parseSections,
   buildDossierMarkdown,
+  addFinding,
   init,
   read,
   show

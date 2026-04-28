@@ -135,6 +135,19 @@ If confirmed, include: slug, completed phase, next phase, manifest path (`.aioso
 
 Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).
 
+**After creating or modifying a file**, register it in the dossier code map:
+```
+aioson dossier:add-codemap . --slug={slug} --file=<path> --lines=<start>-<end> --role=<role> --coupling=<low|medium|high> --added-by=dev
+```
+
+**After each implementation slice**, record in Agent Trail:
+```
+aioson dossier:add-finding . --slug={slug} --agent=dev --section="Agent Trail" --content="Slice concluído: {description}."
+```
+
+If dossier exceeds 15KB: `aioson dossier:compact . --slug={slug}`
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Required input
 
 **Determined by `dev-state.md` or the minimum context package table in the session start protocol.**

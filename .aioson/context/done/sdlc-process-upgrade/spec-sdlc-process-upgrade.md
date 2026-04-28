@@ -8,8 +8,8 @@ classification: MEDIUM
 gate_requirements: approved
 gate_design: approved
 gate_plan: approved
-gate_execution: pending_qa_confirmation
-last_checkpoint: "Post-review corrections completed by @dev on 2026-04-24 — npm test passed (1681/1681); next: @qa final Gate D confirmation"
+gate_execution: approved
+last_checkpoint: "QA re-verification completed on 2026-04-28 — npm test passed (1698/1698); Gate D approved"
 active_execution_artifact: ".aioson/plans/sdlc-process-upgrade/manifest.md"
 ---
 
@@ -196,6 +196,20 @@ Lane summary:
   - `artifact:validate --feature=sdlc-process-upgrade --json` reports `9 REQs, 41 ACs`.
   - `preflight --agent=dev --feature=sdlc-process-upgrade --json` includes the complete downstream context package.
 - Next formal step: activate `@qa` to issue final Gate D PASS/FAIL. Do not route back to `@dev` for these fixed findings unless QA finds a new regression.
+
+## QA sign-off
+
+- Date: 2026-04-28
+- Agent: @qa
+- Re-verification scope: Post-review corrections by @dev (M-01 through M-04 and regression suite)
+- AC coverage: 34/40 fully covered, 6 partial (residuals acceptable — see below)
+- **Verdict: PASS**
+- Residual risks (same as 2026-04-24, no new regressions found):
+  - AC-SDLC-08 / AC-SDLC-14: `workflow:next` gate-blocked output guidance exists in `workflow-execute.js` dry-run; `workflow-next.js` direct gate-block messaging is acceptable residual for MEDIUM.
+  - AC-SDLC-10 / AC-SDLC-13: Not programmatically enforced — agent discipline.
+  - AC-SDLC-26: Phase file not auto-detected — agents open manually after reading manifest.
+  - AC-SDLC-37/38: Pre-existing functionality, not regressed.
+  - L-03: CRLF normalization in `gate-approve.js` — parser handles both, acceptable.
 
 ## Previous QA sign-off
 

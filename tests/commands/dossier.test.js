@@ -29,6 +29,17 @@ afterEach(async () => {
 });
 
 describe('runDossierInit', () => {
+  beforeEach(async () => {
+    prevCwd = process.cwd();
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-cmd-dossier-'));
+    await fs.mkdir(path.join(root, '.aioson', 'context'), { recursive: true });
+    process.chdir(root);
+  });
+  afterEach(async () => {
+    process.chdir(prevCwd);
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
   it('AC1: creates dossier at .aioson/context/features/{slug}/dossier.md', async () => {
     const result = await runDossierInit({
       args: ['.'],
@@ -117,6 +128,21 @@ describe('runDossierInit', () => {
     assert.equal(result.ok, true);
     assert.equal(result.slug, 'feature-z');
   });
+
+  it('HIGH-01: prompts for Why/What when PRD is absent (AC-F1-04 / EC-1)', async () => {
+    // No prd-feature-x.md exists in this temp dir
+    const result = await runDossierInit({
+      args: ['.'], options: { slug: 'feature-x', json: true }, logger: silentLogger()
+    });
+    assert.equal(result.ok, true);
+    const dossier = await fs.readFile(
+      path.join(root, '.aioson', 'context', 'features', 'feature-x', 'dossier.md'),
+      'utf8'
+    );
+    // Expected: interactive prompt sets created_by to 'dossier-init-prompt'
+    // Actual: fallback text with created_by 'dossier-init'
+    assert.match(dossier, /created_by: dossier-init-prompt/);
+  });
 });
 
 describe('runDossierShow', () => {
@@ -146,5 +172,46 @@ describe('runDossierShow', () => {
     });
     assert.equal(result.ok, false);
     assert.equal(result.reason, 'missing_slug');
+  });
+
+  it('returns EDOSSIERPARSE for malformed frontmatter', async () => {
+    const dir = path.join(root, '.aioson', 'context', 'features', 'broken-fm');
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'dossier.md'), 'no frontmatter here');
+
+    const result = await runDossierShow({
+      args: ['.'], options: { slug: 'broken-fm', json: true }, logger: silentLogger()
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'EDOSSIERPARSE');
+  });
+
+  it('returns EDOSSIERSCHEMA for schema-violating frontmatter', async () => {
+    const dir = path.join(root, '.aioson', 'context', 'features', 'bad-schema');
+    await fs.mkdir(dir, { recursive: true });
+    const bad = [
+      '---',
+      'feature_slug: bad-schema',
+      'schema_version: "9.9"',
+      'created_by: dossier-init',
+      'created_at: 2026-04-28T10:00:00Z',
+      'status: active',
+      'classification: MEDIUM',
+      'last_updated_by: dossier-init',
+      'last_updated_at: 2026-04-28T10:00:00Z',
+      '---',
+      '',
+      '## Why',
+      'x',
+      ''
+    ].join('\n');
+    await fs.writeFile(path.join(dir, 'dossier.md'), bad);
+
+    const result = await runDossierShow({
+      args: ['.'], options: { slug: 'bad-schema', json: true }, logger: silentLogger()
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'EDOSSIERSCHEMA');
+    assert.ok(Array.isArray(result.errors));
   });
 });

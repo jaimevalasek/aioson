@@ -26,6 +26,15 @@ afterEach(async () => {
 const FIXED_NOW = () => new Date('2026-04-28T10:00:00Z');
 
 describe('dossier/store — init', () => {
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-dossier-store-'));
+    contextDir = path.join(root, '.aioson', 'context');
+    await fs.mkdir(contextDir, { recursive: true });
+  });
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
   it('creates dossier.md at .aioson/context/features/{slug}/dossier.md', async () => {
     const result = await store.init({
       slug: 'feature-x',
@@ -177,6 +186,31 @@ describe('dossier/store — show', () => {
     assert.match(result.header, /status=active/);
     assert.equal(result.frontmatter.feature_slug, 'feature-x');
   });
+
+  it('O-03: warn is null when dossier-history.md is absent', async () => {
+    await store.init({ slug: 'feature-x', contextDir, now: FIXED_NOW });
+    const result = await store.show({ slug: 'feature-x', contextDir });
+    assert.equal(result.warn, null);
+  });
+
+  it('O-03: warn=history_corrupted when dossier-history.md has read error', async () => {
+    await store.init({ slug: 'feature-x', contextDir, now: FIXED_NOW });
+    const histPath = path.join(contextDir, 'features', 'feature-x', 'dossier-history.md');
+    // Write a valid file then make it a directory (causes read error)
+    await fs.mkdir(histPath, { recursive: true });
+    const result = await store.show({ slug: 'feature-x', contextDir });
+    assert.equal(result.warn, 'history_corrupted');
+    // Cleanup the directory we created
+    await fs.rmdir(histPath);
+  });
+
+  it('O-03: warn is null when dossier-history.md is valid', async () => {
+    await store.init({ slug: 'feature-x', contextDir, now: FIXED_NOW });
+    const histPath = path.join(contextDir, 'features', 'feature-x', 'dossier-history.md');
+    await fs.writeFile(histPath, '# History\n\nSome content.\n', 'utf8');
+    const result = await store.show({ slug: 'feature-x', contextDir });
+    assert.equal(result.warn, null);
+  });
 });
 
 describe('dossier/store — parseSections', () => {
@@ -192,5 +226,38 @@ describe('dossier/store — parseSections', () => {
 
   it('returns empty object when there are no H2 headings', () => {
     assert.deepEqual(store.parseSections('just some text'), Object.create(null));
+  });
+});
+
+describe('dossier/store — parseFrontmatter', () => {
+  it('rejects missing frontmatter', () => {
+    const result = store.parseFrontmatter('just some text');
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'missing_frontmatter');
+  });
+
+  it('rejects unclosed frontmatter', () => {
+    const result = store.parseFrontmatter('---\nkey: value\n');
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'unclosed_frontmatter');
+  });
+
+  it('rejects invalid frontmatter line', () => {
+    const result = store.parseFrontmatter('---\nnot a valid line\n---\n');
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'invalid_frontmatter_line');
+    assert.equal(result.line, 'not a valid line');
+  });
+
+  it('accepts valid frontmatter', () => {
+    const result = store.parseFrontmatter('---\nfeature_slug: x\n---\n# Body\n');
+    assert.equal(result.ok, true);
+    assert.equal(result.data.feature_slug, 'x');
+    assert.equal(result.body, '# Body\n');
+  });
+
+  it('strips surrounding quotes from values', () => {
+    const result = store.parseFrontmatter('---\nfeature_slug: "x"\n---\n');
+    assert.equal(result.data.feature_slug, 'x');
   });
 });

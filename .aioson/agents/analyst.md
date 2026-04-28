@@ -77,6 +77,18 @@ Check the following before doing anything else:
 
 Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).
 
+**Link applicable rules identified during analysis:**
+```
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+```
+
+**After completing requirements**, record in Agent Trail:
+```
+aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" --content="Requirements mapeados. Edge cases: {n}. Pendências: {items}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Required input
 - `.aioson/context/project.context.md` (always)
 - `.aioson/context/prd-{slug}.md` (feature mode)

@@ -790,6 +790,67 @@ async function writeDerivedContextMemory({
   };
 }
 
+async function collectActiveDossiers(targetDir) {
+  const featuresDir = path.join(targetDir, CONTEXT_DIR, 'features');
+  let slugs = [];
+  try {
+    const entries = await fs.readdir(featuresDir, { withFileTypes: true });
+    slugs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch {
+    return [];
+  }
+
+  const active = [];
+  for (const slug of slugs) {
+    const p = path.join(featuresDir, slug, 'dossier.md');
+    try {
+      const raw = await fs.readFile(p, 'utf8');
+      const statusMatch = raw.match(/^status:\s*(\S+)\s*$/m);
+      const updatedMatch = raw.match(/^last_updated_at:\s*(\S+)\s*$/m);
+      if (!statusMatch || statusMatch[1] !== 'active') continue;
+      const relPath = `${CONTEXT_DIR}/features/${slug}/dossier.md`;
+      active.push({
+        relPath,
+        slug,
+        lastUpdatedAt: updatedMatch ? updatedMatch[1] : null,
+        title: `Feature Dossier (${slug})`,
+        group: 'dossier',
+        readWhen: `active feature "${slug}" synthesis — why, what, code map, agent trail`,
+        tags: ['dossier', 'feature', 'active'],
+        exists: true
+      });
+    } catch {
+      // skip unreadable
+    }
+  }
+
+  // Sort by last_updated_at descending (most recent first)
+  active.sort((a, b) => {
+    if (!a.lastUpdatedAt && !b.lastUpdatedAt) return 0;
+    if (!a.lastUpdatedAt) return 1;
+    if (!b.lastUpdatedAt) return -1;
+    return b.lastUpdatedAt.localeCompare(a.lastUpdatedAt);
+  });
+
+  return active;
+}
+
+function rankDossier(dossier, { agent, goal }, rank) {
+  // Base score: between PRD (45) and bootstrap (65). Most recent dossier gets 60.
+  let score = 60 - rank * 5;
+  const reasons = [`active feature dossier (${dossier.slug})`];
+  const lookupText = `${normalizeForLookup(agent)} ${normalizeForLookup(goal)}`.trim();
+  if (lookupText.includes(dossier.slug.replace(/-/g, ' '))) {
+    score += 15;
+    reasons.push('matches active feature slug');
+  }
+  if (/(dev|architect|qa|implement|feature|dossier)/.test(lookupText)) {
+    score += 10;
+    reasons.push('agent/goal matches dossier context');
+  }
+  return { score: Math.max(score, 0), reasons };
+}
+
 async function createContextPack({
   targetDir,
   agent = '',
@@ -805,15 +866,25 @@ async function createContextPack({
     : 8;
 
   const catalog = (await collectContextCatalog(targetDir)).filter((doc) => doc.exists);
-  const ranked = catalog
-    .map((doc) => {
+
+  // Inject active dossiers as ranked sources (reference, not inline copy)
+  const activeDossiers = await collectActiveDossiers(targetDir);
+  const dossierDocs = activeDossiers.map((d, i) => {
+    const rank = rankDossier(d, { agent, goal }, i);
+    return { ...d, score: rank.score, reason: rank.reasons.join('; ') };
+  });
+
+  const ranked = [
+    ...catalog.map((doc) => {
       const rank = rankContextDoc(doc, { agent, goal, module });
       return {
         ...doc,
         score: rank.score,
         reason: rank.reasons.join('; ') || doc.readWhen
       };
-    })
+    }),
+    ...dossierDocs
+  ]
     .filter((doc) => doc.score > 0)
     .sort((a, b) => b.score - a.score || a.relPath.localeCompare(b.relPath));
 

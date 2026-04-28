@@ -5,6 +5,7 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| feature-dossier | 2026-04-28 | 6 | Cada feature do AIOSON ganha um **dossier vivo** — único arquivo lido e enriquecido por toda a cadeia de agentes (`@product → @sheldon → @analyst → @architect → |
 | sdlc-process-upgrade | 2026-04-24 | 7 | Transformar o workflow AIOSON em um pipeline de desenvolvimento previsivel, retomavel e verificavel, onde agentes, CLI, gates, artefatos e memorias compartilham |
 | context-archive-done | 2026-04-24 | 1 | Manter o `.aioson/context/` enxuto automaticamente movendo os artefatos de features concluídas para uma pasta `done/` — sem o usuário precisar lembrar e sem que |
 | pentester-agent | 2026-04-17 | 8 | Adicionar um agente oficial `@pentester` ao AIOSON para atuar com mentalidade adversarial e encontrar vulnerabilidades reais antes do fechamento de uma feature. |

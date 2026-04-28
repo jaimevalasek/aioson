@@ -102,6 +102,17 @@ updated_at: {ISO-date}
 | prds/Y.md | @sheldon | {ISO-date} | prd-{slug}.md |
 ```
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before loading PRD — if present, read it for Why/What context already captured.
+
+**After writing or updating PRD**, record scope summary:
+```
+aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="MVP: {one-line scope}. Key constraints: {constraints}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Briefing-aware detection
 
 Run **after** source document detection and **before** mode detection.

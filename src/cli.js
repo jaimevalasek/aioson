@@ -161,7 +161,8 @@ const { runPulseUpdate } = require('./commands/pulse-update');
 const { runStateSave } = require('./commands/state-save');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive } = require('./commands/feature-archive');
-const { runDossierInit, runDossierShow } = require('./commands/dossier');
+const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
+const { runRevisionOpen, runRevisionList, runRevisionResolve } = require('./commands/revision');
 const { runGateCheck } = require('./commands/gate-check');
 const { runGateApprove } = require('./commands/gate-approve');
 const { runArtifactValidate } = require('./commands/artifact-validate');
@@ -539,6 +540,20 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'dossier-init',
   'dossier:show',
   'dossier-show',
+  'dossier:add-finding',
+  'dossier-add-finding',
+  'dossier:add-codemap',
+  'dossier-add-codemap',
+  'dossier:link-rule',
+  'dossier-link-rule',
+  'dossier:compact',
+  'dossier-compact',
+  'revision:open',
+  'revision-open',
+  'revision:list',
+  'revision-list',
+  'revision:resolve',
+  'revision-resolve',
   'gate:check',
   'gate-check',
   'gate:approve',
@@ -1214,6 +1229,20 @@ async function main() {
       result = await runDossierInit({ args, options, logger: commandLogger });
     } else if (command === 'dossier:show' || command === 'dossier-show') {
       result = await runDossierShow({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:add-finding' || command === 'dossier-add-finding') {
+      result = await runDossierAddFinding({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:add-codemap' || command === 'dossier-add-codemap') {
+      result = await runDossierAddCodemap({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:link-rule' || command === 'dossier-link-rule') {
+      result = await runDossierLinkRule({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:compact' || command === 'dossier-compact') {
+      result = await runDossierCompact({ args, options, logger: commandLogger });
+    } else if (command === 'revision:open' || command === 'revision-open') {
+      result = await runRevisionOpen({ args, options, logger: commandLogger });
+    } else if (command === 'revision:list' || command === 'revision-list') {
+      result = await runRevisionList({ args, options, logger: commandLogger });
+    } else if (command === 'revision:resolve' || command === 'revision-resolve') {
+      result = await runRevisionResolve({ args, options, logger: commandLogger });
     } else if (command === 'gate:check' || command === 'gate-check') {
       result = await runGateCheck({ args, options, logger: commandLogger });
     } else if (command === 'gate:approve' || command === 'gate-approve') {
