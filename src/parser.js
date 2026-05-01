@@ -22,7 +22,11 @@ function parseArgv(argv) {
         'help', 'version', 'no-launch', 'attach', 'tmux',
         'allow-warnings', 'install-hook', 'uninstall-hook', 'remove-hook',
         'agent-safe',
-        'status', 'suggest', 'apply'
+        'status', 'suggest', 'apply',
+        // `--resume` alone means "resume last"; `--resume=<id>` carries a value
+        // and is handled by the `=` branch above. Without this entry, `--resume`
+        // followed by `--tool=claude` would swallow the next token as its value.
+        'resume'
       ]);
 
       const next = tokens[i + 1];

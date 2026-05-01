@@ -1,0 +1,102 @@
+'use strict';
+
+// Capabilities map for the AI CLIs that AIOSON can spawn via `aioson live:start`.
+// Each CLI persists conversation history in its own per-cwd location, so
+// "continue last conversation" is achieved by passing the right resume flag
+// at spawn time — AIOSON never has to track an internal session ID.
+//
+// Used by:
+//   - `aioson live:start --resume[=last|<id>]` to map to the correct argv
+//   - `aioson tool:capabilities` to expose this map as JSON to UI clients
+//     (e.g. AIOSON Play) so they don't duplicate the lookup.
+//
+// Keep entries minimal and source-of-truth here. Adding a new CLI = one entry.
+const TOOL_CAPS = {
+  claude: {
+    install_command: 'npm install -g @anthropic-ai/claude-code',
+    binary: 'claude',
+    supports_resume: true,
+    resume_last: ['--continue'],
+    supports_session_id: true,
+    resume_session_id: ['--resume', '<id>'],
+    supports_session_picker: true,
+    session_picker: ['--resume'],
+  },
+  codex: {
+    install_command: 'npm install -g @openai/codex',
+    binary: 'codex',
+    supports_resume: true,
+    resume_last: ['resume', '--last'],
+    supports_session_id: true,
+    resume_session_id: ['resume', '<id>'],
+    supports_session_picker: true,
+    session_picker: ['resume'],
+  },
+  opencode: {
+    install_command: 'npm install -g opencode-ai',
+    binary: 'opencode',
+    supports_resume: true,
+    resume_last: ['--continue'],
+    supports_session_id: true,
+    resume_session_id: ['--session', '<id>'],
+    supports_session_picker: false,
+    session_picker: null,
+  },
+  gemini: {
+    install_command: 'npm install -g @google/gemini-cli',
+    binary: 'gemini',
+    supports_resume: false,
+    resume_last: null,
+    supports_session_id: false,
+    resume_session_id: null,
+    supports_session_picker: false,
+    session_picker: null,
+  },
+};
+
+function getToolCapabilities(tool) {
+  const key = String(tool || '').trim().toLowerCase();
+  if (!key) return null;
+  return TOOL_CAPS[key] || null;
+}
+
+function listSupportedTools() {
+  return Object.keys(TOOL_CAPS).sort();
+}
+
+// Resolve the argv prefix to add to the CLI spawn so it resumes a conversation.
+// `resumeOpt` accepted shapes:
+//   - true            → resume last
+//   - 'last' / 'true' → resume last
+//   - '' / undefined / null / false → no resume
+//   - any other string → treat as session id
+// Returns [] when the tool doesn't support resume or resumeOpt is falsy.
+function resolveResumeArgs(tool, resumeOpt) {
+  if (resumeOpt === undefined || resumeOpt === null || resumeOpt === '' || resumeOpt === false) {
+    return [];
+  }
+  const caps = getToolCapabilities(tool);
+  if (!caps || !caps.supports_resume) return [];
+
+  const wantsLast =
+    resumeOpt === true ||
+    resumeOpt === 'last' ||
+    String(resumeOpt).toLowerCase() === 'true';
+
+  if (wantsLast) {
+    return Array.isArray(caps.resume_last) ? [...caps.resume_last] : [];
+  }
+
+  if (caps.supports_session_id && Array.isArray(caps.resume_session_id)) {
+    return caps.resume_session_id.map((part) => (part === '<id>' ? String(resumeOpt) : part));
+  }
+
+  return Array.isArray(caps.resume_last) ? [...caps.resume_last] : [];
+}
+
+module.exports = {
+  TOOL_CAPS,
+  getToolCapabilities,
+  listSupportedTools,
+  resolveResumeArgs,
+};

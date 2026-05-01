@@ -19,6 +19,7 @@ const {
 const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
+const { resolveResumeArgs } = require('../lib/tool-capabilities');
 
 const LIVE_EVENTS_LIMIT = 10;
 const LIVE_MESSAGE_LIMIT = 500;
@@ -98,6 +99,15 @@ function parseJsonOption(value) {
   } catch {
     return { raw: String(value) };
   }
+}
+
+// Combine `--resume` (mapped per-tool via TOOL_CAPS) with user-provided `--tool-args`.
+// Resume args go FIRST so that codex `resume --last` (subcommand) lands at argv[1].
+function buildLaunchArgs(options, tool) {
+  const resumeOpt = options.resume !== undefined ? options.resume : options.Resume;
+  const resumeArgs = resolveResumeArgs(tool, resumeOpt);
+  const userArgs = parseToolArgs(options['tool-args'] || options.toolArgs);
+  return [...resumeArgs, ...userArgs];
 }
 
 function parseToolArgs(value) {
@@ -1221,7 +1231,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
         let attachResult = null;
 
         if (attach && !noLaunch) {
-          attachChild = spawn(binaryPath, parseToolArgs(options['tool-args'] || options.toolArgs), {
+          attachChild = spawn(binaryPath, buildLaunchArgs(options, tool), {
             cwd: targetDir,
             env: process.env,
             stdio: 'inherit'
@@ -1324,11 +1334,11 @@ async function runLiveStart({ args, options = {}, logger, t }) {
             agentName,
             tool,
             binaryPath,
-            toolArgs: parseToolArgs(options['tool-args'] || options.toolArgs)
+            toolArgs: buildLaunchArgs(options, tool)
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = spawn(binaryPath, parseToolArgs(options['tool-args'] || options.toolArgs), {
+          child = spawn(binaryPath, buildLaunchArgs(options, tool), {
             cwd: targetDir,
             env: process.env,
             stdio: 'inherit'
@@ -1340,7 +1350,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = spawn(binaryPath, parseToolArgs(options['tool-args'] || options.toolArgs), {
+        child = spawn(binaryPath, buildLaunchArgs(options, tool), {
           cwd: targetDir,
           env: process.env,
           stdio: 'inherit'
@@ -2017,6 +2027,7 @@ async function runLiveList({ args, options = {}, logger, t }) {
 }
 
 module.exports = {
+  buildLaunchArgs,
   runLiveStart,
   runRuntimeEmit,
   runLiveHandoff,

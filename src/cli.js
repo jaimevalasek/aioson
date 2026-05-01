@@ -40,6 +40,8 @@ const { runQaReport } = require('./commands/qa-report');
 const { runWebMap } = require('./commands/web-map');
 const { runWebScrape } = require('./commands/web-scrape');
 const { runScanProject } = require('./commands/scan-project');
+const { runSecurityScan } = require('./commands/security-scan');
+const { runSecurityAudit } = require('./commands/security-audit');
 const { runConfig } = require('./commands/config');
 const { runGenomeDoctor } = require('./commands/genome-doctor');
 const { runGenomeMigrate } = require('./commands/genome-migrate');
@@ -107,6 +109,10 @@ const {
   runLiveClose,
   runLiveList
 } = require('./commands/live');
+const {
+  runToolCapabilities,
+} = require('./commands/tool-capabilities');
+const { runScaffoldComplete } = require('./commands/scaffold-complete');
 const {
   runCloudImportSquad,
   runCloudImportGenome,
@@ -198,6 +204,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'agents',
   'agent:prompt',
   'agent-prompt',
+  'agent:invoke',
+  'agent-invoke',
   'setup:context',
   'setup-context',
   'locale:apply',
@@ -268,6 +276,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'web-scrape',
   'scan:project',
   'scan-project',
+  'security:scan',
+  'security-scan',
+  'security:audit',
+  'security-audit',
   'config',
   'genome:doctor',
   'genome-doctor',
@@ -441,6 +453,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'live-close',
   'live:list',
   'live-list',
+  'scaffold:complete',
+  'scaffold-complete',
   'deliver',
   'output-strategy:export',
   'output-strategy:import',
@@ -660,6 +674,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_i18n_add');
   logHelpLine(t, logger, 'cli.help_agents');
   logHelpLine(t, logger, 'cli.help_agent_prompt');
+  logHelpLine(t, logger, 'cli.help_agent_invoke');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
   logHelpLine(t, logger, 'cli.help_memory_status');
@@ -729,6 +744,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_live_status');
   logHelpLine(t, logger, 'cli.help_live_handoff');
   logHelpLine(t, logger, 'cli.help_live_close');
+  logHelpLine(t, logger, 'cli.help_scaffold_complete');
   logHelpLine(t, logger, 'cli.help_runtime_backup');
   logHelpLine(t, logger, 'cli.help_runtime_restore');
   logHelpLine(t, logger, 'cli.help_skill_install');
@@ -828,7 +844,12 @@ async function main() {
       result = await runI18nAdd({ args, options, logger: commandLogger, t });
     } else if (command === 'agents') {
       result = await runAgentsList({ args, options, logger: commandLogger, t });
-    } else if (command === 'agent:prompt' || command === 'agent-prompt') {
+    } else if (
+      command === 'agent:prompt' ||
+      command === 'agent-prompt' ||
+      command === 'agent:invoke' ||
+      command === 'agent-invoke'
+    ) {
       result = await runAgentPrompt({ args, options, logger: commandLogger, t });
     } else if (command === 'context:validate' || command === 'context-validate') {
       result = await runContextValidate({ args, options, logger: commandLogger, t });
@@ -936,6 +957,10 @@ async function main() {
       result = await runWebScrape({ args, options, logger: commandLogger, t });
     } else if (command === 'scan:project' || command === 'scan-project') {
       result = await runScanProject({ args, options, logger: commandLogger, t });
+    } else if (command === 'security:scan' || command === 'security-scan') {
+      result = await runSecurityScan({ args, options, logger: commandLogger, t });
+    } else if (command === 'security:audit' || command === 'security-audit') {
+      result = await runSecurityAudit({ args, options, logger: commandLogger, t });
     } else if (command === 'config') {
       result = await runConfig({ args, options, logger: commandLogger, t });
     } else if (command === 'genome:doctor' || command === 'genome-doctor') {
@@ -1104,6 +1129,10 @@ async function main() {
       result = await runLiveClose({ args, options, logger: commandLogger, t });
     } else if (command === 'live:list' || command === 'live-list') {
       result = await runLiveList({ args, options, logger: commandLogger, t });
+    } else if (command === 'tool:capabilities' || command === 'tool-capabilities') {
+      result = await runToolCapabilities({ args, options, logger: commandLogger, t });
+    } else if (command === 'scaffold:complete' || command === 'scaffold-complete') {
+      result = await runScaffoldComplete({ args, options, logger: commandLogger, t });
     } else if (command === 'deliver') {
       result = await runDeliver({ args, options, logger: commandLogger, t });
     } else if (command === 'output-strategy:export') {
@@ -1322,7 +1351,9 @@ async function main() {
 
     if (jsonMode && commandSupportsJson(command)) {
       writeJson(result || { ok: true });
-      if (result && Object.prototype.hasOwnProperty.call(result, 'ok') && !result.ok) {
+      if (result && typeof result.exitCode === 'number') {
+        process.exitCode = result.exitCode;
+      } else if (result && Object.prototype.hasOwnProperty.call(result, 'ok') && !result.ok) {
         process.exitCode = 1;
       }
     }
