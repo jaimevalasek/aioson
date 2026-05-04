@@ -237,6 +237,58 @@ test('git:guard blockPaths can deny project-specific junk paths', async () => {
   }
 });
 
+test('git:guard ignores function-call assignments to token/secret variables', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'src/cli.js',
+      [
+        "const token = requireToken(config, t);",
+        "const apiSecret = readSecret('foo');",
+        "const password = await prompts.password();",
+        ''
+      ].join('\n')
+    );
+    git(dir, ['add', '--', 'src/cli.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.equal(result.warnings.some((item) => item.id === 'generic_secret_assignment'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard still warns on literal-string secret assignments', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'src/leaked.js',
+      "const API_TOKEN = 'abcd1234efgh5678';\n"
+    );
+    git(dir, ['add', '--', 'src/leaked.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true, allowWarnings: false },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.warnings.some((item) => item.id === 'generic_secret_assignment'), true);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('git:guard --install-hook creates a managed pre-commit hook', async () => {
   const dir = await makeRepo();
   try {

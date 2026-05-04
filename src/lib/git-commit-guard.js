@@ -137,7 +137,10 @@ const CONTENT_RULES = [
   }
 ];
 
-const GENERIC_SECRET_ASSIGNMENT = /\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\b\s*[:=]\s*['"]?([^\s'",`]{8,})/gi;
+// Detects literal secret assignments. Quotes are required so that function
+// calls (e.g. `const token = requireToken(config)`) are not flagged: only the
+// value inside the matched quote pair counts toward the 8-char minimum.
+const GENERIC_SECRET_ASSIGNMENT = /\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\b\s*[:=]\s*(['"`])([^'"`\n\r]{8,})\2/gi;
 const PLACEHOLDER_VALUE = /^(?:example|sample|placeholder|dummy|changeme|change-me|replace[-_]?me|your[_-]?value|your[_-]?token|test|local|localhost|xxx+)$/i;
 
 function runGit(gitRoot, args, options = {}) {
@@ -385,7 +388,7 @@ function collectContentFindings(relPath, text) {
   GENERIC_SECRET_ASSIGNMENT.lastIndex = 0;
   while ((genericMatch = GENERIC_SECRET_ASSIGNMENT.exec(text)) !== null) {
     const variableName = String(genericMatch[1] || '');
-    const value = String(genericMatch[2] || '');
+    const value = String(genericMatch[3] || '');
     const lowered = value.toLowerCase();
     if (PLACEHOLDER_VALUE.test(value)) continue;
     if (/(example|sample|dummy|placeholder|changeme|localhost|local[_-]?dev)/i.test(lowered)) continue;
