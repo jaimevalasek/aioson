@@ -41,6 +41,26 @@ const SKIP_FILES = new Set([
 const MAX_FILE_BYTES = 512 * 1024;        // 512 KB per file
 const MAX_PACKAGE_BYTES = 20 * 1024 * 1024; // 20 MB total
 
+/**
+ * Parseia lista de emails autorizados a partir de:
+ *   1. Flag CLI --invite="email1,email2,email3" (string com separadores , ; espaço quebra)
+ *   2. Fallback: campo `authorized_emails` no system.json (array ou string)
+ * Devolve array dedup, lowercase, trimmed, validado (contém @).
+ */
+function parseInviteEmails(cliInvite, manifestEmails) {
+  const raw = cliInvite ?? manifestEmails;
+  if (!raw) return [];
+  let parts;
+  if (Array.isArray(raw)) {
+    parts = raw.map(String);
+  } else {
+    parts = String(raw).split(/[,;\s\n]+/);
+  }
+  return Array.from(new Set(
+    parts.map((s) => s.trim().toLowerCase()).filter((s) => s.length > 0 && s.includes('@'))
+  ));
+}
+
 function resolveBaseUrl(config) {
   return String(config.aiosonBaseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
 }
@@ -238,9 +258,14 @@ async function runSystemPublish({ args, options, logger, t }) {
   const paid = Boolean(options.paid);
   const ws = await readWorkspace(dir);
 
+  // Lista de emails autorizados a instalar quando visibility=private.
+  // Aceita via --invite="email1,email2" OU campo `authorized_emails` no
+  // manifest (system.json). Sem efeito quando visibility !== private.
+  const authorizedEmails = parseInviteEmails(options.invite, manifest.authorized_emails);
+
   if (options['dry-run']) {
     logger.log(t('system.publish_dry_run', { slug: manifest.slug, version: manifest.version, visibility }));
-    return { ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility };
+    return { ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails };
   }
 
   logger.log(t('system.publish_sending'));
@@ -253,6 +278,7 @@ async function runSystemPublish({ args, options, logger, t }) {
     manifest,
     visibility,
     paid,
+    authorizedEmails,
     workspaceSlug: ws?.slug || null,
   }, token);
 
