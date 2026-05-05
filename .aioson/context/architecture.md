@@ -1,520 +1,796 @@
 ---
-feature: sdlc-process-upgrade
+feature: secure-by-default
 classification: MEDIUM
-created_at: "2026-04-24T01:07:04-03:00"
+created_at: "2026-04-28T20:58:00-03:00"
 gate_design: approved
+active_phase: "Phase 4 — Pentester App Target Mode"
+phase_gates:
+  phase_1_design: approved
+  phase_2_design: approved
+  phase_3_design: approved
+  phase_4_design: approved
 sources:
-  - .aioson/context/prd-sdlc-process-upgrade.md
-  - .aioson/context/requirements-sdlc-process-upgrade.md
-  - .aioson/context/spec-sdlc-process-upgrade.md
-  - .aioson/context/sheldon-enrichment-sdlc-process-upgrade.md
-  - .aioson/plans/sdlc-process-upgrade/manifest.md
+  - .aioson/context/prd-secure-by-default.md
+  - .aioson/context/requirements-secure-by-default.md
+  - .aioson/context/spec-secure-by-default.md
+  - .aioson/context/conformance-secure-by-default.yaml
+  - .aioson/plans/secure-by-default/manifest.md
+  - .aioson/plans/secure-by-default/plan-security-baseline-contract.md
+  - .aioson/plans/secure-by-default/plan-cli-security-scan-audit.md
+  - .aioson/plans/secure-by-default/plan-secure-tdd-skill.md
+  - researchs/owasp-appsec-baseline-2026/summary.md
+  - researchs/tool-first-agent-workflows-2026/summary.md
 ---
 
-# Architecture — SDLC Process Upgrade
+# Architecture — Secure by Default
 
 ## 1. Architecture Overview
 
-Esta feature deve fechar o ciclo de desenvolvimento do AIOSON sem criar um segundo motor de workflow. A arquitetura correta e uma camada de contrato deterministico em cima dos componentes existentes: `preflight-engine`, `gate:check`, `workflow:execute`, `artifact:validate`, `handoff-contract`, `agent:done`, `pulse:update`, prompts oficiais e regras de path.
+Esta feature deve adicionar uma camada de segurança transversal sem criar um segundo motor de workflow. A arquitetura correta é governança + contratos verificáveis primeiro: constituição, rule versionada, matriz de controles, sinais de gate e artefatos que downstream agents conseguem consumir sem reler o PRD inteiro.
 
-O resultado esperado e que o CLI determine estado, gates, contexto e proximo agente; os prompts apenas consumam esse estado e expliquem ao usuario a acao concreta.
+Phase 1 entrega o contrato. As fases posteriores (`security:scan`, `security:audit`, `secure-tdd`, `app_target` e runtime events) dependem desse contrato para não virarem checklists soltos.
 
-## 2. Design Decisions
+## 2. Non-Negotiable Constraints
 
-### D1 — Um unico motor de workflow
+- Respeitar o manifesto Sheldon: cinco fases, com Phase 1 como primeiro corte implementável.
+- Não redesenhar entidades do `@analyst`; usar `SecurityControl`, `SecurityBaselineRule`, `AttackSurfaceMap`, `SecurityFinding` e `SecurityRuntimeEvent` como contratos lógicos.
+- Não implementar CLI scan/audit, secure-tdd ou pentester app_target em Phase 1.
+- Não criar agente novo de segurança.
+- Não usar `docs/pt/` nem root `plans/` como espaço operacional.
+- Manter `.aioson/context/` Markdown-first; YAML/JSON só nas exceções já permitidas.
+- Em inception mode, toda mudança distribuída deve considerar `.aioson/` e `template/.aioson/`.
 
-`workflow:next` e `workflow:execute` continuam sendo o centro da progressao. Nenhum agente, plano ou comando novo deve criar uma orquestracao paralela para resolver este problema.
+## 3. Phase Architecture
 
-Racional: o projeto ja tem handoff contracts, runtime state, workflow state, gates e preflight. O problema e desalinhamento entre essas pecas, nao ausencia de motor.
+### Phase 1 — Security Baseline Contract
 
-### D2 — `@pm` e dono do implementation plan MEDIUM
+Escopo ativo para `@dev`.
 
-Para features MEDIUM, `.aioson/context/implementation-plan-{slug}.md` deve ser produzido por `@pm`. `@architect` fornece decisoes tecnicas, `@orchestrator` distribui/coordena, e `@dev` executa.
+Arquitetura:
+- Constituição recebe `Article VII — Zero Trust by Default`, apontando para `.aioson/rules/security-baseline.md`.
+- Rule workspace vive em `.aioson/rules/security-baseline.md`.
+- Rule distribuída vive em `template/.aioson/rules/security-baseline.md`.
+- A rule declara controles `SEC-SBD-01` a `SEC-SBD-08`, política por classificação e evidência esperada.
+- `spec-secure-by-default.md` mantém sinais compatíveis: `phase_gates.*` e campos flat `gate_requirements`, `gate_design`.
 
-Racional: Gate C exige plano aprovado antes de implementacao. Se `@dev` cria o plano inicial, ele fica responsavel por aprovar a propria execucao, quebrando separacao de fases.
+Decisão: Phase 1 não precisa de novo módulo em `src/`. É uma mudança de governança e template.
 
-### D3 — `gate:approve` deve ser deterministico e validar antes de escrever
+### Phase 2 — CLI Security Scan and Audit
 
-Adicionar `src/commands/gate-approve.js` como caminho feliz de aprovacao. O comando deve rodar a mesma validacao de `gate:check`; se `gate:check` bloquear, `gate:approve` tambem bloqueia. Quando passar, atualiza `spec-{slug}.md` usando campos flat `gate_requirements`, `gate_design`, `gate_plan`, `gate_execution`.
+Escopo ativo para `@dev` após este Gate B.
 
-Racional: hoje o usuario recebe mensagens de gate, mas nao tem um caminho claro de aprovacao. Editar YAML manualmente nao deve ser o caminho principal.
+**Decisão de layout:** dois commands separados, sem dispatcher. O padrão atual do CLI (`scan-project.js`, `qa-scan.js`, `context-validate.js`) já é "um arquivo por comando", e dispatcher único só agrega indireção sem reduzir duplicação real — `scan` é puramente estático/local, `audit` lê artefatos por slug. Lógica compartilhada vive em `src/lib/security/` apenas quando ≥2 commands consumirem.
 
-### D4 — Formato de gates deve ser machine-readable simples
-
-O formato canonico no MVP e frontmatter flat:
-
-```yaml
-gate_requirements: approved
-gate_design: approved
-gate_plan: pending
-gate_execution: pending
-```
-
-`phase_gates` nested YAML pode continuar sendo aceito apenas se o parser for expandido com suporte real. Ate la, docs/templates/prompts nao devem tratar nested YAML como contrato canonico.
-
-### D5 — `preflight` deve ser role-aware
-
-`buildContextPackage()` e `evaluateReadiness()` devem ter regras especificas para todos os agentes oficiais do fluxo: `product`, `sheldon`, `analyst`, `architect`, `ux-ui`, `pm`, `orchestrator`, `dev`, `deyvin`, `qa`.
-
-Racional: falso READY acontece quando agentes sem regras especificas caem no default permissivo.
-
-### D6 — Manifest Sheldon ativo vence implementation plan durante execucao
-
-Se `.aioson/plans/{slug}/manifest.md` existir e nao estiver `complete`/`done`, ele e `active_execution_artifact`. O implementation plan continua obrigatorio para Gate C em MEDIUM, mas vira contexto auxiliar enquanto o manifest controla as fases.
-
-Racional: o usuario quer preservar detalhes do enrichment/fases Sheldon ate o `@dev`. A precedencia precisa ser explicitada pelo CLI e pelos prompts.
-
-### D7 — `project-pulse` e resumo de retomada; runtime e log tecnico
-
-`agent:done` deve registrar runtime e, para agentes oficiais, deixar dados suficientes para `pulse:update` ou uma atualizacao automatica equivalente. `project-pulse.md` permanece o arquivo humano/agente para retomada curta.
-
-Racional: SQLite/runtime e bom para dashboard; `project-pulse.md` e o primeiro arquivo que agentes leem em novo chat.
-
-## 3. Folder and Module Structure
-
-Nao criar uma pasta nova de dominio para esta feature. A mudanca atravessa comandos e contratos existentes.
+**Arquivos da Phase 2:**
 
 ```text
 src/
-  cli.js
-  preflight-engine.js
-  handoff-contract.js
   commands/
-    artifact-validate.js
-    gate-check.js
-    gate-approve.js          # novo
-    preflight.js
-    workflow-execute.js
-    workflow-next.js
-    workflow-status.js
-    pulse-update.js
-    runtime.js
-    agent-done*.js           # usar arquivo existente que registra agent:done
-  i18n/
-    messages/
-      en.js
-      pt-BR.js
-      es.js
-      fr.js
+    security-scan.js              # comando aioson security:scan
+    security-audit.js             # comando aioson security:audit
+  lib/
+    security/
+      secrets-regex.js            # catálogo de regex + allowlist de dummies
+      findings-writer.js          # writer canônico de security-findings-{slug}.json
+      exit-codes.js               # mapeamento determinístico classificação→exit
+      artifact-reader.js          # leitor de artefatos por slug para audit
+.aioson/
+  context/
+    security-findings-{slug}.json # exceção machine-readable já permitida
+```
 
+Sem novas dependências de runtime. Tudo `node:fs`, `node:child_process` (para `npm audit`), `node:path` — alinhado ao padrão de `scan-project.js`.
+
+**Registro no CLI:** `src/cli.js` recebe duas entradas no mesmo formato dos commands existentes. Sem alteração em `bin/aioson.js`.
+
+#### `security:scan` — contrato
+
+Sintaxe: `aioson security:scan <project-path> [--stage=<analyst|dev|qa|all>] [--format=<json|md>] [--strict]`
+
+Default: `--stage=all`, `--format=json`, sem `--strict`.
+
+Comportamento por stage:
+- `analyst`: secrets regex + `.env*` em locais proibidos. Não roda `npm audit` (analyst ainda não tocou em deps).
+- `dev`: tudo de `analyst` + `npm audit` quando `package-lock.json` existir + configs públicas óbvias (`.aws/`, `id_rsa*`, `*.pem` versionados).
+- `qa`: idêntico a `dev` (espelho — QA confere, não duplica).
+- `all`: superconjunto.
+
+Saídas:
+- stdout: resumo human-readable (1 linha por finding ou "no findings")
+- arquivo: `.aioson/context/security-findings-{slug}.json` quando `--feature={slug}` é passado, OU `.aioson/context/security-findings-project.json` no modo project. Append-or-replace por `finding_id`, nunca duplica.
+
+#### `security:audit` — contrato
+
+Sintaxe: `aioson security:audit <project-path> --slug=<slug> [--format=<json|md>] [--strict]`
+
+Default: `--format=json`, sem `--strict`.
+
+Lê os artefatos do slug:
+- `.aioson/context/prd-{slug}.md`
+- `.aioson/context/requirements-{slug}.md`
+- `.aioson/context/architecture.md`
+- `.aioson/context/implementation-plan-{slug}.md`
+- `.aioson/context/spec-{slug}.md`
+- `.aioson/context/conformance-{slug}.yaml` (se presente)
+- `AttackSurfaceMap` extraído de `requirements-{slug}.md` quando presente
+
+Roda heurísticas declarativas (não-LLM) por controle `SEC-SBD-01..08`:
+- presença/ausência da seção esperada
+- evidência declarada vs N/A rationale
+- consistência entre AttackSurfaceMap e controles obrigatórios pela classificação
+
+Saídas idênticas a `scan`, mas o source dos findings é `security-audit`.
+
+#### Exit codes determinísticos
+
+Tabela única em `src/lib/security/exit-codes.js`:
+
+| Code | Significado | Quando |
+|---|---|---|
+| 0 | pass | nenhum finding ou apenas advisory/low/medium em política não-bloqueante |
+| 0 | pass-with-notes | findings medium/low presentes mas classificação é MICRO ou SMALL non-blocking |
+| 10 | blocking-findings | High/Critical em MEDIUM, ou qualquer finding com `--strict` |
+| 11 | inconclusive | `npm audit` falhou por rede, ou artefato ausente em audit (não falsifica pass) |
+| 12 | bad-input | slug inexistente, project path inválido, flags conflitantes |
+| 13 | contract-violation | tentativa de criar arquivo proibido, frontmatter quebrado em rule, etc. |
+
+Política por classificação consumindo a tabela:
+- MICRO: `--strict` desligado por default; só code 0/12/13 possível para o usuário comum.
+- SMALL: scan rodando após `@dev` retorna 0 ou 11 (nunca bloqueia por default); audit é opt-in.
+- MEDIUM: scan retorna 0/10/11/12/13; audit retorna 0/10/11/12/13. Code 10 bloqueia `aioson workflow:next --complete=qa`.
+
+#### Schema de `security-findings-{slug}.json`
+
+Contrato canônico (writer em `findings-writer.js`):
+
+```json
+{
+  "schema_version": "1.0.0",
+  "slug": "secure-by-default",
+  "generated_at": "2026-04-28T22:00:00-03:00",
+  "generator": "aioson security:scan@1.0.0",
+  "review_contract": {
+    "scope_mode": "feature",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-secure-by-default.json"
+  },
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": [
+    {
+      "finding_id": "SCAN-secrets-001",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "src/config/keys.js:14",
+      "affected_artifacts": ["src/config/keys.js"],
+      "preconditions": ["File is staged or committed"],
+      "reproduction_steps": ["grep -nE 'sk_live_[A-Za-z0-9]{24,}' src/config/keys.js"],
+      "evidence": ["Match at src/config/keys.js:14 column 11"],
+      "impact": "Production Stripe key exposed in workspace.",
+      "suggested_fix": "Move to env var; rotate key; add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true
+    }
+  ]
+}
+```
+
+Notas de schema:
+- `schema_version` permite evolução futura sem quebrar @qa.
+- `review_contract` é o bloco que `@qa` lê por contrato (compatível com `qa.md` § Security findings integration).
+- `findings[].status` aceita `open`, `needs_validation`, `fixed`, `accepted`, `false_positive` (consistente com `SecurityFinding` em requirements).
+- `recommended_gate_status` ∈ {`block`, `review`, `note`} — mapeia direto para a decisão de Gate D em `@qa`.
+- Findings de scan automatizado **sempre** têm `safe_to_reproduce: true`; pentester pode marcar `false` em Phase 4.
+
+#### Catálogo de regex de secrets
+
+Vive em `src/lib/security/secrets-regex.js` como objeto exportado, não YAML/JSON externo (sem novo formato a manter). Cada padrão tem:
+
+```js
+{ id, name, pattern, severity, control: 'SEC-SBD-05', allow_examples }
+```
+
+`allow_examples` é uma lista de substrings que, se presentes na linha, marcam como dummy (e.g. `EXAMPLE`, `dummy`, `xxxxxxxx`, valores em `.env.example`). Allowlist conservadora — falso negativo > falso positivo só quando o marcador é explícito.
+
+Conjunto inicial mínimo: AWS access key, Stripe live, OpenAI/Anthropic API key, generic `password=`, `private_key`, RSA/SSH key headers, `.env*` value lines com ≥20 chars.
+
+#### `npm audit` integration
+
+`security-scan.js` invoca `npm audit --json --omit=dev` via `child_process.spawnSync` apenas quando:
+- stage ∈ {`dev`, `qa`, `all`}
+- `package-lock.json` ou `npm-shrinkwrap.json` existe na raiz
+
+Falha de rede (`spawn` retorna não-zero com stderr contendo `network` / `ENOTFOUND` / `ETIMEDOUT`) → emite finding `INCONCLUSIVE` com `severity: inconclusive`, `recommended_gate_status: review`, e o exit code agrega para 11. Nunca mascara como pass, nunca bloqueia silenciosamente.
+
+#### Fallback sem CLI (modo direct LLM)
+
+Já documentado na rule (`security-baseline.md` § Direct LLM mode). Phase 2 não duplica: agentes em modo direct usam o checklist da rule e registram limitação no devlog. Os commands `security:*` simplesmente não rodam — não há shim/mock.
+
+#### Comportamento append-or-replace dos findings
+
+Writer mantém findings existentes do mesmo slug, identifica match por `finding_id` (composto: `{source}-{control_id}-{hash6(scope)}`), atualiza in-place, marca `status: fixed` os que sumiram. Nunca apaga histórico — `status: fixed` permanece para auditoria. Limite de 500 findings por arquivo; acima disso retorna code 13 (contract-violation) pedindo split por escopo.
+
+#### Não-objetivos de Phase 2
+
+- Sem alteração de história git (AC-SBD-2.7).
+- Sem auto-fix.
+- Sem `app_target` mode (Phase 4).
+- Sem runtime events (Phase 5).
+- Sem skill `secure-tdd` (Phase 3).
+- Sem novo agente.
+- Sem hooks automáticos `.claude/settings.json` — invocação fica explícita (CLI ou agent prompt).
+
+### Phase 3 — Secure TDD Skill
+
+Escopo ativo para `@dev` após este Gate B.
+
+**Decisão de layout:** `secure-tdd` é uma process skill de escopo técnico, não um design skill nem doc avulsa. Ela deve seguir o mesmo contrato estrutural já usado por `aioson-spec-driven`: um `SKILL.md` curto como entrypoint e um diretório `references/` carregado sob demanda. Não criar árvore profunda nem biblioteca de prompts longa.
+
+**Arquivos da Phase 3:**
+
+```text
+.aioson/
+  skills/
+    process/
+      secure-tdd/
+        SKILL.md
+        references/
+          node-express.md
+          nextjs.md
+          planned-stacks.md
+
+template/
+  .aioson/
+    skills/
+      process/
+        secure-tdd/
+          SKILL.md
+          references/
+            node-express.md
+            nextjs.md
+            planned-stacks.md
+```
+
+**Racional de estrutura:**
+- `SKILL.md` define quando carregar, profundidade por classificação e o loop adversarial.
+- `references/node-express.md` e `references/nextjs.md` cobrem os dois templates exigidos no v1.
+- `references/planned-stacks.md` registra Laravel/Pest, Django, Rails e FastAPI como referências planejadas/minimais, sem bloquear v1 nem forçar quatro arquivos extras antes de uso real.
+- Skill processual precisa existir no workspace e no template, porque projetos novos devem recebê-la via `aioson setup .`.
+
+#### Contrato de carregamento
+
+Ordem obrigatória para sessões de implementação:
+1. `@dev` carrega `aioson-spec-driven` primeiro quando houver trabalho spec-driven.
+2. `secure-tdd` é carregada **depois**, como skill complementar, nunca substituta.
+3. Carregar só quando a classificação e a superfície justificarem:
+   - **MEDIUM:** obrigatório quando `requirements-{slug}.md` ou `Attack Surface Map` indicarem auth, ownership, money, uploads, external URLs, secrets/credentials ou storage boundaries sensíveis.
+   - **SMALL:** opcional/reduzido quando a feature tocar essas superfícies, sem tornar TDD adversarial bloqueante por padrão.
+   - **MICRO:** nunca auto-carregar.
+4. Após abrir `SKILL.md`, `@dev` deve carregar só a referência do stack alvo (`node-express.md` ou `nextjs.md`) e, se necessário, consultar `planned-stacks.md` para fallback/documentação de escopo.
+
+**Integrações obrigatórias:**
+- `template/.aioson/agents/dev.md` e `.aioson/agents/dev.md` devem ganhar uma regra explícita de carregamento de `secure-tdd` para MEDIUM com superfície sensível.
+- `@deyvin` pode ler `secure-tdd` apenas em sessões de continuidade com slice pequeno e já validado; não usar isso para burlar workflow oficial em features novas.
+- Não alterar `@qa` nem `@pentester` nesta fase; QA só validará que a skill existe, é carregável e não compete com `aioson-spec-driven`.
+
+#### Contrato funcional da skill
+
+`SKILL.md` deve ensinar um ciclo curto e executável:
+1. Ler `requirements-{slug}.md`, `spec-{slug}.md`, `architecture.md` e a referência de stack relevante.
+2. Identificar a superfície sensível aplicável.
+3. Escrever primeiro os testes adversariais mínimos.
+4. Só depois implementar o código de produção.
+5. Reexecutar os testes e registrar no `spec-{slug}.md` quais ataques passaram a ser cobertos.
+
+Os ataques mínimos cobertos pela skill devem mapear diretamente para os controles do baseline:
+- `SEC-SBD-01`: input limits e validação server-side
+- `SEC-SBD-02`: upload validation / signature / MIME distrust
+- `SEC-SBD-03`: IDOR / ownership / auth bypass
+- `SEC-SBD-04`: race condition / atomicidade / double-submit
+- `SEC-SBD-06`: external URL sanitization
+- `SEC-SBD-08`: auth enumeration / rate limiting
+
+`SEC-SBD-05` (secrets) continua principalmente tool-first via `security:scan`; a skill pode citá-lo como regra de implementação, mas não precisa transformá-lo em suite longa de testes.
+
+#### Templates por stack
+
+**Node/Express (`references/node-express.md`):**
+- Padrão preferido: `node:test` + `supertest` se o projeto já usa HTTP app; se for serviço/CLI Node sem Express, adaptar os testes para boundary functions com `node:test`.
+- Casos mínimos: unauthorized access, cross-user resource access, invalid payload beyond server limit, unsafe external URL, concurrent mutation/race scenario when applicable.
+
+**Next.js (`references/nextjs.md`):**
+- Padrão preferido: Vitest + Testing Library + server action / route handler assertions.
+- Casos mínimos: auth bypass em route handler, server-side validation independent of UI, forged payload, unsafe redirect/external URL, optimistic UI not trusted as source of truth.
+
+**Planned stacks (`references/planned-stacks.md`):**
+- Laravel/Pest, Django/Pytest, Rails/RSpec e FastAPI/Pytest entram como referências mínimas/planned, com:
+  - padrão de runner esperado
+  - lista de ataques a cobrir
+  - nota explícita de que templates completos ficam para expansão futura
+
+#### Não-objetivos da Phase 3
+
+- Não criar comando CLI novo.
+- Não invocar `@pentester`.
+- Não emitir runtime events.
+- Não auto-gerar código de produção.
+- Não duplicar conteúdo de `security-baseline.md`; a skill referencia controles por ID.
+- Não virar biblioteca genérica de segurança: foco em testes adversariais concretos antes do código.
+
+### Phase 4 — Pentester App Target Mode
+
+Escopo ativo para `@dev` apos este Gate B.
+
+**Decisao de integracao:** Phase 4 nao cria um segundo schema de findings nem um segundo motor de execucao. O modo `app_target` reutiliza o envelope canonico de `.aioson/context/security-findings-{slug}.json` ja consolidado pela feature `pentester-agent` e pela Phase 2 desta feature. A separacao entre framework e app acontece por **target mode** e **surface types**, nao por arquivo novo.
+
+**Arquivos da Phase 4:**
+
+```text
 .aioson/
   agents/
-    product.md
-    sheldon.md
-    analyst.md
-    architect.md
-    pm.md
-    orchestrator.md
-    dev.md
-    deyvin.md
-    qa.md
-    discover.md
-  rules/
-    aioson-context-boundary.md
-    disk-first-artifacts.md
-    project-path-contract.md  # novo ou equivalente universal
-  skills/process/aioson-spec-driven/references/
-    artifact-map.md
-    approval-gates.md
-    classification-map.md
-    pm.md
+    pentester.md
+    manifests/
+      pentester.manifest.json
 
 template/
   .aioson/
     agents/
-    rules/
-    skills/process/aioson-spec-driven/references/
+      pentester.md
+      manifests/
+        pentester.manifest.json
 
-test/
-  *.test.js                  # seguir padrao existente node:test
+src/
+  commands/
+    agents.js                    # thin wrapper / routing for invoke path, if needed
+  cli.js                         # alias registration only if invoke path is added
+
+.aioson/
+  context/
+    security-findings-{slug}.json
 ```
 
-Nomeclatura segue o `design-doc.md`: arquivos CLI em kebab-case, responsabilidades pequenas e reuso antes de criar novos modulos.
+**Target-mode contract**
 
-## 4. Module Responsibilities
+`@pentester` passa a operar com dois modos mutuamente exclusivos:
 
-### `src/preflight-engine.js`
+- `framework_target` — comportamento atual do `pentester-agent`; surfaces internas do AIOSON (`memory_context`, `tool_invocation`, `delegation_handoff`, `protocol_contract`, `secret_handling`, `runtime_permissions`).
+- `app_target` — novo comportamento desta fase; surfaces do app gerado ou da feature em review.
 
-Responsabilidades novas:
+Regra obrigatoria:
+- `app_target` **nao** carrega surfaces de framework por default.
+- Surfaces `framework_target` so entram quando a propria feature tocar runtime AIOSON, handoff, autonomia, installer/update, ou outro boundary interno do framework. Nesse caso, a surface extra deve ser marcada explicitamente como `cross_scope_reason`, nunca misturada silenciosamente.
 
-- Expor `active_execution_artifact`.
-- Classificar `dev_state_relation`: `same_feature`, `different_feature`, `stale_done`, `project`, `unknown`.
-- Construir context package por agente oficial.
-- Bloquear ou alertar quando um agente nao tem contexto minimo.
-- Detectar manifest ativo em `.aioson/plans/{slug}/manifest.md`.
-- Ler gates por parser unico compartilhado.
+**App-target surface catalog (v1)**
 
-### `src/commands/preflight.js`
+Cada threat surface de `app_target` deve usar `surface_type` explicito e rastreavel:
 
-Responsabilidades novas:
+| Surface type | Maps to | Trigger |
+|---|---|---|
+| `app_target_ownership_idor` | A01 | ownership, per-user resources, tenant boundaries |
+| `app_target_secrets_crypto` | A02 | secrets, credentials, password/token handling, crypto material |
+| `app_target_injection_xss` | A03 | query building, rendered HTML, template output, unsanitized payloads |
+| `app_target_insecure_design_race` | A04 | money, quotas, double-submit, enumeration, critical mutable state |
+| `app_target_auth_rate_limit` | A07 | login, signup, reset, OTP, auth-adjacent endpoints |
 
-- Exibir `next_agent`, `next_missing`, `active_execution_artifact` e warnings de stale state.
-- Mostrar READY, READY_WITH_WARNINGS ou BLOCKED.
-- Em JSON, manter campos estaveis para consumo por `workflow:execute`, agentes e testes.
+Todas as surfaces nao aplicaveis devem continuar indo para `threat_surfaces[]` com `verification_status: not_applicable` e `skip_reason` obrigatorio.
 
-### `src/commands/gate-check.js`
+**Invocation contract**
 
-Responsabilidades novas:
+O PRD pede `aioson agent:invoke pentester --slug=<slug> --scope=<area> --mode=app_target`. Como o core hoje ja tem `agent:prompt` e `@pentester` como stage oficial do workflow, a implementacao deve ser o menor delta possivel:
 
-- Exportar `checkGate()` para reuso por `gate-approve`.
-- Melhorar recomendacao por gate:
-  - Gate A bloqueado -> `@analyst`
-  - Gate B bloqueado -> `@architect`
-  - Gate C bloqueado -> `@pm`
-  - Gate D bloqueado -> `@qa`
-- Validar status do `implementation-plan-{slug}.md` em Gate C, nao apenas existencia.
+1. Adicionar `agent:invoke` apenas como **thin alias** no CLI.
+2. O alias deve delegar para o mesmo pipeline de prompt/runtime ja usado por `agent:prompt`.
+3. Nao criar executor paralelo, daemon dedicado, nem command tree nova para pentest.
 
-### `src/commands/gate-approve.js`
-
-Novo comando.
-
-Contrato:
+Contrato minimo do alias:
 
 ```bash
-aioson gate:approve . --feature=<slug> --gate=<A|B|C|D>
-aioson gate:approve . --feature=<slug> --gate=<A|B|C|D> --json
+aioson agent:invoke pentester . --feature=<slug> --scope=<area> --mode=app_target
 ```
 
-Fluxo:
+Semantica:
+- `--feature=<slug>` e obrigatorio em `app_target`.
+- `--scope=<area>` e obrigatorio para on-demand invocation; no stage oficial do workflow, o escopo pode vir do findings artifact ou do `AttackSurfaceMap`.
+- `--mode=app_target` seleciona o surface catalog acima.
+- `--mode=framework_target` preserva o comportamento legado do `pentester-agent`.
 
-1. Reusar `checkGate()`.
-2. Se BLOCKED, retornar erro com blockers e `next_agent`.
-3. Se PASS, atualizar o campo flat correspondente em `spec-{slug}.md`.
-4. Atualizar `last_checkpoint`.
-5. Opcionalmente emitir runtime/pulse quando flags ou contexto indicarem.
+Se o alias aumentar demais o escopo, `@dev` deve implementar primeiro o suporte a `--mode` e `--scope` no prompt/manifest e deixar `agent:invoke` como wrapper fino sobre `agent:prompt` na mesma PR.
 
-Sem confirmacao interativa no MVP. O comando so escreve quando a validacao deterministica passa.
+**Findings envelope contract**
 
-### `src/commands/artifact-validate.js`
+Phase 4 preserva o envelope atual e adiciona apenas campos necessarios ao modo `app_target`:
 
-Responsabilidades novas:
+```json
+{
+  "version": 1,
+  "feature_slug": "secure-by-default",
+  "generated_at": "2026-04-29T00:00:00Z",
+  "review_contract": {
+    "review_id": "pentester-secure-by-default-<timestamp>",
+    "scope_mode": "phase_review | on_demand",
+    "runtime_mode": "local_static | local_runtime | fixture_based",
+    "target_mode": "framework_target | app_target",
+    "target_scope": "refund-flow",
+    "allowed_targets": [],
+    "forbidden_targets": [],
+    "attack_surfaces": [],
+    "evidence_policy": "safe-proof-only",
+    "findings_artifact_path": ".aioson/context/security-findings-secure-by-default.json"
+  },
+  "threat_surfaces": [],
+  "findings": []
+}
+```
 
-- Calcular `next_missing`.
-- Calcular `next_agent`.
-- Corrigir contagem de REQ/AC para IDs slugged como `REQ-SDLC-01` e `AC-SDLC-01`.
-- Considerar Gate B/Gate C no diagnostico, nao apenas existencia de arquivos.
+Decisoes:
+- `target_mode` e `target_scope` vivem em `review_contract`, nao em arquivo separado.
+- O finding individual continua compativel com o schema atual, mas `attack_path` passa a ser **obrigatorio** para findings `app_target` de severidade `high` ou `critical`.
+- `affected_artifacts` continua apontando apenas para paths reais do workspace.
+- `recommended_gate_status` continua `block|review|note`; nenhum remapeamento novo.
 
-### `src/handoff-contract.js`
+**Finding rules for app_target**
 
-Responsabilidades novas:
+- `high` e `critical` em `app_target` exigem `attack_path`, `preconditions`, `reproduction_steps`, `evidence`, `impact`, `affected_artifacts`, `suggested_fix`, `safe_to_reproduce=true`.
+- Se faltar qualquer um desses campos, o finding vira `needs_validation` e nao pode nascer como blocker silencioso.
+- `recommended_owner` continua nunca sendo `pentester`.
+- Auto-fix continua proibido.
 
-- Reconciliar `pm` como dono de `implementation-plan-{slug}.md`.
-- Tratar `orchestrator` como consumidor de Gate C aprovado.
-- Para Gate C, exigir plan existente e status aprovado.
-- Usar o mesmo parser/validador compartilhado de gates do `preflight-engine`.
+**QA trigger contract**
 
-### `src/commands/workflow-execute.js`
+`@qa` pode acionar `app_target` quando ocorrer pelo menos um:
 
-Responsabilidades novas:
+- `AttackSurfaceMap.pentester_trigger = required`
+- feature toca auth, money, ownership, uploads ou external URLs e o `security:audit` retornou `review`/`block`
+- heuristica do `@qa` encontrou race, IDOR, enumeration, injection ou boundary inconsistente
 
-- Em dry-run, prever blockers com a mesma regra de `artifact:validate` e `preflight`.
-- Garantir que help/documentacao liste `--feature`, `--tool`, `--start-from`, `--max-checkpoints` e flags realmente suportadas.
-- Sequencia MEDIUM deve respeitar `@pm` antes de `@orchestrator`/`@dev`.
+`@qa` pode pular a invocacao quando:
 
-### `src/commands/pulse-update.js` e `agent:done`
+- `security:audit` voltou limpo
+- o `AttackSurfaceMap` marcou a surface como N/A para esta feature
+- o risco e apenas advisory/MICRO sem surface sensivel real
 
-Responsabilidades novas:
+Quando a invocacao for pulada, o rationale deve ficar em `spec-{slug}.md`.
 
-- Padronizar output de retomada: last_agent, last_gate, active_feature, blockers, next action.
-- Evitar dois formatos concorrentes para `project-pulse.md`.
-- Se `agent:done` nao atualizar pulse automaticamente, ele deve pelo menos registrar dados que permitam `pulse:update` ou handoff deterministicamente.
+**Nao-objetivos da Phase 4**
 
-## 5. Prompt and Rule Architecture
+- nao criar `pentest:*` command family
+- nao mover Gate D para `@pentester`
+- nao criar artifacto markdown novo como fonte de verdade
+- nao emitir runtime events de seguranca (Phase 5)
+- nao reabrir `security:scan`, `security:audit` ou `secure-tdd`
 
-### Universal path contract
+### Phase 5 — QA Gates and Runtime Events
 
-Adicionar regra universal ou ampliar regra existente para cobrir todos os agentes que criam artefatos:
+Design reservado para fase posterior.
 
-- `plans/` root: source-only, read-only para agentes, exceto `plans/source-manifest.md`.
-- `.aioson/plans/{slug}/`: phased plan do Sheldon.
-- `.aioson/context/implementation-plan-{slug}.md`: plano de execucao PM/SDD.
-- `docs/pt/`: documentacao publica do sistema, nunca plano operacional.
+Arquitetura esperada:
+- `@qa` consome `security-findings-{slug}.json`, conformance YAML e runtime events.
+- Eventos ficam no runtime existente, não em snippets paralelos.
+- Fallback sem CLI registra limitação no relatório, não telemetria falsa.
 
-Agentes afetados:
+## 4. Folder and Module Structure
 
-- `@product`
-- `@sheldon`
-- `@analyst`
-- `@architect`
-- `@pm`
-- `@orchestrator`
-- `@dev`
-- `@deyvin`
-- `@qa`
-- `@discover`
+Phase 1:
 
-### Prompt updates required
+```text
+.aioson/
+  constitution.md
+  rules/
+    security-baseline.md          # novo
+  context/
+    architecture.md
+    conformance-secure-by-default.yaml
+    requirements-secure-by-default.md
+    spec-secure-by-default.md
 
-| Agent | Architectural change |
-|---|---|
-| `@product` | Handoff sempre informa proximo agente, criterio de passagem e artifact path; registra `features.md`. |
-| `@sheldon` | RF-01 seleciona PRD antes de early-exit; `spec.md` project-level nao bloqueia feature PRD. |
-| `@analyst` | Ler `sheldon-enrichment-{slug}.md`; usar gate fields flat ou comando de aprovacao. |
-| `@architect` | Gate B por spec slug e arquitetura atual da feature; nao confiar em architecture.md antigo. |
-| `@pm` | Produzir `implementation-plan-{slug}.md` em MEDIUM; marcar Gate C quando aprovado. |
-| `@orchestrator` | Ler `requirements-{slug}.md` e corpo de `spec-{slug}.md`; exigir Gate C. |
-| `@dev` | Aplicar precedencia manifest ativo > implementation plan auxiliar; bloquear sem Gate C em MEDIUM. |
-| `@deyvin` | Mesma precedencia de `@dev` em continuidade. |
-| `@qa` | Usar conformance YAML e Gate D; validar comportamento, artifacts e links. |
-| `@discover` | Refresh deve criar bootstrap faltante, nao assumir cache parcial completo. |
+template/
+  .aioson/
+    constitution.md
+    rules/
+      security-baseline.md        # novo
+```
 
-Sempre atualizar `template/.aioson/agents/` junto com `.aioson/agents/` quando a mudanca for parte do framework distribuido.
+Fases posteriores:
 
-## 6. Gate and State Model
+```text
+src/
+  commands/
+    security-scan.js              # Phase 2
+    security-audit.js             # Phase 2
+  lib/
+    security/                     # criar apenas quando houver lógica reutilizável
 
-### Gate states
+.aioson/
+  skills/process/
+    secure-tdd/
+      SKILL.md                    # Phase 3
+      references/
+        node-express.md
+        nextjs.md
+        planned-stacks.md
+  agents/
+    pentester.md                  # Phase 4
+    manifests/
+      pentester.manifest.json     # Phase 4: target-mode contract
+    qa.md                         # Phase 5
+  context/
+    security-findings-{slug}.json # Phase 4/5, exceção permitida
+```
 
-Estados permitidos:
+Governança aplicada: kebab-case para novos arquivos, sem pastas genéricas, sem criar pasta de um único arquivo exceto quando o diretório é contrato de skill.
 
-- `pending`
-- `approved`
-- `rejected`
-- `skipped` apenas quando a classificacao permitir explicitamente
+## 5. Models and Relationships
 
-### Gate prerequisites
+Não há modelos de banco novos na Phase 1.
 
-| Gate | Owner | Required before | Required evidence |
-|---|---|---|---|
-| A requirements | `@analyst` | `@architect` | requirements + spec with `gate_requirements: approved` |
-| B design | `@architect` | `@pm` | architecture + spec with `gate_design: approved` |
-| C plan | `@pm` | `@orchestrator`/`@dev` | implementation plan status approved + spec with `gate_plan: approved` |
-| D execution | `@qa` | feature close | QA sign-off PASS + spec with `gate_execution: approved` |
+Contratos lógicos:
+- `SecurityBaselineRule` contém muitos `SecurityControl`.
+- `SecurityControl` é referenciado por requirements, arquitetura, skill, audit e QA.
+- `AttackSurfaceMap` é produzido por `@analyst` em features futuras e aponta para controles relevantes.
+- `SecurityFinding` é produzido por scan/audit/pentester em fases posteriores e referencia controles.
+- `SecurityRuntimeEvent` mede adoção e bloqueios em fases posteriores.
+- `review_contract.target_mode` decide se o finding nasceu de `framework_target` ou `app_target`.
+- `review_contract.target_scope` delimita a area investigada em `app_target` sem criar segundo artifact.
 
-### Next agent resolution
+## 6. Security Control Contract
 
-O algoritmo comum deve seguir esta ordem:
+Formato arquitetural mínimo para cada controle dentro de `security-baseline.md`:
 
-1. Se PRD ausente -> `@product`.
-2. Se enrichment requerido e ausente/stale em MEDIUM -> `@sheldon`.
-3. Se requirements ou Gate A ausente -> `@analyst`.
-4. Se architecture ou Gate B ausente -> `@architect`.
-5. Se UI existir/aplicar e ui-spec ausente -> `@ux-ui`.
-6. Se implementation plan ou Gate C ausente -> `@pm`.
-7. Se paralelizacao for aplicavel e Gate C aprovado -> `@orchestrator`.
-8. Se implementacao pendente -> `@dev`.
-9. Se QA/Gate D pendente -> `@qa`.
+```markdown
+### SEC-SBD-01 — Server-side input limits
 
-Para este projeto CLI (`project_type=script`), `@ux-ui` e informativo/skip salvo se a feature tocar dashboard ou experiencia visual.
+- Maps to: OWASP A03/A04
+- Default severity: high
+- Applies to: analyst, dev, qa
+- Classification policy: MICRO advisory; SMALL scan-oriented; MEDIUM audit-blocking when applicable
+- Required evidence: field limits, negative tests, audit pass or N/A rationale
+```
+
+Controles obrigatórios:
+- `SEC-SBD-01`: Server-side input limits.
+- `SEC-SBD-02`: Upload file signature validation.
+- `SEC-SBD-03`: Ownership/IDOR authorization.
+- `SEC-SBD-04`: Atomic critical state changes.
+- `SEC-SBD-05`: Secrets outside code.
+- `SEC-SBD-06`: External URL sanitization.
+- `SEC-SBD-07`: Storage default-deny/RLS boundary.
+- `SEC-SBD-08`: Auth enumeration/rate limiting.
+
+Arquitetura de severidade:
+- `critical`: ownership bypass, financial race, committed production secret.
+- `high`: missing server-side validation, unsafe upload validation, missing rate limit on sensitive endpoint.
+- `medium`: external URL sanitization, low-impact tracker or storage abuse surface.
+- `advisory`: MICRO or non-applicable surfaces with explicit N/A rationale.
 
 ## 7. Integration Architecture
 
-### CLI registration
+### Constitution integration
 
-`src/cli.js` deve registrar:
+Atualizar `.aioson/constitution.md` e `template/.aioson/constitution.md`.
 
-- `gate:approve`
-- alias `gate-approve`
-- help atualizado nos locales
+Regra:
+- Append only. Não renumerar Article I-VI.
+- `last_amended` deve ser atualizado.
+- O artigo deve apontar para `.aioson/rules/security-baseline.md`, não duplicar a matriz inteira.
 
-### i18n/help
+### Rule loading integration
 
-Atualizar:
+`security-baseline.md` deve usar frontmatter:
 
-- `src/i18n/messages/en.js`
-- `src/i18n/messages/pt-BR.js`
-- `src/i18n/messages/es.js`
-- `src/i18n/messages/fr.js`
-
-O help deve refletir a implementacao real. Hoje `workflow:execute` implementa `--feature`, mas o help principal nao mostra isso.
-
-### Runtime and dashboard
-
-Nao alterar dashboard nesta feature. O runtime SQLite recebe eventos via comandos existentes. `project-pulse.md` continua como artefato de retomada lido por agentes.
-
-### Docs
-
-`docs/pt/` so deve ser atualizado depois que CLI e prompts estiverem alinhados. Nao criar plano operacional ali.
-
-## 8. Phase-by-Phase Architecture Map
-
-### Phase 1 — Canonical Paths and Source Contract
-
-Tocar:
-
-- `.aioson/rules/`
-- `.aioson/context/project-map.md` se mantido como mapa
-- `.aioson/agents/product.md`
-- `.aioson/agents/sheldon.md`
-- `.aioson/agents/pm.md`
-- `.aioson/agents/orchestrator.md`
-- `.aioson/agents/discover.md`
-- templates equivalentes
-
-Critico: garantir regra universal antes de editar docs.
-
-### Phase 2 — Gates and Approval UX
-
-Tocar:
-
-- `src/commands/gate-check.js`
-- `src/commands/gate-approve.js`
-- `src/preflight-engine.js`
-- `src/cli.js`
-- `src/i18n/messages/*.js`
-- `.aioson/skills/process/aioson-spec-driven/references/approval-gates.md`
-- prompts que comunicam handoff
-
-Critico: `gate:approve` deve ser testado com PASS e BLOCKED.
-
-### Phase 3 — State Continuity and Next Step
-
-Tocar:
-
-- `src/commands/preflight.js`
-- `src/preflight-engine.js`
-- `src/commands/workflow-execute.js`
-- `src/commands/workflow-status.js`
-- `src/commands/pulse-update.js`
-- comando/arquivo real de `agent:done`
-
-Critico: comandos precisam concordar sobre `next_agent`.
-
-### Phase 4 — Implementation Plan Ownership
-
-Tocar:
-
-- `.aioson/agents/pm.md`
-- `template/.aioson/agents/pm.md`
-- `.aioson/skills/process/aioson-spec-driven/references/artifact-map.md`
-- `.aioson/skills/process/aioson-spec-driven/references/pm.md`
-- `.aioson/rules/*.md`
-- `src/handoff-contract.js`
-- `src/commands/artifact-validate.js`
-- `src/commands/gate-check.js`
-
-Critico: eliminar contradicao onde `@pm` e instruido a nao criar o plano que o sistema exige.
-
-### Phase 5 — Handoff and Preflight Readiness
-
-Tocar:
-
-- `src/preflight-engine.js`
-- `src/commands/preflight.js`
-- `src/commands/artifact-validate.js`
-- `.aioson/agents/orchestrator.md`
-- template equivalente
-
-Critico: `orchestrator` deve bloquear sem requirements/spec/Gate C.
-
-### Phase 6 — Dev Execution Context
-
-Tocar:
-
-- `src/preflight-engine.js`
-- `src/commands/preflight.js`
-- `src/commands/workflow-execute.js`
-- `.aioson/agents/dev.md`
-- `.aioson/agents/deyvin.md`
-- templates equivalentes
-
-Critico: manifest ativo vence e deve aparecer em `active_execution_artifact`.
-
-### Phase 7 — Product and Sheldon Flow
-
-Tocar:
-
-- `.aioson/agents/product.md`
-- `.aioson/agents/sheldon.md`
-- templates equivalentes
-- possivelmente `src/commands/artifact-validate.js` para repair suggestion
-
-Critico: RF-01 do Sheldon precisa mudar de ordem.
-
-### Phase 8 — Memory, Observability, Docs and Regression Tests
-
-Tocar:
-
-- `.aioson/agents/discover.md`
-- template equivalente
-- `src/commands/devlog-process.js`
-- `src/commands/runtime.js`
-- `src/commands/pulse-update.js`
-- `src/cli.js`
-- docs finais em `docs/pt/`
-- testes node:test
-
-Critico: docs so depois do comportamento real.
-
-## 9. Testing Architecture
-
-Usar `node:test` conforme `project.context.md`.
-
-Suites recomendadas:
-
-| Test area | Target |
-|---|---|
-| Path contract | Prompts/rules nao mandam criar planos em `docs/pt/` ou root `plans/`. |
-| Gate parser | Flat fields passam; nested YAML sem suporte nao passa acidentalmente. |
-| `gate:approve` | Bloqueia quando `gate:check` bloqueia; escreve campo flat quando passa. |
-| `artifact:validate` | Retorna `next_missing` e `next_agent`; conta `REQ-SDLC-*` e `AC-SDLC-*`. |
-| Preflight readiness | `sheldon`, `pm`, `orchestrator`, `dev`, `qa` nao recebem falso READY. |
-| Dev state relation | `dev-state.md` de outra feature done vira warning/contexto historico. |
-| Manifest precedence | Manifest ativo vence implementation plan; phases done sao puladas. |
-| Sheldon RF-01 | PRD target selection ocorre antes de early-exit. |
-| PM ownership | Todas as fontes dizem que `@pm` cria initial implementation plan MEDIUM. |
-| Bootstrap refresh | `@discover` cria bootstrap files faltantes. |
-| Help alignment | `workflow:execute` help lista flags reais. |
-
-Testes que alteram devlogs ou runtime devem usar fixture/copia em `/tmp` ou diretorio temporario, nunca devlogs reais do workspace.
-
-## 10. Implementation Sequence for @pm
-
-`@pm` deve criar `.aioson/context/implementation-plan-sdlc-process-upgrade.md` com:
-
-1. Context package obrigatorio por fase.
-2. Ordem de implementacao alinhada as 8 fases Sheldon.
-3. Checkpoint de done por fase.
-4. Arquivos candidatos de leitura/escrita.
-5. Testes exigidos por fase.
-6. Regras de template sync quando prompts forem alterados.
-7. Decisoes finais:
-   - `@pm` owns implementation plan MEDIUM.
-   - `gate:approve` e deterministico e valida antes de escrever.
-   - manifest ativo vence implementation plan durante execucao.
-   - `docs/pt/` so recebe docs finais.
-
-Gate C deve ficar bloqueado enquanto esse arquivo nao existir com `status: approved` e `gate_plan: approved`.
-
-## 11. Implementation Sequence for @dev
-
-Depois de Gate C:
-
-1. Criar testes de contrato para path/gates/preflight antes de editar prompts amplamente.
-2. Implementar parser/approval/gate fixes.
-3. Implementar `next_missing`/`next_agent` em `artifact:validate`.
-4. Implementar role-aware preflight e dev-state relation.
-5. Alinhar prompts/rules/templates.
-6. Implementar PM ownership e orchestrator context.
-7. Implementar manifest precedence para `@dev`/`@deyvin`.
-8. Corrigir Sheldon RF-01 e Product handoff.
-9. Corrigir bootstrap/discover/devlog/help.
-10. Atualizar docs finais.
-11. Rodar `npm test` e testes especificos.
-
-## 12. Non-goals and Deferred Items
-
-- Nao criar dashboard/UI.
-- Nao criar segundo workflow engine.
-- Nao implementar isolamento real de worktree/lane.
-- Nao migrar todo historico antigo.
-- Nao mudar o formato de todos os artefatos de uma vez.
-- Nao transformar root `plans/` em documentacao permanente.
-- Nao exigir web research para esta fase; os achados ja foram validados contra arquivos locais.
-
-## 13. Handoff
-
-Gate B esta aprovado para `sdlc-process-upgrade`.
-
-Proximo agente: `@pm`.
-
-Por que: esta feature e MEDIUM e precisa de Gate C antes de `@orchestrator` ou `@dev`. O `@pm` deve produzir `.aioson/context/implementation-plan-sdlc-process-upgrade.md`, com status aprovado, usando PRD, enrichment, requirements, spec, conformance e este architecture.
-
-Comando/acao recomendada:
-
-```bash
-node bin/aioson.js preflight . --agent=pm --feature=sdlc-process-upgrade
+```yaml
+---
+name: security-baseline
+description: Secure by Default baseline controls for technical agents
+priority: 10
+version: 1.0.0
+agents: [analyst, architect, dev, qa]
+---
 ```
 
-Depois, ativar `@pm`.
+Racional: o loader atual já lê rules por frontmatter. Não é necessário alterar o loader na Phase 1.
 
-> **Gate B:** Architecture approved — @dev can proceed.
+### Template integration
+
+Como este repositório é o core AIOSON, a rule precisa existir no workspace ativo e no template. Após implementação, `npm run sync:agents` não sincroniza rules; `@dev` deve verificar se há comando específico para templates/rules ou editar ambos os caminhos.
+
+## 8. Cross-Cutting Concerns
+
+### Validation
+
+`@qa` deve validar a fase ativa por arquivo e contrato:
+- `@pentester` distingue `framework_target` de `app_target`.
+- `app_target` usa apenas o surface catalog explicito da fase, salvo `cross_scope_reason`.
+- O findings artifact continua unico e valido.
+- Findings `high`/`critical` de `app_target` carregam `attack_path` e `safe_to_reproduce=true`.
+- `@qa` continua sendo o owner final do Gate D.
+
+### Error handling
+
+Se `--feature` ou `--scope` faltarem no caminho on-demand de `app_target`, a invocacao deve falhar cedo com erro de input, nunca cair silenciosamente para `framework_target`.
+
+### Observability
+
+Nao emitir novos runtime events nesta fase. Eventos `security_*` continuam deferidos para Phase 5.
+
+### Backward compatibility
+
+`framework_target` deve continuar funcionando sem alterar as surfaces do feature `pentester-agent`. `app_target` entra como extensao compatível, nunca como substituicao do comportamento anterior.
+
+### Security
+
+`app_target` continua local/controlado. Nenhum target externo, nenhuma API publica, nenhum destructive action fora de fixture.
+
+## 9. Implementation Sequence for @dev
+
+### Phase 1 (done — QA approved 2026-04-28)
+
+1. Ler `requirements-secure-by-default.md`, `conformance-secure-by-default.yaml`, este `architecture.md` e `plan-security-baseline-contract.md`.
+2. Atualizar `.aioson/constitution.md` appendando Article VII e `last_amended`.
+3. Atualizar `template/.aioson/constitution.md` com o mesmo Article VII.
+4. Criar `.aioson/rules/security-baseline.md`.
+5. Criar `template/.aioson/rules/security-baseline.md`.
+6. Garantir que os dois rule files tenham frontmatter idêntico.
+7. Escrever controles `SEC-SBD-01` a `SEC-SBD-08` com metadata mínima.
+8. Documentar política de classificação e fallback sem CLI.
+9. Rodar validação textual simples com `rg` e testes existentes relevantes.
+10. Não implementar comandos `security:*` nesta fase.
+
+### Phase 2 (ativo após Gate B desta rev)
+
+1. Ler `plan-cli-security-scan-audit.md` e a seção `## 3. Phase 2 — CLI Security Scan and Audit` deste `architecture.md`.
+2. Criar `src/lib/security/exit-codes.js` com a tabela canônica (constantes nomeadas; sem números mágicos espalhados).
+3. Criar `src/lib/security/secrets-regex.js` com o conjunto inicial mínimo + `allow_examples`.
+4. Criar `src/lib/security/findings-writer.js` (read-merge-write atômico, `finding_id` determinístico, append-or-replace).
+5. Criar `src/lib/security/artifact-reader.js` (lê os artefatos do slug; retorna shape estruturado; nunca executa código).
+6. Criar `src/commands/security-scan.js` consumindo as três libs acima e invocando `npm audit` via `child_process.spawnSync` quando aplicável.
+7. Criar `src/commands/security-audit.js` consumindo `artifact-reader` e `findings-writer`.
+8. Registrar ambos os commands em `src/cli.js` no padrão dos commands existentes (sem alterar `bin/aioson.js`).
+9. Escrever testes node:test cobrindo: exit code por classificação, allowlist de dummy secrets, npm-audit-network-failure → inconclusive, append-or-replace, slug inexistente → exit 12, finding count > 500 → exit 13.
+10. Rodar `npm test` e fixar falhas antes de marcar done.
+11. Atualizar `spec-secure-by-default.md` com decisões da Phase 2: schema_version do findings, exit codes e qualquer adaptação ao layout final.
+12. Não implementar `app_target`, `secure-tdd`, runtime events, hooks `.claude/settings.json`, nem alterar `pentester.md` — escopo de Phases 3/4/5.
+
+### Phase 3 (ativo após Gate B desta rev)
+
+1. Ler `plan-secure-tdd-skill.md` e a seção `## 3. Phase 3 — Secure TDD Skill` deste `architecture.md`.
+2. Criar `.aioson/skills/process/secure-tdd/SKILL.md` com:
+   - gatilhos de carregamento por classificação
+   - loop adversarial curto
+   - regra explícita de "server-side is the authority"
+   - mapeamento para `SEC-SBD-*` relevantes
+3. Criar `references/node-express.md` com templates mínimos executáveis.
+4. Criar `references/nextjs.md` com templates mínimos executáveis.
+5. Criar `references/planned-stacks.md` registrando Laravel/Pest, Django, Rails e FastAPI como planned/minimal references.
+6. Propagar a mesma árvore para `template/.aioson/skills/process/secure-tdd/`.
+7. Atualizar `.aioson/agents/dev.md` e `template/.aioson/agents/dev.md` para carregar `secure-tdd` depois de `aioson-spec-driven` quando a feature for MEDIUM com superfície sensível.
+8. Se houver ajuste em `@deyvin`, mantê-lo opcional e estritamente de continuidade; não transformar `@deyvin` em rota principal de features novas.
+9. Validar com checagens textuais/contratuais:
+   - arquivos existem nos dois caminhos
+   - `SKILL.md` menciona ordem de carregamento e classificação
+   - refs Node/Next.js existem
+   - stacks planejados aparecem sem bloquear v1
+10. Atualizar `spec-secure-by-default.md` com as decisões da Phase 3 e os gatilhos de carregamento definidos.
+
+### Phase 4 (ativo apos Gate B desta rev)
+
+1. Ler `plan-pentester-app-target.md`, `architecture.md` § Phase 4 e os contratos existentes de `@pentester`.
+2. Atualizar `.aioson/agents/pentester.md` e `template/.aioson/agents/pentester.md` para suportar `target_mode=framework_target|app_target`.
+3. Manter o schema de findings existente; adicionar `target_mode` e `target_scope` apenas no `review_contract`.
+4. Introduzir o catalogo de surfaces `app_target_*` no prompt do `@pentester`, separado das surfaces de framework.
+5. Tornar `attack_path` obrigatorio para findings `app_target` `high`/`critical`.
+6. Atualizar `.aioson/agents/manifests/pentester.manifest.json` e template correspondente para declarar `framework_target` e `app_target` como activation modes aceitos.
+7. Se necessario, adicionar `agent:invoke` como alias fino em `src/cli.js` / `src/commands/agents.js`, reutilizando `agent:prompt` e o runtime atual.
+8. Nao criar novo executor, novo artifacto de findings, nem nova familia `pentest:*`.
+9. Adicionar testes cobrindo:
+   - separacao entre `framework_target` e `app_target`
+   - `app_target` sem `--feature` ou `--scope` falha cedo
+   - findings `high`/`critical` sem `attack_path` viram `needs_validation`
+   - artifacto continua valido para `@qa` / `handoff-contract`
+10. Atualizar `spec-secure-by-default.md` com as decisoes da Phase 4 e os triggers finais do `@qa`.
+
+## 10. QA Verification Plan
+
+### Phase 1 (executada — verdict PASS)
+
+`@qa` verificou:
+- `AC-SBD-001` a `AC-SBD-014` em `conformance-secure-by-default.yaml`.
+- Article VII é append-only e não renumera artigos existentes.
+- Rule frontmatter não inclui agentes fora de `analyst`, `architect`, `dev`, `qa`.
+- Controles obrigatórios existem por ID.
+- Nenhum arquivo não permitido foi criado em `.aioson/context/`.
+- Phase 1 não introduziu alterações em `src/` sem necessidade.
+
+### Phase 2 (a executar após @dev concluir)
+
+`@qa` deve verificar contra `plan-cli-security-scan-audit.md`:
+- AC-SBD-2.1: `aioson security:scan . --stage=analyst` retorna exit code 0 com stdout determinístico em projeto limpo.
+- AC-SBD-2.2: `--stage=dev` detecta secret real (fixture com Stripe live key dummy fora da allowlist), `.env.local` em local proibido e `npm audit` advisory de pacote vulnerável simulado.
+- AC-SBD-2.3: `aioson security:audit . --slug=<slug>` lê os 5 artefatos canônicos e produz JSON conformante ao schema.
+- AC-SBD-2.4: Finding High/Critical em projeto MEDIUM retorna exit 10; em MICRO retorna exit 0 com nota (advisory).
+- AC-SBD-2.5: Política por classificação respeita Phase 1 — MICRO nunca bloqueia, SMALL roda scan sem bloquear, MEDIUM bloqueia em High/Critical.
+- AC-SBD-2.6: Em modo direct LLM (CLI ausente simulado), agente segue checklist da rule e devlog registra limitação — sem falsificar findings.
+- AC-SBD-2.7: Comandos não rodam `git rebase`, `git filter-branch`, `git push`, nem alteram `.git/`. Verificar via auditoria do código + teste com working tree dirty antes/depois.
+- Schema: `security-findings-{slug}.json` valida contra o contrato `review_contract` (scope_mode, evidence_policy, findings_artifact_path presentes).
+- Determinismo: rodar mesmo input duas vezes produz JSON byte-identical exceto `generated_at` (estável modulo timestamp).
+- Idempotência: `append-or-replace` não duplica findings entre execuções consecutivas.
+- Fixtures: `tests/fixtures/security/` deve incluir cenário com dummy secret na allowlist (deve ser ignorado), secret real (deve ser detectado), feature sem superfície sensível (audit retorna 0).
+
+### Phase 3 (a executar após @dev concluir)
+
+`@qa` deve verificar contra `plan-secure-tdd-skill.md`:
+- AC-SBD-3.1: `secure-tdd/SKILL.md` existe e descreve um ciclo TDD adversarial em passos claros.
+- AC-SBD-3.2: `references/node-express.md` e `references/nextjs.md` existem e contêm templates mínimos concretos.
+- AC-SBD-3.3: Laravel/Pest, Django, Rails e FastAPI aparecem como referências planejadas/minimais em `planned-stacks.md`, sem bloquear v1.
+- AC-SBD-3.4: skill diz explicitamente que frontend nunca é autoridade de validação.
+- AC-SBD-3.5: skill cobre IDOR, race condition, auth bypass, input limits, upload validation e external URL sanitization.
+- AC-SBD-3.6: `@dev` prompt/template carrega `secure-tdd` como complemento a `aioson-spec-driven`, não substituição.
+- Verificar que a skill não cria execução fora do workflow e não tenta invocar `@pentester` ou runtime por conta própria.
+
+### Phase 4 (a executar apos @dev concluir)
+
+`@qa` deve verificar contra `plan-pentester-app-target.md`:
+- AC-SBD-4.1: `app_target` tem surfaces explicitas A01/A02/A03/A04/A07 via `surface_type` dedicados.
+- AC-SBD-4.2: `app_target` nao mistura `memory_context`, `tool_invocation`, `delegation_handoff`, `protocol_contract`, `secret_handling` ou `runtime_permissions` sem `cross_scope_reason`.
+- AC-SBD-4.3: findings incluem `severity`, `affected_artifacts`, `attack_path`, `preconditions`, `reproduction_steps`, `evidence`, `impact`, `suggested_fix` e `recommended_gate_status`.
+- AC-SBD-4.4: `@pentester` nao aplica auto-fix nem altera ownership do finding.
+- AC-SBD-4.5: `@qa` consegue pular a invocacao com rationale quando nao ha superficie sensivel.
+- AC-SBD-4.6: `.aioson/context/security-findings-{slug}.json` continua sendo a unica fonte de verdade e permanece valida para `@qa` e `handoff-contract`.
+
+## 11. Explicit Non-Goals and Deferred Items
+
+- Skill `secure-tdd`: Phase 3.
+- `@pentester app_target` e `attack_path` em findings: Phase 4.
+- Runtime events `security_*` e Gate D blocking automation: Phase 5.
+- Hooks automáticos `.claude/settings.json`: deferido para Phase 5 (default preferido é CLI workflow-portable, não hook por cliente).
+- Web3/dapp security surfaces: v2.
+- Honeypots/jump scares/deception: fora do MVP.
+- Auto-fix de findings: fora do MVP.
+- Substituição de `npm audit` por scanner próprio: fora do MVP — usar a ferramenta nativa.
+- LLM dentro de `security:scan` ou `security:audit`: explicitamente proibido (decisão `tool-first` do PRD; preserva custo zero de tokens).
+
+## 12. Handoff
+
+### Phase 1 → @qa
+`@qa` aprovou Phase 1 em 2026-04-28 (PASS, 0 Critical/High, 2 Low aceitos como residuais).
+
+### Phase 2 → @dev
+`@dev` pode implementar Phase 2 sem tomar decisões de produto adicionais. Decisões arquiteturais já fixadas neste documento:
+- Layout: 2 commands + lib compartilhada em `src/lib/security/`.
+- Schema canônico de findings (versão 1.0.0).
+- Exit codes 0/10/11/12/13.
+- Allowlist de dummies via marcadores explícitos.
+- `npm audit` opcional, falha de rede vira inconclusive.
+- Sem alteração de história git.
+
+Se `@dev` encontrar caso que a tabela de exit codes não cobre, retornar 11 (inconclusive) e documentar no spec — **nunca** inventar exit code novo sem revisar este architecture.md.
+
+### Phase 3 → @dev
+`@dev` pode implementar Phase 3 sem reabrir produto ou requirements. Decisões arquiteturais já fixadas neste documento:
+- `secure-tdd` é uma process skill em `.aioson/skills/process/secure-tdd/`, com espelho no template.
+- Entry point curto em `SKILL.md`; exemplos de stack em `references/`.
+- Node/Express e Next.js são os únicos templates completos exigidos no v1.
+- Laravel/Pest, Django, Rails e FastAPI entram como planned/minimal references, não blockers.
+- Ordem de carregamento: `aioson-spec-driven` primeiro, `secure-tdd` depois, só quando classificação/superfície justificarem.
+- A skill complementa `security:scan`; não substitui scan, audit, pentester ou runtime.
+
+### Phase 4 → @dev
+`@dev` pode implementar Phase 4 sem reabrir produto ou requirements. Decisoes arquiteturais ja fixadas neste documento:
+- `app_target` reutiliza o envelope atual de `security-findings-{slug}.json`; nao existe segundo schema.
+- A separacao `framework_target` vs `app_target` e feita por `review_contract.target_mode` e por `surface_type`, nunca por arquivo novo.
+- `app_target` usa cinco surfaces dedicadas: ownership/IDOR, secrets/crypto, injection/XSS, insecure design/race/enumeration, auth/rate limiting.
+- Findings `app_target` `high`/`critical` exigem `attack_path` + evidencia segura completa; sem isso viram `needs_validation`.
+- `agent:invoke` deve ser implementado, se necessario, como wrapper fino sobre `agent:prompt` e o runtime atual.
+- `@qa` continua sendo o gate owner; `@pentester` detecta e persiste, mas nao fecha finding nem aplica auto-fix.
+
+> **Gate B (Phase 1):** Architecture approved — @dev can proceed.
+> **Gate B (Phase 2):** Architecture approved — @dev can proceed.
+> **Gate B (Phase 3):** Architecture approved — @dev can proceed.
+> **Gate B (Phase 4):** Architecture approved — @dev can proceed.

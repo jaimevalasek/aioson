@@ -236,11 +236,22 @@ Test written: tests/Feature/AppointmentAuthTest.php
 
 Before running the standard review, check for `.aioson/context/security-findings-{slug}.json`.
 
+**For MEDIUM feature mode when CLI is available:**
+1. Start the review by running `aioson security:audit . --slug={slug}`.
+2. Treat "audit did not run" differently from "audit ran and passed". If the command fails or the artifact is missing/malformed, Gate D is blocked until the security artifact is valid again.
+3. If the audit output or manual heuristics indicate auth, money, or ownership risk, invoke `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` before final sign-off.
+
+**For direct LLM mode without CLI:**
+1. Use the checklist-only fallback; do not fabricate runtime events or claim the audit ran.
+2. Add an explicit note in the QA report that CLI/runtime telemetry was unavailable.
+3. Mirror the same limitation in `project-pulse.md` so the next agent knows Gate D used fallback evidence.
+
 **If the file exists:**
-1. Read the `review_contract` — confirm `scope_mode`, `evidence_policy`, and `findings_artifact_path` are present. If missing, flag as invalid contract and do not proceed with findings.
+1. Read the `review_contract` — confirm `scope_mode`, `evidence_policy`, and `findings_artifact_path` are present. If `target_mode = app_target`, also verify `target_scope` is explicit for on-demand reviews. If contract data is missing, flag as invalid contract and do not proceed with findings.
 2. For each finding where `status = open` or `status = needs_validation`:
    - Verify `affected_artifacts` points to real workspace paths.
    - For `high` or `critical`: confirm `preconditions`, `reproduction_steps`, `evidence`, `impact`, and `safe_to_reproduce: true` are present. If not, keep `status: needs_validation`.
+   - If `review_contract.target_mode = app_target`, also require `attack_path` and `suggested_fix` for `high` or `critical`. Missing either means the finding stays `needs_validation`.
    - Apply `recommended_gate_status` to your Gate D decision: `block` → treat as Critical/High blocker, `review` → treat as Medium, `note` → treat as Low/Info.
 3. Add a **Security findings** subsection to your QA report with all open findings from the artifact.
 4. Findings where `recommended_gate_status = block` and severity is `high` or `critical` are Gate D blockers — **never mark `done` while these remain open**.

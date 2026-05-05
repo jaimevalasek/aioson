@@ -21,6 +21,77 @@ function nowDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function nowTimestamp() {
+  return new Date().toISOString();
+}
+
+function quoteYaml(value) {
+  return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+function extractRecentActivities(content) {
+  if (!content) return [];
+  const activityMatch = content.match(/## Recent Activity\n([\s\S]*?)(?=\n##|\s*$)/);
+  if (!activityMatch) return [];
+  return activityMatch[1]
+    .split('\n')
+    .filter((line) => line.trim().startsWith('-'))
+    .slice(-2);
+}
+
+async function updateProjectPulseFile(pulsePath, slug, verdict, summary, date) {
+  const existing = await readFileSafe(pulsePath);
+  if (!existing) return false;
+
+  const fm = parseFrontmatter(existing);
+  const gate = `Gate D: ${verdict === 'PASS' ? 'approved' : 'rejected'}`;
+  const recentActivities = extractRecentActivities(existing);
+  let activityLine = `- ${date} @qa → ${slug} (${gate}) VERDICT: ${verdict}`;
+  if (summary) activityLine += `: ${summary}`;
+  const dedupedActivities = recentActivities.filter((line) => line !== activityLine);
+
+  const activeFeature = verdict === 'PASS' ? '(none)' : slug;
+  const activeWork = verdict === 'PASS' ? '' : `${slug} → @qa → qa_failed`;
+  const blockers = verdict === 'PASS'
+    ? 'none'
+    : (summary || fm.blockers || 'QA blockers pending');
+  const nextRecommendation = verdict === 'PASS'
+    ? '@product start the next feature'
+    : '@dev fix QA blockers and return to @qa';
+
+  const lines = [
+    '---',
+    `last_updated: ${nowTimestamp()}`,
+    'last_agent: qa',
+    `last_gate: ${gate}`,
+    `active_feature: ${activeFeature}`,
+    `active_work: ${quoteYaml(activeWork)}`,
+    `blockers: ${quoteYaml(blockers)}`,
+    `next_recommendation: ${quoteYaml(nextRecommendation)}`,
+    '---',
+    '',
+    '# Project Pulse',
+    '',
+    '## Status',
+    '',
+    '- **Last agent:** @qa',
+    `- **Last gate:** ${gate}`,
+    `- **Active feature:** ${activeFeature}`,
+    `- **Active work:** ${activeWork || 'none'}`,
+    `- **Blockers:** ${blockers}`,
+    `- **Next:** ${nextRecommendation}`,
+    '',
+    '## Recent Activity',
+    '',
+    ...dedupedActivities,
+    activityLine,
+    ''
+  ];
+
+  await fs.writeFile(pulsePath, lines.join('\n'), 'utf8');
+  return true;
+}
+
 async function updateSpecFile(specPath, verdict, residual, date) {
   const content = await readFileSafe(specPath);
   if (!content) return false;
@@ -141,17 +212,17 @@ async function runFeatureClose({ args, options = {}, logger }) {
 
   // 3. Update project-pulse.md
   const pulsePath = path.join(dir, 'project-pulse.md');
-  const pulseContent = await readFileSafe(pulsePath);
-  if (pulseContent) {
-    const fm = parseFrontmatter(pulseContent);
-    const status = verdict === 'PASS' ? 'closed' : 'qa_failed';
-    const updatedPulse = pulseContent
-      .replace(/active_feature:\s*.+/, `active_feature: (none)`)
-      .replace(/active_work:\s*".+"/, `active_work: ""`)
-      .replace(/last_agent:\s*.+/, `last_agent: qa`)
-      .replace(/last_gate:\s*.+/, `last_gate: Gate D: ${verdict === 'PASS' ? 'approved' : 'rejected'}`);
-    await fs.writeFile(pulsePath, updatedPulse, 'utf8');
+  const pulseUpdated = await updateProjectPulseFile(
+    pulsePath,
+    slug,
+    verdict,
+    residual || notes || null,
+    today
+  );
+  if (pulseUpdated) {
     updates.push('project-pulse.md: updated active work');
+  } else {
+    updates.push('project-pulse.md: not found (skipped)');
   }
 
   // 4. Auto-archive on PASS (default-on — user never has to remember).

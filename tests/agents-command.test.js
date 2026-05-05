@@ -293,3 +293,105 @@ test('agent:prompt keeps workflow routing when project context is invalid but wo
 
   await assert.doesNotReject(() => fs.access(path.join(dir, 'aioson-logs')));
 });
+
+test('agent:prompt includes pentester app_target activation context', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+
+  const result = await runAgentPrompt({
+    args: ['pentester', dir],
+    options: {
+      tool: 'codex',
+      mode: 'app_target',
+      feature: 'secure-by-default',
+      scope: 'refund-flow'
+    },
+    logger,
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.agent, 'pentester');
+  assert.match(result.prompt, /Requested target mode: app_target\./);
+  assert.match(result.prompt, /Feature slug: secure-by-default\./);
+  assert.match(result.prompt, /Requested scope: refund-flow\./);
+  assert.match(result.prompt, /app_target_ownership_idor/);
+});
+
+test('agent:prompt records pentester_app_target_invoked in runtime for app_target mode', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+
+  const result = await runAgentPrompt({
+    args: ['pentester', dir],
+    options: {
+      tool: 'codex',
+      mode: 'app_target',
+      feature: 'secure-by-default',
+      scope: 'refund-flow'
+    },
+    logger,
+    t
+  });
+
+  assert.equal(result.ok, true);
+  const runtime = await openRuntimeDb(dir, { mustExist: true });
+  try {
+    const event = runtime.db.prepare(`
+      SELECT event_type, phase, status, payload_json
+      FROM execution_events
+      WHERE event_type = 'pentester_app_target_invoked'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `).get();
+
+    assert.equal(event.event_type, 'pentester_app_target_invoked');
+    assert.equal(event.phase, 'security');
+    assert.equal(event.status, 'queued');
+    const payload = JSON.parse(event.payload_json);
+    assert.equal(payload.target_mode, 'app_target');
+    assert.equal(payload.feature_slug, 'secure-by-default');
+    assert.equal(payload.target_scope, 'refund-flow');
+  } finally {
+    runtime.db.close();
+  }
+});
+
+test('agent:prompt rejects pentester app_target without feature and scope', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+
+  await assert.rejects(
+    () => runAgentPrompt({
+      args: ['pentester', dir],
+      options: {
+        tool: 'codex',
+        mode: 'app_target',
+        scope: 'auth-flow'
+      },
+      logger,
+      t
+    }),
+    /requires --feature=<slug>/
+  );
+
+  await assert.rejects(
+    () => runAgentPrompt({
+      args: ['pentester', dir],
+      options: {
+        tool: 'codex',
+        mode: 'app_target',
+        feature: 'secure-by-default'
+      },
+      logger,
+      t
+    }),
+    /requires --scope=<area>/
+  );
+});

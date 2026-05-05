@@ -18,6 +18,7 @@ const {
 } = require('../execution-gateway');
 const { readAutonomyProtocol, resolveEffectiveMode } = require('../autonomy-policy');
 const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-manifests');
+const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 
 const WORKFLOW_AGENT_IDS = new Set([
   'setup',
@@ -30,6 +31,52 @@ const WORKFLOW_AGENT_IDS = new Set([
   'dev',
   'qa'
 ]);
+
+function normalizePentesterTargetMode(input) {
+  const mode = String(input || '').trim().toLowerCase();
+  if (!mode) return null;
+  if (mode === 'framework_target' || mode === 'app_target') return mode;
+  return '__invalid__';
+}
+
+function buildPentesterActivationContext(options, t) {
+  const targetMode = normalizePentesterTargetMode(options.mode);
+  if (targetMode === '__invalid__') {
+    throw new Error(t('agents.prompt_invalid_target_mode', { mode: options.mode }));
+  }
+
+  const featureSlug = String(options.feature || options.slug || '').trim();
+  const scope = String(options.scope || '').trim();
+
+  if (targetMode !== 'app_target' && !targetMode) return '';
+
+  if (targetMode === 'app_target' && !featureSlug) {
+    throw new Error(t('agents.prompt_missing_feature_for_app_target'));
+  }
+
+  if (targetMode === 'app_target' && !scope) {
+    throw new Error(t('agents.prompt_missing_scope_for_app_target'));
+  }
+
+  const lines = [`Requested target mode: ${targetMode}.`];
+  if (featureSlug) lines.push(`Feature slug: ${featureSlug}.`);
+  if (scope) lines.push(`Requested scope: ${scope}.`);
+
+  if (targetMode === 'app_target') {
+    lines.push(
+      'Use only the app_target surface catalog (`app_target_ownership_idor`, `app_target_secrets_crypto`, `app_target_injection_xss`, `app_target_insecure_design_race`, `app_target_auth_rate_limit`).'
+    );
+    lines.push(
+      'Do not mix framework surfaces unless the feature explicitly touches AIOSON runtime boundaries and you record a `cross_scope_reason`.'
+    );
+  } else {
+    lines.push(
+      'Preserve the legacy framework surface catalog (`memory_context`, `tool_invocation`, `delegation_handoff`, `protocol_contract`, `secret_handling`, `runtime_permissions`).'
+    );
+  }
+
+  return lines.join('\n');
+}
 
 async function resolveLocaleForTarget(targetDir, options) {
   const fromOption = options.language || options.lang;
@@ -96,6 +143,8 @@ async function runAgentPrompt({ args, options, logger, t }) {
   let instructionPath = null;
   let prompt = null;
   let effectiveMode = null;
+  let activationContext = '';
+  let pentesterTargetMode = null;
 
   if (WORKFLOW_AGENT_IDS.has(requestedAgent)) {
     const loaded = await loadOrCreateState(targetDir, options);
@@ -123,6 +172,10 @@ async function runAgentPrompt({ args, options, logger, t }) {
 
   if (!prompt) {
     instructionPath = await resolveExistingInstructionPath(targetDir, promptAgent, locale);
+    if (promptAgent.id === 'pentester') {
+      pentesterTargetMode = normalizePentesterTargetMode(options.mode);
+      activationContext = buildPentesterActivationContext(options, t);
+    }
     const autonomyProtocol = await readAutonomyProtocol(targetDir);
     const manifest = await readAgentManifest(targetDir, promptAgent.id);
     effectiveMode = resolveEffectiveMode({
@@ -136,7 +189,8 @@ async function runAgentPrompt({ args, options, logger, t }) {
       instructionPath,
       interactionLanguage: locale,
       autonomyMode: effectiveMode,
-      capabilitySummary: buildAgentCapabilitySummary(manifest, tool)
+      capabilitySummary: buildAgentCapabilitySummary(manifest, tool),
+      activationContext
     });
     const runtimeClass = classifyDirectAgentRuntime(promptAgent.id);
     const handoffLabel = runtimeClass.source === 'squad_session'
@@ -157,6 +211,28 @@ async function runAgentPrompt({ args, options, logger, t }) {
 
   logger.log(t('agents.prompt_title', { agent: promptAgent.id, tool, locale }));
   logger.log(prompt);
+
+  if (
+    promptAgent.id === 'pentester' &&
+    pentesterTargetMode === 'app_target' &&
+    runtime &&
+    runtime.runKey
+  ) {
+    await emitSecurityRuntimeEvent({
+      targetDir,
+      runKey: runtime.runKey,
+      eventType: 'pentester_app_target_invoked',
+      message: `@pentester app_target invoked for ${String(options.feature || options.slug || '').trim()}`,
+      status: 'queued',
+      payload: {
+        target_mode: 'app_target',
+        feature_slug: String(options.feature || options.slug || '').trim(),
+        target_scope: String(options.scope || '').trim(),
+        tool,
+        locale
+      }
+    });
+  }
 
   return {
     ok: true,

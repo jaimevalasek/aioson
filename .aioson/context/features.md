@@ -9,3 +9,4 @@
 | sdlc-process-upgrade | done | 2026-04-24 | 2026-04-24 |
 | context-archive-done | done | 2026-04-24 | 2026-04-24 |
 | feature-dossier | done | 2026-04-28 | 2026-04-28 |
+| secure-by-default | done | 2026-04-28 | 2026-04-29 |

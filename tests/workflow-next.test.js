@@ -8,7 +8,8 @@ const path = require('node:path');
 const { createTranslator } = require('../src/i18n');
 const {
   runWorkflowNext,
-  EVENTS_RELATIVE_PATH
+  EVENTS_RELATIVE_PATH,
+  loadOrCreateState
 } = require('../src/commands/workflow-next');
 const { openRuntimeDb } = require('../src/runtime-store');
 const { HANDOFF_PROTOCOL_RELATIVE_PATH } = require('../src/session-handoff');
@@ -214,6 +215,41 @@ test('workflow:next syncs workflow task, runs, and canonical events into runtime
   }
 
   await assert.doesNotReject(() => fs.access(path.join(dir, 'aioson-logs')));
+});
+
+test('loadOrCreateState reconciles stale persisted stages when a later stage is already completed', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+
+  const statePath = path.join(dir, '.aioson/context/workflow.state.json');
+  await writeFileEnsured(
+    statePath,
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'dev', 'pentester', 'qa'],
+      current: 'pentester',
+      next: 'pentester',
+      completed: ['product', 'analyst', 'dev', 'qa'],
+      skipped: [],
+      featureSlug: 'secure-by-default',
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const loaded = await loadOrCreateState(dir);
+  assert.equal(loaded.created, false);
+  assert.equal(loaded.state.current, null);
+  assert.equal(loaded.state.next, null);
+  assert.deepEqual(loaded.state.skipped, ['pentester']);
+  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'dev', 'qa']);
+
+  const persisted = JSON.parse(await fs.readFile(statePath, 'utf8'));
+  assert.equal(persisted.current, null);
+  assert.equal(persisted.next, null);
+  assert.deepEqual(persisted.skipped, ['pentester']);
 });
 
 test('workflow:next writes handoff-protocol.json in parallel with last-handoff.json', async () => {

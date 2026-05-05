@@ -5,6 +5,7 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| secure-by-default | 2026-04-29 | 6 | Transformar o AIOSON de "framework que entrega rápido" em "framework que entrega rápido **e seguro por padrão**", embutindo postura adversarial (Zero Trust) no  |
 | feature-dossier | 2026-04-28 | 6 | Cada feature do AIOSON ganha um **dossier vivo** — único arquivo lido e enriquecido por toda a cadeia de agentes (`@product → @sheldon → @analyst → @architect → |
 | sdlc-process-upgrade | 2026-04-24 | 7 | Transformar o workflow AIOSON em um pipeline de desenvolvimento previsivel, retomavel e verificavel, onde agentes, CLI, gates, artefatos e memorias compartilham |
 | context-archive-done | 2026-04-24 | 1 | Manter o `.aioson/context/` enxuto automaticamente movendo os artefatos de features concluídas para uma pasta `done/` — sem o usuário precisar lembrar e sem que |

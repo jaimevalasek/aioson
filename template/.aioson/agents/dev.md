@@ -49,7 +49,7 @@ Read `.aioson/context/dev-state.md` if it exists.
 - PRDs of features already marked `done` in `features.md`
 - More than 5 files total before writing your first code change
 
-Breaking this rule = context bloat. If you've read 5 files without writing code: stop, list what you read, ask what to focus on.
+If you've read 5 files without writing code: stop and ask what to focus on.
 
 ## Feature mode detection
 
@@ -65,13 +65,7 @@ Read in this order before writing any code:
 6. `spec.md` — project-level memory: conventions and patterns (if present)
 7. `discovery.md` — existing entity map (to avoid conflicts with existing tables)
 
-During implementation, update `spec-{slug}.md` after each significant decision. Do not touch `spec.md` unless the change affects the whole project architecture.
-
-Commit messages reference the feature slug:
-```
-feat(shopping-cart): add cart_items migration
-feat(shopping-cart): implement AddToCart action
-```
+During implementation, update `spec-{slug}.md` after each significant decision. Touch `spec.md` only for project-wide architecture changes.
 
 **Project mode** — no `prd-{slug}.md`:
 Proceed with the standard required input below.
@@ -84,12 +78,11 @@ Before starting any implementation, check whether an implementation plan exists:
 2. **Feature mode:** look for `.aioson/context/implementation-plan-{slug}.md`
 
 **If plan exists AND status = approved:**
-- Follow the plan's execution strategy phase by phase
-- Read only the files listed in the context package (in the order specified)
-- After each phase, update `spec.md` with decisions taken AND check the plan's checkpoint criteria
-- If you encounter a contradiction with the plan, STOP and ask the user — do not silently override
-- Decisions marked as "pré-tomadas" in the plan are FINAL — do not re-discuss
-- Decisions marked as "adiadas" are yours to make — register them in `spec.md`
+- Follow it phase by phase.
+- Read only the listed context package.
+- Update `spec.md` after each phase and check the plan checkpoints.
+- If the plan contradicts reality, stop and ask.
+- "pré-tomadas" are final; "adiadas" are yours to decide and record.
 
 **Sheldon phased plan detection (RDA-04):**
 
@@ -102,34 +95,26 @@ Also check `.aioson/plans/{slug}/manifest.md` before any implementation:
 - **Deferred decisions** in the manifest are yours to make — register your choice in `spec.md`
 
 **If plan exists AND status = draft:**
-- Tell the user: "There's a draft implementation plan. Want me to review and approve it before starting?"
-- If approved → change status to `approved` and follow it
-- If user wants changes → adjust the plan first
+- Ask whether to review/approve it before starting.
+- If approved, change status to `approved` and follow it.
+- If not, adjust the plan first.
 
 **If plan does NOT exist BUT prerequisites exist:**
-Prerequisites = `architecture.md` (SMALL/MEDIUM) or at least one `prd.md`/`prd-{slug}.md`/`readiness.md`.
-
-- Tell the user: "I found spec artifacts but no implementation plan — plans are created by `@product` (for new features) or `@sheldon` (for phased work). Activate one of them to generate the plan before implementing."
-- Do NOT create the plan yourself.
-- If the user explicitly says to proceed without a plan → proceed with standard flow.
-- Do NOT ask repeatedly if the user already decided to proceed without a plan.
+- Tell the user the spec exists but the implementation plan is missing.
+- Plans come from `@product` or `@sheldon`; do not create them yourself.
+- If the user explicitly says to proceed without a plan, continue with the standard flow.
 
 **MICRO projects exception:**
-- For MICRO projects, an implementation plan is OPTIONAL
-- Only suggest if the user explicitly asks or if the spec looks unusually complex for MICRO
-- Never block MICRO implementation waiting for a plan
+- Implementation plans are optional.
+- Suggest one only if the user asks or the spec is unusually complex.
 
-**Stale plan detection:**
-If available: `aioson plan:stale . --feature={slug}` — STALE means regenerate. Otherwise: if plan source artifacts are newer than plan's `created` date, warn and ask to regenerate.
+**Stale plan detection:** if `aioson plan:stale . --feature={slug}` says `STALE`, regenerate. Otherwise warn when plan inputs are newer than the plan.
 
 ## Context size detection
 
 At the end of each phase: run `aioson preflight:context . --agent=dev` if available; otherwise flag if files read > 20, exchanges > 40, or context near limit.
 
-If flagged:
-> "Context is large. I recommend a new chat for the next phase. I can generate a handoff text."
-
-If confirmed, include: slug, completed phase, next phase, manifest path (`.aioson/plans/{slug}/manifest.md`), required context files, session decisions, and instruction: "activate `@dev` and inform you are continuing plan [slug] from Phase [N]".
+If flagged, recommend a new chat and offer a handoff with slug, completed phase, next phase, manifest path, required context files, and session decisions.
 
 ## Feature dossier
 
@@ -159,14 +144,8 @@ Do NOT load files "just in case." The full list below is the universe of files @
 
 If `framework_installed=true` in `project.context.md`:
 - Check whether `.aioson/context/discovery.md` exists.
-- **If missing:** ⚠ Alert the user before proceeding:
-  > Existing project detected but no discovery.md found.
-  > If local scan artifacts already exist (`scan-index.md`, `scan-folders.md`, `scan-<folder>.md`), activate `@analyst` now so it can turn them into `discovery.md`.
-  > If they do not exist yet, run at least:
-  > `aioson scan:project . --folder=src`
-  > Optional API path:
-  > `aioson scan:project . --folder=src --with-llm --provider=<provider>`
-- **If present:** read `skeleton-system.md` first (lightweight index), then `discovery.md` AND `spec.md` together — they are two halves of project memory. Never read one without the other.
+- If missing, alert the user before proceeding. Reuse existing scan artifacts via `@analyst` when available; otherwise run at least `aioson scan:project . --folder=src`.
+- If present, read `skeleton-system.md` first, then `discovery.md` and `spec.md` together.
 
 ## Context integrity
 
@@ -191,6 +170,10 @@ The detailed dev protocol is split into on-demand framework docs:
 
 - `.aioson/docs/dev/stack-conventions.md`
 - `.aioson/docs/dev/execution-discipline.md`
+
+## Security process skill loading
+
+If `.aioson/skills/process/secure-tdd/SKILL.md` exists and the active feature is MEDIUM with a sensitive surface (auth, ownership, money, uploads, external URLs, secrets/credentials, or sensitive storage boundaries), load `aioson-spec-driven` first when applicable, then `secure-tdd` and only one stack reference. For SMALL it is reduced and optional. For MICRO, never auto-load it.
 
 ## Deterministic preflight
 
@@ -231,13 +214,13 @@ These rules apply even if no extra dev doc was loaded:
 
 ## Auto-orchestração via CLI (execute when appropriate)
 
-You are encouraged to run `aioson` CLI commands via Bash to keep the workflow moving without waiting for the user to type them manually.
+Run `aioson` CLI commands yourself when that keeps the workflow moving.
 
 ### When to run
-1. **After finishing a significant implementation slice** — run `aioson workflow:next . --complete=dev`
-2. **If the gate blocks** — fix the error and re-run the same command (up to 3 attempts)
-3. **If the motor enters healing mode** — treat the injected error as your #1 priority, fix it, then run `aioson workflow:next . --complete=dev` again
-4. **Before telling the user you are done** — always attempt to complete the stage via CLI first
+1. After a significant implementation slice: `aioson workflow:next . --complete=dev`
+2. If the gate blocks: fix the error and retry the same command, up to 3 attempts
+3. If healing mode is active: fix the injected error first, then retry
+4. Before saying the stage is done: always attempt the CLI completion first
 
 ### Commands you can run
 ```bash
@@ -252,9 +235,9 @@ aioson workflow:next .
 ```
 
 ### Rules
-- **Report the result to the user** — tell them what command you ran and what the motor responded
-- **Do not loop infinitely** — max 3 auto-attempts per session
-- **If the command outputs a BLOCKED message, stop and fix** — do not tell the user "I'm done" while the stage is still blocked
+- Report the command and result to the user.
+- Max 3 auto-attempts per session.
+- If the command says `BLOCKED`, stop and fix it before claiming completion.
 
 ## Security findings consumption
 

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-04-28T05:03:43.462Z",
+  "session_ended_at": "2026-04-29T04:23:04.895Z",
   "last_agent": "@qa",
   "last_stage": "qa",
   "what_was_done": "Stage @qa completed.",
-  "what_comes_next": "Workflow is complete. No pending stages.",
-  "next_agent": null,
+  "what_comes_next": "Next stage: @pentester",
+  "next_agent": "@pentester",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
   "classification": "MEDIUM",
-  "feature_slug": "sdlc-process-upgrade"
+  "feature_slug": "secure-by-default"
 }

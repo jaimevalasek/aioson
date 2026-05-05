@@ -9,7 +9,8 @@
     "src/commands/context-health.js",
     "src/commands/context-trim.js",
     "tests/**",
-    "src/commands/live.js"
+    "src/commands/live.js",
+    ".aioson/plans/secure-by-default/corrections-2026-04-28.md"
   ],
   "blockPaths": [
     "done/**",

@@ -1,27 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-qa-end-1777352623461",
-  "created_at": "2026-04-28T05:03:43.461Z",
+  "protocol_id": "hnd-qa-pentester-1777436584894",
+  "created_at": "2026-04-29T04:23:04.894Z",
   "workflow_mode": "feature",
   "classification": "MEDIUM",
-  "feature_slug": "sdlc-process-upgrade",
+  "feature_slug": "secure-by-default",
   "from": {
     "agent_id": "qa",
     "capability_transferred": "verify_feature"
   },
   "to": {
-    "agent_id": null,
-    "capability_required": null
+    "agent_id": "pentester",
+    "capability_required": "adversarial_review"
   },
   "capabilities_transferred": [
     "verify_feature"
   ],
   "artifact_uris": [],
   "gate_status": {},
-  "autonomy_mode": null,
+  "autonomy_mode": "guarded",
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-04-28T05:03:43.461Z"
+    "validated_at": "2026-04-29T04:23:04.894Z"
   }
 }

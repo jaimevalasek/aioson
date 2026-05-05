@@ -1,0 +1,153 @@
+feature: secure-by-default
+classification: MEDIUM
+gate: A
+status: ready_for_architect
+generated_at: "2026-04-28T20:48:44-03:00"
+source_requirements: ".aioson/context/requirements-secure-by-default.md"
+checks:
+  - id: AC-SBD-001
+    requirement: REQ-SBD-001
+    preconditions:
+      - "Phase 1 implementation is being verified."
+    actions:
+      - "Inspect constitution or equivalent governance artifact."
+    expected_outcomes:
+      - "A Zero Trust by Default entry points to .aioson/rules/security-baseline.md."
+    negative_cases:
+      - "No governance entry exists."
+      - "Entry references a non-canonical path."
+  - id: AC-SBD-002
+    requirement: REQ-SBD-001
+    preconditions:
+      - ".aioson/rules/security-baseline.md exists."
+    actions:
+      - "Read YAML frontmatter."
+    expected_outcomes:
+      - "agents includes analyst, architect, dev and qa."
+    negative_cases:
+      - "Rule applies to product/copy/design agents by mistake."
+      - "Rule omits one technical workflow agent."
+  - id: AC-SBD-003
+    requirement: REQ-SBD-002
+    preconditions:
+      - "Security baseline rule exists."
+    actions:
+      - "Count stable security controls."
+    expected_outcomes:
+      - "At least eight controls exist or documented equivalents cover SEC-SBD-01 through SEC-SBD-08."
+    negative_cases:
+      - "Controls are prose-only without IDs."
+      - "Fewer than seven baseline controls exist."
+  - id: AC-SBD-004
+    requirement: REQ-SBD-002
+    preconditions:
+      - "Security controls are listed."
+    actions:
+      - "Verify metadata for each control."
+    expected_outcomes:
+      - "Each control declares severity, responsible agent, classification policy and expected evidence."
+    negative_cases:
+      - "A control cannot be tested because evidence is undefined."
+  - id: AC-SBD-005
+    requirement: REQ-SBD-003
+    preconditions:
+      - "Classification policy section exists."
+    actions:
+      - "Review MICRO, SMALL and MEDIUM behavior."
+    expected_outcomes:
+      - "MICRO is advisory, SMALL is scan-oriented and MEDIUM is audit-blocking."
+    negative_cases:
+      - "MICRO can be blocked by default."
+      - "MEDIUM lacks blocking behavior for High/Critical findings."
+  - id: AC-SBD-006
+    requirement: REQ-SBD-006
+    preconditions:
+      - "Baseline mentions security commands."
+    actions:
+      - "Compare scan and audit definitions."
+    expected_outcomes:
+      - "security:scan is static/tool-first and security:audit is feature-artifact/surface assessment."
+    negative_cases:
+      - "Scan and audit are treated as synonyms."
+  - id: AC-SBD-007
+    requirement: REQ-SBD-007
+    preconditions:
+      - "Pentester invocation policy exists."
+    actions:
+      - "Check trigger conditions."
+    expected_outcomes:
+      - "@qa may invoke @pentester app_target for auth, money, ownership or suspicious audit findings."
+    negative_cases:
+      - "Pentester is mandatory for every MEDIUM feature."
+      - "Pentester trigger is undefined."
+  - id: AC-SBD-008
+    requirement: REQ-SBD-005
+    preconditions:
+      - "Gate D blocking policy exists."
+    actions:
+      - "Review severity handling."
+    expected_outcomes:
+      - "Open High/Critical findings block MEDIUM Gate D."
+    negative_cases:
+      - "Low/Medium findings block unconditionally."
+      - "High/Critical findings are advisory only."
+  - id: AC-SBD-009
+    requirement: REQ-SBD-013
+    preconditions:
+      - "Baseline includes out-of-scope or non-goals."
+    actions:
+      - "Search for honeypot, jump scare or deception requirements."
+    expected_outcomes:
+      - "These techniques are excluded from MVP unless future PRD approves them."
+    negative_cases:
+      - "MVP requires deceptive endpoints by default."
+  - id: AC-SBD-010
+    requirement: REQ-SBD-012
+    preconditions:
+      - "Fallback behavior is documented."
+    actions:
+      - "Review direct LLM mode section."
+    expected_outcomes:
+      - "Fallback uses checklist-only verification, records limitation and does not fabricate runtime events."
+    negative_cases:
+      - "Agent is instructed to synthesize telemetry manually."
+  - id: AC-SBD-011
+    requirement: REQ-SBD-001
+    preconditions:
+      - "Project uses template sync."
+    actions:
+      - "Check implementation notes for template/.aioson/rules/security-baseline.md."
+    expected_outcomes:
+      - "Template sync implications are documented for @architect/@dev."
+    negative_cases:
+      - "Workspace rule exists but template propagation is ignored."
+  - id: AC-SBD-012
+    requirement: REQ-SBD-015
+    preconditions:
+      - "Security artifacts are created under .aioson/context/."
+    actions:
+      - "Validate file extensions."
+    expected_outcomes:
+      - "Markdown is used by default; only conformance YAML and security findings JSON use machine-readable exceptions."
+    negative_cases:
+      - "Unapproved JSON/YAML files are created in .aioson/context/."
+  - id: AC-SBD-013
+    requirement: REQ-SBD-006
+    preconditions:
+      - "Architect starts Phase 1 design."
+    actions:
+      - "Read requirements and deferred decisions."
+    expected_outcomes:
+      - "@architect can decide scan/audit/finding schema without reopening product scope."
+    negative_cases:
+      - "Architect must ask product what scan/audit means."
+  - id: AC-SBD-014
+    requirement: REQ-SBD-002
+    preconditions:
+      - "Dev starts Phase 1 implementation after architecture."
+    actions:
+      - "Read requirements and security control matrix."
+    expected_outcomes:
+      - "@dev can implement Phase 1 without inventing new business rules."
+    negative_cases:
+      - "Control ownership or evidence remains undefined."

@@ -180,6 +180,34 @@ test('agent:prompt --json returns structured payload without human logs', async 
   assert.equal(typeof parsed.prompt, 'string');
 });
 
+test('agent:invoke --json reuses agent:prompt runtime for pentester app_target', async () => {
+  const dir = await makeTempDir();
+  await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.aioson/context/project.context.md'),
+    `---\nproject_name: "demo"\nproject_type: "web_app"\nprofile: "developer"\nframework: "Next.js"\nframework_installed: true\nclassification: "MEDIUM"\nconversation_language: "en"\naioson_version: "1.2.1"\n---\n\n# Project Context\n`,
+    'utf8'
+  );
+
+  const cli = await runCli([
+    'agent:invoke',
+    'pentester',
+    dir,
+    '--tool=codex',
+    '--mode=app_target',
+    '--feature=secure-by-default',
+    '--scope=auth-flow',
+    '--json'
+  ]);
+  assert.equal(cli.code, 0);
+  assert.equal(cli.stderr.trim(), '');
+  const parsed = JSON.parse(cli.stdout);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.agent, 'pentester');
+  assert.match(parsed.prompt, /Requested target mode: app_target\./);
+  assert.match(parsed.prompt, /Requested scope: auth-flow\./);
+});
+
 test('workflow:next --json returns structured payload without human logs', async () => {
   const dir = await makeTempDir();
   await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });

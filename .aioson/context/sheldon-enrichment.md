@@ -1,43 +1,61 @@
 ---
-target_prd: .aioson/context/prd-pentester-agent.md
+target_prd: .aioson/context/prd-secure-by-default.md
 round_count: 1
-last_enrichment_date: 2026-04-17
-plan_path: .aioson/plans/pentester-agent/manifest.md
-sizing_score: 11
+last_enrichment_date: 2026-04-28
+plan_path: .aioson/plans/secure-by-default/manifest.md
+sizing_score: 17
 sizing_decision: phased-plan
 sources_used:
-  - plans/Upgrade-Agents/Plano-Definitivo-Implementacao-Protocol-Contracts.md
-  - researchs/Externalization-in-llm-agents-DEEP-ANALYSIS.md
-  - researchs/Externalization-in-llm-agents-ANALYSIS.md
+  - plans/desenvolvimento-seguro.txt
+  - plans/desenvolvimento-seguro-fonte.txt
   - researchs/pentester-agent-behavior-2026/summary.md
   - researchs/tool-first-agent-workflows-2026/summary.md
   - researchs/mcp-a2a-agent-security-2026/summary.md
+  - researchs/owasp-appsec-baseline-2026/summary.md
 improvements_applied:
-  - External phased plan created for pentester-agent with four implementation phases
-  - Research cache entries created for pentester behavior, tool-first workflows, and MCP/A2A security
+  - External phased plan created for secure-by-default with five implementation phases
+  - OWASP AppSec baseline research saved and incorporated into planning
+  - Open Questions converted into pre-made and deferred decisions for downstream agents
 improvements_discarded: []
+status: completed
 ---
 
-# Sheldon Enrichment Log
+# Sheldon Enrichment Log — secure-by-default
 
 ## Summary
-- Critical gap: the current PRD defines the agent but not the threat model, findings contract, activation policy, or runtime integration points.
-- Critical gap: AIOSON already has commands that can offload context packing, plan status and checkpoints, but `@analyst` and `@architect` do not operationalize them.
-- Important improvement: treat command-side automation as part of the feature plan because it materially improves token economy and execution consistency across agents.
+- O PRD está correto em direção e urgência, mas ainda mistura política, processo, CLI, skill, pentester e QA em um único bloco grande demais para execução direta.
+- O risco principal não é falta de ideia; é falta de contratos verificáveis para `security:scan`, `security:audit`, `secure-tdd`, `app_target` e bloqueio de Gate D.
+- A validação externa confirma OWASP Top 10 como lente de priorização, mas recomenda usar OWASP ASVS 5.0.0 ou IDs próprios versionados como contrato de auditoria verificável.
 
 ## Proposed improvements
 
 ### Critical gaps
-- Add a formal attack-surface matrix for `@pentester`: memory, tools, identity/auth, delegation/handoff, approval boundaries, protocol misuse.
-- Add a structured findings contract with severity, attack path, preconditions, proof, affected artifacts, suggested fix, and blocking signal for `@qa`.
-- Add workflow activation rules: when `@pentester` runs automatically, when it is on-demand, and what classes of feature skip it.
-- Add deterministic command usage for `@analyst`, `@architect` and `@dev` so the CLI resolves state that the LLM is currently re-deriving in prompt context.
+- Definir contrato de controles de segurança: cada item do baseline precisa de ID estável (`SEC-{slug}-{N}` ou ASVS v5.0.0 quando aplicável), severidade, evidência esperada, estágio executor e critério de bloqueio.
+- Separar `security:scan` de `security:audit`: scan é estático/tool-first para secrets/deps/config; audit é avaliação de artefatos e superfície de ataque por slug.
+- Formalizar o mapa de Attack Surface produzido por `@analyst`: endpoints autenticados, ownership, papéis, estado financeiro, uploads, URLs externas, secrets, integrações, storage e fallback sem CLI.
+- Definir o contrato `@qa` → `@pentester app_target`: trigger, escopo, input mínimo, output em `security-findings-{slug}.json`, severidade bloqueante e retorno para `@dev`.
+- Resolver as 6 Open Questions antes de `@analyst`, especialmente hook automático, fallback sem CLI, política brownfield e Web3/dapp scope.
 
 ### Important improvements
-- Add a tool-first runtime lane: `preflight:context`, `context-pack`, `implementation-plan status/stale`, `spec:checkpoint`, `workflow:status`, and gate inspection should become standard operating primitives for technical agents.
-- Add protocol-aware threat modeling so MCP/A2A/manifests/handoffs become pentest surfaces and architected trust boundaries.
-- Add evaluation loops so findings quality and command offloading gains can be measured instead of assumed.
+- Criar fases independentes: baseline/constituição, CLI scan/audit, secure-tdd, app_target pentester, QA/gates/telemetria.
+- Adicionar critérios de aceite verificáveis por fase, evitando "seguro por padrão" como afirmação não testável.
+- Incluir política de classificação em termos executáveis: MICRO advisory, SMALL scan automático, MEDIUM audit bloqueante e pentester condicional.
+- Registrar que honeypots/jump scares/deception ficam fora do MVP, exceto se virarem política explícita; isso reduz risco ético, ruído de QA e implementação teatral.
 
 ### Refinements
-- Enrich the externalization analyses with a dedicated section on deterministic CLI offloading, agentic security review, and token-economy metrics.
-- Add explicit guidance for `@analyst` and `@architect` on when to stop asking the model to rediscover state already computable by commands.
+- Trocar "OWASP onda 1" por uma matriz explícita: A01, A02, A03, A04, A07 no MVP; A05, A06, A09, A10 diferidos.
+- Converter métricas em eventos runtime concretos: `security_scan_completed`, `security_audit_completed`, `pentester_app_target_invoked`, `security_gate_blocked`.
+- Tratar Argon2id como recomendação preferencial com fallback por stack/compliance, não como exigência cega para todo runtime.
+
+## Sizing
+- Main entities above 3: +7
+- Delivery phases above 1: +8
+- External integrations/tooling: +1
+- Acceptance criteria complexity above 10: +1
+- Total: 17
+
+## Decision
+Plano faseado externo criado em `.aioson/plans/secure-by-default/`.
+
+## Gate A readiness
+Gate A ainda será formalizado por `@analyst`. O enriquecimento necessário para iniciar requirements está pronto.

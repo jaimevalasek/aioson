@@ -102,12 +102,51 @@ const CONTRACTS = {
 async function readSecurityFindings(findingsPath) {
   try {
     const content = await readFileSafe(findingsPath);
-    if (!content) return [];
+    if (!content) return { ok: false, reason: 'empty_file' };
     const data = JSON.parse(content);
-    return Array.isArray(data.findings) ? data.findings : [];
+    return {
+      ok: true,
+      reviewContract: data.review_contract && typeof data.review_contract === 'object'
+        ? data.review_contract
+        : null,
+      findings: Array.isArray(data.findings) ? data.findings : []
+    };
   } catch {
-    return [];
+    return { ok: false, reason: 'invalid_json' };
   }
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function validateReviewContract(reviewContract) {
+  const missing = [];
+
+  if (!reviewContract || typeof reviewContract !== 'object') {
+    return ['review_contract'];
+  }
+
+  for (const field of ['scope_mode', 'evidence_policy', 'findings_artifact_path']) {
+    if (!isNonEmptyString(reviewContract[field])) {
+      missing.push(field);
+    }
+  }
+
+  if (
+    reviewContract.target_mode === 'app_target' &&
+    !isNonEmptyString(reviewContract.target_scope)
+  ) {
+    missing.push('target_scope');
+  }
+
+  return missing;
+}
+
+function getFindingIdentifier(finding) {
+  if (isNonEmptyString(finding?.id)) return finding.id.trim();
+  if (isNonEmptyString(finding?.finding_id)) return finding.finding_id.trim();
+  return 'unknown-finding';
 }
 
 async function resolveArtifacts(contract, targetDir, state) {
@@ -115,6 +154,28 @@ async function resolveArtifacts(contract, targetDir, state) {
     ? contract.artifacts(targetDir, state)
     : contract.artifacts;
   return raw.map((p) => path.join(targetDir, p));
+}
+
+function parseFrontmatterValue(markdown, key) {
+  const fmMatch = String(markdown || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fmMatch) return null;
+  for (const line of fmMatch[1].split(/\r?\n/)) {
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    const currentKey = line.slice(0, idx).trim();
+    if (currentKey !== key) continue;
+    return line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+  }
+  return null;
+}
+
+async function resolveClassification(targetDir, state) {
+  const explicit = isNonEmptyString(state?.classification) ? state.classification.trim().toUpperCase() : null;
+  if (explicit) return explicit;
+  const contextPath = path.join(targetDir, '.aioson', 'context', 'project.context.md');
+  const content = await readFileSafe(contextPath);
+  const inferred = parseFrontmatterValue(content, 'classification');
+  return isNonEmptyString(inferred) ? inferred.trim().toUpperCase() : null;
 }
 
 async function checkGateApproval(targetDir, gateLetter, slug) {
@@ -186,6 +247,7 @@ async function validateHandoffContract(targetDir, state, stageName) {
   }
 
   const missing = [];
+  const classification = await resolveClassification(targetDir, state);
 
   // 1. Artifacts
   const artifactPaths = await resolveArtifacts(contract, targetDir, state);
@@ -218,18 +280,36 @@ async function validateHandoffContract(targetDir, state, stageName) {
       targetDir,
       `.aioson/context/security-findings-${state.featureSlug}.json`
     );
-    if (await fileExists(findingsPath)) {
-      const findings = await readSecurityFindings(findingsPath);
-      const blockers = findings.filter(
-        (f) =>
-          (f.status === 'open' || f.status === 'needs_validation') &&
-          f.recommended_gate_status === 'block' &&
-          (f.severity === 'high' || f.severity === 'critical')
-      );
-      if (blockers.length > 0) {
+    const requiresFindingsArtifact = state.mode === 'feature' && classification === 'MEDIUM';
+    if (!(await fileExists(findingsPath))) {
+      if (requiresFindingsArtifact) {
+        missing.push(`missing artifact: ${path.relative(targetDir, findingsPath)} (required for MEDIUM Gate D security audit)`);
+      }
+    } else {
+      const envelope = await readSecurityFindings(findingsPath);
+      if (!envelope || envelope.ok === false) {
         missing.push(
-          `security: ${blockers.length} unresolved high/critical finding(s) blocking gate: ${blockers.map((f) => f.id).join(', ')}`
+          `security: invalid findings artifact in ${path.relative(targetDir, findingsPath)} (${envelope?.reason || 'invalid_json'})`
         );
+      } else {
+        const reviewContractMissing = validateReviewContract(envelope.reviewContract);
+        if (reviewContractMissing.length > 0) {
+          missing.push(
+            `security: invalid review_contract in ${path.relative(targetDir, findingsPath)} (missing: ${reviewContractMissing.join(', ')})`
+          );
+        } else {
+          const blockers = envelope.findings.filter(
+            (f) =>
+              (f.status === 'open' || f.status === 'needs_validation') &&
+              f.recommended_gate_status === 'block' &&
+              (f.severity === 'high' || f.severity === 'critical')
+          );
+          if (blockers.length > 0) {
+            missing.push(
+              `security: ${blockers.length} unresolved high/critical finding(s) blocking gate: ${blockers.map((f) => getFindingIdentifier(f)).join(', ')}`
+            );
+          }
+        }
       }
     }
   }

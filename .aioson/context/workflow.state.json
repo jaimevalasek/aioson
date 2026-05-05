@@ -3,32 +3,24 @@
   "mode": "feature",
   "classification": "MEDIUM",
   "sequence": [
-    "setup",
     "product",
     "analyst",
-    "architect",
-    "ux-ui",
-    "pm",
-    "orchestrator",
     "dev",
+    "pentester",
     "qa"
   ],
   "current": null,
   "next": null,
   "completed": [
-    "setup",
     "product",
     "analyst",
-    "architect",
-    "pm",
-    "orchestrator",
     "dev",
     "qa"
   ],
   "skipped": [
-    "ux-ui"
+    "pentester"
   ],
-  "featureSlug": "sdlc-process-upgrade",
+  "featureSlug": "secure-by-default",
   "detour": null,
-  "updatedAt": "2026-04-28T05:03:43.423Z"
+  "updatedAt": "2026-04-29T04:49:52.384Z"
 }

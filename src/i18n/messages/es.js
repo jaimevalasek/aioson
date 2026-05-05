@@ -20,6 +20,8 @@ module.exports = {
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=es]',
     help_agent_prompt:
       'aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=<bcp47-tag>] [--locale=es]',
+    help_agent_invoke:
+      'aioson agent:invoke <agent> [path] [--tool=codex|claude|gemini|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=es]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=es]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-o-carpeta>] [--max-files=8] [--json] [--locale=es]',
@@ -268,6 +270,12 @@ module.exports = {
     prompt_usage_error:
       'Uso: aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=en|pt-BR|es|fr] [--locale=es]',
     prompt_unknown_agent: 'Agente desconocido: {agent}',
+    prompt_invalid_target_mode:
+      'Modo de objetivo de pentester no valido: {mode}. Usa framework_target o app_target.',
+    prompt_missing_feature_for_app_target:
+      'Pentester app_target requiere --feature=<slug> (o --slug=<slug>).',
+    prompt_missing_scope_for_app_target:
+      'Pentester app_target requiere --scope=<area>.',
     prompt_title: 'Prompt para el agente "{agent}" en la herramienta "{tool}" (locale: {locale}):'
   },
   context_validate: {

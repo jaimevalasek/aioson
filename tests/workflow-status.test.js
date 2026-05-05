@@ -119,3 +119,38 @@ test('workflow:status --suggest recommends completion when the handoff contract 
   assert.equal(result.contractCheck.ok, true);
   assert.deepEqual(result.pendingGates, []);
 });
+
+test('workflow:status reconciles stale active stages before building the suggestion', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'dev', 'pentester', 'qa'],
+      current: 'pentester',
+      next: 'pentester',
+      completed: ['product', 'analyst', 'dev', 'qa'],
+      skipped: [],
+      featureSlug: 'secure-by-default',
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const result = await runWorkflowStatus({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t: (key) => key
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.activeStage, null);
+  assert.equal(result.queuedNextStage, null);
+  assert.equal(result.suggestion.action, 'workflow_complete');
+  assert.equal(result.suggestion.reason, 'The workflow has no pending stage.');
+  assert.deepEqual(result.state.skipped, ['pentester']);
+});

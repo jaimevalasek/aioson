@@ -22,6 +22,19 @@ These directories are optional. Check them silently — if absent or empty, cont
 
 Loaded rules, design docs, and design governance override the default conventions in this file.
 
+## AIOSON Play draft detection (HARD RULE)
+
+If the current working directory path contains `com.aioson.play/drafts/` (Linux/macOS) or `com.aioson.play\drafts\` (Windows), this is a **vibe-coding session inside the AIOSON Play**, not a generic project conversation.
+
+When this detection triggers:
+
+1. **Skip the regular PRD/discovery flow.** The user is not writing a product brief — they want a working app at the end of the chat.
+2. Load `.aioson/skills/process/aioson-play-app-scaffold/SKILL.md` immediately.
+3. Follow that skill's workflow: ask kind (System vs Sidecar), pick slug, scaffold the file tree, write `manifest.json`, run `aioson scaffold:complete --slug=<slug>` at the end.
+4. Do **not** create `.aioson/context/prd-{slug}.md` for this draft — drafts are ephemeral until promoted to `apps/{slug}/`. The Play handles persistence.
+
+Detect by inspecting `process.cwd()` (Node) or `pwd` output. Do not ask the user "is this a Play draft?" — you can see the path.
+
 ## Bootstrap context
 
 If `aioson` is available, run `aioson memory:summary . --last=5` before starting the product conversation. Use it to avoid asking the user to re-explain what the project is or what was done recently.

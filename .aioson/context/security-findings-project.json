@@ -1,0 +1,358 @@
+{
+  "schema_version": "1.0.0",
+  "slug": "project",
+  "generated_at": "2026-04-29T01:10:29.682Z",
+  "generator": "aioson security:scan@1.0.0",
+  "review_contract": {
+    "scope_mode": "project",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-project.json"
+  },
+  "summary": {
+    "critical": 7,
+    "high": 6,
+    "medium": 0,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": [
+    {
+      "finding_id": "security-scan-SEC-SBD-05-008e53",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "tests/scan-project.test.js:82",
+      "affected_artifacts": [
+        "tests/scan-project.test.js"
+      ],
+      "preconditions": [
+        "File tests/scan-project.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/scan-project.test.js: pattern generic-token-assignment"
+      ],
+      "evidence": [
+        "Pattern \"Inline token / api_key assignment with long value\" matched at tests/scan-project.test.js:82"
+      ],
+      "impact": "Possible exposed credential (Inline token / api_key assignment with long value).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-0a098e",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "tests/git-guard.test.js:308",
+      "affected_artifacts": [
+        "tests/git-guard.test.js"
+      ],
+      "preconditions": [
+        "File tests/git-guard.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/git-guard.test.js: pattern openai-api-key"
+      ],
+      "evidence": [
+        "Pattern \"OpenAI API key\" matched at tests/git-guard.test.js:308"
+      ],
+      "impact": "Possible exposed credential (OpenAI API key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-15f878",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:200",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern generic-password-assignment"
+      ],
+      "evidence": [
+        "Pattern \"Inline password assignment\" matched at tests/commands/security-scan.test.js:200"
+      ],
+      "impact": "Possible exposed credential (Inline password assignment).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-4ad0cf",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "docs/pt/sandbox.md:60",
+      "affected_artifacts": [
+        "docs/pt/sandbox.md"
+      ],
+      "preconditions": [
+        "File docs/pt/sandbox.md is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on docs/pt/sandbox.md: pattern rsa-private-key"
+      ],
+      "evidence": [
+        "Pattern \"RSA / SSH private key block\" matched at docs/pt/sandbox.md:60"
+      ],
+      "impact": "Possible exposed credential (RSA / SSH private key block).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-4ebb79",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "tests/git-guard.test.js:72",
+      "affected_artifacts": [
+        "tests/git-guard.test.js"
+      ],
+      "preconditions": [
+        "File tests/git-guard.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/git-guard.test.js: pattern openai-api-key"
+      ],
+      "evidence": [
+        "Pattern \"OpenAI API key\" matched at tests/git-guard.test.js:72"
+      ],
+      "impact": "Possible exposed credential (OpenAI API key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-5bf3c4",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:127",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:127"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-633d3f",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "scripts/benchmark-optimizations.js:156",
+      "affected_artifacts": [
+        "scripts/benchmark-optimizations.js"
+      ],
+      "preconditions": [
+        "File scripts/benchmark-optimizations.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on scripts/benchmark-optimizations.js: pattern openai-api-key"
+      ],
+      "evidence": [
+        "Pattern \"OpenAI API key\" matched at scripts/benchmark-optimizations.js:156"
+      ],
+      "impact": "Possible exposed credential (OpenAI API key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-842db1",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:153",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:153"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-c2459d",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:171",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:171"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-c79884",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:79",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:79"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-cec6ac",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "open",
+      "scope": "tests/git-guard.test.js:190",
+      "affected_artifacts": [
+        "tests/git-guard.test.js"
+      ],
+      "preconditions": [
+        "File tests/git-guard.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/git-guard.test.js: pattern openai-api-key"
+      ],
+      "evidence": [
+        "Pattern \"OpenAI API key\" matched at tests/git-guard.test.js:190"
+      ],
+      "impact": "Possible exposed credential (OpenAI API key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-dc0083",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:98",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:98"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    },
+    {
+      "finding_id": "security-scan-SEC-SBD-05-f58b05",
+      "source": "security-scan",
+      "control_id": "SEC-SBD-05",
+      "severity": "critical",
+      "status": "open",
+      "scope": "tests/commands/security-scan.test.js:184",
+      "affected_artifacts": [
+        "tests/commands/security-scan.test.js"
+      ],
+      "preconditions": [
+        "File tests/commands/security-scan.test.js is staged or committed"
+      ],
+      "reproduction_steps": [
+        "grep -nE on tests/commands/security-scan.test.js: pattern stripe-live-key"
+      ],
+      "evidence": [
+        "Pattern \"Stripe live secret key\" matched at tests/commands/security-scan.test.js:184"
+      ],
+      "impact": "Possible exposed credential (Stripe live secret key).",
+      "suggested_fix": "Move to environment variable or vault. Rotate the credential. Add to .gitignore.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:scan@1.0.0"
+    }
+  ]
+}

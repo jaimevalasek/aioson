@@ -120,7 +120,106 @@ test('feature:close: updates project-pulse.md when it exists', async () => {
     path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
     'utf8'
   );
-  assert.ok(content.includes('qa') || content.includes('Gate D'));
+  assert.match(content, /^---\n/);
+  assert.ok(content.includes('last_agent: qa'));
+  assert.ok(content.includes('last_gate: Gate D: approved'));
+  assert.ok(content.includes('active_feature: (none)'));
+  assert.ok(content.includes('- **Active feature:** (none)'));
+  assert.ok(content.includes('- **Next:** @product start the next feature'));
+});
+
+test('feature:close: rebuilds malformed stale project-pulse.md into canonical format', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', [
+    'last_updated: 2026-04-29T09:08:00-03:00',
+    'last_agent: dev',
+    'last_gate: workflow-state reconciliation fix aplicado',
+    'active_feature: secure-by-default',
+    'active_work: "Engine agora reconcilia estados persistidos fora de ordem; falta re-review final"',
+    'blockers: "nenhum"',
+    'next_recommendation: "@qa validar a regressao"',
+    '---',
+    '',
+    '# Project Pulse',
+    '',
+    '## Status',
+    '',
+    '- **Last agent:** @dev',
+    '- **Last gate:** workflow-state reconciliation fix aplicado',
+    '- **Active feature:** secure-by-default',
+    '- **Active work:** Engine agora reconcilia estados persistidos fora de ordem; falta re-review final',
+    '- **Next:** @qa validar a regressao',
+    '',
+    '## Recent Activity',
+    '',
+    '- 2026-04-29 @dev → secure-by-default: reconciled workflow state',
+    ''
+  ].join('\n'));
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'secure-by-default', verdict: 'PASS', residual: 'none', 'no-archive': true },
+    logger: makeLogger()
+  });
+
+  const content = await fs.readFile(
+    path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
+    'utf8'
+  );
+  assert.match(content, /^---\n/);
+  assert.ok(content.includes('last_agent: qa'));
+  assert.ok(content.includes('active_feature: (none)'));
+  assert.ok(content.includes('- **Active feature:** (none)'));
+  assert.ok(content.includes('- **Active work:** none'));
+  assert.ok(content.includes('- **Next:** @product start the next feature'));
+  assert.doesNotMatch(content, /\*\*Active feature:\*\* secure-by-default/);
+});
+
+test('feature:close: idempotent rerun does not duplicate identical recent activity lines', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', [
+    '---',
+    'last_updated: 2026-04-29T05:01:29.056Z',
+    'last_agent: qa',
+    'last_gate: Gate D: approved',
+    'active_feature: (none)',
+    'active_work: ""',
+    'blockers: "none"',
+    'next_recommendation: "@product start the next feature"',
+    '---',
+    '',
+    '# Project Pulse',
+    '',
+    '## Status',
+    '',
+    '- **Last agent:** @qa',
+    '- **Last gate:** Gate D: approved',
+    '- **Active feature:** (none)',
+    '- **Active work:** none',
+    '- **Blockers:** none',
+    '- **Next:** @product start the next feature',
+    '',
+    '## Recent Activity',
+    '',
+    '- 2026-04-29 @qa → secure-by-default (Gate D: approved) VERDICT: PASS: none',
+    '- 2026-04-29 @qa → secure-by-default (Gate D: approved) VERDICT: PASS: none',
+    ''
+  ].join('\n'));
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'secure-by-default', verdict: 'PASS', residual: 'none', 'no-archive': true },
+    logger: makeLogger()
+  });
+
+  const content = await fs.readFile(
+    path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
+    'utf8'
+  );
+  const lines = content.split('\n').filter((line) =>
+    line.includes('@qa → secure-by-default (Gate D: approved) VERDICT: PASS: none')
+  );
+  assert.equal(lines.length, 1);
 });
 
 test('feature:close: works when spec file missing (skips gracefully)', async () => {

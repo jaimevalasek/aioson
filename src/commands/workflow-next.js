@@ -17,6 +17,8 @@ const { validateHandoffProtocol } = require('../handoff-validator');
 const { readAutonomyProtocol, resolveEffectiveMode } = require('../autonomy-policy');
 const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-manifests');
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
+const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
+const { runSecurityAudit } = require('./security-audit');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
@@ -280,10 +282,132 @@ function findNextFromSequence(sequence, completed, skipped) {
   return sequence.find((stage) => !done.has(normalizeAgentName(stage))) || null;
 }
 
+function reconcileWorkflowState(state) {
+  if (!state || typeof state !== 'object' || !Array.isArray(state.sequence)) {
+    return { state, changed: false };
+  }
+
+  const sequence = state.sequence.map(normalizeAgentName);
+  const completed = Array.from(new Set((state.completed || []).map(normalizeAgentName).filter(Boolean)));
+  const skippedSet = new Set((state.skipped || []).map(normalizeAgentName).filter(Boolean));
+  const detour = state.detour && typeof state.detour === 'object'
+    ? {
+        ...state.detour,
+        agent: normalizeAgentName(state.detour.agent),
+        returnTo: normalizeAgentName(state.detour.returnTo)
+      }
+    : null;
+  let changed = false;
+
+  // If a later stage is already completed, any unresolved earlier stage was
+  // effectively bypassed outside the workflow and must not remain "active".
+  const furthestCompletedIndex = sequence.reduce((max, stage, index) => (
+    completed.includes(stage) ? Math.max(max, index) : max
+  ), -1);
+
+  if (furthestCompletedIndex >= 0) {
+    for (let index = 0; index < furthestCompletedIndex; index += 1) {
+      const stage = sequence[index];
+      if (!completed.includes(stage) && !skippedSet.has(stage)) {
+        skippedSet.add(stage);
+        changed = true;
+      }
+    }
+  }
+
+  const skipped = sequence.filter((stage) => skippedSet.has(stage));
+  const resolved = new Set([...completed, ...skipped]);
+  let current = state.current ? normalizeAgentName(state.current) : null;
+  let next = state.next ? normalizeAgentName(state.next) : null;
+  const currentIsActiveDetour = Boolean(
+    detour &&
+    detour.active &&
+    current &&
+    current === detour.agent
+  );
+
+  if (current && ((!sequence.includes(current) && !currentIsActiveDetour) || resolved.has(current))) {
+    current = null;
+    changed = true;
+  }
+
+  if (!detour || !detour.active) {
+    if (current) {
+      const currentIndex = sequence.indexOf(current);
+      const expectedQueuedNext = sequence.find(
+        (stage, index) => index > currentIndex && !resolved.has(stage)
+      ) || null;
+      if (next && next !== current && next !== expectedQueuedNext) {
+        next = expectedQueuedNext || current;
+        changed = true;
+      } else if (!next) {
+        next = expectedQueuedNext || current;
+        changed = true;
+      }
+    } else {
+      const inferredNext = findNextFromSequence(sequence, completed, skipped);
+      if (next !== inferredNext) {
+        next = inferredNext;
+        changed = true;
+      }
+    }
+  }
+
+  if (!changed) {
+    return { state, changed: false };
+  }
+
+  return {
+    changed: true,
+    state: buildStatePayload({
+      ...state,
+      sequence,
+      completed,
+      skipped,
+      current,
+      next,
+      detour
+    })
+  };
+}
+
 function isInferableStage(stage) {
   return ['setup', 'product', 'analyst', 'architect', 'ux-ui', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
+}
+
+function isSecurityGateBlocked(contractCheck, state, stageName) {
+  if (normalizeAgentName(stageName) !== 'qa' || state.mode !== 'feature' || !state.featureSlug) {
+    return false;
+  }
+  return contractCheck.missing.some((item) =>
+    item.includes('security:') ||
+    item.includes(`security-findings-${state.featureSlug}.json`)
+  );
+}
+
+function buildQaSecurityAuditBriefing(result, targetDir) {
+  if (!result) return '';
+
+  if (result.ok === false && result.reason) {
+    return [
+      '## Secure by Default audit',
+      `- Auto-run failed before QA review: ${result.reason}.`,
+      '- Gate D will remain blocked until a valid `security-findings-{slug}.json` artifact exists.',
+      '- If CLI is unavailable in your client, use the fallback checklist and record the limitation explicitly in the QA report and `project-pulse.md`.'
+    ].join('\n');
+  }
+
+  return [
+    '## Secure by Default audit',
+    `- Auto-ran \`security:audit\` for feature \`${result.slug}\` at QA activation.`,
+    `- Exit code: ${result.exitCode}. Findings: ${result.findingsCount}.`,
+    `- Summary: critical=${result.summary.critical}, high=${result.summary.high}, medium=${result.summary.medium}, low=${result.summary.low}, inconclusive=${result.summary.inconclusive}.`,
+    `- Artifact: \`${path.relative(targetDir, result.artifactPath)}\`.`,
+    '- If the audit or manual heuristics indicate auth, money, or ownership risk, invoke `@pentester` with `--mode=app_target --feature=<slug> --scope=<target>` before final Gate D sign-off.',
+    '- If CLI is unavailable in your client, use the fallback checklist and record the limitation explicitly in the QA report and `project-pulse.md`.'
+  ].join('\n');
 }
 
 async function inferCompletedStages(targetDir, draftState) {
@@ -301,7 +425,11 @@ async function loadOrCreateState(targetDir, options = {}) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
   const existing = await readJsonIfExists(statePath);
   if (existing && typeof existing === 'object' && Array.isArray(existing.sequence)) {
-    return { statePath, state: existing, created: false };
+    const reconciled = reconcileWorkflowState(existing);
+    if (reconciled.changed) {
+      await writeJson(statePath, reconciled.state);
+    }
+    return { statePath, state: reconciled.state, created: false };
   }
 
   const context = await validateProjectContextFile(targetDir);
@@ -425,6 +553,23 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
   // ── Handoff Contract Gate ───────────────────────────────────────────────
   const contractCheck = await validateHandoffContract(targetDir, state, normalizedStage);
   if (!contractCheck.ok) {
+    if (isSecurityGateBlocked(contractCheck, state, normalizedStage)) {
+      await emitSecurityRuntimeEvent({
+        targetDir,
+        eventType: 'security_gate_blocked',
+        message: `Gate D blocked for ${state.featureSlug} at @qa`,
+        status: 'failed',
+        agentName: 'qa',
+        source: 'workflow',
+        workflowState: state,
+        workflowStage: 'qa',
+        payload: {
+          feature_slug: state.featureSlug,
+          classification: state.classification,
+          blockers: contractCheck.missing
+        }
+      });
+    }
     const errMsg = formatContractError(contractCheck);
     await logError(targetDir, normalizedStage, errMsg, 'contract');
     throw new Error(errMsg);
@@ -518,12 +663,41 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
 
   // ── Test Briefing Injection for qa/tester ───────────────────────────────
   let testBriefing = '';
+  let securityAuditBriefing = '';
   if (stageName === 'qa' || stageName === 'tester') {
     try {
       testBriefing = await buildTestBriefing(targetDir);
     } catch {
       // Non-fatal: if briefing generation fails, proceed without it
       testBriefing = '';
+    }
+  }
+
+  if (
+    stageName === 'qa' &&
+    state.mode === 'feature' &&
+    state.classification === 'MEDIUM' &&
+    state.featureSlug
+  ) {
+    try {
+      const auditResult = await runSecurityAudit({
+        args: [targetDir],
+        options: {
+          slug: state.featureSlug,
+          json: true,
+          runtimeAgentName: 'qa',
+          runtimeSource: 'workflow',
+          runtimeState: state,
+          runtimeWorkflowStage: 'qa'
+        },
+        logger: { log() {}, error() {}, warn() {} }
+      });
+      securityAuditBriefing = buildQaSecurityAuditBriefing(auditResult, targetDir);
+    } catch {
+      securityAuditBriefing = buildQaSecurityAuditBriefing({
+        ok: false,
+        reason: 'audit_runtime_failure'
+      }, targetDir);
     }
   }
 
@@ -563,6 +737,10 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
 
   if (testBriefing) {
     prompt += '\n\n' + testBriefing;
+  }
+
+  if (securityAuditBriefing) {
+    prompt += '\n\n' + securityAuditBriefing;
   }
 
   if (pathGuardBlock) {
@@ -853,6 +1031,7 @@ module.exports = {
   readWorkflowConfig,
   detectWorkflowMode,
   loadOrCreateState,
+  reconcileWorkflowState,
   finalizeCurrentStage,
   applySkip,
   activateStage,

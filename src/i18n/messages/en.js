@@ -19,6 +19,8 @@ module.exports = {
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_prompt:
       'aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=<bcp47-tag>] [--locale=en]',
+    help_agent_invoke:
+      'aioson agent:invoke <agent> [path] [--tool=codex|claude|gemini|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
@@ -172,6 +174,8 @@ module.exports = {
       'aioson live:close [path] [--agent=<name>] [--summary=<text>] [--message=<text>] [--status=completed|failed] [--json] [--locale=en]',
     help_live_list:
       'aioson live:list [path] [--json] [--locale=en]',
+    help_scaffold_complete:
+      'aioson scaffold:complete [path] --slug=<slug> [--manifest=<path>] [--scaffold-path=<path>] [--session=<key>] [--agent=<name>] [--json] [--locale=en]',
     help_runtime_backup:
       'aioson runtime:backup [path] [--tables=tasks,runs,...] [--force] [--dry-run] [--json] [--locale=en]',
     help_runtime_restore:
@@ -385,6 +389,12 @@ module.exports = {
     prompt_usage_error:
       'Usage: aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=en|pt-BR|es|fr] [--locale=en]',
     prompt_unknown_agent: 'Unknown agent: {agent}',
+    prompt_invalid_target_mode:
+      'Invalid pentester target mode: {mode}. Expected framework_target or app_target.',
+    prompt_missing_feature_for_app_target:
+      'Pentester app_target requires --feature=<slug> (or --slug=<slug>).',
+    prompt_missing_scope_for_app_target:
+      'Pentester app_target requires --scope=<area>.',
     prompt_title: 'Prompt for agent "{agent}" on tool "{tool}" (locale: {locale}):'
   },
   context_validate: {

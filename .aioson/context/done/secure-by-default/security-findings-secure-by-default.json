@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0.0",
+  "slug": "secure-by-default",
+  "generated_at": "2026-04-29T04:57:04.414Z",
+  "generator": "aioson security:audit@1.0.0",
+  "review_contract": {
+    "scope_mode": "feature",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-secure-by-default.json"
+  },
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": [
+    {
+      "finding_id": "security-audit-SEC-SBD-02-0419f9",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-02",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:uploads:SEC-SBD-02",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"uploads\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-02 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"uploads\" present but no SEC-SBD-02 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-02 is required for surface \"uploads\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-02 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-03-843b84",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-03",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:auth:SEC-SBD-03",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"auth\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-03 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"auth\" present but no SEC-SBD-03 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-03 is required for surface \"auth\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-03 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-03-e45b81",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-03",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:ownership:SEC-SBD-03",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"ownership\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-03 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"ownership\" present but no SEC-SBD-03 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-03 is required for surface \"ownership\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-03 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-04-610f72",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-04",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:money:SEC-SBD-04",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"money\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-04 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"money\" present but no SEC-SBD-04 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-04 is required for surface \"money\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-04 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-05-b7918c",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-05",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:secrets:SEC-SBD-05",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"secrets\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-05 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"secrets\" present but no SEC-SBD-05 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-05 is required for surface \"secrets\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-05 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-06-1ce24c",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-06",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:external_urls:SEC-SBD-06",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"external_urls\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-06 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"external_urls\" present but no SEC-SBD-06 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-06 is required for surface \"external_urls\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-06 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-07-2cb855",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-07",
+      "severity": "high",
+      "status": "fixed",
+      "scope": "secure-by-default:storage:SEC-SBD-07",
+      "affected_artifacts": [
+        "\\\\wsl.localhost\\Ubuntu\\home\\jaime\\MyProjects\\aioson\\.aioson\\context\\spec-secure-by-default.md"
+      ],
+      "preconditions": [
+        "Surface \"storage\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-secure-by-default.md for SEC-SBD-07 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"storage\" present but no SEC-SBD-07 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-07 is required for surface \"storage\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-07 in spec-secure-by-default.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    }
+  ]
+}
