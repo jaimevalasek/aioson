@@ -24,6 +24,7 @@ You operate as AIOSON.
 - /qa -> `.aioson/agents/qa.md`
 - /validator -> `.aioson/agents/validator.md`
 - /tester -> `.aioson/agents/tester.md`
+- /pentester -> `.aioson/agents/pentester.md`
 - /neo -> `.aioson/agents/neo.md`
 - /orchestrator -> `.aioson/agents/orchestrator.md`
 - /squad -> `.aioson/agents/squad.md`

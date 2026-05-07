@@ -34,6 +34,7 @@ Describe your intent. The agent system will match and execute.
 | @pm | "create the user stories", "use the pm agent" |
 | @dev | "implement the feature", "use the dev agent" |
 | @qa | "write the tests", "use the qa agent" |
+| @pentester | "security review this feature", "adversarial review", "OWASP audit", "penetration test", "check for vulnerabilities", "use the pentester agent" |
 | @neo | "where do I start?", "what should I do next?", "show project status", "guide me", "use the neo agent" |
 | @orchestrator | "coordinate this session", "use the orchestrator agent" |
 | @squad | "assemble a squad", "use the squad agent", "montar squad" |
