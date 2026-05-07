@@ -2,7 +2,8 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { execSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
+const { isValidSlug } = require('../dossier/schema');
 
 async function runSquadExport({ args = [], options = {}, logger = console } = {}) {
   const projectDir = path.resolve(process.cwd(), args[0] || '.');
@@ -11,6 +12,15 @@ async function runSquadExport({ args = [], options = {}, logger = console } = {}
   if (!slug) {
     logger.error('Usage: aioson squad:export [path] --squad=<slug>');
     return { ok: false, error: 'No slug provided' };
+  }
+
+  // SF-project-12: reject any slug that is not strict kebab-case before the
+  // value reaches path.join / spawnSync. This is defense-in-depth on top of
+  // the spawnSync-with-array-args change below; either alone closes the
+  // shell-injection vector but together they also reject obvious typos early.
+  if (!isValidSlug(slug)) {
+    logger.error(`Invalid squad slug "${slug}" — must be kebab-case ([a-z][a-z0-9-]*)`);
+    return { ok: false, error: 'Invalid slug' };
   }
 
   const squadDir = path.join(projectDir, '.aioson', 'squads', slug);
@@ -28,11 +38,18 @@ async function runSquadExport({ args = [], options = {}, logger = console } = {}
 
   const relPath = path.relative(projectDir, squadDir).replace(/\\/g, '/');
 
-  try {
-    execSync(`tar -czf "${outputFile}" -C "${projectDir}" "${relPath}"`, { stdio: 'pipe' });
-  } catch (err) {
-    logger.error(`Export failed: ${err.message}`);
-    return { ok: false, error: err.message };
+  // SF-project-12: spawnSync with array args bypasses the shell, so embedded
+  // metacharacters in any argument become literal tar arguments instead of
+  // shell-parsed tokens.
+  const result = spawnSync('tar', ['-czf', outputFile, '-C', projectDir, relPath], {
+    stdio: 'pipe'
+  });
+  if (result.error || result.status !== 0) {
+    const message = result.error
+      ? result.error.message
+      : (result.stderr ? result.stderr.toString().trim() : `tar exit status ${result.status}`);
+    logger.error(`Export failed: ${message}`);
+    return { ok: false, error: message };
   }
 
   const relOutput = path.relative(projectDir, outputFile);

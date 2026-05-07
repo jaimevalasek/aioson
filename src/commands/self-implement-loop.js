@@ -39,8 +39,11 @@ function executeAgent(projectDir, agent, task, feedbackContext, timeoutMs) {
     : task;
 
   try {
-    const output = execSync(
-      `aioson agent:prompt ${agent} . --tool=claude`,
+    // SF-project-13: use execFileSync with array args so an attacker-controlled
+    // agent name cannot break out of the shell.
+    const output = execFileSync(
+      'aioson',
+      ['agent:prompt', agent, '.', '--tool=claude'],
       {
         cwd: projectDir,
         input: prompt,
@@ -67,8 +70,11 @@ async function runVerification(projectDir, spec, artifact, criteria) {
   }
 
   try {
-    const output = execSync(
-      `aioson verify:gate . --spec="${spec}" --artifact="${artifact}" --json`,
+    // SF-project-13: array-arg form — embedded shell metacharacters in spec
+    // or artifact stay literal arguments to verify:gate.
+    const output = execFileSync(
+      'aioson',
+      ['verify:gate', '.', `--spec=${spec}`, `--artifact=${artifact}`, '--json'],
       {
         cwd: projectDir,
         timeout: 30_000,

@@ -3,7 +3,7 @@
 const http = require('http');
 const crypto = require('crypto');
 const readline = require('readline');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { readConfig, writeConfig, CONFIG_DIR } = require('./config');
 
 const DEFAULT_BASE_URL = 'https://aioson.com';
@@ -40,12 +40,38 @@ function isHeadlessEnv() {
 
 function openBrowser(url) {
   return new Promise((resolve) => {
+    // SF-project-14: only http(s) URLs may be opened, and they are passed as
+    // a literal argv element so embedded shell metacharacters cannot escape.
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      resolve(false);
+      return;
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      resolve(false);
+      return;
+    }
+    const safeUrl = parsed.toString();
     const platform = process.platform;
-    const cmd =
-      platform === 'darwin' ? `open "${url}"` :
-      platform === 'win32'  ? `start "" "${url}"` :
-                              `xdg-open "${url}"`;
-    exec(cmd, { timeout: 5000 }, (err) => resolve(!err));
+    const command = platform === 'darwin' ? 'open'
+                  : platform === 'win32'  ? 'cmd'
+                                          : 'xdg-open';
+    const args = platform === 'win32'
+      ? ['/c', 'start', '', safeUrl]
+      : [safeUrl];
+    try {
+      const child = spawn(command, args, { stdio: 'ignore', detached: true });
+      let settled = false;
+      const settle = (ok) => { if (!settled) { settled = true; resolve(ok); } };
+      child.on('error', () => settle(false));
+      child.on('spawn', () => settle(true));
+      child.unref();
+      setTimeout(() => settle(true), 5000);
+    } catch {
+      resolve(false);
+    }
   });
 }
 
