@@ -11,6 +11,7 @@ const {
   assertFrontmatter,
   validateFrontmatter
 } = require('./schema');
+const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 
 const FEATURES_SUBDIR = 'features';
 const DOSSIER_FILENAME = 'dossier.md';
@@ -337,7 +338,12 @@ async function addFinding({ slug, contextDir, agent, section, content, now = () 
     throw err;
   }
 
-  const hash = crypto.createHash('sha256').update(`${section}\0${content}`).digest('hex');
+  // SF-project-09: strip zero-width / bidi / HTML-comment injection carriers
+  // from author-supplied content before it lands in the Agent Trail (read by
+  // every chain agent at session start).
+  const safeContent = stripInjectionChars(String(content || ''));
+
+  const hash = crypto.createHash('sha256').update(`${section}\0${safeContent}`).digest('hex');
   const hashMarker = `<!-- sha256:${hash} -->`;
 
   // Idempotency: if hash already present, no-op silently
@@ -350,7 +356,7 @@ async function addFinding({ slug, contextDir, agent, section, content, now = () 
     hashMarker,
     `**${timestamp}** | @${agent} | _${section}_`,
     '',
-    content.trim(),
+    safeContent.trim(),
     ''
   ].join('\n');
 

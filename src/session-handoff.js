@@ -85,15 +85,57 @@ async function writeHandoff(targetDir, payload) {
   };
 }
 
-async function readHandoff(targetDir) {
-  const handoffPath = path.join(targetDir, HANDOFF_RELATIVE_PATH);
-  if (!(await exists(handoffPath))) return null;
+// SF-project-10: stale-handoff guard. Default TTL is 7 days; a feature_slug
+// mismatch against dev-state.md is also treated as stale even when fresh.
+// Both checks can be skipped via options for callers (tests, audits) that need
+// the raw read.
+const DEFAULT_HANDOFF_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function readActiveFeatureFromDevState(targetDir) {
+  const devStatePath = path.join(targetDir, '.aioson/context/dev-state.md');
+  if (!(await exists(devStatePath))) return null;
   try {
-    const content = await fs.readFile(handoffPath, 'utf8');
-    return JSON.parse(content);
+    const text = await fs.readFile(devStatePath, 'utf8');
+    if (!text.startsWith('---')) return null;
+    const closing = text.indexOf('\n---', 3);
+    if (closing === -1) return null;
+    const front = text.slice(3, closing);
+    const match = front.match(/^\s*active_feature:\s*(.+?)\s*$/m);
+    return match ? match[1].trim().replace(/^["']|["']$/g, '') : null;
   } catch {
     return null;
   }
+}
+
+async function readHandoff(targetDir, options = {}) {
+  const handoffPath = path.join(targetDir, HANDOFF_RELATIVE_PATH);
+  if (!(await exists(handoffPath))) return null;
+  let parsed;
+  try {
+    const content = await fs.readFile(handoffPath, 'utf8');
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const skipStaleCheck = options.skipStaleCheck === true;
+  if (skipStaleCheck) return parsed;
+
+  const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : DEFAULT_HANDOFF_TTL_MS;
+  const sessionEndedAt = Date.parse(parsed.session_ended_at || '');
+  if (Number.isFinite(sessionEndedAt) && Date.now() - sessionEndedAt > ttlMs) {
+    return null;
+  }
+
+  if (parsed.feature_slug) {
+    const activeFeature = await readActiveFeatureFromDevState(targetDir);
+    if (activeFeature && activeFeature !== parsed.feature_slug) {
+      return null;
+    }
+  }
+
+  return parsed;
 }
 
 async function readHandoffProtocol(targetDir) {

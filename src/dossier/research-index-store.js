@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { isValidSlug, RESEARCH_VERDICTS, isCanonicalAgent } = require('./schema');
+const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 
 const FEATURES_SUBDIR = 'features';
 const DOSSIER_FILENAME = 'dossier.md';
@@ -139,11 +140,17 @@ async function addResearch({
 
   const computedSummaryPath = summaryPath || `researchs/${researchSlug}/summary.md`;
 
+  // SF-project-09: strip injection carriers from why_relevant before persistence.
+  // This text is loaded by every chain agent that opens dossier.md.
+  const safeWhyRelevant = typeof whyRelevant === 'string'
+    ? stripInjectionChars(whyRelevant)
+    : whyRelevant;
+
   const candidate = {
     slug: researchSlug,
     verdict,
     agent_who_added: agent,
-    why_relevant: whyRelevant,
+    why_relevant: safeWhyRelevant,
     added_at: now().toISOString(),
     summary_path: computedSummaryPath
   };
@@ -184,13 +191,13 @@ async function addResearch({
     const existing = index.researchs[existingIdx];
     if (
       existing.verdict === verdict &&
-      existing.why_relevant === whyRelevant &&
+      existing.why_relevant === safeWhyRelevant &&
       existing.summary_path === computedSummaryPath
     ) {
       return { added: false, updated: false, slug: researchSlug };
     }
     existing.verdict = verdict;
-    existing.why_relevant = whyRelevant;
+    existing.why_relevant = safeWhyRelevant;
     existing.summary_path = computedSummaryPath;
     action = 'updated';
   } else {

@@ -851,6 +851,11 @@ function rankDossier(dossier, { agent, goal }, rank) {
   return { score: Math.max(score, 0), reasons };
 }
 
+// SF-project-11: paths under these prefixes are NEVER returned in a context
+// pack, regardless of catalog score. This enforces the dev.md HARD RULE
+// "Agent files are never your context" at the code level.
+const EXCLUDED_FROM_CONTEXT_PREFIXES = ['.aioson/agents/'];
+
 async function createContextPack({
   targetDir,
   agent = '',
@@ -886,6 +891,9 @@ async function createContextPack({
     ...dossierDocs
   ]
     .filter((doc) => doc.score > 0)
+    // SF-project-11: enforce the dev.md HARD RULE in code, not just in prompts.
+    // Agent prompt files are never valid context for another agent.
+    .filter((doc) => !EXCLUDED_FROM_CONTEXT_PREFIXES.some((prefix) => doc.relPath.startsWith(prefix)))
     .sort((a, b) => b.score - a.score || a.relPath.localeCompare(b.relPath));
 
   const selectedDocs = [];
@@ -961,6 +969,7 @@ module.exports = {
   buildMemoryIndexMarkdown,
   writeDerivedContextMemory,
   createContextPack,
+  EXCLUDED_FROM_CONTEXT_PREFIXES,
   collectContextCatalog,
   loadExistingFolderScans
 };
