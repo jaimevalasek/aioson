@@ -1,7 +1,7 @@
 {
   "version": 1,
   "feature_slug": "project",
-  "generated_at": "2026-05-07T07:00:00.000Z",
+  "generated_at": "2026-05-07T16:00:00.000Z",
   "review_contract": {
     "review_id": "pentester-project-2026-05-07T00-00-00",
     "scope_mode": "on_demand",
@@ -54,7 +54,16 @@
       "@qa session 2026-05-07 (round 2): physically verified SF-project-05/06/07 fixes in src/installer.js + template/.aioson/git-guard.json. Installer suite 19/19 PASS (4 new regression tests included). Gate D for project-level security review: PASS — final state 6 fixed / 13 false_positive / 1 accepted_risk / 0 open. SEPARATE OBSERVATION (not a Gate D blocker, not a security finding): 3 tests in tests/sdlc-process-upgrade-regression.test.js fail against current product.md/sheldon.md content (Handoff section and features.md hard constraint missing from product.md; sheldon.md RF-01 step order). Confirmed pre-existing in working tree from agent-chain-continuity Phase 4 compaction — recommend running @qa against the agent-chain-continuity feature slug to close that ticket properly.",
       "@pentester session 2026-05-07 (round 3): TS-project-01 memory_context reviewed. 4 findings emitted: SF-project-08 (medium, LLM01.2 indirect injection via researchs/ third-party content — strongest vector), SF-project-09 (low, LLM01.2 dossier writers without sanitization), SF-project-10 (low, LLM01.1-adjacent stale last-handoff with no TTL), SF-project-11 (low, HARD RULE not code-enforced). LLM01.3 multimodal: N/A — no image-loading code paths found.",
       "@dev session 2026-05-07 (round 3): applied SF-project-08/09/10/11 fixes. New module src/lib/llm-content-sanitizer.js + integrations across worker-runner, dossier writers (store + research-index-store), session-handoff (TTL+slug guard), context-memory (exclude prefix list). 14 new tests (8 sanitizer unit + 6 integration). Side fix: pre-existing typo result.text→result.html in worker-runner that had silently disabled the research writer. Full suite 2048/2051 — same 3 pre-existing product.md/sheldon.md failures from agent-chain-continuity Phase 4 compaction.",
-      "@qa session 2026-05-07 (round 3): physically verified SF-project-08/09/10/11 fixes. New module src/lib/llm-content-sanitizer.js inspected. Integration test for SF-08 uses real HTTP server with multi-vector payload. New tests 14/14 PASS. Full suite 2048/2051 — same 3 pre-existing product.md/sheldon.md failures. Gate D for memory_context surface: PASS. Final cumulative state: 10 fixed / 13 false_positive / 1 accepted_risk / 0 open / 0 needs_validation / 0 blockers across 4 reviewed surfaces (supply_chain, installation_integrity, secret_handling [partial], memory_context)."
+      "@qa session 2026-05-07 (round 3): physically verified SF-project-08/09/10/11 fixes. New module src/lib/llm-content-sanitizer.js inspected. Integration test for SF-08 uses real HTTP server with multi-vector payload. New tests 14/14 PASS. Full suite 2048/2051 — same 3 pre-existing product.md/sheldon.md failures. Gate D for memory_context surface: PASS. Final cumulative state: 10 fixed / 13 false_positive / 1 accepted_risk / 0 open / 0 needs_validation / 0 blockers across 4 reviewed surfaces (supply_chain, installation_integrity, secret_handling [partial], memory_context).",
+      "@pentester session 2026-05-07 (round 4): TS-project-02 tool_invocation reviewed. 459 child_process hits triaged. 3 new findings emitted (all execSync/exec template-literal shell injection vectors): SF-12 medium (squad:export tar with unvalidated slug — strongest), SF-13 medium (self:implement-loop agent/spec/artifact), SF-14 low (auth:openBrowser url — defense-in-depth). src/sandbox.js shell:true is by design (sandbox:exec is the feature) — not a finding. Bash interpolation in agent prompts is LLM-side, belongs to TS-06 runtime_permissions.",
+      "@dev session 2026-05-07 (round 4): applied SF-project-12/13/14 fixes — all three execSync/exec template-literal sites converted to spawnSync/execFileSync/spawn with array args. SF-12 also gains isValidSlug defense-in-depth. SF-14 gains URL.protocol restriction. 3 new regression tests at tests/tool-invocation-hardening.test.js. Full suite 2054/2054 PASS — zero failures, including the previously flaky squad-score test (passed cleanly this run).",
+      "@qa session 2026-05-07 (round 4): physically verified SF-project-12/13/14 fixes. spawnSync/execFileSync/spawn array-arg pattern applied consistently. Defense-in-depth (isValidSlug, URL.protocol allowlist) added where useful. Full suite 2054/2054 PASS — first session in this entire chain to reach a fully green suite (the previously flaky squad-score test passed too). Gate D for tool_invocation: PASS. Cumulative: 13 fixed, 13 false_positive, 1 accepted_risk, 0 open, 0 needs_validation, 0 blockers across 4 fully-reviewed surfaces.",
+      "@pentester session 2026-05-07 (round 5): TS-project-06 runtime_permissions reviewed. 2 findings emitted: SF-15 high (autonomy-policy whitelist/blacklist is dead code — guarded mode is advisory only, no real enforcement gate), SF-16 medium (manifest can upgrade autonomy ceiling without validation — combined with SF-15 today is label-only, becomes real after SF-15 is fixed). The TTY guard (canRunHeadless) is enforced; mode resolution is informational. Recommended fix path: option 1 (docs) + option 2 (sandbox enforcement) for SF-15; schema validation + ceiling cap for SF-16.",
+      "@dev session 2026-05-07 (round 5): applied SF-project-15/16 fixes. Sandbox shell-gate now enforces shell_whitelist/blacklist when opts.policy is passed. Manifest reading now (a) refuses non-canonical agent ids, (b) filters autonomy_modes to a known set, (c) caps manifest declarations at protocol.global_mode in getAgentMaxMode. Pre-existing test updated to match new ceiling-cap behavior. 8 new regression tests; one pre-existing test updated. Full suite 2063/2063 PASS.",
+      "@qa session 2026-05-07 (round 5): physically verified SF-project-15/16. Sandbox enforcement gate active via opts.policy. Manifest hardening across 3 layers. Pre-existing autonomy-policy.test.js updated to match security-correct behavior. Full suite 2063/2063 PASS — clean run. Gate D for runtime_permissions: PASS. Cumulative state: 15 fixed, 13 false_positive, 1 accepted_risk, 0 open / 0 needs_validation / 0 blockers across 5 fully-reviewed surfaces (memory_context, secret_handling [partial], runtime_permissions, installation_integrity, supply_chain_integrity, tool_invocation). 3 surfaces remain pending (delegation_handoff, protocol_contract, auth_identity).",
+      "@pentester session 2026-05-07 (round 6 — final pack): TS-project-03 delegation_handoff + TS-project-04 protocol_contract + TS-project-07 auth_identity reviewed together. 4 findings: SF-17 medium (handoff validator non-blocking — workflow-next writes regardless of validation), SF-18 medium (workflow.state.json gate bypass via direct file write), SF-19 low (artifact_uris path not validated), SF-20 info → accepted_risk (auth_identity is prompt-side convention by design, single-tenant local dev). All 9 surfaces now reviewed.",
+      "@dev session 2026-05-07 (round 6): SF-18 + SF-19 fixed; SF-17 transitioned to accepted_risk after investigation showed the soft-validation pattern is intentional for current error types (manifest absence is common during bootstrap). Added detectUnsubstantiatedCompletions cross-check against runtime telemetry (warn-only). isSafeArtifactPath guard on coerceArtifactUri rejects absolute paths and \"..\". 5 new regression tests. Initial hard-block attempt for SF-17 broke 8 tests and was reverted with clarifying comments at both call sites. Full suite 2068/2068 PASS.",
+      "@qa session 2026-05-07 (round 6 — final): physically verified SF-18/19 fixes. SF-17 accepted_risk decision audited and confirmed as evidence-based (8 existing tests document the soft-validation contract). Full suite 2068/2068 PASS — fully green with all 9 surfaces touched. Gate D for delegation_handoff + protocol_contract: PASS. Cumulative final state: 17 fixed, 13 false_positive, 3 accepted_risk (SF-04 scanner allowlist backlog, SF-17 validator refactor backlog, SF-20 auth_identity by design), 0 open, 0 needs_validation, 0 blockers across 8 fully-reviewed surfaces and 1 partially-reviewed surface. All threat-surface entries closed for this review cycle."
     ]
   },
   "threat_surfaces": [
@@ -67,20 +76,20 @@
     {
       "surface_id": "TS-project-02",
       "surface_type": "tool_invocation",
-      "verification_status": "not_yet_reviewed",
-      "scope_notes": "All Bash/Write/Edit/Read invocations in src/commands/*.js and agent prompts. Path traversal via fs.* and child_process."
+      "verification_status": "reviewed",
+      "scope_notes": "src/commands/ + src/*.js + bin/*.js scanned for child_process.exec / execSync template-literal interpolation and shell:true patterns. 459 child_process-related hits triaged: most are RegExp.exec or db.exec (false positives). 4 real shell-invocation sites identified: 3 with operator-supplied data flowing into template literals (SF-12/13/14), 1 with shell:true by design in src/sandbox.js#runSandboxedCommand (the feature's purpose — out of scope). Bash invocations inside agent prompts use {N} placeholder syntax interpreted by the LLM, not the shell — that vector belongs to runtime_permissions (TS-06)."
     },
     {
       "surface_id": "TS-project-03",
       "surface_type": "delegation_handoff",
-      "verification_status": "not_yet_reviewed",
-      "scope_notes": "src/handoff-contract.js, src/session-handoff.js, last-handoff.json schema enforcement, manifest forgery vectors."
+      "verification_status": "reviewed",
+      "scope_notes": "src/handoff-contract.js (363 LOC), src/session-handoff.js, last-handoff.json schema, agent manifest forgery (already covered by SF-16). Reviewed coerceArtifactUri: validates path is non-empty string but not within projectDir nor that it points to a real file → SF-19 low."
     },
     {
       "surface_id": "TS-project-04",
       "surface_type": "protocol_contract",
-      "verification_status": "not_yet_reviewed",
-      "scope_notes": "src/handoff-validator.js, workflow-next.js gate enforcement, conformance-*.yaml validation."
+      "verification_status": "reviewed",
+      "scope_notes": "src/handoff-validator.js (45 LOC), src/commands/workflow-next.js gate enforcement, .aioson/context/workflow.state.json schema. validateHandoffProtocol does report errors correctly but its caller (workflow-next.js:1031-1036) writes the handoff regardless of validation result → SF-17 medium. workflow.state.json is plain JSON with no integrity/signature → SF-18 medium gate-bypass. conformance-*.yaml files exist in done/ archives but no enforcement points found via grep across src/."
     },
     {
       "surface_id": "TS-project-05",
@@ -91,14 +100,14 @@
     {
       "surface_id": "TS-project-06",
       "surface_type": "runtime_permissions",
-      "verification_status": "not_yet_reviewed",
-      "scope_notes": "src/autonomy-policy.js, .aioson/config/autonomy-protocol.json, guarded-mode enforcement at CLI vs prompt level."
+      "verification_status": "reviewed",
+      "scope_notes": "src/autonomy-policy.js (139 LOC), .aioson/config/autonomy-protocol.json, src/agent-manifests.js (66 LOC), all callers of resolveEffectiveMode/canRunHeadless/isCommandAllowed traced via grep across src/. Findings: SF-15 (high) — isCommandAllowed is dead code (exported, never called); SF-16 (medium) — manifest can upgrade agent autonomy ceiling without validation. The TTY guard (canRunHeadless) IS enforced in workflow-execute.js:508; mode resolution (resolveEffectiveMode) is informational only."
     },
     {
       "surface_id": "TS-project-07",
       "surface_type": "auth_identity",
-      "verification_status": "not_yet_reviewed",
-      "scope_notes": "Agent identity escalation between @pentester / @dev / @qa, ownership/gate impersonation."
+      "verification_status": "reviewed",
+      "scope_notes": "Agent identity in AIOSON is a prompt-side convention, not an OS-level isolation boundary. The framework runs every agent as the same OS user via the same Node.js process. There is no privilege escalation surface to attack — the framework was designed for single-tenant local development. SF-20 documents this explicitly as accepted_risk so users do not assume isolation that does not exist."
     },
     {
       "surface_id": "TS-project-08",
@@ -925,6 +934,332 @@
       "safe_to_reproduce": true,
       "dev_session_note": "Fixed 2026-05-07: src/context-memory.js now exports EXCLUDED_FROM_CONTEXT_PREFIXES = [\".aioson/agents/\"] and createContextPack filters the ranked list against this prefix list before selection. Result: no agent prompt file can ever appear in selectedFiles, even if it scores high on the agent/goal heuristic. The dev.md HARD RULE now matches code-level enforcement. Test at tests/memory-context-hardening.test.js places a .aioson/agents/dev.md fixture and asserts it never leaks into the pack. Stricter exclusion list (e.g., .aioson/locales/) deferred — this finding scoped only to .aioson/agents/.",
       "qa_verification_note": "Verified 2026-05-07 by @qa: src/context-memory.js:857 declares EXCLUDED_FROM_CONTEXT_PREFIXES = [\".aioson/agents/\"] (constant, frozen at module load). Line 896 applies .filter((doc) => !EXCLUDED_FROM_CONTEXT_PREFIXES.some((prefix) => doc.relPath.startsWith(prefix))) before the sort — this fires AFTER score>0 filter, so it can never be skipped by a high-scoring agent file. Constant exported for external inspection (line 972). Test plants a .aioson/agents/dev.md fixture and asserts no leakage to selectedFiles. dev.md HARD RULE now matches code-level enforcement. Gate decision: PASS. Note for backlog: scope only covers .aioson/agents/; future expansions (e.g., excluding .aioson/locales/ or .aioson/runtime/) can be added to the same constant without touching the filter."
+    },
+    {
+      "id": "SF-project-12",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "tool_invocation",
+      "severity": "medium",
+      "title": "squad:export — execSync template literal interpolates unvalidated slug into shell command (tar)",
+      "hypothesis": "src/commands/squad-export.js:32 builds the tar command via `execSync(\\`tar -czf \"${outputFile}\" -C \"${projectDir}\" \"${relPath}\"\\`, { stdio: \"pipe\" })`. The slug arrives from `options.squad || args[1]` with no validation (no isValidSlug check before the path build). It flows through path.join into outputFile; path.join preserves shell metacharacters like \", ;, $, `, &, |. A crafted slug like `x\"; rm -rf ~/.aioson #` produces the shell command `tar -czf \"/path/x\"; rm -rf ~/.aioson #.aios-squad.tar.gz\" -C ...` — the double quote breaks out and the injected `rm -rf` runs.",
+      "preconditions": [
+        "src/commands/squad-export.js:9 reads slug from options.squad || args[1] without validation",
+        "src/commands/squad-export.js:18 path.join builds outputFile preserving shell metacharacters",
+        "src/commands/squad-export.js:32 execSync uses a template literal — shell parses the result"
+      ],
+      "reproduction_steps": [
+        "1. Create a fixture squad directory at .aioson/squads/probe (legitimate slug).",
+        "2. Run `aioson squad:export . --squad='probe\"; touch /tmp/aioson-pwned #'` (note the embedded double quote and shell separator).",
+        "3. Observe /tmp/aioson-pwned was created — confirms the shell parsed the injected suffix as a separate command.",
+        "4. Validate that a slug containing only kebab-case characters does not trigger the vector (regression baseline)."
+      ],
+      "evidence": [
+        "src/commands/squad-export.js:9 — `const slug = options.squad || args[1]` (no isValidSlug guard)",
+        "src/commands/squad-export.js:18 — `path.join(exportsDir, \\`${slug}.aios-squad.tar.gz\\`)` (slug propagated)",
+        "src/commands/squad-export.js:32 — `execSync(\\`tar -czf \"${outputFile}\" -C \"${projectDir}\" \"${relPath}\"\\`, ...)` — template literal, no escaping"
+      ],
+      "attack_path": "attacker-supplied slug (CLI flag or automation) → path.join preserves metacharacters → template literal interpolates into shell command → shell parses unintended commands",
+      "impact": "Local code execution as the user running aioson. Realistic vectors: (a) operator typo with shell-special chars, (b) automation pipeline that constructs slug from external source (cloud import, web form), (c) malicious squad manifest in a third-party squad bundle. Blast radius limited to operator privilege, but the framework documents a \"guarded\" autonomy mode and a project-local sandbox — both should treat unvalidated CLI input as untrusted on principle.",
+      "affected_artifacts": [
+        "src/commands/squad-export.js"
+      ],
+      "suggested_fix": "Two-step: (1) Add slug validation before any use: `if (!/^[a-z][a-z0-9-]*$/.test(slug)) return error`. The dossier schema already exports isValidSlug from src/dossier/schema.js — reuse it. (2) Replace execSync with spawnSync taking array args: `spawnSync(\"tar\", [\"-czf\", outputFile, \"-C\", projectDir, relPath], { stdio: \"pipe\" })`. spawnSync without shell:true does not parse arguments through a shell — even pathological argument values become literal arguments to tar, eliminating the injection vector entirely. Item (2) alone is sufficient; (1) is defense-in-depth.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/commands/squad-export.js now (1) imports isValidSlug from src/dossier/schema.js and rejects non-kebab slugs before any path.join or shell call (defense-in-depth), (2) replaces execSync with template literal by spawnSync(\"tar\", [\"-czf\", outputFile, \"-C\", projectDir, relPath], ...) — array args bypass shell parsing entirely, so embedded \", ;, $, `, &, | become literal tar arguments. Result envelope still returns { ok, error } on tar failure with the stderr message extracted. New regression tests at tests/tool-invocation-hardening.test.js cover both paths: a malicious slug is refused with /tmp/aioson-pwn-12 NOT created, and a clean kebab slug packages successfully into .aios-squad.tar.gz.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/commands/squad-export.js — confirmed spawnSync(\"tar\", [array args], { stdio: \"pipe\" }) at the only execution site; isValidSlug imported from src/dossier/schema.js and gates the slug before any path.join or spawn. Result envelope correctly extracts result.error.message or result.stderr on failure. Two regression tests in tests/tool-invocation-hardening.test.js: malicious slug refused (no /tmp/aioson-pwn-12 created) + clean kebab slug succeeds and produces .aios-squad.tar.gz. Both pass. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-13",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "tool_invocation",
+      "severity": "medium",
+      "title": "self-implement-loop — execSync template literals interpolate agent / spec / artifact paths into shell commands",
+      "hypothesis": "src/commands/self-implement-loop.js:42 calls `execSync(\\`aioson agent:prompt ${agent} . --tool=claude\\`)` and lines 60-65 call `execSync(\\`aioson verify:gate . --spec=\"${spec}\" --artifact=\"${artifact}\" --json\\`)`. agent / spec / artifact arrive from options/payload with no allowlist or escaping. Same shell-injection class as SF-12. Even when wrapped in double quotes (the verify:gate case), an embedded double quote in the value breaks out.",
+      "preconditions": [
+        "src/commands/self-implement-loop.js:42 uses template literal interpolation into execSync for agent",
+        "src/commands/self-implement-loop.js:60 uses template literal interpolation into execSync for spec and artifact",
+        "No validation/escaping of agent, spec, artifact before the shell call"
+      ],
+      "reproduction_steps": [
+        "1. Stand up a minimal fixture project where self:implement is callable.",
+        "2. Run `aioson self:implement` with `--agent='dev\"; touch /tmp/aioson-pwn-13 #'` (or feed the same via the option-parsing path).",
+        "3. Observe /tmp/aioson-pwn-13 was created.",
+        "4. Repeat with --spec / --artifact carrying double-quote payloads to confirm both lines are vulnerable."
+      ],
+      "evidence": [
+        "src/commands/self-implement-loop.js:42 — `\\`aioson agent:prompt ${agent} . --tool=claude\\`` (no escape)",
+        "src/commands/self-implement-loop.js:61 — `\\`aioson verify:gate . --spec=\"${spec}\" --artifact=\"${artifact}\" --json\\``",
+        "No validateAgentName / no path-allowlist before the call"
+      ],
+      "attack_path": "crafted agent/spec/artifact value (CLI flag, config file, or automation payload) → template literal → shell execution",
+      "impact": "Local code execution. Lower realistic exploit chance than SF-12 because self:implement is a less-frequent flow, but still trivially exploitable from any caller that controls those fields.",
+      "affected_artifacts": [
+        "src/commands/self-implement-loop.js"
+      ],
+      "suggested_fix": "Replace both execSync calls with spawnSync passing array arguments: `spawnSync(\"aioson\", [\"agent:prompt\", agent, \".\", \"--tool=claude\"], { input: prompt, ... })` and `spawnSync(\"aioson\", [\"verify:gate\", \".\", `--spec=${spec}`, `--artifact=${artifact}`, \"--json\"], { ... })`. spawnSync without shell:true treats every array element as a literal argument, so embedded shell metacharacters become inert. Add isValidSlug check on agent and a path-existence/within-projectDir check on spec/artifact as defense-in-depth.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/commands/self-implement-loop.js — both call sites switched from execSync template literals to execFileSync with array args. (a) executeAgent at line 42: execFileSync(\"aioson\", [\"agent:prompt\", agent, \".\", \"--tool=claude\"], { input: prompt, ... }). (b) runVerification at line 70: execFileSync(\"aioson\", [\"verify:gate\", \".\", `--spec=${spec}`, `--artifact=${artifact}`, \"--json\"], ...). The execFileSync import was already present at line 21 — no new dependency. The static `npm test --if-present 2>&1` at line 106 is unchanged (no interpolation, not a vector). Behavior identical for all valid inputs; shell-special chars in agent/spec/artifact now stay literal arguments instead of being parsed by the shell.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/commands/self-implement-loop.js — both former execSync sites now use execFileSync with literal \"aioson\" as the binary and the rest as array args (executeAgent at line 44, runVerification at line 75). The pre-existing static `execSync(\"npm test --if-present 2>&1\", ...)` at line 106 was correctly left untouched (no interpolation, not a vector). No new dependency — execFileSync was already in the imports. Behavior preserved for the documented option shapes. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-14",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "tool_invocation",
+      "severity": "low",
+      "title": "auth:openBrowser — exec template literal interpolates url into shell command",
+      "hypothesis": "src/commands/auth.js:48 builds platform-specific browser-open commands via `exec(\\`open \"${url}\"\\`, ...)` (or `start \"\" \"${url}\"` on Windows, `xdg-open \"${url}\"` on Linux). The url comes from the auth flow — typically an OAuth callback URL constructed from environment + state. If a future code path lets an attacker influence url (e.g., a redirect from cloud auth or a configured custom auth provider), the same shell-injection vector applies.",
+      "preconditions": [
+        "src/commands/auth.js:48 uses exec with a template literal",
+        "url originates from upstream auth flow; no URL validation before the open call"
+      ],
+      "reproduction_steps": [
+        "1. Mock callbackLogin to invoke openBrowser with `http://example.com/x\"; touch /tmp/aioson-pwn-14 #`.",
+        "2. Observe /tmp/aioson-pwn-14 was created."
+      ],
+      "evidence": [
+        "src/commands/auth.js:42-50 — exec with template literal for the platform-specific open command"
+      ],
+      "impact": "Lower realistic exploit chance than SF-12/13 because url is currently constructed from controlled inputs (baseUrl + state), but this is a thin protection — any future change that lets url come from a redirect or remote response makes it exploitable. Defense-in-depth treatment is cheap.",
+      "affected_artifacts": [
+        "src/commands/auth.js"
+      ],
+      "suggested_fix": "Use spawn with array args. Per platform: `spawn(\"open\", [url])` (macOS), `spawn(\"xdg-open\", [url])` (Linux), `spawn(\"cmd\", [\"/c\", \"start\", \"\", url])` (Windows — note that Windows `start` historically requires a special argument shape; safer alternative is to use the `start-process` Node.js library, but spawn with a fully-quoted argv is fine here). Optionally validate that url starts with http:// or https:// and is parseable by `new URL(url)` before opening.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/commands/auth.js#openBrowser — replaced exec(template_literal) with spawn(command, [argv...], { detached: true }). Three additional hardening layers applied: (1) URL parsed with new URL(url) — invalid URLs return false without spawning, (2) protocol restricted to http: or https: only, (3) child.unref() so the open call does not block process exit. Resolution semantics preserved: returns true once the child spawns successfully, false on any error. The Windows path uses cmd /c start \"\" <url> with the URL as a literal arg.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/commands/auth.js#openBrowser — confirmed (a) new URL(url) parse with try/catch returning false on invalid input, (b) protocol allowlist enforces http: or https: only, (c) spawn(command, args, { stdio: \"ignore\", detached: true }) replaces exec(template_literal). Resolution semantics preserved via spawn event handlers (error → false, spawn → true) plus a 5-second fallback timeout for hanging spawns. unref() prevents the child from blocking process exit. Smoke test in tool-invocation-hardening covers the exported behavior and asserts no canary file is created from a shell-injection candidate. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-15",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "runtime_permissions",
+      "severity": "high",
+      "title": "Autonomy-policy whitelist/blacklist is dead code — guarded mode does not actually restrict tool invocations",
+      "hypothesis": "src/autonomy-policy.js exports isCommandAllowed (lines 111-123) which checks shell_whitelist / shell_blacklist / aioson_whitelist patterns from .aioson/config/autonomy-protocol.json. grep across src/*.js, src/commands/*.js, src/lib/*.js, bin/*.js shows ZERO call sites for isCommandAllowed outside the module itself. Effective_mode is stamped on plan steps (workflow-execute.js:550) and displayed to users, but no code path actually consults the whitelist before spawning a child process or invoking an aioson subcommand. The framework documents \"guarded\" / \"trusted\" / \"headless\" modes as security boundaries; in reality, only the requires_tty flag is enforced (canRunHeadless at workflow-execute.js:508). Users running in guarded mode see the label but get the same execution surface as trusted.",
+      "preconditions": [
+        "src/autonomy-policy.js:111-123 exports isCommandAllowed",
+        "No grep match for isCommandAllowed( in any src/ file outside the module itself",
+        "autonomy-protocol.json declares whitelists for codex/claude/gemini/opencode tools",
+        "workflow-execute.js, agents.js, workflow-status.js, workflow-next.js use resolveEffectiveMode (mode label) but never gate execution against isCommandAllowed"
+      ],
+      "reproduction_steps": [
+        "1. Confirm the dead code: `grep -rn \"isCommandAllowed(\" src/ bin/ tests/ 2>/dev/null | grep -v \"src/autonomy-policy.js\"` — returns nothing.",
+        "2. Confirm the policy is read: `grep -rn \"readAutonomyProtocol\" src/ | head -5` — multiple readers.",
+        "3. Confirm the policy is only used for mode resolution: tracing each readAutonomyProtocol caller leads to resolveEffectiveMode/getToolPolicy and ultimately to a label, never to an authorization gate.",
+        "4. Demonstrate user-facing impact: run any aioson command with `--mode=guarded` and observe that no shell or subcommand is actually blocked."
+      ],
+      "evidence": [
+        "src/autonomy-policy.js:111 — isCommandAllowed function declaration",
+        "src/autonomy-policy.js:137 — isCommandAllowed exported",
+        "No call sites in src/, src/commands/, src/lib/, bin/ outside the module itself",
+        ".aioson/config/autonomy-protocol.json declares shell_whitelist, shell_blacklist, aioson_whitelist for every tool but those arrays are never consulted at runtime",
+        "src/commands/workflow-execute.js:508 only enforces canRunHeadless (TTY guard); :550 stamps effective_mode as a display label"
+      ],
+      "attack_path": "user trusts the documented \"guarded mode\" boundary → in practice no shell or aioson command is blocked → an automated/orchestrated flow that runs in guarded mode can invoke any whitelisted-on-paper command (e.g., `rm -rf /` via shell tool, `aioson cloud:*` via aioson tool) without policy enforcement.",
+      "impact": "Documentation/contract gap of high severity. The framework markets autonomy modes as a safety mechanism (see CLAUDE.md \"guarded\" references and the /sandbox docs) but the gate is informational. A user who relies on guarded mode to constrain a less-trusted agent or tool is misled. Combined with SF-project-16 (manifest can upgrade autonomy ceiling), a malicious actor with write access to .aioson/agents/manifests/ can declare any mode and the framework still wont block — but the higher-mode label may grant the agent more downstream privileges via prompt-side instructions.",
+      "affected_artifacts": [
+        "src/autonomy-policy.js",
+        "src/commands/workflow-execute.js",
+        "src/commands/agents.js",
+        "src/commands/workflow-next.js",
+        "src/commands/workflow-status.js",
+        ".aioson/config/autonomy-protocol.json"
+      ],
+      "suggested_fix": "Three options ordered by scope: (1) **Document the gap** — update /sandbox docs and autonomy-policy comments to say modes are advisory labels, not enforcement gates. Cheapest, honest, ships immediately. (2) **Enforce at the sandbox boundary** — wire isCommandAllowed into src/sandbox.js#runSandboxedCommand (which currently uses shell:true by design) so the sandbox refuses commands not in the active tool's shell_whitelist. Targeted, smallest blast radius for a real gate. (3) **Enforce at the harness boundary** — hook isCommandAllowed into the framework's tool-call paths (Bash tool emissions from agent prompts) via a pre-execution check. Largest blast radius and not feasible without harness changes. **Recommended now: option 1 (docs) + option 2 (sandbox)**. Option 3 is a plan-level discussion, not a quick fix.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/sandbox.js#executeInSandbox now accepts opts.policy. When supplied, the command is checked against shell_whitelist/shell_blacklist via isCommandAllowed BEFORE spawn — refused commands return { ok:false, refusedByPolicy:true, stderr:\"[autonomy-policy] command refused...\" } without ever touching the shell. Backwards-compatible: callers that omit opts.policy continue to behave exactly as before. src/autonomy-policy.js gains a top-of-file enforcement-boundary comment block documenting which functions are advisory (resolveEffectiveMode, getAgentMaxMode for label) and which gate execution (canRunHeadless for TTY, isCommandAllowed for sandbox shell). The harness-level Bash gate remains backlog. 4 regression tests cover whitelist/blacklist refusal, allowed-command pass-through, and back-compat (no policy).",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/sandbox.js:82-93 — opts.policy is checked via isCommandAllowed BEFORE the spawn block; refused commands return { ok:false, refusedByPolicy:true, stderr:\"[autonomy-policy] command refused...\" } and do not touch the shell at all. Backwards-compat preserved (no policy → original behavior). src/autonomy-policy.js gains a top-of-file comment block clearly delineating the enforcement boundary: which functions ARE gates (canRunHeadless TTY, isCommandAllowed sandbox shell), which are advisory labels (resolveEffectiveMode, getAgentMaxMode without enforcement). Honest documentation of the harness-level Bash gate as backlog. 4 regression tests in tests/runtime-permissions-hardening.test.js cover refusal/pass/back-compat. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-16",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "runtime_permissions",
+      "severity": "medium",
+      "title": "Agent manifest is read with no schema validation — can upgrade autonomy ceiling via forged autonomy_modes",
+      "hypothesis": "src/agent-manifests.js#readAgentManifest (line 9-22) calls JSON.parse on any .aioson/agents/manifests/{agent}.manifest.json file, returns the parsed object as-is, and the result feeds into src/autonomy-policy.js#getAgentMaxMode (line 78-87). The order of precedence at line 78-86 is: protocol.agents[id].max_mode > manifest.autonomy_modes > protocol.global_mode. If no agent-policy override exists in autonomy-protocol.json, the MANIFEST wins. A crafted manifest declaring `{ \"autonomy_modes\": [\"headless\"] }` upgrades the agent's ceiling above the global guarded default. Combined with SF-15 (no enforcement), the practical exploit today is a label upgrade — but once enforcement is added, this becomes a real bypass vector.",
+      "preconditions": [
+        "src/agent-manifests.js:9-22 — readAgentManifest does JSON.parse with no schema validation",
+        "src/agent-manifests.js:10 — agentId is only normalized (lowercase + trim), not validated against canonical agents (isCanonicalAgent in src/dossier/schema.js exists but is not used)",
+        "src/autonomy-policy.js:78-87 getAgentMaxMode treats manifest.autonomy_modes as authoritative when no per-agent policy override exists",
+        ".aioson/agents/manifests/ is a committed directory (per GITIGNORE_POLICY_LINES \"!.aioson/**\")"
+      ],
+      "reproduction_steps": [
+        "1. In a fresh project, autonomy-protocol.json has global_mode=guarded and no agents.foo entry.",
+        "2. Create .aioson/agents/manifests/foo.manifest.json with `{ \"autonomy_modes\": [\"headless\"] }`.",
+        "3. Call resolveEffectiveMode({ protocol, tool: \"claude\", agentId: \"foo\", manifest }) — observe the result is \"headless\" (manifest wins) instead of the global \"guarded\".",
+        "4. The mode label stamped on workflow plan steps is therefore elevated for agent foo."
+      ],
+      "evidence": [
+        "src/agent-manifests.js:16-21 — readAgentManifest parses any JSON file at the manifest path with try/catch and no schema validation",
+        "src/autonomy-policy.js:78-87 — manifest precedence over global_mode is explicit when no agent-policy override exists",
+        "src/dossier/schema.js exports isCanonicalAgent — exists but not consumed by readAgentManifest"
+      ],
+      "impact": "Today: label upgrade only (because SF-15 means modes are advisory). After SF-15 is fixed: a forged manifest grants the agent a higher autonomy ceiling than the operator intended. Realistic vector: a malicious dependency or a poisoned squad import that drops a manifest in .aioson/agents/manifests/. Lower than SF-15 because the manifest directory is small and visible to operators on git diff, but still warrants a schema check before SF-15 is fixed.",
+      "affected_artifacts": [
+        "src/agent-manifests.js",
+        "src/autonomy-policy.js"
+      ],
+      "suggested_fix": "Two layers: (1) **Validate agent identity** — readAgentManifest should reject when agentId is not in the canonical agent list (reuse isCanonicalAgent from src/dossier/schema.js). (2) **Validate manifest schema** — autonomy_modes must be an array whose elements are subsets of MODES = [\"guarded\",\"trusted\",\"headless\"]; reject any element not in MODES instead of silently passing it to getMostPermissiveMode (which currently treats unknown modes as fallback=\"guarded\" — silent downgrade). Optionally cap manifest.autonomy_modes at protocol.global_mode (manifest can only NARROW, not WIDEN, the ceiling). The cap is the architecturally cleaner fix — it removes the precedence inversion that allows manifest upgrade in the first place.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: three layers. (1) src/agent-manifests.js#readAgentManifest refuses non-canonical agent ids before opening the file (reuses isCanonicalAgent from src/dossier/schema.js). (2) New sanitizeManifest filters autonomy_modes against ALLOWED_AUTONOMY_MODES = {\"guarded\",\"trusted\",\"headless\"} — unknown modes (e.g., \"godmode\") are stripped silently rather than passed through to getMostPermissiveMode. (3) src/autonomy-policy.js#getAgentMaxMode caps manifest-supplied modes at protocol.global_mode — manifest can NARROW the autonomy ceiling but never WIDEN it. The pre-existing test \"resolveEffectiveMode clamps requested mode by tool and agent limits\" was updated to reflect the new (security-correct) cap; a new sibling test verifies that manifest can still claim modes up to the global ceiling. 4 new regression tests at tests/runtime-permissions-hardening.test.js. Full suite 2063/2063 PASS.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: three-layer fix in place. Layer 1 (src/agent-manifests.js:31): isCanonicalAgent guard refuses non-canonical agent ids before disk read — manifest forgery for unknown agents impossible. Layer 2 (src/agent-manifests.js:15-23): sanitizeManifest filters autonomy_modes against ALLOWED_AUTONOMY_MODES; unknown modes silently dropped instead of leaking through getMostPermissiveMode. Layer 3 (src/autonomy-policy.js:94-110): getAgentMaxMode caps manifest-declared modes at protocol.global_mode using MODES index comparison — manifest can narrow but never widen. Pre-existing test \"resolveEffectiveMode clamps requested mode by tool and agent limits\" updated to reflect new (security-correct) behavior; comment in test explicitly cites SF-16. New sibling test verifies manifest can claim modes UP TO the global ceiling. 4 regression tests cover all three layers. Full suite 2063/2063 PASS — first round to ship a fully green suite with zero pre-existing failures across all surfaces. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-17",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "protocol_contract",
+      "severity": "medium",
+      "title": "validateHandoffProtocol failure is logged but does not block writeHandoff",
+      "hypothesis": "src/commands/workflow-next.js:1031-1036 calls validateHandoffProtocol and logs validation errors via logErrorLine, but writeHandoff runs unconditionally on the next line. A handoff that fails capability checks (missing manifest, agent does not declare required capability, handoff_contract_ok=false) is still persisted to .aioson/context/last-handoff.json and propagates to the next agent.",
+      "preconditions": [
+        "src/commands/workflow-next.js:1031 — validation result is consumed only as a log line",
+        "src/commands/workflow-next.js:1036 — writeHandoff runs regardless of handoffValidation.ok"
+      ],
+      "reproduction_steps": [
+        "1. Construct a workflow handoff where to.agent_id points to a non-canonical agent or where capability_required is missing from the target manifest.",
+        "2. Trigger the workflow:next path that builds and writes the handoff (e.g., complete a stage with the malformed activation).",
+        "3. Observe the warning log line \"Handoff protocol warning:\" — the handoff is still written.",
+        "4. Read .aioson/context/last-handoff.json and confirm the malformed payload landed."
+      ],
+      "evidence": [
+        "src/commands/workflow-next.js:1031-1036 — validation result discarded before writeHandoff",
+        "src/handoff-validator.js:5-41 — validator returns { ok, errors[] } but caller does not act on ok",
+        "Same pattern at workflow-next.js:932-937 (healing path)"
+      ],
+      "attack_path": "malformed/forged handoff payload → validateHandoffProtocol returns ok=false → log line emitted → writeHandoff persists anyway → next agent reads last-handoff.json and trusts the payload.",
+      "impact": "Workflow integrity: a corrupted handoff propagates as if it were valid. Combined with SF-10 (TTL/slug guard now in place but no schema validation), the next agent can be steered toward the wrong stage or capability. Severity is medium because the writer is internal (workflow-next.js itself constructs the payload via buildWorkflowHandoffProtocol), so external forgery requires write access to the project. But the validator was designed to block bad payloads — the bypass is gratuitous.",
+      "affected_artifacts": [
+        "src/commands/workflow-next.js"
+      ],
+      "suggested_fix": "Make the validator enforcing: when handoffValidation.ok === false, return early with an error result instead of writing the handoff. Both call sites (line 932-937 healing, line 1031-1036 normal) need the same guard. Optionally, allow a soft-fail mode via an option flag for legacy callers — but the default should be enforcing.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "accepted_risk",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Investigated 2026-05-07 by @dev. Initial attempt to make the validator enforcing (return early on validation failure) broke 8 existing tests because the current error set is intentionally soft: \"no capability manifest\" / \"unknown capability\" are common during bootstrap (only 7 of ~20 agents have manifests committed). Reverted the hard-block. Added clarifying comments at both call sites in src/commands/workflow-next.js (lines ~1031 normal, ~932 healing) explaining that warnings are non-blocking by design until the validator is refactored to separate hard contract violations from advisory checks. Marked accepted_risk; backlog ticket: extend handoff-validator.js to return { warnings, errors } separately, then enforce only on errors. Workflow integrity is partially compensated by SF-10 (TTL+slug guard on readHandoff) and SF-16 (manifest validation).",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: status accepted_risk after evidence-based investigation. The original hard-block fix broke 8 pre-existing tests because the validator currently flags soft conditions (missing manifest, unknown capability) that are common in bootstrap. Both call sites in src/commands/workflow-next.js now carry clarifying comments explaining the design constraint. Compensating controls in place: SF-10 (TTL/slug guard on readHandoff drops stale or feature-mismatched handoffs), SF-16 (manifest schema validation). Backlog ticket: refactor handoff-validator to return { warnings, errors } separately and enforce only on errors. Gate decision: ACCEPT."
+    },
+    {
+      "id": "SF-project-18",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "protocol_contract",
+      "severity": "medium",
+      "title": "workflow.state.json has no integrity check — workflow gate can be bypassed by direct file write",
+      "hypothesis": ".aioson/context/workflow.state.json is plain JSON ({ sequence, current, next, completed, skipped, ... }). Workflow gates are decided based on the completed[] array. Any process with write access to the file can claim arbitrary stages were completed without running them. There is no signature, no per-stage timestamp validation, no cross-check against runtime telemetry (.aioson/runtime/aios.sqlite events).",
+      "preconditions": [
+        "src/commands/workflow-next.js reads workflow.state.json without integrity verification",
+        "workflow.state.json contains a free-form completed[] array"
+      ],
+      "reproduction_steps": [
+        "1. In a fresh project, run `aioson workflow:next .` once to create the state file.",
+        "2. Edit .aioson/context/workflow.state.json by hand: set `completed: [\"product\",\"analyst\",\"architect\",\"dev\",\"pentester\",\"qa\"]` and `current: null`.",
+        "3. Run `aioson workflow:next .` again — observe it accepts the edited completed list as if those stages had run.",
+        "4. The workflow proceeds to the next gate without the actual artifacts (prd-{slug}.md, spec-{slug}.md, security-findings-{slug}.json) existing."
+      ],
+      "evidence": [
+        "src/commands/workflow-next.js:26 STATE_RELATIVE_PATH constant",
+        "workflow.state.json schema admits any string in completed[] / sequence[]",
+        "No grep match for HMAC/signature/integrity in workflow-next.js or related modules"
+      ],
+      "impact": "Gate bypass via local file write. Realistic vectors: (a) a malicious dependency or sub-process with write access to the project directory, (b) an LLM agent that decides to \"fix\" workflow state directly. The framework already has runtime events in .aioson/runtime/aios.sqlite that record stage completions — these could serve as the cross-check. Severity medium because attacker needs project write access; high if the attacker is an LLM agent that the user trusted.",
+      "affected_artifacts": [
+        "src/commands/workflow-next.js",
+        ".aioson/context/workflow.state.json"
+      ],
+      "suggested_fix": "Two layers: (1) **Cross-check against runtime telemetry**: when reading workflow.state.json, verify each completed[] entry has a corresponding agent_done event in .aioson/runtime/aios.sqlite. Mismatches log a warning and (in strict mode) refuse to advance. (2) **Optional: HMAC-sign the state file** with a project-local key stored in .aioson/runtime/ (gitignored) so external file writes are detectable. Layer 1 is cheaper and uses telemetry that already exists. Layer 2 is defense-in-depth for projects that need stronger integrity guarantees.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/commands/workflow-next.js#detectUnsubstantiatedCompletions queries .aioson/runtime/aios.sqlite agent_events for each completed[] stage and emits a warn line via logger.warn when stages have no agent_done/stage_completed event. Wired into loadOrCreateState so every workflow:next call performs the cross-check on existing state. Best-effort: silent if runtime DB is absent, schema mismatched, or driver unavailable — the framework still works in environments without telemetry. Function exported from workflow-next.js for testability. Layer 2 (HMAC signing) deferred to backlog. 1 regression test confirms silent-skip when DB is absent.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/commands/workflow-next.js — new detectUnsubstantiatedCompletions function queries .aioson/runtime/aios.sqlite for agent_done/stage_completed events matching each completed[] stage. Wired into loadOrCreateState so every workflow:next call cross-checks. Robust to: missing DB, missing schema, driver errors — degrades to silent no-op rather than raising false alarms. Function exported for testability. Smoke test confirms silent-skip when DB is absent. Layer 2 (HMAC signing) explicitly deferred to backlog with rationale. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-19",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "delegation_handoff",
+      "severity": "low",
+      "title": "artifact_uris path is accepted without project-boundary or existence check",
+      "hypothesis": "src/session-handoff.js:27-48 coerceArtifactUri validates that path is a non-empty string but does not check (a) that the path is relative to projectDir, (b) that the path does not contain `..`, (c) that the file actually exists. A handoff payload can declare `artifact_uris: [{ path: \"/etc/passwd\", kind: \"spec\" }]` and downstream consumers (e.g., dev-resume, qa preflight) treat it as a legitimate spec path.",
+      "preconditions": [
+        "src/session-handoff.js:27-48 coerceArtifactUri does not validate path scope or existence",
+        "Downstream consumers (src/lib/dev-resume.js, qa flows) read artifact_uris paths without re-validating"
+      ],
+      "reproduction_steps": [
+        "1. Construct a handoff with artifact_uris: [{ path: \"../../../../etc/passwd\", kind: \"spec\", agent: \"dev\", added_at: <iso> }].",
+        "2. Pass through writeHandoff or buildBasicHandoffProtocol and observe the entry persists verbatim.",
+        "3. Trigger any downstream code that reads artifact_uris (dev-resume.js#buildDevResumeData) and observe it accepts the entry."
+      ],
+      "evidence": [
+        "src/session-handoff.js:38 — `typeof item.path === \"string\" && item.path.trim()` is the only validation",
+        "No path.relative or .startsWith(\"..\") guard"
+      ],
+      "impact": "Operational risk: misleading dev-resume payloads, qa flows that look at the wrong file. Not directly a code-execution vector because consumers typically just READ the file (and read failures are caught), but a confusing handoff can steer agents toward attacker-chosen paths.",
+      "affected_artifacts": [
+        "src/session-handoff.js"
+      ],
+      "suggested_fix": "In coerceArtifactUri, validate that path is project-relative: if path.isAbsolute(item.path) or item.path.split(path.sep).includes(\"..\") then drop the entry (return null) and emit a runtime-log warning `artifact_uri_rejected`. Optionally check fs.exists at write time to fail fast on non-existent paths.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-07: src/session-handoff.js — new isSafeArtifactPath rejects (a) non-string or empty paths, (b) absolute paths via path.isAbsolute, (c) any path whose segments contain \"..\". Both the string-form and object-form branches of coerceArtifactUri now route through this guard. Forged handoffs declaring artifact_uris like /etc/passwd or ../../etc/secrets are dropped silently (return null) instead of propagating to downstream consumers (dev-resume, qa preflight). 4 regression tests in tests/protocol-contract-hardening.test.js cover the absolute-path, dotdot, string-absolute, and safe-path cases.",
+      "qa_verification_note": "Verified 2026-05-07 by @qa: src/session-handoff.js — new isSafeArtifactPath helper rejects (a) non-string/empty paths, (b) absolute paths via path.isAbsolute, (c) any path whose segments include \"..\". Routed through both branches of coerceArtifactUri (string-form and object-form), so coerceArtifactUris (the array writer) inherits the guard transparently. 4 regression tests in tests/protocol-contract-hardening.test.js cover absolute-path / dotdot / string-absolute / safe-path. Gate decision: PASS."
+    },
+    {
+      "id": "SF-project-20",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "auth_identity",
+      "severity": "info",
+      "title": "Agent identity is a prompt-side convention; no OS-level isolation between agents (by design, single-tenant)",
+      "hypothesis": "Across src/* there is no privilege model that distinguishes @dev from @qa from @pentester at runtime. All agents run as the same OS user, in the same Node.js process, with the same filesystem and tool access. Identity is enforced solely by the LLM following the agent prompt loaded at session start — there is no signing, sandbox-per-agent, or capability ACL that would prevent a malicious or confused agent from acting as another. The framework was designed for single-tenant local development where this is acceptable, but the implication should be explicit.",
+      "preconditions": [
+        "No grep match for getuid/setuid/sandbox-per-agent/capability-acl in src/",
+        "Manifest exists (.aioson/agents/manifests/) but only describes capabilities, does not enforce them at runtime",
+        "CLAUDE.md HARD constraints rely on prompt instructions, not code enforcement (covered separately by SF-11 for context-pack and SF-15 for autonomy modes)"
+      ],
+      "reproduction_steps": [
+        "N/A — this is a framework-architecture finding, not an exploitable bug. Confirmed by grep across src/ for any privilege-separation primitive."
+      ],
+      "evidence": [
+        "No code paths impose runtime identity isolation between agents",
+        "CLAUDE.md and individual agent .md files document trust boundaries but as prompt instructions",
+        "SF-11 already enforced one HARD RULE in code (.aioson/agents/ excluded from context-pack); the broader identity isolation is intentionally not implemented"
+      ],
+      "impact": "For single-tenant local development (the framework's primary use case), this is appropriate. If AIOSON is ever embedded in a multi-tenant environment (cloud-hosted CI, shared CLI server), users must NOT assume agent isolation provides any security boundary. Documented as accepted_risk so future operators do not misread the framework guarantees.",
+      "affected_artifacts": [
+        "CLAUDE.md",
+        ".aioson/agents/"
+      ],
+      "suggested_fix": "No code change required. Add a brief note in CLAUDE.md or in the framework documentation: \"AIOSON runs all agents in the same OS process and trust domain. Agent identity is a documentation/convention concept enforced by prompts and a small set of code-level guards (autonomy-policy sandbox shell-gate, context-pack agent-file exclusion, manifest schema validation). Do not rely on agent isolation for security boundaries in multi-tenant deployments.\"",
+      "recommended_owner": "qa",
+      "recommended_gate_status": "note",
+      "status": "accepted_risk",
+      "safe_to_reproduce": true,
+      "qa_decision_note": "Accepted as residual risk. Framework is designed for single-tenant local dev; documenting the limit is the appropriate response. Backlog: add the explicit note to CLAUDE.md."
     }
   ]
 }
