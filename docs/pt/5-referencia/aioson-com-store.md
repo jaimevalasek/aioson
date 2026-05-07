@@ -116,4 +116,4 @@ $ aioson system:install compliance-v1
 
 - [Ficha do @squad](../4-agentes/squad.md) — criar squads para publicar
 - [Receita: Publicar no aioson.com](../3-receitas/publicar-no-aioson-com.md) — passo a passo end-to-end
-- [Genome Distribution](../genome-distribution.md) — publicar genomes especificamente
+- [Genome Distribution](./genome-distribution.md) — publicar genomes especificamente

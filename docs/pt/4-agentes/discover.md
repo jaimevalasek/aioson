@@ -61,6 +61,11 @@ Você > @discover
 
 ## Saídas em disco
 
+`@discover` produz **dois outputs complementares**, com propósitos diferentes:
+
+- **`bootstrap/`** — cache **semântico**, organizado por *tipo de artefato* (entidades, rotas, services, dependências, testes). Pensado para o próximo agente ler em sequência sem re-escanear o projeto.
+- **`brains/discover/`** — nodes em formato **Zettelkasten**, com cross-references entre conceitos. Pensado para qualquer agente consultar pontualmente ("o que sei sobre `OrderItem`?") via `aioson brains:query`.
+
 | Arquivo | O que contém |
 |---|---|
 | `.aioson/context/bootstrap/entities.md` | Entidades, atributos e relacionamentos detectados |

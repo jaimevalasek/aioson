@@ -111,5 +111,5 @@ aioson detect:test-runner .
 
 - [Constitution completa](../1-entender/por-que-existe.md)
 - [Classificação MICRO/SMALL/MEDIUM](../2-comecar/decisoes-iniciais.md)
-- [SDD Automation Scripts](../sdd-automation-scripts.md)
+- [SDD Automation Scripts](./sdd-automation-scripts.md)
 - [Feature Dossier](./feature-dossier.md) — onde os artefatos de cada feature vivem

@@ -123,9 +123,9 @@ Você > push-notifications
 
 ---
 
-## Variante B — A ideia está só na sua cabeça
+## Variante B — A ideia está só na sua cabeça (modo conversacional)
 
-Sem arquivos. Nenhum rascunho. Só uma vontade de construir algo.
+Sem arquivos. Nenhum rascunho. Só uma vontade de construir algo. Quando `plans/` está vazio, `@briefing` entra em **modo conversacional estruturado** — uma entrevista em 6 etapas que constrói o briefing pergunta por pergunta.
 
 ```
 Você > @briefing
@@ -134,18 +134,60 @@ Você > @briefing
             conversacionalmente? Vou fazer perguntas e montar o briefing.
 Você > Sim.
 
-@briefing > Qual o contexto — o que está acontecendo no projeto que fez essa
-            ideia surgir agora?
+─── Etapa A — Contexto (o "por que agora?") ───
+@briefing > Me conta o contexto: qual a situação atual e o que mudou
+            recentemente que fez isso surgir agora? Sempre existe um
+            gatilho.
 Você > Clientes estão reclamando que perdem atualizações de pedido.
+       Tivemos 3 chamados na semana passada.
 
-@briefing > Entendi. Quem é afetado — só clientes finais, ou também
-            a equipe interna?
-Você > Principalmente clientes.
+─── Etapa B — Problema (framing JTBD) ───
+@briefing > Qual a dor específica que você quer resolver? Para quem?
+            O que eles não conseguem fazer hoje sem dar uma volta?
+Você > Cliente faz pedido, fecha o app, e fica sem saber se foi confirmado.
 
-@briefing > [continua — 4 a 6 perguntas no total, bateria de riscos, gaps]
+@briefing > Deixa eu reformular como JTBD: "Quando faço um pedido e fecho
+            o app, quero saber que ele foi confirmado, para não precisar
+            voltar e checar." Faz sentido?
+Você > Sim, exatamente.
 
-@briefing > Briefing gerado: .aioson/briefings/notificacoes-pedido/briefings.md
+─── Etapa C — Solução proposta ───
+@briefing > Que direções você está cogitando? Múltiplas é ok — é hipótese,
+            não compromisso.
+Você > Push notification. Talvez SMS para pedidos acima de R$500.
+
+─── Etapa D — Riscos (os 4 de Cagan + risco de não-fazer) ───
+@briefing > Vou perguntar em 4 passes:
+            1. Valor: usuários vão querer? (ou só toleram?)
+            2. Usabilidade: vão entender e configurar?
+            3. Viabilidade técnica: dá para construir?
+            4. Viabilidade de negócio: legal/LGPD/custo/marca?
+            E por fim: qual o custo de NÃO fazer?
+Você > [responde cada um]
+
+─── Etapa E — Gaps (estado atual vs desejado) ───
+@briefing > Para cada coisa indefinida, vamos enquadrar como:
+            "hoje temos X, queremos Y, o delta é Z (mensurável quando der)".
+            O que ainda está em aberto?
+Você > Frequência máxima de notif por dia. Hoje: indefinido. Queremos: ?
+
+─── Etapa F — Classificação de questões abertas ───
+@briefing > Vou marcar cada pergunta com uma tag:
+            [research-able]      → < 4h de pesquisa resolve
+            [testable]           → experimento de 1-2 dias
+            [decision-required]  → julgamento entre alternativas
+            [out-of-scope]       → parar agora, não bloqueia
+
+            Resultado:
+            1. Frequência máxima       [decision-required]
+            2. Engajamento real esperado [research-able]
+            3. SMS para pedidos altos  [out-of-scope — fase 2]
+
+@briefing > 6 etapas concluídas. Briefing gerado:
+            .aioson/briefings/notificacoes-pedido/briefings.md
 ```
+
+> **Regra de qualidade:** se mais de 3 perguntas ficarem como `decision-required` ou vagas, `@briefing` faz outra rodada antes de escrever. Briefing apressado custa caro depois.
 
 O resto do fluxo é igual: aprovar via CLI → `@product`.
 

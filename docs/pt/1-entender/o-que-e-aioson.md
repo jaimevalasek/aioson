@@ -18,11 +18,14 @@ Imagine que você quer construir uma casa.
 
 **Com AIOSON:** você tem uma equipe.
 
-- O **Product** entende o que você quer construir e por quê.
+- O **Briefing** ouve sua ideia ainda crua (a "conversa de bar") e devolve um briefing estruturado, com riscos e perguntas em aberto, *antes* de virar projeto.
+- O **Product** entende o que você quer construir e por quê — e escreve o PRD.
+- O **Sheldon** revisa o PRD como um arquiteto sênior que já viu de tudo: aponta lacunas, pesquisa o que está obsoleto, lê o seu código real e decide se enriquece o PRD ou cria um plano em fases. Pode revisar várias vezes.
 - O **Analyst** descobre o que já existe no terreno (codebase) e o que precisa.
 - O **Architect** projeta a estrutura.
 - O **UX-UI** desenha como o morador vai viver lá.
 - O **Dev** constrói.
+- O **Deyvin** é o empreiteiro que retoma a obra quando você volta de viagem: lê o que está confirmado, marca o que é só inferência, e segue um passo pequeno de cada vez sem você precisar re-explicar nada.
 - O **QA** vistoria.
 - O **Pentester** testa as fechaduras (segurança).
 - O **Committer** escreve a ata da reforma (mensagem de commit).

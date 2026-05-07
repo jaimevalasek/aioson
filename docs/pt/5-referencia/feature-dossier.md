@@ -117,5 +117,5 @@ O `dossier.json` referencia artefatos via `artifact_uris` — caminhos relativos
 ## Próximo passo
 
 - [Agent-chain continuity](./agent-chain-continuity.md) — como dossier, handoff-protocol e dev-resume trabalham juntos
-- [Feature Archive](../feature-archive.md) — o que acontece quando a feature é fechada
+- [Feature Archive](./feature-archive.md) — o que acontece quando a feature é fechada
 - [Ficha do @deyvin](../4-agentes/deyvin.md) — agente de retomada que lê o dossier

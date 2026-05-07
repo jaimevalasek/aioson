@@ -140,5 +140,5 @@ Use `workflow:next` para seguir o fluxo automático do SDD. Use `live:start` qua
 ## Próximo passo
 
 - [Agent-chain continuity](./agent-chain-continuity.md) — como milestones e handoffs se conectam com dossier
-- [Runtime observability](../runtime-observability.md) — visualizar telemetria no dashboard
-- [Hooks & Session Guard](../hooks-session-guard.md) — visibilidade automática sem live session
+- [Runtime observability](./runtime-observability.md) — visualizar telemetria no dashboard
+- [Hooks & Session Guard](./hooks-session-guard.md) — visibilidade automática sem live session

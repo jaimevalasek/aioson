@@ -878,7 +878,7 @@ Use quando você quer:
 - **Testar** webhooks antes de rodar squads de verdade
 - **Reenviar** conteúdo que falhou na entrega automática
 
-Veja [Output Strategy e Delivery](../output-strategy-delivery.md) para guia completo sobre webhooks, payloads, env vars e troubleshooting.
+Veja [Output Strategy e Delivery](./output-strategy-delivery.md) para guia completo sobre webhooks, payloads, env vars e troubleshooting.
 
 ### 28. Verificar saúde do contexto antes de uma sessão
 

@@ -210,7 +210,7 @@ Crie `.aioson/rules/<nome>.md`. Exemplo:
 Controllers nunca acessam o ORM diretamente. Sempre via service layer.
 ```
 
-Todo agente técnico (`@dev`, `@qa`, etc.) carrega essas regras automaticamente. Veja [Governança de Design Docs](../design-docs-governance.md) (atualizado).
+Todo agente técnico (`@dev`, `@qa`, etc.) carrega essas regras automaticamente. Veja [Governança de Design Docs](../5-referencia/design-docs-governance.md) (atualizado).
 
 ### Equipe inteira no mesmo projeto
 

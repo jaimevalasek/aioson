@@ -27,9 +27,10 @@
         ┌──────────────────────────────────────┐
         │       NÚCLEO DE DESENVOLVIMENTO      │
         │                                      │
-        │  Product → Analyst → Architect →     │
-        │  UX-UI → PM → Orchestrator → Dev →   │
-        │  QA → Validator → Tester → Pentester │
+        │  Product → Sheldon → Analyst →       │
+        │  Architect → UX-UI → PM →            │
+        │  Orchestrator → Dev → QA →           │
+        │  Validator → Tester → Pentester      │
         │                                      │
         └──────────────────────────────────────┘
                       │
@@ -37,8 +38,8 @@
         ┌──────────────────────────────────────┐
         │      CONTINUIDADE & ENTREGA          │
         │                                      │
-        │  Deyvin (pair) · Sheldon (review)    │
-        │  Committer (git) · Discover (cache)  │
+        │  Deyvin (pair) · Committer (git)     │
+        │  Discover (cache semântico)          │
         │                                      │
         └──────────────────────────────────────┘
                       │
@@ -70,12 +71,15 @@
 A ordem padrão depende da classificação:
 
 **MICRO:** `@setup → @product (opcional) → @dev`
-**SMALL:** `@setup → @product → @analyst → @architect → @dev → @qa`
-**MEDIUM:** `@setup → @product → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa`
+**SMALL:** `@setup → @product → @sheldon (opcional) → @analyst → @architect → @dev → @qa`
+**MEDIUM:** `@setup → @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa`
+
+> **Por que `@sheldon` aparece tão cedo?** Ele é o **PRD quality guardian** — roda *entre* `@product` e `@analyst` para detectar gaps, validar premissas técnicas com pesquisa web, e decidir entre enriquecer o PRD in-place ou criar um phased plan em `.aioson/plans/{slug}/`. Pode ser invocado N vezes no mesmo PRD. Pular essa etapa em features sérias custa caro lá na frente.
 
 | Agente | O que faz | Saída principal |
 |---|---|---|
 | **`@product`** | Define visão, escopo, PRD da feature | `prd.md`, `spec.md` |
+| **`@sheldon`** | PRD quality guardian — gap analysis, web research, sizing, decide in-place vs phased plan | `sheldon-enrichment-{slug}.md` ou `.aioson/plans/{slug}/` |
 | **`@analyst`** | Descobre domínio, entidades, fluxos no codebase | `architecture.md`, ER diagrams |
 | **`@architect`** | Decisões técnicas: estrutura, libs, integração | `architecture.md` (decisões) |
 | **`@ux-ui`** | Design system e specs de componentes (MEDIUM) | `design-doc.md`, `discovery.md` |
@@ -91,10 +95,9 @@ A ordem padrão depende da classificação:
 
 | Agente | O que faz | Quando invocar |
 |---|---|---|
-| **`@deyvin`** (alias `@pair`) | Pair-programming, continuidade | Voltar a uma feature em curso |
-| **`@sheldon`** | Análise técnica profunda, revisão de arquitetura | Antes de mergulhar em decisões grandes |
+| **`@deyvin`** (alias `@pair`) | Pair-programming continuity-first — recupera estado com `confirmed/inferred`, trabalha em batches pequenos validados, scope gate automático (recusa greenfield e devolve para `@product`) | Retomar feature em curso após crash, debugar slice pequena, pair em tarefa já delimitada |
 | **`@committer`** | Gera mensagens de commit profissionais | Antes de commitar |
-| **`@discover`** | Constrói cache semântico do projeto | Onboarding rápido em codebase grande |
+| **`@discover`** | Constrói cache semântico do projeto: produz `bootstrap/` (estruturado por tipo de artefato, para agentes lerem) **e** `brains/` (Zettelkasten para cross-referência) | Onboarding rápido em codebase grande |
 
 ### 4. Especializações
 

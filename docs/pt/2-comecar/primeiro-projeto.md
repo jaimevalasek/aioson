@@ -14,7 +14,7 @@ Vamos construir um **mini-app de TODO** usando o ciclo SMALL. Você verá cada a
 - Um cliente AI configurado: **Claude Code**, **Codex CLI**, **Gemini CLI** ou **OpenCode**. Os exemplos aqui usam Claude Code; é trivial trocar.
 - Um terminal aberto
 
-Se você não tem cliente AI ainda: o Claude Code é o mais usado pela comunidade AIOSON. Veja [`clientes-ai.md`](../clientes-ai.md).
+Se você não tem cliente AI ainda: o Claude Code é o mais usado pela comunidade AIOSON. Veja [`clientes-ai.md`](../5-referencia/clientes-ai.md).
 
 ---
 
