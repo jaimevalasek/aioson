@@ -47,6 +47,7 @@
 
 | Documento | Descrição |
 |---|---|
+| [sdd-planos-e-estrutura.md](./sdd-planos-e-estrutura.md) | Mapa completo de artefatos: plans/, .aioson/plans/, .aioson/context/, lanes paralelas, tasks.md |
 | [sdd-automation-scripts.md](./sdd-automation-scripts.md) | Regra dos 80%: scripts determinísticos de gate, classificação e estado |
 | [motor-hardening.md](./motor-hardening.md) | Hardening do motor: gates técnicos, auto-cura, test briefing |
 | [design-docs-governance.md](./design-docs-governance.md) | Regras hard de código que agentes aplicam automaticamente |

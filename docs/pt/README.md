@@ -20,18 +20,25 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 3. [Decisões iniciais](./2-comecar/decisoes-iniciais.md) — MICRO, SMALL ou MEDIUM? Qual cliente AI?
 
 ### Quero uma receita pronta para o meu caso
-1. [Landing page](./3-receitas/landing-page.md) — `@product` → `@ux-ui` → `@dev` → `@qa`, com `@copywriter` opcional
-2. [App SaaS do zero](./3-receitas/app-saas-do-zero.md) — workflow MEDIUM completo, auth + billing + admin
-3. [Integração em codebase grande](./3-receitas/integracao-em-codebase-grande.md) — install + `@discover` + `@analyst` em legacy
-4. [Refatoração grande](./3-receitas/refatoracao-grande.md) — `@sheldon` antes do `@dev`, ciclo autônomo QA→Dev
-5. [Auditoria de segurança](./3-receitas/auditoria-seguranca.md) — `@pentester` end-to-end (OWASP + LLM Top 10 + supply chain)
-6. [Publicar no aioson.com](./3-receitas/publicar-no-aioson-com.md) — `system:package` + `system:publish` (com `--invite`)
-7. [Clonar design de site](./3-receitas/clonar-design-de-site.md) — `@site-forge` + `@design-hybrid-forge`
-8. [Continuidade entre sessões](./3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
+
+**Trilhas canônicas — como features chegam ao dev:**
+1. **[Feature completa com @sheldon](./3-receitas/feature-completa-com-sheldon.md)** — a trilha principal: `@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa` (com gates opcionais de `@tester` e `@pentester`)
+2. [Da ideia ao PRD via @briefing](./3-receitas/da-ideia-ao-prd-via-briefing.md) — quando a ideia ainda é vaga
+3. [Plans externos para @product](./3-receitas/plans-externos-para-product.md) — quando você planejou em ChatGPT/Claude.io e quer trazer
+
+**Por cenário:**
+4. [Landing page](./3-receitas/landing-page.md) — `@product` → `@ux-ui` → `@dev` → `@qa`, com `@copywriter` opcional
+5. [App SaaS do zero](./3-receitas/app-saas-do-zero.md) — workflow MEDIUM completo, auth + billing + admin
+6. [Integração em codebase grande](./3-receitas/integracao-em-codebase-grande.md) — install + `@discover` + `@analyst` em legacy
+7. [Refatoração grande](./3-receitas/refatoracao-grande.md) — `@sheldon` antes do `@dev`, ciclo autônomo QA→Dev
+8. [Auditoria de segurança](./3-receitas/auditoria-seguranca.md) — `@pentester` end-to-end (OWASP + LLM Top 10 + supply chain)
+9. [Publicar no aioson.com](./3-receitas/publicar-no-aioson-com.md) — `system:package` + `system:publish` (com `--invite`)
+10. [Clonar design de site](./3-receitas/clonar-design-de-site.md) — `@site-forge` + `@design-hybrid-forge`
+11. [Continuidade entre sessões](./3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
 
 ### Quero a referência técnica de um agente ou comando
 - **[Fichas dos 28 agentes](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
-- **[Referência técnica completa](./5-referencia/README.md)** — 30 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
+- **[Referência técnica completa](./5-referencia/README.md)** — 32 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
 - [Guia de agentes (legado)](./agentes.md) — visão tabular alternativa
 
 #### Destaques de `5-referencia/` (features 2026 sem doc PT antes)
@@ -89,10 +96,11 @@ Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legado
 ## Status desta documentação
 
 **Fase A (entender + começar)** — concluída · 8 docs em `1-entender/` e `2-comecar/`.
-**Fase B (receitas práticas + ficha por agente)** — concluída · 8 receitas em `3-receitas/` + 28 fichas em `4-agentes/`.
-**Fase C (referência técnica completa)** — concluída · 30 docs em `5-referencia/`, com 6 totalmente novos cobrindo features 2026 antes não documentadas em PT.
+**Fase B (receitas práticas + ficha por agente)** — concluída · 11 receitas em `3-receitas/` + 28 fichas em `4-agentes/`.
+**Fase C (referência técnica completa)** — concluída · 32 docs em `5-referencia/`, com 6 totalmente novos cobrindo features 2026 antes não documentadas em PT.
+**Fase D (trilhas de workflow)** — concluída · 3 trilhas canônicas de feature: briefing→PRD, plans externos, e trilha completa com @sheldon.
 
-**Métricas finais:** 76 docs, ~85.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
+**Métricas finais:** 81 docs, ~92.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
 
 Próximos passos do projeto de docs (fora desta entrega):
 - Replicar a estrutura em `docs/en/` (atualmente legacy)

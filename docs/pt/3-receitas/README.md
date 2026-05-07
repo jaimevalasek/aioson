@@ -2,6 +2,18 @@
 
 Cada receita é um guia end-to-end com diálogos simulados, exemplos rodáveis e solução de problemas. Escolha pelo seu cenário:
 
+## Trilhas canônicas (recomendadas para começar)
+
+Estas três trilhas mostram **como features chegam ao desenvolvimento** no AIOSON. Você quase sempre cai em uma delas.
+
+| Trilha | Quando usar | Agentes-chave |
+|---|---|---|
+| **[Feature completa com @sheldon](./feature-completa-com-sheldon.md)** | Você tem PRD em mente e quer a trilha canônica completa (a mais usada) | @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa |
+| [Da ideia ao PRD via @briefing](./da-ideia-ao-prd-via-briefing.md) | Sua ideia ainda é vaga, várias anotações soltas | @briefing → @product |
+| [Plans externos para @product](./plans-externos-para-product.md) | Você já planejou em outro chat (ChatGPT, Claude.io, Gemini Web) | @product (lê `/plans/`) |
+
+## Receitas por cenário
+
 | Receita | Cenário | Agentes principais |
 |---|---|---|
 | [Landing page](./landing-page.md) | Criar página de apresentação com copy e design | @product, @copywriter, @ux-ui, @dev, @qa |

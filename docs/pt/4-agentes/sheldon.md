@@ -57,10 +57,17 @@ Você > @sheldon
 
 ## Saídas em disco
 
-| Arquivo | O que contém |
-|---|---|
-| `.aioson/context/prd-{slug}.md` | PRD enriquecido in-place (quando enriquecimento direto) |
-| `.aioson/context/sheldon-enrichment.md` | Registro de enriquecimentos anteriores (para re-entrância) |
+O `@sheldon` decide entre **enriquecer in-place** ou **criar plano faseado** dependendo do tamanho do gap. Resultado:
+
+| Arquivo | Quando | O que contém |
+|---|---|---|
+| `.aioson/context/prd.md` (ou `prd-{slug}.md`) | Enriquecimento in-place | PRD com gaps fechados |
+| `.aioson/context/sheldon-enrichment.md` | Sempre | Registro das rodadas (para re-entrada) |
+| `.aioson/plans/{slug}/phase-1.md`, `phase-2.md`, ... | Quando o escopo é grande demais para uma única implementação | Plano de execução faseada lido pelos agentes seguintes (`@analyst` em diante) |
+| `.aioson/plans/{slug}/harness-contract.json` | Junto do phased plan | Contrato binário de sucesso (consumido por `@validator`) |
+| `.aioson/plans/{slug}/progress.json` | Junto do phased plan | Status corrente das fases |
+
+**Re-entrante:** se `sheldon-enrichment.md` já existir, o `@sheldon` detecta e oferece nova rodada sem refazer do zero. Você pode invocá-lo 2, 3, N vezes — cada rodada fecha mais gaps.
 
 ## Como ele lê seu projeto
 
@@ -82,6 +89,7 @@ O @sheldon agora detecta automaticamente **relacionamentos de entidade ausentes*
 
 ## Próximo passo
 
-- Entender o fluxo completo → [Mapa do ecossistema](../1-entender/mapa-do-ecossistema.md)
-- PRD ainda não existe → [@product](./product.md) *(ficha em construção)*
+- Trilha canônica de feature completa onde o `@sheldon` é peça-chave → [Feature completa com @sheldon](../3-receitas/feature-completa-com-sheldon.md)
+- PRD ainda não existe → [@product](./product.md)
+- Estrutura de planos que o `@sheldon` cria → [SDD: planos e estrutura](../5-referencia/sdd-planos-e-estrutura.md)
 - Termos como "gap", "AC" e "PRD" → [Glossário](../1-entender/glossario.md)

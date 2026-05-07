@@ -18,6 +18,8 @@ Ele é o primeiro agente técnico num projeto novo (logo após `@setup`) e o pon
 
 Se você tiver notas no `plans/` ou `prds/`, o `@product` as detecta automaticamente e pergunta se deve usá-las como material. Os arquivos originais nunca são modificados.
 
+**Modo briefing-aware:** se existir `.aioson/briefings/` com algum briefing `status: approved` e `prd_generated: null`, o `@product` lista esses briefings antes da detecção de modo e oferece converter em PRD. Se aceito, o PRD nasce com `briefing_source: {slug}` no frontmatter — rastreio completo do briefing original. Veja [Da ideia ao PRD via @briefing](../3-receitas/da-ideia-ao-prd-via-briefing.md).
+
 ---
 
 ## Quando invocar
@@ -105,6 +107,8 @@ aioson context:validate .
 
 ## Próximo passo
 
+- Trilha canônica de feature completa → [Feature completa com @sheldon](../3-receitas/feature-completa-com-sheldon.md)
+- Ideia ainda vaga? → [Da ideia ao PRD via @briefing](../3-receitas/da-ideia-ao-prd-via-briefing.md)
+- Já planejou em outro chat? → [Plans externos para @product](../3-receitas/plans-externos-para-product.md)
 - [Ficha do @analyst](./analyst.md) — próximo no fluxo SMALL/MEDIUM
-- [Mapa do ecossistema](../1-entender/mapa-do-ecossistema.md)
 - [Glossário: Dossier, Spec, PRD](../1-entender/glossario.md)
