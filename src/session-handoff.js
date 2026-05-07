@@ -7,6 +7,53 @@ const { exists, ensureDir } = require('./utils');
 const HANDOFF_RELATIVE_PATH = '.aioson/context/last-handoff.json';
 const HANDOFF_PROTOCOL_RELATIVE_PATH = '.aioson/context/handoff-protocol.json';
 
+// handoff-protocol.json schema_version for `artifact_uris`:
+// v1 (legacy) — array of strings; v2 — array of {path, kind, agent, added_at}.
+// Writers always emit v2; readers coerce v1 transparently.
+const ARTIFACT_KINDS = Object.freeze([
+  'prd',
+  'requirements',
+  'spec',
+  'plan',
+  'dossier',
+  'code',
+  'test',
+  'manifest',
+  'conformance',
+  'research',
+  'other'
+]);
+
+function coerceArtifactUri(item, fallbackAgent) {
+  if (typeof item === 'string') {
+    if (!item.trim()) return null;
+    return {
+      path: item,
+      kind: 'other',
+      agent: fallbackAgent || 'unknown',
+      added_at: null
+    };
+  }
+  if (item && typeof item === 'object' && typeof item.path === 'string' && item.path.trim()) {
+    const kind = ARTIFACT_KINDS.includes(item.kind) ? item.kind : 'other';
+    const agent = typeof item.agent === 'string' && item.agent.trim()
+      ? item.agent
+      : (fallbackAgent || 'unknown');
+    const addedAt = typeof item.added_at === 'string' && item.added_at.trim()
+      ? item.added_at
+      : null;
+    return { path: item.path, kind, agent, added_at: addedAt };
+  }
+  return null;
+}
+
+function coerceArtifactUris(uris, fallbackAgent) {
+  if (!Array.isArray(uris)) return [];
+  return uris
+    .map((item) => coerceArtifactUri(item, fallbackAgent))
+    .filter(Boolean);
+}
+
 async function writeHandoff(targetDir, payload) {
   const handoffPath = path.join(targetDir, HANDOFF_RELATIVE_PATH);
   const protocolPath = path.join(targetDir, HANDOFF_PROTOCOL_RELATIVE_PATH);
@@ -54,7 +101,14 @@ async function readHandoffProtocol(targetDir) {
   if (!(await exists(protocolPath))) return null;
   try {
     const content = await fs.readFile(protocolPath, 'utf8');
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === 'object') {
+      const fromAgentId = parsed.from && typeof parsed.from === 'object'
+        ? parsed.from.agent_id || null
+        : null;
+      parsed.artifact_uris = coerceArtifactUris(parsed.artifact_uris, fromAgentId);
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -123,7 +177,7 @@ function buildWorkflowHandoffProtocol(state, completedStage, nextAgent, options 
       capability_required: toCapability
     },
     capabilities_transferred: fromCapability ? [fromCapability] : [],
-    artifact_uris: Array.isArray(options.artifactUris) ? options.artifactUris : [],
+    artifact_uris: coerceArtifactUris(options.artifactUris, fromAgentId),
     gate_status: options.gateStatus && typeof options.gateStatus === 'object' ? options.gateStatus : {},
     autonomy_mode: options.autonomyMode || null,
     validation: {
@@ -154,7 +208,7 @@ function buildBasicHandoffProtocol(payload) {
       capability_required: mapStageToCapability(toAgentId)
     },
     capabilities_transferred: fromCapability ? [fromCapability] : [],
-    artifact_uris: Array.isArray(payload.contextFilesUpdated) ? payload.contextFilesUpdated : [],
+    artifact_uris: coerceArtifactUris(payload.contextFilesUpdated, fromAgentId),
     gate_status: {},
     autonomy_mode: payload.autonomyMode || null,
     validation: {
@@ -178,6 +232,9 @@ function buildRuntimeLogHandoff(agentName, message, summary) {
 module.exports = {
   HANDOFF_RELATIVE_PATH,
   HANDOFF_PROTOCOL_RELATIVE_PATH,
+  ARTIFACT_KINDS,
+  coerceArtifactUri,
+  coerceArtifactUris,
   writeHandoff,
   readHandoff,
   readHandoffProtocol,

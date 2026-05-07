@@ -1,5 +1,5 @@
 ---
-description: "Feature dossier schema (canônico v1.0 + v1.1 Phase 3). Lido por src/dossier/schema.js — toda mudança aqui exige bump de schema_version."
+description: "Feature dossier schema (canônico v1.0 + v1.1 Phase 3 + v1.2 Research Index) e handoff-protocol artifact_uris v2. Lido por src/dossier/schema.js e src/session-handoff.js — toda mudança aqui exige bump de schema_version."
 ---
 
 # Feature Dossier — Schema canônico
@@ -143,7 +143,76 @@ patterns:
 
 `dossier:show` lê v1.0 e v1.1 sem erro. Campos extras em frontmatter são ignorados (forward-compat). `dossier-history.md` corrompido: `dossier:show` lê só o ativo, exit 0, warn explícito.
 
+## Research Index — estrutura v1.2 (agent-chain-continuity Phase 1)
+
+A partir de `schema_version: "1.2"`, o dossier inclui uma seção opcional `## Research Index` para registrar pesquisas (`researchs/{slug}/summary.md`) consultadas ou produzidas pelos agentes ao longo do ciclo da feature. A seção é inserida entre `## Rules & Design-Docs aplicáveis` e `## Agent Trail`, e carrega YAML embutido:
+
+```yaml
+researchs:
+- slug: payment-providers-2026          # kebab-case, único na lista (obrigatório)
+  verdict: confirmed                    # enum (obrigatório)
+  agent_who_added: orache               # agente canônico (obrigatório)
+  why_relevant: "alinha com decisão de stack do PRD §4" # string ≤200 chars (obrigatório)
+  added_at: 2026-05-07T14:00:00Z        # ISO 8601 (obrigatório)
+  summary_path: researchs/payment-providers-2026/summary.md  # default: researchs/{slug}/summary.md
+```
+
+**Verdict enum (`RESEARCH_VERDICTS`):** `confirmed` | `has-alternatives` | `outdated` | `deprecated`
+
+**Idempotência:** `aioson dossier:add-research` deduplica por `slug` com last-write-wins em `verdict`, `why_relevant` e `summary_path`; `agent_who_added` e `added_at` originais da primeira gravação são preservados.
+
+**Forward-compat:** parser v1.2 lê dossiers v1.0 e v1.1 sem `## Research Index` (seção ausente = `researchs: []`).
+
+## handoff-protocol — `artifact_uris` v2
+
+`handoff-protocol.json` (escrito por `src/session-handoff.js`) trafega o campo `artifact_uris` em duas versões:
+
+- **v1 (legado):** array de strings. Cada item é um path relativo (ex.: `.aioson/context/prd-foo.md`).
+- **v2 (atual):** array de objetos `{ path, kind, agent, added_at }`.
+
+### v2 schema do item
+
+| Campo | Tipo | Obrigatório | Notas |
+|---|---|---|---|
+| `path` | string | sim | path relativo ao projeto (ex.: `.aioson/context/spec-foo.md`) |
+| `kind` | string (enum) | sim | ver enum abaixo; valores desconhecidos colapsam para `other` |
+| `agent` | string | sim | id de agente canônico produtor; `unknown` quando origem é v1 ou ausente |
+| `added_at` | string \| null | sim | ISO 8601 quando conhecido; `null` para itens v1 coercidos |
+
+### Enum `kind` (`ARTIFACT_KINDS`)
+
+```
+prd | requirements | spec | plan | dossier | code | test | manifest | conformance | research | other
+```
+
+### Política de compatibilidade
+
+- **Writers sempre emitem v2.** As funções `buildWorkflowHandoffProtocol` e `buildBasicHandoffProtocol` em `src/session-handoff.js` aplicam `coerceArtifactUris(...)` antes de escrever. Strings recebidas dos callers são convertidas para `{ path, kind: "other", agent: <fromAgent | "unknown">, added_at: null }`.
+- **Readers coercem v1 transparentemente.** `readHandoffProtocol(...)` aplica a mesma coerção pós-`JSON.parse`, então arquivos legados em disco continuam consumíveis sem migração.
+- **Sem `sha256`.** Decisão arquitetural: custo-benefício baixo (ver `architecture-agent-chain-continuity.md` § 11). Pode virar v3 se drift entre handoff e estado real virar problema observável.
+- **Sem deprecation.** A backwards compat é indefinida — não há plano de remover suporte a leitura de v1.
+
+### Exemplo v2
+
+```json
+{
+  "version": "1.0",
+  "protocol_id": "hnd-product-analyst-1715098200000",
+  "from": { "agent_id": "product", "capability_transferred": "define_product_scope" },
+  "to": { "agent_id": "analyst", "capability_required": "analyze_requirements" },
+  "artifact_uris": [
+    {
+      "path": ".aioson/context/prd-agent-chain-continuity.md",
+      "kind": "prd",
+      "agent": "product",
+      "added_at": "2026-05-07T14:00:00Z"
+    }
+  ]
+}
+```
+
 ## Roadmap de schema
 
 - **v1.0** (Phase 1): schema base — frontmatter obrigatório + 6 seções.
 - **v1.1** (Phase 3): `code_map` estruturado com validation, `bootstrap_hash`, active retrieval, compaction, `dossier:init --from-existing`. Compatível com leitores v1.0.
+- **v1.2** (agent-chain-continuity Phase 1): seção `## Research Index` com YAML embutido + bump do `handoff-protocol.json.artifact_uris` para v2 (objetos `{path, kind, agent, added_at}`). Compatível com leitores v1.0 e v1.1; `handoff-protocol` v1 (strings) continua legível via coerção em `readHandoffProtocol`.
