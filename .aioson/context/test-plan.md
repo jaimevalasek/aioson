@@ -150,11 +150,32 @@ Reasoning: The project has broad existing test coverage (1774 passing tests). Th
 | dossier command | `tests/commands/dossier.test.js` | 2 (EDOSSIERPARSE, EDOSSIERSCHEMA) |
 | dossier/store | `tests/dossier/store.test.js` | 5 (parseFrontmatter edge cases) |
 
+## Smoke run — 2026-05-07
+
+Trigger: full suite run after squad refresh + breadth commits (7542ca5, 7524773) and QA fix commit (2e9465b).
+
+- Command: `node --test`
+- Result: **2032 pass / 1 fail / 0 skip**, 1596 top-level subtests in 24.8s
+- Conclusion: recent doc/prompt commits did not regress the suite. The single failure is pre-existing.
+
+### [bug-found-2] feature:close does not dedupe identical Recent Activity lines
+
+- Failing test: `feature:close: idempotent rerun does not duplicate identical recent activity lines`
+- Location: `tests/feature-close.test.js:178` (assertion at `:222`)
+- Introduced: `e01840f3` on 2026-05-05 (`feat(secure-by-default): implement security baseline and CLI commands`)
+- Source under test: `src/commands/feature-close.js`
+- Expected: after running `feature:close` against a `project-pulse.md` already containing 2 identical activity lines for `@qa → secure-by-default (Gate D: approved) VERDICT: PASS: none`, the result should contain exactly **1** such line (dedupe + idempotent insertion).
+- Actual: 3 lines remain (2 pre-existing + 1 new appended).
+- Diagnosis: the test was committed without (or ahead of) dedupe logic in `feature-close.js`. Either the implementation was reverted or never landed.
+- Severity: **Medium** — degrades project-pulse audit trail readability across reruns. No security or data-integrity impact.
+- Routing: `@dev` to implement dedupe in `src/commands/feature-close.js` (read existing Recent Activity lines, drop exact-duplicate signatures before appending the new entry), then re-run this test.
+
 ## Next step
 
 Route to `@dev`:
 1. Fix [bug-found-1] dev kernel size violation
-2. Implement Phase 2/3 commands before @tester can write corresponding tests
+2. Fix [bug-found-2] feature:close dedupe of Recent Activity lines (smoke 2026-05-07)
+3. Implement Phase 2/3 commands before @tester can write corresponding tests
 
 Route to `@qa`:
 1. Review test quality of new tests

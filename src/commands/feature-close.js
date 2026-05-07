@@ -51,7 +51,9 @@ async function updateProjectPulseFile(pulsePath, slug, verdict, summary, date) {
   const recentActivities = extractRecentActivities(existing);
   let activityLine = `- ${date} @qa → ${slug} (${gate}) VERDICT: ${verdict}`;
   if (summary) activityLine += `: ${summary}`;
-  const dedupedActivities = recentActivities.filter((line) => line !== activityLine);
+  const stripDate = (line) => line.replace(/^-\s+\d{4}-\d{2}-\d{2}\s+/, '');
+  const activitySignature = stripDate(activityLine);
+  const dedupedActivities = recentActivities.filter((line) => stripDate(line) !== activitySignature);
 
   const activeFeature = verdict === 'PASS' ? '(none)' : slug;
   const activeWork = verdict === 'PASS' ? '' : `${slug} → @qa → qa_failed`;
