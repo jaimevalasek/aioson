@@ -74,8 +74,8 @@ Then build `required_modules` using this deterministic map:
 
 | Condition | Required modules |
 |---|---|
-| `default-create`, `create`, `extend`, `repair`, `validate` | `.aioson/docs/squad/package-contract.md` |
-| `default-create`, `design`, `create`, `extend` | `.aioson/docs/squad/creation-flow.md` |
+| `default-create`, `create`, `extend`, `repair`, `refresh`, `validate` | `.aioson/docs/squad/package-contract.md` |
+| `default-create`, `design`, `create`, `extend`, `refresh` | `.aioson/docs/squad/creation-flow.md` |
 | `default-create`, `design`, or request introduces a regulated domain, specialized domain, locale-specific audience, or country-specific constraints | `.aioson/docs/squad/domain-classification.md` |
 | `default-create`, `design`, `create`, `extend`, `refresh`, or request involves customer-facing executors (retail, hospitality, service, support, sales, food service, reception, healthcare front desk, gym, hotel, pharmacy, etc.) — or the user reports an existing squad refusing legitimate adjacent requests as "out of scope" | `.aioson/docs/squad/domain-breadth.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/research-loop.md` |
