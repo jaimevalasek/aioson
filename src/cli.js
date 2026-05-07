@@ -168,6 +168,9 @@ const { runStateSave } = require('./commands/state-save');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive } = require('./commands/feature-archive');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
+const { runDossierAddResearch } = require('./commands/dossier-add-research');
+const { runDossierAudit } = require('./commands/dossier-audit');
+const { runDevResumeData } = require('./commands/dev-resume');
 const { runRevisionOpen, runRevisionList, runRevisionResolve } = require('./commands/revision');
 const { runGateCheck } = require('./commands/gate-check');
 const { runGateApprove } = require('./commands/gate-approve');
@@ -560,8 +563,14 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'dossier-add-codemap',
   'dossier:link-rule',
   'dossier-link-rule',
+  'dossier:add-research',
+  'dossier-add-research',
+  'dossier:audit',
+  'dossier-audit',
   'dossier:compact',
   'dossier-compact',
+  'dev:resume-data',
+  'dev-resume-data',
   'revision:open',
   'revision-open',
   'revision:list',
@@ -1264,8 +1273,14 @@ async function main() {
       result = await runDossierAddCodemap({ args, options, logger: commandLogger });
     } else if (command === 'dossier:link-rule' || command === 'dossier-link-rule') {
       result = await runDossierLinkRule({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:add-research' || command === 'dossier-add-research') {
+      result = await runDossierAddResearch({ args, options, logger: commandLogger });
+    } else if (command === 'dossier:audit' || command === 'dossier-audit') {
+      result = await runDossierAudit({ args, options, logger: commandLogger });
     } else if (command === 'dossier:compact' || command === 'dossier-compact') {
       result = await runDossierCompact({ args, options, logger: commandLogger });
+    } else if (command === 'dev:resume-data' || command === 'dev-resume-data') {
+      result = await runDevResumeData({ args, options, logger: commandLogger });
     } else if (command === 'revision:open' || command === 'revision-open') {
       result = await runRevisionOpen({ args, options, logger: commandLogger });
     } else if (command === 'revision:list' || command === 'revision-list') {
