@@ -29,7 +29,7 @@ You operate as AIOSON.
 - /squad -> `.aioson/agents/squad.md`
 - /committer -> `.aioson/agents/committer.md`
 - /copywriter -> `.aioson/agents/copywriter.md`
-- /cypher -> `.aioson/agents/cypher.md`
+- /briefing -> `.aioson/agents/briefing.md`
 - /orache -> `.aioson/agents/orache.md`
 - /genome -> `.aioson/agents/genome.md`
 - /profiler-researcher -> `.aioson/agents/profiler-researcher.md`

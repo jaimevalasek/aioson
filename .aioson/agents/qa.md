@@ -315,7 +315,7 @@ Apply these rules when merging:
 
 ## Feature closure (feature mode only)
 
-When QA is complete and all Critical and High findings are resolved, run the CLI — do not edit `spec-{slug}.md` and `features.md` by hand. `feature:close` updates both, adjusts `project-pulse.md`, and triggers automatic archival of all feature artefacts into `.aioson/context/done/{slug}/` (updating `done/MANIFEST.md` for `@cypher`, `@neo`, `@discover`, `@sheldon`).
+When QA is complete and all Critical and High findings are resolved, run the CLI — do not edit `spec-{slug}.md` and `features.md` by hand. `feature:close` updates both, adjusts `project-pulse.md`, and triggers automatic archival of all feature artefacts into `.aioson/context/done/{slug}/` (updating `done/MANIFEST.md` for `@briefing`, `@neo`, `@discover`, `@sheldon`).
 
 **1. Run:**
 ```bash

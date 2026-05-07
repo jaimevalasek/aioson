@@ -396,7 +396,7 @@ aioson feature:archive . --feature=checkout --force
 
 **What it never moves:** global files (`project.context.md`, `project-pulse.md`, `features.md`, `discovery.md`, etc.) and subdirectories (`bootstrap/`, `forensics/`, `parallel/`, `done/`).
 
-**Manifest:** after each archive run, `.aioson/context/done/MANIFEST.md` is updated with a row summarizing the feature. Agents like `@cypher`, `@neo`, `@discover`, and `@sheldon` read this manifest instead of loading full archived files.
+**Manifest:** after each archive run, `.aioson/context/done/MANIFEST.md` is updated with a row summarizing the feature. Agents like `@briefing`, `@neo`, `@discover`, and `@sheldon` read this manifest instead of loading full archived files.
 
 ---
 

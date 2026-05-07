@@ -62,7 +62,7 @@ patterns: []
 Fonte de verdade: `.aioson/agents/*.md`. A lista abaixo deve estar sincronizada com `src/dossier/schema.js#CANONICAL_AGENT_IDS`.
 
 ```
-analyst, architect, committer, copywriter, cypher, design-hybrid-forge,
+analyst, architect, briefing, committer, copywriter, cypher, design-hybrid-forge,
 dev, deyvin, discover, discovery-design-doc, genome, neo, orache, orchestrator,
 pair, pentester, pm, product, profiler-enricher, profiler-forge, profiler-researcher,
 qa, setup, sheldon, site-forge, squad, tester, ux-ui, validator

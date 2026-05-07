@@ -151,11 +151,12 @@ Based on the user's answer:
    - "Create a landing page / sales page" → `/product` (if no PRD) or `/copywriter` (if PRD exists but no copy) or `/ux-ui` (if copy exists)
    - "Add tests" / "improve coverage" / "no tests" / "shipped without tests" / "test gaps" → `/tester`
    - "Audit security" / "find security flaws" / "pentest" / "is this secure?" / "supply chain check" → `/pentester`
+   - "I have an idea but not sure if it's a feature yet" / "frame the problem" / "structure my plans before PRD" / "create a briefing" / "work through this raw thinking" → `/briefing`
 4. **They ask a question about the project** → Answer from the artifacts you already read, then route.
 
-## Specialized testing agents (route when triggers fire)
+## Specialized agents (route when triggers fire)
 
-`@tester` and `@pentester` are official AIOSON agents that complement `@qa`. Use them when their triggers match — they're often forgotten because they don't sit on the default workflow chain.
+`@tester`, `@pentester`, and `@briefing` are official AIOSON agents that sit off the default workflow chain. They're often forgotten — surface them when their triggers match.
 
 **Route to `/tester`** when:
 - The user mentions test gaps, weak coverage, brownfield without baseline tests, shipped-without-tests, "no tests", or coverage below the critical-path target (≥ 90% line / ≥ 80% branch on auth/money/ownership)
@@ -167,6 +168,13 @@ Based on the user's answer:
 - The feature touches authentication, authorization, ownership, money/value, secrets, file upload, user-supplied URLs, or supply chain (`package.json`, lockfiles, GitHub Actions)
 - The feature is LLM-aware (prompts, RAG, agent loops, tool invocation)
 - `@qa` flagged a sensitive surface and recommended `@pentester`
+
+**Route to `/briefing`** when:
+- The user has raw plans (`plans/*.md`) they want to structure before opening a PRD
+- The user says "I have an idea but I'm not sure if it's a feature yet" or describes something fuzzy that needs problem framing
+- The conversation is generating feature-shaped descriptions and needs JTBD reframing
+- A briefing exists but feels surface-level (open questions without owners, generic risks, no measurable gaps)
+- A complex problem space needs partitioning into themes before `@product` opens it
 
 For MEDIUM features with sensitive surface, prefer the tracked invocation: `aioson agent:invoke pentester . --mode=app_target --feature={slug}` — same effect, dashboard logs the run.
 

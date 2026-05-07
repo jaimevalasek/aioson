@@ -62,7 +62,7 @@ Após cada arquivamento, `.aioson/context/done/MANIFEST.md` é atualizado com um
 
 O summary é extraído automaticamente da seção `## Vision` do PRD da feature.
 
-Agentes que precisam de contexto histórico (`@cypher`, `@neo`, `@discover`, `@sheldon`) leem o manifest em vez de varrer os arquivos arquivados — custo de tokens mínimo.
+Agentes que precisam de contexto histórico (`@briefing`, `@neo`, `@discover`, `@sheldon`) leem o manifest em vez de varrer os arquivos arquivados — custo de tokens mínimo.
 
 ---
 
@@ -101,7 +101,7 @@ Após restaurar, atualize `features.md` manualmente se quiser mudar o status da 
 Para features que já estão como `done` em `features.md` mas ainda têm arquivos no root (projetos que fizeram upgrade do AIOSON):
 
 ```bash
-aioson feature:archive . --feature=cypher-agent
+aioson feature:archive . --feature=briefing-agent
 aioson feature:archive . --feature=harness-driven-aioson
 # etc.
 ```
@@ -172,7 +172,7 @@ aioson feature:archive . --feature=checkout --json
 | `@qa` | Roda `aioson feature:close --verdict=PASS` ao fechar — o archive cascateia automaticamente |
 | `@dev`, `@analyst`, `@architect`, `@tester`, `@pm`, `@ux-ui` | Sem mudança — já operavam apenas na feature ativa |
 | `@product` | Sem mudança — vê apenas `prd.md` e `prd-{slug}.md` ativos |
-| `@cypher` | Lê `done/MANIFEST.md` para evitar duplicar briefings de features já entregues |
+| `@briefing` | Lê `done/MANIFEST.md` para evitar duplicar briefings de features já entregues |
 | `@neo` | Lê `done/MANIFEST.md` para contexto geral do projeto |
 | `@discover` | Lê `done/MANIFEST.md` ao montar `bootstrap/what-it-does.md` |
 | `@sheldon` | Lê `done/MANIFEST.md` — features arquivadas não aparecem no menu de enrichment |

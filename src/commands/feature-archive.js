@@ -165,7 +165,7 @@ function manifestHeader() {
     '# Archived Features Manifest',
     '',
     '> Features whose artefacts were moved into `.aioson/context/done/{slug}/` after QA sign-off.',
-    '> Agents that need historical awareness (@cypher, @neo, @discover, @sheldon) read this file instead of globbing archived PRDs.',
+    '> Agents that need historical awareness (@briefing, @neo, @discover, @sheldon) read this file instead of globbing archived PRDs.',
     '',
     '| slug | completed | files | summary |',
     '|------|-----------|-------|---------|',

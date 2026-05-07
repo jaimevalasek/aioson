@@ -6,9 +6,9 @@
  *
  * Usage:
  *   aioson briefing:approve .
- *   aioson briefing:approve . --slug=cypher-agent
+ *   aioson briefing:approve . --slug=briefing-agent
  *   aioson briefing:unapprove .
- *   aioson briefing:unapprove . --slug=cypher-agent
+ *   aioson briefing:unapprove . --slug=briefing-agent
  *
  * Config file: .aioson/briefings/config.md
  * Format: YAML frontmatter (briefings: array) + Markdown table
@@ -212,7 +212,7 @@ async function runBriefingApprove({ args, options = {}, logger }) {
   try {
     raw = await fs.readFile(configFile, 'utf8');
   } catch {
-    logger.error('Nenhum briefing encontrado. Ative @cypher para criar o primeiro briefing.');
+    logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
     return { ok: false, error: 'no_config' };
   }
 
@@ -279,7 +279,7 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   try {
     raw = await fs.readFile(configFile, 'utf8');
   } catch {
-    logger.error('Nenhum briefing encontrado. Ative @cypher para criar o primeiro briefing.');
+    logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
     return { ok: false, error: 'no_config' };
   }
 

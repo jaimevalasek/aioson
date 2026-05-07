@@ -532,7 +532,7 @@ aioson squad:dashboard              # real-time web monitoring panel
 | `/squad` | Parallel agent squads | Large feature sets in parallel |
 | `/genome` | Agent knowledge & learning | Adaptive squad intelligence |
 | `/committer` | Semantic commit messages | High-quality Git commits |
-| `/cypher` | Plan → structured briefing | Pre-production planning |
+| `/briefing` | Plan → structured briefing | Pre-production planning, problem framing |
 | `/copywriter` | Conversion copy & content | Marketing pages, VSL scripts |
 | `/discover` | System discovery & semantic cache | Brownfield mapping, knowledge bootstrap |
 | `/neo` | Onboarding & next steps | "Where do I start?" guidance |

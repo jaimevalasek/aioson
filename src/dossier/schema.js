@@ -6,6 +6,7 @@ const SUPPORTED_SCHEMA_VERSIONS = Object.freeze(new Set(['1.0', '1.1', '1.2']));
 const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'analyst',
   'architect',
+  'briefing',
   'committer',
   'copywriter',
   'cypher',

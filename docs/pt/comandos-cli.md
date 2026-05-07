@@ -916,7 +916,7 @@ Para restaurar uma feature arquivada (e voltar a trabalhar nela):
 aioson feature:archive . --feature=user-auth --restore
 ```
 
-O manifest em `.aioson/context/done/MANIFEST.md` registra todas as features arquivadas com data, contagem de arquivos e resumo da Vision — agentes históricos (`@cypher`, `@neo`, `@discover`, `@sheldon`) leem esse manifest em vez dos arquivos completos.
+O manifest em `.aioson/context/done/MANIFEST.md` registra todas as features arquivadas com data, contagem de arquivos e resumo da Vision — agentes históricos (`@briefing`, `@neo`, `@discover`, `@sheldon`) leem esse manifest em vez dos arquivos completos.
 
 > Veja a [documentação completa do feature:archive](./feature-archive.md) para detalhes de safety guards, saída JSON e impacto nos agentes.
 

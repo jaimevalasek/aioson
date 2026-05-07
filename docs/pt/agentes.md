@@ -28,7 +28,7 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 # Agentes especializados (uso sob demanda)
 @committer          ← gera mensagens de commit semanticas
 @copywriter         ← copy para paginas e estrategia de conversao
-@cypher             ← transforma plans em briefings estruturados
+@briefing           ← transforma plans em briefings estruturados
 @design-hybrid-forge ← cria skills hibridas de design
 @discover           ← descobre o sistema e mapeia conhecimento
 @neo                ← guia de inicio, status e proximos passos
@@ -722,20 +722,21 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 ---
 
-## @cypher
+## @briefing
 
-**Quando usar:** Quando voce tem notas, rascunhos ou plans brutos em `plans/` e quer transforma-los em um briefing estruturado antes de iniciar o fluxo de produto.
+**Quando usar:** Quando voce tem notas, rascunhos ou plans brutos em `plans/` e quer transforma-los em um briefing estruturado antes de iniciar o fluxo de produto. Tambem util quando voce tem uma ideia mas ainda nao sabe se vira feature — o agente conduz uma conversa estruturada e entrega o briefing pronto pro @product decidir.
 
 **O que faz:**
 - Le arquivos de `plans/` e sintetiza um briefing enriquecido
-- Identifica gaps, riscos e perguntas em aberto
+- Identifica gaps, riscos e perguntas em aberto (com taxonomia: research-able / testable / decision-required / out-of-scope)
 - Faz web research para validar suposicoes tecnicas ou de mercado
+- Aplica frameworks de discovery (Opportunity Solution Tree, Jobs-to-be-Done, Cagan's 4 risks) quando relevantes
 - Produz `.aioson/briefings/{slug}/briefings.md`
 - Nao cria PRD — isso e responsabilidade do @product
 
 **Como ativar:**
 ```
-@cypher
+@briefing
 ```
 
 **Entrega:**

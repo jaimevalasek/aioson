@@ -39,7 +39,7 @@ Describe your intent. The agent system will match and execute.
 | @squad | "assemble a squad", "use the squad agent", "montar squad" |
 | @committer | "commit my changes", "generate commit message", "use the committer agent" |
 | @copywriter | "write copy for this page", "conversion strategy", "use the copywriter agent" |
-| @cypher | "create a briefing from plans", "pre-production planning", "use the cypher agent" |
+| @briefing | "create a briefing from plans", "pre-production planning", "frame the problem", "I have an idea but not sure if it's a feature yet", "structure my plans before PRD", "use the briefing agent" |
 | @genome | "generate a genome", "use the genome agent", "gerar genome" |
 | @profiler-researcher | "start the profiler research", "profile this person", "pesquisar DNA mental" |
 | @profiler-enricher | "enrich this profile", "analyze this person's cognition", "consolidar perfil cognitivo" |
@@ -98,7 +98,7 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - @squad → `.aioson/agents/squad.md`
 - @committer → `.aioson/agents/committer.md`
 - @copywriter → `.aioson/agents/copywriter.md`
-- @cypher → `.aioson/agents/cypher.md`
+- @briefing → `.aioson/agents/briefing.md`
 - @genome → `.aioson/agents/genome.md`
 - @profiler-researcher → `.aioson/agents/profiler-researcher.md`
 - @profiler-enricher → `.aioson/agents/profiler-enricher.md`
