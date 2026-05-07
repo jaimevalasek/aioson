@@ -19,6 +19,9 @@ const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-man
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { runSecurityAudit } = require('./security-audit');
+const dossierBootstrap = require('../dossier/dossier-bootstrap');
+const dossierStore = require('../dossier/store');
+const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
@@ -632,6 +635,65 @@ function applySkip(config, state, target) {
   });
 }
 
+async function ensureFeatureDossier(targetDir, state) {
+  if (state.mode !== 'feature' || !state.featureSlug) return;
+  const classification = String(state.classification || '').toUpperCase();
+  if (classification !== 'SMALL' && classification !== 'MEDIUM') return;
+
+  const ctxDir = path.join(targetDir, '.aioson', 'context');
+  const dossierFile = path.join(ctxDir, 'features', state.featureSlug, 'dossier.md');
+  try {
+    await fs.access(dossierFile);
+    return;
+  } catch {
+    // proceed to create
+  }
+
+  let mode = null;
+  try {
+    await dossierBootstrap.initFromExisting({
+      slug: state.featureSlug,
+      contextDir: ctxDir,
+      classification,
+      targetDir
+    });
+    mode = 'from-existing';
+  } catch (err) {
+    if (err && err.code === 'EBOOTSTRAPEMPTY') {
+      try {
+        await dossierStore.init({
+          slug: state.featureSlug,
+          contextDir: ctxDir,
+          classification,
+          whyText: '(auto-init by workflow:next; no source artifacts yet)',
+          whatText: '(auto-init by workflow:next; no source artifacts yet)'
+        });
+        mode = 'minimal-fallback';
+      } catch {
+        return;
+      }
+    } else if (err && err.code === 'EDOSSIEREXISTS') {
+      return;
+    } else {
+      return;
+    }
+  }
+
+  if (mode) {
+    await emitDossierEvent(targetDir, {
+      agent: 'workflow-next',
+      type: 'dossier_auto_initialized',
+      summary: `${state.featureSlug} ${mode}`,
+      meta: {
+        feature_slug: state.featureSlug,
+        classification,
+        trigger_source: 'workflow_next_pre_stage',
+        mode
+      }
+    });
+  }
+}
+
 async function activateStage(targetDir, state, locale, tool, explicitAgent = null, requestedMode = null) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
   if (!stageName) {
@@ -642,6 +704,11 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
       prompt: null
     };
   }
+
+  // Pre-stage hook: ensure feature dossier exists for SMALL/MEDIUM features.
+  // Silent (no logging); idempotent (no-op if dossier already exists).
+  // Defense-in-depth alongside the @product prompt instruction.
+  await ensureFeatureDossier(targetDir, state);
 
   // ── Committer Safety Gate ───────────────────────────────────────────────
   if (stageName === 'committer') {

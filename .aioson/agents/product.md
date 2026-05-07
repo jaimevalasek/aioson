@@ -117,14 +117,16 @@ updated_at: {ISO-date}
 
 ## Feature dossier
 
-Check `.aioson/context/features/{slug}/dossier.md` before loading PRD — if present, read it for Why/What context already captured.
+**Auto-init (silent):** after writing `prd-{slug}.md`, if its frontmatter `classification` is `SMALL` or `MEDIUM` and `.aioson/context/features/{slug}/dossier.md` is missing, run `aioson dossier:init . --slug={slug}` silently. Do not mention it to the user — framework infrastructure, not a deliverable.
 
-**After writing or updating PRD**, record scope summary:
+Check `.aioson/context/features/{slug}/dossier.md` before loading PRD — if present, read it for Why/What already captured.
+
+**After writing/updating PRD**, record scope:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="MVP: {one-line scope}. Key constraints: {constraints}."
+aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="MVP: {scope}. Constraints: {constraints}."
 ```
 
-Full templates: `.aioson/docs/dossier/agent-templates.md`
+Templates: `.aioson/docs/dossier/agent-templates.md`
 
 ## Briefing-aware detection
 

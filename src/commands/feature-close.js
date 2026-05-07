@@ -16,6 +16,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter } = require('../preflight-engine');
 const { runFeatureArchive } = require('./feature-archive');
+const dossierBootstrap = require('../dossier/dossier-bootstrap');
+const dossierStore = require('../dossier/store');
+const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
@@ -168,6 +171,39 @@ async function updateFeaturesFile(featuresPath, slug, verdict, date) {
   return true;
 }
 
+async function ensureDossier({ targetDir, ctxDir, slug }) {
+  const dossierPath = path.join(ctxDir, 'features', slug, 'dossier.md');
+  try {
+    await fs.access(dossierPath);
+    return { mode: 'present' };
+  } catch {
+    // proceed to create
+  }
+
+  try {
+    await dossierBootstrap.initFromExisting({
+      slug,
+      contextDir: ctxDir,
+      targetDir
+    });
+    return { mode: 'from-existing' };
+  } catch (err) {
+    if (err && err.code === 'EBOOTSTRAPEMPTY') {
+      await dossierStore.init({
+        slug,
+        contextDir: ctxDir,
+        whyText: '(no source artifacts found at close time)',
+        whatText: '(no source artifacts found at close time)'
+      });
+      return { mode: 'minimal-fallback' };
+    }
+    if (err && err.code === 'EDOSSIEREXISTS') {
+      return { mode: 'present' };
+    }
+    return { mode: 'failed', error: err && err.message ? err.message : String(err) };
+  }
+}
+
 async function runFeatureClose({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.feature ? String(options.feature) : null;
@@ -190,6 +226,21 @@ async function runFeatureClose({ args, options = {}, logger }) {
   const today = nowDate();
   const dir = contextDir(targetDir);
   const updates = [];
+
+  // 0. Dossier guarantee — verdict-agnostic; ensures every closed feature has a dossier
+  // for archive + audit trail. Telemetry is silent on failure.
+  const dossierResult = await ensureDossier({ targetDir, ctxDir: dir, slug });
+  if (dossierResult.mode === 'from-existing' || dossierResult.mode === 'minimal-fallback') {
+    updates.push(`dossier: ${dossierResult.mode === 'from-existing' ? 'synthesized from existing artifacts' : 'minimal fallback (no artifacts found)'}`);
+    await emitDossierEvent(targetDir, {
+      agent: 'feature-close',
+      type: 'feature_close_dossier_synthesized',
+      summary: `${slug} ${dossierResult.mode}`,
+      meta: { feature_slug: slug, mode: dossierResult.mode }
+    });
+  } else if (dossierResult.mode === 'failed') {
+    updates.push(`dossier: guarantee failed (${dossierResult.error})`);
+  }
 
   // 1. Update spec file
   const specPath = path.join(dir, `spec-${slug}.md`);
