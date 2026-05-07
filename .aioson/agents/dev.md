@@ -120,6 +120,12 @@ If flagged, recommend a new chat and offer a handoff with slug, completed phase,
 
 Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).
 
+**Auto-resume (session start):** run `aioson dev:resume-data .`. Returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then `aioson runtime-log . --agent=dev --type=dev_auto_resume --summary="<feature>: phase <N>"`.
+
+**Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan (role/lines/pattern), or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `runtime-log --type=dev_drift_detected`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision: {path}. Reason: {why}."`.
+
+**Per slice:** `dossier:add-codemap` per file + `dossier:add-finding --section="Agent Trail" --content="Slice: {desc}. Próximo: {next}."`. Full templates: `.aioson/docs/dossier/agent-templates.md`.
+
 ## Required input
 
 **Determined by `dev-state.md` or the minimum context package table in the session start protocol.**
