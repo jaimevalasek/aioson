@@ -21,6 +21,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { CHAIN_AGENTS, FEATURE_DOSSIER_HEADER, extractSection } = require('./dossier-audit');
+const dossierTelemetry = require('../lib/dossier-telemetry');
 
 function readFileOrEmpty(filePath) {
   try {
@@ -54,8 +55,7 @@ function checkParity(projectRoot) {
   return violations;
 }
 
-function main() {
-  const projectRoot = process.cwd();
+async function main(projectRoot = process.cwd()) {
   const violations = checkParity(projectRoot);
 
   if (violations.length === 0) {
@@ -68,11 +68,19 @@ function main() {
   }
   process.stderr.write('\nCopy workspace → template for these agents before running sync:agents,\n');
   process.stderr.write('otherwise rsync will overwrite the workspace edits.\n');
+
+  await dossierTelemetry.emitDossierEvent(projectRoot, {
+    agent: 'sync-agents-preflight',
+    type: 'sync_agents_parity_violation',
+    summary: `${violations.length} agent(s) ahead in workspace`,
+    meta: { violations }
+  });
+
   return 1;
 }
 
 if (require.main === module) {
-  process.exit(main());
+  main().then((code) => process.exit(code));
 }
 
 module.exports = { checkParity, main };

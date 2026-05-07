@@ -6,8 +6,9 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-const { checkParity } = require('../src/commands/sync-agents-preflight');
+const { checkParity, main } = require('../src/commands/sync-agents-preflight');
 const { CHAIN_AGENTS } = require('../src/commands/dossier-audit');
+const dossierTelemetry = require('../src/lib/dossier-telemetry');
 
 async function makeProject() {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-preflight-'));
@@ -138,6 +139,76 @@ describe('sync-agents-preflight', () => {
       // No files anywhere — all skipped
       assert.deepEqual(checkParity(tmp), []);
     } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('emits sync_agents_parity_violation when main() aborts on violation', async () => {
+    const tmp = await makeProject();
+    const originalEmit = dossierTelemetry.emitDossierEvent;
+    const originalStderrWrite = process.stderr.write.bind(process.stderr);
+    const calls = [];
+    dossierTelemetry.emitDossierEvent = async (projectRoot, payload) => {
+      calls.push({ projectRoot, payload });
+    };
+    process.stderr.write = () => true;
+    try {
+      const longer = `## Feature dossier
+- one
+- two
+- three
+- four
+- five
+
+`;
+      const shorter = `## Feature dossier
+- one
+
+`;
+      await writeAgent(tmp, 'workspace', 'product', makeAgentMd(longer));
+      await writeAgent(tmp, 'template', 'product', makeAgentMd(shorter));
+      const body = makeAgentMd(FEATURE_DOSSIER_BLOCK);
+      for (const agent of CHAIN_AGENTS) {
+        if (agent === 'product') continue;
+        await writeAgent(tmp, 'workspace', agent, body);
+        await writeAgent(tmp, 'template', agent, body);
+      }
+
+      const code = await main(tmp);
+      assert.equal(code, 1);
+
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].projectRoot, tmp);
+      assert.equal(calls[0].payload.type, 'sync_agents_parity_violation');
+      assert.equal(calls[0].payload.agent, 'sync-agents-preflight');
+      assert.match(calls[0].payload.summary, /1 agent\(s\) ahead in workspace/);
+      assert.ok(Array.isArray(calls[0].payload.meta.violations));
+      assert.equal(calls[0].payload.meta.violations[0].agent, 'product');
+    } finally {
+      dossierTelemetry.emitDossierEvent = originalEmit;
+      process.stderr.write = originalStderrWrite;
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('main() returns 0 without emitting events when there are no violations', async () => {
+    const tmp = await makeProject();
+    const originalEmit = dossierTelemetry.emitDossierEvent;
+    const calls = [];
+    dossierTelemetry.emitDossierEvent = async (projectRoot, payload) => {
+      calls.push({ projectRoot, payload });
+    };
+    try {
+      const body = makeAgentMd(FEATURE_DOSSIER_BLOCK);
+      for (const agent of CHAIN_AGENTS) {
+        await writeAgent(tmp, 'workspace', agent, body);
+        await writeAgent(tmp, 'template', agent, body);
+      }
+      const code = await main(tmp);
+      assert.equal(code, 0);
+      assert.equal(calls.length, 0);
+    } finally {
+      dossierTelemetry.emitDossierEvent = originalEmit;
       await fs.rm(tmp, { recursive: true, force: true });
     }
   });

@@ -1,4 +1,5 @@
 ---
+gate_execution: approved
 feature: agent-chain-continuity
 status: in_progress
 started: 2026-05-07
@@ -67,6 +68,20 @@ gate_requirements: approved
 - **Resultado final:** 17/17 tests verdes na primeira pasagem (após 1 ajuste de regex para refletir a versão compactada do prompt). Suite total: **2030/2031 verde** — mesma falha pré-existente flaky `feature:close idempotent` (residual de `secure-by-default`, não causada por esta feature). Lint clean.
 
 **Status final da feature:** todas as 7 phases entregues. **111 tests novos** somando Phases 1-7. Cobertura completa dos 17 ACs. Workspace ↔ template em paridade total para os 9 chain agents. 5 runtime events instrumentados. Pronto para `@qa` Gate D + `aioson feature:close . --feature=agent-chain-continuity --verdict=PASS`.
+
+**Phase 8 — QA corrections C-01 (2026-05-07):**
+
+- **`src/commands/sync-agents-preflight.js`** (modificado): import via `dossierTelemetry` namespace para permitir stubbing em testes; `main()` virou `async (projectRoot = process.cwd())`; antes de `return 1`, chama `await dossierTelemetry.emitDossierEvent(projectRoot, { agent: 'sync-agents-preflight', type: 'sync_agents_parity_violation', summary: '\${n} agent(s) ahead in workspace', meta: { violations } })`; entrypoint adaptado para `main().then((code) => process.exit(code))`. Telemetria silenciosa (já garantida pelo helper) — falha não quebra preflight.
+- **`tests/sync-agents-preflight.test.js`** (modificado): 2 testes novos. (1) `emits sync_agents_parity_violation when main() aborts on violation` — substitui `dossierTelemetry.emitDossierEvent` por spy, monta workspace ahead, chama `main(tmp)`, valida 1 chamada com `type/agent/summary/meta.violations[].agent`. (2) `main() returns 0 without emitting events when there are no violations` — paridade ok, exit 0, zero chamadas. Total da suite passa de 5 → 7 testes.
+- **`tests/agent-chain-continuity.regression.test.js`** (modificado): AC-ACC-17 atualizado. O 5º evento agora asserta `assert.match(syncPreflight, /sync_agents_parity_violation/)` + `/emitDossierEvent/` lendo `src/commands/sync-agents-preflight.js`, substituindo o string-match em `architecture-agent-chain-continuity.md` (proxy fraco identificado pelo QA). Os outros 4 ACs e a sanidade `expected.length===5` permanecem.
+- **Resultado:** Suite total 2032/2033 verde (mesma falha pré-existente flaky `feature:close idempotent` — residual de `secure-by-default` 2026-04-29, NÃO causada por esta correção). Bundle de regressão 17/17 verde. Lint clean. **5 telemetry events agora todos emitidos por código real**: `dossier_auto_initialized` (workflow-next), `feature_close_dossier_synthesized` (feature-close), `dev_auto_resume`/`dev_drift_detected` (prompt @dev + runtime-log), `sync_agents_parity_violation` (sync-agents-preflight, novo).
+
+## QA Sign-off
+
+- **Date:** 2026-05-07
+- **Verdict:** PASS
+- **Residual:** L-01 BR-ACC-11 doc drift (requirements vs impl, sem efeito funcional); L-03 dossier What dogfood vazio (auto-init resolve em features futuras); L-04 pre-existing flaky feature:close idempotent (residual secure-by-default 2026-04-29, ticket MICRO separado)
+- **Gate D (execution):** approved
 
 ## Entities added
 

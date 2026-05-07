@@ -183,6 +183,15 @@ files:
   role: test
   coupling_risk: low
   added_at: 2026-05-07T02:15:28.852Z
+- path: src/commands/sync-agents-preflight.js
+  role: command-entry
+  added_at: 2026-05-07T03:35:24.959Z
+- path: tests/sync-agents-preflight.test.js
+  role: test
+  added_at: 2026-05-07T03:35:25.102Z
+- path: tests/agent-chain-continuity.regression.test.js
+  role: test
+  added_at: 2026-05-07T03:35:25.249Z
 modules: []
 patterns: []
 ```
@@ -259,6 +268,16 @@ Phase 5 (@dev intelligence) done. (5.1) src/lib/dev-resume.js novo: buildDevResu
 **2026-05-07T02:15:29.061Z** | @dev | _Agent Trail_
 
 Phase 7 (Testing - regression bundle) done. tests/agent-chain-continuity.regression.test.js novo: 17 tests integração end-to-end mapeando 1:1 para AC-ACC-01 a AC-ACC-17 de requirements §6. Cada test exercita o caminho live (codigo OU artefato workspace) e asserta o contrato do AC. Estratégia: ACs com unit coverage profundo (Phases 1-5) ganham um teste de integração focado; ACs prompt-driven (10/11/12 drift) verificam string match contra dev.md atual. Suite total: 2030/2031 verde - mesma falha pré-existente flaky feature:close idempotent residual do secure-by-default closure (NÃO causada por essa feature). Lint clean. **TODAS AS 7 PHASES (1-7) FECHADAS. Feature agent-chain-continuity COMPLETA - pronta para QA + feature:close.** Coverage final: Phase 1 schema v1.2 + handoff v2 + docs (38 tests); Phase 2 dossier:add-research + dossier:audit (26 tests); Phase 3 auto-init via feature-close + workflow-next + product (9 tests); Phase 4 9 chain agents paridade + sync-agents-preflight + agent-templates (5 tests + audit); Phase 5 dev-resume helper + dev.md auto-resume + drift detection (16 tests); Phase 6 telemetry inline (5 events cobertos); Phase 7 regression bundle (17 ACs verde). Total novo: 111 tests verdes em 7 phases.
+
+<!-- sha256:c31c5a36466331db60c8c1495fb9f1058823c7b9238a12c3e6a623c50d0eb596 -->
+**2026-05-07T03:35:36.407Z** | @dev | _Agent Trail_
+
+C-01 corrigido: sync-agents-preflight.js agora emite runtime event sync_agents_parity_violation via emitDossierEvent quando main() aborta em workspace_ahead. main() virou async e aceita projectRoot opcional (default process.cwd()). 2 testes novos em sync-agents-preflight.test.js (mock do dossier-telemetry capturando type/agent/summary/meta + caminho zero-violations no-emit). AC-ACC-17 atualizado: 5 evento agora asserta string-match contra src/commands/sync-agents-preflight.js (emitDossierEvent + sync_agents_parity_violation), substituindo o proxy fraco que lia architecture.md. Suite total: 2032/2033 verde (mesma falha pre-existente flaky feature:close idempotent residual de secure-by-default 2026-04-29, NAO causada por essa correcao). 5 telemetry events agora todos emitidos por codigo real.
+
+<!-- sha256:d3f482a4360ab03c63b094709acc4016209af1d06bc8947fa214e55224fa52bb -->
+**2026-05-07T03:40:29.789Z** | @qa | _Agent Trail_
+
+QA re-verificacao concluida. Verdict: PASS. C-01 fechado com codigo real (sync-agents-preflight.js emite sync_agents_parity_violation via dossierTelemetry.emitDossierEvent) + 2 testes novos com spy + AC-ACC-17 reforcado. Bundle 17/17 verde, suite 2032/2033 verde (mesma falha flaky pre-existente NAO causada). Paridade workspace/template ok. 5 telemetry events agora todos emitidos por codigo real. Cobertura 17/17 ACs. Issues: 0 Critical, 0 High, 0 Medium, 3 Low residuais (L-01 BR-ACC-11 doc drift; L-03 dossier What dogfood; L-04 pre-existing flaky feature:close idempotent residual de secure-by-default 2026-04-29).
 
 ## Revision Requests
 

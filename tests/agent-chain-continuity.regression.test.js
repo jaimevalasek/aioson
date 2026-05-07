@@ -399,14 +399,13 @@ describe('agent-chain-continuity — AC regression bundle', () => {
     assert.match(devMd, /dev_auto_resume/);
     assert.match(devMd, /dev_drift_detected/);
 
-    // sync_agents_parity_violation: documented in the architecture/spec; emitted
-    // by sync-agents-preflight.js abort path. Asserting the architecture section
-    // referencing it keeps the contract auditable.
-    const arch = await fs.readFile(
-      path.join(REPO_ROOT, '.aioson', 'context', 'architecture-agent-chain-continuity.md'),
+    // sync_agents_parity_violation: emitted by sync-agents-preflight.js abort path.
+    const syncPreflight = await fs.readFile(
+      path.join(REPO_ROOT, 'src', 'commands', 'sync-agents-preflight.js'),
       'utf8'
     );
-    assert.match(arch, /sync_agents_parity_violation/);
+    assert.match(syncPreflight, /sync_agents_parity_violation/);
+    assert.match(syncPreflight, /emitDossierEvent/);
 
     // sanity: every name accounted for above
     assert.equal(expected.length, 5);
