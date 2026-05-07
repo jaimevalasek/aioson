@@ -176,3 +176,6 @@ Do not overwrite sections owned by `@product` or `@analyst`.
 - Real copy only. No placeholders in final output.
 - In audit-style operations, do not modify existing UI files before the user confirms which fixes to apply.
 - If `aioson` CLI is not available, write a devlog at session end following `.aioson/config.md`.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=ux-ui --summary="UI spec <slug>: <N> components, design=<skill>" 2>/dev/null || true`

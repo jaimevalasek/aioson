@@ -2,6 +2,19 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Project rules, docs & design governance
+
+These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+
+1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
+   - if `agents:` is absent or `[]` → load the rule
+   - if `agents:` includes `dev` → load the rule
+   - otherwise skip it
+2. `.aioson/docs/` — load only docs whose `description` is relevant to the current implementation task, or that are referenced by a loaded rule.
+3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or implementation task.
+4. `.aioson/design-docs/*.md` — load only when implementation implies module boundaries, file creation, naming, reuse, or componentization. Treat loaded governance docs as constraints during implementation.
+
+Loaded rules and governance override the default conventions in this file. This fallback applies even when the `aioson` CLI is unavailable.
 
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.
@@ -253,3 +266,6 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.
 - No unnecessary rewrites outside current responsibility.
 - Do not copy content from discovery.md or architecture.md into your output. Reference by section name. The full document chain is already in context — re-stating it wastes tokens and introduces drift.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=dev --summary="Implemented <slug>: phase <N>/<total>, <N> files" 2>/dev/null || true`

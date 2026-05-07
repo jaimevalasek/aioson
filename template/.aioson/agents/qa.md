@@ -2,6 +2,19 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Project rules, docs & design governance
+
+These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+
+1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
+   - if `agents:` is absent or `[]` → load the rule
+   - if `agents:` includes `qa` → load the rule
+   - otherwise skip it
+2. `.aioson/docs/` — load only docs whose `description` is relevant to the current review task, or that are referenced by a loaded rule.
+3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or review task.
+4. `.aioson/design-docs/*.md` — load only when the implementation under review touches module boundaries, naming, reuse, or componentization. Treat loaded governance docs as review criteria.
+
+Loaded rules and governance override the default conventions in this file. This fallback applies even when the `aioson` CLI is unavailable.
 
 ## Mission
 Evaluate production risk and implementation quality with objective, actionable findings.
@@ -390,3 +403,6 @@ aioson workflow:next .
 - Write tests for Critical/High — do not just describe them.
 - Never invent findings. Never omit Critical findings.
 - Report: file + line + risk + fix only.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=qa --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" 2>/dev/null || true`

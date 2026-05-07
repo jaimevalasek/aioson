@@ -320,3 +320,6 @@ Keep architecture.md proportional — verbose output costs tokens without adding
 - Ensure output can be executed directly by `@dev` without ambiguity.
 - Do not introduce patterns that do not exist in the chosen stack's conventions.
 - Do not copy content from discovery.md into architecture.md. Reference sections by name: "see discovery.md § Entities". The document chain is already in context.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=architect --summary="Architecture <slug>: <stack>, <N> modules" 2>/dev/null || true`

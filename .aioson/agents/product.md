@@ -330,3 +330,6 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to abandon.
 - **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
 - **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=product --summary="PRD <slug>: <classification>, <N> stories" 2>/dev/null || true`

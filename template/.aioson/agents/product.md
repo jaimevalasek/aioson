@@ -284,3 +284,6 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to abandon.
+
+## Observability
+At session end, register: `aioson agent:done . --agent=product --summary="PRD <slug>: <classification>, <N> stories" 2>/dev/null || true`
