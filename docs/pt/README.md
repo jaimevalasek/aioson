@@ -1,125 +1,100 @@
-# Documentação AIOSON (Português)
+# Documentação AIOSON — Português
 
-Bem-vindo à documentação em português do AIOSON — um framework leve de agentes de IA para projetos de software.
+> **AIOSON** é um framework que dá a cada sessão de IA um **papel**, um **protocolo** e um **ciclo de vida**.
+> Em vez de um único prompt gigante tentando fazer tudo, agentes especializados se revezam: cada um cuida de uma fatia (descobrir, planejar, implementar, testar, revisar) e passa o bastão para o próximo de forma limpa.
 
-## Guias
+Esta é a porta de entrada da documentação em português. Não é um índice alfabético — é um **mapa por trilhas**. Escolha a sua e siga.
 
-| Documento | Descrição |
+---
+
+## Trilhas — escolha a sua
+
+### Sou novo aqui, quero entender em 15 minutos
+1. [O que é AIOSON](./1-entender/o-que-e-aioson.md) — analogia simples e o que ele resolve
+2. [Por que ele existe](./1-entender/por-que-existe.md) — o problema do prompt-monolito
+3. [Mapa do ecossistema](./1-entender/mapa-do-ecossistema.md) — diagrama dos agentes
+
+### Quero usar agora, num projeto
+1. [Primeiro projeto do zero](./2-comecar/primeiro-projeto.md) — passo a passo, com diálogos reais
+2. [Em projeto existente](./2-comecar/projeto-existente.md) — install + scan + primeira feature
+3. [Decisões iniciais](./2-comecar/decisoes-iniciais.md) — MICRO, SMALL ou MEDIUM? Qual cliente AI?
+
+### Quero uma receita pronta para o meu caso
+1. [Landing page](./3-receitas/landing-page.md) — `@product` → `@ux-ui` → `@dev` → `@qa`, com `@copywriter` opcional
+2. [App SaaS do zero](./3-receitas/app-saas-do-zero.md) — workflow MEDIUM completo, auth + billing + admin
+3. [Integração em codebase grande](./3-receitas/integracao-em-codebase-grande.md) — install + `@discover` + `@analyst` em legacy
+4. [Refatoração grande](./3-receitas/refatoracao-grande.md) — `@sheldon` antes do `@dev`, ciclo autônomo QA→Dev
+5. [Auditoria de segurança](./3-receitas/auditoria-seguranca.md) — `@pentester` end-to-end (OWASP + LLM Top 10 + supply chain)
+6. [Publicar no aioson.com](./3-receitas/publicar-no-aioson-com.md) — `system:package` + `system:publish` (com `--invite`)
+7. [Clonar design de site](./3-receitas/clonar-design-de-site.md) — `@site-forge` + `@design-hybrid-forge`
+8. [Continuidade entre sessões](./3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
+
+### Quero a referência técnica de um agente ou comando
+- **[Fichas dos 28 agentes](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
+- **[Referência técnica completa](./5-referencia/README.md)** — 30 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
+- [Guia de agentes (legado)](./agentes.md) — visão tabular alternativa
+
+#### Destaques de `5-referencia/` (features 2026 sem doc PT antes)
+- [Feature Dossier](./5-referencia/feature-dossier.md) — pasta única de feature: spec, plano, status, pesquisas
+- [Agent-chain continuity](./5-referencia/agent-chain-continuity.md) — handoff v2, dev-resume, drift detection
+- [SDD Framework](./5-referencia/sdd-framework.md) — Constitution, project-pulse, skill `aioson-spec-driven`
+- [Live Sessions](./5-referencia/live-sessions.md) — sessões rastreadas com tmux, status bar, handoff
+- [Secure by Default](./5-referencia/secure-by-default.md) — baseline `SEC-SBD-01..08` + `git:guard`
+- [aioson.com Store](./5-referencia/aioson-com-store.md) — publish/install de squads, genomes, skills
+
+### Arquivo histórico
+[`_arquivo/`](./_arquivo/) — versões anteriores das docs, preservadas com nota de redirect para o novo equivalente. Nenhum conteúdo foi perdido.
+
+---
+
+## Glossário rápido
+
+Termos que aparecem o tempo todo. Versão expandida em [`1-entender/glossario.md`](./1-entender/glossario.md).
+
+| Termo | O que é |
 |---|---|
-| [Início Rápido](./inicio-rapido.md) | Instale, configure e comece em menos de 10 minutos |
-| [Comandos CLI](./comandos-cli.md) | Referência em português dos comandos do `aioson`, com descrição, exemplos e usos práticos |
-| [Memória e Contexto](./memoria-contexto.md) | Guia prático dos arquivos de memória, descoberta, índices e pacotes mínimos de contexto |
-| [Deyvin](./deyvin.md) | Guia do agente de continuidade e pair programming do AIOSON |
-| [Cenários de Uso](./cenarios.md) | Exemplos completos e práticos para projetos MICRO, SMALL e MEDIUM |
-| [Guia de Agentes](./agentes.md) | Quando usar cada agente e o que ele entrega |
-| [Hardening do Motor](./motor-hardening.md) | Gates técnicos, auto-cura, test briefing e hardening autônomo do workflow |
-| [Squad e Genome](./squad-genome.md) | Como criar squads modulares, diferenciar skill de genome, aplicar genomes e publicar entregáveis HTML |
-| [Agentes Customizados](./agentes-customizados.md) | Criar agentes personalizados com `squad:agent-create` — tipos, Voice DNA, infra operacional, maturity scoring |
-| [Skills](./skills.md) | Sistema de skills: tipos, instalação, mapeamento por framework e compatibilidade cross-tool |
-| [design-hybrid-forge](./design-hybrid-forge.md) | Fluxo canônico para criar skills híbridas de design com preset visual, locale automático e histórico |
-| [Automação de Squads](./automacao-squads.md) | Transformar processos de squad em scripts executáveis (Python/Node.js) que rodam sem LLM |
-| [Output Strategy e Delivery](./output-strategy-delivery.md) | Configurar webhooks, automatizar entrega de conteúdo, monitorar delivery e troubleshoot |
-| [Suporte Web3](./web3.md) | Guia para projetos dApp (Ethereum, Solana, Cardano) |
-| [Recuperação de Sessão](./recuperacao-de-sessao.md) | Gerar e restaurar contexto entre sessões do Claude Code após compactação |
-| [Monitor de Contexto](./monitor-de-contexto.md) | Visualizar uso de janela de contexto por agente com alertas de warning e critical |
-| [Busca de Contexto](./busca-de-contexto.md) | Indexar e buscar documentos do projeto via FTS5 com ranking por relevância e recência |
-| [Cache de Contexto](./cache-de-contexto.md) | Salvar snapshots de contexto e restaurar entre sessões |
-| [Sandbox de Execução](./sandbox.md) | Executar comandos com timeout, redação de secrets e summarização de output |
-| [Agent Sharding](./agent-sharding.md) | Carregar apenas as seções relevantes de instruções de agente para uma tarefa específica |
-| [Spec & Learnings Pipeline](./spec-learnings-pipeline.md) | Sincronizar specs Markdown com o SQLite, exportar learnings para brains e acompanhar progresso de features |
-| [Devlog Pipeline](./devlog-pipeline.md) | Processar devlogs manuais dos agentes, sincronizar artifacts/learnings/verdict com o SQLite e exportar para brains |
-| [Hooks & Session Guard](./hooks-session-guard.md) | Visibilidade automática no dashboard para Claude Code, Antigravity e Codex — instalar hooks, session:guard e diagnóstico |
-| [Governança de Design Docs](./design-docs-governance.md) | Sistema modular de regras duras de código que agentes aplicam automaticamente em toda sessão |
-| [Runner System](./runner-system.md) | Execução persistente em background: filas, daemon e planos por fase |
-| [Feature Archive](./feature-archive.md) | Arquivamento automático de artefatos de features concluídas e manifest de histórico |
-| [SDD Automation Scripts](./sdd-automation-scripts.md) | Scripts determinísticos da Regra dos 80%: preflight, gates, classificação e detecção de test runner |
-| [compress:agents](./compress-agents.md) | Reduzir consumo de tokens comprimindo instruções de agentes |
-| [Site Forge](./site-forge.md) | Clonar, reconstruir ou extrair design de qualquer URL |
-| [Profiler System](./profiler-system.md) | Pipeline completo de pesquisa, enriquecimento e forja de perfis cognitivos (Genome 3.0) |
-| [Genome 3.0 Spec](./genome-3.0-spec.md) | Especificação técnica do formato Genome 3.0 com campos DISC, Enneagram, Big Five e MBTI |
+| **Agente** | Uma personagem especialista (`@product`, `@dev`, `@qa`...) com prompt e regras próprias |
+| **Squad** | Um grupo de agentes customizados criado por você para um domínio específico |
+| **Genome** | "DNA cognitivo" de uma persona — usado para criar advisors com personalidade |
+| **Skill** | Um pacote de instrução plugável (design system, processo, conhecimento de domínio) |
+| **Dossier** | Pasta de uma feature: spec, plano, decisões, status — tudo num só lugar |
+| **Classificação** | MICRO / SMALL / MEDIUM — define o quanto de processo o projeto precisa |
+| **Constitution** | 6 princípios que todo agente respeita — não pode ser sobrescrito |
 
-## Documentação em inglês
+---
 
-Para referências técnicas completas, consulte `docs/en/`:
-- [i18n](../en/i18n.md) — Localização e packs de idioma
-- [Orquestração paralela](../en/parallel.md) — Para projetos MEDIUM com múltiplas lanes
-- [Integração MCP](../en/mcp.md) — Model Context Protocol
-- [Schemas JSON](../en/json-schemas.md) — Contratos de saída machine-readable
-- [Web3 (EN)](../en/web3.md) — Referência técnica de suporte Web3
-
-## Início rápido em 3 comandos
+## Em três comandos
 
 ```bash
-# 1. Instalar em um projeto existente
-npx @jaimevalasek/aioson install
+# 1. Instale na sua máquina (uma vez)
+npx @jaimevalasek/aioson init meu-projeto
 
-# 2. Configurar contexto do projeto
-npx @jaimevalasek/aioson setup:context
+# 2. Entre no projeto
+cd meu-projeto
 
-# 3. Verificar saúde
-npx @jaimevalasek/aioson doctor
+# 3. Abra seu cliente AI (Claude Code, Codex, Gemini, OpenCode) e digite:
+@setup
 ```
 
-Depois, abra seu AI IDE e digite `/setup` para começar.
+A partir daí, os agentes guiam você. Detalhes em [Primeiro projeto do zero](./2-comecar/primeiro-projeto.md).
 
-Fluxo recomendado:
-- `@setup` primeiro
-- em projeto existente sem documentação, rode `scan:project --folder=src` ou `scan:project --folder=app` para gerar `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`, `memory-index.md` e `module-<pasta>.md`
-- se existir `spec.md`, o scan local também deriva `spec-current.md` e `spec-history.md`
-- depois rode novamente com `--with-llm` para gerar ou atualizar `discovery.md` e `skeleton-system.md`
-- quando quiser mandar só o contexto mínimo para uma tarefa, use `context:pack`
-- quando quiser entender como o `@deyvin` trabalha, leia [Deyvin](./deyvin.md)
-- quando quiser continuar uma sessao, corrigir um recorte pequeno ou trabalhar em modo companheiro tecnico, use `@deyvin`
-- `@discovery-design-doc` quando o escopo ainda estiver vago ou a feature for grande
-- `@analyst` / `@architect` / `@dev` conforme a clareza e o tipo do trabalho
+---
 
-Esse passo de `discovery-design-doc` e recomendado, nao obrigatorio.
+## Outras línguas
 
-## Brownfield sem duvida
+Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legados em `docs/en/`. Próxima fase: replicar esta estrutura para `docs/en/`.
 
-Se voce instalou o AIOSON num projeto que ja existe, este e o fluxo inicial mais seguro:
+---
 
-```bash
-# 1. Instale/atualize o AIOSON no repositorio
-npx @jaimevalasek/aioson install
+## Status desta documentação
 
-# 2. Gere o contexto principal
-npx @jaimevalasek/aioson setup:context --defaults
+**Fase A (entender + começar)** — concluída · 8 docs em `1-entender/` e `2-comecar/`.
+**Fase B (receitas práticas + ficha por agente)** — concluída · 8 receitas em `3-receitas/` + 28 fichas em `4-agentes/`.
+**Fase C (referência técnica completa)** — concluída · 30 docs em `5-referencia/`, com 6 totalmente novos cobrindo features 2026 antes não documentadas em PT.
 
-# 3. Gere os mapas locais do codigo
-npx @jaimevalasek/aioson scan:project . --folder=src,app
+**Métricas finais:** 76 docs, ~85.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
 
-# 4. Gere ou atualize a memoria brownfield consolidada com LLM
-npx @jaimevalasek/aioson scan:project . --folder=src,app --with-llm --provider=openai
-
-# 5. Monte um pacote minimo de contexto para a tarefa atual
-npx @jaimevalasek/aioson context:pack . --agent=dev --goal="ajustar captions do editor" --module=src
-```
-
-O que cada etapa entrega:
-
-- `scan:project` sem `--with-llm`: gera `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`, `memory-index.md`, `module-<pasta>.md` e, quando houver `spec.md`, também `spec-current.md` + `spec-history.md`
-- `scan:project` com `--with-llm`: gera ou atualiza `discovery.md` e `skeleton-system.md`
-- `scan:project` nunca gera `architecture.md`; esse arquivo vem depois com `@architect`
-- `context:pack`: gera `.aioson/context/context-pack.md` com o pacote mínimo recomendado para a tarefa atual
-
-Sem API LLM no `aioson`, ainda existe um caminho valido:
-
-- rode `scan:project . --folder=...` para gerar os mapas locais
-- rode `context:pack` se quiser entregar menos contexto e gastar menos tokens
-- abra Codex, Claude Code, Gemini CLI ou outro cliente de IA
-- ative `@analyst`
-- o `@analyst` pode usar `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md` e `scan-aioson.md` para escrever `discovery.md`
-- se o cliente permitir escolher modelo, prefira um modelo rapido/barato nessa etapa
-
-Fluxo recomendado depois do scanner em projeto SMALL brownfield:
-
-- `@analyst` para consolidar ou revisar a descoberta do sistema e do escopo atual
-- `@architect` para transformar essa descoberta em `architecture.md`
-- `@dev` somente depois da memoria estar pronta
-
-Regra importante sobre atualizacao:
-
-- `scan:project --with-llm` usa `merge` por padrao quando `discovery.md` ou `skeleton-system.md` ja existem
-- antes de sobrescrever, ele cria backup automatico em `.aioson/backups/`
-- se voce quiser regenerar do zero, use `--context-mode=rewrite`
+Próximos passos do projeto de docs (fora desta entrega):
+- Replicar a estrutura em `docs/en/` (atualmente legacy)
+- Replicar em `docs/es/` e `docs/fr/`
+- Adicionar diagramas SVG opcionais (hoje só ASCII)

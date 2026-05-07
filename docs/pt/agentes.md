@@ -1,5 +1,7 @@
 # Guia de Agentes
 
+> **Versão tabular alternativa (legado).** Para fichas individuais detalhadas com diálogos, saídas em disco e handoff, veja [`4-agentes/README.md`](./4-agentes/README.md).
+
 > Quando usar cada agente, o que ele entrega e como ativá-lo.
 
 ---
@@ -42,9 +44,9 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 
 > **Nota sobre estrutura de arquivos (v1.7.3+):** Os manifests dos agentes (arquivos `.manifest.json`) foram movidos para `.aioson/agents/manifests/` para reduzir clutter no diretório de agentes. Os arquivos `.md` de instrução continuam em `.aioson/agents/`. Isso facilita a navegação e separa metadados de prompts.
 
-> Para o fluxo completo de `@squad` e `@genome`, veja também [Squad e Genome](./squad-genome.md).
-> Para criar agentes customizados (my-agents e squad agents), veja [Agentes Customizados](./agentes-customizados.md).
-> Para uma explicação focada no agente de continuidade, veja também [Deyvin](./deyvin.md).
+> Para o fluxo completo de `@squad` e `@genome`, veja também [Squad e Genome](./4-agentes/squad.md).
+> Para criar agentes customizados (my-agents e squad agents), veja [Agentes Customizados](./4-agentes/squad.md).
+> Para uma explicação focada no agente de continuidade, veja também [Deyvin](./4-agentes/deyvin.md).
 
 ## Fluxo brownfield apos scan
 
@@ -203,7 +205,7 @@ Alias compativel:
 - `@deyvin` nao substitui discovery, produto ou arquitetura formal
 - quando a demanda cresce demais ou fica vaga, ele deve fazer handoff em vez de fingir que tudo cabe numa sessao de continuidade
 - se o pedido abrir projeto novo, greenfield, feature grande, escopo contraditorio ou misturar produto + UX + implementacao, o `@deyvin` deve fazer handoff imediato e nao comecar a codar
-- se voce quiser uma explicacao mais direta e focada no uso dele, consulte [Deyvin](./deyvin.md)
+- se voce quiser uma explicacao mais direta e focada no uso dele, consulte [Deyvin](./4-agentes/deyvin.md)
 
 ---
 
@@ -460,7 +462,7 @@ npx @jaimevalasek/aioson parallel:status
 - Metadata do squad
 - Estrutura de output, logs, mídia e sessão
 
-> Guia completo: [Squad e Genome](./squad-genome.md)
+> Guia completo: [Squad e Genome](./4-agentes/squad.md)
 
 ---
 
@@ -494,7 +496,7 @@ Quando uma skill vier do catálogo online ou de outro pacote, ela deve ser salva
 
 Depois disso, ela passa a ser parte real do pacote local da squad e deve ser considerada pelos agentes sob demanda.
 
-> Guia completo: [Squad e Genome](./squad-genome.md)
+> Guia completo: [Squad e Genome](./4-agentes/squad.md)
 
 ---
 
@@ -989,6 +991,6 @@ Duração típica: dias a semanas. Análise completa, paralelismo, backlog forma
 ## Veja também
 
 - [Fluxo de artefatos entre agentes](./fluxo-artefatos.md) — o que cada agente produz, o que @dev lê de fato e como o plano do Sheldon chega à implementação
-- [Cenários completos com exemplos práticos](./cenarios.md)
-- [Início rápido](./inicio-rapido.md)
-- [Guia do engenheiro: pair programming com IA](./guia-engineer.md)
+- [Cenários completos com exemplos práticos](./3-receitas/README.md)
+- [Início rápido](./2-comecar/primeiro-projeto.md)
+- [Guia do engenheiro: pair programming com IA](./4-agentes/deyvin.md)
