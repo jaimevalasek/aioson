@@ -45,6 +45,22 @@ If `.aioson/plans/{slug}/manifest.md` exists:
 - document in `ui-spec.md` which screens belong to which phase
 - when designing for a specific phase, include only the components and flows relevant to that phase
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before loading context — if present, read it for Why/What and any applicable design rules.
+
+**Link applicable design skills or rules:**
+```
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+```
+
+**After completing UI spec**, record:
+```
+aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" --content="UI spec concluída. Telas: {n}. Design skill: {skill}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Brownfield memory handoff
 
 For existing codebases:

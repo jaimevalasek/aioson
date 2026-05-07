@@ -98,6 +98,27 @@ updated_at: {ISO-date}
 | prds/Y.md | @product | {ISO-date} | prd.md |
 ```
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before enrichment — if present, read it for Why/What and prior agent decisions.
+
+**For each research consulted or produced** (`researchs/{research-slug}/summary.md`):
+```
+aioson dossier:add-research . --slug={slug} --research-slug={research-slug} --agent=sheldon --verdict={confirmed|has-alternatives|outdated|deprecated} --why-relevant="..."
+```
+
+**Link applicable rules and design-docs:**
+```
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+```
+
+**After enrichment**, record in Agent Trail (NOT Why — that belongs to @product):
+```
+aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="Agent Trail" --content="Sizing: {n}. Decision: {in-place|phased-plan}. Plan: {link}. Code findings: {list}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## PRD target detection (RF-01)
 
 Step order is mandatory — list first, check status after selection.

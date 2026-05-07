@@ -29,6 +29,17 @@ Proceed with the standard required input below.
 - `.aioson/context/prd.md` (if present — use acceptance criteria as test targets)
 - Implemented code and existing tests
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before starting review — if present, read it for code map and agent trail context.
+
+**After QA sign-off**, record verdict:
+```
+aioson dossier:add-finding . --slug={slug} --agent=qa --section="Agent Trail" --content="QA concluído. Verdict: {PASS|FAIL}. Cobertura: {n}%. Issues: {list}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Sheldon phased plan detection (RDA-05)
 
 If `.aioson/plans/{slug}/manifest.md` exists:

@@ -42,6 +42,17 @@ Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruth
 - The default feature workflow does **not** route through `@pm`.
 - If the user explicitly detours into `@pm` for a feature, refine the feature PRD in place instead of inventing a second planning artifact by default.
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before loading context — if present, read it for scope and prior agent decisions.
+
+**After completing user stories / plan**, record:
+```
+aioson dossier:add-finding . --slug={slug} --agent=pm --section="Agent Trail" --content="Plano refinado. Stories: {n}. Prioridade: {priority}."
+```
+
+Full templates: `.aioson/docs/dossier/agent-templates.md`
+
 ## Skills and docs on demand
 
 Before backlog shaping:

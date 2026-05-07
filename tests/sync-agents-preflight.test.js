@@ -1,0 +1,144 @@
+'use strict';
+
+const { describe, it } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+
+const { checkParity } = require('../src/commands/sync-agents-preflight');
+const { CHAIN_AGENTS } = require('../src/commands/dossier-audit');
+
+async function makeProject() {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-preflight-'));
+  await fs.mkdir(path.join(tmp, '.aioson', 'agents'), { recursive: true });
+  await fs.mkdir(path.join(tmp, 'template', '.aioson', 'agents'), { recursive: true });
+  return tmp;
+}
+
+const FEATURE_DOSSIER_BLOCK = `## Feature dossier
+- one
+- two
+- three
+
+`;
+
+function makeAgentMd(extra = '') {
+  return `# Agent
+
+## Mission
+Do work.
+
+${extra}## Position
+After @setup.
+`;
+}
+
+async function writeAgent(projectRoot, location, agent, body) {
+  const dir = location === 'workspace'
+    ? path.join(projectRoot, '.aioson', 'agents')
+    : path.join(projectRoot, 'template', '.aioson', 'agents');
+  await fs.writeFile(path.join(dir, `${agent}.md`), body, 'utf8');
+}
+
+describe('sync-agents-preflight', () => {
+  it('returns no violations when workspace and template are identical', async () => {
+    const tmp = await makeProject();
+    try {
+      const body = makeAgentMd(FEATURE_DOSSIER_BLOCK);
+      for (const agent of CHAIN_AGENTS) {
+        await writeAgent(tmp, 'workspace', agent, body);
+        await writeAgent(tmp, 'template', agent, body);
+      }
+      assert.deepEqual(checkParity(tmp), []);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('returns violations when workspace has more content than template', async () => {
+    const tmp = await makeProject();
+    try {
+      const longer = `## Feature dossier
+- one
+- two
+- three
+- four
+- five
+
+`;
+      const shorter = `## Feature dossier
+- one
+
+`;
+      await writeAgent(tmp, 'workspace', 'product', makeAgentMd(longer));
+      await writeAgent(tmp, 'template', 'product', makeAgentMd(shorter));
+      // others identical
+      const body = makeAgentMd(FEATURE_DOSSIER_BLOCK);
+      for (const agent of CHAIN_AGENTS) {
+        if (agent === 'product') continue;
+        await writeAgent(tmp, 'workspace', agent, body);
+        await writeAgent(tmp, 'template', agent, body);
+      }
+      const violations = checkParity(tmp);
+      assert.equal(violations.length, 1);
+      assert.equal(violations[0].agent, 'product');
+      assert.ok(violations[0].workspaceLen > violations[0].templateLen);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('does NOT flag when template is longer than workspace (template-ahead is safe for rsync)', async () => {
+    const tmp = await makeProject();
+    try {
+      const longer = `## Feature dossier
+- one
+- two
+- three
+- four
+
+`;
+      const shorter = `## Feature dossier
+- one
+
+`;
+      await writeAgent(tmp, 'workspace', 'qa', makeAgentMd(shorter));
+      await writeAgent(tmp, 'template', 'qa', makeAgentMd(longer));
+      // others identical
+      const body = makeAgentMd(FEATURE_DOSSIER_BLOCK);
+      for (const agent of CHAIN_AGENTS) {
+        if (agent === 'qa') continue;
+        await writeAgent(tmp, 'workspace', agent, body);
+        await writeAgent(tmp, 'template', agent, body);
+      }
+      assert.deepEqual(checkParity(tmp), []);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('flags workspace_only as a violation (template missing the section)', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeAgent(tmp, 'workspace', 'sheldon', makeAgentMd(FEATURE_DOSSIER_BLOCK));
+      await writeAgent(tmp, 'template', 'sheldon', makeAgentMd(''));
+      const violations = checkParity(tmp);
+      assert.equal(violations.length, 1);
+      assert.equal(violations[0].agent, 'sheldon');
+      assert.equal(violations[0].templateLen, 0);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('handles missing files gracefully (no crash, no false positive)', async () => {
+    const tmp = await makeProject();
+    try {
+      // No files anywhere — all skipped
+      assert.deepEqual(checkParity(tmp), []);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
