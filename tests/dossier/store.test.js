@@ -50,11 +50,12 @@ describe('dossier/store — init', () => {
     assert.equal(fssync.existsSync(result.path), true);
   });
 
-  it('writes valid frontmatter (schema_version 1.0, status active)', async () => {
+  it('writes valid frontmatter (current schema_version, status active)', async () => {
+    const { SCHEMA_VERSION } = require('../../src/dossier/schema');
     await store.init({ slug: 'feature-x', contextDir, classification: 'MEDIUM', now: FIXED_NOW });
     const { frontmatter } = await store.read({ slug: 'feature-x', contextDir });
     assert.equal(frontmatter.feature_slug, 'feature-x');
-    assert.equal(frontmatter.schema_version, '1.0');
+    assert.equal(frontmatter.schema_version, SCHEMA_VERSION);
     assert.equal(frontmatter.status, 'active');
     assert.equal(frontmatter.classification, 'MEDIUM');
     assert.equal(frontmatter.created_by, 'dossier-init');

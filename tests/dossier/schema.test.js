@@ -5,8 +5,10 @@ const assert = require('node:assert/strict');
 
 const {
   SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   CANONICAL_AGENT_IDS,
   REQUIRED_SECTIONS,
+  RESEARCH_VERDICTS,
   isValidSlug,
   isValidIsoDate,
   isCanonicalAgent,
@@ -30,8 +32,15 @@ function validFrontmatter(overrides = {}) {
 }
 
 describe('dossier/schema — constants', () => {
-  it('exposes schema version 1.0', () => {
-    assert.equal(SCHEMA_VERSION, '1.0');
+  it('exposes current schema version 1.2', () => {
+    assert.equal(SCHEMA_VERSION, '1.2');
+  });
+
+  it('supports v1.0, v1.1 and v1.2 for backward-compatible reads', () => {
+    assert.ok(SUPPORTED_SCHEMA_VERSIONS.has('1.0'));
+    assert.ok(SUPPORTED_SCHEMA_VERSIONS.has('1.1'));
+    assert.ok(SUPPORTED_SCHEMA_VERSIONS.has('1.2'));
+    assert.equal(SUPPORTED_SCHEMA_VERSIONS.has('2.0'), false);
   });
 
   it('canonical agent set includes core SDLC chain', () => {
@@ -48,6 +57,15 @@ describe('dossier/schema — constants', () => {
       'Rules & Design-Docs aplicáveis',
       'Agent Trail',
       'Revision Requests'
+    ]);
+  });
+
+  it('research verdicts enum matches researchs/ convention', () => {
+    assert.deepEqual([...RESEARCH_VERDICTS].sort(), [
+      'confirmed',
+      'deprecated',
+      'has-alternatives',
+      'outdated'
     ]);
   });
 });

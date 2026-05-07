@@ -1,6 +1,7 @@
 'use strict';
 
-const SCHEMA_VERSION = '1.0';
+const SCHEMA_VERSION = '1.2';
+const SUPPORTED_SCHEMA_VERSIONS = Object.freeze(new Set(['1.0', '1.1', '1.2']));
 
 const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'analyst',
@@ -59,6 +60,9 @@ const REQUIRED_SECTIONS = Object.freeze([
   'Revision Requests'
 ]);
 
+// v1.2 additions — Research Index is an optional section, not required for a valid dossier
+const RESEARCH_VERDICTS = Object.freeze(new Set(['confirmed', 'has-alternatives', 'outdated', 'deprecated']));
+
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]*$/;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -97,8 +101,8 @@ function validateFrontmatter(fm) {
     errors.push(`feature_slug must be kebab-case (got: ${JSON.stringify(fm.feature_slug)})`);
   }
 
-  if (fm.schema_version !== undefined && fm.schema_version !== SCHEMA_VERSION) {
-    errors.push(`unsupported schema_version: ${JSON.stringify(fm.schema_version)} (expected ${SCHEMA_VERSION})`);
+  if (fm.schema_version !== undefined && !SUPPORTED_SCHEMA_VERSIONS.has(fm.schema_version)) {
+    errors.push(`unsupported schema_version: ${JSON.stringify(fm.schema_version)} (supported: ${[...SUPPORTED_SCHEMA_VERSIONS].join(', ')})`);
   }
 
   if (fm.status !== undefined && !ALLOWED_STATUSES.has(fm.status)) {
@@ -140,12 +144,14 @@ function assertFrontmatter(fm) {
 
 module.exports = {
   SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   CANONICAL_AGENT_IDS,
   ORIGIN_PSEUDO_IDS,
   REQUIRED_FRONTMATTER_FIELDS,
   ALLOWED_STATUSES,
   ALLOWED_CLASSIFICATIONS,
   REQUIRED_SECTIONS,
+  RESEARCH_VERDICTS,
   isValidSlug,
   isValidIsoDate,
   isCanonicalAgent,

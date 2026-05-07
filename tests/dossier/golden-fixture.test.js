@@ -10,7 +10,7 @@ const {
   REQUIRED_SECTIONS,
   REQUIRED_FRONTMATTER_FIELDS,
   validateFrontmatter,
-  SCHEMA_VERSION
+  SUPPORTED_SCHEMA_VERSIONS
 } = require('../../src/dossier/schema');
 
 const FIXTURE_PATH = path.join(__dirname, '..', 'fixtures', 'dossier', 'feature-x.dossier.md');
@@ -31,7 +31,9 @@ describe('dossier — golden fixture v1.0 (AC-F1-09)', () => {
     for (const field of REQUIRED_FRONTMATTER_FIELDS) {
       assert.ok(parsed.data[field], `frontmatter missing field: ${field}`);
     }
-    assert.equal(parsed.data.schema_version, SCHEMA_VERSION);
+    // Golden fixture exercises v1.0 — must remain readable by the current parser.
+    assert.equal(parsed.data.schema_version, '1.0');
+    assert.ok(SUPPORTED_SCHEMA_VERSIONS.has(parsed.data.schema_version));
   });
 
   it('fixture exposes all 6 required sections', () => {
