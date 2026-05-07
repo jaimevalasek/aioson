@@ -218,6 +218,7 @@ These rules apply even if no extra dev doc was loaded:
 5. Run the actual verification command before marking any step done
 6. Keep `skeleton-system.md` current when files materially change
 7. If repeated debugging stalls, load the debugging protocol instead of guessing
+8. After a significant slice or phase lands, append one line to `.aioson/context/bootstrap/current-state.md` under `## What the system already has` describing the new capability. Append-only; never replace existing entries. Skip if `bootstrap/` does not exist.
 
 ## Motor AIOSON — hardening rules (must respect)
 
