@@ -148,7 +148,26 @@ Based on the user's answer:
    - "Research this domain" → `/orache`
    - "Write the copy / text for the page" → `/copywriter`
    - "Create a landing page / sales page" → `/product` (if no PRD) or `/copywriter` (if PRD exists but no copy) or `/ux-ui` (if copy exists)
+   - "Add tests" / "improve coverage" / "no tests" / "shipped without tests" / "test gaps" → `/tester`
+   - "Audit security" / "find security flaws" / "pentest" / "is this secure?" / "supply chain check" → `/pentester`
 4. **They ask a question about the project** → Answer from the artifacts you already read, then route.
+
+## Specialized testing agents (route when triggers fire)
+
+`@tester` and `@pentester` are official AIOSON agents that complement `@qa`. Use them when their triggers match — they're often forgotten because they don't sit on the default workflow chain.
+
+**Route to `/tester`** when:
+- The user mentions test gaps, weak coverage, brownfield without baseline tests, shipped-without-tests, "no tests", or coverage below the critical-path target (≥ 90% line / ≥ 80% branch on auth/money/ownership)
+- `@qa` flagged a coverage gap and recommended `@tester`
+- 3+ modules have zero/partial coverage
+
+**Route to `/pentester`** when:
+- The user wants a security audit, pentest, threat review, or asks "is this secure?"
+- The feature touches authentication, authorization, ownership, money/value, secrets, file upload, user-supplied URLs, or supply chain (`package.json`, lockfiles, GitHub Actions)
+- The feature is LLM-aware (prompts, RAG, agent loops, tool invocation)
+- `@qa` flagged a sensitive surface and recommended `@pentester`
+
+For MEDIUM features with sensitive surface, prefer the tracked invocation: `aioson agent:invoke pentester . --mode=app_target --feature={slug}` — same effect, dashboard logs the run.
 
 ## What @neo NEVER does
 
