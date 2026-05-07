@@ -8,7 +8,7 @@
 ## npm publish
 - Workflow: `.github/workflows/release.yml`
 - Triggers: `v*` git tags or manual dispatch
-- Required secret: `NPM_TOKEN`
+- Required GitHub Actions secret name: `NPM_TOKEN`
 
 ## npm package name
 The published package name is `@jaimevalasek/aioson`.
