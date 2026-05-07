@@ -31,6 +31,10 @@ test('autonomy policy defaults to guarded when protocol file is missing', async 
 });
 
 test('resolveEffectiveMode clamps requested mode by tool and agent limits', () => {
+  // SF-project-16: manifest cannot widen the agent ceiling above global_mode.
+  // With global_mode=guarded, a manifest claiming [guarded, trusted] is
+  // capped at guarded — both getAgentMaxMode and resolveEffectiveMode reflect
+  // the cap.
   const protocol = {
     version: '1.0',
     global_mode: 'guarded',
@@ -51,7 +55,33 @@ test('resolveEffectiveMode clamps requested mode by tool and agent limits', () =
     requestedMode: 'headless'
   });
 
+  assert.equal(getAgentMaxMode(protocol, 'dev', manifest), 'guarded');
+  assert.equal(effective, 'guarded');
+});
+
+test('resolveEffectiveMode allows manifest to claim mode up to global ceiling', () => {
+  // When global_mode permits, manifest can declare any mode at or below it.
+  const protocol = {
+    version: '1.0',
+    global_mode: 'headless',
+    tools: {
+      codex: { mode: 'trusted', requires_tty: false }
+    },
+    agents: {}
+  };
+  const manifest = { autonomy_modes: ['guarded', 'trusted'] };
+
+  // agent ceiling = min(manifest most-permissive=trusted, global=headless) = trusted
   assert.equal(getAgentMaxMode(protocol, 'dev', manifest), 'trusted');
+
+  // effective = min(tool=trusted, agent=trusted, requested=headless) = trusted
+  const effective = resolveEffectiveMode({
+    protocol,
+    tool: 'codex',
+    agentId: 'dev',
+    manifest,
+    requestedMode: 'headless'
+  });
   assert.equal(effective, 'trusted');
 });
 

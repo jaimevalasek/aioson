@@ -1,5 +1,20 @@
 'use strict';
 
+// Enforcement boundary (SF-project-15):
+//   - resolveEffectiveMode / canRunHeadless / getAgentMaxMode are consulted
+//     by workflow-execute, workflow-status, agents, and workflow-next, but
+//     they only STAMP an effective_mode label on plan steps and gate the
+//     headless/TTY decision. They do not, by themselves, refuse commands.
+//   - isCommandAllowed (whitelist/blacklist enforcement) is wired into
+//     src/sandbox.js#executeInSandbox via opts.policy. Callers that want a
+//     real refusal-on-disallowed-command gate must pass the active toolPolicy
+//     when invoking executeInSandbox. Other tool-call paths (Bash emissions
+//     from agent prompts via the harness) remain advisory until a harness-
+//     level pre-execution hook is added — see SF-project-15 backlog.
+//   - getAgentMaxMode (SF-project-16) caps any manifest-supplied
+//     autonomy_modes at the protocol global_mode so manifest declarations
+//     can only narrow, never widen, the agent ceiling.
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { exists } = require('./utils');
@@ -76,14 +91,23 @@ function getMostPermissiveMode(modes, fallback = 'guarded') {
 }
 
 function getAgentMaxMode(protocol, agentId, manifest = null) {
+  const globalMode = normalizeMode(protocol && protocol.global_mode, 'guarded');
+  const globalIndex = MODES.indexOf(globalMode);
+
   const agentPolicy = getAgentPolicy(protocol, agentId);
   if (agentPolicy && agentPolicy.max_mode) {
     return normalizeMode(agentPolicy.max_mode, 'guarded');
   }
   if (manifest && Array.isArray(manifest.autonomy_modes) && manifest.autonomy_modes.length > 0) {
-    return getMostPermissiveMode(manifest.autonomy_modes, 'guarded');
+    // SF-project-16: cap manifest-declared modes at the global ceiling.
+    // A manifest may NARROW the autonomy ceiling but never WIDEN it — so a
+    // forged manifest claiming `headless` under a global `guarded` policy
+    // collapses back to guarded.
+    const manifestMode = getMostPermissiveMode(manifest.autonomy_modes, 'guarded');
+    const manifestIndex = MODES.indexOf(manifestMode);
+    return MODES[Math.min(manifestIndex, globalIndex)];
   }
-  return normalizeMode(protocol && protocol.global_mode, 'guarded');
+  return globalMode;
 }
 
 function resolveEffectiveMode({ protocol, tool, agentId, manifest = null, requestedMode = null }) {

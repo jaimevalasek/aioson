@@ -76,6 +76,23 @@ async function executeInSandbox(command, opts = {}) {
   const intent = opts.intent || command.slice(0, 60);
   const shell = opts.shell !== false; // default true
 
+  // SF-project-15: when a tool policy is supplied, gate the command against
+  // shell_whitelist / shell_blacklist before spawning. Without this gate the
+  // policy in autonomy-protocol.json was advisory only.
+  if (opts.policy) {
+    const { isCommandAllowed } = require('./autonomy-policy');
+    if (!isCommandAllowed(opts.policy, 'shell', command)) {
+      return {
+        ok: false,
+        stdout: '',
+        stderr: `[autonomy-policy] command refused — not in shell_whitelist or matched shell_blacklist`,
+        exitCode: null,
+        timedOut: false,
+        refusedByPolicy: true
+      };
+    }
+  }
+
   return new Promise((resolve) => {
     const controller = new AbortController();
     let timedOut = false;
