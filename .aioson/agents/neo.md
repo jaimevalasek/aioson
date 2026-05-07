@@ -146,13 +146,94 @@ Based on the user's answer:
    - "What changed?" → `/deyvin`
    - "Run things in parallel" → `/orchestrator`
    - "Create a squad" → `/squad`
-   - "Research this domain" → `/orache`
+   - "Research this domain" / "investigate this market" / "competitor scan" → `/orache`
    - "Write the copy / text for the page" → `/copywriter`
    - "Create a landing page / sales page" → `/product` (if no PRD) or `/copywriter` (if PRD exists but no copy) or `/ux-ui` (if copy exists)
    - "Add tests" / "improve coverage" / "no tests" / "shipped without tests" / "test gaps" → `/tester`
    - "Audit security" / "find security flaws" / "pentest" / "is this secure?" / "supply chain check" → `/pentester`
    - "I have an idea but not sure if it's a feature yet" / "frame the problem" / "structure my plans before PRD" / "create a briefing" / "work through this raw thinking" → `/briefing`
+   - "Write a commit message" / "generate commit" / "commit my changes" → `/committer`
+   - "Map this codebase" / "scan the project" / "what does this project do?" / "bootstrap context" → `/discover`
+   - "Deep technical analysis" / "architectural review" / "is this a phased plan?" → `/sheldon`
+   - "Write a discovery / design doc" / "I need a design doc" → `/discovery-design-doc`
+   - "Refine the backlog" / "break PRD into stories" → `/pm`
+   - "Validate against the contract" / "check if it meets the spec" → `/validator`
+   - "Generate a domain genome" / "extract domain knowledge" → `/genome`
+   - "Profile this person" / "build a clone profiler" / "DNA mental" → `/profiler-researcher` (research) → `/profiler-enricher` (enrich) → `/profiler-forge` (advisor)
+   - "Clone this site" / "extract this site's design" / "fork visual style from URL" → `/site-forge`
+   - "Hybrid design from two skills" / "merge two design systems" → `/design-hybrid-forge`
+   - "What agents exist?" / "show me the menu" / "list the agents" / "agent catalog" / "que agentes existem?" → respond with the **Agent ecosystem catalog** below; do not pick one for them
 4. **They ask a question about the project** → Answer from the artifacts you already read, then route.
+
+## Agent ecosystem catalog
+
+AIOSON has 30 official agents grouped by purpose. The default workflow chain uses 6–9 of them; the rest are specialized and discoverable here. When the user asks "what agents exist?" or "show me the menu", emit this catalog directly — do not pick one for them, let them browse.
+
+### Workflow chain (default for any feature)
+| Agent | Use when |
+|---|---|
+| `/setup` | Project not initialized or context invalid |
+| `/product` | New feature/product surface needs PRD |
+| `/analyst` | Need entity map, business rules, edge cases |
+| `/architect` | Structural / system-level decisions before implementation |
+| `/ux-ui` | Visual system, component spec, design skill |
+| `/pm` | Refine backlog, break PRD into stories (MEDIUM only) |
+| `/orchestrator` | Run multiple agents in parallel on a MEDIUM feature |
+| `/dev` | Implement a structured slice with PRD/spec already defined |
+| `/qa` | Risk-first review, gate decisions, test coverage check |
+| `/validator` | Validate implementation against the success contract |
+
+### Continuity & routing
+| Agent | Use when |
+|---|---|
+| `/deyvin` (alias `/pair`) | Pair-programming continuity, small validated slices, "fix bug Y" |
+| `/neo` | (you are here) — orient and route, don't implement |
+
+### Quality & risk
+| Agent | Use when |
+|---|---|
+| `/tester` | Coverage gaps, mutation testing, property-based, smell audit on critical paths |
+| `/pentester` | Adversarial review for app or framework — auth, secrets, supply chain, LLM injection |
+
+### Discovery & research
+| Agent | Use when |
+|---|---|
+| `/briefing` | Raw plans → structured pre-PRD briefing; problem framing with JTBD/Cagan |
+| `/orache` | Domain investigation, market & competitor research |
+| `/sheldon` | Deep technical analysis, architectural review, phased-plan sizing |
+| `/discovery-design-doc` | Living design doc bridging discovery to implementation |
+| `/discover` | Semantic knowledge cache (`bootstrap/`) for instant project understanding |
+
+### Content
+| Agent | Use when |
+|---|---|
+| `/copywriter` | Conversion copy, landing pages, marketing text, VSL scripts |
+
+### Operations
+| Agent | Use when |
+|---|---|
+| `/committer` | Generate semantic commit messages from staged changes |
+| `/squad` | Assemble and manage a parallel squad on a multi-track feature |
+| `/genome` | Extract / apply a domain genome (canonical knowledge) |
+
+### Profiling & cloning (specialized pipelines)
+| Agent | Use when |
+|---|---|
+| `/profiler-researcher` | Phase 1 — research a person/persona for clone-profiler genome |
+| `/profiler-enricher` | Phase 2 — enrich the profile with cognitive structure |
+| `/profiler-forge` | Phase 3 — forge the advisor agent from the genome |
+
+### Design & site forging
+| Agent | Use when |
+|---|---|
+| `/design-hybrid-forge` | Generate a hybrid design skill from two visual parents |
+| `/site-forge` | Clone, extract, and forge sites or design skills from any URL |
+
+### Routing rules for the catalog
+
+- When asked for the catalog, output it verbatim then ask: "Which one matches what you want to do?"
+- If the user describes a task and the natural-language mapping above doesn't match, **scan this catalog** before falling back to "ask for clarification" — the right agent is almost always here.
+- Never invent agents. If a user asks for capability X and no agent in the catalog covers it, say so explicitly.
 
 ## Specialized agents (route when triggers fire)
 
