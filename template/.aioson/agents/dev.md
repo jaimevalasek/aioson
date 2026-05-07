@@ -118,13 +118,13 @@ If flagged, recommend a new chat and offer a handoff with slug, completed phase,
 
 ## Feature dossier
 
-Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).
+Check `.aioson/context/features/{slug}/dossier.md` before per-slug PRD/spec. If present, read it FIRST — it consolidates Why/What + code map and is the canonical entry point for chained context. If absent, continue with standard input (legacy flow).
 
-**Auto-resume (session start):** run `aioson dev:resume-data .`. Returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then `aioson runtime-log . --agent=dev --type=dev_auto_resume --summary="<feature>: phase <N>"`.
+**Auto-resume (session start):** `aioson dev:resume-data .` returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then `runtime-log --type=dev_auto_resume --summary="<feature>: phase <N>"`.
 
-**Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan (role/lines/pattern), or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `runtime-log --type=dev_drift_detected`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision: {path}. Reason: {why}."`.
+**Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan, or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `runtime-log --type=dev_drift_detected`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision. Reason."`.
 
-**Per slice:** `dossier:add-codemap` per file + `dossier:add-finding --section="Agent Trail" --content="Slice: {desc}. Próximo: {next}."`. Full templates: `.aioson/docs/dossier/agent-templates.md`.
+**Per slice:** `dossier:add-codemap` per file + `dossier:add-finding --section="Agent Trail" --content="Slice: {desc}. Next: {next}."`. Templates in `.aioson/docs/dossier/agent-templates.md`.
 
 ## Required input
 
@@ -218,42 +218,18 @@ These rules apply even if no extra dev doc was loaded:
 - If the motor reports `[Technical Gate BLOCKED]`, do not finish @dev. Fix the error and re-run the verification.
 - If the motor enters **self-healing mode**, you will receive the previous error in your prompt. Treat it as your top priority and apply the minimal fix.
 
-## Auto-orchestração via CLI (execute when appropriate)
+## Auto-orchestração via CLI
 
-Run `aioson` CLI commands yourself when that keeps the workflow moving.
-
-### When to run
-1. After a significant implementation slice: `aioson workflow:next . --complete=dev`
-2. If the gate blocks: fix the error and retry the same command, up to 3 attempts
-3. If healing mode is active: fix the injected error first, then retry
-4. Before saying the stage is done: always attempt the CLI completion first
-
-### Commands you can run
-```bash
-# Complete your stage and let the motor validate
-aioson workflow:next . --complete=dev
-
-# If you are in a healing session and want to retry manually
-aioson workflow:heal . --stage=dev
-
-# Check current workflow state
-aioson workflow:next .
-```
-
-### Rules
-- Report the command and result to the user.
-- Max 3 auto-attempts per session.
-- If the command says `BLOCKED`, stop and fix it before claiming completion.
+Run `aioson` CLI yourself to keep the workflow moving:
+- After a significant slice: `aioson workflow:next . --complete=dev`
+- On gate block: fix error, retry the same command (max 3 attempts/session)
+- In healing mode: fix the injected error first, then retry
+- `aioson workflow:heal . --stage=dev` for manual retry; `aioson workflow:next .` to inspect state
+- Always attempt CLI completion before declaring done. Report the command + result. If `BLOCKED`, stop and fix.
 
 ## Auto-cycle return to @qa (corrections mode)
 
-If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you are inside an auto-correction cycle initiated by `@qa`. After applying corrections from the plan referenced in `last_plan` and verifying tests pass:
-
-1. Update dossier (`Code Map` + `Agent Trail`) and spec as usual.
-2. Mark the corrections plan `status: resolved` in its frontmatter.
-3. Invoke `Skill(aioson:qa)` automatically with task `"re-verify after applying <plan path>"`. Do not ask the user — the cycle continues unless they Ctrl+C.
-
-If the file is absent or the slug differs, behave as today (manual handoff to user / `@qa`).
+If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
 
 ## Security findings consumption
 

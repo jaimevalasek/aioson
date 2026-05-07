@@ -125,6 +125,27 @@ Document the chosen strategy and justification in `.aioson/context/test-plan.md`
 
 **Confirm with the user before starting to write tests.**
 
+## Coverage Quality Tier — beyond line %
+
+Line coverage tells you which lines ran. It tells you nothing about whether the test caught a bug. Graduate the assertion quality of critical modules through this ladder:
+
+| Tier | Metric | Target overall | Target critical paths |
+|---|---|---|---|
+| 1 | Line coverage | ≥ 80% | ≥ 90% |
+| 2 | Branch coverage | ≥ 60% | ≥ 80% |
+| 3 | Mutation score | not required | ≥ 80% on critical modules |
+| 4 | Property-based invariants | n/a | one property per critical invariant |
+
+**Critical paths** (always treat as critical): authentication, authorization, ownership boundaries, money/value transfers, irreversible actions, public APIs, state machines with consistency invariants.
+
+**Trigger to load deep guide:** when you reach Phase 4 on any critical module, or coverage gap requires graduated assertion quality, **load `.aioson/docs/tester/coverage-quality.md`**. It contains:
+- Mutation testing config recipes per stack (Stryker / Infection / mutmut / PIT / mutant / forge fuzz) with thresholds (`high: 80, low: 70, break: 70`)
+- Five canonical property-based patterns (round-trip, invariants, stateful, differential, metamorphic) with code snippets per stack
+- Pact / consumer-driven contract testing discipline
+- Adjacent layer triggers (snapshot, visual, a11y, load, depscan)
+
+**Hard rule:** for any module in the critical-paths list with line coverage ≥ 80%, run mutation testing and report the score. Survived mutants in boundary or conditional logic are real gaps — they must be covered or escalated.
+
 ## Phase 4 — Test writing (by priority)
 
 Work module by module in priority order from the risk map:
@@ -289,6 +310,37 @@ PARE. Responda ao usuário:
 "⚠ Detectei um loop de análise — li {N} arquivos sem escrever testes.
 Razão: {explique por que não agiu}
 Próximo passo: {o que precisa acontecer para sair do loop}"
+
+## Phase 4.5 — Test smell self-audit
+
+Before declaring Phase 4 done, run this checklist against every test file written in this session. Each smell predicts flakiness or false confidence. Refactor any hit before moving to Phase 5.
+
+| Smell | Symptom | Fix |
+|---|---|---|
+| Eager Test | One test asserting many unrelated behaviors (> 5 unrelated `expect`/`assert`) | Split into one test per behavior |
+| Mystery Guest | Test reads `fs.readFile`, `process.env`, `new Date()`, `Date.now()`, `fetch(` without explicit setup | Inject the dependency; use fake timers |
+| Test Run War | Passes alone, fails together; flaky in parallel | Per-test fresh state, transactional rollback |
+| Conditional Test Logic | `if`/`else`/loops inside the test body | Parameterize (`it.each` / `pytest.mark.parametrize`) or split |
+| Redundant Assertion | `assert.equal(x, x)`, repeated equivalent assertions | Delete |
+| Mock Overdose | More than ~50% of setup is mocks | Write integration test instead; if blocked, escalate to `@architect` |
+
+**Auto-generated tests are 2–3× higher in smells.** Anything from EvoSuite, Pynguin, or LLM agents must be reviewed against this checklist before keeping.
+
+For deep refactor guidance, load `.aioson/docs/tester/coverage-quality.md` § 4.
+
+## Adjacent quality layers — opt-in by trigger
+
+Don't auto-load. Add only when the trigger fires. Full details: `.aioson/docs/tester/coverage-quality.md` § 6.
+
+| Layer | Trigger | Tooling |
+|---|---|---|
+| Snapshot | Stable UI/DOM/JSON output | vitest/jest snapshots; sanitize timestamps + IDs first |
+| Visual regression | Design-system-stable UI | Percy, Chromatic, Playwright `toHaveScreenshot()` |
+| Accessibility | User-facing UI | `axe-core`, `jest-axe`, `playwright/axe` |
+| Load / performance | Public API or perf-sensitive flow | `k6`, `locust`, `artillery` |
+| Dependency vuln scan | Every project (every CI run) | `npm audit`, `pip-audit`, `OSV-Scanner`, `Snyk`, `Trivy` |
+
+**Dependency scan is the only universal layer** — if the project doesn't already gate CI on `high`/`critical` CVEs, recommend adding it.
 
 ## Phase 5 — Coverage report
 
