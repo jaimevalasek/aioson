@@ -105,12 +105,16 @@ node .aioson/brains/scripts/query.js --tags css,hover,no-js --match all
 
 ```
 .aioson/brains/
-├── README.md                         # This file
-├── _index.json                       # Master index (always loaded, ~2KB)
+├── README.md                              # This file
+├── _index.json                            # Master index (always loaded, ~2KB)
 ├── scripts/
-│   └── query.js                      # Cross-reference query script
+│   └── query.js                           # Cross-reference query script
+├── dev/
+│   └── patterns.brain.json                # Implementation patterns for @dev (5 nodes)
+├── sheldon/
+│   └── architecture-decisions.brain.json  # Architecture decisions for @sheldon (5 nodes)
 └── site-forge/
-    └── visual-patterns.brain.json    # CSS/animation/interaction patterns (14 nodes)
+    └── visual-patterns.brain.json         # CSS/animation/interaction patterns (14 nodes)
 ```
 
 ## Adding a new brain

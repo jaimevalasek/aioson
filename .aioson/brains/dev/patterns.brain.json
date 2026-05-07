@@ -1,0 +1,79 @@
+{
+  "v": 1,
+  "agent": "dev",
+  "domain": "patterns",
+  "desc": "Implementation patterns @dev should default to. Quality-scored, anti-pattern aware. Seed nodes — extend with new q≥4 patterns after each significant slice.",
+  "updated": "2026-05-07",
+  "nodes": [
+    {
+      "id": "dev-001",
+      "title": "spawn with array args over execSync template literals",
+      "tags": ["security", "shell", "injection", "node", "child-process"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "When invoking external commands from Node, use spawn/execFile with an argv array. Never interpolate user-controlled values into a template-literal command string passed to execSync — that is shell-injection by construction.",
+      "p": "// good\nconst { spawnSync } = require('node:child_process');\nspawnSync('git', ['log', '--oneline', '-n', String(n)], { encoding: 'utf8' });\n// bad\nexecSync(`git log --oneline -n ${n}`);",
+      "src": "AIOSON commit 171dbf0 (fix tool-invocation)",
+      "date": "2026-05-07",
+      "not": "execSync(`cmd ${userInput}`) — interpolation goes through /bin/sh and any whitespace/metachar in userInput becomes a new command",
+      "warn": "applies even when input feels trusted — slugs, file paths, agent names can all contain shell metachars in tests/fixtures",
+      "see": ["dev-002"]
+    },
+    {
+      "id": "dev-002",
+      "title": "git commit -m via HEREDOC for multi-line bodies",
+      "tags": ["git", "commit", "shell", "formatting"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "Multi-line commit messages must come from a HEREDOC with single-quoted EOF — anything else mangles backticks, $-escapes, and indentation.",
+      "p": "git commit -m \"$(cat <<'EOF'\nfix(scope): subject\n\nBody paragraph.\nEOF\n)\"",
+      "src": "CLAUDE.md commit protocol",
+      "date": "2026-05-07",
+      "not": "git commit -m \"line1\\nline2\" — \\n is literal; $vars expand; backticks execute",
+      "warn": "the EOF marker must be single-quoted ('EOF') to prevent shell expansion inside the body",
+      "see": ["dev-001"]
+    },
+    {
+      "id": "dev-003",
+      "title": "append-only updates to context cache files",
+      "tags": ["context", "bootstrap", "cache", "idempotency"],
+      "q": 4,
+      "v": "BEST_PRACTICE",
+      "s": "Files that act as system state caches (bootstrap/current-state.md, project-pulse.md, features.md) are append-only. Never replace existing entries — add a new line/row. Other agents trust historical entries to remain stable.",
+      "p": "// good — Edit appending one bullet under existing section\n// bad — Write replacing the whole file",
+      "src": "AIOSON audit Lote B (commits ff14ccf, 5aa1c0c)",
+      "date": "2026-05-07",
+      "not": "regenerating the cache from scratch on every update — destroys the audit trail downstream agents read",
+      "warn": "if an entry is wrong, mark it superseded with a follow-up entry — do not edit the original line",
+      "see": ["dev-005"]
+    },
+    {
+      "id": "dev-004",
+      "title": "Read before Edit — surgical edits over rewrites",
+      "tags": ["editing", "tooling", "discipline"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "Always read the target file before editing. Prefer Edit (single old_string→new_string) over Write (full rewrite). Anchors must be unique enough to match exactly — surrounding context is your friend.",
+      "p": "// good — Edit with a 2-3 line unique anchor\n// bad — Write the whole file just to change one line",
+      "src": "Claude Code Edit tool contract; AIOSON dev.md execution invariants",
+      "date": "2026-05-07",
+      "not": "Write to overwrite an existing file when only one section needs to change — loses concurrent edits and bypasses staleness checks",
+      "warn": "if old_string isn't unique, EITHER widen the anchor OR use replace_all — never guess",
+      "see": ["dev-003"]
+    },
+    {
+      "id": "dev-005",
+      "title": "small validated slices over big-bang implementation",
+      "tags": ["process", "verification", "tdd-lite", "discipline"],
+      "q": 4,
+      "v": "GOOD",
+      "s": "Implement one slice → run the actual verification command (tsc, cargo check, npm test) → only then move to the next slice. Batched debugging at the end is the slowest path.",
+      "p": "loop: { write code → run verification → fix → commit-ready }",
+      "src": "dev.md Execution invariants; Motor AIOSON hardening rules",
+      "date": "2026-05-07",
+      "not": "write 10 files then run tsc — error cascades make root cause hard to find",
+      "warn": "verification command must be the real one (the one CI runs), not a proxy you trust",
+      "see": ["dev-003"]
+    }
+  ]
+}

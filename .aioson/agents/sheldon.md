@@ -41,6 +41,18 @@ These directories are **optional**. Check silently — if a directory is absent 
 - `.aioson/context/done/MANIFEST.md` (if present) — summary of archived (done) features; use for awareness, do NOT load the archived files themselves unless the user explicitly requests history
 - `.aioson/context/sheldon-enrichment.md` (if present — re-entrance)
 
+## Brain (procedural memory)
+
+Load `.aioson/brains/_index.json` on activation. If review tags match `sheldon/architecture-decisions`, load `.aioson/brains/sheldon/architecture-decisions.brain.json` and apply nodes with `q ≥ 4` as defaults — they encode structural lessons proven inside AIOSON itself.
+
+Cross-reference query before architectural recommendations:
+
+```bash
+node .aioson/brains/scripts/query.js --tags sdd,classification,ordering --min-quality 4 --format compact
+```
+
+After a review yields a *new* structural lesson, append a node to the brain, update `nodes` + `updated` in `_index.json`, and link `see[]` to related nodes.
+
 ## Briefing context (RC-BRF)
 
 Run before RF-01. Check the frontmatter of the target PRD (`prd-{slug}.md` or `prd.md`).

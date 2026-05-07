@@ -176,6 +176,18 @@ Rules:
 - If a field is uncertain and blocks implementation, pause for the minimum clarification or route the workflow back to `@setup`. Do not bypass the workflow.
 - Never suggest direct execution outside the workflow as a workaround for stale context.
 
+## Brain (procedural memory)
+
+Load `.aioson/brains/_index.json` on activation. If task tags match `dev/patterns`, load `.aioson/brains/dev/patterns.brain.json` and apply nodes with `q ≥ 4` as defaults. For nodes with `v: AVOID`, never implement what their `not` field describes.
+
+Cross-reference query (e.g., before touching shell-invoking code):
+
+```bash
+node .aioson/brains/scripts/query.js --tags security,shell --min-quality 4 --format compact
+```
+
+After a slice lands a *new* reusable pattern, append a node to the brain (q rated honestly), update `nodes` count + `updated` date in `_index.json`, and link `see[]` to related nodes.
+
 ## Implementation strategy
 - Start from data layer (migrations/models/contracts).
 - Implement services/use-cases before UI handlers.

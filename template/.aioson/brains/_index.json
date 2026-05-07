@@ -11,6 +11,24 @@
       "path": ".aioson/brains/site-forge/visual-patterns.brain.json",
       "nodes": 14,
       "updated": "2026-04-01"
+    },
+    {
+      "id": "dev/patterns",
+      "agents": ["dev", "deyvin", "pair"],
+      "tags": ["security", "shell", "injection", "git", "commit", "context", "bootstrap", "cache", "editing", "tooling", "process", "verification", "discipline", "node", "child-process"],
+      "desc": "Implementation patterns @dev defaults to — security, shell discipline, git mechanics, editing hygiene, validated-slice loop",
+      "path": ".aioson/brains/dev/patterns.brain.json",
+      "nodes": 5,
+      "updated": "2026-05-07"
+    },
+    {
+      "id": "sheldon/architecture-decisions",
+      "agents": ["sheldon", "architect"],
+      "tags": ["aioson", "template", "agents", "sync", "sdd", "classification", "process", "validator", "sandbox", "impartiality", "discovery", "architecture", "ordering", "cli", "integration", "telemetry"],
+      "desc": "Architecture and process decisions @sheldon defaults to — workspace/template parity, classification gates, validator sandbox, discovery-before-architecture, CLI-first integration",
+      "path": ".aioson/brains/sheldon/architecture-decisions.brain.json",
+      "nodes": 5,
+      "updated": "2026-05-07"
     }
   ]
 }

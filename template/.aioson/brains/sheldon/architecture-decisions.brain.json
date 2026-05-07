@@ -1,0 +1,79 @@
+{
+  "v": 1,
+  "agent": "sheldon",
+  "domain": "architecture-decisions",
+  "desc": "Architecture and process decisions @sheldon should default to. Captures structural patterns proven in the AIOSON framework itself. Extend after each architectural review.",
+  "updated": "2026-05-07",
+  "nodes": [
+    {
+      "id": "sheldon-001",
+      "title": "workspace/template parity for agent files",
+      "tags": ["aioson", "template", "agents", "sync", "structural"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "Every change to .aioson/agents/*.md must be mirrored in template/.aioson/agents/*.md. The sync direction is template→workspace (sync:agents copies template to workspace), so new content must be propagated to template manually or it is silently lost on next sync.",
+      "p": "// after editing .aioson/agents/X.md, also Edit template/.aioson/agents/X.md\n// verify with: diff -q .aioson/agents/X.md template/.aioson/agents/X.md",
+      "src": "AIOSON audit Lote A (commit 89f7681)",
+      "date": "2026-05-07",
+      "not": "edit only the workspace copy — the template stays stale and the next sync wipes the change",
+      "warn": "some pairs have legitimate preexisting diffs (e.g., qa.md feature:close logic) — review the diff before propagating, do not blindly mirror",
+      "see": ["sheldon-005"]
+    },
+    {
+      "id": "sheldon-002",
+      "title": "classification gates scale process depth",
+      "tags": ["sdd", "classification", "process", "scoping"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "Every project/feature gets a MICRO/SMALL/MEDIUM classification that gates which agents run and which artefacts are produced. MICRO = product→dev. SMALL = product→analyst→dev. MEDIUM = full chain with all gates. Skipping the classification step bloats MICRO work and starves MEDIUM work.",
+      "p": "1. @analyst runs first to classify\n2. The classification routes to the appropriate agent chain\n3. Process depth (artefacts, gates, reviews) follows the classification, not the urgency",
+      "src": "aioson-spec-driven SKILL.md; AIOSON CLAUDE.md",
+      "date": "2026-05-07",
+      "not": "running the full MEDIUM pipeline on every task because 'it's safer' — kills throughput on MICRO work",
+      "warn": "do not let user urgency reclassify down — urgency does not shrink risk surface",
+      "see": ["sheldon-004"]
+    },
+    {
+      "id": "sheldon-003",
+      "title": "strict context sandbox for impartial validators",
+      "tags": ["validator", "sandbox", "impartiality", "verification"],
+      "q": 5,
+      "v": "EXCELLENT",
+      "s": "Agents whose role is to verify (validator, qa) operate best with a strict read-list, not the full conversation context. The Nautilus Pattern: validator reads only harness-contract.json, progress.json, and listed completed_steps — never other agents' artefacts or chat history. Continuity hallucinations vanish.",
+      "p": "// validator reads:\n//   .aioson/plans/{slug}/harness-contract.json\n//   .aioson/plans/{slug}/progress.json\n//   files in progress.json.completed_steps\n//   diagnostic-tool output\n// validator NEVER reads PRDs, requirements, or sibling-agent transcripts",
+      "src": "validator.md Context restrictions",
+      "date": "2026-05-07",
+      "not": "feeding the validator the full conversation history — it starts agreeing with prior agents instead of checking the binary contract",
+      "warn": "rules from .aioson/rules/ may add criteria but never expand the sandbox — validator stays read-restricted",
+      "see": ["sheldon-005"]
+    },
+    {
+      "id": "sheldon-004",
+      "title": "discovery before architecture — never the reverse",
+      "tags": ["sdd", "discovery", "architecture", "ordering", "anti-pattern"],
+      "q": 5,
+      "v": "BEST_PRACTICE",
+      "s": "discovery.md (entities, business rules, constraints) must precede architecture.md (modules, stack choices, file layout). Architecting against assumed entities reliably ships the wrong abstraction.",
+      "p": "@discovery-design-doc → @analyst → discovery.md →\n@architect reads discovery.md → architecture.md →\n@dev reads both → implementation",
+      "src": "AIOSON SDD framework",
+      "date": "2026-05-07",
+      "not": "architect.md written before discovery.md — entities get reverse-engineered from the architecture diagram, business rules get lost",
+      "warn": "in brownfield projects, discovery still comes first but it is reverse discovery (scan code → discovery.md), not greenfield interview",
+      "see": ["sheldon-002"]
+    },
+    {
+      "id": "sheldon-005",
+      "title": "integrate via CLI command, not direct file write",
+      "tags": ["aioson", "cli", "integration", "telemetry", "schema"],
+      "q": 4,
+      "v": "GOOD",
+      "s": "When an agent needs to update a structured artefact (dossier, project-pulse, features.md, current-state.md), prefer the CLI command (dossier:add-finding, pulse:update, feature:close) over hand-editing the file. The CLI enforces schema, updates indices, and emits telemetry the dashboard needs.",
+      "p": "// good\naioson dossier:add-finding . --slug={slug} --section='Agent Trail' --content='...'\n// fallback only when CLI unavailable\n// edit the markdown file by hand, append-only",
+      "src": "AIOSON audit Lote B (discovery-design-doc, validator, tester dossier integration)",
+      "date": "2026-05-07",
+      "not": "rewriting an artefact's whole structure to add one entry — breaks index sync and loses telemetry",
+      "warn": "the CLI fallback path (manual edit) must remain available when CLI is missing — agents that hard-require CLI become unusable in plain Claude Code sessions",
+      "see": ["sheldon-001", "sheldon-003"]
+    }
+  ]
+}
