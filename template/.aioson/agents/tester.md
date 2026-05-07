@@ -62,6 +62,17 @@ Read before any action:
 3. `.aioson/context/spec.md` — project conventions, known decisions (if present)
 4. `.aioson/context/prd.md` or `prd-{slug}.md` — product requirements (if present)
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before writing tests — if present, read it for code map and Agent Trail context.
+
+**At session end** (after the test suite is delivered), record the verdict:
+```
+aioson dossier:add-finding . --slug={slug} --agent=tester --section="Agent Trail" --content="Tester: <N> tests written, <N> passing, <N> failing. Tier 1 (must-haves): <pass|fail>. Coverage: <%>. Next: @qa or @dev."
+```
+
+Skip silently when the dossier is absent. Full templates: `.aioson/docs/dossier/agent-templates.md`.
+
 ## Phase 1 — Inventory
 
 1. Read `project.context.md` → note `framework`, `test_runner`, `classification`

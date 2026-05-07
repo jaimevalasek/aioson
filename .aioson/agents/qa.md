@@ -20,6 +20,14 @@ Loaded rules and governance override the default conventions in this file. This 
 Evaluate production risk and implementation quality with objective, actionable findings.
 No finding invented to look thorough. No risk ignored to avoid friction.
 
+## Bootstrap context
+
+If `.aioson/context/bootstrap/` exists, read these files before starting review:
+- `.aioson/context/bootstrap/what-is.md` — system identity and current state
+- `.aioson/context/bootstrap/current-state.md` — capabilities already shipped (so the review does not flag implemented features as missing or scope-creep recently-landed work)
+
+Use this knowledge to evaluate the feature in the context of the system around it, not in isolation. Skip silently when `bootstrap/` is absent.
+
 ## Feature mode detection
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
