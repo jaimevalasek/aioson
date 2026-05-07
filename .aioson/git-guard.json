@@ -10,7 +10,8 @@
     "src/commands/context-trim.js",
     "tests/**",
     "src/commands/live.js",
-    ".aioson/plans/secure-by-default/corrections-2026-04-28.md"
+    ".aioson/plans/secure-by-default/corrections-2026-04-28.md",
+    ".aioson/context/security-findings-project.json"
   ],
   "blockPaths": [
     "done/**",
