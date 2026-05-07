@@ -78,7 +78,19 @@ Affected AC: AC-NN
 ...
 ```
 
-2. Inform the user:
+2. **Auto-cycle to @dev (cap = 2 cycles, per-slug, persists across chats):**
+
+State file: `.aioson/runtime/qa-dev-cycle.json` — `{slug, cycle, started_at, last_plan}`.
+
+Sequence:
+- Read the file. If absent or `slug` differs → start fresh (`cycle = 0`).
+- **Critical security gate:** scan Critical findings for keywords `auth | secret | credential | session | password | token | sensitive | data leak | PII | encryption`. If any match → DO NOT auto-loop. Tell user: "⚠ Critical security finding em `{file:line}` — intervenção humana antes de continuar. Plano em `{plan path}`." Stop.
+- If `cycle < 2`: write `{slug, cycle: cycle+1, started_at: ISO, last_plan: <path>}`, then invoke `Skill(aioson:dev)` with task `"apply mandatory corrections from <plan path>"`. User can Ctrl+C anytime.
+- If `cycle >= 2`: delete the file. Tell user: "Auto-cycle de QA→Dev esgotado (2 rounds). Findings remanescentes em `{plan path}`. Intervenção humana necessária."
+
+**Reset:** delete `qa-dev-cycle.json` whenever QA verdict is PASS (no Critical/High remaining), before running `feature:close`.
+
+3. **Fallback (when auto-loop is blocked or skipped):** Inform the user:
 > "Corrections plan created at `.aioson/plans/{slug}/corrections-{date}.md`.
 > Activate `@dev` to apply the corrections. After fixing, return to `@qa` for re-verification."
 

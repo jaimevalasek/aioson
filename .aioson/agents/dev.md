@@ -245,6 +245,16 @@ aioson workflow:next .
 - Max 3 auto-attempts per session.
 - If the command says `BLOCKED`, stop and fix it before claiming completion.
 
+## Auto-cycle return to @qa (corrections mode)
+
+If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you are inside an auto-correction cycle initiated by `@qa`. After applying corrections from the plan referenced in `last_plan` and verifying tests pass:
+
+1. Update dossier (`Code Map` + `Agent Trail`) and spec as usual.
+2. Mark the corrections plan `status: resolved` in its frontmatter.
+3. Invoke `Skill(aioson:qa)` automatically with task `"re-verify after applying <plan path>"`. Do not ask the user — the cycle continues unless they Ctrl+C.
+
+If the file is absent or the slug differs, behave as today (manual handoff to user / `@qa`).
+
 ## Security findings consumption
 
 Before implementation, check `.aioson/context/security-findings-{slug}.json`. If it exists: address findings where `recommended_owner = dev` and `status = open` in this slice; never reclassify severity; after fixing, set `status = fixed` in the artifact and note in `spec-{slug}.md`; never close findings — `@qa` is the decision owner. If absent: proceed normally.
