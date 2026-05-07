@@ -2,6 +2,7 @@
   "version": 1,
   "description": "Project-specific overrides for aioson git:guard. allowPaths suppress both path-based and content-based checks for listed paths.",
   "allowPaths": [],
+  "contentAllowPaths": [],
   "blockPaths": [
     "node_modules/**",
     "aioson-logs/**"

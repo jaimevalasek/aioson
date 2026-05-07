@@ -266,19 +266,44 @@ test('ensureGitGuardBaseline merges missing baseline blockPaths without removing
   }
 });
 
-test('ensureGitGuardBaseline is idempotent when baseline already present', async () => {
+test('ensureGitGuardBaseline is idempotent when baseline and full schema already present', async () => {
   const dir = await makeTempDir();
   const guardPath = path.join(dir, '.aioson/git-guard.json');
   await fs.mkdir(path.join(dir, '.aioson'), { recursive: true });
   await fs.writeFile(guardPath, JSON.stringify({
     version: 1,
-    blockPaths: [...GIT_GUARD_BASELINE_BLOCK_PATHS, 'done/**']
+    allowPaths: [],
+    contentAllowPaths: [],
+    blockPaths: [...GIT_GUARD_BASELINE_BLOCK_PATHS, 'done/**'],
+    allowExtensions: [],
+    blockExtensions: []
   }, null, 2) + '\n', 'utf8');
 
   const added = await ensureGitGuardBaseline(dir);
-  assert.equal(added, 0, 'nothing should be added when baseline already present');
+  assert.equal(added, 0, 'nothing should be added when baseline and all schema fields are already present');
   const result = JSON.parse(await fs.readFile(guardPath, 'utf8'));
   assert.equal(result.blockPaths.length, GIT_GUARD_BASELINE_BLOCK_PATHS.length + 1, 'no duplicate entries');
+});
+
+test('ensureGitGuardBaseline initializes missing schema array fields without removing existing data', async () => {
+  const dir = await makeTempDir();
+  const guardPath = path.join(dir, '.aioson/git-guard.json');
+  await fs.mkdir(path.join(dir, '.aioson'), { recursive: true });
+  // Older config missing contentAllowPaths and other schema fields — simulates downgrade scenario.
+  await fs.writeFile(guardPath, JSON.stringify({
+    version: 1,
+    blockPaths: ['custom/**']
+  }, null, 2) + '\n', 'utf8');
+
+  const added = await ensureGitGuardBaseline(dir);
+  assert.ok(added > 0, 'should report mutations when schema fields are missing');
+
+  const result = JSON.parse(await fs.readFile(guardPath, 'utf8'));
+  assert.deepEqual(result.allowPaths, [], 'allowPaths must be initialized as []');
+  assert.deepEqual(result.contentAllowPaths, [], 'contentAllowPaths must be initialized as []');
+  assert.deepEqual(result.allowExtensions, [], 'allowExtensions must be initialized as []');
+  assert.deepEqual(result.blockExtensions, [], 'blockExtensions must be initialized as []');
+  assert.ok(result.blockPaths.includes('custom/**'), 'existing blockPaths entries must be preserved');
 });
 
 test('ensureGitGuardBaseline is called during installTemplate and baseline is present after install', async () => {
@@ -290,6 +315,57 @@ test('ensureGitGuardBaseline is called during installTemplate and baseline is pr
   for (const baseline of GIT_GUARD_BASELINE_BLOCK_PATHS) {
     assert.ok(config.blockPaths.includes(baseline), `baseline "${baseline}" must be in git-guard after install`);
   }
+});
+
+test('detectExistingInstall returns true when only committed markers (no config.md) are present — fresh-clone scenario', async () => {
+  const dir = await makeTempDir();
+  // Simulate a freshly-cloned project: agents/dev.md committed, config.md gitignored and absent.
+  await fs.mkdir(path.join(dir, '.aioson/agents'), { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson/agents/dev.md'), '# dev agent\n', 'utf8');
+
+  assert.equal(await detectExistingInstall(dir), true, 'install must be detected via committed markers even without config.md');
+});
+
+test('detectExistingInstall returns false on empty directory', async () => {
+  const dir = await makeTempDir();
+  assert.equal(await detectExistingInstall(dir), false);
+});
+
+test('failed backup during update is recorded in failedBackups but does not block the operation', async () => {
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+
+  // Force a backup target to a path that cannot be written: replace nowStamp with a colon-bearing
+  // value via monkey-patching is intrusive; instead, place a regular file where the backup root
+  // would be a directory. The backup will fail on ensureDir(path.dirname(dest)).
+  const claudePath = path.join(dir, 'CLAUDE.md');
+  await fs.writeFile(claudePath, '# custom\n', 'utf8');
+
+  // Pre-create a regular FILE at .aioson/backups so the next nowStamp() subdir creation under it fails.
+  const backupsRoot = path.join(dir, '.aioson/backups');
+  await fs.rm(backupsRoot, { recursive: true, force: true }).catch(() => {});
+  await fs.writeFile(backupsRoot, 'not a dir', 'utf8');
+
+  // Suppress expected console.warn during the test
+  const originalWarn = console.warn;
+  const warnings = [];
+  console.warn = (msg) => warnings.push(msg);
+
+  let result;
+  try {
+    result = await installTemplate(dir, {
+      mode: 'update',
+      overwrite: true,
+      backupOnOverwrite: true
+    });
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.ok(Array.isArray(result.failedBackups), 'result must include failedBackups array');
+  assert.ok(result.failedBackups.length > 0, 'at least one backup should have failed');
+  assert.ok(result.copied.length > 0, 'update must still proceed and copy files');
+  assert.ok(warnings.some((m) => typeof m === 'string' && m.includes('backup of') && m.includes('failed')), 'console.warn must be emitted for at least one failed backup');
 });
 
 async function fileExists(filePath) {

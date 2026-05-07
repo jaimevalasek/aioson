@@ -69,7 +69,18 @@ const GITIGNORE_POLICY_LINES = [
 ];
 
 async function detectExistingInstall(targetDir) {
-  return exists(path.join(targetDir, '.aioson/config.md'));
+  // Check multiple markers — config.md is gitignored (line 42) so a fresh
+  // clone will not have it, but committed framework files like agents/dev.md
+  // remain present. Any one is enough to confirm the install.
+  const markers = [
+    '.aioson/config.md',
+    '.aioson/agents/dev.md',
+    '.aioson/install.json'
+  ];
+  for (const marker of markers) {
+    if (await exists(path.join(targetDir, marker))) return true;
+  }
+  return false;
 }
 
 async function ensureGitignoreEntry(targetDir, entry) {
@@ -104,6 +115,17 @@ async function ensureProjectGitignorePolicy(targetDir) {
   return ensureGitignoreEntries(targetDir, GITIGNORE_POLICY_LINES);
 }
 
+// Schema fields that must always exist as arrays in git-guard.json.
+// Missing fields are added (initialized to []), never removed or modified.
+// Prevents silent downgrade when an older template ships fewer fields than the project uses.
+const GIT_GUARD_SCHEMA_ARRAY_FIELDS = [
+  'allowPaths',
+  'contentAllowPaths',
+  'blockPaths',
+  'allowExtensions',
+  'blockExtensions'
+];
+
 async function ensureGitGuardBaseline(targetDir) {
   const guardPath = path.join(targetDir, '.aioson/git-guard.json');
   if (!(await exists(guardPath))) return 0;
@@ -115,13 +137,28 @@ async function ensureGitGuardBaseline(targetDir) {
     return 0; // corrupted — do not touch
   }
 
-  const existing = new Set(Array.isArray(config.blockPaths) ? config.blockPaths : []);
-  const toAdd = GIT_GUARD_BASELINE_BLOCK_PATHS.filter((p) => !existing.has(p));
-  if (toAdd.length === 0) return 0;
+  let mutations = 0;
 
-  config.blockPaths = [...(config.blockPaths || []), ...toAdd];
+  // Ensure every schema field exists as an array. Never remove existing entries.
+  for (const field of GIT_GUARD_SCHEMA_ARRAY_FIELDS) {
+    if (!Array.isArray(config[field])) {
+      config[field] = [];
+      mutations++;
+    }
+  }
+
+  // Merge baseline blockPaths (additive only).
+  const existing = new Set(config.blockPaths);
+  const toAdd = GIT_GUARD_BASELINE_BLOCK_PATHS.filter((p) => !existing.has(p));
+  if (toAdd.length > 0) {
+    config.blockPaths = [...config.blockPaths, ...toAdd];
+    mutations += toAdd.length;
+  }
+
+  if (mutations === 0) return 0;
+
   await fs.writeFile(guardPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
-  return toAdd.length;
+  return mutations;
 }
 
 async function countProjectFiles(targetDir) {
@@ -248,6 +285,7 @@ async function installTemplate(targetDir, options = {}) {
   const copied = [];
   const skipped = [];
   const backedUp = [];
+  const failedBackups = [];
   let runtime = null;
 
   let backupRoot = null;
@@ -289,8 +327,10 @@ async function installTemplate(targetDir, options = {}) {
         try {
           const backupPath = await backupManagedFile(targetDir, rel, backupRoot);
           if (backupPath) backedUp.push(toRelativeSafe(targetDir, backupPath));
-        } catch {
-          // backup failed — warn but do not block the update
+        } catch (err) {
+          // Backup failed — do not block the update, but surface the loss of rollback safety.
+          failedBackups.push({ path: rel, error: err && err.message ? err.message : String(err) });
+          console.warn(`[aioson update] backup of ${rel} failed; update proceeding without rollback for this file: ${err && err.message ? err.message : err}`);
         }
       } else {
         backedUp.push(toRelativeSafe(targetDir, path.join(backupRoot, rel)));
@@ -336,6 +376,7 @@ async function installTemplate(targetDir, options = {}) {
     copied,
     skipped,
     backedUp,
+    failedBackups,
     runtime,
     dryRun,
     projectFileCount,
