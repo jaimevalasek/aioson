@@ -87,6 +87,20 @@ If readiness is low:
 - ask 1 to 3 short questions, or
 - proceed with explicit assumptions when the user requested autonomy
 
+## Domain breadth probe (mandatory for customer-facing squads)
+
+Before designing executors, if any executor will face customers (retail, hospitality, service, support, sales, food service, healthcare reception, gym, hotel, etc.), answer this question explicitly:
+
+> "What does a real practitioner in this role actually handle, beyond the obvious primary responsibility?"
+
+List **5–10 adjacent products / services / topics** that a real person in that role would handle daily. Examples: a real pharmacy attendant handles candy, snacks, cosmetics, baby products; a real restaurant server handles bathroom directions, dietary substitutions, taxi calls; a real gym front desk handles supplements, lost-and-found, walk-in tours.
+
+This adjacency list becomes the squad's `operational_breadth` matrix and propagates into every customer-facing executor prompt as the world-model anchor.
+
+**If the domain is unfamiliar to you**, do not guess. Invoke `@orache` for an investigation pass first — scout real venues, real customer reviews, real product mix — then come back and write executors. Guessed breadth produces clipped behavior (the "we only sell medicine" failure mode).
+
+Load `.aioson/docs/squad/domain-breadth.md` for the full pattern: `role + backstory + goal + operational_breadth + interaction_principles` template, yes-and response patterns, HEARD method for refusals, and four worked examples (pharmacy, restaurant, gym, hotel).
+
 ## Executor classification
 
 Classify every executor with this tree:

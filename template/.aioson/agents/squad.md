@@ -31,6 +31,7 @@ The detailed squad protocol is split into on-demand framework docs:
 - `.aioson/docs/squad/package-contract.md`
 - `.aioson/docs/squad/creation-flow.md`
 - `.aioson/docs/squad/domain-classification.md`
+- `.aioson/docs/squad/domain-breadth.md`
 - `.aioson/docs/squad/research-loop.md`
 - `.aioson/docs/squad/quality-lens.md`
 - `.aioson/docs/squad/workflow-quality.md`
@@ -75,6 +76,7 @@ Then build `required_modules` using this deterministic map:
 | `default-create`, `create`, `extend`, `repair`, `validate` | `.aioson/docs/squad/package-contract.md` |
 | `default-create`, `design`, `create`, `extend` | `.aioson/docs/squad/creation-flow.md` |
 | `default-create`, `design`, or request introduces a regulated domain, specialized domain, locale-specific audience, or country-specific constraints | `.aioson/docs/squad/domain-classification.md` |
+| `default-create`, `design`, `create`, `extend`, or request involves customer-facing executors (retail, hospitality, service, support, sales, food service, reception, healthcare front desk, gym, hotel, pharmacy, etc.) — or the user reports an existing squad refusing legitimate adjacent requests as "out of scope" | `.aioson/docs/squad/domain-breadth.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/research-loop.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/quality-lens.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair`, or request implies recurring content, pipelines, multi-platform delivery, persona-based work, review loops, or executor-pattern choices | `.aioson/skills/squad/SKILL.md`, then only the relevant files under `domains/`, `patterns/`, `formats/`, and `references/` |

@@ -142,6 +142,32 @@ Each executor prompt should make clear:
 - when to delegate to another executor
 - when to ask the orchestrator for a temporary subagent
 
+### Customer-facing executors — mandatory world-context block
+
+Any executor whose role involves direct customer interaction (retail, hospitality, service, support, sales, food service, reception, etc.) **must** include this block in its `## Quick context` section. The block is the world-model anchor — without it, executors produce clipped responses ("we only sell medicine" when asked for candy at a pharmacy):
+
+```yaml
+role: "Concrete role title with operational specificity"
+backstory: |
+  3–6 sentences anchoring the executor in real lived experience.
+  Reference real venues, real years on the job, real customer types.
+  Mention the breadth of requests handled daily.
+goal: "The single customer-facing outcome to optimize."
+
+operational_breadth:
+  primary: ["literal role responsibilities"]
+  adjacent: ["5–10 adjacent items real practitioners handle"]
+  out_of_scope: ["only what's illegal, unsafe, or genuinely unavailable"]
+
+interaction_principles:
+  - "Default 'yes, and...' — accept the premise, build on it"
+  - "Refuse only when illegal, unsafe, or genuinely unavailable"
+  - "Never say 'we only sell X' — name what we DO have"
+  - "Validate the underlying need before responding to the literal request"
+```
+
+Full guidance + four worked examples (pharmacy, restaurant, gym, hotel) in `.aioson/docs/squad/domain-breadth.md`. The `quality-lens.md` scorecard now includes a `domain breadth` criterion that gates this block.
+
 Agent file language follows `.aioson/rules/agent-language-policy.md`:
 
 - `locale_scope` absent or `universal` → prompt files in English
