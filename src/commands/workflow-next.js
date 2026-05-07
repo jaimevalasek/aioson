@@ -424,10 +424,73 @@ async function inferCompletedStages(targetDir, draftState) {
   return completed;
 }
 
+// SF-project-18: cross-check workflow.state.json#completed against runtime
+// telemetry. Stages claimed as completed without a corresponding agent_done
+// event in .aioson/runtime/aios.sqlite are surfaced as a warning. Detection
+// is best-effort — if the runtime DB is unavailable, the check is silently
+// skipped (the framework still works in environments without telemetry).
+async function detectUnsubstantiatedCompletions(targetDir, completedStages, logger = null) {
+  if (!Array.isArray(completedStages) || completedStages.length === 0) return [];
+  let runtimeStore;
+  try {
+    runtimeStore = require('../runtime-store');
+  } catch {
+    return [];
+  }
+  if (!runtimeStore.runtimeStoreExists) return [];
+  let dbExists;
+  try { dbExists = await runtimeStore.runtimeStoreExists(targetDir); } catch { return []; }
+  if (!dbExists) return [];
+  let db;
+  try {
+    db = await runtimeStore.openRuntimeDb(targetDir);
+  } catch {
+    return [];
+  }
+  if (!db || typeof db.prepare !== 'function') {
+    try { if (db && typeof db.close === 'function') db.close(); } catch { /* ignore */ }
+    return [];
+  }
+  const unsubstantiated = [];
+  try {
+    let stmt;
+    try {
+      stmt = db.prepare(
+        "SELECT 1 FROM agent_events WHERE agent = ? AND event_type IN ('agent_done', 'stage_completed') LIMIT 1"
+      );
+    } catch {
+      // schema differences across versions — abort the cross-check.
+      return [];
+    }
+    for (const stage of completedStages) {
+      try {
+        const row = stmt.get(stage);
+        if (!row) unsubstantiated.push(stage);
+      } catch {
+        return [];
+      }
+    }
+  } finally {
+    try { db.close(); } catch { /* ignore */ }
+  }
+  if (unsubstantiated.length > 0 && logger && typeof logger.warn === 'function') {
+    logger.warn(
+      `[workflow:next] state-file integrity warning — completed stages without agent_done telemetry: ${unsubstantiated.join(', ')}. ` +
+      `If you did not just edit workflow.state.json by hand, this may indicate tampering.`
+    );
+  }
+  return unsubstantiated;
+}
+
 async function loadOrCreateState(targetDir, options = {}) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
   const existing = await readJsonIfExists(statePath);
   if (existing && typeof existing === 'object' && Array.isArray(existing.sequence)) {
+    // SF-project-18: warn-on-mismatch only, never refuse — preserves
+    // backwards-compat with environments that lack runtime telemetry.
+    if (Array.isArray(existing.completed) && existing.completed.length > 0 && options.logger) {
+      await detectUnsubstantiatedCompletions(targetDir, existing.completed, options.logger);
+    }
     const reconciled = reconcileWorkflowState(existing);
     if (reconciled.changed) {
       await writeJson(statePath, reconciled.state);
@@ -931,6 +994,11 @@ async function runWorkflowNext({ args, options, logger, t }) {
           });
           const healingValidation = await validateHandoffProtocol(targetDir, healingHandoff.protocol);
           if (!healingValidation.ok) {
+            // SF-project-17: the current validator error set is intentionally
+            // soft (missing manifests / unknown capabilities are common during
+            // bootstrap), so we WARN and continue. Blocking would require a
+            // validator that distinguishes warnings from hard contract
+            // violations — see SF-17 dev_session_note for the deferred fix.
             logErrorLine('Handoff protocol warning:');
             for (const err of healingValidation.errors) logErrorLine(`  - ${err}`);
           }
@@ -1030,6 +1098,13 @@ async function runWorkflowNext({ args, options, logger, t }) {
     });
     const handoffValidation = await validateHandoffProtocol(targetDir, handoffData.protocol);
     if (!handoffValidation.ok) {
+      // SF-project-17: the validator currently returns errors for soft
+      // conditions (missing manifest, unknown capability) that occur during
+      // normal bootstrap. Treating them as blockers would break the workflow
+      // for any agent whose manifest has not been committed yet. Until the
+      // validator is refactored to separate warnings from hard contract
+      // violations, this caller emits a warning and continues — see
+      // SF-project-17 dev_session_note.
       logErrorLine('Handoff protocol warning:');
       for (const err of handoffValidation.errors) logErrorLine(`  - ${err}`);
     }
@@ -1102,5 +1177,6 @@ module.exports = {
   finalizeCurrentStage,
   applySkip,
   activateStage,
-  runWorkflowNext
+  runWorkflowNext,
+  detectUnsubstantiatedCompletions
 };

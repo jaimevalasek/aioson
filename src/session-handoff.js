@@ -24,9 +24,18 @@ const ARTIFACT_KINDS = Object.freeze([
   'other'
 ]);
 
+// SF-project-19: artifact_uris paths must stay project-relative so a forged
+// handoff cannot point downstream consumers at /etc/passwd or escape via "..".
+// Rejects absolute paths and any segment containing "..".
+function isSafeArtifactPath(p) {
+  if (typeof p !== 'string' || !p.trim()) return false;
+  if (path.isAbsolute(p)) return false;
+  return !p.split(/[\\/]+/).includes('..');
+}
+
 function coerceArtifactUri(item, fallbackAgent) {
   if (typeof item === 'string') {
-    if (!item.trim()) return null;
+    if (!isSafeArtifactPath(item)) return null;
     return {
       path: item,
       kind: 'other',
@@ -34,7 +43,7 @@ function coerceArtifactUri(item, fallbackAgent) {
       added_at: null
     };
   }
-  if (item && typeof item === 'object' && typeof item.path === 'string' && item.path.trim()) {
+  if (item && typeof item === 'object' && isSafeArtifactPath(item.path)) {
     const kind = ARTIFACT_KINDS.includes(item.kind) ? item.kind : 'other';
     const agent = typeof item.agent === 'string' && item.agent.trim()
       ? item.agent
