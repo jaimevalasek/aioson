@@ -150,7 +150,12 @@ Both `@tester` and `@pentester` are official AIOSON agents. Surface them explici
 - Application is LLM-aware (prompts, RAG, agent loops, tool invocation)
 > "Sensitive surface detected ({list}). Activate `/aioson:pentester` for adversarial review. Surfaces TS-A01..A07 mapped against OWASP ASVS 5.0 + LLM Top 10. Full playbook in `.aioson/docs/pentester/app-playbooks.md` and `.aioson/docs/pentester/llm-supplychain.md`."
 
-When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invocation `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` instead of telling the user to type the slash command — same effect, dashboard logs the run.
+**Recommend `@validator`** in the report when:
+- `.aioson/plans/{slug}/harness-contract.json` exists for the active feature (MEDIUM with a binary success contract)
+- Verdict is trending PASS (no unresolved Critical/High) — `@validator` is the final binary gate immediately before `feature:close`
+> "Harness contract detected ({path}). Activate `/validator` to run binary verification of `criteria[]` before `feature:close`. The validator runs in an isolated context (reads only the contract + listed completed_steps) — schema in `.aioson/docs/sheldon/harness-contract.md`."
+
+When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invocation `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` instead of telling the user to type the slash command — same effect, dashboard logs the run. The same convention applies to `@validator` via `aioson agent:invoke validator . --feature={slug}`.
 
 ## Review process
 1. **Map AC items** from `prd.md` — mark each: covered / partial / missing.
@@ -283,6 +288,7 @@ Test written: tests/Feature/AppointmentAuthTest.php
 ### Recommended next agents (when triggers fire — see "Specialized agent triggers")
 - `@tester` — coverage gap on critical paths or no mutation tests on auth/money modules.
 - `@pentester` — feature touches sensitive surface (auth/secrets/data/upload/external URL/supply chain).
+- `@validator` — `.aioson/plans/{slug}/harness-contract.json` is present (binary contract gates `feature:close` via `progress.json.ready_for_done_gate`).
 
 ### Summary: X Critical, X High, X Medium, X Low. AC: X/Y covered.
 ```

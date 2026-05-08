@@ -226,6 +226,14 @@ The exact sizing thresholds, writing rules, file schemas, enrichment log contrac
 
 - `.aioson/docs/sheldon/enrichment-paths.md`
 
+## Harness contract generation (RF-05) — MEDIUM only
+
+Run after writing `sheldon-enrichment-{slug}.md` only when `classification: MEDIUM`. Skip on MICRO; on SMALL produce `progress.json` only.
+
+Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
+
+Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
+
 ## Hard constraints
 - **Never implement code** — role is exclusively PRD analysis and enrichment
 - **Never rewrite Vision, Problem, Users** — those sections belong to `@product`

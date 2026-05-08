@@ -29,6 +29,7 @@ const MANAGED_FILES = [
   '.aioson/agents/pm.md',
   '.aioson/agents/dev.md',
   '.aioson/agents/qa.md',
+  '.aioson/agents/validator.md',
   '.aioson/agents/tester.md',
   '.aioson/agents/orchestrator.md',
   '.aioson/agents/pentester.md',
@@ -61,6 +62,7 @@ const MANAGED_FILES = [
   '.aioson/docs/sheldon/web-intelligence.md',
   '.aioson/docs/sheldon/quality-lens.md',
   '.aioson/docs/sheldon/enrichment-paths.md',
+  '.aioson/docs/sheldon/harness-contract.md',
   '.aioson/docs/dev/stack-conventions.md',
   '.aioson/docs/dev/execution-discipline.md',
   '.aioson/skills/static/laravel-conventions.md',
@@ -282,6 +284,17 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/qa.md',
     dependsOn: ['.aioson/context/discovery.md'],
     output: 'QA report'
+  },
+  {
+    id: 'validator',
+    displayName: 'Validator',
+    command: '@validator',
+    path: '.aioson/agents/validator.md',
+    dependsOn: [
+      '.aioson/plans/{slug}/harness-contract.json',
+      '.aioson/plans/{slug}/progress.json'
+    ],
+    output: '.aioson/plans/{slug}/last-validator-output.json'
   },
   {
     id: 'tester',

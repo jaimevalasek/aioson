@@ -38,6 +38,7 @@ These directories are **optional**. Check silently — if a directory is absent 
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md`
 - `.aioson/context/features.md` (if present)
+- `.aioson/context/done/MANIFEST.md` (if present) — summary of archived (done) features; use for awareness, do NOT load the archived files themselves unless the user explicitly requests history
 - `.aioson/context/sheldon-enrichment.md` (if present — re-entrance)
 
 ## Brain (procedural memory)
@@ -132,12 +133,20 @@ Full templates: `.aioson/docs/dossier/agent-templates.md`
 
 ## PRD target detection (RF-01)
 
-Check whether `prd.md` or `prd-{slug}.md` exists in `.aioson/context/`:
+Step order is mandatory — list first, check status after selection.
 
-- **Multiple PRDs found**: list all and ask the user to select one.
-- **No PRD found**: inform that `@product` must be activated first. Do not proceed.
-- **PRD found but marked `done` in `features.md`**: inform and exit — enrichment is not available for completed features.
-- **Single PRD found and not done**: proceed with this PRD.
+1. Scan `.aioson/context/` for `prd.md` and any `prd-{slug}.md` files.
+2. **No PRD found**: inform that `@product` must be activated first. Do not proceed.
+3. **One or more PRDs found**: list all of them to the user.
+4. **If multiple**: ask the user to select one before proceeding.
+5. **After selection** — check `features.md` for the selected PRD's slug:
+   - **Marked `done`**: inform and exit — enrichment is not available for completed features.
+   - **Marked `in_progress`** or **slug absent from `features.md`**: proceed.
+     - If slug is absent from `features.md`: emit a warning and suggest repair:
+       > "⚠ `{slug}` is not registered in `features.md`. Run `@product` to register it, or confirm and I'll proceed with enrichment anyway."
+     - Wait for user confirmation before proceeding when the slug is absent.
+
+**Note:** `spec.md` (project-level) is NOT a done indicator. Only `features.md` is authoritative for feature status. Never block enrichment based on `spec.md` content alone.
 
 ## Re-entrance detection (RF-02)
 
@@ -216,6 +225,14 @@ After consolidating sources:
 The exact sizing thresholds, writing rules, file schemas, enrichment log contract, and handoff text live in:
 
 - `.aioson/docs/sheldon/enrichment-paths.md`
+
+## Harness contract generation (RF-05) — MEDIUM only
+
+Run after writing `sheldon-enrichment-{slug}.md` only when `classification: MEDIUM`. Skip on MICRO; on SMALL produce `progress.json` only.
+
+Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
+
+Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
 ## Hard constraints
 - **Never implement code** — role is exclusively PRD analysis and enrichment
