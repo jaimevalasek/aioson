@@ -68,7 +68,9 @@ Você > @validator
 
 | Arquivo | Conteúdo |
 |---|---|
-| `.aioson/context/last-handoff.json` | Veredicto JSON com critérios e resultado |
+| `.aioson/plans/{slug}/last-validator-output.json` | Veredicto JSON emitido pelo agente — consumido pelo `harness:apply-validation` |
+| `.aioson/plans/{slug}/validator-runs/{ISO}.json` | Arquivamento dos veredictos consumidos (após apply) |
+| `.aioson/plans/{slug}/progress.json` | Estado pós-aplicação: `last_error`, `ready_for_done_gate`, `circuit_state` |
 
 ---
 
@@ -86,8 +88,27 @@ Apenas e exclusivamente:
 
 ## Handoff típico
 
-- **Vem de:** `@qa`
-- **Vai para:** `aioson feature:close` (se `ready_for_done_gate: true`)
+- **Vem de:** `@qa` (recomenda `@validator` no relatório quando `harness-contract.json` existe).
+- `aioson workflow:next` também roteia automaticamente para `@validator` (como detour) quando `progress.json.status === 'waiting_validation'`.
+- **Vai para:** `aioson feature:close` — bloqueado se `ready_for_done_gate !== true` (libera com `--force` em emergência).
+
+---
+
+## Como rodar (modo CLI/headless)
+
+```bash
+# 1. Gera o prompt do validator em .aioson/plans/{slug}/validator-prompt.txt
+aioson harness:validate . --slug={slug}
+
+# 2. Você roda esse prompt no LLM (Claude Code, Codex, etc.) e salva
+#    o JSON do output em .aioson/plans/{slug}/last-validator-output.json
+
+# 3. Consome o JSON, atualiza progress.json, arquiva o output:
+aioson harness:apply-validation . --slug={slug}
+# ou simplesmente re-executar harness:validate (router auto-detecta o output)
+```
+
+Em CI: pular o passo manual emitindo o prompt para um runner de LLM externo, salvando o JSON no path padrão e chamando `apply-validation`.
 
 ---
 

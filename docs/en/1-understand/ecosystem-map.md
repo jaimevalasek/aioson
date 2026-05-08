@@ -87,7 +87,7 @@ The default order depends on the classification:
 | **`@orchestrator`** | Coordinates parallel lanes (MEDIUM) | `parallel/`, execution plan |
 | **`@dev`** | Implements the feature | Code + `dev-state.md` |
 | **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 2) | `test-plan.md`, `qa-report-*.md` |
-| **`@validator`** | Technically validates against success contract | `last-handoff.json`, validation report |
+| **`@validator`** | Technically validates against `harness-contract.json` in a context sandbox | `.aioson/plans/{slug}/last-validator-output.json` (consumed by `harness:apply-validation`, updates `progress.json`) |
 | **`@tester`** | Systematic test engineering (legacy/brownfield) | `test-inventory.md`, coverage tier |
 | **`@pentester`** | Adversarial security review (OWASP, LLM Top 10) | `security-findings-*.json` |
 
