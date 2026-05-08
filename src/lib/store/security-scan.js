@@ -23,8 +23,10 @@ const MAX_PACKAGE_BYTES = 5 * 1024 * 1024; // 5 MB total
  * All patterns are applied to raw file content (string).
  */
 const THREAT_PATTERNS = [
-  // Shell execution
-  { id: 'shell_exec',      pattern: /\$\(.*\)|`[^`]{0,200}`/,                          description: 'shell command substitution' },
+  // Shell execution — $(...) substitution is always suspicious; backticks alone
+  // are too noisy in markdown (false positives for inline code), so we only flag
+  // backtick spans containing dangerous shell keywords.
+  { id: 'shell_exec',      pattern: /\$\([^)]*(?:rm|curl|wget|eval|exec|chmod|sudo|bash|sh|python|node|ruby|perl|nc|netcat|fetch|http)\b[^)]*\)|`[^`]*\b(?:rm\s+-rf?|curl\s+-?\w*\s*http|wget\s+-\w*\s*http|sudo\s|chmod\s+\+x|eval\s*\(|exec\s*\(|nc\s+-?\w+\s|bash\s+<|sh\s+-c)\b[^`]*`/i, description: 'shell command substitution with dangerous keywords' },
   { id: 'curl_pipe',       pattern: /curl\s+.*\|\s*(ba)?sh/i,                           description: 'curl pipe to shell' },
   { id: 'wget_pipe',       pattern: /wget\s+.*-O\s*-\s*\|\s*(ba)?sh/i,                 description: 'wget pipe to shell' },
   { id: 'exec_call',       pattern: /\bexec\s*\(/,                                      description: 'exec() call' },
