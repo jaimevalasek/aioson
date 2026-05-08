@@ -3,15 +3,26 @@
 /**
  * Lightweight terminal checkbox UI using raw mode and keypress events.
  * No external dependencies.
+ *
+ * Bug history: the previous implementation used `\x1B[NA` (cursor up N) +
+ * `\x1B[J` (clear from cursor) to redraw in place. That sequence is bounded
+ * by the visible viewport — when the rendered list overflows past the
+ * terminal's row count, content scrolls out of reach of the cursor-up move,
+ * "clear from cursor" only touches the visible portion, and each subsequent
+ * draw stacks new content below the orphaned old lines (the "duplica tudo"
+ * regression in commit:prepare with many files).
+ *
+ * Fix: enter the alternate screen buffer on start (\x1B[?1049h) and clear
+ * the whole screen with `\x1B[H\x1B[J` (cursor home + clear) on each draw.
+ * On exit, leave the alt buffer (\x1B[?1049l) so the user's terminal and
+ * scrollback are restored exactly as before — same TUI pattern as vim/less.
+ *
+ * For richer pickers (filtering, grouping, pagination, risk annotations),
+ * see `terminal-picker.js`. This module stays small and API-stable for
+ * existing callers (install-wizard, briefing).
  */
 
 const readline = require('node:readline');
-
-function countVisualLines(text, cols) {
-  return text.split('\n').reduce((acc, line) => {
-    return acc + Math.max(1, Math.ceil((line.length || 1) / cols));
-  }, 0);
-}
 
 function render(items, selectedIndex, hint) {
   const lines = items.map((item, index) => {
@@ -28,7 +39,6 @@ function promptCheckbox(items, hint = '↑/↓ navegar | Espaço selecionar | En
   return new Promise((resolve) => {
     const state = items.map((label) => ({ label, checked: true }));
     let selectedIndex = 0;
-    let renderedLines = 0;
 
     const stdin = process.stdin;
     const stdout = process.stdout;
@@ -40,14 +50,12 @@ function promptCheckbox(items, hint = '↑/↓ navegar | Espaço selecionar | En
     stdin.resume();
     readline.emitKeypressEvents(stdin);
 
+    // Enter alternate screen buffer + hide cursor.
+    stdout.write('\x1B[?1049h\x1B[?25l');
+
     function draw() {
-      const cols = stdout.columns || 80;
-      if (renderedLines > 0) {
-        stdout.write(`\x1B[${renderedLines}A\x1B[J`);
-      }
-      const output = render(state, selectedIndex, hint);
-      renderedLines = countVisualLines(output, cols);
-      stdout.write(output + '\n');
+      stdout.write('\x1B[H\x1B[J'); // cursor home + clear screen
+      stdout.write(render(state, selectedIndex, hint) + '\n');
     }
 
     function cleanup() {
@@ -56,11 +64,8 @@ function promptCheckbox(items, hint = '↑/↓ navegar | Espaço selecionar | En
       }
       stdin.pause();
       stdin.removeListener('keypress', onKeypress);
-      const cols = stdout.columns || 80;
-      if (renderedLines > 0) {
-        stdout.write(`\x1B[${renderedLines}A\x1B[J`);
-      }
-      renderedLines = 0;
+      // Show cursor + leave alt buffer — terminal restored to prior state.
+      stdout.write('\x1B[?25h\x1B[?1049l');
     }
 
     function confirm() {
