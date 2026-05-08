@@ -229,6 +229,57 @@ async function runFeatureClose({ args, options = {}, logger }) {
   const dir = contextDir(targetDir);
   const updates = [];
 
+  // 0a. Harness Done Gate (AC-HD-11 refined)
+  // Only enforced on PASS — FAIL means QA already rejected and we want the
+  // closure to record that. Without `harness-contract.json` for the feature,
+  // behavior is unchanged (zero impact on MICRO/SMALL or any feature that
+  // never opted into the harness).
+  if (verdict === 'PASS') {
+    const planDir = path.join(targetDir, '.aioson', 'plans', slug);
+    const contractPath = path.join(planDir, 'harness-contract.json');
+    const progressPath = path.join(planDir, 'progress.json');
+    const contractContent = await readFileSafe(contractPath);
+    const progressContent = await readFileSafe(progressPath);
+
+    if (contractContent && progressContent) {
+      const force = options.force === true;
+      let progress = null;
+      try {
+        progress = JSON.parse(progressContent);
+      } catch (err) {
+        // Corrupted progress.json: fail-safe — record warning, do NOT block.
+        // A broken progress file should not lock the feature forever; the user
+        // can re-run harness:validate to regenerate it. This mirrors the
+        // behaviour in workflow-next.js's existing harness-block path.
+        updates.push(`harness done gate: progress.json parse error (${err.message}) — proceeding without check`);
+      }
+
+      if (progress && progress.ready_for_done_gate !== true) {
+        if (!force) {
+          const pendingHint = progress.last_error
+            ? ` Pending: ${progress.last_error}.`
+            : '';
+          const errMsg = `[Harness Done Gate BLOCKED] Feature "${slug}" did not pass the binary contract (ready_for_done_gate=false).${pendingHint} Run 'aioson harness:validate' and 'aioson harness:apply-validation' until overall_score=1, or pass --force for an emergency override.`;
+          if (options.json) {
+            return {
+              ok: false,
+              reason: 'harness_done_gate_blocked',
+              feature: slug,
+              error: errMsg,
+              last_error: progress.last_error || null,
+              ready_for_done_gate: false
+            };
+          }
+          logger.log(errMsg);
+          return { ok: false, reason: 'harness_done_gate_blocked' };
+        }
+        updates.push(`harness done gate: BYPASSED via --force (ready_for_done_gate=false at close time; last_error=${progress.last_error || 'none'})`);
+      } else if (progress && progress.ready_for_done_gate === true) {
+        updates.push('harness done gate: PASSED (ready_for_done_gate=true)');
+      }
+    }
+  }
+
   // 0. Dossier guarantee — verdict-agnostic; ensures every closed feature has a dossier
   // for archive + audit trail. Telemetry is silent on failure.
   const dossierResult = await ensureDossier({ targetDir, ctxDir: dir, slug });

@@ -352,3 +352,163 @@ test('feature:close updates gate_execution frontmatter', async () => {
   );
   assert.ok(content.includes('gate_execution: approved'));
 });
+
+// ---------- Harness Done Gate (T5 / AC-HD-11 refined) ----------
+
+async function setupHarnessFeature(tmpDir, slug, { ready_for_done_gate, last_error = null, circuit_state = 'CLOSED' }) {
+  const planDir = path.join(tmpDir, '.aioson', 'plans', slug);
+  await fs.mkdir(planDir, { recursive: true });
+  await fs.writeFile(
+    path.join(planDir, 'harness-contract.json'),
+    JSON.stringify({
+      feature: slug,
+      contract_mode: 'BALANCED',
+      governor: { max_steps: 50, error_streak_limit: 5 },
+      criteria: [{ id: 'C1', description: 'x', assertion: 'y', binary: true }]
+    }),
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(planDir, 'progress.json'),
+    JSON.stringify({
+      feature: slug,
+      phase: 1,
+      status: 'in_progress',
+      completed_steps: [],
+      last_error,
+      session_count: 1,
+      last_updated: new Date().toISOString(),
+      circuit_state,
+      iterations: 0,
+      consecutive_errors: 0,
+      ready_for_done_gate
+    }),
+    'utf8'
+  );
+}
+
+test('feature:close (T5): without harness contract behaves exactly as before (regression)', async () => {
+  const tmpDir = await makeTmpDir();
+  // No contract created — just a regular feature
+  await writeFile(tmpDir, '.aioson/context/spec-plain.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'plain', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.verdict, 'PASS');
+});
+
+test('feature:close (T5): with contract and ready_for_done_gate=true, PASS proceeds', async () => {
+  const tmpDir = await makeTmpDir();
+  await setupHarnessFeature(tmpDir, 'gate-pass', { ready_for_done_gate: true });
+  await writeFile(tmpDir, '.aioson/context/spec-gate-pass.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'gate-pass', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.verdict, 'PASS');
+  assert.ok(result.updates.some((u) => u.includes('harness done gate: PASSED')),
+    'must record harness gate as PASSED in updates');
+});
+
+test('feature:close (T5): with contract and ready_for_done_gate=false, PASS is BLOCKED', async () => {
+  const tmpDir = await makeTmpDir();
+  await setupHarnessFeature(tmpDir, 'gate-block', {
+    ready_for_done_gate: false,
+    last_error: 'C2: Missing export in src/foo.js'
+  });
+  await writeFile(tmpDir, '.aioson/context/spec-gate-block.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'gate-block', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'harness_done_gate_blocked');
+  assert.equal(result.last_error, 'C2: Missing export in src/foo.js');
+  assert.match(result.error, /Harness Done Gate BLOCKED/);
+  assert.match(result.error, /C2: Missing export/, 'must include the pending criterion in the error');
+
+  // Confirms NO write happened: features.md untouched (it didn't exist anyway, but spec also untouched)
+  const specContent = await fs.readFile(path.join(tmpDir, '.aioson/context/spec-gate-block.md'), 'utf8');
+  assert.doesNotMatch(specContent, /QA Sign-off/, 'spec must not be mutated when gate blocks');
+});
+
+test('feature:close (T5): --force bypasses the gate with explicit warning in updates', async () => {
+  const tmpDir = await makeTmpDir();
+  await setupHarnessFeature(tmpDir, 'gate-force', {
+    ready_for_done_gate: false,
+    last_error: 'C1: emergency override needed'
+  });
+  await writeFile(tmpDir, '.aioson/context/spec-gate-force.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'gate-force', verdict: 'PASS', force: true },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.verdict, 'PASS');
+  assert.ok(result.updates.some((u) => u.includes('harness done gate: BYPASSED')),
+    'must record explicit BYPASS in updates');
+  assert.ok(result.updates.some((u) => u.includes('C1: emergency override needed')),
+    'BYPASS message must include the pending last_error for audit trail');
+});
+
+test('feature:close (T5): FAIL verdict skips gate (QA already rejected, gate is moot)', async () => {
+  const tmpDir = await makeTmpDir();
+  await setupHarnessFeature(tmpDir, 'gate-fail', {
+    ready_for_done_gate: false,
+    last_error: 'C1: still failing'
+  });
+  await writeFile(tmpDir, '.aioson/context/spec-gate-fail.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'gate-fail', verdict: 'FAIL', notes: 'Auth edge case missing' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.verdict, 'FAIL');
+  // Gate should NOT have been evaluated on FAIL — no harness-related update lines
+  assert.equal(
+    result.updates.some((u) => u.startsWith('harness done gate:')),
+    false,
+    'harness done gate must not run on FAIL verdict'
+  );
+});
+
+test('feature:close (T5): corrupted progress.json fails safe (warns and proceeds)', async () => {
+  const tmpDir = await makeTmpDir();
+  const planDir = path.join(tmpDir, '.aioson/plans', 'gate-corrupt');
+  await fs.mkdir(planDir, { recursive: true });
+  await fs.writeFile(path.join(planDir, 'harness-contract.json'),
+    JSON.stringify({ feature: 'gate-corrupt', contract_mode: 'BALANCED', governor: {}, criteria: [] }),
+    'utf8');
+  await fs.writeFile(path.join(planDir, 'progress.json'), '{ this is not json', 'utf8');
+  await writeFile(tmpDir, '.aioson/context/spec-gate-corrupt.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'gate-corrupt', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  // Fail-safe: do NOT block on parse error; proceed with a warning in updates
+  assert.equal(result.ok, true);
+  assert.equal(result.verdict, 'PASS');
+  assert.ok(result.updates.some((u) => u.includes('progress.json parse error')),
+    'must record the parse error in updates');
+});
