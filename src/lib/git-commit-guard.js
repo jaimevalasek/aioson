@@ -28,9 +28,24 @@ const BLOCKED_PATH_RULES = [
     test: (relPath) => /(^|\/)(dist|build|coverage|\.next|\.nuxt|\.svelte-kit|\.turbo|\.cache|\.parcel-cache|tmp|temp)(\/|$)/i.test(relPath)
   },
   {
+    id: 'ide_config',
+    reason: 'IDE/editor local config — usually contains machine-specific paths',
+    test: (relPath) => /(^|\/)(\.idea|\.vscode|\.fleet|\.cursor|\.zed|\.vs)(\/|$)/i.test(relPath)
+  },
+  {
+    id: 'lang_cache',
+    reason: 'language tool cache should not be committed',
+    test: (relPath) => /(^|\/)(__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|\.tox|\.venv|\.gradle|\.mvn\/wrapper|target|\.terraform|\.serverless)(\/|$)/i.test(relPath)
+  },
+  {
+    id: 'dotnet_build',
+    reason: '.NET build output should not be committed',
+    test: (relPath) => /(^|\/)(bin|obj)\/(Debug|Release)(\/|$)/i.test(relPath)
+  },
+  {
     id: 'session_artifact',
     reason: 'runtime/session artifact should not be committed',
-    test: (relPath) => /(^|\/)(aioson-logs|output|media)(\/|$)/i.test(relPath)
+    test: (relPath) => /(^|\/)(aioson-logs|output|media|chat-sessions)(\/|$)/i.test(relPath)
   },
   {
     id: 'aioson_backup',
@@ -229,6 +244,50 @@ function globToRegExp(pattern) {
 
 function matchesAnyPattern(relPath, patterns) {
   return patterns.some((pattern) => globToRegExp(pattern).test(relPath));
+}
+
+/**
+ * Path-only rule evaluation for a single file. Used by interactive pickers
+ * (commit:prepare) to render risk annotations BEFORE the file is staged,
+ * so users see "node_modules/foo will be blocked" instead of staging blind.
+ *
+ * Honors `allowPaths` from project config: paths explicitly allowed are
+ * never reported as blocked or warned, even if they match a default rule.
+ *
+ * Returns:
+ *   { blocked: [{ id, reason }, ...], warned: [{ id, reason }, ...] }
+ *
+ * Both arrays may be empty for safe paths. Content scanning is NOT performed
+ * here — that requires reading the staged blob and is the job of
+ * inspectStagedChanges() at commit time.
+ */
+function evaluatePathRules(relPath, config = {}) {
+  const normalized = normalizeRelPath(relPath);
+  const allowPaths = Array.isArray(config.allowPaths) ? config.allowPaths : [];
+  if (allowPaths.length > 0 && matchesAnyPattern(normalized, allowPaths)) {
+    return { blocked: [], warned: [] };
+  }
+
+  const extraBlock = Array.isArray(config.blockPaths) ? config.blockPaths : [];
+  const blockExt = Array.isArray(config.blockExtensions) ? config.blockExtensions : [];
+
+  const blocked = [];
+  for (const rule of BLOCKED_PATH_RULES) {
+    if (rule.test(normalized)) blocked.push({ id: rule.id, reason: rule.reason });
+  }
+  if (extraBlock.length > 0 && matchesAnyPattern(normalized, extraBlock)) {
+    blocked.push({ id: 'project_block_path', reason: 'matched project blockPaths pattern' });
+  }
+  if (blockExt.length > 0 && matchesAnyExtension(normalized, blockExt)) {
+    blocked.push({ id: 'project_block_extension', reason: 'matched project blockExtensions' });
+  }
+
+  const warned = [];
+  for (const rule of WARNING_PATH_RULES) {
+    if (rule.test(normalized)) warned.push({ id: rule.id, reason: rule.reason });
+  }
+
+  return { blocked, warned };
 }
 
 function normalizeExtension(value) {
@@ -685,6 +744,7 @@ module.exports = {
   isManagedHook,
   BLOCKED_PATH_RULES,
   WARNING_PATH_RULES,
+  evaluatePathRules,
   DEFAULT_CONFIG_REL_PATH,
   BACKUP_HOOK_GIT_PATH,
   MANAGED_HOOK_MARKER

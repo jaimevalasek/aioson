@@ -16,7 +16,8 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const readline = require('node:readline');
 const { runGitGuard } = require('./git-guard');
-const { promptCheckbox } = require('../lib/terminal-checkbox');
+const { promptPicker } = require('../lib/terminal-picker');
+const { evaluatePathRules, loadGuardConfig, resolveGuardConfigPath } = require('../lib/git-commit-guard');
 
 function runGit(gitRoot, args, options = {}) {
   return execFileSync('git', args, {
@@ -67,14 +68,77 @@ function askQuestion(rl, questionText) {
   });
 }
 
-async function promptFileSelectionCheckbox(files) {
-  if (files.length === 0) return [];
+/**
+ * Builds picker items for the rich TUI: groups by git status (Modified vs
+ * Untracked), pre-evaluates each path against git-guard rules, and produces
+ * the per-item state used by promptPicker:
+ *
+ *   - locked = true  → file would be blocked by git-guard (e.g. node_modules,
+ *                       .idea, build artifacts). Cannot be checked. The reason
+ *                       is shown in the row hint and on space press.
+ *   - badge   = '⚠'  → file matches a warning rule (backup, *.sqlite, scratch
+ *                       names) — checkable but flagged.
+ *   - hint    = small grey text describing why a row is locked/warned, or the
+ *                       short relative directory.
+ *
+ * Default checked state: safe and warned files start checked (match existing
+ * "press Enter to stage everything" muscle memory). Locked files stay
+ * unchecked and locked.
+ */
+function buildPickerItems(unstaged, untracked, guardConfig) {
+  const cfg = guardConfig || {};
+  const dirHint = (p) => {
+    const dir = p.split('/').slice(0, -1).join('/');
+    return dir ? `· ${dir}` : '';
+  };
 
-  process.stdout.write('\nSelecione os arquivos para adicionar ao stage (todos começam marcados):\n');
+  const make = (filePath, group) => {
+    const evalResult = evaluatePathRules(filePath, cfg);
+    const isBlocked = evalResult.blocked.length > 0;
+    const hasWarning = evalResult.warned.length > 0;
+    const reason = isBlocked
+      ? evalResult.blocked.map((b) => b.reason).join('; ')
+      : hasWarning
+        ? evalResult.warned.map((w) => w.reason).join('; ')
+        : '';
+    return {
+      id: filePath,
+      label: filePath,
+      group,
+      checked: !isBlocked,
+      locked: isBlocked,
+      badge: isBlocked ? 'BLOCK' : hasWarning ? 'WARN' : '',
+      hint: reason || dirHint(filePath),
+      blockReason: reason
+    };
+  };
 
-  const selected = await promptCheckbox(files);
+  return [
+    ...unstaged.map((p) => make(p, 'Modified')),
+    ...untracked.map((p) => make(p, 'Untracked'))
+  ];
+}
 
-  return selected; // null = cancelado pelo usuário
+async function promptFileSelectionPicker(unstaged, untracked, guardConfig) {
+  const items = buildPickerItems(unstaged, untracked, guardConfig);
+  if (items.length === 0) return [];
+
+  const blockedCount = items.filter((i) => i.locked).length;
+  const warnedCount = items.filter((i) => i.badge === 'WARN').length;
+  const subtitle = [
+    `${unstaged.length} modified, ${untracked.length} untracked`,
+    blockedCount > 0 ? `${blockedCount} \x1B[31mblocked by git-guard\x1B[0m` : null,
+    warnedCount > 0 ? `${warnedCount} \x1B[33mwarn\x1B[0m` : null
+  ].filter(Boolean).join(' · ');
+
+  return promptPicker(items, {
+    title: 'commit:prepare — select files to stage',
+    subtitle,
+    summary: ({ checkedCount, totalCount, lockedCount, filteredCount }) => {
+      const filterNote = filteredCount !== totalCount ? ` · ${filteredCount} match filter` : '';
+      return `${checkedCount} selected · ${lockedCount} locked · ${totalCount} total${filterNote}`;
+    }
+  });
 }
 
 async function promptYesNo(questionText) {
@@ -349,29 +413,28 @@ async function runCommitPrepare({ args, options, logger }) {
       return failure;
     }
 
-    const choice = await promptMenu([
-          'selecionar arquivos específicos',
-          'prosseguir apenas com o que já está no stage',
-          'cancelar'
-        ], 'O que deseja fazer?');
+    // Pre-load git-guard config so the picker can pre-evaluate each candidate
+    // path. This catches IDE configs (.idea, .vscode), build artifacts
+    // (node_modules, dist, target, __pycache__), and other commonly-leaked
+    // dirs BEFORE staging — they show up locked in the picker with the reason
+    // attached, instead of slipping through git add . and getting caught at
+    // commit time.
+    let guardConfigState = { config: {} };
+    try {
+      guardConfigState = await loadGuardConfig(gitRoot);
+    } catch (err) {
+      // Bad config: warn but proceed with no extra rules. Default rules still apply.
+      logger.error(`Aviso: git-guard.json inválido (${err.message}). Usando regras padrão.`);
+    }
 
-    if (choice === 1) {
-      const selected = await promptFileSelectionCheckbox(allModified);
-      if (selected === null) {
-        const cancelResult = { ok: false, error: 'cancelled_by_user', message: 'Operação cancelada pelo usuário.' };
-        if (jsonMode) return cancelResult;
-        logger.log('Cancelado.');
-        return cancelResult;
-      }
-      filesToStage = selected;
-    } else if (choice === 2) {
-      filesToStage = [];
-    } else {
+    const selected = await promptFileSelectionPicker(unstaged, untracked, guardConfigState.config);
+    if (selected === null) {
       const cancelResult = { ok: false, error: 'cancelled_by_user', message: 'Operação cancelada pelo usuário.' };
       if (jsonMode) return cancelResult;
       logger.log('Cancelado.');
       return cancelResult;
     }
+    filesToStage = selected;
   }
 
   if (filesToStage.length > 0) {
