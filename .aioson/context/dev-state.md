@@ -1,125 +1,114 @@
 ---
 last_updated: 2026-05-07
-active_feature: agent-chain-continuity
-active_phase: done
-next_step: "Feature COMPLETA — todas as 7 phases entregues. Próxima ação: rodar @qa para Gate D + aioson feature:close . --feature=agent-chain-continuity --verdict=PASS."
+active_feature: harness-driven-aioson
+active_phase: 3
+next_step: "Fase 3 COMPLETA. Próxima ação: rodar @qa para Gate D contra os ACs HD-06/11/13/14/15, depois aioson feature:close . --feature=harness-driven-aioson --verdict=PASS quando aprovado."
 status: ready_for_qa
 ---
 
 # Dev State
 
-**Feature:** agent-chain-continuity
-**Phase:** 1-7 of 7 — TODAS COMPLETAS (Foundations + Storage + Auto-init + Paridade + @dev intelligence + Telemetry inline + Regression bundle)
-**Status:** ready_for_qa — Phases 1-7 fechadas 2026-05-07
-**Next step:** @qa para Gate D, depois `aioson feature:close . --feature=agent-chain-continuity --verdict=PASS`.
+**Feature:** harness-driven-aioson (reaberta 2026-05-07 após Round 2 sheldon)
+**Phase:** 3 of 3 — Multi-Agent Validation Loop
+**Status:** in_progress — Tarefa T4 concluída; T1 é o próximo slice
+**Plan:** `.aioson/plans/harness-driven-aioson/manifest.md`
+**Phase doc:** `.aioson/plans/harness-driven-aioson/plan-multi-agent-validation-loop.md`
 
-## Context package (próxima sessão — Phase 7)
+## Tarefas residuais (Round 2 sheldon — ordem T4→T1→T3→T2→T5→T6)
+
+- [x] **T4** — propagar AC-HD-06 para `sheldon.md` (workspace+template) — DONE 2026-05-07
+- [x] **T1** — `qa.md` recomenda `@validator` quando contrato existe (cobre AC-HD-13) — DONE 2026-05-07
+- [x] **T3** — `harness:validate` router + `harness:apply-validation` + `agent:prompt --headless` (AC-HD-15) — DONE 2026-05-07
+- [x] **T2** — `workflow:next` direciona para `@validator` quando `progress.status==waiting_validation` (AC-HD-14) — DONE 2026-05-07
+- [x] **T5** — `feature:close` consulta `progress.ready_for_done_gate` (AC-HD-11 refinado) — DONE 2026-05-07
+- [x] **T6** — alinhar docs PT/EN com agentes reais — DONE 2026-05-07
+
+## Context package (próxima sessão — @qa Gate D)
 
 1. `.aioson/context/project.context.md`
-2. `.aioson/context/spec-agent-chain-continuity.md`
-3. `.aioson/context/requirements-agent-chain-continuity.md` (§6 — 17 ACs)
-4. `.aioson/context/features/agent-chain-continuity/dossier.md`
+2. `.aioson/context/done/harness-driven-aioson/prd-harness-driven-aioson.md` (12 ACs originais + AC-HD-11 refinado + AC-HD-13/14/15 novos)
+3. `.aioson/context/sheldon-enrichment-harness-driven-aioson.md` (Round 2 trail)
+4. `.aioson/plans/harness-driven-aioson/plan-multi-agent-validation-loop.md` — Tarefas residuais T1-T6 (todas done)
 
-## Implementation roadmap (de architecture-agent-chain-continuity.md § 6)
-
-- **Fase 1 — Foundations** (sessão atual): schema v1.2, research-index.js, handoff-contract v2, schema.md doc
-- **Fase 2 — Storage e writes:** dossier-add-research, dossier-audit
-- **Fase 3 — Auto-init:** feature-close guarantee, workflow-next pre-stage hook, @product prompt
-- **Fase 4 — Agent paridade:** 8 agents workspace+template + agent-templates.md + sync:agents pre-hook
-- **Fase 5 — @dev intelligence:** dev-resume.js + @dev prompt updates
-- **Fase 6 — Telemetry:** runtime events emitidos junto das fases 3/4/5
-- **Fase 7 — Testing:** regression bundle 17 ACs + unit tests
+@qa deve mapear AC coverage 1:1 contra os 6 tests novos (harness-apply-validation.test.js, workflow-next-validator-routing.test.js, feature-close.test.js T5 block) + os 2 backports (qa.md handoff, sheldon.md RF-05). Quando aprovado: `aioson feature:close . --feature=harness-driven-aioson --verdict=PASS`.
 
 ## History
 
-- 2026-05-07 phase 1 — Sessão iniciada; preflight verde (Gates A+B aprovados); dev-state reset de secure-by-default para agent-chain-continuity
-- 2026-05-07 phase 1.1 — done. schema.js: SCHEMA_VERSION="1.2" + SUPPORTED_SCHEMA_VERSIONS Set para back-compat ler v1.0/v1.1/v1.2; RESEARCH_VERDICTS enum exportado. research-index-store.js novo (parser/serializer YAML embedded + addResearch idempotente dedup por slug com last-write-wins em verdict, preserva agent_who_added e added_at). research-index-store.test.js: 19 testes verdes. schema.test.js: +2 testes verdes. Suite total: 1938/1939 verde — 1 falha pré-existente (feature:close idempotent flaky residual do secure-by-default closure, NÃO causada por essa sessão). Dossier atualizado com 3 entradas em Code Map e 1 entry em Agent Trail. Próximo: Phase 1.2 em sessão nova (recomendado dado context budget).
-- 2026-05-07 phase 1.2-1.4 — done. handoff-protocol artifact_uris v1→v2 em src/session-handoff.js: ARTIFACT_KINDS enum (11 valores) + coerceArtifactUri/coerceArtifactUris helpers; writers (buildWorkflowHandoffProtocol, buildBasicHandoffProtocol) sempre emitem v2; readHandoffProtocol aplica coerce após JSON.parse para handles transparentes de v1 legados em disco. Test asserting v1 string-includes em session-handoff-pentester.test.js atualizado para asserir v2 path-match. tests/handoff-contract-v2.test.js novo (19 tests: coerção unit, writers sempre v2, round-trip read+write, backwards compat de arquivos legados em disco). docs/dossier/schema.md atualizado: descrição expandida + seção Research Index v1.2 + nova seção handoff-protocol artifact_uris v2 com enum/schema/política/exemplo + roadmap v1.2. Suite total: 1957/1958 verde — mesma falha pré-existente flaky (feature:close idempotent). **Phase 1 (Foundations) FECHADA.**
-- 2026-05-07 phase 2 — done. dossier:add-research command em src/commands/dossier-add-research.js (handler isolado): wraps research-index-store.addResearch; valida slug+research-slug+agent canônico+verdict enum (RESEARCH_VERDICTS=confirmed|has-alternatives|outdated|deprecated)+why-relevant required; default summary_path infere para researchs/{research-slug}/summary.md; idempotent (added/updated/no-op). dossier:audit command em src/commands/dossier-audit.js com 2 sub-checks: --check=template-parity extrai seção '## Feature dossier' dos 9 chain agents (CHAIN_AGENTS=[product,sheldon,analyst,architect,ux-ui,pm,orchestrator,dev,qa]) workspace vs template/ e classifica violations (workspace_only|template_only|workspace_ahead|template_ahead); --check=coverage parsea features.md (markdown table) e relata in-progress SMALL/MEDIUM sem dossier (lê classification do prd-{slug}.md/spec-{slug}.md/dossier frontmatter; skip MICRO+done). Helpers exportados (extractSection, parseFeaturesTable, parseFrontmatterField) para tests. Schema.md doc corrigido: verdict enum agora reflete implementação (confirmed|has-alternatives|outdated|deprecated em vez do useful|partial|inconclusive errado escrito em 1.3); field rename added_by→agent_who_added, notes→why_relevant. Registrado em src/cli.js (require + known-commands + dispatch). 26 tests novos (10 dossier-add-research + 16 dossier-audit). Suite total: 1983/1984 verde — mesma falha pré-existente flaky. Smoke vivo: parity detecta exatamente as violações que Phase 4 vai resolver. **Phases 1+2 FECHADAS.**
-- 2026-05-07 phase 3 — done. (3.1) feature-close.js: ensureDossier hook como step 0 (verdict-agnostic, roda em PASS+FAIL): present→no-op, missing→tenta initFromExisting, EBOOTSTRAPEMPTY→writeMinimalDossier via store.init com whyText/whatText '(no source artifacts found at close time)'. Emite feature_close_dossier_synthesized. (3.2) workflow-next.js: ensureFeatureDossier early em activateStage (silent, idempotent). Skip MICRO+project mode. EBOOTSTRAPEMPTY→minimal fallback com texto '(auto-init by workflow:next; no source artifacts yet)'. Emite dossier_auto_initialized com trigger_source=workflow_next_pre_stage. (3.3) Workspace+template product.md em paridade total: instrução auto-init silenciosa compactada (~440 chars) para caber no kernel size limit (15KB). (3.4) tests/agent-chain-continuity-phase3.test.js: 9 tests verdes (4 feature-close + 5 workflow-next). src/lib/dossier-telemetry.js novo: emitDossierEvent silent helper com try/catch chamando logAgentEvent direto via openRuntimeDb. Suite total: 1992/1993 verde — mesma falha pré-existente flaky. Smoke parity: product agora em paridade. **Phases 1-3 FECHADAS.**
-- 2026-05-07 phase 4 — done. (4.1+4.2) Os 8 chain agents restantes em paridade workspace=template: sheldon ganha '## Feature dossier' completa em ambos (Agent Trail + Research Index com override do legacy Why); analyst+architect+ux-ui+pm+orchestrator+qa templates atualizados para conter os mesmos contratos do workspace. dev já estava em paridade (Phase 5 expandirá). audit final: ok=true, violations=[]. (4.3) .aioson/docs/dossier/agent-templates.md reescrita: 9 chain agents, override @sheldon explícito, dossier:add-research em sheldon+analyst+architect, convenção DRIFT: documentada para @dev. (4.4) src/commands/sync-agents-preflight.js novo (~70 linhas): extrai ## Feature dossier de cada chain agent workspace vs template via extractSection (reuso do dossier-audit), aborta exit 1 se workspace.length > template.length, template-ahead permitido (rsync ok). Wired into package.json#sync:agents (preflight && rsync). 5 tests novos em tests/sync-agents-preflight.test.js. Suite total 1997/1998 verde — mesma falha pré-existente flaky. **Phases 1-4 FECHADAS.**
-- 2026-05-07 phase 5 — done. (5.1) src/lib/dev-resume.js novo: buildDevResumeData(projectPath) lê last-handoff.json (feature_slug obrigatório) → null se ausente OU feature.status !== 'in_progress' (contrato strict do architecture §4.4); senão monta payload completo agregando dossier code_map (parseCodeMapBlock+parseYamlCodeMap), dev-state.md frontmatter (extractDevStateFields), prd-{slug}/spec-{slug} para classification, manifest do plano @sheldon (deriveNextStepFromPlan extrai primeiro [ ] item). 4 helpers exportados. (5.2) src/commands/dev-resume.js wrapper + src/cli.js registrado: aioson dev:resume-data . retorna JSON via stdout (pretty quando logger). (5.3) tests/dev-resume.test.js: 16 tests verdes (7 helpers + 7 buildDevResumeData edge cases + 2 CLI). (5.4) Workspace+template dev.md em paridade: 3 nova subseções compactadas em ## Feature dossier (Auto-resume + Drift detection + Per slice). 14907 bytes sob 15K kernel limit. audit ok=true. Suite total 2013/2014 verde — mesma falha pré-existente flaky. **5 telemetry events cobertos:** dossier_auto_initialized (3.2), feature_close_dossier_synthesized (3.1), dev_auto_resume (5.4 prompt), dev_drift_detected (5.4 prompt), sync_agents_parity_violation (4.4 — abort path). **Phases 1-5 FECHADAS. Phase 6 entregue inline.**
-- 2026-05-07 phase 7 — done. tests/agent-chain-continuity.regression.test.js novo: 17 integration tests mapeando 1:1 para AC-ACC-01 a AC-ACC-17 de requirements §6. Cada test exercita caminho live (código + artefato workspace) e asserta o contrato. Estratégia: ACs com unit coverage profundo (Phases 1-5) ganham 1 integration test focado; ACs prompt-driven (10-12 drift) verificam string match contra dev.md atual. Suite total 2030/2031 verde — mesma falha pré-existente flaky feature:close idempotent. Lint clean. **TODAS AS 7 PHASES FECHADAS — feature COMPLETA, pronta para Gate D + feature:close PASS.** Coverage final: Phase 1=38 tests, Phase 2=26, Phase 3=9, Phase 4=5+audit, Phase 5=16, Phase 7=17 = **111 tests novos** + workspace agora 100% paridade workspace=template para os 9 chain agents.
+- 2026-05-07 T6 — done. Alinhamento de docs PT/EN com a realidade dos agentes pós-T1-T5: (1) docs/pt/4-agentes/validator.md "Saídas em disco" corrigido (era `last-handoff.json` único; agora reflete `last-validator-output.json` + `validator-runs/{ISO}.json` arquivado + `progress.json` atualizado pelo apply); (2) seção "Como rodar (modo CLI/headless)" adicionada com fluxo end-to-end de 3 passos (validate → externa LLM → apply); (3) "Handoff típico" expandido com auto-routing via workflow:next e gate em feature:close. (4) docs/pt/1-entender/mapa-do-ecossistema.md e docs/en/1-understand/ecosystem-map.md: célula do @validator atualizada (sandbox de contexto explícito + outputs reais). docs/pt/4-agentes/qa.md já estava promissivo (linha 66, 116, 122) e agora bate com a realidade — sem mudança necessária. docs/en/4-agents/README.md já listava @validator corretamente — sem mudança. Suite 2102/2105 verde — 3 falhas idênticas a HEAD; zero regressão.
 
-## Files modified this session (Phase 1.2-1.4 + Phase 2)
+- 2026-05-07 T5 — done. Adicionado Harness Done Gate em src/commands/feature-close.js (Step 0a, antes do dossier guarantee): só ativa em verdict=PASS; checa `.aioson/plans/{slug}/harness-contract.json` + `progress.json` via `readFileSafe` (consistente com o resto do arquivo, sem fs.existsSync); se contrato presente AND `ready_for_done_gate !== true` AND sem `--force` → return {ok:false, reason:'harness_done_gate_blocked', last_error, error}. Mensagem de erro inclui `progress.last_error` quando presente (formato "Cn: reason" do tradutor T3). `--force` permite override emergencial e registra `harness done gate: BYPASSED` em updates com last_error para audit trail. Verdict=FAIL skippa o gate (QA já rejeitou). Parse error em progress.json: fail-safe, registra warning em updates e procede (não bloqueia). 6 tests novos em tests/feature-close.test.js: regression sem contrato, PASS com gate=true, BLOCKED com gate=false (verifica spec.md NÃO mutado), --force bypass com audit, FAIL skip, corrupted JSON fail-safe. Suite 2102/2105 verde — 3 falhas idênticas a HEAD.
 
-**Phase 1.2-1.4:**
-- src/session-handoff.js (modified — ARTIFACT_KINDS enum, coerceArtifactUri/coerceArtifactUris, writers v2, reader coerção v1→v2)
-- tests/handoff-contract-v2.test.js (new — 19 tests v2 + backwards compat)
-- tests/session-handoff-pentester.test.js (modified — assert v2 path-match em vez de v1 string-includes)
-- .aioson/docs/dossier/schema.md (modified — description expandida + seção Research Index v1.2 + seção handoff artifact_uris v2 + roadmap v1.2; corrigido enum + field names depois)
+- 2026-05-07 T2 — done. (1) `runHarnessValidate` em src/commands/harness.js seta `progress.status = 'waiting_validation'` após gerar prompt do validator (com novo timestamp em last_updated). (2) `runHarnessApplyValidation` ganhou helper `clearWaitingValidationStatus(cb)` chamado após recordSuccess/recordError; reset apenas se status ainda é 'waiting_validation' (preserva 'circuit_open' setado por recordError quando error_streak_limit dispara). (3) src/commands/workflow-next.js: helper `shouldRouteToValidator(targetDir, state)` exportado — checa state.mode='feature' AND featureSlug AND contract+progress files exist AND progress.status='waiting_validation'; fail-safe em parse error retorna false (preserva fluxo padrão). (4) Em runWorkflowNext, antes de activateStage: se !requestedAgent && shouldRouteToValidator → requestedAgent='validator'. activateStage cria detour automaticamente quando explicitAgent != state.next (linha 880-896 existente — reutilizado, sem mudança). Detour preserva returnTo=state.next, então após validator o workflow volta ao agente original. 4 tests novos em harness-apply-validation.test.js (status set/clear PASS, clear FAIL non-circuit-open, preserve circuit_open). 9 tests novos em workflow-next-validator-routing.test.js (5 do helper isolado + 4 integration: routes-when-waiting, no-route-without-contract, no-route-when-in_progress, explicit-override). Decisão: test do override usa --agent=dev em vez de --agent=qa porque qa+MEDIUM+feature dispara runSecurityAudit que tem leak de async resource pré-existente em HEAD (exit 11) — confirmado via `git stash + node -e` que o exit 11 existe sem minhas mudanças. Suite total 2096/2099 verde — 3 falhas idênticas a HEAD; +13 testes adicionados sem regressão.
 
-**Phase 2:**
-- src/commands/dossier-add-research.js (new — handler isolado para `aioson dossier:add-research`)
-- src/commands/dossier-audit.js (new — handler para `aioson dossier:audit --check=template-parity|coverage`)
-- src/cli.js (modified — require + known-commands + dispatch para 2 novos comandos)
-- tests/dossier-add-research.test.js (new — 10 tests)
-- tests/dossier-audit.test.js (new — 16 tests)
+- 2026-05-07 T3 — done. Re-arquitetura do `harness:validate` para refletir realidade do aioson (orquestrador de prompts, não runner de LLM): (a) `agent:prompt --headless --output=<file>` em src/commands/agents.js — gera prompt sem launch de editor e sem registrar live session; quando `--output` presente, escreve em arquivo; sem `--output`, imprime em stdout; pula `bootstrapDirectAgentPrompt`. (b) `runHarnessApplyValidation` novo em src/commands/harness.js — consome JSON do @validator de qualquer fonte (default `.aioson/plans/{slug}/last-validator-output.json` ou `--input=<path>`), valida schema (validateValidatorOutput helper), traduz primeira falha para `progress.last_error` no formato `"<id>: <reason>"` (translateValidatorOutputToLastError helper), chama `cb.recordSuccess()` ou `cb.recordError(msg)` conforme overall_score, arquiva input em `validator-runs/<ISO-stamp>.json` após consumo (skipável via `--archive=false` / `archive: false`). (c) `runHarnessValidate` refatorado como router: se `last-validator-output.json` existe → delega para apply-validation; senão → invoca `runAgentPrompt` headless, escreve `validator-prompt.txt`, imprime instruções de 3 passos. (d) Validator adicionado a AGENT_DEFINITIONS + MANAGED_FILES (src/constants.js). (e) CLI: `harness:apply-validation` registrado em src/cli.js (require + known-commands + dispatch). 16 tests novos em tests/harness-apply-validation.test.js cobrindo helpers, PASS, FAIL, missing input, invalid JSON, invalid schema, --input override, archive opt-out, router-no-output (gera prompt), router-with-output (consome). 2 tests novos em tests/agents-command.test.js cobrindo --headless --output e --headless sem output. Suite total 2083/2086 verde — 3 falhas pré-existentes idênticas a HEAD; +18 testes adicionados sem regressão.
 
-**Phase 3:**
-- src/lib/dossier-telemetry.js (new — emitDossierEvent silent helper)
-- src/commands/feature-close.js (modified — ensureDossier hook step 0)
-- src/commands/workflow-next.js (modified — ensureFeatureDossier early em activateStage)
-- .aioson/agents/product.md (modified — instrução auto-init silencioso, compacta ~440 chars)
-- template/.aioson/agents/product.md (modified — paridade idêntica com workspace)
-- tests/agent-chain-continuity-phase3.test.js (new — 9 tests)
+- 2026-05-07 T1 — done. Adicionou bloco "Recommend `@validator`" em "Specialized agent triggers" e linha em "Recommended next agents" do qa.md (workspace+template). Trigger: `.aioson/plans/{slug}/harness-contract.json` exists AND verdict trending PASS. Mensagem template referencia schema em `.aioson/docs/sheldon/harness-contract.md`. CLI invocation `aioson agent:invoke validator . --feature={slug}` adicionada à nota CLI compartilhada com pentester. Drift conhecido em "Feature closure" (workspace usa `aioson feature:close`, template usa manual edit) NÃO tocado — reconhecido pelo brain sheldon-001 como legitimate preexisting diff. Sizes: workspace 19637→20338 (+701), template 19228→19937 (+709). Suite: 2065/2068 verde — zero regressão (3 falhas idênticas a HEAD). sync-agents-preflight verde (## Feature dossier section em paridade preservada). docs/pt/4-agentes/qa.md já promete o handoff (gap-1 da auditoria fechado nesta T1).
 
-**Phase 4:**
-- .aioson/agents/sheldon.md (modified — added ## Feature dossier section)
-- template/.aioson/agents/sheldon.md (modified — paridade idêntica)
-- template/.aioson/agents/analyst.md (modified — expanded com link-rule + Agent Trail templates)
-- template/.aioson/agents/architect.md (modified — add-codemap + link-rule + Agent Trail)
-- template/.aioson/agents/ux-ui.md (modified — added section)
-- template/.aioson/agents/pm.md (modified — added section)
-- template/.aioson/agents/orchestrator.md (modified — added section)
-- template/.aioson/agents/qa.md (modified — added section)
-- .aioson/docs/dossier/agent-templates.md (rewritten — 9 chain agents, override @sheldon, DRIFT: convention)
-- src/commands/sync-agents-preflight.js (new — Feature dossier parity guard)
-- package.json (modified — sync:agents prefixa preflight)
-- tests/sync-agents-preflight.test.js (new — 5 tests)
+- 2026-05-07 T4 — done. Propagou AC-HD-06 para sheldon.md (workspace+template em paridade total). Adicionou seção `## Harness contract generation (RF-05) — MEDIUM only` com trigger compacto + referência on-demand para `.aioson/docs/sheldon/harness-contract.md`. Doc novo (criado em workspace+template) detalha: when-to-run gate por classification, populate criteria binary vs advisory, contract_mode/governor selection por risk surface, schemas canônicos de harness-contract.json + progress.json, failure modes. Backportou ao mesmo tempo 2 enhancements workspace-only (RF-01 expandido + done/MANIFEST.md em Required input) ao template — drift identificado via diff antes do edit; fix preventivo dado brain sheldon-001 q=5 (sync template→workspace apaga workspace-only changes). Adicionou `.aioson/docs/sheldon/harness-contract.md` em `MANAGED_FILES` (src/constants.js). Sheldon size: 11804→13342 bytes (sob 15K target). Suite: 2065/2068 verde — 3 falhas pré-existentes confirmadas em HEAD (test 10 product/dev kernel size pré-existente; 2 tests json-schema também pré-existentes). Zero regressão.
 
-**Phase 5:**
-- src/lib/dev-resume.js (new — buildDevResumeData helper + 3 utility helpers)
-- src/commands/dev-resume.js (new — CLI handler)
-- src/cli.js (modified — require + known-commands + dispatch)
-- .aioson/agents/dev.md (modified — Auto-resume + Drift detection + Per slice)
-- template/.aioson/agents/dev.md (modified — paridade idêntica)
-- tests/dev-resume.test.js (new — 16 tests)
+## Files modified this session (T5 + T6)
 
-**Phase 7:**
-- tests/agent-chain-continuity.regression.test.js (new — 17 integration tests, 1:1 com ACs)
+**T5 (Harness Done Gate em feature-close):**
+- `src/commands/feature-close.js` (modified — adicionado Step 0a entre validação e dossier guarantee; readFileSafe consistente; --force flag; fail-safe em parse error)
+- `tests/feature-close.test.js` (modified — +6 tests T5: regression sem contrato, PASS com gate, BLOCKED, --force, FAIL skip, corrupted JSON)
 
-**Cross-phase:**
-- .aioson/context/features/agent-chain-continuity/dossier.md (modified — 8 entradas Code Map + 2 Agent Trail entries)
-- .aioson/context/spec-agent-chain-continuity.md (modified — § What was built preenchido para Phase 1)
-- .aioson/context/dev-state.md (este arquivo)
+**T6 (alinhamento de docs):**
+- `docs/pt/4-agentes/validator.md` (modified — Saídas em disco corretas + nova seção "Como rodar (modo CLI/headless)" + Handoff típico expandido)
+- `docs/pt/1-entender/mapa-do-ecossistema.md` (modified — célula @validator atualizada)
+- `docs/en/1-understand/ecosystem-map.md` (modified — célula @validator atualizada)
 
-## Recommended commit before next session
+## Files modified previous sessions (T2)
+
+- `src/commands/harness.js` (modified — set `waiting_validation` em validate, helper `clearWaitingValidationStatus` em apply-validation)
+- `src/commands/workflow-next.js` (modified — `shouldRouteToValidator` helper exportado + injeção do override de requestedAgent antes de activateStage)
+- `tests/harness-apply-validation.test.js` (modified — +4 tests para status state machine)
+- `tests/workflow-next-validator-routing.test.js` (new — 9 tests de routing)
+- `.aioson/context/bootstrap/current-state.md` (modified — 2 entries append-only)
+- `.aioson/context/dev-state.md` (este arquivo)
+
+## Files modified previous sessions (T3)
+
+- `src/commands/agents.js` (modified — `--headless` flag + opcional `--output=<file>`; pula bootstrap; novo campo `headlessOutputPath` no return)
+- `src/commands/harness.js` (rewritten — `runHarnessApplyValidation` novo + `validateValidatorOutput` + `translateValidatorOutputToLastError` + `runHarnessValidate` virou router; init mantido idêntico)
+- `src/cli.js` (modified — require runHarnessApplyValidation + registro `harness:apply-validation` em known-commands + dispatch)
+- `src/constants.js` (modified — `validator` adicionado a AGENT_DEFINITIONS + `.aioson/agents/validator.md` em MANAGED_FILES)
+- `tests/harness-apply-validation.test.js` (new — 16 tests cobrindo helpers, apply (PASS/FAIL/erros), router (no-output/with-output))
+- `tests/agents-command.test.js` (modified — +2 tests para `--headless --output` e `--headless` standalone)
+- `.aioson/context/bootstrap/current-state.md` (modified — 3 entries append-only)
+- `.aioson/context/dev-state.md` (este arquivo)
+
+## Files modified previous sessions (T1)
+
+- `.aioson/agents/qa.md` (modified — bloco @validator em Specialized triggers + linha em Recommended next agents)
+- `template/.aioson/agents/qa.md` (modified — paridade idêntica nas seções não-conflitantes; "Feature closure" drift preservado)
+
+## Files modified previous sessions (T4)
+
+- `.aioson/agents/sheldon.md` (modified — RF-05 compact + RF-01 expansion já presente)
+- `template/.aioson/agents/sheldon.md` (modified — paridade idêntica + backport RF-01 expansion + done/MANIFEST.md)
+- `.aioson/docs/sheldon/harness-contract.md` (new — full procedure on-demand, ~3.5KB)
+- `template/.aioson/docs/sheldon/harness-contract.md` (new — paridade idêntica)
+- `src/constants.js` (modified — adicionou .aioson/docs/sheldon/harness-contract.md em MANAGED_FILES)
+- `.aioson/context/bootstrap/current-state.md` (modified — append-only entry sob "What the system already has")
+- `.aioson/context/dev-state.md` (este arquivo — reset para harness-driven-aioson)
+
+## Recommended commit before next session (T4)
 
 ```
-git add src/session-handoff.js src/cli.js \
-        src/commands/dossier-add-research.js \
-        src/commands/dossier-audit.js \
-        src/commands/feature-close.js \
-        src/commands/workflow-next.js \
-        src/lib/dossier-telemetry.js \
-        tests/handoff-contract-v2.test.js \
-        tests/session-handoff-pentester.test.js \
-        tests/dossier-add-research.test.js \
-        tests/dossier-audit.test.js \
-        tests/agent-chain-continuity-phase3.test.js \
-        .aioson/agents/product.md \
-        template/.aioson/agents/product.md \
-        .aioson/docs/dossier/schema.md \
-        .aioson/context/dev-state.md \
-        .aioson/context/spec-agent-chain-continuity.md \
-        .aioson/context/features/agent-chain-continuity/dossier.md
+git add .aioson/agents/sheldon.md \
+        template/.aioson/agents/sheldon.md \
+        .aioson/docs/sheldon/harness-contract.md \
+        template/.aioson/docs/sheldon/harness-contract.md \
+        src/constants.js \
+        .aioson/context/bootstrap/current-state.md \
+        .aioson/plans/harness-driven-aioson/plan-multi-agent-validation-loop.md \
+        .aioson/context/done/harness-driven-aioson/prd-harness-driven-aioson.md \
+        .aioson/context/sheldon-enrichment-harness-driven-aioson.md \
+        .aioson/context/features.md \
+        .aioson/brains/_index.json \
+        .aioson/brains/sheldon/architecture-decisions.brain.json \
+        .aioson/context/dev-state.md
 ```
 
-Mensagens sugeridas (1 commit por fase):
-- `feat(agent-chain-continuity): Phase 1.2-1.4 — handoff-protocol artifact_uris v2 + docs`
-- `feat(agent-chain-continuity): Phase 2 — dossier:add-research and dossier:audit commands`
-- `feat(agent-chain-continuity): Phase 3 — auto-init via feature:close + workflow:next + @product`
-- `feat(agent-chain-continuity): Phase 4 — chain agent paridade + sync-agents-preflight`
-- `feat(agent-chain-continuity): Phase 5 — dev-resume helper + dev.md auto-resume + drift detection`
-- `test(agent-chain-continuity): Phase 7 — 17-AC regression bundle`
+Mensagem sugerida:
+- `feat(harness-driven-aioson): T4 — sheldon.md generates harness-contract.json on MEDIUM (AC-HD-06)`

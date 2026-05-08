@@ -42,6 +42,14 @@ These capabilities were confirmed during this analysis:
 - `parallel:status` and `parallel:doctor` now report write-scope coverage gaps, invalid `write_paths` patterns, and overlapping file ownership across lanes
 - `parallel:guard` now validates whether a given lane is allowed to write specific project paths before execution starts
 - `parallel:merge` now also blocks when declared `write_paths` overlap or contain invalid patterns
+- `@sheldon` now generates `harness-contract.json` for MEDIUM features as part of RF-05, populating binary criteria from PRD ACs (full procedure in `.aioson/docs/sheldon/harness-contract.md`)
+- `@qa` now recommends `@validator` in the QA report when `.aioson/plans/{slug}/harness-contract.json` exists for the active feature, gating `feature:close` via `progress.json.ready_for_done_gate`
+- `aioson agent:prompt --headless --output=<file>` now generates an agent prompt without launching an editor and without registering a live session, suitable for CI runners and external LLM execution
+- `aioson harness:validate` is now a router: when `.aioson/plans/{slug}/last-validator-output.json` exists it consumes it via `harness:apply-validation`; otherwise it generates the @validator prompt headless for external LLM execution
+- `aioson harness:apply-validation . --slug=<slug> [--input=<path>]` consumes @validator JSON output and translates `results[].reason` of the first failure into `progress.json.last_error` (format `"<id>: <reason>"`), records via the circuit breaker, archives the input under `validator-runs/<timestamp>.json` after PASS or FAIL
+- `harness:validate` now sets `progress.json.status = 'waiting_validation'` after generating the validator prompt, and `harness:apply-validation` resets it to `'in_progress'` after consuming output (preserving `circuit_open` when error_streak limit fires)
+- `aioson workflow:next` now auto-routes to `@validator` (as a detour, returning to the original `state.next` after validator completes) when the active feature has `harness-contract.json` and `progress.status === 'waiting_validation'`. Explicit `--agent=…` overrides preserve user intent; without contract or in MICRO/SMALL the routing is a no-op
+- `aioson feature:close --verdict=PASS` now enforces the harness done gate: if `harness-contract.json` exists and `progress.json.ready_for_done_gate !== true`, closure is blocked with the pending criterion ID/reason. `--force` bypasses with an explicit BYPASS audit trail entry. `--verdict=FAIL` skips the gate (QA already rejected). Without contract, behavior is unchanged.
 
 ## What the system does not have yet
 
