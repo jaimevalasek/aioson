@@ -75,7 +75,7 @@ const { runSquadToolRegister } = require('./commands/squad-tool-register');
 const { runSquadReview } = require('./commands/squad-review');
 const { runAgentAudit } = require('./commands/agent-audit');
 const { runBriefGen } = require('./commands/brief-gen');
-const { runHarnessInit, runHarnessValidate } = require('./commands/harness');
+const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = require('./commands/harness');
 const { runVerifyGate } = require('./commands/verify-gate');
 const {
   runRuntimeInit,
@@ -354,6 +354,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'harness-init',
   'harness:validate',
   'harness-validate',
+  'harness:apply-validation',
+  'harness-apply-validation',
   'brief-gen',
   'verify:gate',
   'verify-gate',
@@ -1044,6 +1046,8 @@ async function main() {
       result = await runHarnessInit({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:validate' || command === 'harness-validate') {
       result = await runHarnessValidate({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:apply-validation' || command === 'harness-apply-validation') {
+      result = await runHarnessApplyValidation({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:gate' || command === 'verify-gate') {
       result = await runVerifyGate({ args, options, logger: commandLogger, t });
 

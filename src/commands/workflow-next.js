@@ -679,6 +679,37 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
   return { state: nextState, completedStage: normalizedStage };
 }
 
+/**
+ * Detects whether the current feature has a harness contract awaiting
+ * validation. Used by runWorkflowNext to route to @validator (as a detour)
+ * before any other agent. Implements AC-HD-14 of harness-driven-aioson.
+ *
+ * Returns true only when ALL of the following hold:
+ *   - state.mode === 'feature' AND state.featureSlug is set
+ *   - .aioson/plans/<slug>/harness-contract.json exists
+ *   - .aioson/plans/<slug>/progress.json exists, parses, and reports
+ *     status === 'waiting_validation'
+ *
+ * Without these conditions the function returns false and the workflow
+ * routing proceeds exactly as before (zero behavior change for MICRO/SMALL
+ * or any MEDIUM feature without a contract).
+ */
+function shouldRouteToValidator(targetDir, state) {
+  if (!state || state.mode !== 'feature' || !state.featureSlug) return false;
+  const fsLocal = require('node:fs');
+  const planDir = path.join(targetDir, '.aioson', 'plans', state.featureSlug);
+  const contractPath = path.join(planDir, 'harness-contract.json');
+  const progressPath = path.join(planDir, 'progress.json');
+  if (!fsLocal.existsSync(contractPath) || !fsLocal.existsSync(progressPath)) return false;
+  try {
+    const progress = JSON.parse(fsLocal.readFileSync(progressPath, 'utf8'));
+    return progress && progress.status === 'waiting_validation';
+  } catch {
+    // Corrupted progress: do NOT override routing — fail safe to default flow.
+    return false;
+  }
+}
+
 function applySkip(config, state, target) {
   const normalizedTarget = normalizeAgentName(target);
   ensureSkippableTarget(config, state, normalizedTarget);
@@ -1049,7 +1080,17 @@ async function runWorkflowNext({ args, options, logger, t }) {
     state = applySkip(config, state, options.skip);
   }
 
-  const requestedAgent = options.agent ? normalizeAgentName(options.agent) : null;
+  let requestedAgent = options.agent ? normalizeAgentName(options.agent) : null;
+
+  // ── Harness Validator Routing (AC-HD-14) ────────────────────────────────
+  // When the active feature has a harness-contract and progress is
+  // `waiting_validation`, route to @validator as a detour. Explicit user
+  // override (--agent=…) is preserved; auto-routing only fires when no agent
+  // was requested. Without contract or in MICRO/SMALL, this is a no-op.
+  if (!requestedAgent && shouldRouteToValidator(targetDir, state)) {
+    requestedAgent = 'validator';
+  }
+
   const activation = await activateStage(targetDir, state, locale, tool, requestedAgent, options.mode || null);
   state = activation.state;
   const statePath = await persistState(targetDir, state);
@@ -1178,5 +1219,6 @@ module.exports = {
   applySkip,
   activateStage,
   runWorkflowNext,
+  shouldRouteToValidator,
   detectUnsubstantiatedCompletions
 };

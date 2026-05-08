@@ -395,3 +395,53 @@ test('agent:prompt rejects pentester app_target without feature and scope', asyn
     /requires --scope=<area>/
   );
 });
+
+test('agent:prompt --headless --output writes prompt to file and skips bootstrap', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+  const outputPath = path.join(dir, 'validator-prompt.txt');
+
+  const result = await runAgentPrompt({
+    args: ['validator', dir],
+    options: {
+      tool: 'claude',
+      headless: true,
+      output: outputPath
+    },
+    logger,
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.headless, true);
+  assert.equal(result.headlessOutputPath, outputPath);
+  assert.equal(result.runtime, null, 'headless mode must skip bootstrap (runtime stays null)');
+
+  const content = await fs.readFile(outputPath, 'utf8');
+  assert.match(content, /validator/i, 'prompt content must reference the validator agent');
+  assert.equal(content.length > 100, true, 'prompt must be substantial');
+});
+
+test('agent:prompt --headless without --output prints prompt to stdout', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+
+  const result = await runAgentPrompt({
+    args: ['validator', dir],
+    options: { tool: 'claude', headless: true },
+    logger,
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.headless, true);
+  assert.equal(result.headlessOutputPath, null);
+  assert.equal(result.runtime, null);
+  // The prompt was printed via logger.log
+  const printedPrompt = logger.lines.join('\n');
+  assert.match(printedPrompt, /validator/i);
+});

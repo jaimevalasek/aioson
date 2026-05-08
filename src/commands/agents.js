@@ -135,6 +135,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
   const targetDir = path.resolve(process.cwd(), args[1] || '.');
   const locale = await resolveLocaleForTarget(targetDir, options);
   const tool = options.tool || 'codex';
+  const isHeadless = Boolean(options.headless);
 
   let routed = false;
   let requestedAgent = normalizeAgentName(agent.id);
@@ -146,7 +147,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
   let activationContext = '';
   let pentesterTargetMode = null;
 
-  if (WORKFLOW_AGENT_IDS.has(requestedAgent)) {
+  if (!isHeadless && WORKFLOW_AGENT_IDS.has(requestedAgent)) {
     const loaded = await loadOrCreateState(targetDir, options);
     const hasWorkflowStage = Boolean(loaded.state.current || loaded.state.next || loaded.state.sequence.length > 0);
     if (hasWorkflowStage) {
@@ -198,19 +199,34 @@ async function runAgentPrompt({ args, options, logger, t }) {
       : runtimeClass.source === 'orchestration'
         ? 'Orchestration handoff'
         : 'Direct agent handoff';
-    runtime = await bootstrapDirectAgentPrompt(targetDir, {
-      agentName: promptAgent.id,
-      tool,
-      locale,
-      instructionPath,
-      prompt,
-      title: `${handoffLabel}: @${promptAgent.id}`,
-      message: `Prompt generated for @${promptAgent.id}`
-    });
+    if (!isHeadless) {
+      runtime = await bootstrapDirectAgentPrompt(targetDir, {
+        agentName: promptAgent.id,
+        tool,
+        locale,
+        instructionPath,
+        prompt,
+        title: `${handoffLabel}: @${promptAgent.id}`,
+        message: `Prompt generated for @${promptAgent.id}`
+      });
+    }
   }
 
-  logger.log(t('agents.prompt_title', { agent: promptAgent.id, tool, locale }));
-  logger.log(prompt);
+  let headlessOutputPath = null;
+  if (isHeadless) {
+    if (options.output) {
+      const fs = require('node:fs');
+      headlessOutputPath = path.resolve(targetDir, String(options.output));
+      fs.mkdirSync(path.dirname(headlessOutputPath), { recursive: true });
+      fs.writeFileSync(headlessOutputPath, prompt, 'utf8');
+      logger.log(t('agents.prompt_headless_saved', { path: headlessOutputPath }) || `Headless prompt saved to ${headlessOutputPath}`);
+    } else {
+      logger.log(prompt);
+    }
+  } else {
+    logger.log(t('agents.prompt_title', { agent: promptAgent.id, tool, locale }));
+    logger.log(prompt);
+  }
 
   if (
     promptAgent.id === 'pentester' &&
@@ -245,7 +261,9 @@ async function runAgentPrompt({ args, options, logger, t }) {
     instructionPath,
     prompt,
     runtime,
-    effectiveMode
+    effectiveMode,
+    headless: isHeadless,
+    headlessOutputPath
   };
 }
 
