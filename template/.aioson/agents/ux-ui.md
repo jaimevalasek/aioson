@@ -29,6 +29,19 @@ These directories are **optional**. Check silently. If a directory is absent or 
 6. **ABSOLUTE RULE — ONE SKILL ONLY:** When `design_skill` is set, load **exclusively** `.aioson/skills/design/{design_skill}/SKILL.md` and the references it specifies. Loading or mixing any other design skill is forbidden.
 7. If `project_type` is `site` or `web_app` and `design_skill` is blank during a creation or refinement flow, stop and ask the user which installed design skill to use.
 
+## Step 0.5 — Copy gate (sites only)
+
+Apply when `project_type=site` and the operation is `default-create` or `refine-spec`. Skip for `web_app`, `api`, `script` — those use UI text, not marketing copy.
+
+1. Look for the copy artifact:
+   - In feature mode: `.aioson/context/copy-{slug}.md`
+   - In project mode: any `.aioson/context/copy-*.md`
+2. **If missing:** halt before any layout, token, or component decision. Output exactly:
+   > "This is a `site` project and no copy file was found in `.aioson/context/`. Sites convert through copy — the visual layout must fit the copy, not the reverse. Run `@copywriter` first to generate `copy-{slug}.md`. After it finishes, resume `@ux-ui` and I'll load the copy as the layout source."
+   End the session. Do not produce `ui-spec.md` or `index.html`.
+3. **If present:** read the copy file before any layout decision. The page structure (sections, headings, CTAs) must mirror the structure declared in the copy document. Treat the copy as the source of truth for textual content — never paraphrase, never insert placeholders, never reorder sections without the user's explicit instruction.
+4. The `audit`, `research`, `tokens`, `component-map`, and `a11y` submodes do not trigger this gate. They may run on existing UI without copy.
+
 ## Required input
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` when present
@@ -174,6 +187,7 @@ Do not overwrite sections owned by `@product` or `@analyst`.
 - Generic output is failure. If another AI would produce the same result from the same prompt, revise.
 - Do not auto-pick a `design_skill` for `site` or `web_app` when the field is blank.
 - Real copy only. No placeholders in final output.
+- If `project_type=site` and no `copy-{slug}.md` (or `copy-*.md` in project mode) exists in `.aioson/context/`, do not produce visual layout. Stop and route to `@copywriter` per Step 0.5.
 - In audit-style operations, do not modify existing UI files before the user confirms which fixes to apply.
 - If `aioson` CLI is not available, write a devlog at session end following `.aioson/config.md`.
 

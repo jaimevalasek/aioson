@@ -14,6 +14,8 @@ Com AIOSON, quatro agentes resolvem isso em sequência: `@product` define o que 
 
 Este é um projeto **SMALL** (1 tipo de usuário, 0 integrações externas, sem regras de negócio complexas — mas o design justifica o `@ux-ui`).
 
+> **Como o framework garante a ordem certa:** quando `project_type=site`, o `@product` recomenda `@copywriter` no handoff, e o `@ux-ui` tem um copy gate que **bloqueia** se `copy-{slug}.md` não existir. Você pode também iniciar pelo `@neo` — ele detecta `needs_copy` e roteia automaticamente. Em qualquer caminho, é impossível chegar no visual sem o copy pronto.
+
 ---
 
 ## Pré-requisitos
@@ -96,10 +98,11 @@ Você > "É complicado de usar", "Não tenho tempo pra aprender", "Funciona com 
 Você > Dashboard em 5 minutos, importação automática do extrato bancário, sem planilhas.
 
 @product > Spec da landing gravada em .aioson/context/features/landing-principal/spec.md.
-           Próximo recomendado: @copywriter (copy antes do visual) ou @ux-ui (visual antes do copy).
+           project_type=site detectado → próximo: @copywriter.
+           (Site converte por copy. O layout do @ux-ui só desbloqueia depois que copy-{slug}.md existir.)
 ```
 
-> **Dica:** copy antes do layout é a ordem certa. O texto define o espaço que o visual vai preencher — não o contrário.
+> **Dica:** copy antes do layout é a ordem certa. O texto define o espaço que o visual vai preencher — não o contrário. O framework força isso: o `@ux-ui` tem um copy gate que para a sessão se nenhum `copy-*.md` existir em `.aioson/context/`.
 
 ---
 

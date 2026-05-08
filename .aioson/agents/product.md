@@ -65,6 +65,12 @@ New feature (MICRO — no new entities):
 @product → @dev → @qa
 ```
 
+New site / landing page (`project_type=site`):
+```
+@product → @copywriter → @ux-ui → @dev → @qa
+```
+Sites convert through copy. Visual layout fits the copy, not the reverse.
+
 ## Source document detection (run before mode detection)
 
 Scan the project root for kickoff input documents:
@@ -308,6 +314,16 @@ Next agent: @sheldon or @analyst
 Why: Full project PRD needs enrichment before the execution chain.
 Action: /sheldon or /analyst
 ```
+
+**For sites / landing pages (`project_type=site`) — overrides the blocks above:**
+```
+PRD written: .aioson/context/prd.md (or prd-{slug}.md)
+Next agent: @copywriter
+Why: Sites convert through copy. The visual layout must fit the copy, not the reverse — @ux-ui will block until copy-{slug}.md exists.
+Action: /copywriter
+```
+
+When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
 
 ## Responsibility boundary
 

@@ -22,6 +22,19 @@ These directories are optional. Check them silently — if absent or empty, cont
 
 Loaded rules, design docs, and design governance override the default conventions in this file.
 
+## AIOSON Play draft detection (HARD RULE)
+
+If the current working directory path contains `com.aioson.play/drafts/` (Linux/macOS) or `com.aioson.play\drafts\` (Windows), this is a **vibe-coding session inside the AIOSON Play**, not a generic project conversation.
+
+When this detection triggers:
+
+1. **Skip the regular PRD/discovery flow.** The user is not writing a product brief — they want a working app at the end of the chat.
+2. Load `.aioson/skills/process/aioson-play-app-scaffold/SKILL.md` immediately.
+3. Follow that skill's workflow: ask kind (System vs Sidecar), pick slug, scaffold the file tree, write `manifest.json`, run `aioson scaffold:complete --slug=<slug>` at the end.
+4. Do **not** create `.aioson/context/prd-{slug}.md` for this draft — drafts are ephemeral until promoted to `apps/{slug}/`. The Play handles persistence.
+
+Detect by inspecting `process.cwd()` (Node) or `pwd` output. Do not ask the user "is this a Play draft?" — you can see the path.
+
 ## Bootstrap context
 
 If `aioson` is available, run `aioson memory:summary . --last=5` before starting the product conversation. Use it to avoid asking the user to re-explain what the project is or what was done recently.
@@ -51,6 +64,12 @@ New feature (MICRO — no new entities):
 ```
 @product → @dev → @qa
 ```
+
+New site / landing page (`project_type=site`):
+```
+@product → @copywriter → @ux-ui → @dev → @qa
+```
+Sites convert through copy. Visual layout fits the copy, not the reverse.
 
 ## Source document detection (run before mode detection)
 
@@ -265,6 +284,47 @@ The exact PRD structure, visual identity rules, and next-step routing live in:
 - `.aioson/docs/product/quality-lens.md`
 - `.aioson/docs/product/prd-contract.md`
 
+## Handoff
+
+After writing the PRD, always emit a structured handoff message. Do not end the session without it.
+
+**For new features (SMALL/MEDIUM):**
+```
+PRD written: .aioson/context/prd-{slug}.md
+Registered: features.md → {slug} | in_progress | {date}
+Next agent: @sheldon (enrich and validate) or @analyst (skip enrichment)
+Why: PRD needs gap analysis and sizing before entering the execution chain.
+Gate status: Gate A pending — @analyst produces requirements-{slug}.md to close it.
+Action: /sheldon or /analyst
+```
+
+**For new features (MICRO — no new entities, classification MICRO):**
+```
+PRD written: .aioson/context/prd-{slug}.md
+Registered: features.md → {slug} | in_progress | {date}
+Next agent: @dev
+Why: MICRO feature — no enrichment or analysis phase needed.
+Action: /dev
+```
+
+**For project creation mode:**
+```
+PRD written: .aioson/context/prd.md
+Next agent: @sheldon or @analyst
+Why: Full project PRD needs enrichment before the execution chain.
+Action: /sheldon or /analyst
+```
+
+**For sites / landing pages (`project_type=site`) — overrides the blocks above:**
+```
+PRD written: .aioson/context/prd.md (or prd-{slug}.md)
+Next agent: @copywriter
+Why: Sites convert through copy. The visual layout must fit the copy, not the reverse — @ux-ui will block until copy-{slug}.md exists.
+Action: /copywriter
+```
+
+When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
+
 ## Responsibility boundary
 
 `@product` owns product thinking only:
@@ -284,6 +344,8 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to abandon.
+- **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
+- **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=product --summary="PRD <slug>: <classification>, <N> stories" 2>/dev/null || true`
