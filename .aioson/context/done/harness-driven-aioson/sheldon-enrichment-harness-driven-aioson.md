@@ -1,12 +1,12 @@
 ---
 prd: prd-harness-driven-aioson.md
-last_enriched: 2026-04-10
-enrichment_rounds: 1
+last_enriched: 2026-05-07
+enrichment_rounds: 2
 plan_path: .aioson/plans/harness-driven-aioson/manifest.md
 sizing_score: 10
 sizing_decision: phased_external
 readiness: ready_for_downstream
-readiness_notes: ""
+readiness_notes: "Round 2 fechou gaps de execução descobertos pós-design. @dev pode iniciar Tarefa T4 → T1 → T3 → T2 → T5 → T6 da Fase 3 do plano."
 gray_areas_extracted: true
 gray_areas_decided: 4
 ---
@@ -45,6 +45,48 @@ Nenhum MER disponível.
 Score: 10 → phased_external
 Justificativa: 3 fases distintas do roadmap + 7 entidades + 3 integrações externas (linters, type-checkers, pre-commit hooks).
 
+## Rodada 2 — 2026-05-07
+
+### Trigger da rodada
+Auditoria solicitada pelo usuário após observar que `@validator` nunca rodou em features implementadas, embora documentado. Investigação revelou: feature marcada `done` em 2026-04-10 com apenas design completo; nenhuma das 3 fases de execução foi rodada; agente está órfão. Usuário escolheu **opção (A) reabrir** (mudou `features.md` de `done` → `in-progress`) para destravar enrichment.
+
+### Fontes usadas
+- [diagnóstico] Auditoria interna do código atual (2026-05-07) — sem fontes externas
+- [evidência] `grep` em `src/commands/workflow-next.js`, `src/commands/harness.js`, `.aioson/agents/qa.md` — comprovou ausência de wiring
+- [evidência] `find . -name harness-contract.json` → zero ocorrências em features reais
+- [brain] sheldon-001 (workspace/template parity), sheldon-003 (validator sandbox), sheldon-005 (CLI integration) — confirmaram desenho do agente; gap é wiring, não conceito
+
+### Gaps descobertos (categorizados — quality lens)
+
+**Critical (bloqueiam @validator de operar):**
+- G1: AC ausente para handoff `@qa → @validator`
+- G2: AC ausente para routing em `aioson workflow:next`
+- G3: AC ausente para tradutor `validator output → progress.json.last_error`
+- G4: AC-HD-06 não foi propagado para `.aioson/agents/sheldon.md` (gap de propagação, AC já existe)
+
+**Important:**
+- G5: AC-HD-11 conceitual sem assertion executável em `feature:close`
+
+**Refinement:**
+- G6: `plan-multi-agent-validation-loop.md` sem sequência concreta de tarefas para @dev
+
+### Melhorias aplicadas
+- [AC-HD-11 refinado] — assertion executável adicionada ("`feature:close` lê `progress.json.ready_for_done_gate`")
+- [AC-HD-13 novo] — handoff `@qa → @validator` em features com contrato
+- [AC-HD-14 novo] — routing em `workflow:next` quando `progress.status == waiting_validation`
+- [AC-HD-15 novo] — tradutor `results[].reason → progress.last_error` em `harness:validate`
+- [plan-multi-agent T1-T6] — 6 tarefas residuais com paths de arquivo concretos, ordem de execução sugerida (T4→T1→T3→T2→T5→T6)
+- [brain sheldon-006] — nova lição: "PRD design-complete não significa execution-complete; auditar gaps de wiring antes de marcar feature done"
+
+### Melhorias descartadas pelo usuário
+- Nenhuma — todas as 4 categorias de melhoria foram aprovadas em uma rodada de seleção.
+
+### Decisão de sizing
+Score mantido: 10 → phased_external (não muda — as 3 fases existentes absorvem os novos ACs).
+
+### Fontes não consultadas (justificativa)
+Esta rodada não usou pesquisas externas porque os gaps emergiram do diff entre PRD e código atual — não há incerteza tecnológica a validar. Brain procedural já endossa o desenho (sheldon-003 q=5 EXCELLENT). Trazer fontes externas adicionaria ruído sem evidência incremental.
+
 ## Decisões tomadas
 
 > Decisões de gray areas confirmadas pelo usuário. Downstream agents devem respeitar estas decisões sem re-perguntar.
@@ -56,3 +98,4 @@ Justificativa: 3 fases distintas do roadmap + 7 entidades + 3 integrações exte
 | 2 | Scope do @governor no MVP | Circuit breaker como middleware em execution-gateway.js; policies em harness-contract.json | Non-blocking, additive; Microsoft AGT pattern; sem novo agente |
 | 3 | Formato harness-contract.json | JSON único com {id, description, assertion, binary} por critério (COINE 2026) | Industry consensus 2026; legível em PR review; parseável por máquina |
 | 4 | Scope harness:init | Minimal MVP: cria harness-contract.json + progress.json; bootstrap.sh + smoke-tests/ na Fase 3 | Começo-meio-fim sem pontas soltas; Fase 2 é completa por si só |
+| 5 | Feature reaberta vs nova PRD | Reabrir `harness-driven-aioson` (in-progress) ao invés de criar PRD-filha | Usuário escolheu opção (A) na sessão de 2026-05-07 — preserva continuidade do plano de 3 fases |

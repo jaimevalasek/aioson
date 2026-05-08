@@ -60,8 +60,11 @@ Feature marcada como done
 |---|---|
 | AC-HD-09 | Dado @dev concluindo fase, quando `aioson harness:validate` é invocado, @validator em contexto separado retorna score `0` ou `1` por critério do contrato |
 | AC-HD-10 | Dado score `0`, quando feedback chega ao @dev via `progress.json.last_error`, @dev recebe o critério específico que falhou com razão suficiente para corrigir sem reiniciar |
-| AC-HD-11 | Dado todos os critérios `binary: true` com score=1, quando @validator aprova, gateway libera done gate e feature pode ser marcada como `done` em `features.md` |
+| AC-HD-11 | Dado `progress.json.ready_for_done_gate == true` e `overall_score == 1`, quando `aioson feature:close` é executado, o comando lê `progress.json`, valida o gate e atualiza `features.md` para `done`; se `ready_for_done_gate ≠ true` (com contrato presente), aborta com mensagem clara apontando o critério pendente; sem contrato, comportamento atual mantido _(refined Round 2)_ |
 | AC-HD-12 | Dado `error_streak_limit` atingido, quando circuit breaker abre, o loop para automaticamente e solicita intervenção humana antes de qualquer nova tentativa |
+| AC-HD-13 | Dado feature MEDIUM com `harness-contract.json` presente, quando `@qa` finaliza relatório, deve recomendar `@validator` na seção "Recommended next agents" do `qa-report-{slug}.md`; instrução em `template/.aioson/agents/qa.md` e `.aioson/agents/qa.md` _(Round 2)_ |
+| AC-HD-14 | Dado `progress.json.status == "waiting_validation"`, quando `aioson workflow:next` é executado em projeto MEDIUM com contrato, o comando direciona para `@validator` antes de qualquer outro agente; sem contrato ou em MICRO/SMALL, roteamento atual preservado _(Round 2)_ |
+| AC-HD-15 | Dado output do `@validator` retornado por `aioson agent:prompt validator`, quando `aioson harness:validate` consome a resposta, traduz `results[].reason` da primeira falha para `progress.json.last_error` (formato `"<critério-id>: <reason>"`), agrega `error_streak` e atualiza `circuit_state` conforme governor thresholds _(Round 2)_ |
 
 ## Agente @validator — especificação
 
@@ -90,6 +93,47 @@ Feature marcada como done
   "ready_for_done_gate": false
 }
 ```
+
+## Tarefas residuais — Round 2 sheldon (2026-05-07)
+
+> Surfaced após auditoria do `@validator` em 2026-05-07. A feature foi marcada `done` prematuramente em 2026-04-10 (apenas design completo); execução das 3 fases ficou pendente. Esta lista cobre os gaps que tornam o `@validator` órfão hoje.
+
+### Tarefa T1 — Handoff `@qa → @validator` (cobre AC-HD-13)
+- Editar `template/.aioson/agents/qa.md` E `.aioson/agents/qa.md` (workspace+template parity — brain `sheldon-001`)
+- Adicionar seção "Specialized agent triggers" → recomendação automática de `@validator` quando `harness-contract.json` existe na feature ativa
+- Mensagem template: *"Harness contract detected ({path}). Activate `/validator` to run binary verification before `feature:close`."*
+
+### Tarefa T2 — Routing em `workflow:next` (cobre AC-HD-14)
+- Editar `src/commands/workflow-next.js`
+- Adicionar lookup: se `active_feature` tem `.aioson/plans/{slug}/progress.json` com `status: "waiting_validation"`, retornar `@validator` como next agent
+- Sem progress.json ou sem status `waiting_validation` → roteamento atual mantido
+- Update i18n: `src/i18n/messages/{en,pt-BR}.js` para mensagens de routing
+
+### Tarefa T3 — Tradutor `results[] → last_error` (cobre AC-HD-15)
+- Editar `src/commands/harness.js` em `runHarnessValidate`
+- Substituir invocação atual de `aioson verify:gate` por `aioson agent:prompt validator . --slug={slug} --json` (ou padrão equivalente)
+- Parsear output JSON do agente conforme schema do validator.md
+- Tradução: primeira falha (`results.find(r => !r.passed)`) → `progress.json.last_error` no formato `"<id>: <reason>"`
+- Agregar: `passed_count / total_count` em `progress.json.metrics`; incrementar `error_streak` se overall_score=0; reset se overall_score=1
+
+### Tarefa T4 — Propagação de AC-HD-06 para `sheldon.md` (cobertura existente)
+- Editar `template/.aioson/agents/sheldon.md` E `.aioson/agents/sheldon.md`
+- Adicionar passo no fluxo de enrichment: *"Em features MEDIUM, após escrever sheldon-enrichment, gerar `harness-contract.json` em `.aioson/plans/{slug}/` populado com critérios derivados dos ACs do PRD"*
+- Template do contrato deve respeitar schema documentado no PRD seção "Schemas de artefatos"
+- Se `harness:init` ainda não rodou, chamar `aioson harness:init . --slug={slug}` antes de popular
+
+### Tarefa T5 — Done gate em `feature:close` (cobre AC-HD-11 refinado)
+- Editar `src/commands/feature-close.js` (ou equivalente)
+- Antes de marcar feature como `done`: ler `.aioson/plans/{slug}/progress.json` se existir
+- Se `ready_for_done_gate !== true`: abortar com mensagem listando critério pendente (`results.find(r => !r.passed).id`)
+- Se `harness-contract.json` ausente: comportamento atual (sem bloqueio)
+
+### Tarefa T6 — Atualizar docs PT/EN
+- `docs/pt/4-agentes/qa.md` já promete handoff para `@validator` (linha 66) — verificar se T1 alinha doc com agente
+- `docs/en/4-agents/README.md` — mencionar `@validator` como gate condicional (presença de contrato)
+
+### Ordem sugerida de execução
+T4 → T1 → T3 → T2 → T5 → T6. T4 garante que contratos passem a existir; T1 e T3 fecham o loop @qa→@validator→@dev; T2 dá ao gateway visibilidade do estado; T5 fecha o ciclo completo.
 
 ## Sequência de implementação sugerida
 1. Criar `template/.aioson/agents/validator.md` com:

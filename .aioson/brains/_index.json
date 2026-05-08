@@ -24,10 +24,10 @@
     {
       "id": "sheldon/architecture-decisions",
       "agents": ["sheldon", "architect"],
-      "tags": ["aioson", "template", "agents", "sync", "sdd", "classification", "process", "validator", "sandbox", "impartiality", "discovery", "architecture", "ordering", "cli", "integration", "telemetry"],
-      "desc": "Architecture and process decisions @sheldon defaults to — workspace/template parity, classification gates, validator sandbox, discovery-before-architecture, CLI-first integration",
+      "tags": ["aioson", "template", "agents", "sync", "sdd", "classification", "process", "validator", "sandbox", "impartiality", "discovery", "architecture", "ordering", "cli", "integration", "telemetry", "feature-lifecycle", "wiring", "audit"],
+      "desc": "Architecture and process decisions @sheldon defaults to — workspace/template parity, classification gates, validator sandbox, discovery-before-architecture, CLI-first integration, design-complete vs execution-complete audit",
       "path": ".aioson/brains/sheldon/architecture-decisions.brain.json",
-      "nodes": 5,
+      "nodes": 6,
       "updated": "2026-05-07"
     }
   ]

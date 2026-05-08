@@ -105,8 +105,11 @@ O `harness-contract.json` não substitui o `sheldon-enrichment-*.md` — os dois
 |---|---|
 | AC-HD-09 | Dado @dev concluindo implementação de fase, quando @validator é invocado em contexto separado, retorna score `0` ou `1` por critério declarado no contrato |
 | AC-HD-10 | Dado score `0` retornado pelo @validator, quando feedback é enviado ao @dev, @dev recebe o critério específico que falhou com contexto suficiente para corrigir sem reiniciar do zero |
-| AC-HD-11 | Dado todos os critérios `binary: true` com score=1, quando @validator aprova, gateway libera o done gate e a feature pode ser marcada como `done` em `features.md` |
+| AC-HD-11 | Dado `progress.json.ready_for_done_gate == true` e `overall_score == 1`, quando `aioson feature:close` é executado, o comando lê `progress.json`, valida o gate e atualiza `features.md` para `done`; se `ready_for_done_gate ≠ true` (com contrato presente), o comando aborta com mensagem clara apontando o critério pendente; sem `harness-contract.json`, comportamento atual mantido _(refined sheldon Round 2)_ |
 | AC-HD-12 | Dado `error_streak_limit` atingido no loop de validação, quando circuit breaker abre, o loop para automaticamente e solicita intervenção humana antes de qualquer nova tentativa |
+| AC-HD-13 | Dado feature MEDIUM com `harness-contract.json` presente, quando `@qa` finaliza relatório, deve recomendar `@validator` na seção "Recommended next agents" do `qa-report-{slug}.md`; instrução refletida em `template/.aioson/agents/qa.md` e `.aioson/agents/qa.md` (workspace + template parity, sheldon-001) _(sheldon Round 2)_ |
+| AC-HD-14 | Dado `progress.json.status == "waiting_validation"`, quando `aioson workflow:next` é executado em projeto MEDIUM com contrato presente, o comando direciona para `@validator` antes de qualquer outro agente; sem contrato ou em projeto MICRO/SMALL, roteamento atual preservado _(sheldon Round 2)_ |
+| AC-HD-15 | Dado output do `@validator` retornado por `aioson agent:prompt validator`, quando `aioson harness:validate` consome a resposta, traduz `results[].reason` da primeira falha para `progress.json.last_error` (formato: `"<critério-id>: <reason>"`), agrega contagens em `error_streak` e atualiza `circuit_state` conforme thresholds do governor; sem essa tradução, AC-HD-10 fica inverificável _(sheldon Round 2)_ |
 
 ## Schemas de artefatos _(sheldon)_
 
