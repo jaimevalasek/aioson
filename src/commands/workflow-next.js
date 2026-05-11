@@ -10,7 +10,7 @@ const { syncWorkflowRuntime } = require('../execution-gateway');
 const { writeHandoff, buildWorkflowHandoff, buildWorkflowHandoffProtocol } = require('../session-handoff');
 const { runTechnicalGate, formatGateError } = require('../workflow-gates');
 const { buildTestBriefing } = require('../test-briefing');
-const { validateHandoffContract, formatContractError, getBlockingRevisions } = require('../handoff-contract');
+const { validateHandoffContract, formatContractError, getBlockingRevisions, parseFrontmatterValue } = require('../handoff-contract');
 const { buildPathGuardBlock } = require('../path-guard');
 const { logError, buildHealingPrompt } = require('../self-healing');
 const { validateHandoffProtocol } = require('../handoff-validator');
@@ -485,7 +485,21 @@ async function detectUnsubstantiatedCompletions(targetDir, completedStages, logg
 
 async function loadOrCreateState(targetDir, options = {}) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
-  const existing = await readJsonIfExists(statePath);
+  let existing = await readJsonIfExists(statePath);
+
+  // Feature-transition guard: if the persisted state belongs to a different
+  // feature than the currently active one (per features.md), it is stale —
+  // left over from a closed/abandoned feature. Discard it and rebuild from
+  // current features.md. Without this, opening a new feature inherits the
+  // previous feature's slug, classification, and completion record, blocking
+  // the new workflow on gates that don't apply.
+  if (existing && existing.mode === 'feature' && existing.featureSlug) {
+    const modeInfo = await detectWorkflowMode(targetDir);
+    if (modeInfo.featureSlug && existing.featureSlug !== modeInfo.featureSlug) {
+      existing = null;
+    }
+  }
+
   if (existing && typeof existing === 'object' && Array.isArray(existing.sequence)) {
     // SF-project-18: warn-on-mismatch only, never refuse — preserves
     // backwards-compat with environments that lack runtime telemetry.
@@ -500,11 +514,28 @@ async function loadOrCreateState(targetDir, options = {}) {
   }
 
   const context = await validateProjectContextFile(targetDir);
+  const modeInfo = await detectWorkflowMode(targetDir);
+
+  // Feature classification (from prd-{slug}.md frontmatter) takes precedence
+  // over the project classification. A MICRO feature inside a MEDIUM project
+  // must be sequenced and gated as MICRO.
+  let featurePrdClassification = null;
+  if (modeInfo.mode === 'feature' && modeInfo.featureSlug) {
+    const prdPath = path.join(targetDir, '.aioson/context', `prd-${modeInfo.featureSlug}.md`);
+    const prdContent = await fs.readFile(prdPath, 'utf8').catch(() => '');
+    if (prdContent) {
+      const parsed = parseFrontmatterValue(prdContent, 'classification');
+      if (parsed) featurePrdClassification = parsed;
+    }
+  }
+
   const classification = normalizeClassification(
-    options.classification || (context.data && context.data.classification) || 'MICRO',
+    options.classification
+      || featurePrdClassification
+      || (context.data && context.data.classification)
+      || 'MICRO',
     'MICRO'
   );
-  const modeInfo = await detectWorkflowMode(targetDir);
   const { config } = await readWorkflowConfig(targetDir);
   const sequence = getSequenceForMode(config, modeInfo.mode, classification);
   const draftState = buildStatePayload({

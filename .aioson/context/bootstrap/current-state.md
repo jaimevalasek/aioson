@@ -1,5 +1,6 @@
 ---
-updated_at: "2026-04-17T00:50:39-03:00"
+updated_at: "2026-05-11T20:00:00.000Z"
+generated_at: "2026-05-11T20:00:00.000Z"
 source: "Autonomy/orchestration analysis and planning session"
 ---
 
@@ -59,6 +60,10 @@ These capabilities were confirmed during this analysis:
 - `.aioson/docs/autonomy-protocol.md` is now an on-demand doc describing the 3-tier permission model, the 4 native harness formats, the notify levels, backward-compat rules, and the procedure to add a new command to a tier.
 - `aioson doctor` now runs 5 additional Living Memory checks at `severity: 'warning'` (`bootstrap_coverage`, `features_dir_present`, `claude_commands_present`, `version_drift`, `permissions_in_sync`); the `--fix` flag auto-creates `.aioson/context/features/`, restores missing `.claude/commands/aioson/agent/*` slashes from the template, and regenerates native harness permission files via `permissions-generator`. Bootstrap coverage and version drift are advisory (no auto-fix). Warnings surface in the diagnosis line but do not break `report.ok`, so existing tooling that gates on doctor's overall verdict keeps working. Hints are localised in en, pt-BR, es, and fr.
 - Living Memory user documentation now lives at `docs/pt/living-memory/` (7 files: README index + memoria-viva concept + reflexao-in-harness pipeline + autonomy-contract 3-tiers + notificacoes-info + troubleshooting 11 receitas + diagramas ASCII), linked from the main `docs/pt/README.md`. ~1440 lines in pt-BR covering the entire feature for non-developer readers.
+- `/discover` slash command is now registered across all four supported harnesses — `template/.claude/commands/aioson/agent/discover.md`, `template/.gemini/commands/aios-discover.toml`, and `template/OPENCODE.md`. `src/constants.js` extended so `aioson doctor` detects previously-invisible buckets (`agents/discover.md`, `gemini aios-discover.toml`, four representative Claude slashes); `doctor --fix` restores missing entries from template. `@discover` is registered in `AGENT_DEFINITIONS` with bootstrap outputs.
+- `@neo` routing rules and `@sheldon` scope boundary now distinguish PRD-only analysis (sheldon) from code archaeology (deyvin) and structural review of implemented systems (architect); `@sheldon` carries an explicit ✅ in-scope / ❌ out-of-scope block and a refuse-and-redirect protocol for mis-routings. Workspace and template synced.
+
+- Handoff contracts and workflow state now respect **feature-level classification**: `CONTRACTS.dev` and `CONTRACTS.qa` skip Gate C/D for MICRO features via `checkGateApproval(..., classification)` short-circuit; `resolveClassification` (in `src/handoff-contract.js`) reads `prd-{slug}.md` frontmatter before falling back to project-level classification; `loadOrCreateState` (in `src/commands/workflow-next.js`) detects feature-transition (existing.featureSlug ≠ active feature per `features.md`) and rebuilds state instead of inheriting stale completion records from a closed feature. New tests in `tests/handoff-contract-micro.test.js` (7 cases). Unblocks MICRO features inside MEDIUM projects (inception mode bug surfaced 2026-05-11 during `deyvin-density` handoff).
 
 ## What the system does not have yet
 

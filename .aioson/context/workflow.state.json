@@ -1,26 +1,21 @@
 {
   "version": 1,
   "mode": "feature",
-  "classification": "MEDIUM",
+  "classification": "MICRO",
   "sequence": [
     "product",
-    "analyst",
     "dev",
-    "pentester",
     "qa"
   ],
   "current": null,
   "next": null,
   "completed": [
     "product",
-    "analyst",
     "dev",
     "qa"
   ],
-  "skipped": [
-    "pentester"
-  ],
-  "featureSlug": "secure-by-default",
+  "skipped": [],
+  "featureSlug": "deyvin-density",
   "detour": null,
-  "updatedAt": "2026-04-29T04:49:52.384Z"
+  "updatedAt": "2026-05-11T19:30:27.777Z"
 }

@@ -153,7 +153,9 @@ Based on the user's answer:
    - "I have an idea but not sure if it's a feature yet" / "frame the problem" / "structure my plans before PRD" / "create a briefing" / "work through this raw thinking" → `/briefing`
    - "Write a commit message" / "generate commit" / "commit my changes" → `/committer`
    - "Map this codebase" / "scan the project" / "what does this project do?" / "bootstrap context" → `/discover`
-   - "Deep technical analysis" / "architectural review" / "is this a phased plan?" → `/sheldon`
+   - "Deep technical analysis of an existing PRD" / "is this a phased plan?" / "size the PRD" / "enrich requirements" → `/sheldon` (PRD-only; never for code archaeology or runtime state)
+   - "Diagnose existing code" / "is this a bug or a missing feature?" / "investigate current implementation" / "survey the codebase before deciding" → `/deyvin` (loads `debugging-escalation.md`; escalates to `/product` if it turns out to be a new feature, never to `/sheldon`)
+   - "Architectural review of an implemented system" / "structural impact of a change" → `/architect`
    - "Write a discovery / design doc" / "I need a design doc" → `/discovery-design-doc`
    - "Refine the backlog" / "break PRD into stories" → `/pm`
    - "Validate against the contract" / "check if it meets the spec" → `/validator`
@@ -199,7 +201,7 @@ AIOSON has 30 official agents grouped by purpose. The default workflow chain use
 |---|---|
 | `/briefing` | Raw plans → structured pre-PRD briefing; problem framing with JTBD/Cagan |
 | `/orache` | Domain investigation, market & competitor research |
-| `/sheldon` | Deep technical analysis, architectural review, phased-plan sizing |
+| `/sheldon` | **PRD-only.** Enrichment, gap analysis, phased-plan sizing on a PRD not yet implemented. Never code archaeology or runtime diagnosis. |
 | `/discovery-design-doc` | Living design doc bridging discovery to implementation |
 | `/discover` | Semantic knowledge cache (`bootstrap/`) for instant project understanding |
 

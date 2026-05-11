@@ -172,13 +172,35 @@ function parseFrontmatterValue(markdown, key) {
 async function resolveClassification(targetDir, state) {
   const explicit = isNonEmptyString(state?.classification) ? state.classification.trim().toUpperCase() : null;
   if (explicit) return explicit;
+
+  // When in feature mode, the feature's own classification (in prd-{slug}.md)
+  // takes precedence over the project-level classification. A MICRO feature
+  // inside a MEDIUM project should be treated as MICRO for gate enforcement.
+  const slug = state?.featureSlug;
+  if (slug) {
+    const prdPath = path.join(targetDir, '.aioson', 'context', `prd-${slug}.md`);
+    const prdContent = await readFileSafe(prdPath);
+    if (prdContent) {
+      const featureClass = parseFrontmatterValue(prdContent, 'classification');
+      if (isNonEmptyString(featureClass)) return featureClass.trim().toUpperCase();
+    }
+  }
+
   const contextPath = path.join(targetDir, '.aioson', 'context', 'project.context.md');
   const content = await readFileSafe(contextPath);
   const inferred = parseFrontmatterValue(content, 'classification');
   return isNonEmptyString(inferred) ? inferred.trim().toUpperCase() : null;
 }
 
-async function checkGateApproval(targetDir, gateLetter, slug) {
+async function checkGateApproval(targetDir, gateLetter, slug, classification) {
+  // MICRO features are documented as @product → @dev only — they don't pass
+  // through @analyst/@architect and therefore don't produce spec-{slug}.md.
+  // Skip gate validation entirely for MICRO; the lightweight workflow is the
+  // gate.
+  if (classification === 'MICRO' && slug) {
+    return { ok: true, reason: 'micro_skips_gate' };
+  }
+
   const specPath = slug
     ? path.join(targetDir, '.aioson', 'context', `spec-${slug}.md`)
     : path.join(targetDir, '.aioson', 'context', 'spec.md');
@@ -259,7 +281,7 @@ async function validateHandoffContract(targetDir, state, stageName) {
 
   // 2. Gates
   for (const gateLetter of contract.gates) {
-    const gateCheck = await checkGateApproval(targetDir, gateLetter, state.featureSlug);
+    const gateCheck = await checkGateApproval(targetDir, gateLetter, state.featureSlug, classification);
     if (!gateCheck.ok) {
       missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
     }
@@ -356,6 +378,7 @@ async function getBlockingRevisions(targetDir, featureSlug) {
 }
 
 module.exports = {
+  parseFrontmatterValue,
   validateHandoffContract,
   formatContractError,
   getBlockingRevisions,

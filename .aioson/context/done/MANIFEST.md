@@ -5,6 +5,7 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| deyvin-density | 2026-05-11 | 2 | Make `@deyvin` stop reasoning from stale context: enforce the Living Memory bootstrap gate on activation and give the agent a deterministic table for deciding w |
 | harness-driven-aioson | 2026-05-08 | 7 | — |
 | agent-chain-continuity | 2026-05-07 | 4 | Toda feature SMALL/MEDIUM nasce com um **dossier vivo auto-inicializado** que toda a cadeia de agentes (`@product → @sheldon → @analyst → @architect → @ux-ui → |
 | secure-by-default | 2026-04-29 | 6 | Transformar o AIOSON de "framework que entrega rápido" em "framework que entrega rápido **e seguro por padrão**", embutindo postura adversarial (Zero Trust) no |
