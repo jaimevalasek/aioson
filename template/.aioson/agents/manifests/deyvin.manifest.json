@@ -1,32 +1,20 @@
 {
-  "agent_id": "dev",
+  "agent_id": "deyvin",
   "version": "1.0",
-  "display_name": "Dev",
+  "display_name": "Deyvin",
+  "aliases": ["pair"],
   "capabilities": [
     {
-      "id": "implement_feature",
+      "id": "pair_programming",
       "category": "create",
-      "description": "Implement code changes according to spec and architecture.",
+      "description": "Pair-programming partner for small validated slices on existing known context.",
       "inputs": [
         { "type": "artifact", "path_pattern": ".aioson/context/spec-{slug}.md", "required": false },
-        { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false },
-        { "type": "gate", "path_pattern": "gate:C", "required": false }
+        { "type": "artifact", "path_pattern": ".aioson/context/dev-state.md", "required": false }
       ],
       "outputs": [
         { "type": "artifact", "path_pattern": "src/**/*" },
-        { "type": "artifact", "path_pattern": "tests/**/*" },
-        { "type": "state", "path_pattern": ".aioson/context/dev-state.md" }
-      ]
-    },
-    {
-      "id": "refactor_code",
-      "category": "transform",
-      "description": "Refactor existing code while preserving behavior.",
-      "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/discovery.md", "required": false }
-      ],
-      "outputs": [
-        { "type": "artifact", "path_pattern": "src/**/*" }
+        { "type": "artifact", "path_pattern": "tests/**/*" }
       ]
     },
     {
@@ -40,14 +28,13 @@
       "outputs": [
         { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/current-state.md" },
         { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/how-it-works.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/what-it-does.md" },
         { "type": "event", "path_pattern": "runtime:memory_reflect_committed" }
       ],
       "trigger": "post_agent_done",
       "tier": "tier2_notified"
     }
   ],
-  "autonomy_modes": ["guarded", "trusted"],
+  "autonomy_modes": ["guarded"],
   "default_mode": "guarded",
   "supported_tools": ["codex", "claude", "gemini", "opencode"],
   "risk_profile": "medium"

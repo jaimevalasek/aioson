@@ -226,9 +226,14 @@ async function runMemorySummary({ args, options = {}, logger }) {
   return { ok: true, status, summary };
 }
 
+const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
+const { runMemoryReflectCommit } = require('./memory-reflect-commit');
+
 module.exports = {
   REQUIRED_BOOTSTRAP,
   collectMemoryStatus,
   runMemoryStatus,
-  runMemorySummary
+  runMemorySummary,
+  runMemoryReflectPrepare,
+  runMemoryReflectCommit
 };

@@ -28,8 +28,15 @@ aioson workflow:status .
 aioson context:validate .
 aioson preflight . --agent=dev --feature={slug}
 aioson preflight:context . --agent=dev
+aioson memory:status .
 ```
 Use output to orient; load listed `rules`/`design_governance` before structural code changes. If CLI unavailable, proceed to Step 1.
+
+**Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
+
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Run `/discover` (or `aioson memory:refresh`) before continuing on broad work.
+
+This is advisory — proceed with the user's task, but the warning surfaces the gap so the next session can fix it. Skip when bootstrap/ does not exist (greenfield).
 
 **Step 1 — Check dev-state:**
 Read `.aioson/context/dev-state.md` if it exists.
@@ -279,6 +286,10 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.
 - No unnecessary rewrites outside current responsibility.
 - Do not copy content from discovery.md or architecture.md into your output. Reference by section name. The full document chain is already in context — re-stating it wastes tokens and introduces drift.
+
+## Memory reflection (post-session)
+
+If `.aioson/runtime/reflect-prompt.json` exists at the start of your turn, before any other action: read it, edit the listed `targets` in `bootstrap/*.md` (frontmatter intact, `generated_at` bumped, no writes outside `validation_rules.allowed_paths`), then `aioson memory:reflect-commit . --agent=dev --output=<path>` with `{ "files": { "<rel>": "<content>" } }`. See `.aioson/docs/autonomy-protocol.md` for tier semantics. Skip silently if no manifest is present.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=dev --summary="Implemented <slug>: phase <N>/<total>, <N> files" 2>/dev/null || true`

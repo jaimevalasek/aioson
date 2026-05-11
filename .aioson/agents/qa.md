@@ -28,6 +28,12 @@ If `.aioson/context/bootstrap/` exists, read these files before starting review:
 
 Use this knowledge to evaluate the feature in the context of the system around it, not in isolation. Skip silently when `bootstrap/` is absent.
 
+**Bootstrap gate (Living Memory):** before starting, run `aioson memory:status .` if available. If `Bootstrap < 4/4` or the files are older than 30 days, surface a warning at the top of your QA report:
+
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Findings may miss recently-landed context — recommend `/discover` before next review.
+
+This is advisory; continue with the review. Skip when bootstrap/ does not exist.
+
 ## Feature mode detection
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
@@ -342,23 +348,30 @@ Apply these rules when merging:
 
 ## Feature closure (feature mode only)
 
-When QA is complete and all Critical and High findings are resolved, run the CLI — do not edit `spec-{slug}.md` and `features.md` by hand. `feature:close` updates both, adjusts `project-pulse.md`, and triggers automatic archival of all feature artefacts into `.aioson/context/done/{slug}/` (updating `done/MANIFEST.md` for `@briefing`, `@neo`, `@discover`, `@sheldon`).
+When QA is complete and all Critical and High findings are resolved:
 
-**1. Run:**
-```bash
-aioson feature:close . --feature={slug} --verdict=PASS --residual="{residual risks or 'none'}"
-```
+**1. Update `spec-{slug}.md`:**
+- Add a `## QA sign-off` section at the bottom:
+  ```markdown
+  ## QA sign-off
+  - Date: {ISO-date}
+  - AC coverage: X/Y fully covered
+  - Residual risks: [list or "none"]
+  ```
 
-For a failed QA, use `--verdict=FAIL --notes="{reason}"` — no archival happens on FAIL.
+**2. Update `features.md`:**
+- Change status from `in_progress` to `done`.
+- Fill in the `completed` date.
+  ```
+  | {slug} | done | {started} | {ISO-date} |
+  ```
 
-**2. Tell the user:**
-> "Feature **{slug}** is QA-approved and closed. Artefacts archived under `.aioson/context/done/{slug}/` — the context root stays clean automatically.
-> Residual risks are documented in `spec-{slug}.md` (now inside the archive).
+**3. Tell the user:**
+> "Feature **{slug}** is QA-approved and marked as `done` in `features.md`.
+> Residual risks are documented in `spec-{slug}.md`.
 > To start the next feature, activate **@product**."
 
 > **Never mark `done` if any Critical or High finding is unresolved.** Medium and Low findings may remain open — document them as residual risks.
-
-**Skip auto-archive** only when you need to re-run `feature:close` idempotently or are debugging — pass `--no-archive` in that case. Otherwise leave it on (default).
 
 ## Motor AIOSON — hardening rules (must respect)
 
@@ -410,6 +423,10 @@ aioson workflow:next .
 - Write tests for Critical/High — do not just describe them.
 - Never invent findings. Never omit Critical findings.
 - Report: file + line + risk + fix only.
+
+## Memory reflection (post-session)
+
+If `.aioson/runtime/reflect-prompt.json` exists at the start of your turn: read it, edit the listed `targets` in `bootstrap/*.md` (frontmatter intact, `generated_at` bumped, no writes outside `validation_rules.allowed_paths`), then `aioson memory:reflect-commit . --agent=qa --output=<path>` with `{ "files": { "<rel>": "<content>" } }`. See `.aioson/docs/autonomy-protocol.md` for tier semantics. Skip silently if no manifest is present.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=qa --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" 2>/dev/null || true`

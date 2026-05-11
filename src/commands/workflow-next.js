@@ -16,6 +16,7 @@ const { logError, buildHealingPrompt } = require('../self-healing');
 const { validateHandoffProtocol } = require('../handoff-validator');
 const { readAutonomyProtocol, resolveEffectiveMode } = require('../autonomy-policy');
 const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-manifests');
+const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { runSecurityAudit } = require('./security-audit');
@@ -1074,6 +1075,17 @@ async function runWorkflowNext({ args, options, logger, t }) {
       const retriesPath = path.join(targetDir, '.aioson/context/pipeline-retries', `${completedStage}.json`);
       try { await fs.unlink(retriesPath); } catch { /* ignore */ }
     }
+
+    // ── Living Memory: reflect bootstrap if the completed stage produced
+    //    a relevant diff (routes/models/contracts/volume). Best-effort —
+    //    never fail the workflow on reflection errors.
+    try {
+      await runMemoryReflectPrepare({
+        args: [targetDir],
+        options: { agent: completedStage, json: true },
+        logger: { log: () => {}, error: () => {} }
+      });
+    } catch { /* reflection is advisory; never block the workflow */ }
   }
 
   if (options.skip) {
@@ -1093,6 +1105,18 @@ async function runWorkflowNext({ args, options, logger, t }) {
 
   const activation = await activateStage(targetDir, state, locale, tool, requestedAgent, options.mode || null);
   state = activation.state;
+
+  // ── Living Memory: if a reflect manifest is pending (created above by the
+  //    completed agent), prepend a one-line instruction so the next agent
+  //    consumes it before any other action.
+  try {
+    const reflectPath = path.join(targetDir, '.aioson/runtime/reflect-prompt.json');
+    if (await exists(reflectPath) && activation.prompt) {
+      activation.prompt =
+        'ℹ [memory] reflect-prompt.json pending — before any other action, read .aioson/runtime/reflect-prompt.json and run `aioson memory:reflect-commit . --agent=' + (activation.agent || 'dev') + ' --output=<path>` per your Memory Reflection section.\n\n' +
+        activation.prompt;
+    }
+  } catch { /* ignore */ }
   const statePath = await persistState(targetDir, state);
   const eventPayload = {
     id: Date.now(),

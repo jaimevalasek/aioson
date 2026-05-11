@@ -1,10 +1,85 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "global_mode": "guarded",
+  "tiers": {
+    "tier1_silent": {
+      "description": "Read-only and internal telemetry. Auto-execute without notification.",
+      "shell_patterns": [
+        "git diff *",
+        "git log *",
+        "git status",
+        "git show *",
+        "git rev-parse *",
+        "ls *",
+        "cat *",
+        "head *",
+        "tail *",
+        "wc *",
+        "grep *",
+        "rg *",
+        "find . *"
+      ],
+      "aioson_commands": [
+        "preflight",
+        "preflight:context",
+        "context:health",
+        "context:validate",
+        "context:pack",
+        "memory:status",
+        "memory:summary",
+        "workflow:status",
+        "runtime:emit",
+        "agent:done",
+        "brain:query",
+        "doctor"
+      ]
+    },
+    "tier2_notified": {
+      "description": "Changes to framework memory. Auto-execute plus inline notify.",
+      "shell_patterns": [],
+      "aioson_commands": [
+        "memory:reflect-prepare",
+        "memory:reflect-commit",
+        "memory:refresh",
+        "workflow:next",
+        "workflow:heal",
+        "live:handoff",
+        "live:close",
+        "dossier:add-codemap",
+        "dossier:add-finding",
+        "dossier:link-rule",
+        "notify"
+      ],
+      "write_paths": [
+        ".aioson/context/bootstrap/**",
+        ".aioson/context/features/**",
+        ".aioson/runtime/**"
+      ]
+    },
+    "tier3_blocking": {
+      "description": "Irreversible or external operations. Block and require human action.",
+      "shell_patterns": [
+        "git push *",
+        "git reset --hard *",
+        "git checkout -- *",
+        "rm -rf *",
+        "npm publish *",
+        "curl * | sh",
+        "curl * | bash"
+      ],
+      "aioson_commands": [
+        "cloud:publish:*",
+        "genome:publish",
+        "skill:publish",
+        "squad:publish"
+      ]
+    }
+  },
   "tools": {
     "codex": {
       "mode": "trusted",
       "fallback_mode": "guarded",
+      "derived_from_tiers": ["tier1_silent", "tier2_notified"],
       "shell_whitelist": ["git *", "npm *", "npx *", "node *", "aioson *"],
       "shell_blacklist": ["rm -rf /", "curl * | sh", "*>*"],
       "aioson_whitelist": ["workflow:next", "workflow:heal", "commit:prepare", "git:guard", "runtime:emit", "live:handoff"],
@@ -14,6 +89,7 @@
     "claude": {
       "mode": "trusted",
       "fallback_mode": "guarded",
+      "derived_from_tiers": ["tier1_silent", "tier2_notified"],
       "shell_whitelist": ["git *", "npm *", "npx *", "node *", "aioson *"],
       "shell_blacklist": ["rm -rf /", "curl * | sh", "*>*"],
       "aioson_whitelist": ["workflow:next", "workflow:heal", "commit:prepare", "git:guard", "runtime:emit", "live:handoff"],
@@ -23,6 +99,7 @@
     "gemini": {
       "mode": "guarded",
       "fallback_mode": "guarded",
+      "derived_from_tiers": ["tier1_silent"],
       "shell_whitelist": ["git status", "git log", "npm test"],
       "aioson_whitelist": ["workflow:next"],
       "requires_tty": true,
@@ -31,6 +108,7 @@
     "opencode": {
       "mode": "guarded",
       "fallback_mode": "abort",
+      "derived_from_tiers": ["tier1_silent"],
       "shell_whitelist": [],
       "aioson_whitelist": ["workflow:next"],
       "requires_tty": true,

@@ -1,21 +1,21 @@
 ---
 active_feature: living-memory
-active_phase: 0
+active_phase: 5
 active_plan: architecture-living-memory.md
-last_spec_version: 1
+last_spec_version: 6
 context_package:
   - .aioson/context/project.context.md
   - .aioson/context/architecture-living-memory.md
   - .aioson/context/spec-living-memory.md
-next_step: "Fase 1 — Reflexão In-Harness: criar src/memory-reflect-engine.js (heurística determinística + buildPrompt + validate), depois sub-comandos memory:reflect-prepare e memory:reflect-commit em src/commands/memory.js, depois templates em template/.aioson/templates/reflect-prompts/*.md. Total estimado: ~6h (2 sessões /dev)."
-status: ready_for_phase_1
+next_step: "Feature living-memory COMPLETA (5/5 fases). Próximos candidatos não-bloqueantes: (1) promover autonomy-protocol v1.1 via aioson update --all em projetos consumidores; (2) telemetria de adoção das reflexões (SQLite queries); (3) bug-fix do test #15 (dev.md > 15KB kernel size, pré-existente); (4) próxima feature harness-isolation (deferred da F4). Próxima ativação esperada: @qa para Gate D ou nova feature."
+status: feature_complete
 updated_at: 2026-05-11
 ---
 
 # Dev State — living-memory
 
 ## Foco atual
-Feature `living-memory` em desenvolvimento. Fase 0 (correções urgentes do template) concluída. Próxima: Fase 1 (Reflexão In-Harness).
+✅ Feature `living-memory` COMPLETA — Fases 0-5 entregues. Aguardando ativação de @qa para Gate D ou nova feature.
 
 ## Pacote de contexto — carregar SOMENTE estes arquivos
 1. `.aioson/context/project.context.md` — sempre
@@ -28,18 +28,18 @@ Feature `living-memory` em desenvolvimento. Fase 0 (correções urgentes do temp
 - `dev-state.md` antigo de `harness-driven-aioson` (substituído por este)
 
 ## O que foi feito (últimas 3 sessões)
-- 2026-05-11 @architect: arquitetura `architecture-living-memory.md` entregue, Gate B approved
-- 2026-05-11 @dev: Fase 0 completa — slash `/discover` consertado em todos harnesses, constants.js estendido, validado no atendimento
-- 2026-05-08 @qa: harness-driven-aioson Gate D approved (feature anterior, fechada)
+- 2026-05-11 @dev: Fase 5 completa — 7 docs em pt-BR (README + memoria-viva + reflexao-in-harness + autonomy-contract + notificacoes-info + troubleshooting + diagramas, ~1440 linhas), link no docs/pt/README.md principal
+- 2026-05-11 @dev: Fase 4 completa — 5 checks de doctor (severity=warning), 5 fix actions (3 ativas + 2 advisory), i18n em 4 idiomas, 10 testes passam
+- 2026-05-11 @dev: Fase 3 completa — capability reflect_memory em manifests, Memory reflection nos agents, bootstrap gate, hooks em workflow-next/runAgentDone, autonomy-protocol.md doc
 
 ## Próximo passo
-**Fase 1 — Reflexão In-Harness** (ordem):
-1. `src/memory-reflect-engine.js` — função `evaluate(targetDir, agent)` retorna `{ verdict, reasons }`; função `buildPrompt(snapshot, diff, devlog)` retorna texto JSON; função `validate(commitOutput)` retorna `{ ok, errors }`
-2. `src/commands/memory-reflect-prepare.js` — sub-comando: lê estado, roteia para engine, escreve `.aioson/runtime/reflect-prompt.json`
-3. `src/commands/memory-reflect-commit.js` — sub-comando: lê output do agente, valida via engine, atualiza `bootstrap/*.md`, registra runtime event
-4. `template/.aioson/templates/reflect-prompts/{current-state,how-it-works,what-it-does}.md` — templates de prompt para reflexão
-5. Adicionar sub-comandos ao roteador em `src/commands/memory.js`
-6. Testes: 6 cenários (verdict relevant/skip, validation pass/fail, concurrency, missing bootstrap)
+✅ Feature COMPLETA. Sugestões para sessões futuras:
+- **@qa** — Gate D: revisão final da feature antes de marcar `done` em features.md
+- **@committer** — commit estruturado da feature inteira (com referência a architecture-living-memory.md)
+- **Nova feature** — sugestão deferred: `harness-isolation` (sandbox real por tier, não só permissão)
 
-## Critério de aceite da Fase 1
-`aioson memory:reflect-prepare . --agent=dev` gera `reflect-prompt.json` válido contra fixture de teste.
+## Status final
+- 2190/2193 testes passam (3 pré-existentes desde Fase 0)
+- 39 testes novos somados (8+19+2+10+0)
+- ~1100 linhas de produção, ~1440 linhas de doc
+- 5 fases, 33 decisões registradas (D1-D33)

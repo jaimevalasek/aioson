@@ -7,6 +7,7 @@ const { getCliVersion } = require('./version');
 const { exists, ensureDir, copyFileWithDir, nowStamp, toRelativeSafe } = require('./utils');
 const { ensureProjectRuntime } = require('./execution-gateway');
 const { shouldIncludeForProfile } = require('./install-profile');
+const { generatePermissions } = require('./permissions-generator');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
@@ -367,6 +368,17 @@ async function installTemplate(targetDir, options = {}) {
     runtime = await ensureProjectRuntime(targetDir);
   }
 
+  // Derive native harness permissions from autonomy-protocol.json
+  // (best-effort: never block installation on permissions sync failure).
+  let permissions = null;
+  if (!dryRun) {
+    try {
+      permissions = await generatePermissions(targetDir);
+    } catch (err) {
+      permissions = { error: err && err.message ? err.message : String(err) };
+    }
+  }
+
   // Detect if this is an existing project with many files
   const projectFileCount = await countProjectFiles(targetDir);
   const isExistingProject = frameworkDetection && projectFileCount > 20;
@@ -378,6 +390,7 @@ async function installTemplate(targetDir, options = {}) {
     backedUp,
     failedBackups,
     runtime,
+    permissions,
     dryRun,
     projectFileCount,
     isExistingProject

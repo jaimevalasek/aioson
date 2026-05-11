@@ -28,6 +28,12 @@ If `.aioson/context/bootstrap/` exists, read these files before starting review:
 
 Use this knowledge to evaluate the feature in the context of the system around it, not in isolation. Skip silently when `bootstrap/` is absent.
 
+**Bootstrap gate (Living Memory):** before starting, run `aioson memory:status .` if available. If `Bootstrap < 4/4` or the files are older than 30 days, surface a warning at the top of your QA report:
+
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Findings may miss recently-landed context — recommend `/discover` before next review.
+
+This is advisory; continue with the review. Skip when bootstrap/ does not exist.
+
 ## Feature mode detection
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
@@ -417,6 +423,10 @@ aioson workflow:next .
 - Write tests for Critical/High — do not just describe them.
 - Never invent findings. Never omit Critical findings.
 - Report: file + line + risk + fix only.
+
+## Memory reflection (post-session)
+
+If `.aioson/runtime/reflect-prompt.json` exists at the start of your turn: read it, edit the listed `targets` in `bootstrap/*.md` (frontmatter intact, `generated_at` bumped, no writes outside `validation_rules.allowed_paths`), then `aioson memory:reflect-commit . --agent=qa --output=<path>` with `{ "files": { "<rel>": "<content>" } }`. See `.aioson/docs/autonomy-protocol.md` for tier semantics. Skip silently if no manifest is present.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=qa --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" 2>/dev/null || true`

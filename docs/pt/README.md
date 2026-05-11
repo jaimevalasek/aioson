@@ -48,6 +48,7 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 - [Live Sessions](./5-referencia/live-sessions.md) — sessões rastreadas com tmux, status bar, handoff
 - [Secure by Default](./5-referencia/secure-by-default.md) — baseline `SEC-SBD-01..08` + `git:guard`
 - [aioson.com Store](./5-referencia/aioson-com-store.md) — publish/install de squads, genomes, skills
+- **[Memória Viva](./living-memory/README.md)** — bootstrap auto-atualizado + autonomy contract (3 tiers) + `notify` (ℹ/⚠/⛔) + 5 checks novos no doctor
 
 ### Arquivo histórico
 [`_arquivo/`](./_arquivo/) — versões anteriores das docs, preservadas com nota de redirect para o novo equivalente. Nenhum conteúdo foi perdido.

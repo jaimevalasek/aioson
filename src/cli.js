@@ -149,7 +149,13 @@ const { runDevlogProcess } = require('./commands/devlog-process');
 const { runDevlogWatch } = require('./commands/devlog-watch');
 const { runDevlogExportBrains } = require('./commands/devlog-export-brains');
 const { runBrainQuery } = require('./commands/brain-query');
-const { runMemoryStatus, runMemorySummary } = require('./commands/memory');
+const {
+  runMemoryStatus,
+  runMemorySummary,
+  runMemoryReflectPrepare,
+  runMemoryReflectCommit
+} = require('./commands/memory');
+const { runNotify } = require('./commands/notify');
 const { runSpecSync } = require('./commands/spec-sync');
 const { runSpecStatus } = require('./commands/spec-status');
 const { runSpecCheckpoint } = require('./commands/spec-checkpoint');
@@ -491,6 +497,11 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'memory-status',
   'memory:summary',
   'memory-summary',
+  'memory:reflect-prepare',
+  'memory-reflect-prepare',
+  'memory:reflect-commit',
+  'memory-reflect-commit',
+  'notify',
   'runtime:backup',
   'runtime-backup',
   'runtime:restore',
@@ -1172,6 +1183,12 @@ async function main() {
       result = await runMemoryStatus({ args, options, logger: commandLogger });
     } else if (command === 'memory:summary' || command === 'memory-summary') {
       result = await runMemorySummary({ args, options, logger: commandLogger });
+    } else if (command === 'memory:reflect-prepare' || command === 'memory-reflect-prepare') {
+      result = await runMemoryReflectPrepare({ args, options, logger: commandLogger });
+    } else if (command === 'memory:reflect-commit' || command === 'memory-reflect-commit') {
+      result = await runMemoryReflectCommit({ args, options, logger: commandLogger });
+    } else if (command === 'notify') {
+      result = await runNotify({ args, options, logger: commandLogger });
     } else if (command === 'runtime:prune' || command === 'runtime-prune') {
       result = await runRuntimePrune({ args, options, logger: commandLogger, t });
     } else if (command === 'runtime:backup' || command === 'runtime-backup') {

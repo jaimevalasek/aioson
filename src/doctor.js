@@ -7,6 +7,78 @@ const { installTemplate, TEMPLATE_DIR } = require('./installer');
 const { exists, copyFileWithDir } = require('./utils');
 const { validateProjectContextFile, getInteractionLanguage } = require('./context');
 const { applyAgentLocale } = require('./locales');
+const { getCliVersion } = require('./version');
+const { generatePermissions, OUTPUT_PATHS: PERMISSIONS_OUTPUT_PATHS } = require('./permissions-generator');
+
+const BOOTSTRAP_REQUIRED = ['what-is.md', 'how-it-works.md', 'what-it-does.md', 'current-state.md'];
+
+const CLAUDE_AGENT_COMMANDS_REQUIRED = [
+  '.claude/commands/aioson/agent/setup.md',
+  '.claude/commands/aioson/agent/dev.md',
+  '.claude/commands/aioson/agent/qa.md',
+  '.claude/commands/aioson/agent/discover.md'
+];
+
+async function countBootstrapFiles(targetDir) {
+  const dir = path.join(targetDir, '.aioson/context/bootstrap');
+  let present = 0;
+  for (const name of BOOTSTRAP_REQUIRED) {
+    if (await exists(path.join(dir, name))) present += 1;
+  }
+  return { present, required: BOOTSTRAP_REQUIRED.length };
+}
+
+async function readMtime(filePath) {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+async function readContextVersion(targetDir) {
+  try {
+    const raw = await fs.readFile(path.join(targetDir, '.aioson/context/project.context.md'), 'utf8');
+    const match = raw.match(/aioson_version\s*:\s*["']?([^"'\n]+)["']?/);
+    return match ? match[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function assessPermissionsSync(targetDir) {
+  const protocolPath = path.join(targetDir, '.aioson/config/autonomy-protocol.json');
+  const protocolMtime = await readMtime(protocolPath);
+  if (protocolMtime === null) {
+    return { protocolMissing: true, drifted: [], missing: [] };
+  }
+
+  // Only check files for tools the protocol actually declares — extra harness
+  // files left over from previous installs are not considered drift.
+  let declaredTools = [];
+  try {
+    const raw = await fs.readFile(protocolPath, 'utf8');
+    const json = JSON.parse(raw);
+    declaredTools = Object.keys(json.tools || {});
+  } catch {
+    declaredTools = Object.keys(PERMISSIONS_OUTPUT_PATHS);
+  }
+
+  const drifted = [];
+  const missing = [];
+  for (const tool of declaredTools) {
+    const rel = PERMISSIONS_OUTPUT_PATHS[tool];
+    if (!rel) continue;
+    const m = await readMtime(path.join(targetDir, rel));
+    if (m === null) {
+      missing.push(rel);
+    } else if (m < protocolMtime) {
+      drifted.push(rel);
+    }
+  }
+  return { protocolMissing: false, drifted, missing };
+}
 
 function parseMajor(version) {
   const cleaned = String(version || '').replace(/^v/, '');
@@ -197,13 +269,106 @@ async function runDoctor(targetDir) {
     ok: major >= 18
   });
 
-  const failed = checks.filter((c) => !c.ok);
+  // ── Living Memory checks (Fase 4) ────────────────────────────────────────
+  // Severity = 'warning' so they surface to the user as advisories without
+  // breaking the overall `report.ok` (which gates downstream tooling).
+
+  // 1. bootstrap_coverage
+  const bootstrapDirExists = await exists(path.join(targetDir, '.aioson/context/bootstrap'));
+  const bootstrapStats = await countBootstrapFiles(targetDir);
+  checks.push({
+    id: 'living-memory:bootstrap_coverage',
+    severity: 'warning',
+    key: 'doctor.bootstrap_coverage',
+    params: { present: bootstrapStats.present, required: bootstrapStats.required },
+    ok: bootstrapStats.present === bootstrapStats.required,
+    hintKey: bootstrapStats.present === bootstrapStats.required
+      ? undefined
+      : (bootstrapDirExists ? 'doctor.bootstrap_coverage_hint' : 'doctor.bootstrap_coverage_hint_seed')
+  });
+
+  // 2. features_dir_present
+  const featuresDirExists = await exists(path.join(targetDir, '.aioson/context/features'));
+  checks.push({
+    id: 'living-memory:features_dir',
+    severity: 'warning',
+    key: 'doctor.features_dir_present',
+    params: {},
+    ok: featuresDirExists,
+    hintKey: featuresDirExists ? undefined : 'doctor.features_dir_present_hint'
+  });
+
+  // 3. claude_commands_present
+  const missingClaudeCmds = [];
+  for (const rel of CLAUDE_AGENT_COMMANDS_REQUIRED) {
+    if (!(await exists(path.join(targetDir, rel)))) missingClaudeCmds.push(rel);
+  }
+  checks.push({
+    id: 'living-memory:claude_commands',
+    severity: 'warning',
+    key: 'doctor.claude_commands_present',
+    params: { missing: missingClaudeCmds.length, required: CLAUDE_AGENT_COMMANDS_REQUIRED.length },
+    ok: missingClaudeCmds.length === 0,
+    hintKey: missingClaudeCmds.length === 0 ? undefined : 'doctor.claude_commands_present_hint',
+    hintParams: missingClaudeCmds.length === 0 ? undefined : { paths: missingClaudeCmds.join(', ') }
+  });
+
+  // 4. version_drift
+  const contextVersion = await readContextVersion(targetDir);
+  const cliVersion = await getCliVersion();
+  const versionOk = !contextVersion || contextVersion === cliVersion;
+  checks.push({
+    id: 'living-memory:version_drift',
+    severity: 'warning',
+    key: 'doctor.version_drift',
+    params: { context: contextVersion || '(none)', cli: cliVersion },
+    ok: versionOk,
+    hintKey: versionOk ? undefined : 'doctor.version_drift_hint'
+  });
+
+  // 5. permissions_in_sync
+  const permsAssessment = await assessPermissionsSync(targetDir);
+  const permsOk = !permsAssessment.protocolMissing
+    && permsAssessment.drifted.length === 0
+    && permsAssessment.missing.length === 0;
+  checks.push({
+    id: 'living-memory:permissions_in_sync',
+    severity: 'warning',
+    key: 'doctor.permissions_in_sync',
+    params: {
+      drifted: permsAssessment.drifted.length,
+      missing: permsAssessment.missing.length,
+      protocol_missing: permsAssessment.protocolMissing ? 'yes' : 'no'
+    },
+    ok: permsOk,
+    hintKey: permsOk
+      ? undefined
+      : (permsAssessment.protocolMissing ? 'doctor.permissions_protocol_missing_hint' : 'doctor.permissions_in_sync_hint'),
+    hintParams: permsOk ? undefined : {
+      paths: [...permsAssessment.drifted, ...permsAssessment.missing].join(', ') || '(none)'
+    }
+  });
+
+  // Overall `ok` only considers errors (not warnings). `failedCount` still
+  // includes warnings so the user sees them in the count line.
+  const errorChecks = checks.filter((c) => !c.ok && c.severity !== 'warning');
+  const warningChecks = checks.filter((c) => !c.ok && c.severity === 'warning');
+  const failed = [...errorChecks, ...warningChecks];
 
   return {
-    ok: failed.length === 0,
+    ok: errorChecks.length === 0,
     checks,
     failedCount: failed.length,
-    contextValidation
+    warningCount: warningChecks.length,
+    errorCount: errorChecks.length,
+    contextValidation,
+    livingMemory: {
+      bootstrap: bootstrapStats,
+      featuresDir: featuresDirExists,
+      claudeCommandsMissing: missingClaudeCmds,
+      versionDrift: !versionOk ? { context: contextVersion, cli: cliVersion } : null,
+      permissions: permsAssessment
+    }
   };
 }
 
@@ -312,6 +477,98 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
       applied: false,
       skipped: true,
       count: 0
+    });
+  }
+
+  // ── Living Memory fixes (Fase 4) ─────────────────────────────────────────
+
+  // claude_commands: restore missing claude slash commands from template
+  const missingClaudeCmds = (report.livingMemory && report.livingMemory.claudeCommandsMissing) || [];
+  if (missingClaudeCmds.length > 0) {
+    const restored = await restoreTemplateFiles(targetDir, missingClaudeCmds, { dryRun });
+    if (restored.length > 0) changedCount += restored.length;
+    actions.push({
+      id: 'claude_commands',
+      applied: restored.length > 0,
+      count: restored.length,
+      missingCount: missingClaudeCmds.length
+    });
+  } else {
+    actions.push({ id: 'claude_commands', applied: false, skipped: true, count: 0, missingCount: 0 });
+  }
+
+  // features_dir: mkdir if missing
+  const featuresDirOk = !!(report.livingMemory && report.livingMemory.featuresDir);
+  if (!featuresDirOk) {
+    const featuresDir = path.join(targetDir, '.aioson/context/features');
+    if (!dryRun) {
+      await fs.mkdir(featuresDir, { recursive: true });
+    }
+    changedCount += 1;
+    actions.push({ id: 'features_dir', applied: !dryRun, count: 1, missingCount: 1 });
+  } else {
+    actions.push({ id: 'features_dir', applied: false, skipped: true, count: 0, missingCount: 0 });
+  }
+
+  // permissions_in_sync: regenerate native permission files
+  const permsAssessment = (report.livingMemory && report.livingMemory.permissions) || null;
+  const permsNeedRegen = permsAssessment
+    && !permsAssessment.protocolMissing
+    && (permsAssessment.drifted.length > 0 || permsAssessment.missing.length > 0);
+  if (permsNeedRegen) {
+    if (!dryRun) {
+      try {
+        const result = await generatePermissions(targetDir);
+        const regenCount = (result.written || []).length;
+        if (regenCount > 0) changedCount += regenCount;
+        actions.push({
+          id: 'permissions_in_sync',
+          applied: regenCount > 0,
+          count: regenCount,
+          missingCount: permsAssessment.drifted.length + permsAssessment.missing.length
+        });
+      } catch (err) {
+        actions.push({
+          id: 'permissions_in_sync',
+          applied: false,
+          count: 0,
+          error: err && err.message ? err.message : String(err),
+          missingCount: permsAssessment.drifted.length + permsAssessment.missing.length
+        });
+      }
+    } else {
+      actions.push({
+        id: 'permissions_in_sync',
+        applied: false,
+        count: permsAssessment.drifted.length + permsAssessment.missing.length,
+        missingCount: permsAssessment.drifted.length + permsAssessment.missing.length,
+        dryRun: true
+      });
+    }
+  } else {
+    actions.push({ id: 'permissions_in_sync', applied: false, skipped: true, count: 0, missingCount: 0 });
+  }
+
+  // bootstrap_coverage and version_drift: advisory only (no auto-fix)
+  const bs = report.livingMemory && report.livingMemory.bootstrap;
+  if (bs && bs.present < bs.required) {
+    actions.push({
+      id: 'bootstrap_coverage',
+      applied: false,
+      skipped: true,
+      advisory: true,
+      count: 0,
+      missingCount: bs.required - bs.present
+    });
+  }
+  if (report.livingMemory && report.livingMemory.versionDrift) {
+    actions.push({
+      id: 'version_drift',
+      applied: false,
+      skipped: true,
+      advisory: true,
+      count: 0,
+      missingCount: 1
     });
   }
 

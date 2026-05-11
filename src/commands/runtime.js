@@ -21,6 +21,7 @@ const {
 const { runAutoDelivery } = require('../delivery-runner');
 const { writeHandoff, buildRuntimeLogHandoff } = require('../session-handoff');
 const { backupAiosonDocs, isDocCreatingAgent } = require('../backup-local');
+const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
 
 const ALLOWED_LAYOUTS = new Set(['document', 'tabs', 'accordion', 'stack', 'mixed']);
 const DEFAULT_TEXT_FIELDS = ['content', 'text', 'body', 'lyrics', 'markdown'];
@@ -1225,6 +1226,15 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         backupAiosonDocs(targetDir).catch(() => {});
       }
 
+      // Living Memory: best-effort reflection (never blocks the close)
+      try {
+        await runMemoryReflectPrepare({
+          args: [targetDir],
+          options: { agent: normalizedAgent.replace(/^@/, ''), json: true },
+          logger: { log: () => {}, error: () => {} }
+        });
+      } catch { /* ignore */ }
+
       return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey };
     }
 
@@ -1272,6 +1282,15 @@ async function runAgentDone({ args, options = {}, logger, t }) {
     if (isDocCreatingAgent(normalizedAgent)) {
       backupAiosonDocs(targetDir).catch(() => {});
     }
+
+    // Living Memory: best-effort reflection (never blocks the close)
+    try {
+      await runMemoryReflectPrepare({
+        args: [targetDir],
+        options: { agent: normalizedAgent.replace(/^@/, ''), json: true },
+        logger: { log: () => {}, error: () => {} }
+      });
+    } catch { /* ignore */ }
 
     return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey };
   } finally {
