@@ -275,7 +275,13 @@ module.exports = {
     step_agent_prompt: '3. Generate setup prompt for your tool: aioson agent:prompt setup --tool={tool}',
     existing_project_detected: '⚠ Existing project detected ({count} files). Run the scanner before starting:',
     existing_project_scan_hint:
-      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (generates discovery.md + skeleton-system.md; omit --with-llm for local maps only)'
+      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (generates discovery.md + skeleton-system.md; omit --with-llm for local maps only)',
+    using_saved_profile: 'Using saved install profile from .aioson/install.json.',
+    fallback_no_saved_profile: '⚠  No saved profile and no interactive wizard available — fallback to install-all (every template file will be copied).',
+    reconfigure_needs_tty: '--reconfigure requires an interactive terminal (blocked by: {reason}). Re-run in a real TTY without --no-interactive/--dry-run.',
+    opening_wizard: '› Opening install wizard (↑/↓ navigate, space toggle, enter confirm, q/Ctrl+C cancel)...',
+    wizard_cancelled_using_saved: '⚠  Wizard cancelled — falling back to saved install profile.',
+    wizard_cancelled_install_all: '⚠  Wizard cancelled and no saved profile — falling back to install-all.'
   },
   install_wizard: {
     ready_to_install: 'Ready to install:',

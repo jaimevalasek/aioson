@@ -28,23 +28,61 @@ async function runInstall({ args, options, logger, t }) {
     logger.log(t('install.framework_not_detected'));
   }
 
-  // Decide install profile
+  // Decide install profile.
+  //
+  // UX contract:
+  //   - Interactive (TTY + !no-interactive + !dry-run) → wizard ALWAYS appears,
+  //     pre-populated from saved profile if any. The user no longer needs to
+  //     remember `--reconfigure` to change settings — it's the default flow.
+  //   - Non-interactive → honor saved profile if present, else loud fallback.
+  //   - Contradictions (`--reconfigure --no-interactive`) → fail loudly.
+  //   - Wizard returning null (user pressed q/ctrl+c) → fall back to saved
+  //     profile if any, else explicit "install-all" with warning. Never silent.
   let installProfile = null;
   const isTTY = process.stdin.isTTY && process.stdout.isTTY;
+  const canRunWizard = !noInteractive && isTTY && !dryRun;
+  const existingProfile = await readInstallProfile(targetDir);
 
-  if (!noInteractive && isTTY && !dryRun) {
-    const existingProfile = await readInstallProfile(targetDir);
-    if (!existingProfile || reconfigure) {
-      installProfile = await runInstallWizard({
-        noInteractive,
-        existingProfile: reconfigure ? existingProfile : null,
-        t
-      });
-      // null = user cancelled → fall back to full install
-    } else {
-      installProfile = existingProfile;
-      logger.log(t('install.using_saved_profile'));
+  // --reconfigure needs the wizard. Without one we cannot ask the user
+  // anything, and silently falling back to "install everything" hides the
+  // intent of the flag.
+  if (reconfigure && !canRunWizard) {
+    const reason = noInteractive ? '--no-interactive' : (!isTTY ? 'non-TTY environment' : '--dry-run');
+    throw new Error(t('install.reconfigure_needs_tty', { reason }));
+  }
+
+  if (canRunWizard) {
+    // Diagnostic on stderr — guarantees the user sees something even if the
+    // wizard's first render gets clobbered by terminal escape sequences in
+    // certain emulators. stderr is unbuffered for TTYs.
+    process.stderr.write(`${t('install.opening_wizard')}\n`);
+
+    installProfile = await runInstallWizard({
+      noInteractive,
+      existingProfile,
+      t
+    });
+
+    if (installProfile === null) {
+      // The wizard didn't return a profile. This happens when the user pressed
+      // q/ctrl+c OR when the wizard's internal TTY check failed (some terminal
+      // emulators report isTTY=true but can't actually do raw-mode keypress).
+      // Either way: do NOT silently install-all — fall back to saved profile.
+      if (existingProfile) {
+        installProfile = existingProfile;
+        process.stderr.write(`${t('install.wizard_cancelled_using_saved')}\n`);
+      } else {
+        process.stderr.write(`${t('install.wizard_cancelled_install_all')}\n`);
+      }
     }
+  } else if (existingProfile) {
+    // Non-interactive: honor the saved profile instead of falling through to null.
+    installProfile = existingProfile;
+    logger.log(t('install.using_saved_profile'));
+  } else {
+    // Non-interactive AND no saved profile: install-all is the only safe fallback,
+    // but it must be announced so the user understands why every file was copied.
+    logger.log(t('install.fallback_no_saved_profile'));
   }
 
   // When reconfigure, we need overwrite=true so changed profile is reflected

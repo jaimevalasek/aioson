@@ -843,8 +843,6 @@ async function main() {
       result = await runInstall({ args, options, logger: commandLogger, t });
     } else if (command === 'setup') {
       result = await runSetup({ args, options, logger: commandLogger, t });
-    } else if (command === 'install') {
-      result = await runInstall({ args, options, logger: commandLogger, t });
     } else if (command === 'update') {
       result = await runUpdate({ args, options, logger: commandLogger, t });
     } else if (command === 'info') {

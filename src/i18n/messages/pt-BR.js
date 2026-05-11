@@ -242,7 +242,13 @@ module.exports = {
     existing_project_detected:
       '⚠ Projeto existente detectado ({count} arquivos). Rode o scanner antes de comecar:',
     existing_project_scan_hint:
-      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (gera discovery.md + skeleton-system.md; sem --with-llm gera apenas os mapas locais)'
+      '  aioson scan:project . --folder=src --with-llm --provider=<provider>   (gera discovery.md + skeleton-system.md; sem --with-llm gera apenas os mapas locais)',
+    using_saved_profile: 'Usando perfil de instalacao salvo em .aioson/install.json.',
+    fallback_no_saved_profile: '⚠  Sem perfil salvo e sem wizard interativo disponivel — fallback para install-all (todos os arquivos do template serao copiados).',
+    reconfigure_needs_tty: '--reconfigure requer um terminal interativo (bloqueado por: {reason}). Rode novamente em um TTY real, sem --no-interactive/--dry-run.',
+    opening_wizard: '› Abrindo wizard de instalacao (↑/↓ navega, espaco marca, enter confirma, q/Ctrl+C cancela)...',
+    wizard_cancelled_using_saved: '⚠  Wizard cancelado — usando perfil de instalacao salvo.',
+    wizard_cancelled_install_all: '⚠  Wizard cancelado e sem perfil salvo — fallback para install-all.'
   },
   install_wizard: {
     ready_to_install: 'Pronto para instalar:',
