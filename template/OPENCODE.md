@@ -8,6 +8,7 @@
 ## Available agents
 - setup -> `.aioson/agents/setup.md`
 - discovery-design-doc -> `.aioson/agents/discovery-design-doc.md`
+- discover -> `.aioson/agents/discover.md`
 - analyst -> `.aioson/agents/analyst.md`
 - architect -> `.aioson/agents/architect.md`
 - ux-ui (UI/UX) -> `.aioson/agents/ux-ui.md`
