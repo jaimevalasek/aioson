@@ -1,0 +1,140 @@
+{
+  "genome": "copywriting",
+  "domain": "copywriting (foundational direct response baseline)",
+  "type": "function",
+  "version": 2,
+  "format": "genome-v4-modular",
+  "track": "4.2",
+  "language": "en",
+  "depth": "standard",
+  "evidence_mode": "hybrid",
+  "generated": "2026-05-08",
+  "last_updated": "2026-05-08",
+  "fidelity_score": 0.80,
+  "confidence": "high",
+  "advisor_ready": false,
+  "description": "Foundational direct response copywriting genome — One Belief, 5 Acts, PMS, awareness spectrum. Niche-agnostic baseline always loaded by @copywriter as base layer.",
+  "fidelity_history": [
+    { "date": "2026-05-08", "score": 0.80, "phase": "initial creation as foundational genome" },
+    {
+      "date": "2026-05-08",
+      "score": 0.80,
+      "phase": "Track 4.2 modular migration — content decomposed into references; no new evidence",
+      "source_added": null,
+      "source_provenance": "structural — synthesized references from existing single-file material",
+      "references_modified": [],
+      "references_added": [
+        "methodology",
+        "decision-weights",
+        "meta-axioms",
+        "heuristics",
+        "frameworks/one-belief",
+        "frameworks/5-act-narrative",
+        "frameworks/pms-research",
+        "frameworks/classical-formulas",
+        "frameworks/two-paths-close",
+        "frameworks/offer-stack",
+        "application-notes"
+      ],
+      "delta_score": "0.00",
+      "notes": "Operational improvement — folder format with 11 references. Foundational function genome — niche-agnostic baseline. advisor_ready: false (foundational principles, not a person). References .aioson/skills/marketing/ for deeper dives."
+    }
+  ],
+  "references": [
+    {
+      "id": "methodology",
+      "file": "references/methodology.md",
+      "when": "Need overall foundational copywriting method shape (One Belief + 5 Acts + PMS + Awareness Spectrum)",
+      "load_priority": "high"
+    },
+    {
+      "id": "meta-axioms",
+      "file": "references/meta-axioms.md",
+      "when": "Need the 6 foundational philosophies of direct response copywriting",
+      "load_priority": "medium"
+    },
+    {
+      "id": "decision-weights",
+      "file": "references/decision-weights.md",
+      "when": "Resolving copy trade-offs against direct response dogma",
+      "load_priority": "high"
+    },
+    {
+      "id": "heuristics",
+      "file": "references/heuristics.md",
+      "when": "Quick decision rules during copy production (10 H rules)",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-one-belief",
+      "file": "references/frameworks/one-belief.md",
+      "when": "Establishing the one central belief that organizes the entire piece",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-5-act-narrative",
+      "file": "references/frameworks/5-act-narrative.md",
+      "when": "Structuring sales pages, VSLs, or long-form copy with dramatic 5-act arc",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-pms-research",
+      "file": "references/frameworks/pms-research.md",
+      "when": "Audience research before writing (Problems / Myths / Dreams mapping)",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-classical-formulas",
+      "file": "references/frameworks/classical-formulas.md",
+      "when": "Applying AIDA / PAS / BAB based on content type and length",
+      "load_priority": "medium"
+    },
+    {
+      "id": "frameworks-two-paths-close",
+      "file": "references/frameworks/two-paths-close.md",
+      "when": "Close technique for Act 5 — emotional urgency through stay-vs-change framing",
+      "load_priority": "medium"
+    },
+    {
+      "id": "frameworks-offer-stack",
+      "file": "references/frameworks/offer-stack.md",
+      "when": "Building irresistible offer with value anchoring, stacking, bonuses, guarantee",
+      "load_priority": "high"
+    },
+    {
+      "id": "application-notes",
+      "file": "references/application-notes.md",
+      "when": "Loading .aioson/skills/marketing/ references on demand; combining with applied master genomes",
+      "load_priority": "medium"
+    }
+  ],
+  "dependencies": {
+    "skills": [
+      "marketing"
+    ],
+    "genomes": []
+  },
+  "relations": [],
+  "tags": [
+    "copywriting",
+    "direct-response",
+    "foundational",
+    "one-belief",
+    "5-acts",
+    "pms",
+    "awareness-spectrum",
+    "track-4.2-modular"
+  ],
+  "compatible_with": [
+    "@copywriter",
+    "any-squad",
+    "any-master-genome"
+  ],
+  "best_for": [
+    "foundational-baseline",
+    "direct-response-fundamentals",
+    "junior-onboarding",
+    "multi-format-campaigns"
+  ],
+  "use_as": "foundational-baseline-always-loaded-by-copywriter"
+}
