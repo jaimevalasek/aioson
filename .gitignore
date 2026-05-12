@@ -1,7 +1,7 @@
 changelogs/
 node_modules/
 done/
-references/
+/references/
 npm-debug.log*
 .DS_Store
 *:Zone.Identifier
