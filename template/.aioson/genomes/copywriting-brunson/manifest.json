@@ -1,0 +1,152 @@
+{
+  "genome": "copywriting-brunson",
+  "domain": "Direct response copywriting (Brunson method)",
+  "type": "function",
+  "version": 2,
+  "format": "genome-v4-modular",
+  "track": "4.2",
+  "language": "en",
+  "depth": "deep",
+  "evidence_mode": "evidenced",
+  "generated": "2026-05-07",
+  "last_updated": "2026-05-08",
+  "fidelity_score": 0.75,
+  "confidence": "high",
+  "advisor_ready": false,
+  "method_author": "Russell Brunson",
+  "method_source_text": "Expert Secrets (2017) / DotCom Secrets (2015) / Traffic Secrets (2020)",
+  "fidelity_history": [
+    { "date": "2026-05-07", "score": 0.75, "phase": "initial creation from Litecopy file + secondary references" },
+    {
+      "date": "2026-05-08",
+      "score": 0.75,
+      "phase": "Track 4.2 modular migration — content decomposed into references; no new evidence",
+      "source_added": null,
+      "source_provenance": "structural — synthesized references from existing single-file material",
+      "references_modified": [],
+      "references_added": [
+        "methodology",
+        "decision-weights",
+        "meta-axioms",
+        "frameworks/origin-story",
+        "frameworks/perfect-webinar-script",
+        "frameworks/who-what-why-how",
+        "frameworks/value-stack",
+        "frameworks/6-part-structure",
+        "frameworks/persuasive-storytelling-5-structures",
+        "evidence-and-attribution",
+        "application-notes"
+      ],
+      "delta_score": "0.00",
+      "notes": "Operational improvement — folder format with 11 references. Function genome, advisor_ready: false (Brunson is alive but not authorized; no transcripts ingested). Fidelity preserved at 0.75; ingestion of Expert Secrets full text + Brunson webinar transcripts would push above 0.75 in future."
+    }
+  ],
+  "source_files": [
+    "plans/litecopy/Litecopy-10-Russell Brunson.txt"
+  ],
+  "references": [
+    {
+      "id": "methodology",
+      "file": "references/methodology.md",
+      "when": "Need overall Brunson method shape (storytelling + mental funnel + value stack + community)",
+      "load_priority": "high"
+    },
+    {
+      "id": "decision-weights",
+      "file": "references/decision-weights.md",
+      "when": "Resolving copy trade-offs against Brunson dogma",
+      "load_priority": "high"
+    },
+    {
+      "id": "meta-axioms",
+      "file": "references/meta-axioms.md",
+      "when": "Need foundational mechanical rules of the Brunson framework",
+      "load_priority": "medium"
+    },
+    {
+      "id": "frameworks-origin-story",
+      "file": "references/frameworks/origin-story.md",
+      "when": "Writing founder/brand origin story with 6 essential components",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-perfect-webinar",
+      "file": "references/frameworks/perfect-webinar-script.md",
+      "when": "Webinar pitch or long-form sales letter using 7-phase structure",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-who-what-why-how",
+      "file": "references/frameworks/who-what-why-how.md",
+      "when": "Structuring offer presentation; clarifying positioning",
+      "load_priority": "medium"
+    },
+    {
+      "id": "frameworks-value-stack",
+      "file": "references/frameworks/value-stack.md",
+      "when": "Building irresistible offer with stacked bonuses",
+      "load_priority": "high"
+    },
+    {
+      "id": "frameworks-6-part-structure",
+      "file": "references/frameworks/6-part-structure.md",
+      "when": "Long-form sales letter with proportional section budget",
+      "load_priority": "medium"
+    },
+    {
+      "id": "frameworks-persuasive-storytelling",
+      "file": "references/frameworks/persuasive-storytelling-5-structures.md",
+      "when": "Choosing story type per copy goal",
+      "load_priority": "medium"
+    },
+    {
+      "id": "evidence-and-attribution",
+      "file": "references/evidence-and-attribution.md",
+      "when": "Citing Brunson; Expert/DotCom/Traffic Secrets; ClickFunnels lineage",
+      "load_priority": "low"
+    },
+    {
+      "id": "application-notes",
+      "file": "references/application-notes.md",
+      "when": "Pairing Brunson with Schwartz/Kennedy; modern adaptation",
+      "load_priority": "medium"
+    }
+  ],
+  "dependencies": {
+    "skills": [],
+    "genomes": []
+  },
+  "relations": [
+    { "genome": "copywriting-schwartz", "type": "complementa" },
+    { "genome": "copywriting-halbert", "type": "complementa" },
+    { "genome": "copywriting-kennedy", "type": "complementa" },
+    { "genome": "copywriting-georgi", "type": "contradiz" }
+  ],
+  "tags": [
+    "copywriting",
+    "direct-response",
+    "storytelling",
+    "funnels",
+    "clickfunnels",
+    "origin-story",
+    "perfect-webinar",
+    "value-stack",
+    "brunson",
+    "track-4.2-modular"
+  ],
+  "compatible_with": [
+    "@copywriter",
+    "squad:vendas",
+    "squad:course-launch",
+    "squad:funnel-architect"
+  ],
+  "best_for": [
+    "info-products",
+    "course-launches",
+    "coaching-mentorships",
+    "paid-communities",
+    "transformation-programs",
+    "perfect-webinar-funnels"
+  ],
+  "use_as": "funnel-launch-specialist-pair-with-kennedy-and-schwartz"
+}
