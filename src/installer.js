@@ -209,6 +209,7 @@ function shouldSkipTemplatePath(rel, profile = null) {
   if (rel === '.gitignore') return 'merge-only';
   if (rel === '.aioson/context/.gitkeep') return false;
   if (rel === '.aioson/context/design-doc.md') return false; // framework default — copied on fresh install, project-local on update
+  if (rel === '.aioson/context/_archived/.gitkeep') return false; // active-learning-loop Phase 3 archive convention
   if (rel.startsWith('.aioson/context/')) return 'context-protected';
   // Never overwrite user-installed skills (only the .gitkeep is created)
   if (rel.startsWith('.aioson/installed-skills/') && rel !== '.aioson/installed-skills/.gitkeep') return 'context-protected';

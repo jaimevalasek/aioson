@@ -462,3 +462,178 @@ aioson test:package --json
 4. Reports pass/fail.
 
 **Note:** requires Node.js and npm to be available. Intended for release validation.
+
+---
+
+## context:load
+
+Record that an agent loaded a rule or brain. Writes a `rule_loaded` or `brain_loaded` event to `execution_events`. Used by the Active Learning Loop to detect stale rules.
+
+**Tier:** 1 (silent — no output by default)
+
+```bash
+aioson context:load --target=rule:authn-rules --agent=dev
+aioson context:load --target=brain:sheldon-005 --agent=sheldon --feature=auth-flow --verbose
+aioson context:load --target=rule:authn-rules --agent=dev --batch="jwt-patterns,session-mgmt" --json
+```
+
+**Options:**
+- `--target=<rule|brain>:<slug>` — **required**. Type and identifier. E.g. `rule:authn-rules`, `brain:sheldon-005`.
+- `--agent=<name>` — **required**. Agent name loading the rule/brain.
+- `--batch="a,b,c"` — additional slugs to register in one transaction (same type and agent).
+- `--feature=<slug>` — associate with an active feature (stored in payload).
+- `--verbose` — print a confirmation line per event.
+- `--json` — structured JSON output `{ ok, event, target, agent }`.
+
+**Behavior:** creates a row in `execution_events` with `event_type='rule_loaded'` or `'brain_loaded'`. No filesystem validation — pure telemetry. Payload capped at 4KB; paths normalized to forward-slash cross-platform.
+
+See [Active Learning Loop — CLI reference](../active-learning-loop/cli-commands.md) for full details.
+
+---
+
+## memory:search
+
+BM25 full-text search over `project_learnings` (title + evidence) via SQLite FTS5.
+
+**Tier:** 1 (silent — no notify emitted)
+
+```bash
+aioson memory:search "authentication JWT"
+aioson memory:search "rate limiting" --surface=rules --limit=10 --json
+aioson memory:search "session" --include-archived
+```
+
+**Options:**
+- `"<query>"` — **required**. Search text, max 500 chars.
+- `[path]` — project root directory (default: `.`).
+- `--limit=N` — max results (default: 5).
+- `--surface=<value>` — where to search: `rules`, `learnings` (default), or `all`.
+- `--include-archived` — include entries with status `archived`.
+- `--json` — structured JSON output `{ ok, query, results[], total }`.
+
+**Query sanitization:** each whitespace-separated token is wrapped in phrase quotes and AND-ed. FTS5 operator characters are stripped before conversion.
+
+See [Active Learning Loop — CLI reference](../active-learning-loop/cli-commands.md) for full details.
+
+---
+
+## memory:archive
+
+Archive a rule, learning, or brain: moves the file to `_archived/YYYY-MM-DD/` and records history in `evolution_log`.
+
+**Tier:** 2 (notified — emits `notify --level=warn` before mutation). **Human-only:** refuses when `AIOSON_RUNTIME_HOOK=1`.
+
+```bash
+aioson memory:archive --id=rule:legacy-session-cookies --reason="replaced by JWT auth" --dry-run
+aioson memory:archive --id=rule:legacy-session-cookies --reason="replaced by JWT auth"
+aioson memory:archive --id=learning:jwt-draft-1 --reason="superseded" --feature=auth-flow --json
+```
+
+**Options:**
+- `--id=<rule|learning|brain>:<slug>` — **required**. Type and slug.
+- `--reason="<text>"` — **required**. Archival reason (stored in `evolution_log`).
+- `--feature=<slug>` — associate with a feature for traceability.
+- `--dry-run` — simulate with zero side effects.
+- `--json` — structured JSON output.
+
+**Behavior:** atomic (BEGIN TRANSACTION → move file → INSERT evolution_log → COMMIT). Idempotent: re-archive of already-archived target returns `already_archived`. Cross-volume fallback via copy+unlink.
+
+See [Active Learning Loop — CLI reference](../active-learning-loop/cli-commands.md) for full details.
+
+---
+
+## memory:restore
+
+Restore an archived rule, learning, or brain to its original path. Records `event_type='restored'` in `evolution_log`.
+
+**Tier:** 2 (notified). **Human-only:** refuses when `AIOSON_RUNTIME_HOOK=1`.
+
+```bash
+aioson memory:restore --id=rule:rate-limiting-rules --dry-run
+aioson memory:restore --id=rule:rate-limiting-rules --reason="still needed — removal was premature"
+```
+
+**Options:**
+- `--id=<rule|learning|brain>:<slug>` — **required**.
+- `--reason="<text>"` — archival reason (optional but recommended).
+- `--feature=<slug>` — associate with a feature.
+- `--dry-run` — simulate with zero side effects.
+- `--json` — structured JSON output.
+
+See [Active Learning Loop — CLI reference](../active-learning-loop/cli-commands.md) for full details.
+
+---
+
+## scout:prep
+
+Prepare a sub-task scout: validate inputs, check caps, and generate the standardized prompt for the harness sub-agent.
+
+**Tier:** 1 (silent — use `--json`)
+
+```bash
+aioson scout:prep \
+  --question="Why does workflow:next inherit stale completion records?" \
+  --scope-paths="src/commands/workflow-next.js,src/handoff-contract.js" \
+  --parent-agent=deyvin \
+  --parent-session-id=sess-abc123 \
+  --parent-session-excerpt="User reported state inheritance bug; inspect loadOrCreateState" \
+  --feature-slug=current-feature \
+  --json
+```
+
+**Options:**
+- `--question="<text>"` — **required**. The question the sub-agent must answer.
+- `--scope-paths="<paths>"` — **required**. Comma-separated files/dirs. Directories expand 1 level.
+- `--parent-agent=<name>` — **required**. In V1, only `"deyvin"` accepted.
+- `--parent-session-id=<id>` — **required**. Session ID for cap tracking.
+- `--parent-session-excerpt="<text>"` — **required** (50-1000 chars). Why the scout was dispatched — cold-load comprehension field; blocked if absent.
+- `--feature-slug=<slug>` — associate with feature for archival on `feature:close`.
+- `--json` — structured output `{ ok, id, prompt, output_path, cap_remaining }`.
+
+**Exit codes:** 0 = prepared; 2 = invalid arg, cap exceeded, scope too large, path outside root.
+
+See [Sub-task Scout — CLI reference](../deyvin-subtask-scout/cli-commands.md) for full details.
+
+---
+
+## scout:validate
+
+Validate the JSON returned by the sub-agent against the output schema. Tracks retries in the state file.
+
+**Tier:** 1 (silent)
+
+```bash
+aioson scout:validate --input=.aioson/runtime/scouts/scout-2026-05-14-a3b7c1.json
+aioson scout:validate --input=<path> --json
+```
+
+**Options:**
+- `--input=<path>` — **required**. Path to the JSON file the sub-agent wrote.
+- `--json` — structured output on failure: `{ ok, error: { code, details[] }, retry_remaining }`.
+
+**Exit codes:** 0 = PASS; 2 = schema invalid, retry exhausted, file not found.
+
+See [Sub-task Scout — CLI reference](../deyvin-subtask-scout/cli-commands.md) for full details.
+
+---
+
+## scout:commit
+
+Persist the validated scout report, emit telemetry, and decrement the cap counter.
+
+**Tier:** 1 (silent)
+
+```bash
+aioson scout:commit --input=.aioson/runtime/scouts/scout-2026-05-14-a3b7c1.json
+aioson scout:commit --input=<path> --json
+```
+
+**Options:**
+- `--input=<path>` — **required**. Path to the validated JSON.
+- `--json` — structured output `{ ok, committed, id, path, cap_remaining }`.
+
+**Behavior:** idempotent — re-commit of same id returns `{ committed: false, reason: "already_committed" }`. Emits `type=sub_task action=committed` to `agent_events`.
+
+**Exit codes:** 0 = committed (or no-op); 1 = file not found, lock failure.
+
+See [Sub-task Scout — CLI reference](../deyvin-subtask-scout/cli-commands.md) for full details.

@@ -9,6 +9,16 @@ const { validateProjectContextFile, getInteractionLanguage } = require('./contex
 const { applyAgentLocale } = require('./locales');
 const { getCliVersion } = require('./version');
 const { generatePermissions, OUTPUT_PATHS: PERMISSIONS_OUTPUT_PATHS } = require('./permissions-generator');
+const { loadConfig: loadScoutConfig } = require('./sub-task-engine');
+const {
+  computeStalenessThreshold,
+  readProjectClassification,
+  readClosedFeatures,
+  assessRuleStaleness,
+  assessLearningOrphans,
+  assessDistillationLag
+} = require('./learning-loop-doctor');
+const { openRuntimeDb } = require('./runtime-store');
 
 const BOOTSTRAP_REQUIRED = ['what-is.md', 'how-it-works.md', 'what-it-does.md', 'current-state.md'];
 
@@ -326,6 +336,106 @@ async function runDoctor(targetDir) {
     hintKey: versionOk ? undefined : 'doctor.version_drift_hint'
   });
 
+  // 6. scouts_directory_pruning — sub-task scout housekeeping (advisory)
+  const scoutAssessment = await assessScoutPruning(targetDir);
+  checks.push({
+    id: 'living-memory:scouts_directory_pruning',
+    severity: 'warning',
+    key: 'doctor.scouts_directory_pruning',
+    params: { stale: scoutAssessment.staleCount, days: scoutAssessment.pruneDays },
+    ok: scoutAssessment.staleCount === 0,
+    hintKey: scoutAssessment.staleCount === 0 ? undefined : 'doctor.scouts_directory_pruning_hint'
+  });
+
+  // 7. Active Learning Loop curation checks (Phase 4)
+  //    Per BR-ALL-11: MICRO projects skip these checks entirely (with hint).
+  //    On DB failure (no runtime/aios.sqlite yet), checks emit ok=true so a
+  //    fresh project does not produce noisy false positives (EC-ALL-11).
+  const classification = await readProjectClassification(targetDir);
+  const closedFeatures = await readClosedFeatures(targetDir);
+  const stalenessThreshold = computeStalenessThreshold(
+    closedFeatures.map((f) => f.completed).filter(Boolean)
+  );
+  const recentFeatureSlugs = closedFeatures.slice(-stalenessThreshold).map((f) => f.slug);
+
+  let curationDb = null;
+  let curationDbError = null;
+  if (classification !== 'MICRO') {
+    try {
+      const handle = await openRuntimeDb(targetDir);
+      curationDb = handle.db;
+    } catch (err) {
+      curationDbError = err && err.message ? err.message : String(err);
+    }
+  }
+
+  const pushCurationCheck = (id, key, params, ok, hintKey, hintParams) => {
+    checks.push({ id, severity: 'warning', key, params, ok, hintKey, hintParams });
+  };
+
+  try {
+    if (classification === 'MICRO') {
+      // BR-ALL-11 opt-out — emit explicit skipped checks so users see why.
+      pushCurationCheck('living-memory:rule_staleness', 'doctor.living_memory.rule_staleness_skipped_micro', {}, true);
+      pushCurationCheck('living-memory:learning_orphans', 'doctor.living_memory.learning_orphans_skipped_micro', {}, true);
+      pushCurationCheck('living-memory:distillation_lag', 'doctor.living_memory.distillation_lag_skipped_micro', {}, true);
+    } else if (!curationDb) {
+      // No runtime DB yet — emit ok=true (fresh-install EC-ALL-11) but keep
+      // the id so JSON consumers see the checks ran.
+      pushCurationCheck('living-memory:rule_staleness', 'doctor.living_memory.rule_staleness', { stale: 0, threshold: stalenessThreshold }, true);
+      pushCurationCheck('living-memory:learning_orphans', 'doctor.living_memory.learning_orphans', { orphans: 0 }, true);
+      pushCurationCheck('living-memory:distillation_lag', 'doctor.living_memory.distillation_lag', { closed: closedFeatures.length, distillations: 0, threshold: 5 }, true);
+    } else {
+      const ruleAssessment = await assessRuleStaleness({
+        db: curationDb,
+        targetDir,
+        threshold: stalenessThreshold,
+        recentFeatureSlugs
+      });
+      pushCurationCheck(
+        'living-memory:rule_staleness',
+        'doctor.living_memory.rule_staleness',
+        { stale: ruleAssessment.items.length, threshold: stalenessThreshold, total: ruleAssessment.ruleCount },
+        ruleAssessment.ok,
+        ruleAssessment.ok ? undefined : 'doctor.living_memory.rule_staleness_hint',
+        ruleAssessment.ok ? undefined : {
+          slugs: ruleAssessment.items.slice(0, 5).map((it) => it.slug).join(', ') || '(none listed)',
+          propose: ruleAssessment.items.length > 0
+            ? `aioson memory:archive --id=rule:${ruleAssessment.items[0].slug} --reason="not loaded in last ${stalenessThreshold} features"`
+            : ''
+        }
+      );
+
+      const orphanAssessment = await assessLearningOrphans({ db: curationDb });
+      pushCurationCheck(
+        'living-memory:learning_orphans',
+        'doctor.living_memory.learning_orphans',
+        { orphans: orphanAssessment.items.length },
+        orphanAssessment.ok,
+        orphanAssessment.ok ? undefined : 'doctor.living_memory.learning_orphans_hint',
+        orphanAssessment.ok ? undefined : {
+          ids: orphanAssessment.items.slice(0, 5).map((it) => it.learning_id).join(', ') || '(none listed)'
+        }
+      );
+
+      const lagAssessment = await assessDistillationLag({ db: curationDb, closedFeatures });
+      pushCurationCheck(
+        'living-memory:distillation_lag',
+        'doctor.living_memory.distillation_lag',
+        lagAssessment.params,
+        lagAssessment.ok,
+        lagAssessment.ok ? undefined : 'doctor.living_memory.distillation_lag_hint',
+        lagAssessment.ok ? undefined : {
+          missing_slugs: lagAssessment.items.slice(0, 5).map((it) => it.slug).join(', ') || '(none listed)'
+        }
+      );
+    }
+  } finally {
+    if (curationDb) {
+      try { curationDb.close(); } catch { /* swallow — already-closed is fine */ }
+    }
+  }
+
   // 5. permissions_in_sync
   const permsAssessment = await assessPermissionsSync(targetDir);
   const permsOk = !permsAssessment.protocolMissing
@@ -367,9 +477,50 @@ async function runDoctor(targetDir) {
       featuresDir: featuresDirExists,
       claudeCommandsMissing: missingClaudeCmds,
       versionDrift: !versionOk ? { context: contextVersion, cli: cliVersion } : null,
-      permissions: permsAssessment
+      permissions: permsAssessment,
+      scoutPruning: scoutAssessment,
+      curation: {
+        classification,
+        closedFeatureCount: closedFeatures.length,
+        stalenessThreshold,
+        dbError: curationDbError
+      }
     }
   };
+}
+
+// assessScoutPruning — list `.aioson/runtime/scouts/*.json` files older than
+// `prune_unattached_after_days` (config; default 90d) AND not attached to any
+// feature (`feature_slug` absent in JSON or feature listed as in_progress).
+// Attached-to-active-feature scouts are NEVER counted as stale here, even
+// when old — they're kept for cold-load comprehension.
+async function assessScoutPruning(targetDir) {
+  let config;
+  try { config = loadScoutConfig(targetDir); }
+  catch { config = { scout_dir: '.aioson/runtime/scouts', prune_unattached_after_days: 90 }; }
+  const dir = path.join(targetDir, config.scout_dir);
+  const cutoffMs = Date.now() - (config.prune_unattached_after_days * 24 * 60 * 60 * 1000);
+  const stale = [];
+  let entries;
+  try { entries = await fs.readdir(dir, { withFileTypes: true }); }
+  catch (err) {
+    if (err.code === 'ENOENT') return { staleCount: 0, stalePaths: [], pruneDays: config.prune_unattached_after_days };
+    return { staleCount: 0, stalePaths: [], pruneDays: config.prune_unattached_after_days };
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json') || entry.name.startsWith('.')) continue;
+    const filePath = path.join(dir, entry.name);
+    let stat;
+    try { stat = await fs.stat(filePath); } catch { continue; }
+    if (stat.mtimeMs >= cutoffMs) continue;
+    let scout;
+    try { scout = JSON.parse(await fs.readFile(filePath, 'utf8')); } catch { scout = null; }
+    // Attached scouts (with feature_slug) NEVER pruned by doctor — even when
+    // old. Only unattached or unparseable orphans are pruning candidates.
+    if (scout && typeof scout.feature_slug === 'string' && scout.feature_slug.length > 0) continue;
+    stale.push(filePath);
+  }
+  return { staleCount: stale.length, stalePaths: stale, pruneDays: config.prune_unattached_after_days };
 }
 
 async function applyDoctorFixes(targetDir, report, options = {}) {
@@ -547,6 +698,29 @@ async function applyDoctorFixes(targetDir, report, options = {}) {
     }
   } else {
     actions.push({ id: 'permissions_in_sync', applied: false, skipped: true, count: 0, missingCount: 0 });
+  }
+
+  // scouts_directory_pruning: delete stale unattached scouts
+  const scoutPruning = (report.livingMemory && report.livingMemory.scoutPruning) || null;
+  if (scoutPruning && scoutPruning.staleCount > 0) {
+    let pruned = 0;
+    if (!dryRun) {
+      for (const filePath of scoutPruning.stalePaths) {
+        try { await fs.unlink(filePath); pruned += 1; } catch { /* race or perms */ }
+      }
+    } else {
+      pruned = scoutPruning.staleCount;
+    }
+    if (pruned > 0) changedCount += pruned;
+    actions.push({
+      id: 'scouts_directory_pruning',
+      applied: !dryRun && pruned > 0,
+      count: pruned,
+      missingCount: scoutPruning.staleCount,
+      dryRun
+    });
+  } else {
+    actions.push({ id: 'scouts_directory_pruning', applied: false, skipped: true, count: 0, missingCount: 0 });
   }
 
   // bootstrap_coverage and version_drift: advisory only (no auto-fix)

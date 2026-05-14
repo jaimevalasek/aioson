@@ -13,10 +13,17 @@ const { runI18nAdd } = require('./commands/i18n-add');
 const { runAgentsList, runAgentPrompt } = require('./commands/agents');
 const { runContextValidate } = require('./commands/context-validate');
 const { runContextPack } = require('./commands/context-pack');
+const { runContextLoad } = require('./commands/context-load');
+const { runMemorySearch } = require('./commands/memory-search');
+const { runMemoryArchive } = require('./commands/memory-archive');
+const { runMemoryRestore } = require('./commands/memory-restore');
 const { runSetupContext } = require('./commands/setup-context');
 const { runLocaleApply } = require('./commands/locale-apply');
 const { runSmokeTest } = require('./commands/smoke');
 const { runMcpInit } = require('./commands/mcp-init');
+const { runScoutPrep } = require('./commands/scout-prep');
+const { runScoutValidate } = require('./commands/scout-validate');
+const { runScoutCommit } = require('./commands/scout-commit');
 const { runMcpDoctor } = require('./commands/mcp-doctor');
 const { runPackageTest } = require('./commands/package-e2e');
 const { runWorkflowPlan } = require('./commands/workflow-plan');
@@ -225,6 +232,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-validate',
   'context:pack',
   'context-pack',
+  'context:load',
+  'context-load',
   'test:smoke',
   'test-smoke',
   'test:agents',
@@ -497,10 +506,22 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'memory-status',
   'memory:summary',
   'memory-summary',
+  'memory:search',
+  'memory-search',
+  'memory:archive',
+  'memory-archive',
+  'memory:restore',
+  'memory-restore',
   'memory:reflect-prepare',
   'memory-reflect-prepare',
   'memory:reflect-commit',
   'memory-reflect-commit',
+  'scout:prep',
+  'scout-prep',
+  'scout:validate',
+  'scout-validate',
+  'scout:commit',
+  'scout-commit',
   'notify',
   'runtime:backup',
   'runtime-backup',
@@ -699,8 +720,12 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_invoke');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
+  logHelpLine(t, logger, 'cli.help_context_load');
   logHelpLine(t, logger, 'cli.help_memory_status');
   logHelpLine(t, logger, 'cli.help_memory_summary');
+  logHelpLine(t, logger, 'cli.help_memory_search');
+  logHelpLine(t, logger, 'cli.help_memory_archive');
+  logHelpLine(t, logger, 'cli.help_memory_restore');
   logHelpLine(t, logger, 'cli.help_brain_query');
   logHelpLine(t, logger, 'cli.help_setup_context');
   logHelpLine(t, logger, 'cli.help_locale_apply');
@@ -875,6 +900,8 @@ async function main() {
       result = await runContextValidate({ args, options, logger: commandLogger, t });
     } else if (command === 'context:pack' || command === 'context-pack') {
       result = await runContextPack({ args, options, logger: commandLogger, t });
+    } else if (command === 'context:load' || command === 'context-load') {
+      result = await runContextLoad({ args, options, logger: commandLogger, t });
     } else if (command === 'setup:context' || command === 'setup-context') {
       result = await runSetupContext({ args, options, logger: commandLogger, t });
     } else if (command === 'locale:apply' || command === 'locale-apply') {
@@ -1183,10 +1210,22 @@ async function main() {
       result = await runMemoryStatus({ args, options, logger: commandLogger });
     } else if (command === 'memory:summary' || command === 'memory-summary') {
       result = await runMemorySummary({ args, options, logger: commandLogger });
+    } else if (command === 'memory:search' || command === 'memory-search') {
+      result = await runMemorySearch({ args, options, logger: commandLogger, t });
+    } else if (command === 'memory:archive' || command === 'memory-archive') {
+      result = await runMemoryArchive({ args, options, logger: commandLogger, t });
+    } else if (command === 'memory:restore' || command === 'memory-restore') {
+      result = await runMemoryRestore({ args, options, logger: commandLogger, t });
     } else if (command === 'memory:reflect-prepare' || command === 'memory-reflect-prepare') {
       result = await runMemoryReflectPrepare({ args, options, logger: commandLogger });
     } else if (command === 'memory:reflect-commit' || command === 'memory-reflect-commit') {
       result = await runMemoryReflectCommit({ args, options, logger: commandLogger });
+    } else if (command === 'scout:prep' || command === 'scout-prep') {
+      result = await runScoutPrep({ args, options, logger: commandLogger });
+    } else if (command === 'scout:validate' || command === 'scout-validate') {
+      result = await runScoutValidate({ args, options, logger: commandLogger });
+    } else if (command === 'scout:commit' || command === 'scout-commit') {
+      result = await runScoutCommit({ args, options, logger: commandLogger });
     } else if (command === 'notify') {
       result = await runNotify({ args, options, logger: commandLogger });
     } else if (command === 'runtime:prune' || command === 'runtime-prune') {

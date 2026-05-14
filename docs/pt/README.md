@@ -49,6 +49,8 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 - [Secure by Default](./5-referencia/secure-by-default.md) — baseline `SEC-SBD-01..08` + `git:guard`
 - [aioson.com Store](./5-referencia/aioson-com-store.md) — publish/install de squads, genomes, skills
 - **[Memória Viva](./living-memory/README.md)** — bootstrap auto-atualizado + autonomy contract (3 tiers) + `notify` (ℹ/⚠/⛔) + 5 checks novos no doctor
+- **[Active Learning Loop](./active-learning-loop/README.md)** — destilação automática no `feature:close` + busca BM25 em learnings + archive/restore com `evolution_log` + 3 novos checks de curadoria no doctor
+- **[Deyvin Sub-Task Scout](./deyvin-subtask-scout/README.md)** — primitiva de diagnóstico estruturado do `@deyvin`: `scout:prep/validate/commit`, contexto isolado, caps configuráveis, archivamento por feature
 
 ### Arquivo histórico
 [`_arquivo/`](./_arquivo/) — versões anteriores das docs, preservadas com nota de redirect para o novo equivalente. Nenhum conteúdo foi perdido.

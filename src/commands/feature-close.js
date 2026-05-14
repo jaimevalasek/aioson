@@ -19,6 +19,12 @@ const { runFeatureArchive } = require('./feature-archive');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
+const { appendScoutToFeatureDossier } = require('../dossier/scout-section');
+const { emitSubTaskEvent } = require('../sub-task-telemetry');
+const { loadConfig } = require('../sub-task-engine');
+const { runDistillation, readFeatureClassification } = require('../learning-loop-engine');
+const { openRuntimeDb } = require('../runtime-store');
+const { runNotify } = require('./notify');
 
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
@@ -206,6 +212,86 @@ async function ensureDossier({ targetDir, ctxDir, slug }) {
   }
 }
 
+// archiveScoutsForFeature — copy `.aioson/runtime/scouts/{id}.json` files
+// whose `feature_slug` matches `slug` into `.aioson/context/features/{slug}/scouts/`,
+// auto-append a bullet to the feature dossier per archived scout, and emit
+// telemetry. Idempotent: re-archival overwrites file, dossier append is no-op.
+// Returns { archived: [{id, archive_rel}], skipped: [{id, reason}] }.
+async function archiveScoutsForFeature(targetDir, slug) {
+  const result = { archived: [], skipped: [] };
+  let config;
+  try { config = loadConfig(targetDir); }
+  catch { config = { scout_dir: '.aioson/runtime/scouts', archive_root: '.aioson/context/features' }; }
+
+  const sourceDir = path.join(targetDir, config.scout_dir);
+  let entries;
+  try { entries = await fs.readdir(sourceDir, { withFileTypes: true }); }
+  catch (err) {
+    if (err.code === 'ENOENT') return result;
+    throw err;
+  }
+
+  const archiveDir = path.join(targetDir, config.archive_root, slug, 'scouts');
+  let archiveDirEnsured = false;
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json') || entry.name.startsWith('.')) continue;
+    const sourcePath = path.join(sourceDir, entry.name);
+    let scout;
+    try {
+      scout = JSON.parse(await fs.readFile(sourcePath, 'utf8'));
+    } catch {
+      result.skipped.push({ id: entry.name, reason: 'parse_error' });
+      continue;
+    }
+    if (!scout || scout.feature_slug !== slug) continue;
+    if (!scout.id) {
+      result.skipped.push({ id: entry.name, reason: 'missing_id' });
+      continue;
+    }
+
+    if (!archiveDirEnsured) {
+      await fs.mkdir(archiveDir, { recursive: true });
+      archiveDirEnsured = true;
+    }
+    const targetPath = path.join(archiveDir, `${scout.id}.json`);
+    await fs.copyFile(sourcePath, targetPath);
+
+    // Dossier auto-append (idempotent).
+    try {
+      appendScoutToFeatureDossier({ rootPath: targetDir, feature_slug: slug, scout });
+    } catch {
+      // dossier write failed; archival itself succeeded — non-fatal
+    }
+
+    result.archived.push({
+      id: scout.id,
+      archive_rel: path.relative(targetDir, targetPath).replace(/\\/g, '/')
+    });
+  }
+
+  if (result.archived.length > 0) {
+    // M-01 fix: feature-close fires exactly one sub_task event per invocation,
+    // so logAgentEvent would land it as event_type='start' (lifecycle artifact
+    // for the agent's first event in a new session) with payload_json=null,
+    // making it invisible to collectScoutSummary's WHERE event_type='sub_task'
+    // query. emitSubTaskEvent writes directly to agent_events with the correct
+    // event_type and structured payload.
+    await emitSubTaskEvent(targetDir, {
+      message: 'scouts archived on feature:close',
+      parent_session_id: `feature-close-${slug}`,
+      payload: {
+        action: 'archived_on_close',
+        slug,
+        count: result.archived.length,
+        ids: result.archived.map((a) => a.id)
+      }
+    });
+  }
+
+  return result;
+}
+
 async function runFeatureClose({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.feature ? String(options.feature) : null;
@@ -329,6 +415,27 @@ async function runFeatureClose({ args, options = {}, logger }) {
     updates.push('project-pulse.md: not found (skipped)');
   }
 
+  // Capture feature classification BEFORE archive moves prd-{slug}.md to
+  // .aioson/context/done/{slug}/. The Phase 5 distillation hook below needs
+  // this value to enforce the MICRO opt-out (BR-ALL-11).
+  const preArchiveClassification = verdict === 'PASS'
+    ? await readFeatureClassification(targetDir, slug)
+    : null;
+
+  // 3.5. Archive scouts attached to this feature (deyvin-subtask-scout).
+  // Copies `.aioson/runtime/scouts/{id}.json` matching feature_slug to
+  // `.aioson/context/features/{slug}/scouts/{id}.json`, auto-appends to
+  // dossier, emits telemetry. Idempotent on re-close.
+  let scoutArchive = null;
+  try {
+    scoutArchive = await archiveScoutsForFeature(targetDir, slug);
+    if (scoutArchive.archived.length > 0) {
+      updates.push(`scouts: archived ${scoutArchive.archived.length} to .aioson/context/features/${slug}/scouts/`);
+    }
+  } catch (err) {
+    updates.push(`scouts: archival failed (${err.message || err})`);
+  }
+
   // 4. Auto-archive on PASS (default-on — user never has to remember).
   // Disable explicitly with --no-archive when needed (e.g. re-running feature:close idempotently).
   let archive = null;
@@ -353,6 +460,77 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   }
 
+  // ── Active Learning Loop distillation hook (Phase 5) ──────────────────────
+  // Best-effort (BR-ALL-05): runs after archive, never blocks feature:close,
+  // single tier-2 notify with summary. Disabled when:
+  //   - verdict !== 'PASS' (FAIL means QA rejected; no learning to consolidate)
+  //   - feature classification is MICRO (PMD-5 / BR-ALL-11)
+  //   - `--no-distill` flag explicitly set
+  //   - `learning-loop.json#enabled=false` (per-project opt-out, optional)
+  // The hook never throws — every failure mode is captured in evolution_log
+  // and surfaced through the `distill` line of the closure summary.
+  //
+  // NOTE: classification was captured BEFORE the archive step above, because
+  // `runFeatureArchive` moves prd-{slug}.md into .aioson/context/done/{slug}/.
+  // Reading after archive would return null and bypass MICRO opt-out.
+  let distillation = null;
+  const skipDistill = options['no-distill'] === true || options.distill === false;
+  if (verdict === 'PASS' && !skipDistill) {
+    const featureClassification = preArchiveClassification;
+    if (featureClassification === 'MICRO') {
+      updates.push('distill: skipped (feature classification MICRO)');
+    } else {
+      let dbHandle = null;
+      try {
+        dbHandle = await openRuntimeDb(targetDir);
+        distillation = await runDistillation({
+          targetDir,
+          slug,
+          classification: featureClassification,
+          db: dbHandle.db
+        });
+        if (distillation && distillation.ok) {
+          updates.push(
+            `distill: ${distillation.promoted_count} promoted, ${distillation.review_count} for review, ${distillation.merge_candidate_count} merge candidates (${distillation.duration_ms}ms)`
+          );
+          // AC-ALL-502: exactly 1 tier-2 notify per closure on success.
+          try {
+            await runNotify({
+              args: [targetDir],
+              options: {
+                level: 'info',
+                topic: 'learning-loop',
+                message: `distillation: ${distillation.promoted_count} promoted, ${distillation.review_count} for review, ${distillation.merge_candidate_count} merge candidates`,
+                agent: 'feature-close',
+                json: options.json ? true : undefined
+              },
+              logger: logger || { log: () => {} }
+            });
+          } catch (notifyErr) {
+            updates.push(`distill: notify failed (${notifyErr && notifyErr.message || notifyErr})`);
+          }
+        } else if (distillation && distillation.reason === 'lock_held') {
+          updates.push(`distill: skipped (already in progress for "${slug}")`);
+        } else if (distillation && distillation.reason === 'skipped_micro') {
+          // Defensive: feature classification flipped between read and run.
+          updates.push('distill: skipped (feature classification MICRO)');
+        } else if (distillation && !distillation.ok) {
+          updates.push(`distill: failed silently (${distillation.reason}${distillation.error_phase ? `:${distillation.error_phase}` : ''})`);
+        }
+      } catch (err) {
+        // Defensive — engine is best-effort but any unexpected throw still
+        // must not break feature:close.
+        updates.push(`distill: hook error (${err && err.message || err})`);
+      } finally {
+        if (dbHandle && dbHandle.db) {
+          try { dbHandle.db.close(); } catch { /* swallow */ }
+        }
+      }
+    }
+  } else if (verdict === 'PASS' && skipDistill) {
+    updates.push('distill: skipped (--no-distill flag)');
+  }
+
   const result = {
     ok: true,
     feature: slug,
@@ -360,7 +538,9 @@ async function runFeatureClose({ args, options = {}, logger }) {
     date: today,
     residual: residual || notes || null,
     updates,
-    archive
+    archive,
+    scoutArchive,
+    distillation
   };
 
   if (options.json) return result;

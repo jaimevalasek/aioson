@@ -1,21 +1,21 @@
 {
   "version": 1,
   "mode": "feature",
-  "classification": "MICRO",
+  "classification": "MEDIUM",
   "sequence": [
     "product",
+    "analyst",
     "dev",
+    "pentester",
     "qa"
   ],
   "current": null,
-  "next": null,
+  "next": "analyst",
   "completed": [
-    "product",
-    "dev",
-    "qa"
+    "product"
   ],
   "skipped": [],
-  "featureSlug": "deyvin-density",
+  "featureSlug": "active-learning-loop",
   "detour": null,
-  "updatedAt": "2026-05-11T19:30:27.777Z"
+  "updatedAt": "2026-05-14T03:25:01.215Z"
 }

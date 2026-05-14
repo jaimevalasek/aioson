@@ -1,0 +1,23 @@
+{
+  "feature": "active-learning-loop",
+  "phase": 6,
+  "status": "qa_approved",
+  "completed_steps": [
+    "telemetry-foundation",
+    "memory-search-fts5",
+    "memory-archive-with-evolution-log",
+    "doctor-curation-checks",
+    "feature-close-distillation-hook",
+    "inception-mirror-parity"
+  ],
+  "last_error": null,
+  "session_count": 1,
+  "last_updated": "2026-05-14T16:00:00.000Z",
+  "circuit_state": "CLOSED",
+  "iterations": 0,
+  "consecutive_errors": 0,
+  "ready_for_done_gate": true,
+  "qa_approved_phases": 6,
+  "qa_verdict": "PASS",
+  "qa_at": "2026-05-14"
+}

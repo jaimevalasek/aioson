@@ -16,6 +16,9 @@
 | [live-sessions.md](./live-sessions.md) | Live sessions rastreadas: tmux launcher, live:start/status/handoff/close, runtime:emit |
 | [secure-by-default.md](./secure-by-default.md) | Baseline de segurança SEC-SBD-01..08, git:guard, pentester, controles por classificação |
 | [aioson-com-store.md](./aioson-com-store.md) | AIOSON Store: auth, workspaces, system:package/publish (--invite), squad/genome/skill:publish |
+| [../living-memory/README.md](../living-memory/README.md) | Memória Viva: bootstrap auto-atualizado, autonomy contract 3 tiers, notify (ℹ/⚠/⛔), doctor checks |
+| [../active-learning-loop/README.md](../active-learning-loop/README.md) | Active Learning Loop: destilação automática no `feature:close`, busca BM25 em learnings, archive/restore com `evolution_log`, 3 checks de curadoria no doctor |
+| [../deyvin-subtask-scout/README.md](../deyvin-subtask-scout/README.md) | Deyvin Sub-Task Scout: primitiva de diagnóstico estruturado, `scout:prep/validate/commit`, caps configuráveis, archivamento por feature |
 
 ---
 

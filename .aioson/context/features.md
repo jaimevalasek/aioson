@@ -13,3 +13,5 @@
 | agent-chain-continuity | done | 2026-05-07 | 2026-05-07 |
 | living-memory | done | 2026-05-11 | 2026-05-11 |
 | deyvin-density | done | 2026-05-11 | 2026-05-11 |
+| deyvin-subtask-scout | done | 2026-05-13 | 2026-05-14 |
+| active-learning-loop | done | 2026-05-13 | 2026-05-14 |

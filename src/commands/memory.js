@@ -48,11 +48,11 @@ async function collectRuntimeSummary(targetDir) {
   try {
     handle = await openRuntimeDb(targetDir, { mustExist: true });
   } catch {
-    return { exists: false, taskCounts: {}, recentRuns: [], learnings: 0 };
+    return { exists: false, taskCounts: {}, recentRuns: [], learnings: 0, scouts: { count: 0, recent: [] } };
   }
 
   if (!handle || !handle.db) {
-    return { exists: false, taskCounts: {}, recentRuns: [], learnings: 0 };
+    return { exists: false, taskCounts: {}, recentRuns: [], learnings: 0, scouts: { count: 0, recent: [] } };
   }
 
   const { db, dbPath } = handle;
@@ -76,10 +76,65 @@ async function collectRuntimeSummary(targetDir) {
       learnings = 0;
     }
 
-    return { exists: true, dbPath, taskCounts, recentRuns, learnings };
+    const scouts = collectScoutSummary(db);
+
+    return { exists: true, dbPath, taskCounts, recentRuns, learnings, scouts };
   } finally {
     db.close();
   }
+}
+
+// Sub-task scout dispatch summary — drives the "Scouts dispatched" row in
+// `aioson memory:summary`. Reads `agent_events` for `event_type='sub_task'`
+// AND `payload_json.action IN ('committed','archived_on_close')`. Always
+// returns a deterministic shape (count=0 if none) so the row is always
+// present in the summary — cold-load agents see "scout layer exists".
+function collectScoutSummary(db) {
+  const empty = { count: 0, recent: [], topTopics: [] };
+  let rows;
+  try {
+    rows = db.prepare(`
+      SELECT created_at, payload_json
+      FROM agent_events
+      WHERE event_type = 'sub_task'
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).all();
+  } catch {
+    return empty;
+  }
+
+  let count = 0;
+  const topics = new Map();
+  const recent = [];
+  for (const row of rows) {
+    let payload = {};
+    try { payload = JSON.parse(row.payload_json || '{}'); } catch { payload = {}; }
+    const action = payload.action || '';
+    if (action !== 'committed' && action !== 'archived_on_close') continue;
+    count += 1;
+    if (recent.length < 5) {
+      recent.push({
+        id: payload.id || null,
+        action,
+        feature_slug: payload.feature_slug || null,
+        confidence: payload.confidence || null,
+        created_at: row.created_at
+      });
+    }
+    // Best-effort topic extraction — first 4 words of the question if present
+    // in payload (older events may not carry it).
+    const q = payload.question || '';
+    if (typeof q === 'string' && q.length > 0) {
+      const key = q.split(/\s+/).slice(0, 4).join(' ').toLowerCase();
+      topics.set(key, (topics.get(key) || 0) + 1);
+    }
+  }
+  const topTopics = Array.from(topics.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([t]) => t);
+  return { count, recent, topTopics };
 }
 
 async function collectMemoryStatus(targetDir) {
@@ -188,6 +243,10 @@ async function runMemorySummary({ args, options = {}, logger }) {
   const currentState = await readText(path.join(targetDir, '.aioson', 'context', 'bootstrap', 'current-state.md'));
 
   const recentRuns = (status.runtime.recentRuns || []).slice(0, Number(options.last || 5));
+  const scouts = status.runtime.scouts || { count: 0, topTopics: [] };
+  const scoutTopicsHint = scouts.topTopics && scouts.topTopics.length > 0
+    ? ` (top topics: ${scouts.topTopics.join('; ')})`
+    : '';
   const lines = [
     '# AIOSON Memory Summary',
     '',
@@ -203,7 +262,8 @@ async function runMemorySummary({ args, options = {}, logger }) {
     status.runtime.exists
       ? `- Tasks: ${formatTaskCounts(status.runtime.taskCounts)}`
       : '- Runtime database missing',
-    `- Active learnings: ${status.runtime.learnings || 0}`
+    `- Active learnings: ${status.runtime.learnings || 0}`,
+    `- Scouts dispatched: ${scouts.count}${scoutTopicsHint}`
   ];
 
   if (recentRuns.length > 0) {

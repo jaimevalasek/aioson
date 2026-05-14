@@ -1,0 +1,17 @@
+{
+  "feature": "active-learning-loop",
+  "contract_mode": "BALANCED",
+  "governor": {
+    "max_steps": 50,
+    "error_streak_limit": 5,
+    "cost_ceiling_tokens": null
+  },
+  "criteria": [
+    {
+      "id": "C1",
+      "description": "Estrutura de arquivos e sintaxe básica",
+      "assertion": "all files exist and parse",
+      "binary": true
+    }
+  ]
+}

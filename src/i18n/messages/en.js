@@ -24,8 +24,53 @@ module.exports = {
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
+    help_context_load:
+      'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<name> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=en]',
+    context_load: {
+      target_required: 'context:load requires --target=<rule|brain>:<slug>.',
+      agent_required: 'context:load requires --agent=<name>.',
+      target_invalid: 'context:load invalid --target value: {target}. Expected rule:<slug> or brain:<slug>.',
+      success: 'context:load emitted {count} event(s) for agent {agent}.'
+    },
     help_memory_status: 'aioson memory:status [path] [--json] [--locale=en]',
     help_memory_summary: 'aioson memory:summary [path] [--last=5] [--json] [--locale=en]',
+    help_memory_search:
+      'aioson memory:search "<query>" [path] [--limit=5] [--surface=rules|learnings|all] [--include-archived] [--json] [--locale=en]',
+    help_memory_archive:
+      'aioson memory:archive [path] --id=<rule|learning|brain>:<slug> --reason="<text>" [--feature=<slug>] [--dry-run] [--json] [--locale=en]',
+    help_memory_restore:
+      'aioson memory:restore [path] --id=<rule|learning|brain>:<slug> [--reason="<text>"] [--feature=<slug>] [--dry-run] [--json] [--locale=en]',
+    memory_archive: {
+      id_required: 'memory:archive requires --id=<rule|learning|brain>:<slug>.',
+      reason_required: 'memory:archive requires --reason="<text>".',
+      invalid_id: 'memory:archive invalid --id value: "{value}". Expected rule|learning|brain:<slug>.',
+      hook_blocked: 'memory:archive cannot be invoked from a runtime hook (BR-ALL-01: tier-2 requires human action).',
+      target_not_found: 'memory:archive: {kind} "{slug}" not found in active state.',
+      already_archived: 'memory:archive: "{path}" already archived. No-op.',
+      notify_template: 'archiving {kind} "{slug}": {reason}',
+      dry_run_summary: 'memory:archive [dry-run]: would move {source} → {dest} (active entry: {has_active}).',
+      archived_success: 'memory:archive ✓ {kind} "{slug}" archived to {dest}.'
+    },
+    memory_restore: {
+      id_required: 'memory:restore requires --id=<rule|learning|brain>:<slug>.',
+      invalid_id: 'memory:restore invalid --id value: "{value}". Expected rule|learning|brain:<slug>.',
+      hook_blocked: 'memory:restore cannot be invoked from a runtime hook (BR-ALL-01: tier-2 requires human action).',
+      target_not_archived: 'memory:restore: {kind} "{slug}" not found in archive.',
+      target_already_active: 'memory:restore: {kind} "{slug}" already active. No-op.',
+      target_not_found: 'memory:restore: {kind} "{slug}" not found.',
+      notify_template: 'restoring {kind} "{slug}": {reason}',
+      dry_run_summary: 'memory:restore [dry-run]: would move {source} → {dest}.',
+      restored_success: 'memory:restore ✓ {kind} "{slug}" restored to {dest}.'
+    },
+    memory_search: {
+      query_empty: 'memory:search requires a non-empty query string.',
+      query_too_long: 'memory:search query exceeds {max} characters.',
+      query_unparseable: 'memory:search query "{value}" reduces to empty after sanitization (only operator characters / quotes).',
+      invalid_surface: 'memory:search invalid --surface value: {value}. Expected rules, learnings, or all.',
+      no_results: 'No matches for "{query}".',
+      results_header: 'Top {count} hits for "{query}":',
+      snippet_truncated: 'Snippet truncated.'
+    },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--min-quality=4] [--format=compact|json|ids] [--json] [--locale=en]',
     help_setup_context:
@@ -381,7 +426,29 @@ module.exports = {
     version_drift_hint: 'project.context.md aioson_version ({context}) differs from CLI ({cli}). Update one or both manually.',
     permissions_in_sync: 'Native harness permissions are in sync with autonomy-protocol.json ({drifted} drifted, {missing} missing)',
     permissions_in_sync_hint: 'Run `aioson doctor . --fix` to regenerate: {paths}.',
-    permissions_protocol_missing_hint: 'autonomy-protocol.json is missing — run `aioson update .` to reinstall the template config.'
+    permissions_protocol_missing_hint: 'autonomy-protocol.json is missing — run `aioson update .` to reinstall the template config.',
+    scouts_directory_pruning: 'Sub-task scouts directory pruning ({stale} unattached scouts > {days} days)',
+    scouts_directory_pruning_hint: 'Run `aioson doctor . --fix` to delete stale unattached scouts (attached scouts with feature_slug are NEVER pruned).',
+    fix_action_scouts_directory_pruning: 'Delete unattached scouts older than prune_unattached_after_days from .aioson/runtime/scouts/',
+    learning_loop: {
+      distillation_complete: 'distillation: {promoted} promoted, {review} for review, {merge} merge candidates ({duration}ms)',
+      distillation_failed_silent: 'distillation failed silently for feature "{slug}" — phase: {phase}',
+      skipped_micro: 'distillation skipped: feature classification MICRO',
+      skipped_no_distill: 'distillation skipped: --no-distill flag set',
+      lock_held: 'distillation skipped: another instance is in progress for "{slug}"',
+      notify_template: 'distillation: {promoted} promoted, {review} for review, {merge} merge candidates'
+    },
+    living_memory: {
+      rule_staleness: 'Rule staleness: {stale} of {total} rules unloaded over last {threshold} closed features',
+      rule_staleness_hint: 'Stale rules (first 5): {slugs}. Propose: {propose}',
+      rule_staleness_skipped_micro: 'Rule staleness check skipped: project classification is MICRO (BR-ALL-11)',
+      learning_orphans: 'Learning orphans: {orphans} learnings promoted to rules that were never loaded after promotion',
+      learning_orphans_hint: 'Orphan learning_ids (first 5): {ids}. Use `aioson memory:why --id=<id>` to inspect.',
+      learning_orphans_skipped_micro: 'Learning orphan check skipped: project classification is MICRO (BR-ALL-11)',
+      distillation_lag: 'Distillation lag: {closed} closed features but only {distillations} have an auto_distillation event (threshold {threshold})',
+      distillation_lag_hint: 'Features missing distillation (first 5): {missing_slugs}. Check Phase 5 hook health.',
+      distillation_lag_skipped_micro: 'Distillation lag check skipped: project classification is MICRO (BR-ALL-11)'
+    }
   },
   i18n_add: {
     usage_error: 'Usage: aioson i18n:add <locale> [--force] [--dry-run] [--locale=en]',

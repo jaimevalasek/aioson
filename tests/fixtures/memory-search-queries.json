@@ -1,0 +1,16 @@
+{
+  "description": "Representative search queries for AC-ALL-205 precision metric. With the seeded project_learnings fixture (10 entries across 5 features), at least 8 of these queries should return >=1 relevant hit. expect_target_id reflects the value derived by the search query (promoted_to path when target_type=rule; learning_id when target_type=learning).",
+  "seed_features": ["user-auth", "checkout", "schema-refactor", "active-learning-loop", "site-forge"],
+  "queries": [
+    { "id": "q1", "text": "prisma migration", "expect_target_id": ".aioson/rules/prisma-migration-discipline.md" },
+    { "id": "q2", "text": "react component reuse", "expect_target_id": ".aioson/rules/react-component-reuse.md" },
+    { "id": "q3", "text": "jwt session rotation", "expect_target_id": "pl-jwt-rotation" },
+    { "id": "q4", "text": "stripe checkout idempotency", "expect_target_id": "pl-stripe-idempotency" },
+    { "id": "q5", "text": "fts5 bm25 ranking", "expect_target_id": "pl-fts5-bm25" },
+    { "id": "q6", "text": "tailwind dark mode", "expect_target_id": "pl-tailwind-tokens" },
+    { "id": "q7", "text": "uuid primary keys", "expect_target_id": ".aioson/rules/prisma-migration-discipline.md" },
+    { "id": "q8", "text": "context load telemetry", "expect_target_id": "pl-context-load" },
+    { "id": "q9", "text": "supabase row level", "expect_target_id": "pl-supabase-rls" },
+    { "id": "q10", "text": "unrelated nonsense xyzzy nothing", "expect_target_id": null }
+  ]
+}

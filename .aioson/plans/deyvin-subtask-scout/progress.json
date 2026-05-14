@@ -1,0 +1,36 @@
+{
+  "slug": "deyvin-subtask-scout",
+  "classification": "SMALL",
+  "manifest_path": ".aioson/plans/deyvin-subtask-scout/manifest.md",
+  "created_at": "2026-05-13T00:00:00.000Z",
+  "status": "done",
+  "current_phase": null,
+  "phases": [
+    {
+      "slug": "core-engine",
+      "status": "done",
+      "depends_on": [],
+      "completed_at": "2026-05-13",
+      "tests_pass": "51/51"
+    },
+    {
+      "slug": "cli-verbs",
+      "status": "done",
+      "depends_on": ["core-engine"],
+      "completed_at": "2026-05-13",
+      "tests_pass": "10/10"
+    },
+    {
+      "slug": "wiring-and-lifecycle",
+      "status": "done",
+      "depends_on": ["cli-verbs"],
+      "completed_at": "2026-05-13",
+      "tests_pass": "19/19"
+    }
+  ],
+  "completed_steps": ["core-engine", "cli-verbs", "wiring-and-lifecycle"],
+  "ready_for_done_gate": true,
+  "last_error": null,
+  "harness_contract": null,
+  "notes": "SMALL feature — no harness-contract.json (MEDIUM-only per RF-05). progress.json provides phase tracking and feeds workflow:next routing."
+}

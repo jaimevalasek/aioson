@@ -1,6 +1,6 @@
 ---
-generated_by: qa
-generated_at: "2026-05-11T20:00:00.000Z"
+generated_by: product
+generated_at: "2026-05-13T00:00:00.000Z"
 confidence: high
 ---
 
@@ -28,7 +28,11 @@ Feature `living-memory` was completed in 2026-05 (5 phases, 39 new tests, ~1100 
 
 Next candidates surfaced during living-memory: promote autonomy-protocol v1.1 across consumer projects, surface adoption telemetry (reflection counts in SQLite), trim `dev.md` kernel below 15KB, and explore `harness-isolation` (real sandbox per tier, deferred from this feature).
 
-Active (in_progress) since 2026-05-11: `deyvin-density` (MICRO) — enforces the Living Memory bootstrap gate on `/deyvin` activation, adds an explicit "Memory awareness preflight" checklist of 9 memory layers (on-demand loading), and codifies a "Scope decision rubric" table mapping user-message symptoms to actions (handle / handoff to `/product`, `/architect`, `/analyst`, `/sheldon`). Motivated by the 2026-05-11 mis-routing incident where `/deyvin` skipped the bootstrap gate. **Companion router fix already landed 2026-05-11** (workspace + template): `.aioson/agents/neo.md` routing line for "deep technical analysis" split into PRD/code/architect paths, and `.aioson/agents/sheldon.md` gained a "Strict scope boundary" section with refuse-and-redirect protocol. **In-flight framework fix landed in same dev session**: handoff contracts now MICRO-aware (`src/handoff-contract.js`) and workflow state transitions between features automatically (`src/commands/workflow-next.js`) — unblocking MICRO features inside MEDIUM projects. Follow-up feature `deyvin-subtask-scout` (SMALL, queued) will add a sub-task pattern for code-survey diagnoses with structured JSON return.
+Active (in_progress) since 2026-05-13: `active-learning-loop` (MEDIUM) — closes the open ends of AIOSON's existing learning infrastructure (`learning`, `pattern:detect`, brains, `evolution_log`) by wiring auto-distillation into `feature:close`, adding rule/brain usage telemetry (`context_load_events` SQLite table), three new doctor checks (`rule_staleness`, `learning_orphans`, `distillation_lag`), and two new CLI verbs (`memory:search` with FTS5 over `content_items` + `learnings`, `memory:archive` tier 2 human-approved). Inception-mirrored: every change lands in both `src/` and `template/`. Out of scope: auto-archive without human, cross-project memory, LLM clustering, multi-channel gateway. PRD: `.aioson/context/prd-active-learning-loop.md`. Triggered by insights from a video on Hermes Agent learning loops — AIOSON already has the primitives, this feature closes the loop.
+
+Recently closed (2026-05-14): `deyvin-subtask-scout` (SMALL) — added a structured sub-task scout primitive so `@deyvin` dispatches context-isolated diagnostic surveys (>5 files or runtime-flow tracing) without burning parent context. Shipped `src/sub-task-engine.js`, three CLI verbs (`scout:prep`, `scout:validate`, `scout:commit`), versioned JSON output schema, per-session/scope/retry caps, telemetry via `runtime:emit --type=sub_task`, and lifecycle archival on `feature:close`. PRD: `.aioson/context/prd-deyvin-subtask-scout.md`. Follow-up surface: multi-agent scout deferred until V1 usage data exists.
+
+Recently closed (2026-05-11): `deyvin-density` (MICRO) — enforced the Living Memory bootstrap gate on `/deyvin` activation, added a 9-layer Memory awareness preflight section, and codified an 11-row Scope decision rubric replacing the prior bullet-list Escalation map. **Companion router fix landed same session** (`@neo` routing split + `@sheldon` Strict scope boundary). **Inception-mode framework fix** in same dev slice: handoff contracts now MICRO-aware (`src/handoff-contract.js`) and workflow state transitions between features automatically (`src/commands/workflow-next.js`) — unblocked MICRO features inside MEDIUM projects.
 
 Recently closed (2026-04-24): `sdlc-process-upgrade` — process-level corrections in the development workflow (gate approval ergonomics, handoff contract completeness, implementation-plan ownership, Sheldon PRD target detection, bootstrap/session/brain memory integration, observability for primary workflow agents).
 

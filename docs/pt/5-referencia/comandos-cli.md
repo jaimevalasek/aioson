@@ -262,6 +262,31 @@ Scripts determinísticos que movem verificações de estado, validação de arte
 | `agent:shard:index` | Divide arquivos de instrução de agente em shards por heading e indexa via FTS5 | Após adicionar ou atualizar arquivos de agente. Veja [Agent Sharding](./agent-sharding.md) |
 | `agent:load` | Carrega os shards mais relevantes de um agente para um objetivo dado, dentro de orçamento de tokens | Quando quer enviar ao LLM apenas as seções do agente necessárias para a tarefa atual |
 
+### Active Learning Loop — Memória Viva
+
+Comandos do [Active Learning Loop](../active-learning-loop/README.md): telemetria de contexto, busca BM25, archive/restore com `evolution_log`.
+
+| Comando | O que faz | Tier | Quando usar |
+|---|---|---|---|
+| `context:load --target=<rule\|brain>:<slug> --agent=<nome>` | Registra que um agente carregou uma regra ou brain; grava evento em `execution_events` | tier-1 silencioso | Agentes declaram no preflight quais regras carregaram |
+| `memory:search "<query>"` | Busca BM25 (FTS5) sobre `project_learnings` por palavras-chave | tier-1 silencioso | Quando quer encontrar learnings relevantes antes de criar uma regra |
+| `memory:archive --id=<rule\|learning\|brain>:<slug> --reason="<texto>"` | Move o item para `_archived/YYYY-MM-DD/` e grava historico em `evolution_log`; tier-2 requer confirmação humana | tier-2 notificado | Quando o doctor aponta staleness ou você decide arquivar item obsoleto |
+| `memory:restore --id=<rule\|learning\|brain>:<slug>` | Restaura item arquivado para o path original; grava `event_type='restored'` | tier-2 notificado | Quando um arquivamento foi precipitado |
+
+Veja [Referência CLI — Active Learning Loop](../active-learning-loop/comandos-cli.md) para flags completos.
+
+### Sub-task Scout
+
+Comandos do [Deyvin Sub-Task Scout](../deyvin-subtask-scout/README.md): diagnóstico estruturado com sub-agente isolado.
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `scout:prep --question="..." --scope-paths="..." --parent-agent=deyvin --parent-session-id=<id> --parent-session-excerpt="..."` | Valida inputs, checa caps, gera prompt para sub-agente; retorna `{ id, prompt, output_path, cap_remaining }` | Quando `@deyvin` dispara rubrica linha 111 (survey >5 arquivos) |
+| `scout:validate --input=<path>` | Valida JSON retornado pelo sub-agente contra output schema; rastreia retries | Após sub-agente escrever o relatório em `output_path` |
+| `scout:commit --input=<path>` | Persiste relatório validado, decrementa cap, emite telemetria | Após `scout:validate` retornar exit 0 |
+
+Veja [Referência CLI — Sub-task Scout](../deyvin-subtask-scout/comandos-cli.md) para flags completos.
+
 ### Auditoria, briefs e verificação
 
 Três comandos de inteligência de sistema para otimizar tokens, gerar contexto autocontido e verificar entregas sem viés de conversa.

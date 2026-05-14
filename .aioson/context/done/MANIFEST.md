@@ -5,6 +5,8 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| deyvin-subtask-scout | 2026-05-14 | 5 | Give `@deyvin` a structured way to dispatch a context-isolated **scout** that surveys >5 files or traces a runtime flow and returns deterministic JSON findings |
+| active-learning-loop | 2026-05-14 | 10 | Fechar o loop entre os primitivos de aprendizado que AIOSON já tem (`learning`, `pattern:detect`, brains, evolution_log) e o ciclo real de desenvolvimento de fe |
 | deyvin-density | 2026-05-11 | 2 | Make `@deyvin` stop reasoning from stale context: enforce the Living Memory bootstrap gate on activation and give the agent a deterministic table for deciding w |
 | harness-driven-aioson | 2026-05-08 | 7 | — |
 | agent-chain-continuity | 2026-05-07 | 4 | Toda feature SMALL/MEDIUM nasce com um **dossier vivo auto-inicializado** que toda a cadeia de agentes (`@product → @sheldon → @analyst → @architect → @ux-ui → |

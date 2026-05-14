@@ -1,0 +1,10 @@
+{
+  "$schema": "https://aioson.dev/schemas/learning-loop.v1.json",
+  "enabled": true,
+  "skip_on_classification": ["MICRO"],
+  "execution_mode": "foreground",
+  "lock_strategy": "sqlite-row",
+  "auto_promote_threshold": 3,
+  "staleness_window_features_min": 5,
+  "timeout_ms": 5000
+}

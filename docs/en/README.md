@@ -52,6 +52,8 @@ See [3-recipes/README.md](./3-recipes/README.md) for the full list.
 - [Squad Dashboard](./5-reference/squad-dashboard.md) — real-time monitoring panel
 - [Web3 guide](./5-reference/web3.md) — Hardhat/Foundry/Anchor support
 - [i18n](./5-reference/i18n.md) — localization layer
+- **[Active Learning Loop](./active-learning-loop/README.md)** — automatic distillation in `feature:close` + BM25 search over learnings + archive/restore with `evolution_log` + 3 new curation checks in doctor
+- **[Deyvin Sub-Task Scout](./deyvin-subtask-scout/README.md)** — `@deyvin`'s structured diagnostic primitive: `scout:prep/validate/commit`, isolated context, configurable caps, feature archival
 
 ---
 

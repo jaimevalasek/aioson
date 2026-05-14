@@ -25,8 +25,53 @@ module.exports = {
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=pt-BR]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-ou-pasta>] [--max-files=8] [--json] [--locale=pt-BR]',
+    help_context_load:
+      'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<nome> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=pt-BR]',
+    context_load: {
+      target_required: 'context:load exige --target=<rule|brain>:<slug>.',
+      agent_required: 'context:load exige --agent=<nome>.',
+      target_invalid: 'context:load valor inválido para --target: {target}. Esperado rule:<slug> ou brain:<slug>.',
+      success: 'context:load emitiu {count} evento(s) para o agente {agent}.'
+    },
     help_memory_status: 'aioson memory:status [path] [--json] [--locale=pt-BR]',
     help_memory_summary: 'aioson memory:summary [path] [--last=5] [--json] [--locale=pt-BR]',
+    help_memory_search:
+      'aioson memory:search "<consulta>" [path] [--limit=5] [--surface=rules|learnings|all] [--include-archived] [--json] [--locale=pt-BR]',
+    help_memory_archive:
+      'aioson memory:archive [path] --id=<rule|learning|brain>:<slug> --reason="<texto>" [--feature=<slug>] [--dry-run] [--json] [--locale=pt-BR]',
+    help_memory_restore:
+      'aioson memory:restore [path] --id=<rule|learning|brain>:<slug> [--reason="<texto>"] [--feature=<slug>] [--dry-run] [--json] [--locale=pt-BR]',
+    memory_archive: {
+      id_required: 'memory:archive exige --id=<rule|learning|brain>:<slug>.',
+      reason_required: 'memory:archive exige --reason="<texto>".',
+      invalid_id: 'memory:archive valor inválido para --id: "{value}". Esperado rule|learning|brain:<slug>.',
+      hook_blocked: 'memory:archive não pode ser invocado por hook (BR-ALL-01: tier-2 exige ação humana).',
+      target_not_found: 'memory:archive: {kind} "{slug}" não encontrado em estado ativo.',
+      already_archived: 'memory:archive: "{path}" já está arquivado. No-op.',
+      notify_template: 'arquivando {kind} "{slug}": {reason}',
+      dry_run_summary: 'memory:archive [dry-run]: moveria {source} → {dest} (entry ativa: {has_active}).',
+      archived_success: 'memory:archive ✓ {kind} "{slug}" arquivado em {dest}.'
+    },
+    memory_restore: {
+      id_required: 'memory:restore exige --id=<rule|learning|brain>:<slug>.',
+      invalid_id: 'memory:restore valor inválido para --id: "{value}". Esperado rule|learning|brain:<slug>.',
+      hook_blocked: 'memory:restore não pode ser invocado por hook (BR-ALL-01: tier-2 exige ação humana).',
+      target_not_archived: 'memory:restore: {kind} "{slug}" não encontrado no arquivo.',
+      target_already_active: 'memory:restore: {kind} "{slug}" já está ativo. No-op.',
+      target_not_found: 'memory:restore: {kind} "{slug}" não encontrado.',
+      notify_template: 'restaurando {kind} "{slug}": {reason}',
+      dry_run_summary: 'memory:restore [dry-run]: moveria {source} → {dest}.',
+      restored_success: 'memory:restore ✓ {kind} "{slug}" restaurado para {dest}.'
+    },
+    memory_search: {
+      query_empty: 'memory:search requer uma consulta não-vazia.',
+      query_too_long: 'memory:search consulta excede {max} caracteres.',
+      query_unparseable: 'memory:search consulta "{value}" fica vazia após sanitização (somente operadores / aspas).',
+      invalid_surface: 'memory:search valor inválido para --surface: {value}. Esperado rules, learnings ou all.',
+      no_results: 'Nenhum resultado para "{query}".',
+      results_header: 'Top {count} resultados para "{query}":',
+      snippet_truncated: 'Trecho truncado.'
+    },
     help_brain_query:
       'aioson brain:query [path] [--tags=<csv>] [--agent=<agente>] [--min-quality=4] [--format=compact|json|ids] [--json] [--locale=pt-BR]',
     help_setup_context:
@@ -356,7 +401,26 @@ module.exports = {
     version_drift_hint: 'project.context.md aioson_version ({context}) difere do CLI ({cli}). Atualize manualmente.',
     permissions_in_sync: 'Permissoes nativas sincronizadas com autonomy-protocol.json ({drifted} drift, {missing} ausentes)',
     permissions_in_sync_hint: 'Rode `aioson doctor . --fix` para regenerar: {paths}.',
-    permissions_protocol_missing_hint: 'autonomy-protocol.json esta ausente — rode `aioson update .` para reinstalar.'
+    permissions_protocol_missing_hint: 'autonomy-protocol.json esta ausente — rode `aioson update .` para reinstalar.',
+    learning_loop: {
+      distillation_complete: 'distillation: {promoted} promovidos, {review} para revisão, {merge} candidatos a merge ({duration}ms)',
+      distillation_failed_silent: 'distillation falhou silenciosamente para feature "{slug}" — fase: {phase}',
+      skipped_micro: 'distillation ignorada: classificação da feature é MICRO',
+      skipped_no_distill: 'distillation ignorada: flag --no-distill ativa',
+      lock_held: 'distillation ignorada: outra instância em progresso para "{slug}"',
+      notify_template: 'distillation: {promoted} promovidos, {review} para revisão, {merge} candidatos a merge'
+    },
+    living_memory: {
+      rule_staleness: 'Rules estagnadas: {stale} de {total} sem load nas últimas {threshold} features fechadas',
+      rule_staleness_hint: 'Rules estagnadas (primeiras 5): {slugs}. Proposta: {propose}',
+      rule_staleness_skipped_micro: 'Check de rule_staleness ignorado: classificação do projeto é MICRO (BR-ALL-11)',
+      learning_orphans: 'Learnings órfãos: {orphans} learnings promovidos para rules que nunca foram carregadas',
+      learning_orphans_hint: 'learning_ids órfãos (primeiros 5): {ids}. Use `aioson memory:why --id=<id>` para inspecionar.',
+      learning_orphans_skipped_micro: 'Check de learning_orphans ignorado: classificação do projeto é MICRO (BR-ALL-11)',
+      distillation_lag: 'Lag de distillation: {closed} features fechadas mas apenas {distillations} têm evento auto_distillation (limite {threshold})',
+      distillation_lag_hint: 'Features sem distillation (primeiras 5): {missing_slugs}. Verifique o hook da Phase 5.',
+      distillation_lag_skipped_micro: 'Check de distillation_lag ignorado: classificação do projeto é MICRO (BR-ALL-11)'
+    }
   },
   i18n_add: {
     usage_error: 'Uso: aioson i18n:add <locale> [--force] [--dry-run] [--locale=pt-BR]',

@@ -9,6 +9,7 @@ const {
   flattenGenomeBindings,
   mergeGenomeBindings
 } = require('./genomes/bindings');
+const { runMigration: runLearningLoopMigration } = require('./learning-loop-migration');
 
 const RUNTIME_DIR = path.join('.aioson', 'runtime');
 const DB_FILE = 'aios.sqlite';
@@ -772,6 +773,8 @@ function ensureLegacyColumns(db) {
       source_learning_ids_json TEXT
     );
   `);
+
+  runLearningLoopMigration(db);
 }
 
 function insertEvent(db, record) {
@@ -828,6 +831,46 @@ function insertExecutionEvent(db, record) {
       @plan_step_id, @worker_status, @verdict, @token_count, @progress_pct
     )
   `).run(record);
+}
+
+function appendContextLoadEvent(db, options) {
+  const eventType = String(options.eventType || '').trim();
+  if (eventType !== 'rule_loaded' && eventType !== 'brain_loaded') {
+    throw new Error(`appendContextLoadEvent: invalid eventType "${eventType}" (must be rule_loaded|brain_loaded)`);
+  }
+
+  const now = options.createdAt || nowIso();
+  const agentName = options.agentName ? String(options.agentName).trim() : null;
+  const payloadJson = options.payload ? JSON.stringify(options.payload) : null;
+  const runKey = options.runKey ? String(options.runKey).trim() : null;
+  const sequenceNo = runKey ? nextExecutionSequence(db, runKey) : 1;
+
+  insertExecutionEvent(db, {
+    task_key: null,
+    run_key: runKey,
+    agent_name: agentName,
+    agent_kind: null,
+    squad_slug: null,
+    session_key: null,
+    source: 'context_load',
+    workflow_id: null,
+    workflow_stage: null,
+    parent_run_key: null,
+    event_type: eventType,
+    phase: 'context_load',
+    status: null,
+    tool_name: null,
+    message: String(options.message || ''),
+    payload_json: payloadJson,
+    sequence_no: sequenceNo,
+    parent_event_id: null,
+    created_at: now,
+    plan_step_id: null,
+    worker_status: null,
+    verdict: null,
+    token_count: null,
+    progress_pct: null
+  });
 }
 
 function appendRunEvent(db, options) {
@@ -2587,6 +2630,7 @@ module.exports = {
   createRunKey,
   createTaskKey,
   appendRunEvent,
+  appendContextLoadEvent,
   logAgentEvent,
   readAgentSession,
   writeAgentSession,
