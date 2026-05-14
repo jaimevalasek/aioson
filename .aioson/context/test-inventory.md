@@ -1,177 +1,159 @@
 ---
-generated: "2026-04-28T02:57:07-03:00"
+generated: "2026-05-14T22:45:00.000Z"
 framework: "Node.js"
 test_runner: "node:test"
 agent: "tester"
-feature: "feature-dossier"
+scope: "CLI commands & install pipeline (per user complaint)"
+supersedes: "2026-04-28 feature-dossier inventory (stale)"
 ---
 
-# Test Inventory
+# Test Inventory — CLI/install regression scan
 
-## Summary
-- Total source files scanned: 257
-- Files with full coverage: ~88
-- Files with partial coverage: ~48
-- Files with no coverage: ~121
+## Test suite baseline (npm test)
 
-> Coverage definitions:
-> - **✓ covered**: dedicated test file exists matching source path/name
-> - **◑ partial**: tested indirectly or by a differently-named test file
-> - **✗ missing**: no identifiable test coverage
+| Métrica | Valor |
+|---|---|
+| Total tests | 2419 |
+| Passing | 2377 |
+| **Failing** | **42** |
+| Skipped / Todo / Cancelled | 0 |
+| Duration | 77.6s |
 
-## Coverage map — Dossier feature (active)
+Histórico (per `bootstrap/current-state.md:70`): regressão anterior era 2238/2275 com 37 falhas pré-existentes. **5 falhas novas** entraram desde então.
 
-| Source file | Test file | Status |
+## Failures grouped by domain
+
+| Domínio | # | Arquivos |
 |---|---|---|
-| src/commands/dossier.js | tests/commands/dossier.test.js | ✓ covered |
-| src/commands/feature-archive.js | tests/commands/feature-archive-dossier.test.js | ✓ covered |
-| src/commands/feature-close.js | tests/feature-close.test.js | ✓ covered |
-| src/dossier/store.js | tests/dossier/store.test.js | ✓ covered |
-| src/dossier/schema.js | tests/dossier/schema.test.js | ✓ covered |
-| src/dossier/lock.js | tests/dossier/lock.test.js | ✓ covered |
-| src/cli.js (dossier registration) | — | ✗ missing |
+| Squad daemon/dashboard/webhook | 18 | squad-daemon, squad-dashboard, squad-api-endpoints, squad-webhook-production, squad-export, squad-score, tool-invocation-hardening |
+| Live/Runtime sessions | 6 | live-command (4), live-json-output (1), runtime-command (1) |
+| Context health | 6 | context-health (whole file) |
+| sync-agents-preflight | 2 | sync-agents-preflight (Phase 6 active-learning-loop) **NEW** |
+| JSON schema files | 2 | json-schema-files |
+| Perf flakes (Windows IO) | 2 | qa-telemetry-foundation (QA-PERF-01 — documented flake), telemetry-foundation (AC-ALL-101) |
+| Diversos | 6 | agent-contracts (kernel size), agent-teams-adapter, learning-auto-promote, devlog-process-fixture, designer-related |
 
-## Coverage map — Project-wide (selected modules)
+## CLI install pipeline — focused inspection
 
-| Source file | Test file | Status |
-|---|---|---|
-| src/agent-loader.js | tests/agent-loader.test.js | ✓ covered |
-| src/agent-manifests.js | tests/agent-manifests.test.js | ✓ covered |
-| src/agents.js | tests/agents.test.js | ✓ covered |
-| src/autonomy-policy.js | tests/autonomy-policy.test.js | ✓ covered |
-| src/brain-query.js | tests/brain-query.test.js | ✓ covered |
-| src/cli.js | — | ✗ missing |
-| src/commands/artifact-validate.js | tests/artifact-validate.test.js | ✓ covered |
-| src/commands/classify.js | tests/classify-command.test.js | ◑ partial |
-| src/commands/cloud.js | tests/cloud-command.test.js | ◑ partial |
-| src/commands/commit-prepare.js | tests/commit-prepare.test.js | ✓ covered |
-| src/commands/context-cache.js | tests/context-cache.test.js | ✓ covered |
-| src/commands/context-health.js | tests/context-health.test.js | ✓ covered |
-| src/commands/context-pack.js | tests/context-pack.test.js | ✓ covered |
-| src/commands/context-search.js | tests/context-search.test.js | ✓ covered |
-| src/commands/context-trim.js | tests/context-trim.test.js | ✓ covered |
-| src/commands/design-hybrid-options.js | tests/design-hybrid-options.test.js | ✓ covered |
-| src/commands/detect-test-runner.js | tests/detect-test-runner.test.js | ✓ covered |
-| src/commands/doctor.js | tests/doctor.test.js | ✓ covered |
-| src/commands/gate-approve.js | tests/gate-approve.test.js | ✓ covered |
-| src/commands/gate-check.js | tests/gate-check.test.js | ✓ covered |
-| src/commands/git-guard.js | tests/git-guard.test.js | ✓ covered |
-| src/commands/implementation-plan.js | tests/implementation-plan.test.js | ✓ covered |
-| src/commands/learning-auto-promote.js | tests/learning-auto-promote.test.js | ✓ covered |
-| src/commands/learning.js | tests/learning.test.js | ✓ covered |
-| src/commands/mcp-doctor.js | tests/mcp-doctor.test.js | ✓ covered |
-| src/commands/mcp-init.js | tests/mcp-init.test.js | ✓ covered |
-| src/commands/parallel-assign.js | tests/parallel-assign.test.js | ✓ covered |
-| src/commands/parallel-doctor.js | tests/parallel-doctor.test.js | ✓ covered |
-| src/commands/parallel-guard.js | tests/parallel-guard.test.js | ✓ covered |
-| src/commands/parallel-init.js | tests/parallel-init.test.js | ✓ covered |
-| src/commands/parallel-merge.js | tests/parallel-merge.test.js | ✓ covered |
-| src/commands/parallel-status.js | tests/parallel-status.test.js | ✓ covered |
-| src/commands/pulse-update.js | tests/pulse-update.test.js | ✓ covered |
-| src/commands/qa-doctor.js | tests/qa-doctor.test.js | ✓ covered |
-| src/commands/qa-init.js | tests/qa-init.test.js | ✓ covered |
-| src/commands/qa-report.js | tests/qa-report.test.js | ✓ covered |
-| src/commands/runner-daemon.js | tests/runner-daemon.test.js | ✓ covered |
-| src/commands/runner-plan.js | tests/runner-plan.test.js | ✓ covered |
-| src/commands/runner-queue-from-plan.js | tests/runner-queue-from-plan.test.js | ✓ covered |
-| src/commands/runner-queue.js | tests/runner-queue.test.js | ✓ covered |
-| src/commands/runner-run.js | tests/runner-run.test.js | ✓ covered |
-| src/commands/sandbox.js | tests/sandbox.test.js | ✓ covered |
-| src/commands/scan-project.js | tests/scan-project.test.js | ✓ covered |
-| src/commands/setup-context.js | tests/setup-context.test.js | ✓ covered |
-| src/commands/smoke.js | tests/smoke.test.js | ✓ covered |
-| src/commands/spec-tasks.js | tests/spec-tasks.test.js | ✓ covered |
-| src/commands/squad-card.js | tests/squad-card.test.js | ✓ covered |
-| src/commands/squad-daemon.js | tests/squad-daemon.test.js | ✓ covered |
-| src/commands/squad-dashboard.js | tests/squad-dashboard.test.js | ✓ covered |
-| src/commands/squad-doctor.js | tests/squad-doctor.test.js | ✓ covered |
-| src/commands/squad-export.js | tests/squad-export.test.js | ✓ covered |
-| src/commands/squad-investigate.js | tests/squad-investigate.test.js | ✓ covered |
-| src/commands/squad-learning.js | tests/squad-learning.test.js | ✓ covered |
-| src/commands/squad-mcp.js | tests/squad-mcp.test.js | ✓ covered |
-| src/commands/squad-pipeline.js | tests/squad-pipeline.test.js | ✓ covered |
-| src/commands/squad-plan.js | tests/squad-plan.test.js | ✓ covered |
-| src/commands/squad-roi.js | tests/squad-roi.test.js | ✓ covered |
-| src/commands/squad-scaffold.js | tests/squad-scaffold.test.js | ✓ covered |
-| src/commands/squad-score.js | tests/squad-score.test.js | ✓ covered |
-| src/commands/squad-validate.js | tests/squad-validate.test.js | ✓ covered |
-| src/commands/squad-worker.js | tests/squad-worker.test.js | ✓ covered |
-| src/commands/state-save.js | tests/state-save.test.js | ✓ covered |
-| src/commands/update.js | tests/update.test.js | ✓ covered |
-| src/commands/verify-gate.js | tests/verify-gate.test.js | ✓ covered |
-| src/commands/workflow-execute.js | tests/workflow-execute.test.js | ✓ covered |
-| src/commands/workflow-harden.js | tests/workflow-harden.test.js | ✓ covered |
-| src/commands/workflow-heal.js | tests/workflow-heal.test.js | ✓ covered |
-| src/commands/workflow-next.js | tests/workflow-next.test.js | ✓ covered |
-| src/commands/workflow-plan.js | tests/workflow-plan.test.js | ✓ covered |
-| src/commands/workflow-status.js | tests/workflow-status.test.js | ✓ covered |
-| src/context-cache.js | tests/context-cache.test.js | ✓ covered |
-| src/context-memory.js | tests/context-memory.test.js | ✓ covered |
-| src/context-parse-reason.js | tests/context-parse-reason.test.js | ✓ covered |
-| src/context-search.js | tests/context-search.test.js | ✓ covered |
-| src/context-writer.js | tests/context-writer.test.js | ✓ covered |
-| src/context.js | tests/context.test.js | ✓ covered |
-| src/delivery-runner.js | tests/delivery-runner.test.js | ✓ covered |
-| src/detector.js | tests/detector.test.js | ✓ covered |
-| src/doctor.js | tests/doctor.test.js | ✓ covered |
-| src/handoff-validator.js | tests/handoff-validator.test.js | ✓ covered |
-| src/harness/circuit-breaker.js | tests/harness/circuit-breaker.test.js | ✓ covered |
-| src/install-animation.js | tests/install-animation.test.js | ✓ covered |
-| src/install-profile.js | tests/install-profile.test.js | ✓ covered |
-| src/install-wizard.js | tests/install-wizard.test.js | ✓ covered |
-| src/installer.js | tests/installer.test.js | ✓ covered |
-| src/locales.js | tests/locales.test.js | ✓ covered |
-| src/onboarding.js | tests/onboarding.test.js | ✓ covered |
-| src/path-guard.js | tests/path-guard.test.js | ✓ covered |
-| src/preflight-engine.js | tests/preflight-engine.test.js | ✓ covered |
-| src/prompt-tool.js | tests/prompt-tool.test.js | ✓ covered |
-| src/recovery-context-session.js | tests/recovery-context-session.test.js | ✓ covered |
-| src/runtime-store.js | tests/runtime-store.test.js | ✓ covered |
-| src/sandbox.js | tests/sandbox.test.js | ✓ covered |
-| src/squad/agent-teams-adapter.js | tests/agent-teams-adapter.test.js | ✓ covered |
-| src/squad/brief-validator.js | tests/brief-validator.test.js | ✓ covered |
-| src/squad/bus-bridge.js | tests/bus-bridge.test.js | ✓ covered |
-| src/squad/context-compactor.js | tests/context-compactor.test.js | ✓ covered |
-| src/squad/external-session.js | tests/external-session.test.js | ✓ covered |
-| src/squad/hooks-generator.js | tests/hooks-generator.test.js | ✓ covered |
-| src/squad/pattern-detector.js | tests/pattern-detector.test.js | ✓ covered |
-| src/squad/squad-scaffold.js | tests/squad-scaffold.test.js | ✓ covered |
-| src/squad/verify-gate.js | tests/verify-gate.test.js | ✓ covered |
-| src/utils.js | tests/utils.test.js | ✓ covered |
-| src/version.js | tests/version.test.js | ✓ covered |
-| src/workflow-gates.js | tests/workflow-gates.test.js | ✓ covered |
+### Tier 1 — Exists
+- ✓ `src/commands/install.js` (149 lines)
+- ✓ `src/installer.js` (413 lines)
+- ✓ `src/install-profile.js`, `src/install-wizard.js`, `src/install-animation.js`
+- ✓ Tests: `installer.test.js`, `installer-profile.test.js`, `install-orchestrator.test.js`, `install-profile.test.js`, `install-animation.test.js`, `init-install-guidance.test.js`, `install-wizard.test.js` (7 arquivos)
 
-## Risk priorities — Dossier feature gaps
+### Tier 2 — Substantive
+- ✓ `install.js`: implementação real, wizard path bem documentado, fallback paths cobertos no código (TTY/non-TTY/--dry-run)
+- ✓ `installer.js`: 413 LOC, lógica de cópia + skip + overwrite
 
-### Critical (data integrity / business rules)
-1. **feature-close auto-archive on PASS** — `tests/feature-close.test.js` does not verify that `runFeatureArchive` is invoked automatically when verdict is PASS, nor does it test `--no-archive` bypass.
-2. **feature-archive status enforcement** — `tests/commands/feature-archive-dossier.test.js` seeds `features.md` with `done` status in every test; there is no test that archiving a non-done feature fails without `--force`.
-3. **dossier:show malformed dossier handling** — `EDOSSIERPARSE` and `EDOSSIERSCHEMA` error branches in `runDossierShow` are not exercised.
-4. **feature-close gate_execution frontmatter update** — existing QA sign-off replacement path and frontmatter `gate_execution` mutation are not verified.
-5. **feature-archive belongsToOtherSlug collision** — no test for the slug-prefix collision logic that prevents mis-attribution of files.
+### Tier 3 — Wired
+- ✓ Registrado em `src/cli.js` KNOWN_COMMANDS
+- ✓ i18n keys 4 idiomas (en/pt-BR/es/fr)
+- ✓ Recente hardening em `cc7bd17 fix(install): wizard always opens in TTY; non-TTY never silently install-all`
 
-### High (invariants / edge cases)
-6. **dossier/store.parseFrontmatter edge cases** — missing frontmatter, unclosed frontmatter, invalid line are exported but never unit-tested.
-7. **feature-archive restore dry-run** — restore path with `--dry-run` exists in source but is not tested.
-8. **feature-close idempotency** — re-running `feature:close` with existing QA Sign-off block should replace it cleanly.
+### Tier 4 — Functional (smoke test)
+- ⚠ **BUG-001 confirmado em produção**: `aioson install --dry-run` (no projeto atual) imprime `"Installation completed at: C:\dev\aioson, Files copied: 235, Files skipped: 175"`, sem qualquer marcador de dry-run. `git status` confirma 0 arquivos modificados — **dry-run funciona corretamente**, mas a saída engana o operador.
+- ⚠ Causa raíz em `src/commands/install.js:121-128`: branch `else` do TTY check usa as mesmas keys i18n (`install.done_at`, `install.files_copied`, `install.files_skipped`) para o caso real E para o dry-run. Não existe `install.dry_run_*` em `src/i18n/messages/*.js`.
+- ✓ **RESOLVIDO 2026-05-14 (@dev)**: branch dry-run isolada + 4 i18n keys × 4 locales + characterization test `tests/install-dry-run.test.js` (3/3 verde). Smoke real agora imprime `⚠  DRY RUN — no files were written.` + `Files that would be copied: 240`.
 
-### Medium (specification drift)
-9. **AC-F1-07 agent prompt dossier read** — conformance requires static analysis verifying that agent `.md` files reference `features/{slug}/dossier.md`; no test exists.
-10. **Phase 2/3 conformance gaps** — `conformance-feature-dossier.yaml` defines AC-F2-* (revisions) and AC-F3-* (codemap/bootstrap), but the corresponding CLI commands (`revision:*`, `dossier:add-finding`, etc.) are **not implemented**. These represent specification drift, not coverage gaps.
+## Coverage gap evidence — why tests didn't catch BUG-001
 
-## Orphan tests (no direct source mapping)
+Verifiquei com `grep -n "dry" tests/installer.test.js tests/install-orchestrator.test.js tests/install-wizard.test.js`:
 
-The following test files cover integration, cross-cutting, or architectural concerns rather than a single source file:
+- **Zero asserções** sobre output de `--dry-run` nos 3 arquivos de teste do install.
+- Os testes verificam `result.ok`, `result.copied.length`, `result.skipped.length` (estado interno) — mas nunca capturam stdout para validar que o usuário recebe mensagem dry-run distinta.
+- **Padrão**: testes Tier 2 (substantive) e Tier 3 (wired) passam; Tier 4 (functional — UX/comunicação) não é testado.
 
-- `tests/agent-contracts.test.js` — kernel size and prompt contracts
-- `tests/agents-command.test.js` — CLI agent orchestration
-- `tests/context-core.test.js` — context system integration
-- `tests/doctor-command.test.js` — doctor CLI integration
-- `tests/dossier/golden-fixture.test.js` — dossier schema fixture
-- `tests/harness/pentester-scenarios.test.js` — security scenarios
-- `tests/integration/*.test.js` — end-to-end integration tests
-- `tests/json-output.test.js` — JSON contract across commands
-- `tests/live-command.test.js` — live session integration
-- `tests/preflight-command.test.js` — preflight engine integration
-- `tests/runtime-command.test.js` — runtime telemetry integration
-- `tests/sdlc-process-upgrade-regression.test.js` — SDD regression
+## Risk priorities — testing gaps por severidade
+
+### High (afeta UX em produção e está sem cobertura)
+- **BUG-001**: dry-run install sem marcador visual — usuário pode achar que rodou o real
+- **squad subsystem (18 falhas)** — testes existem mas falham; cobertura aparente sem proteção real. Precisa verificar se squad é considerado "supported" ou experimental
+- **live-command + runtime-command (6 falhas)** — observability path falhando; afeta dashboard
+- **sync-agents-preflight (2 falhas NOVAS)** — checks que **bloqueiam** o `npm run sync:agents:preflight`. Se passar em CI mas falhar local, motor de hardening trava
+
+### Medium
+- **context-health (6 falhas — arquivo inteiro)** — comando `aioson context:health` provavelmente quebrado; usuários que rodam health checks recebem falsa segurança
+- **json-schema-files (2 falhas)** — schemas de manifest podem estar drift do código real
+
+### Low (mas registrar)
+- **perf flakes Windows** (`QA-PERF-01`, `AC-ALL-101`) — já documentadas como Windows-IO-sensitive; reproduzem 1/3 das vezes
+- **agent-contracts kernel size** — orçamento de bytes dos prompts; provavelmente saiu do budget após edits recentes
+- **agent-teams-adapter, learning-auto-promote, etc** — 1 falha isolada cada
+
+## Hypothesis sobre o pedido do user
+
+User reportou: *"vários comandos com problemas principalmente o install"*.
+
+Match com evidência:
+- ✓ Install **funciona** em produção, mas **dry-run engana** (UX bug confirmado)
+- ✓ Outros comandos que provavelmente o user encontrou problemas (especulação até confirmar): `aioson live:*`, `aioson context:health`, `aioson squad:*`, qualquer coisa rodada via `sync-agents:preflight`
+- ✓ Padrão geral: tests verificam estado interno mas não validam UX/comunicação/integração end-to-end
+
+## Sugestão de Strategy (Phase 3 — pendente confirmação do user)
+
+**Strategy: Risk-first Gap Filling + Characterization Testing**
+
+Foco em duas frentes paralelas:
+
+1. **Closing 5 new failures** (rápido — provavelmente quebraram com último commit; pegar antes que congelem):
+   - sync-agents-preflight (2)
+   - context-health (6 — talvez todas decorrentes de uma única refactor)
+   - telemetry-foundation AC-ALL-101 (1 — perf, talvez flake legítimo)
+
+2. **BUG-001 install dry-run** (User-facing UX gap):
+   - Adicionar test que captura stdout do `runInstall` em dry-run
+   - Asserta que output contém marcador distinto (e.g. `[DRY RUN]` ou `Would copy …`)
+   - Repor com i18n keys `install.dry_run_*` em 4 idiomas (escopo @dev, não @tester)
+   - @tester só escreve o test que falha → @dev implementa o fix → @qa re-verify
+
+3. **Tier 4 functional coverage missing** para CLI:
+   - Smoke test cada `aioson <cmd> --help` e `aioson <cmd> --dry-run` → não-zero exit, output não-vazio, sem stack traces
+
+## Files NOT loaded (avoidance — anti-context-bloat)
+
+- Não li `src/installer.js` completo (413 LOC) — peguei só headlines via wc/grep
+- Não li conteúdo dos 7 install*.test.js — só verifiquei ausência de "dry" via grep
+- Não inspecionei tests/squad-* individualmente — agrupei por sintoma
+
+## Squad subsystem deep-dive (per user pick)
+
+Audit das 18 falhas em `squad-*.test.js`:
+
+### Root cause primário (16/18 falhas)
+**Windows-only `EBUSY: resource busy or locked, unlink ... aios.sqlite`** durante teardown dos testes.
+
+- `squad-daemon` (4/4 falhas), `squad-dashboard` (4/4), `squad-score` (1/1) e maioria de `squad-api-endpoints`/`squad-webhook-production` falham **na limpeza do tmpDir**, não no corpo do teste.
+- Padrão: testes usam `await fs.rm(tmpDir, { recursive: true })` sem chamar `db.close()` antes. `better-sqlite3` mantém handle aberto; Windows não permite `unlink` enquanto handle ativo (POSIX permitiria).
+- Confirmado por grep: 19 ocorrências de `fs.rm(tmpDir, { recursive: true })` em squad-daemon + squad-dashboard sem `db.close()` precedente.
+
+### Root cause secundário (1/18)
+**`tar: Cannot connect to C: resolve failed`** em `squad-export.test.js` + `tool-invocation-hardening.test.js#SF-12`.
+
+- GNU tar no Windows interpreta `C:\path` como `C:` host + `\path` path (sintaxe remote).
+- Causa: commit `171dbf0 fix(tool-invocation): convert execSync template-literal sites to spawn-with-array-args` não normalizou para forward-slash ou `tar --force-local` antes de invocar.
+
+### Smoke test do squad CLI no projeto real
+
+- ✓ `aioson squad:status .` → "No squads found." (output correto, exit 0)
+- ⚠ `aioson squad:doctor .` → "Error: Multiple squads found. Provide --squad=<slug>." (não é bug do código — é estado do repo; CLI funciona)
+
+### Veredito squad
+
+O **subsistema squad em produção funciona**. As 18 falhas em `npm test` no Windows são **bugs de infraestrutura de teste** (fixture teardown), não bugs do squad. Quem rodar a suite em Linux CI provavelmente vê 0 falhas dessas (pendente confirmação).
+
+**Não é a causa do "vários comandos com problemas"** que o user reportou.
+
+**Atualização 2026-05-14 (@dev fix bug-002)**: o veredito acima foi parcialmente revisado durante o fix. **17/18 falhas eram infra de teste** (handle SQLite descartado), conforme diagnosticado. **1/18 era bug real de produção** em `squad-score.js:284` (chamada de função async sem await, vazando handle e silenciando o erro via catch). Esse bug significava que `runSquadScore` **nunca persistia scores no runtime DB** desde que foi escrito — a feature de score histórico estava silenciosamente inoperante. Fix shipped junto com o helper de cleanup.
+
+### Recomendação
+
+**@dev fix (escopo Medium):**
+1. Criar helper `tests/helpers/sqlite-cleanup.js` que envolve teardown: `closeAllOpenDbs(); await sleep(50); await fs.rm(...)`.
+2. Refatorar squad-daemon/squad-dashboard/squad-score/squad-api-endpoints/squad-webhook-production para usar o helper.
+3. `squad-export` + `tool-invocation-hardening#SF-12`: usar `tar --force-local` ou normalizar paths antes do spawn.
+
+**@tester escopo (esta sessão):** marcar essas 16 falhas como **Windows-environment-known-flake** em `test-plan.md`. Não escrever testes novos — o sintoma já está documentado.
+
+## Continuation
+
+Squad: investigação concluída — não é a fonte real do problema do user. Próximo escopo pendente: **re-investigar os outros clusters** (context-health, sync-agents-preflight, live-*) que podem ter o mesmo root-cause SQLite-on-Windows OU bugs reais.
