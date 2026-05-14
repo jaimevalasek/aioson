@@ -38,10 +38,24 @@ async function runSquadExport({ args = [], options = {}, logger = console } = {}
 
   const relPath = path.relative(projectDir, squadDir).replace(/\\/g, '/');
 
+  // bug-found-003 (Windows): GNU tar parses any argument matching `HOST:PATH`
+  // as a remote-host reference. A Windows drive-letter path like `C:\dev\foo`
+  // looks exactly like `host:path` to tar, so `-C C:\dev\aioson` triggers
+  // "tar: Cannot connect to C: resolve failed". Two parts to the fix:
+  //   1. Pass `--force-local` on Windows to disable remote-host parsing
+  //      (GNU tar only; bsdtar on macOS doesn't have the parsing nor the flag).
+  //   2. Convert Windows backslashes to forward slashes for the `-C` and
+  //      output-file args — msys/GNU tar on Windows still mangles backslash
+  //      paths even with --force-local.
+  const tarProjectDir = projectDir.replace(/\\/g, '/');
+  const tarOutputFile = outputFile.replace(/\\/g, '/');
+  const tarArgs = ['-czf', tarOutputFile, '-C', tarProjectDir, relPath];
+  if (process.platform === 'win32') tarArgs.unshift('--force-local');
+
   // SF-project-12: spawnSync with array args bypasses the shell, so embedded
   // metacharacters in any argument become literal tar arguments instead of
   // shell-parsed tokens.
-  const result = spawnSync('tar', ['-czf', outputFile, '-C', projectDir, relPath], {
+  const result = spawnSync('tar', tarArgs, {
     stdio: 'pipe'
   });
   if (result.error || result.status !== 0) {

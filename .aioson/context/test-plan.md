@@ -50,13 +50,28 @@ Esses 2 problemas se sobrepõem no dashboard de `npm test` — o operador vê 42
 - **Severidade**: medium — bloqueia dev-loop no Windows mas CI Linux passa — **MITIGADO**
 - **Regression**: 100/100 verde no cluster squad (5 arquivos, vs 82/100 baseline). Full suite: 2399/2422 (vs 2382/2422 antes do fix; vs 2377/2419 baseline original). Delta net: +17 passing. As 23 falhas restantes são clusters separados (context-health, live-*, json-schema, sync-agents-preflight, etc) fora do escopo bug-002.
 
-### [bug-found-003] squad-export tar Windows path
+### [bug-found-003] squad-export tar Windows path — **FIXED 2026-05-14 (@dev)**
 
 - **Arquivos**: `tests/squad-export.test.js`, `tests/tool-invocation-hardening.test.js#SF-12`
 - **Sintoma**: `tar: Cannot connect to C: resolve failed`
-- **Root cause**: GNU tar interpreta `C:\foo` como `C:` host + `\foo` path
-- **Owner**: @dev (passar `--force-local` ou normalizar paths antes do spawn)
+- **Root cause**: GNU tar interpreta qualquer `HOST:PATH` como host remoto; o `-C C:\dev\foo` casa exatamente esse padrão. Verificado experimentalmente: forward-slash sozinho não resolve (o colon ainda dispara o parser), `--force-local` sozinho corrompe os backslashes na msys tar.
+- **Owner**: @dev (passar `--force-local` ou normalizar paths antes do spawn) — **CONCLUÍDO**
 - **Severidade**: low — feature de export é tier-3
+- **Fix delivery**: 4 linhas em `src/commands/squad-export.js`:
+  1. `tarProjectDir = projectDir.replace(/\\/g, '/')` — forward-slash do `-C` arg
+  2. `tarOutputFile = outputFile.replace(/\\/g, '/')` — forward-slash do `-czf` arg
+  3. `tarArgs = [...]` + `if (process.platform === 'win32') tarArgs.unshift('--force-local')`
+  4. Comentário explicando ambas as decisões e por que cada parte é necessária
+- **Regression**: `squad-export.test.js` 3/3 verde, `tool-invocation-hardening.test.js#SF-12` verde, full suite 2402/2422 (was 2399/2422). Zero regressão nova.
+
+## Veredito do trio bug-found-*
+
+Os 3 bugs identificados pelo @tester estão resolvidos. Total dessa sessão @dev:
+- **bug-001** (install --dry-run UX): 4 i18n keys × 4 locales + branch isolada + 3 ACs em characterization test
+- **bug-002** (squad EBUSY): helper `tests/helpers/sqlite-cleanup.js` + 5 test files refatorados + 1 production bug consertado em `squad-score.js` (missing await silenciou função inteira)
+- **bug-003** (squad-export tar Windows): 4 linhas em `squad-export.js` (forward-slash + --force-local condicional Windows)
+- **Net delta full suite**: 2402/2422 vs 2377/2419 baseline @tester — **+22 passing, -22 failing**
+- **3 commits** entregues no `main`: `fix(install)`, `fix(squad)`, `chore(context)` — bug-003 pendente de commit
 
 ## Test writing plan (Phase 4 — pendente decisão do user)
 
