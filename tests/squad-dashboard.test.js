@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { openRuntimeDb, upsertSquadManifest, upsertSquadMetric, listSquadMetrics } = require('../src/runtime-store');
+const { cleanupTmpDir } = require('./helpers/sqlite-cleanup');
 const { createDashboardServer } = require('../src/squad-dashboard/server');
 const { detectPanels, loadSquadList } = require('../src/squad-dashboard/api');
 const { renderHomePage, renderSquadPage, esc } = require('../src/squad-dashboard/renderer');
@@ -167,9 +168,10 @@ test('loadSquadList reads squad manifest', async () => {
 
 test('upsertSquadMetric inserts and retrieves metrics', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const { db } = await openRuntimeDb(tmpDir);
-    upsertSquadMetric(db, {
+    handle = await openRuntimeDb(tmpDir);
+    upsertSquadMetric(handle.db, {
       squadSlug: 'odonto',
       metricKey: 'no_show_rate',
       value: 8,
@@ -179,48 +181,47 @@ test('upsertSquadMetric inserts and retrieves metrics', async () => {
       target: 5,
       source: 'manual'
     });
-    const metrics = listSquadMetrics(db, 'odonto');
+    const metrics = listSquadMetrics(handle.db, 'odonto');
     assert.equal(metrics.length, 1);
     assert.equal(metrics[0].metric_key, 'no_show_rate');
     assert.equal(metrics[0].metric_value, 8);
     assert.equal(metrics[0].baseline, 20);
     assert.equal(metrics[0].target, 5);
-    db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('upsertSquadMetric updates on conflict', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const { db } = await openRuntimeDb(tmpDir);
-    upsertSquadMetric(db, { squadSlug: 'odonto', metricKey: 'no_show_rate', value: 20, unit: '%', period: '2026-03', baseline: 25 });
-    upsertSquadMetric(db, { squadSlug: 'odonto', metricKey: 'no_show_rate', value: 8, unit: '%', period: '2026-03' });
-    const metrics = listSquadMetrics(db, 'odonto');
+    handle = await openRuntimeDb(tmpDir);
+    upsertSquadMetric(handle.db, { squadSlug: 'odonto', metricKey: 'no_show_rate', value: 20, unit: '%', period: '2026-03', baseline: 25 });
+    upsertSquadMetric(handle.db, { squadSlug: 'odonto', metricKey: 'no_show_rate', value: 8, unit: '%', period: '2026-03' });
+    const metrics = listSquadMetrics(handle.db, 'odonto');
     assert.equal(metrics.length, 1);
     assert.equal(metrics[0].metric_value, 8);
     assert.equal(metrics[0].baseline, 25); // preserved from first insert
-    db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('listSquadMetrics filters by period', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const { db } = await openRuntimeDb(tmpDir);
-    upsertSquadMetric(db, { squadSlug: 'odonto', metricKey: 'rate', value: 10, period: '2026-02' });
-    upsertSquadMetric(db, { squadSlug: 'odonto', metricKey: 'rate', value: 8, period: '2026-03' });
-    const march = listSquadMetrics(db, 'odonto', '2026-03');
+    handle = await openRuntimeDb(tmpDir);
+    upsertSquadMetric(handle.db, { squadSlug: 'odonto', metricKey: 'rate', value: 10, period: '2026-02' });
+    upsertSquadMetric(handle.db, { squadSlug: 'odonto', metricKey: 'rate', value: 8, period: '2026-03' });
+    const march = listSquadMetrics(handle.db, 'odonto', '2026-03');
     assert.equal(march.length, 1);
     assert.equal(march[0].metric_value, 8);
-    const all = listSquadMetrics(db, 'odonto');
+    const all = listSquadMetrics(handle.db, 'odonto');
     assert.equal(all.length, 2);
-    db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -228,6 +229,7 @@ test('listSquadMetrics filters by period', async () => {
 
 test('dashboard server serves home page', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
     await setupSquadDir(tmpDir, 'test-squad', {
       name: 'Test Squad',
@@ -236,7 +238,7 @@ test('dashboard server serves home page', async () => {
       executors: [{ slug: 'agent1' }]
     });
     // Init runtime DB
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
 
     const dashboard = createDashboardServer(tmpDir, { port: 0 });
     const { port } = await dashboard.start();
@@ -250,12 +252,13 @@ test('dashboard server serves home page', async () => {
       await dashboard.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('dashboard server serves squad detail page', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
     await setupSquadDir(tmpDir, 'marketing', {
       name: 'Marketing',
@@ -263,7 +266,7 @@ test('dashboard server serves squad detail page', async () => {
       goal: 'Grow revenue',
       executors: [{ slug: 'writer' }, { slug: 'designer' }]
     });
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
 
     const dashboard = createDashboardServer(tmpDir, { port: 0 });
     const { port } = await dashboard.start();
@@ -278,15 +281,16 @@ test('dashboard server serves squad detail page', async () => {
       await dashboard.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('dashboard server serves JSON API', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
     await setupSquadDir(tmpDir, 'api-test', { name: 'API Test', mode: 'software', executors: [] });
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
 
     const dashboard = createDashboardServer(tmpDir, { port: 0 });
     const { port } = await dashboard.start();
@@ -301,14 +305,15 @@ test('dashboard server serves JSON API', async () => {
       await dashboard.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('dashboard server returns 404 for unknown squad', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const dashboard = createDashboardServer(tmpDir, { port: 0 });
     const { port } = await dashboard.start();
     try {
@@ -318,16 +323,17 @@ test('dashboard server returns 404 for unknown squad', async () => {
       await dashboard.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('dashboard server returns squads list via API', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
     await setupSquadDir(tmpDir, 'squad-a', { name: 'A', mode: 'content', executors: [] });
     await setupSquadDir(tmpDir, 'squad-b', { name: 'B', mode: 'software', executors: [] });
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
 
     const dashboard = createDashboardServer(tmpDir, { port: 0 });
     const { port } = await dashboard.start();
@@ -341,6 +347,6 @@ test('dashboard server returns squads list via API', async () => {
       await dashboard.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });

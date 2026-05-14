@@ -278,10 +278,14 @@ async function runSquadScore({ args = [], options = {}, logger = console, transl
 
   logger.log('');
 
-  // Store in runtime if available
+  // Store in runtime if available. `openRuntimeDb` is async — without `await`
+  // the destructure unpacks the Promise (db === undefined), the try block
+  // throws on db.prepare, the catch swallows the error, AND the underlying
+  // Promise still resolves and leaks a never-closed handle. On Windows that
+  // leak is what made `fs.rm(tmpDir)` fail with EBUSY in test fixtures.
   try {
     const { openRuntimeDb } = require('../runtime-store');
-    const { db } = openRuntimeDb(projectDir);
+    const { db } = await openRuntimeDb(projectDir);
     try {
       const now = new Date().toISOString();
       const stmt = db.prepare('INSERT OR REPLACE INTO squad_scores (squad_slug, dimension, score, max_score, details_json, scored_at) VALUES (?, ?, ?, ?, ?, ?)');

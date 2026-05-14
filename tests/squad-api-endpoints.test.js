@@ -8,6 +8,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { SquadDaemon } = require('../src/squad-daemon');
 const { openRuntimeDb } = require('../src/runtime-store');
+const { cleanupTmpDir } = require('./helpers/sqlite-cleanup');
 const { renderSquadApiSection } = require('../src/context-writer');
 const { runSquadValidate } = require('../src/commands/squad-validate');
 
@@ -49,8 +50,9 @@ function makeRequest(options, body, method, extraHeaders) {
 
 test('GET /status returns 200 (regression fix)', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'status-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'status-squad', { port: 0, poll: 60000 });
@@ -75,7 +77,7 @@ test('GET /status returns 200 (regression fix)', async () => {
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -83,8 +85,9 @@ test('GET /status returns 200 (regression fix)', async () => {
 
 test('Daemon with api_endpoints: POST /api/buscar executes worker', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ produtos: [] })); process.exit(0);';
     await setupWorker(tmpDir, 'api-squad', 'buscar', {
       slug: 'buscar', name: 'Buscar', type: 'webhook', timeout_ms: 5000
@@ -108,14 +111,15 @@ test('Daemon with api_endpoints: POST /api/buscar executes worker', async () => 
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('Daemon without api_endpoints: POST /api/buscar returns 404', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'noapi-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'noapi-squad', { port: 0, poll: 60000 });
@@ -131,14 +135,15 @@ test('Daemon without api_endpoints: POST /api/buscar returns 404', async () => {
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('CORS: origin in whitelist receives Access-Control-Allow-Origin header', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ ok: true })); process.exit(0);';
     await setupWorker(tmpDir, 'cors-squad', 'api-worker', {
       slug: 'api-worker', name: 'API Worker', type: 'webhook', timeout_ms: 5000
@@ -165,14 +170,15 @@ test('CORS: origin in whitelist receives Access-Control-Allow-Origin header', as
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('CORS: origin not in whitelist does not receive Access-Control-Allow-Origin header', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ ok: true })); process.exit(0);';
     await setupWorker(tmpDir, 'cors2-squad', 'api-worker', {
       slug: 'api-worker', name: 'API Worker', type: 'webhook', timeout_ms: 5000
@@ -199,14 +205,15 @@ test('CORS: origin not in whitelist does not receive Access-Control-Allow-Origin
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('OPTIONS preflight returns 204', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'opt-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'opt-squad', {
@@ -229,7 +236,7 @@ test('OPTIONS preflight returns 204', async () => {
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 

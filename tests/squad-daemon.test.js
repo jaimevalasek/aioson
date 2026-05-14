@@ -8,6 +8,7 @@ const path = require('node:path');
 const http = require('node:http');
 const { SquadDaemon, parseCronExpression, cronMatches, parseCronField } = require('../src/squad-daemon');
 const { openRuntimeDb } = require('../src/runtime-store');
+const { cleanupTmpDir } = require('./helpers/sqlite-cleanup');
 
 async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-squad-daemon-'));
@@ -140,8 +141,9 @@ test('cronMatches returns false for null parsed', () => {
 
 test('SquadDaemon starts and stops with no workers', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     // Create empty squad dir
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'empty-squad', 'workers'), { recursive: true });
 
@@ -159,14 +161,15 @@ test('SquadDaemon starts and stops with no workers', async () => {
     await daemon.stop();
     assert.ok(!daemon.running);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon registers cron jobs for scheduled workers', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await setupWorker(tmpDir, 'cron-squad', 'daily-task', {
       slug: 'daily-task', name: 'Daily', type: 'scheduled',
       trigger: { type: 'scheduled', cron: '0 8 * * *' },
@@ -185,14 +188,15 @@ test('SquadDaemon registers cron jobs for scheduled workers', async () => {
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon webhook endpoint executes worker', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = `
 const input = JSON.parse(process.argv[2] || '{}');
 process.stdout.write(JSON.stringify({ received: input.msg || 'none' }));
@@ -219,14 +223,15 @@ process.exit(0);
       await daemon.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon webhook returns 404 for unknown paths', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'test-404', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'test-404', { port: 0, poll: 60000 });
@@ -239,14 +244,15 @@ test('SquadDaemon webhook returns 404 for unknown paths', async () => {
       await daemon.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon webhook returns 400 for invalid JSON', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'test-bad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'test-bad', { port: 0, poll: 60000 });
@@ -275,14 +281,15 @@ test('SquadDaemon webhook returns 400 for invalid JSON', async () => {
       await daemon.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon records worker runs in SQLite', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const handle = await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ok:true})); process.exit(0);';
     await setupWorker(tmpDir, 'log-squad', 'logger-w', {
       slug: 'logger-w', name: 'Logger', type: 'webhook',
@@ -304,28 +311,28 @@ test('SquadDaemon records worker runs in SQLite', async () => {
     } finally {
       await daemon.stop();
     }
-    handle.db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('squad_daemons table is created by openRuntimeDb', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const { db } = await openRuntimeDb(tmpDir);
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='squad_daemons'").all();
+    handle = await openRuntimeDb(tmpDir);
+    const tables = handle.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='squad_daemons'").all();
     assert.equal(tables.length, 1);
-    db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon upserts daemon record in SQLite', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    const handle = await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'rec-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'rec-squad', { port: 0, poll: 60000 });
@@ -340,9 +347,7 @@ test('SquadDaemon upserts daemon record in SQLite', async () => {
 
     const stopped = handle.db.prepare('SELECT * FROM squad_daemons WHERE squad_slug = ?').get('rec-squad');
     assert.equal(stopped.status, 'stopped');
-
-    handle.db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });

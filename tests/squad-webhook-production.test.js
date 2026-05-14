@@ -11,6 +11,7 @@ const { SquadDaemon } = require('../src/squad-daemon');
 const { openRuntimeDb } = require('../src/runtime-store');
 const { runSquadDeploy, generateNginxConf } = require('../src/commands/squad-deploy');
 const { runSquadDoctor } = require('../src/commands/squad-doctor');
+const { cleanupTmpDir } = require('./helpers/sqlite-cleanup');
 
 // --- Helpers ---
 
@@ -54,8 +55,9 @@ function hmacSha256(secret, body) {
 
 test('SquadDaemon uses webhook.bind when set in config', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'bind-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'bind-squad', {
@@ -68,14 +70,15 @@ test('SquadDaemon uses webhook.bind when set in config', async () => {
     assert.equal(addr.address, '127.0.0.1');
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
 test('SquadDaemon defaults to 127.0.0.1 when no webhook.bind', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'nobind-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'nobind-squad', { port: 0, poll: 60000 });
@@ -84,7 +87,7 @@ test('SquadDaemon defaults to 127.0.0.1 when no webhook.bind', async () => {
     assert.equal(addr.address, '127.0.0.1');
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -92,8 +95,9 @@ test('SquadDaemon defaults to 127.0.0.1 when no webhook.bind', async () => {
 
 test('_handleWebhook with validate_signature=false accepts request without HMAC header', async () => {
   const tmpDir = await makeTempDir();
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ ok: true })); process.exit(0);';
     await setupWorker(tmpDir, 'nosig-squad', 'echo', {
       slug: 'echo', name: 'Echo', type: 'webhook', timeout_ms: 5000
@@ -112,7 +116,7 @@ test('_handleWebhook with validate_signature=false accepts request without HMAC 
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -123,8 +127,9 @@ test('_handleWebhook with correct HMAC returns 200', async () => {
   const secret = 'test-secret-abc';
   const origEnv = process.env.TEST_HMAC_SECRET;
   process.env.TEST_HMAC_SECRET = secret;
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     const script = 'process.stdout.write(JSON.stringify({ ok: true })); process.exit(0);';
     await setupWorker(tmpDir, 'hmac-squad', 'echo', {
       slug: 'echo', name: 'Echo', type: 'webhook', timeout_ms: 5000
@@ -156,7 +161,7 @@ test('_handleWebhook with correct HMAC returns 200', async () => {
   } finally {
     if (origEnv === undefined) delete process.env.TEST_HMAC_SECRET;
     else process.env.TEST_HMAC_SECRET = origEnv;
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -165,8 +170,9 @@ test('_handleWebhook with wrong HMAC returns 401', async () => {
   const secret = 'test-secret-xyz';
   const origEnv = process.env.TEST_HMAC_WRONG;
   process.env.TEST_HMAC_WRONG = secret;
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'badhmac-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'badhmac-squad', {
@@ -194,7 +200,7 @@ test('_handleWebhook with wrong HMAC returns 401', async () => {
   } finally {
     if (origEnv === undefined) delete process.env.TEST_HMAC_WRONG;
     else process.env.TEST_HMAC_WRONG = origEnv;
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -202,8 +208,9 @@ test('_handleWebhook without HMAC header when signature required returns 401', a
   const tmpDir = await makeTempDir();
   const origEnv = process.env.TEST_HMAC_REQ;
   process.env.TEST_HMAC_REQ = 'some-secret';
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'reqsig-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'reqsig-squad', {
@@ -231,7 +238,7 @@ test('_handleWebhook without HMAC header when signature required returns 401', a
   } finally {
     if (origEnv === undefined) delete process.env.TEST_HMAC_REQ;
     else process.env.TEST_HMAC_REQ = origEnv;
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
@@ -239,8 +246,9 @@ test('_handleWebhook when signature env var not set returns 401 signature_requir
   const tmpDir = await makeTempDir();
   const envKey = 'TEST_HMAC_UNSET_' + Date.now();
   delete process.env[envKey]; // ensure unset
+  let handle = null;
   try {
-    await openRuntimeDb(tmpDir);
+    handle = await openRuntimeDb(tmpDir);
     await fs.mkdir(path.join(tmpDir, '.aioson', 'squads', 'unset-squad', 'workers'), { recursive: true });
 
     const daemon = new SquadDaemon(tmpDir, 'unset-squad', {
@@ -266,7 +274,7 @@ test('_handleWebhook when signature env var not set returns 401 signature_requir
 
     await daemon.stop();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await cleanupTmpDir(tmpDir, { handles: [handle] });
   }
 });
 
