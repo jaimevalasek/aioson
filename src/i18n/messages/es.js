@@ -185,6 +185,10 @@ module.exports = {
     done_at: 'Instalacion completada en: {targetDir}',
     files_copied: 'Archivos copiados: {count}',
     files_skipped: 'Archivos omitidos: {count}',
+    dry_run_header: '⚠  DRY RUN — no se escribio ningun archivo. Mostrando lo que haria el install:',
+    dry_run_done_at: 'DRY RUN: no se escribio nada en {targetDir}',
+    dry_run_files_copied: 'Archivos que se copiarian (would be copied): {count}',
+    dry_run_files_skipped: 'Archivos que se omitirian (would be skipped): {count}',
     next_steps: 'Siguientes pasos:',
     step_setup_context:
       '1. Genera/actualiza el contexto del proyecto: aioson setup:context --defaults',

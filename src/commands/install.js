@@ -118,6 +118,19 @@ async function runInstall({ args, options, logger, t }) {
     const version = await getCliVersion();
     await renderRevealAnimation(version);
     renderInstallSummary({ result, installProfile });
+  } else if (dryRun) {
+    // bug-found-001: dry-run must be visually distinct from a real install.
+    // Past-tense verbs ("Installation completed", "Files copied") on a no-op
+    // run mislead operators into believing files were written. Use a banner
+    // marker and the conditional form ("would be copied") instead.
+    logger.log(t('install.dry_run_header'));
+    logger.log(t('install.dry_run_done_at', { targetDir }));
+    logger.log(t('install.dry_run_files_copied', { count: result.copied.length }));
+    logger.log(t('install.dry_run_files_skipped', { count: result.skipped.length }));
+    logger.log(t('install.next_steps'));
+    logger.log(t('install.step_setup_context'));
+    logger.log(t('install.step_agents'));
+    logger.log(t('install.step_agent_prompt', { tool: promptTool }));
   } else {
     logger.log(t('install.done_at', { targetDir }));
     logger.log(t('install.files_copied', { count: result.copied.length }));
