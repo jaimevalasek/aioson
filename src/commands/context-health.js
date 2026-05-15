@@ -97,7 +97,17 @@ async function runContextHealth({ args, options = {}, logger }) {
   const db = dbResult ? dbResult.db : null;
   const dbPath = dbResult ? dbResult.dbPath : null;
   const cacheHitRate = await getCacheHitRate(db);
-  if (db) db.close();
+  if (db) {
+    // bug-found-004: openRuntimeDb activates WAL mode, which spawns
+    // `aios.sqlite-wal` and `aios.sqlite-shm` sibling files. Closing the
+    // handle without truncating the WAL first leaves those files locked
+    // for ~50-100ms on Windows — long enough to make any cleanup-then-rm
+    // teardown fail with EBUSY. Truncate-checkpoint forces WAL → main and
+    // synchronously releases the sibling files so the close() that follows
+    // leaves a clean filesystem state.
+    try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch { /* best-effort */ }
+    db.close();
+  }
 
   const skeletonPresent = entries.includes('skeleton-system.md') || entries.includes('skeleton.md');
 

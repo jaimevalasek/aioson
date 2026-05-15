@@ -156,4 +156,6 @@ O **subsistema squad em produção funciona**. As 18 falhas em `npm test` no Win
 
 ## Continuation
 
-Squad: investigação concluída — não é a fonte real do problema do user. Próximo escopo pendente: **re-investigar os outros clusters** (context-health, sync-agents-preflight, live-*) que podem ter o mesmo root-cause SQLite-on-Windows OU bugs reais.
+Squad: investigação concluída — não é a fonte real do problema do user.
+
+**Atualização 2026-05-14 (@tester triagem das 20 remanescentes)**: a triagem cross-cluster foi concluída. Artifact JSON em `.aioson/context/test-triage.json`. Detalhes humanos em `test-plan.md > Cross-cluster sweep`. Resumo: 6 EBUSY (mesma raiz do bug-002, mecânico) + 6 live-cluster ENOENT (bug real high-sev) + 2 test-update + 2 fixture-stale + 3 singletons + 1 drift de prompt + 1 perf-flake. **15 dos 20 são entregáveis para @dev**, 2 são test refresh para @tester, 3 são decisões de @architect/product-owner.

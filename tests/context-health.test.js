@@ -6,6 +6,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const { runContextHealth } = require('../src/commands/context-health');
+const { cleanupTmpDir } = require('./helpers/sqlite-cleanup');
 
 const mockLogger = { log: () => {}, error: () => {}, warn: () => {} };
 
@@ -25,7 +26,10 @@ describe('context-health.js — runContextHealth', () => {
   });
 
   afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    // bug-found-004: helper handles any residual EBUSY from WAL/SHM lingering
+    // on Windows. The matching production fix in context-health.js truncates
+    // the WAL before closing, so retries should rarely fire in practice.
+    await cleanupTmpDir(tmpDir);
   });
 
   it('returns no_context_dir when context directory missing', async () => {

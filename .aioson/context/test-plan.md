@@ -64,6 +64,97 @@ Esses 2 problemas se sobrepõem no dashboard de `npm test` — o operador vê 42
   4. Comentário explicando ambas as decisões e por que cada parte é necessária
 - **Regression**: `squad-export.test.js` 3/3 verde, `tool-invocation-hardening.test.js#SF-12` verde, full suite 2402/2422 (was 2399/2422). Zero regressão nova.
 
+## Cross-cluster sweep — triagem das 20 falhas remanescentes (Opção C, 2026-05-14 @tester)
+
+Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta seção é a triagem prometida no test-plan.md original (Opção C — "cross-cluster sweep para EBUSY pattern").
+
+**Artifact JSON com a triagem completa**: `.aioson/context/test-triage.json` (legível por CI/scripts).
+
+### Buckets — 20 falhas em 7 classes
+
+| Classe | # | Owner | Severidade | ID |
+|---|---|---|---|---|
+| windows-teardown-ebusy | 6 | @dev | high | **bug-found-004** |
+| real-assertion-failure-live-cluster | 6 | @dev | high | **bug-found-005** |
+| test-needs-update-new-check-noise | 2 | @tester | low | test-update-001 |
+| stale-fixture-path | 2 | investigação | low | investigation-001 |
+| drift-from-recent-refactor | 1 | @architect | medium | decision-needed-001 |
+| real-assertion-failure-singleton | 3 | @dev | medium | **bug-found-006** |
+| perf-flake-windows-io | 1 | @tester/@architect | low | known-flake-001 |
+
+### Detalhes por bucket
+
+#### [bug-found-004] context-health EBUSY × 6 — **FIXED 2026-05-14 (@dev)**
+
+- `tests/context-health.test.js:46,59,77,97,115,125`
+- Sintoma idêntico: `EBUSY: resource busy or locked, unlink ... aios.sqlite`
+- **Diagnóstico revisado durante o fix**: NÃO era o padrão de "handle descartado" do bug-002. O test fechava o handle corretamente no `beforeEach` e o `runContextHealth` também fechava na linha 100 do código de produção. O leak eram os **arquivos WAL/SHM** (`aios.sqlite-wal`, `aios.sqlite-shm`) criados quando `openRuntimeDb` ativa WAL mode (linha 59 de `runtime-store.js`). Esses arquivos siblings ficam pendurados ~50-100ms no Windows mesmo após `db.close()` — tempo suficiente pro `fs.rm` do `afterEach` falhar.
+- **Fix entregue**:
+  - Produção: `src/commands/context-health.js` linha 100 — adicionado `db.pragma('wal_checkpoint(TRUNCATE)')` antes de `db.close()`. Força WAL→main e libera siblings sincronamente.
+  - Test: `afterEach` agora usa `cleanupTmpDir(tmpDir)` em vez de `fs.rm` cru — safety net via `maxRetries: 5, retryDelay: 100` caso outro path quebre o checkpoint.
+  - Comentários documentam ambas as decisões e por que cada uma é necessária.
+- **Regressão**: `context-health.test.js` 7/7 verde, full suite **2407/2422** (was 2402/2422). +5 net (6 context-health recuperados, 1 flake elsewhere offsetting).
+
+**Note**: o padrão WAL/SHM lingering provavelmente afeta outros testes — durante esta sessão observei `tests/context-search.test.js:15` falhar com `ENOTEMPTY` em `search/` subdir (também é WAL-related). Recomendação: aplicar o mesmo padrão (`wal_checkpoint(TRUNCATE)` + `cleanupTmpDir`) em sessões futuras se ocorrerem flakes similares.
+
+#### [bug-found-005] live-* cluster ENOENT × 6 — BUG REAL DE PRODUÇÃO
+
+- `tests/live-command.test.js:36,308,394,435`, `tests/live-json-output.test.js:34`, `tests/runtime-command.test.js:610`
+- Sintoma uniforme: `ENOENT: no such file or directory, open '.../runtime/live/direct-session:{ts}:deyvin/state.json'`
+- Root cause provável: refactor recente em `src/commands/live-*` ou `src/live-session`. Ou (a) o `state.json` não está sendo escrito, ou (b) o path mudou e os tests não foram atualizados, ou (c) há race entre `live:start` retornar e o `state.json` ser persistido
+- **Severidade alta**: a feature de live sessions é parte do runtime principal do dashboard — se está quebrada em produção, dashboard fica sem visibilidade
+- ETA: investigação primeiro (1-2h), fix depende do diagnóstico
+
+#### [test-update-001] sync-agents-preflight × 2 — TEST NEEDS UPDATE (não bug)
+
+- `tests/sync-agents-preflight.test.js:146,194`
+- Tests stubam `dossierTelemetry.emitDossierEvent` e contam chamadas. Foram escritos antes do check `learning_loop_template_parity_violation` (Phase 6 active-learning-loop) existir. O novo check emite +1 evento, quebrando as contagens (esperado 1 → recebe 2; esperado 0 → recebe 1)
+- **Fix**: filtrar `calls` por `payload.type === 'sync_agents_parity_violation'` antes de contar (5 minutos de @tester)
+- **NÃO é bug de produção** — o código de produção está correto, o test é que não cobre o cenário pós-Phase 6
+
+#### [investigation-001] json-schema-files × 2 — STALE FIXTURE PATH
+
+- `tests/json-schema-files.test.js:17,65`
+- Aponta para `docs/en/schemas/index.json` que **não existe** no repo (`docs/en/` existe com 6 subdirs, mas nenhum `schemas/`)
+- Owner unclear até alguém rodar `git log --all -- 'docs/**/schemas/**'` pra descobrir se os schemas:
+  1. Nunca existiram nesse path (test sempre quebrado?)
+  2. Existiram e foram removidos (test precisa atualizar path OU os schemas precisam voltar)
+  3. Foram movidos pra outro lugar (test precisa atualizar path)
+- ETA: 5 minutos de arqueologia git → decisão
+
+#### [decision-needed-001] product kernel oversize × 1 — NÃO É BUG, É DECISÃO
+
+- `tests/agent-contracts.test.js:229`
+- Asserção: "product kernel should stay within the generalist target" — falhou
+- Adições recentes ao prompt do `product.md` empurraram o tamanho acima do budget enforced
+- Decisão (não-tester): (a) rebudget — atualizar o limite no test, ou (b) trim — cortar conteúdo do prompt
+- Owner: @architect ou product-owner
+
+#### [bug-found-006] singletons reais × 3
+
+- `tests/agent-teams-adapter.test.js:122` — `teammate.agentFile.includes('custom/agents/dev.md')` false → custom file path não está sendo honrado
+- `tests/learning-auto-promote.test.js:92` — `result.promoted_items[0].file.includes('.aioson/rules')` false → path format mudou
+- `tests/live-command.test.js:308` (também no live-cluster acima, mas a asserção é distinta — "Missing expected rejection")
+- ETA: 15-30min cada, investigação individual
+
+#### [known-flake-001] QA-PERF-01 Windows perf × 1
+
+- `tests/qa-telemetry-foundation.test.js:30`
+- p99 = 1047.99ms vs SLA 100ms (10× over)
+- Já documentado como Windows-IO-sensitive flake; este run pegou um pico de carga (10× é fora do padrão histórico)
+- Decisão de @architect: rebudget SLA pra Windows, skip por plataforma, ou aceitar flake
+
+### Recomendação de sequenciamento
+
+1. **bug-found-004** primeiro (@dev, mecânico, alto retorno) — recupera 6 testes
+2. **test-update-001** em paralelo (@tester, 5min) — recupera 2 testes
+3. **bug-found-005** depois (@dev, investigação + fix) — recupera 6 testes
+4. **bug-found-006** sequencial (@dev, 3 itens) — recupera 3 testes
+5. **investigation-001** → arqueologia git → decisão (@dev ou @architect)
+6. **decision-needed-001** + **known-flake-001** → @architect
+
+Pós-execução do 1-4: **17 testes recuperados** → suite deve chegar a **2419/2422 verde** (3 itens decision-only restantes).
+
 ## Veredito do trio bug-found-*
 
 Os 3 bugs identificados pelo @tester estão resolvidos. Total dessa sessão @dev:

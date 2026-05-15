@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-14T23:30:00.000Z",
+  "agent": "tester",
+  "scope": "Triage of 20 failures remaining after bug-found-001/002/003 fixes shipped",
+  "baseline": {
+    "tests": 2422,
+    "pass": 2402,
+    "fail": 20
+  },
+  "buckets": {
+    "windows-teardown-ebusy": {
+      "count": 6,
+      "status": "FIXED 2026-05-14 (@dev)",
+      "description": "Refined diagnosis: NOT discarded handles like bug-002. The test correctly closes its own DB; the leak was WAL/SHM sibling files lingering after openRuntimeDb (which enables WAL mode) in src/commands/context-health.js. Fix: added wal_checkpoint(TRUNCATE) before db.close() in production code + cleanupTmpDir helper in afterEach as a safety net.",
+      "skip_on_windows_safe": false,
+      "ci_linux_likely_passes": true,
+      "owner": "dev",
+      "bug_id": "bug-found-004",
+      "resolution": "context-health 7/7 green. Full suite delta: 2407/2422 (was 2402/2422). 6 EBUSY recoveries, 1 flake offset elsewhere.",
+      "files": [
+        "tests/context-health.test.js:46:reports empty context directory",
+        "tests/context-health.test.js:59:estimates tokens for markdown files",
+        "tests/context-health.test.js:77:flags heavy and critical files by token count",
+        "tests/context-health.test.js:97:detects stale specs from features.md",
+        "tests/context-health.test.js:115:detects skeleton-system.md presence",
+        "tests/context-health.test.js:125:sorts files by token count descending"
+      ]
+    },
+    "real-assertion-failure-live-cluster": {
+      "count": 6,
+      "description": "All 6 live-* tests fail with ENOENT on .aioson/runtime/live/direct-session:{id}/state.json. Either the file is no longer written, the directory naming changed, or there is a race between live:start returning and state.json being persisted.",
+      "skip_on_windows_safe": false,
+      "ci_linux_likely_passes": false,
+      "owner": "dev",
+      "bug_id": "bug-found-005",
+      "severity": "high",
+      "evidence_pattern": "ENOENT: no such file or directory, open 'C:\\Users\\...\\aioson-live-command-*\\.aioson\\runtime\\live\\direct-session:1778803...:deyvin\\state.json'",
+      "files": [
+        "tests/live-command.test.js:36:live session commands track start, plan progress, handoff and close for a no-launch session",
+        "tests/live-command.test.js:308:runtime:emit rejects back-to-back task_started without task_completed",
+        "tests/live-command.test.js:394:live:list returns sessions after start and close",
+        "tests/live-command.test.js:435:state.json contains events_by_type breakdown after emit",
+        "tests/live-json-output.test.js:34:live session commands return structured JSON payloads with plan progress and handoff",
+        "tests/runtime-command.test.js:610:runtime status exposes live sessions, micro-tasks, and handoffs from the live runtime flow"
+      ],
+      "suspected_source": "Recent refactor in src/commands/live-* or src/live-session — verify state.json write path matches what live:start advertises"
+    },
+    "test-needs-update-new-check-noise": {
+      "count": 2,
+      "description": "Tests stub dossierTelemetry.emitDossierEvent and count calls. They were written before the active-learning-loop Phase 6 'learning_loop_template_parity_violation' check existed. The new check emits one extra event in both tested scenarios, breaking the count assertion.",
+      "skip_on_windows_safe": false,
+      "ci_linux_likely_passes": false,
+      "owner": "tester",
+      "bug_id": "test-update-001",
+      "severity": "low",
+      "files": [
+        "tests/sync-agents-preflight.test.js:146:emits sync_agents_parity_violation when main() aborts on violation (expects 1 call, gets 2)",
+        "tests/sync-agents-preflight.test.js:194:main() returns 0 without emitting events when there are no violations (expects 0 calls, gets 1)"
+      ],
+      "fix_recipe": "Either (a) filter calls by payload.type before counting (only count sync_agents_parity_violation), or (b) add a second assertion accounting for the new template parity check. (a) is more surgical."
+    },
+    "stale-fixture-path": {
+      "count": 2,
+      "description": "Tests reference docs/en/schemas/index.json but neither docs/en/schemas/ nor docs/schemas/ exists in the repo. Either the schemas were never created in that location, or they were removed/relocated without updating the tests.",
+      "skip_on_windows_safe": true,
+      "ci_linux_likely_passes": false,
+      "owner": "investigation-needed",
+      "bug_id": "investigation-001",
+      "severity": "low",
+      "files": [
+        "tests/json-schema-files.test.js:17:json schema index is valid and references existing schema files",
+        "tests/json-schema-files.test.js:65:json schema files expose required metadata"
+      ],
+      "fix_recipe": "Run `git log --all --oneline -- 'docs/**/schemas/**'` to find whether schemas were ever committed. If they were and got deleted, restore or update the test path. If never created, delete the test or skip with reason."
+    },
+    "drift-from-recent-refactor": {
+      "count": 1,
+      "description": "agent-contracts kernel size budget: product kernel grew beyond the generalist target. Recent additions to the product agent prompt pushed it over the byte budget enforced by tests/agent-contracts.test.js.",
+      "skip_on_windows_safe": false,
+      "ci_linux_likely_passes": false,
+      "owner": "architect-or-product-owner",
+      "bug_id": "decision-needed-001",
+      "severity": "medium",
+      "files": [
+        "tests/agent-contracts.test.js:229:product, sheldon, and dev kernels use deterministic on-demand docs and stay within size targets (product kernel oversize)"
+      ],
+      "fix_recipe": "Decision: either (a) raise the product kernel byte budget in tests/agent-contracts.test.js (acknowledge prompt growth) or (b) trim the product agent .md to fit. Not a tester decision."
+    },
+    "real-assertion-failure-singleton": {
+      "count": 3,
+      "description": "Isolated real assertion failures, each in a distinct module. Each needs individual investigation but is not part of a cluster.",
+      "skip_on_windows_safe": false,
+      "ci_linux_likely_passes": false,
+      "owner": "dev",
+      "bug_id": "bug-found-006",
+      "severity": "medium",
+      "files": [
+        "tests/agent-teams-adapter.test.js:122:executorToTeammate uses custom file path when provided (teammate.agentFile.includes('custom/agents/dev.md') was false)",
+        "tests/learning-auto-promote.test.js:92:learning:auto-promote promotes process learnings above threshold (result.promoted_items[0].file.includes('.aioson/rules') was false — path format may have changed)",
+        "tests/live-command.test.js:308:runtime:emit rejects back-to-back task_started without task_completed (Missing expected rejection — included with live-cluster above but the assertion is distinct from state.json ENOENT)"
+      ]
+    },
+    "perf-flake-windows-io": {
+      "count": 1,
+      "description": "QA-PERF-01 — p99 latency stays under 100ms across 500 sequential context:load calls. Already documented as Windows-IO-sensitive flake. Most recent run measured p99 = 1047.99ms (10× SLA), which is unusual even for a flake — may be system load at the time of run.",
+      "skip_on_windows_safe": true,
+      "ci_linux_likely_passes": true,
+      "owner": "tester-or-architect",
+      "bug_id": "known-flake-001",
+      "severity": "low",
+      "files": [
+        "tests/qa-telemetry-foundation.test.js:30:QA-PERF-01: p99 latency stays under 100ms across 500 sequential context:load calls"
+      ],
+      "fix_recipe": "Options: (a) raise the SLA for Windows (e.g., 250ms p99), (b) skip on Windows entirely with platform check, (c) leave as-is and accept the flake. Decision belongs to @architect."
+    }
+  },
+  "summary_by_owner": {
+    "dev": {
+      "buckets": ["windows-teardown-ebusy", "real-assertion-failure-live-cluster", "real-assertion-failure-singleton"],
+      "count": 15
+    },
+    "tester": {
+      "buckets": ["test-needs-update-new-check-noise"],
+      "count": 2
+    },
+    "investigation-needed": {
+      "buckets": ["stale-fixture-path"],
+      "count": 2
+    },
+    "architect-or-product-owner": {
+      "buckets": ["drift-from-recent-refactor"],
+      "count": 1
+    }
+  },
+  "summary_by_severity": {
+    "high": 6,
+    "medium": 4,
+    "low": 5,
+    "skip-on-windows-only": 3,
+    "decision-needed": 1
+  },
+  "recommended_next": [
+    "bug-found-004 (context-health EBUSY × 6): @dev — mechanical fix, same recipe as bug-found-002, ~30 minutes",
+    "bug-found-005 (live-* cluster × 6): @dev — REAL bug, state.json missing; investigate src/commands/live-* first",
+    "test-update-001 (sync-agents-preflight × 2): @tester — filter call list by payload.type, 5 minutes",
+    "investigation-001 (docs/en/schemas missing): owner unclear — git archaeology needed first",
+    "decision-needed-001 (product kernel oversize): @architect or product-owner decision, not a fix"
+  ]
+}
