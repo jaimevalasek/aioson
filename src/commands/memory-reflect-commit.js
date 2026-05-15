@@ -11,6 +11,7 @@ const path = require('node:path');
 const { openRuntimeDb, logAgentEvent } = require('../runtime-store');
 const { validate, readBootstrapSnapshot } = require('../memory-reflect-engine');
 const { REFLECT_PROMPT_RELATIVE } = require('./memory-reflect-prepare');
+const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 
 async function readJsonFile(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');
@@ -115,8 +116,13 @@ async function runMemoryReflectCommit({ args, options = {}, logger }) {
       });
       return { ok: false, error: 'path_escape', message: msg };
     }
+    // SF-project-22: scrub zero-width / bidi / HTML-comment injection carriers
+    // from the LLM-authored content before it lands in bootstrap. Path
+    // containment is already enforced above; this is the content layer of the
+    // same defense pattern (SF-08/09).
+    const safeContent = stripInjectionChars(content);
     await fs.mkdir(path.dirname(absPath), { recursive: true });
-    await fs.writeFile(absPath, content, 'utf8');
+    await fs.writeFile(absPath, safeContent, 'utf8');
     written.push(relPath);
   }
 

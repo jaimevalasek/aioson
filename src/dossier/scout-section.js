@@ -11,6 +11,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { stripInjectionChars } = require('../lib/llm-content-sanitizer');
 
 const SECTION_HEADING = '## Sub-task scouts';
 const MAX_RECOMMENDATION_PREVIEW = 200;
@@ -33,8 +34,11 @@ function firstSentence(text, maxLen) {
 
 function buildBullet(scout) {
   const id = String(scout.id || '');
-  const question = String(scout.question || '').trim();
-  const recPreview = firstSentence(scout.recommendation, MAX_RECOMMENDATION_PREVIEW);
+  // SF-project-21: strip zero-width / bidi / HTML-comment carriers before the
+  // scout's LLM-authored text lands in dossier.md. Mirrors the existing fix
+  // (SF-08/09) applied to worker-runner.js + dossier/store.js + dossier/research-index-store.js.
+  const question = stripInjectionChars(String(scout.question || '').trim());
+  const recPreview = stripInjectionChars(firstSentence(scout.recommendation, MAX_RECOMMENDATION_PREVIEW));
   const confidence = String(scout.confidence || '?');
   const findings = Array.isArray(scout.findings) ? scout.findings.length : 0;
   return `- ${id}: ${question} → ${recPreview} (confidence: ${confidence}, ${findings} findings)`;
