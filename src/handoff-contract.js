@@ -169,13 +169,25 @@ function parseFrontmatterValue(markdown, key) {
   return null;
 }
 
+async function readProjectClassification(targetDir) {
+  // SF-project-26: project-level classification, independent of any feature's
+  // PRD frontmatter. Used as the security baseline that an LLM-authored
+  // prd-{slug}.md cannot override downwards.
+  const contextPath = path.join(targetDir, '.aioson', 'context', 'project.context.md');
+  const content = await readFileSafe(contextPath);
+  const inferred = parseFrontmatterValue(content, 'classification');
+  return isNonEmptyString(inferred) ? inferred.trim().toUpperCase() : null;
+}
+
 async function resolveClassification(targetDir, state) {
   const explicit = isNonEmptyString(state?.classification) ? state.classification.trim().toUpperCase() : null;
   if (explicit) return explicit;
 
   // When in feature mode, the feature's own classification (in prd-{slug}.md)
   // takes precedence over the project-level classification. A MICRO feature
-  // inside a MEDIUM project should be treated as MICRO for gate enforcement.
+  // inside a MEDIUM project should be treated as MICRO for gate enforcement —
+  // except for Gate D security review, which falls back to the project
+  // baseline (handled in checkGateApproval via SF-project-26).
   const slug = state?.featureSlug;
   if (slug) {
     const prdPath = path.join(targetDir, '.aioson', 'context', `prd-${slug}.md`);
@@ -186,18 +198,24 @@ async function resolveClassification(targetDir, state) {
     }
   }
 
-  const contextPath = path.join(targetDir, '.aioson', 'context', 'project.context.md');
-  const content = await readFileSafe(contextPath);
-  const inferred = parseFrontmatterValue(content, 'classification');
-  return isNonEmptyString(inferred) ? inferred.trim().toUpperCase() : null;
+  return await readProjectClassification(targetDir);
 }
 
-async function checkGateApproval(targetDir, gateLetter, slug, classification) {
+async function checkGateApproval(targetDir, gateLetter, slug, classification, projectClassification) {
   // MICRO features are documented as @product → @dev only — they don't pass
   // through @analyst/@architect and therefore don't produce spec-{slug}.md.
-  // Skip gate validation entirely for MICRO; the lightweight workflow is the
-  // gate.
-  if (classification === 'MICRO' && slug) {
+  // Skip the process gates (A=requirements, B=design, C=plan) for MICRO; the
+  // lightweight workflow is the gate.
+  //
+  // SF-project-26: Gate D (security review) is the project's security
+  // baseline, not a per-feature concern. Skip Gate D only when the PROJECT
+  // itself is MICRO — a MICRO feature inside a MEDIUM project must still pass
+  // Gate D because the security baseline applies project-wide. The LLM-
+  // authored prd-{slug}.md cannot lower the project's security floor.
+  if (classification === 'MICRO' && slug && gateLetter !== 'D') {
+    return { ok: true, reason: 'micro_skips_gate' };
+  }
+  if (classification === 'MICRO' && slug && gateLetter === 'D' && projectClassification === 'MICRO') {
     return { ok: true, reason: 'micro_skips_gate' };
   }
 
@@ -270,6 +288,10 @@ async function validateHandoffContract(targetDir, state, stageName) {
 
   const missing = [];
   const classification = await resolveClassification(targetDir, state);
+  // SF-project-26: project-level classification is the security baseline.
+  // Independent of the feature's PRD frontmatter so it cannot be lowered by
+  // an LLM-authored PRD.
+  const projectClassification = await readProjectClassification(targetDir);
 
   // 1. Artifacts
   const artifactPaths = await resolveArtifacts(contract, targetDir, state);
@@ -281,7 +303,13 @@ async function validateHandoffContract(targetDir, state, stageName) {
 
   // 2. Gates
   for (const gateLetter of contract.gates) {
-    const gateCheck = await checkGateApproval(targetDir, gateLetter, state.featureSlug, classification);
+    const gateCheck = await checkGateApproval(
+      targetDir,
+      gateLetter,
+      state.featureSlug,
+      classification,
+      projectClassification
+    );
     if (!gateCheck.ok) {
       missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
     }
@@ -379,6 +407,9 @@ async function getBlockingRevisions(targetDir, featureSlug) {
 
 module.exports = {
   parseFrontmatterValue,
+  readProjectClassification,
+  resolveClassification,
+  checkGateApproval,
   validateHandoffContract,
   formatContractError,
   getBlockingRevisions,
