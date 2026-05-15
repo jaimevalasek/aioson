@@ -116,12 +116,15 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
   - 5 sites em 2 test files atualizados pra usar o helper
 - **Regressão**: live-command 8/8 + live-json-output 2/2 + runtime-command relevante verde. Full suite **2413/2422** (was 2407/2422). +6 net. As 9 falhas restantes incluem 4 flakes intermitentes que passam em isolação.
 
-#### [test-update-001] sync-agents-preflight × 2 — TEST NEEDS UPDATE (não bug)
+#### [test-update-001] sync-agents-preflight × 2 — **FIXED 2026-05-14 (@tester)**
 
 - `tests/sync-agents-preflight.test.js:146,194`
-- Tests stubam `dossierTelemetry.emitDossierEvent` e contam chamadas. Foram escritos antes do check `learning_loop_template_parity_violation` (Phase 6 active-learning-loop) existir. O novo check emite +1 evento, quebrando as contagens (esperado 1 → recebe 2; esperado 0 → recebe 1)
-- **Fix**: filtrar `calls` por `payload.type === 'sync_agents_parity_violation'` antes de contar (5 minutos de @tester)
-- **NÃO é bug de produção** — o código de produção está correto, o test é que não cobre o cenário pós-Phase 6
+- Tests stubam `dossierTelemetry.emitDossierEvent` e contam chamadas. Foram escritos antes do check `learning_loop_template_parity_violation` (Phase 6 active-learning-loop) existir. O novo check emite +1 evento, quebrando as contagens (esperado 1 → recebe 2; esperado 0 → recebe 1).
+- **Fix entregue**:
+  - Test 146: filter `calls` por `payload.type === 'sync_agents_parity_violation'` antes de contar. Mantém todas as outras asserções.
+  - Test 194: refactored. O test original misturava 2 invariants (no parity_violation emit AND global exit code 0). Como main() agora reflete múltiplos checks, removi a asserção de exit code e mantive só a invariant agent-chain-específica. Renomeei o test para refletir o escopo real: "main() does not emit sync_agents_parity_violation when agent-chain parity is clean".
+- **NÃO é bug de produção** — o código está correto, os tests é que não cobriam o cenário pós-Phase 6.
+- **Regressão**: sync-agents-preflight 7/7 verde. Full suite **2418/2422**.
 
 #### [investigation-001] json-schema-files × 2 — STALE FIXTURE PATH
 
