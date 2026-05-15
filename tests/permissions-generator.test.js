@@ -207,3 +207,149 @@ test('generatePermissions honours v1.0 fallback via legacy whitelists', async ()
   assert.ok(claude.permissions.allow.includes('Bash(aioson workflow:next:*)'));
   assert.ok(!claude.permissions.allow.some((r) => r.includes('preflight')), 'v1.0 has no tier1 commands');
 });
+
+// SF-project-24: tier3_blocking + tool.shell_blacklist must materialize as deny rules
+
+test('SF-project-24: resolveToolSets exposes deny patterns from tier3_blocking', () => {
+  const sets = resolveToolSets(PROTOCOL_V11, PROTOCOL_V11.tools.claude);
+  assert.ok(Array.isArray(sets.denyShellPatterns));
+  assert.ok(sets.denyShellPatterns.includes('git push *'));
+  assert.ok(sets.denyShellPatterns.includes('rm -rf *'));
+  assert.ok(Array.isArray(sets.denyAiosonCommands));
+  assert.ok(sets.denyAiosonCommands.includes('cloud:publish:*'));
+  assert.ok(sets.denyAiosonCommands.includes('genome:publish'));
+});
+
+test('SF-project-24: resolveToolSets unions tool.shell_blacklist into deny set', () => {
+  const protocol = {
+    ...PROTOCOL_V11,
+    tools: {
+      claude: {
+        mode: 'trusted',
+        derived_from_tiers: ['tier1_silent'],
+        shell_blacklist: ['rm -rf /', 'curl * | sh']
+      }
+    }
+  };
+  const sets = resolveToolSets(protocol, protocol.tools.claude);
+  assert.ok(sets.denyShellPatterns.includes('rm -rf /'));
+  assert.ok(sets.denyShellPatterns.includes('curl * | sh'));
+  // tier3 entries still flow in alongside the tool-level blacklist
+  assert.ok(sets.denyShellPatterns.includes('git push *'));
+});
+
+test('SF-project-24: buildClaudeSettings emits permissions.deny when deny entries exist', () => {
+  const result = buildClaudeSettings({
+    shellPatterns: ['git status'],
+    aiosonCommands: ['preflight'],
+    denyShellPatterns: ['rm -rf *', 'git push *'],
+    denyAiosonCommands: ['genome:publish']
+  });
+  assert.ok(Array.isArray(result.permissions.deny), 'deny array missing from Claude settings');
+  assert.ok(result.permissions.deny.includes('Bash(rm -rf:*)'));
+  assert.ok(result.permissions.deny.includes('Bash(git push:*)'));
+  assert.ok(result.permissions.deny.includes('Bash(aioson genome:publish:*)'));
+});
+
+test('SF-project-24: buildClaudeSettings omits deny key when nothing to deny', () => {
+  const result = buildClaudeSettings({
+    shellPatterns: ['git status'],
+    aiosonCommands: ['preflight'],
+    denyShellPatterns: [],
+    denyAiosonCommands: []
+  });
+  assert.equal(result.permissions.deny, undefined);
+});
+
+test('SF-project-24: buildCodexPermissions emits shell_denied + aioson_denied', () => {
+  const out = buildCodexPermissions(
+    {
+      shellPatterns: ['git status'],
+      aiosonCommands: ['preflight'],
+      denyShellPatterns: ['rm -rf /', 'git push *'],
+      denyAiosonCommands: ['cloud:publish:*']
+    },
+    { mode: 'trusted', requires_tty: false }
+  );
+  assert.deepEqual(out.shell_denied, ['rm -rf /', 'git push *']);
+  assert.deepEqual(out.aioson_denied, ['cloud:publish:*']);
+});
+
+test('SF-project-24: buildGeminiToml emits shell_denied + aioson_denied blocks', () => {
+  const toml = buildGeminiToml(
+    {
+      shellPatterns: ['git status'],
+      aiosonCommands: ['preflight'],
+      denyShellPatterns: ['rm -rf *'],
+      denyAiosonCommands: ['cloud:publish:*']
+    },
+    { mode: 'guarded', requires_tty: true }
+  );
+  assert.match(toml, /shell_denied = \[\s+"rm -rf \*",\s+\]/);
+  assert.match(toml, /aioson_denied = \[\s+"cloud:publish:\*",\s+\]/);
+});
+
+test('SF-project-24: buildOpencodeYaml emits shell_denied + aioson_denied lists', () => {
+  const yaml = buildOpencodeYaml(
+    {
+      shellPatterns: ['git status'],
+      aiosonCommands: [],
+      denyShellPatterns: ['rm -rf *', 'curl * | sh'],
+      denyAiosonCommands: ['cloud:publish:*']
+    },
+    { mode: 'guarded', requires_tty: true }
+  );
+  assert.match(yaml, /shell_denied:\s+- "rm -rf \*"/);
+  assert.match(yaml, /aioson_denied:\s+- "cloud:publish:\*"/);
+});
+
+test('SF-project-24: generatePermissions writes deny rules to .claude/settings.json end-to-end', async () => {
+  const dir = await makeProject(PROTOCOL_V11);
+  await generatePermissions(dir);
+  const claude = JSON.parse(await fs.readFile(path.join(dir, '.claude/settings.json'), 'utf8'));
+  assert.ok(Array.isArray(claude.permissions.deny), 'deny missing from generated .claude/settings.json');
+  assert.ok(claude.permissions.deny.includes('Bash(git push:*)'), 'tier3 git push not denied');
+  assert.ok(claude.permissions.deny.includes('Bash(rm -rf:*)'), 'tier3 rm -rf not denied');
+  assert.ok(claude.permissions.deny.includes('Bash(aioson cloud:publish:*:*)'), 'tier3 cloud:publish not denied');
+});
+
+// SF-project-25: drift surface on existing allow entries
+
+test('SF-project-25: mergeClaudeSettings reports unexpected existing allow entries', async () => {
+  const dir = await makeProject(PROTOCOL_V11);
+  await fs.mkdir(path.join(dir, '.claude'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.claude', 'settings.json'),
+    JSON.stringify({
+      permissions: { allow: ['Bash(rm-injected:*)', 'Bash(another-injected:*)'] }
+    }, null, 2),
+    'utf8'
+  );
+
+  const result = await generatePermissions(dir);
+  assert.ok(Array.isArray(result.notices));
+  const drift = result.notices.find((n) => n.kind === 'unexpected_claude_allow');
+  assert.ok(drift, 'expected unexpected_claude_allow notice');
+  assert.deepEqual(drift.entries.sort(), ['Bash(another-injected:*)', 'Bash(rm-injected:*)'].sort());
+  assert.match(drift.message, /generator did not produce/);
+
+  // SF-25 must preserve UX: the existing entries are still in the merged file.
+  const claude = JSON.parse(await fs.readFile(path.join(dir, '.claude/settings.json'), 'utf8'));
+  assert.ok(claude.permissions.allow.includes('Bash(rm-injected:*)'));
+  assert.ok(claude.permissions.allow.includes('Bash(another-injected:*)'));
+});
+
+test('SF-project-25: mergeClaudeSettings emits no drift notice when existing entries match generated set', async () => {
+  const dir = await makeProject(PROTOCOL_V11);
+  // pre-write a settings.json that mirrors what the generator will emit
+  const expected = buildClaudeSettings(resolveToolSets(PROTOCOL_V11, PROTOCOL_V11.tools.claude));
+  await fs.mkdir(path.join(dir, '.claude'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.claude', 'settings.json'),
+    JSON.stringify(expected, null, 2),
+    'utf8'
+  );
+  const result = await generatePermissions(dir);
+  const drift = (result.notices || []).find((n) => n.kind === 'unexpected_claude_allow');
+  assert.equal(drift, undefined, `unexpected drift notice: ${JSON.stringify(drift)}`);
+});
