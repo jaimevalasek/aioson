@@ -1,7 +1,7 @@
 {
   "version": 1,
   "feature_slug": "project",
-  "generated_at": "2026-05-07T16:00:00.000Z",
+  "generated_at": "2026-05-15T00:00:00.000Z",
   "review_contract": {
     "review_id": "pentester-project-2026-05-07T00-00-00",
     "scope_mode": "on_demand",
@@ -63,7 +63,11 @@
       "@qa session 2026-05-07 (round 5): physically verified SF-project-15/16. Sandbox enforcement gate active via opts.policy. Manifest hardening across 3 layers. Pre-existing autonomy-policy.test.js updated to match security-correct behavior. Full suite 2063/2063 PASS — clean run. Gate D for runtime_permissions: PASS. Cumulative state: 15 fixed, 13 false_positive, 1 accepted_risk, 0 open / 0 needs_validation / 0 blockers across 5 fully-reviewed surfaces (memory_context, secret_handling [partial], runtime_permissions, installation_integrity, supply_chain_integrity, tool_invocation). 3 surfaces remain pending (delegation_handoff, protocol_contract, auth_identity).",
       "@pentester session 2026-05-07 (round 6 — final pack): TS-project-03 delegation_handoff + TS-project-04 protocol_contract + TS-project-07 auth_identity reviewed together. 4 findings: SF-17 medium (handoff validator non-blocking — workflow-next writes regardless of validation), SF-18 medium (workflow.state.json gate bypass via direct file write), SF-19 low (artifact_uris path not validated), SF-20 info → accepted_risk (auth_identity is prompt-side convention by design, single-tenant local dev). All 9 surfaces now reviewed.",
       "@dev session 2026-05-07 (round 6): SF-18 + SF-19 fixed; SF-17 transitioned to accepted_risk after investigation showed the soft-validation pattern is intentional for current error types (manifest absence is common during bootstrap). Added detectUnsubstantiatedCompletions cross-check against runtime telemetry (warn-only). isSafeArtifactPath guard on coerceArtifactUri rejects absolute paths and \"..\". 5 new regression tests. Initial hard-block attempt for SF-17 broke 8 tests and was reverted with clarifying comments at both call sites. Full suite 2068/2068 PASS.",
-      "@qa session 2026-05-07 (round 6 — final): physically verified SF-18/19 fixes. SF-17 accepted_risk decision audited and confirmed as evidence-based (8 existing tests document the soft-validation contract). Full suite 2068/2068 PASS — fully green with all 9 surfaces touched. Gate D for delegation_handoff + protocol_contract: PASS. Cumulative final state: 17 fixed, 13 false_positive, 3 accepted_risk (SF-04 scanner allowlist backlog, SF-17 validator refactor backlog, SF-20 auth_identity by design), 0 open, 0 needs_validation, 0 blockers across 8 fully-reviewed surfaces and 1 partially-reviewed surface. All threat-surface entries closed for this review cycle."
+      "@qa session 2026-05-07 (round 6 — final): physically verified SF-18/19 fixes. SF-17 accepted_risk decision audited and confirmed as evidence-based (8 existing tests document the soft-validation contract). Full suite 2068/2068 PASS — fully green with all 9 surfaces touched. Gate D for delegation_handoff + protocol_contract: PASS. Cumulative final state: 17 fixed, 13 false_positive, 3 accepted_risk (SF-04 scanner allowlist backlog, SF-17 validator refactor backlog, SF-20 auth_identity by design), 0 open, 0 needs_validation, 0 blockers across 8 fully-reviewed surfaces and 1 partially-reviewed surface. All threat-surface entries closed for this review cycle.",
+      "@pentester session 2026-05-15 (round 7 — new-features delta): re-opened TS-project-01 memory_context, TS-project-02 tool_invocation, TS-project-03 delegation_handoff, TS-project-06 runtime_permissions to cover code introduced or modified by 4 features shipped after the round-6 close (2026-05-08 → 2026-05-14): living-memory (Phase 0-5: reflect engine + autonomy v1.1 + doctor + /discover), deyvin-density (MICRO framework gates), deyvin-subtask-scout (scout-prep/validate/commit), active-learning-loop (memory archive/restore/search, learning-loop-archive/doctor, scout-section dossier). review_id=pentester-project-2026-05-15-round7, scope_mode=on_demand, runtime_mode=local_static, target_mode=framework_target, target_scope=aioson-framework-new-features-delta-2026-05-08-to-2026-05-14. New writers in scope: src/memory-reflect-engine.js, src/commands/memory-{archive,restore,search,reflect-prepare,reflect-commit}.js, src/learning-loop-{archive,doctor}.js, src/dossier/scout-section.js, src/commands/scout-{prep,validate,commit}.js, src/handoff-contract.js (MICRO changes), src/commands/workflow-next.js (MICRO gates), src/permissions-generator.js. Configs: .aioson/config/autonomy-protocol.json (autonomy v1.1, +84 lines diff), template/.aioson/templates/reflect-prompts/*. TS-project-04 protocol_contract, TS-project-05 secret_handling, TS-project-07 auth_identity, TS-project-08 installation_integrity, TS-project-09 supply_chain_integrity not re-opened — code in those surfaces did not change materially in this delta (verified via git diff scope). Cross-platform fixes (squad-export tar Windows, live session key sanitize, context-health WAL truncate) included in TS-project-02 scope — SF-project-12 hardening verified intact.",
+      "@pentester session 2026-05-15 (round 7 — closing summary): 6 findings emitted across 4 reviewed surfaces — SF-project-21 medium (scout-section.js bypasses llm-content-sanitizer — LLM01.2 indirect injection via dossier.md; same pattern as SF-09 fix scope but on a new writer), SF-project-22 low (memory-reflect-commit.js writes bootstrap content without injection-char strip — bootstrap has highest cross-session blast radius), SF-project-23 low (brain-query.js#normalizeBrainPath accepts absolute paths and ../ without containment — defense-in-depth, not actively exploitable today), SF-project-24 medium (permissions-generator emits allow-only — shell_blacklist + tier3_blocking never materialized as harness deny rules; declared policy diverges from enforced policy), SF-project-25 low (mergeClaudeSettings preserves injected allow entries without divergence-warning — pairs with SF-24), SF-project-26 medium (MICRO classification in prd-{slug}.md short-circuits ALL gates including Gate D security review — gate-bypass via LLM-authored frontmatter, parallel to SF-18 but via different vector). tool_invocation (TS-02) clean — no new shell-injection sites; SF-12 Windows-tar regression test passes. Recommended owner: @dev for all six. Recommended gates: review for SF-21/24/26 medium; note for SF-22/23/25 low. Handing off to @dev for fixes and @qa for Gate D adjudication. Cumulative state post-round-7: 17 fixed (rounds 1-6), 13 false_positive (rounds 1-2), 3 accepted_risk (SF-04, SF-17, SF-20), 6 open (SF-21..26), 0 needs_validation. 9 surfaces total: 6 fully reviewed (memory_context, tool_invocation, delegation_handoff, runtime_permissions, installation_integrity, supply_chain_integrity), 1 partially reviewed (secret_handling), 2 reviewed-by-architecture-only (protocol_contract, auth_identity).",
+      "@dev session 2026-05-15 (round 7 — fixes): all 6 round-7 findings transitioned to status=fixed. Files touched: src/dossier/scout-section.js (SF-21), src/commands/memory-reflect-commit.js (SF-22), src/brain-query.js (SF-23), src/permissions-generator.js (SF-24 + SF-25), src/handoff-contract.js (SF-26). 19 new regression tests across tests/scout-section.test.js (+1), tests/memory-reflect-engine.test.js (+1), tests/brain-query.test.js (+4), tests/permissions-generator.test.js (+10), tests/handoff-contract-micro.test.js (+4 new, +1 updated to clarify the legitimate qa-MICRO-pass scenario). SF-26 implemented option 2 only (Gate D carve-out via project classification baseline); option 1 (force feature ≤ project classification) was rejected as it would override the deyvin-density-validated design that lets MICRO features inside MEDIUM projects use a lightweight workflow for A/B/C — option 2 preserves that UX while restoring the security baseline. Full suite: 2440/2442 PASS, 1 skipped, 1 environmental flake (tests/telemetry-foundation.test.js#AC-ALL-101 — a Windows-specific perf assertion of <200ms that landed at 1336ms under concurrent suite load; passes consistently in isolation at ~90ms — not a regression of these fixes). Pre-existing 3 sdlc-process-upgrade-regression failures noted in round 3 are now absent from this run. Handing off to @qa for Gate D adjudication of SF-21..26.",
+      "@qa session 2026-05-15 (round 7 — final): Gate D PASS for all 6 SF-21..26. Physical verification of fixes performed by inspecting each source code change directly (not just trusting @dev's note): SF-21 src/dossier/scout-section.js:14+40-41, SF-22 src/commands/memory-reflect-commit.js:14+123, SF-23 src/brain-query.js:20-25 (with the disguised `.aioson/brains/../../` traversal case explicitly verified to collapse correctly via path.resolve before the containment check), SF-24 src/permissions-generator.js:79-258 across all 4 builders (Claude/Codex/Gemini/OpenCode each emit shape-stable deny lists; tier3 deny flows independently of derived_from_tiers — defense in depth with SF-15 sandbox shell-gate intact), SF-25 src/permissions-generator.js:289+349-356 (notices array surfaces unexpected entries without changing merge UX), SF-26 src/handoff-contract.js:172-218+290-312 (readProjectClassification reads project baseline independently; Gate D carve-out applies only when project itself is MICRO). SF-26 design judgment audited manually across 7 edge cases (state.classification override, project.context.md missing, prd.md missing, MEDIUM-feature-in-MICRO-project, unknown classification value, TOCTOU race) — option 2 alone is sufficient and the explicit rejection of option 1 is correct (option 1 would have cost UX without security gain given option 2's enforcement). The pre-existing qa-stage-MICRO-passes test update is correct semantics — the original test was implicitly protecting the exact vulnerability SF-26 documents. Test verification: scout-section.test.js + memory-reflect-engine.test.js + brain-query.test.js + permissions-generator.test.js + handoff-contract-micro.test.js = 62/62 PASS (19 new SF-* assertions inclusive). Adjacent handoff-contract suites = 56/56 PASS (no regression from the projectClassification plumbing). Full suite from @dev session 2440/2442 with 1 env flake (Windows perf assertion under concurrent load) acknowledged as pre-existing and not a regression. Cumulative state post-round-7 close: 23 fixed, 13 false_positive, 3 accepted_risk (SF-04, SF-17, SF-20), 0 open, 0 needs_validation, 0 blockers. Residual observation (NOT a Gate D blocker): SF-25's notices array is now populated in the generator's return value but installer.js and doctor.js still consume it as opaque pass-through — a follow-up could surface the unexpected_claude_allow notice via tier-2 notify/stderr at install/refresh time so operators see the drift signal at the moment it matters. Filed as backlog. Gate D for round 7: PASS — all 6 findings physically verified as fixed, no critical/high blockers remain, all 9 surfaces touched this review cycle."
     ]
   },
   "threat_surfaces": [
@@ -71,19 +75,19 @@
       "surface_id": "TS-project-01",
       "surface_type": "memory_context",
       "verification_status": "reviewed",
-      "scope_notes": "src/worker-runner.js#runResearchWorker (researchs/ writer), src/dossier/store.js#addFinding (Agent Trail writer), src/dossier/research-index-store.js#addResearch (Research Index writer), src/session-handoff.js#writeHandoff/readHandoff, src/lib/dev-resume.js. Probes: LLM01.1 direct injection (last-handoff what_was_done/what_comes_next, dev-state frontmatter), LLM01.2 indirect injection (researchs/{topic}/summary.md from third-party URLs, dossier Agent Trail content, why_relevant), LLM01.3 multimodal (no image-loading paths found — N/A). Findings: SF-project-08/09/10/11."
+      "scope_notes": "Round 1-6: src/worker-runner.js#runResearchWorker (researchs/ writer), src/dossier/store.js#addFinding (Agent Trail writer), src/dossier/research-index-store.js#addResearch (Research Index writer), src/session-handoff.js#writeHandoff/readHandoff, src/lib/dev-resume.js. Probes: LLM01.1 direct injection, LLM01.2 indirect injection, LLM01.3 multimodal N/A. Findings: SF-project-08/09/10/11 (all fixed). Round 7 (2026-05-15): src/dossier/scout-section.js + src/commands/memory-reflect-commit.js + src/brain-query.js reviewed for sanitizer coverage and path safety; src/learning-loop-fts5.js verified safe (bind parameters only, length cap 500, FTS5 operators stripped per-token, sanitization fail-closed on empty result). Findings: SF-project-21 medium (scout-section bypasses sanitizer), SF-project-22 low (reflect-commit bypasses sanitizer), SF-project-23 low (brain-query path traversal — defense-in-depth)."
     },
     {
       "surface_id": "TS-project-02",
       "surface_type": "tool_invocation",
       "verification_status": "reviewed",
-      "scope_notes": "src/commands/ + src/*.js + bin/*.js scanned for child_process.exec / execSync template-literal interpolation and shell:true patterns. 459 child_process-related hits triaged: most are RegExp.exec or db.exec (false positives). 4 real shell-invocation sites identified: 3 with operator-supplied data flowing into template literals (SF-12/13/14), 1 with shell:true by design in src/sandbox.js#runSandboxedCommand (the feature's purpose — out of scope). Bash invocations inside agent prompts use {N} placeholder syntax interpreted by the LLM, not the shell — that vector belongs to runtime_permissions (TS-06)."
+      "scope_notes": "Round 1-6: src/commands/ + src/*.js + bin/*.js scanned. 4 shell-invocation sites identified, 3 fixed (SF-12/13/14), 1 sandbox:exec by design. Round 7 (2026-05-15): scout-{prep,validate,commit}.js, memory-{search,archive,restore}.js, learning-loop-{archive,doctor}.js triaged. Only one new child_process site found — src/memory-reflect-engine.js uses execFile(git, [args...]) with array arguments and cwd locked to targetDir; no shell, no template-literal interpolation, gitRange arg flows through unmodified but git rejects invalid ranges (no command-string injection vector). src/commands/squad-export.js (39dd578 Windows tar fix) verified: spawnSync + array args + isValidSlug guard intact; new --force-local flag and forward-slash conversion are additive only — SF-project-12 hardening preserved. No new findings; surface remains clean."
     },
     {
       "surface_id": "TS-project-03",
       "surface_type": "delegation_handoff",
       "verification_status": "reviewed",
-      "scope_notes": "src/handoff-contract.js (363 LOC), src/session-handoff.js, last-handoff.json schema, agent manifest forgery (already covered by SF-16). Reviewed coerceArtifactUri: validates path is non-empty string but not within projectDir nor that it points to a real file → SF-19 low."
+      "scope_notes": "Round 1-6: src/handoff-contract.js (363 LOC), src/session-handoff.js, last-handoff.json schema. SF-19 (path validation on artifact_uris) fixed. Round 7 (2026-05-15): deyvin-density diff (7d5914e) on src/handoff-contract.js reviewed in full. New parseFrontmatterValue export and resolveClassification frontmatter-first lookup are correct. The new MICRO short-circuit in checkGateApproval applies to ALL gates including Gate D — see SF-project-26 medium for the security-review skip vector. isSafeArtifactPath from SF-19 is untouched by this diff; no regression."
     },
     {
       "surface_id": "TS-project-04",
@@ -101,7 +105,7 @@
       "surface_id": "TS-project-06",
       "surface_type": "runtime_permissions",
       "verification_status": "reviewed",
-      "scope_notes": "src/autonomy-policy.js (139 LOC), .aioson/config/autonomy-protocol.json, src/agent-manifests.js (66 LOC), all callers of resolveEffectiveMode/canRunHeadless/isCommandAllowed traced via grep across src/. Findings: SF-15 (high) — isCommandAllowed is dead code (exported, never called); SF-16 (medium) — manifest can upgrade agent autonomy ceiling without validation. The TTY guard (canRunHeadless) IS enforced in workflow-execute.js:508; mode resolution (resolveEffectiveMode) is informational only."
+      "scope_notes": "Round 1-6: src/autonomy-policy.js (139 LOC), .aioson/config/autonomy-protocol.json, src/agent-manifests.js. SF-15/16 fixed (sandbox shell-gate enforces whitelist when policy passed; manifest reading filters autonomy_modes + caps at protocol.global_mode). Round 7 (2026-05-15): autonomy v1.1 reviewed in src/autonomy-policy.js + src/permissions-generator.js + .aioson/config/autonomy-protocol.json. SF-15 sandbox gate intact (isCommandAllowed still consults shell_whitelist/blacklist). SF-16 ceiling cap intact (getAgentMaxMode unchanged). NEW gap discovered: permissions-generator emits allow-only — declared shell_blacklist and tier3_blocking never reach harness deny rules (SF-project-24 medium). mergeClaudeSettings preserves existing allow entries without divergence-warning (SF-project-25 low). tier1/tier2 derivation logic itself is correct (tier3 explicitly skipped at line 74)."
     },
     {
       "surface_id": "TS-project-07",
@@ -1260,6 +1264,238 @@
       "status": "accepted_risk",
       "safe_to_reproduce": true,
       "qa_decision_note": "Accepted as residual risk. Framework is designed for single-tenant local dev; documenting the limit is the appropriate response. Backlog: add the explicit note to CLAUDE.md."
+    },
+    {
+      "id": "SF-project-21",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "memory_context",
+      "severity": "medium",
+      "llm_top_10_id": "LLM01.2",
+      "title": "scout-section dossier writer bypasses llm-content-sanitizer",
+      "hypothesis": "src/dossier/scout-section.js#appendScoutToFeatureDossier writes scout.question and scout.recommendation into .aioson/context/features/{slug}/dossier.md without going through src/lib/llm-content-sanitizer.js. Both question and recommendation are LLM-authored strings (the scout subagent emits them), and dossier.md is loaded as context by future agents — the exact LLM01.2 indirect-prompt-injection chain that SF-project-08/09 closed for the Agent Trail writer (src/dossier/store.js#addFinding) and Research Index writer (src/dossier/research-index-store.js#addResearch). A scout that ingests adversarial third-party content can persist injection payloads (zero-width, bidi, HTML-comment carriers, fake <system> tags) into the feature dossier, which then influences every downstream agent reading that dossier.",
+      "preconditions": [
+        "Feature deyvin-subtask-scout + active-learning-loop installed (shipped 2026-05-14)",
+        "feature:close calls appendScoutToFeatureDossier for archived scouts",
+        "Scout subagent output (question, recommendation) is not pre-sanitized by the caller"
+      ],
+      "reproduction_steps": [
+        "Inspect src/dossier/scout-section.js — confirm no require('../lib/llm-content-sanitizer')",
+        "Compare against src/worker-runner.js (researchs writer), src/dossier/store.js (Agent Trail), src/dossier/research-index-store.js — all three call stripInjectionChars / wrapAsExternalContent",
+        "grep -n 'llm-content-sanitizer' src/dossier/ — only store.js and research-index-store.js match; scout-section.js does not"
+      ],
+      "evidence": [
+        "src/dossier/scout-section.js: no require of llm-content-sanitizer",
+        "src/dossier/scout-section.js:35-41 buildBullet inlines String(scout.question) and firstSentence(scout.recommendation) verbatim into the dossier bullet",
+        "src/dossier/scout-section.js:85 fs.writeFileSync(dPath, updated, 'utf8') — writes the unsanitized string to disk",
+        "Sanitizer module exists at src/lib/llm-content-sanitizer.js and is imported only by worker-runner.js + dossier/store.js + dossier/research-index-store.js (grep result)"
+      ],
+      "impact": "Indirect prompt injection persists across sessions via dossier.md. Any agent that consumes feature dossiers (deyvin, validator, qa) ingests the unsanitized scout text. Zero-width chars and bidi controls can hide directives that a human reviewer cannot visually detect. Same blast radius as SF-project-09 (dossier Agent Trail), which is why that finding was rated medium.",
+      "affected_artifacts": [
+        "src/dossier/scout-section.js",
+        ".aioson/context/features/{slug}/dossier.md (every feature that closes a scout)"
+      ],
+      "suggested_fix": "Import { stripInjectionChars } from src/lib/llm-content-sanitizer.js and apply it to scout.question and scout.recommendation inside buildBullet, before the firstSentence truncation. Add a regression test under tests/dossier-scout-section.test.js asserting that a payload containing U+200B, U+2068, and an HTML comment is stripped before the bullet reaches disk.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15: src/dossier/scout-section.js now imports stripInjectionChars from src/lib/llm-content-sanitizer.js and applies it to both scout.question and the firstSentence-truncated scout.recommendation inside buildBullet. Regression test added at tests/scout-section.test.js asserting U+200B/U+200C/U+202E/U+202C zero-width+bidi chars and HTML comments are stripped while visible text survives. tests/scout-section.test.js 16/16 PASS.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed. Physically inspected src/dossier/scout-section.js:14 (import) and lines 40-41 (application to both question and recommendation before firstSentence is composed into the bullet). stripInjectionChars is the same primitive validated in round 3 SF-08 (zero-width + bidi + HTML-comment scrub). Regression test at tests/scout-section.test.js asserts all 6 carrier classes are stripped while visible text survives. 16/16 PASS in scout-section.test.js. Gate D decision: fixed. Severity unchanged (@qa does not reclassify)."
+    },
+    {
+      "id": "SF-project-22",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "memory_context",
+      "severity": "low",
+      "llm_top_10_id": "LLM01.1",
+      "title": "memory:reflect-commit writes LLM-authored bootstrap content with no injection-character stripping",
+      "hypothesis": "src/commands/memory-reflect-commit.js#runMemoryReflectCommit writes the in-harness reflect agent's output (a JSON map of relative path → new content) directly to .aioson/context/bootstrap/*.md after validate() approves paths and frontmatter shape. validate() (src/memory-reflect-engine.js:277) enforces path containment, frontmatter presence, generated_at update, and content-diff requirement, but it never inspects the file body for injection carriers. Bootstrap files have the highest cross-session blast radius in AIOSON — every agent loads project.context.md and (through it) the bootstrap snapshot at session start. A reflect agent that itself was influenced by indirect injection upstream can lay down a persistent injection in bootstrap that survives across all future sessions until manually rewritten.",
+      "preconditions": [
+        "living-memory feature installed (autonomy v1.1, 2026-05-11)",
+        "memory:reflect-prepare emits a manifest the in-harness agent consumes",
+        "Reflect agent produces output that includes content the caller may not visually audit (large diffs, terse summaries)"
+      ],
+      "reproduction_steps": [
+        "Inspect src/commands/memory-reflect-commit.js:107-121 — fs.writeFile(absPath, content, 'utf8') writes the agent-supplied content verbatim",
+        "Inspect src/memory-reflect-engine.js#validate:277-345 — confirm no body-level injection-char strip",
+        "Compare to SF-project-08 fix in src/worker-runner.js, which wraps third-party content via wrapAsExternalContent + stripInjectionChars before persisting"
+      ],
+      "evidence": [
+        "src/commands/memory-reflect-commit.js:118-119 — `await fs.mkdir(path.dirname(absPath), { recursive: true }); await fs.writeFile(absPath, content, 'utf8');`",
+        "src/memory-reflect-engine.js#validate does not call any sanitizer; only path, frontmatter, generated_at, and snapshot_hash invariants are enforced",
+        "No grep hit for stripInjectionChars in src/memory-reflect-engine.js or src/commands/memory-reflect-commit.js"
+      ],
+      "impact": "Cross-session persistence of indirect prompt injection via bootstrap snapshot. Severity is rated low rather than medium because: (a) the writer is the project's own in-harness reflect agent (single-tenant local dev — operator-trusted), (b) the path containment is defense-in-depth fail-closed (SF-22 does not weaken path safety), and (c) reflect operations are tier-2 notified via autonomy v1.1 so the operator sees a warn-level notify before commit. If the reflect agent is ever invoked with third-party content in its session context (e.g., a researchs/ summary it just consumed), this becomes the persistence layer for that injection.",
+      "affected_artifacts": [
+        "src/commands/memory-reflect-commit.js",
+        "src/memory-reflect-engine.js",
+        ".aioson/context/bootstrap/*.md (every project using living-memory)"
+      ],
+      "suggested_fix": "Apply stripInjectionChars (zero-width + bidi + HTML-comment scrub) to every file body before fs.writeFile in memory-reflect-commit.js. Keep the existing path/frontmatter validation untouched. Optionally extend validate() in memory-reflect-engine.js to refuse a commit when raw payload contains BIDI controls (which have no legitimate use in a Markdown bootstrap file).",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15: src/commands/memory-reflect-commit.js now imports stripInjectionChars and runs it on each file body inside the write loop before fs.writeFile. Path containment (the existing defense layer) is unchanged. Regression test added at tests/memory-reflect-engine.test.js exercising the full reflect-prepare → reflect-commit flow with a bootstrap content payload containing U+200B, U+202E/U+202C, and an HTML-comment-wrapped injection — asserts the carriers are absent on disk while visible content survives. tests/memory-reflect-engine.test.js 18/18 PASS.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed. Physically inspected src/commands/memory-reflect-commit.js:14 (import) and line 123 (sanitize step inside the write loop, between path-containment check and fs.writeFile). Sanitization sits at the correct layer — the path-containment fail-closed pattern from the original SF-22 review is preserved untouched; this is purely additive content scrubbing. Regression test uses the real reflect-prepare → reflect-commit pipeline with an adversarial bootstrap payload (zero-width + bidi + HTML-comment injection wrapper) and verifies (a) carriers absent on disk, (b) injection payload text inside the HTML comment is gone, (c) visible content survives. memory-reflect-engine.test.js 18/18 PASS. Gate D decision: fixed."
+    },
+    {
+      "id": "SF-project-23",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "memory_context",
+      "severity": "low",
+      "title": "brain-query normalizeBrainPath accepts absolute paths and unvalidated relative paths from _index.json",
+      "hypothesis": "src/brain-query.js#normalizeBrainPath (line 13-19) returns three classes of paths: (a) absolute paths verbatim if path.isAbsolute(raw), (b) path.join(targetDir, raw) when raw starts with '.aioson/brains/', (c) path.join(targetDir, '.aioson', 'brains', raw) otherwise. No `..` rejection in any branch. The function is fed `brain.path` values from .aioson/brains/_index.json, which is operator-controlled today but could become a write target via future learning-loop features (auto-promote, evolution_log). If a brain entry sets path='/etc/passwd' or path='../../../secret.json', queryBrains will fs.readFile that location and feed its JSON-parseable content into the agent context via formatBrainNodesCompact. Defense-in-depth gap; not actively exploitable today because _index.json is not written by automation, but the function does not enforce its documented intent of '.aioson/brains/' confinement.",
+      "preconditions": [
+        ".aioson/brains/_index.json present (active-learning-loop / brains template installed)",
+        "An attacker (or operator drift) can edit _index.json (e.g., template downgrade, manual edit, future hook-driven write)",
+        "Target file is parseable as JSON to be loaded by readJsonFile"
+      ],
+      "reproduction_steps": [
+        "Inspect src/brain-query.js:13-19 — normalizeBrainPath",
+        "Edit a test copy of .aioson/brains/_index.json: set one brain entry's path to '../../../README.json' or a JSON file outside brains/ (only on a throwaway clone — do NOT run in production tree)",
+        "Run aioson brain:query — observe that queryBrains will attempt to readJsonFile() the out-of-bounds path and that selectedBrains entries lacking a path emit a warning rather than failing the whole query"
+      ],
+      "evidence": [
+        "src/brain-query.js:13-19 — `if (path.isAbsolute(raw)) return raw;` and `path.join(targetDir, '.aioson', 'brains', raw)` with no `..` guard",
+        "src/brain-query.js:115-122 — readJsonFile(brainPath) executes with the un-normalized path",
+        "src/brain-query.js:118 — failure mode is a soft warning, so silent attempts succeed/fail without halting query"
+      ],
+      "impact": "Arbitrary local JSON file read whose content is then injected into agent context via formatBrainNodesCompact. Confined to JSON files, but those include .aioson/runtime/aios.sqlite-WAL fragments, package.json (no secret), node_modules manifests, or any operator-stored JSON. The attack requires _index.json compromise first, so blast radius today is low. Becomes medium if/when a hook writes to _index.json automatically.",
+      "affected_artifacts": [
+        "src/brain-query.js",
+        ".aioson/brains/_index.json"
+      ],
+      "suggested_fix": "Make normalizeBrainPath fail-closed: (1) reject path.isAbsolute(raw) outright, (2) compute abs via path.resolve(brainsRoot, raw) and assert it stays under brainsRoot via the same isInsideRoot pattern used in src/commands/scout-prep.js#isInsideRoot. Both changes are pure additions; no existing legitimate entry uses absolute paths in the shipped template (.aioson/brains/_index.json uses relative `dev/patterns.brain.json` shape).",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15: src/brain-query.js#normalizeBrainPath now rejects path.isAbsolute(raw) and resolves the candidate via path.resolve against the brains root, returning null when the result escapes .aioson/brains/. The caller's existing 'has no path' warning is reused for the rejection signal — same UX, fail-closed semantics. 4 new regression tests added at tests/brain-query.test.js covering: absolute Windows/POSIX paths, relative `../` escapes (including disguised `.aioson/brains/../../README.md` form), legitimate paths still resolve, and queryBrains skips brains whose path escapes containment. tests/brain-query.test.js 7/7 PASS.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed. Physically inspected src/brain-query.js:20 (isAbsolute fail-closed), :21 (brainsRoot via path.resolve), :22-25 (candidate resolution + containment guard via startsWith(brainsRoot + path.sep)). The disguised .aioson/brains/../../README.md attack vector is correctly handled because the path.resolve call collapses the .. segments before the containment check runs. Regression tests cover both POSIX and Windows absolute path shapes, multiple traversal disguises, and confirm the legitimate `.aioson/brains/dev/patterns.brain.json` and bare-relative `dev/patterns.brain.json` paths still resolve. queryBrains emits the existing 'has no path' warning rather than failing the whole query — preserves UX while making the threat fail-closed. brain-query.test.js 7/7 PASS. Gate D decision: fixed."
+    },
+    {
+      "id": "SF-project-24",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "runtime_permissions",
+      "severity": "medium",
+      "title": "permissions-generator silently drops shell_blacklist and tier3_blocking when materializing harness permission files",
+      "hypothesis": "src/permissions-generator.js#resolveDerivedSets (line 66-85) only collects shell_patterns and aioson_commands from non-tier3 tiers, and #buildClaudeSettings (line 125-140) emits only `permissions.allow` entries. The tool-level `shell_blacklist` declared in .aioson/config/autonomy-protocol.json (e.g., `['rm -rf /', 'curl * | sh', '*>*']` for the claude and codex tools) is never read by the generator. tier3_blocking patterns (`git push *`, `npm publish *`, `rm -rf *`, `curl * | sh`) are explicitly skipped from the allow list (line 74) but never emitted as deny rules either. Net effect: the protocol's declared deny policy never reaches the harness configuration. SF-project-15's sandbox shell-gate enforces blacklists for callers that pass opts.policy to executeInSandbox, but Bash commands the harness runs directly (via Claude Bash() permissions) bypass that gate. Users reading autonomy-protocol.json reasonably expect 'rm -rf /' to be blocked at every layer; in practice, only the sandbox layer enforces it.",
+      "preconditions": [
+        ".aioson/config/autonomy-protocol.json declares shell_blacklist or tier3_blocking entries",
+        "aioson permissions:generate (or its caller) runs to materialize .claude/settings.json, .codex/permissions.json, .gemini/permissions.toml, .opencode/permissions.yaml",
+        "Harness (Claude/Codex) reads the generated permission file at session start"
+      ],
+      "reproduction_steps": [
+        "Inspect autonomy-protocol.json: 'tools.claude.shell_blacklist' = ['rm -rf /', 'curl * | sh', '*>*']; 'tiers.tier3_blocking.shell_patterns' = ['git push *', 'rm -rf *', 'npm publish *', 'curl * | sh', 'curl * | bash']",
+        "Run aioson permissions:generate (or equivalent) in a throwaway clone, then inspect .claude/settings.json — confirm `permissions.allow` is populated but no `permissions.deny`",
+        "grep -n 'deny' src/permissions-generator.js — zero hits",
+        "Verify that src/autonomy-policy.js#isCommandAllowed still checks shell_blacklist (intact from SF-project-15) — meaning sandbox-level enforcement is fine; only harness-level is missing"
+      ],
+      "evidence": [
+        "src/permissions-generator.js:66-85 resolveDerivedSets — only reads tier.shell_patterns + tier.aioson_commands; skips tier3 entirely (line 74) without emitting deny",
+        "src/permissions-generator.js:125-140 buildClaudeSettings — returns `{ permissions: { allow: [...] } }` with no `deny` key",
+        "src/permissions-generator.js:142-150 buildCodexPermissions — emits `shell_allowed` + `aioson_allowed`; no `shell_denied`/`aioson_denied`",
+        "src/permissions-generator.js:158-173 buildGeminiToml — same pattern, allow-only",
+        "src/permissions-generator.js:180-199 buildOpencodeYaml — same pattern, allow-only",
+        ".aioson/config/autonomy-protocol.json lines 67-69 declare tier3_blocking shell_patterns; lines 84, 94 declare tool-level shell_blacklist"
+      ],
+      "impact": "User-visible security policy diverges from harness-enforced behavior. An operator reviewing autonomy-protocol.json and seeing `tier3_blocking: ['rm -rf *', 'npm publish *', 'curl * | sh']` reasonably believes those commands are blocked at the harness level. They are not. If a malicious dependency, indirect-injection, or compromised prompt causes the agent to emit `rm -rf $HOME`, Claude's Bash() gate consults only the allow list — and because `rm -rf` is not in allow, Claude will prompt the operator (this is the actual safety net). The medium rating reflects: (a) the safety net remains intact via Claude's default-deny-on-unmatched, but (b) any operator who set allow='*' or 'Bash(rm:*)' loses both layers of defense without realizing it because the protocol's deny intent is silently dropped.",
+      "affected_artifacts": [
+        "src/permissions-generator.js",
+        ".aioson/config/autonomy-protocol.json (declared deny intent)",
+        ".claude/settings.json (generated, missing deny)",
+        ".codex/permissions.json",
+        ".gemini/permissions.toml",
+        ".opencode/permissions.yaml"
+      ],
+      "suggested_fix": "Extend resolveToolSets/resolveDerivedSets to return a third set `denyPatterns` collected from (a) tool.shell_blacklist and (b) protocol.tiers.tier3_blocking.shell_patterns. Update buildClaudeSettings to emit `permissions.deny` with `Bash(...)` rules derived from those patterns. Mirror in buildCodexPermissions (add `shell_denied`), buildGeminiToml (`shell_denied = [...]`), buildOpencodeYaml (`shell_denied: [...]`). Add regression tests under tests/permissions-generator.test.js asserting that deny entries are emitted and that tier3 shell_patterns reach the deny set even when the tool has no derived_from_tiers tier3 entry.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15: src/permissions-generator.js#resolveDerivedSets and resolveLegacySets now also expose denyShellPatterns + denyAiosonCommands; resolveToolSets unions tier3_blocking patterns + tool.shell_blacklist into the deny set regardless of derived_from_tiers. buildClaudeSettings emits permissions.deny (Bash(...) rules); buildCodexPermissions adds shell_denied + aioson_denied; buildGeminiToml/buildOpencodeYaml emit shell_denied/aioson_denied blocks (always present for schema stability, empty when nothing to deny). mergeClaudeSettings preserves operator deny entries as well as allow. 8 new regression tests in tests/permissions-generator.test.js covering each output format + the end-to-end .claude/settings.json deny emission. tests/permissions-generator.test.js 21/21 PASS.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed. Physically inspected src/permissions-generator.js: line 79-92 (denyShellSet built from tier3.shell_patterns + tier3.aioson_commands), line 117-120 (resolveToolSets unions tool.shell_blacklist into deny set), line 146-175 (buildClaudeSettings emits permissions.deny only when non-empty), line 177-186 (buildCodexPermissions emits shell_denied + aioson_denied always for schema stability), line 195-222 (buildGeminiToml deny blocks), line 227-258 (buildOpencodeYaml deny blocks). Critical implementation detail confirmed: tier3 deny patterns flow into the deny set REGARDLESS of whether the tool listed tier3_blocking in derived_from_tiers — this matches the suggested_fix intent (declared deny policy reaches the harness even when the tool config omits tier3 from its derivation list). End-to-end test asserts .claude/settings.json contains Bash(git push:*), Bash(rm -rf:*), and Bash(aioson cloud:publish:*:*) in permissions.deny. permissions-generator.test.js 21/21 PASS. SF-15 sandbox-level shell_blacklist gate (round 5 fix) remains intact as the second enforcement layer — defense in depth across sandbox + harness. Gate D decision: fixed."
+    },
+    {
+      "id": "SF-project-25",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "runtime_permissions",
+      "severity": "low",
+      "title": "mergeClaudeSettings persistently preserves any existing allow entries across regeneration",
+      "hypothesis": "src/permissions-generator.js#mergeClaudeSettings (line 211-230) reads the current .claude/settings.json, unions its `permissions.allow` with the freshly-generated allow list, and writes the result back. The intent is to preserve operator-added allow rules between regenerations, but the same code also preserves entries that were injected by a prior compromise (e.g., a Bash(rm:*) entry an attacker wrote once via any path-write vector). There is no diff/warn signal alerting the operator when the existing file contains entries the generator did not produce. Combined with SF-24 (no deny rules emitted), a one-shot injection into .claude/settings.json persists indefinitely and is treated as legitimate operator policy on every subsequent run.",
+      "preconditions": [
+        ".claude/settings.json exists with at least one allow entry the generator did not produce",
+        "aioson permissions:generate runs (e.g., post-install, post-protocol-edit, or scheduled regeneration)"
+      ],
+      "reproduction_steps": [
+        "On a throwaway clone, edit .claude/settings.json and add `Bash(rm:*)` (or any sentinel like `Bash(echo-injected:*)`) to permissions.allow",
+        "Run aioson permissions:generate",
+        "Re-read .claude/settings.json — confirm the sentinel entry survives",
+        "grep -n 'warn\\|diff\\|unexpected' src/permissions-generator.js — zero hits referencing entry-divergence detection"
+      ],
+      "evidence": [
+        "src/permissions-generator.js:220-222 — `const existingAllow = ...; const generatedAllow = generated.permissions.allow; const merged = [...new Set([...generatedAllow, ...existingAllow])];`",
+        "No warning emitted for entries present in existingAllow but absent from generatedAllow",
+        "The generator outputs `merged` directly, so the user never sees a diff log"
+      ],
+      "impact": "Defense-in-depth gap. Today the framework targets single-tenant local dev where the operator controls .claude/settings.json directly, so persistence of operator-added entries is desirable UX. The risk surfaces when an attacker has any one-shot write to .claude/settings.json (e.g., via a future vulnerability) — that injected entry then becomes effectively permanent because no audit signal flags it.",
+      "affected_artifacts": [
+        "src/permissions-generator.js",
+        ".claude/settings.json"
+      ],
+      "suggested_fix": "Either (option A) compute the set difference `extra = existingAllow \\ generatedAllow` and, when non-empty, log a tier-2 notify or stderr warning naming the unexpected entries so the operator can review; or (option B) make the merge opt-in via a flag and default to strict regeneration. Option A is the least disruptive — preserves current UX while surfacing drift.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15 (option A — drift-surface without changing merge UX): src/permissions-generator.js#mergeClaudeSettings now returns { merged, unexpectedAllow } where unexpectedAllow is the set difference existingAllow \\ generatedAllow. generatePermissions populates a notices: [{kind: 'unexpected_claude_allow', tool, path, entries, message}] array in its return value when drift is detected. Existing entries are still preserved (UX intact); installer/doctor can surface the notice however they choose. 2 new regression tests in tests/permissions-generator.test.js: one asserts the notice is emitted when injected entries exist, one asserts no notice when existing matches generated.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed. Physically inspected src/permissions-generator.js: line 270-303 (mergeClaudeSettings returns {merged, unexpectedAllow}), line 289 (set difference computation), line 325 (notices array initialized), line 349-356 (notice pushed when divergence detected with structured payload kind/tool/path/entries/message). Backward-compat concern checked: installer.js and doctor.js consume generatePermissions result and forward it; they will pass-through the new notices field without breaking on unknown keys. Recommended downstream follow-up (NOT a Gate D blocker): surface the unexpected_claude_allow notice via tier-2 notify or stderr in installer/doctor so operators see the drift signal at the moment it matters most. Filed as residual observation in QA sign-off below. permissions-generator.test.js 21/21 PASS. Gate D decision: fixed."
+    },
+    {
+      "id": "SF-project-26",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "delegation_handoff",
+      "severity": "medium",
+      "title": "MICRO classification in prd-{slug}.md short-circuits ALL gates including Gate D (security review)",
+      "hypothesis": "src/handoff-contract.js#checkGateApproval was extended in commit 7d5914e (deyvin-density, 2026-05-11) to short-circuit gate validation when classification is MICRO. The classification value is resolved from prd-{slug}.md frontmatter via parseFrontmatterValue (line 184), with no integrity check, no operator-confirmation requirement, and no constraint that a feature's classification be ≤ the project's classification. A maliciously-influenced (or accidentally mis-classified) prd-{slug}.md setting `classification: MICRO` causes checkGateApproval to return `{ ok: true, reason: 'micro_skips_gate' }` for EVERY gate the contract requires — including Gate D, which is the @qa+@pentester security-review gate. Net effect: a feature can ship through workflow:next from @product directly to @dev to feature:close with verdict=PASS, never passing through any security review, simply by virtue of its PRD declaring MICRO classification.",
+      "preconditions": [
+        "Feature uses workflow:next gate enforcement (default flow)",
+        "prd-{slug}.md frontmatter contains `classification: MICRO`",
+        "Operator does not manually verify the classification matches feature scope"
+      ],
+      "reproduction_steps": [
+        "Inspect src/handoff-contract.js:172-191 resolveClassification — reads prd-{slug}.md frontmatter first, falls back to project.context.md",
+        "Inspect src/handoff-contract.js:281-289 checkGateApproval — `if (classification === 'MICRO' && slug) return { ok: true, reason: 'micro_skips_gate' };`",
+        "Inspect src/handoff-contract.js:301-307 validateHandoffContract — the loop calls checkGateApproval for every contract.gates entry, so MICRO skips Gates A, B, C, AND D",
+        "Trace: a prd-{slug}.md with `classification: MICRO` reaches workflow:next → resolveClassification returns 'MICRO' → all gates short-circuit → feature:close --verdict=PASS succeeds without spec, without QA report, without @pentester findings"
+      ],
+      "evidence": [
+        "src/handoff-contract.js:281-289 the MICRO short-circuit",
+        "src/handoff-contract.js:283-285 comment confirms the design intent — '@product → @dev only — they don't pass through @analyst/@architect and therefore don't produce spec-{slug}.md. Skip gate validation entirely for MICRO; the lightweight workflow is the gate.'",
+        "tests/handoff-contract-micro.test.js (referenced in 7d5914e commit message) — '7 cases covering MICRO bypass on dev/qa stages, SMALL/MEDIUM unchanged regression'",
+        "No code path in src/handoff-contract.js or src/commands/workflow-next.js verifies that classification ≤ project.context.md classification",
+        "No operator-confirmation step is required before resolveClassification accepts the prd-derived value"
+      ],
+      "impact": "Gate-bypass mechanism that maps directly onto Gate D — the security-review gate. The framework's documented contract is 'MEDIUM features require @qa + @pentester before close'. A feature whose PRD claims MICRO classification can ship without that review even if the actual scope warrants MEDIUM. The vector is realistic because: (a) classification is set by the LLM-driven @product agent at PRD time, (b) the same agent is susceptible to indirect-injection via researchs/ or dossier content (the entire memory_context surface), (c) no operator-side checksum or confirmation gate exists between 'PRD frontmatter' and 'MICRO short-circuit'. Distinct from SF-project-18 (direct workflow.state.json edits) — that vector requires write access to runtime state; this one only requires influence over the @product agent's PRD output.",
+      "affected_artifacts": [
+        "src/handoff-contract.js",
+        "src/commands/workflow-next.js",
+        ".aioson/context/prd-{slug}.md (the classification source-of-truth)"
+      ],
+      "suggested_fix": "Two-layer defense, both small: (1) Enforce 'feature classification ≤ project classification' in resolveClassification — if prd-{slug}.md declares MICRO but project.context.md is MEDIUM, the resolver returns the more-restrictive of the two and logs a warn-level notify naming the conflict. This matches the principle 'feature scope can be narrower than project scope but never wider in terms of process rigor.' (2) Carve Gate D out of the MICRO short-circuit when the project classification is MEDIUM: even for genuine MICRO features inside a MEDIUM project, Gate D should still run because the security baseline is project-wide. Concretely, change the early-return to `if (classification === 'MICRO' && slug && gateLetter !== 'D')` and add a regression test asserting Gate D still runs for a MICRO feature inside a MEDIUM project.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "dev_session_note": "Fixed 2026-05-15 (option 2 — Gate D carve-out only, not option 1): src/handoff-contract.js gains readProjectClassification(targetDir) that reads project.context.md frontmatter independently of any feature PRD. validateHandoffContract resolves both classification (feature-level, may be PRD-overridden) and projectClassification (always project.context.md). checkGateApproval takes a 5th argument projectClassification and short-circuits MICRO only for process gates A/B/C; Gate D short-circuits only when the *project* classification is also MICRO. Option 1 (force feature ≤ project) was rejected as it would override the deyvin-density-validated design that lets MICRO features in MEDIUM projects use a lightweight workflow for A/B/C — option 2 preserves that UX while restoring the security baseline. Updated 1 pre-existing test (qa-stage-MICRO-passes adds writeProjectContext(MICRO) to match the legitimate scenario the test verifies). 4 new regression tests added: MICRO-in-MEDIUM blocks Gate D, MICRO-in-SMALL blocks Gate D, MICRO-in-MEDIUM passes Gate C (process gate, no security implication), MICRO-in-MEDIUM passes Gate D when spec-{slug}.md carries a recorded QA Sign-off PASS verdict. tests/handoff-contract-micro.test.js 11/11 PASS.",
+      "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed AND design judgment (option 2 only, not option 1) AUDITED AS SOUND. Physically inspected src/handoff-contract.js: line 172-181 (readProjectClassification reads project.context.md independently), line 184-201 (resolveClassification feature-first with project fallback), line 215 (MICRO short-circuit for non-D gates), line 218 (Gate D short-circuit ONLY when project is also MICRO), line 290-295 (validateHandoffContract resolves both classifications), line 304-312 (checkGateApproval receives both as 4th + 5th args). Audited 7 edge cases manually: (1) state.classification='MICRO' override → projectClassification still controls Gate D since readProjectClassification is independent — confirmed; (2) project.context.md missing → readProjectClassification returns null → Gate D falls through to spec check (fail-closed) — confirmed; (3) prd-{slug}.md missing → resolveClassification falls back to projectClassification → consistent behavior — confirmed; (4) prd without classification field → same as (3) — confirmed; (5) MEDIUM feature in MICRO project → classification='MEDIUM' bypasses MICRO short-circuit → full gates apply — confirmed; (6) unknown classification value → falls through to spec check — confirmed; (7) TOCTOU race on project.context.md → readFileSafe returns empty → fail-closed — confirmed. Option 2 alone is sufficient because: (a) security baseline now applies project-wide, (b) fail-closed when project classification unknown, (c) state/PRD overrides do not bypass the baseline (orthogonal layers). Option 1 would have only prevented legitimate MICRO-in-MEDIUM lightweight workflow (a UX cost without security gain given option 2). The pre-existing test update (writeProjectContext(MICRO) added to qa-stage-MICRO-passes) is correct test semantics — the old test was implicitly asserting the exact gate-bypass behavior SF-26 documents, so adding the project context makes the test verify the LEGITIMATE short-circuit scope. handoff-contract-micro.test.js 11/11 PASS + handoff-contract-pentester.test.js + handoff-contract-v2.test.js + handoff-validator.test.js + workflow-next-validator-routing.test.js together = 56/56 PASS (no regression of any handoff-contract behavior). Gate D decision: fixed."
     }
   ]
 }
