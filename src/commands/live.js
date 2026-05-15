@@ -67,8 +67,23 @@ async function withRuntimeDb(targetDir, t) {
   return handle;
 }
 
+// bug-found-005: session keys carry the format `direct-session:{ts}:{agent}`
+// which contains colons. NTFS reserves `:` in filenames (it's the drive-letter
+// separator and the alternate-data-stream syntax), so any `path.join(..., 'live',
+// 'direct-session:1234:deyvin')` would have `mkdir` fail silently in the
+// auxiliary-filesystem catches further down — leaving the dashboard's
+// state.json/events.ndjson/summary.md never written on Windows.
+//
+// We sanitize only at the filesystem boundary: the session_key stored in
+// SQLite, returned to callers, and printed by the CLI keeps its colons (it's
+// a documented public identifier). Colons survive on POSIX too, but `__` is
+// safe everywhere and lets a single code path handle both platforms.
+function sessionKeyToDirName(sessionKey) {
+  return String(sessionKey).replace(/:/g, '__');
+}
+
 function resolveLivePaths(runtimeDir, sessionKey) {
-  const sessionDir = path.join(runtimeDir, 'live', sessionKey);
+  const sessionDir = path.join(runtimeDir, 'live', sessionKeyToDirName(sessionKey));
   return {
     sessionDir,
     statePath: path.join(sessionDir, 'state.json'),
@@ -2033,7 +2048,11 @@ module.exports = {
   runLiveHandoff,
   runLiveStatus,
   runLiveClose,
-  runLiveList
+  runLiveList,
+  // Exported so callers (including tests) can resolve the on-disk directory
+  // for a given session key without re-implementing the sanitization rules.
+  sessionKeyToDirName,
+  resolveLivePaths
 };
 
 // ── Context estimation helpers ──

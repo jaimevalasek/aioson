@@ -29,13 +29,16 @@
     },
     "real-assertion-failure-live-cluster": {
       "count": 6,
-      "description": "All 6 live-* tests fail with ENOENT on .aioson/runtime/live/direct-session:{id}/state.json. Either the file is no longer written, the directory naming changed, or there is a race between live:start returning and state.json being persisted.",
+      "status": "FIXED 2026-05-14 (@dev)",
+      "description": "ROOT CAUSE: live session keys carry the format `direct-session:{ts}:{agent}` with colons. NTFS reserves `:` in filenames — `mkdir 'direct-session:123:deyvin'` fails with ENOENT on Windows. The fs.mkdir calls inside writeLiveState/appendLiveEvent/writeLiveSummary were wrapped in `try { ... } catch { /* filesystem is auxiliary */ }` which silently swallowed the error, leaving state.json/events.ndjson/summary.md never written. All 6 failures stem from this — 2 read state.json directly (ENOENT), 1 relies on validation logic that reads state.json, 1 relies on listLiveStates scanning state.json files, and the others count derivative state that depends on the file existing.",
       "skip_on_windows_safe": false,
-      "ci_linux_likely_passes": false,
+      "ci_linux_likely_passes": true,
       "owner": "dev",
       "bug_id": "bug-found-005",
       "severity": "high",
       "evidence_pattern": "ENOENT: no such file or directory, open 'C:\\Users\\...\\aioson-live-command-*\\.aioson\\runtime\\live\\direct-session:1778803...:deyvin\\state.json'",
+      "resolution": "Added sessionKeyToDirName() helper in src/commands/live.js that replaces `:` with `__`. Applied in resolveLivePaths (single boundary point — all FS writes go through it). Exported the helper so tests can construct paths matching the on-disk layout. The session_key stored in SQLite / returned by CLI keeps its colons (it's a public identifier). live-command 8/8 + live-json-output 2/2 + runtime-command relevant test green. Full suite: 2413/2422 (was 2407/2422).",
+      "footnote": "Feature was silently broken on Windows since commit 4621cf3 (feat: add tracked live sessions and runtime projections) — CI runs on Linux where colons are valid filenames so it never surfaced. Dashboard live view never worked on Windows before this fix.",
       "files": [
         "tests/live-command.test.js:36:live session commands track start, plan progress, handoff and close for a no-launch session",
         "tests/live-command.test.js:308:runtime:emit rejects back-to-back task_started without task_completed",

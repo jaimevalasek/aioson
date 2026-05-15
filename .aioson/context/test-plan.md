@@ -97,13 +97,24 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
 
 **Note**: o padrão WAL/SHM lingering provavelmente afeta outros testes — durante esta sessão observei `tests/context-search.test.js:15` falhar com `ENOTEMPTY` em `search/` subdir (também é WAL-related). Recomendação: aplicar o mesmo padrão (`wal_checkpoint(TRUNCATE)` + `cleanupTmpDir`) em sessões futuras se ocorrerem flakes similares.
 
-#### [bug-found-005] live-* cluster ENOENT × 6 — BUG REAL DE PRODUÇÃO
+#### [bug-found-005] live-* cluster ENOENT × 6 — **FIXED 2026-05-14 (@dev)**
 
 - `tests/live-command.test.js:36,308,394,435`, `tests/live-json-output.test.js:34`, `tests/runtime-command.test.js:610`
 - Sintoma uniforme: `ENOENT: no such file or directory, open '.../runtime/live/direct-session:{ts}:deyvin/state.json'`
-- Root cause provável: refactor recente em `src/commands/live-*` ou `src/live-session`. Ou (a) o `state.json` não está sendo escrito, ou (b) o path mudou e os tests não foram atualizados, ou (c) há race entre `live:start` retornar e o `state.json` ser persistido
-- **Severidade alta**: a feature de live sessions é parte do runtime principal do dashboard — se está quebrada em produção, dashboard fica sem visibilidade
-- ETA: investigação primeiro (1-2h), fix depende do diagnóstico
+- **Diagnóstico real**: o session key tem formato `direct-session:{ts}:{agent}` com **colons**. NTFS reserva `:` em nomes de arquivo (drive letter, ADS syntax). `mkdir 'direct-session:123:deyvin'` falha com ENOENT no Windows. Os 3 escritores (`writeLiveState`, `appendLiveEvent`, `writeLiveSummary`) tinham `try { ... } catch { /* filesystem is auxiliary */ }` que silenciosamente engolia o erro — `state.json` nunca era escrito. Linha 4621cf3 da história git: o bug está em produção desde que tracked live sessions foram adicionadas; CI roda em Linux onde colons funcionam. **Dashboard live view nunca funcionou em produção no Windows.**
+- **1 root cause, 6 sintomas diferentes**:
+  1. `state.json` ENOENT × 2 — leitura direta falha (nunca escrito)
+  2. "Missing expected rejection" (back-to-back task_started) — validação lê state.json, não acha nada, permite duplicação
+  3. `live:list` 0 sessions — list escaneia state.json files, nenhum existe
+  4. `runtime status child_task_count 2 !== 1` — accounting depende de state.json existir
+  5. live-json-output — espera summary.md no path com colons
+- **Fix entregue**:
+  - Helper `sessionKeyToDirName(key)` em `src/commands/live.js` que troca `:` por `__`
+  - `resolveLivePaths` agora sanitiza antes de `path.join` — único ponto de fronteira FS
+  - Export do helper pra que tests possam construir paths que casam com o layout de disco
+  - `session_key` em SQLite e CLI continua com colons (identificador público); só o nome do diretório é sanitizado
+  - 5 sites em 2 test files atualizados pra usar o helper
+- **Regressão**: live-command 8/8 + live-json-output 2/2 + runtime-command relevante verde. Full suite **2413/2422** (was 2407/2422). +6 net. As 9 falhas restantes incluem 4 flakes intermitentes que passam em isolação.
 
 #### [test-update-001] sync-agents-preflight × 2 — TEST NEEDS UPDATE (não bug)
 

@@ -6,6 +6,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { sessionKeyToDirName } = require('../src/commands/live');
 
 async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-live-json-'));
@@ -154,7 +155,7 @@ test('live session commands return structured JSON payloads with plan progress a
   assert.equal(statusClosedParsed.phase, 'closed');
   assert.equal(statusClosedParsed.open, false);
 
-  const summaryPath = path.join(dir, '.aioson', 'runtime', 'live', startParsed.sessionKey, 'summary.md');
+  const summaryPath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(startParsed.sessionKey), 'summary.md');
   const summary = await fs.readFile(summaryPath, 'utf8');
   assert.equal(summary.includes('Sessao encerrada via CLI'), true);
 });

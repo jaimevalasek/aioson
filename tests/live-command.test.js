@@ -12,7 +12,8 @@ const {
   runLiveHandoff,
   runLiveStatus,
   runLiveClose,
-  runLiveList
+  runLiveList,
+  sessionKeyToDirName
 } = require('../src/commands/live');
 const { openRuntimeDb, readAgentSession } = require('../src/runtime-store');
 
@@ -98,7 +99,7 @@ test('live session commands track start, plan progress, handoff and close for a 
     db.close();
   }
 
-  const statePath = path.join(dir, '.aioson', 'runtime', 'live', start.sessionKey, 'state.json');
+  const statePath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(start.sessionKey), 'state.json');
   const initialState = JSON.parse(await fs.readFile(statePath, 'utf8'));
   assert.equal(initialState.phase, 'active');
   assert.equal(initialState.tool_session, 'codex');
@@ -261,7 +262,7 @@ test('live session commands track start, plan progress, handoff and close for a 
   const closedSessionRef = await readAgentSession(runtimeDir, '@product');
   assert.equal(closedSessionRef, null);
 
-  const ndjsonPath = path.join(dir, '.aioson', 'runtime', 'live', start.sessionKey, 'events.ndjson');
+  const ndjsonPath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(start.sessionKey), 'events.ndjson');
   const lines = (await fs.readFile(ndjsonPath, 'utf8'))
     .trim()
     .split('\n')
@@ -276,7 +277,7 @@ test('live session commands track start, plan progress, handoff and close for a 
     'session_closed'
   ]);
 
-  const summaryPath = path.join(dir, '.aioson', 'runtime', 'live', start.sessionKey, 'summary.md');
+  const summaryPath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(start.sessionKey), 'summary.md');
   const summary = await fs.readFile(summaryPath, 'utf8');
   assert.equal(summary.includes('Sessao encerrada com sucesso'), true);
   assert.equal(summary.includes('Duration:'), true);
@@ -465,7 +466,7 @@ test('state.json contains events_by_type breakdown after emit', async () => {
     t
   });
 
-  const statePath = path.join(dir, '.aioson', 'runtime', 'live', start.sessionKey, 'state.json');
+  const statePath = path.join(dir, '.aioson', 'runtime', 'live', sessionKeyToDirName(start.sessionKey), 'state.json');
   const state = JSON.parse(await fs.readFile(statePath, 'utf8'));
   assert.equal(state.stats.events_by_type.milestone, 2);
   assert.equal(state.stats.events_by_type.block, 1);
