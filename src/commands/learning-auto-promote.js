@@ -145,7 +145,9 @@ async function runLearningAutoPromote({ args, options = {}, logger }) {
       title: learning.title,
       type: learning.type,
       frequency: learning.frequency,
-      file: path.join(RULES_DIR, fileName)
+      // Forward-slash for cross-platform JSON/CLI consistency — the field is
+      // logged, returned via --json, and consumed by downstream automation.
+      file: path.join(RULES_DIR, fileName).replace(/\\/g, '/')
     });
   }
 

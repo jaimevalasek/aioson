@@ -66,9 +66,15 @@ function detectAgentTeams() {
  * Build a teammate definition from a squad executor.
  */
 function executorToTeammate(executor, squadSlug, projectDir) {
-  const agentFile = executor.file
+  // Normalize to forward-slashes after path.join: agentFile is a string fed
+  // into agent tooling (Codex/Claude/Gemini), JSON outputs, and CLI logs.
+  // Node's fs APIs accept forward-slash on Windows, but if we emit native
+  // backslash paths here, every consumer that handles them across platforms
+  // would need its own normalization. Standardize at the boundary.
+  const agentFile = (executor.file
     ? path.join(projectDir, executor.file)
-    : path.join(projectDir, SQUADS_DIR, squadSlug, 'agents', `${executor.slug}.md`);
+    : path.join(projectDir, SQUADS_DIR, squadSlug, 'agents', `${executor.slug}.md`)
+  ).replace(/\\/g, '/');
 
   const teammate = {
     name: executor.slug,

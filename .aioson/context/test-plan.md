@@ -141,12 +141,13 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
 - Decisão (não-tester): (a) rebudget — atualizar o limite no test, ou (b) trim — cortar conteúdo do prompt
 - Owner: @architect ou product-owner
 
-#### [bug-found-006] singletons reais × 3
+#### [bug-found-006] singletons reais — **FIXED 2026-05-14 (@dev)**
 
-- `tests/agent-teams-adapter.test.js:122` — `teammate.agentFile.includes('custom/agents/dev.md')` false → custom file path não está sendo honrado
-- `tests/learning-auto-promote.test.js:92` — `result.promoted_items[0].file.includes('.aioson/rules')` false → path format mudou
-- `tests/live-command.test.js:308` (também no live-cluster acima, mas a asserção é distinta — "Missing expected rejection")
-- ETA: 15-30min cada, investigação individual
+- `tests/agent-teams-adapter.test.js:122` — **FIXED**: era Windows path separator. `path.join` no Windows emite backslash; test esperava substring com forward-slash. Fix em `src/squad/agent-teams-adapter.js`: normaliza `agentFile` pra forward-slash após `path.join`.
+- `tests/learning-auto-promote.test.js:92` — **FIXED**: mesmo padrão. Fix em `src/commands/learning-auto-promote.js`: normaliza `promoted_items[].file` pra forward-slash.
+- `tests/live-command.test.js:308` — **FIXED via bug-005**: misclassificado. Era sintoma do state.json nunca escrito (validação back-to-back lia state.json vazio e não rejeitava).
+- **Decisão arquitetural**: a normalização vai em **produção, não em tests**, porque esses campos (`agentFile`, `file`) aparecem em JSON outputs, CLI logs, e são consumidos por automação downstream. Separators mistos entre plataformas seria um problema de interop. Fix em produção via `.replace(/\\/g, '/')` após `path.join`.
+- **Regressão**: agent-teams-adapter 36/36 + learning-auto-promote 10/10 verde. Full suite **2414/2422**.
 
 #### [known-flake-001] QA-PERF-01 Windows perf × 1
 

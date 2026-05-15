@@ -92,17 +92,19 @@
     },
     "real-assertion-failure-singleton": {
       "count": 3,
-      "description": "Isolated real assertion failures, each in a distinct module. Each needs individual investigation but is not part of a cluster.",
+      "status": "FIXED 2026-05-14 (@dev) — 2 real singletons + 1 absorbed by bug-005",
+      "description": "Two of the three singletons share a common Windows path-separator root cause: production code uses path.join which emits backslash on Windows; tests asserted forward-slash substrings. The third singleton (live-command.test.js:308) was misclassified — it was part of the live-cluster ENOENT chain and got fixed by bug-005.",
       "skip_on_windows_safe": false,
-      "ci_linux_likely_passes": false,
+      "ci_linux_likely_passes": true,
       "owner": "dev",
       "bug_id": "bug-found-006",
       "severity": "medium",
       "files": [
-        "tests/agent-teams-adapter.test.js:122:executorToTeammate uses custom file path when provided (teammate.agentFile.includes('custom/agents/dev.md') was false)",
-        "tests/learning-auto-promote.test.js:92:learning:auto-promote promotes process learnings above threshold (result.promoted_items[0].file.includes('.aioson/rules') was false — path format may have changed)",
-        "tests/live-command.test.js:308:runtime:emit rejects back-to-back task_started without task_completed (Missing expected rejection — included with live-cluster above but the assertion is distinct from state.json ENOENT)"
-      ]
+        "tests/agent-teams-adapter.test.js:122:FIXED (executorToTeammate now normalizes to forward-slash)",
+        "tests/learning-auto-promote.test.js:92:FIXED (promoted_items[0].file now normalized to forward-slash)",
+        "tests/live-command.test.js:308:FIXED via bug-005 (not a singleton; was symptomatic of state.json never written)"
+      ],
+      "resolution": "Both real singletons fixed by normalizing path output to forward-slash after path.join in user-facing fields (.replace(/\\\\\\\\/g, '/')). Decision: normalize at production boundary (not in tests) because these fields are emitted in JSON outputs, CLI logs, and consumed by downstream automation across platforms. Mixed separators would be an interop problem. agent-teams-adapter 36/36 + learning-auto-promote 10/10 green. Full suite: 2414/2422."
     },
     "perf-flake-windows-io": {
       "count": 1,
