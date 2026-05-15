@@ -81,16 +81,17 @@
     },
     "drift-from-recent-refactor": {
       "count": 1,
-      "description": "agent-contracts kernel size budget: product kernel grew beyond the generalist target. Recent additions to the product agent prompt pushed it over the byte budget enforced by tests/agent-contracts.test.js.",
+      "status": "FIXED 2026-05-14 (@architect)",
+      "description": "agent-contracts kernel size budget: BOTH product (18356 bytes) AND dev (18198 bytes) had grown past the 15000-byte budget — test only reported product because short-circuit on first failure. sheldon was inside (14481).",
       "skip_on_windows_safe": false,
       "ci_linux_likely_passes": false,
-      "owner": "architect-or-product-owner",
+      "owner": "architect",
       "bug_id": "decision-needed-001",
       "severity": "medium",
       "files": [
-        "tests/agent-contracts.test.js:229:product, sheldon, and dev kernels use deterministic on-demand docs and stay within size targets (product kernel oversize)"
+        "tests/agent-contracts.test.js:229:FIXED (KERNEL_BUDGET_BYTES = 20000)"
       ],
-      "fix_recipe": "Decision: either (a) raise the product kernel byte budget in tests/agent-contracts.test.js (acknowledge prompt growth) or (b) trim the product agent .md to fit. Not a tester decision."
+      "resolution": "@architect decision: rebudget from 15000 → 20000 globally. Rationale: the on-demand-doc pattern (kernels reference external docs rather than inlining them) is still intact, so the cap protects against accidental bloat, not documented scope growth. Growth came from deliberate additions (active-learning-loop wiring, sub-task scout, dossier protocol, etc.). Next dev hitting 20KB will get the same nudge. agent-contracts test green."
     },
     "real-assertion-failure-singleton": {
       "count": 3,
@@ -110,16 +111,17 @@
     },
     "perf-flake-windows-io": {
       "count": 1,
-      "description": "QA-PERF-01 — p99 latency stays under 100ms across 500 sequential context:load calls. Already documented as Windows-IO-sensitive flake. Most recent run measured p99 = 1047.99ms (10× SLA), which is unusual even for a flake — may be system load at the time of run.",
+      "status": "FIXED 2026-05-14 (@architect)",
+      "description": "QA-PERF-01 — p99 latency stays under 100ms across 500 sequential context:load calls. ROOT CAUSE refined: the test PASSES in isolation (~12s total for 500 calls, p99 under 100ms) but fails under full-suite parallel execution on NTFS — ~100 test files competing for SQLite/disk/temp IO push p99 to 1000-1300ms. Not Windows-slow-by-itself; Windows-slow-under-contention.",
       "skip_on_windows_safe": true,
       "ci_linux_likely_passes": true,
-      "owner": "tester-or-architect",
+      "owner": "architect",
       "bug_id": "known-flake-001",
       "severity": "low",
       "files": [
-        "tests/qa-telemetry-foundation.test.js:30:QA-PERF-01: p99 latency stays under 100ms across 500 sequential context:load calls"
+        "tests/qa-telemetry-foundation.test.js:30:FIXED (skip on win32 with rationale string)"
       ],
-      "fix_recipe": "Options: (a) raise the SLA for Windows (e.g., 250ms p99), (b) skip on Windows entirely with platform check, (c) leave as-is and accept the flake. Decision belongs to @architect."
+      "resolution": "@architect decision: skip on Windows only, via Node test-runner `skip` option with explanatory string. Initial attempt was platform-aware SLA (Win=250ms) but ambient contention pushes p99 to 1222ms — any cap that survives contention is too loose to detect real regressions. Skipping preserves signal where it matters (Linux/CI run strict 100ms bound) and stops the false-positive noise on Windows. To measure Windows perf manually: run `node --test tests/qa-telemetry-foundation.test.js` in isolation. Full suite now: 2421 pass / 0 fail / 1 skipped."
     }
   },
   "summary_by_owner": {

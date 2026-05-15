@@ -135,13 +135,13 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
 - **Fix**: 1 linha no test — `SCHEMAS_DIR` repointado para `docs/en/5-reference/schemas`. Comment com a referência ao commit do `git mv` pra facilitar a próxima vez.
 - **Regressão**: json-schema-files 2/2 verde. Full suite **2420/2422**.
 
-#### [decision-needed-001] product kernel oversize × 1 — NÃO É BUG, É DECISÃO
+#### [decision-needed-001] kernel oversize × 1 — **FIXED 2026-05-14 (@architect)**
 
 - `tests/agent-contracts.test.js:229`
 - Asserção: "product kernel should stay within the generalist target" — falhou
-- Adições recentes ao prompt do `product.md` empurraram o tamanho acima do budget enforced
-- Decisão (não-tester): (a) rebudget — atualizar o limite no test, ou (b) trim — cortar conteúdo do prompt
-- Owner: @architect ou product-owner
+- **Achado refinado**: BOTH product (18356 bytes) AND dev (18198 bytes) estavam over 15KB; o test só reportava product por causa do short-circuit. sheldon estava dentro (14481).
+- **@architect decision**: rebudget 15000 → 20000 globalmente.
+- **Rationale**: padrão on-demand-doc (kernels referenciam docs externas) está intacto, então o cap protege contra bloat acidental, não growth documentado. As adições vieram de scope deliberado (active-learning-loop, sub-task scout, dossier protocol). Next dev a estourar 20KB vai receber o mesmo nudge.
 
 #### [bug-found-006] singletons reais — **FIXED 2026-05-14 (@dev)**
 
@@ -151,12 +151,13 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
 - **Decisão arquitetural**: a normalização vai em **produção, não em tests**, porque esses campos (`agentFile`, `file`) aparecem em JSON outputs, CLI logs, e são consumidos por automação downstream. Separators mistos entre plataformas seria um problema de interop. Fix em produção via `.replace(/\\/g, '/')` após `path.join`.
 - **Regressão**: agent-teams-adapter 36/36 + learning-auto-promote 10/10 verde. Full suite **2414/2422**.
 
-#### [known-flake-001] QA-PERF-01 Windows perf × 1
+#### [known-flake-001] QA-PERF-01 Windows perf × 1 — **FIXED 2026-05-14 (@architect)**
 
 - `tests/qa-telemetry-foundation.test.js:30`
-- p99 = 1047.99ms vs SLA 100ms (10× over)
-- Já documentado como Windows-IO-sensitive flake; este run pegou um pico de carga (10× é fora do padrão histórico)
-- Decisão de @architect: rebudget SLA pra Windows, skip por plataforma, ou aceitar flake
+- **Diagnóstico refinado**: test PASSA em isolação (~12s total, p99 < 100ms). Falha sob full-suite porque ~100 test files competem por SQLite/disk/temp IO no NTFS — p99 vai pra 1000-1300ms. Não é Windows-slow, é Windows-slow-under-contention.
+- **Tentativa rebudget rejeitada**: SLA Win=250ms ainda media 1222ms na realidade contended. Qualquer valor que sobrevivesse contention seria solto demais pra detectar regressão real.
+- **@architect decision**: skip-on-windows via Node test-runner `skip` option com string de rationale. Linux/CI continua estrito em 100ms. Pra medir Windows perf manualmente: rodar `node --test tests/qa-telemetry-foundation.test.js` isolado.
+- **Resultado**: full suite agora **2421 pass / 0 fail / 1 skipped**.
 
 ### Recomendação de sequenciamento
 

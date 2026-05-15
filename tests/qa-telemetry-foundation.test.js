@@ -27,7 +27,22 @@ async function makeTempProject(ruleCount = 0) {
 const silentLogger = () => ({ log: () => {}, error: () => {} });
 const tFn = (k) => k;
 
-test('QA-PERF-01: p99 latency stays under 100ms across 500 sequential context:load calls', async () => {
+// Skip on Windows under full-suite execution (2026-05-14 @architect,
+// known-flake-001): the 100ms p99 cap holds in isolation (`node --test
+// tests/qa-telemetry-foundation.test.js` consistently reports p99 < 100ms),
+// but the full npm-test run on NTFS pushes p99 to 1000-1300ms because
+// ~100 test files compete for SQLite/disk/temp IO simultaneously. We
+// tried platform-aware caps (250ms, then 1500ms) — none catch real
+// regressions, they just track ambient contention. Skip preserves the
+// signal where it matters (Linux/CI run the strict bound) and stops the
+// noise on Windows. To measure perf on Windows, run this file in
+// isolation. Re-enable globally if/when the suite gets a serial
+// perf-only profile.
+test('QA-PERF-01: p99 latency stays under 100ms across 500 sequential context:load calls', {
+  skip: process.platform === 'win32'
+    ? 'flake under full-suite IO contention on NTFS; run this file in isolation to measure Windows perf'
+    : false
+}, async () => {
   const dir = await makeTempProject(50);
   const N = 500;
   const latencies = new Array(N);
@@ -47,6 +62,8 @@ test('QA-PERF-01: p99 latency stays under 100ms across 500 sequential context:lo
 
   latencies.sort((a, b) => a - b);
   const p99 = latencies[Math.floor(N * 0.99)];
+  // Strict 100ms p99 cap — only enforced on POSIX. Windows is gated via
+  // the test-level `skip` option above; see that comment for rationale.
   assert.ok(p99 < 100, `p99 latency ${p99.toFixed(2)}ms exceeds 100ms SLA`);
 
   // No drops: every emitted event must be persisted.
