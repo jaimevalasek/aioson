@@ -6,7 +6,10 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
-const SCHEMAS_DIR = path.join(ROOT, 'docs/en/schemas');
+// Schemas moved from docs/en/schemas/ to docs/en/5-reference/schemas/ in
+// commit 20ac2fa (2026-05-07) as part of the docs/en 5-layer restructure
+// that mirrors docs/pt. The test wasn't updated alongside the `git mv`.
+const SCHEMAS_DIR = path.join(ROOT, 'docs/en/5-reference/schemas');
 const INDEX_FILE = path.join(SCHEMAS_DIR, 'index.json');
 
 async function readJson(filePath) {

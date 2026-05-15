@@ -126,15 +126,14 @@ Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta se�
 - **NÃO é bug de produção** — o código está correto, os tests é que não cobriam o cenário pós-Phase 6.
 - **Regressão**: sync-agents-preflight 7/7 verde. Full suite **2418/2422**.
 
-#### [investigation-001] json-schema-files × 2 — STALE FIXTURE PATH
+#### [investigation-001] json-schema-files × 2 — **FIXED 2026-05-14 (@tester)**
 
 - `tests/json-schema-files.test.js:17,65`
-- Aponta para `docs/en/schemas/index.json` que **não existe** no repo (`docs/en/` existe com 6 subdirs, mas nenhum `schemas/`)
-- Owner unclear até alguém rodar `git log --all -- 'docs/**/schemas/**'` pra descobrir se os schemas:
-  1. Nunca existiram nesse path (test sempre quebrado?)
-  2. Existiram e foram removidos (test precisa atualizar path OU os schemas precisam voltar)
-  3. Foram movidos pra outro lugar (test precisa atualizar path)
-- ETA: 5 minutos de arqueologia git → decisão
+- Apontava para `docs/en/schemas/index.json` que **não existia** no repo.
+- **Arqueologia git revelou**: commit `20ac2fa` (2026-05-07, "docs(en): phase 1 — mirror docs/pt 5-layer structure") moveu os schemas via `git mv` de `docs/en/schemas/` para `docs/en/5-reference/schemas/`. Test não foi atualizado alongside o move.
+- **Saída escolhida**: opção 3 do triage (update test path) — 22 schemas continuam existindo, só mudou o local.
+- **Fix**: 1 linha no test — `SCHEMAS_DIR` repointado para `docs/en/5-reference/schemas`. Comment com a referência ao commit do `git mv` pra facilitar a próxima vez.
+- **Regressão**: json-schema-files 2/2 verde. Full suite **2420/2422**.
 
 #### [decision-needed-001] product kernel oversize × 1 — NÃO É BUG, É DECISÃO
 

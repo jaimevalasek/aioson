@@ -66,17 +66,18 @@
     },
     "stale-fixture-path": {
       "count": 2,
-      "description": "Tests reference docs/en/schemas/index.json but neither docs/en/schemas/ nor docs/schemas/ exists in the repo. Either the schemas were never created in that location, or they were removed/relocated without updating the tests.",
+      "status": "FIXED 2026-05-14 (@tester investigation-001 closed)",
+      "description": "Tests referenced docs/en/schemas/index.json but the directory had been moved via `git mv` to docs/en/5-reference/schemas/ in commit 20ac2fa (2026-05-07, 'docs(en): phase 1 — mirror docs/pt 5-layer structure'). The test wasn't updated alongside the move. Schemas themselves are present (22 files including index.json) — just at a new path.",
       "skip_on_windows_safe": true,
-      "ci_linux_likely_passes": false,
-      "owner": "investigation-needed",
+      "ci_linux_likely_passes": true,
+      "owner": "tester",
       "bug_id": "investigation-001",
       "severity": "low",
       "files": [
-        "tests/json-schema-files.test.js:17:json schema index is valid and references existing schema files",
-        "tests/json-schema-files.test.js:65:json schema files expose required metadata"
+        "tests/json-schema-files.test.js:17:FIXED (SCHEMAS_DIR updated to docs/en/5-reference/schemas)",
+        "tests/json-schema-files.test.js:65:FIXED (same constant)"
       ],
-      "fix_recipe": "Run `git log --all --oneline -- 'docs/**/schemas/**'` to find whether schemas were ever committed. If they were and got deleted, restore or update the test path. If never created, delete the test or skip with reason."
+      "resolution": "Single-line change: SCHEMAS_DIR constant repointed to docs/en/5-reference/schemas. Comment added referencing the git-mv commit so the next path drift is easier to trace. json-schema-files 2/2 green. Full suite: 2420/2422."
     },
     "drift-from-recent-refactor": {
       "count": 1,
