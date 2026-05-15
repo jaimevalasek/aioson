@@ -13,9 +13,19 @@ function splitCsv(value) {
 function normalizeBrainPath(targetDir, brainPath) {
   const raw = String(brainPath || '').trim();
   if (!raw) return null;
-  if (path.isAbsolute(raw)) return raw;
-  if (raw.startsWith('.aioson/brains/')) return path.join(targetDir, raw);
-  return path.join(targetDir, '.aioson', 'brains', raw);
+  // SF-project-23: fail-closed containment. _index.json declares brain files
+  // by relative path under .aioson/brains/. Absolute paths and relative paths
+  // that escape that root have no legitimate use here, so reject them up front
+  // and let the caller emit its existing "Brain file not found" warning.
+  if (path.isAbsolute(raw)) return null;
+  const brainsRoot = path.resolve(targetDir, '.aioson', 'brains');
+  const candidate = raw.startsWith('.aioson/brains/')
+    ? path.resolve(targetDir, raw)
+    : path.resolve(brainsRoot, raw);
+  if (candidate !== brainsRoot && !candidate.startsWith(brainsRoot + path.sep)) {
+    return null;
+  }
+  return candidate;
 }
 
 async function readJsonFile(filePath) {

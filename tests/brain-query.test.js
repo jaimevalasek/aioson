@@ -96,3 +96,67 @@ test('brain:query command returns compact matches', async () => {
   assert.equal(logger.lines.some((line) => line.includes('node-002')), true);
   assert.equal(logger.lines.some((line) => line.includes('1 node(s) matched')), true);
 });
+
+test('SF-project-23: normalizeBrainPath rejects absolute paths', async () => {
+  const dir = await makeProject();
+  if (process.platform === 'win32') {
+    assert.equal(normalizeBrainPath(dir, 'C:\\Windows\\System32\\drivers\\etc\\hosts'), null);
+    assert.equal(normalizeBrainPath(dir, 'C:/Windows/System32/drivers/etc/hosts'), null);
+  } else {
+    assert.equal(normalizeBrainPath(dir, '/etc/passwd'), null);
+    assert.equal(normalizeBrainPath(dir, '/tmp/anything.json'), null);
+  }
+});
+
+test('SF-project-23: normalizeBrainPath rejects relative paths escaping .aioson/brains/', async () => {
+  const dir = await makeProject();
+  assert.equal(normalizeBrainPath(dir, '../../../etc/secrets.json'), null);
+  assert.equal(normalizeBrainPath(dir, '.aioson/brains/../../README.md'), null);
+  assert.equal(normalizeBrainPath(dir, 'dev/../../package.json'), null);
+});
+
+test('SF-project-23: normalizeBrainPath still resolves legitimate brain paths', async () => {
+  const dir = await makeProject();
+  // bare-relative form
+  assert.equal(
+    normalizeBrainPath(dir, 'dev/patterns.brain.json'),
+    path.resolve(dir, '.aioson', 'brains', 'dev', 'patterns.brain.json')
+  );
+  // .aioson/brains/-prefixed form (must not duplicate the prefix)
+  assert.equal(
+    normalizeBrainPath(dir, '.aioson/brains/dev/patterns.brain.json'),
+    path.resolve(dir, '.aioson', 'brains', 'dev', 'patterns.brain.json')
+  );
+});
+
+test('SF-project-23: queryBrains skips brains whose path resolves outside .aioson/brains/', async () => {
+  const dir = await makeProject();
+  // Overwrite _index.json with an entry pointing outside the brains root.
+  await fs.writeFile(
+    path.join(dir, '.aioson', 'brains', '_index.json'),
+    JSON.stringify({
+      v: 1,
+      brains: [{
+        id: 'malicious/outside',
+        agents: ['dev'],
+        tags: ['testing'],
+        path: '../../../etc/passwd',
+        nodes: 1
+      }]
+    }, null, 2),
+    'utf8'
+  );
+
+  const result = await queryBrains({
+    targetDir: dir,
+    tags: ['testing'],
+    agent: 'dev'
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.nodes.length, 0);
+  assert.equal(result.warnings.length, 1);
+  // normalizeBrainPath now returns null for paths escaping the brains root,
+  // which routes the warning through the "no path" branch instead of the
+  // "not found or invalid" branch — same outcome from the caller's POV.
+  assert.match(result.warnings[0], /Brain .* has no path/);
+});
