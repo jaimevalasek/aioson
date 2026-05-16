@@ -135,18 +135,13 @@ test('QA-INCEPTION-ISOLATION: tmpdir greenfield install + feature:close does NOT
   assert.equal(after, before, 'project-root aios.sqlite was modified by an isolated tmpdir test');
 });
 
-test('QA-INSTALLER-UPDATE-BEHAVIOR: pins CURRENT behavior — learning-loop.json IS overwritten on update mode (documented Medium)', async () => {
-  // This test pins TODAY'S behavior, not the desired behavior. The architecture
-  // spec promises "aioson update aplica merge inteligente (preserve user
-  // overrides)" but the installer.js currently copies template → workspace,
-  // overwriting customizations. Same is true for autonomy-protocol.json and
-  // scout-engine.json — this is the policy for the whole `.aioson/config/`
-  // directory, not specific to active-learning-loop. Backups land under
-  // `.aioson/backups/{timestamp}/` per the installer's `backupOnOverwrite`
-  // option for update mode.
-  //
-  // If/when a future change implements true merge, this test should flip
-  // expectations — that change is then visible.
+test('QA-INSTALLER-UPDATE-BEHAVIOR: learning-loop.json customizations survive update via additive JSON merge (M-01 fixed)', async () => {
+  // M-01 (closed by commit f82c427): `.aioson/config/*.json` no longer get
+  // blindly overwritten on `aioson update`. The installer routes them through
+  // src/installer-config-merge.js with additive deep-merge semantics — user
+  // primitives win on collision, arrays union, new keys from the template are
+  // added, and the prior file is backed up to `.aioson/backups/{ts}/` before
+  // any mutation. This test pins that behavior.
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'aios-qa6-upd-'));
   await installTemplate(dir, { overwrite: true, mode: 'install' });
   const cfgPath = path.join(dir, '.aioson', 'config', 'learning-loop.json');
@@ -161,12 +156,16 @@ test('QA-INSTALLER-UPDATE-BEHAVIOR: pins CURRENT behavior — learning-loop.json
   };
   fs.writeFileSync(cfgPath, JSON.stringify(customized, null, 2));
 
-  await installTemplate(dir, { mode: 'update' });
+  await installTemplate(dir, { mode: 'update', overwrite: true, backupOnOverwrite: true });
 
   const after = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-  assert.equal(after.enabled, true, 'CURRENT behavior pin: update overwrites enabled');
-  assert.equal(after.timeout_ms, 5000, 'CURRENT behavior pin: update overwrites timeout_ms');
-
-  // Backup MAY be there if backupOnOverwrite ran. Don't fail if not — that
-  // varies by installer flags.
+  assert.equal(after.enabled, false, 'user override of enabled must survive merge');
+  assert.equal(after.timeout_ms, 9999, 'user override of timeout_ms must survive merge');
+  assert.equal(after.auto_promote_threshold, 7, 'user override of auto_promote_threshold must survive');
+  assert.ok(
+    Array.isArray(after.skip_on_classification)
+      && after.skip_on_classification.includes('MICRO')
+      && after.skip_on_classification.includes('SMALL'),
+    'user-extended array entries must survive'
+  );
 });
