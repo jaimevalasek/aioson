@@ -8,6 +8,7 @@ const { exists, ensureDir, copyFileWithDir, nowStamp, toRelativeSafe } = require
 const { ensureProjectRuntime } = require('./execution-gateway');
 const { shouldIncludeForProfile } = require('./install-profile');
 const { generatePermissions } = require('./permissions-generator');
+const { isConfigMergePath, mergeConfigFile } = require('./installer-config-merge');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
@@ -288,6 +289,7 @@ async function installTemplate(targetDir, options = {}) {
   const skipped = [];
   const backedUp = [];
   const failedBackups = [];
+  const mergedConfigs = [];
   let runtime = null;
 
   let backupRoot = null;
@@ -300,6 +302,39 @@ async function installTemplate(targetDir, options = {}) {
     const skipReason = shouldSkipTemplatePath(rel, installProfile);
     if (skipReason) {
       skipped.push({ path: rel, reason: skipReason });
+      continue;
+    }
+
+    // M-01: .aioson/config/*.json get additive JSON merge (preserve user
+    // customizations) with backup of the prior file before any mutation.
+    // This branch handles its own create/update/skip semantics and bypasses
+    // selectiveUpdate so a project on an older version still gets new configs.
+    if (isConfigMergePath(rel)) {
+      const mergeResult = await mergeConfigFile({
+        templatePath: absPath,
+        targetDir,
+        relPath: rel,
+        backupRoot,
+        dryRun
+      });
+      if (mergeResult.action === 'invalid_template') {
+        skipped.push({ path: rel, reason: 'invalid-template' });
+      } else if (mergeResult.action === 'unchanged') {
+        skipped.push({ path: rel, reason: 'unchanged' });
+      } else {
+        copied.push(rel);
+        mergedConfigs.push({ path: rel, action: mergeResult.action });
+        if (mergeResult.backupPath) {
+          backedUp.push(toRelativeSafe(targetDir, mergeResult.backupPath));
+        }
+        if (mergeResult.backupError) {
+          failedBackups.push({ path: rel, error: mergeResult.backupError });
+          console.warn(`[aioson update] backup of ${rel} failed; update proceeding without rollback for this file: ${mergeResult.backupError}`);
+        }
+      }
+      if (onProgress) {
+        onProgress({ copied: copied.length, total: templateFiles.length, file: rel });
+      }
       continue;
     }
 
@@ -390,6 +425,7 @@ async function installTemplate(targetDir, options = {}) {
     skipped,
     backedUp,
     failedBackups,
+    mergedConfigs,
     runtime,
     permissions,
     dryRun,
