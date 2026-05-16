@@ -338,14 +338,15 @@ clarification: none | [specific question if confidence is low]
 
 ## Continuation Protocol
 
-Before ending your response, always append:
+Before ending your response, decide whether the recommendation depends on diagnostic work done in this session. If yes and the next agent will run in a fresh context, load `.aioson/docs/handoff-persistence.md` and persist the diagnostic to `plans/{slug}.md` BEFORE suggesting `/clear`. Then append:
 
 ---
 ## Next Up
 - Routed to: [agent name]
 - Activate: `/[agent]`
+- Context persisted: `plans/{slug}.md` (only when diagnostic was preserved; omit otherwise)
 - Do not continue into the next agent's work — routing only
-- `/clear` → fresh context window before continuing
+- `/clear` → fresh context window before continuing (safe because context is in the file)
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]

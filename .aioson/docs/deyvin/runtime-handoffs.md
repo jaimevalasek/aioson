@@ -34,3 +34,9 @@ If the user did not enter through `aioson live:start`, keep one direct session o
 ## Dashboard visibility
 
 Plain natural-language agent activation in an external client does not create runtime records by itself. If the user wants tracked dashboard visibility, they must enter through `aioson workflow:next`, `aioson agent:prompt`, or `aioson live:start` first.
+
+## Cross-session handoffs — persist before /clear
+
+The runtime helpers above cover same-session handoffs (`live:handoff`, `runtime:session:finish`). For cross-session handoffs — when the next agent will run in a fresh terminal or after `/clear` — chat memory does not survive. Before suggesting `/clear`, persist the diagnostic to `plans/{slug}.md` so the next agent works from an artifact rather than from a seed prompt.
+
+Load `.aioson/docs/handoff-persistence.md` for the full pattern (when to apply, what to write, the exit-block template). Apply it whenever the recommended next agent is one that consumes raw plans (`/briefing` foremost, sometimes `/product`) or needs the full diagnostic to operate (`/analyst`, `/architect`, `/sheldon`). Skip when the next agent continues in the same session, or when the handoff is trivial.

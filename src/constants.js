@@ -60,6 +60,7 @@ const MANAGED_FILES = [
   '.aioson/docs/deyvin/pair-execution.md',
   '.aioson/docs/deyvin/runtime-handoffs.md',
   '.aioson/docs/deyvin/debugging-escalation.md',
+  '.aioson/docs/handoff-persistence.md',
   '.aioson/docs/sheldon/research-loop.md',
   '.aioson/docs/sheldon/web-intelligence.md',
   '.aioson/docs/sheldon/quality-lens.md',
