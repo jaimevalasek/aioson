@@ -35,7 +35,7 @@ const {
   inferProjectTypeFromFramework,
   inferWeb3NetworkFromFramework,
   buildDeveloperProfile,
-  recommendBeginnerProfile,
+  recommendCreatorProfile,
   buildTeamProfile
 } = require('../onboarding');
 
@@ -286,7 +286,7 @@ function buildDeveloperProfileFromOptions(options, defaults, t) {
 }
 
 function buildBeginnerProfileFromOptions(options, t) {
-  const profile = recommendBeginnerProfile({
+  const profile = recommendCreatorProfile({
     projectSummary: resolveOption(options, 'project-summary', ''),
     expectedUsers: resolveOption(options, 'expected-users', ''),
     mobileRequirement: resolveOption(options, 'mobile-requirement', ''),
@@ -408,7 +408,7 @@ async function askBeginnerProfile(rl, data, logger, t) {
   const mobileRequirement = await ask(rl, t('setup_context.q_beginner_mobile'), '2');
   const hostingPreference = await ask(rl, t('setup_context.q_beginner_hosting'), '1');
 
-  const recommendation = recommendBeginnerProfile({
+  const recommendation = recommendCreatorProfile({
     projectSummary,
     expectedUsers,
     mobileRequirement,
@@ -443,7 +443,7 @@ async function askBeginnerProfile(rl, data, logger, t) {
 
   return {
     ...custom,
-    profile: 'beginner',
+    profile: 'creator',
     notes: uniqueStrings([
       ...localizeProfileNotes(recommendation, t).notes,
       t('setup_context.note_beginner_declined')
@@ -560,7 +560,7 @@ async function runSetupContext({ args, options, logger, t }) {
       let profileData = null;
       if (data.profile === 'developer') {
         profileData = await askDeveloperProfile(rl, data, t);
-      } else if (data.profile === 'beginner') {
+      } else if (data.profile === 'creator') {
         profileData = await askBeginnerProfile(rl, data, logger, t);
       } else {
         profileData = await askTeamProfile(rl, data, t);
@@ -601,7 +601,7 @@ async function runSetupContext({ args, options, logger, t }) {
     let profileData = null;
     if (profile === 'developer') {
       profileData = buildDeveloperProfileFromOptions(options, data, t);
-    } else if (profile === 'beginner') {
+    } else if (profile === 'creator') {
       profileData = buildBeginnerProfileFromOptions(options, t);
     } else {
       profileData = localizeProfileNotes(buildTeamProfileFromOptions(options, data), t);

@@ -6,14 +6,19 @@ const {
   normalizeProfile,
   parseServices,
   buildDeveloperProfile,
-  recommendBeginnerProfile,
+  recommendCreatorProfile,
   buildTeamProfile
 } = require('../src/onboarding');
 
 test('normalizeProfile accepts numeric profile shortcuts', () => {
   assert.equal(normalizeProfile('1'), 'developer');
-  assert.equal(normalizeProfile('2'), 'beginner');
+  assert.equal(normalizeProfile('2'), 'creator');
   assert.equal(normalizeProfile('3'), 'team');
+});
+
+test('normalizeProfile migrates legacy beginner to creator (E4 shim)', () => {
+  assert.equal(normalizeProfile('beginner'), 'creator');
+  assert.equal(normalizeProfile('BEGINNER'), 'creator');
 });
 
 test('parseServices normalizes aliases and removes duplicates', () => {
@@ -46,15 +51,15 @@ test('buildDeveloperProfile supports Laravel with Jetstream notes', () => {
   assert.equal(profile.services.includes('Cache (Redis)'), true);
 });
 
-test('recommendBeginnerProfile infers dapp recommendation from summary', () => {
-  const profile = recommendBeginnerProfile({
+test('recommendCreatorProfile infers dapp recommendation from summary', () => {
+  const profile = recommendCreatorProfile({
     projectSummary: 'A wallet and NFT marketplace for creators',
     expectedUsers: '3',
     mobileRequirement: '2',
     hostingPreference: '3'
   });
 
-  assert.equal(profile.profile, 'beginner');
+  assert.equal(profile.profile, 'creator');
   assert.equal(profile.projectType, 'dapp');
   assert.equal(profile.framework, 'Hardhat');
   assert.equal(profile.web3Enabled, true);

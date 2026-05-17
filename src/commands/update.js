@@ -40,6 +40,10 @@ async function runUpdate({ args, options, logger, t }) {
   logger.log(t('update.done_at', { targetDir }));
   logger.log(t('update.files_updated', { count: result.copied.length }));
   logger.log(t('update.backups_created', { count: result.backedUp.length }));
+  if (result.migrations && result.migrations.profileRename && result.migrations.profileRename.changed) {
+    logger.log('');
+    logger.log(t('update.profile_renamed'));
+  }
   if (!dryRun) {
     logger.log('');
     logger.log(t('update.reconfigure_hint'));

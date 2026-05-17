@@ -215,6 +215,8 @@ If `.aioson/skills/process/secure-tdd/SKILL.md` exists and the active feature is
 
 ## Deterministic preflight
 
+Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
+
 Before the first code change, decide which dev docs must be loaded:
 
 | Condition | Required module |
@@ -282,6 +284,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.
 - No unnecessary rewrites outside current responsibility.

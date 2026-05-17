@@ -68,4 +68,36 @@ describe('parser.js — parseArgv', () => {
     assert.equal(result.options.agent, true);
     assert.equal(result.options.json, true);
   });
+
+  it('preserves `=` characters inside flag values (regression: dev-state-producer)', () => {
+    // Pre-fix: `.split('=')` + destructuring chopped after the second `=`,
+    // silently truncating any flag value containing `=` (URLs, sentences,
+    // SQL, key=value pairs in messages).
+    const result = parseArgv([
+      'node', 'aioson', 'state:save', '.',
+      '--next=Phase 2: profile=creator; cap=20000; CONTEXT_ALLOWED_PROFILES'
+    ]);
+    assert.equal(
+      result.options.next,
+      'Phase 2: profile=creator; cap=20000; CONTEXT_ALLOWED_PROFILES'
+    );
+  });
+
+  it('preserves multi-line / long flag values without truncation', () => {
+    const longValue = 'A'.repeat(500) + ' middle=marker ' + 'B'.repeat(500);
+    const result = parseArgv(['node', 'aioson', 'cmd', `--note=${longValue}`]);
+    assert.equal(result.options.note, longValue);
+    assert.equal(result.options.note.length, 500 + ' middle=marker '.length + 500);
+  });
+
+  it('preserves URL query strings in flag values', () => {
+    const result = parseArgv([
+      'node', 'aioson', 'cmd',
+      '--url=https://example.com/api?foo=1&bar=2&baz=qux'
+    ]);
+    assert.equal(
+      result.options.url,
+      'https://example.com/api?foo=1&bar=2&baz=qux'
+    );
+  });
 });

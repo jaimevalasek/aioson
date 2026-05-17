@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { detectExistingInstall, installTemplate, readInstallProfile } = require('./installer');
+const { migrateProfileRename } = require('./migrations/profile-rename');
 
 async function updateInstallation(targetDir, options = {}) {
   const installed = await detectExistingInstall(targetDir);
@@ -27,10 +28,22 @@ async function updateInstallation(targetDir, options = {}) {
     selectiveUpdate: !options.all
   });
 
+  // Post-install migrations. Best-effort: a migration failure must not break
+  // the update flow. Skip migrations in dry-run mode.
+  let profileMigration = { changed: false, file: null };
+  if (!options.dryRun) {
+    try {
+      profileMigration = await migrateProfileRename(targetDir);
+    } catch {
+      // swallow — migrations are advisory
+    }
+  }
+
   return {
     ok: true,
     ...result,
-    savedProfile
+    savedProfile,
+    migrations: { profileRename: profileMigration }
   };
 }
 

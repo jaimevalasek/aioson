@@ -68,6 +68,9 @@ const MANAGED_FILES = [
   '.aioson/docs/sheldon/harness-contract.md',
   '.aioson/docs/dev/stack-conventions.md',
   '.aioson/docs/dev/execution-discipline.md',
+  '.aioson/skills/process/decision-presentation/SKILL.md',
+  '.aioson/skills/process/decision-presentation/references/jargon-map.en.yaml',
+  '.aioson/skills/process/decision-presentation/references/jargon-map.pt-BR.yaml',
   '.aioson/skills/static/laravel-conventions.md',
   '.aioson/skills/static/tall-stack-patterns.md',
   '.aioson/skills/static/jetstream-setup.md',
@@ -181,7 +184,7 @@ const CONTEXT_REQUIRED_FIELDS = [
 
 const CONTEXT_ALLOWED_CLASSIFICATIONS = ['MICRO', 'SMALL', 'MEDIUM'];
 const CONTEXT_ALLOWED_PROJECT_TYPES = ['web_app', 'api', 'site', 'script', 'dapp', 'desktop_app'];
-const CONTEXT_ALLOWED_PROFILES = ['developer', 'beginner', 'team'];
+const CONTEXT_ALLOWED_PROFILES = ['developer', 'creator', 'team'];
 
 const AGENT_DEFINITIONS = [
   {

@@ -82,13 +82,14 @@ The detailed pair-programming protocol is split into on-demand framework docs:
 
 Run this after the immediate scope gate and before touching code:
 
-1. Always load `.aioson/docs/deyvin/continuity-recovery.md`
-2. If `aioson` is available, run `aioson preflight . --agent=deyvin --feature={slug}` when a feature slug is known; load any listed `rules` and `design_governance` files before touching code
-3. If continuation depends on `spec*.md`, `dev-state.md`, or a feature already in progress, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and then only `references/deyvin.md`
-4. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
-5. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
-6. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
-7. Do not touch code until all required modules have been loaded
+1. Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
+2. Always load `.aioson/docs/deyvin/continuity-recovery.md`
+3. If `aioson` is available, run `aioson preflight . --agent=deyvin --feature={slug}` when a feature slug is known; load any listed `rules` and `design_governance` files before touching code
+4. If continuation depends on `spec*.md`, `dev-state.md`, or a feature already in progress, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and then only `references/deyvin.md`
+5. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
+6. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
+7. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
+8. Do not touch code until all required modules have been loaded
 
 ## Working kernel
 
@@ -184,6 +185,7 @@ Dispatch via harness sub-agent with the tool whitelist `[Read, Grep]`. Read the 
 ## Hard constraints
 
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
 - Always check `.aioson/rules/` and relevant `.aioson/docs/` when they exist.
 - Always apply relevant `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.

@@ -1,23 +1,71 @@
 'use strict';
 
 /**
- * aioson state:save — create/update dev-state.md for @dev session resumption.
+ * aioson state:save (alias: dev:state:write) — create/update dev-state.md
+ * for @dev session resumption.
  *
- * Replaces the manual dev-state.md update block. Stores active feature,
- * phase, next step, spec version, and context package.
+ * Stores active feature, phase, next step, spec version, and context package.
+ * Invoked by upstream agents (@analyst, @product, @sheldon, @architect) at
+ * session end so the next @dev activation auto-resumes on `next_step` instead
+ * of cold-starting.
  *
  * Usage:
- *   aioson state:save . --feature=checkout --phase=3 --next="Implement notification listeners" \
- *     --spec-version=3 --status=in_progress
- *   aioson state:save . --feature=checkout --next="Continue payment webhook" --status=in_progress
+ *   aioson dev:state:write . --feature=checkout --phase=3 \
+ *     --next="Implement notification listeners" --context=spec,requirements,impl-plan
+ *   aioson state:save . --feature=checkout --next="Continue payment webhook"
+ *
+ * --context (optional): comma-separated canonical type tokens. Each token
+ * resolves to a feature-scoped path. Max 4 entries total (including the
+ * always-included project.context.md anchor). Unknown tokens or missing
+ * files emit a warning and are skipped — never fail the command.
+ *
+ * Canonical context tokens:
+ *   prd          → prd-{slug}.md
+ *   requirements → requirements-{slug}.md
+ *   spec         → spec-{slug}.md
+ *   architecture → architecture.md
+ *   impl-plan    → implementation-plan-{slug}.md
+ *   sheldon      → sheldon-enrichment-{slug}.md
+ *   design-doc   → design-doc-{slug}.md (falls back to design-doc.md)
+ *   dossier      → features/{slug}/dossier.md
+ *
+ * When --context is omitted, auto-detect kicks in (legacy behavior): include
+ * project.context.md + spec-{slug}.md + plan if present.
  */
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter, scanArtifacts } = require('../preflight-engine');
 
+const MAX_CONTEXT = 4;
+
+const CONTEXT_TYPE_MAP = {
+  prd:           { rel: (slug) => `prd-${slug}.md` },
+  requirements:  { rel: (slug) => `requirements-${slug}.md` },
+  spec:          { rel: (slug) => `spec-${slug}.md` },
+  architecture:  { rel: () => 'architecture.md' },
+  'impl-plan':   { rel: (slug) => `implementation-plan-${slug}.md` },
+  sheldon:       { rel: (slug) => `sheldon-enrichment-${slug}.md` },
+  'design-doc':  { rel: (slug) => `design-doc-${slug}.md`, fallback: () => 'design-doc.md' },
+  dossier:       { rel: (slug) => `features/${slug}/dossier.md` }
+};
+
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function parseContextFlag(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return String(value).split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+async function fileExistsRel(targetDir, rel) {
+  try {
+    await fs.access(path.join(contextDir(targetDir), rel));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function runStateSave({ args, options = {}, logger }) {
@@ -28,6 +76,7 @@ async function runStateSave({ args, options = {}, logger }) {
   const specVersion = options['spec-version'] ? String(options['spec-version']) : null;
   const status = options.status ? String(options.status) : 'in_progress';
   const plan = options.plan ? String(options.plan) : null;
+  const contextTokens = parseContextFlag(options.context);
 
   if (!slug) {
     if (options.json) return { ok: false, reason: 'missing_feature' };
@@ -41,13 +90,49 @@ async function runStateSave({ args, options = {}, logger }) {
     return { ok: false };
   }
 
-  // Build context package based on what exists
+  // Build context package
   const artifacts = await scanArtifacts(targetDir, slug);
   const contextPackage = [];
-  if (artifacts.project_context.exists) contextPackage.push('project.context.md');
-  if (artifacts.spec.exists) contextPackage.push(`spec-${slug}.md`);
-  if (plan) contextPackage.push(plan);
-  else if (artifacts.implementation_plan.exists) contextPackage.push(`implementation-plan-${slug}.md`);
+  const warnings = [];
+
+  if (contextTokens) {
+    // Explicit mode: agent declares the canonical types to include.
+    // Always anchor with project.context.md (counts toward the 4-entry cap).
+    if (artifacts.project_context.exists) contextPackage.push('project.context.md');
+
+    for (const rawToken of contextTokens) {
+      const token = rawToken.toLowerCase();
+      if (contextPackage.length >= MAX_CONTEXT) {
+        warnings.push(`context cap reached (${MAX_CONTEXT}); skipped "${token}" and remaining`);
+        break;
+      }
+      const def = CONTEXT_TYPE_MAP[token];
+      if (!def) {
+        warnings.push(`unknown context type "${token}" (valid: ${Object.keys(CONTEXT_TYPE_MAP).join(', ')})`);
+        continue;
+      }
+      const relPath = def.rel(slug);
+      if (await fileExistsRel(targetDir, relPath)) {
+        if (!contextPackage.includes(relPath)) contextPackage.push(relPath);
+      } else if (def.fallback) {
+        const fb = def.fallback();
+        if (await fileExistsRel(targetDir, fb)) {
+          if (!contextPackage.includes(fb)) contextPackage.push(fb);
+        } else {
+          warnings.push(`"${token}" file missing (${relPath}); skipped`);
+        }
+      } else {
+        warnings.push(`"${token}" file missing (${relPath}); skipped`);
+      }
+    }
+  } else {
+    // Auto-detect (legacy behavior): keep backward compatibility for callers
+    // that haven't migrated to --context yet.
+    if (artifacts.project_context.exists) contextPackage.push('project.context.md');
+    if (artifacts.spec.exists) contextPackage.push(`spec-${slug}.md`);
+    if (plan) contextPackage.push(plan);
+    else if (artifacts.implementation_plan.exists) contextPackage.push(`implementation-plan-${slug}.md`);
+  }
 
   const today = nowDate();
   const statePath = path.join(contextDir(targetDir), 'dev-state.md');
@@ -104,7 +189,8 @@ async function runStateSave({ args, options = {}, logger }) {
     active_phase: phase,
     next_step: next,
     last_spec_version: specVersion,
-    context_package: contextPackage
+    context_package: contextPackage,
+    warnings
   };
 
   if (options.json) return result;
@@ -115,8 +201,20 @@ async function runStateSave({ args, options = {}, logger }) {
   logger.log(`  next_step: "${next}"`);
   if (specVersion) logger.log(`  last_spec_version: ${specVersion}`);
   logger.log(`  context_package: [${contextPackage.join(', ')}]`);
+  for (const w of warnings) logger.log(`  warn: ${w}`);
+  if (warnings.length === 0 && contextTokens) {
+    // Visible confirmation banner — agent kernels can rely on this to know
+    // they fulfilled the dev-state.md producer contract for @dev cold-resume.
+    const preview = next.length > 80 ? `${next.slice(0, 77)}...` : next;
+    logger.log(`  ✓ @dev will auto-resume on cold start: next_step="${preview}"`);
+  }
 
   return result;
 }
 
-module.exports = { runStateSave };
+module.exports = {
+  runStateSave,
+  CONTEXT_TYPE_MAP,
+  MAX_CONTEXT,
+  parseContextFlag
+};

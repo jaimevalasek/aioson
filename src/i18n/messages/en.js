@@ -343,6 +343,7 @@ module.exports = {
     done_at: 'Update completed at: {targetDir}',
     files_updated: 'Files updated: {count}',
     backups_created: 'Backups created: {count}',
+    profile_renamed: 'i Profile `beginner` renamed to `creator` in project.context.md to better describe the user. Behavior unchanged. Edit the file to switch to `developer` if desired.',
     reconfigure_hint: 'New options may be available. Run: aioson install --reconfigure'
   },
   info: {
@@ -381,7 +382,7 @@ module.exports = {
     context_project_type_value: '`project_type` must be one of {expected}',
     context_project_type_value_hint: 'Use web_app, api, site, script, dapp, or desktop_app exactly.',
     context_profile_value: '`profile` must be one of {expected}',
-    context_profile_value_hint: 'Use developer, beginner, or team exactly.',
+    context_profile_value_hint: 'Use developer, creator, or team exactly.',
     context_interaction_language_format: '`interaction_language` is not a valid BCP-47 tag',
     context_interaction_language_format_hint: 'Use values like en, en-US, pt-BR.',
     context_conversation_language_format: '`conversation_language` is not a valid BCP-47 tag',
@@ -452,6 +453,12 @@ module.exports = {
       distillation_lag: 'Distillation lag: {closed} closed features but only {distillations} have an auto_distillation event (threshold {threshold})',
       distillation_lag_hint: 'Features missing distillation (first 5): {missing_slugs}. Check Phase 5 hook health.',
       distillation_lag_skipped_micro: 'Distillation lag check skipped: project classification is MICRO (BR-ALL-11)'
+    },
+    jargon_leak_detection: {
+      ok: 'No jargon leaks in user-facing agent events ({events} events scanned, profile={profile})',
+      fail: 'Jargon leaks: {count} occurrences across {events} events from MVP agents (profile={profile})',
+      hint: 'Affected events (first 5): {samples}. Translate the term via jargon-map.{en,pt-BR}.yaml or update the dictionary if the term is intentional.',
+      skipped_dev: 'Jargon leak check skipped: project profile is `{profile}` (jargon permitted in this mode)'
     }
   },
   i18n_add: {
@@ -533,7 +540,7 @@ module.exports = {
     detected: 'Detected framework: {framework} (installed={installed})',
     q_project_name: 'Project name',
     q_project_type: 'Project type (web_app|api|site|script|dapp|desktop_app)',
-    q_profile: 'Profile: [1] developer [2] beginner [3] team',
+    q_profile: 'Profile: [1] developer [2] creator [3] team',
     q_use_detected_framework: 'Use detected framework? (true/false)',
     q_framework: 'Framework',
     q_framework_installed: 'Framework installed? (true/false)',

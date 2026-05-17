@@ -72,7 +72,7 @@ const SERVICE_ALIASES = {
 
 const PROFILE_CHOICES = {
   '1': 'developer',
-  '2': 'beginner',
+  '2': 'creator',
   '3': 'team'
 };
 
@@ -101,7 +101,9 @@ function normalizeProfile(value, fallback = 'developer') {
     return PROFILE_CHOICES[input];
   }
   const lower = input.toLowerCase();
-  if (['developer', 'beginner', 'team'].includes(lower)) return lower;
+  // Accept legacy 'beginner' as input but normalize to 'creator' (E4 migration shim).
+  if (lower === 'beginner') return 'creator';
+  if (['developer', 'creator', 'team'].includes(lower)) return lower;
   return fallback;
 }
 
@@ -191,14 +193,14 @@ function buildDeveloperProfile(input) {
   };
 }
 
-function recommendBeginnerProfile(input = {}) {
+function recommendCreatorProfile(input = {}) {
   const expectedUsers = normalizeText(input.expectedUsers).toLowerCase();
   const mobileNeed = normalizeText(input.mobileRequirement).toLowerCase();
   const hosting = normalizeText(input.hostingPreference).toLowerCase();
   const summary = normalizeText(input.projectSummary);
 
   const recommendation = {
-    profile: 'beginner',
+    profile: 'creator',
     projectType: 'web_app',
     framework: 'Laravel',
     backend: 'Laravel',
@@ -300,6 +302,6 @@ module.exports = {
   inferProjectTypeFromFramework,
   inferWeb3NetworkFromFramework,
   buildDeveloperProfile,
-  recommendBeginnerProfile,
+  recommendCreatorProfile,
   buildTeamProfile
 };

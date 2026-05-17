@@ -254,11 +254,12 @@ The detailed product protocol is split into on-demand framework docs:
 
 Run this before asking the first product question or writing any PRD:
 
-1. After mode detection, load `.aioson/docs/product/conversation-playbook.md`
-2. Before the first synthesis or any finalize decision, load `.aioson/docs/product/research-loop.md` and derive the current keyword set
-3. Before writing or updating any PRD file, load `.aioson/docs/product/quality-lens.md`
-4. Before writing or updating any PRD file, load `.aioson/docs/product/prd-contract.md`
-5. If `project_type` is `site` or `web_app`, `design_skill` is already set, or the user mentions visual quality/preferences, use the loaded docs to preserve the design-skill decision and the `## Visual identity` contract
+1. Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
+2. After mode detection, load `.aioson/docs/product/conversation-playbook.md`
+3. Before the first synthesis or any finalize decision, load `.aioson/docs/product/research-loop.md` and derive the current keyword set
+4. Before writing or updating any PRD file, load `.aioson/docs/product/quality-lens.md`
+5. Before writing or updating any PRD file, load `.aioson/docs/product/prd-contract.md`
+6. If `project_type` is `site` or `web_app`, `design_skill` is already set, or the user mentions visual quality/preferences, use the loaded docs to preserve the design-skill decision and the `## Visual identity` contract
 
 Do not proceed to PRD writing until the research loop, quality lens, and PRD contract have all been loaded.
 
@@ -267,7 +268,7 @@ Do not proceed to PRD writing until the research loop, quality lens, and PRD con
 The essential product conversation rules are:
 
 1. First message = one open question only
-2. From the second message onward, ask up to 5 numbered questions per batch
+2. Cadence by `profile` (from `project.context.md`): `creator` (or absent/auto) → 1 question per turn via `AskUserQuestion` with `(Recomendado)` on the first option and `Pausar / quero pensar` always available; `developer` → up to 5 numbered questions per batch; `team` → up to 5 per batch + emit executive summary at `agent:done`
 3. End every batch with: `6 - Finalize — write the PRD now with what we have.`
 4. Reflect understanding before opening a new topic
 5. Surface edge cases, ownership, empty states, dependencies, and failure modes proactively
@@ -340,12 +341,27 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
 - Never produce a PRD section you haven't actually discussed — write "TBD" instead.
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to abandon.
 - **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
 - **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
+
+## Dev handoff producer
+
+When the PRD classification is **MICRO** (next agent will be `@dev` directly without intermediate stages), produce `dev-state.md` before the final `agent:done` call so the next `/dev` session auto-resumes on cold start:
+
+```bash
+aioson dev:state:write . --feature={slug} \
+  --next="Implement MVP per prd-{slug}.md must-have section" \
+  --context=prd
+```
+
+`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`), max 4 entries total. For MICRO features `--context=prd` is usually sufficient. Idempotent: re-running with the same args does not duplicate state.
+
+Skip this step when classification is SMALL or MEDIUM — `@analyst` (and downstream agents) own the handoff producer in those flows.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=product --summary="PRD <slug>: <classification>, <N> stories" 2>/dev/null || true`

@@ -1,21 +1,21 @@
 {
   "version": 1,
   "mode": "feature",
-  "classification": "MEDIUM",
+  "classification": "SMALL",
   "sequence": [
     "product",
     "analyst",
     "dev",
-    "pentester",
     "qa"
   ],
-  "current": null,
+  "current": "analyst",
   "next": "analyst",
   "completed": [
-    "product"
+    "product",
+    "qa"
   ],
   "skipped": [],
-  "featureSlug": "active-learning-loop",
+  "featureSlug": "lay-user-agent-mode",
   "detour": null,
-  "updatedAt": "2026-05-14T03:25:01.215Z"
+  "updatedAt": "2026-05-17T06:24:11.898Z"
 }

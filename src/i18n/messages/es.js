@@ -217,6 +217,7 @@ module.exports = {
     done_at: 'Actualizacion completada en: {targetDir}',
     files_updated: 'Archivos actualizados: {count}',
     backups_created: 'Backups creados: {count}',
+    profile_renamed: 'i Perfil `beginner` renombrado a `creator` en project.context.md para describir mejor al usuario. Comportamiento sin cambios. Edita el archivo para cambiar a `developer` si lo prefieres.',
     reconfigure_hint: 'Nuevas opciones pueden estar disponibles. Ejecuta: aioson install --reconfigure'
   },
   info: {
@@ -259,7 +260,7 @@ module.exports = {
     context_project_type_value: '`project_type` debe ser uno de {expected}',
     context_project_type_value_hint: 'Usa web_app, api, site, script, dapp o desktop_app exactamente.',
     context_profile_value: '`profile` debe ser uno de {expected}',
-    context_profile_value_hint: 'Usa developer, beginner o team exactamente.',
+    context_profile_value_hint: 'Usa developer, creator o team exactamente.',
     context_interaction_language_format:
       '`interaction_language` no es una etiqueta BCP-47 valida',
     context_interaction_language_format_hint: 'Usa valores como en, en-US, pt-BR.',
@@ -330,6 +331,12 @@ module.exports = {
       distillation_lag: 'Retraso de distillation: {closed} features cerradas pero solo {distillations} tienen evento auto_distillation (umbral {threshold})',
       distillation_lag_hint: 'Features sin distillation (primeras 5): {missing_slugs}. Verifique el hook de la Phase 5.',
       distillation_lag_skipped_micro: 'Verificación de distillation_lag omitida: clasificación del proyecto es MICRO (BR-ALL-11)'
+    },
+    jargon_leak_detection: {
+      ok: 'Sin fugas de jerga en eventos de agentes user-facing ({events} eventos analizados, profile={profile})',
+      fail: 'Fugas de jerga: {count} ocurrencias en {events} eventos de agentes del MVP (profile={profile})',
+      hint: 'Eventos afectados (primeros 5): {samples}. Traduce el término vía jargon-map.{en,pt-BR}.yaml o actualiza el diccionario si el término es intencional.',
+      skipped_dev: 'Verificación de jargon_leak_detection omitida: profile del proyecto es `{profile}` (jerga permitida en este modo)'
     }
   },
   i18n_add: {
@@ -411,7 +418,7 @@ module.exports = {
     detected: 'Framework detectado: {framework} (installed={installed})',
     q_project_name: 'Nombre del proyecto',
     q_project_type: 'Tipo de proyecto (web_app|api|site|script|dapp|desktop_app)',
-    q_profile: 'Perfil: [1] developer [2] beginner [3] team',
+    q_profile: 'Perfil: [1] developer [2] creator [3] team',
     q_use_detected_framework: 'Usar framework detectado? (true/false)',
     q_framework: 'Framework',
     q_framework_installed: 'Framework instalado? (true/false)',

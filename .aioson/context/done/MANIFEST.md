@@ -5,6 +5,8 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| lay-user-agent-mode | 2026-05-17 | 4 | Habilitar pessoas tecnicamente curiosas mas não-desenvolvedoras a construírem sistemas complexos usando AIOSON, expondo os agentes em linguagem corrente com dec |
+| dev-state-producer | 2026-05-17 | 2 | Restaurar a fluidez agente→agente prometida pela feature `agent-chain-continuity` (2026-05-07) fazendo com que os agentes upstream do `@dev` produzam `dev-state |
 | deyvin-subtask-scout | 2026-05-14 | 5 | Give `@deyvin` a structured way to dispatch a context-isolated **scout** that surveys >5 files or traces a runtime flow and returns deterministic JSON findings |
 | active-learning-loop | 2026-05-14 | 10 | Fechar o loop entre os primitivos de aprendizado que AIOSON já tem (`learning`, `pattern:detect`, brains, evolution_log) e o ciclo real de desenvolvimento de fe |
 | deyvin-density | 2026-05-11 | 2 | Make `@deyvin` stop reasoning from stale context: enforce the Living Memory bootstrap gate on activation and give the agent a deterministic table for deciding w |

@@ -6,3 +6,4 @@
 {"ts":"2026-05-11T18:52:27.511Z","stage":"dev","gateType":"contract","error":"[Handoff Contract BLOCKED]\nStage: @dev\n\nMissing deliverables:\n  - gate C not approved (spec_missing)\n\nComplete these items before finishing the stage."}
 {"ts":"2026-05-11T18:53:08.582Z","stage":"dev","gateType":"contract","error":"[Handoff Contract BLOCKED]\nStage: @dev\n\nMissing deliverables:\n  - gate C not approved (spec_missing)\n\nComplete these items before finishing the stage."}
 {"ts":"2026-05-11T18:54:24.563Z","stage":"dev","gateType":"contract","error":"[Handoff Contract BLOCKED]\nStage: @dev\n\nMissing deliverables:\n  - gate C not approved (spec_missing)\n\nComplete these items before finishing the stage."}
+{"ts":"2026-05-17T06:21:51.480Z","stage":"qa","gateType":"contract","error":"[Handoff Contract BLOCKED]\nStage: @qa\n\nMissing deliverables:\n  - gate D not approved (gate_execution_not_approved)\n\nComplete these items before finishing the stage."}

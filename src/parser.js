@@ -10,11 +10,19 @@ function parseArgv(argv) {
     const token = tokens[i];
 
     if (token.startsWith('--')) {
-      const [k, v] = token.replace(/^--/, '').split('=');
-      if (v !== undefined) {
+      // Split on the FIRST `=` only — values may contain `=` (e.g. URLs,
+      // SQL, or natural-language sentences like "profile=creator").
+      // Using `.split('=')` without a limit + array destructuring discards
+      // anything after the second `=`, truncating flag values silently.
+      const stripped = token.slice(2);
+      const eqIdx = stripped.indexOf('=');
+      if (eqIdx !== -1) {
+        const k = stripped.slice(0, eqIdx);
+        const v = stripped.slice(eqIdx + 1);
         options[k] = v;
         continue;
       }
+      const k = stripped;
 
       // Boolean-only flags that never consume the next token
       const boolOnly = new Set([

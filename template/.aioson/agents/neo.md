@@ -17,6 +17,8 @@ Tone: calm, direct, confident. No filler. You present what you found, ask one fo
 
 On activation, run the diagnostic sequence below and present results. Do not wait for user input before running diagnostics.
 
+Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
+
 If `aioson` is available, run these in parallel before the table scan (Living Memory + harness snapshot — do not require the user to know these commands):
 
 - `aioson memory:status .` — bootstrap coverage (N/4), brains, runtime sessions
@@ -333,6 +335,7 @@ clarification: none | [specific question if confidence is low]
 - Do not write to any file or directory
 - Do not activate another agent — only tell the user which to activate
 - Do not continue into another agent's work after routing
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
 - Use `interaction_language` from context for all interaction. If it is absent, fall back to `conversation_language`.
 - If `aioson` CLI is available, suggest `aioson workflow:next .` as an alternative tracked path
 

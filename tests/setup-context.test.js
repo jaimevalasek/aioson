@@ -57,7 +57,7 @@ test('setup:context defaults supports developer onboarding options', async () =>
   assert.equal(content.includes('## Notes'), true);
 });
 
-test('setup:context beginner recommendation can produce dapp defaults', async () => {
+test('setup:context creator recommendation can produce dapp defaults', async () => {
   const projectDir = await makeTempDir();
   const logger = createQuietLogger();
   const { t } = createTranslator('en');
@@ -66,7 +66,7 @@ test('setup:context beginner recommendation can produce dapp defaults', async ()
     args: [projectDir],
     options: {
       defaults: true,
-      profile: 'beginner',
+      profile: 'creator',
       'project-summary': 'Web3 wallet and token dashboard',
       'expected-users': '3',
       'mobile-requirement': '2',
@@ -76,7 +76,7 @@ test('setup:context beginner recommendation can produce dapp defaults', async ()
     t
   });
 
-  assert.equal(result.data.profile, 'beginner');
+  assert.equal(result.data.profile, 'creator');
   assert.equal(result.data.projectType, 'dapp');
   assert.equal(result.data.framework, 'Hardhat');
   assert.equal(result.data.web3Enabled, true);
@@ -93,7 +93,7 @@ test('setup:context localizes onboarding notes with pt-BR locale', async () => {
     args: [projectDir],
     options: {
       defaults: true,
-      profile: 'beginner',
+      profile: 'creator',
       'project-summary': 'Web3 wallet and token dashboard',
       'expected-users': '3',
       'mobile-requirement': '1',

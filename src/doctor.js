@@ -18,6 +18,7 @@ const {
   assessLearningOrphans,
   assessDistillationLag
 } = require('./learning-loop-doctor');
+const { assessJargonLeak } = require('./jargon-leak-doctor');
 const { openRuntimeDb } = require('./runtime-store');
 
 const BOOTSTRAP_REQUIRED = ['what-is.md', 'how-it-works.md', 'what-it-does.md', 'current-state.md'];
@@ -433,6 +434,57 @@ async function runDoctor(targetDir) {
   } finally {
     if (curationDb) {
       try { curationDb.close(); } catch { /* swallow — already-closed is fine */ }
+    }
+  }
+
+  // 8. lay-user-agent-mode — jargon_leak_detection (Phase 3)
+  //    Independent of classification (the skip rule is profile-based, not
+  //    size-based). Opens its own DB handle so it works for MICRO projects.
+  let jargonDb = null;
+  try {
+    try {
+      const handle = await openRuntimeDb(targetDir);
+      jargonDb = handle.db;
+    } catch {
+      jargonDb = null; // greenfield (EC-LUM-05)
+    }
+    const jargonAssessment = await assessJargonLeak({ db: jargonDb, targetDir });
+    if (jargonAssessment.skipped) {
+      checks.push({
+        id: 'jargon_leak_detection',
+        severity: 'warning',
+        key: 'doctor.jargon_leak_detection.skipped_dev',
+        params: { profile: jargonAssessment.profile },
+        ok: true
+      });
+    } else {
+      const params = {
+        count: jargonAssessment.count,
+        events: jargonAssessment.eventsScanned || 0,
+        profile: jargonAssessment.profile
+      };
+      checks.push({
+        id: 'jargon_leak_detection',
+        severity: 'warning',
+        key: jargonAssessment.ok
+          ? 'doctor.jargon_leak_detection.ok'
+          : 'doctor.jargon_leak_detection.fail',
+        params,
+        ok: jargonAssessment.ok,
+        hintKey: jargonAssessment.ok ? undefined : 'doctor.jargon_leak_detection.hint',
+        hintParams: jargonAssessment.ok
+          ? undefined
+          : {
+              samples: jargonAssessment.samples
+                .slice(0, 5)
+                .map((s) => `${s.agent}/${(s.terms || []).join('+')}`)
+                .join(', ') || '(none)'
+            }
+      });
+    }
+  } finally {
+    if (jargonDb) {
+      try { jargonDb.close(); } catch { /* swallow */ }
     }
   }
 

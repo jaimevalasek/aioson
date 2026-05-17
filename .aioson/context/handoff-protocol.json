@@ -1,27 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-qa-end-1778527827906",
-  "created_at": "2026-05-11T19:30:27.906Z",
+  "protocol_id": "hnd-qa-analyst-1778999051927",
+  "created_at": "2026-05-17T06:24:11.927Z",
   "workflow_mode": "feature",
-  "classification": "MICRO",
-  "feature_slug": "deyvin-density",
+  "classification": "SMALL",
+  "feature_slug": "lay-user-agent-mode",
   "from": {
     "agent_id": "qa",
     "capability_transferred": "verify_feature"
   },
   "to": {
-    "agent_id": null,
-    "capability_required": null
+    "agent_id": "analyst",
+    "capability_required": "analyze_requirements"
   },
   "capabilities_transferred": [
     "verify_feature"
   ],
   "artifact_uris": [],
   "gate_status": {},
-  "autonomy_mode": null,
+  "autonomy_mode": "guarded",
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-05-11T19:30:27.906Z"
+    "validated_at": "2026-05-17T06:24:11.927Z"
   }
 }

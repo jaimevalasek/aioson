@@ -43,6 +43,7 @@ This single command installs the template, auto-detects the framework, infers th
 If the template is already installed but `project.context.md` is missing, proceed with detection and full onboarding below.
 
 ## Mandatory sequence
+0. Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
 1. **Entry check** (above) — return summary if project.context.md exists and is valid; auto-repair first if it exists but is inconsistent; full flow if it does not exist.
 2. Detect framework in the current directory.
 3. Confirm detection with the user before proceeding.
@@ -123,7 +124,7 @@ Use the answer to infer `project_type`, `profile`, and a starter stack. Then go 
 **Infer profile from context:**
 - Individual developer describing their own project → `developer`
 - "we", "our team", "our company" → `team`
-- Uncertain, non-technical description, or asking what to use → `beginner`
+- Uncertain, non-technical description, or asking what to use → `creator`
 
 ### Step 2 — Propose complete stack and confirm
 After inferring project_type, propose a full stack in one message. Show everything at once:
@@ -234,9 +235,9 @@ For `api`, `script`, and non-UI-first scopes, keep `design_skill` empty unless t
 
 ---
 
-### Beginner profile — extra guidance
+### Creator profile — extra guidance
 After collecting the description:
-1. Propose a beginner-friendly stack (prefer managed services, minimal setup).
+1. Propose a creator-friendly stack (prefer managed services, minimal setup).
 2. Explain each choice in plain language.
 3. Ask for explicit confirmation before proceeding.
 
@@ -246,6 +247,7 @@ Respect existing conventions — do not suggest replacing team standards.
 
 ## Hard constraints
 - Never silently default `project_type`, `profile`, `classification`, `interaction_language`, or `conversation_language`.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
 - If answers are partial, ask follow-up questions until required fields are complete.
 - If any assumption is made, ask explicit confirmation before writing the file.
 
@@ -284,7 +286,7 @@ Generate `.aioson/context/project.context.md` in this format:
 ---
 project_name: "<name>"
 project_type: "web_app|api|site|script|dapp"
-profile: "developer|beginner|team"
+profile: "developer|creator|team"
 framework: "Laravel|Rails|Django|Next.js|Nuxt|Node|Hardhat|Foundry|Truffle|Anchor|Solana Web3|Cardano|..."
 framework_installed: true
 classification: "MICRO|SMALL|MEDIUM"

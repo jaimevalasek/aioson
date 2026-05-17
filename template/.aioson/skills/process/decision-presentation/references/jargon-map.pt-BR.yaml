@@ -1,0 +1,108 @@
+version: 1
+language: pt-BR
+# Dicionário de jargão — traduções pt-BR para a skill decision-presentation.
+# Lookup: case-sensitive, word-boundary (\b{term}\b). Match por substring bloqueado.
+# Carga lazy pela skill só quando vai emitir um termo de framework pra usuário com profile=creator.
+# Adicionar termo: `translation` curto (≤6 palavras), `context` em linguagem corrente (≤120 chars),
+# `examples` cobrindo frases típicas onde o termo aparece.
+
+terms:
+  MICRO:
+    translation: "rápida"
+    context: "Tipo de feature pequena — costuma fechar em 1-2 horas de trabalho."
+    examples: ["feature MICRO", "classification: MICRO", "projeto MICRO"]
+
+  SMALL:
+    translation: "padrão"
+    context: "Tipo de feature de médio porte — costuma levar 1-3 dias do início ao fim."
+    examples: ["classification: SMALL", "feature SMALL"]
+
+  MEDIUM:
+    translation: "completa"
+    context: "Tipo de feature complexa — leva uma semana ou mais, com vários checkpoints de revisão."
+    examples: ["classification: MEDIUM", "projeto MEDIUM"]
+
+  "Gate A":
+    translation: "primeiro checkpoint — requisitos prontos"
+    context: "Confirma que os requisitos estão escritos antes de alguém começar a construir."
+    examples: ["Gate A pending", "Gate A aprovado"]
+
+  "Gate B":
+    translation: "checkpoint de desenho — arquitetura decidida"
+    context: "Confirma como o sistema vai ser construído antes do código começar."
+    examples: ["Gate B pending", "Gate B aprovado"]
+
+  "Gate C":
+    translation: "checkpoint de plano — execução assinada"
+    context: "Confirma que o passo a passo está pronto antes da implementação."
+    examples: ["Gate C pending", "Gate C aprovado"]
+
+  "Gate D":
+    translation: "revisão final antes de fechar"
+    context: "Última verificação que o QA faz antes de marcar a feature como pronta."
+    examples: ["Gate D pending", "Gate D aprovado"]
+
+  tier1:
+    translation: "ação automática silenciosa"
+    context: "Uma ação que o agente faz sozinho, sem avisar — normalmente leitura ou telemetria."
+    examples: ["comando tier1", "tier1 silent"]
+
+  tier2:
+    translation: "ação automática com aviso"
+    context: "Uma ação que o agente faz e te avisa — normalmente escrita na memória."
+    examples: ["comando tier2", "tier2 notified"]
+
+  tier3:
+    translation: "ação que precisa da sua aprovação"
+    context: "Ação irreversível que o agente nunca faz sozinho — tipo publicar ou dar push."
+    examples: ["comando tier3", "tier3 blocking"]
+
+  circuit_open:
+    translation: "freio de segurança acionado"
+    context: "Parada interna que impede o agente de tentar de novo depois de falhas em sequência."
+    examples: ["circuit_open", "circuit state: CLOSED"]
+
+  harness-contract:
+    translation: "contrato do runtime do agente"
+    context: "Conjunto de regras que a feature se compromete a seguir pra o runtime do agente conseguir rastrear."
+    examples: ["harness-contract.json", "harness contract"]
+
+  waiting_validation:
+    translation: "esperando aprovação do QA"
+    context: "Feature está implementada mas o QA ainda não deu o OK."
+    examples: ["status: waiting_validation"]
+
+  ready_for_done_gate:
+    translation: "pronto pra revisão final"
+    context: "Feature passou em todas as verificações anteriores e está na fila do QA final."
+    examples: ["ready_for_done_gate: true"]
+
+  dossier:
+    translation: "pasta da feature"
+    context: "Documento vivo que consolida tudo sobre uma feature num lugar só."
+    examples: ["dossier da feature", "dossier.md"]
+
+  brain:
+    translation: "memória de padrões do agente"
+    context: "Memória procedural que o agente reusa — tipo lembretes aprendidos de projetos antigos."
+    examples: ["nó de brain", "padrão de brain"]
+
+  scout:
+    translation: "investigação paralela"
+    context: "Tarefa rápida e somente-leitura que coleta informação sem atrapalhar o trabalho principal."
+    examples: ["subtarefa scout", "scout dispatch"]
+
+  in_progress:
+    translation: "em andamento"
+    context: "Trabalho está acontecendo neste item agora."
+    examples: ["status: in_progress"]
+
+  done:
+    translation: "concluído"
+    context: "Item está fechado e entregue."
+    examples: ["status: done"]
+
+  classification:
+    translation: "tipo de feature"
+    context: "Quão grande é a feature — `rápida`, `padrão` ou `completa`."
+    examples: ["classification: SMALL"]

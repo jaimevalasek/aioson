@@ -583,6 +583,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'pulse-update',
   'state:save',
   'state-save',
+  'dev:state:write',
+  'dev-state-write',
   'feature:close',
   'feature-close',
   'feature:archive',
@@ -1315,7 +1317,12 @@ async function main() {
       result = await runDetectTestRunner({ args, options, logger: commandLogger });
     } else if (command === 'pulse:update' || command === 'pulse-update') {
       result = await runPulseUpdate({ args, options, logger: commandLogger });
-    } else if (command === 'state:save' || command === 'state-save') {
+    } else if (
+      command === 'state:save' ||
+      command === 'state-save' ||
+      command === 'dev:state:write' ||
+      command === 'dev-state-write'
+    ) {
       result = await runStateSave({ args, options, logger: commandLogger });
     } else if (command === 'feature:close' || command === 'feature-close') {
       result = await runFeatureClose({ args, options, logger: commandLogger });

@@ -15,3 +15,5 @@
 | deyvin-density | done | 2026-05-11 | 2026-05-11 |
 | deyvin-subtask-scout | done | 2026-05-13 | 2026-05-14 |
 | active-learning-loop | done | 2026-05-13 | 2026-05-14 |
+| lay-user-agent-mode | done | 2026-05-16 | 2026-05-17 |
+| dev-state-producer | done | 2026-05-17 | 2026-05-17 |

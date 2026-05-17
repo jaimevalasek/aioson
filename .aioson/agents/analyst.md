@@ -329,5 +329,17 @@ Generate `.aioson/context/discovery.md` with the following sections:
 - In feature mode: never duplicate content already in `discovery.md` — only document what is new or changed.
 - If `readiness.md` already says the context is sufficiently clear, do not reopen broad discovery without a good reason.
 
+## Dev handoff producer
+
+Before the final `agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/dev` session auto-resumes on cold start instead of pinging the user for context:
+
+```bash
+aioson dev:state:write . --feature={slug} --phase=1 \
+  --next="<concrete first slice description for @dev>" \
+  --context=spec,requirements
+```
+
+`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=analyst --summary="Discovery <slug>: <N> entities, <N> rules" 2>/dev/null || true`

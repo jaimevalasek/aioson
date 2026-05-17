@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-05-11T19:30:27.906Z",
+  "session_ended_at": "2026-05-17T06:24:11.928Z",
   "last_agent": "@qa",
   "last_stage": "qa",
   "what_was_done": "Stage @qa completed.",
-  "what_comes_next": "Workflow is complete. No pending stages.",
-  "next_agent": null,
+  "what_comes_next": "Next stage: @analyst",
+  "next_agent": "@analyst",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
-  "classification": "MICRO",
-  "feature_slug": "deyvin-density"
+  "classification": "SMALL",
+  "feature_slug": "lay-user-agent-mode"
 }
