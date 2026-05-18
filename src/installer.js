@@ -9,6 +9,7 @@ const { ensureProjectRuntime } = require('./execution-gateway');
 const { shouldIncludeForProfile } = require('./install-profile');
 const { generatePermissions } = require('./permissions-generator');
 const { isConfigMergePath, mergeConfigFile } = require('./installer-config-merge');
+const { isGatewayPointerPath, mergeGatewayPointer } = require('./gateway-pointer-merge');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
@@ -67,7 +68,10 @@ const GITIGNORE_POLICY_LINES = [
   '.aioson/profiler-reports/*',
   '!.aioson/profiler-reports/.gitkeep',
   '.claude/settings.local.json',
-  '*:Zone.Identifier'
+  '*:Zone.Identifier',
+  '# AIOSON — shared agent scratch caches (local-only)',
+  'researchs/',
+  'squad-searches/'
 ];
 
 async function detectExistingInstall(targetDir) {
@@ -340,6 +344,40 @@ async function installTemplate(targetDir, options = {}) {
 
     const dest = path.join(targetDir, rel);
     const destExists = await exists(dest);
+
+    // Gateway pointer files (CLAUDE.md, AGENTS.md, OPENCODE.md, .gemini/GEMINI.md)
+    // get block-merged so that an existing project-authored file keeps its content
+    // and only the AIOSON-managed block is created or refreshed in place.
+    if (isGatewayPointerPath(rel)) {
+      if (!destExists && selectiveUpdate) {
+        skipped.push({ path: rel, reason: 'not-installed' });
+        continue;
+      }
+      const mergeResult = await mergeGatewayPointer({
+        templatePath: absPath,
+        targetPath: dest,
+        backupRoot: backupOnOverwrite ? backupRoot : null,
+        targetDir,
+        dryRun
+      });
+      if (mergeResult.action === 'unchanged') {
+        skipped.push({ path: rel, reason: 'unchanged' });
+      } else {
+        copied.push(rel);
+        mergedConfigs.push({ path: rel, action: mergeResult.action });
+        if (mergeResult.backupPath) {
+          backedUp.push(toRelativeSafe(targetDir, mergeResult.backupPath));
+        }
+        if (mergeResult.backupError) {
+          failedBackups.push({ path: rel, error: mergeResult.backupError });
+          console.warn(`[aioson update] backup of ${rel} failed; update proceeding without rollback for this file: ${mergeResult.backupError}`);
+        }
+      }
+      if (onProgress) {
+        onProgress({ copied: copied.length, total: templateFiles.length, file: rel });
+      }
+      continue;
+    }
 
     // Project-local files are never overwritten from template.
     // On fresh install they are created once; on any subsequent operation they are preserved
