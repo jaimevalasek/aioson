@@ -24,6 +24,8 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
+Active (in_progress) since 2026-05-18: `release-page-1-9-0` (MICRO) — adds a standalone editorial HTML page at `tutorials/releases/1-9-0/index.html` narrating the 10-day evolution that culminated in v1.9.0 (Living Memory, Brains, Active Learning Loop, hardening R4-7, cross-platform, lay-user mode), plus a redesigned `tutorials/index.html` hub and visual polish on the 4 existing tutorials. Standalone HTML (zero build), structure prepared for future `tutorials/releases/{version}/`. Cross-repo work (mirror to `aioson-com`) intentionally out of scope — user copies manually later. PRD: `.aioson/context/prd-release-page-1-9-0.md`.
+
 Feature `living-memory` was completed in 2026-05 (5 phases, 39 new tests, ~1100 lines of production + ~1440 lines of pt-BR documentation under `docs/pt/living-memory/`).
 
 Next candidates surfaced during living-memory: promote autonomy-protocol v1.1 across consumer projects, surface adoption telemetry (reflection counts in SQLite), trim `dev.md` kernel below 15KB, and explore `harness-isolation` (real sandbox per tier, deferred from this feature).

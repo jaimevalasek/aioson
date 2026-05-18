@@ -1,1124 +1,1284 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AIOSON Squads — Tutorial Completo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AIOSON Squads — Tutorial Completo</title>
+<meta name="description" content="Times de agentes especializados para qualquer domínio. 34 comandos squad:*, 29 agentes oficiais, daemon, workers, bus, MCP, ROI tracking, dashboard." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ════════════════════════════════════════════════════════════
+   AIOSON Design System — Tokens
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
+  --transition-fast:140ms ease; --transition:220ms ease;
+}
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme:dark;
+  --bg:#07080c; --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
+  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
+  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
+  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb; --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
+  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
+  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
+  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
+}
 
-    :root {
-      --bg: #07070f;
-      --surface: #0f0f1a;
-      --card: #13131f;
-      --card2: #0d0d18;
-      --border: #1f1f32;
-      --border-light: #282840;
-      --primary: #6c47ff;
-      --primary-dim: rgba(108, 71, 255, 0.12);
-      --primary-glow: rgba(108, 71, 255, 0.22);
-      --text: #e2e8f0;
-      --muted: #8892a4;
-      --accent: #a78bfa;
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --red: #f87171;
-      --blue: #60a5fa;
-      --cyan: #22d3ee;
-      --orange: #fb923c;
-      --radius: 14px;
-      --heading: #d4d8f0;
-    }
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 26%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease, color .3s ease;
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
+    linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+}
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
 
-    html { scroll-behavior: smooth; }
+/* ── Shell ─────────────────────────────────────────────── */
+.shell {
+  width:min(1280px, calc(100% - 32px));
+  margin:0 auto;
+  padding:0 0 60px;
+  display:flex; flex-direction:column;
+}
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.7;
-      font-size: 16px;
-    }
+/* ════════════════════════════════════════════════════════════
+   Command Dock (sticky, fixed bug)
+   ════════════════════════════════════════════════════════════ */
+.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
+.cmd-dock {
+  display:flex; align-items:center; gap:14px;
+  padding:10px 14px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+  transition:box-shadow .3s ease, transform .25s ease, border-color .3s ease;
+}
+.dock-wrap.is-scrolled .cmd-dock {
+  box-shadow:var(--shadow-dock-scrolled);
+  border-color:color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.cmd-dock::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size:36px 36px;
+  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  opacity:.2;
+}
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark {
+  width:36px; height:36px; border-radius:11px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong)));
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+  color:var(--accent);
+}
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version {
+  display:inline-flex; align-items:center;
+  font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em;
+  padding:2px 6px; border-radius:5px;
+  background:var(--accent-2-soft); color:var(--accent-2);
+  border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border));
+}
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.8rem; font-weight:500; color:var(--muted);
+  background:transparent; border:none; padding:6px 11px; border-radius:9px;
+  text-decoration:none; transition:var(--transition-fast);
+}
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] {
+  color:var(--accent-strong); background:var(--panel-strong);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn {
+  width:34px; height:34px; border-radius:10px;
+  background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:var(--transition-fast);
+}
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.8rem; font-weight:600; color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent; border-radius:10px; padding:7px 13px;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition:var(--transition-fast);
+}
+.cmd-cta:hover { transform:translateY(-1px); }
 
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+/* ════════════════════════════════════════════════════════════
+   Marketing Hero
+   ════════════════════════════════════════════════════════════ */
+.marketing-hero {
+  border:1px solid var(--border); border-radius:26px;
+  padding:42px 36px;
+  overflow:hidden; position:relative;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+  box-shadow:var(--shadow);
+  margin-bottom:18px;
+  display:grid;
+  grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap:32px;
+  align-items:center;
+}
+[data-theme="light"] .marketing-hero {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%),
+    linear-gradient(160deg, #fff 0%, #f7faff 100%);
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+}
+.marketing-hero::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  opacity:.5;
+}
+.hero-copy { position:relative; z-index:1; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.hero-copy h1 {
+  margin-top:14px;
+  font-size:clamp(2rem, 3.2vw, 2.8rem);
+  letter-spacing:-.04em; line-height:1.02; font-weight:700;
+  color:var(--text);
+}
+.hero-copy h1 .accent-cyan { color:var(--accent); }
+.hero-copy h1 .accent-violet { color:var(--accent-2); }
+.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
+.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.primary-button, .secondary-button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:38px; padding:0 16px;
+  border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap;
+  transition:var(--transition-fast);
+}
+.primary-button {
+  color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent;
+  box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.primary-button:hover { transform:translateY(-1px); }
+.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
+.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
+.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
+.stat-tile {
+  border-radius:14px; padding:14px 16px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
+}
+[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
+.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
+.stat-tile.blue   strong { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.stat-tile.green  strong { color:var(--accent-4); }
+.stat-tile.violet strong { color:var(--accent-2); }
+.stat-tile.gold   strong { color:var(--accent-3); }
 
-    /* ── Nav ─────────────────────────────────────── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(7,7,15,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
+/* ════════════════════════════════════════════════════════════
+   Compact callout
+   ════════════════════════════════════════════════════════════ */
+.compact-callout {
+  margin:24px 0;
+  border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border));
+  background:color-mix(in srgb, var(--accent-2-soft) 24%, var(--panel-strong));
+  border-radius:14px;
+  padding:18px 22px;
+  display:flex; gap:14px; align-items:flex-start;
+}
+[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
+.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
+.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
+.compact-callout strong { color:var(--accent-2); }
 
-    .nav-back {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      text-decoration: none;
-      color: var(--muted);
-      font-size: 14px;
-      transition: color 0.2s;
-    }
-    .nav-back:hover { color: var(--text); }
-    .nav-sep { color: var(--border-light); }
-    .nav-title { font-size: 14px; font-weight: 600; color: var(--text); }
-    .nav-tag {
-      margin-left: auto;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: 20px;
-      padding: 3px 12px;
-    }
+/* ════════════════════════════════════════════════════════════
+   Site Section
+   ════════════════════════════════════════════════════════════ */
+.site-section { padding:36px 0 12px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-title .accent-emerald { color:var(--accent-4); }
+.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
 
-    /* ── Hero ────────────────────────────────────── */
-    .hero {
-      padding: 90px 24px 70px;
-      text-align: center;
-      background: radial-gradient(ellipse 60% 55% at 50% -5%, rgba(108,71,255,0.2) 0%, transparent 65%);
-      border-bottom: 1px solid var(--border);
-    }
+/* ════════════════════════════════════════════════════════════
+   Concept cards (3 — anatomy)
+   ════════════════════════════════════════════════════════════ */
+.concept-grid { display:grid; gap:14px; grid-template-columns:repeat(3, 1fr); }
+.concept-card {
+  border:1px solid var(--border); border-radius:16px;
+  padding:18px; background:var(--panel-strong);
+  display:flex; gap:12px; align-items:flex-start;
+}
+[data-theme="light"] .concept-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.concept-icon {
+  width:36px; height:36px; flex-shrink:0; border-radius:10px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--accent-soft) 60%, var(--panel));
+  border:1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  color:var(--accent);
+}
+.concept-card[data-tone="violet"] .concept-icon { background:color-mix(in srgb, var(--accent-2-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-2) 24%, var(--border)); color:var(--accent-2); }
+.concept-card[data-tone="emerald"] .concept-icon { background:color-mix(in srgb, var(--accent-4-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-4) 24%, var(--border)); color:var(--accent-4); }
+.concept-icon svg { width:18px; height:18px; }
+.concept-body h3 { font-size:.95rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.concept-body p { font-size:.82rem; color:var(--muted); line-height:1.6; margin-top:4px; }
+.concept-body code { font-size:.74rem; padding:2px 6px; border-radius:6px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); font-weight:500; }
 
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 28px;
-    }
-    .hero-eyebrow::before, .hero-eyebrow::after {
-      content: '';
-      display: block;
-      width: 28px;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-    }
+/* ════════════════════════════════════════════════════════════
+   Category cards (cmd categories) + dialogs
+   ════════════════════════════════════════════════════════════ */
+.cat-grid {
+  display:grid; gap:14px;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+.cat-card {
+  position:relative;
+  border:1px solid var(--border); border-radius:18px; padding:20px;
+  background:var(--panel-strong);
+  text-align:left; cursor:pointer;
+  display:flex; flex-direction:column; gap:10px;
+  transition:var(--transition-fast);
+  overflow:hidden;
+}
+[data-theme="light"] .cat-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.cat-card::before { content:''; position:absolute; inset:0 auto auto 0; width:120px; height:120px; pointer-events:none; opacity:.7; }
+.cat-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
+.cat-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.cat-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="cyan"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="emerald"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="violet"]::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="gold"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="pink"]    { background:linear-gradient(180deg, rgba(255,107,164,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="pink"]::before    { background:radial-gradient(circle, rgba(255,107,164,.18), transparent 70%); }
+.cat-card[data-tone="teal"]    { background:linear-gradient(180deg, rgba(34,211,238,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="teal"]::before    { background:radial-gradient(circle, rgba(34,211,238,.18), transparent 70%); }
+.cat-head { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cat-icon {
+  width:36px; height:36px; border-radius:10px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  border:1px solid var(--border);
+}
+.cat-icon svg { width:18px; height:18px; }
+.cat-card[data-tone="cyan"]    .cat-icon { color:var(--accent);   border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.cat-card[data-tone="emerald"] .cat-icon { color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); }
+.cat-card[data-tone="violet"]  .cat-icon { color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); }
+.cat-card[data-tone="gold"]    .cat-icon { color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); }
+.cat-card[data-tone="pink"]    .cat-icon { color:#ff6ba4; border-color:rgba(255,107,164,.28); }
+.cat-card[data-tone="teal"]    .cat-icon { color:#22d3ee; border-color:rgba(34,211,238,.28); }
+.cat-count {
+  margin-left:auto;
+  font-family:var(--font-mono); font-size:.7rem; font-weight:600;
+  color:var(--muted);
+  background:var(--surface-soft); border:1px solid var(--border);
+  border-radius:6px; padding:2px 8px;
+}
+.cat-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; position:relative; z-index:1; }
+.cat-card p { font-size:.8rem; color:var(--muted); line-height:1.55; margin:0; position:relative; z-index:1; }
+.cat-cta { margin-top:6px; display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:600; position:relative; z-index:1; transition:gap .15s ease; }
+.cat-card[data-tone="cyan"]    .cat-cta { color:var(--accent); }
+.cat-card[data-tone="emerald"] .cat-cta { color:var(--accent-4); }
+.cat-card[data-tone="violet"]  .cat-cta { color:var(--accent-2); }
+.cat-card[data-tone="gold"]    .cat-cta { color:var(--accent-3); }
+.cat-card[data-tone="pink"]    .cat-cta { color:#ff6ba4; }
+.cat-card[data-tone="teal"]    .cat-cta { color:#22d3ee; }
+.cat-card:hover .cat-cta { gap:9px; }
 
-    .hero h1 {
-      font-size: clamp(2.2rem, 6vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      background: linear-gradient(145deg, #d4d8f0 0%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 22px;
-    }
+/* Dialog (same as automation page) */
+dialog.popover {
+  width:min(900px, calc(100% - 32px));
+  max-height:min(85vh, 800px);
+  padding:0;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--panel-strong); color:var(--text);
+  box-shadow:0 30px 80px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+[data-theme="light"] dialog.popover { box-shadow:0 30px 80px -10px rgba(15,23,42,.30); }
+dialog.popover::backdrop { background:rgba(7,8,12,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+[data-theme="light"] dialog.popover::backdrop { background:rgba(15,23,42,.45); }
+dialog.popover[open] { animation:dlg-in .25s ease; }
+@keyframes dlg-in { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+.dlg-head {
+  display:flex; align-items:center; gap:14px;
+  padding:18px 22px;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel) 60%, transparent);
+}
+.dlg-head .cat-icon { width:32px; height:32px; }
+.dlg-head .dlg-meta { flex:1; }
+.dlg-head .dlg-eyebrow { font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.dlg-head .dlg-title { font-size:1.05rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; }
+.dlg-close {
+  width:32px; height:32px; border-radius:10px;
+  background:var(--surface-soft); border:1px solid var(--border); color:var(--muted);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:var(--transition-fast); flex-shrink:0;
+}
+.dlg-close:hover { color:var(--text); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.dlg-body { padding:22px; overflow-y:auto; max-height:calc(85vh - 70px); }
+.dlg-intro { color:var(--muted); font-size:.88rem; line-height:1.65; margin-bottom:16px; }
 
-    .hero-sub {
-      font-size: 1.15rem;
-      color: var(--muted);
-      max-width: 600px;
-      margin: 0 auto 36px;
-    }
+.cmd-grid {
+  display:grid; gap:10px;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+  margin-bottom:18px;
+}
+.cmd-card {
+  background:color-mix(in srgb, var(--panel) 50%, var(--panel-strong));
+  border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px;
+}
+[data-theme="light"] .cmd-card { background:color-mix(in srgb, var(--accent-soft) 8%, #fff); }
+.cmd-name { font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
+.cmd-title { font-size:.86rem; font-weight:700; color:var(--text-soft); margin-top:4px; letter-spacing:-.01em; }
+.cmd-desc { font-size:.76rem; color:var(--muted); line-height:1.55; margin-top:4px; }
 
-    .hero-meta {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
+.terminal-card {
+  border-radius:14px;
+  border:1px solid transparent;
+  background:linear-gradient(180deg, #0e1320, #0a0f1c);
+  box-shadow:0 10px 30px -10px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+.terminal-head {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:#10182a;
+}
+.terminal-dots { display:flex; gap:5px; }
+.terminal-dots span { width:9px; height:9px; border-radius:999px; }
+.terminal-dots span:nth-child(1) { background:#ff6057; }
+.terminal-dots span:nth-child(2) { background:#febc2e; }
+.terminal-dots span:nth-child(3) { background:#28c840; }
+.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
+.terminal-copy {
+  margin-left:auto; background:transparent;
+  border:1px solid rgba(255,255,255,.10); color:#a9b3c7;
+  font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em;
+  padding:3px 9px; border-radius:5px; text-transform:uppercase;
+  transition:var(--transition-fast);
+}
+.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
+.terminal-body {
+  padding:14px 18px 16px;
+  font-family:var(--font-mono); font-size:.78rem; line-height:1.7;
+  color:#c8d8ee; overflow-x:auto;
+}
+.term-line { display:block; white-space:pre; }
+.term-prompt { color:#4dd5a6; }
+.term-cmd { color:#fff; }
+.term-flag { color:#e8b05f; }
+.term-str { color:#7be3bb; }
+.term-comment { color:#7f8796; }
+.term-out-key { color:#5ec8ff; }
+.term-out-val { color:#e5c07b; }
+.term-ok { color:#4dd5a6; }
 
-    .meta-pill {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .meta-dot { width: 7px; height: 7px; border-radius: 50%; }
+/* ════════════════════════════════════════════════════════════
+   Agent catalog grid (29 agentes)
+   ════════════════════════════════════════════════════════════ */
+.agent-group { margin-bottom:22px; }
+.agent-group-title {
+  font-family:var(--font-mono); font-size:.66rem; font-weight:700;
+  letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px;
+  display:flex; align-items:center; gap:10px;
+}
+.agent-group-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.agent-grid { display:grid; gap:8px; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
+.agent-pill {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--border); border-radius:12px;
+  background:var(--panel-strong);
+  transition:var(--transition-fast);
+  text-decoration:none; color:inherit;
+}
+[data-theme="light"] .agent-pill { box-shadow:0 4px 12px -10px rgba(15,23,42,.10); }
+.agent-pill:hover { border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); transform:translateY(-1px); }
+.agent-slash {
+  font-family:var(--font-mono); font-size:.74rem; font-weight:700;
+  color:var(--accent); letter-spacing:-.01em;
+  background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  padding:3px 7px; border-radius:6px;
+  white-space:nowrap; flex-shrink:0;
+}
+.agent-pill[data-color="violet"] .agent-slash { color:var(--accent-2); background:var(--accent-2-soft); border-color:color-mix(in srgb, var(--accent-2) 26%, var(--border)); }
+.agent-pill[data-color="emerald"] .agent-slash { color:var(--accent-4); background:var(--accent-4-soft); border-color:color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
+.agent-pill[data-color="gold"] .agent-slash { color:var(--accent-3); background:var(--accent-3-soft); border-color:color-mix(in srgb, var(--accent-3) 26%, var(--border)); }
+.agent-pill[data-color="pink"] .agent-slash { color:#ff6ba4; background:rgba(255,107,164,.12); border-color:rgba(255,107,164,.28); }
+.agent-pill[data-color="teal"] .agent-slash { color:#22d3ee; background:rgba(34,211,238,.12); border-color:rgba(34,211,238,.28); }
+.agent-role { font-size:.78rem; color:var(--text-soft); line-height:1.4; }
 
-    /* ── Layout ──────────────────────────────────── */
-    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+/* ════════════════════════════════════════════════════════════
+   Steps (numbered tutorial)
+   ════════════════════════════════════════════════════════════ */
+.steps { display:flex; flex-direction:column; gap:0; margin-top:18px; }
+.step { display:flex; gap:20px; position:relative; padding-bottom:24px; }
+.step:not(:last-child)::after {
+  content:''; position:absolute; left:18px; top:42px; bottom:0;
+  width:2px;
+  background:linear-gradient(to bottom, var(--border), transparent);
+}
+.step-num {
+  flex-shrink:0; width:36px; height:36px; border-radius:10px;
+  background:var(--panel-strong); border:1.5px solid var(--accent);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:.84rem; font-weight:700;
+  color:var(--accent);
+  position:relative; z-index:1;
+}
+.step-body { flex:1; }
+.step-body h3 { font-size:1rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; letter-spacing:-.01em; }
+.step-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin:0 0 10px; }
+.step-body .terminal-card { margin-top:10px; }
 
-    section {
-      padding: 72px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    section:last-child { border-bottom: none; }
+/* ════════════════════════════════════════════════════════════
+   Use case cards
+   ════════════════════════════════════════════════════════════ */
+.usecase-grid { display:grid; gap:14px; grid-template-columns:repeat(3, 1fr); }
+.usecase-card {
+  border:1px solid var(--border); border-radius:18px;
+  padding:22px; background:var(--panel-strong);
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column; gap:12px;
+}
+[data-theme="light"] .usecase-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.usecase-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.usecase-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.usecase-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.usecase-tag {
+  font-family:var(--font-mono); font-size:.6rem; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase;
+  padding:2px 8px; border-radius:5px;
+  background:var(--surface-soft); border:1px solid var(--border); color:var(--muted);
+  align-self:flex-start;
+}
+.usecase-card[data-tone="cyan"]    .usecase-tag { color:var(--accent);   background:var(--accent-soft);   border-color:color-mix(in srgb, var(--accent) 26%, var(--border)); }
+.usecase-card[data-tone="violet"]  .usecase-tag { color:var(--accent-2); background:var(--accent-2-soft); border-color:color-mix(in srgb, var(--accent-2) 26%, var(--border)); }
+.usecase-card[data-tone="emerald"] .usecase-tag { color:var(--accent-4); background:var(--accent-4-soft); border-color:color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
+.usecase-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.usecase-card p { font-size:.84rem; color:var(--muted); line-height:1.6; margin:0; }
+.usecase-card ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.usecase-card li { font-family:var(--font-mono); font-size:.72rem; color:var(--text-soft); display:flex; align-items:center; gap:8px; }
+.usecase-card li::before { content:'›'; color:var(--accent); font-weight:700; }
 
-    .section-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-    .section-label::before {
-      content: '';
-      display: block;
-      width: 18px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 2px;
-    }
+/* ════════════════════════════════════════════════════════════
+   Site CTA + Footer (same as automation page)
+   ════════════════════════════════════════════════════════════ */
+.site-cta {
+  border-radius:22px;
+  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%),
+    color-mix(in srgb, var(--bg-deep) 86%, transparent);
+  padding:34px 30px;
+  display:grid; gap:18px; grid-template-columns:1.4fr 1fr;
+  align-items:center;
+  margin-top:24px;
+}
+[data-theme="light"] .site-cta {
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),
+    #fff;
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+}
+.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
+.site-cta-heading .accent-cyan { color:var(--accent); }
+.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
+.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
 
-    h2 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--heading);
-      margin-bottom: 16px;
-      line-height: 1.25;
-    }
+.site-footer {
+  display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr;
+  padding:42px 4px 8px; margin-top:30px;
+  border-top:1px solid var(--border);
+}
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base {
+  margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap;
+  color:var(--muted); font-size:.76rem;
+}
 
-    h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--heading);
-      margin-bottom: 10px;
-    }
-
-    p { color: var(--muted); margin-bottom: 16px; }
-    p:last-child { margin-bottom: 0; }
-
-    /* ── Cards ───────────────────────────────────── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    /* ── Callout ─────────────────────────────────── */
-    .callout {
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      margin: 24px 0;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-    .callout.green {
-      background: rgba(52,211,153,0.08);
-      border-color: rgba(52,211,153,0.3);
-    }
-    .callout.yellow {
-      background: rgba(251,191,36,0.08);
-      border-color: rgba(251,191,36,0.3);
-    }
-    .callout-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-    .callout p { margin: 0; color: var(--text); font-size: 0.95rem; }
-
-    /* ── Code ────────────────────────────────────── */
-    .code-block {
-      background: #0a0a14;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13.5px;
-      line-height: 1.8;
-      color: #c9d1d9;
-      overflow-x: auto;
-      margin: 20px 0;
-    }
-    .code-block .c  { color: var(--muted); }
-    .code-block .kw { color: var(--accent); }
-    .code-block .cmd { color: var(--cyan); }
-    .code-block .str { color: var(--green); }
-    .code-block .num { color: var(--yellow); }
-    .code-block .flag { color: var(--orange); }
-    .code-block .prompt { color: var(--primary); opacity: 0.7; user-select: none; }
-
-    /* ── Steps ───────────────────────────────────── */
-    .steps { display: flex; flex-direction: column; gap: 0; margin-top: 32px; }
-
-    .step { display: flex; gap: 24px; position: relative; }
-
-    .step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      left: 19px;
-      top: 46px;
-      bottom: -4px;
-      width: 2px;
-      background: linear-gradient(to bottom, var(--border-light), transparent);
-    }
-
-    .step-num {
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 2px solid var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent);
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-body { flex: 1; padding-bottom: 36px; }
-    .step-body h3 { margin-bottom: 8px; }
-    .step-body p { font-size: 0.92rem; }
-
-    /* ── Flow ────────────────────────────────────── */
-    .flow {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      margin: 32px 0;
-      overflow-x: auto;
-      padding-bottom: 8px;
-    }
-
-    .flow-node {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 20px;
-      text-align: center;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .flow-node .fn-icon { font-size: 1.4rem; display: block; margin-bottom: 6px; }
-    .flow-node .fn-label { font-size: 12px; font-weight: 600; color: var(--heading); display: block; }
-    .flow-node .fn-sub { font-size: 11px; color: var(--muted); }
-
-    .flow-node.active {
-      border-color: var(--primary);
-      background: var(--primary-dim);
-    }
-    .flow-node.active .fn-label { color: var(--accent); }
-
-    .flow-arrow {
-      color: var(--border-light);
-      font-size: 18px;
-      padding: 0 8px;
-      flex-shrink: 0;
-    }
-
-    /* ── Arch diagram ─────────────────────────────── */
-    .arch {
-      background: var(--card2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-      margin: 28px 0;
-    }
-
-    .arch-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 24px;
-      text-align: center;
-    }
-
-    .arch-layer {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .arch-box {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--heading);
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      white-space: nowrap;
-    }
-
-    .arch-box.primary {
-      border-color: var(--primary);
-      background: var(--primary-dim);
-      color: var(--accent);
-    }
-
-    .arch-box.green {
-      border-color: rgba(52,211,153,0.4);
-      background: rgba(52,211,153,0.07);
-      color: var(--green);
-    }
-
-    .arch-box.blue {
-      border-color: rgba(96,165,250,0.4);
-      background: rgba(96,165,250,0.07);
-      color: var(--blue);
-    }
-
-    .arch-connector {
-      text-align: center;
-      font-size: 18px;
-      color: var(--border-light);
-      margin-bottom: 12px;
-    }
-
-    /* ── Table ───────────────────────────────────── */
-    .tbl {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 24px 0;
-      font-size: 14px;
-    }
-
-    .tbl th {
-      text-align: left;
-      padding: 12px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tbl td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      vertical-align: top;
-    }
-
-    .tbl tr:last-child td { border-bottom: none; }
-
-    .tbl td:first-child {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--cyan);
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .tbl td:nth-child(2) { color: var(--text); }
-
-    /* ── Tag pills ───────────────────────────────── */
-    .tag {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      border-radius: 20px;
-      padding: 2px 10px;
-    }
-    .tag-green { background: rgba(52,211,153,0.12); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
-    .tag-blue  { background: rgba(96,165,250,0.12); color: var(--blue);  border: 1px solid rgba(96,165,250,0.3); }
-    .tag-yellow{ background: rgba(251,191,36,0.12); color: var(--yellow);border: 1px solid rgba(251,191,36,0.3); }
-    .tag-red   { background: rgba(248,113,113,0.12);color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
-
-    /* ── TOC sidebar ─────────────────────────────── */
-    .layout {
-      display: grid;
-      grid-template-columns: 1fr 220px;
-      gap: 48px;
-      max-width: 1160px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .toc {
-      position: sticky;
-      top: 80px;
-      align-self: start;
-      padding: 24px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-    }
-
-    .toc-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-
-    .toc a {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      text-decoration: none;
-      padding: 5px 0;
-      transition: color 0.2s;
-      border-left: 2px solid transparent;
-      padding-left: 12px;
-      margin-left: -12px;
-    }
-    .toc a:hover { color: var(--accent); border-left-color: var(--primary); }
-
-    @media (max-width: 780px) {
-      .layout { grid-template-columns: 1fr; }
-      .toc { display: none; }
-      .flow { flex-direction: column; align-items: flex-start; }
-      .flow-arrow { transform: rotate(90deg); }
-    }
-
-    /* ── Footer ──────────────────────────────────── */
-    footer {
-      text-align: center;
-      padding: 40px 24px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.875rem;
-    }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+/* ════════════════════════════════════════════════════════════
+   Responsive
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .marketing-hero { grid-template-columns:1fr; gap:24px; }
+  .cat-grid { grid-template-columns:repeat(2, 1fr); }
+  .concept-grid { grid-template-columns:1fr; }
+  .usecase-grid { grid-template-columns:1fr; }
+  .site-cta { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; }
+  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
+  .cmd-brand { padding-right:0; border-right:none; }
+  .cmd-center { order:3; width:100%; }
+  .cmd-nav { width:100%; overflow-x:auto; }
+  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
+  .marketing-hero { padding:24px 20px; }
+  .hero-copy h1 { font-size:1.8rem; }
+  .cat-grid { grid-template-columns:1fr; }
+  .hero-rail { grid-template-columns:repeat(2, 1fr); }
+  .site-footer { grid-template-columns:1fr; }
+  dialog.popover { width:100%; max-height:100vh; height:100vh; border-radius:0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
 </head>
 <body>
 
-<nav>
-  <a class="nav-back" href="../index.html">← Tutoriais</a>
-  <span class="nav-sep">/</span>
-  <span class="nav-title">AIOSON Squads</span>
-  <span class="nav-tag">Squads</span>
-</nav>
+<main class="shell">
 
-<div class="hero">
-  <div class="hero-eyebrow">Tutorial Completo</div>
-  <h1>AIOSON Squads</h1>
-  <p class="hero-sub">Crie times de agentes especializados que trabalham juntos, se corrigem e evoluem — para software, conteúdo, pesquisa e qualquer domínio.</p>
-  <div class="hero-meta">
-    <span class="meta-pill"><span class="meta-dot" style="background:var(--green)"></span> Nível intermediário</span>
-    <span class="meta-pill"><span class="meta-dot" style="background:var(--blue)"></span> Leitura ~20 min</span>
-    <span class="meta-pill"><span class="meta-dot" style="background:var(--accent)"></span> AIOSON v2+</span>
+  <!-- ═══════════════════════════════════════════════════════ STICKY DOCK -->
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" />
+          </svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> squads · 34 cmds · 29 agentes</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="../index.html#guides"><span class="cmd-nav-glyph">◐</span> Tutoriais</a>
+          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">⬡</span> Squads</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <span class="cmd-divider"></span>
+        <a href="../releases/1-9-0/index.html" class="cmd-cta">
+          Release v1.9.0
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
   </div>
-</div>
 
-<div class="layout">
+  <!-- ═══════════════════════════════════════════════════════ HERO -->
+  <section class="marketing-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Tutorial · AIOSON Squads</span>
+      <h1>
+        Times de agentes<br/>
+        para <span class="accent-violet">qualquer</span> <span class="accent-cyan">domínio</span>.
+      </h1>
+      <p class="lede">
+        Squads são times de agentes especializados que executam workflows complexos juntos — software, conteúdo, jurídico, comercial. Daemon executando, workers paralelos, bus de mensagens, ROI tracking, MCP, dashboard. Tudo via 34 comandos <code>squad:*</code>.
+      </p>
+      <div class="hero-actions">
+        <a class="primary-button" href="#comandos">
+          Ver os 34 comandos
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="secondary-button" href="#primeiro">Criar meu primeiro</a>
+      </div>
+    </div>
+    <aside class="hero-rail">
+      <div class="stat-tile blue"><span>comandos</span><strong>34</strong></div>
+      <div class="stat-tile violet"><span>agentes oficiais</span><strong>29</strong></div>
+      <div class="stat-tile green"><span>tiers</span><strong>0-3</strong></div>
+      <div class="stat-tile gold"><span>domínios</span><strong>∞</strong></div>
+    </aside>
+  </section>
 
-  <!-- ── TOC ── -->
-  <aside class="toc" style="grid-column: 2; grid-row: 1 / 20;">
-    <p class="toc-title">Neste tutorial</p>
-    <a href="#o-que-e">O que é um Squad</a>
-    <a href="#quando-usar">Quando usar</a>
-    <a href="#anatomia">Anatomia de um Squad</a>
-    <a href="#criar">Criando seu primeiro squad</a>
-    <a href="#executores">Tipos de executor</a>
-    <a href="#autorun">Execução autônoma</a>
-    <a href="#bus">Comunicação intra-squad</a>
-    <a href="#inter-squad">Conectando squads</a>
-    <a href="#memoria">Memória e aprendizado</a>
-    <a href="#cli">Referência de comandos</a>
-    <a href="#exemplos">Exemplos por domínio</a>
-  </aside>
+  <!-- ═══════════════════════════════════════════════════════ CALLOUT — O QUE É -->
+  <section class="site-section">
+    <div class="compact-callout">
+      <div class="compact-callout-icon">🤖</div>
+      <p><strong>O que é um Squad:</strong> diferente de invocar agentes oficiais um a um, um squad é um <strong>time persistente e configurável</strong> com manifesto próprio, executores customizados, memória/aprendizado compartilhados, comunicação interna (bus/webhook), telemetria de ROI e ciclo de vida (publish/install/deploy). Você cria squads para domínios específicos: software, marketing, jurídico, suporte, comercial, criação de conteúdo.</p>
+    </div>
+  </section>
 
-  <!-- ── Content ── -->
-  <main style="grid-column: 1; grid-row: 1 / 20; min-width: 0;">
-
-    <!-- ── O que é ── -->
-    <section id="o-que-e">
-      <div class="section-label">Conceito</div>
-      <h2>O que é um Squad?</h2>
-      <p>Um Squad é um time de agentes especializados que colabora para completar tarefas complexas de forma autônoma. Cada agente tem um papel, ferramentas, e um contrato de entrega claro.</p>
-
-      <div class="arch">
-        <p class="arch-title">Estrutura de um Squad</p>
-        <div class="arch-layer">
-          <div class="arch-box primary">🎯 Objetivo do Squad</div>
-        </div>
-        <div class="arch-connector">↓</div>
-        <div class="arch-layer">
-          <div class="arch-box primary">🧠 Orquestrador</div>
-        </div>
-        <div class="arch-connector">↙ &nbsp;&nbsp; ↓ &nbsp;&nbsp; ↘</div>
-        <div class="arch-layer">
-          <div class="arch-box green">⚙️ Worker A</div>
-          <div class="arch-box green">⚙️ Worker B</div>
-          <div class="arch-box green">⚙️ Worker C</div>
-        </div>
-        <div class="arch-connector">↓ bus de mensagens ↓</div>
-        <div class="arch-layer">
-          <div class="arch-box blue">📦 Output</div>
-          <div class="arch-box blue">📊 STATE.md</div>
-          <div class="arch-box blue">🧠 Learnings</div>
+  <!-- ═══════════════════════════════════════════════════════ ANATOMIA -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Anatomia de um squad</span>
+      <h2 class="site-section-title">Os <span class="accent-cyan">3 elementos</span> básicos.</h2>
+      <p class="site-section-subtitle">Todo squad tem agentes (quem decide), executores (quem faz) e infraestrutura (como se comunicam e aprendem). O resto é configuração.</p>
+    </header>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
+        <div class="concept-body">
+          <h3>Agentes (decisores)</h3>
+          <p>Personalidades com tier 0-3, mission, DISC profile e domínio. Definem <em>o quê</em> fazer. Podem ser oficiais (<code>@product</code>, <code>@dev</code>) ou customizados por <code>squad:agent-create</code>.</p>
         </div>
       </div>
-
-      <p>O orquestrador decompõe o objetivo em tarefas, distribui para os workers em paralelo (por waves), monitora o progresso via bus de mensagens, e lida com falhas automaticamente — sem você precisar intervir.</p>
-
-      <div class="callout green">
-        <span class="callout-icon">✓</span>
-        <p><strong>Diferença-chave:</strong> um Squad não é um único agente fazendo tudo. São especialistas trabalhando em paralelo, com contexto isolado por worker, comunicando-se por mensagens.</p>
-      </div>
-    </section>
-
-    <!-- ── Quando usar ── -->
-    <section id="quando-usar">
-      <div class="section-label">Decisão</div>
-      <h2>Quando usar um Squad?</h2>
-
-      <div class="card-grid">
-        <div class="card">
-          <h3 style="color:var(--green)">✓ Use Squad quando...</h3>
-          <p style="font-size:0.9rem; margin-top:12px;">A tarefa tem partes independentes que podem rodar em paralelo</p>
-          <p style="font-size:0.9rem;">Especialistas diferentes precisam contribuir (pesquisador, escritor, revisor)</p>
-          <p style="font-size:0.9rem;">O trabalho se repete em sessões futuras</p>
-          <p style="font-size:0.9rem;">Você quer que o resultado melhore com o tempo via learnings</p>
-        </div>
-        <div class="card">
-          <h3 style="color:var(--red)">✗ Use agente único quando...</h3>
-          <p style="font-size:0.9rem; margin-top:12px;">A tarefa é linear e curta (&lt; 30 min)</p>
-          <p style="font-size:0.9rem;">Um único agente (/dev, /qa) resolve o problema</p>
-          <p style="font-size:0.9rem;">Não há paralelismo real possível</p>
-          <p style="font-size:0.9rem;">É exploração ou prototipagem rápida</p>
+      <div class="concept-card" data-tone="violet">
+        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg></span>
+        <div class="concept-body">
+          <h3>Executores (workers)</h3>
+          <p>Workers determinísticos que recebem tasks do agente. Tipos: <code>shell</code>, <code>http</code>, <code>llm</code>, <code>mcp</code>, <code>custom</code>. Rodam via <code>squad:daemon</code> ou <code>squad:worker</code> individual.</p>
         </div>
       </div>
-    </section>
-
-    <!-- ── Anatomia ── -->
-    <section id="anatomia">
-      <div class="section-label">Estrutura</div>
-      <h2>Anatomia de um Squad</h2>
-      <p>Todo squad criado pelo AIOSON tem esta estrutura de arquivos:</p>
-
-      <div class="code-block"><span class="c"># Gerado automaticamente por aioson squad:scaffold</span>
-.aioson/squads/<span class="str">meu-squad</span>/
-├── agents/
-│   ├── agents.md          <span class="c"># roster de executores</span>
-│   ├── orquestrador.md    <span class="c"># agent do coordenador</span>
-│   ├── worker-a.md        <span class="c"># agent do worker A</span>
-│   └── worker-b.md        <span class="c"># agent do worker B</span>
-├── squad.manifest.json    <span class="c"># configuração principal</span>
-├── squad.md               <span class="c"># documentação do squad</span>
-├── STATE.md               <span class="c"># memória cross-session</span>
-├── docs/
-│   ├── design-doc.md      <span class="c"># decisões de arquitetura</span>
-│   └── readiness.md       <span class="c"># checklist de prontidão</span>
-├── checklists/
-│   └── quality.md         <span class="c"># critérios de qualidade</span>
-├── learnings/
-│   └── index.md           <span class="c"># aprendizados acumulados</span>
-└── bus/                   <span class="c"># mensagens inter-worker (JSONL)</span>
-
-output/<span class="str">meu-squad</span>/         <span class="c"># outputs gerados</span>
-aioson-logs/<span class="str">meu-squad</span>/    <span class="c"># logs de sessão</span></div>
-
-      <h3 style="margin-top: 32px;">O squad.manifest.json</h3>
-      <p>O coração de um squad. Define executores, budget, dependências e comportamento:</p>
-
-      <div class="code-block">{
-  <span class="str">"slug"</span>: <span class="str">"meu-squad"</span>,
-  <span class="str">"name"</span>: <span class="str">"Meu Squad de Conteúdo"</span>,
-  <span class="str">"mode"</span>: <span class="str">"content"</span>,          <span class="c">// content | code | hybrid</span>
-
-  <span class="str">"executors"</span>: [
-    {
-      <span class="str">"slug"</span>: <span class="str">"researcher"</span>,
-      <span class="str">"title"</span>: <span class="str">"Pesquisador"</span>,
-      <span class="str">"role"</span>: <span class="str">"Pesquisa tendências e fontes"</span>,
-      <span class="str">"type"</span>: <span class="str">"agent"</span>,
-      <span class="str">"modelTier"</span>: <span class="str">"balanced"</span>  <span class="c">// fast | balanced | powerful</span>
-    },
-    {
-      <span class="str">"slug"</span>: <span class="str">"writer"</span>,
-      <span class="str">"title"</span>: <span class="str">"Escritor"</span>,
-      <span class="str">"role"</span>: <span class="str">"Escreve o conteúdo final"</span>,
-      <span class="str">"type"</span>: <span class="str">"agent"</span>,
-      <span class="str">"modelTier"</span>: <span class="str">"powerful"</span>
-    }
-  ],
-
-  <span class="str">"budget"</span>: {
-    <span class="str">"max_tokens_per_session"</span>: <span class="num">200000</span>,
-    <span class="str">"max_tokens_per_task"</span>: <span class="num">20000</span>,
-    <span class="str">"action_on_exceed"</span>: <span class="str">"pause"</span>   <span class="c">// pause | abort | notify</span>
-  },
-
-  <span class="str">"depends_on"</span>: [],              <span class="c">// dependências de outros squads</span>
-  <span class="str">"subscriptions"</span>: []            <span class="c">// eventos de outros squads para ouvir</span>
-}</div>
-    </section>
-
-    <!-- ── Criar ── -->
-    <section id="criar">
-      <div class="section-label">Prática</div>
-      <h2>Criando seu primeiro Squad</h2>
-      <p>O agente <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:0.9em;">/squad</code> guia você por todo o processo. Siga estes passos:</p>
-
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Ative o agente @squad</h3>
-            <p>No Claude Code, digite <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace;">/squad</code> e descreva o que você quer construir. Seja específico sobre o domínio e o objetivo.</p>
-            <div class="code-block"><span class="prompt">/squad</span>
-
-<span class="c"># Exemplos de boas descrições:</span>
-<span class="str">"Quero um squad para produzir roteiros de YouTube sobre tecnologia,
-pesquisando tendências, escrevendo o roteiro e revisando antes de publicar"</span>
-
-<span class="str">"Squad de desenvolvimento para criar features em Node.js —
-preciso de um arquiteto, developer e QA"</span>
-
-<span class="str">"Time de pesquisa jurídica para analisar contratos e identificar riscos"</span></div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Revise o design (blueprint)</h3>
-            <p>O agente apresenta um <strong>blueprint</strong> do squad antes de criar qualquer arquivo. Você pode aceitar, ajustar papéis, ou pedir mais especialistas.</p>
-            <div class="callout yellow">
-              <span class="callout-icon">💡</span>
-              <p>Este passo é intencional — decisões sobre papéis e ferramentas impactam todas as sessões futuras. Vale 2 minutos de revisão.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Squad é criado automaticamente</h3>
-            <p>Com o blueprint aprovado, o agente executa o scaffolding e gera todos os arquivos:</p>
-            <div class="code-block"><span class="c"># Gerado internamente pelo @squad:</span>
-<span class="cmd">aioson</span> <span class="kw">squad:scaffold</span> . <span class="flag">--slug</span>=youtube-roteiros <span class="flag">--name</span>=<span class="str">"YouTube Roteiros"</span> <span class="flag">--mode</span>=content
-
-<span class="c"># Resultado:</span>
-✓ .aioson/squads/youtube-roteiros/        <span class="c">(15 arquivos criados)</span>
-✓ output/youtube-roteiros/
-✓ aioson-logs/youtube-roteiros/</div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <h3>Agentes especializados são gerados</h3>
-            <p>Cada executor recebe seu próprio arquivo <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:0.9em;">.md</code> com papel, ferramentas, contexto e critérios de qualidade específicos para o domínio.</p>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">5</div>
-          <div class="step-body">
-            <h3>Squad registrado no projeto</h3>
-            <p>Os atalhos são adicionados ao <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:0.9em;">CLAUDE.md</code> e <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:0.9em;">AGENTS.md</code>, e você já pode invocar os agentes individuais.</p>
-            <div class="code-block"><span class="c"># Adicionado ao CLAUDE.md automaticamente:</span>
-<span class="kw">## Squad: YouTube Roteiros</span>
-- /pesquisador  -> .aioson/squads/youtube-roteiros/agents/pesquisador.md
-- /escritor     -> .aioson/squads/youtube-roteiros/agents/escritor.md
-- /revisor      -> .aioson/squads/youtube-roteiros/agents/revisor.md
-- /orquestrador -> .aioson/squads/youtube-roteiros/agents/orquestrador.md</div>
-          </div>
+      <div class="concept-card" data-tone="emerald">
+        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4"/></svg></span>
+        <div class="concept-body">
+          <h3>Infraestrutura</h3>
+          <p>Bus de mensagens intra-squad, webhook externo, MCP servers, dashboard de ROI, memória + learning loop. Tudo configurável no manifesto + comandos dedicados.</p>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ── Executores ── -->
-    <section id="executores">
-      <div class="section-label">Componentes</div>
-      <h2>Tipos de Executor</h2>
-      <p>Cada worker em um squad tem um tipo que define como ele executa suas tarefas:</p>
+  <!-- ═══════════════════════════════════════════════════════ CATEGORIAS DE COMANDOS -->
+  <section class="site-section" id="comandos">
+    <header class="site-section-header">
+      <span class="eyebrow">6 categorias · 34 comandos</span>
+      <h2 class="site-section-title">Tudo que você precisa para um squad <span class="accent-cyan">vivo</span>.</h2>
+      <p class="site-section-subtitle">Click em qualquer categoria para ver os comandos, descrição e exemplo de terminal. Cada uma cobre uma fase do ciclo de vida de um squad.</p>
+    </header>
 
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Quando usar</th>
-            <th>Model tier padrão</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>agent</td>
-            <td>Worker principal — recebe briefing, usa ferramentas, entrega output</td>
-            <td><span class="tag tag-blue">balanced</span></td>
-          </tr>
-          <tr>
-            <td>worker</td>
-            <td>Executa scripts determinísticos (Node.js, Python) — sem LLM</td>
-            <td><span class="tag tag-green">none</span></td>
-          </tr>
-          <tr>
-            <td>reviewer</td>
-            <td>Avalia output de outros workers com critérios estruturados</td>
-            <td><span class="tag tag-blue">balanced</span></td>
-          </tr>
-          <tr>
-            <td>research</td>
-            <td>Pesquisa web com cache automático (7 dias)</td>
-            <td><span class="tag tag-yellow">powerful</span></td>
-          </tr>
-          <tr>
-            <td>human-gate</td>
-            <td>Ponto de aprovação humana — pausa execução até confirmação</td>
-            <td><span class="tag tag-red">human</span></td>
-          </tr>
-          <tr>
-            <td>clone</td>
-            <td>Múltiplas instâncias do mesmo agente rodando em paralelo (voting)</td>
-            <td><span class="tag tag-blue">balanced</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+    <div class="cat-grid">
 
-    <!-- ── Autorun ── -->
-    <section id="autorun">
-      <div class="section-label">Execução</div>
-      <h2>Execução Autônoma com squad:autorun</h2>
-      <p>Após criar o squad, você pode rodá-lo sem supervisão. O <code style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:0.9em;">squad:autorun</code> cuida de tudo:</p>
-
-      <div class="code-block"><span class="c"># Execução básica</span>
-<span class="cmd">aioson</span> <span class="kw">squad:autorun</span> . <span class="flag">--squad</span>=youtube-roteiros <span class="flag">--goal</span>=<span class="str">"Criar roteiro sobre IA generativa em 2026"</span>
-
-<span class="c"># Com validação de dependências de outros squads</span>
-<span class="cmd">aioson</span> <span class="kw">squad:autorun</span> . <span class="flag">--squad</span>=distribuicao <span class="flag">--goal</span>=<span class="str">"Publicar episódio"</span> <span class="flag">--wait-deps</span>
-
-<span class="c"># Com engine nativo do Claude Code (experimental)</span>
-<span class="cmd">aioson</span> <span class="kw">squad:autorun</span> . <span class="flag">--squad</span>=youtube-roteiros <span class="flag">--goal</span>=<span class="str">"..."</span> <span class="flag">--engine</span>=agent-teams
-
-<span class="c"># Em modo daemon (roda em background continuamente)</span>
-<span class="cmd">aioson</span> <span class="kw">squad:daemon</span> . <span class="flag">--squad</span>=youtube-roteiros <span class="flag">--persistent</span></div>
-
-      <h3 style="margin-top: 32px;">O que acontece durante uma run</h3>
-
-      <div class="flow">
-        <div class="flow-node">
-          <span class="fn-icon">🎯</span>
-          <span class="fn-label">Goal</span>
-          <span class="fn-sub">input do usuário</span>
+      <button class="cat-card" data-tone="cyan" data-dialog="dlg-create" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="cat-count">6</span>
         </div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-node active">
-          <span class="fn-icon">🔀</span>
-          <span class="fn-label">Decomposição</span>
-          <span class="fn-sub">tasks + waves</span>
+        <h3>Criar (compose)</h3>
+        <p>Scaffold, agent-create, plan, dependency-graph, card, validate.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="emerald" data-dialog="dlg-run" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20" /></svg></span>
+          <span class="cat-count">6</span>
         </div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-node">
-          <span class="fn-icon">⚡</span>
-          <span class="fn-label">Wave 1</span>
-          <span class="fn-sub">paralelo</span>
+        <h3>Executar (run)</h3>
+        <p>Daemon, autorun, worker, processes, worktrees, recovery.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="violet" data-dialog="dlg-orch" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M8 18h8M6 8v8M18 8v8"/></svg></span>
+          <span class="cat-count">7</span>
         </div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-node">
-          <span class="fn-icon">⚡</span>
-          <span class="fn-label">Wave 2</span>
-          <span class="fn-sub">deps resolvidas</span>
+        <h3>Coordenar (orchestrate)</h3>
+        <p>Bus, webhook, merge, deploy, pipeline, learning, review.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="gold" data-dialog="dlg-share" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8h16v-8M12 4v12M8 8l4-4 4 4"/></svg></span>
+          <span class="cat-count">6</span>
         </div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-node">
-          <span class="fn-icon">✅</span>
-          <span class="fn-label">Verificação</span>
-          <span class="fn-sub">4-tier gate</span>
+        <h3>Distribuir (share)</h3>
+        <p>Publish, install, grant, export, repair-genomes, list.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="pink" data-dialog="dlg-monitor" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-4 3 2 4-5"/></svg></span>
+          <span class="cat-count">6</span>
         </div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-node active">
-          <span class="fn-icon">🧠</span>
-          <span class="fn-label">Learnings</span>
-          <span class="fn-sub">extraídas</span>
+        <h3>Observar (monitor)</h3>
+        <p>Dashboard, status, doctor, score, ROI, investigate.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="teal" data-dialog="dlg-extend" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M4.9 19.1l4.2-4.2M19.1 4.9l-4.2 4.2"/></svg></span>
+          <span class="cat-count">3</span>
         </div>
+        <h3>Estender (extend)</h3>
+        <p>MCP server, MCP call, tool:register.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ 29 AGENTES OFICIAIS -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">29 agentes oficiais · ecossistema completo</span>
+      <h2 class="site-section-title">Use os <span class="accent-violet">oficiais</span> ou crie os seus.</h2>
+      <p class="site-section-subtitle">Squads podem reutilizar qualquer agente oficial do AIOSON. Cada um cobre uma responsabilidade específica do ciclo de produto. Crie squads compondo eles ou estendendo via <code>squad:agent-create</code>.</p>
+    </header>
+
+    <div class="agent-group">
+      <div class="agent-group-title">Workflow chain (default)</div>
+      <div class="agent-grid">
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/setup</span><span class="agent-role">Inicialização do projeto</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/product</span><span class="agent-role">PRD + visão de produto</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/analyst</span><span class="agent-role">Entidades + business rules</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/architect</span><span class="agent-role">Decisões estruturais</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/ux-ui</span><span class="agent-role">Visual system + UI spec</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/pm</span><span class="agent-role">Backlog + user stories</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/orchestrator</span><span class="agent-role">Paralelismo MEDIUM</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/dev</span><span class="agent-role">Implementação</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/qa</span><span class="agent-role">Risk-first review</span></a>
+        <a class="agent-pill" href="../index.html"><span class="agent-slash">/validator</span><span class="agent-role">Harness contract validation</span></a>
       </div>
+    </div>
 
-      <h3>Proteções automáticas</h3>
-      <div class="card-grid" style="margin-top: 16px;">
-        <div class="card">
-          <h3 style="font-size:1rem;">🔄 Gap Closure Loop</h3>
-          <p style="font-size:0.88rem; margin-top:8px;">Se uma tarefa falha, o sistema retenta até 3x com o contexto do erro anterior — não é retry burro, é retry informado.</p>
-        </div>
-        <div class="card">
-          <h3 style="font-size:1rem;">💓 Heartbeat</h3>
-          <p style="font-size:0.88rem; margin-top:8px;">Workers longos (>30s) enviam pulso a cada 30 segundos. Sem resposta em 3 pulsos = task considerada travada.</p>
-        </div>
-        <div class="card">
-          <h3 style="font-size:1rem;">🛑 Anti-Loop Guard</h3>
-          <p style="font-size:0.88rem; margin-top:8px;">Se um worker envia 8+ mensagens de status sem entregar resultado, o coordenador intervém e força uma decisão.</p>
-        </div>
-        <div class="card">
-          <h3 style="font-size:1rem;">💰 Budget Gate</h3>
-          <p style="font-size:0.88rem; margin-top:8px;">Antes de cada task, o sistema projeta o uso de tokens. Se a projeção excede o budget configurado, pausa e avisa.</p>
-        </div>
+    <div class="agent-group">
+      <div class="agent-group-title">Continuity & routing</div>
+      <div class="agent-grid">
+        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/deyvin</span><span class="agent-role">Pair programming + scout</span></a>
+        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/pair</span><span class="agent-role">Alias de /deyvin</span></a>
+        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/neo</span><span class="agent-role">Router · orienta e roteia</span></a>
       </div>
-    </section>
+    </div>
 
-    <!-- ── Bus ── -->
-    <section id="bus">
-      <div class="section-label">Comunicação</div>
-      <h2>Bus de Mensagens Intra-Squad</h2>
-      <p>Workers se comunicam via um bus de mensagens JSONL — o coordenador observa todo o tráfego e age quando necessário.</p>
-
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Significado</th>
-            <th>Quem responde</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>result</td>
-            <td>Worker concluiu uma tarefa com sucesso</td>
-            <td>Coordenador avança o plano</td>
-          </tr>
-          <tr>
-            <td>block</td>
-            <td>Worker está travado e precisa de ajuda</td>
-            <td>Coordenador resolve ou escala</td>
-          </tr>
-          <tr>
-            <td>question</td>
-            <td>Worker tem dúvida sobre escopo ou decisão</td>
-            <td>Coordenador ou peer worker</td>
-          </tr>
-          <tr>
-            <td>finding</td>
-            <td>Worker descobriu algo relevante para os outros</td>
-            <td>Outros workers leem se pertinente</td>
-          </tr>
-          <tr>
-            <td>heartbeat</td>
-            <td>Worker ainda está ativo (tasks longas)</td>
-            <td>Coordenador monitora ausência</td>
-          </tr>
-          <tr>
-            <td>resolution</td>
-            <td>Um block foi resolvido</td>
-            <td>Worker bloqueado retoma</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="callout">
-        <span class="callout-icon">📋</span>
-        <p>O bus é persistido em <code style="font-family:'JetBrains Mono',monospace;">.aioson/squads/{slug}/bus/*.jsonl</code>. Você pode inspecioná-lo para depurar sessions e entender o que aconteceu.</p>
+    <div class="agent-group">
+      <div class="agent-group-title">Quality &amp; risk</div>
+      <div class="agent-grid">
+        <a class="agent-pill" data-color="gold" href="../index.html"><span class="agent-slash">/tester</span><span class="agent-role">Cobertura + mutation testing</span></a>
+        <a class="agent-pill" data-color="gold" href="../index.html"><span class="agent-slash">/pentester</span><span class="agent-role">Security audit + threat review</span></a>
       </div>
-    </section>
+    </div>
 
-    <!-- ── Inter-squad ── -->
-    <section id="inter-squad">
-      <div class="section-label">Orquestração</div>
-      <h2>Conectando Squads</h2>
-      <p>Squads diferentes no mesmo projeto podem se comunicar via eventos pub/sub. O squad A publica eventos quando conclui trabalho; o squad B os consome automaticamente no início da próxima run.</p>
-
-      <div class="code-block"><span class="c"># Declare dependências no squad.manifest.json do squad B:</span>
-{
-  <span class="str">"slug"</span>: <span class="str">"squad-distribuicao"</span>,
-  <span class="str">"depends_on"</span>: [
-    {
-      <span class="str">"squad"</span>: <span class="str">"squad-conteudo"</span>,
-      <span class="str">"event"</span>: <span class="str">"episodio.criado"</span>        <span class="c">// aguardar este evento</span>
-    }
-  ],
-  <span class="str">"subscriptions"</span>: [<span class="str">"episodio.*"</span>]     <span class="c">// padrão de eventos para ouvir</span>
-}
-
-<span class="c"># Executar squad B — aguarda evento automaticamente (até 60s)</span>
-<span class="cmd">aioson</span> <span class="kw">squad:autorun</span> . <span class="flag">--squad</span>=squad-distribuicao <span class="flag">--goal</span>=<span class="str">"Publicar"</span> <span class="flag">--wait-deps</span>
-
-<span class="c"># Visualizar o grafo de dependências entre todos os squads</span>
-<span class="cmd">aioson</span> <span class="kw">squad:dependency-graph</span> .</div>
-
-      <div class="callout yellow">
-        <span class="callout-icon">⚠️</span>
-        <p>Use <code style="font-family:'JetBrains Mono',monospace;">--ignore-deps</code> para executar sem validar dependências — útil em desenvolvimento, mas não em produção.</p>
+    <div class="agent-group">
+      <div class="agent-group-title">Discovery &amp; research</div>
+      <div class="agent-grid">
+        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/briefing</span><span class="agent-role">Pré-PRD framing</span></a>
+        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/orache</span><span class="agent-role">Domínio + competitor research</span></a>
+        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/sheldon</span><span class="agent-role">Enrichment de PRD</span></a>
+        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/discovery-design-doc</span><span class="agent-role">Living design doc</span></a>
+        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/discover</span><span class="agent-role">Semantic project scan</span></a>
       </div>
-    </section>
+    </div>
 
-    <!-- ── Memória ── -->
-    <section id="memoria">
-      <div class="section-label">Evolução</div>
-      <h2>Memória e Aprendizado</h2>
-      <p>O squad melhora com o tempo. A cada sessão, learnings são extraídas automaticamente e persistidas para influenciar sessões futuras.</p>
+    <div class="agent-group">
+      <div class="agent-group-title">Content &amp; operations</div>
+      <div class="agent-grid">
+        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/copywriter</span><span class="agent-role">Marketing copy + VSL</span></a>
+        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/committer</span><span class="agent-role">Git commit messages</span></a>
+        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/squad</span><span class="agent-role">Squad management meta-agent</span></a>
+        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/genome</span><span class="agent-role">Domain genome extraction</span></a>
+      </div>
+    </div>
 
-      <div class="steps">
-        <div class="step">
-          <div class="step-num" style="border-color: var(--green); color: var(--green);">1</div>
-          <div class="step-body">
-            <h3>STATE.md — memória cross-session</h3>
-            <p>Mantém decisões tomadas, blockers encontrados, pendências e velocidade do squad. Lido no início de cada run para dar contexto ao orquestrador.</p>
-            <div class="code-block"><span class="c"># .aioson/squads/{slug}/STATE.md</span>
-<span class="str">squad</span>: youtube-roteiros
-<span class="str">sessions_completed</span>: <span class="num">12</span>
-<span class="str">avg_tasks_per_session</span>: <span class="num">4.2</span>
+    <div class="agent-group">
+      <div class="agent-group-title">Profiling &amp; cloning (pipelines)</div>
+      <div class="agent-grid">
+        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-researcher</span><span class="agent-role">Research phase do clone</span></a>
+        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-enricher</span><span class="agent-role">Enrichment do perfil</span></a>
+        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-forge</span><span class="agent-role">Forge do advisor agent</span></a>
+        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/site-forge</span><span class="agent-role">Clone visual de URL</span></a>
+        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/design-hybrid-forge</span><span class="agent-role">Híbrido de 2 design skills</span></a>
+      </div>
+    </div>
+  </section>
 
-<span class="kw">## Decisions Made</span>
-- Usar formato JSON para output (integração webhook)
-- Roteiros entre 8-12 min performam melhor
+  <!-- ═══════════════════════════════════════════════════════ TUTORIAL: PRIMEIRO SQUAD -->
+  <section class="site-section" id="primeiro">
+    <header class="site-section-header">
+      <span class="eyebrow">Tutorial · primeiro squad</span>
+      <h2 class="site-section-title">Crie e rode um squad em <span class="accent-cyan">5 passos</span>.</h2>
+      <p class="site-section-subtitle">Do scaffold ao dashboard. Cada passo é um comando — squads são primeira-classe no CLI, não exigem GUI.</p>
+    </header>
 
-<span class="kw">## Active Blockers</span>
-- API do YouTube precisa de nova key (expirou)</div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num" style="border-color: var(--blue); color: var(--blue);">2</div>
-          <div class="step-body">
-            <h3>Agent Memory — memória por executor</h3>
-            <p>Cada executor acumula conhecimento específico do seu domínio. Um pesquisador aprende quais fontes são mais confiáveis; um escritor aprende quais formatos performam melhor.</p>
-            <div class="code-block"><span class="c"># .aioson/squads/{slug}/agent-memory/escritor.md</span>
-<span class="kw">## Patterns that work</span>
-- Hooks de curiosidade nos primeiros 15s aumentam retenção 35%
-- Roteiros &lt; 10 min têm 2x mais completion rate
-
-<span class="kw">## Patterns to avoid</span>
-- Intros genéricas &gt; 30s causam 60% de drop-off</div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num" style="border-color: var(--accent); color: var(--accent);">3</div>
-          <div class="step-body">
-            <h3>Learning Evolution — aprendizado aplicado</h3>
-            <p>Learnings com frequência ≥ 2 podem ser promovidas para regras do squad, modificando automaticamente o comportamento futuro.</p>
-            <div class="code-block"><span class="c"># Detectar candidatos a automação</span>
-<span class="cmd">aioson</span> <span class="kw">pattern:detect</span> . <span class="flag">--squad</span>=youtube-roteiros
-
-<span class="c"># Aplicar learnings como regras</span>
-<span class="cmd">aioson</span> <span class="kw">learning:evolve</span> . <span class="flag">--squad</span>=youtube-roteiros <span class="flag">--auto-apply</span>
-
-<span class="c"># Reverter uma evolução indesejada</span>
-<span class="cmd">aioson</span> <span class="kw">learning:rollback</span> . <span class="flag">--squad</span>=youtube-roteiros <span class="flag">--evolution</span>=<span class="str">uuid-aqui</span></div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Scaffold da estrutura base</h3>
+          <p>Cria <code>.aioson/squads/{slug}/</code> com manifesto, executors vazios, contracts iniciais.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">scaffold</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:scaffold</span> . <span class="term-flag">--name</span>=marketing-team <span class="term-flag">--domain</span>=<span class="term-str">'content'</span></span>
+<span class="term-line"><span class="term-ok">✓</span> created .aioson/squads/marketing-team/ · manifest · 0 agents · 0 workers</span></div>
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ── CLI ── -->
-    <section id="cli">
-      <div class="section-label">Referência</div>
-      <h2>Referência de Comandos CLI</h2>
-
-      <h3 style="margin-bottom: 16px;">Criação e setup</h3>
-      <table class="tbl">
-        <thead><tr><th>Comando</th><th>O que faz</th></tr></thead>
-        <tbody>
-          <tr><td>squad:scaffold</td><td>Gera todos os diretórios e arquivos skeleton de um squad (sem LLM)</td></tr>
-          <tr><td>brief:validate</td><td>Valida completude de um brief antes de spawnar workers — detecta campos faltando e pode auto-corrigir</td></tr>
-          <tr><td>preflight:context</td><td>Estima budget de tokens antes de iniciar uma sessão — alerta sobre risco de truncação</td></tr>
-        </tbody>
-      </table>
-
-      <h3 style="margin-bottom: 16px; margin-top: 32px;">Execução</h3>
-      <table class="tbl">
-        <thead><tr><th>Comando</th><th>O que faz</th></tr></thead>
-        <tbody>
-          <tr><td>squad:autorun</td><td>Execução autônoma completa — decompõe goal, executa em waves, verifica resultados</td></tr>
-          <tr><td>squad:daemon</td><td>Modo persistente — fica em loop monitorando eventos e rodando sessões automaticamente</td></tr>
-          <tr><td>squad:status</td><td>Mostra estado atual do squad (STATE.md + eventos pendentes)</td></tr>
-        </tbody>
-      </table>
-
-      <h3 style="margin-bottom: 16px; margin-top: 32px;">Análise e evolução</h3>
-      <table class="tbl">
-        <thead><tr><th>Comando</th><th>O que faz</th></tr></thead>
-        <tbody>
-          <tr><td>pattern:detect</td><td>Detecta candidatos a automação analisando learnings e histórico de sessões</td></tr>
-          <tr><td>learning:evolve</td><td>Promove learnings frequentes para regras do squad</td></tr>
-          <tr><td>learning:rollback</td><td>Reverte uma evolução aplicada por UUID</td></tr>
-          <tr><td>context:compact</td><td>Compacta contexto de sessão longa em handoff estruturado</td></tr>
-          <tr><td>squad:dependency-graph</td><td>Visualiza dependências entre squads (ASCII ou Mermaid)</td></tr>
-        </tbody>
-      </table>
-
-      <h3 style="margin-bottom: 16px; margin-top: 32px;">Integração e exportação</h3>
-      <table class="tbl">
-        <thead><tr><th>Comando</th><th>O que faz</th></tr></thead>
-        <tbody>
-          <tr><td>squad:card</td><td>Gera Agent Card compatível com Google A2A v1.0 — permite que outros sistemas descubram o squad</td></tr>
-          <tr><td>agent:export-skill</td><td>Exporta um agente como Agent Skills Standard — portável para Cursor, Copilot, Gemini CLI e mais</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- ── Exemplos ── -->
-    <section id="exemplos">
-      <div class="section-label">Casos de uso</div>
-      <h2>Exemplos por Domínio</h2>
-
-      <div class="card-grid">
-        <div class="card">
-          <span style="font-size:2rem; display:block; margin-bottom:12px;">🎬</span>
-          <h3>Conteúdo Digital</h3>
-          <p style="font-size:0.88rem; margin-top:8px; margin-bottom:12px;">Pesquisador + Roteirista + Editor + Thumbnail Designer</p>
-          <div class="code-block" style="font-size:12px; padding:14px 16px; margin:0;"><span class="cmd">aioson</span> <span class="kw">squad:autorun</span> .
-  <span class="flag">--squad</span>=youtube
-  <span class="flag">--goal</span>=<span class="str">"Ep. sobre LLMs em 2026"</span></div>
-        </div>
-
-        <div class="card">
-          <span style="font-size:2rem; display:block; margin-bottom:12px;">⚙️</span>
-          <h3>Desenvolvimento</h3>
-          <p style="font-size:0.88rem; margin-top:8px; margin-bottom:12px;">Arquiteto + Developer + QA + Security Reviewer</p>
-          <div class="code-block" style="font-size:12px; padding:14px 16px; margin:0;"><span class="cmd">aioson</span> <span class="kw">squad:autorun</span> .
-  <span class="flag">--squad</span>=backend
-  <span class="flag">--goal</span>=<span class="str">"Implementar auth JWT"</span></div>
-        </div>
-
-        <div class="card">
-          <span style="font-size:2rem; display:block; margin-bottom:12px;">⚖️</span>
-          <h3>Pesquisa Jurídica</h3>
-          <p style="font-size:0.88rem; margin-top:8px; margin-bottom:12px;">Pesquisador + Analista + Redator + Revisor</p>
-          <div class="code-block" style="font-size:12px; padding:14px 16px; margin:0;"><span class="cmd">aioson</span> <span class="kw">squad:autorun</span> .
-  <span class="flag">--squad</span>=juridico
-  <span class="flag">--goal</span>=<span class="str">"Análise contrato NDA"</span></div>
-        </div>
-
-        <div class="card">
-          <span style="font-size:2rem; display:block; margin-bottom:12px;">📊</span>
-          <h3>Business Intelligence</h3>
-          <p style="font-size:0.88rem; margin-top:8px; margin-bottom:12px;">Data Collector + Analyst + Report Writer</p>
-          <div class="code-block" style="font-size:12px; padding:14px 16px; margin:0;"><span class="cmd">aioson</span> <span class="kw">squad:autorun</span> .
-  <span class="flag">--squad</span>=bi
-  <span class="flag">--goal</span>=<span class="str">"Relatório mensal Q1"</span></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Adicionar agentes ao squad</h3>
+          <p>Use agentes oficiais ou crie customizados. Tier 0-3 controla autonomia, DISC profile define personalidade.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">agent-create</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:agent-create</span> . <span class="term-flag">--squad</span>=marketing-team \\</span>
+<span class="term-line">    <span class="term-flag">--name</span>=copywriter <span class="term-flag">--type</span>=agent <span class="term-flag">--tier</span>=2 <span class="term-flag">--disc</span>=I \\</span>
+<span class="term-line">    <span class="term-flag">--mission</span>=<span class="term-str">'Write conversion-focused copy'</span> <span class="term-flag">--domain</span>=<span class="term-str">'marketing'</span></span>
+<span class="term-line"><span class="term-ok">✓</span> agent copywriter created · tier 2 · DISC=I</span></div>
+          </div>
         </div>
       </div>
 
-      <div class="callout green" style="margin-top: 32px;">
-        <span class="callout-icon">🚀</span>
-        <p><strong>Dica de velocidade:</strong> Na primeira sessão, use o agente <code style="font-family:'JetBrains Mono',monospace;">/squad</code> interativamente para refinar os executores. A partir da segunda sessão, <code style="font-family:'JetBrains Mono',monospace;">squad:autorun</code> já tem contexto suficiente para rodar sozinho.</p>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Validar manifesto + dependências</h3>
+          <p>Verifica schema, dependency graph e contratos antes de rodar. Quebra cedo, não no daemon.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">validate + dependency-graph</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:validate</span> . <span class="term-flag">--squad</span>=marketing-team</span>
+<span class="term-line"><span class="term-ok">✓</span> manifest valid · 1 agent · 0 unresolved deps</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:dependency-graph</span> . <span class="term-flag">--squad</span>=marketing-team</span>
+<span class="term-line"><span class="term-out-key">→</span> copywriter (entry) · no downstream</span></div>
+          </div>
+        </div>
       </div>
-    </section>
 
-  </main>
-</div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Subir o daemon e dashboard</h3>
+          <p>Daemon escuta eventos, dashboard mostra telemetria em real-time (porta 4180 por padrão).</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">daemon + dashboard</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:daemon</span> . <span class="term-flag">--sub</span>=start <span class="term-flag">--squad</span>=marketing-team</span>
+<span class="term-line"><span class="term-ok">✓</span> daemon started · pid 12847 · port 4180</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:dashboard</span> . <span class="term-flag">--squad</span>=marketing-team <span class="term-flag">--port</span>=4180</span>
+<span class="term-line"><span class="term-out-key">→</span> http://localhost:4180/squad/marketing-team</span></div>
+          </div>
+        </div>
+      </div>
 
-<footer>
-  <p>AIOSON · <a href="../../tutorials/index.html">← Tutoriais</a> · <a href="https://github.com/jaimevalasek/aioson" target="_blank">GitHub</a> · <a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank">npm</a></p>
-</footer>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Disparar uma task + monitorar</h3>
+          <p>Send a task via bus, monitor execution, track ROI metrics.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">bus + status + roi</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:bus</span> . <span class="term-flag">--squad</span>=marketing-team <span class="term-flag">--to</span>=copywriter \\</span>
+<span class="term-line">    <span class="term-flag">--message</span>=<span class="term-str">'Write landing hero for new SaaS launch'</span></span>
+<span class="term-line"><span class="term-ok">✓</span> message dispatched · waiting...</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:roi</span> . <span class="term-flag">--sub</span>=report <span class="term-flag">--squad</span>=marketing-team</span>
+<span class="term-line"><span class="term-out-key">tasks</span>: 1 · <span class="term-out-key">avg_time</span>: 4.2s · <span class="term-out-key">tokens</span>: 1.8k · <span class="term-out-key">cost</span>: $0.04</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ CASOS DE USO -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Casos de uso</span>
+      <h2 class="site-section-title">Squads <span class="accent-emerald">por domínio</span>.</h2>
+      <p class="site-section-subtitle">Cada squad é um time inteiro. Reusa agentes oficiais quando fazem sentido, cria customizados pro que é específico do domínio.</p>
+    </header>
+
+    <div class="usecase-grid">
+      <article class="usecase-card" data-tone="cyan">
+        <span class="usecase-tag">software</span>
+        <h3>Dev squad full-stack</h3>
+        <p>Time completo de software com SDD: PRD → arquitetura → implementação → QA → security audit.</p>
+        <ul>
+          <li>@product · @analyst · @architect</li>
+          <li>@dev · @qa · @pentester</li>
+          <li>workers: shell (npm), http (CI)</li>
+          <li>bus: webhook GitHub</li>
+        </ul>
+      </article>
+      <article class="usecase-card" data-tone="violet">
+        <span class="usecase-tag">marketing</span>
+        <h3>Content marketing squad</h3>
+        <p>Pesquisa, copy, edição, distribuição. Genomes de copywriter (Brunson, etc) injetados por padrão.</p>
+        <ul>
+          <li>@orache (research) · @copywriter</li>
+          <li>custom: editor · custom: scheduler</li>
+          <li>workers: http (CMS), mcp (analytics)</li>
+          <li>roi: pageviews / conversões</li>
+        </ul>
+      </article>
+      <article class="usecase-card" data-tone="emerald">
+        <span class="usecase-tag">jurídico</span>
+        <h3>Legal review squad</h3>
+        <p>Triagem de contratos, redação de cláusulas, compliance check, sumário executivo.</p>
+        <ul>
+          <li>custom: triador · custom: redator</li>
+          <li>custom: compliance-officer</li>
+          <li>workers: shell (LLM local), mcp (notion)</li>
+          <li>memória: precedentes do escritório</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FINAL CTA -->
+  <section class="site-cta">
+    <div>
+      <span class="eyebrow">Próximo passo</span>
+      <h2 class="site-cta-heading">Crie o squad que faz <span class="accent-cyan">seu trabalho</span>.</h2>
+      <p class="site-cta-text">Squads são primeira-classe no AIOSON. 34 comandos cobrem do scaffold ao deploy. Reusa os 29 agentes oficiais ou cria os seus.</p>
+    </div>
+    <div class="site-cta-actions">
+      <a class="primary-button" href="../index.html">Voltar ao hub</a>
+      <a class="secondary-button" href="../releases/1-9-0/index.html">Release v1.9.0 →</a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="../sdd/index.html">SDD básico</a></li><li><a href="../sdd/automation.html">Automation</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Releases</div><ul><li><a href="../releases/1-9-0/index.html">v1.9.0</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>34 squad cmds · 29 agentes oficiais · multi-domínio</div>
+      <div>AIOSON · inception mode</div>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════ DIALOGS (popovers) -->
+
+<dialog class="popover" id="dlg-create">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent); border-color:color-mix(in srgb, var(--accent) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 1 · 6 comandos</div><div class="dlg-title">Criar (compose)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Composição do squad: scaffolding inicial, criação de agentes customizados, planejamento de pipeline, mapeamento de dependências, card de apresentação e validação do manifesto.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:scaffold</div><div class="cmd-title">Estrutura inicial</div><div class="cmd-desc">Cria <code>.aioson/squads/{slug}/</code> com manifest, contracts, executors vazios, README.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:agent-create</div><div class="cmd-title">Agente customizado</div><div class="cmd-desc"><code>--type=agent|assistant|clone|worker --tier=0|1|2|3 --disc=&lt;profile&gt;</code>. Opcional <code>--with-infra</code> cria scaffold de workers.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:plan</div><div class="cmd-title">Plano de execução</div><div class="cmd-desc">Gera plan.json do squad: ordem dos agentes, gates internos, dependências, tier mapping.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:dependency-graph</div><div class="cmd-title">Grafo de dependências</div><div class="cmd-desc">Visualiza quem chama quem dentro do squad. Detecta ciclos. Usa antes de daemon.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:card</div><div class="cmd-title">Card público</div><div class="cmd-desc">Gera card de apresentação do squad pra marketplace/registry. Title, summary, capabilities.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:validate</div><div class="cmd-title">Schema check</div><div class="cmd-desc">Valida manifest, schemas, dependency graph e contratos. Quebra cedo — antes do daemon.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">criar</span><button class="terminal-copy" type="button" data-copy="aioson squad:scaffold . --name=dev-team --domain=software&#10;aioson squad:agent-create . --squad=dev-team --name=tech-lead --type=agent --tier=2 --disc=D --mission='Architect decisions'&#10;aioson squad:validate . --squad=dev-team&#10;aioson squad:dependency-graph . --squad=dev-team">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:scaffold</span> . <span class="term-flag">--name</span>=dev-team <span class="term-flag">--domain</span>=software</span>
+<span class="term-line"><span class="term-ok">✓</span> .aioson/squads/dev-team/ created · 0 agents · manifest seeded</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:agent-create</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--name</span>=tech-lead <span class="term-flag">--type</span>=agent <span class="term-flag">--tier</span>=2</span>
+<span class="term-line"><span class="term-ok">✓</span> agent tech-lead added · DISC=D · tier 2</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:validate</span> . <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-ok">✓</span> manifest valid · 1 agent · 0 unresolved deps</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-run">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 2 · 6 comandos</div><div class="dlg-title">Executar (run)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Tudo de execução: daemon (long-running), autorun (one-shot), workers individuais, processos rodando, worktrees git paralelas, e recovery de crashes.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:daemon</div><div class="cmd-title">Long-running daemon</div><div class="cmd-desc"><code>--sub=start|status|stop|logs</code>. Escuta bus + webhook, distribui tasks pros workers. Porta padrão 4180.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:autorun</div><div class="cmd-title">One-shot execution</div><div class="cmd-desc">Roda o squad inteiro até completar a task atual, sem ficar de daemon. Bom pra CI.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:worker</div><div class="cmd-title">Worker individual</div><div class="cmd-desc"><code>--sub=list|run|test|logs|scaffold</code>. Roda 1 worker isolado pra debug ou tarefa pontual.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:processes</div><div class="cmd-title">Inspect processos</div><div class="cmd-desc">Lista todos os processos do squad ativo (daemon, workers, MCP). PID, memória, uptime.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:worktrees</div><div class="cmd-title">Git worktrees paralelas</div><div class="cmd-desc">Cria worktrees git pra cada lane do squad rodar isolada. Evita conflito de branch.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:recovery</div><div class="cmd-title">Recovery após crash</div><div class="cmd-desc">Restaura estado do squad a partir do último checkpoint válido. Limpa locks órfãos.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">executar</span><button class="terminal-copy" type="button" data-copy="aioson squad:daemon . --sub=start --squad=dev-team&#10;aioson squad:processes . --squad=dev-team&#10;aioson squad:worker . --sub=logs --squad=dev-team --worker=ci-runner">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:daemon</span> . <span class="term-flag">--sub</span>=start <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-ok">✓</span> daemon · pid 12847 · listening on :4180</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:processes</span> . <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-out-key">daemon</span>: 12847 · <span class="term-out-key">workers</span>: 12849 (ci-runner), 12851 (linter) · <span class="term-out-key">mcp</span>: 12853</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-orch">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M8 18h8M6 8v8M18 8v8"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 3 · 7 comandos</div><div class="dlg-title">Coordenar (orchestrate)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Comunicação interna (bus) e externa (webhook), merging de output de várias lanes, deploy do squad inteiro, pipelines pré-definidos, ciclo de aprendizado e review entre agentes.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:bus</div><div class="cmd-title">Mensagens intra-squad</div><div class="cmd-desc">Dispatch de mensagens entre agentes do squad. <code>--to=&lt;agent&gt; --message=&lt;text&gt;</code>. Substituto moderno do mailbox.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:webhook</div><div class="cmd-title">Webhooks externos</div><div class="cmd-desc">Recebe POSTs externos (GitHub, Slack, etc) e dispara tasks no squad. URL emitida pelo daemon.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:merge</div><div class="cmd-title">Merge de output</div><div class="cmd-desc">Combina output de várias lanes paralelas em um único resultado. Strategies: concat, dedup, vote.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:deploy</div><div class="cmd-title">Deploy do squad</div><div class="cmd-desc">Empacota o squad inteiro e deploya em um ambiente alvo (cloud, server, etc). Versioned.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:pipeline</div><div class="cmd-title">Pipelines nomeadas</div><div class="cmd-desc"><code>--sub=list|show|status --pipeline=&lt;slug&gt;</code>. Pipelines pré-configuradas dentro do squad.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:learning</div><div class="cmd-title">Ciclo de aprendizado</div><div class="cmd-desc">Roda o learning loop interno do squad: distillation de tasks recentes em rules/brains próprias.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:review</div><div class="cmd-title">Review entre agentes</div><div class="cmd-desc">Faz um agente revisar output de outro antes de aprovar. Útil pra QA automation interno.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">coordenar</span><button class="terminal-copy" type="button" data-copy="aioson squad:bus . --squad=dev-team --to=tech-lead --message='New ticket: optimize query in /reports'&#10;aioson squad:pipeline . --sub=show --squad=dev-team --pipeline=ci-on-pr&#10;aioson squad:learning . --squad=dev-team">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:bus</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--to</span>=tech-lead <span class="term-flag">--message</span>=<span class="term-str">'New ticket: optimize query'</span></span>
+<span class="term-line"><span class="term-ok">✓</span> message id=msg-abc · dispatched · awaiting ack</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:pipeline</span> . <span class="term-flag">--sub</span>=show <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--pipeline</span>=ci-on-pr</span>
+<span class="term-line"><span class="term-out-key">stages</span>: lint → tests → security-audit → deploy-preview</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-share">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8h16v-8M12 4v12M8 8l4-4 4 4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 4 · 6 comandos</div><div class="dlg-title">Distribuir (share)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Publicar squads no registry da nuvem, instalar squads de outros, dar acesso via grant, exportar snapshot local, reparar genomes corrompidos, listar squads disponíveis.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:publish</div><div class="cmd-title">Publicar no registry</div><div class="cmd-desc"><code>--bundle-skills=a,b --bundle-genomes=a,b --version=1.0.0 [--private] [--paid]</code>. Versionado.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:install</div><div class="cmd-title">Instalar squad</div><div class="cmd-desc"><code>&lt;code-or-slug&gt; [--email]</code>. Baixa do registry e configura local. Para squads pagos: email + grant.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:grant</div><div class="cmd-title">Conceder acesso</div><div class="cmd-desc"><code>&lt;code&gt; &lt;email&gt;</code>. Owner concede acesso a um squad pago para um usuário específico.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:export</div><div class="cmd-title">Snapshot local</div><div class="cmd-desc">Exporta squad em tar.gz para distribuição manual ou backup. Inclui manifests, brains, contracts.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:repair-genomes</div><div class="cmd-title">Reparar genomes</div><div class="cmd-desc"><code>&lt;manifest.json&gt;</code>. Repara genomes do squad com schema antigo ou paths quebrados. Backup automático.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:list</div><div class="cmd-title">Listar squads</div><div class="cmd-desc"><code>[--remote]</code>. Lista squads locais ou navega no registry remoto.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">distribuir</span><button class="terminal-copy" type="button" data-copy="aioson squad:list . --remote&#10;aioson squad:install . marketing-pro --email=user@example.com&#10;aioson squad:publish . --slug=dev-team --version=1.0.0 --private">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:list</span> . <span class="term-flag">--remote</span></span>
+<span class="term-line"><span class="term-out-key">found</span>: 47 squads · 12 free · 35 paid</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:install</span> . marketing-pro <span class="term-flag">--email</span>=user@example.com</span>
+<span class="term-line"><span class="term-ok">✓</span> installed marketing-pro@2.1.0 · 4 agents · 3 genomes bundled</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-monitor">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#ff6ba4; border-color:rgba(255,107,164,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-4 3 2 4-5"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 5 · 6 comandos</div><div class="dlg-title">Observar (monitor)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Dashboard web em real-time, status snapshot, doctor com auto-fix, scoring de tasks, ROI tracking com métricas customizadas, e investigações estruturadas.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:dashboard</div><div class="cmd-title">Dashboard web</div><div class="cmd-desc"><code>--port=4180 --squad=&lt;slug&gt;</code>. Telemetria em real-time: tasks, mensagens, ROI, processos.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:status</div><div class="cmd-title">Status snapshot</div><div class="cmd-desc">CLI snapshot: daemon up, agents idle/busy, queue depth, last task. Ideal para preflight.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:doctor</div><div class="cmd-title">Health check</div><div class="cmd-desc"><code>--stale-minutes=5</code>. Detecta workers stale, locks órfãos, dependências quebradas. Sugere fixes.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:score</div><div class="cmd-title">Score de tasks</div><div class="cmd-desc">Pontua tasks executadas por métricas configuráveis. Persistido em runtime SQLite para histórico.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:roi</div><div class="cmd-title">ROI tracking</div><div class="cmd-desc"><code>--sub=config|metric|report|export --key=&lt;m&gt; --value=&lt;n&gt;</code>. Métricas próprias: tokens, $, tempo, leads.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:investigate</div><div class="cmd-title">Investigações</div><div class="cmd-desc"><code>--sub=list|show|score|link|register --investigation=&lt;slug&gt;</code>. Issues, RCAs, post-mortems do squad.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">observar</span><button class="terminal-copy" type="button" data-copy="aioson squad:status . --squad=dev-team&#10;aioson squad:dashboard . --squad=dev-team --port=4180&#10;aioson squad:roi . --sub=report --squad=dev-team">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:status</span> . <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-out-key">daemon</span>: up (2h 14m) · <span class="term-out-key">workers</span>: 3 idle, 1 busy · <span class="term-out-key">queue</span>: 0</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:roi</span> . <span class="term-flag">--sub</span>=report <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-out-key">last 7d</span> · tasks: 142 · tokens: 1.8M · cost: $42.30 · avg_time: 2.4min</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-extend">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#22d3ee; border-color:rgba(34,211,238,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M4.9 19.1l4.2-4.2M19.1 4.9l-4.2 4.2"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 6 · 3 comandos</div><div class="dlg-title">Estender (extend)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">MCP (Model Context Protocol) servers integrados ao squad pra acessar ferramentas externas (filesystem, GitHub, Notion, etc) e tools customizadas registráveis. Esta é a camada de extensibilidade.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson squad:mcp</div><div class="cmd-title">MCP server manager</div><div class="cmd-desc"><code>--sub=status|connectors|configure|test --mcp=&lt;slug&gt;</code>. Gerencia servers MCP do squad.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:mcp:call</div><div class="cmd-title">Chamar tool MCP</div><div class="cmd-desc">Invoca uma tool específica de um connector MCP do squad. Testa integração antes de wire no agente.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson squad:tool:register</div><div class="cmd-title">Registrar tool custom</div><div class="cmd-desc">Registra função customizada (JS/Python/shell) como tool acessível pelos agentes do squad.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">estender</span><button class="terminal-copy" type="button" data-copy="aioson squad:mcp . --sub=status --squad=dev-team&#10;aioson squad:mcp:call . --squad=dev-team --mcp=github --tool=create_issue --params='{...}'&#10;aioson squad:tool:register . --squad=dev-team --tool=deploy-preview --executor=shell">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:mcp</span> . <span class="term-flag">--sub</span>=status <span class="term-flag">--squad</span>=dev-team</span>
+<span class="term-line"><span class="term-out-key">connectors</span>: github (✓), notion (✓), slack (offline)</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:tool:register</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--tool</span>=deploy-preview <span class="term-flag">--executor</span>=shell</span>
+<span class="term-line"><span class="term-ok">✓</span> tool deploy-preview registered · available to all agents</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  // Theme toggle
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+    try {
+      const saved = localStorage.getItem('aioson-theme');
+      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    const sync = () => {
+      const t = root.getAttribute('data-theme') || 'dark';
+      const moon = toggle.querySelector('.cmd-theme-moon');
+      const sun  = toggle.querySelector('.cmd-theme-sun');
+      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
+      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
+    };
+    sync();
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+
+  // Sticky dock scroll feedback
+  (function () {
+    const wrap = document.getElementById('dock-wrap');
+    if (!wrap) return;
+    const update = () => {
+      if (window.scrollY > 8) wrap.classList.add('is-scrolled');
+      else wrap.classList.remove('is-scrolled');
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+  })();
+
+  // Dialogs
+  (function () {
+    document.querySelectorAll('[data-dialog]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.dialog;
+        const dlg = document.getElementById(id);
+        if (!dlg) return;
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+        else dlg.setAttribute('open', '');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    document.querySelectorAll('dialog.popover').forEach((dlg) => {
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+      dlg.addEventListener('close', () => { document.body.style.overflow = ''; });
+      dlg.querySelectorAll('[data-dialog-close]').forEach((btn) => { btn.addEventListener('click', () => dlg.close()); });
+    });
+  })();
+
+  // Copy buttons
+  (function () {
+    if (!navigator.clipboard) return;
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.textContent;
+          btn.textContent = 'copiado ✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>

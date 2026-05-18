@@ -1,1183 +1,1192 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SDD Automation Scripts — AIOSON</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #07070f;
-      --surface: #0f0f1a;
-      --card: #13131f;
-      --card2: #0d0d18;
-      --border: #1f1f32;
-      --border-light: #282840;
-      --primary: #6c47ff;
-      --primary-dim: rgba(108, 71, 255, 0.12);
-      --primary-glow: rgba(108, 71, 255, 0.22);
-      --text: #e2e8f0;
-      --muted: #8892a4;
-      --accent: #a78bfa;
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --red: #f87171;
-      --blue: #60a5fa;
-      --cyan: #22d3ee;
-      --radius: 14px;
-      --heading: #d4d8f0;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.7;
-      font-size: 16px;
-    }
-
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
-
-    /* ── Nav ─────────────────────────────────────── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(7,7,15,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .nav-back {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      text-decoration: none;
-      color: var(--muted);
-      font-size: 14px;
-      transition: color 0.2s;
-    }
-    .nav-back:hover { color: var(--text); }
-    .nav-sep { color: var(--border-light); }
-    .nav-title { font-size: 14px; font-weight: 600; color: var(--text); }
-
-    .nav-tag {
-      margin-left: auto;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: 20px;
-      padding: 3px 12px;
-    }
-
-    /* ── Hero ────────────────────────────────────── */
-    .hero {
-      padding: 90px 24px 70px;
-      text-align: center;
-      background: radial-gradient(ellipse 60% 55% at 50% -5%, rgba(108,71,255,0.2) 0%, transparent 65%);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 28px;
-    }
-
-    .hero-eyebrow::before, .hero-eyebrow::after {
-      content: '';
-      display: block;
-      width: 28px;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-    }
-
-    .hero h1 {
-      font-size: clamp(2rem, 5vw, 3.4rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      background: linear-gradient(145deg, #d4d8f0 0%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 22px;
-    }
-
-    .hero-sub {
-      font-size: 1.1rem;
-      color: var(--muted);
-      max-width: 580px;
-      margin: 0 auto 36px;
-    }
-
-    .hero-meta {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .meta-pill {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .meta-dot { width: 7px; height: 7px; border-radius: 50%; }
-
-    /* ── Layout ──────────────────────────────────── */
-    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
-
-    section {
-      padding: 72px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    section:last-child { border-bottom: none; }
-
-    .section-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-
-    .section-label::before {
-      content: '';
-      display: block;
-      width: 18px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 2px;
-    }
-
-    h2 {
-      font-size: clamp(1.5rem, 3vw, 2rem);
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--heading);
-      margin-bottom: 16px;
-      line-height: 1.25;
-    }
-
-    h3 { font-size: 1.1rem; font-weight: 700; color: var(--heading); margin-bottom: 10px; }
-
-    p { color: var(--muted); margin-bottom: 16px; }
-    p:last-child { margin-bottom: 0; }
-
-    /* ── Cards ───────────────────────────────────── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    /* ── Callout ─────────────────────────────────── */
-    .callout {
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      margin: 24px 0;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-
-    .callout.green {
-      background: rgba(52,211,153,0.07);
-      border-color: rgba(52,211,153,0.3);
-    }
-
-    .callout.yellow {
-      background: rgba(251,191,36,0.07);
-      border-color: rgba(251,191,36,0.3);
-    }
-
-    .callout-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-    .callout p { margin: 0; color: var(--text); font-size: 0.95rem; }
-
-    /* ── Code ────────────────────────────────────── */
-    .code-block {
-      background: #0a0a14;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      line-height: 1.85;
-      color: #c9d1d9;
-      overflow-x: auto;
-      margin: 20px 0;
-    }
-
-    .code-block .c  { color: var(--muted); }
-    .code-block .kw { color: var(--accent); }
-    .code-block .cmd { color: var(--cyan); }
-    .code-block .str { color: var(--green); }
-    .code-block .num { color: var(--yellow); }
-    .code-block .flag { color: #f4a261; }
-
-    /* ── Steps ───────────────────────────────────── */
-    .steps { display: flex; flex-direction: column; gap: 0; margin-top: 32px; }
-
-    .step { display: flex; gap: 24px; position: relative; }
-
-    .step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      left: 19px;
-      top: 46px;
-      bottom: -4px;
-      width: 2px;
-      background: linear-gradient(to bottom, var(--border-light), transparent);
-    }
-
-    .step-num {
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 2px solid var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent);
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-body { flex: 1; padding-bottom: 36px; }
-    .step-body h3 { margin-bottom: 8px; }
-    .step-body p { font-size: 0.92rem; }
-
-    /* ── Command cards ───────────────────────────── */
-    .cmd-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 28px;
-    }
-
-    .cmd-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 22px;
-      transition: border-color 0.2s;
-    }
-
-    .cmd-card:hover { border-color: var(--primary); }
-
-    .cmd-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--cyan);
-      margin-bottom: 6px;
-    }
-
-    .cmd-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
-    }
-
-    .cmd-desc {
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .cmd-saving {
-      margin-top: 10px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--green);
-      background: rgba(52,211,153,0.08);
-      border: 1px solid rgba(52,211,153,0.2);
-      border-radius: 6px;
-      padding: 3px 8px;
-      display: inline-block;
-    }
-
-    /* ── Pipeline ────────────────────────────────── */
-    .pipeline-track { display: flex; flex-direction: column; gap: 0; }
-
-    .p-phase {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: 24px;
-      align-items: start;
-      padding: 22px 0;
-      border-bottom: 1px dashed var(--border);
-    }
-
-    .p-phase:last-child { border-bottom: none; }
-
-    .p-phase-label { text-align: right; padding-top: 2px; }
-
-    .p-phase-name {
-      font-size: 0.73rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .p-phase-agent {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--accent);
-    }
-
-    .p-artifact {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-    }
-
-    .p-artifact-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--cyan);
-      margin-bottom: 4px;
-    }
-
-    .p-artifact-desc { font-size: 0.82rem; color: var(--muted); }
-
-    .p-cmd-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 500;
-      border-radius: 20px;
-      padding: 2px 9px;
-      margin-top: 8px;
-      background: rgba(34,211,238,0.08);
-      color: var(--cyan);
-      border: 1px solid rgba(34,211,238,0.25);
-    }
-
-    /* ── Savings bar ─────────────────────────────── */
-    .savings-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .savings-row {
-      display: grid;
-      grid-template-columns: 220px 1fr 100px;
-      gap: 16px;
-      align-items: center;
-    }
-
-    @media (max-width: 600px) {
-      .savings-row { grid-template-columns: 1fr; }
-    }
-
-    .savings-cmd {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--cyan);
-    }
-
-    .savings-bar-wrap {
-      height: 8px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .savings-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      border-radius: 4px;
-      transition: width 0.4s ease;
-    }
-
-    .savings-val {
-      font-size: 0.78rem;
-      color: var(--green);
-      font-weight: 600;
-      text-align: right;
-    }
-
-    /* ── Verdict badges ──────────────────────────── */
-    .verdict-pass {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--green);
-      background: rgba(52,211,153,0.1);
-      border: 1px solid rgba(52,211,153,0.3);
-      border-radius: 6px;
-      padding: 3px 9px;
-    }
-
-    .verdict-blocked {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--red);
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.3);
-      border-radius: 6px;
-      padding: 3px 9px;
-    }
-
-    /* ── Gate check visual ───────────────────────── */
-    .gate-flow {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 24px;
-    }
-
-    .gate-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-    }
-
-    .gate-letter {
-      flex-shrink: 0;
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 13px;
-    }
-
-    .g-a { background: rgba(108,71,255,0.18); color: var(--accent); border: 1px solid rgba(108,71,255,0.4); }
-    .g-b { background: rgba(34,211,238,0.12); color: var(--cyan);   border: 1px solid rgba(34,211,238,0.35); }
-    .g-c { background: rgba(251,191,36,0.12);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.35); }
-    .g-d { background: rgba(52,211,153,0.12);  color: var(--green);  border: 1px solid rgba(52,211,153,0.35); }
-
-    .gate-info { flex: 1; }
-    .gate-name { font-size: 0.9rem; font-weight: 700; color: var(--text); }
-    .gate-artifact { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--muted); }
-
-    .gate-status-pass { color: var(--green); font-size: 0.8rem; font-weight: 600; }
-    .gate-status-block { color: var(--red); font-size: 0.8rem; font-weight: 600; }
-
-    /* ── Tier table ──────────────────────────────── */
-    .tier-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      margin-top: 28px;
-    }
-
-    .tier-table th {
-      text-align: left;
-      padding: 10px 14px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .tier-table td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      vertical-align: top;
-    }
-
-    .tier-table tr:last-child td { border-bottom: none; }
-    .tier-table td:first-child { font-weight: 700; color: var(--text); }
-    .tier-table td:last-child { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--cyan); }
-
-    .tier-micro { color: var(--cyan) !important; }
-    .tier-small { color: var(--accent) !important; }
-    .tier-medium { color: var(--primary) !important; }
-
-    @media (max-width: 640px) {
-      .p-phase { grid-template-columns: 1fr; }
-      .p-phase-label { text-align: left; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SDD Automation Scripts — AIOSON</title>
+<meta name="description" content="50+ scripts determinísticos em 8 categorias. A regra dos 80% aplicada: scripts fazem o trabalho mecânico, agentes ficam com o raciocínio." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ════════════════════════════════════════════════════════════
+   AIOSON Design System — Tokens
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
+  --transition-fast:140ms ease; --transition:220ms ease;
+}
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme:dark;
+  --bg:#07080c; --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
+  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
+  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
+  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb; --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
+  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
+  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
+  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
+}
+
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 38%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 32%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease, color .3s ease;
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
+    linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+}
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
+
+/* ── Shell ─────────────────────────────────────────────── */
+.shell {
+  width:min(1280px, calc(100% - 32px));
+  margin:0 auto;
+  padding:0 0 60px;
+  display:flex; flex-direction:column;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Command Dock — FIXED (truly floating)
+   ════════════════════════════════════════════════════════════ */
+.dock-wrap {
+  position:sticky;
+  top:14px;
+  z-index:60;
+  padding-top:18px;
+  margin-bottom:24px;
+}
+.cmd-dock {
+  display:flex; align-items:center; gap:14px;
+  padding:10px 14px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+  transition:box-shadow .3s ease, transform .25s ease, border-color .3s ease;
+}
+.dock-wrap.is-scrolled .cmd-dock {
+  box-shadow:var(--shadow-dock-scrolled);
+  border-color:color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.cmd-dock::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size:36px 36px;
+  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  opacity:.2;
+}
+
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark {
+  width:36px; height:36px; border-radius:11px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong)));
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+  color:var(--accent);
+}
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version {
+  display:inline-flex; align-items:center;
+  font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em;
+  padding:2px 6px; border-radius:5px;
+  background:var(--accent-2-soft); color:var(--accent-2);
+  border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border));
+}
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.8rem; font-weight:500; color:var(--muted);
+  background:transparent; border:none;
+  padding:6px 11px; border-radius:9px;
+  text-decoration:none;
+  transition:var(--transition-fast);
+}
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] {
+  color:var(--accent-strong); background:var(--panel-strong);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn {
+  width:34px; height:34px; border-radius:10px;
+  background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:var(--transition-fast);
+}
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.8rem; font-weight:600; color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent; border-radius:10px;
+  padding:7px 13px;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition:var(--transition-fast);
+}
+.cmd-cta:hover { transform:translateY(-1px); }
+
+/* ════════════════════════════════════════════════════════════
+   Marketing Hero — compact
+   ════════════════════════════════════════════════════════════ */
+.marketing-hero {
+  border:1px solid var(--border); border-radius:26px;
+  padding:42px 36px;
+  overflow:hidden; position:relative;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+  box-shadow:var(--shadow);
+  margin-bottom:18px;
+  display:grid;
+  grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap:32px;
+  align-items:center;
+}
+[data-theme="light"] .marketing-hero {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%),
+    linear-gradient(160deg, #fff 0%, #f7faff 100%);
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+}
+.marketing-hero::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  opacity:.5;
+}
+.hero-copy { position:relative; z-index:1; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.hero-copy h1 {
+  margin-top:14px;
+  font-size:clamp(2rem, 3.2vw, 2.8rem);
+  letter-spacing:-.04em; line-height:1.02; font-weight:700;
+  color:var(--text);
+}
+.hero-copy h1 .accent-cyan { color:var(--accent); }
+.hero-copy h1 .accent-violet { color:var(--accent-2); }
+.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
+.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.primary-button, .secondary-button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:38px; padding:0 16px;
+  border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap;
+  transition:var(--transition-fast);
+}
+.primary-button {
+  color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent;
+  box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.primary-button:hover { transform:translateY(-1px); }
+.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
+.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
+
+/* Hero rail — compact stats */
+.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
+.stat-tile {
+  border-radius:14px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
+}
+[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
+.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
+.stat-tile.blue   strong { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.stat-tile.green  strong { color:var(--accent-4); }
+.stat-tile.violet strong { color:var(--accent-2); }
+.stat-tile.gold   strong { color:var(--accent-3); }
+
+/* ════════════════════════════════════════════════════════════
+   Compact callout (1 row only — no more antes/depois split)
+   ════════════════════════════════════════════════════════════ */
+.compact-callout {
+  margin:24px 0;
+  border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border));
+  background:color-mix(in srgb, var(--accent-2-soft) 24%, var(--panel-strong));
+  border-radius:14px;
+  padding:18px 22px;
+  display:flex; gap:14px; align-items:flex-start;
+}
+[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
+.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
+.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
+.compact-callout strong { color:var(--accent-2); }
+
+/* ════════════════════════════════════════════════════════════
+   Site Section
+   ════════════════════════════════════════════════════════════ */
+.site-section { padding:36px 0 12px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-title .accent-emerald { color:var(--accent-4); }
+.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
+
+/* ════════════════════════════════════════════════════════════
+   Category Grid — compact 4-col cards, click to open <dialog>
+   ════════════════════════════════════════════════════════════ */
+.cat-grid {
+  display:grid; gap:14px;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+}
+.cat-card {
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:20px;
+  background:var(--panel-strong);
+  text-align:left;
+  cursor:pointer;
+  display:flex; flex-direction:column; gap:10px;
+  transition:var(--transition-fast);
+  overflow:hidden;
+}
+[data-theme="light"] .cat-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.cat-card::before {
+  content:''; position:absolute; inset:0 auto auto 0; width:120px; height:120px;
+  pointer-events:none; opacity:.7;
+}
+.cat-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
+.cat-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.cat-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="cyan"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="emerald"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="violet"]::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="gold"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="pink"]    { background:linear-gradient(180deg, rgba(255,107,164,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="pink"]::before    { background:radial-gradient(circle, rgba(255,107,164,.18), transparent 70%); }
+.cat-card[data-tone="teal"]    { background:linear-gradient(180deg, rgba(34,211,238,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="teal"]::before    { background:radial-gradient(circle, rgba(34,211,238,.18), transparent 70%); }
+.cat-card[data-tone="amber"]   { background:linear-gradient(180deg, rgba(251,191,36,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="amber"]::before   { background:radial-gradient(circle, rgba(251,191,36,.18), transparent 70%); }
+.cat-card[data-tone="slate"]   { background:linear-gradient(180deg, rgba(148,163,184,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="slate"]::before   { background:radial-gradient(circle, rgba(148,163,184,.18), transparent 70%); }
+
+.cat-head { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cat-icon {
+  width:36px; height:36px; border-radius:10px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  border:1px solid var(--border);
+}
+.cat-icon svg { width:18px; height:18px; }
+.cat-card[data-tone="cyan"]    .cat-icon { color:var(--accent);   border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.cat-card[data-tone="emerald"] .cat-icon { color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); }
+.cat-card[data-tone="violet"]  .cat-icon { color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); }
+.cat-card[data-tone="gold"]    .cat-icon { color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); }
+.cat-card[data-tone="pink"]    .cat-icon { color:#ff6ba4; border-color:rgba(255,107,164,.28); }
+.cat-card[data-tone="teal"]    .cat-icon { color:#22d3ee; border-color:rgba(34,211,238,.28); }
+.cat-card[data-tone="amber"]   .cat-icon { color:#fbbf24; border-color:rgba(251,191,36,.28); }
+.cat-card[data-tone="slate"]   .cat-icon { color:#94a3b8; border-color:rgba(148,163,184,.28); }
+.cat-count {
+  margin-left:auto;
+  font-family:var(--font-mono); font-size:.7rem; font-weight:600;
+  color:var(--muted);
+  background:var(--surface-soft); border:1px solid var(--border);
+  border-radius:6px; padding:2px 8px;
+}
+.cat-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; position:relative; z-index:1; }
+.cat-card p { font-size:.8rem; color:var(--muted); line-height:1.55; margin:0; position:relative; z-index:1; }
+.cat-cta {
+  margin-top:6px;
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:.78rem; font-weight:600;
+  position:relative; z-index:1;
+  transition:gap .15s ease;
+}
+.cat-card[data-tone="cyan"]    .cat-cta { color:var(--accent); }
+.cat-card[data-tone="emerald"] .cat-cta { color:var(--accent-4); }
+.cat-card[data-tone="violet"]  .cat-cta { color:var(--accent-2); }
+.cat-card[data-tone="gold"]    .cat-cta { color:var(--accent-3); }
+.cat-card[data-tone="pink"]    .cat-cta { color:#ff6ba4; }
+.cat-card[data-tone="teal"]    .cat-cta { color:#22d3ee; }
+.cat-card[data-tone="amber"]   .cat-cta { color:#fbbf24; }
+.cat-card[data-tone="slate"]   .cat-cta { color:#94a3b8; }
+.cat-card:hover .cat-cta { gap:9px; }
+
+/* ════════════════════════════════════════════════════════════
+   <dialog> popover — full details per category
+   ════════════════════════════════════════════════════════════ */
+dialog.popover {
+  width:min(900px, calc(100% - 32px));
+  max-height:min(85vh, 800px);
+  padding:0;
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:var(--panel-strong);
+  color:var(--text);
+  box-shadow:0 30px 80px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+[data-theme="light"] dialog.popover { box-shadow:0 30px 80px -10px rgba(15,23,42,.30); }
+dialog.popover::backdrop {
+  background:rgba(7,8,12,.72);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+}
+[data-theme="light"] dialog.popover::backdrop { background:rgba(15,23,42,.45); }
+dialog.popover[open] {
+  animation:dlg-in .25s ease;
+}
+@keyframes dlg-in {
+  from { opacity:0; transform:translateY(8px) scale(.985); }
+  to   { opacity:1; transform:translateY(0)   scale(1); }
+}
+.dlg-head {
+  display:flex; align-items:center; gap:14px;
+  padding:18px 22px;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel) 60%, transparent);
+}
+.dlg-head .cat-icon { width:32px; height:32px; }
+.dlg-head .dlg-meta { flex:1; }
+.dlg-head .dlg-eyebrow { font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.dlg-head .dlg-title { font-size:1.05rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; }
+.dlg-close {
+  width:32px; height:32px; border-radius:10px;
+  background:var(--surface-soft); border:1px solid var(--border); color:var(--muted);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:var(--transition-fast);
+  flex-shrink:0;
+}
+.dlg-close:hover { color:var(--text); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.dlg-body {
+  padding:22px;
+  overflow-y:auto;
+  max-height:calc(85vh - 70px);
+}
+.dlg-intro { color:var(--muted); font-size:.88rem; line-height:1.65; margin-bottom:16px; }
+
+/* Command grid inside dialog */
+.cmd-grid {
+  display:grid; gap:10px;
+  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+  margin-bottom:18px;
+}
+.cmd-card {
+  background:color-mix(in srgb, var(--panel) 50%, var(--panel-strong));
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+}
+[data-theme="light"] .cmd-card { background:color-mix(in srgb, var(--accent-soft) 8%, #fff); }
+.cmd-name { font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
+.cmd-title { font-size:.86rem; font-weight:700; color:var(--text-soft); margin-top:4px; letter-spacing:-.01em; }
+.cmd-desc { font-size:.76rem; color:var(--muted); line-height:1.55; margin-top:4px; }
+
+/* Terminal inside dialog */
+.terminal-card {
+  border-radius:14px;
+  border:1px solid transparent;
+  background:linear-gradient(180deg, #0e1320, #0a0f1c);
+  box-shadow:0 10px 30px -10px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+.terminal-head {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:#10182a;
+}
+.terminal-dots { display:flex; gap:5px; }
+.terminal-dots span { width:9px; height:9px; border-radius:999px; }
+.terminal-dots span:nth-child(1) { background:#ff6057; }
+.terminal-dots span:nth-child(2) { background:#febc2e; }
+.terminal-dots span:nth-child(3) { background:#28c840; }
+.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
+.terminal-copy {
+  margin-left:auto; background:transparent;
+  border:1px solid rgba(255,255,255,.10); color:#a9b3c7;
+  font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em;
+  padding:3px 9px; border-radius:5px; text-transform:uppercase;
+  transition:var(--transition-fast);
+}
+.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
+.terminal-body {
+  padding:14px 18px 16px;
+  font-family:var(--font-mono); font-size:.78rem; line-height:1.7;
+  color:#c8d8ee; overflow-x:auto;
+}
+.term-line { display:block; white-space:pre; }
+.term-prompt { color:#4dd5a6; }
+.term-cmd { color:#fff; }
+.term-flag { color:#e8b05f; }
+.term-str { color:#7be3bb; }
+.term-comment { color:#7f8796; }
+.term-out-key { color:#5ec8ff; }
+.term-out-val { color:#e5c07b; }
+.term-ok { color:#4dd5a6; }
+.term-warn { color:#e8b05f; }
+
+/* ════════════════════════════════════════════════════════════
+   Tier table — compact
+   ════════════════════════════════════════════════════════════ */
+.tier-table {
+  width:100%; border-collapse:collapse;
+  border:1px solid var(--border); border-radius:16px;
+  overflow:hidden;
+  background:var(--panel-strong);
+}
+[data-theme="light"] .tier-table { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.tier-table th {
+  text-align:left; padding:10px 14px;
+  font-family:var(--font-mono); font-size:.62rem; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+  background:color-mix(in srgb, var(--panel) 70%, transparent);
+  border-bottom:1px solid var(--border);
+}
+.tier-table td {
+  padding:12px 14px; vertical-align:top;
+  border-bottom:1px solid var(--border);
+  font-size:.82rem; color:var(--text-soft);
+}
+.tier-table tr:last-child td { border-bottom:none; }
+.tier-table td:first-child { font-family:var(--font-mono); font-weight:700; font-size:.74rem; letter-spacing:.06em; }
+.tier-table td.cmds { font-family:var(--font-mono); font-size:.72rem; color:var(--accent); line-height:1.75; }
+.t-micro { color:var(--accent-4); }
+.t-small { color:var(--accent); }
+.t-medium { color:var(--accent-2); }
+
+/* ════════════════════════════════════════════════════════════
+   Flow terminal — single big example on main page
+   ════════════════════════════════════════════════════════════ */
+.flow-terminal { margin-top:20px; }
+.flow-terminal .terminal-body { padding:18px 22px 22px; font-size:.82rem; }
+
+/* ════════════════════════════════════════════════════════════
+   Site CTA + Footer
+   ════════════════════════════════════════════════════════════ */
+.site-cta {
+  border-radius:22px;
+  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%),
+    color-mix(in srgb, var(--bg-deep) 86%, transparent);
+  padding:34px 30px;
+  display:grid; gap:18px; grid-template-columns:1.4fr 1fr;
+  align-items:center;
+  margin-top:24px;
+}
+[data-theme="light"] .site-cta {
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),
+    #fff;
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+}
+.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
+.site-cta-heading .accent-cyan { color:var(--accent); }
+.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
+.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
+
+.site-footer {
+  display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr;
+  padding:42px 4px 8px; margin-top:30px;
+  border-top:1px solid var(--border);
+}
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base {
+  margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap;
+  color:var(--muted); font-size:.76rem;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Responsive
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .marketing-hero { grid-template-columns:1fr; gap:24px; }
+  .cat-grid { grid-template-columns:repeat(2, 1fr); }
+  .site-cta { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; }
+  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
+  .cmd-brand { padding-right:0; border-right:none; }
+  .cmd-center { order:3; width:100%; }
+  .cmd-nav { width:100%; overflow-x:auto; }
+  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
+  .marketing-hero { padding:24px 20px; }
+  .hero-copy h1 { font-size:1.8rem; }
+  .cat-grid { grid-template-columns:1fr; }
+  .hero-rail { grid-template-columns:repeat(2, 1fr); }
+  .site-footer { grid-template-columns:1fr; }
+  dialog.popover { width:100%; max-height:100vh; height:100vh; border-radius:0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
 </head>
 <body>
 
-<nav>
-  <a href="../index.html" class="nav-back">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    Tutoriais
-  </a>
-  <span class="nav-sep">/</span>
-  <span class="nav-title">SDD Automation Scripts</span>
-  <span class="nav-tag">Regra dos 80%</span>
-</nav>
+<main class="shell">
 
-<!-- ═══════════════════════════════════════════════════════ HERO -->
-<div class="hero">
-  <div class="hero-eyebrow">Tutorial · Plan 79</div>
-  <h1>SDD Automation Scripts</h1>
-  <p class="hero-sub">
-    12 scripts determinísticos que eliminam 4.800–8.800 tokens por feature,
-    movendo verificações de estado, validação de artefatos e gate checks para fora do contexto LLM.
-  </p>
-  <div class="hero-meta">
-    <div class="meta-pill">
-      <div class="meta-dot" style="background:var(--green)"></div>
-      12 comandos novos
-    </div>
-    <div class="meta-pill">
-      <div class="meta-dot" style="background:var(--yellow)"></div>
-      Zero chamadas LLM
-    </div>
-    <div class="meta-pill">
-      <div class="meta-dot" style="background:var(--accent)"></div>
-      Regra dos 80%
-    </div>
+  <!-- ═══════════════════════════════════════════════════════ STICKY DOCK -->
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" />
+          </svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> automation · 50+ scripts</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="../index.html#guides"><span class="cmd-nav-glyph">◐</span> Tutoriais</a>
+          <a class="cmd-nav-item" href="./automation.html" aria-current="page"><span class="cmd-nav-glyph">⚡</span> Automation</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <span class="cmd-divider"></span>
+        <a href="../releases/1-9-0/index.html" class="cmd-cta">
+          Release v1.9.0
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
   </div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════ POR QUÊ -->
-<section>
-  <div class="container">
-    <div class="section-label">Motivação</div>
-    <h2>Por que 80% do trabalho não precisa de LLM</h2>
-    <p>
-      Antes desses scripts, perguntas como "o gate A está aprovado?" ou "qual a classificação dessa feature?"
-      eram resolvidas dentro da janela de contexto do agente — consumindo tokens desnecessários
-      para trabalho determinístico puro.
-    </p>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px">
-      <div class="card" style="border-color:rgba(248,113,113,0.3)">
-        <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--red);margin-bottom:12px">Antes (sem scripts)</p>
-        <p style="font-size:0.85rem">O agente lê <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--cyan)">project.context.md</code>, <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--cyan)">spec-checkout.md</code>, <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--cyan)">implementation-plan.md</code> e mais 3 arquivos para descobrir o que já existe — usando 3.000+ tokens no processo.</p>
-      </div>
-      <div class="card" style="border-color:rgba(52,211,153,0.3)">
-        <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--green);margin-bottom:12px">Agora (com scripts)</p>
-        <p style="font-size:0.85rem">Uma chamada a <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--cyan)">aioson preflight .</code> retorna tudo em JSON estruturado em &lt; 200ms. O agente usa o resultado diretamente.</p>
+  <!-- ═══════════════════════════════════════════════════════ HERO COMPACTO -->
+  <section class="marketing-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Tutorial · CLI Automation</span>
+      <h1>
+        <span class="accent-cyan">50+</span> scripts.<br />
+        <span class="accent-violet">8 categorias</span>. Zero LLM.
+      </h1>
+      <p class="lede">
+        80% do trabalho de verificação, estado e validação é determinístico. Scripts fazem melhor — sem custo de tokens, sem variabilidade. Reserve o agente para os 20% que exigem raciocínio.
+      </p>
+      <div class="hero-actions">
+        <a class="primary-button" href="#categorias">
+          Ver as categorias
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="secondary-button" href="#fluxo">Fluxo completo</a>
       </div>
     </div>
+    <aside class="hero-rail">
+      <div class="stat-tile blue"><span>scripts</span><strong>50+</strong></div>
+      <div class="stat-tile violet"><span>categorias</span><strong>8</strong></div>
+      <div class="stat-tile green"><span>tokens/feature</span><strong>−8.8k</strong></div>
+      <div class="stat-tile gold"><span>llm calls</span><strong>0</strong></div>
+    </aside>
+  </section>
 
-    <div class="callout" style="margin-top:28px">
-      <div class="callout-icon">💡</div>
-      <p><strong>Regra dos 80%:</strong> 80% do trabalho de verificação, estado e validação é determinístico — scripts fazem melhor, mais rápido e sem custo de tokens. Reserve o contexto do agente para os 20% que exigem raciocínio.</p>
+  <!-- ═══════════════════════════════════════════════════════ CALLOUT REGRA 80% -->
+  <section class="site-section">
+    <div class="compact-callout">
+      <div class="compact-callout-icon">💡</div>
+      <p><strong>A regra dos 80%:</strong> antes desses scripts, perguntas como "o gate A está aprovado?" ou "qual a classificação dessa feature?" eram resolvidas dentro da janela de contexto do agente — consumindo 3 000+ tokens. Agora, uma chamada a <code>aioson preflight .</code> retorna tudo em JSON em &lt; 200ms.</p>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ═══════════════════════════════════════════════════════ MAPA DOS SCRIPTS -->
-<section>
-  <div class="container">
-    <div class="section-label">Visão Geral</div>
-    <h2>Os 12 scripts e o que cada um faz</h2>
-    <p>Cada script elimina um tipo específico de trabalho que os agentes faziam manualmente.</p>
+  <!-- ═══════════════════════════════════════════════════════ CATEGORIAS -->
+  <section class="site-section" id="categorias">
+    <header class="site-section-header">
+      <span class="eyebrow">8 categorias · 50+ scripts</span>
+      <h2 class="site-section-title">Cada categoria <span class="accent-cyan">substitui</span> um tipo de trabalho.</h2>
+      <p class="site-section-subtitle">Click em qualquer card pra ver os comandos, descrição, exemplo de terminal e quando usar. Tudo via popover — sem sair da página.</p>
+    </header>
 
-    <div class="cmd-grid">
-      <div class="cmd-card">
-        <div class="cmd-name">aioson preflight</div>
-        <div class="cmd-title">Pré-voo completo</div>
-        <div class="cmd-desc">Coleta modo, classificação, framework, test runner, artefatos, gates e prontidão em uma chamada.</div>
-        <div class="cmd-saving">-1.800–3.200 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson classify</div>
-        <div class="cmd-title">Classificação MICRO/SMALL/MEDIUM</div>
-        <div class="cmd-desc">Scoring automático via PRD + requirements. Modo interativo disponível.</div>
-        <div class="cmd-saving">-800–1.500 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson sizing</div>
-        <div class="cmd-title">Modelo de sizing</div>
-        <div class="cmd-desc">Decide entre inplace, phased_inplace e phased_external contando entidades e integrações.</div>
-        <div class="cmd-saving">-400–800 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson detect:test-runner</div>
-        <div class="cmd-title">Detecção de test runner</div>
-        <div class="cmd-desc">PHPUnit, Jest, Vitest, Pytest, RSpec, Forge, node:test — detecta por arquivos de config.</div>
-        <div class="cmd-saving">-300–600 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson gate:check</div>
-        <div class="cmd-title">Verificação de phase gate</div>
-        <div class="cmd-desc">Valida pré-requisitos e artefatos dos gates A/B/C/D. Retorna PASS ou BLOCKED.</div>
-        <div class="cmd-saving">-600–1.200 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson artifact:validate</div>
-        <div class="cmd-title">Cadeia de artefatos</div>
-        <div class="cmd-desc">Verifica PRD → spec → plano → conformance e indica o próximo item faltante.</div>
-        <div class="cmd-saving">-500–900 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson pulse:update</div>
-        <div class="cmd-title">Atualização de pulse</div>
-        <div class="cmd-desc">Cria ou atualiza project-pulse.md com agente ativo, feature, gate e próximo passo.</div>
-        <div class="cmd-saving">-150–300 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson state:save</div>
-        <div class="cmd-title">Ponto de continuação</div>
-        <div class="cmd-desc">Salva fase, status e spec-version em dev-state.md com histórico auditável.</div>
-        <div class="cmd-saving">-150–300 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson feature:close</div>
-        <div class="cmd-title">Fechamento de feature</div>
-        <div class="cmd-desc">Atualiza spec (QA sign-off), features.md e project-pulse.md com um comando.</div>
-        <div class="cmd-saving">-800–1.400 tokens</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson workflow:execute</div>
-        <div class="cmd-title">Orquestração de feature</div>
-        <div class="cmd-desc">Monta e executa o plano de agentes por tier. Suporta --dry-run e --start-from.</div>
-        <div class="cmd-saving">economiza coordenação manual</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson runner:queue:from-plan</div>
-        <div class="cmd-title">Enfileirar fases do plano</div>
-        <div class="cmd-desc">Extrai fases ## Phase N: e enfileira no runner com prioridades correspondentes.</div>
-        <div class="cmd-saving">automação de runner</div>
-      </div>
-      <div class="cmd-card">
-        <div class="cmd-name">aioson learning:auto-promote</div>
-        <div class="cmd-title">Promoção de aprendizados</div>
-        <div class="cmd-desc">Promove aprendizados process/quality de alta frequência para .aioson/rules/.</div>
-        <div class="cmd-saving">memória procedural automática</div>
-      </div>
+    <div class="cat-grid">
+
+      <button class="cat-card" data-tone="cyan" data-dialog="dlg-spec" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg></span>
+          <span class="cat-count">12</span>
+        </div>
+        <h3>Spec-Driven core</h3>
+        <p>Pré-voo, classificação, gates A·B·C·D, artefatos, telemetria, fechamento de feature.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="emerald" data-dialog="dlg-memory" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
+          <span class="cat-count">7</span>
+        </div>
+        <h3>Living Memory</h3>
+        <p>Bootstrap status, FTS5 search, archive com evolution log, reflect engine pós-<code>agent:done</code>.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="violet" data-dialog="dlg-brains" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
+          <span class="cat-count">1</span>
+        </div>
+        <h3>Brains procedural</h3>
+        <p>Padrões com quality-score, carregamento lazy por tags. 3 brains, 25 nodes hoje.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="gold" data-dialog="dlg-context" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 3v18"/></svg></span>
+          <span class="cat-count">10</span>
+        </div>
+        <h3>Context</h3>
+        <p>Pack focal, telemetria de carga, validação, health do SQLite, cache, compress, search.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="pink" data-dialog="dlg-dossier" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg></span>
+          <span class="cat-count">8</span>
+        </div>
+        <h3>Dossier</h3>
+        <p>Why/What + code map + agent trail por feature. Init silencioso, add-finding, audit, compact.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="teal" data-dialog="dlg-scout" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+          <span class="cat-count">3</span>
+        </div>
+        <h3>Scout (sub-task)</h3>
+        <p>Surveys context-isolated. @deyvin dispatch sem queimar contexto do parent. Prep, validate, commit.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="amber" data-dialog="dlg-harness" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span class="cat-count">3</span>
+        </div>
+        <h3>Harness validator</h3>
+        <p>Phase D enforcement via JSON. <code>harness:init</code>, <code>validate</code>, <code>apply-validation</code> com circuit breaker.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="slate" data-dialog="dlg-ops" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg></span>
+          <span class="cat-count">8</span>
+        </div>
+        <h3>Operations</h3>
+        <p>Doctor (15+ checks com <code>--fix</code>), notify, dev:state, commit:prepare, agent:done, learning:auto-promote.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ═══════════════════════════════════════════════════════ ECONOMIA DE TOKENS -->
-<section>
-  <div class="container">
-    <div class="section-label">Impacto</div>
-    <h2>Economia de tokens por feature</h2>
-    <p>Estimativa por chamada, com base na quantidade de arquivo I/O que cada script substitui.</p>
-
-    <div class="savings-grid">
-      <div class="savings-row">
-        <div class="savings-cmd">preflight</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:85%"></div></div>
-        <div class="savings-val">1.800–3.200</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">feature:close</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:72%"></div></div>
-        <div class="savings-val">800–1.400</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">classify</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:60%"></div></div>
-        <div class="savings-val">800–1.500</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">gate:check</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:52%"></div></div>
-        <div class="savings-val">600–1.200</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">artifact:validate</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:44%"></div></div>
-        <div class="savings-val">500–900</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">sizing</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:36%"></div></div>
-        <div class="savings-val">400–800</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">detect:test-runner</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:28%"></div></div>
-        <div class="savings-val">300–600</div>
-      </div>
-      <div class="savings-row">
-        <div class="savings-cmd">pulse:update + state:save</div>
-        <div class="savings-bar-wrap"><div class="savings-bar" style="width:20%"></div></div>
-        <div class="savings-val">300–600</div>
-      </div>
-    </div>
-
-    <div class="callout green" style="margin-top:32px">
-      <div class="callout-icon">✅</div>
-      <p><strong>Total estimado por feature completa:</strong> 4.800–8.800 tokens economizados — equivalente a 2–4 sessões de agente a menos, sem perda de rastreabilidade.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════ WORKFLOW POR TIER -->
-<section>
-  <div class="container">
-    <div class="section-label">Workflow</div>
-    <h2>Qual script usar em cada tier</h2>
-
+  <!-- ═══════════════════════════════════════════════════════ TIER TABLE -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Workflow</span>
+      <h2 class="site-section-title">Qual conjunto usar em cada <span class="accent-gold">tier</span>.</h2>
+      <p class="site-section-subtitle">A combinação muda conforme a classificação. MICRO usa o mínimo; MEDIUM ativa o conjunto completo + paralelismo.</p>
+    </header>
     <table class="tier-table">
-      <thead>
-        <tr>
-          <th>Tier</th>
-          <th>Agentes</th>
-          <th>Scripts obrigatórios</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Tier</th><th>Agentes</th><th>Scripts essenciais</th></tr></thead>
       <tbody>
-        <tr>
-          <td class="tier-micro">MICRO</td>
-          <td>@dev</td>
-          <td>preflight · detect:test-runner · state:save · feature:close</td>
-        </tr>
-        <tr>
-          <td class="tier-small">SMALL</td>
-          <td>@product → @analyst → @dev → @qa</td>
-          <td>preflight · classify · gate:check · artifact:validate · pulse:update · state:save · feature:close</td>
-        </tr>
-        <tr>
-          <td class="tier-medium">MEDIUM</td>
-          <td>+ @architect + paralelismo</td>
-          <td>todos os anteriores + sizing · runner:queue:from-plan · learning:auto-promote</td>
-        </tr>
+        <tr><td class="t-micro">MICRO</td><td>@product → @dev → @qa</td><td class="cmds">preflight · classify · dev:state:write · memory:status · feature:close · doctor</td></tr>
+        <tr><td class="t-small">SMALL</td><td>+ @analyst (+ @sheldon opc)</td><td class="cmds">+ gate:check · artifact:validate · context:pack · pulse:update · brain:query · dossier:init</td></tr>
+        <tr><td class="t-medium">MEDIUM</td><td>+ @architect · @sheldon · @validator · paralelismo</td><td class="cmds">+ sizing · workflow:execute · memory:search · harness:* · scout:* · notify · parallel:*</td></tr>
       </tbody>
     </table>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FLUXO COMPLETO -->
+  <section class="site-section" id="fluxo">
+    <header class="site-section-header">
+      <span class="eyebrow">Fluxo completo</span>
+      <h2 class="site-section-title">Do início ao fechamento — <span class="accent-cyan">só scripts</span>.</h2>
+      <p class="site-section-subtitle">Uma feature SMALL completa sem leitura manual de arquivos. Cada passo é determinístico, cada saída é auditável.</p>
+    </header>
+    <div class="flow-terminal terminal-card">
+      <div class="terminal-head">
+        <div class="terminal-dots"><span></span><span></span><span></span></div>
+        <span class="terminal-title">fluxo completo · feature SMALL</span>
+        <button class="terminal-copy" type="button" data-copy="aioson preflight . --agent=product --feature=checkout&#10;aioson classify . --feature=checkout&#10;aioson memory:summary . --last=5&#10;aioson dossier:init . --slug=checkout&#10;aioson workflow:execute . --feature=checkout --tool=claude --dry-run&#10;aioson workflow:execute . --feature=checkout --tool=claude&#10;aioson state:save . --feature=checkout --phase=2 --next='Phase 3: webhook'&#10;aioson context:pack . --agent=dev --goal='webhook handler'&#10;aioson gate:check . --feature=checkout --gate=D&#10;aioson feature:close . --feature=checkout --verdict=PASS&#10;aioson doctor . --fix&#10;aioson learning:auto-promote . --threshold=3">Copiar</button>
+      </div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-comment"># 1. Pré-voo + classificação</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson preflight</span> . <span class="term-flag">--agent</span>=product <span class="term-flag">--feature</span>=checkout</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson classify</span> . <span class="term-flag">--feature</span>=checkout</span>
+<span class="term-line"><span class="term-out-key">→</span> SMALL · chain: @product → @analyst → @dev → @qa</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 2. Cold-load barato + inicializa dossier</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:summary</span> . <span class="term-flag">--last</span>=5</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson dossier:init</span> . <span class="term-flag">--slug</span>=checkout</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 3. Plano + execução (workflow:execute orquestra @product → @analyst → @dev → @qa)</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson workflow:execute</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--tool</span>=claude <span class="term-flag">--dry-run</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson workflow:execute</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--tool</span>=claude</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 4. Durante @dev: salvar estado + context pack focal</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson state:save</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--phase</span>=2 <span class="term-flag">--next</span>=<span class="term-str">'Phase 3: webhook'</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson context:pack</span> . <span class="term-flag">--agent</span>=dev <span class="term-flag">--goal</span>=<span class="term-str">'webhook handler'</span></span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 5. Gate D + QA close + auto-distillation</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson gate:check</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--gate</span>=D</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson feature:close</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--verdict</span>=PASS</span>
+<span class="term-line"><span class="term-ok">✓</span> spec sealed · features.md flipped · evolution_log entry · learning:auto-promote queued</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 6. Health check + promover aprendizados</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson doctor</span> . <span class="term-flag">--fix</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson learning:auto-promote</span> . <span class="term-flag">--threshold</span>=3</span>
+<span class="term-line"><span class="term-ok">✓</span> 12 chamadas CLI · 0 LLM · −8 800 tokens economizados</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FINAL CTA -->
+  <section class="site-cta">
+    <div>
+      <span class="eyebrow">Próximo passo</span>
+      <h2 class="site-cta-heading">Pare de queimar tokens em <span class="accent-cyan">trabalho mecânico</span>.</h2>
+      <p class="site-cta-text">Os 50+ scripts cobrem 80% do que é determinístico. Sobre o agente cai apenas o raciocínio real.</p>
+    </div>
+    <div class="site-cta-actions">
+      <a class="primary-button" href="../index.html">Voltar ao hub</a>
+      <a class="secondary-button" href="../releases/1-9-0/index.html">Release v1.9.0 →</a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="./index.html">SDD básico</a></li><li><a href="../squads/index.html">Squads</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Releases</div><ul><li><a href="../releases/1-9-0/index.html">v1.9.0</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>50+ scripts · 8 categorias · zero LLM calls</div>
+      <div>AIOSON · inception mode</div>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════ DIALOGS (popovers) -->
+
+<dialog class="popover" id="dlg-spec">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent); border-color:color-mix(in srgb, var(--accent) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 1 · 12 scripts</div><div class="dlg-title">Spec-Driven core</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
   </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: PREFLIGHT -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 1 de 6</div>
-    <h2>Começar uma sessão com <code style="font-size:1.4rem;font-family:'JetBrains Mono';color:var(--cyan)">preflight</code></h2>
-    <p>
-      O comando <code style="font-family:'JetBrains Mono';color:var(--cyan)">preflight</code> substitui a leitura manual de 4–6 arquivos de contexto.
-      Use-o sempre que iniciar uma sessão de agente.
-    </p>
-
-    <div class="code-block">
-<span class="c"># Verificar prontidão antes de começar o @dev</span>
-<span class="cmd">aioson preflight</span> . <span class="flag">--agent</span>=dev <span class="flag">--feature</span>=checkout <span class="flag">--json</span>
+  <div class="dlg-body">
+    <p class="dlg-intro">A fundação do AIOSON. Cobrem pré-voo, classificação, gates A·B·C·D, artefatos, telemetria e fechamento de feature.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson preflight</div><div class="cmd-title">Pré-voo completo</div><div class="cmd-desc">Modo, classificação, framework, test runner, artefatos, gates e prontidão em uma chamada.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson classify</div><div class="cmd-title">MICRO / SMALL / MEDIUM</div><div class="cmd-desc">Scoring automático via PRD + requirements.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson sizing</div><div class="cmd-title">Modelo de sizing</div><div class="cmd-desc">Inplace, phased_inplace, phased_external contando entidades e integrações.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson detect:test-runner</div><div class="cmd-title">Detecção do runner</div><div class="cmd-desc">PHPUnit, Jest, Vitest, Pytest, RSpec, Forge, node:test por arquivos de config.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson gate:check</div><div class="cmd-title">Phase gate</div><div class="cmd-desc">Valida pré-requisitos e artefatos dos gates A/B/C/D. PASS ou BLOCKED.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson artifact:validate</div><div class="cmd-title">Cadeia de artefatos</div><div class="cmd-desc">PRD → spec → plano → conformance e indica o próximo item faltante.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson pulse:update</div><div class="cmd-title">Pulse update</div><div class="cmd-desc">Cria ou atualiza project-pulse.md com agente, feature, gate e próximo passo.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson state:save</div><div class="cmd-title">Ponto de continuação</div><div class="cmd-desc">Alias <code>dev:state:write</code>. Fase, status e spec-version em dev-state.md com histórico.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson feature:close</div><div class="cmd-title">Fechamento</div><div class="cmd-desc">Atualiza spec (QA sign-off), features.md e pulse. Dispara distillation hook.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson workflow:execute</div><div class="cmd-title">Orquestração</div><div class="cmd-desc">Monta e executa o plano de agentes por tier. <code>--dry-run</code> e <code>--start-from</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson workflow:next</div><div class="cmd-title">Próximo estágio</div><div class="cmd-desc">Avança o workflow. <code>--complete</code>, <code>--status</code>, <code>--suggest</code>, auto-routing.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson learning:auto-promote</div><div class="cmd-title">Promoção de aprendizados</div><div class="cmd-desc">Promove patterns process/quality (threshold ≥ 3) para <code>.aioson/rules/</code>.</div></div>
     </div>
-
-    <div class="callout yellow">
-      <div class="callout-icon">⚡</div>
-      <p>O campo <strong>readiness.status</strong> retorna <code style="font-family:'JetBrains Mono'">READY</code> ou <code style="font-family:'JetBrains Mono'">BLOCKED</code> com lista de <strong>blockers</strong>. Se BLOCKED, resolva os blockers antes de iniciar o agente.</p>
-    </div>
-
-    <div class="pipeline-track" style="margin-top:32px">
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Output</div>
-          <div class="p-phase-agent">JSON</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">mode, classification, framework</div>
-          <div class="p-artifact-desc">Como o projeto está configurado e qual tier de feature usar</div>
-        </div>
-      </div>
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Output</div>
-          <div class="p-phase-agent">JSON</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">artifacts, phase_gates</div>
-          <div class="p-artifact-desc">Quais arquivos já existem e quais gates foram aprovados</div>
-        </div>
-      </div>
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Output</div>
-          <div class="p-phase-agent">JSON</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">readiness: READY / BLOCKED</div>
-          <div class="p-artifact-desc">Veredito final com lista de blockers se houver</div>
-          <div class="p-cmd-tag">use antes de qualquer sessão</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: GATE CHECK -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 2 de 6</div>
-    <h2>Verificar gates com <code style="font-size:1.4rem;font-family:'JetBrains Mono';color:var(--cyan)">gate:check</code></h2>
-    <p>
-      Use antes de avançar para o próximo agente. Cada gate tem pré-requisitos e artefatos obrigatórios.
-    </p>
-
-    <div class="gate-flow">
-      <div class="gate-row">
-        <div class="gate-letter g-a">A</div>
-        <div class="gate-info">
-          <div class="gate-name">Gate A — Requirements</div>
-          <div class="gate-artifact">requirements-{slug}.md ou prd-{slug}.md</div>
-        </div>
-        <div>
-          <div class="gate-status-pass">sem pré-requisitos</div>
-        </div>
-      </div>
-      <div class="gate-row">
-        <div class="gate-letter g-b">B</div>
-        <div class="gate-info">
-          <div class="gate-name">Gate B — Design</div>
-          <div class="gate-artifact">spec-{slug}.md</div>
-        </div>
-        <div>
-          <div class="gate-status-block">requer Gate A</div>
-        </div>
-      </div>
-      <div class="gate-row">
-        <div class="gate-letter g-c">C</div>
-        <div class="gate-info">
-          <div class="gate-name">Gate C — Plan</div>
-          <div class="gate-artifact">implementation-plan-{slug}.md</div>
-        </div>
-        <div>
-          <div class="gate-status-block">requer Gates A + B</div>
-        </div>
-      </div>
-      <div class="gate-row">
-        <div class="gate-letter g-d">D</div>
-        <div class="gate-info">
-          <div class="gate-name">Gate D — Execution</div>
-          <div class="gate-artifact">QA sign-off em spec + gate_execution</div>
-        </div>
-        <div>
-          <div class="gate-status-block">requer Gates A + B + C</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="code-block" style="margin-top:28px">
-<span class="c"># Antes de acionar @dev: verificar Gate C</span>
-<span class="cmd">aioson gate:check</span> . <span class="flag">--feature</span>=checkout <span class="flag">--gate</span>=C <span class="flag">--json</span>
-
-<span class="c"># Aceita também nomes completos</span>
-<span class="cmd">aioson gate:check</span> . <span class="flag">--feature</span>=checkout <span class="flag">--gate</span>=plan
-    </div>
-
-    <p style="margin-top:16px">
-      Se o resultado for <span class="verdict-pass">PASS</span> — avance para o próximo agente.<br>
-      Se for <span class="verdict-blocked">BLOCKED</span> — o campo <code style="font-family:'JetBrains Mono';color:var(--cyan)">blockers</code> indica exatamente o que falta.
-    </p>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: STATE -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 3 de 6</div>
-    <h2>Salvar estado durante o dev</h2>
-    <p>
-      Use <code style="font-family:'JetBrains Mono';color:var(--cyan)">state:save</code> e <code style="font-family:'JetBrains Mono';color:var(--cyan)">pulse:update</code> ao fim de cada fase para garantir recuperação de sessão sem perda de contexto.
-    </p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h3>Salvar ponto de continuação</h3>
-          <p>Registra fase, status e spec-version em <code style="font-family:'JetBrains Mono';color:var(--cyan)">dev-state.md</code> com entrada histórica.</p>
-          <div class="code-block">
-<span class="cmd">aioson state:save</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--phase</span>=<span class="num">2</span> \
-  <span class="flag">--status</span>=in_progress \
-  <span class="flag">--next</span>=<span class="str">"Phase 3: webhook"</span> \
-  <span class="flag">--spec-version</span>=<span class="num">4</span>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h3>Atualizar o pulse</h3>
-          <p>Registra em <code style="font-family:'JetBrains Mono';color:var(--cyan)">project-pulse.md</code> o agente ativo, a feature e o próximo passo.</p>
-          <div class="code-block">
-<span class="cmd">aioson pulse:update</span> . \
-  <span class="flag">--agent</span>=dev \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--action</span>=<span class="str">"Phase 2 concluída"</span> \
-  <span class="flag">--next</span>=<span class="str">"Phase 3: webhook handler"</span>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h3>Na próxima sessão: ler estado</h3>
-          <p>O <code style="font-family:'JetBrains Mono';color:var(--cyan)">preflight</code> já inclui <code style="font-family:'JetBrains Mono';color:var(--cyan)">dev_state</code> e <code style="font-family:'JetBrains Mono';color:var(--cyan)">pulse</code> no JSON. Não é necessário ler os arquivos manualmente.</p>
-          <div class="code-block">
-<span class="cmd">aioson preflight</span> . <span class="flag">--agent</span>=dev <span class="flag">--feature</span>=checkout <span class="flag">--json</span>
-<span class="c"># → dev_state.phase = 2, dev_state.next = "Phase 3: webhook"</span>
-          </div>
-        </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">spec-driven</span><button class="terminal-copy" type="button" data-copy="aioson preflight . --agent=dev --feature=checkout --json&#10;aioson gate:check . --feature=checkout --gate=C&#10;aioson state:save . --feature=checkout --phase=2 --next='Phase 3'&#10;aioson feature:close . --feature=checkout --verdict=PASS">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson preflight</span> . <span class="term-flag">--agent</span>=dev <span class="term-flag">--feature</span>=checkout <span class="term-flag">--json</span></span>
+<span class="term-line"><span class="term-out-key">readiness</span>: <span class="term-ok">READY</span>  <span class="term-out-key">classification</span>: SMALL</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson gate:check</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--gate</span>=C</span>
+<span class="term-line"><span class="term-out-key">status</span>: <span class="term-ok">PASS</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson feature:close</span> . <span class="term-flag">--feature</span>=checkout <span class="term-flag">--verdict</span>=PASS</span>
+<span class="term-line"><span class="term-ok">✓</span> spec sealed · features.md flipped · distillation queued</span>
       </div>
     </div>
   </div>
-</section>
+</dialog>
 
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: FEATURE CLOSE -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 4 de 6</div>
-    <h2>Fechar feature após QA com <code style="font-size:1.4rem;font-family:'JetBrains Mono';color:var(--cyan)">feature:close</code></h2>
-    <p>
-      Um comando substitui a edição manual de três arquivos: <code style="font-family:'JetBrains Mono';color:var(--cyan)">spec-*.md</code>, <code style="font-family:'JetBrains Mono';color:var(--cyan)">features.md</code> e <code style="font-family:'JetBrains Mono';color:var(--cyan)">project-pulse.md</code>.
-    </p>
-
-    <div class="code-block">
-<span class="c"># PASS — feature aprovada pelo QA</span>
-<span class="cmd">aioson feature:close</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--verdict</span>=PASS
-
-<span class="c"># PASS com residual (item aceito mas não testado completamente)</span>
-<span class="cmd">aioson feature:close</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--verdict</span>=PASS \
-  <span class="flag">--residual</span>=<span class="str">"Email delivery não testado E2E"</span>
-
-<span class="c"># FAIL — feature rejeitada</span>
-<span class="cmd">aioson feature:close</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--verdict</span>=FAIL \
-  <span class="flag">--notes</span>=<span class="str">"Auth edge case ausente"</span>
+<dialog class="popover" id="dlg-memory">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 2 · 7 scripts · v1.9.0</div><div class="dlg-title">Living Memory</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Sessões pararam de esquecer. Bootstrap em 4 arquivos, reflect engine pós-<code>agent:done</code>, FTS5 search, archive com evolution log. Tudo via CLI.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson memory:status</div><div class="cmd-title">Snapshot da memória</div><div class="cmd-desc">Bootstrap coverage (N/4), brains indexed, runtime tasks, autonomy mode. Ideal pra preflight.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:summary</div><div class="cmd-title">Resumo recente</div><div class="cmd-desc">Identity + pulse + recent activity + retrieval hints. Cold-load barato pra @neo, @dev.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:search</div><div class="cmd-title">FTS5 full-text</div><div class="cmd-desc">Busca em content_items + learnings via FTS5. <code>--surface=rules|learnings|all</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:archive</div><div class="cmd-title">Tier-2 archive</div><div class="cmd-desc">Arquiva rule/brain/learning com <code>--reason</code>. Evolution log preserva história.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:restore</div><div class="cmd-title">Restaurar archived</div><div class="cmd-desc">Retorna target arquivado com nova entrada <code>event_type='restored'</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:reflect-prepare</div><div class="cmd-title">Reflect manifest</div><div class="cmd-desc">Classifica diff pós-agent e escreve <code>.aioson/runtime/reflect-prompt.json</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson memory:reflect-commit</div><div class="cmd-title">Reflect commit</div><div class="cmd-desc">Valida e persiste bootstrap edits do agente. Frontmatter intact, snapshot hash check.</div></div>
     </div>
-
-    <div class="pipeline-track" style="margin-top:24px">
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Atualiza</div>
-          <div class="p-phase-agent">spec file</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">spec-checkout.md</div>
-          <div class="p-artifact-desc">Adiciona bloco ## QA Sign-off + atualiza gate_execution no frontmatter</div>
-        </div>
-      </div>
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Atualiza</div>
-          <div class="p-phase-agent">features</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">features.md</div>
-          <div class="p-artifact-desc">Muda status para <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--green)">done</code> ou <code style="font-family:'JetBrains Mono';font-size:0.8rem;color:var(--red)">qa_failed</code> com data</div>
-        </div>
-      </div>
-      <div class="p-phase">
-        <div class="p-phase-label">
-          <div class="p-phase-name">Atualiza</div>
-          <div class="p-phase-agent">pulse</div>
-        </div>
-        <div class="p-artifact">
-          <div class="p-artifact-name">project-pulse.md</div>
-          <div class="p-artifact-desc">Limpa active_feature, registra last_gate: Gate D</div>
-        </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">living memory</span><button class="terminal-copy" type="button" data-copy="aioson memory:status .&#10;aioson memory:summary . --last=5&#10;aioson memory:search 'harness gate' --surface=all">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:status</span> .</span>
+<span class="term-line"><span class="term-out-key">Bootstrap</span>: <span class="term-ok">4/4</span> · <span class="term-out-key">Brains</span>: 3 indexed · <span class="term-out-key">Runtime</span>: 40 done</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:search</span> <span class="term-str">'harness gate'</span> <span class="term-flag">--surface</span>=all</span>
+<span class="term-line"><span class="term-out-key">match</span>: rule:harness-contract · rank: 1.42</span>
       </div>
     </div>
   </div>
-</section>
+</dialog>
 
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: WORKFLOW -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 5 de 6</div>
-    <h2>Orquestrar sem dashboard com <code style="font-size:1.3rem;font-family:'JetBrains Mono';color:var(--cyan)">workflow:execute</code></h2>
-    <p>
-      Executa o fluxo completo de agentes de uma feature, passando o contexto correto para cada um e registrando estado ao longo do caminho.
-    </p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h3>Dry-run: ver o plano antes de executar</h3>
-          <div class="code-block">
-<span class="cmd">aioson workflow:execute</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--classification</span>=SMALL \
-  <span class="flag">--dry-run</span> \
-  <span class="flag">--json</span>
-<span class="c"># → steps: [{agent:"product"}, {agent:"analyst"}, {agent:"dev"}, {agent:"qa"}]</span>
-<span class="c"># Steps com skip:true já têm artefatos — serão pulados automaticamente</span>
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h3>Executar o fluxo</h3>
-          <div class="code-block">
-<span class="cmd">aioson workflow:execute</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--tool</span>=claude
-          </div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h3>Retomar de um ponto específico</h3>
-          <p>Se a feature já passou por product e analyst, use <code style="font-family:'JetBrains Mono';color:var(--flag)">--start-from</code> para pular:</p>
-          <div class="code-block">
-<span class="cmd">aioson workflow:execute</span> . \
-  <span class="flag">--feature</span>=checkout \
-  <span class="flag">--tool</span>=claude \
-  <span class="flag">--start-from</span>=dev
-          </div>
-        </div>
+<dialog class="popover" id="dlg-brains">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 3 · 1 script · procedural</div><div class="dlg-title">Brains</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Padrões procedurais com quality score (q ≥ 4 = default). Carrega só o que faz match com as tags da task. Hoje: 3 brains, 25 nodes — site-forge/visual-patterns, dev/patterns, sheldon/architecture-decisions. Agentes evoluem brains conforme ganham novos padrões.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson brain:query</div><div class="cmd-title">Buscar por tag</div><div class="cmd-desc"><code>--tags=security,shell</code> + <code>--min-quality=4</code>. Formatos: compact, json, ids. Substitui leitura especulativa de brains inteiros.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">brain</span><button class="terminal-copy" type="button" data-copy="aioson brain:query . --tags=security,shell --min-quality=4 --format=compact">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson brain:query</span> . <span class="term-flag">--tags</span>=security,shell <span class="term-flag">--min-quality</span>=4</span>
+<span class="term-line"><span class="term-out-key">brain</span>: dev/patterns · <span class="term-out-key">matched</span>: 3 nodes</span>
+<span class="term-line">  <span class="term-out-val">spawn-with-array-args</span> · q:5 · convert execSync to spawn(cmd, [args])</span>
+<span class="term-line">  <span class="term-out-val">shell-injection-defense</span> · q:5 · never interpolate user input</span>
+<span class="term-line">  <span class="term-out-val">cross-platform-paths</span> · q:4 · normalize to forward-slash</span>
       </div>
     </div>
   </div>
-</section>
+</dialog>
 
-<!-- ═══════════════════════════════════════════════════════ TUTORIAL: FLUXO COMPLETO -->
-<section>
-  <div class="container">
-    <div class="section-label">Tutorial 6 de 6</div>
-    <h2>Fluxo completo de uma feature SMALL</h2>
-    <p>
-      Do início ao fechamento, usando apenas scripts SDD — sem leitura manual de arquivos de contexto.
-    </p>
-
-    <div class="code-block">
-<span class="c"># ── 1. Pré-voo ───────────────────────────────────────────────</span>
-<span class="cmd">aioson preflight</span> . <span class="flag">--agent</span>=product <span class="flag">--feature</span>=checkout
-
-<span class="c"># ── 2. Classificar ───────────────────────────────────────────</span>
-<span class="cmd">aioson classify</span> . <span class="flag">--feature</span>=checkout
-<span class="c"># → SMALL</span>
-
-<span class="c"># ── 3. Verificar artefatos antes de iniciar @analyst ─────────</span>
-<span class="cmd">aioson artifact:validate</span> . <span class="flag">--feature</span>=checkout
-<span class="cmd">aioson gate:check</span> . <span class="flag">--feature</span>=checkout <span class="flag">--gate</span>=A
-
-<span class="c"># ── 4. Executar workflow (product → analyst → dev → qa) ───────</span>
-<span class="cmd">aioson workflow:execute</span> . <span class="flag">--feature</span>=checkout <span class="flag">--tool</span>=claude <span class="flag">--dry-run</span>
-<span class="cmd">aioson workflow:execute</span> . <span class="flag">--feature</span>=checkout <span class="flag">--tool</span>=claude
-
-<span class="c"># ── 5. Durante @dev: salvar ao fim de cada fase ───────────────</span>
-<span class="cmd">aioson state:save</span> . <span class="flag">--feature</span>=checkout <span class="flag">--phase</span>=<span class="num">2</span> \
-  <span class="flag">--status</span>=in_progress <span class="flag">--next</span>=<span class="str">"Phase 3: webhook"</span>
-<span class="cmd">aioson pulse:update</span> . <span class="flag">--agent</span>=dev <span class="flag">--feature</span>=checkout \
-  <span class="flag">--action</span>=<span class="str">"Phase 2 done"</span> <span class="flag">--next</span>=<span class="str">"Phase 3"</span>
-
-<span class="c"># ── 6. Antes de @qa: checar Gate D ───────────────────────────</span>
-<span class="cmd">aioson gate:check</span> . <span class="flag">--feature</span>=checkout <span class="flag">--gate</span>=D
-
-<span class="c"># ── 7. QA sign-off ───────────────────────────────────────────</span>
-<span class="cmd">aioson feature:close</span> . <span class="flag">--feature</span>=checkout <span class="flag">--verdict</span>=PASS
-
-<span class="c"># ── 8. Promover aprendizados para regras ─────────────────────</span>
-<span class="cmd">aioson learning:auto-promote</span> . <span class="flag">--threshold</span>=<span class="num">3</span>
-    </div>
-
-    <div class="callout green" style="margin-top:24px">
-      <div class="callout-icon">🚀</div>
-      <p>Todos os oito passos substituem a leitura e edição manual de 10+ arquivos de contexto. Nenhuma chamada LLM é feita pelos scripts — apenas I/O de arquivo e SQLite.</p>
-    </div>
+<dialog class="popover" id="dlg-context">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 3v18"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 4 · 10 scripts</div><div class="dlg-title">Context</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
   </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════ REFERÊNCIA -->
-<section>
-  <div class="container">
-    <div class="section-label">Referência</div>
-    <h2>Documentação completa</h2>
-    <p>Para flags detalhadas, saídas JSON e exemplos avançados de cada comando:</p>
-    <div class="card-grid">
-      <div class="card">
-        <h3>Referência em português</h3>
-        <p style="font-size:0.88rem;margin-top:8px">Documentação completa de todos os 12 comandos com flags, saídas JSON e exemplos de uso.</p>
-        <div style="margin-top:16px">
-          <a href="../../docs/pt/sdd-automation-scripts.md" style="font-family:'JetBrains Mono';font-size:0.82rem;color:var(--cyan);text-decoration:none">docs/pt/sdd-automation-scripts.md →</a>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Referência CLI geral</h3>
-        <p style="font-size:0.88rem;margin-top:8px">Tabela de todos os comandos do AIOSON com exemplos numerados (42–53 são os scripts SDD).</p>
-        <div style="margin-top:16px">
-          <a href="../../docs/pt/comandos-cli.md" style="font-family:'JetBrains Mono';font-size:0.82rem;color:var(--cyan);text-decoration:none">docs/pt/comandos-cli.md →</a>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Tutorial SDD principal</h3>
-        <p style="font-size:0.88rem;margin-top:8px">Introdução ao Spec-Driven Development: gates, tiers, pipeline completo e agentes.</p>
-        <div style="margin-top:16px">
-          <a href="./index.html" style="font-family:'JetBrains Mono';font-size:0.82rem;color:var(--cyan);text-decoration:none">tutorials/sdd/index.html →</a>
-        </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">O agente lê só o que precisa. Pack focal por agente+goal, telemetria de carga (tier-1), validação de integridade, cache, compress, health do SQLite runtime.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson context:pack</div><div class="cmd-title">Pacote focal</div><div class="cmd-desc"><code>--agent=dev --goal='X'</code> retorna até 8 arquivos rankeados. Substitui leitura especulativa.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:load</div><div class="cmd-title">Telemetria tier-1</div><div class="cmd-desc">Registra <code>rule_loaded</code>/<code>brain_loaded</code> em execution_events. Feeds curation checks.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:validate</div><div class="cmd-title">Sanidade</div><div class="cmd-desc">Frontmatter, fields obrigatórios e consistência de project.context.md.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:health</div><div class="cmd-title">Health do SQLite</div><div class="cmd-desc">Integridade do aios.sqlite, WAL checkpoint, índices. Truncate antes de close (fix Win EBUSY).</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:compact</div><div class="cmd-title">Compactar contexto</div><div class="cmd-desc">Reduz volume de contexto carregado quando próximo do limite.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:trim</div><div class="cmd-title">Trim seletivo</div><div class="cmd-desc">Remove sections menos relevantes mantendo essência.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:cache:save</div><div class="cmd-title">Salvar cache</div><div class="cmd-desc">Persiste snapshot de contexto para reuse em sessões futuras.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:cache:restore</div><div class="cmd-title">Restaurar cache</div><div class="cmd-desc">Reconstitui contexto a partir de cache salvo. Pula re-leitura.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:cache:cleanup</div><div class="cmd-title">Limpeza de cache</div><div class="cmd-desc">Remove caches expirados ou stale do disco.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson context:search</div><div class="cmd-title">Search no contexto</div><div class="cmd-desc">Busca textual sobre os arquivos de contexto indexados.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">context</span><button class="terminal-copy" type="button" data-copy="aioson context:pack . --agent=dev --goal='webhook handler' --max-files=6">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson context:pack</span> . <span class="term-flag">--agent</span>=dev <span class="term-flag">--goal</span>=<span class="term-str">'webhook handler'</span> <span class="term-flag">--max-files</span>=6</span>
+<span class="term-line"><span class="term-out-key">packed</span>: 6 files · 12.4 KB</span>
+<span class="term-line">  1. project.context.md (anchor)</span>
+<span class="term-line">  2. spec-checkout.md · 3. requirements-checkout.md</span>
+<span class="term-line">  4. implementation-plan-checkout.md · 5. .aioson/rules/secure-tdd.md</span>
       </div>
     </div>
   </div>
-</section>
+</dialog>
+
+<dialog class="popover" id="dlg-dossier">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#ff6ba4; border-color:rgba(255,107,164,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 5 · 8 scripts · feature-dossier</div><div class="dlg-title">Dossier</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Cada feature SMALL/MEDIUM ganha um <code>.aioson/context/features/{slug}/dossier.md</code> consolidando Why/What + code map + agent trail. Auto-init silencioso após PRD. Consultado por @dev/@deyvin pra detectar drift. <strong>É a "memória da feature"</strong> — independente da memória global do projeto.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:init</div><div class="cmd-title">Criar dossier</div><div class="cmd-desc">Init silencioso por @product. Cria <code>features/{slug}/dossier.md</code> com Why/What.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:show</div><div class="cmd-title">Ler dossier</div><div class="cmd-desc">Exibe conteúdo do dossier de uma feature. Usado por @dev em cold start.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:add-finding</div><div class="cmd-title">Adicionar finding</div><div class="cmd-desc"><code>--section="Agent Trail" --content="Slice: X"</code>. Cada agente registra seu pass.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:add-codemap</div><div class="cmd-title">Mapear arquivos</div><div class="cmd-desc">Registra paths que cada slice de implementação tocou. Usado pra drift detection.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:link-rule</div><div class="cmd-title">Linkar rule</div><div class="cmd-desc">Associa <code>.aioson/rules/X.md</code> consultadas durante a feature ao dossier.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:add-research</div><div class="cmd-title">Adicionar research</div><div class="cmd-desc">Vincula items de <code>researchs/</code> consumidos durante discovery/architect.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:audit</div><div class="cmd-title">Audit do dossier</div><div class="cmd-desc">Valida completude (Why/What presentes, Agent Trail tem entradas, code_map populado).</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dossier:compact</div><div class="cmd-title">Compactar dossier</div><div class="cmd-desc">Resume entries antigos do Agent Trail mantendo decisões importantes. Reduz tamanho.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">dossier · workflow</span><button class="terminal-copy" type="button" data-copy="aioson dossier:init . --slug=checkout&#10;aioson dossier:add-finding . --slug=checkout --agent=product --section='What' --content='MVP: payment webhook'&#10;aioson dossier:add-codemap . --slug=checkout --path=src/webhooks/checkout.js&#10;aioson dossier:audit . --slug=checkout">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-comment"># @product init silencioso (auto após PRD)</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson dossier:init</span> . <span class="term-flag">--slug</span>=checkout</span>
+<span class="term-line"><span class="term-ok">✓</span> created .aioson/context/features/checkout/dossier.md</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># Cada agente registra seu passo</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson dossier:add-finding</span> . <span class="term-flag">--slug</span>=checkout <span class="term-flag">--agent</span>=product <span class="term-flag">--section</span>=<span class="term-str">'What'</span> <span class="term-flag">--content</span>=<span class="term-str">'MVP: payment webhook'</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson dossier:add-codemap</span> . <span class="term-flag">--slug</span>=checkout <span class="term-flag">--path</span>=src/webhooks/checkout.js</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># Antes do @qa: validar completude</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson dossier:audit</span> . <span class="term-flag">--slug</span>=checkout</span>
+<span class="term-line"><span class="term-out-key">why</span>: ✓ · <span class="term-out-key">what</span>: ✓ · <span class="term-out-key">agent_trail</span>: 4 entries · <span class="term-out-key">code_map</span>: 8 paths</span>
+<span class="term-line"><span class="term-ok">✓</span> dossier complete</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-scout">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#22d3ee; border-color:rgba(34,211,238,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 6 · 3 scripts · @deyvin</div><div class="dlg-title">Scout (sub-task)</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Surveys context-isolated. Quando @deyvin precisa investigar &gt; 5 arquivos ou trace runtime, dispatch um scout em vez de carregar tudo no parent. Resultado volta sumarizado — pai não queima contexto.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson scout:prep</div><div class="cmd-title">Preparar scout</div><div class="cmd-desc">Monta o prompt para sub-agente read-only com <code>parent_session_excerpt</code> + <code>scope_paths</code>. Caps por sessão/scope.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson scout:validate</div><div class="cmd-title">Validar output</div><div class="cmd-desc">Verifica JSON schema do output do scout, aplica caps, retorna PASS ou retry.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson scout:commit</div><div class="cmd-title">Commit do scout</div><div class="cmd-desc">Persiste em <code>.aioson/runtime/scouts/</code>, emite telemetry sub_task. Auto-archive on feature:close.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">scout · @deyvin dispatch</span><button class="terminal-copy" type="button" data-copy="aioson scout:prep . --topic='auth flow trace' --scope-paths=src/auth,src/middleware&#10;aioson scout:validate . --scout-id=scout-abc123 --input=output.json&#10;aioson scout:commit . --scout-id=scout-abc123 --feature=checkout">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson scout:prep</span> . <span class="term-flag">--topic</span>=<span class="term-str">'auth flow trace'</span> <span class="term-flag">--scope-paths</span>=src/auth,src/middleware</span>
+<span class="term-line"><span class="term-out-key">scout_id</span>: scout-abc123 · <span class="term-out-key">caps</span>: 50 files max · 3 retries</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson scout:validate</span> . <span class="term-flag">--scout-id</span>=scout-abc123 <span class="term-flag">--input</span>=output.json</span>
+<span class="term-line"><span class="term-ok">✓</span> schema valid · 18 files visited · within caps</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson scout:commit</span> . <span class="term-flag">--scout-id</span>=scout-abc123 <span class="term-flag">--feature</span>=checkout</span>
+<span class="term-line"><span class="term-ok">✓</span> committed · will archive to features/checkout/scouts/ on close</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-harness">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#fbbf24; border-color:rgba(251,191,36,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 7 · 3 scripts · MEDIUM features</div><div class="dlg-title">Harness validator</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Gate D enforcement via JSON output. @sheldon gera <code>harness-contract.json</code> com binary criteria, @validator avalia headless, circuit breaker bloqueia closure se ainda houver erros. Só MEDIUM — opt-in.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson harness:init</div><div class="cmd-title">Inicializar contrato</div><div class="cmd-desc">Cria <code>.aioson/plans/{slug}/harness-contract.json</code> com schema vazio pra @sheldon popular.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson harness:validate</div><div class="cmd-title">Router de validação</div><div class="cmd-desc">Se <code>last-validator-output.json</code> existe, aplica via apply-validation; senão gera prompt headless.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson harness:apply-validation</div><div class="cmd-title">Consumir output</div><div class="cmd-desc">Traduz <code>results[].reason</code> do primeiro fail em <code>progress.json.last_error</code>. Circuit breaker.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">harness · ciclo</span><button class="terminal-copy" type="button" data-copy="aioson harness:init . --feature=checkout&#10;aioson harness:validate . --slug=checkout&#10;aioson harness:apply-validation . --slug=checkout --input=last-validator-output.json">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson harness:init</span> . <span class="term-flag">--feature</span>=checkout</span>
+<span class="term-line"><span class="term-ok">✓</span> harness-contract.json created · awaiting @sheldon binary criteria</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson harness:validate</span> . <span class="term-flag">--slug</span>=checkout</span>
+<span class="term-line"><span class="term-out-key">status</span>: waiting_validation · prompt generated headless</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson harness:apply-validation</span> . <span class="term-flag">--slug</span>=checkout <span class="term-flag">--input</span>=last-validator-output.json</span>
+<span class="term-line"><span class="term-ok">✓</span> ready_for_done_gate=true · 8/8 criteria met</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-ops">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#94a3b8; border-color:rgba(148,163,184,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 8 · 8 scripts · operações contínuas</div><div class="dlg-title">Operations</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Saúde do projeto, notifications visuais, handoff agent→agent, auto-resume, commit risk-aware. A camada operacional que mantém tudo rodando sem fricção.</p>
+    <div class="cmd-grid">
+      <div class="cmd-card"><div class="cmd-name">aioson doctor</div><div class="cmd-title">15+ checks de saúde</div><div class="cmd-desc">Bootstrap coverage, features dir, claude commands, version drift, permissions sync, learning loop, jargon leak. <code>--fix</code> auto-corrige.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson notify</div><div class="cmd-title">Visual wrapper</div><div class="cmd-desc"><code>--level=info|warn|block</code> com prefixos ℹ/⚠/⛔. <code>block</code> retorna exit code 2.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dev:state:write</div><div class="cmd-title">Handoff producer</div><div class="cmd-desc">Alias de state:save. @analyst/@product invocam ao final. <code>--context=prd,spec,impl-plan</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson dev:resume-data</div><div class="cmd-title">Auto-resume @dev</div><div class="cmd-desc">Retorna feature, classification, phase, next_step, code_map. Pula discovery em cold start.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson commit:prepare</div><div class="cmd-title">Risk-aware staging</div><div class="cmd-desc">Picker de arquivos com regras de segurança extendidas. Headless mode pra CI.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson agent:done</div><div class="cmd-title">Marcar sessão done</div><div class="cmd-desc">Registra summary no runtime SQLite. Dispara reflect-prepare hook (Living Memory).</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson agent:invoke</div><div class="cmd-title">Tracked agent invoke</div><div class="cmd-desc">Invoca agente com tracking. <code>--mode=framework_target|app_target</code>.</div></div>
+      <div class="cmd-card"><div class="cmd-name">aioson learning:auto-promote</div><div class="cmd-title">Promoção de patterns</div><div class="cmd-desc">Threshold ≥ 3 (configurável). Process/quality learnings viram rules em <code>.aioson/rules/</code>.</div></div>
+    </div>
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">operations</span><button class="terminal-copy" type="button" data-copy="aioson doctor . --fix&#10;aioson notify --level=warn --topic=migration --message='profile renamed to creator'&#10;aioson dev:state:write . --feature=checkout --next='Phase 2'">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson doctor</span> . <span class="term-flag">--fix</span></span>
+<span class="term-line"><span class="term-ok">✓</span> bootstrap_coverage: 4/4</span>
+<span class="term-line"><span class="term-warn">⚠</span>  permissions_in_sync: auto-fixing...</span>
+<span class="term-line"><span class="term-ok">✓</span> regenerated for claude, codex, gemini, opencode</span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson notify</span> <span class="term-flag">--level</span>=warn <span class="term-flag">--topic</span>=migration <span class="term-flag">--message</span>=<span class="term-str">'profile renamed to creator'</span></span>
+<span class="term-line"><span class="term-warn">⚠</span>  [migration] profile renamed to creator</span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  // ── Theme toggle ──────────────────────────────────────
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+    try {
+      const saved = localStorage.getItem('aioson-theme');
+      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    const sync = () => {
+      const t = root.getAttribute('data-theme') || 'dark';
+      const moon = toggle.querySelector('.cmd-theme-moon');
+      const sun  = toggle.querySelector('.cmd-theme-sun');
+      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
+      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
+    };
+    sync();
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+
+  // ── Sticky dock: visual change when scrolled ─────────
+  (function () {
+    const wrap = document.getElementById('dock-wrap');
+    if (!wrap) return;
+    const update = () => {
+      if (window.scrollY > 8) wrap.classList.add('is-scrolled');
+      else wrap.classList.remove('is-scrolled');
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+  })();
+
+  // ── Dialog open/close + Esc + backdrop click ─────────
+  (function () {
+    document.querySelectorAll('[data-dialog]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.dialog;
+        const dlg = document.getElementById(id);
+        if (!dlg) return;
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+        else dlg.setAttribute('open', '');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    document.querySelectorAll('dialog.popover').forEach((dlg) => {
+      // close on backdrop click
+      dlg.addEventListener('click', (e) => {
+        if (e.target === dlg) dlg.close();
+      });
+      dlg.addEventListener('close', () => {
+        document.body.style.overflow = '';
+      });
+      // close button inside
+      dlg.querySelectorAll('[data-dialog-close]').forEach((btn) => {
+        btn.addEventListener('click', () => dlg.close());
+      });
+    });
+  })();
+
+  // ── Copy buttons (terminals) ─────────────────────────
+  (function () {
+    if (!navigator.clipboard) return;
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.textContent;
+          btn.textContent = 'copiado ✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>

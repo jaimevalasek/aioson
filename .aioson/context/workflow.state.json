@@ -8,14 +8,17 @@
     "dev",
     "qa"
   ],
-  "current": "analyst",
-  "next": "analyst",
+  "current": null,
+  "next": null,
   "completed": [
     "product",
     "qa"
   ],
-  "skipped": [],
+  "skipped": [
+    "analyst",
+    "dev"
+  ],
   "featureSlug": "lay-user-agent-mode",
   "detour": null,
-  "updatedAt": "2026-05-17T06:24:11.898Z"
+  "updatedAt": "2026-05-18T02:25:26.715Z"
 }

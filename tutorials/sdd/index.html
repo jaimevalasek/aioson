@@ -1,2689 +1,1052 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spec-Driven Development — AIOSON</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #07070f;
-      --surface: #0f0f1a;
-      --card: #13131f;
-      --card2: #0d0d18;
-      --border: #1f1f32;
-      --border-light: #282840;
-      --primary: #6c47ff;
-      --primary-dim: rgba(108, 71, 255, 0.12);
-      --primary-glow: rgba(108, 71, 255, 0.22);
-      --text: #e2e8f0;
-      --muted: #8892a4;
-      --accent: #a78bfa;
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --red: #f87171;
-      --blue: #60a5fa;
-      --cyan: #22d3ee;
-      --radius: 14px;
-      --heading: #d4d8f0;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.7;
-      font-size: 16px;
-    }
-
-    /* ── Scrollbar ───────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
-
-    /* ── Nav ─────────────────────────────────────── */
-    nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(7,7,15,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .nav-back {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      text-decoration: none;
-      color: var(--muted);
-      font-size: 14px;
-      transition: color 0.2s;
-    }
-    .nav-back:hover { color: var(--text); }
-
-    .nav-sep { color: var(--border-light); }
-
-    .nav-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .nav-tag {
-      margin-left: auto;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: 20px;
-      padding: 3px 12px;
-    }
-
-    /* ── Hero ────────────────────────────────────── */
-    .hero {
-      padding: 90px 24px 70px;
-      text-align: center;
-      background: radial-gradient(ellipse 60% 55% at 50% -5%, rgba(108,71,255,0.2) 0%, transparent 65%);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 28px;
-    }
-
-    .hero-eyebrow::before, .hero-eyebrow::after {
-      content: '';
-      display: block;
-      width: 28px;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-    }
-
-    .hero h1 {
-      font-size: clamp(2.2rem, 6vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      background: linear-gradient(145deg, #d4d8f0 0%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 22px;
-    }
-
-    .hero-sub {
-      font-size: 1.15rem;
-      color: var(--muted);
-      max-width: 600px;
-      margin: 0 auto 36px;
-    }
-
-    .hero-meta {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .meta-pill {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .meta-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-    }
-
-    /* ── Layout ──────────────────────────────────── */
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    section {
-      padding: 72px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    section:last-child { border-bottom: none; }
-
-    .section-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--primary);
-      margin-bottom: 16px;
-    }
-
-    .section-label::before {
-      content: '';
-      display: block;
-      width: 18px;
-      height: 2px;
-      background: var(--primary);
-      border-radius: 2px;
-    }
-
-    h2 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--heading);
-      margin-bottom: 16px;
-      line-height: 1.25;
-    }
-
-    h3 {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--heading);
-      margin-bottom: 10px;
-    }
-
-    p { color: var(--muted); margin-bottom: 16px; }
-    p:last-child { margin-bottom: 0; }
-
-    /* ── Cards ───────────────────────────────────── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    /* ── Highlight box ───────────────────────────── */
-    .callout {
-      background: var(--primary-dim);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: var(--radius);
-      padding: 20px 24px;
-      margin: 24px 0;
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-
-    .callout-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-    .callout p { margin: 0; color: var(--text); font-size: 0.95rem; }
-
-    /* ── Code ────────────────────────────────────── */
-    .code-block {
-      background: #0a0a14;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13.5px;
-      line-height: 1.8;
-      color: #c9d1d9;
-      overflow-x: auto;
-      margin: 20px 0;
-    }
-
-    .code-block .c  { color: var(--muted); }
-    .code-block .kw { color: var(--accent); }
-    .code-block .cmd { color: var(--cyan); }
-    .code-block .str { color: var(--green); }
-    .code-block .num { color: var(--yellow); }
-
-    /* ── Steps ───────────────────────────────────── */
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      margin-top: 32px;
-    }
-
-    .step {
-      display: flex;
-      gap: 24px;
-      position: relative;
-    }
-
-    .step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      left: 19px;
-      top: 46px;
-      bottom: -4px;
-      width: 2px;
-      background: linear-gradient(to bottom, var(--border-light), transparent);
-    }
-
-    .step-num {
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 2px solid var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent);
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-body {
-      flex: 1;
-      padding-bottom: 36px;
-    }
-
-    .step-body h3 { margin-bottom: 8px; }
-    .step-body p { font-size: 0.92rem; }
-
-    /* ── Flow Diagram ─────────────────────────────── */
-    .flow {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-      margin: 40px auto;
-      max-width: 680px;
-    }
-
-    .flow-node {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 28px;
-      text-align: center;
-      width: 100%;
-      max-width: 440px;
-      position: relative;
-      transition: border-color 0.2s;
-    }
-
-    .flow-node.primary {
-      border-color: var(--primary);
-      background: var(--primary-dim);
-    }
-
-    .flow-node.green  { border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.07); }
-    .flow-node.yellow { border-color: rgba(251,191,36,0.5);  background: rgba(251,191,36,0.07); }
-    .flow-node.red    { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.07); }
-    .flow-node.cyan   { border-color: rgba(34,211,238,0.5);  background: rgba(34,211,238,0.07); }
-
-    .flow-node-title {
-      font-size: 0.88rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .flow-node-main {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--heading);
-      margin-bottom: 4px;
-    }
-
-    .flow-node-sub {
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
-
-    .flow-arrow {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-      padding: 6px 0;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .flow-arrow svg { color: var(--muted); }
-    .flow-arrow-label {
-      font-size: 11px;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2px 10px;
-      margin: 4px 0;
-    }
-
-    .flow-row {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      width: 100%;
-      margin: 8px 0;
-    }
-
-    .flow-row .flow-node {
-      flex: 1;
-    }
-
-    /* ── Gate cards ──────────────────────────────── */
-    .gates {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    .gate {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px 28px;
-      display: flex;
-      gap: 20px;
-      align-items: flex-start;
-    }
-
-    .gate-badge {
-      flex-shrink: 0;
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      font-weight: 800;
-    }
-
-    .gate-badge.a { background: rgba(108,71,255,0.18); color: var(--accent); border: 1px solid rgba(108,71,255,0.4); }
-    .gate-badge.b { background: rgba(34,211,238,0.12); color: var(--cyan);   border: 1px solid rgba(34,211,238,0.35); }
-    .gate-badge.c { background: rgba(251,191,36,0.12);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.35); }
-    .gate-badge.d { background: rgba(52,211,153,0.12);  color: var(--green);  border: 1px solid rgba(52,211,153,0.35); }
-
-    .gate-content h3 { margin-bottom: 6px; font-size: 1rem; }
-    .gate-content p { font-size: 0.88rem; color: var(--muted); margin: 0 0 10px; }
-
-    .check-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .check-list li {
-      font-size: 0.83rem;
-      color: var(--muted);
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-    }
-
-    .check-list li::before {
-      content: '✓';
-      color: var(--green);
-      font-size: 0.8rem;
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    /* ── Classification table ────────────────────── */
-    .class-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    @media (max-width: 640px) {
-      .class-grid { grid-template-columns: 1fr; }
-    }
-
-    .class-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      text-align: center;
-    }
-
-    .class-card.micro { border-top: 3px solid var(--cyan); }
-    .class-card.small { border-top: 3px solid var(--accent); }
-    .class-card.medium { border-top: 3px solid var(--primary); }
-
-    .class-name {
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .class-card.micro  .class-name { color: var(--cyan); }
-    .class-card.small  .class-name { color: var(--accent); }
-    .class-card.medium .class-name { color: var(--primary); }
-
-    .class-scope {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-
-    .class-phases {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      text-align: left;
-    }
-
-    .phase-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-    }
-
-    .phase-pill {
-      font-size: 10px;
-      font-weight: 600;
-      border-radius: 20px;
-      padding: 2px 8px;
-      white-space: nowrap;
-    }
-
-    .pill-yes   { background: rgba(52,211,153,0.15);  color: var(--green);  border: 1px solid rgba(52,211,153,0.3); }
-    .pill-opt   { background: rgba(251,191,36,0.12);   color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
-    .pill-skip  { background: rgba(139,145,164,0.1);   color: var(--muted);  border: 1px solid var(--border); }
-    .pill-req   { background: rgba(108,71,255,0.18);   color: var(--accent); border: 1px solid rgba(108,71,255,0.35); }
-
-    /* ── Agent cards ─────────────────────────────── */
-    .agent-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .agent-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      transition: border-color 0.2s;
-    }
-
-    .agent-card:hover { border-color: var(--primary); }
-
-    .agent-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--accent);
-      margin-bottom: 6px;
-    }
-
-    .agent-role {
-      font-size: 0.78rem;
-      color: var(--text);
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .agent-desc {
-      font-size: 0.75rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* ── Comparison strip ────────────────────────── */
-    .compare {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 28px;
-    }
-
-    @media (max-width: 560px) { .compare { grid-template-columns: 1fr; } }
-
-    .compare-col {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-
-    .compare-col.bad  { border-color: rgba(248,113,113,0.35); }
-    .compare-col.good { border-color: rgba(52,211,153,0.35); }
-
-    .compare-header {
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .compare-col.bad  .compare-header { color: var(--red); }
-    .compare-col.good .compare-header { color: var(--green); }
-
-    .compare-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .compare-list li {
-      font-size: 0.85rem;
-      color: var(--muted);
-      display: flex;
-      gap: 10px;
-    }
-
-    .compare-list li span { flex-shrink: 0; }
-
-    /* ── SDD Pipeline visual ─────────────────────── */
-    .pipeline {
-      margin: 48px 0;
-    }
-
-    .pipeline-track {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .p-phase {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 24px;
-      align-items: start;
-      padding: 24px 0;
-      border-bottom: 1px dashed var(--border);
-    }
-
-    .p-phase:last-child { border-bottom: none; }
-
-    .p-phase-label {
-      text-align: right;
-      padding-top: 2px;
-    }
-
-    .p-phase-name {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .p-phase-agent {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--accent);
-    }
-
-    .p-artifact {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-    }
-
-    .p-artifact-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--cyan);
-      margin-bottom: 4px;
-    }
-
-    .p-artifact-desc {
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
-
-    .p-gate-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 600;
-      border-radius: 20px;
-      padding: 3px 10px;
-      margin-top: 10px;
-    }
-
-    .p-gate-badge.a { background: rgba(108,71,255,0.15); color: var(--accent); border: 1px solid rgba(108,71,255,0.3); }
-    .p-gate-badge.b { background: rgba(34,211,238,0.10); color: var(--cyan);   border: 1px solid rgba(34,211,238,0.3); }
-    .p-gate-badge.c { background: rgba(251,191,36,0.10);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
-    .p-gate-badge.d { background: rgba(52,211,153,0.10);  color: var(--green);  border: 1px solid rgba(52,211,153,0.3); }
-
-    /* ── Status badges ───────────────────────────── */
-    .status-flow {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      flex-wrap: wrap;
-      margin: 28px 0;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 13px;
-      font-weight: 600;
-      border-radius: 8px;
-      padding: 8px 16px;
-      white-space: nowrap;
-    }
-
-    .status-badge.draft    { background: rgba(139,145,164,0.1); color: var(--muted);  border: 1px solid var(--border); }
-    .status-badge.approved { background: rgba(108,71,255,0.15); color: var(--accent); border: 1px solid rgba(108,71,255,0.3); }
-    .status-badge.progress { background: rgba(251,191,36,0.12);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.35); }
-    .status-badge.done     { background: rgba(52,211,153,0.12);  color: var(--green);  border: 1px solid rgba(52,211,153,0.35); }
-
-    .status-arrow {
-      color: var(--border-light);
-      font-size: 18px;
-      padding: 0 8px;
-      flex-shrink: 0;
-    }
-
-    .spec-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    .spec-field {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 16px;
-      align-items: start;
-    }
-
-    @media (max-width: 600px) {
-      .spec-field { grid-template-columns: 1fr; }
-    }
-
-    .spec-field-key {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--cyan);
-      font-weight: 500;
-    }
-
-    .spec-field-val {
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .spec-field-val strong { color: var(--text); }
-
-    .ui-symbols {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .ui-sym {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ui-sym-char {
-      font-size: 1.1rem;
-      width: 24px;
-      text-align: center;
-    }
-
-    .ui-sym-desc {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    /* ── Memory layers ────────────────────────────── */
-    .layers {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-top: 32px;
-    }
-
-    .layer {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .layer-header {
-      padding: 20px 24px;
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .layer-num {
-      flex-shrink: 0;
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .layer-num.l1 { background: rgba(108,71,255,0.18); color: var(--accent); border: 1px solid rgba(108,71,255,0.35); }
-    .layer-num.l2 { background: rgba(34,211,238,0.12); color: var(--cyan);   border: 1px solid rgba(34,211,238,0.35); }
-    .layer-num.l3 { background: rgba(251,191,36,0.12);  color: var(--yellow); border: 1px solid rgba(251,191,36,0.35); }
-
-    .layer-title-block h3 { margin-bottom: 3px; font-size: 1rem; }
-    .layer-path {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: var(--cyan);
-    }
-
-    .layer-cadence {
-      margin-left: auto;
-      flex-shrink: 0;
-      font-size: 11px;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-    }
-
-    .layer-body {
-      padding: 20px 24px;
-    }
-
-    .layer-body p { font-size: 0.87rem; margin-bottom: 12px; }
-
-    .layer-when {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 14px;
-    }
-
-    .layer-when-item {
-      display: flex;
-      gap: 8px;
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
-
-    .layer-when-item::before {
-      content: '→';
-      color: var(--accent);
-      flex-shrink: 0;
-    }
-
-    .layer-example {
-      background: #0a0a14;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 18px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      color: #c9d1d9;
-      line-height: 1.7;
-    }
-
-    .layer-example .fc { color: var(--muted); }
-    .layer-example .fk { color: var(--accent); }
-    .layer-example .fv { color: var(--green); }
-    .layer-example .fn { color: var(--cyan); }
-
-    .decision-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 28px;
-      font-size: 0.85rem;
-    }
-
-    .decision-table th {
-      text-align: left;
-      padding: 10px 14px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .decision-table td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      vertical-align: top;
-    }
-
-    .decision-table tr:last-child td { border-bottom: none; }
-
-    .decision-table td:first-child { color: var(--text); font-size: 0.82rem; }
-    .decision-table td:last-child {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: var(--cyan);
-    }
-
-    /* ── Brains ───────────────────────────────────── */
-    .brain-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 14px;
-      margin-top: 28px;
-    }
-
-    .brain-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-    }
-
-    .brain-card-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .verdict-badge {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      border-radius: 6px;
-      padding: 3px 8px;
-    }
-
-    .v-excellent  { background: rgba(52,211,153,0.15); color: var(--green); border: 1px solid rgba(52,211,153,0.35); }
-    .v-good       { background: rgba(96,165,250,0.12); color: var(--blue);  border: 1px solid rgba(96,165,250,0.3); }
-    .v-best       { background: rgba(108,71,255,0.15); color: var(--accent);border: 1px solid rgba(108,71,255,0.3); }
-    .v-avoid      { background: rgba(248,113,113,0.12);color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
-    .v-broken     { background: rgba(139,145,164,0.1); color: var(--muted); border: 1px solid var(--border); }
-
-    .brain-q {
-      display: flex;
-      gap: 2px;
-      margin-left: auto;
-    }
-
-    .brain-q span {
-      width: 8px; height: 8px;
-      border-radius: 2px;
-    }
-
-    .brain-q span.on  { background: var(--yellow); }
-    .brain-q span.off { background: var(--border-light); }
-
-    .brain-card-title {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 5px;
-    }
-
-    .brain-card-desc {
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .brain-node-example {
-      background: #0a0a14;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 20px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      color: #c9d1d9;
-      line-height: 1.8;
-      margin-top: 24px;
-      overflow-x: auto;
-    }
-
-    .brain-node-example .jk { color: var(--cyan); }
-    .brain-node-example .jv { color: var(--green); }
-    .brain-node-example .jn { color: var(--yellow); }
-    .brain-node-example .jc { color: var(--muted); }
-
-    /* ── Commands ref ────────────────────────────── */
-    .cmd-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .cmd-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 18px;
-    }
-
-    .cmd-item code {
-      display: block;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--cyan);
-      margin-bottom: 6px;
-    }
-
-    .cmd-item p {
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin: 0;
-    }
-
-    /* ── Footer ──────────────────────────────────── */
-    footer {
-      text-align: center;
-      padding: 48px 24px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.875rem;
-      margin-top: 40px;
-    }
-
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-
-    /* ── Responsive ──────────────────────────────── */
-    @media (max-width: 640px) {
-      .p-phase { grid-template-columns: 1fr; }
-      .p-phase-label { text-align: left; }
-      .card-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ── Big flowchart ───────────────────────────── */
-    .bigflow {
-      margin: 48px 0;
-      overflow-x: auto;
-    }
-
-    .bigflow-inner {
-      min-width: 560px;
-    }
-
-    .bf-row {
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-      gap: 12px;
-      margin: 0;
-    }
-
-    .bf-node {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 18px;
-      text-align: center;
-      min-width: 120px;
-    }
-
-    .bf-node.start {
-      background: var(--primary-dim);
-      border-color: rgba(108,71,255,0.5);
-      min-width: 200px;
-    }
-
-    .bf-node.gate {
-      background: rgba(52,211,153,0.08);
-      border-color: rgba(52,211,153,0.4);
-      min-width: 160px;
-    }
-
-    .bf-node.end {
-      background: rgba(52,211,153,0.1);
-      border-color: rgba(52,211,153,0.5);
-      min-width: 200px;
-    }
-
-    .bf-title {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    .bf-name {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--heading);
-    }
-
-    .bf-sub {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-
-    .bf-arrow-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 4px 0;
-    }
-
-    .bf-line {
-      width: 2px;
-      flex: 1;
-      background: var(--border-light);
-    }
-
-    .bf-arrowhead {
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 8px solid var(--border-light);
-    }
-
-    .bf-split {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 8px 0;
-    }
-
-    .bf-split-branch {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0;
-    }
-
-    .bf-split-line {
-      width: 2px;
-      height: 24px;
-      background: var(--border-light);
-    }
-
-    .bf-hbar {
-      display: flex;
-      justify-content: center;
-      margin: 0;
-    }
-
-    .bf-hbar-inner {
-      height: 2px;
-      background: var(--border-light);
-      width: 60%;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spec-Driven Development — AIOSON</title>
+<meta name="description" content="Como o AIOSON transforma ideia vaga em código funcional sem pular etapas. 29 agentes, 4 gates, classificação MICRO/SMALL/MEDIUM, Living Memory, brains, autonomy v1.1." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* AIOSON Design System — Tokens */
+:root {
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
+  --transition-fast:140ms ease; --transition:220ms ease;
+}
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme:dark;
+  --bg:#07080c; --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
+  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
+  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
+  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb; --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
+  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
+  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
+  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
+}
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  font-family:var(--font-body);
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease, color .3s ease;
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
+    linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+}
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
+
+/* Shell */
+.shell { width:min(1280px, calc(100% - 32px)); margin:0 auto; padding:0 0 60px; display:flex; flex-direction:column; }
+
+/* Command Dock */
+.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
+.cmd-dock {
+  display:flex; align-items:center; gap:14px;
+  padding:10px 14px; border-radius:20px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:var(--shadow);
+  position:relative; overflow:hidden;
+  transition:box-shadow .3s ease, border-color .3s ease;
+}
+.dock-wrap.is-scrolled .cmd-dock { box-shadow:var(--shadow-dock-scrolled); border-color:color-mix(in srgb, var(--accent) 18%, var(--border)); }
+.cmd-dock::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size:36px 36px;
+  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  opacity:.2;
+}
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark { width:36px; height:36px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%), linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong))); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent); color:var(--accent); }
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:500; color:var(--muted); background:transparent; border:none; padding:6px 11px; border-radius:9px; text-decoration:none; transition:var(--transition-fast); }
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] { color:var(--accent-strong); background:var(--panel-strong); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent); }
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn { width:34px; height:34px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; border-radius:10px; padding:7px 13px; box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition:var(--transition-fast); }
+.cmd-cta:hover { transform:translateY(-1px); }
+
+/* Marketing Hero */
+.marketing-hero {
+  border:1px solid var(--border); border-radius:26px;
+  padding:42px 36px; overflow:hidden; position:relative;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+  box-shadow:var(--shadow);
+  margin-bottom:18px;
+  display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr); gap:32px; align-items:center;
+}
+[data-theme="light"] .marketing-hero { background: radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%), radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%), linear-gradient(160deg, #fff 0%, #f7faff 100%); box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.marketing-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background-image: linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px); background-size:48px 48px; mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); opacity:.5; }
+.hero-copy { position:relative; z-index:1; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.hero-copy h1 { margin-top:14px; font-size:clamp(2rem, 3.2vw, 2.8rem); letter-spacing:-.04em; line-height:1.02; font-weight:700; color:var(--text); }
+.hero-copy h1 .accent-cyan { color:var(--accent); }
+.hero-copy h1 .accent-violet { color:var(--accent-2); }
+.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
+.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.primary-button, .secondary-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:0 16px; border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap; transition:var(--transition-fast); }
+.primary-button { color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.primary-button:hover { transform:translateY(-1px); }
+.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
+.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
+.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
+.stat-tile { border-radius:14px; padding:14px 16px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 70%, transparent); }
+[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
+.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
+.stat-tile.blue   strong { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.stat-tile.green  strong { color:var(--accent-4); }
+.stat-tile.violet strong { color:var(--accent-2); }
+.stat-tile.gold   strong { color:var(--accent-3); }
+
+/* Compact callout */
+.compact-callout { margin:24px 0; border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border)); background:color-mix(in srgb, var(--accent-2-soft) 24%, var(--panel-strong)); border-radius:14px; padding:18px 22px; display:flex; gap:14px; align-items:flex-start; }
+[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
+.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
+.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
+.compact-callout strong { color:var(--accent-2); }
+
+/* Site Section */
+.site-section { padding:36px 0 12px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-title .accent-emerald { color:var(--accent-4); }
+.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
+
+/* Pipeline visual (8 agents in horizontal strip) */
+.pipeline-track {
+  display:flex; gap:0;
+  border:1px solid var(--border); border-radius:18px;
+  overflow:hidden;
+  background:var(--panel-strong);
+  box-shadow:var(--shadow);
+}
+[data-theme="light"] .pipeline-track { box-shadow:0 12px 30px -20px rgba(15,23,42,.18); }
+.pipeline-step {
+  flex:1; min-width:0; padding:14px;
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column; gap:6px;
+  position:relative;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), transparent);
+  transition:var(--transition-fast);
+}
+[data-theme="light"] .pipeline-step { background:linear-gradient(180deg, #fbfdff, transparent); }
+.pipeline-step:last-child { border-right:none; }
+.pipeline-step:hover { background:color-mix(in srgb, var(--accent-soft) 24%, transparent); }
+[data-theme="light"] .pipeline-step:hover { background:color-mix(in srgb, var(--accent-soft) 38%, #fff); }
+.pipeline-step.gate { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 14%, transparent), transparent); }
+.pipeline-step-num { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+.pipeline-step.gate .pipeline-step-num { color:var(--accent-3); }
+.pipeline-step-cmd { font-family:var(--font-mono); font-size:.84rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
+.pipeline-step.gate .pipeline-step-cmd { color:var(--accent-3); }
+.pipeline-step-name { font-size:.76rem; color:var(--text); font-weight:500; }
+.pipeline-step-desc { font-size:.7rem; color:var(--muted); line-height:1.4; }
+
+/* Gates cards (4 — A·B·C·D) */
+.gates-grid { display:grid; gap:14px; grid-template-columns:repeat(4, 1fr); }
+.gate-card {
+  border:1px solid var(--border); border-radius:16px;
+  padding:20px; background:var(--panel-strong);
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column; gap:10px;
+}
+[data-theme="light"] .gate-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.gate-letter {
+  width:44px; height:44px; border-radius:12px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-weight:800; font-size:1.1rem;
+  background:color-mix(in srgb, var(--accent-3-soft) 70%, var(--panel));
+  border:1px solid color-mix(in srgb, var(--accent-3) 28%, var(--border));
+  color:var(--accent-3);
+}
+.gate-eyebrow { font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+.gate-card h3 { font-size:.95rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.gate-card p { font-size:.78rem; color:var(--muted); line-height:1.55; }
+.gate-artifact {
+  margin-top:auto;
+  font-family:var(--font-mono); font-size:.7rem;
+  color:var(--accent); background:var(--accent-soft);
+  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius:6px; padding:4px 8px;
+}
+
+/* Tier table */
+.tier-table { width:100%; border-collapse:collapse; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--panel-strong); }
+[data-theme="light"] .tier-table { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.tier-table th { text-align:left; padding:10px 14px; font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:color-mix(in srgb, var(--panel) 70%, transparent); border-bottom:1px solid var(--border); }
+.tier-table td { padding:14px 16px; vertical-align:top; border-bottom:1px solid var(--border); font-size:.84rem; color:var(--text-soft); }
+.tier-table tr:last-child td { border-bottom:none; }
+.tier-table td:first-child { font-family:var(--font-mono); font-weight:700; font-size:.78rem; letter-spacing:.06em; vertical-align:top; }
+.tier-table td.chain { font-family:var(--font-mono); font-size:.74rem; color:var(--accent); line-height:1.7; }
+.tier-table td.duration { font-family:var(--font-mono); font-size:.74rem; color:var(--accent-4); }
+.t-micro { color:var(--accent-4); }
+.t-small { color:var(--accent); }
+.t-medium { color:var(--accent-2); }
+
+/* Category cards + dialogs (for advanced v1.9.0 concepts) */
+.cat-grid { display:grid; gap:14px; grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.cat-card {
+  position:relative;
+  border:1px solid var(--border); border-radius:18px; padding:20px;
+  background:var(--panel-strong);
+  text-align:left; cursor:pointer;
+  display:flex; flex-direction:column; gap:10px;
+  transition:var(--transition-fast);
+  overflow:hidden;
+}
+[data-theme="light"] .cat-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.cat-card::before { content:''; position:absolute; inset:0 auto auto 0; width:120px; height:120px; pointer-events:none; opacity:.7; }
+.cat-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
+.cat-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.cat-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="cyan"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="emerald"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="violet"]::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="gold"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 20%, transparent), transparent 70%); }
+.cat-card[data-tone="pink"]    { background:linear-gradient(180deg, rgba(255,107,164,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="pink"]::before    { background:radial-gradient(circle, rgba(255,107,164,.18), transparent 70%); }
+.cat-card[data-tone="teal"]    { background:linear-gradient(180deg, rgba(34,211,238,.08), transparent 60%), var(--panel-strong); }
+.cat-card[data-tone="teal"]::before    { background:radial-gradient(circle, rgba(34,211,238,.18), transparent 70%); }
+.cat-head { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cat-icon { width:36px; height:36px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--panel-strong) 70%, transparent); border:1px solid var(--border); }
+.cat-icon svg { width:18px; height:18px; }
+.cat-card[data-tone="cyan"]    .cat-icon { color:var(--accent);   border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.cat-card[data-tone="emerald"] .cat-icon { color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); }
+.cat-card[data-tone="violet"]  .cat-icon { color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); }
+.cat-card[data-tone="gold"]    .cat-icon { color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); }
+.cat-card[data-tone="pink"]    .cat-icon { color:#ff6ba4; border-color:rgba(255,107,164,.28); }
+.cat-card[data-tone="teal"]    .cat-icon { color:#22d3ee; border-color:rgba(34,211,238,.28); }
+.cat-badge { margin-left:auto; font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
+.cat-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; position:relative; z-index:1; }
+.cat-card p { font-size:.8rem; color:var(--muted); line-height:1.55; margin:0; position:relative; z-index:1; }
+.cat-cta { margin-top:6px; display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:600; position:relative; z-index:1; transition:gap .15s ease; }
+.cat-card[data-tone="cyan"]    .cat-cta { color:var(--accent); }
+.cat-card[data-tone="emerald"] .cat-cta { color:var(--accent-4); }
+.cat-card[data-tone="violet"]  .cat-cta { color:var(--accent-2); }
+.cat-card[data-tone="gold"]    .cat-cta { color:var(--accent-3); }
+.cat-card[data-tone="pink"]    .cat-cta { color:#ff6ba4; }
+.cat-card[data-tone="teal"]    .cat-cta { color:#22d3ee; }
+.cat-card:hover .cat-cta { gap:9px; }
+
+/* Dialog (popovers) */
+dialog.popover { width:min(900px, calc(100% - 32px)); max-height:min(85vh, 800px); padding:0; border:1px solid var(--border); border-radius:20px; background:var(--panel-strong); color:var(--text); box-shadow:0 30px 80px rgba(0,0,0,.5); overflow:hidden; }
+[data-theme="light"] dialog.popover { box-shadow:0 30px 80px -10px rgba(15,23,42,.30); }
+dialog.popover::backdrop { background:rgba(7,8,12,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+[data-theme="light"] dialog.popover::backdrop { background:rgba(15,23,42,.45); }
+dialog.popover[open] { animation:dlg-in .25s ease; }
+@keyframes dlg-in { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+.dlg-head { display:flex; align-items:center; gap:14px; padding:18px 22px; border-bottom:1px solid var(--border); background:color-mix(in srgb, var(--panel) 60%, transparent); }
+.dlg-head .cat-icon { width:32px; height:32px; }
+.dlg-head .dlg-meta { flex:1; }
+.dlg-head .dlg-eyebrow { font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.dlg-head .dlg-title { font-size:1.05rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; }
+.dlg-close { width:32px; height:32px; border-radius:10px; background:var(--surface-soft); border:1px solid var(--border); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); flex-shrink:0; }
+.dlg-close:hover { color:var(--text); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.dlg-body { padding:22px; overflow-y:auto; max-height:calc(85vh - 70px); }
+.dlg-intro { color:var(--muted); font-size:.88rem; line-height:1.65; margin-bottom:16px; }
+.dlg-body h4 { font-size:.78rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; margin:18px 0 10px; text-transform:uppercase; font-family:var(--font-mono); letter-spacing:.06em; }
+.dlg-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin-bottom:12px; }
+.dlg-body p code, .dlg-body li code { font-size:.78rem; padding:1px 6px; border-radius:5px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); }
+.dlg-body ul { padding-left:20px; margin:0 0 14px; }
+.dlg-body li { font-size:.84rem; color:var(--text-soft); line-height:1.65; margin-bottom:4px; }
+
+/* Steps */
+.steps { display:flex; flex-direction:column; gap:0; margin-top:18px; }
+.step { display:flex; gap:20px; position:relative; padding-bottom:24px; }
+.step:not(:last-child)::after { content:''; position:absolute; left:18px; top:42px; bottom:0; width:2px; background:linear-gradient(to bottom, var(--border), transparent); }
+.step-num { flex-shrink:0; width:36px; height:36px; border-radius:10px; background:var(--panel-strong); border:1.5px solid var(--accent); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.84rem; font-weight:700; color:var(--accent); position:relative; z-index:1; }
+.step-body { flex:1; }
+.step-body h3 { font-size:1rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; letter-spacing:-.01em; }
+.step-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin:0 0 10px; }
+.step-body p code { font-size:.78rem; padding:1px 5px; border-radius:5px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); }
+
+/* Terminal card (shared from automation) */
+.terminal-card { border-radius:14px; border:1px solid transparent; background:linear-gradient(180deg, #0e1320, #0a0f1c); box-shadow:0 10px 30px -10px rgba(0,0,0,.5); overflow:hidden; }
+.terminal-head { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.06); background:#10182a; }
+.terminal-dots { display:flex; gap:5px; }
+.terminal-dots span { width:9px; height:9px; border-radius:999px; }
+.terminal-dots span:nth-child(1) { background:#ff6057; }
+.terminal-dots span:nth-child(2) { background:#febc2e; }
+.terminal-dots span:nth-child(3) { background:#28c840; }
+.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
+.terminal-copy { margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,.10); color:#a9b3c7; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; padding:3px 9px; border-radius:5px; text-transform:uppercase; transition:var(--transition-fast); }
+.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
+.terminal-body { padding:14px 18px 16px; font-family:var(--font-mono); font-size:.78rem; line-height:1.7; color:#c8d8ee; overflow-x:auto; }
+.term-line { display:block; white-space:pre; }
+.term-prompt { color:#4dd5a6; }
+.term-cmd { color:#fff; }
+.term-flag { color:#e8b05f; }
+.term-str { color:#7be3bb; }
+.term-comment { color:#7f8796; }
+.term-out-key { color:#5ec8ff; }
+.term-out-val { color:#e5c07b; }
+.term-ok { color:#4dd5a6; }
+
+/* Site CTA + Footer */
+.site-cta { border-radius:22px; border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%), radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%), color-mix(in srgb, var(--bg-deep) 86%, transparent); padding:34px 30px; display:grid; gap:18px; grid-template-columns:1.4fr 1fr; align-items:center; margin-top:24px; }
+[data-theme="light"] .site-cta { background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%), radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%), #fff; box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
+.site-cta-heading .accent-cyan { color:var(--accent); }
+.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
+.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
+.site-footer { display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr; padding:42px 4px 8px; margin-top:30px; border-top:1px solid var(--border); }
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base { margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.76rem; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .marketing-hero { grid-template-columns:1fr; gap:24px; }
+  .gates-grid { grid-template-columns:repeat(2, 1fr); }
+  .cat-grid { grid-template-columns:repeat(2, 1fr); }
+  .pipeline-track { overflow-x:auto; }
+  .pipeline-step { min-width:130px; }
+  .site-cta { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; }
+  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
+  .cmd-brand { padding-right:0; border-right:none; }
+  .cmd-center { order:3; width:100%; }
+  .cmd-nav { width:100%; overflow-x:auto; }
+  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
+  .marketing-hero { padding:24px 20px; }
+  .hero-copy h1 { font-size:1.8rem; }
+  .gates-grid { grid-template-columns:1fr; }
+  .cat-grid { grid-template-columns:1fr; }
+  .hero-rail { grid-template-columns:repeat(2, 1fr); }
+  .site-footer { grid-template-columns:1fr; }
+  dialog.popover { width:100%; max-height:100vh; height:100vh; border-radius:0; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
 </head>
 <body>
 
-  <!-- Nav -->
-  <nav>
-    <a class="nav-back" href="../index.html">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-      Tutoriais
-    </a>
-    <span class="nav-sep">›</span>
-    <span class="nav-title">Spec-Driven Development</span>
-    <span class="nav-tag">Fundamental</span>
-  </nav>
+<main class="shell">
 
-  <!-- Hero -->
-  <div class="hero">
-    <div class="hero-eyebrow">Tutorial completo</div>
-    <h1>Do Prompt ao Código<br/>Sem Surpresas</h1>
-    <p class="hero-sub">
-      Como o AIOSON transforma uma ideia vaga num sistema bem construído — usando agentes especializados, artefatos e gates de aprovação que impedem o AI de adivinhar o que você quis dizer.
-    </p>
-    <div class="hero-meta">
-      <span class="meta-pill"><span class="meta-dot" style="background:var(--green)"></span> Nível iniciante</span>
-      <span class="meta-pill"><span class="meta-dot" style="background:var(--accent)"></span> Leitura: ~12 min</span>
-      <span class="meta-pill"><span class="meta-dot" style="background:var(--cyan)"></span> PT-BR</span>
-    </div>
+  <!-- DOCK -->
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" /></svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> sdd · 29 agentes · 4 gates</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">⚡</span> SDD</a>
+          <a class="cmd-nav-item" href="./automation.html"><span class="cmd-nav-glyph">◇</span> Automation</a>
+          <a class="cmd-nav-item" href="../squads/index.html"><span class="cmd-nav-glyph">⬡</span> Squads</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <span class="cmd-divider"></span>
+        <a href="../releases/1-9-0/index.html" class="cmd-cta">
+          Release v1.9.0
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
   </div>
 
-  <!-- ── Section 1: O problema ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Contexto</div>
-      <h2>O problema que o AIOSON resolve</h2>
-      <p>
-        Você já pediu para uma IA "criar um sistema de gerenciamento de estoque" e ela simplesmente começou a escrever código — sem perguntar nada, sem confirmar se era o que você queria, sem lidar com os casos especiais que você nem tinha pensado ainda?
+  <!-- HERO -->
+  <section class="marketing-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Tutorial · Spec-Driven Development</span>
+      <h1>
+        Da <span class="accent-cyan">ideia</span> vaga<br />
+        ao <span class="accent-violet">código</span> funcional.
+      </h1>
+      <p class="lede">
+        SDD é o método central do AIOSON. 29 agentes especializados, 4 gates de aprovação, classificação automática MICRO/SMALL/MEDIUM e Living Memory que faz sessões pararem de esquecer. Tudo orquestrado por CLI determinístico — você nunca pula uma etapa.
       </p>
-      <p>
-        Isso acontece porque a maioria das ferramentas de AI não tem <strong>protocolo</strong>. Elas recebem uma mensagem, geram uma resposta. Sem etapas, sem gates, sem memória entre sessões.
-      </p>
+      <div class="hero-actions">
+        <a class="primary-button" href="#pipeline">
+          Ver o pipeline
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="secondary-button" href="#primeira">Sua primeira feature</a>
+      </div>
+    </div>
+    <aside class="hero-rail">
+      <div class="stat-tile blue"><span>agentes</span><strong>29</strong></div>
+      <div class="stat-tile violet"><span>gates</span><strong>A·B·C·D</strong></div>
+      <div class="stat-tile green"><span>tiers</span><strong>3</strong></div>
+      <div class="stat-tile gold"><span>v1.9.0 adds</span><strong>6</strong></div>
+    </aside>
+  </section>
 
-      <div class="compare">
-        <div class="compare-col bad">
-          <div class="compare-header">
-            <svg width="14" height="14" fill="var(--red)" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg>
-            Sem protocolo
-          </div>
-          <ul class="compare-list">
-            <li><span>⚡</span> Começa a codificar imediatamente</li>
-            <li><span>🤔</span> Adivinha os requisitos não ditos</li>
-            <li><span>🔄</span> Perde contexto após algumas mensagens</li>
-            <li><span>💥</span> Reescreve tudo quando você muda a ideia</li>
-            <li><span>🔀</span> Mistura decisão de produto com código</li>
-          </ul>
+  <!-- CALLOUT — O QUE É SDD -->
+  <section class="site-section">
+    <div class="compact-callout">
+      <div class="compact-callout-icon">🧭</div>
+      <p><strong>SDD em uma frase:</strong> ao invés do agente "tentar implementar direto" a partir de um prompt, ele segue um <strong>pipeline determinístico</strong> — primeiro entende o produto (@product), depois mapeia entidades (@analyst), define decisões estruturais (@architect), implementa (@dev), e valida com QA (@qa). Cada estágio precisa passar por um <em>gate</em> antes do próximo. Ninguém pula etapa, ninguém improvisa o que ficou ambíguo.</p>
+    </div>
+  </section>
+
+  <!-- PIPELINE VISUAL -->
+  <section class="site-section" id="pipeline">
+    <header class="site-section-header">
+      <span class="eyebrow">Pipeline · 8 estágios</span>
+      <h2 class="site-section-title">Como uma feature <span class="accent-cyan">flui</span>.</h2>
+      <p class="site-section-subtitle">Cada feature percorre uma cadeia de agentes. MICRO pula a maioria, MEDIUM passa por todos. Gates intermediários (A·B·C·D) bloqueiam quando algo está faltando.</p>
+    </header>
+
+    <div class="pipeline-track">
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">01</div>
+        <div class="pipeline-step-cmd">@product</div>
+        <div class="pipeline-step-name">PRD</div>
+        <div class="pipeline-step-desc">O quê e por quê</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate A</div>
+        <div class="pipeline-step-cmd">requirements</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">PRD passou</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">02</div>
+        <div class="pipeline-step-cmd">@analyst</div>
+        <div class="pipeline-step-name">Entities</div>
+        <div class="pipeline-step-desc">BRs · ACs · ECs</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate B</div>
+        <div class="pipeline-step-cmd">design</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">spec pronta</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">03</div>
+        <div class="pipeline-step-cmd">@architect</div>
+        <div class="pipeline-step-name">Decisions</div>
+        <div class="pipeline-step-desc">Stack &amp; boundaries</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate C</div>
+        <div class="pipeline-step-cmd">plan</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">phases definidas</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">04</div>
+        <div class="pipeline-step-cmd">@dev</div>
+        <div class="pipeline-step-name">Implement</div>
+        <div class="pipeline-step-desc">Slices validadas</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate D</div>
+        <div class="pipeline-step-cmd">@qa</div>
+        <div class="pipeline-step-name">PASS/FAIL</div>
+        <div class="pipeline-step-desc">QA verdict</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 GATES -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">4 gates · protegem o projeto</span>
+      <h2 class="site-section-title">Cada estágio <span class="accent-gold">precisa passar</span>.</h2>
+      <p class="site-section-subtitle">Gates são checkpoints determinísticos. Se o artefato esperado não existe ou está incompleto, o gate retorna BLOCKED e o agente seguinte recusa-se a começar. Sem ambiguidade.</p>
+    </header>
+
+    <div class="gates-grid">
+      <div class="gate-card">
+        <div class="gate-letter">A</div>
+        <div class="gate-eyebrow">requirements</div>
+        <h3>Gate A — Requirements</h3>
+        <p>Existe um PRD ou requirements doc com escopo claro, users, MVP, out-of-scope?</p>
+        <div class="gate-artifact">requirements-{slug}.md OU prd-{slug}.md</div>
+      </div>
+      <div class="gate-card">
+        <div class="gate-letter">B</div>
+        <div class="gate-eyebrow">design</div>
+        <h3>Gate B — Design</h3>
+        <p>Existe spec com entidades, business rules, edge cases e decisões registradas?</p>
+        <div class="gate-artifact">spec-{slug}.md (requer Gate A)</div>
+      </div>
+      <div class="gate-card">
+        <div class="gate-letter">C</div>
+        <div class="gate-eyebrow">plan</div>
+        <h3>Gate C — Plan</h3>
+        <p>Existe plano de implementação com fases ordenadas, dependências e pré-decisões?</p>
+        <div class="gate-artifact">implementation-plan-{slug}.md (requer A+B)</div>
+      </div>
+      <div class="gate-card">
+        <div class="gate-letter">D</div>
+        <div class="gate-eyebrow">execution</div>
+        <h3>Gate D — Execution</h3>
+        <p>QA aprovou. Spec com sign-off, features.md flipado, distillation hook disparou.</p>
+        <div class="gate-artifact">QA verdict PASS + spec sealed (requer A+B+C)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLASSIFICATION -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Classificação · MICRO / SMALL / MEDIUM</span>
+      <h2 class="site-section-title">O processo escala com o <span class="accent-emerald">tamanho</span>.</h2>
+      <p class="site-section-subtitle">Nem toda feature precisa do pipeline completo. <code>aioson classify</code> mapeia a feature em um dos 3 tiers; cada um ativa uma cadeia diferente de agentes e gates.</p>
+    </header>
+
+    <table class="tier-table">
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Quando</th>
+          <th>Chain de agentes</th>
+          <th>Duração típica</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="t-micro">MICRO</td>
+          <td>Sem entidades novas. Fix, refactor pequeno, alias, nova flag de CLI. <code>--no-distill</code> opt-in.</td>
+          <td class="chain">@product → @dev → @qa</td>
+          <td class="duration">1-2 sessões</td>
+        </tr>
+        <tr>
+          <td class="t-small">SMALL</td>
+          <td>Entidade nova ou refactor médio. Webhooks, integrações de 1 hop, novas views.</td>
+          <td class="chain">@product → @analyst → @dev → @qa</td>
+          <td class="duration">3-5 sessões</td>
+        </tr>
+        <tr>
+          <td class="t-medium">MEDIUM</td>
+          <td>Multi-entidade, multi-hop, paralelismo, harness contract. Living Memory, Squads, novos agentes.</td>
+          <td class="chain">@product → @sheldon → @analyst → @architect → @dev → @qa → @validator</td>
+          <td class="duration">1-3 semanas</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6 CONCEITOS AVANÇADOS V1.9.0 -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">v1.9.0 · 6 conceitos avançados</span>
+      <h2 class="site-section-title">O que mudou na <span class="accent-violet">Living Memory Era</span>.</h2>
+      <p class="site-section-subtitle">Click em qualquer card para ver detalhes em popover. Esses 6 conceitos transformaram o SDD básico em algo persistente, procedural e adaptado pra quem está começando.</p>
+    </header>
+
+    <div class="cat-grid">
+      <button class="cat-card" data-tone="emerald" data-dialog="dlg-living" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
+          <span class="cat-badge">v1.9.0</span>
         </div>
-        <div class="compare-col good">
-          <div class="compare-header">
-            <svg width="14" height="14" fill="var(--green)" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-            Com AIOSON
+        <h3>Living Memory</h3>
+        <p>Bootstrap em 4 arquivos auto-sync com diffs, reflect engine pós-<code>agent:done</code>, FTS5 search. Sessões pararam de esquecer.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="violet" data-dialog="dlg-brains-c" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
+          <span class="cat-badge">v1.9.0</span>
+        </div>
+        <h3>Brains procedural</h3>
+        <p>Padrões com quality-score. Agentes carregam só nodes q ≥ 4 que fazem match com tags da task. 3 brains, 25 nodes hoje.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="gold" data-dialog="dlg-autonomy" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span class="cat-badge">v1.9.0</span>
+        </div>
+        <h3>Autonomy 3 tiers</h3>
+        <p>tier1 silent (read) · tier2 notified (memory writes) · tier3 blocking (push/publish). Materializado por harness via <code>permissions-generator</code>.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="cyan" data-dialog="dlg-profile" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
+          <span class="cat-badge">v1.9.0</span>
+        </div>
+        <h3>Profile creator/developer</h3>
+        <p>Default <code>creator</code>: 1 pergunta/turn via AskUserQuestion, jargão traduzido, opção "Pausar / quero pensar". Devs trocam pra <code>developer</code>.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="pink" data-dialog="dlg-dossier-c" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/></svg></span>
+          <span class="cat-badge">v1.8.0+</span>
+        </div>
+        <h3>Dossier por feature</h3>
+        <p>Cada feature SMALL/MEDIUM ganha <code>features/{slug}/dossier.md</code> consolidando Why/What + code map + agent trail. A "memória da feature".</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+
+      <button class="cat-card" data-tone="teal" data-dialog="dlg-harness-c" type="button">
+        <div class="cat-head">
+          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span class="cat-badge">MEDIUM</span>
+        </div>
+        <h3>Harness contracts</h3>
+        <p>@sheldon gera <code>harness-contract.json</code> com binary criteria, @validator avalia headless, circuit breaker bloqueia <code>feature:close</code>.</p>
+        <span class="cat-cta">Ver detalhes →</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- TUTORIAL — PRIMEIRA FEATURE -->
+  <section class="site-section" id="primeira">
+    <header class="site-section-header">
+      <span class="eyebrow">Tutorial · sua primeira feature</span>
+      <h2 class="site-section-title">Do <span class="accent-cyan">zero</span> ao Gate D PASS.</h2>
+      <p class="site-section-subtitle">5 passos pra entregar uma feature SMALL completa. Cada passo aciona um agente específico — não improvisa, não pula etapa.</p>
+    </header>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Ative <code>/neo</code> pra orientar</h3>
+          <p>Neo lê o estado do projeto (pulse + Living Memory) e rotea pro próximo agente. Em projetos novos, vai direcionar pra <code>/setup</code> ou <code>/product</code>.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">/neo</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> /neo</span>
+<span class="term-line"><span class="term-out-key">project</span>: meu-app · <span class="term-out-key">stage</span>: ready for next feature</span>
+<span class="term-line"><span class="term-out-key">→ recomendado</span>: /product (sem feature ativa)</span></div>
           </div>
-          <ul class="compare-list">
-            <li><span>📋</span> Documenta os requisitos antes de codar</li>
-            <li><span>✅</span> Gates explícitos impedem avanços prematuros</li>
-            <li><span>💾</span> Artefatos salvam estado entre sessões</li>
-            <li><span>🎯</span> Cada agente tem escopo definido</li>
-            <li><span>🔍</span> Ambiguidades viram decisões documentadas</li>
-          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Escreva o PRD com <code>/product</code></h3>
+          <p>@product conduz uma conversa estruturada — vision, problem, users, MVP must-have/should-have, out-of-scope, métricas. Saída: <code>prd-{slug}.md</code> + entrada em <code>features.md</code>.</p>
+          <p>Em <strong>profile creator</strong>, faz 1 pergunta por turno via <code>AskUserQuestion</code> com opções. Em <strong>profile developer</strong>, batcheia até 5 perguntas.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Map de entidades com <code>/analyst</code></h3>
+          <p>SMALL+ entra aqui. @analyst extrai entidades, business rules, acceptance criteria, edge cases. Verifica integridade vs <code>discovery.md</code>. Gate A ✓ → Gate B em construção.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Implemente com <code>/dev</code></h3>
+          <p>@dev lê <code>dev-state.md</code> (auto-resume sem cold start), carrega só os arquivos do context_package, executa em slices validadas. Roda <code>memory:status</code> pra Living Memory bootstrap gate.</p>
+          <div class="terminal-card">
+            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">/dev cold start</span></div>
+            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> /dev</span>
+<span class="term-line"><span class="term-out-key">resume</span>: feature=checkout · phase=2 · next=<span class="term-str">'Implement payment webhook'</span></span>
+<span class="term-line"><span class="term-out-key">context_package</span>: project.context.md, spec-checkout.md, implementation-plan-checkout.md</span>
+<span class="term-line"><span class="term-out-key">memory:status</span>: bootstrap 4/4 · brains 3 indexed</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Valide e feche com <code>/qa</code></h3>
+          <p>@qa faz risk-first review, testa critical paths, gera test plan, decide PASS/FAIL. Em MEDIUM com harness-contract, recomenda <code>/validator</code> antes do close. Após PASS, <code>feature:close</code> dispara distillation automática.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Section 2: Instalação ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Instalação</div>
-      <h2>Começar em 3 passos</h2>
-      <p>O AIOSON é um CLI Node.js. Você instala uma vez e configura em qualquer projeto novo ou existente.</p>
-
-      <div class="steps">
-
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Instale o AIOSON globalmente</h3>
-            <p>Só precisa fazer isso uma vez na sua máquina. Requer Node.js 18+.</p>
-            <div class="code-block">
-<span class="cmd">npm</span> install -g <span class="str">@jaimevalasek/aioson</span>
-            </div>
-            <p>Ou use sem instalar, direto com npx:</p>
-            <div class="code-block">
-<span class="cmd">npx</span> <span class="str">@jaimevalasek/aioson</span> init meu-projeto
-            </div>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Inicialize no seu projeto</h3>
-            <p>Para um projeto novo, use <code style="font-family:monospace;color:var(--cyan)">init</code>. Para um projeto já existente, use <code style="font-family:monospace;color:var(--cyan)">install</code>.</p>
-            <div class="code-block">
-<span class="c"># Projeto novo</span>
-<span class="cmd">aioson</span> init meu-projeto
-
-<span class="c"># Projeto existente</span>
-<span class="cmd">cd</span> meu-projeto
-<span class="cmd">aioson</span> install .
-            </div>
-            <p>Um <strong>wizard interativo</strong> vai perguntar qual AI usar (Claude Code, Codex, Gemini…), o idioma dos agentes e se quer ativar Squads.</p>
-          </div>
-        </div>
-
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Abra o AI e ative o primeiro agente</h3>
-            <p>O AIOSON cria os arquivos de configuração que ensinam o AI como se comportar. Abra seu cliente AI e execute:</p>
-            <div class="code-block">
-<span class="c"># Ver quais agentes estão disponíveis</span>
-<span class="cmd">aioson</span> agents
-
-<span class="c"># Pegar o prompt de ativação do setup</span>
-<span class="cmd">aioson</span> agent:prompt setup --tool=claude
-            </div>
-            <p>Cole o prompt gerado na primeira mensagem do seu AI. O agente <strong>/setup</strong> vai mapear o contexto do projeto antes de qualquer trabalho começar.</p>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="callout">
-        <span class="callout-icon">💡</span>
-        <p><strong>O que o install faz por baixo:</strong> cria uma pasta <code style="font-family:monospace;color:var(--cyan)">.aioson/</code> no seu projeto com agentes, skills, regras e configuração. Também cria um <code style="font-family:monospace;color:var(--cyan)">CLAUDE.md</code> (ou equivalente) que instrui o AI sobre o protocolo AIOSON.</p>
-      </div>
+  <!-- FINAL CTA -->
+  <section class="site-cta">
+    <div>
+      <span class="eyebrow">Próximo passo</span>
+      <h2 class="site-cta-heading">Pare de improvisar — siga o <span class="accent-cyan">pipeline</span>.</h2>
+      <p class="site-cta-text">SDD é o que faz o AIOSON diferente de "agente que tenta tudo direto". 29 agentes especializados, 4 gates, classificação automática, Living Memory persistente.</p>
+    </div>
+    <div class="site-cta-actions">
+      <a class="primary-button" href="./automation.html">Ver os scripts CLI →</a>
+      <a class="secondary-button" href="../index.html">Voltar ao hub</a>
     </div>
   </section>
 
-  <!-- ── Section 3: Fluxo de agentes ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Arquitetura</div>
-      <h2>O fluxo completo de agentes</h2>
-      <p>
-        Em vez de um único "chat", o AIOSON divide o trabalho em agentes especializados. Cada agente tem um papel fixo e entrega artefatos concretos antes de passar o bastão para o próximo.
-      </p>
-
-      <!-- Big flowchart -->
-      <div class="bigflow">
-        <div class="bigflow-inner">
-
-          <!-- User input -->
-          <div class="bf-row">
-            <div class="bf-node start">
-              <div class="bf-title">Entrada do usuário</div>
-              <div class="bf-name">Ideia ou pedido</div>
-              <div class="bf-sub">"quero um sistema de estoque"</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Setup -->
-          <div class="bf-row">
-            <div class="bf-node" style="border-color:rgba(167,139,250,0.5);background:rgba(167,139,250,0.07);min-width:200px">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/setup</div>
-              <div class="bf-sub">contexto do projeto</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Discovery tier -->
-          <div class="bf-row" style="gap:8px">
-            <div class="bf-node" style="min-width:110px;background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/analyst</div>
-              <div class="bf-sub">domínio</div>
-            </div>
-            <div class="bf-node" style="min-width:110px;background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/architect</div>
-              <div class="bf-sub">estrutura</div>
-            </div>
-            <div class="bf-node" style="min-width:110px;background:rgba(34,211,238,0.06);border-color:rgba(34,211,238,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/product</div>
-              <div class="bf-sub">PRD</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Sheldon -->
-          <div class="bf-row">
-            <div class="bf-node" style="border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.07);min-width:200px">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/sheldon</div>
-              <div class="bf-sub">enriquecimento PRD + raciocínio profundo</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Gate A -->
-          <div class="bf-row">
-            <div class="bf-node gate" style="min-width:200px">
-              <div class="bf-title">Gate A</div>
-              <div class="bf-name" style="color:var(--green)">Requisitos aprovados?</div>
-              <div class="bf-sub">requirements-{slug}.md</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- UX-UI + Architecture -->
-          <div class="bf-row" style="gap:8px">
-            <div class="bf-node" style="min-width:140px;background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/ux-ui</div>
-              <div class="bf-sub">design system</div>
-            </div>
-            <div class="bf-node" style="min-width:140px;background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/architect</div>
-              <div class="bf-sub">design doc</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Gate B -->
-          <div class="bf-row">
-            <div class="bf-node gate" style="min-width:200px">
-              <div class="bf-title">Gate B</div>
-              <div class="bf-name" style="color:var(--green)">Design aprovado?</div>
-              <div class="bf-sub">architecture.md</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Dev + PM -->
-          <div class="bf-row" style="gap:8px">
-            <div class="bf-node" style="min-width:110px;background:rgba(96,165,250,0.06);border-color:rgba(96,165,250,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/dev</div>
-              <div class="bf-sub">plano</div>
-            </div>
-            <div class="bf-node" style="min-width:110px;background:rgba(96,165,250,0.06);border-color:rgba(96,165,250,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/pm</div>
-              <div class="bf-sub">backlog</div>
-            </div>
-            <div class="bf-node" style="min-width:110px;background:rgba(96,165,250,0.06);border-color:rgba(96,165,250,0.3)">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/deyvin</div>
-              <div class="bf-sub">impl.</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Gate C -->
-          <div class="bf-row">
-            <div class="bf-node gate" style="min-width:200px">
-              <div class="bf-title">Gate C</div>
-              <div class="bf-name" style="color:var(--green)">Plano aprovado?</div>
-              <div class="bf-sub">implementation-plan.md</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:28px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Execution -->
-          <div class="bf-row">
-            <div class="bf-node" style="border-color:rgba(96,165,250,0.4);background:rgba(96,165,250,0.07);min-width:200px">
-              <div class="bf-title">Execução</div>
-              <div class="bf-name">@dev / @deyvin</div>
-              <div class="bf-sub">código + commits + spec atualizado</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Gate D -->
-          <div class="bf-row">
-            <div class="bf-node gate" style="min-width:200px">
-              <div class="bf-title">Gate D</div>
-              <div class="bf-name" style="color:var(--green)">Verificação 4 níveis</div>
-              <div class="bf-sub">Existe → Substancial → Conectado → Funcional</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- QA -->
-          <div class="bf-row">
-            <div class="bf-node" style="border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.07);min-width:200px">
-              <div class="bf-title">Agente</div>
-              <div class="bf-name">/qa</div>
-              <div class="bf-sub">review, testes, browser QA</div>
-            </div>
-          </div>
-
-          <div class="bf-row"><div class="bf-arrow-col" style="height:20px"><div class="bf-line"></div><div class="bf-arrowhead"></div></div></div>
-
-          <!-- Done -->
-          <div class="bf-row">
-            <div class="bf-node end" style="min-width:200px">
-              <div class="bf-title">Resultado</div>
-              <div class="bf-name">✓ Entregue</div>
-              <div class="bf-sub">código funcional + artefatos documentados</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Agents grid -->
-      <h3 style="margin-top:40px;margin-bottom:8px;color:var(--muted);font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Todos os agentes</h3>
-      <div class="agent-grid">
-        <div class="agent-card">
-          <div class="agent-name">/setup</div>
-          <div class="agent-role">Onboarding do projeto</div>
-          <div class="agent-desc">Primeiro passo. Mapeia o contexto e prepara o projeto para os demais agentes.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/analyst</div>
-          <div class="agent-role">Descoberta de domínio</div>
-          <div class="agent-desc">Mapeia entidades, fluxos e regras de negócio. Produz requirements.md.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/product</div>
-          <div class="agent-role">PRD e escopo</div>
-          <div class="agent-desc">Define objetivos, o que está fora do escopo e histórias de usuário.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/sheldon</div>
-          <div class="agent-role">Raciocínio profundo</div>
-          <div class="agent-desc">Enriquece o PRD, resolve áreas cinzentas e valida prontidão antes da implementação.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/architect</div>
-          <div class="agent-role">Decisões técnicas</div>
-          <div class="agent-desc">Define stack, estrutura de módulos e padrões de código.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/ux-ui</div>
-          <div class="agent-role">Design system</div>
-          <div class="agent-desc">Especificações visuais, componentes e sistema de design.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/pm</div>
-          <div class="agent-role">Backlog e sprints</div>
-          <div class="agent-desc">Quebra o trabalho em tarefas menores e organiza o backlog.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/dev</div>
-          <div class="agent-role">Implementação</div>
-          <div class="agent-desc">Executa o código seguindo o plano aprovado, sem reinventar decisões já tomadas.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/deyvin</div>
-          <div class="agent-role">Implementação avançada</div>
-          <div class="agent-desc">Alias de /pair. Implementação direta para contexto já conhecido.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/qa</div>
-          <div class="agent-role">Qualidade e revisão</div>
-          <div class="agent-desc">Testes, revisão de risco, QA no browser via Playwright.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/orchestrator</div>
-          <div class="agent-role">Coordenação paralela</div>
-          <div class="agent-desc">Coordena múltiplos agentes em paralelo para projetos grandes.</div>
-        </div>
-        <div class="agent-card">
-          <div class="agent-name">/squad</div>
-          <div class="agent-role">Times especializados</div>
-          <div class="agent-desc">Cria squads de agentes para qualquer domínio, não só software.</div>
-        </div>
-      </div>
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
     </div>
-  </section>
-
-  <!-- ── Section 3b: Mapa Mental ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Visão geral</div>
-      <h2>Mapa mental do AIOSON SDD</h2>
-      <p>Uma visão de tudo de uma vez — como cada parte do sistema se relaciona com o centro. Use como referência rápida enquanto aprende.</p>
+    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="./automation.html">Automation</a></li><li><a href="../squads/index.html">Squads</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Releases</div><ul><li><a href="../releases/1-9-0/index.html">v1.9.0</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>29 agentes · 4 gates · MICRO/SMALL/MEDIUM · Living Memory</div>
+      <div>AIOSON · inception mode</div>
     </div>
-
-    <div style="overflow-x:auto;padding:0 24px 8px;margin-top:28px">
-      <svg viewBox="0 0 980 610" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;min-width:680px;display:block">
-
-        <!-- Background -->
-        <rect width="980" height="610" fill="#080810" rx="16"/>
-
-        <!-- Subtle grid -->
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1a2e" stroke-width="0.5"/>
-          </pattern>
-        </defs>
-        <rect width="980" height="610" fill="url(#grid)" rx="16" opacity="0.6"/>
-
-        <!-- ══ CONNECTION LINES — drawn before nodes so nodes appear on top ══ -->
-
-        <!-- Center → SDD Flow (top-left) -->
-        <line x1="490" y1="292" x2="308" y2="198" stroke="#22d3ee" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-        <!-- Center → @sheldon (top) -->
-        <line x1="490" y1="292" x2="490" y2="108" stroke="#fbbf24" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-        <!-- Center → Gates (top-right) -->
-        <line x1="490" y1="292" x2="672" y2="198" stroke="#34d399" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-        <!-- Center → Execução (bottom-right) -->
-        <line x1="490" y1="292" x2="672" y2="386" stroke="#60a5fa" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-        <!-- Center → Memória (bottom) -->
-        <line x1="490" y1="292" x2="490" y2="472" stroke="#a78bfa" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-        <!-- Center → Status (bottom-left) -->
-        <line x1="490" y1="292" x2="308" y2="386" stroke="#f87171" stroke-width="1.8" opacity="0.4" stroke-linecap="round"/>
-
-        <!-- SDD sub-lines -->
-        <line x1="308" y1="198" x2="150" y2="138" stroke="#22d3ee" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="308" y1="198" x2="130" y2="205" stroke="#22d3ee" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="308" y1="198" x2="148" y2="272" stroke="#22d3ee" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- Sheldon sub-lines -->
-        <line x1="490" y1="108" x2="354" y2="38" stroke="#fbbf24" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="490" y1="108" x2="490" y2="28" stroke="#fbbf24" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="490" y1="108" x2="626" y2="38" stroke="#fbbf24" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- Gates sub-lines -->
-        <line x1="672" y1="198" x2="822" y2="138" stroke="#34d399" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="672" y1="198" x2="844" y2="202" stroke="#34d399" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="672" y1="198" x2="820" y2="268" stroke="#34d399" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="672" y1="198" x2="798" y2="338" stroke="#34d399" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- Exec sub-lines -->
-        <line x1="672" y1="386" x2="826" y2="358" stroke="#60a5fa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="672" y1="386" x2="826" y2="424" stroke="#60a5fa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- Memory sub-lines -->
-        <line x1="490" y1="472" x2="322" y2="542" stroke="#a78bfa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="490" y1="472" x2="446" y2="558" stroke="#a78bfa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="490" y1="472" x2="566" y2="558" stroke="#a78bfa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="490" y1="472" x2="688" y2="540" stroke="#a78bfa" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- Status sub-lines -->
-        <line x1="308" y1="386" x2="128" y2="344" stroke="#f87171" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="308" y1="386" x2="112" y2="410" stroke="#f87171" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-        <line x1="308" y1="386" x2="126" y2="476" stroke="#f87171" stroke-width="1" opacity="0.28" stroke-linecap="round"/>
-
-        <!-- ══ CENTER NODE ══ -->
-        <rect x="426" y="265" width="128" height="54" rx="27" fill="#0f0f1e" stroke="#6c47ff" stroke-width="2.5"/>
-        <rect x="426" y="265" width="128" height="54" rx="27" fill="rgba(108,71,255,0.08)"/>
-        <text x="490" y="285" text-anchor="middle" fill="#a78bfa" font-family="Inter,sans-serif" font-size="15" font-weight="800" letter-spacing="-0.3">AIOSON</text>
-        <text x="490" y="304" text-anchor="middle" fill="#6854a8" font-family="Inter,sans-serif" font-size="10.5" font-weight="500">Spec-Driven Dev</text>
-
-        <!-- ══ SDD FLOW node (308, 198) ══ -->
-        <rect x="246" y="180" width="124" height="36" rx="18" fill="#091318" stroke="#22d3ee" stroke-width="1.5"/>
-        <text x="308" y="198" text-anchor="middle" dominant-baseline="central" fill="#22d3ee" font-family="Inter,sans-serif" font-size="12" font-weight="700">SDD Flow</text>
-
-        <!-- SDD subs -->
-        <rect x="74" y="124" width="152" height="28" rx="14" fill="#080e12" stroke="#22d3ee" stroke-width="1" opacity="0.75"/>
-        <text x="150" y="138" text-anchor="middle" dominant-baseline="central" fill="#86e3ee" font-family="Inter,sans-serif" font-size="10.5">prd-{slug}.md</text>
-
-        <rect x="54" y="191" width="152" height="28" rx="14" fill="#080e12" stroke="#22d3ee" stroke-width="1" opacity="0.75"/>
-        <text x="130" y="205" text-anchor="middle" dominant-baseline="central" fill="#86e3ee" font-family="Inter,sans-serif" font-size="10.5">requirements.md</text>
-
-        <rect x="72" y="258" width="152" height="28" rx="14" fill="#080e12" stroke="#22d3ee" stroke-width="1" opacity="0.75"/>
-        <text x="148" y="272" text-anchor="middle" dominant-baseline="central" fill="#86e3ee" font-family="Inter,sans-serif" font-size="10.5">impl-plan.md</text>
-
-        <!-- ══ @SHELDON node (490, 108) ══ -->
-        <rect x="428" y="90" width="124" height="36" rx="18" fill="#1a1208" stroke="#fbbf24" stroke-width="1.5"/>
-        <text x="490" y="108" text-anchor="middle" dominant-baseline="central" fill="#fbbf24" font-family="Inter,sans-serif" font-size="12" font-weight="700">@sheldon</text>
-
-        <!-- Sheldon subs -->
-        <rect x="280" y="24" width="148" height="28" rx="14" fill="#120f06" stroke="#fbbf24" stroke-width="1" opacity="0.75"/>
-        <text x="354" y="38" text-anchor="middle" dominant-baseline="central" fill="#fde68a" font-family="Inter,sans-serif" font-size="10.5">Gray Areas → decisões</text>
-
-        <rect x="416" y="14" width="148" height="28" rx="14" fill="#120f06" stroke="#fbbf24" stroke-width="1" opacity="0.75"/>
-        <text x="490" y="28" text-anchor="middle" dominant-baseline="central" fill="#fde68a" font-family="Inter,sans-serif" font-size="10.5">Score: 3 sizing paths</text>
-
-        <rect x="552" y="24" width="148" height="28" rx="14" fill="#120f06" stroke="#fbbf24" stroke-width="1" opacity="0.75"/>
-        <text x="626" y="38" text-anchor="middle" dominant-baseline="central" fill="#fde68a" font-family="Inter,sans-serif" font-size="10.5">Fases externas (7+)</text>
-
-        <!-- ══ GATES node (672, 198) ══ -->
-        <rect x="610" y="180" width="124" height="36" rx="18" fill="#09150e" stroke="#34d399" stroke-width="1.5"/>
-        <text x="672" y="198" text-anchor="middle" dominant-baseline="central" fill="#34d399" font-family="Inter,sans-serif" font-size="12" font-weight="700">Gates A → D</text>
-
-        <!-- Gates subs -->
-        <rect x="746" y="124" width="152" height="28" rx="14" fill="#060f0a" stroke="#34d399" stroke-width="1" opacity="0.75"/>
-        <text x="822" y="138" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-family="Inter,sans-serif" font-size="10.5">A: Requisitos</text>
-
-        <rect x="768" y="188" width="152" height="28" rx="14" fill="#060f0a" stroke="#34d399" stroke-width="1" opacity="0.75"/>
-        <text x="844" y="202" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-family="Inter,sans-serif" font-size="10.5">B: Design</text>
-
-        <rect x="744" y="254" width="152" height="28" rx="14" fill="#060f0a" stroke="#34d399" stroke-width="1" opacity="0.75"/>
-        <text x="820" y="268" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-family="Inter,sans-serif" font-size="10.5">C: Plano</text>
-
-        <rect x="722" y="324" width="152" height="28" rx="14" fill="#060f0a" stroke="#34d399" stroke-width="1" opacity="0.75"/>
-        <text x="798" y="338" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-family="Inter,sans-serif" font-size="10.5">D: Verificação 4-tier</text>
-
-        <!-- ══ EXECUÇÃO node (672, 386) ══ -->
-        <rect x="610" y="368" width="124" height="36" rx="18" fill="#080e1c" stroke="#60a5fa" stroke-width="1.5"/>
-        <text x="672" y="386" text-anchor="middle" dominant-baseline="central" fill="#60a5fa" font-family="Inter,sans-serif" font-size="12" font-weight="700">Execução</text>
-
-        <!-- Exec subs -->
-        <rect x="750" y="344" width="152" height="28" rx="14" fill="#060a14" stroke="#60a5fa" stroke-width="1" opacity="0.75"/>
-        <text x="826" y="358" text-anchor="middle" dominant-baseline="central" fill="#93c5fd" font-family="Inter,sans-serif" font-size="10.5">@dev / @deyvin</text>
-
-        <rect x="750" y="410" width="152" height="28" rx="14" fill="#060a14" stroke="#60a5fa" stroke-width="1" opacity="0.75"/>
-        <text x="826" y="424" text-anchor="middle" dominant-baseline="central" fill="#93c5fd" font-family="Inter,sans-serif" font-size="10.5">spec-{slug}.md</text>
-
-        <!-- ══ MEMÓRIA node (490, 472) ══ -->
-        <rect x="428" y="454" width="124" height="36" rx="18" fill="#0e0a1c" stroke="#a78bfa" stroke-width="1.5"/>
-        <text x="490" y="472" text-anchor="middle" dominant-baseline="central" fill="#a78bfa" font-family="Inter,sans-serif" font-size="12" font-weight="700">Memória</text>
-
-        <!-- Memory subs -->
-        <rect x="248" y="528" width="148" height="28" rx="14" fill="#0a0814" stroke="#a78bfa" stroke-width="1" opacity="0.75"/>
-        <text x="322" y="542" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-family="Inter,sans-serif" font-size="10.5">rules/</text>
-
-        <rect x="372" y="544" width="148" height="28" rx="14" fill="#0a0814" stroke="#a78bfa" stroke-width="1" opacity="0.75"/>
-        <text x="446" y="558" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-family="Inter,sans-serif" font-size="10.5">docs/</text>
-
-        <rect x="492" y="544" width="148" height="28" rx="14" fill="#0a0814" stroke="#a78bfa" stroke-width="1" opacity="0.75"/>
-        <text x="566" y="558" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-family="Inter,sans-serif" font-size="10.5">design-docs</text>
-
-        <rect x="614" y="526" width="148" height="28" rx="14" fill="#0a0814" stroke="#a78bfa" stroke-width="1" opacity="0.75"/>
-        <text x="688" y="540" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-family="Inter,sans-serif" font-size="10.5">brains/</text>
-
-        <!-- ══ STATUS node (308, 386) ══ -->
-        <rect x="246" y="368" width="124" height="36" rx="18" fill="#180c0c" stroke="#f87171" stroke-width="1.5"/>
-        <text x="308" y="386" text-anchor="middle" dominant-baseline="central" fill="#f87171" font-family="Inter,sans-serif" font-size="12" font-weight="700">Status</text>
-
-        <!-- Status subs -->
-        <rect x="52" y="330" width="152" height="28" rx="14" fill="#120808" stroke="#f87171" stroke-width="1" opacity="0.75"/>
-        <text x="128" y="344" text-anchor="middle" dominant-baseline="central" fill="#fca5a5" font-family="Inter,sans-serif" font-size="10.5">phase_gates</text>
-
-        <rect x="36" y="396" width="152" height="28" rx="14" fill="#120808" stroke="#f87171" stroke-width="1" opacity="0.75"/>
-        <text x="112" y="410" text-anchor="middle" dominant-baseline="central" fill="#fca5a5" font-family="Inter,sans-serif" font-size="10.5">last_checkpoint</text>
-
-        <rect x="50" y="462" width="152" height="28" rx="14" fill="#120808" stroke="#f87171" stroke-width="1" opacity="0.75"/>
-        <text x="126" y="476" text-anchor="middle" dominant-baseline="central" fill="#fca5a5" font-family="Inter,sans-serif" font-size="10.5">MICRO · SMALL · MEDIUM</text>
-
-        <!-- ── legend ── -->
-        <text x="490" y="596" text-anchor="middle" fill="#3a3a5a" font-family="Inter,sans-serif" font-size="10">
-          SDD Flow · @sheldon · Gates · Execução · Memória · Status
-        </text>
-      </svg>
-    </div>
-  </section>
-
-  <!-- ── Section 4: SDD explicado ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Spec-Driven Development</div>
-      <h2>Como o SDD funciona na prática</h2>
-      <p>
-        Spec-Driven Development (SDD) é o protocolo central do AIOSON. A ideia é simples: <strong>antes de escrever qualquer código, a especificação precisa estar clara e aprovada</strong>. Nenhum agente avança sem que a fase anterior tenha entregado seu artefato.
-      </p>
-
-      <div class="callout">
-        <span class="callout-icon">🎯</span>
-        <p>
-          <strong>A regra de ouro:</strong> um prompt vago vira uma especificação não-ambígua antes de qualquer código ser escrito. Nenhuma fase é pulada, nenhuma suposição fica silenciosa.
-        </p>
-      </div>
-
-      <!-- Pipeline de artefatos -->
-      <h3 style="margin-top:36px;margin-bottom:4px">Cadeia de artefatos</h3>
-      <p>Cada fase produz um documento concreto. O documento da fase anterior é a entrada obrigatória da próxima.</p>
-
-      <div class="pipeline">
-        <div class="pipeline-track">
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 1</div>
-              <div class="p-phase-agent">@product</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">prd-{slug}.md</div>
-              <div class="p-artifact-desc">Product Requirements Document. Define objetivos, o que está fora do escopo, comportamentos esperados e itens abertos.</div>
-              <span class="p-gate-badge a">→ Gates Gate A</span>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 2</div>
-              <div class="p-phase-agent">@sheldon</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">sheldon-enrichment-{slug}.md</div>
-              <div class="p-artifact-desc">Enriquecimento do PRD. Áreas cinzentas decididas, extração de RF/RNF, score de prontidão, critérios de aceite endurecidos.</div>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 3</div>
-              <div class="p-phase-agent">@analyst</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">requirements-{slug}.md</div>
-              <div class="p-artifact-desc">Requisitos com IDs (REQ-001), critérios de aceite verificáveis (AC-001), entidades e regras de negócio mapeadas.</div>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 4</div>
-              <div class="p-phase-agent">@architect</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">architecture.md + design-doc-{slug}.md</div>
-              <div class="p-artifact-desc">Stack técnica, estrutura de módulos, dependências entre componentes, decisões não-óbvias documentadas com rationale.</div>
-              <span class="p-gate-badge b">→ Gate B</span>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 5</div>
-              <div class="p-phase-agent">@dev</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">implementation-plan-{slug}.md</div>
-              <div class="p-artifact-desc">Sequência de execução, critérios de done por checkpoint, lista de arquivos a ler antes de cada fase.</div>
-              <span class="p-gate-badge c">→ Gate C</span>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 6</div>
-              <div class="p-phase-agent">@dev / @deyvin</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">código + spec-{slug}.md (atualizado)</div>
-              <div class="p-artifact-desc">Implementação seguindo o plano aprovado. Spec atualizado com estado atual, último checkpoint e must_haves.</div>
-            </div>
-          </div>
-
-          <div class="p-phase">
-            <div class="p-phase-label">
-              <div class="p-phase-name">Fase 7</div>
-              <div class="p-phase-agent">@qa</div>
-            </div>
-            <div class="p-artifact">
-              <div class="p-artifact-name">Verificação 4-tier</div>
-              <div class="p-artifact-desc">Existe → Substancial (não é stub) → Conectado (imports, registros) → Funcional (testes passando).</div>
-              <span class="p-gate-badge d">Gate D</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Sheldon: PRD decomposition -->
-      <h3 style="margin-top:48px;margin-bottom:8px">@sheldon — O guardião que decompõe PRDs grandes</h3>
-      <p>
-        O @sheldon não apenas enriquece o PRD — ele avalia o tamanho do escopo e decide automaticamente a estrutura de entrega. Quanto maior e mais complexo o PRD, mais granular fica a decomposição.
-      </p>
-
-      <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px">
-
-        <!-- Score path 0-3 -->
-        <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:var(--radius);padding:20px 24px;display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:start">
-          <div style="text-align:center">
-            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:6px">Score</div>
-            <div style="font-size:2rem;font-weight:800;color:var(--cyan)">0 – 3</div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">MICRO / SMALL simples</div>
-          </div>
-          <div>
-            <div style="font-size:0.88rem;font-weight:700;color:var(--heading);margin-bottom:6px">Enriquecimento in-place</div>
-            <p style="font-size:0.83rem;margin-bottom:10px">@sheldon adiciona seções diretamente no <code style="font-family:monospace;color:var(--cyan)">prd-{slug}.md</code>. Sem arquivos externos.</p>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#0a0a14;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:#c9d1d9;line-height:1.7">
-<span style="color:var(--muted)"># prd-{slug}.md (após @sheldon)</span><br/>
-+ ## Edge cases &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--green)">_(sheldon)_</span><br/>
-+ ## Acceptance criteria &nbsp;<span style="color:var(--green)">_(sheldon)_</span><br/>
-+ ## Fontes de referência &nbsp;<span style="color:var(--green)">_(sheldon)_</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Score path 4-6 -->
-        <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px;display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:start">
-          <div style="text-align:center">
-            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:6px">Score</div>
-            <div style="font-size:2rem;font-weight:800;color:var(--accent)">4 – 6</div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">SMALL complexo / MEDIUM leve</div>
-          </div>
-          <div>
-            <div style="font-size:0.88rem;font-weight:700;color:var(--heading);margin-bottom:6px">Enriquecimento + Delivery Plan inline</div>
-            <p style="font-size:0.83rem;margin-bottom:10px">@sheldon enriquece o PRD <em>e</em> adiciona um bloco <code style="font-family:monospace;color:var(--cyan)">## Delivery plan</code> com fases numeradas e dependências explícitas.</p>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#0a0a14;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:#c9d1d9;line-height:1.7">
-<span style="color:var(--accent)">## Delivery plan</span><br/>
-<br/>
-<span style="color:var(--cyan)">### Fase 1 — Autenticação</span><br/>
-- Escopo: login + registro<br/>
-- ACs: AC-01, AC-02<br/>
-<br/>
-<span style="color:var(--cyan)">### Fase 2 — Dashboard</span><br/>
-- Depende de: Fase 1<br/>
-- ACs: AC-03, AC-04
-            </div>
-          </div>
-        </div>
-
-        <!-- Score path 7+ -->
-        <div style="background:var(--card);border:1px solid var(--border);border-left:3px solid var(--yellow);border-radius:var(--radius);padding:20px 24px;display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:start">
-          <div style="text-align:center">
-            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:6px">Score</div>
-            <div style="font-size:2rem;font-weight:800;color:var(--yellow)">7+</div>
-            <div style="font-size:0.72rem;color:var(--muted);margin-top:4px">MEDIUM / projeto grande</div>
-          </div>
-          <div>
-            <div style="font-size:0.88rem;font-weight:700;color:var(--heading);margin-bottom:6px">Plano de fases externo em <code style="font-family:monospace;font-size:0.83rem;color:var(--cyan)">.aioson/plans/{slug}/</code></div>
-            <p style="font-size:0.83rem;margin-bottom:10px">@sheldon cria uma estrutura completa de planos. Cada fase vira um arquivo independente. O @dev executa fase por fase sem re-ler tudo.</p>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#0a0a14;border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:#c9d1d9;line-height:1.7">
-.aioson/plans/<span style="color:var(--yellow)">stock-management</span>/<br/>
-├── <span style="color:var(--cyan)">manifest.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># índice + status</span><br/>
-├── <span style="color:var(--green)">plan-entidades-core.md</span>&nbsp;<span style="color:var(--muted)"># status: pending</span><br/>
-├── <span style="color:var(--green)">plan-api-rest.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># depende de: anterior</span><br/>
-└── <span style="color:var(--green)">plan-frontend.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># depende de: api-rest</span>
-            </div>
-            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-              <span style="font-size:11px;background:rgba(251,191,36,0.1);color:var(--yellow);border:1px solid rgba(251,191,36,0.3);border-radius:6px;padding:3px 10px">pending</span>
-              <span style="font-size:11px;background:rgba(251,191,36,0.18);color:var(--yellow);border:1px solid rgba(251,191,36,0.4);border-radius:6px;padding:3px 10px">in_progress</span>
-              <span style="font-size:11px;background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.3);border-radius:6px;padding:3px 10px">done</span>
-              <span style="font-size:11px;background:rgba(96,165,250,0.1);color:var(--blue);border:1px solid rgba(96,165,250,0.3);border-radius:6px;padding:3px 10px">qa_approved</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="callout" style="margin-top:24px">
-        <span class="callout-icon">🧠</span>
-        <p><strong>Score calculado pelo @sheldon:</strong> +1 por entidade acima de 3 · +2 por fase de entrega distinta · +1 por integração externa · +1 por fluxo de usuário acima de 3 · +1 se ACs > 10. O resultado determina automaticamente a estrutura de entrega — sem decisão manual.</p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── Section 5: Status e Ciclo de Vida ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Status e rastreamento</div>
-      <h2>Como o AIOSON rastreia o progresso</h2>
-      <p>
-        Cada artefato tem um ciclo de vida explícito. O <code style="font-family:monospace;color:var(--cyan)">spec-{slug}.md</code> é a memória viva da feature — ele registra em qual fase o trabalho está, o que foi decidido, e exatamente onde parou. É o que permite retomar uma sessão sem re-ler tudo.
-      </p>
-
-      <!-- Status flow -->
-      <h3 style="margin-top:32px;margin-bottom:12px">Ciclo de vida do plano de implementação</h3>
-      <div class="status-flow">
-        <div class="status-badge draft">○ draft</div>
-        <span class="status-arrow">→</span>
-        <div class="status-badge approved">✓ approved</div>
-        <span class="status-arrow">→</span>
-        <div class="status-badge progress">◆ in_progress</div>
-        <span class="status-arrow">→</span>
-        <div class="status-badge done">✓ completed</div>
-      </div>
-      <p style="font-size:0.87rem">O <code style="font-family:monospace;color:var(--cyan)">implementation-plan.md</code> começa como <em>draft</em>, só vira <em>approved</em> com confirmação explícita do usuário, e só pode ser executado depois disso. Sem aprovação, o @dev não começa.</p>
-
-      <!-- Phase gates -->
-      <h3 style="margin-top:36px;margin-bottom:12px">Phase gates — o estado de cada fase</h3>
-      <p style="font-size:0.87rem">O arquivo <code style="font-family:monospace;color:var(--cyan)">spec-{slug}.md</code> mantém um bloco YAML com o estado atual de cada gate:</p>
-
-      <div style="background:#0a0a14;border:1px solid var(--border);border-radius:10px;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.9;color:#c9d1d9;margin:16px 0;overflow-x:auto">
-<span style="color:var(--muted)">---</span><br/>
-<span style="color:var(--cyan)">feature</span>: <span style="color:var(--green)">"stock-management"</span><br/>
-<span style="color:var(--cyan)">classification</span>: <span style="color:var(--green)">"MEDIUM"</span><br/>
-<br/>
-<span style="color:var(--cyan)">phase_gates</span>:<br/>
-&nbsp;&nbsp;<span style="color:var(--cyan)">requirements</span>: <span style="color:var(--accent)">approved</span>&nbsp;&nbsp;<span style="color:var(--muted)"># Gate A passou — requisitos bloqueados</span><br/>
-&nbsp;&nbsp;<span style="color:var(--cyan)">design</span>: <span style="color:var(--accent)">approved</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># Gate B passou — arquitetura bloqueada</span><br/>
-&nbsp;&nbsp;<span style="color:var(--cyan)">plan</span>: <span style="color:var(--yellow)">pending</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--muted)"># Gate C ainda aguarda aprovação</span><br/>
-<br/>
-<span style="color:var(--cyan)">last_checkpoint</span>: <span style="color:var(--green)">"api: GET /products done — next: POST /products"</span><br/>
-<br/>
-<span style="color:var(--cyan)">pending_review</span>:<br/>
-&nbsp;&nbsp;- <span style="color:var(--green)">"Confirmar: password reset expira em 1h ou 24h?"</span><br/>
-<br/>
-<span style="color:var(--cyan)">gray_areas_decided</span>:<br/>
-&nbsp;&nbsp;- <span style="color:var(--green)">"2026-04-01 Soft delete em produtos — mantém histórico de pedidos"</span><br/>
-<span style="color:var(--muted)">---</span>
-      </div>
-
-      <!-- Spec fields -->
-      <h3 style="margin-top:32px;margin-bottom:4px">Campos do spec — o que cada um significa</h3>
-      <p style="font-size:0.87rem">O @deyvin lê estes campos na ordem exata ao retomar uma sessão:</p>
-
-      <div class="spec-fields">
-        <div class="spec-field">
-          <div class="spec-field-key">phase_gates.{fase}: pending</div>
-          <div class="spec-field-val">Fase ainda não aprovada. @dev <strong>não pode avançar</strong> para fases que dependem dela. Em MEDIUM é bloqueante; em SMALL é informativo.</div>
-        </div>
-        <div class="spec-field">
-          <div class="spec-field-key">phase_gates.{fase}: approved</div>
-          <div class="spec-field-val">Fase aprovada e <strong>bloqueada</strong>. Decisões desta fase são finais — @dev não reabre a discussão.</div>
-        </div>
-        <div class="spec-field">
-          <div class="spec-field-key">last_checkpoint</div>
-          <div class="spec-field-val">A <strong>primeira coisa</strong> que @deyvin lê ao retomar. Formato: <em>"{fase}: {o que está feito} — next: {próximo passo}"</em>. Uma linha, acionável.</div>
-        </div>
-        <div class="spec-field">
-          <div class="spec-field-key">pending_review</div>
-          <div class="spec-field-val">Itens que precisam de <strong>verificação humana</strong> antes da próxima fase. @deyvin os lista ao usuário antes de continuar.</div>
-        </div>
-        <div class="spec-field">
-          <div class="spec-field-key">gray_areas_decided</div>
-          <div class="spec-field-val">Cada ambiguidade que foi levantada e decidida, com data e rationale. Evita que a mesma discussão aconteça duas vezes.</div>
-        </div>
-        <div class="spec-field">
-          <div class="spec-field-key">must_haves</div>
-          <div class="spec-field-val">Tripé de verificação: <strong>truths</strong> (comportamentos verificados), <strong>artifacts</strong> (arquivos não-stub), <strong>key_links</strong> (imports/registros conectados).</div>
-        </div>
-      </div>
-
-      <!-- UI Language -->
-      <h3 style="margin-top:36px;margin-bottom:12px">Linguagem visual dos agentes</h3>
-      <p style="font-size:0.87rem">Os agentes usam símbolos padronizados para comunicar status ao usuário — sempre consistente, nunca ambíguo:</p>
-
-      <div class="ui-symbols">
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--green)">✓</span><div class="ui-sym-desc">completo / aprovado</div></div>
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--red)">✗</span><div class="ui-sym-desc">falhou / bloqueado</div></div>
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--yellow)">◆</span><div class="ui-sym-desc">em progresso</div></div>
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--muted)">○</span><div class="ui-sym-desc">pendente</div></div>
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--yellow)">⚠</span><div class="ui-sym-desc">atenção necessária</div></div>
-        <div class="ui-sym"><span class="ui-sym-char" style="color:var(--accent)">⚡</span><div class="ui-sym-desc">auto-aprovado (MICRO)</div></div>
-      </div>
-
-      <div style="background:#0a0a14;border:1px solid var(--border);border-radius:10px;padding:18px 22px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;color:#c9d1d9;margin-top:20px">
-<span style="color:var(--muted)">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><br/>
-<span style="color:var(--accent)"> AIOSON ► @dev — GATE C</span><br/>
-<span style="color:var(--muted)">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><br/>
-<br/>
-<span style="color:var(--green)">✓</span> requirements.md — aprovado (Gate A)<br/>
-<span style="color:var(--green)">✓</span> architecture.md — aprovado (Gate B)<br/>
-<span style="color:var(--yellow)">◆</span> implementation-plan.md — aguardando aprovação<br/>
-<span style="color:var(--muted)">○</span> execução — pendente<br/>
-<br/>
-<span style="color:var(--muted)">Progresso: ██████░░░░ 60% (3/5 fases)</span><br/>
-<br/>
-<span style="color:var(--yellow)">⚠ DECISÃO NECESSÁRIA</span><br/>
-&nbsp;&nbsp;Confirmar plano antes de começar a implementação?<br/>
-&nbsp;&nbsp;Escolha [s/n]:
-      </div>
-
-      <div class="callout" style="margin-top:24px">
-        <span class="callout-icon">💡</span>
-        <p><strong>Como o @deyvin retoma uma sessão:</strong> Lê <code style="font-family:monospace;color:var(--cyan)">phase_gates</code> (o que está bloqueado), depois <code style="font-family:monospace;color:var(--cyan)">last_checkpoint</code> (de onde continuar), depois <code style="font-family:monospace;color:var(--cyan)">pending_review</code> (o que precisa confirmar). Só lê a spec completa se o checkpoint estiver vazio.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Section 6: Gates ── -->
-  <section id="gates">
-    <div class="container">
-      <div class="section-label">Gates de aprovação</div>
-      <h2>Os 4 gates que protegem o projeto</h2>
-      <p>
-        Gates são pontos de verificação obrigatórios entre as fases. Em projetos MEDIUM, são bloqueantes — o agente <strong>não pode avançar</strong> sem aprovação explícita. Em projetos pequenos, são informativos.
-      </p>
-
-      <div class="gates">
-
-        <div class="gate">
-          <div class="gate-badge a">A</div>
-          <div class="gate-content">
-            <h3>Gate A — Requisitos aprovados</h3>
-            <p>Entre @product/@analyst → @architect ou @dev</p>
-            <ul class="check-list">
-              <li>Objetivos claros e não-ambíguos</li>
-              <li>Comportamentos esperados descritos (não só features)</li>
-              <li>Restrições explícitas — o que esta versão NÃO faz</li>
-              <li>IDs de requisito: REQ-{slug}-{N}</li>
-              <li>Critérios de aceite independentemente verificáveis: AC-{slug}-{N}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="gate">
-          <div class="gate-badge b">B</div>
-          <div class="gate-content">
-            <h3>Gate B — Design aprovado</h3>
-            <p>Entre @architect → @dev</p>
-            <ul class="check-list">
-              <li>Abordagem técnica escolhida e documentada</li>
-              <li>Estrutura de módulos/pastas definida</li>
-              <li>Dependências entre componentes explícitas</li>
-              <li>Rationale para escolhas não-óbvias</li>
-              <li>@dev pode começar sem inventar lógica de negócio</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="gate">
-          <div class="gate-badge c">C</div>
-          <div class="gate-content">
-            <h3>Gate C — Plano aprovado</h3>
-            <p>Antes de @dev/@deyvin executar um batch significativo</p>
-            <ul class="check-list">
-              <li>Sequência de execução definida</li>
-              <li>Checkpoints com critérios de done</li>
-              <li>Pacote de contexto listado (quais arquivos ler)</li>
-              <li>Decisões pré-tomadas são FINAIS — @dev não re-discute</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="gate">
-          <div class="gate-badge d">D</div>
-          <div class="gate-content">
-            <h3>Gate D — Verificação de execução</h3>
-            <p>Antes de marcar uma fase ou feature como completa</p>
-            <ul class="check-list">
-              <li><strong>Existe:</strong> o arquivo/função/componente existe de fato</li>
-              <li><strong>Substancial:</strong> não é um stub vazio</li>
-              <li><strong>Conectado:</strong> imports, registros e middleware estão ligados</li>
-              <li><strong>Funcional:</strong> testes passando ou verificação manual documentada</li>
-            </ul>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="callout" style="margin-top:28px">
-        <span class="callout-icon">⚠️</span>
-        <p>Um gate nunca é assumido como passado silenciosamente. Cada agente, ao final da sessão, declara explicitamente: <em>"Gate A passou — ative @architect"</em> ou <em>"Gate A bloqueado — [razão]. Resolva antes de continuar."</em></p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Section 6b: Memória do Projeto ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Memória persistente</div>
-      <h2>As 3 camadas de memória do projeto</h2>
-      <p>
-        À medida que o projeto evolui, o AIOSON acumula conhecimento em três camadas distintas dentro de <code style="font-family:monospace;color:var(--cyan)">.aioson/</code>. Cada camada tem um propósito e cadência de atualização diferente — carregar a camada errada para a situação errada é uma das formas mais comuns de contexto desperdiçado.
-      </p>
-
-      <div class="layers">
-
-        <!-- Layer 1: rules -->
-        <div class="layer">
-          <div class="layer-header">
-            <div class="layer-num l1">1</div>
-            <div class="layer-title-block">
-              <h3>rules/ — Convenções comportamentais</h3>
-              <div class="layer-path">.aioson/rules/*.md</div>
-            </div>
-            <span class="layer-cadence">Estável · muda raramente</span>
-          </div>
-          <div class="layer-body">
-            <p>São <strong>overrides obrigatórios</strong> para os agentes. Quando uma regra existe em <code style="font-family:monospace;color:var(--cyan)">rules/</code>, ela substitui o comportamento padrão do agente em todas as sessões — sem precisar repetir a instrução.</p>
-
-            <div class="layer-when">
-              <div class="layer-when-item">Uma convenção precisa ser aplicada em toda sessão de implementação</div>
-              <div class="layer-when-item">Um padrão de @dev apareceu 3+ vezes e deve virar permanente</div>
-              <div class="layer-when-item">O projeto usa um padrão diferente do default dos agentes</div>
-            </div>
-
-            <div class="layer-example">
-<span class="fc">---</span><br/>
-<span class="fn">name</span>: <span class="fv">monetary-values-convention</span><br/>
-<span class="fn">description</span>: <span class="fv">Nunca usar float para valores monetários — usar inteiros em centavos</span><br/>
-<span class="fn">agents</span>: [<span class="fv">dev</span>, <span class="fv">architect</span>]<br/>
-<span class="fn">priority</span>: <span class="fk">10</span><br/>
-<span class="fn">version</span>: <span class="fv">1.0.0</span><br/>
-<span class="fc">---</span><br/>
-<br/>
-<span class="fv">Sempre armazenar valores monetários como INTEGER (centavos).</span><br/>
-<span class="fv">Nunca usar FLOAT, DECIMAL ou string para preços.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Layer 2: docs -->
-        <div class="layer">
-          <div class="layer-header">
-            <div class="layer-num l2">2</div>
-            <div class="layer-title-block">
-              <h3>docs/ — Conhecimento de domínio</h3>
-              <div class="layer-path">.aioson/docs/*.md</div>
-            </div>
-            <span class="layer-cadence">Atualiza com o sistema externo</span>
-          </div>
-          <div class="layer-body">
-            <p>Documentação técnica que múltiplos agentes precisam ao longo do projeto — comportamento de APIs externas, quirks de integrações, modelos de dados que só existem em produção.</p>
-            <p>Agentes carregam um doc quando o <code style="font-family:monospace;color:var(--cyan)">description</code> no frontmatter é relevante para a tarefa atual. Não é injetado automaticamente — o agente decide.</p>
-
-            <div class="layer-when">
-              <div class="layer-when-item">2+ features precisam do mesmo contexto externo (ex: Stripe webhooks)</div>
-              <div class="layer-when-item">Uma integração tem comportamento não-óbvio que já causou bugs</div>
-              <div class="layer-when-item">Um modelo de dados existe só em produção e não deriva do código</div>
-            </div>
-
-            <div class="layer-example">
-<span class="fc">---</span><br/>
-<span class="fn">description</span>: <span class="fv">"Stripe webhook events — idempotency, retry behavior, event order"</span><br/>
-<span class="fn">scope</span>: <span class="fv">global</span><br/>
-<span class="fn">agents</span>: [<span class="fv">dev</span>, <span class="fv">architect</span>]<br/>
-<span class="fc">---</span><br/>
-<br/>
-<span class="fv"># Stripe Webhook Context</span><br/>
-<span class="fv">Events can arrive out of order. Always check event.created</span><br/>
-<span class="fv">before updating state. Idempotency key: event.id.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Layer 3: design-docs -->
-        <div class="layer">
-          <div class="layer-header">
-            <div class="layer-num l3">3</div>
-            <div class="layer-title-block">
-              <h3>context/design-doc*.md — Decisões por feature</h3>
-              <div class="layer-path">.aioson/context/design-doc-{slug}.md</div>
-            </div>
-            <span class="layer-cadence">Atualiza a cada feature</span>
-          </div>
-          <div class="layer-body">
-            <p>Documento vivo de decisões da feature atual. Escrito pelo <strong>@discovery-design-doc</strong>, atualizado pelo @dev ao fechar cada feature. Decisões são <em>append-only</em> — nunca apagadas.</p>
-            <p>Um design-doc por feature (<code style="font-family:monospace;color:var(--cyan)">design-doc-stock.md</code>) ou um global (<code style="font-family:monospace;color:var(--cyan)">design-doc.md</code>) para decisões de arquitetura do projeto inteiro.</p>
-
-            <div class="layer-when">
-              <div class="layer-when-item">Documentar o escopo e decisões de uma feature específica</div>
-              <div class="layer-when-item">Registrar o que foi decidido durante a sessão atual</div>
-              <div class="layer-when-item">Rastrear itens com decisão ainda pendente</div>
-            </div>
-
-            <div class="layer-example">
-<span class="fv"># Design Doc — Stock Management</span><br/>
-<br/>
-<span class="fv">## Decisions already made</span><br/>
-<span class="fv">- 2026-04-01 Soft delete — mantém histórico de pedidos</span><br/>
-<span class="fv">- 2026-04-02 UUID em vez de auto-increment — multi-tenant</span><br/>
-<br/>
-<span class="fv">## Decisions still pending</span><br/>
-<span class="fv">- [ ] Cache de estoque: Redis ou in-memory?</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Decision guide -->
-      <h3 style="margin-top:36px;margin-bottom:8px">Onde vai cada informação?</h3>
-      <p style="font-size:0.87rem">Guia rápido para não colocar coisa no lugar errado:</p>
-
-      <table class="decision-table">
-        <thead>
-          <tr>
-            <th>Situação</th>
-            <th>Onde guardar</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Enforçar uma convenção de código no projeto inteiro</td>
-            <td>rules/</td>
-          </tr>
-          <tr>
-            <td>Agentes precisam sempre saber como uma API externa funciona</td>
-            <td>docs/</td>
-          </tr>
-          <tr>
-            <td>Decisões de escopo e arquitetura de uma feature específica</td>
-            <td>design-doc-{slug}.md</td>
-          </tr>
-          <tr>
-            <td>Decisão de arquitetura que afeta o projeto inteiro</td>
-            <td>design-doc.md (global)</td>
-          </tr>
-          <tr>
-            <td>Um padrão do @dev que apareceu 3+ vezes</td>
-            <td>rules/ (promover via @dev)</td>
-          </tr>
-          <tr>
-            <td>Estado atual de implementação de uma feature</td>
-            <td>spec-{slug}.md</td>
-          </tr>
-          <tr>
-            <td>Requisitos e critérios de aceite</td>
-            <td>requirements-{slug}.md</td>
-          </tr>
-          <tr>
-            <td>Contexto geral do projeto (stack, times, objetivos)</td>
-            <td>context/project.context.md</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="callout" style="margin-top:24px">
-        <span class="callout-icon">🔄</span>
-        <p><strong>Como as camadas interagem:</strong> Rules são carregadas sempre. Docs são carregados quando relevantes. Design-docs são carregados por feature. O resultado é que cada agente começa a sessão com exatamente o que precisa — nem mais, nem menos.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Section 6c: Brains ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Aprendizagem adaptativa</div>
-      <h2>Brains — memória procedural dos agentes</h2>
-      <p>
-        Regras descrevem <em>o que fazer</em>. Docs descrevem <em>como algo funciona</em>. Brains descrevem <em>o que funciona de verdade</em> — padrões com qualidade comprovada, anti-padrões conhecidos, e conexões entre conhecimentos.
-      </p>
-      <p>
-        Inspirado no Zettelkasten: cada nó de brain tem uma qualidade de 1–5 baseada em uso real, um verdict, e links para nós relacionados. Agentes carregam brains sob demanda — o índice é sempre carregado (~2KB), os arquivos de brain só quando as tags batem.
-      </p>
-
-      <!-- Verdicts -->
-      <h3 style="margin-top:32px;margin-bottom:16px">Verdicts — como o agente avalia cada padrão</h3>
-      <div class="brain-grid">
-        <div class="brain-card">
-          <div class="brain-card-header">
-            <span class="verdict-badge v-excellent">EXCELLENT</span>
-            <div class="brain-q"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div>
-          </div>
-          <div class="brain-card-title">Melhor da categoria</div>
-          <div class="brain-card-desc">Use por padrão. Verificado em produção com resultado excelente. Score 5.</div>
-        </div>
-        <div class="brain-card">
-          <div class="brain-card-header">
-            <span class="verdict-badge v-good">GOOD</span>
-            <div class="brain-q"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="off"></span></div>
-          </div>
-          <div class="brain-card-title">Sólido, use quando EXCELLENT não se aplica</div>
-          <div class="brain-card-desc">Funcionou bem em contextos reais. Score 4.</div>
-        </div>
-        <div class="brain-card">
-          <div class="brain-card-header">
-            <span class="verdict-badge v-best">BEST_PRACTICE</span>
-            <div class="brain-q"><span class="on"></span><span class="on"></span><span class="on"></span><span class="off"></span><span class="off"></span></div>
-          </div>
-          <div class="brain-card-title">Linha de base obrigatória</div>
-          <div class="brain-card-desc">Sempre incluir — é o piso de qualidade, não o teto.</div>
-        </div>
-        <div class="brain-card">
-          <div class="brain-card-header">
-            <span class="verdict-badge v-avoid">AVOID</span>
-            <div class="brain-q"><span class="on"></span><span class="off"></span><span class="off"></span><span class="off"></span><span class="off"></span></div>
-          </div>
-          <div class="brain-card-title">Anti-padrão — nunca usar</div>
-          <div class="brain-card-desc">Mantido no brain para documentar o que NÃO fazer. Score 1.</div>
-        </div>
-        <div class="brain-card">
-          <div class="brain-card-header">
-            <span class="verdict-badge v-broken">BROKEN</span>
-            <div class="brain-q"><span class="off"></span><span class="off"></span><span class="off"></span><span class="off"></span><span class="off"></span></div>
-          </div>
-          <div class="brain-card-title">Quebrado no contexto atual</div>
-          <div class="brain-card-desc">Funcionou antes mas está quebrado no stack/versão atual.</div>
-        </div>
-      </div>
-
-      <!-- Brain node example -->
-      <h3 style="margin-top:36px;margin-bottom:12px">Anatomia de um nó de brain</h3>
-      <div class="brain-node-example">
-{<br/>
-&nbsp;&nbsp;<span class="jk">"id"</span>: <span class="jv">"css-001"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"title"</span>: <span class="jv">"Hover animation com transform+opacity"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"tags"</span>: [<span class="jv">"css"</span>, <span class="jv">"hover"</span>, <span class="jv">"animation"</span>],<br/>
-&nbsp;&nbsp;<span class="jk">"q"</span>: <span class="jn">5</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jc">// qualidade 1-5</span><br/>
-&nbsp;&nbsp;<span class="jk">"v"</span>: <span class="jv">"EXCELLENT"</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jc">// verdict</span><br/>
-&nbsp;&nbsp;<span class="jk">"s"</span>: <span class="jv">"transform+opacity é GPU-accelerated — nunca usar top/left"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"p"</span>: <span class="jv">"transition: transform 0.2s, opacity 0.2s;"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"not"</span>: <span class="jv">"transition: all — anima propriedades que forçam reflow"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"warn"</span>: <span class="jv">"Testar no Safari — transform-origin pode diferir"</span>,<br/>
-&nbsp;&nbsp;<span class="jk">"see"</span>: [<span class="jv">"css-002"</span>, <span class="jv">"css-007"</span>]&nbsp;&nbsp;&nbsp;&nbsp;<span class="jc">// rede Zettelkasten</span><br/>
-}
-      </div>
-
-      <!-- Learning cycle -->
-      <h3 style="margin-top:36px;margin-bottom:12px">Ciclo de aprendizagem</h3>
-      <p style="font-size:0.87rem">Brains evoluem com cada projeto. Ao fechar um ciclo de desenvolvimento, os padrões que funcionaram são promovidos:</p>
-
-      <div class="steps" style="margin-top:0">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h3>Sessão finalizada</h3>
-            <p>@dev completa uma fase e registra as decisões tomadas no <code style="font-family:monospace;color:var(--cyan)">spec-{slug}.md</code>.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h3>Evolução de padrões</h3>
-            <p>O comando <code style="font-family:monospace;color:var(--cyan)">aioson learning:evolve</code> destila padrões das sessões completadas e adiciona nós ao brain com qualidade inicial.</p>
-            <div class="code-block" style="font-size:12px;padding:12px">
-<span class="cmd">aioson</span> learning:evolve
-<span class="cmd">aioson</span> learning:apply
-            </div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h3>Promoção para rules</h3>
-            <p>Se um padrão apareceu 3+ vezes e funcionou bem (q ≥ 4), o agente sugere promovê-lo para <code style="font-family:monospace;color:var(--cyan)">rules/</code> — virando convenção permanente do projeto.</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <h3>Consulta sob demanda</h3>
-            <p>Em sessões futuras, agentes consultam o brain quando as tags da tarefa batem com os nós disponíveis:</p>
-            <div class="code-block" style="font-size:12px;padding:12px">
-<span class="c"># Padrões excelentes sobre CSS animation</span>
-node .aioson/brains/scripts/query.js \
-  --tags css,animation --verdict EXCELLENT
-
-<span class="c"># Anti-padrões a evitar</span>
-node .aioson/brains/scripts/query.js --avoid
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ── Section 9: Classificação ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Tamanho do projeto</div>
-      <h2>MICRO, SMALL ou MEDIUM?</h2>
-      <p>
-        O AIOSON adapta o protocolo ao tamanho do projeto. Não faz sentido criar 7 documentos para corrigir um bug simples — nem pular a documentação num sistema complexo.
-      </p>
-
-      <div class="class-grid">
-
-        <div class="class-card micro">
-          <div class="class-name">MICRO</div>
-          <div class="class-scope">Score 0–1 · Bug fix, feature simples</div>
-          <div class="class-phases">
-            <div class="phase-row"><span class="phase-pill pill-opt">Lite</span> PRD resumido</div>
-            <div class="phase-row"><span class="phase-pill pill-skip">Pular</span> @sheldon</div>
-            <div class="phase-row"><span class="phase-pill pill-skip">Pular</span> Requirements</div>
-            <div class="phase-row"><span class="phase-pill pill-skip">Pular</span> Architecture</div>
-            <div class="phase-row"><span class="phase-pill pill-opt">Opcional</span> Plano</div>
-            <div class="phase-row"><span class="phase-pill pill-yes">Direto</span> @dev executa</div>
-            <div class="phase-row" style="margin-top:6px;font-size:0.75rem;color:var(--muted)">Gates informativos</div>
-          </div>
-        </div>
-
-        <div class="class-card small">
-          <div class="class-name">SMALL</div>
-          <div class="class-scope">Score 2–3 · Feature nova, módulo</div>
-          <div class="class-phases">
-            <div class="phase-row"><span class="phase-pill pill-yes">Completo</span> PRD</div>
-            <div class="phase-row"><span class="phase-pill pill-opt">Recomendado</span> @sheldon</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Obrigatório</span> Requirements</div>
-            <div class="phase-row"><span class="phase-pill pill-opt">Seletivo</span> Architecture</div>
-            <div class="phase-row"><span class="phase-pill pill-opt">Recomendado</span> Plano</div>
-            <div class="phase-row"><span class="phase-pill pill-yes">Com spec</span> @dev executa</div>
-            <div class="phase-row" style="margin-top:6px;font-size:0.75rem;color:var(--muted)">Gate A recomendado</div>
-          </div>
-        </div>
-
-        <div class="class-card medium">
-          <div class="class-name">MEDIUM</div>
-          <div class="class-scope">Score 4–6 · Sistema completo</div>
-          <div class="class-phases">
-            <div class="phase-row"><span class="phase-pill pill-req">Completo</span> PRD</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Obrigatório</span> @sheldon</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Obrigatório</span> Requirements</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Obrigatório</span> Architecture</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Obrigatório</span> Plano aprovado</div>
-            <div class="phase-row"><span class="phase-pill pill-req">Plano aprovado</span> @dev</div>
-            <div class="phase-row" style="margin-top:6px;font-size:0.75rem;color:var(--muted)">Gates A, B, C bloqueantes</div>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="card" style="margin-top:28px">
-        <h3 style="margin-bottom:12px">Como o score é calculado</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
-          <div>
-            <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Tipos de usuário</div>
-            <div style="font-size:0.82rem;color:var(--muted)">1 tipo = 0 pts<br/>2 tipos = 1 pt<br/>3+ tipos = 2 pts</div>
-          </div>
-          <div>
-            <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Integrações externas</div>
-            <div style="font-size:0.82rem;color:var(--muted)">Nenhuma = 0 pts<br/>1–2 = 1 pt<br/>3+ = 2 pts</div>
-          </div>
-          <div>
-            <div style="font-size:0.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Complexidade de regras</div>
-            <div style="font-size:0.82rem;color:var(--muted)">Simples = 0 pts<br/>Algumas = 1 pt<br/>Complexo = 2 pts</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Section 7: Inteligência de contexto ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Contexto inteligente</div>
-      <h2>O AI nunca perde o fio da meada</h2>
-      <p>
-        Um dos maiores problemas com AI em projetos reais: o contexto acaba, a sessão crasheia e você precisa repetir tudo. O AIOSON tem um sistema completo para isso.
-      </p>
-
-      <div class="card-grid">
-
-        <div class="card">
-          <div style="font-size:1.3rem;margin-bottom:12px">🔄</div>
-          <h3>Session Recovery</h3>
-          <p style="font-size:0.87rem">Quando o Claude compacta ou a sessão cai, um comando restaura o estado completo em menos de 2.000 tokens.</p>
-          <div class="code-block" style="font-size:12px;padding:14px">
-<span class="cmd">aioson</span> recovery:generate
-<span class="cmd">aioson</span> recovery:show
-          </div>
-        </div>
-
-        <div class="card">
-          <div style="font-size:1.3rem;margin-bottom:12px">📊</div>
-          <h3>Context Monitor</h3>
-          <p style="font-size:0.87rem">Barras de uso em tempo real com limites adaptativos por tamanho de projeto.</p>
-          <div class="code-block" style="font-size:12px;padding:14px">
-<span class="cmd">aioson</span> context:monitor
-<span class="c"># ████████████░ 73% ⚠ warning</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div style="font-size:1.3rem;margin-bottom:12px">🔍</div>
-          <h3>Busca FTS5</h3>
-          <p style="font-size:0.87rem">Encontra qualquer informação em todos os artefatos do projeto em milissegundos.</p>
-          <div class="code-block" style="font-size:12px;padding:14px">
-<span class="cmd">aioson</span> context:search <span class="str">"webhook retry"</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div style="font-size:1.3rem;margin-bottom:12px">✂️</div>
-          <h3>Agent Sharding</h3>
-          <p style="font-size:0.87rem">Carrega só as instruções relevantes para o objetivo atual — 68% menos tokens por agente.</p>
-          <div class="code-block" style="font-size:12px;padding:14px">
-<span class="cmd">aioson</span> agent:load deyvin <span class="kw">--goal</span>=<span class="str">"fix modal"</span>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:12px">Limites de contexto por tamanho</h3>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
-          <div style="text-align:center">
-            <div style="font-size:1.6rem;font-weight:800;color:var(--cyan)">75%</div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:4px">MICRO — ok rodar mais alto</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:1.6rem;font-weight:800;color:var(--accent)">65%</div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:4px">SMALL — padrão balanceado</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:1.6rem;font-weight:800;color:var(--primary)">55%</div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:4px">MEDIUM — avisar cedo</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Section 8: Squads ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Squads</div>
-      <h2>Times de agentes para qualquer domínio</h2>
-      <p>
-        Squads são a funcionalidade mais surpreendente do AIOSON. Você pode criar um time especializado para <strong>qualquer área</strong> — não só desenvolvimento de software.
-      </p>
-
-      <div class="card-grid" style="margin-top:28px">
-
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <span style="font-size:1.5rem">💻</span>
-            <h3 style="margin:0">Squad de Software</h3>
-          </div>
-          <p style="font-size:0.85rem">@product, @architect, @dev, @qa trabalhando em paralelo para entregar features end-to-end.</p>
-        </div>
-
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <span style="font-size:1.5rem">🎬</span>
-            <h3 style="margin:0">Squad de Conteúdo</h3>
-          </div>
-          <p style="font-size:0.85rem">@scriptwriter, @hook-analyst, @thumbnail-strategist para YouTube, newsletters e redes sociais.</p>
-        </div>
-
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <span style="font-size:1.5rem">⚖️</span>
-            <h3 style="margin:0">Squad Jurídico</h3>
-          </div>
-          <p style="font-size:0.85rem">@risk-analyst, @clause-reviewer, @summarizer para revisão de contratos.</p>
-        </div>
-
-      </div>
-
-      <div class="code-block" style="margin-top:24px">
-<span class="c"># Criar um squad</span>
-<span class="cmd">aioson</span> squad:create content-squad
-
-<span class="c"># Rodar o squad como daemon em background</span>
-<span class="cmd">aioson</span> squad:daemon content-squad
-
-<span class="c"># Dashboard em tempo real</span>
-<span class="cmd">aioson</span> squad:dashboard
-<span class="c"># → http://localhost:4180</span>
-      </div>
-
-      <p style="margin-top:20px">
-        Cada squad tem seu próprio <strong>Genome</strong> — uma camada cognitiva que define não só o que o agente faz, mas como ele pensa. Você pode até importar o perfil cognitivo de uma pessoa real (como Alex Hormozi ou um especialista do seu setor) e aplicar ao squad.
-      </p>
-    </div>
-  </section>
-
-  <!-- ── Section 9: Comandos de referência ── -->
-  <section>
-    <div class="container">
-      <div class="section-label">Referência rápida</div>
-      <h2>Comandos essenciais</h2>
-      <p>Os comandos mais usados no dia-a-dia com AIOSON.</p>
-
-      <div class="cmd-grid">
-        <div class="cmd-item">
-          <code>aioson init meu-projeto</code>
-          <p>Cria um projeto novo com o wizard de configuração</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson install .</code>
-          <p>Instala o AIOSON num projeto existente</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson agents</code>
-          <p>Lista todos os agentes disponíveis</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson agent:prompt setup</code>
-          <p>Gera o prompt de ativação do agente /setup</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson workflow:plan</code>
-          <p>Recomendação de sequência para o tamanho do projeto</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson context:monitor</code>
-          <p>Mostra uso do contexto em tempo real</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson recovery:generate</code>
-          <p>Cria snapshot do estado para recuperar sessão</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson scan:project .</code>
-          <p>Escaneia projeto existente com LLM barato</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson squad:dashboard</code>
-          <p>Abre painel web de monitoramento dos squads</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson update</code>
-          <p>Atualiza AIOSON respeitando o perfil salvo</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson doctor .</code>
-          <p>Diagnostica e corrige problemas de configuração</p>
-        </div>
-        <div class="cmd-item">
-          <code>aioson learning:evolve</code>
-          <p>Extrai padrões de sessões passadas e evolui os agentes</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer>
-    <p style="margin-bottom:12px">AIOSON · AI operating framework for hyper-personalized software</p>
-    <p>
-      <a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank">npm</a>
-      &nbsp;·&nbsp;
-      <a href="https://github.com/jaimevalasek/aioson" target="_blank">GitHub</a>
-      &nbsp;·&nbsp;
-      <a href="../index.html">← Todos os tutoriais</a>
-    </p>
   </footer>
+
+</main>
+
+<!-- DIALOGS -->
+
+<dialog class="popover" id="dlg-living">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · 5 phases shipped</div><div class="dlg-title">Living Memory</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Antes do v1.9.0, agentes começavam toda sessão lendo 4-6 arquivos de contexto pra entender onde a coisa parou. Living Memory cortou isso: <strong>4 arquivos de bootstrap auto-sincronizados</strong> + <strong>reflect engine</strong> que classifica diffs pós-<code>agent:done</code> + <strong>FTS5 search</strong> sobre rules/learnings.</p>
+
+    <h4>Os 4 arquivos de bootstrap</h4>
+    <ul>
+      <li><code>what-is.md</code> — identidade do sistema e usuários</li>
+      <li><code>what-it-does.md</code> — capabilities ativas e improvement focus</li>
+      <li><code>how-it-works.md</code> — fluxos e contratos internos</li>
+      <li><code>current-state.md</code> — o que o sistema já tem (append-only)</li>
+    </ul>
+
+    <h4>Reflect engine</h4>
+    <p>Depois de <code>agent:done</code> ou <code>workflow:next --complete</code>, o engine analisa o git diff e classifica se o impact justifica atualizar o bootstrap. Se sim, escreve um manifest em <code>.aioson/runtime/reflect-prompt.json</code>. O agente da próxima sessão lê o manifest, edita os bootstraps listados, e commita via <code>memory:reflect-commit</code> (que valida frontmatter, snapshot hash, allowed paths).</p>
+
+    <h4>FTS5 search</h4>
+    <p><code>memory:search "harness gate"</code> retorna matches em <code>content_items</code> + <code>learnings</code> com ranking BM25. Phrase-query sanitization default + 500-char cap. Saída JSON pronta pra dashboard ou pro próprio agente consumir.</p>
+
+    <h4>Doctor checks novos</h4>
+    <p><code>bootstrap_coverage</code> · <code>rule_staleness</code> · <code>learning_orphans</code> · <code>distillation_lag</code> · <code>permissions_in_sync</code> · <code>jargon_leak_detection</code>. Todos warning-level, não bloqueiam, mas surfaceiam gaps. <code>--fix</code> auto-corrige permissions e gaps estruturais.</p>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-brains-c">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · procedural memory</div><div class="dlg-title">Brains</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Brains são <strong>memória procedural dos agentes</strong> — padrões que ele recorre ao implementar/decidir. Diferente de rules (boas práticas amplas), brains armazenam recipes específicas com <strong>quality score</strong>. Agente só carrega o que faz match com tags da task atual, com q ≥ 4 por default.</p>
+
+    <h4>Brains atuais (3 · 25 nodes)</h4>
+    <ul>
+      <li><code>site-forge/visual-patterns</code> — 14 nodes · CSS, animations, cloning</li>
+      <li><code>dev/patterns</code> — 5 nodes · security, shell, git, editing</li>
+      <li><code>sheldon/architecture-decisions</code> — 6 nodes · sandbox, parity, sizing</li>
+    </ul>
+
+    <h4>Loading lazy via tags</h4>
+    <p><code>aioson brain:query . --tags=security,shell --min-quality=4 --format=compact</code> retorna só os nodes que casam. Saída: compact (linha por node), json (estruturado), ids (só ids).</p>
+
+    <h4>Estrutura de um node</h4>
+    <ul>
+      <li><code>id</code> · slug curto</li>
+      <li><code>tags</code> · termos pra discovery</li>
+      <li><code>q</code> · quality score 1-5 (filtros usam ≥ 4)</li>
+      <li><code>v</code> · variante: PREFER ou AVOID (anti-pattern)</li>
+      <li><code>desc</code> · uma linha</li>
+      <li><code>see</code> · cross-refs pra outros nodes</li>
+    </ul>
+
+    <h4>Auto-update</h4>
+    <p>Quando um agente identifica um novo padrão reutilizável, ele acrescenta um node ao brain com q honesto. <code>_index.json</code> é atualizado com novo count + updated date. Brains evoluem com cada feature.</p>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-autonomy">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · autonomy-protocol.json v1.1</div><div class="dlg-title">Autonomy 3 tiers</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Contrato de permissões em 3 tiers materializado pelo <code>permissions-generator</code> em arquivos nativos de cada harness (Claude Code, Codex, Gemini, OpenCode). <strong>Tier3 é hard-rejected</strong> mesmo se um tool listar — ações irreversíveis sempre exigem mão humana.</p>
+
+    <h4>Tier 1 — silent</h4>
+    <p>Leituras + telemetria. Não requer notificação ao usuário. Exemplos: <code>preflight</code>, <code>memory:status</code>, <code>brain:query</code>, <code>context:load</code>, <code>memory:search</code>.</p>
+
+    <h4>Tier 2 — notified</h4>
+    <p>Writes em memória (rules/brains/learnings). Notifica o usuário via <code>aioson notify --level=warn</code> antes de mutar. Exemplos: <code>memory:archive</code>, <code>memory:restore</code>, <code>memory:reflect-commit</code>.</p>
+
+    <h4>Tier 3 — blocking</h4>
+    <p>Irreversível. Hard-rejected pelo harness regardless of allow-list. Exige humano explícito. Exemplos: <code>git push</code>, <code>npm publish</code>, <code>cloud:publish:*</code>, <code>genome:publish</code>, <code>skill:publish</code>, <code>squad:publish</code>.</p>
+
+    <h4>Como funciona o materializer</h4>
+    <p>No install/update, <code>src/permissions-generator.js</code> lê <code>autonomy-protocol.json</code> e gera arquivos nativos:</p>
+    <ul>
+      <li><code>.claude/settings.json</code></li>
+      <li><code>.codex/permissions.json</code></li>
+      <li><code>.gemini/permissions.toml</code></li>
+      <li><code>.opencode/permissions.yaml</code></li>
+    </ul>
+    <p>Backups em <code>.aioson/backups/{ts}/permissions/</code>. Doctor <code>permissions_in_sync</code> detecta drift e <code>--fix</code> regenera.</p>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-profile">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:var(--accent); border-color:color-mix(in srgb, var(--accent) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · decision-presentation skill</div><div class="dlg-title">Profile creator/developer/team</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Em <code>project.context.md</code>, o campo <code>profile</code> define como agentes interagem. Default é <code>creator</code> (mais seguro pra não-devs). Devs trocam manualmente pra <code>developer</code>.</p>
+
+    <h4>creator (default)</h4>
+    <ul>
+      <li><strong>1 pergunta por turn</strong> via <code>AskUserQuestion</code> com 2-4 opções estruturadas</li>
+      <li><strong>Marcador <code>(Recomendado)</code></strong> obrigatório na primeira opção, com plain-language why</li>
+      <li><strong>Jargão traduzido</strong> via dicionário (MICRO → "feature pequena", Gate A → "checkpoint de requisitos", etc)</li>
+      <li><strong>"Pausar / quero pensar"</strong> sempre disponível como última opção</li>
+      <li>Sem free-form questions abertas (escape via "Other / Conte com suas palavras")</li>
+    </ul>
+
+    <h4>developer</h4>
+    <ul>
+      <li>Cadência permissiva: até 5 numbered questions por batch</li>
+      <li>Jargão permitido sem tradução</li>
+      <li>Marker <code>(Recomendado)</code> opcional</li>
+    </ul>
+
+    <h4>team</h4>
+    <ul>
+      <li>Cadência igual a developer no fluxo operacional</li>
+      <li>Emite executive summary em <code>agent:done</code> usando o dicionário (operadores leem jargão; stakeholders leem tradução)</li>
+    </ul>
+
+    <h4>Onde se aplica</h4>
+    <p>Agentes com a skill <code>decision-presentation</code> wired: <code>@neo</code>, <code>@setup</code>, <code>@product</code>, <code>@dev</code>, <code>@deyvin</code>. Doctor check <code>jargon_leak_detection</code> detecta vazamento de termos não traduzidos em projetos creator.</p>
+
+    <h4>Migração</h4>
+    <p>Projetos legacy com <code>profile: beginner</code> migram automaticamente pra <code>creator</code> no próximo <code>aioson update</code>. Notify visual surfaceia a mudança.</p>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-dossier-c">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#ff6ba4; border-color:rgba(255,107,164,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">v1.8.0+ · feature-level memory</div><div class="dlg-title">Dossier por feature</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Cada feature SMALL ou MEDIUM ganha <code>.aioson/context/features/{slug}/dossier.md</code> — uma <strong>memória dedicada da feature</strong>, separada da memória global do projeto. Auto-init silencioso após PRD pra classificações SMALL+.</p>
+
+    <h4>Seções padrão do dossier</h4>
+    <ul>
+      <li><strong>Why</strong> — motivação, problema, stakeholders</li>
+      <li><strong>What</strong> — escopo MVP, must-have, out-of-scope</li>
+      <li><strong>Code Map</strong> — paths tocados em cada slice</li>
+      <li><strong>Agent Trail</strong> — pass por pass (cada agente adiciona finding)</li>
+      <li><strong>Research</strong> — items de <code>researchs/</code> consumidos</li>
+      <li><strong>Rules linked</strong> — rules de <code>.aioson/rules/</code> consultadas</li>
+    </ul>
+
+    <h4>Para que serve</h4>
+    <ul>
+      <li><strong>Cold start barato</strong> — @dev/@deyvin leem dossier antes do PRD; entendem contexto em segundos</li>
+      <li><strong>Drift detection</strong> — antes de modificar arquivo, checam se está em code_map e se mudança diverge do plan</li>
+      <li><strong>Audit trail</strong> — quem decidiu o que, quando, com que razão</li>
+      <li><strong>Compactação</strong> — <code>dossier:compact</code> resume entradas antigas mantendo decisões importantes</li>
+    </ul>
+
+    <h4>Auto-archive em feature:close</h4>
+    <p>Quando <code>feature:close --verdict=PASS</code> roda, o dossier é arquivado em <code>.aioson/context/done/{slug}/dossier/</code> junto com PRD, spec, requirements. Fica recuperável mas não polui o contexto ativo.</p>
+  </div>
+</dialog>
+
+<dialog class="popover" id="dlg-harness-c">
+  <div class="dlg-head">
+    <span class="cat-icon" style="color:#22d3ee; border-color:rgba(34,211,238,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <div class="dlg-meta"><div class="dlg-eyebrow">MEDIUM only · Gate D enforcement</div><div class="dlg-title">Harness contracts</div></div>
+    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-intro">Para features MEDIUM, Gate D vira enforcement programático. <strong>@sheldon</strong> gera <code>.aioson/plans/{slug}/harness-contract.json</code> com <strong>binary criteria</strong> extraídas das ACs do PRD. <strong>@validator</strong> roda headless e avalia cada criterion. <strong>Circuit breaker</strong> bloqueia <code>feature:close</code> até passar.</p>
+
+    <h4>Quando ativa</h4>
+    <p>Só em MEDIUM (RF-05 do @sheldon). MICRO e SMALL não geram harness-contract — gates A·B·C·D continuam por inspeção semântica.</p>
+
+    <h4>Anatomia do contract</h4>
+    <ul>
+      <li><code>criteria[]</code> — array de checks binários (id, description, evaluator)</li>
+      <li><code>circuit_state</code> — CLOSED (default), HALF_OPEN, OPEN</li>
+      <li><code>error_streak_limit</code> — quantos fails consecutivos abrem o circuito</li>
+      <li><code>ready_for_done_gate</code> — flag que <code>feature:close</code> consulta</li>
+    </ul>
+
+    <h4>Fluxo</h4>
+    <ol style="padding-left:20px; margin:0 0 14px; color:var(--text-soft); font-size:.84rem; line-height:1.65;">
+      <li>@dev termina implementação → <code>progress.status = 'waiting_validation'</code></li>
+      <li><code>workflow:next</code> auto-routes pra @validator (detour temporário)</li>
+      <li>@validator avalia cada criterion, escreve <code>last-validator-output.json</code></li>
+      <li><code>harness:apply-validation</code> consome output, atualiza <code>progress.json</code></li>
+      <li>Se todos passam: <code>ready_for_done_gate = true</code></li>
+      <li>Se falha: <code>last_error</code> capturado, circuit breaker incrementa</li>
+      <li><code>feature:close --verdict=PASS</code> verifica <code>ready_for_done_gate</code> antes de fechar</li>
+    </ol>
+
+    <h4>Bypass</h4>
+    <p><code>feature:close --force</code> bypassa com audit trail entry "BYPASS" registrada. <code>--verdict=FAIL</code> skipa o gate inteiro (QA já rejeitou).</p>
+  </div>
+</dialog>
+
+<script>
+  // Theme toggle
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+    try {
+      const saved = localStorage.getItem('aioson-theme');
+      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+    } catch (e) {}
+    const sync = () => {
+      const t = root.getAttribute('data-theme') || 'dark';
+      const moon = toggle.querySelector('.cmd-theme-moon');
+      const sun  = toggle.querySelector('.cmd-theme-sun');
+      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
+      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
+    };
+    sync();
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+
+  // Sticky scroll feedback
+  (function () {
+    const wrap = document.getElementById('dock-wrap');
+    if (!wrap) return;
+    const update = () => {
+      if (window.scrollY > 8) wrap.classList.add('is-scrolled');
+      else wrap.classList.remove('is-scrolled');
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+  })();
+
+  // Dialogs
+  (function () {
+    document.querySelectorAll('[data-dialog]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.dialog;
+        const dlg = document.getElementById(id);
+        if (!dlg) return;
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+        else dlg.setAttribute('open', '');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    document.querySelectorAll('dialog.popover').forEach((dlg) => {
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+      dlg.addEventListener('close', () => { document.body.style.overflow = ''; });
+      dlg.querySelectorAll('[data-dialog-close]').forEach((btn) => { btn.addEventListener('click', () => dlg.close()); });
+    });
+  })();
+
+  // Copy buttons (if any added later)
+  (function () {
+    if (!navigator.clipboard) return;
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.textContent;
+          btn.textContent = 'copiado ✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>

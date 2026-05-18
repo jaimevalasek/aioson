@@ -39,9 +39,10 @@ AGENTS.local.md
 .aioson/templates/
 .aioson/advisors/
 .aioson/mcp/servers.md
-# AIOSON — user-installed skills (versioned with project)
-!.aioson/installed-skills/
-!.aioson/installed-skills/**
+# AIOSON — user-installed skills (local-only, not versioned)
+# NOTE: template/.aioson/installed-skills/ is unaffected — root-anchored rule.
+.aioson/installed-skills/
+!.aioson/installed-skills/.gitkeep
 # AIOSON — custom agents (versioned with project)
 !.aioson/my-agents/
 !.aioson/my-agents/**

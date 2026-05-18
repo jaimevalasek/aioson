@@ -1,256 +1,1842 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AIOSON — Tutoriais</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AIOSON — Tutoriais &amp; Releases · Control Center</title>
+<meta name="description" content="Painel vivo do AIOSON: estado do framework, último release, tutoriais e shipments recentes — em um só lugar." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ════════════════════════════════════════════════════════════════
+   AIOSON · Tutorials Control Surface
+   Design language extraída de aioson-com/plans/aioson.com v6.html
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --text-xs:.72rem; --text-sm:.82rem; --text-base:.95rem;
+  --text-lg:1rem; --text-xl:1.25rem; --text-2xl:1.6rem;
+  --text-3xl:2.2rem; --text-4xl:3rem;
 
-    :root {
-      --bg: #07070f;
-      --surface: #0f0f1a;
-      --card: #13131f;
-      --border: #1f1f32;
-      --primary: #6c47ff;
-      --primary-glow: rgba(108, 71, 255, 0.18);
-      --text: #e2e8f0;
-      --muted: #8892a4;
-      --accent: #a78bfa;
-    }
+  --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem;
+  --space-5:1.25rem; --space-6:1.5rem; --space-8:2rem; --space-10:2.5rem;
+  --space-12:3rem; --space-16:4rem;
 
-    html { scroll-behavior: smooth; }
+  --radius-sm:.375rem; --radius-md:.625rem; --radius-lg:.875rem;
+  --radius-xl:1.125rem; --radius-2xl:1.5rem; --radius-full:9999px;
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
+  --transition-fast:140ms ease;
+  --transition-base:200ms ease;
 
-    /* ── Header ─────────────────────────────────── */
-    header {
-      padding: 80px 24px 60px;
-      text-align: center;
-      background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(108,71,255,0.18) 0%, transparent 70%);
-      border-bottom: 1px solid var(--border);
-    }
+  --font-body:'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+}
 
-    .logo-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 40px;
-      padding: 8px 20px;
-      font-size: 13px;
-      color: var(--accent);
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      margin-bottom: 32px;
-    }
+/* Light (default) — off-white blue, aurora */
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb;
+  --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92);
+  --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04);
+  --border:rgba(15,23,42,.10);
+  --text:#0f172a;
+  --text-soft:#1a2236;
+  --muted:#5b6677;
+  --accent:#1f8aff;
+  --accent-strong:#0066d6;
+  --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff;
+  --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233;
+  --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a;
+  --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10), 0 12px 28px rgba(31,138,255,.10);
+}
 
-    .logo-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--primary);
-      box-shadow: 0 0 8px var(--primary);
-      animation: pulse 2s ease-in-out infinite;
-    }
+/* Dark */
+[data-theme="dark"] {
+  color-scheme:dark;
+  --bg:#07080c;
+  --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88);
+  --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035);
+  --border:rgba(142,162,194,.12);
+  --text:#edf1f5;
+  --text-soft:#f7f9fb;
+  --muted:#7f8796;
+  --accent:#5ec8ff;
+  --accent-strong:#8fdcff;
+  --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff;
+  --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f;
+  --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6;
+  --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05), 0 10px 28px rgba(3,12,22,.42);
+}
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  font-family:var(--font-body);
+  font-weight:400;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 26%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 22%),
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 26%),
+    linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 90%, var(--bg-deep)) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  transition: background 0.4s ease, color 0.3s ease;
+}
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 60%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+}
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
 
-    h1 {
-      font-size: clamp(2.4rem, 5vw, 3.8rem);
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      background: linear-gradient(135deg, #d4d8f0 30%, var(--accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1.1;
-      margin-bottom: 18px;
-    }
+/* ── Shell ───────────────────────────────────────────────── */
+.shell {
+  width:min(1280px, calc(100% - 32px));
+  margin:0 auto;
+  padding:18px 0 60px;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
 
-    .subtitle {
-      font-size: 1.2rem;
-      color: var(--muted);
-      max-width: 520px;
-      margin: 0 auto;
-    }
+/* ════════════════════════════════════════════════════════════
+   Command Dock — sticky topbar
+   ════════════════════════════════════════════════════════════ */
+.cmd-dock {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:10px 14px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 90%, transparent);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:var(--shadow);
+  position:sticky;
+  top:14px;
+  z-index:60;
+  margin-bottom:22px;
+  position:relative;
+  overflow:hidden;
+}
+.cmd-dock::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
+  background-size:36px 36px;
+  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+  opacity:.2;
+  pointer-events:none;
+}
 
-    /* ── Grid ────────────────────────────────────── */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 24px;
-      max-width: 960px;
-      margin: 60px auto;
-      padding: 0 24px;
-    }
+.cmd-brand {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-right:14px;
+  border-right:1px solid var(--border);
+  position:relative;
+  z-index:1;
+}
+.cmd-mark {
+  width:38px; height:38px;
+  border-radius:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong)));
+  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+  color:var(--accent);
+}
+.cmd-mark svg { width:20px; height:20px; }
 
-    .tutorial-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
-      text-decoration: none;
-      color: inherit;
-      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title {
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  font-size:.96rem;
+  font-weight:700;
+  letter-spacing:-.02em;
+  color:var(--text);
+}
+.cmd-brand-version {
+  display:inline-flex;
+  align-items:center;
+  font-family:var(--font-mono);
+  font-size:.62rem;
+  font-weight:600;
+  letter-spacing:.06em;
+  padding:2px 7px;
+  border-radius:6px;
+  background:var(--accent-2-soft);
+  color:var(--accent-2);
+  border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border));
+}
+.cmd-brand-sub {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.cmd-status-dot {
+  width:7px; height:7px;
+  border-radius:50%;
+  background:var(--accent-4);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent);
+  animation:pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50% { opacity:.55; transform:scale(.85); }
+}
 
-    .tutorial-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -20%, var(--primary-glow), transparent 70%);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
+.cmd-center {
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  position:relative;
+  z-index:1;
+}
+.cmd-nav {
+  display:flex;
+  gap:2px;
+  padding:3px;
+  border-radius:12px;
+  background:var(--surface-soft);
+  border:1px solid var(--border);
+}
+.cmd-nav-item {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:.82rem;
+  font-weight:500;
+  color:var(--muted);
+  background:transparent;
+  border:none;
+  padding:7px 12px;
+  border-radius:9px;
+  text-decoration:none;
+  transition:var(--transition-fast);
+}
+.cmd-nav-item:hover {
+  color:var(--text);
+  background:color-mix(in srgb, var(--panel-strong) 80%, transparent);
+}
+.cmd-nav-item[aria-current="page"] {
+  color:var(--accent-strong);
+  background:var(--panel-strong);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.cmd-nav-glyph {
+  display:inline-flex;
+  font-size:.86rem;
+  color:var(--muted);
+}
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+.cmd-nav-badge {
+  font-family:var(--font-mono);
+  font-size:.56rem;
+  font-weight:700;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:1px 5px;
+  border-radius:4px;
+  background:var(--accent-2-soft);
+  color:var(--accent-2);
+  margin-left:2px;
+}
 
-    .tutorial-card:hover {
-      border-color: var(--primary);
-      transform: translateY(-4px);
-      box-shadow: 0 16px 48px rgba(108,71,255,0.2);
-    }
+.cmd-actions {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  position:relative;
+  z-index:1;
+}
+/* Princípio 6 da skill: filhos nunca encolhem (evita sobrepor o nav) */
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn {
+  width:36px; height:36px;
+  border-radius:10px;
+  background:var(--panel-strong);
+  border:1px solid var(--border);
+  color:var(--text-soft);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition:var(--transition-fast);
+}
+.cmd-icon-btn:hover {
+  background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong));
+  border-color:color-mix(in srgb, var(--accent) 30%, var(--border));
+  color:var(--accent-strong);
+}
+.cmd-divider {
+  width:1px; height:22px;
+  background:var(--border);
+}
+.cmd-cta {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:.84rem;
+  font-weight:600;
+  color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent;
+  border-radius:10px;
+  padding:8px 14px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition:var(--transition-fast);
+}
+.cmd-cta:hover {
+  transform:translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 10px 24px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.cmd-cta-arrow { transition:transform 0.15s ease; }
+.cmd-cta:hover .cmd-cta-arrow { transform:translateX(3px); }
 
-    .tutorial-card:hover::before { opacity: 1; }
+/* ════════════════════════════════════════════════════════════
+   Marketing Hero — 2 cols (copy + rail)
+   ════════════════════════════════════════════════════════════ */
+.marketing-hero {
+  display:grid;
+  grid-template-columns:minmax(0, 1.12fr) minmax(300px, .88fr);
+  gap:32px;
+  border:1px solid var(--border);
+  border-radius:26px;
+  padding:38px 36px;
+  overflow:hidden;
+  position:relative;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%),
+    linear-gradient(160deg, #ffffff 0%, #f7faff 100%);
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+  margin-bottom:14px;
+}
+[data-theme="dark"] .marketing-hero {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+}
+.marketing-hero::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px);
+  background-size:48px 48px;
+  background-position:-1px -1px;
+  mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
+  pointer-events:none;
+  opacity:.6;
+}
 
-    .card-tag {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--primary);
-      background: var(--primary-glow);
-      border: 1px solid rgba(108,71,255,0.3);
-      border-radius: 20px;
-      padding: 3px 12px;
-      margin-bottom: 20px;
-    }
+.hero-copy {
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+}
+.eyebrow {
+  font-family:var(--font-mono);
+  text-transform:uppercase;
+  letter-spacing:.18em;
+  font-size:var(--text-xs);
+  font-weight:600;
+  color:var(--muted);
+}
+.hero-copy h1 {
+  margin-top:14px;
+  max-width:16ch;
+  font-size:clamp(2.05rem, 3.4vw, 3.15rem);
+  letter-spacing:-.05em;
+  line-height:.96;
+  font-weight:700;
+  color:var(--text);
+}
+.hero-copy h1 .accent-cyan { color:var(--accent); }
+.hero-copy h1 .accent-violet { color:var(--accent-2); }
+.lede {
+  width:min(560px, 100%);
+  margin-top:14px;
+  color:color-mix(in srgb, var(--text) 78%, var(--muted));
+  font-size:.96rem;
+  line-height:1.7;
+}
+.hero-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:18px;
+}
+.primary-button, .secondary-button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:40px;
+  padding:0 16px;
+  border-radius:14px;
+  font-size:.86rem;
+  font-weight:600;
+  white-space:nowrap;
+  transition:var(--transition-fast);
+}
+.primary-button {
+  color:#fff;
+  background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  border:1px solid transparent;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.30) inset,
+    0 -1px 0 rgba(0,0,0,.10) inset,
+    0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.primary-button:hover {
+  transform:translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.30) inset,
+    0 12px 28px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.secondary-button {
+  background:var(--panel-strong);
+  border:1px solid var(--border);
+  color:var(--text);
+}
+.secondary-button:hover {
+  background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong));
+  border-color:color-mix(in srgb, var(--accent) 28%, var(--border));
+  color:var(--accent-strong);
+  transform:translateY(-1px);
+}
 
-    .card-icon {
-      font-size: 2.4rem;
-      margin-bottom: 16px;
-      display: block;
-    }
+.hero-cli {
+  margin-top:18px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:#0e1320;
+  color:#dbe6f5;
+  font-family:var(--font-mono);
+  font-size:.82rem;
+  box-shadow:0 10px 24px -10px rgba(15,23,42,.30);
+}
+.hero-cli-prompt { color:#7be3bb; font-weight:600; }
+.hero-cli-cmd { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hero-cli-copy {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px; height:30px;
+  border-radius:8px;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.08);
+  color:#a9b3c7;
+  transition:var(--transition-fast);
+}
+.hero-cli-copy:hover { color:#fff; border-color:rgba(255,255,255,.20); }
+.hero-cli-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.4); }
 
-    .tutorial-card h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #d4d8f0;
-      margin-bottom: 10px;
-    }
+.hero-rail {
+  position:relative;
+  z-index:1;
+  display:grid;
+  gap:12px;
+  align-content:start;
+}
+.note-card {
+  display:flex;
+  flex-direction:column;
+}
+.note-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.note-tag {
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  background:color-mix(in srgb, var(--accent-soft) 70%, var(--panel));
+  color:var(--accent);
+  font-family:var(--font-mono);
+  font-size:.62rem;
+  font-weight:600;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+[data-theme="light"] .note-tag {
+  background:color-mix(in srgb, var(--accent-soft) 60%, #fff);
+  color:var(--accent-strong);
+}
+.note-card h2 {
+  margin-top:10px;
+  font-size:1.12rem;
+  letter-spacing:-.04em;
+  color:var(--text-soft);
+}
+.note-card > p {
+  margin-top:8px;
+  color:var(--muted);
+  line-height:1.65;
+  font-size:.88rem;
+}
+.preview-grid {
+  display:grid;
+  gap:10px;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  margin-top:14px;
+}
+.preview-stat {
+  border-radius:16px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  background:var(--panel-strong);
+  box-shadow:0 2px 6px rgba(15,23,42,.04);
+}
+.preview-stat span {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.preview-stat strong {
+  display:block;
+  margin-top:8px;
+  font-size:1.42rem;
+  line-height:1;
+  letter-spacing:-.05em;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  font-weight:700;
+}
+.preview-stat p {
+  margin:6px 0 0;
+  color:var(--muted);
+  line-height:1.4;
+  font-size:.74rem;
+}
+.preview-stat-blue   { background:color-mix(in srgb, var(--accent-soft) 80%, #fff); }
+.preview-stat-violet { background:color-mix(in srgb, var(--accent-2-soft) 80%, #fff); }
+.preview-stat-gold   { background:color-mix(in srgb, var(--accent-3-soft) 80%, #fff); }
+[data-theme="dark"] .preview-stat-blue   { background:color-mix(in srgb, var(--accent-soft) 74%, var(--panel)); }
+[data-theme="dark"] .preview-stat-violet { background:color-mix(in srgb, var(--accent-2-soft) 74%, var(--panel)); }
+[data-theme="dark"] .preview-stat-gold   { background:color-mix(in srgb, var(--accent-3-soft) 74%, var(--panel)); }
 
-    .tutorial-card p {
-      font-size: 0.95rem;
-      color: var(--muted);
-      line-height: 1.65;
-    }
+.signal-cluster { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.signal-pill {
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--panel-strong);
+  color:var(--text-soft);
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.signal-pill-blue   { border-color:color-mix(in srgb, var(--accent) 26%, var(--border)); background:color-mix(in srgb, var(--accent-soft) 82%, var(--panel)); color:var(--accent); }
+.signal-pill-teal   { border-color:color-mix(in srgb, var(--accent-4) 24%, var(--border)); background:color-mix(in srgb, var(--accent-4-soft) 82%, var(--panel)); color:var(--accent-4); }
+.signal-pill-violet { border-color:color-mix(in srgb, var(--accent-2) 22%, var(--border)); background:color-mix(in srgb, var(--accent-2-soft) 82%, var(--panel)); color:var(--accent-2); }
+.signal-pill-gold   { border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); background:color-mix(in srgb, var(--accent-3-soft) 82%, var(--panel)); color:var(--accent-3); }
+[data-theme="light"] .signal-pill-blue   { background:color-mix(in srgb, var(--accent-soft) 70%, #fff); color:var(--accent-strong); }
+[data-theme="light"] .signal-pill-teal   { background:color-mix(in srgb, var(--accent-4-soft) 70%, #fff); }
+[data-theme="light"] .signal-pill-violet { background:color-mix(in srgb, var(--accent-2-soft) 70%, #fff); }
+[data-theme="light"] .signal-pill-gold   { background:color-mix(in srgb, var(--accent-3-soft) 70%, #fff); }
 
-    .card-arrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 20px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--accent);
-    }
+/* ════════════════════════════════════════════════════════════
+   Site Section (banded with header)
+   ════════════════════════════════════════════════════════════ */
+.site-section {
+  padding:38px 0 14px;
+  position:relative;
+}
+.site-section + .site-section {
+  padding-top:22px;
+  border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.site-section-header {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:24px;
+  max-width:64ch;
+}
+.site-section-title {
+  margin-top:8px;
+  font-size:clamp(1.6rem, 2.4vw, 2.2rem);
+  letter-spacing:-.04em;
+  font-weight:700;
+  line-height:1.05;
+}
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-subtitle {
+  margin-top:8px;
+  color:var(--muted);
+  font-size:.96rem;
+  line-height:1.6;
+  max-width:60ch;
+}
+.site-section-meta {
+  font-family:var(--font-mono);
+  font-size:.7rem;
+  color:var(--muted);
+  letter-spacing:.04em;
+}
 
-    /* ── Coming soon ─────────────────────────────── */
-    .tutorial-card.soon {
-      opacity: 0.5;
-      pointer-events: none;
-    }
+/* ════════════════════════════════════════════════════════════
+   Track Grid — Tutoriais
+   ════════════════════════════════════════════════════════════ */
+.track-grid {
+  display:grid;
+  gap:16px;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+.track-card {
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:22px;
+  background:var(--panel-strong);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  overflow:hidden;
+  text-decoration:none;
+  color:inherit;
+  transition:var(--transition-fast);
+  box-shadow:0 10px 28px -18px rgba(15,23,42,.18);
+}
+.track-card::before {
+  content:'';
+  position:absolute;
+  inset:0 auto auto 0;
+  width:160px; height:160px;
+  pointer-events:none;
+}
+.track-card--cyan    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 60%, transparent), transparent 56%), var(--panel-strong); }
+.track-card--cyan::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%); }
+.track-card--cyan:hover      { border-color:color-mix(in srgb, var(--accent) 32%, var(--border)); }
+.track-card--violet  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 60%, transparent), transparent 56%), var(--panel-strong); }
+.track-card--violet::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 70%); }
+.track-card--violet:hover    { border-color:color-mix(in srgb, var(--accent-2) 32%, var(--border)); }
+.track-card--gold    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 60%, transparent), transparent 56%), var(--panel-strong); }
+.track-card--gold::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 22%, transparent), transparent 70%); }
+.track-card--gold:hover      { border-color:color-mix(in srgb, var(--accent-3) 32%, var(--border)); }
+.track-card--emerald { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 60%, transparent), transparent 56%), var(--panel-strong); }
+.track-card--emerald::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 22%, transparent), transparent 70%); }
+.track-card--emerald:hover   { border-color:color-mix(in srgb, var(--accent-4) 32%, var(--border)); }
+.track-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-glow); }
+.track-card.soon { opacity:.7; pointer-events:none; }
 
-    .soon-badge {
-      position: absolute;
-      top: 16px; right: 16px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-    }
+.track-card-header {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  position:relative;
+  z-index:1;
+}
+.track-card-icon {
+  width:42px; height:42px;
+  border-radius:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  border:1px solid var(--border);
+}
+[data-theme="light"] .track-card-icon {
+  background:#fff;
+  box-shadow:0 1px 2px rgba(15,23,42,.05);
+}
+.track-card-icon svg { width:22px; height:22px; }
+.track-card--cyan    .track-card-icon { border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent); }
+.track-card--violet  .track-card-icon { border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); color:var(--accent-2); }
+.track-card--gold    .track-card-icon { border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); color:var(--accent-3); }
+.track-card--emerald .track-card-icon { border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); color:var(--accent-4); }
+.track-card-eyebrow {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:600;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.track-card-label {
+  font-size:1.1rem;
+  letter-spacing:-.03em;
+  font-weight:700;
+  color:var(--text-soft);
+  margin-top:2px;
+}
+.track-card-title {
+  margin-top:18px;
+  font-size:1rem;
+  font-weight:600;
+  color:var(--text);
+  line-height:1.4;
+  letter-spacing:-.01em;
+  position:relative; z-index:1;
+}
+.track-card-desc {
+  margin-top:10px;
+  color:var(--muted);
+  line-height:1.65;
+  font-size:.88rem;
+  position:relative; z-index:1;
+}
+.track-card-pills {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:14px;
+  position:relative; z-index:1;
+}
+.track-card-pill {
+  display:inline-flex;
+  align-items:center;
+  height:24px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.24);
+  font-family:var(--font-mono);
+  font-size:.62rem;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--text-soft);
+}
+[data-theme="light"] .track-card-pill { background:#f7faff; }
+.track-card--cyan    .track-card-pill { border-color:color-mix(in srgb, var(--accent) 22%, var(--border)); color:var(--accent-strong); }
+.track-card--violet  .track-card-pill { border-color:color-mix(in srgb, var(--accent-2) 22%, var(--border)); color:var(--accent-2); }
+.track-card--gold    .track-card-pill { border-color:color-mix(in srgb, var(--accent-3) 22%, var(--border)); color:#a5701d; }
+.track-card--emerald .track-card-pill { border-color:color-mix(in srgb, var(--accent-4) 22%, var(--border)); color:var(--accent-4); }
+.track-card-cta {
+  margin-top:18px;
+  font-size:.84rem;
+  font-weight:600;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  position:relative; z-index:1;
+  transition:var(--transition-fast);
+}
+.track-card--cyan    .track-card-cta { color:var(--accent); }
+.track-card--violet  .track-card-cta { color:var(--accent-2); }
+.track-card--gold    .track-card-cta { color:var(--accent-3); }
+.track-card--emerald .track-card-cta { color:var(--accent-4); }
+.track-card-cta:hover { gap:10px; }
+.track-card .soon-tag {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:600;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  background:var(--surface-soft);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:3px 8px;
+  margin-left:auto;
+}
 
-    /* ── Footer ──────────────────────────────────── */
-    footer {
-      text-align: center;
-      padding: 40px 24px;
-      border-top: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.875rem;
-    }
+/* ════════════════════════════════════════════════════════════
+   Pipeline Strip (SDD agents)
+   ════════════════════════════════════════════════════════════ */
+.pipeline-track {
+  display:flex;
+  gap:0;
+  border:1px solid var(--border);
+  border-radius:18px;
+  overflow:hidden;
+  background:var(--panel-strong);
+  box-shadow:var(--shadow);
+}
+[data-theme="light"] .pipeline-track { box-shadow:0 12px 30px -20px rgba(15,23,42,.18); }
+.pipeline-step {
+  flex:1;
+  min-width:0;
+  padding:14px;
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  position:relative;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), transparent);
+  transition:var(--transition-fast);
+}
+[data-theme="light"] .pipeline-step { background:linear-gradient(180deg, #fbfdff, transparent); }
+.pipeline-step:last-child { border-right:none; }
+.pipeline-step:hover {
+  background:color-mix(in srgb, var(--accent-soft) 24%, transparent);
+}
+[data-theme="light"] .pipeline-step:hover {
+  background:color-mix(in srgb, var(--accent-soft) 38%, #fff);
+}
+.pipeline-step.gate {
+  background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 14%, transparent), transparent);
+}
+.pipeline-step-num {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:700;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.pipeline-step.gate .pipeline-step-num { color:var(--accent-3); }
+.pipeline-step-cmd {
+  font-family:var(--font-mono);
+  font-size:.84rem;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:-.01em;
+}
+.pipeline-step.gate .pipeline-step-cmd { color:var(--accent-3); }
+.pipeline-step-name {
+  font-size:.8rem;
+  color:var(--text);
+  font-weight:500;
+  letter-spacing:-.01em;
+}
+.pipeline-step-desc {
+  font-size:.72rem;
+  color:var(--muted);
+  line-height:1.45;
+}
 
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+/* ════════════════════════════════════════════════════════════
+   Dual Grid (Recent shipments + Living Memory)
+   ════════════════════════════════════════════════════════════ */
+.dual-grid {
+  display:grid;
+  gap:38px;
+  grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+  margin-top:8px;
+  padding:38px 0 14px;
+  border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.surface-strip {
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:6px 0;
+}
+.surface-strip-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+}
+.surface-strip-head h3 {
+  margin-top:6px;
+  font-size:1.18rem;
+  letter-spacing:-.03em;
+  font-weight:700;
+}
+.surface-strip-link {
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--muted);
+  transition:var(--transition-fast);
+}
+.surface-strip-link:hover { color:var(--accent); }
+
+/* Shipments rows */
+.ship-row {
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  gap:12px;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 90%, transparent);
+  box-shadow:var(--shadow);
+  transition:var(--transition-fast);
+}
+[data-theme="light"] .ship-row {
+  background:#ffffff;
+  box-shadow:0 6px 18px -12px rgba(15,23,42,.14);
+}
+.ship-row:hover { border-color:color-mix(in srgb, var(--accent) 22%, var(--border)); transform:translateY(-1px); }
+.ship-date {
+  font-family:var(--font-mono);
+  font-size:.74rem;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:.02em;
+}
+.ship-slug {
+  font-family:var(--font-mono);
+  font-size:.84rem;
+  font-weight:600;
+  color:var(--text-soft);
+  letter-spacing:-.01em;
+}
+.ship-class {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding:3px 8px;
+  border-radius:6px;
+}
+.ship-class.medium { background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 26%, var(--border)); }
+.ship-class.small  { background:var(--accent-soft); color:var(--accent-strong); border:1px solid color-mix(in srgb, var(--accent) 26%, var(--border)); }
+.ship-class.micro  { background:var(--accent-4-soft); color:var(--accent-4); border:1px solid color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
+.ship-verdict {
+  font-family:var(--font-mono);
+  font-size:.62rem;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--accent-4);
+}
+
+/* Memory rows */
+.mem-row {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel-strong) 90%, transparent);
+  box-shadow:var(--shadow);
+}
+[data-theme="light"] .mem-row {
+  background:#ffffff;
+  box-shadow:0 6px 18px -12px rgba(15,23,42,.14);
+}
+a.mem-row {
+  text-decoration:none; color:inherit;
+  transition:transform 0.15s ease, border-color 0.15s ease;
+}
+a.mem-row:hover {
+  transform:translateY(-1px);
+  border-color:color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.mem-new {
+  display:inline-flex; align-items:center;
+  font-family:'JetBrains Mono', monospace;
+  font-size:.56rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+  padding:1px 6px; border-radius:4px;
+  background:var(--accent-2-soft); color:var(--accent-2);
+  border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border));
+  margin-left:6px;
+}
+.mem-icon {
+  width:36px; height:36px;
+  flex-shrink:0;
+  border-radius:10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:color-mix(in srgb, var(--accent-soft) 60%, var(--panel));
+  border:1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  color:var(--accent);
+}
+.mem-row[data-tone="violet"]  .mem-icon { background:color-mix(in srgb, var(--accent-2-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-2) 24%, var(--border)); color:var(--accent-2); }
+.mem-row[data-tone="teal"]    .mem-icon { background:color-mix(in srgb, var(--accent-4-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-4) 24%, var(--border)); color:var(--accent-4); }
+.mem-row[data-tone="gold"]    .mem-icon { background:color-mix(in srgb, var(--accent-3-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-3) 24%, var(--border)); color:var(--accent-3); }
+.mem-icon svg { width:18px; height:18px; }
+.mem-body { flex:1; min-width:0; }
+.mem-title {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  font-size:.94rem;
+  font-weight:600;
+  letter-spacing:-.01em;
+  color:var(--text-soft);
+}
+.mem-title code {
+  font-size:.74rem;
+  padding:2px 6px;
+  border-radius:6px;
+  background:var(--surface-soft);
+  border:1px solid var(--border);
+  color:var(--accent);
+  font-weight:500;
+}
+.mem-desc { margin-top:4px; font-size:.82rem; color:var(--muted); line-height:1.6; }
+.mem-val {
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  font-weight:700;
+  color:var(--text-soft);
+  text-align:right;
+  letter-spacing:-.01em;
+}
+.mem-val small { display:block; font-size:.62rem; font-weight:500; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:2px; }
+
+/* ════════════════════════════════════════════════════════════
+   Terminal Card (Quick start)
+   ════════════════════════════════════════════════════════════ */
+.terminal-card {
+  border-radius:18px;
+  border:1px solid transparent;
+  background:linear-gradient(180deg, #0e1320, #0a0f1c);
+  box-shadow:0 22px 48px -22px rgba(15,23,42,.40);
+  overflow:hidden;
+  margin-top:8px;
+}
+.terminal-head {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  background:#10182a;
+}
+.terminal-dots { display:flex; gap:6px; }
+.terminal-dots span { width:10px; height:10px; border-radius:999px; }
+.terminal-dots span:nth-child(1) { background:#ff6057; }
+.terminal-dots span:nth-child(2) { background:#febc2e; }
+.terminal-dots span:nth-child(3) { background:#28c840; }
+.terminal-title {
+  font-family:var(--font-mono);
+  font-size:.74rem;
+  font-weight:600;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:#a9b3c7;
+}
+.terminal-copy {
+  margin-left:auto;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.10);
+  color:#a9b3c7;
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  letter-spacing:.06em;
+  padding:4px 10px;
+  border-radius:6px;
+  text-transform:uppercase;
+  transition:var(--transition-fast);
+}
+.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
+.terminal-body {
+  padding:18px 22px 22px;
+  font-family:var(--font-mono);
+  font-size:.84rem;
+  line-height:1.7;
+  color:#c8d8ee;
+  overflow-x:auto;
+}
+.term-line { display:block; white-space:pre; }
+.term-prompt { color:#4dd5a6; }
+.term-cmd { color:#fff; }
+.term-flag { color:#e8b05f; }
+.term-str { color:#7be3bb; }
+.term-comment { color:#7f8796; }
+.term-out-key { color:#5ec8ff; }
+.term-out-val { color:#e5c07b; }
+.term-ok { color:#4dd5a6; }
+
+/* ════════════════════════════════════════════════════════════
+   Site CTA
+   ════════════════════════════════════════════════════════════ */
+.site-cta {
+  border-radius:24px;
+  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),
+    #ffffff;
+  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
+  padding:38px 32px;
+  display:grid;
+  gap:18px;
+  grid-template-columns:1.4fr 1fr;
+  align-items:center;
+  margin-top:24px;
+}
+[data-theme="dark"] .site-cta {
+  background:
+    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%),
+    color-mix(in srgb, var(--bg-deep) 86%, transparent);
+}
+.site-cta-heading {
+  font-size:clamp(1.6rem, 2.6vw, 2.2rem);
+  letter-spacing:-.04em;
+  font-weight:700;
+  line-height:1.1;
+}
+.site-cta-heading .accent-cyan { color:var(--accent); }
+.site-cta-heading .accent-violet { color:var(--accent-2); }
+.site-cta-text {
+  margin-top:12px;
+  color:var(--muted);
+  line-height:1.7;
+  max-width:50ch;
+}
+.site-cta-actions {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Footer
+   ════════════════════════════════════════════════════════════ */
+.site-footer {
+  display:grid;
+  gap:18px;
+  grid-template-columns:1.4fr 1fr 1fr 1fr;
+  padding:48px 4px 8px;
+  margin-top:32px;
+  border-top:1px solid var(--border);
+}
+.site-footer-brand p {
+  margin-top:10px;
+  color:var(--muted);
+  font-size:.84rem;
+  line-height:1.6;
+  max-width:32ch;
+}
+.footer-col-title {
+  font-family:var(--font-mono);
+  font-size:.6rem;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:10px;
+}
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.86rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base {
+  margin-top:18px;
+  padding:18px 4px 0;
+  border-top:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  color:var(--muted);
+  font-size:.78rem;
+}
+.footer-stats {
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.footer-stat {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  letter-spacing:.04em;
+  color:var(--muted);
+}
+.footer-stat .b-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--accent-4);
+  box-shadow:0 0 6px color-mix(in srgb, var(--accent-4) 60%, transparent);
+}
+
+/* ════════════════════════════════════════════════════════════
+   Responsive
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .marketing-hero { grid-template-columns:1fr; gap:24px; }
+  .track-grid { grid-template-columns:repeat(2, 1fr); }
+  .dual-grid { grid-template-columns:1fr; gap:24px; padding:28px 0 8px; }
+  .site-cta { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+  .pipeline-track { overflow-x:auto; }
+  .pipeline-step { min-width:140px; }
+  .cmd-nav-item-hide { display:none; }
+}
+@media (max-width: 720px) {
+  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
+  .cmd-brand { padding-right:0; border-right:none; }
+  .cmd-center { order:3; width:100%; }
+  .cmd-nav { width:100%; overflow-x:auto; }
+  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
+  .cmd-account-info { display:none; }
+  .marketing-hero { padding:28px 22px; }
+  .hero-copy h1 { font-size:2rem; max-width:none; }
+  .track-grid { grid-template-columns:1fr; }
+  .preview-grid { grid-template-columns:repeat(2, 1fr); }
+  .site-footer { grid-template-columns:1fr; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+</style>
 </head>
 <body>
 
-  <header>
-    <div class="logo-badge">
-      <span class="logo-dot"></span>
-      AIOSON Tutorials
+<main class="shell">
+
+  <!-- ═══════════════════════════════════════════════════════ COMMAND DOCK -->
+  <nav class="cmd-dock" aria-label="Topbar">
+    <div class="cmd-brand">
+      <span class="cmd-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3l8 18H4l8-18z" />
+          <path d="M8.5 14h7" />
+        </svg>
+      </span>
+      <div class="cmd-brand-info">
+        <span class="cmd-brand-title">
+          AIOSON
+          <span class="cmd-brand-version">v1.9.0</span>
+        </span>
+        <span class="cmd-brand-sub">
+          <span class="cmd-status-dot"></span> framework · online
+        </span>
+      </div>
     </div>
-    <h1>Tutoriais</h1>
-    <p class="subtitle">Aprenda a usar o AIOSON do zero — guias visuais, fluxogramas e exemplos práticos.</p>
-  </header>
 
-  <div class="grid">
+    <div class="cmd-center">
+      <div class="cmd-nav" role="tablist">
+        <a class="cmd-nav-item" href="index.html" aria-current="page">
+          <span class="cmd-nav-glyph">⌂</span> Hub
+        </a>
+        <a class="cmd-nav-item" href="#guides">
+          <span class="cmd-nav-glyph">◐</span> Tutoriais
+        </a>
+        <a class="cmd-nav-item" href="#releases">
+          <span class="cmd-nav-glyph">⬡</span> Releases
+          <span class="cmd-nav-badge">new</span>
+        </a>
+        <a class="cmd-nav-item cmd-nav-item-hide" href="#pipeline">
+          <span class="cmd-nav-glyph">◇</span> Pipeline
+        </a>
+        <a class="cmd-nav-item cmd-nav-item-hide" href="#memory">
+          <span class="cmd-nav-glyph">◈</span> Memory
+        </a>
+      </div>
+    </div>
 
-    <a class="tutorial-card" href="sdd/index.html">
-      <span class="card-tag">Fundamental</span>
-      <span class="card-icon">⚡</span>
-      <h2>Spec-Driven Development</h2>
-      <p>Entenda como o AIOSON transforma uma ideia vaga em código funcional — do prompt ao deploy, sem pular etapas.</p>
-      <span class="card-arrow">Ler tutorial →</span>
-    </a>
+    <div class="cmd-actions">
+      <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+        <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+        <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+      </button>
+      <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <span class="cmd-divider" aria-hidden="true"></span>
+      <a href="releases/1-9-0/index.html" class="cmd-cta">
+        Release v1.9.0
+        <svg class="cmd-cta-arrow" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+  </nav>
 
-    <a class="tutorial-card" href="squads/index.html">
-      <span class="card-tag">Squads</span>
-      <span class="card-icon">🤖</span>
-      <h2>AIOSON Squads</h2>
-      <p>Crie times de agentes especializados para qualquer domínio — software, conteúdo, jurídico e mais.</p>
-      <span class="card-arrow">Ler tutorial →</span>
-    </a>
+  <!-- ═══════════════════════════════════════════════════════ HERO -->
+  <section class="marketing-hero" aria-label="Hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Control center · Tutoriais &amp; Releases</span>
+      <h1>
+        O painel <span class="accent-cyan">vivo</span><br />
+        do <span class="accent-violet">AIOSON</span>.
+      </h1>
+      <p class="lede">
+        Estado atual do framework, último release, tutoriais e shipments recentes — em um só lugar.
+        Tudo o que você precisa pra começar a usar (ou entender em 3 minutos o que mudou) está aqui embaixo.
+      </p>
+      <div class="hero-actions">
+        <a class="primary-button" href="releases/1-9-0/index.html">
+          Ler release v1.9.0
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="secondary-button" href="#guides">Ver tutoriais</a>
+      </div>
+      <div class="hero-cli">
+        <span class="hero-cli-prompt">$</span>
+        <span class="hero-cli-cmd">npm install -g @jaimevalasek/aioson</span>
+        <button class="hero-cli-copy" type="button" aria-label="Copiar comando" data-copy="npm install -g @jaimevalasek/aioson">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="9" height="9" rx="1.5"/><path d="M3 11V3a1 1 0 0 1 1-1h8"/></svg>
+        </button>
+      </div>
+    </div>
 
-    <a class="tutorial-card" href="sdd/automation.html">
-      <span class="card-tag">Automação</span>
-      <span class="card-icon">🔗</span>
-      <h2>Webhooks & Automação</h2>
-      <p>Conecte WhatsApp, Slack e ERPs ao seu squad via HTTP — dispare agentes de qualquer sistema externo.</p>
-      <span class="card-arrow">Ler tutorial →</span>
-    </a>
+    <aside class="hero-rail">
+      <div class="note-card">
+        <div class="note-head">
+          <span class="note-tag">Sprint 2026-05-07 → 17</span>
+        </div>
+        <h2>10 dias. 15 features. Zero blockers.</h2>
+        <p>O sprint mais intenso da história do framework — Living Memory, Brains procedurais, Active Learning, hardening R4-7 e modo lay-user.</p>
 
-    <div class="tutorial-card soon">
-      <span class="soon-badge">Em breve</span>
-      <span class="card-tag">Avançado</span>
-      <span class="card-icon">🧠</span>
-      <h2>Genomes & Profiler</h2>
-      <p>Como injetar conhecimento de domínio profundo nos seus agentes usando o sistema de genomas do AIOSON.</p>
-      <span class="card-arrow">Em breve</span>
+        <div class="preview-grid">
+          <div class="preview-stat preview-stat-blue">
+            <span>Versão</span>
+            <strong>1.9.0</strong>
+            <p>shipped 2026-05-16</p>
+          </div>
+          <div class="preview-stat preview-stat-violet">
+            <span>Tests</span>
+            <strong>2 500</strong>
+            <p>0 fail · 1 skip</p>
+          </div>
+          <div class="preview-stat preview-stat-gold">
+            <span>Features</span>
+            <strong>15</strong>
+            <p>fechadas em 10 dias</p>
+          </div>
+        </div>
+
+        <div class="signal-cluster">
+          <span class="signal-pill signal-pill-blue">bootstrap 4/4</span>
+          <span class="signal-pill signal-pill-teal">3 brains</span>
+          <span class="signal-pill signal-pill-violet">autonomy v1.1</span>
+          <span class="signal-pill signal-pill-gold">SF-21…26</span>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ RELEASES -->
+  <section class="site-section" id="releases">
+    <header class="site-section-header" style="max-width:none; flex-direction:row; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap;">
+      <div>
+        <span class="eyebrow">Featured release · v1.9.0</span>
+        <h2 class="site-section-title" style="margin-top:6px;">A era da <span class="accent-cyan">Living Memory</span> chegou.</h2>
+        <p class="site-section-subtitle">Agentes que se lembram, brains procedurais indexados, loop de aprendizado ativo, sete rodadas de hardening de segurança, modo para usuários leigos e dev-state auto-produzido.</p>
+      </div>
+      <a href="releases/index.html" style="font-family:'JetBrains Mono', monospace; font-size:.78rem; font-weight:600; color:var(--accent); display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:1px solid color-mix(in srgb, var(--accent) 28%, var(--border)); background:color-mix(in srgb, var(--accent-soft) 30%, transparent); transition:var(--transition-fast); white-space:nowrap;">
+        Ver todas releases →
+      </a>
+    </header>
+
+    <div class="track-grid">
+      <a class="track-card track-card--cyan" href="living-memory/index.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Memory · 0-5</div>
+            <div class="track-card-label">Living Memory</div>
+          </div>
+        </div>
+        <p class="track-card-desc">Bootstrap cache em 4 arquivos, reflect engine pós-<code>agent:done</code>, autonomy 3-tier. Sessões pararam de esquecer.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">/discover</span>
+          <span class="track-card-pill">memory:reflect</span>
+        </div>
+        <span class="track-card-cta">Ver detalhes <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+
+      <a class="track-card track-card--violet" href="brains/index.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="3" r="1.5"/><circle cx="12" cy="21" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="21" cy="12" r="1.5"/><path d="M12 6v3M12 15v3M6 12h3M15 12h3"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Procedural memory</div>
+            <div class="track-card-label">Brains indexados</div>
+          </div>
+        </div>
+        <p class="track-card-desc">3 brains, 25 nodes com quality score. Loading lazy por tags. Padrões viram defaults pros agentes.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">brain:query</span>
+          <span class="track-card-pill">q ≥ 4</span>
+        </div>
+        <span class="track-card-cta">Ver detalhes <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+
+      <a class="track-card track-card--emerald" href="autonomy/index.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Pentester · R4-7</div>
+            <div class="track-card-label">Hardening</div>
+          </div>
+        </div>
+        <p class="track-card-desc">Três camadas contra prompt injection (LLM01.2), execSync → spawn, runtime-permissions com deny rules + drift detection.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">SF-21..26</span>
+          <span class="track-card-pill">notify --level=block</span>
+        </div>
+        <span class="track-card-cta">Ver detalhes <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ GUIDES -->
+  <section class="site-section" id="guides">
+    <header class="site-section-header">
+      <span class="eyebrow">Tutoriais · 4 guides</span>
+      <h2 class="site-section-title">Aprenda a usar o <span class="accent-violet">AIOSON</span> do zero.</h2>
+      <p class="site-section-subtitle">Guias visuais com fluxogramas, exemplos práticos e tabelas de referência. Cada um aborda uma área distinta — escolha o seu ponto de entrada.</p>
+    </header>
+
+    <div class="track-grid" style="grid-template-columns:repeat(2, 1fr)">
+      <a class="track-card track-card--cyan" href="sdd/index.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Fundamental · 8 min</div>
+            <div class="track-card-label">Spec-Driven Development</div>
+          </div>
+        </div>
+        <p class="track-card-desc">Como o AIOSON transforma ideia vaga em código funcional. Gates A·B·C·D, classificação MICRO/SMALL/MEDIUM e fluxo completo de agentes.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">@product → @dev → @qa</span>
+        </div>
+        <span class="track-card-cta">Ler tutorial <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+
+      <a class="track-card track-card--violet" href="squads/index.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><circle cx="17" cy="9" r="3"/><circle cx="13" cy="17" r="3"/><path d="M9 12v2M17 12v2M13 17h-2M13 17h2"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Multi-agente · 10 min</div>
+            <div class="track-card-label">AIOSON Squads</div>
+          </div>
+        </div>
+        <p class="track-card-desc">Times de agentes especializados para qualquer domínio — software, conteúdo, jurídico, comercial. Workers, daemon, dashboard e ROI tracking.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">squad:create</span>
+          <span class="track-card-pill">squad:dashboard</span>
+        </div>
+        <span class="track-card-cta">Ler tutorial <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+
+      <a class="track-card track-card--gold" href="sdd/automation.html">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4L4 14h6l-1 6 6-10h-6l1-6z"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Avançado · 12 min</div>
+            <div class="track-card-label">SDD Automation Scripts</div>
+          </div>
+        </div>
+        <p class="track-card-desc">12 scripts determinísticos que eliminam 4 800–8 800 tokens por feature. <code>preflight</code>, <code>gate:check</code>, <code>artifact:validate</code> — a regra dos 80%.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">−8 800 tokens</span>
+          <span class="track-card-pill">CLI-first</span>
+        </div>
+        <span class="track-card-cta">Ler tutorial <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+      </a>
+
+      <div class="track-card soon">
+        <div class="track-card-header">
+          <span class="track-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+          </span>
+          <div>
+            <div class="track-card-eyebrow">Em breve</div>
+            <div class="track-card-label">Genomes &amp; Profiler</div>
+          </div>
+          <span class="soon-tag">soon</span>
+        </div>
+        <p class="track-card-desc">Como injetar conhecimento de domínio profundo nos agentes via sistema de genomas. Tracks 4.2/4.3, Cognitive Pipeline, Advisor Mode.</p>
+        <div class="track-card-pills">
+          <span class="track-card-pill">genome:install</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ PIPELINE -->
+  <section class="site-section" id="pipeline">
+    <header class="site-section-header">
+      <span class="eyebrow">SDD pipeline</span>
+      <h2 class="site-section-title">Como uma feature <span class="accent-gold">flui</span> pelo framework.</h2>
+      <p class="site-section-subtitle">Cada feature percorre uma cadeia de agentes — alguns são pulados em MICRO, todos rodam em MEDIUM. Gates intermediários (A·B·C·D) bloqueiam quando algo está faltando.</p>
+    </header>
+
+    <div class="pipeline-track">
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">01</div>
+        <div class="pipeline-step-cmd">@product</div>
+        <div class="pipeline-step-name">PRD</div>
+        <div class="pipeline-step-desc">O que construir e por quê</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate A</div>
+        <div class="pipeline-step-cmd">requirements</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">PRD passou</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">02</div>
+        <div class="pipeline-step-cmd">@analyst</div>
+        <div class="pipeline-step-name">Entities</div>
+        <div class="pipeline-step-desc">BRs · ACs · ECs</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate B</div>
+        <div class="pipeline-step-cmd">design</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">spec pronta</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">03</div>
+        <div class="pipeline-step-cmd">@architect</div>
+        <div class="pipeline-step-name">Decisions</div>
+        <div class="pipeline-step-desc">Stack &amp; boundaries</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate C</div>
+        <div class="pipeline-step-cmd">plan</div>
+        <div class="pipeline-step-name">Approve</div>
+        <div class="pipeline-step-desc">phases definidas</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-step-num">04</div>
+        <div class="pipeline-step-cmd">@dev</div>
+        <div class="pipeline-step-name">Implement</div>
+        <div class="pipeline-step-desc">Slices validadas</div>
+      </div>
+      <div class="pipeline-step gate">
+        <div class="pipeline-step-num">Gate D</div>
+        <div class="pipeline-step-cmd">@qa</div>
+        <div class="pipeline-step-name">PASS / FAIL</div>
+        <div class="pipeline-step-desc">QA verdict</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ DUAL: SHIPMENTS + MEMORY -->
+  <div class="dual-grid" id="memory">
+
+    <div class="surface-strip">
+      <div class="surface-strip-head">
+        <div>
+          <span class="eyebrow">Recent shipments</span>
+          <h3>Últimas 6 features</h3>
+        </div>
+        <a class="surface-strip-link" href="https://github.com/jaimevalasek/aioson/commits/main" target="_blank" rel="noopener">ver no GitHub →</a>
+      </div>
+
+      <div class="ship-row">
+        <span class="ship-date">2026-05-18</span>
+        <span class="ship-slug">release-page-1-9-0</span>
+        <span class="ship-class micro">micro</span>
+        <span class="ship-verdict">shipped</span>
+      </div>
+      <div class="ship-row">
+        <span class="ship-date">2026-05-17</span>
+        <span class="ship-slug">dev-state-producer</span>
+        <span class="ship-class micro">micro</span>
+        <span class="ship-verdict">pass</span>
+      </div>
+      <div class="ship-row">
+        <span class="ship-date">2026-05-17</span>
+        <span class="ship-slug">lay-user-agent-mode</span>
+        <span class="ship-class small">small</span>
+        <span class="ship-verdict">pass</span>
+      </div>
+      <div class="ship-row">
+        <span class="ship-date">2026-05-14</span>
+        <span class="ship-slug">active-learning-loop</span>
+        <span class="ship-class medium">medium</span>
+        <span class="ship-verdict">pass</span>
+      </div>
+      <div class="ship-row">
+        <span class="ship-date">2026-05-14</span>
+        <span class="ship-slug">deyvin-subtask-scout</span>
+        <span class="ship-class small">small</span>
+        <span class="ship-verdict">pass</span>
+      </div>
+      <div class="ship-row">
+        <span class="ship-date">2026-05-11</span>
+        <span class="ship-slug">living-memory</span>
+        <span class="ship-class medium">medium</span>
+        <span class="ship-verdict">pass</span>
+      </div>
+    </div>
+
+    <div class="surface-strip">
+      <div class="surface-strip-head">
+        <div>
+          <span class="eyebrow">Living Memory · status</span>
+          <h3>Bootstrap, brains, autonomy</h3>
+        </div>
+        <a class="surface-strip-link" href="living-memory/index.html">tutorial completo →</a>
+      </div>
+
+      <a class="mem-row" href="living-memory/index.html">
+        <span class="mem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg>
+        </span>
+        <div class="mem-body">
+          <div class="mem-title">Living Memory <code>bootstrap 4/4</code> <span class="mem-new">tutorial</span></div>
+          <div class="mem-desc">4 arquivos auto-sync + reflect engine + FTS5 search + 7 cmds CLI.</div>
+        </div>
+        <div class="mem-val">100% <small>complete</small></div>
+      </a>
+
+      <a class="mem-row" data-tone="violet" href="brains/index.html">
+        <span class="mem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg>
+        </span>
+        <div class="mem-body">
+          <div class="mem-title">Brains procedural <code>25 nodes</code> <span class="mem-new">tutorial</span></div>
+          <div class="mem-desc">site-forge (14), dev/patterns (5), sheldon (6). Loading lazy via tags, q ≥ 4.</div>
+        </div>
+        <div class="mem-val">3 <small>brains</small></div>
+      </a>
+
+      <div class="mem-row" data-tone="teal">
+        <span class="mem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+        </span>
+        <div class="mem-body">
+          <div class="mem-title">Runtime tasks <code>completed:40</code></div>
+          <div class="mem-desc">SQLite em <code>.aioson/runtime/aios.sqlite</code> — telemetria viva do projeto.</div>
+        </div>
+        <div class="mem-val">40 <small>done</small></div>
+      </div>
+
+      <a class="mem-row" data-tone="gold" href="autonomy/index.html">
+        <span class="mem-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5 3 9 9 9s9-4 9-9V7l-9-5z"/><path d="M8 12l3 3 5-6"/></svg>
+        </span>
+        <div class="mem-body">
+          <div class="mem-title">Autonomy <code>v1.1 · 3-tier</code> <span class="mem-new">tutorial</span></div>
+          <div class="mem-desc">tier1 silent (read) · tier2 notified (memory writes) · tier3 blocking (hard-rejected).</div>
+        </div>
+        <div class="mem-val">v1.1 <small>active</small></div>
+      </a>
     </div>
 
   </div>
 
-  <footer>
-    <p>AIOSON · <a href="https://github.com/jaimevalasek/aioson" target="_blank">GitHub</a> · <a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank">npm</a></p>
+  <!-- ═══════════════════════════════════════════════════════ QUICK START TERMINAL -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Quick start · 3 comandos</span>
+      <h2 class="site-section-title">Do <span class="accent-cyan">zero</span> ao primeiro agente em 2 minutos.</h2>
+      <p class="site-section-subtitle">Instala, configura e mapeia semanticamente qualquer projeto que você abrir. Tudo determinístico, zero dependências externas além do npm.</p>
+    </header>
+
+    <div class="terminal-card">
+      <div class="terminal-head">
+        <div class="terminal-dots"><span></span><span></span><span></span></div>
+        <span class="terminal-title">~/meu-projeto</span>
+        <button class="terminal-copy" type="button" id="terminal-copy" data-copy="npm install -g @jaimevalasek/aioson&#10;aioson setup .&#10;aioson /discover">Copiar tudo</button>
+      </div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-comment"># 1. Instalar o CLI globalmente</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">npm install</span> <span class="term-flag">-g</span> @jaimevalasek/aioson</span>
+<span class="term-line"><span class="term-out-key">added</span> <span class="term-out-val">1 package</span> in 4s</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 2. Inicializar AIOSON em qualquer projeto</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson setup</span> .</span>
+<span class="term-line"><span class="term-ok">✓</span> created .aioson/ · config.md · context/ · agents/ · skills/</span>
+<span class="term-line"><span class="term-ok">✓</span> bootstrap context written (4 files · Living Memory online)</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-comment"># 3. Mapear semanticamente o projeto</span></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson</span> <span class="term-flag">/discover</span></span>
+<span class="term-line"><span class="term-out-key">discovered</span> 142 files · 28 modules · 12 boundaries</span>
+<span class="term-line"><span class="term-ok">✓</span> ready — ative <span class="term-out-val">/product</span>, <span class="term-out-val">/dev</span> ou <span class="term-out-val">/neo</span> no seu editor</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FINAL CTA -->
+  <section class="site-cta">
+    <div>
+      <span class="eyebrow">Próximo passo</span>
+      <h2 class="site-cta-heading">Construa com agentes que <span class="accent-cyan">se lembram</span>.</h2>
+      <p class="site-cta-text">Spec-Driven Development, brains procedurais, Living Memory e 30 agentes oficiais — todos open source, todos rodando localmente, todos pront-pra-uso em qualquer editor.</p>
+    </div>
+    <div class="site-cta-actions">
+      <a class="primary-button" href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">
+        Instalar via npm
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+      <a class="secondary-button" href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">
+        Estrelar no GitHub
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.1rem">
+        AIOSON
+        <span class="cmd-brand-version">v1.9.0</span>
+      </div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Produto</div>
+      <ul>
+        <li><a href="releases/1-9-0/index.html">Release v1.9.0</a></li>
+        <li><a href="#guides">Tutoriais</a></li>
+        <li><a href="#pipeline">SDD pipeline</a></li>
+        <li><a href="#memory">Living Memory</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Recursos</div>
+      <ul>
+        <li><a href="sdd/index.html">Spec-Driven Development</a></li>
+        <li><a href="sdd/automation.html">Automation Scripts</a></li>
+        <li><a href="squads/index.html">Squads</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Comunidade</div>
+      <ul>
+        <li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm package</a></li>
+        <li><a href="https://github.com/jaimevalasek/aioson/issues" target="_blank" rel="noopener">Issues</a></li>
+      </ul>
+    </div>
+
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div class="footer-stats">
+        <span class="footer-stat"><span class="b-dot"></span>v1.9.0 · all systems nominal</span>
+        <span class="footer-stat">2 500 tests · 0 fail</span>
+        <span class="footer-stat">Living Memory online</span>
+      </div>
+      <div>
+        © AIOSON · feito em modo inception — o framework usando ele mesmo.
+      </div>
+    </div>
   </footer>
+
+</main>
+
+<script>
+  // ── Theme toggle — alinhado com aioson-design-system ──
+  // Default: dark. Sem detecção de SO (princípio do skill: escolha consciente).
+  // localStorage key: 'aioson-theme' (mesmo que o site principal).
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+
+    try {
+      const saved = localStorage.getItem('aioson-theme');
+      if (saved === 'dark' || saved === 'light') {
+        root.setAttribute('data-theme', saved);
+      }
+    } catch (e) {}
+
+    const sync = () => {
+      const t = root.getAttribute('data-theme') || 'dark';
+      const moon = toggle.querySelector('.cmd-theme-moon');
+      const sun  = toggle.querySelector('.cmd-theme-sun');
+      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
+      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
+    };
+    sync();
+
+    toggle.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+
+  // ── Copy buttons (data-copy + terminal block) ────────
+  (function () {
+    if (!navigator.clipboard) return;
+
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.textContent;
+          if (btn.id === 'terminal-copy') {
+            btn.textContent = 'copiado ✓';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+          } else {
+            btn.classList.add('copied');
+            setTimeout(() => btn.classList.remove('copied'), 1600);
+          }
+        });
+      });
+    });
+  })();
+</script>
 
 </body>
 </html>

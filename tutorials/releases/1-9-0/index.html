@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AIOSON v1.9.0 — Living Memory Era · Release Notes</title>
+<meta name="description" content="10 dias de evolução: Living Memory, Brains procedural, Active Learning Loop, hardening R4-7, lay-user mode e dev-state-producer. 15 features, 2 500 tests, 0 blockers." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* AIOSON Design System — Tokens */
+:root {
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
+  --transition-fast:140ms ease; --transition:220ms ease;
+}
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme:dark;
+  --bg:#07080c; --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
+  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
+  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
+  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb; --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
+  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
+  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
+  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
+}
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body { font-family:var(--font-body); color:var(--text);
+  background:radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 26%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment:fixed; -webkit-font-smoothing:antialiased; transition:background .4s ease, color .3s ease;
+}
+[data-theme="light"] body { background:radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%); background-attachment:fixed; }
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
+.shell { width:min(1280px, calc(100% - 32px)); margin:0 auto; padding:0 0 60px; display:flex; flex-direction:column; }
+
+/* Command Dock */
+.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
+.cmd-dock { display:flex; align-items:center; gap:14px; padding:10px 14px; border-radius:20px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 92%, transparent); backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%); box-shadow:var(--shadow); position:relative; overflow:hidden; transition:box-shadow .3s ease, border-color .3s ease; }
+.dock-wrap.is-scrolled .cmd-dock { box-shadow:var(--shadow-dock-scrolled); border-color:color-mix(in srgb, var(--accent) 18%, var(--border)); }
+.cmd-dock::after { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px); background-size:36px 36px; mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); opacity:.2; }
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark { width:36px; height:36px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%), linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong))); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent); color:var(--accent); }
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:500; color:var(--muted); background:transparent; border:none; padding:6px 11px; border-radius:9px; text-decoration:none; transition:var(--transition-fast); }
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] { color:var(--accent-strong); background:var(--panel-strong); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent); }
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn { width:34px; height:34px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; border-radius:10px; padding:7px 13px; box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition:var(--transition-fast); }
+.cmd-cta:hover { transform:translateY(-1px); }
+
+/* Hero specific for release page */
+.release-hero {
+  border:1px solid var(--border); border-radius:26px;
+  padding:54px 40px; overflow:hidden; position:relative;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 18%, transparent), transparent 36%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 30%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent-4) 12%, transparent), transparent 60%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+  box-shadow:var(--shadow);
+  margin-bottom:14px;
+  text-align:center;
+}
+[data-theme="light"] .release-hero { background:radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 30%),radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 60%),linear-gradient(160deg, #fff 0%, #f7faff 100%); box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.release-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px); background-size:48px 48px; mask-image:radial-gradient(ellipse at 50% 30%, black 0%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 30%, black 0%, transparent 70%); opacity:.4; }
+.release-hero > * { position:relative; z-index:1; }
+
+.version-pill {
+  display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--font-mono); font-size:.8rem; font-weight:500;
+  color:var(--accent);
+  background:rgba(94,200,255,.10);
+  border:1px solid rgba(94,200,255,.30);
+  border-radius:999px; padding:6px 16px;
+}
+[data-theme="light"] .version-pill { color:var(--accent-strong); background:rgba(31,138,255,.12); border-color:rgba(31,138,255,.30); }
+.version-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); animation:pulse 2s ease-in-out infinite; }
+
+.release-hero h1 {
+  margin-top:24px;
+  font-size:clamp(2.4rem, 5vw, 4rem);
+  font-weight:800; letter-spacing:-.05em; line-height:1.02;
+  color:var(--text);
+  max-width:14ch; margin-left:auto; margin-right:auto;
+}
+.release-hero h1 .accent-cyan { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.release-hero h1 .accent-violet { color:var(--accent-2); }
+.release-hero p {
+  max-width:60ch; margin:18px auto 0;
+  color:color-mix(in srgb, var(--text) 78%, var(--muted));
+  font-size:1rem; line-height:1.7;
+}
+.hero-cta {
+  display:flex; justify-content:center; gap:12px;
+  margin-top:32px; flex-wrap:wrap;
+}
+.primary-button, .secondary-button {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:42px; padding:0 20px;
+  border-radius:12px; font-size:.88rem; font-weight:600; white-space:nowrap;
+  transition:var(--transition-fast);
+}
+.primary-button { color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.primary-button:hover { transform:translateY(-1px); }
+.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
+.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
+
+/* Site Section */
+.site-section { padding:38px 0 14px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.site-section-title { margin-top:6px; font-size:clamp(1.5rem, 2.4vw, 2.1rem); letter-spacing:-.04em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-emerald { color:var(--accent-4); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.95rem; line-height:1.65; max-width:62ch; }
+
+.read-time { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.72rem; color:var(--muted); margin-left:12px; }
+.read-time::before { content:'⏱'; font-size:.8rem; }
+
+/* Metric tiles */
+.metric-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:14px; }
+.metric-tile { background:var(--panel-strong); border:1px solid var(--border); border-radius:14px; padding:22px 18px; text-align:center; transition:transform 0.2s ease, border-color 0.2s ease; }
+[data-theme="light"] .metric-tile { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.metric-tile:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.metric-num { font-family:var(--font-mono); font-size:2.2rem; font-weight:700; letter-spacing:-.03em; background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1.1; }
+.metric-tile[data-tone="violet"] .metric-num { background:linear-gradient(135deg, var(--accent-2), var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.metric-tile[data-tone="green"] .metric-num { color:var(--accent-4); background:none; -webkit-text-fill-color:initial; }
+.metric-tile[data-tone="gold"] .metric-num { color:var(--accent-3); background:none; -webkit-text-fill-color:initial; }
+.metric-label { font-family:var(--font-mono); font-size:.66rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:8px; }
+
+.compact-callout { margin:24px 0; border:1px solid color-mix(in srgb, var(--accent-4) 22%, var(--border)); background:color-mix(in srgb, var(--accent-4-soft) 24%, var(--panel-strong)); border-radius:14px; padding:18px 22px; display:flex; gap:14px; align-items:flex-start; }
+[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-4-soft) 50%, #fff); }
+.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
+.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
+.compact-callout strong { color:var(--accent-4); }
+.compact-callout.yellow { border-color:color-mix(in srgb, var(--accent-3) 22%, var(--border)); background:color-mix(in srgb, var(--accent-3-soft) 24%, var(--panel-strong)); }
+[data-theme="light"] .compact-callout.yellow { background:color-mix(in srgb, var(--accent-3-soft) 50%, #fff); }
+.compact-callout.yellow strong { color:var(--accent-3); }
+
+/* Timeline */
+.timeline { position:relative; padding-left:24px; border-left:2px solid var(--border); margin-top:24px; }
+.timeline-entry { position:relative; padding:0 0 28px 22px; }
+.timeline-entry:last-child { padding-bottom:0; }
+.timeline-entry::before { content:''; position:absolute; left:-31px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--bg), 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent); }
+[data-theme="light"] .timeline-entry::before { box-shadow:0 0 0 4px var(--bg-deep), 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent); }
+.timeline-date { font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent); letter-spacing:.03em; }
+.timeline-title { font-size:1rem; font-weight:700; color:var(--text-soft); margin:4px 0 6px; }
+.timeline-desc { font-size:.88rem; color:var(--muted); margin:0; }
+.timeline-tag { display:inline-block; font-family:var(--font-mono); font-size:.62rem; font-weight:600; color:var(--accent-2); background:var(--accent-2-soft); border:1px solid color-mix(in srgb, var(--accent-2) 26%, var(--border)); border-radius:999px; padding:1px 9px; margin-left:8px; vertical-align:middle; text-transform:lowercase; }
+
+/* Theme cards (7 áreas de evolução) */
+.theme-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+.theme-card { background:var(--panel-strong); border:1px solid var(--border); border-radius:18px; padding:24px; position:relative; overflow:hidden; transition:border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
+[data-theme="light"] .theme-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.theme-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 80% 60% at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+.theme-card:hover { border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); transform:translateY(-2px); box-shadow:var(--shadow-glow); }
+.theme-card:hover::before { opacity:1; }
+.theme-icon { font-size:1.6rem; margin-bottom:12px; display:block; }
+.theme-card h3 { font-size:1.05rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; }
+.theme-tag { display:inline-block; font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-2); margin-bottom:10px; }
+.theme-card p { font-size:.86rem; color:var(--muted); line-height:1.65; margin:0 0 12px; }
+.theme-card .snippet { font-family:var(--font-mono); font-size:.74rem; color:var(--accent); background:#0a0a14; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-top:10px; overflow-x:auto; white-space:pre; }
+[data-theme="light"] .theme-card .snippet { color:#7be3bb; }
+
+/* What's next list */
+.next-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+.next-list li { display:flex; gap:14px; align-items:flex-start; padding:14px 18px; background:var(--panel-strong); border:1px solid var(--border); border-radius:12px; font-size:.9rem; color:var(--text-soft); }
+[data-theme="light"] .next-list li { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.next-list li::before { content:'→'; color:var(--accent); font-weight:700; flex-shrink:0; }
+
+/* CTA cards */
+.cta-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; }
+.cta-card { background:var(--panel-strong); border:1px solid var(--border); border-radius:14px; padding:22px; text-decoration:none; color:inherit; transition:border-color 0.2s ease, transform 0.2s ease; display:block; }
+[data-theme="light"] .cta-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.cta-card:hover { border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); transform:translateY(-2px); }
+.cta-card .cta-title { font-size:.95rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; }
+.cta-card .cta-desc { font-size:.82rem; color:var(--muted); }
+.cta-card .cta-link { display:inline-flex; align-items:center; gap:5px; margin-top:12px; font-family:var(--font-mono); font-size:.78rem; color:var(--accent); }
+
+/* Changelog appendix */
+details.changelog { background:var(--panel-strong); border:1px solid var(--border); border-radius:16px; padding:0; margin-top:24px; overflow:hidden; }
+[data-theme="light"] details.changelog { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+details.changelog summary { cursor:pointer; padding:20px 24px; list-style:none; display:flex; align-items:center; gap:12px; font-size:.95rem; font-weight:700; color:var(--text-soft); user-select:none; }
+details.changelog summary::-webkit-details-marker { display:none; }
+details.changelog summary::before { content:'+'; font-family:var(--font-mono); font-size:1.4rem; font-weight:400; color:var(--accent); transition:transform 0.2s ease; }
+details.changelog[open] summary::before { content:'−'; }
+.changelog-count { margin-left:auto; font-family:var(--font-mono); font-size:.78rem; color:var(--muted); }
+.changelog-body { padding:0 24px 24px; }
+.changelog-group { margin-top:18px; }
+.changelog-group h4 { font-family:var(--font-mono); font-size:.78rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+.changelog-group ul { list-style:none; padding-left:0; margin:0; }
+.changelog-group li { font-family:var(--font-mono); font-size:.78rem; color:var(--muted); padding:2px 0; line-height:1.7; }
+.changelog-group li .sha { color:color-mix(in srgb, var(--muted) 70%, transparent); margin-right:8px; }
+.changelog-group li .scope { color:var(--accent-2); }
+
+/* Footer */
+.site-footer { display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr; padding:42px 4px 8px; margin-top:30px; border-top:1px solid var(--border); }
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base { margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.76rem; }
+
+@media (max-width: 1024px) {
+  .release-hero { padding:40px 28px; }
+  .release-hero h1 { font-size:2.4rem; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; } .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; } .cmd-brand { padding-right:0; border-right:none; } .cmd-center { order:3; width:100%; } .cmd-nav { width:100%; overflow-x:auto; }
+  .release-hero { padding:32px 20px; }
+  .release-hero h1 { font-size:2rem; }
+  .site-footer { grid-template-columns:1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
+</head>
+<body>
+
+<main class="shell">
+
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" /></svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> release · Living Memory Era</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⬡</span> Releases</a>
+          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">●</span> v1.9.0</a>
+          <a class="cmd-nav-item" href="../../sdd/index.html"><span class="cmd-nav-glyph">⚡</span> SDD</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <span class="cmd-divider"></span>
+        <a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-cta">npm install
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="release-hero">
+    <span class="version-pill"><span class="dot"></span>AIOSON v1.9.0 · shipped 2026-05-16</span>
+    <h1>A era da <span class="accent-cyan">Living Memory</span> chegou.</h1>
+    <p>10 dias de evolução intensa: agentes que se lembram, brains procedurais, loop de aprendizado ativo, sete rodadas de hardening, modo para usuários leigos e auto-produção de estado. <strong>15 features fechadas, 2 500 testes verdes, zero blockers.</strong></p>
+    <div class="hero-cta">
+      <a class="primary-button" href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">
+        npm install -g @jaimevalasek/aioson
+      </a>
+      <a class="secondary-button" href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">
+        Ver no GitHub →
+      </a>
+    </div>
+  </section>
+
+  <!-- MÉTRICAS -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Em números</span>
+      <h2 class="site-section-title">O sprint que virou release. <span class="read-time">~4 min</span></h2>
+      <p class="site-section-subtitle">De 2026-05-07 a 2026-05-17, o framework absorveu mais valor do que qualquer outra janela de 10 dias da sua história.</p>
+    </header>
+
+    <div class="metric-grid">
+      <div class="metric-tile"><div class="metric-num">2 500</div><div class="metric-label">testes passando</div></div>
+      <div class="metric-tile" data-tone="violet"><div class="metric-num">15</div><div class="metric-label">features fechadas</div></div>
+      <div class="metric-tile" data-tone="green"><div class="metric-num">0</div><div class="metric-label">blockers</div></div>
+      <div class="metric-tile" data-tone="green"><div class="metric-num">10</div><div class="metric-label">dias de sprint</div></div>
+      <div class="metric-tile" data-tone="violet"><div class="metric-num">3</div><div class="metric-label">brains indexados</div></div>
+      <div class="metric-tile" data-tone="gold"><div class="metric-num">4/4</div><div class="metric-label">bootstrap coverage</div></div>
+    </div>
+
+    <div class="compact-callout">
+      <div class="compact-callout-icon">✅</div>
+      <p><strong>Verdict triplo PASS no Gate D:</strong> active-learning-loop (14/05), lay-user-agent-mode (17/05) e dev-state-producer (17/05) fecharam consecutivos, sem regressões e sem dívida crítica.</p>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Cronologia</span>
+      <h2 class="site-section-title">10 dias, <span class="accent-cyan">nove marcos</span>.</h2>
+      <p class="site-section-subtitle">O sprint não foi linear — cada marco resolveu uma fricção sentida pelo próprio framework enquanto se construía.</p>
+    </header>
+
+    <div class="timeline">
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-07</div>
+        <div class="timeline-title">Harness-driven AIOSON fecha Phase 3 <span class="timeline-tag">harness</span></div>
+        <p class="timeline-desc">@validator end-to-end via headless prompt, done-gate enforcement em <code>feature:close</code>, @sheldon RF-05. Base de governança travada.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-07</div>
+        <div class="timeline-title">Brains seed para @dev e @sheldon <span class="timeline-tag">brains</span></div>
+        <p class="timeline-desc">Procedural memory inicializada com 11 nodes (dev/patterns + sheldon/architecture-decisions). Loading lazy via <code>_index.json</code>.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-07</div>
+        <div class="timeline-title">Pentester rounds 4-7 — hardening completo <span class="timeline-tag">security</span></div>
+        <p class="timeline-desc"><code>execSync</code> → <code>spawn</code> com array args, três camadas de defesa contra injection (LLM01.2), CI endurecido, installer protegido contra downgrade silencioso.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-11</div>
+        <div class="timeline-title">Living Memory Phases 0-5 <span class="timeline-tag">memory</span></div>
+        <p class="timeline-desc">Reflect engine + autonomy v1.1 + doctor + docs pt-BR + <code>/discover</code> em todas as harnesses. Bootstrap cache de 4 arquivos.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-11</div>
+        <div class="timeline-title">Deyvin-density — framework MICRO-aware <span class="timeline-tag">fix</span></div>
+        <p class="timeline-desc">Handoff contracts cientes de MICRO, transição automática entre features no workflow. Inception fix que destrava MICRO dentro de MEDIUM.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-14</div>
+        <div class="timeline-title">Active Learning Loop + Subtask Scout <span class="timeline-tag">learning</span></div>
+        <p class="timeline-desc">Telemetry foundation → FTS5 search → archive com evolution log → doctor curation → distillation hook. Mais 9 fixes cross-platform Windows.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-15</div>
+        <div class="timeline-title">Security Round 7 — SF-21 a SF-26 <span class="timeline-tag">security</span></div>
+        <p class="timeline-desc">Sanitização de memory-context writers, brain-query fail-closed, runtime-permissions com deny rules, delegation-handoff carve-out de Gate D.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-16</div>
+        <div class="timeline-title">Release v1.9.0 + Neo upgrade + Handoff persistence <span class="timeline-tag">release</span></div>
+        <p class="timeline-desc">Installer com merge JSON aditivo (não sobrescreve customizações), @neo enxerga Living Memory + harness + dossiers + brains, diagnóstico persiste antes de <code>/clear</code>.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-date">2026-05-17</div>
+        <div class="timeline-title">Lay-user agent mode + dev-state self-producer <span class="timeline-tag">ux</span></div>
+        <p class="timeline-desc">Profile <code>creator</code> por padrão com 1 pergunta por turno, jargão traduzido, opção "Pausar / quero pensar". @analyst e @product passam a escrever <code>dev-state.md</code> nativamente.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- EVOLUÇÃO POR TEMA -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Evolução por tema</span>
+      <h2 class="site-section-title">Sete áreas, um framework <span class="accent-violet">mais inteligente</span>.</h2>
+      <p class="site-section-subtitle">Cada card é uma capability que não existia há 10 dias.</p>
+    </header>
+
+    <div class="theme-grid">
+      <article class="theme-card">
+        <span class="theme-icon">🧠</span>
+        <span class="theme-tag">Memory · Phases 0-5</span>
+        <h3>Living Memory</h3>
+        <p>Bootstrap cache em 4 arquivos, reflect engine pós-<code>agent:done</code>, autonomy 3-tier. Sessões pararam de esquecer.</p>
+        <div class="snippet">aioson memory:status .
+# Bootstrap: 4/4 | Brains: 3 indexed</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">🧬</span>
+        <span class="theme-tag">Procedural memory</span>
+        <h3>Brains indexados</h3>
+        <p>Padrões procedurais com quality score (q≥4 = default). 3 brains hoje: site-forge (14), dev (5), sheldon (6). Loading lazy por tags.</p>
+        <div class="snippet">aioson brain:query . --tags=security,shell --min-quality=4</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">🔁</span>
+        <span class="theme-tag">Active Learning · 6 phases</span>
+        <h3>Loop de aprendizado ativo</h3>
+        <p>Telemetry + FTS5 search + archive tier-2 + distillation hook no <code>feature:close</code>. Doctor detecta rule_staleness, learning_orphans, distillation_lag.</p>
+        <div class="snippet">aioson memory:search "harness gate"</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">🛡️</span>
+        <span class="theme-tag">Pentester rounds 4-7</span>
+        <h3>Hardening de segurança</h3>
+        <p>Três camadas contra prompt injection (LLM01.2), <code>execSync</code> → <code>spawn</code> com array args, runtime-permissions com deny rules, brain-query fail-closed.</p>
+        <div class="snippet">aioson notify --level=block --message="tier3 detected"</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">🪟</span>
+        <span class="theme-tag">Cross-platform · 9 fixes</span>
+        <h3>Windows ficou primeira-classe</h3>
+        <p>Paths normalizados para forward-slash, WAL truncado antes de close, <code>tar</code> com drive-letter, live session key sanitizada, better-sqlite3 handles fechados.</p>
+        <div class="snippet">aioson squad:export . --squad=artisan
+# agora funciona em C:\dev\ sem stack trace</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">🧑‍🎨</span>
+        <span class="theme-tag">UX · decision-presentation</span>
+        <h3>Modo lay-user (creator)</h3>
+        <p>Novo profile <code>creator</code> default: 1 pergunta por turno via <code>AskUserQuestion</code>, jargão traduzido, "Pausar / quero pensar". Migração <code>beginner → creator</code> automática.</p>
+        <div class="snippet">aioson doctor . --fix
+# auto-migra profile e permissions</div>
+      </article>
+
+      <article class="theme-card">
+        <span class="theme-icon">📌</span>
+        <span class="theme-tag">Self-eating feature</span>
+        <h3>Dev-state auto-produzido</h3>
+        <p>@analyst e @product escrevem <code>dev-state.md</code> nativamente no fim de cada sessão via <code>dev:state:write</code>. Tokens canônicos com warn-and-skip. Parser truncation fix bonus.</p>
+        <div class="snippet">aioson dev:state:write . --feature=checkout \
+  --next="Phase 2" --context=prd,requirements</div>
+      </article>
+    </div>
+  </section>
+
+  <!-- WHAT'S NEXT -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Próximos passos</span>
+      <h2 class="site-section-title">O que vem <span class="accent-gold">depois</span>.</h2>
+      <p class="site-section-subtitle">Pontas soltas confirmadas durante o sprint e priorizadas para as próximas releases.</p>
+    </header>
+
+    <ul class="next-list">
+      <li><strong>Autonomy v1.1 cross-project</strong> — promover o contrato de 3 tiers para projetos consumidores, com telemetry de adoção em SQLite.</li>
+      <li><strong>Harness-isolation</strong> — sandbox real por tier (deferred do living-memory). Foi a única decisão adiada do sprint.</li>
+      <li><strong>Kernel <code>dev.md</code> &lt; 15 KB</strong> — o kernel cresceu durante o sprint; precisa trim antes do v1.10.</li>
+      <li><strong>Multi-agent scout</strong> — extensão do <code>deyvin-subtask-scout</code> quando houver dados de uso V1.</li>
+      <li><strong>Cobertura docs nos 4 idiomas</strong> — AC-ALL-604 deferred do active-learning-loop.</li>
+    </ul>
+
+    <div class="compact-callout yellow">
+      <div class="compact-callout-icon">⚡</div>
+      <p><strong>Inception em modo maduro:</strong> cada item acima nasceu de fricção sentida pelo próprio framework enquanto se construía. O AIOSON está se otimizando usando ele mesmo.</p>
+    </div>
+  </section>
+
+  <!-- CTAs FINAIS -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Comece agora</span>
+      <h2 class="site-section-title">Três caminhos pra <span class="accent-cyan">entrar</span>.</h2>
+    </header>
+
+    <div class="cta-row">
+      <a class="cta-card" href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">
+        <div class="cta-title">📦 Instalar via npm</div>
+        <div class="cta-desc">Pacote oficial, install global pra usar o CLI em qualquer projeto.</div>
+        <span class="cta-link">npm install -g @jaimevalasek/aioson →</span>
+      </a>
+      <a class="cta-card" href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">
+        <div class="cta-title">⭐ GitHub</div>
+        <div class="cta-desc">Source, issues, discussions. Onde o inception acontece.</div>
+        <span class="cta-link">github.com/jaimevalasek/aioson →</span>
+      </a>
+      <a class="cta-card" href="../../index.html">
+        <div class="cta-title">📚 Tutoriais</div>
+        <div class="cta-desc">Volte ao hub pra ver SDD, Squads, Automation e os próximos releases.</div>
+        <span class="cta-link">tutorials/ →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- APÊNDICE: CHANGELOG -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Apêndice</span>
+      <h2 class="site-section-title">Changelog técnico <span class="accent-emerald">completo</span>.</h2>
+      <p class="site-section-subtitle">Commits agrupados por feature/escopo, de 2026-05-07 a 2026-05-17. Lista bruta para auditoria.</p>
+    </header>
+
+    <details class="changelog">
+      <summary>Ver changelog técnico completo <span class="changelog-count">62 commits</span></summary>
+      <div class="changelog-body">
+
+        <div class="changelog-group">
+          <h4>2026-05-17 — Lay-user agent mode + dev-state-producer</h4>
+          <ul>
+            <li><span class="sha">59b83bd</span> <span class="scope">feat:</span> ship lay-user-agent-mode + dev-state-producer + parser fix</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-16 — Release v1.9.0 + Neo + handoff persistence</h4>
+          <ul>
+            <li><span class="sha">73adfd2</span> <span class="scope">feat(handoff-persistence):</span> persist diagnostic to plans/{slug}.md before /clear</li>
+            <li><span class="sha">72751cb</span> <span class="scope">feat(neo):</span> surface Living Memory + harness + dossiers + brains in status scan</li>
+            <li><span class="sha">a66135d</span> <span class="scope">chore(release):</span> bump version to 1.9.0</li>
+            <li><span class="sha">f82c427</span> <span class="scope">fix(installer):</span> additive JSON merge for .aioson/config/*.json (M-01)</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-15 — Pentester round 7 (SF-21..26)</h4>
+          <ul>
+            <li><span class="sha">e14ab68</span> <span class="scope">docs(security):</span> record round 7 audit trail</li>
+            <li><span class="sha">7cbbf87</span> <span class="scope">fix(delegation-handoff):</span> carve Gate D out of MICRO short-circuit (SF-26)</li>
+            <li><span class="sha">430bb25</span> <span class="scope">fix(runtime-permissions):</span> materialize deny rules + allow-list drift (SF-24, 25)</li>
+            <li><span class="sha">2b96379</span> <span class="scope">fix(brain-query):</span> fail-closed containment for _index.json paths (SF-23)</li>
+            <li><span class="sha">f6c0a50</span> <span class="scope">fix(memory-context):</span> sanitize scout-section + memory-reflect-commit (SF-21, 22)</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-14 — Active Learning Loop + cross-platform Windows</h4>
+          <ul>
+            <li><span class="sha">3fddb9b</span> <span class="scope">feat:</span> ship active-learning-loop + deyvin-subtask-scout</li>
+            <li><span class="sha">0a7f42f</span> <span class="scope">test(architect):</span> close last 2 triage decisions</li>
+            <li><span class="sha">f2cb778</span> <span class="scope">fix(cross-platform):</span> normalize path output to forward-slash</li>
+            <li><span class="sha">d2b1d4a</span> <span class="scope">fix(live):</span> sanitize session key on Windows</li>
+            <li><span class="sha">8a4ef9c</span> <span class="scope">fix(context-health):</span> truncate WAL before close on Windows</li>
+            <li><span class="sha">39dd578</span> <span class="scope">fix(squad-export):</span> tar with Windows drive-letter paths</li>
+            <li><span class="sha">740a009</span> <span class="scope">fix(squad):</span> close better-sqlite3 handles in tests</li>
+            <li><span class="sha">1ed500e</span> <span class="scope">fix(install):</span> distinguish --dry-run output from real install</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-12 — Genomes copywriting Track 4.2</h4>
+          <ul>
+            <li><span class="sha">76def2f</span> <span class="scope">feat(genomes/copywriting-brunson):</span> Track 4.2 modular migration</li>
+            <li><span class="sha">9c47294</span> <span class="scope">feat(genomes/copywriting):</span> Track 4.2 modular migration</li>
+            <li><span class="sha">f83dd4c</span> <span class="scope">fix(gitignore):</span> scope references/ rule to project root</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-11 — Living Memory Phases 0-5 + deyvin-density</h4>
+          <ul>
+            <li><span class="sha">7d5914e</span> <span class="scope">feat(deyvin-density):</span> MICRO feature + framework MICRO-aware gates</li>
+            <li><span class="sha">dc7cf8f</span> <span class="scope">feat(living-memory):</span> Phases 1-5 reflect engine + autonomy v1.1 + doctor</li>
+            <li><span class="sha">15893c9</span> <span class="scope">feat(living-memory):</span> Phase 0 — /discover across harnesses</li>
+          </ul>
+        </div>
+
+        <div class="changelog-group">
+          <h4>2026-05-07 — Harness-driven phase 3 close + Pentester rounds 4-6 + Brains seed</h4>
+          <ul>
+            <li><span class="sha">88ca550</span> <span class="scope">chore(harness-driven-aioson):</span> close Phase 3 — feature done after Gate D PASS</li>
+            <li><span class="sha">df3c570</span> <span class="scope">feat(harness):</span> done gate enforcement in feature:close (T5)</li>
+            <li><span class="sha">94c6afb</span> <span class="scope">feat(harness):</span> wire @validator end-to-end (T3 + T2)</li>
+            <li><span class="sha">f7918cd</span> <span class="scope">feat(harness):</span> @sheldon RF-05 + @qa @validator trigger (T4 + T1)</li>
+            <li><span class="sha">501ba09</span> <span class="scope">feat(brains):</span> seed procedural memory for @dev and @sheldon</li>
+            <li><span class="sha">7e929a8</span> <span class="scope">feat(pentester):</span> register slash command in workspace and template</li>
+            <li><span class="sha">343927c</span> <span class="scope">fix(memory-context):</span> three-layer defense against indirect prompt injection (LLM01.2)</li>
+            <li><span class="sha">171dbf0</span> <span class="scope">fix(tool-invocation):</span> convert execSync template-literal sites to spawn-with-array-args</li>
+            <li><span class="sha">1f70e32</span> <span class="scope">fix(ci):</span> harden GitHub Actions workflows against supply-chain vectors</li>
+            <li><span class="sha">d37a81a</span> <span class="scope">fix(installer):</span> harden installation_integrity against silent downgrades</li>
+            <li><span class="sha">b0a0f70</span> <span class="scope">fix(runtime-permissions):</span> wire shell whitelist to sandbox boundary</li>
+            <li><span class="sha">9d14050</span> <span class="scope">fix(feature-close):</span> dedupe Recent Activity by signature</li>
+            <li><span class="sha">4f307ab</span> <span class="scope">feat(commit-prepare):</span> risk-aware file picker + extended git-guard rules</li>
+            <li><span class="sha">c47f0e4</span> <span class="scope">fix(terminal-checkbox):</span> use alternate screen buffer to avoid duplicate redraw</li>
+          </ul>
+        </div>
+
+      </div>
+    </details>
+  </section>
+
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Releases</div>
+      <ul>
+        <li><a href="../index.html">Todas releases</a></li>
+        <li><a href="./index.html">v1.9.0 (atual)</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Conceitos v1.9.0</div>
+      <ul>
+        <li><a href="../../living-memory/index.html">Living Memory</a></li>
+        <li><a href="../../brains/index.html">Brains</a></li>
+        <li><a href="../../autonomy/index.html">Autonomy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Comunidade</div>
+      <ul>
+        <li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li>
+      </ul>
+    </div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>AIOSON v1.9.0 · Living Memory Era · shipped 2026-05-16</div>
+      <div>AIOSON · inception mode</div>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+    try { const s = localStorage.getItem('aioson-theme'); if (s === 'dark' || s === 'light') root.setAttribute('data-theme', s); } catch (e) {}
+    const sync = () => { const t = root.getAttribute('data-theme') || 'dark'; const m = toggle.querySelector('.cmd-theme-moon'); const s = toggle.querySelector('.cmd-theme-sun'); if (m) m.style.display = (t === 'dark') ? 'none' : ''; if (s) s.style.display = (t === 'dark') ? '' : 'none'; };
+    sync();
+    toggle.addEventListener('click', () => { const c = root.getAttribute('data-theme') || 'dark'; const n = c === 'light' ? 'dark' : 'light'; root.setAttribute('data-theme', n); try { localStorage.setItem('aioson-theme', n); } catch (e) {} sync(); });
+  })();
+  (function () { const w = document.getElementById('dock-wrap'); if (!w) return; const u = () => { if (window.scrollY > 8) w.classList.add('is-scrolled'); else w.classList.remove('is-scrolled'); }; u(); window.addEventListener('scroll', u, { passive: true }); })();
+</script>
+
+</body>
+</html>

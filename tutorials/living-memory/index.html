@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Living Memory — AIOSON</title>
+<meta name="description" content="Como sessões pararam de esquecer no AIOSON v1.9.0. Bootstrap em 4 arquivos auto-sync, reflect engine pós agent:done, FTS5 search, autonomy 3-tier." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ════════════════════════════════════════════════════════════
+   AIOSON Design System — Tokens
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
+  --transition-fast:140ms ease; --transition:220ms ease;
+}
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme:dark;
+  --bg:#07080c; --bg-deep:#0b0d12;
+  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
+  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
+  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
+  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
+  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
+  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
+  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
+  --shadow:0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
+  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
+}
+[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f4f6fb; --bg-deep:#e8edf5;
+  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
+  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
+  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
+  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
+  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
+  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
+  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
+  --shadow:0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
+  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
+}
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body { font-family:var(--font-body); color:var(--text);
+  background: radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent-4) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 28%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased; transition:background .4s ease, color .3s ease;
+}
+[data-theme="light"] body { background: radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent-4) 14%, transparent), transparent 30%), radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 28%), radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 30%), linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%); background-attachment:fixed; }
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; font:inherit; }
+h1, h2, h3, h4, p { margin:0; }
+code { font-family:var(--font-mono); }
+
+.shell { width:min(1280px, calc(100% - 32px)); margin:0 auto; padding:0 0 60px; display:flex; flex-direction:column; }
+
+/* Command Dock */
+.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
+.cmd-dock { display:flex; align-items:center; gap:14px; padding:10px 14px; border-radius:20px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 92%, transparent); backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%); box-shadow:var(--shadow); position:relative; overflow:hidden; transition:box-shadow .3s ease, border-color .3s ease; }
+.dock-wrap.is-scrolled .cmd-dock { box-shadow:var(--shadow-dock-scrolled); border-color:color-mix(in srgb, var(--accent) 18%, var(--border)); }
+.cmd-dock::after { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px); background-size:36px 36px; mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); opacity:.2; }
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark { width:36px; height:36px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent-4) 30%, transparent), transparent 60%), linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong))); border:1px solid color-mix(in srgb, var(--accent-4) 30%, var(--border)); box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent-4) 50%, transparent); color:var(--accent-4); }
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:500; color:var(--muted); background:transparent; border:none; padding:6px 11px; border-radius:9px; text-decoration:none; transition:var(--transition-fast); }
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] { color:var(--accent-4); background:var(--panel-strong); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent-4) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent-4) 30%, transparent); }
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent-4); }
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn { width:34px; height:34px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; color:#fff; background:linear-gradient(135deg, var(--accent-4), var(--accent)); border:1px solid transparent; border-radius:10px; padding:7px 13px; box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent-4) 60%, transparent); transition:var(--transition-fast); }
+.cmd-cta:hover { transform:translateY(-1px); }
+
+/* Hero */
+.marketing-hero { border:1px solid var(--border); border-radius:26px; padding:42px 36px; overflow:hidden; position:relative;
+  background: radial-gradient(circle at top left, color-mix(in srgb, var(--accent-4) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 26%),
+    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
+  box-shadow:var(--shadow); margin-bottom:18px; display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr); gap:32px; align-items:center;
+}
+[data-theme="light"] .marketing-hero { background:radial-gradient(circle at top left, color-mix(in srgb, var(--accent-4) 10%, transparent), transparent 36%),radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28%),linear-gradient(160deg, #fff 0%, #f7faff 100%); box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.marketing-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent-4) 4%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent-4) 4%, transparent) 1px, transparent 1px); background-size:48px 48px; mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); opacity:.5; }
+.hero-copy { position:relative; z-index:1; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.hero-copy h1 { margin-top:14px; font-size:clamp(2rem, 3.2vw, 2.8rem); letter-spacing:-.04em; line-height:1.02; font-weight:700; color:var(--text); }
+.hero-copy h1 .accent-cyan { color:var(--accent); }
+.hero-copy h1 .accent-emerald { color:var(--accent-4); }
+.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
+.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.primary-button, .secondary-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:0 16px; border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap; transition:var(--transition-fast); }
+.primary-button { color:#fff; background:linear-gradient(135deg, var(--accent-4), var(--accent)); border:1px solid transparent; box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent-4) 60%, transparent); }
+.primary-button:hover { transform:translateY(-1px); }
+.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
+.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
+.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
+.stat-tile { border-radius:14px; padding:14px 16px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 70%, transparent); }
+[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
+.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
+.stat-tile.blue   strong { color:var(--accent); }
+.stat-tile.green  strong { color:var(--accent-4); }
+.stat-tile.violet strong { color:var(--accent-2); }
+.stat-tile.gold   strong { color:var(--accent-3); }
+
+/* Compact callout */
+.compact-callout { margin:24px 0; border:1px solid color-mix(in srgb, var(--accent-4) 22%, var(--border)); background:color-mix(in srgb, var(--accent-4-soft) 24%, var(--panel-strong)); border-radius:14px; padding:18px 22px; display:flex; gap:14px; align-items:flex-start; }
+[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-4-soft) 50%, #fff); }
+.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
+.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
+.compact-callout strong { color:var(--accent-4); }
+
+/* Site Section */
+.site-section { padding:36px 0 12px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-emerald { color:var(--accent-4); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+.site-section-title .accent-gold { color:var(--accent-3); }
+.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
+
+/* Bootstrap files (4 cards) */
+.bootstrap-grid { display:grid; gap:14px; grid-template-columns:repeat(2, 1fr); }
+.bootstrap-card { border:1px solid var(--border); border-radius:16px; padding:20px; background:var(--panel-strong); position:relative; overflow:hidden; display:flex; flex-direction:column; gap:10px; }
+[data-theme="light"] .bootstrap-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.bootstrap-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.bootstrap-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.bootstrap-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.bootstrap-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
+.bs-filename { font-family:var(--font-mono); font-size:.78rem; font-weight:700; color:var(--accent); letter-spacing:-.01em; }
+.bootstrap-card[data-tone="emerald"] .bs-filename { color:var(--accent-4); }
+.bootstrap-card[data-tone="violet"]  .bs-filename { color:var(--accent-2); }
+.bootstrap-card[data-tone="gold"]    .bs-filename { color:var(--accent-3); }
+.bs-purpose { font-size:.66rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); }
+.bootstrap-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.bootstrap-card p { font-size:.82rem; color:var(--muted); line-height:1.6; margin:0; }
+.bs-meta { margin-top:auto; padding-top:10px; border-top:1px dashed var(--border); display:flex; gap:14px; font-family:var(--font-mono); font-size:.66rem; color:var(--muted); }
+
+/* Pipeline visual (reflect engine flow) */
+.reflect-pipeline { display:grid; grid-template-columns:repeat(5, 1fr); gap:0; border:1px solid var(--border); border-radius:18px; overflow:hidden; background:var(--panel-strong); }
+[data-theme="light"] .reflect-pipeline { box-shadow:0 12px 30px -20px rgba(15,23,42,.18); }
+.reflect-step { padding:18px; border-right:1px solid var(--border); display:flex; flex-direction:column; gap:8px; position:relative; }
+.reflect-step:last-child { border-right:none; }
+.reflect-step-num { font-family:var(--font-mono); font-size:.6rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+.reflect-step-trigger { font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent-4); letter-spacing:-.01em; }
+.reflect-step h4 { font-size:.86rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.reflect-step p { font-size:.7rem; color:var(--muted); line-height:1.5; margin:0; }
+
+/* Cmd cards (CLI commands) */
+.cmd-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
+.cmd-card { background:color-mix(in srgb, var(--panel) 50%, var(--panel-strong)); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+[data-theme="light"] .cmd-card { background:#fff; box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.cmd-name { font-family:var(--font-mono); font-size:.78rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
+.cmd-title { font-size:.9rem; font-weight:700; color:var(--text-soft); margin-top:4px; letter-spacing:-.01em; }
+.cmd-desc { font-size:.8rem; color:var(--muted); line-height:1.55; margin-top:6px; }
+.cmd-tier { display:inline-flex; align-items:center; margin-top:8px; font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:2px 7px; border-radius:5px; }
+.cmd-tier.t1 { color:var(--accent-4); background:var(--accent-4-soft); border:1px solid color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
+.cmd-tier.t2 { color:var(--accent-3); background:var(--accent-3-soft); border:1px solid color-mix(in srgb, var(--accent-3) 26%, var(--border)); }
+
+/* Doctor checks (3 cards) */
+.doctor-grid { display:grid; gap:14px; grid-template-columns:repeat(3, 1fr); }
+.doctor-card { border:1px solid var(--border); border-radius:16px; padding:18px; background:var(--panel-strong); display:flex; gap:12px; align-items:flex-start; }
+[data-theme="light"] .doctor-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.doctor-icon { width:34px; height:34px; flex-shrink:0; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--accent-3-soft) 60%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent-3) 24%, var(--border)); color:var(--accent-3); }
+.doctor-icon svg { width:16px; height:16px; }
+.doctor-body h3 { font-size:.86rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.doctor-body p { font-size:.78rem; color:var(--muted); line-height:1.55; margin-top:4px; }
+.doctor-body .check-id { font-family:var(--font-mono); font-size:.66rem; color:var(--accent-3); display:block; margin-top:6px; }
+
+/* Timeline */
+.timeline { position:relative; padding-left:24px; border-left:2px solid var(--border); margin-top:20px; }
+.timeline-entry { position:relative; padding:0 0 22px 22px; }
+.timeline-entry:last-child { padding-bottom:0; }
+.timeline-entry::before { content:''; position:absolute; left:-31px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 4px var(--bg), 0 0 12px color-mix(in srgb, var(--accent-4) 50%, transparent); }
+.timeline-phase { font-family:var(--font-mono); font-size:.7rem; font-weight:600; color:var(--accent-4); letter-spacing:.04em; }
+.timeline-title { font-size:.95rem; font-weight:700; color:var(--text-soft); margin:4px 0 4px; }
+.timeline-desc { font-size:.82rem; color:var(--muted); line-height:1.6; margin:0; }
+
+/* Terminal */
+.terminal-card { border-radius:14px; border:1px solid transparent; background:linear-gradient(180deg, #0e1320, #0a0f1c); box-shadow:0 10px 30px -10px rgba(0,0,0,.5); overflow:hidden; margin-top:16px; }
+.terminal-head { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.06); background:#10182a; }
+.terminal-dots { display:flex; gap:5px; }
+.terminal-dots span { width:9px; height:9px; border-radius:999px; }
+.terminal-dots span:nth-child(1) { background:#ff6057; }
+.terminal-dots span:nth-child(2) { background:#febc2e; }
+.terminal-dots span:nth-child(3) { background:#28c840; }
+.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
+.terminal-copy { margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,.10); color:#a9b3c7; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; padding:3px 9px; border-radius:5px; text-transform:uppercase; transition:var(--transition-fast); }
+.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
+.terminal-body { padding:14px 18px 16px; font-family:var(--font-mono); font-size:.78rem; line-height:1.7; color:#c8d8ee; overflow-x:auto; }
+.term-line { display:block; white-space:pre; }
+.term-prompt { color:#4dd5a6; }
+.term-cmd { color:#fff; }
+.term-flag { color:#e8b05f; }
+.term-str { color:#7be3bb; }
+.term-comment { color:#7f8796; }
+.term-out-key { color:#5ec8ff; }
+.term-out-val { color:#e5c07b; }
+.term-ok { color:#4dd5a6; }
+.term-warn { color:#e8b05f; }
+
+/* CTA + Footer */
+.site-cta { border-radius:22px; border:1px solid color-mix(in srgb, var(--accent-4) 22%, var(--border)); background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 36%), radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent-4) 16%, transparent), transparent 36%), color-mix(in srgb, var(--bg-deep) 86%, transparent); padding:34px 30px; display:grid; gap:18px; grid-template-columns:1.4fr 1fr; align-items:center; margin-top:24px; }
+[data-theme="light"] .site-cta { background:radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent-4) 14%, transparent), transparent 36%),#fff; box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
+.site-cta-heading .accent-emerald { color:var(--accent-4); }
+.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
+.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
+.site-footer { display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr; padding:42px 4px 8px; margin-top:30px; border-top:1px solid var(--border); }
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent-4); }
+.site-footer-base { margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.76rem; }
+
+@media (max-width: 1024px) {
+  .marketing-hero { grid-template-columns:1fr; gap:24px; }
+  .bootstrap-grid { grid-template-columns:1fr; }
+  .reflect-pipeline { grid-template-columns:1fr; }
+  .reflect-step { border-right:none; border-bottom:1px solid var(--border); }
+  .reflect-step:last-child { border-bottom:none; }
+  .doctor-grid { grid-template-columns:1fr; }
+  .site-cta { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; }
+  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
+  .cmd-brand { padding-right:0; border-right:none; }
+  .cmd-center { order:3; width:100%; }
+  .cmd-nav { width:100%; overflow-x:auto; }
+  .marketing-hero { padding:24px 20px; }
+  .hero-copy h1 { font-size:1.8rem; }
+  .hero-rail { grid-template-columns:repeat(2, 1fr); }
+  .site-footer { grid-template-columns:1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
+</head>
+<body>
+
+<main class="shell">
+
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> living memory · phases 0-5</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="../sdd/index.html"><span class="cmd-nav-glyph">⚡</span> SDD</a>
+          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">◈</span> Living Memory</a>
+          <a class="cmd-nav-item" href="../brains/index.html"><span class="cmd-nav-glyph">🧬</span> Brains</a>
+          <a class="cmd-nav-item" href="../autonomy/index.html"><span class="cmd-nav-glyph">🛡</span> Autonomy</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <span class="cmd-divider"></span>
+        <a href="../releases/1-9-0/index.html" class="cmd-cta">Release v1.9.0
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="marketing-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">v1.9.0 · 5 phases shipped</span>
+      <h1>Sessões pararam de <span class="accent-emerald">esquecer</span>.</h1>
+      <p class="lede">Bootstrap em 4 arquivos auto-sincronizados, reflect engine que classifica diffs pós-<code>agent:done</code>, FTS5 search sobre rules + learnings, archive com evolution log. Tudo deterministicamente acessível via CLI — sem readar 6 arquivos toda sessão.</p>
+      <div class="hero-actions">
+        <a class="primary-button" href="#bootstrap">Ver os 4 arquivos
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="secondary-button" href="#reflect">Reflect engine</a>
+      </div>
+    </div>
+    <aside class="hero-rail">
+      <div class="stat-tile green"><span>bootstrap</span><strong>4/4</strong></div>
+      <div class="stat-tile blue"><span>phases</span><strong>0-5</strong></div>
+      <div class="stat-tile violet"><span>memory cmds</span><strong>7</strong></div>
+      <div class="stat-tile gold"><span>doctor checks</span><strong>3</strong></div>
+    </aside>
+  </section>
+
+  <!-- CALLOUT -->
+  <section class="site-section">
+    <div class="compact-callout">
+      <div class="compact-callout-icon">🧠</div>
+      <p><strong>O problema antes do v1.9.0:</strong> toda sessão começava com agente lendo 4-6 arquivos de contexto pra entender onde parou — projeto context, spec ativa, requirements, plano. Isso queimava 3 000+ tokens só pra "se situar". Living Memory inverte: 4 arquivos compactos auto-atualizados via reflect engine, mais search FTS5 e archive tier-2. <strong>Cold start agora custa centenas de tokens, não milhares.</strong></p>
+    </div>
+  </section>
+
+  <!-- BOOTSTRAP FILES -->
+  <section class="site-section" id="bootstrap">
+    <header class="site-section-header">
+      <span class="eyebrow">Bootstrap · 4 arquivos canônicos</span>
+      <h2 class="site-section-title">A <span class="accent-emerald">memória mínima</span> do projeto.</h2>
+      <p class="site-section-subtitle">Esses 4 arquivos ficam em <code>.aioson/context/bootstrap/</code>. São lidos no início de toda sessão de agente. <code>memory:status</code> reporta coverage (N/4). Doctor warning se algum estiver stale &gt; 30 dias.</p>
+    </header>
+
+    <div class="bootstrap-grid">
+      <div class="bootstrap-card" data-tone="emerald">
+        <span class="bs-purpose">Identidade · stable</span>
+        <div class="bs-filename">what-is.md</div>
+        <h3>O que é o sistema</h3>
+        <p>Identidade alta-nível: tipo de software, propósito core, quem são os usuários. Muda raramente — só em pivots de produto.</p>
+        <div class="bs-meta"><span>generated_by: discover</span> <span>~150 LOC</span></div>
+      </div>
+      <div class="bootstrap-card" data-tone="cyan">
+        <span class="bs-purpose">Capabilities · evolutivo</span>
+        <div class="bs-filename">what-it-does.md</div>
+        <h3>O que faz hoje</h3>
+        <p>Lista de capabilities ativas + improvement focus atual. Atualizado pelo reflect engine quando features grandes fecham.</p>
+        <div class="bs-meta"><span>generated_by: product</span> <span>~300 LOC</span></div>
+      </div>
+      <div class="bootstrap-card" data-tone="violet">
+        <span class="bs-purpose">Arquitetura · médio</span>
+        <div class="bs-filename">how-it-works.md</div>
+        <h3>Como funciona</h3>
+        <p>Fluxos internos, contratos entre módulos, decisões arquiteturais. Reflect engine atualiza quando boundaries mudam.</p>
+        <div class="bs-meta"><span>generated_by: architect</span> <span>~400 LOC</span></div>
+      </div>
+      <div class="bootstrap-card" data-tone="gold">
+        <span class="bs-purpose">Estado · append-only</span>
+        <div class="bs-filename">current-state.md</div>
+        <h3>O que o sistema já tem</h3>
+        <p>Append-only ledger de capabilities entregues. Cada feature fechada acrescenta uma linha. Nunca remove — é histórico.</p>
+        <div class="bs-meta"><span>generated_by: dev/feature-close</span> <span>~80 entries</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REFLECT ENGINE -->
+  <section class="site-section" id="reflect">
+    <header class="site-section-header">
+      <span class="eyebrow">Reflect engine · 5 passos</span>
+      <h2 class="site-section-title">Como a memória <span class="accent-cyan">se auto-atualiza</span>.</h2>
+      <p class="site-section-subtitle">Após cada <code>agent:done</code> ou <code>workflow:next --complete</code>, o engine analisa o git diff e decide se justifica atualizar os bootstrap files. Tudo deterministicamente.</p>
+    </header>
+
+    <div class="reflect-pipeline">
+      <div class="reflect-step">
+        <div class="reflect-step-num">01</div>
+        <div class="reflect-step-trigger">agent:done</div>
+        <h4>Trigger</h4>
+        <p>Agente fecha sessão. Hook em <code>runAgentDone</code> chama <code>memory:reflect-prepare</code>.</p>
+      </div>
+      <div class="reflect-step">
+        <div class="reflect-step-num">02</div>
+        <div class="reflect-step-trigger">classify diff</div>
+        <h4>Classify</h4>
+        <p>Engine puro (<code>src/memory-reflect-engine.js</code>) analisa diff vs sinais: routes, models, contratos, volume.</p>
+      </div>
+      <div class="reflect-step">
+        <div class="reflect-step-num">03</div>
+        <div class="reflect-step-trigger">manifest</div>
+        <h4>Write manifest</h4>
+        <p>Se relevante: escreve <code>.aioson/runtime/reflect-prompt.json</code> listando targets, snapshot hash, allowed paths.</p>
+      </div>
+      <div class="reflect-step">
+        <div class="reflect-step-num">04</div>
+        <div class="reflect-step-trigger">agent reflects</div>
+        <h4>Agent edits</h4>
+        <p>Próxima sessão recebe ⚠ no prompt. Agente edita os targets respeitando frontmatter intact.</p>
+      </div>
+      <div class="reflect-step">
+        <div class="reflect-step-num">05</div>
+        <div class="reflect-step-trigger">commit</div>
+        <h4>Persist</h4>
+        <p><code>memory:reflect-commit</code> valida (snapshot hash, allowed paths, frontmatter) e persiste em disco.</p>
+      </div>
+    </div>
+
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">reflect commit</span><button class="terminal-copy" type="button" data-copy="aioson memory:reflect-commit . --agent=dev --output=reflect-output.json">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:reflect-commit</span> . <span class="term-flag">--agent</span>=dev <span class="term-flag">--output</span>=reflect-output.json</span>
+<span class="term-line"><span class="term-out-key">validating</span>: frontmatter intact ✓ · snapshot hash match ✓ · paths in allow-list ✓</span>
+<span class="term-line"><span class="term-ok">✓</span> wrote .aioson/context/bootstrap/current-state.md · 1 new entry appended</span>
+<span class="term-line"><span class="term-ok">✓</span> reflect-prompt.json consumed and removed</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 MEMORY COMMANDS -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">7 comandos · CLI completa</span>
+      <h2 class="site-section-title">Todo acesso à memória é <span class="accent-violet">determinístico</span>.</h2>
+      <p class="site-section-subtitle">Nenhum desses comandos faz chamada LLM. Tudo SQLite + filesystem + classificação pura.</p>
+    </header>
+
+    <div class="cmd-grid">
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:status</div>
+        <div class="cmd-title">Snapshot da memória</div>
+        <div class="cmd-desc">Bootstrap coverage (N/4), brains indexed, runtime tasks, autonomy mode. Saída compacta — ideal pra preflight de agente.</div>
+        <span class="cmd-tier t1">tier 1 · silent</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:summary</div>
+        <div class="cmd-title">Resumo recente</div>
+        <div class="cmd-desc"><code>--last=5</code>. Identity + project pulse + recent activity + retrieval hints. Cold-load barato para @neo/@dev.</div>
+        <span class="cmd-tier t1">tier 1 · silent</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:search</div>
+        <div class="cmd-title">FTS5 full-text search</div>
+        <div class="cmd-desc"><code>"query" --surface=rules|learnings|all --limit=5</code>. BM25 ranking. Phrase-query sanitization. 500-char cap.</div>
+        <span class="cmd-tier t1">tier 1 · silent</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:archive</div>
+        <div class="cmd-title">Arquivar target</div>
+        <div class="cmd-desc"><code>--id=rule:&lt;slug&gt; --reason="..."</code>. Evolution log preserva história. Idempotente. <code>--dry-run</code> disponível.</div>
+        <span class="cmd-tier t2">tier 2 · notified</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:restore</div>
+        <div class="cmd-title">Restaurar archived</div>
+        <div class="cmd-desc">Retorna target arquivado com nova entrada <code>event_type='restored'</code>. Preserva end_at do archive anterior.</div>
+        <span class="cmd-tier t2">tier 2 · notified</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:reflect-prepare</div>
+        <div class="cmd-title">Classify + manifest</div>
+        <div class="cmd-desc">Best-effort hook. Classifica diff e escreve <code>reflect-prompt.json</code>. Falha silenciosa — nunca bloqueia workflow.</div>
+        <span class="cmd-tier t1">tier 1 · silent</span>
+      </div>
+      <div class="cmd-card">
+        <div class="cmd-name">aioson memory:reflect-commit</div>
+        <div class="cmd-title">Validate + persist</div>
+        <div class="cmd-desc">Valida edits do agente (frontmatter, snapshot hash, allowed paths). Persiste em <code>bootstrap/*.md</code> ou rejeita.</div>
+        <span class="cmd-tier t2">tier 2 · notified</span>
+      </div>
+    </div>
+
+    <div class="terminal-card">
+      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">memory workflow</span><button class="terminal-copy" type="button" data-copy="aioson memory:status .&#10;aioson memory:summary . --last=5&#10;aioson memory:search 'harness gate' --surface=all&#10;aioson memory:archive . --id=rule:legacy-validator --reason='not loaded in 5 features'">Copiar</button></div>
+      <div class="terminal-body">
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:status</span> .</span>
+<span class="term-line"><span class="term-out-key">Bootstrap</span>: <span class="term-ok">4/4</span> · <span class="term-out-key">Brains</span>: 3 indexed · <span class="term-out-key">Runtime</span>: 40 done</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:search</span> <span class="term-str">'harness gate'</span> <span class="term-flag">--surface</span>=all</span>
+<span class="term-line"><span class="term-out-key">match</span>: rule:harness-contract · <span class="term-out-key">rank</span>: 1.42 · "<span class="term-out-val">...harness gate D enforcement via JSON contract...</span>"</span>
+<span class="term-line"></span>
+<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson memory:archive</span> . <span class="term-flag">--id</span>=rule:legacy-validator <span class="term-flag">--reason</span>=<span class="term-str">'not loaded in 5 features'</span></span>
+<span class="term-line"><span class="term-warn">⚠</span>  tier-2 mutation · evolution log entry written</span>
+<span class="term-line"><span class="term-ok">✓</span> archived to .aioson/rules/_archived/2026-05-18/legacy-validator.md</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOCTOR CHECKS -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Doctor · 3 checks de curadoria</span>
+      <h2 class="site-section-title">A memória se <span class="accent-gold">auto-fiscaliza</span>.</h2>
+      <p class="site-section-subtitle">Esses checks rodam dentro de <code>aioson doctor</code> com severity warning. Não bloqueiam o build, mas surfaceiam quando algo está envelhecendo.</p>
+    </header>
+
+    <div class="doctor-grid">
+      <div class="doctor-card">
+        <div class="doctor-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg></div>
+        <div class="doctor-body">
+          <h3>rule_staleness</h3>
+          <p>Rules em <code>.aioson/rules/</code> que não foram carregadas (<code>rule_loaded</code> event) nas últimas N features. Threshold dinâmico: <code>max(5, ceil(avg_days_between_last_5_features / 7))</code>.</p>
+          <span class="check-id">living-memory:rule_staleness</span>
+        </div>
+      </div>
+      <div class="doctor-card">
+        <div class="doctor-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 11l-4 4-4-4"/><path d="M12 3v12"/><path d="M3 17v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3"/></svg></div>
+        <div class="doctor-body">
+          <h3>learning_orphans</h3>
+          <p>Learnings <code>status='promoted'</code> cuja rule não tem <code>rule_loaded</code> event posterior ao <code>updated_at</code> da promoção. Sinal de que o pattern foi promovido mas ninguém usa.</p>
+          <span class="check-id">living-memory:learning_orphans</span>
+        </div>
+      </div>
+      <div class="doctor-card">
+        <div class="doctor-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
+        <div class="doctor-body">
+          <h3>distillation_lag</h3>
+          <p>Features <code>status=done</code> sem entry <code>auto_distillation</code> em <code>evolution_log</code>. Fires apenas quando ≥ 5 features fecharam — evita falso positivo em projetos novos.</p>
+          <span class="check-id">living-memory:distillation_lag</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Phases shipped</span>
+      <h2 class="site-section-title">6 fases · <span class="accent-emerald">2026-05-07 → 2026-05-11</span>.</h2>
+      <p class="site-section-subtitle">Living Memory foi entregue em 5 fases consecutivas em 5 dias. Cada fase agregou uma capability autônoma.</p>
+    </header>
+
+    <div class="timeline">
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 0 · 2026-05-07</div>
+        <div class="timeline-title">/discover slash em todas as harnesses</div>
+        <p class="timeline-desc">Registro do comando <code>/discover</code> em Claude, Codex, Gemini, OpenCode. Doctor expansion pra detectar buckets invisíveis.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 1 · 2026-05-08</div>
+        <div class="timeline-title">Bootstrap cache + memory:status</div>
+        <p class="timeline-desc">Criação dos 4 arquivos canônicos. Comando <code>memory:status</code> reportando coverage. <code>memory:summary</code> com retrieval hints.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 2 · 2026-05-09</div>
+        <div class="timeline-title">FTS5 search</div>
+        <p class="timeline-desc">Virtual table sobre <code>content_items</code> + <code>learnings</code> com tokenizer unicode61. Comando <code>memory:search</code> com phrase-query default.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 3 · 2026-05-10</div>
+        <div class="timeline-title">Archive + evolution log</div>
+        <p class="timeline-desc"><code>memory:archive</code> e <code>memory:restore</code> tier-2 com notify pre-mutation. Evolution log preserva histórico.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 4 · 2026-05-10</div>
+        <div class="timeline-title">Doctor curation checks</div>
+        <p class="timeline-desc">3 novos checks: rule_staleness, learning_orphans, distillation_lag. BR-ALL-11: MICRO opt-out de curadoria.</p>
+      </div>
+      <div class="timeline-entry">
+        <div class="timeline-phase">Phase 5 · 2026-05-11</div>
+        <div class="timeline-title">Reflect engine + autonomy v1.1</div>
+        <p class="timeline-desc">Engine pure (<code>memory-reflect-engine.js</code>) classifica diff e escreve manifest. Autonomy 3-tier materializado via <code>permissions-generator</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="site-cta">
+    <div>
+      <span class="eyebrow">Próximo passo</span>
+      <h2 class="site-cta-heading">Sessões pararam de esquecer — agora aprendem <span class="accent-emerald">com cada feature</span>.</h2>
+      <p class="site-cta-text">Cold start barato, search FTS5, archive com history, doctor checks de curadoria. Tudo deterministic via CLI.</p>
+    </div>
+    <div class="site-cta-actions">
+      <a class="primary-button" href="../brains/index.html">Brains procedural →</a>
+      <a class="secondary-button" href="../autonomy/index.html">Autonomy v1.1 →</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col"><div class="footer-col-title">Conceitos v1.9.0</div><ul><li><a href="./index.html">Living Memory</a></li><li><a href="../brains/index.html">Brains</a></li><li><a href="../autonomy/index.html">Autonomy</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="../sdd/index.html">SDD básico</a></li><li><a href="../sdd/automation.html">Automation</a></li><li><a href="../squads/index.html">Squads</a></li></ul></div>
+    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>Living Memory · 5 phases · 4/4 bootstrap · 7 CLI cmds</div>
+      <div>AIOSON · inception mode</div>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  (function () {
+    const root = document.documentElement;
+    const toggle = document.querySelector('[data-theme-toggle]');
+    if (!toggle) return;
+    try { const s = localStorage.getItem('aioson-theme'); if (s === 'dark' || s === 'light') root.setAttribute('data-theme', s); } catch (e) {}
+    const sync = () => { const t = root.getAttribute('data-theme') || 'dark'; const m = toggle.querySelector('.cmd-theme-moon'); const s = toggle.querySelector('.cmd-theme-sun'); if (m) m.style.display = (t === 'dark') ? 'none' : ''; if (s) s.style.display = (t === 'dark') ? '' : 'none'; };
+    sync();
+    toggle.addEventListener('click', () => { const c = root.getAttribute('data-theme') || 'dark'; const n = c === 'light' ? 'dark' : 'light'; root.setAttribute('data-theme', n); try { localStorage.setItem('aioson-theme', n); } catch (e) {} sync(); });
+  })();
+  (function () { const w = document.getElementById('dock-wrap'); if (!w) return; const u = () => { if (window.scrollY > 8) w.classList.add('is-scrolled'); else w.classList.remove('is-scrolled'); }; u(); window.addEventListener('scroll', u, { passive: true }); })();
+  (function () { if (!navigator.clipboard) return; document.querySelectorAll('[data-copy]').forEach((btn) => { btn.addEventListener('click', () => { const t = (btn.dataset.copy || '').replace(/&#10;/g, '\n'); navigator.clipboard.writeText(t).then(() => { const o = btn.textContent; btn.textContent = 'copiado ✓'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = o; btn.classList.remove('copied'); }, 1500); }); }); }); })();
+</script>
+
+</body>
+</html>

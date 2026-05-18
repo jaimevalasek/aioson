@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Releases — AIOSON</title>
+<meta name="description" content="Histórico de evolução do AIOSON. Cada release é uma página dedicada com timeline, métricas e o que mudou." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root { --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --font-mono:'JetBrains Mono',ui-monospace,monospace; --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px; --transition-fast:140ms ease; --transition:220ms ease; }
+[data-theme="dark"], :root:not([data-theme]) { color-scheme:dark; --bg:#07080c; --bg-deep:#0b0d12; --panel:rgba(12,15,21,.88); --panel-strong:#12161d; --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12); --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796; --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16); --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14); --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16); --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14); --shadow:0 18px 44px rgba(0,0,0,.38); --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42); --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5); }
+[data-theme="light"] { color-scheme:light; --bg:#f4f6fb; --bg-deep:#e8edf5; --panel:rgba(255,255,255,.92); --panel-strong:#ffffff; --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10); --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677; --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12); --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12); --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14); --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12); --shadow:0 14px 38px rgba(15,23,42,.10); --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10); --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14); }
+* { box-sizing:border-box; } html, body { margin:0; min-height:100%; }
+body { font-family:var(--font-body); color:var(--text); background:radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%); background-attachment:fixed; -webkit-font-smoothing:antialiased; transition:background .4s ease, color .3s ease; }
+[data-theme="light"] body { background:radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%); background-attachment:fixed; }
+a { color:inherit; text-decoration:none; } button { cursor:pointer; font:inherit; } h1, h2, h3, h4, p { margin:0; } code { font-family:var(--font-mono); }
+.shell { width:min(1280px, calc(100% - 32px)); margin:0 auto; padding:0 0 60px; display:flex; flex-direction:column; }
+
+.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
+.cmd-dock { display:flex; align-items:center; gap:14px; padding:10px 14px; border-radius:20px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 92%, transparent); backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%); box-shadow:var(--shadow); position:relative; overflow:hidden; transition:box-shadow .3s ease, border-color .3s ease; }
+.dock-wrap.is-scrolled .cmd-dock { box-shadow:var(--shadow-dock-scrolled); border-color:color-mix(in srgb, var(--accent) 18%, var(--border)); }
+.cmd-dock::after { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px); background-size:36px 36px; mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%); opacity:.2; }
+.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
+.cmd-mark { width:36px; height:36px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%), linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong))); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent); color:var(--accent); }
+.cmd-mark svg { width:18px; height:18px; }
+.cmd-brand-info { display:grid; gap:1px; }
+.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
+.cmd-brand-version { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
+.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
+.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
+.cmd-nav-item { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:500; color:var(--muted); background:transparent; border:none; padding:6px 11px; border-radius:9px; text-decoration:none; transition:var(--transition-fast); }
+.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
+.cmd-nav-item[aria-current="page"] { color:var(--accent-strong); background:var(--panel-strong); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent); }
+.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
+.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+.cmd-actions > * { flex-shrink:0; }
+.cmd-icon-btn { width:34px; height:34px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
+.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
+.cmd-divider { width:1px; height:20px; background:var(--border); }
+.cmd-cta { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; border-radius:10px; padding:7px 13px; box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition:var(--transition-fast); }
+.cmd-cta:hover { transform:translateY(-1px); }
+
+/* Hero */
+.releases-hero { border:1px solid var(--border); border-radius:26px; padding:48px 36px; overflow:hidden; position:relative; background:radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94)); box-shadow:var(--shadow); margin-bottom:18px; text-align:center; }
+[data-theme="light"] .releases-hero { background:radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%),linear-gradient(160deg, #fff 0%, #f7faff 100%); box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
+.releases-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background-image:linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px); background-size:48px 48px; mask-image:radial-gradient(ellipse at 50% 30%, black 0%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 30%, black 0%, transparent 70%); opacity:.5; }
+.releases-hero > * { position:relative; z-index:1; }
+.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
+.releases-hero h1 { margin-top:18px; font-size:clamp(2rem, 3.4vw, 3rem); font-weight:800; letter-spacing:-.04em; line-height:1.05; color:var(--text); }
+.releases-hero h1 .accent-cyan { color:var(--accent); }
+.releases-hero h1 .accent-violet { color:var(--accent-2); }
+.releases-hero p { max-width:60ch; margin:14px auto 0; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.96rem; line-height:1.65; }
+
+/* Site Section */
+.site-section { padding:36px 0 12px; position:relative; }
+.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
+.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
+.site-section-title .accent-cyan { color:var(--accent); }
+.site-section-title .accent-violet { color:var(--accent-2); }
+
+/* Featured release (latest) — big card */
+.featured-release {
+  display:grid; grid-template-columns:1.4fr 1fr; gap:0;
+  background:linear-gradient(135deg, rgba(94,200,255,.10) 0%, rgba(122,108,255,.05) 50%, var(--panel-strong) 100%);
+  border:1px solid rgba(94,200,255,.30);
+  border-radius:22px;
+  overflow:hidden;
+  text-decoration:none; color:inherit;
+  transition:transform .25s ease, box-shadow .3s ease, border-color .25s ease;
+  position:relative;
+}
+[data-theme="light"] .featured-release { background:linear-gradient(135deg, rgba(31,138,255,.08) 0%, rgba(94,77,255,.04) 50%, #fff 100%); border-color:rgba(31,138,255,.30); box-shadow:0 10px 28px -18px rgba(15,23,42,.18); }
+.featured-release::before { content:''; position:absolute; inset:0; background:linear-gradient(120deg, transparent 30%, rgba(167,139,250,.10) 50%, transparent 70%); transform:translateX(-100%); transition:transform 0.8s ease; pointer-events:none; }
+.featured-release:hover { transform:translateY(-3px); border-color:var(--accent); box-shadow:0 20px 60px rgba(94,200,255,.20); }
+.featured-release:hover::before { transform:translateX(100%); }
+.featured-body { padding:40px 36px; display:flex; flex-direction:column; gap:14px; position:relative; z-index:1; }
+.featured-version-pill { display:inline-flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:.78rem; font-weight:600; color:var(--accent); letter-spacing:.04em; }
+.featured-version-pill .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent), 0 0 0 4px rgba(94,200,255,.12); }
+.featured-release h3 { font-size:2rem; font-weight:800; letter-spacing:-.025em; color:var(--text); margin:6px 0 6px; line-height:1.1; }
+.featured-release p { font-size:.96rem; color:var(--muted); line-height:1.6; margin:0; max-width:60ch; }
+.featured-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+.featured-tag { font-family:var(--font-mono); font-size:.62rem; font-weight:600; color:var(--accent-2); background:var(--accent-2-soft); border:1px solid color-mix(in srgb, var(--accent-2) 28%, var(--border)); border-radius:999px; padding:3px 10px; }
+.featured-cta { display:inline-flex; align-items:center; gap:8px; font-size:.95rem; font-weight:700; color:var(--accent); margin-top:14px; }
+.featured-aside { padding:36px 32px; border-left:1px solid rgba(94,200,255,.16); background:rgba(7,8,12,.30); display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; }
+[data-theme="light"] .featured-aside { background:rgba(247,250,255,.5); border-left-color:rgba(31,138,255,.16); }
+.featured-aside-label { font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.featured-stat { display:flex; align-items:baseline; justify-content:space-between; padding:8px 0; border-bottom:1px dashed color-mix(in srgb, var(--border) 70%, transparent); font-size:.86rem; }
+.featured-stat:last-of-type { border-bottom:none; }
+.featured-stat span { color:var(--muted); }
+.featured-stat strong { font-family:var(--font-mono); font-weight:700; color:var(--text-soft); }
+.featured-stat strong.green { color:var(--accent-4); }
+.featured-stat strong.cyan { color:var(--accent); }
+
+/* All releases grid (older + coming soon) */
+.releases-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px; }
+.release-card {
+  border:1px solid var(--border); border-radius:16px;
+  padding:22px; background:var(--panel-strong);
+  text-decoration:none; color:inherit;
+  display:flex; flex-direction:column; gap:10px;
+  transition:var(--transition-fast);
+  position:relative;
+}
+[data-theme="light"] .release-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
+.release-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
+.release-card.coming-soon { opacity:.5; pointer-events:none; border-style:dashed; }
+.release-card.coming-soon::after { content:'planned'; position:absolute; top:14px; right:14px; font-family:var(--font-mono); font-size:.56rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); background:var(--surface-soft); border:1px solid var(--border); border-radius:5px; padding:2px 7px; }
+.release-version { font-family:var(--font-mono); font-size:.92rem; font-weight:700; color:var(--accent); letter-spacing:-.01em; }
+.release-card[data-codename]::before { content:attr(data-codename); font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.release-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
+.release-card p { font-size:.82rem; color:var(--muted); line-height:1.55; margin:0; }
+.release-meta { margin-top:auto; padding-top:12px; border-top:1px dashed var(--border); display:flex; gap:14px; font-family:var(--font-mono); font-size:.7rem; color:var(--muted); flex-wrap:wrap; }
+.release-meta strong { color:var(--accent-4); font-weight:600; }
+.release-cta { display:inline-flex; align-items:center; gap:5px; margin-top:8px; font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent); }
+
+/* Pattern callout */
+.pattern-callout { margin-top:32px; border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border)); background:color-mix(in srgb, var(--accent-2-soft) 18%, var(--panel-strong)); border-radius:14px; padding:20px 24px; }
+[data-theme="light"] .pattern-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
+.pattern-callout-title { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.pattern-callout-title h3 { font-size:1rem; font-weight:700; color:var(--text-soft); }
+.pattern-callout-title .icon { font-size:1.2rem; }
+.pattern-callout p { margin:0 0 8px; font-size:.86rem; color:var(--muted); line-height:1.6; }
+.pattern-callout p:last-child { margin-bottom:0; }
+.pattern-callout code { font-size:.78rem; padding:1px 6px; border-radius:5px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); }
+
+/* Footer */
+.site-footer { display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr; padding:42px 4px 8px; margin-top:30px; border-top:1px solid var(--border); }
+.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
+.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
+.footer-col a:hover { color:var(--accent); }
+.site-footer-base { margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.76rem; }
+
+@media (max-width: 1024px) {
+  .featured-release { grid-template-columns:1fr; }
+  .featured-aside { border-left:none; border-top:1px solid rgba(94,200,255,.16); }
+  .site-footer { grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .dock-wrap { padding-top:10px; } .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; } .cmd-brand { padding-right:0; border-right:none; } .cmd-center { order:3; width:100%; } .cmd-nav { width:100%; overflow-x:auto; }
+  .releases-hero { padding:32px 22px; } .releases-hero h1 { font-size:2rem; }
+  .featured-body { padding:28px 24px; } .featured-aside { padding:24px; } .featured-release h3 { font-size:1.5rem; }
+  .releases-grid { grid-template-columns:1fr; }
+  .site-footer { grid-template-columns:1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
+</style>
+</head>
+<body>
+
+<main class="shell">
+
+  <div class="dock-wrap" id="dock-wrap">
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" /></svg>
+        </span>
+        <div class="cmd-brand-info">
+          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
+          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> releases · histórico de evolução</span>
+        </div>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
+          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">⬡</span> Releases</a>
+          <a class="cmd-nav-item" href="../sdd/index.html"><span class="cmd-nav-glyph">⚡</span> SDD</a>
+          <a class="cmd-nav-item" href="../squads/index.html"><span class="cmd-nav-glyph">🤖</span> Squads</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+        </button>
+        <a href="https://github.com/jaimevalasek/aioson/releases" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub releases">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <span class="cmd-divider"></span>
+        <a href="./1-9-0/index.html" class="cmd-cta">Latest v1.9.0
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- HERO -->
+  <section class="releases-hero">
+    <span class="eyebrow">Releases · histórico</span>
+    <h1>Cada versão tem sua <span class="accent-cyan">página dedicada</span>.</h1>
+    <p>Timeline, métricas, evolução por tema e changelog completo — todo release entra com a mesma estrutura. Padrão escalável: <code>tutorials/releases/{version}/</code>.</p>
+  </section>
+
+  <!-- LATEST FEATURED -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Latest · stable</span>
+      <h2 class="site-section-title">Release <span class="accent-cyan">atual</span>.</h2>
+    </header>
+
+    <a class="featured-release" href="./1-9-0/index.html">
+      <div class="featured-body">
+        <span class="featured-version-pill"><span class="dot"></span>AIOSON v1.9.0 · Living Memory Era</span>
+        <h3>A era da Living Memory chegou</h3>
+        <p>10 dias de evolução intensa: agentes que se lembram, brains procedurais, loop de aprendizado ativo, sete rodadas de hardening, modo para usuários leigos e auto-produção de estado.</p>
+        <div class="featured-tags">
+          <span class="featured-tag">Living Memory</span>
+          <span class="featured-tag">Brains</span>
+          <span class="featured-tag">Active Learning</span>
+          <span class="featured-tag">Security R4-7</span>
+          <span class="featured-tag">Lay-user mode</span>
+        </div>
+        <span class="featured-cta">Ler release notes completo →</span>
+      </div>
+      <div class="featured-aside">
+        <span class="featured-aside-label">Sprint highlights</span>
+        <div class="featured-stat"><span>Shipped</span><strong>2026-05-16</strong></div>
+        <div class="featured-stat"><span>Features fechadas</span><strong class="green">15</strong></div>
+        <div class="featured-stat"><span>Commits no sprint</span><strong>62</strong></div>
+        <div class="featured-stat"><span>Tests passing</span><strong class="green">2 500</strong></div>
+        <div class="featured-stat"><span>Gates D PASS</span><strong class="green">3 consecutivos</strong></div>
+        <div class="featured-stat"><span>Hardening</span><strong class="cyan">SF-21…26</strong></div>
+        <div class="featured-stat"><span>Regressões</span><strong class="green">0</strong></div>
+      </div>
+    </a>
+  </section>
+
+  <!-- ALL RELEASES GRID -->
+  <section class="site-section">
+    <header class="site-section-header">
+      <span class="eyebrow">Todas releases</span>
+      <h2 class="site-section-title">Histórico <span class="accent-violet">completo</span>.</h2>
+      <p style="margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6;">Cada release vira uma página em <code style="font-family:var(--font-mono); font-size:.84rem; color:var(--accent);">tutorials/releases/{version}/</code>. Versões futuras já planejadas aparecem como "planned".</p>
+    </header>
+
+    <div class="releases-grid">
+
+      <a class="release-card" href="./1-9-0/index.html">
+        <div class="release-version">v1.9.0</div>
+        <h3>Living Memory Era</h3>
+        <p>Bootstrap auto-sync, reflect engine, brains procedurais, autonomy 3-tier, lay-user mode.</p>
+        <div class="release-meta">
+          <span>📅 2026-05-16</span>
+          <span><strong>15</strong> features</span>
+          <span>10 dias</span>
+        </div>
+        <span class="release-cta">Ler release →</span>
+      </a>
+
+      <div class="release-card coming-soon">
+        <div class="release-version">v1.9.1</div>
+        <h3>Patch + polish</h3>
+        <p>Bug fixes pós-v1.9.0, melhorias incrementais. Detalhes quando shipar.</p>
+        <div class="release-meta">
+          <span>📅 TBD</span>
+          <span>tipo: patch</span>
+        </div>
+      </div>
+
+      <div class="release-card coming-soon">
+        <div class="release-version">v1.10.0</div>
+        <h3>Next minor</h3>
+        <p>Próximas features destacadas do roadmap. autonomy v1.1 cross-project, harness-isolation, kernel dev.md &lt; 15KB.</p>
+        <div class="release-meta">
+          <span>📅 TBD</span>
+          <span>tipo: minor</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pattern-callout">
+      <div class="pattern-callout-title">
+        <span class="icon">📐</span>
+        <h3>Padrão escalável para próximas releases</h3>
+      </div>
+      <p>Cada nova versão segue o mesmo padrão: copiar a pasta <code>tutorials/releases/1-9-0/</code> para <code>tutorials/releases/&lt;version&gt;/</code> e adaptar o conteúdo. O template inclui hero com version-pill, métricas, timeline, evolução por tema (cards com snippets), what's next, CTAs e apêndice changelog colapsável.</p>
+      <p>Depois de criar a nova pasta, atualize este índice (<code>releases/index.html</code>) movendo a anterior do "latest" para o grid de histórico, e atualize o hub principal (<code>tutorials/index.html</code>) com a versão nova no featured-release.</p>
+      <p style="color:var(--text-soft); margin-top:14px;"><strong>3 lugares pra atualizar quando uma nova versão sair:</strong></p>
+      <ol style="padding-left:22px; margin:8px 0 0; color:var(--muted); font-size:.86rem; line-height:1.7;">
+        <li><code>tutorials/releases/&lt;version&gt;/index.html</code> — copie a v1.9.0 e adapte</li>
+        <li><code>tutorials/releases/index.html</code> — promova ao latest, mova v1.9.0 pro grid</li>
+        <li><code>tutorials/index.html</code> — atualize featured-release no hub</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="site-footer-brand">
+      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
+      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Releases</div>
+      <ul>
+        <li><a href="./index.html">Todas releases</a></li>
+        <li><a href="./1-9-0/index.html">v1.9.0 (atual)</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Conceitos</div>
+      <ul>
+        <li><a href="../living-memory/index.html">Living Memory</a></li>
+        <li><a href="../brains/index.html">Brains</a></li>
+        <li><a href="../autonomy/index.html">Autonomy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">Comunidade</div>
+      <ul>
+        <li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li>
+      </ul>
+    </div>
+    <div class="site-footer-base" style="grid-column:1 / -1">
+      <div>Releases · padrão escalável para versão futuras</div>
+      <div>AIOSON · inception mode</div>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  (function () { const root = document.documentElement; const toggle = document.querySelector('[data-theme-toggle]'); if (!toggle) return; try { const s = localStorage.getItem('aioson-theme'); if (s === 'dark' || s === 'light') root.setAttribute('data-theme', s); } catch (e) {} const sync = () => { const t = root.getAttribute('data-theme') || 'dark'; const m = toggle.querySelector('.cmd-theme-moon'); const s = toggle.querySelector('.cmd-theme-sun'); if (m) m.style.display = (t === 'dark') ? 'none' : ''; if (s) s.style.display = (t === 'dark') ? '' : 'none'; }; sync(); toggle.addEventListener('click', () => { const c = root.getAttribute('data-theme') || 'dark'; const n = c === 'light' ? 'dark' : 'light'; root.setAttribute('data-theme', n); try { localStorage.setItem('aioson-theme', n); } catch (e) {} sync(); }); })();
+  (function () { const w = document.getElementById('dock-wrap'); if (!w) return; const u = () => { if (window.scrollY > 8) w.classList.add('is-scrolled'); else w.classList.remove('is-scrolled'); }; u(); window.addEventListener('scroll', u, { passive: true }); })();
+</script>
+
+</body>
+</html>
