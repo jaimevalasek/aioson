@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { installTemplate } = require('../src/installer');
-const { MARKER_BEGIN, MARKER_END } = require('../src/gateway-pointer-merge');
+const { MARKER_BEGIN, MARKER_END, BLOCK_NOTICE } = require('../src/gateway-pointer-merge');
 
 async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-gateway-'));
@@ -57,6 +57,21 @@ test('re-install replaces the AIOSON block in place without duplicating it', asy
   assert.equal(content.match(new RegExp(MARKER_BEGIN, 'g')).length, 1, 'block was duplicated instead of replaced');
   assert.ok(!content.includes('STALE-VERSION'), 'old block content survived the update');
   assert.ok(content.includes('You operate as AIOSON.'), 'fresh template body missing');
+});
+
+test('managed block carries an explicit warning that edits inside will be overwritten', async () => {
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+
+  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md', '.gemini/GEMINI.md']) {
+    const content = await fs.readFile(path.join(dir, rel), 'utf8');
+    const beginIdx = content.indexOf(MARKER_BEGIN);
+    const endIdx = content.indexOf(MARKER_END);
+    assert.ok(beginIdx !== -1 && endIdx !== -1, `${rel} missing markers`);
+    const block = content.slice(beginIdx, endIdx);
+    assert.ok(block.includes(BLOCK_NOTICE), `${rel} missing the managed-block warning`);
+    assert.ok(block.indexOf(BLOCK_NOTICE) < block.indexOf('# AIOSON'), `${rel} warning must appear before the template body`);
+  }
 });
 
 test('all four gateway pointers receive the managed block on fresh install', async () => {

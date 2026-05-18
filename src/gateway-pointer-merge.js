@@ -14,6 +14,7 @@ const { exists, copyFileWithDir, toRelativeSafe } = require('./utils');
 
 const MARKER_BEGIN = '<!-- AIOSON:BEGIN -->';
 const MARKER_END = '<!-- AIOSON:END -->';
+const BLOCK_NOTICE = '> Managed by AIOSON — edits inside this block will be overwritten on `aioson update`. Put project-specific rules above or below this block.';
 
 const GATEWAY_POINTER_FILES = new Set([
   'CLAUDE.md',
@@ -28,7 +29,7 @@ function isGatewayPointerPath(rel) {
 
 function buildBlock(templateContent) {
   const body = templateContent.endsWith('\n') ? templateContent : `${templateContent}\n`;
-  return `${MARKER_BEGIN}\n${body}${MARKER_END}\n`;
+  return `${MARKER_BEGIN}\n${BLOCK_NOTICE}\n\n${body}${MARKER_END}\n`;
 }
 
 function findBlockRange(content) {
@@ -93,6 +94,7 @@ async function mergeGatewayPointer({ templatePath, targetPath, backupRoot, targe
 module.exports = {
   MARKER_BEGIN,
   MARKER_END,
+  BLOCK_NOTICE,
   GATEWAY_POINTER_FILES,
   isGatewayPointerPath,
   buildBlock,
