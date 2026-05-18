@@ -30,6 +30,7 @@ function parseArgv(argv) {
         'help', 'version', 'no-launch', 'attach', 'tmux',
         'allow-warnings', 'install-hook', 'uninstall-hook', 'remove-hook',
         'agent-safe',
+        'selective',
         'status', 'suggest', 'apply',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`

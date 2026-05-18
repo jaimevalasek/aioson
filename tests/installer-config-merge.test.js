@@ -301,7 +301,7 @@ test('installTemplate (update): config files bypass selectiveUpdate (new configs
   await fs.unlink(newConfigPath);
   assert.equal(await fileExists(newConfigPath), false);
 
-  // Update with selectiveUpdate=true (the default for `aioson update` without --all).
+  // Update with selectiveUpdate=true (legacy mode, opt-in via `aioson update --selective` since 1.9.2).
   await installTemplate(dir, {
     mode: 'update',
     overwrite: true,

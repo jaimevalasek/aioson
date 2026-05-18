@@ -10,12 +10,14 @@ async function runUpdate({ args, options, logger, t }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const dryRun = Boolean(options['dry-run']);
   const all = Boolean(options.all);
+  const selective = Boolean(options.selective);
   const requestedLanguage = options.lang || options.language;
 
   const detection = await detectFramework(targetDir);
   const result = await updateInstallation(targetDir, {
     dryRun,
     all,
+    selective,
     frameworkDetection: detection.framework
   });
 

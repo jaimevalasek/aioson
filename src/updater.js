@@ -16,8 +16,12 @@ async function updateInstallation(targetDir, options = {}) {
 
   const savedProfile = await readInstallProfile(targetDir);
 
-  // Default: only update files already present in the target (selective update).
-  // With --all: install every file from the template, including new ones not yet installed.
+  // Default: sync everything from the template, including files added by the
+  // release that aren't yet in the target. Pre-1.9.2 this defaulted to
+  // selective and silently dropped new agents/slash commands between versions.
+  // `--selective` restores the legacy conservative mode; `--all` is accepted
+  // as a backwards-compat no-op since "all" is now the default.
+  const selective = Boolean(options.selective) && !options.all;
   const result = await installTemplate(targetDir, {
     overwrite: true,
     dryRun: Boolean(options.dryRun),
@@ -25,7 +29,7 @@ async function updateInstallation(targetDir, options = {}) {
     backupOnOverwrite: true,
     frameworkDetection: options.frameworkDetection || null,
     installProfile: savedProfile,
-    selectiveUpdate: !options.all
+    selectiveUpdate: selective
   });
 
   // Post-install migrations. Best-effort: a migration failure must not break
