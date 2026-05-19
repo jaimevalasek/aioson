@@ -1,24 +1,21 @@
 {
   "version": 1,
   "mode": "feature",
-  "classification": "SMALL",
+  "classification": "MEDIUM",
   "sequence": [
     "product",
     "analyst",
     "dev",
+    "pentester",
     "qa"
   ],
   "current": null,
-  "next": null,
+  "next": "analyst",
   "completed": [
-    "product",
-    "qa"
+    "product"
   ],
-  "skipped": [
-    "analyst",
-    "dev"
-  ],
-  "featureSlug": "lay-user-agent-mode",
+  "skipped": [],
+  "featureSlug": "workflow-handoff-integrity",
   "detour": null,
-  "updatedAt": "2026-05-18T02:25:26.715Z"
+  "updatedAt": "2026-05-19T16:33:50.919Z"
 }

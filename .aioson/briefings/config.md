@@ -1,5 +1,5 @@
 ---
-updated_at: 2026-05-18
+updated_at: 2026-05-19
 briefings:
   - slug: harness-driven-aioson
     status: implemented
@@ -32,6 +32,17 @@ briefings:
     prd_generated: null
     updated_at: "2026-05-18"
     decision_note: "Documented-only strategic intake. Resolved 2026-05-18 with @product: Q1=(a) AIOSON enriquece sem mudar foco; Theme 2 parked (no observed pain); Themes 1/3/5 out-of-scope; Theme 4 dropped (opinion-as-config risk). No PRD will be generated. Briefing serves as permanent reference for rejecting future 'let's copy X from Cursor' proposals without observed pain data."
+  - slug: workflow-handoff-integrity-1-9-2
+    status: implemented
+    source_plans: ["conversational — seed from dogfooding session in aioson-com after v1.9.2 release (2026-05-19)"]
+    created_at: "2026-05-19"
+    approved_at: "2026-05-19"
+    prd_generated:
+      - .aioson/context/prd-workflow-hotfix-1-9-3.md
+      - .aioson/context/prd-workflow-handoff-integrity.md
+    updated_at: "2026-05-19"
+    approval_note: "Approved via manual config.md edit (CLI `briefing:approve` ainda não implementada — gap conhecido, mesmo pattern dos briefings anteriores). User confirmed approval via /product activation. Gerado em DOIS PRDs por decisão de @product + user (split estrutural): prd-workflow-hotfix-1-9-3.md (SMALL — completar migração 981a8fd, sequência de release) + prd-workflow-handoff-integrity.md (MEDIUM — F1/F2/F3 + CI guard + dogfood gate; depends_on hotfix)."
+    note: "Cluster de 5 falhas (F1-F5) detectadas no primeiro dogfood pós-v1.9.2, com investigação iterativa: @briefing inicial → @deyvin hotfix-tentado-revertido → @briefing-v2 com git archaeology. Causa-raiz final: **migração SDLC `981a8fd` (2026-04-24, v1.9.0) ficou incompleta**. O commit documentou em `.aioson/plans/sdlc-process-upgrade/plan-implementation-plan-ownership.md` que `@pm` é owner canônico de `implementation-plan-{slug}.md` em MEDIUM (AC-SDLC-15), e atualizou workspace `.aioson/agents/pm.md`. MAS não tocou `template/.aioson/agents/pm.md`, nem `tests/agent-runtime-alignment.test.js` (último touch em `8ac092f`, anterior), nem arquivos candidatos listados no plan (`artifact-map.md`, `handoff-contract.js`, `artifact-validate.js`). O `ca15f55` (Phase 4 chain-continuity) tentou re-sincronizar mas só pegou `## Feature dossier` section, não a parte de implementation-plan. Logo: source pm.md tem o contrato canônico correto; template+test estão obsoletos. Hotfix v1.9.3 deve completar a migração `981a8fd` por inteiro, não apenas copiar arquivos. Lição-meta registrada no briefing: verificar canon via tripé prompts + tests + plans committed antes de qualquer fix de contrato. F2/F3/F1 são frentes separadas (não dependem de T1)."
 ---
 
 # Briefings Registry
@@ -42,3 +53,4 @@ briefings:
 | lay-user-agent-mode | implemented | plans/lay-user-agent-mode.md | 2026-05-16 | 2026-05-16 | .aioson/context/prd-lay-user-agent-mode.md | — |
 | agent-chain-continuity-delivery-fix | approved | conversational (@dev diagnostic) | 2026-05-16 | 2026-05-16 | — | PRD deferred (scope-cut to MICRO follow-up) |
 | cursor3-harness-evolution | draft | plans/relatorio-proposta-melhoria-analisar.txt | 2026-05-18 | — | — | documented-only — no feature spawned |
+| workflow-handoff-integrity-1-9-2 | implemented | conversational (dogfood pós-1.9.2) | 2026-05-19 | 2026-05-19 | prd-workflow-hotfix-1-9-3.md + prd-workflow-handoff-integrity.md | split em 2 PRDs (hotfix SMALL + estrutural MEDIUM); absorve MICRO de agent-chain-continuity |

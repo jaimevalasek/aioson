@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-05-17T06:24:11.928Z",
-  "last_agent": "@qa",
-  "last_stage": "qa",
-  "what_was_done": "Stage @qa completed.",
-  "what_comes_next": "Next stage: @analyst",
-  "next_agent": "@analyst",
+  "session_ended_at": "2026-05-19T16:02:50.356Z",
+  "last_agent": "@analyst",
+  "last_stage": "analyst",
+  "what_was_done": "Stage @analyst completed.",
+  "what_comes_next": "Next stage: @dev",
+  "next_agent": "@dev",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
   "classification": "SMALL",
-  "feature_slug": "lay-user-agent-mode"
+  "feature_slug": "workflow-hotfix-1-9-3"
 }
