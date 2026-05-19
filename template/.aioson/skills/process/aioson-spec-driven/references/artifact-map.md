@@ -11,7 +11,7 @@ prd*.md
   → spec-{slug}.md                 (feature memory — @analyst seeds, @dev fills)
   → architecture.md                (tech decisions — @architect)
   → design-doc*.md                 (scope-specific decisions — @architect)
-  → implementation-plan-{slug}.md  (execution sequence — @dev)
+  → implementation-plan-{slug}.md  (execution sequence — @pm for MEDIUM, AC-SDLC-15)
   → spec-{slug}.md (updated)       (living state during execution — @dev)
 ```
 
@@ -28,7 +28,7 @@ prd*.md
 | `spec.md` | @dev | @dev | @dev, @deyvin |
 | `architecture.md` | @architect | — | @dev, @ux-ui |
 | `design-doc*.md` | @architect | — | @dev, @ux-ui |
-| `implementation-plan-{slug}.md` | @dev | — | @dev, @deyvin |
+| `implementation-plan-{slug}.md` | @pm (MEDIUM, AC-SDLC-15) | — | @dev, @deyvin, @orchestrator |
 
 ## Naming conventions
 

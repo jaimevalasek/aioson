@@ -26,8 +26,9 @@ Loaded rules, design docs, and design governance override the default convention
 Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruthlessly.
 
 ## When to use
-- **MEDIUM** projects: required, runs after `@architect` and `@ux-ui`.
-- **MICRO** projects: skip — `@dev` reads context and architecture directly.
+- **MEDIUM** projects: required, runs after `@architect` and `@ux-ui`. `@pm` is the canonical owner of the initial `implementation-plan-{slug}.md`.
+- **SMALL** projects: optional — activate if user explicitly asks for delivery planning.
+- **MICRO** projects: skip — `@dev` reads context and architecture directly. Do not produce an implementation plan for MICRO.
 
 ## Required input
 - `.aioson/context/project.context.md`
@@ -68,11 +69,62 @@ For existing codebases:
 - `discovery.md` may have been generated either by `scan:project --with-llm` or by `@analyst` from local scan artifacts.
 - If `discovery.md` is missing but local scan artifacts exist, do not prioritize directly from raw code maps. Route through `@analyst` first, then continue once discovery is consolidated.
 
-## Handoff reality
+## MEDIUM implementation plan (mandatory output for MEDIUM)
 
-- The canonical `@pm` workflow stage enriches the existing PRD in place.
-- Do not silently create `implementation-plan.md` or `implementation-plan-{slug}.md` as if they were mandatory outputs of this stage.
-- If the user explicitly asks for a standalone implementation plan, treat that as a separate planning request instead of changing the default `@pm` deliverable.
+For MEDIUM features, `@pm` MUST produce `implementation-plan-{slug}.md` in `.aioson/context/`. This is Gate C.
+
+Structure:
+```markdown
+---
+feature: {slug}
+status: approved
+created_by: pm
+created_at: {ISO date}
+classification: MEDIUM
+gate: C
+gate_status: approved
+---
+
+# Implementation Plan — {Feature Name}
+
+## Gate C Summary
+[Why Gate C is approved — prerequisites satisfied]
+
+## Required Context Package
+[Ordered list of files @dev must read]
+
+## Pre-Taken Decisions
+[Decisions already made — @dev does not re-discuss these]
+
+## Execution Sequence
+| Phase | Scope | Primary files | Done criteria |
+|---|---|---|---|
+| 1 | ... | ... | ... |
+
+## Checkpoints
+[After each phase, what @dev must update]
+```
+
+After writing the plan, always close Gate C:
+```
+aioson gate:approve . --feature={slug} --gate=C
+```
+Or manually set `gate_plan: approved` in `spec-{slug}.md`.
+
+**Handoff:**
+```
+Implementation plan written: .aioson/context/implementation-plan-{slug}.md
+Gate C: approved
+Next agent: @orchestrator (MEDIUM) or @dev (SMALL, user confirmed)
+Action: /orchestrator or /dev
+```
+
+## Non-MEDIUM handoff reality
+
+For non-MEDIUM projects or when the user activates `@pm` for enrichment only:
+- Enrich the existing PRD in place.
+- Do not produce `implementation-plan-{slug}.md` unless explicitly requested.
+- If the feature is MEDIUM and missing a plan, inform the user and offer to produce it.
 
 ## Output contract
 Update the same PRD file you read (`prd.md` or `prd-{slug}.md`) in place. Never replace it with a shorter template and never delete sections that already exist.

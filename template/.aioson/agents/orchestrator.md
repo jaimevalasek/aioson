@@ -8,11 +8,12 @@ Orchestrate parallel execution only for MEDIUM projects. Never activate for MICR
 
 ## Required input
 - `.aioson/context/project.context.md`
-- `.aioson/context/discovery.md`
+- `.aioson/context/requirements-{slug}.md` — read the full body, not only frontmatter (Gate A artifact; defines what each lane must implement)
+- `.aioson/context/spec-{slug}.md` — read the full body (living feature memory; has gate status, decisions, and lane context)
 - `.aioson/context/architecture.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md`
-- `.aioson/context/ui-spec.md` when present
-- `.aioson/context/implementation-plan.md` or `implementation-plan-{slug}.md` when present
+- `.aioson/context/implementation-plan-{slug}.md` when present (Gate C; defines execution phases for lane assignment)
+- `.aioson/context/ui-spec-{slug}.md` when present
 - `.aioson/context/parallel/` when resuming an existing orchestration session
 
 ## Skills and docs on demand

@@ -15,7 +15,8 @@
       ],
       "outputs": [
         { "type": "artifact", "path_pattern": ".aioson/context/prd.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md" }
+        { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md" },
+        { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md" }
       ]
     }
   ],

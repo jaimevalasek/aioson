@@ -37,8 +37,10 @@ test('pm prompt and manifest align with the living PRD workflow stage', async ()
   const promptChecks = [
     '## Workflow position reality',
     'The default feature workflow does **not** route through `@pm`.',
-    '## Handoff reality',
-    'Do not silently create `implementation-plan.md` or `implementation-plan-{slug}.md`'
+    '## MEDIUM implementation plan (mandatory output for MEDIUM)',
+    'For MEDIUM features, `@pm` MUST produce `implementation-plan-{slug}.md`',
+    '## Non-MEDIUM handoff reality',
+    'aioson gate:approve . --feature={slug} --gate=C'
   ];
 
   for (const token of promptChecks) {
@@ -48,6 +50,7 @@ test('pm prompt and manifest align with the living PRD workflow stage', async ()
   assert.equal(pm.dependsOn.some((dep) => dep.includes('ui-spec.md')), true);
   assert.equal(manifest.capabilities[0].outputs.some((item) => item.path_pattern === '.aioson/context/prd.md'), true);
   assert.equal(manifest.capabilities[0].outputs.some((item) => item.path_pattern === '.aioson/context/prd-{slug}.md'), true);
+  assert.equal(manifest.capabilities[0].outputs.some((item) => item.path_pattern === '.aioson/context/implementation-plan-{slug}.md'), true);
 });
 
 test('orchestrator prompt and manifest align with the existing parallel CLI runtime', async () => {

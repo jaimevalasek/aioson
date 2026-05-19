@@ -33,6 +33,24 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.3] - 2026-05-19
+
+### Fixed
+- **`@pm` agent prompt in template** now correctly declares ownership of `implementation-plan-{slug}.md` for MEDIUM features (AC-SDLC-15), completing the SDLC migration started in v1.9.0 (commit `981a8fd`). Projects on 1.9.0/1/2 hit a deadlock at Gate C when running MEDIUM features via the standard chain: `/architect` routed users to `/pm`, but the legacy template prompt instructed `/pm` to NOT silently create the artifact. The workspace prompt had been updated in `981a8fd` but the template, alignment test, and a docs file were never propagated.
+- **`tests/agent-runtime-alignment.test.js`** updated to assert the new canonical tokens (`## MEDIUM implementation plan (mandatory output for MEDIUM)`, `For MEDIUM features, @pm MUST produce implementation-plan-{slug}.md`, `## Non-MEDIUM handoff reality`, gate-approve command). The previous assertions were guarding the pre-`981a8fd` contract.
+- **`template/.aioson/agents/manifests/pm.manifest.json`** `capabilities[0].outputs[]` now declares `.aioson/context/implementation-plan-{slug}.md` as a canonical produce of `@pm`. Test alignment also asserts this. Source manifest synced for parity.
+- **`template/.aioson/skills/process/aioson-spec-driven/references/artifact-map.md`** ownership table corrected: `implementation-plan-{slug}.md` written by `@pm` for MEDIUM (AC-SDLC-15) instead of `@dev`, and read by `@dev, @deyvin, @orchestrator`. Also corrected the chain description (line 14).
+- **`template/.aioson/agents/orchestrator.md`** propagated from workspace — uses feature-scoped artifact naming (`requirements-{slug}.md`, `spec-{slug}.md`, `implementation-plan-{slug}.md`, `ui-spec-{slug}.md`) matching the post-`981a8fd` contract. Previously template still used legacy generic names.
+
+### Notes
+- **Rollback:** `npm install @jaimevalasek/aioson@1.9.2` (or pin in your project's `package.json`) restores the previous behavior. Use only as last resort — the previous state had `@pm` deadlock at Gate C for MEDIUM features.
+- **Affected:** any project installed from 1.9.0/1/2 running MEDIUM features through the standard chain (`/product → /analyst → /architect → /pm`).
+- **How to verify the fix in your project:** after `aioson update`, run a MEDIUM feature through the chain. `/pm` should produce `implementation-plan-{slug}.md` without refusing. `aioson workflow:status` should advance through Gate C.
+- **Follow-ups intentionally NOT included in this hotfix** (will be in a separate MEDIUM PRD, `prd-workflow-handoff-integrity.md`):
+  - `briefing.md` / `discover.md` template drift (one-line addition about `done/MANIFEST.md` awareness — benign but not tied to a documented plan).
+  - F1 (stale `dev-state.md` cleanup), F2 (workflow pointer auto-emission), F3 (analyst routing checks), T5 (CI guard for semantic drift), T6 (smoke test pre-publish).
+- **Audit trail for this hotfix:** see PR description, briefing `.aioson/briefings/workflow-handoff-integrity-1-9-2/briefings.md`, PRD `.aioson/context/prd-workflow-hotfix-1-9-3.md`.
+
 ## [1.7.3] - 2026-04-13
 ### Fixed
 - `@dev` pt-BR locale pack realigned with the canonical prompt flow, restoring the proper cold-start fallback when `dev-state.md` is already `done` and another feature is still `in_progress` in `features.md`.
