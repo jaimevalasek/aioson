@@ -284,7 +284,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.
 - No unnecessary rewrites outside current responsibility.

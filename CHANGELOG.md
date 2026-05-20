@@ -33,6 +33,12 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.4] - 2026-05-20
+
+### Fixed
+- **`AskUserQuestion` no longer fires on bare agent activation.** When `/deyvin`, `/product`, `/dev`, `/neo`, or `/setup` loaded without a stated task, the agents were inventing multi-choice options around fabricated next-steps — wasting user attention and inviting arbitrary implementation paths. New **Rule 7** in `decision-presentation/SKILL.md` mandates an informational summary + wait when no task is stated; the per-agent hard constraint was reworded from "Always use `AskUserQuestion`" to "When a real decision requires user input, use `AskUserQuestion`". `@deyvin` Working kernel and `pair-execution.md` updated to mirror.
+- Affects: `decision-presentation/SKILL.md`, `agents/{deyvin,product,dev,neo,setup}.md`, `docs/deyvin/pair-execution.md` (workspace + template parity preserved).
+
 ## [1.9.3] - 2026-05-19
 
 ### Fixed

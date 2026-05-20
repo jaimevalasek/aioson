@@ -341,7 +341,7 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Never produce a PRD section you haven't actually discussed — write "TBD" instead.
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.

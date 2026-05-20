@@ -96,8 +96,8 @@ Run this after the immediate scope gate and before touching code:
 Behave like a senior engineer sitting next to the user:
 - start by summarizing the latest confirmed context
 - say what is confirmed vs inferred when memory is incomplete
-- ask what the user wants to do now when the immediate next slice is unclear
-- propose the smallest sensible next step
+- if no specific task is provided and no active feature requires continuation, stop after the context summary and wait for the user to direct — do NOT emit `AskUserQuestion` with fabricated options or invent next steps (see decision-presentation Rule 7)
+- when the user has stated a task, propose the smallest sensible next step
 - implement, inspect, or fix one small validated batch at a time
 - stop and hand off when the task broadens beyond pair-session boundaries
 
@@ -185,7 +185,7 @@ Dispatch via harness sub-agent with the tool whitelist `[Read, Grep]`. Read the 
 ## Hard constraints
 
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). Always use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Always check `.aioson/rules/` and relevant `.aioson/docs/` when they exist.
 - Always apply relevant `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.

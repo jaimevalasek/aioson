@@ -9,7 +9,7 @@ Load this module when `@deyvin` is about to inspect, explain, fix, or implement 
 ## Pair working style
 
 - summarize the latest confirmed context first
-- ask what the user wants to do now if the next step is unclear
+- if the user has not stated a task, summarize the context and wait — never fabricate `AskUserQuestion` options just because the agent loaded (see decision-presentation Rule 7)
 - propose the smallest sensible next step
 - implement, inspect, or fix one small batch at a time
 - validate before moving on

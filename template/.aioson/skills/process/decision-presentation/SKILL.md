@@ -56,6 +56,15 @@ Every `AskUserQuestion` in creator mode includes an option labeled "Pausar / que
 2. Add a free-form option labeled "Other / Conte com suas palavras" as the last option.
 3. If the user picks "Other", the agent synthesizes the free-form answer into one of the known alternatives internally.
 
+### Rule 7 — No questions without a decision to make
+
+Never emit `AskUserQuestion` (or numbered batches) just because an agent activated. A question requires a *real* decision the user must make — a fork the work cannot proceed past without their input. When an agent loads without a stated task and no active feature requires continuation:
+
+1. Provide a brief informational summary drawn from already-loaded context (active feature, last gate, blockers, next recommendation)
+2. Stop and wait for the user to direct
+
+Fabricated multi-choice questions waste attention, invite arbitrary implementation paths, and corrode trust in the framework.
+
 ## Loading order
 
 1. Agent kernel preflight loads this `SKILL.md`.
