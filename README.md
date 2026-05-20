@@ -70,11 +70,54 @@ npx @jaimevalasek/aioson install --reconfigure
 npx @jaimevalasek/aioson install --no-interactive
 ```
 
-**Update** to a new version (respects your saved profile):
+**Update** the AIOSON files in your project (respects your saved profile):
 
 ```bash
 npx @jaimevalasek/aioson update
 ```
+
+> Updating an existing project to a new release? See [Upgrading](#upgrading) — `aioson update` alone is not enough if the CLI itself is out of date.
+
+---
+
+## Upgrading
+
+Two things can be on different versions: the **CLI you run** (`aioson`) and the **AIOSON files inside your project** (`.aioson/`). Both need to move together.
+
+> ⚠ **The #1 reason `aioson update` "doesn't bring in the new version":** `aioson update` copies the templates bundled with the CLI currently on disk. If your global CLI is on an older release, running `aioson update` from a project will copy that older version's files — no matter how many times you run it. You have to upgrade the CLI itself first.
+
+**Step 1 — upgrade the CLI.**
+
+If you installed globally:
+
+```bash
+npm install -g @jaimevalasek/aioson@latest
+aioson --version
+```
+
+If `aioson --version` still shows the old version, the binary is being shadowed (older Node on PATH, nvm switch, leftover global install). Reinstall cleanly:
+
+```bash
+npm uninstall -g @jaimevalasek/aioson
+npm install -g @jaimevalasek/aioson@latest
+aioson --version
+```
+
+Prefer not to install globally at all? Use `npx` pinned to `@latest` — it always fetches the latest published version and ignores anything installed globally:
+
+```bash
+npx @jaimevalasek/aioson@latest <command>
+```
+
+**Step 2 — refresh the AIOSON files in each project.**
+
+From inside the project directory:
+
+```bash
+aioson update
+```
+
+This copies the latest agents, skills, and templates into `.aioson/`, respecting your saved profile. Repeat in every project you want to bring up to date.
 
 ---
 
