@@ -9,13 +9,14 @@
     "pentester",
     "qa"
   ],
-  "current": null,
-  "next": "analyst",
+  "current": "dev",
+  "next": "dev",
   "completed": [
-    "product"
+    "product",
+    "analyst"
   ],
   "skipped": [],
   "featureSlug": "workflow-handoff-integrity",
   "detour": null,
-  "updatedAt": "2026-05-19T16:33:50.919Z"
+  "updatedAt": "2026-05-20T18:32:35.479Z"
 }

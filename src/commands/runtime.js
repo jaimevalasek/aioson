@@ -1222,6 +1222,9 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         logger.log(`agent:done — ${normalizedAgent} | live session active, event logged | run: ${session.runKey} (${dbPath})`);
       }
 
+      // F2 (workflow-handoff-integrity v1.9.5) — best-effort auto-advance workflow pointer
+      await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
+
       if (isDocCreatingAgent(normalizedAgent)) {
         backupAiosonDocs(targetDir).catch(() => {});
       }
@@ -1279,6 +1282,9 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       logger.log(`agent:done — ${normalizedAgent} | task: ${taskKey} | run: ${runKey} (${dbPath})`);
     }
 
+    // F2 (workflow-handoff-integrity v1.9.5) — best-effort auto-advance workflow pointer
+    await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
+
     if (isDocCreatingAgent(normalizedAgent)) {
       backupAiosonDocs(targetDir).catch(() => {});
     }
@@ -1296,6 +1302,150 @@ async function runAgentDone({ args, options = {}, logger, t }) {
   } finally {
     db.close();
   }
+}
+
+
+/**
+ * maybeAutoAdvanceWorkflow — F2 (workflow-handoff-integrity v1.9.5)
+ *
+ * Best-effort: when a workflow is active for the project AND the calling
+ * agent has produced its canonical artifact on disk, internally invokes
+ * `runWorkflowNext({ complete: <agent> })` so the pointer advances without
+ * requiring every agent prompt to literal-call `aioson workflow:next`.
+ *
+ * Gating (DD-01 — workflow.state.json presence-detection):
+ *   - workflow.state.json absent OR `--no-auto-advance` flag → skip (backward-compat)
+ *   - workflow.state.json corrupt → log warning, skip (AC-F2-09 graceful degradation)
+ *   - agent unknown in handoff-contract CONTRACTS → log warning, skip (AC-F2-10)
+ *
+ * Idempotency (BR-01): `last_workflow_event_at` in workflow.state.json blocks
+ * re-emission within a 1s window.
+ *
+ * Side effects (best-effort, every failure is non-fatal):
+ *   - reads `.aioson/context/workflow.state.json`
+ *   - writes `last_workflow_event_at` back to that file on success
+ *   - calls `runWorkflowNext` with quiet logger + `--json` to suppress prose
+ *   - emits ONE concise stdout line on success when not in --json mode
+ *
+ * @param {object} ctx
+ * @param {string} ctx.targetDir       Project root.
+ * @param {string} ctx.normalizedAgent Agent name with leading `@`.
+ * @param {object} ctx.options         agent:done CLI options.
+ * @param {object} ctx.logger          Logger (logger.log + logger.error).
+ * @param {Function} [ctx.t]           Translation fn (passed through).
+ * @returns {Promise<{advanced: boolean, skipped?: string, error?: string}>}
+ */
+async function maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options = {}, logger, t }) {
+  // DD-01 opt-out — explicit --no-auto-advance disables, regardless of state.
+  if (options['no-auto-advance'] || options.noAutoAdvance) {
+    return { advanced: false, skipped: 'opt-out' };
+  }
+
+  const statePath = path.join(targetDir, '.aioson', 'context', 'workflow.state.json');
+
+  // 1. Read workflow.state.json (graceful absent OR corrupt — AC-F2-02 / AC-F2-09).
+  let state;
+  try {
+    const raw = await fs.readFile(statePath, 'utf8');
+    state = JSON.parse(raw);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return { advanced: false, skipped: 'no_active_workflow' };
+    }
+    if (!options.json && logger?.error) {
+      logger.error(`[agent:done] workflow.state.json unreadable (${err.code || err.message}); fallback to backward-compat (no auto-advance)`);
+    }
+    return { advanced: false, skipped: 'state_corrupt', error: err.message };
+  }
+
+  // 2. Inactive workflow → skip.
+  if (!state || (!state.featureSlug && state.mode !== 'project') || state.current === null) {
+    return { advanced: false, skipped: 'inactive_workflow' };
+  }
+
+  // 3. Idempotency guard (BR-01 — 1s window).
+  const now = Date.now();
+  const lastEventAt = Number(state.last_workflow_event_at) || 0;
+  if (now - lastEventAt < 1000) {
+    return { advanced: false, skipped: 'idempotency_window' };
+  }
+
+  // 4. Lookup canonical artifact via handoff-contract (DPC-03 — reuse CONTRACTS map).
+  let artifacts;
+  try {
+    const { getCanonicalArtifactsForAgent } = require('../handoff-contract');
+    artifacts = await getCanonicalArtifactsForAgent(normalizedAgent, targetDir, {
+      mode: state.mode || 'feature',
+      featureSlug: state.featureSlug,
+      classification: state.classification
+    });
+  } catch (err) {
+    if (!options.json && logger?.error) {
+      logger.error(`[agent:done] handoff-contract lookup failed (${err.message}); skip auto-advance`);
+    }
+    return { advanced: false, skipped: 'contract_error', error: err.message };
+  }
+
+  // AC-F2-10 — agent not registered in CONTRACTS.
+  if (artifacts === null) {
+    if (!options.json && logger?.error) {
+      logger.error(`[agent:done] agent '${normalizedAgent}' not in handoff-contract CONTRACTS map; skip auto-advance`);
+    }
+    return { advanced: false, skipped: 'unknown_agent' };
+  }
+
+  // Empty array — agent legitimately produces no canonical artifact (e.g. @committer, @dev).
+  // Don't auto-advance; the workflow advances on explicit user action when needed.
+  if (artifacts.length === 0) {
+    return { advanced: false, skipped: 'no_canonical_artifact' };
+  }
+
+  // 5. At least one declared artifact must exist on disk before we trust auto-advance.
+  let anyExists = false;
+  for (const artifactPath of artifacts) {
+    try {
+      await fs.access(artifactPath);
+      anyExists = true;
+      break;
+    } catch { /* not found — try next */ }
+  }
+  if (!anyExists) {
+    return { advanced: false, skipped: 'artifact_missing' };
+  }
+
+  // 6. Internal invocation of runWorkflowNext (lazy require — circular safety).
+  let result;
+  try {
+    const { runWorkflowNext } = require('./workflow-next');
+    result = await runWorkflowNext({
+      args: [targetDir],
+      options: { complete: normalizedAgent.replace(/^@/, ''), json: true },
+      logger: { log: () => {}, error: () => {}, warn: () => {} },
+      t
+    });
+  } catch (err) {
+    if (!options.json && logger?.error) {
+      logger.error(`[agent:done] workflow:next failed (${err.message}); pointer unchanged`);
+    }
+    return { advanced: false, skipped: 'workflow_next_failed', error: err.message };
+  }
+
+  // 7. Persist last_workflow_event_at for idempotency (best-effort).
+  try {
+    const refreshedRaw = await fs.readFile(statePath, 'utf8').catch(() => null);
+    const refreshed = refreshedRaw ? JSON.parse(refreshedRaw) : state;
+    refreshed.last_workflow_event_at = now;
+    await fs.writeFile(statePath, `${JSON.stringify(refreshed, null, 2)}\n`);
+  } catch { /* non-fatal */ }
+
+  // 8. Surface concise outcome — single line, AFTER existing standard log (AC-F2-02 preserved).
+  if (!options.json && logger?.log && result?.ok) {
+    const nextStage = result.next || result.nextStage || null;
+    const tag = nextStage ? `→ ${nextStage}` : '(workflow complete)';
+    logger.log(`[agent:done] auto-advanced ${tag}`);
+  }
+
+  return { advanced: true, result };
 }
 
 
@@ -2074,6 +2224,7 @@ module.exports = {
   runRuntimeLog,
   runAgentDone,
   runAgentRecover,
+  maybeAutoAdvanceWorkflow,
   runRuntimeSessionStart,
   runRuntimeSessionLog,
   runRuntimeSessionFinish,

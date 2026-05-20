@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "session_ended_at": "2026-05-19T16:02:50.356Z",
+  "session_ended_at": "2026-05-20T18:32:35.505Z",
   "last_agent": "@analyst",
   "last_stage": "analyst",
   "what_was_done": "Stage @analyst completed.",
@@ -9,6 +9,6 @@
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
-  "classification": "SMALL",
-  "feature_slug": "workflow-hotfix-1-9-3"
+  "classification": "MEDIUM",
+  "feature_slug": "workflow-handoff-integrity"
 }

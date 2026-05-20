@@ -33,6 +33,23 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.5] - 2026-05-20
+
+### Added
+- **`agent:done` auto-emits `workflow:next --complete=<agent>`** (Phase 1 / F2 of `workflow-handoff-integrity`). When a workflow is active for the project (`.aioson/runtime/workflow.state.json` present + matching feature) AND the calling agent has produced its canonical artifact on disk, `aioson agent:done` now internally advances the workflow pointer. Removes the requirement for every agent prompt to literal-call `aioson workflow:next` — centralizes the trigger in `runAgentDone`. Backward-compat preserved: state file absent → no auto-advance (baseline stdout byte-identical).
+- **`src/handoff-contract.js#getCanonicalArtifactsForAgent(agent, targetDir, state)`** public helper. Consumes the existing CONTRACTS map; returns absolute artifact paths array, `null` for unknown agents, `[]` for agents with no canonical artifact (e.g. `@committer`, `@dev`).
+- **`--no-auto-advance` opt-out flag** on `aioson agent:done` for cases where auto-emit is undesirable (debug, manual restore, scripts).
+- **`tests/baselines/agent-done-stdout.txt`** — backward-compat baseline lock per Risk-11 mitigation.
+- **`tests/agent-done-auto-emit.test.js`** — 13 unit tests covering AC-F2-01..10 (happy path, backward-compat, opt-out, idempotency 1s window, corrupt state, missing artifact, unknown agent).
+
+### Changed
+- `src/commands/runtime.js#runAgentDone` injects `maybeAutoAdvanceWorkflow` call after stdout log in both live-session and standalone branches. Idempotency via `last_workflow_event_at` field added to `workflow.state.json` schema (backward-compat: missing field treated as zero).
+
+### Notes
+- This release closes Phase 1 of `workflow-handoff-integrity` MEDIUM feature. Phases 2-5 (F3 CLI guard, F1 stale dev-state, T5 semantic sync, T6 CI smoke) ship as separate releases v1.9.6 → v1.10.0 per progressive release strategy (DD-05).
+- Full npm test: 2520/2521 pass; the single skipped/flaky test is AC-ALL-101 (`telemetry-foundation.test.js`, performance threshold) — pre-existing, documented as separate follow-up.
+- Inception note: this hotfix was implemented via the AIOSON chain itself (`@analyst → @architect → @pm → @dev`) — eating its own dog food.
+
 ## [1.9.4] - 2026-05-20
 
 ### Fixed

@@ -4,6 +4,7 @@ slug: workflow-handoff-integrity
 classification: MEDIUM
 created_by: product
 created_at: 2026-05-19
+sheldon_enriched: 2026-05-20
 status: draft
 gate_a: pending
 gate_b: pending
@@ -42,10 +43,14 @@ E uma observação meta (T6): essas falhas só apareceram em **uso real pós-rel
 ### Must-have 🔴
 
 - **F2 — `agent:done` avança o workflow pointer automaticamente:** modificar `src/commands/runtime.js:1173-1250` (função `runAgentDone`) para, ao detectar artefato canônico em disco do agente correspondente, chamar `workflow:next --complete=<agent>` internamente. Centraliza lógica em um lugar; não depende de cada prompt lembrar de incluir a instrução.
+  - _(sheldon)_ **Backward-compat:** `agent:done` mantém output stdout idêntico em modo default. Novo comportamento (auto-emit `workflow:next --complete=<agent>`) é gated por: (i) presença de `.aioson/runtime/workflow.state.json` ativo, OU (ii) flag explícita `--auto-advance`. Comportamento legacy preservado para scripts/automations existentes que não esperam o segundo evento.
+  - _(sheldon)_ **Telemetry impact:** ordem de emissão documentada — telemetry SQLite (`agent_events` row) primeiro, depois chamada interna a `runWorkflowNext`. Idempotência: re-execução de `agent:done` para mesmo `(agent, feature)` não duplica workflow event (gated por last_workflow_event_at no state). Dashboard + learning-loop consumers podem ler ambos sem dedup adicional.
 - **F3 — Validação cruzada no CLI:** `aioson workflow:next --complete=analyst` (ou outro agente upstream) recusa avançar se o `sheldon manifest` (`.aioson/plans/{slug}/manifest.md`) tem `status: pending-*-decisions`. Mensagem de erro recomenda o agente correto. Defesa em camadas — não substitui correção dos prompts, mas previne erro mesmo com prompt errado.
+  - _(sheldon)_ **Pending-state enumeration:** CLI guard faz regex `pending-.*-decisions` no campo `status` do manifest. Estados canônicos atuais: `pending-architect-decisions`, `pending-product-decisions`, `pending-pm-decisions`. Estados `pending-*` futuros pegam automaticamente sem precisar atualizar o CLI.
 - **F1 — Stale `dev-state.md` cleanup interativo:** estender `preflight.js:72` (`detectStaleDevState`) para, quando detecta stale, oferecer `aioson state:reset` ou `aioson state:save --new-feature=<slug>` como sugestão direta ao usuário. Não é cleanup automático silencioso — é warning acionável.
 - **T5 — Estender `sync-agents-preflight.js` para detectar divergência semântica:** além do check atual de `## Feature dossier` length, comparar todos os tokens estruturais entre `template/.aioson/agents/<agent>.md` e `.aioson/agents/<agent>.md`. Sinalizar (não bloquear) quando houver divergência em headers de seção ou em strings que aparecem em testes alignment. Permite CI ou release notes destacarem o gap antes de virar bug.
 - **T6 — Smoke test ponta-a-ponta como CI gate antes de `npm publish`:** workflow CI que faz `npm pack` + `aioson setup` em fixture greenfield + executa cadeia `/briefing → /product → /sheldon → /architect → /pm → /dev` em feature MEDIUM mock + verifica que `workflow:status` chega em `[>] @dev` sem drift e sem Gate bloqueado.
+  - _(sheldon)_ **Fixture maintenance:** fixture greenfield NÃO é pinada no repo — gerada fresh a cada CI run via `npm pack` (current source) + `aioson setup .` em diretório temporário do CI runner. Garante zero drift entre source canônico e fixture. Custo: ~30-60s overhead por release smoke run, aceitável dado que roda só em PR com label `release`.
 
 ### Should-have 🟡
 
@@ -99,6 +104,7 @@ E uma observação meta (T6): essas falhas só apareceram em **uso real pós-rel
 - **CI guard detecta drift semântico:** test em fixture que modifica `template/.aioson/agents/pm.md` removendo um header presente no workspace; preflight estendido sinaliza.
 - **Smoke test em CI passa antes de publish:** workflow CI executa cadeia ponta-a-ponta antes do `npm publish`; se falha, publish é bloqueado.
 - **Zero regressão:** suite atual de testes (`npm test`) passa após implementação.
+- _(sheldon)_ **Wiring audit pré-closure (brain sheldon-006 ★5):** antes de marcar feature `done` em `features.md`, auditar para CADA mudança implementada: (a) call sites que invocam o código novo confirmados via grep no codebase; (b) testes cobrem o caminho real chamado (não unit isolado de função pura); (c) smoke test em fixture greenfield exercita o caminho ponta-a-ponta. Documento de auditoria fica em `.aioson/context/wiring-audit-workflow-handoff-integrity.md`. Sem este audit, repete o padrão do `@validator` que ficou orfanado por semanas.
 
 ## Open questions
 
@@ -111,6 +117,7 @@ E uma observação meta (T6): essas falhas só apareceram em **uso real pós-rel
 7. **[research-able]** O `manifests/dev.manifest.json` com `required: false` (G12 no briefing) é inconsistência real com Gate C, ou são camadas distintas? Confirmar antes de tratar como bug.
 8. **[testable]** Repro completo para todas as 4 falhas estruturais: pode ser sintetizado em um único smoke test, ou exige cenários separados? Recomendação: cenários separados para diagnóstico melhor.
 9. **[out-of-scope]** Auditoria de outras migrações em `.aioson/plans/` que tenham mesmo padrão de incompletude. Captura como briefing meta separado se confirmado em research.
+10. _(sheldon)_ **[decision-required]** Estratégia de release: ship F1-T6 num único release MEDIUM (v1.10.0), ou progressivo fase-a-fase com release entre cada (v1.9.5, v1.9.6, ...)? **Recomendação:** progressivo na ordem `F2 → F3 → F1 → T5 → T6`. Razão: minimiza inception risk (usar a própria cadeia para implementar F2 enquanto F2 está broken na cadeia ativa), cada fase valida a estabilidade da próxima, e bisect fica trivial se aparecer regressão. Trade-off: 5 publishes em vez de 1. Pertence a `@architect`.
 
 ## Visual identity
 

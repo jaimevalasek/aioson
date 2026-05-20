@@ -1,0 +1,13 @@
+{
+  "feature": "workflow-handoff-integrity",
+  "phase": 1,
+  "status": "in_progress",
+  "completed_steps": [],
+  "last_error": null,
+  "session_count": 1,
+  "last_updated": "2026-05-20T18:14:41.616Z",
+  "circuit_state": "CLOSED",
+  "iterations": 0,
+  "consecutive_errors": 0,
+  "ready_for_done_gate": false
+}

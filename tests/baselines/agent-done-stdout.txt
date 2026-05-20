@@ -1,0 +1,69 @@
+# Baseline — aioson agent:done stdout (backward-compat lock)
+#
+# Locks the format of `aioson agent:done` stdout output as of v1.9.4.
+# Phase 1 (F2 — workflow-handoff-integrity v1.9.5) MUST preserve this format
+# in the default mode (workflow.state.json absent OR --no-auto-advance OR --json).
+#
+# Source: src/commands/runtime.js#runAgentDone lines 1222 (live) + 1279 (standalone).
+# Captured: 2026-05-20 from runtime.js HEAD (commit bb9db17).
+#
+# Variables in <ANGLE_BRACKETS> are dynamic and MUST be normalized to literal
+# placeholders by the test before string comparison. Normalization rules listed
+# at the bottom of this file.
+
+## Mode 1 — Standalone (no active live session)
+
+Trigger: `aioson agent:done . --agent=<name> --summary="..."` when no
+`.aioson/runtime/.session/{agent}.json` exists for the named agent.
+
+Expected stdout (single line):
+
+agent:done — <AGENT> | task: <TASK_KEY> | run: <RUN_KEY> (<RUNTIME_DB_PATH>)
+
+## Mode 2 — Live session active
+
+Trigger: same command, but a prior `aioson live:start` or
+`aioson agent:prompt` has opened a live session for the agent.
+
+Expected stdout (single line):
+
+agent:done — <AGENT> | live session active, event logged | run: <RUN_KEY> (<RUNTIME_DB_PATH>)
+
+## Mode 3 — JSON output
+
+Trigger: any of the above with `--json` flag.
+
+Expected stdout: NO logger.log output. JSON return value goes to the structured
+output channel, not stdout. Tests must assert stdout === '' when --json is set.
+
+## Normalization rules for test comparison
+
+Tests normalize captured stdout via these regex substitutions BEFORE comparing
+to baseline:
+
+| Placeholder | Regex (replaced with literal placeholder text) |
+|---|---|
+| <AGENT> | /@\w+(-\w+)*/ |
+| <TASK_KEY> | /task-\w+(-\w+)*-\d{13}/ |
+| <RUN_KEY> | /\w+(-\w+)*-\d{13}/ |
+| <RUNTIME_DB_PATH> | /\(.+aios\.sqlite\)/ → '(<RUNTIME_DB_PATH>)' |
+
+After normalization, comparison is byte-exact against the corresponding line
+above (whitespace included, trailing newline excluded).
+
+## Update protocol (Risk-11 mitigation)
+
+Changes to this baseline are intentional and require:
+1. Note in `spec-workflow-handoff-integrity.md` § Key decisions explaining why
+2. Commit message tag `[baseline-update]` + reason
+3. Reviewer approval
+
+Cosmetic changes (whitespace, punctuation, word order) to the stdout format
+are NOT free — they break consumers who parse the output (scripts, dashboards,
+CI). Treat as breaking change.
+
+## Phases that depend on this baseline
+
+- Phase 1 (F2) — AC-F2-02: backward-compat preserved when state absent / opt-out
+- Phase 1 (F2) — AC-F2-09: graceful degradation on workflow.state corruption (must produce baseline-matching output, not crash)
+- Phase 5 (T6) — smoke test asserts cadeia mock matches baseline at each agent:done call

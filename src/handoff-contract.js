@@ -405,6 +405,30 @@ async function getBlockingRevisions(targetDir, featureSlug) {
   }
 }
 
+/**
+ * getCanonicalArtifactsForAgent
+ *
+ * Public lookup helper used by `runAgentDone` (F2 — workflow-handoff-integrity v1.9.5)
+ * to determine which artifact paths an agent is expected to produce. Returns the
+ * paths declared by the agent's contract in CONTRACTS, fully resolved against the
+ * workflow state.
+ *
+ * @param {string} agent       Agent name (with or without leading `@`).
+ * @param {string} targetDir   Project root path (absolute).
+ * @param {object} state       Workflow state: { mode, featureSlug, classification }.
+ * @returns {string[]|null}    Array of absolute artifact paths, or `null` when the
+ *                             agent is not registered in CONTRACTS. An empty array
+ *                             means the agent produces no canonical artifact (e.g.
+ *                             `@committer`, `@dev`) — auto-emit should be skipped.
+ */
+async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
+  const normalizedAgent = String(agent || '').replace(/^@/, '').toLowerCase();
+  if (!normalizedAgent) return null;
+  const contract = CONTRACTS[normalizedAgent];
+  if (!contract) return null;
+  return await resolveArtifacts(contract, targetDir, state || {});
+}
+
 module.exports = {
   parseFrontmatterValue,
   readProjectClassification,
@@ -413,5 +437,6 @@ module.exports = {
   validateHandoffContract,
   formatContractError,
   getBlockingRevisions,
+  getCanonicalArtifactsForAgent,
   CONTRACTS
 };

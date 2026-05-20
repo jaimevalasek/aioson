@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-analyst-dev-1779206570355",
-  "created_at": "2026-05-19T16:02:50.355Z",
+  "protocol_id": "hnd-analyst-dev-1779301955503",
+  "created_at": "2026-05-20T18:32:35.503Z",
   "workflow_mode": "feature",
-  "classification": "SMALL",
-  "feature_slug": "workflow-hotfix-1-9-3",
+  "classification": "MEDIUM",
+  "feature_slug": "workflow-handoff-integrity",
   "from": {
     "agent_id": "analyst",
     "capability_transferred": "analyze_requirements"
@@ -22,6 +22,6 @@
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-05-19T16:02:50.355Z"
+    "validated_at": "2026-05-20T18:32:35.503Z"
   }
 }
