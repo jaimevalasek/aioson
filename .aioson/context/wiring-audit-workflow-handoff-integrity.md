@@ -6,7 +6,7 @@ created_at: 2026-05-20
 purpose: "Wiring audit obrigatório (PMD-07 / BR-05 / RF-09 / brain sheldon-006 ★5) — confirma para CADA phase que código novo é invocado dos call sites existentes, testes cobrem o caminho real, e smoke test exercita ponta-a-ponta. Sem este documento, @qa Gate D não pode passar."
 phases:
   phase_1_f2: completed
-  phase_2_f3: pending
+  phase_2_f3: completed
   phase_3_f1: pending
   phase_4_t5: pending
   phase_5_t6: pending
@@ -99,9 +99,64 @@ Interim manual smoke recomendado antes de v1.9.5 publish:
 - ⏳ Full npm test suite — running
 - ⏳ Manual smoke em fixture greenfield (recomendado antes de tag v1.9.5)
 
-## Phase 2 — F3: CLI pending guard (v1.9.6 — pending)
+## Phase 2 — F3: CLI pending guard (v1.9.6 candidate)
 
-_Será preenchido quando Phase 2 implementar._
+**Status:** Implementation complete; awaiting full npm test pass + Gate D for closure.
+
+### Call sites — onde o código novo é invocado
+
+**`assertManifestNotPending` helper** (`src/commands/workflow-next.js`):
+
+```bash
+$ grep -n "assertManifestNotPending" src/commands/workflow-next.js
+# definition + 1 call site in runWorkflowNext + module.exports
+```
+
+Single call site: inside `runWorkflowNext` at start of `options.complete` branch (BEFORE `finalizeCurrentStage`). Per AC-F3-05 precedence: guard runs before existing validation + emit logic. Existing CLI consumers of `workflow:next --complete=<agent>` automatically hit the guard.
+
+### Tests cobrindo o caminho real
+
+**`tests/workflow-next-pending-guard.test.js`** — 10 tests cobrindo ACs F3-01 a F3-07:
+
+| AC | Test name | Path exercised |
+|----|-----------|----------------|
+| AC-F3-01 | "hard error: pending-architect-decisions blocks with actionable message" | Error code + message format |
+| AC-F3-02 | "regex match: pending-product-decisions / pending-pm-decisions" | Regex generic match against whitelist |
+| AC-F3-02 | "unknown captured group: still blocks but flagged as unrecognized" | DD-02 hybrid: regex + whitelist warn |
+| AC-F3-02 | "status not matching pending-*-decisions pattern" | Pattern specificity (e.g. `ready`, `pending-review` don't trigger) |
+| AC-F3-03 | "--force override: returns silently even with pending state" | Override path |
+| AC-F3-04 | "no manifest: file absent → silent skip" + "no slug: project mode → silent skip" | No over-block when manifest absent |
+| AC-F3-05 | (implicit by code placement) | Guard precedence over finalizeCurrentStage — verified by code review |
+| AC-F3-06 | (this test file IS the deliverable) | — |
+| AC-F3-07 | (this wiring audit IS the deliverable) | — |
+| — | "manifest without status field: silent skip" | Robustness against incomplete manifests |
+| — | "whitelist constant matches DD-02 canonical set" | Whitelist surface stable |
+
+10/10 passing as of 2026-05-20.
+
+### Code review notes (AC-F3-05 precedence)
+
+Verified via code inspection in `runWorkflowNext`:
+
+```
+Line 990:   if (options.complete || options['complete-current']) {
+Line 992:     await assertManifestNotPending(targetDir, state.featureSlug, force);   ← F3 guard
+Line 1001:    finalized = await finalizeCurrentStage(...)                            ← existing logic
+```
+
+Guard fires BEFORE finalizeCurrentStage. Throw propagates to CLI as exit != 0 (PMD-02 hard error).
+
+### Smoke test status
+
+**N/A para Phase 2.** Smoke test ponta-a-ponta é Phase 5 (T6). Composto F2+F3 test (cadeia mock + manifest pending) será adicionado em Phase 5.
+
+### Phase 2 sign-off
+
+- ✅ Call sites confirmed via grep
+- ✅ 10/10 unit tests passing
+- ✅ Coordination with existing logErrorLine pattern preserved
+- ✅ DD-02 hybrid regex+whitelist implemented
+- ⏳ Full npm test suite — running
 
 ## Phase 3 — F1: stale dev-state interactive (v1.9.7 — pending)
 

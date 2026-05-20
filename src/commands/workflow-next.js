@@ -967,6 +967,57 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
   };
 }
 
+/**
+ * F3 (workflow-handoff-integrity v1.9.6) — pending-decisions guard.
+ *
+ * Reads `.aioson/plans/{slug}/manifest.md` frontmatter. If `status` matches
+ * `pending-<X>-decisions`, throws a hard error recommending the agent that
+ * resolves those decisions. `--force` overrides.
+ *
+ * Whitelist (DD-02): known agents are [architect, product, pm, qa]. Unknown
+ * captured groups still block but are flagged as unrecognized so typos don't
+ * silently route to nonexistent agents.
+ *
+ * Errors:
+ *   - WORKFLOW_NEXT_PENDING_DECISIONS — pending state detected, advance blocked.
+ *
+ * @param {string} targetDir   Project root.
+ * @param {string|null} slug   Feature slug (null in project mode → no-op).
+ * @param {boolean} force      When true, skip the check (--force override).
+ * @returns {Promise<void>}    Resolves silently when no pending decisions block; throws otherwise.
+ */
+const PENDING_STATE_WHITELIST = ['architect', 'product', 'pm', 'qa'];
+
+async function assertManifestNotPending(targetDir, slug, force) {
+  if (force) return; // AC-F3-03 — explicit override.
+  if (!slug) return; // AC-F3-04 — no feature context, nothing to guard.
+  const manifestPath = path.join(targetDir, '.aioson', 'plans', slug, 'manifest.md');
+  let content;
+  try {
+    content = await fs.readFile(manifestPath, 'utf8');
+  } catch {
+    return; // AC-F3-04 — no manifest (e.g. MICRO without Sheldon stage), skip.
+  }
+  const status = parseFrontmatterValue(content, 'status');
+  if (!status) return; // No status field → nothing to assert.
+  const match = String(status).match(/^pending-(.+)-decisions$/);
+  if (!match) return; // AC-F3-02 — only pending-*-decisions pattern blocks.
+  const captured = match[1].toLowerCase();
+  const known = PENDING_STATE_WHITELIST.includes(captured);
+  const recommendation = known
+    ? `Próximo agente recomendado: @${captured}.`
+    : `Estado desconhecido '${captured}' — whitelist atual: ${PENDING_STATE_WHITELIST.map((a) => `@${a}`).join(', ')}.`;
+  const err = new Error(
+    `[workflow:next] Gate blocked: ${slug} manifest tem status 'pending-${captured}-decisions'. ${recommendation} Use --force para override.`
+  );
+  err.code = 'WORKFLOW_NEXT_PENDING_DECISIONS';
+  err.slug = slug;
+  err.pendingState = captured;
+  err.knownState = known;
+  throw err;
+}
+
+
 async function runWorkflowNext({ args, options, logger, t }) {
   if (options.status || options.suggest) {
     const { runWorkflowStatus } = require('./workflow-status');
@@ -988,6 +1039,17 @@ async function runWorkflowNext({ args, options, logger, t }) {
   let completedStage = null;
 
   if (options.complete || options['complete-current']) {
+    // F3 (workflow-handoff-integrity v1.9.6) — pending-decisions guard.
+    // Hard error if sheldon manifest has unresolved decisions; --force overrides.
+    try {
+      await assertManifestNotPending(targetDir, state.featureSlug, Boolean(options.force));
+    } catch (err) {
+      if (err && err.code === 'WORKFLOW_NEXT_PENDING_DECISIONS') {
+        logErrorLine(err.message);
+      }
+      throw err;
+    }
+
     let finalized;
     try {
       finalized = await finalizeCurrentStage(
@@ -1274,6 +1336,8 @@ module.exports = {
   applySkip,
   activateStage,
   runWorkflowNext,
+  assertManifestNotPending,
+  PENDING_STATE_WHITELIST,
   shouldRouteToValidator,
   detectUnsubstantiatedCompletions
 };

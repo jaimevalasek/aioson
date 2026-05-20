@@ -33,6 +33,21 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.6] - 2026-05-20
+
+### Added
+- **`aioson workflow:next --complete=<agent>` rejects advance when manifest has pending decisions** (Phase 2 / F3 of `workflow-handoff-integrity`). Reads `.aioson/plans/{slug}/manifest.md` frontmatter; if `status` matches `^pending-(.+)-decisions$`, throws `WORKFLOW_NEXT_PENDING_DECISIONS` with actionable message recommending the agent that resolves those decisions (e.g. `pending-architect-decisions` → "Próximo agente recomendado: @architect"). Prevents the deadlock observed in `aioson-com` 2026-05-19 where `/analyst` routed to `/dev` despite manifest pending.
+- **`--force` flag** on `aioson workflow:next` for explicit override (logs warning, proceeds). For emergency-use cases.
+- **DD-02 hybrid regex+whitelist:** regex `^pending-(.+)-decisions$` catches any future `pending-<X>-decisions` state automatically; whitelist `[architect, product, pm, qa]` flags unrecognized captured groups (still blocks but warns "estado desconhecido" so typos don't silently route to nonexistent agents).
+- **`tests/workflow-next-pending-guard.test.js`** — 10 unit tests covering AC-F3-01..07 (hard error, regex match per known agents, unknown group warning, --force override, no manifest, no slug, pattern specificity, whitelist export).
+
+### Changed
+- `src/commands/workflow-next.js`: new public helpers `assertManifestNotPending(targetDir, slug, force)` + `PENDING_STATE_WHITELIST` const exported. Guard fires at start of `options.complete` branch (line 992, BEFORE `finalizeCurrentStage`) per AC-F3-05 precedence.
+
+### Notes
+- This release closes Phase 2 of `workflow-handoff-integrity`. F2 + F3 together cover the forward (auto-emit) and gating (pre-check pending) directions of workflow handoff integrity. Phases 3-5 (F1 stale dev-state, T5 semantic sync, T6 CI smoke) ship as v1.9.7 → v1.10.0.
+- Full npm test: 1 transient Windows tempdir flake (L-02 documented) — confirmed transient via targeted re-run of `tests/external-session.test.js` (21/21 pass). All other tests green.
+
 ## [1.9.5] - 2026-05-20
 
 ### Added

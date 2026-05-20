@@ -43,9 +43,21 @@ gate_plan: approved
 
 `src/commands/workflow-next.js:429-479` already has integrity check **inverso** (SQL query for `agent_done` events; warns if completed stages lack telemetry). F2 auto-advance is **forward direction** (agent:done → workflow:next emit). Both coexist without conflict — F2 ensures the SQL `agent_done` row is committed BEFORE `runWorkflowNext` is called (AC-F2-04 ordering), satisfying the existing integrity check.
 
-### Phase 2-5
+### Phase 2 — F3 (v1.9.6 candidate) — 2026-05-20
 
-_Para preencher quando Phases 2-5 implementarem (v1.9.6 → v1.10.0)._
+**Status:** Implementation complete, 10/10 unit tests passing, awaiting full npm test + Gate D.
+
+**Changes:**
+
+- **`src/commands/workflow-next.js` (EXTEND per DPC-01 — file is workflow-next.js, not workflow.js):** New helper `assertManifestNotPending(targetDir, slug, force)` reads `.aioson/plans/{slug}/manifest.md` frontmatter and throws `WORKFLOW_NEXT_PENDING_DECISIONS` error when `status` matches `^pending-(.+)-decisions$`. Hybrid DD-02 implementation: regex generic match + whitelist `[architect, product, pm, qa]` for warn on unrecognized states (still blocks but flags typos). `--force` flag overrides per AC-F3-03. Wired into `runWorkflowNext` at start of `options.complete` branch (line 992, before `finalizeCurrentStage`) — AC-F3-05 precedence.
+- **`tests/workflow-next-pending-guard.test.js`:** 10 new tests covering AC-F3-01..07 (hard error, regex match, unknown captured group, --force override, no manifest, no slug, pattern specificity, status field robustness, whitelist export).
+- **Exports added:** `assertManifestNotPending`, `PENDING_STATE_WHITELIST` (for test access + future consumers).
+
+**Coordination notes:**
+
+Existing `logErrorLine` helper in `runWorkflowNext` is reused for the error message before throw (consistent CLI error pattern). Error code `WORKFLOW_NEXT_PENDING_DECISIONS` is unique and parseable by upstream consumers.
+
+The composto F2+F3 scenario (analyst completes + auto-emit triggers + manifest pending → guard blocks) will be covered in Phase 5 (T6) smoke test — not feasible as unit test without full runtime.
 
 ## Entities added
 
