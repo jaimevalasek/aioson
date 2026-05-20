@@ -43,6 +43,23 @@ gate_plan: approved
 
 `src/commands/workflow-next.js:429-479` already has integrity check **inverso** (SQL query for `agent_done` events; warns if completed stages lack telemetry). F2 auto-advance is **forward direction** (agent:done → workflow:next emit). Both coexist without conflict — F2 ensures the SQL `agent_done` row is committed BEFORE `runWorkflowNext` is called (AC-F2-04 ordering), satisfying the existing integrity check.
 
+### Phase 4 — T5 (v1.9.8 candidate) — 2026-05-20
+
+**Status:** Implementation complete, 20/20 unit tests passing, 0 drift against actual repo.
+
+**Changes:**
+
+- **`src/lib/agent-semantic-diff.js` (NEW per DPC-04 path):** Pure helpers — `extractFrontmatter`, `extractHeaders` (ignores fenced code blocks), `extractSections` (header → body map for hashing), `diffHeaders` (presence + order), `diffSectionContent` (sha256 hash-based, ignores whitespace), `diffFrontmatter` (field-level), `diffAgentFile` (aggregate), `normalizeBody`, `hashBody`.
+- **`src/commands/sync-agents-preflight.js` (EXTEND):** New `checkSemanticParity(projectRoot)` runs 3 plugins per agent file. Mode detection: default = warning (severity='warning'); `AIOSON_PREPUBLISH=true` env → error (severity='error'). Wired into `main()` alongside existing `checkParity` + `checkLearningLoopTemplateParity`. Existing length check kept (additive, not replacement). `main()` returns 1 only on hard-block: length violations OR learning-loop issues OR pre-publish semantic issues; default-mode semantic warnings don't block.
+- **`tests/sync-agents-preflight-semantic.test.js`:** 20 unit tests including AC-T5-06 regression guard (reproduces 981a8fd-style diff inside isolated tmp fixture, asserts the check catches it).
+
+**Coordination notes:**
+
+- 3-strategy approach per DD-03 (header + section content hash + frontmatter field). Plain text body diff intentionally skipped (cosmetic noise).
+- Fenced code blocks (` ``` `) are handled specially in extractHeaders and extractSections so example code in agent prompts doesn't generate false positives.
+- Section content hash uses `normalizeBody` to collapse whitespace — typo fixes don't trigger drift, but real wording changes do.
+- Telemetry: `dossierTelemetry.emitDossierEvent` fires with type `semantic_parity_violation` on detection (existing pattern reused from `sync_agents_parity_violation`).
+
 ### Phase 3 — F1 (v1.9.7 candidate) — 2026-05-20
 
 **Status:** Implementation complete, 20/20 unit tests passing.

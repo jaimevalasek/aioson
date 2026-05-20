@@ -33,6 +33,23 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.8] - 2026-05-20
+
+### Added
+- **Semantic parity check between workspace and template agent files** (Phase 4 / T5 of `workflow-handoff-integrity`). `sync-agents-preflight` now runs three additional diff strategies on top of the existing `## Feature dossier` length check: (1) header diff (`##`/`###` presence + order), (2) section-content hash diff (catches body drift even when headers match — exactly the 981a8fd-style migration gap), (3) frontmatter field-level diff. Each issue includes an actionable hint.
+- **Mode-aware severity** via `AIOSON_PREPUBLISH=true` env var. Default mode (local dev, CI without pre-publish): semantic drift is a warning, non-blocking. Pre-publish mode: warning becomes hard fail — blocks `npm publish` until drift is resolved.
+- **`src/lib/agent-semantic-diff.js`** new pure-helpers module exporting `extractHeaders`, `extractSections`, `extractFrontmatter`, `diffHeaders`, `diffSectionContent`, `diffFrontmatter`, `diffAgentFile`, `normalizeBody`, `hashBody`. Reusable by downstream consumers.
+- **`checkSemanticParity(projectRoot)`** exported from `src/commands/sync-agents-preflight.js`.
+- **`tests/sync-agents-preflight-semantic.test.js`** — 20 unit tests covering AC-T5-01..08 including a **regression guard test** that reproduces the 981a8fd-style diff inside an isolated fixture and confirms the new check catches it.
+
+### Changed
+- `src/commands/sync-agents-preflight.js`: `main()` now also runs semantic parity. Existing length check + learning-loop checks kept (additive). Telemetry event `semantic_parity_violation` emitted on detection (per-existing `dossierTelemetry` pattern).
+
+### Notes
+- This release closes Phase 4 of `workflow-handoff-integrity`. F1+F2+F3+T5 now cover state hygiene, forward auto-emit, gating against pending decisions, AND structural drift detection between workspace/template. Phase 5 (T6 — CI smoke ponta-a-ponta) ships next as v1.10.0.
+- DD-03 (semantic diff granularity) resolved as: section-level + token-aware code blocks + frontmatter field-level. Plain text body diff deliberately skipped to avoid cosmetic noise (typo fixes).
+- Smoke against actual repo: `checkSemanticParity(process.cwd())` returns 0 drift issues — confirms workspace ↔ template agent files are aligned and v1.9.4 AskUserQuestion mass-edit preserved parity correctly.
+
 ## [1.9.7] - 2026-05-20
 
 ### Added

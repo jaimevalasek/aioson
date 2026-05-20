@@ -8,7 +8,7 @@ phases:
   phase_1_f2: completed
   phase_2_f3: completed
   phase_3_f1: completed
-  phase_4_t5: pending
+  phase_4_t5: completed
   phase_5_t6: pending
 ---
 
@@ -230,9 +230,56 @@ Wired in `src/cli.js` via two command aliases: `state:reset` and `state-reset`. 
 - ✅ `state:reset` idempotent + archive variant + json mode
 - ⏳ Full npm test suite — running
 
-## Phase 4 — T5: semantic sync preflight (v1.9.8 — pending)
+## Phase 4 — T5: semantic sync preflight (v1.9.8 candidate)
 
-_Será preenchido quando Phase 4 implementar._
+**Status:** Implementation complete; 20/20 unit tests passing; 0 drift detected against actual repo (smoke verified).
+
+### Call sites — onde o código novo é invocado
+
+**`diffAgentFile` aggregate helper** (`src/lib/agent-semantic-diff.js`):
+
+```bash
+$ grep -rn "diffAgentFile\|checkSemanticParity" src/ tests/
+src/lib/agent-semantic-diff.js (helper definitions)
+src/commands/sync-agents-preflight.js (consumes diffAgentFile + new checkSemanticParity)
+tests/sync-agents-preflight-semantic.test.js (20 tests)
+```
+
+`checkSemanticParity` is invoked from `main()` of sync-agents-preflight.js — same entry point as the existing `checkParity` + `checkLearningLoopTemplateParity`. Three checks run side-by-side; semantic drift is warning-by-default, hard-fail in pre-publish mode.
+
+### Tests cobrindo o caminho real
+
+**`tests/sync-agents-preflight-semantic.test.js`** — 20 tests cobrindo ACs T5-01..08:
+
+| AC | Test name | Path exercised |
+|----|-----------|----------------|
+| AC-T5-01 | "diffHeaders detects sections missing in template (981a8fd pattern)" + "diffSectionContent catches body drift even when headers match" | Header + section-content diff plugins |
+| AC-T5-02 | "mode detection: AIOSON_PREPUBLISH=true → severity becomes error" | Env-var-driven severity |
+| AC-T5-03 | (exclusion list: v1 = empty per plan) | Out of scope |
+| AC-T5-04 | (signal richness: tests assert kind+hint structure) | Issue object shape |
+| AC-T5-05 | "frontmatter field-level diff reports value changes" | Frontmatter plugin |
+| AC-T5-06 | "regression guard: 981a8fd-style diff is caught" | **Critical** — reproduces the original bug scenario; check now catches it |
+| AC-T5-07 | (this wiring audit IS the deliverable) | — |
+| AC-T5-08 | "diffAgentFile reports missing file on either side" + "missing template file detection: workspace exists, template absent" | Missing-file detection |
+
+Plus robustness tests: identical inputs → empty result, fenced code blocks ignored in header extraction, whitespace-only differences considered cosmetic (no false positive), `normalizeBody` deterministic.
+
+20/20 passing as of 2026-05-20.
+
+### Smoke test status
+
+**Smoke against actual repo:** `node -e "const { checkSemanticParity } = require('./src/commands/sync-agents-preflight'); console.log(checkSemanticParity(process.cwd()).length)"` → 0 drift issues. Workspace ↔ template agent files are aligned (v1.9.4 AskUserQuestion mass-edit preserved parity correctly).
+
+Full ponta-a-ponta smoke is Phase 5 (T6).
+
+### Phase 4 sign-off
+
+- ✅ Call sites confirmed via grep
+- ✅ 20/20 unit tests passing including AC-T5-06 regression guard
+- ✅ Mode detection works (default warn, AIOSON_PREPUBLISH → error)
+- ✅ 0 drift against current repo (proves no false positives on aligned content)
+- ✅ Telemetry event emitted on drift (existing dossierTelemetry pattern)
+- ⏳ Full npm test suite — running
 
 ## Phase 5 — T6: CI smoke pre-publish (v1.10.0 — pending)
 

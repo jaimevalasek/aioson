@@ -22,6 +22,7 @@ const path = require('node:path');
 
 const { CHAIN_AGENTS, FEATURE_DOSSIER_HEADER, extractSection } = require('./dossier-audit');
 const dossierTelemetry = require('../lib/dossier-telemetry');
+const { diffAgentFile } = require('../lib/agent-semantic-diff');
 
 // Active Learning Loop Phase 6 — workspace ↔ template parity checks for the
 // `.aioson/` artifacts this feature ships. Phase 1 dev's documented decision
@@ -105,6 +106,90 @@ function checkLearningLoopTemplateParity(projectRoot) {
   return issues;
 }
 
+/**
+ * checkSemanticParity — T5 (workflow-handoff-integrity v1.9.8)
+ *
+ * Detects semantic drift between `.aioson/agents/{agent}.md` and
+ * `template/.aioson/agents/{agent}.md`: headers (presence + order), section
+ * content (hash), and frontmatter fields. Catches 981a8fd-style migration
+ * incompleteness that the original Feature-dossier-length check misses.
+ *
+ * Mode-aware severity (per PMD-04 / DD-03):
+ *   - Default (local dev): returns issues with severity='warning' (caller is non-blocking).
+ *   - `AIOSON_PREPUBLISH=true`: returns issues with severity='error' (caller blocks publish).
+ *
+ * Returns array of issue objects.
+ */
+function checkSemanticParity(projectRoot) {
+  const issues = [];
+  const isPrepublish = process.env.AIOSON_PREPUBLISH === 'true';
+  const severity = isPrepublish ? 'error' : 'warning';
+
+  for (const agent of CHAIN_AGENTS) {
+    const workspacePath = path.join(projectRoot, '.aioson', 'agents', `${agent}.md`);
+    const templatePath = path.join(projectRoot, 'template', '.aioson', 'agents', `${agent}.md`);
+    const workspaceRaw = readFileOrEmpty(workspacePath);
+    const templateRaw = readFileOrEmpty(templatePath);
+
+    const diff = diffAgentFile(workspaceRaw, templateRaw);
+    if (!diff) continue;
+
+    if (diff.missingFile) {
+      // AC-T5-08 — file removed in one side, still present in the other.
+      issues.push({
+        agent,
+        kind: 'missing_file',
+        side: diff.missingFile,
+        severity,
+        hint: diff.missingFile === 'workspace'
+          ? `template/.aioson/agents/${agent}.md exists but workspace/.aioson/agents/${agent}.md does not — sync would create it (likely fine, unless workspace deletion was intentional)`
+          : `workspace/.aioson/agents/${agent}.md exists but template/.aioson/agents/${agent}.md does not — workspace edits are unpropagated; copy to template OR delete workspace file`
+      });
+      continue;
+    }
+
+    if (diff.missingInTemplate.length > 0) {
+      issues.push({
+        agent, kind: 'sections_missing_in_template', sections: diff.missingInTemplate, severity,
+        hint: `Workspace has sections not in template: ${diff.missingInTemplate.map((s) => `'${s}'`).join(', ')}. Likely unpropagated workspace edits (981a8fd pattern).`
+      });
+    }
+    if (diff.missingInWorkspace.length > 0) {
+      issues.push({
+        agent, kind: 'sections_missing_in_workspace', sections: diff.missingInWorkspace, severity,
+        hint: `Template has sections not in workspace: ${diff.missingInWorkspace.map((s) => `'${s}'`).join(', ')}. Workspace lost content OR template added new sections post-sync.`
+      });
+    }
+    if (diff.reordered) {
+      issues.push({
+        agent, kind: 'sections_reordered', severity,
+        hint: 'Section order differs between workspace and template — review for unintended structural drift.'
+      });
+    }
+    if (diff.divergedSections.length > 0) {
+      issues.push({
+        agent, kind: 'section_content_diverged', sections: diff.divergedSections.map((d) => d.header), severity,
+        hint: `Section content hash differs (not cosmetic): ${diff.divergedSections.map((d) => `'${d.header}'`).join(', ')}. Investigate before sync to avoid 981a8fd-style migration regression.`
+      });
+    }
+    if (diff.frontmatter) {
+      const fm = diff.frontmatter;
+      if (fm.missingInTemplate.length > 0) {
+        issues.push({ agent, kind: 'frontmatter_missing_in_template', fields: fm.missingInTemplate, severity });
+      }
+      if (fm.missingInWorkspace.length > 0) {
+        issues.push({ agent, kind: 'frontmatter_missing_in_workspace', fields: fm.missingInWorkspace, severity });
+      }
+      if (fm.valueChanged.length > 0) {
+        issues.push({ agent, kind: 'frontmatter_value_changed', changes: fm.valueChanged, severity });
+      }
+    }
+  }
+
+  return issues;
+}
+
+
 function checkParity(projectRoot) {
   const violations = [];
   for (const agent of CHAIN_AGENTS) {
@@ -132,8 +217,11 @@ function checkParity(projectRoot) {
 async function main(projectRoot = process.cwd()) {
   const violations = checkParity(projectRoot);
   const learningLoopIssues = checkLearningLoopTemplateParity(projectRoot);
+  // T5 (workflow-handoff-integrity v1.9.8) — semantic parity check on top of length check.
+  const semanticIssues = checkSemanticParity(projectRoot);
+  const isPrepublish = process.env.AIOSON_PREPUBLISH === 'true';
 
-  if (violations.length === 0 && learningLoopIssues.length === 0) {
+  if (violations.length === 0 && learningLoopIssues.length === 0 && semanticIssues.length === 0) {
     return 0;
   }
 
@@ -166,11 +254,37 @@ async function main(projectRoot = process.cwd()) {
     });
   }
 
-  return 1;
+  // T5 semantic drift — warning-only locally, error in pre-publish mode.
+  if (semanticIssues.length > 0) {
+    const banner = isPrepublish
+      ? '[sync:agents BLOCKED] Semantic parity drift detected (pre-publish hard fail — AIOSON_PREPUBLISH=true):'
+      : '[sync:agents WARN] Semantic parity drift detected (warning only — non-blocking for local dev):';
+    process.stderr.write(`${banner}\n`);
+    for (const issue of semanticIssues) {
+      const detail = issue.sections ? ` [${issue.sections.join(', ')}]`
+        : issue.fields ? ` [${issue.fields.join(', ')}]`
+        : issue.changes ? ` [${issue.changes.map((c) => c.key).join(', ')}]`
+        : '';
+      process.stderr.write(`  - @${issue.agent}: ${issue.kind}${detail}\n`);
+      if (issue.hint) process.stderr.write(`    → ${issue.hint}\n`);
+    }
+    await dossierTelemetry.emitDossierEvent(projectRoot, {
+      agent: 'sync-agents-preflight',
+      type: 'semantic_parity_violation',
+      summary: `${semanticIssues.length} semantic drift issue(s) (mode: ${isPrepublish ? 'prepublish-fail' : 'local-warn'})`,
+      meta: { issues: semanticIssues, prepublish: isPrepublish }
+    });
+  }
+
+  // Block only when there are HARD failures: length violations + learning-loop issues
+  // always block (existing behavior). Semantic drift blocks ONLY in pre-publish mode.
+  const hardBlock = violations.length > 0 || learningLoopIssues.length > 0
+    || (isPrepublish && semanticIssues.length > 0);
+  return hardBlock ? 1 : 0;
 }
 
 if (require.main === module) {
   main().then((code) => process.exit(code));
 }
 
-module.exports = { checkParity, checkLearningLoopTemplateParity, main };
+module.exports = { checkParity, checkLearningLoopTemplateParity, checkSemanticParity, main };
