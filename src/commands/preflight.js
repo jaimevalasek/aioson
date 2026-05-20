@@ -28,6 +28,7 @@ const {
   buildContextPackage,
   evaluateReadiness,
   detectStaleDevState,
+  detectStaleDevStateRich,
   extractSpecVersion,
   extractLastCheckpoint,
   GATE_NAMES
@@ -69,8 +70,11 @@ async function runPreflight({ args, options = {}, logger }) {
     ? manifest.path
     : (artifacts.implementation_plan.exists ? artifacts.implementation_plan.path : null);
 
-  // Stale dev-state detection (AC-SDLC-12)
-  const staleDevStateWarning = devState.exists ? detectStaleDevState(devState, slug) : null;
+  // Stale dev-state detection (AC-SDLC-12 + F1 workflow-handoff-integrity v1.9.7).
+  // Use rich variant: cross-references features.md (orphan/done detection) and applies 30d TTL.
+  const staleDevStateWarning = devState.exists
+    ? await detectStaleDevStateRich(devState, slug, targetDir)
+    : null;
 
   // Determine mode
   const mode = slug

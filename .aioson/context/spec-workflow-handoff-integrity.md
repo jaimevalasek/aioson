@@ -43,6 +43,32 @@ gate_plan: approved
 
 `src/commands/workflow-next.js:429-479` already has integrity check **inverso** (SQL query for `agent_done` events; warns if completed stages lack telemetry). F2 auto-advance is **forward direction** (agent:done → workflow:next emit). Both coexist without conflict — F2 ensures the SQL `agent_done` row is committed BEFORE `runWorkflowNext` is called (AC-F2-04 ordering), satisfying the existing integrity check.
 
+### Phase 3 — F1 (v1.9.7 candidate) — 2026-05-20
+
+**Status:** Implementation complete, 20/20 unit tests passing.
+
+**DPC-07 path correction (discovered during impl):** `src/preflight.js` referenced in PRD/architecture/impl-plan does NOT exist. Actual layout is split:
+- `src/preflight-engine.js` (pure helpers — readDevState, detectStaleDevState, evaluateReadiness)
+- `src/commands/preflight.js` (CLI command — runPreflight)
+
+F1 extended BOTH (helpers + caller). Documented as part of Phase 3 closing in CHANGELOG.
+
+**Changes:**
+
+- **`src/preflight-engine.js` (EXTEND):**
+  - `readDevState`: added `parseError` flag (AC-F1-08) — detects missing or unparseable frontmatter as corrupt.
+  - `detectStaleDevState` (sync): added parseError branch with command suggestion (state:reset / state:save).
+  - NEW `detectStaleDevStateRich(devState, slug, targetDir, now)`: async, reads features.md, applies (a) feature marked done/abandoned, (b) orphan / cross-project leak, (c) TTL > 30 days.
+  - NEW `parseFeaturesMap(content)`: tolerant table parser → Map<slug, status>.
+- **`src/commands/preflight.js`:** `runPreflight` uses `detectStaleDevStateRich` (async) at the staleDevStateWarning line — picks up the 3 new conditions automatically.
+- **`src/commands/state-save.js` (EXTEND):** NEW `runStateReset` command. Removes dev-state.md; `--archive` flag moves to `.aioson/runtime/devstate-history/{ISO}.md` for audit trail. Idempotent.
+- **`src/cli.js`:** wired `state:reset` / `state-reset` command aliases.
+- **`tests/preflight-stale-devstate.test.js`:** 20 new tests covering AC-F1-01..08, parseFeaturesMap robustness, runStateReset surface.
+
+**Deviations from plan:**
+
+- Per PRD ("warning acionável", NOT cleanup automático silencioso), F1 delivers structured warning with embedded command suggestion (`aioson state:reset` OR `aioson state:save --feature=<slug>`). Plan-f1 had implied y/N interactive prompt; this is SAFER (non-blocking in CI/non-TTY) and aligned with PRD intent. Future enhancement could add interactive prompt as opt-in.
+
 ### Phase 2 — F3 (v1.9.6 candidate) — 2026-05-20
 
 **Status:** Implementation complete, 10/10 unit tests passing, awaiting full npm test + Gate D.

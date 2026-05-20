@@ -212,8 +212,69 @@ async function runStateSave({ args, options = {}, logger }) {
   return result;
 }
 
+/**
+ * runStateReset — F1 (workflow-handoff-integrity v1.9.7)
+ *
+ * Clears `.aioson/context/dev-state.md`. Idempotent: no-op when file is absent.
+ *
+ * Behavior:
+ *   - Default: deletes the file outright.
+ *   - With `--archive`: moves to `.aioson/runtime/devstate-history/{ISO}.md` for audit trail.
+ *
+ * Usage:
+ *   aioson state:reset .
+ *   aioson state:reset . --archive
+ *   aioson state:reset . --archive --json
+ */
+async function runStateReset({ args, options = {}, logger }) {
+  const targetDir = path.resolve(process.cwd(), args[0] || '.');
+  const statePath = path.join(contextDir(targetDir), 'dev-state.md');
+  const archive = Boolean(options.archive);
+
+  let archivedTo = null;
+  let removed = false;
+
+  try {
+    await fs.access(statePath);
+  } catch {
+    // AC-F1-03 — idempotent: no-op when absent.
+    const result = { ok: true, removed: false, archived: null, reason: 'no_state_file' };
+    if (options.json) return result;
+    logger.log('state:reset — no dev-state.md present; nothing to do.');
+    return result;
+  }
+
+  if (archive) {
+    const historyDir = path.join(targetDir, '.aioson', 'runtime', 'devstate-history');
+    await fs.mkdir(historyDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    archivedTo = path.join(historyDir, `${stamp}.md`);
+    const content = await fs.readFile(statePath, 'utf8');
+    await fs.writeFile(archivedTo, content, 'utf8');
+  }
+
+  await fs.unlink(statePath);
+  removed = true;
+
+  const result = {
+    ok: true,
+    removed,
+    archived: archivedTo ? path.relative(targetDir, archivedTo) : null
+  };
+
+  if (options.json) return result;
+
+  if (archivedTo) {
+    logger.log(`state:reset — dev-state.md archived to ${result.archived} and removed.`);
+  } else {
+    logger.log('state:reset — dev-state.md removed (no archive).');
+  }
+  return result;
+}
+
 module.exports = {
   runStateSave,
+  runStateReset,
   CONTEXT_TYPE_MAP,
   MAX_CONTEXT,
   parseContextFlag

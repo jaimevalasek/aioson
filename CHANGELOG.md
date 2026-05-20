@@ -33,6 +33,25 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.9.7] - 2026-05-20
+
+### Added
+- **Stale `dev-state.md` detection with actionable warnings** (Phase 3 / F1 of `workflow-handoff-integrity`). `aioson preflight` now cross-references `.aioson/context/features.md` and applies a 30-day TTL: stale conditions are (a) feature already marked `done`/`abandoned`, (b) feature absent from features.md (orphan / cross-project leak), (c) `last_updated > 30 days`. Each warning embeds the command to fix it (`aioson state:reset` or `aioson state:save --feature=<slug>`).
+- **`aioson state:reset`** new CLI command. Removes `.aioson/context/dev-state.md`. `--archive` flag moves to `.aioson/runtime/devstate-history/{ISO}.md` for audit trail. Idempotent. `--json` returns structured result.
+- **Corrupt dev-state detection (AC-F1-08).** `readDevState` flags `parseError` when the file lacks frontmatter markers or has empty frontmatter. `detectStaleDevState` returns a warning with a `state:reset` command suggestion.
+- **`detectStaleDevStateRich` + `parseFeaturesMap`** exported from `src/preflight-engine.js` for downstream consumers + tests.
+- **`tests/preflight-stale-devstate.test.js`** — 20 unit tests covering AC-F1-01..08, parseFeaturesMap robustness, and runStateReset (idempotent, archive variant, json mode).
+
+### Changed
+- `src/commands/preflight.js`: `runPreflight` switched the stale-detection call from sync `detectStaleDevState` to async `detectStaleDevStateRich`. Existing sync helper preserved (still used internally by `evaluateReadiness`) for backward-compat.
+
+### Fixed
+- Per PRD ("warning acionável, NÃO cleanup automático silencioso"), F1 delivers a structured stderr warning with embedded command suggestion. No interactive y/N prompt (safer for CI/non-TTY contexts than plan-f1 originally implied).
+
+### Notes
+- This release closes Phase 3 of `workflow-handoff-integrity`. F1 + F2 + F3 now cover state hygiene (Phase 3 — F1), forward auto-emit (Phase 1 — F2), and gating against pending decisions (Phase 2 — F3). Phases 4-5 (T5 semantic sync, T6 CI smoke) ship as v1.9.8 → v1.10.0.
+- DPC-07 (additional path correction discovered): the PRD/architecture referenced `src/preflight.js` which does not exist. Actual layout: `src/preflight-engine.js` (helpers) + `src/commands/preflight.js` (CLI command). Both extended.
+
 ## [1.9.6] - 2026-05-20
 
 ### Added

@@ -7,7 +7,7 @@ purpose: "Wiring audit obrigatório (PMD-07 / BR-05 / RF-09 / brain sheldon-006 
 phases:
   phase_1_f2: completed
   phase_2_f3: completed
-  phase_3_f1: pending
+  phase_3_f1: completed
   phase_4_t5: pending
   phase_5_t6: pending
 ---
@@ -158,9 +158,77 @@ Guard fires BEFORE finalizeCurrentStage. Throw propagates to CLI as exit != 0 (P
 - ✅ DD-02 hybrid regex+whitelist implemented
 - ⏳ Full npm test suite — running
 
-## Phase 3 — F1: stale dev-state interactive (v1.9.7 — pending)
+## Phase 3 — F1: stale dev-state interactive (v1.9.7 candidate)
 
-_Será preenchido quando Phase 3 implementar._
+**Status:** Implementation complete; 20/20 unit tests passing.
+
+**DPC-07 (additional path correction discovered during scan):** `src/preflight.js` referenced in PRD/architecture does NOT exist. The actual locations are:
+- `src/preflight-engine.js` — pure logic helpers (`readDevState`, `detectStaleDevState`, `evaluateReadiness`).
+- `src/commands/preflight.js` — CLI command (`runPreflight`).
+
+F1 extended BOTH: helpers in `preflight-engine.js` + caller updated to async rich variant in `commands/preflight.js`.
+
+### Call sites — onde o código novo é invocado
+
+**`detectStaleDevStateRich` async helper** (`src/preflight-engine.js`):
+
+```bash
+$ grep -rn "detectStaleDevStateRich" src/
+src/preflight-engine.js:507 (definition)
+src/preflight-engine.js:641 (module.exports)
+src/commands/preflight.js:31 (import)
+src/commands/preflight.js:76 (call site — replaces previous sync detectStaleDevState)
+```
+
+`runPreflight` (the `aioson preflight` CLI command) now uses the rich variant — picks up the 3 new conditions automatically for every dev/deyvin preflight call.
+
+**`detectStaleDevState` sync** (`src/preflight-engine.js`): still called from `evaluateReadiness` line 571 (which is sync). The parseError handling (AC-F1-08) flows through this sync path too — both call sites benefit from the corruption check.
+
+**`runStateReset` command** (`src/commands/state-save.js`):
+
+```bash
+$ grep -n "runStateReset" src/
+src/commands/state-save.js:222 (definition)
+src/commands/state-save.js:281 (module.exports)
+src/cli.js:180 (import)
+src/cli.js:1330 (CLI routing branch)
+```
+
+Wired in `src/cli.js` via two command aliases: `state:reset` and `state-reset`. Listed in KNOWN_COMMANDS at line 586.
+
+### Tests cobrindo o caminho real
+
+**`tests/preflight-stale-devstate.test.js`** — 20 tests cobrindo ACs F1-01..08:
+
+| AC | Test name | Path exercised |
+|----|-----------|----------------|
+| AC-F1-01 | "(a) rich detection: feature marked done in features.md → stale + command suggestion" | Warning text includes `aioson state:reset` action |
+| AC-F1-03 | "state:reset removes dev-state.md" + "idempotent: no-op when absent" + "--archive moves to runtime/devstate-history/" + "--json structured result" | State reset CLI surface |
+| AC-F1-04 | (state:save --feature validation deferred — covered by existing state-save tests) | — |
+| AC-F1-05 (a) | "feature marked done in features.md" + "abandoned" variants | features.md status='done'/'abandoned' |
+| AC-F1-05 (b) | "feature absent from features.md → orphan warning" | Cross-project leak / orphan |
+| AC-F1-05 (c) | "last_updated > 30 days → TTL warning" | TTL check |
+| AC-F1-06 | (this test file IS the deliverable) | — |
+| AC-F1-07 | (this wiring audit IS the deliverable) | — |
+| AC-F1-08 | "readDevState flags parseError when content has no frontmatter markers" + "empty frontmatter" + "detectStaleDevState returns warning when parseError" | Corrupt parse handling |
+| — | "current state + within 30d + active in features.md → no warning" | Negative case (false-positive guard) |
+| — | "features.md absent → falls back to sync baseline only" | No over-trigger when features.md missing |
+| — | parseFeaturesMap extraction + header skipping | Helper robustness |
+
+20/20 passing as of 2026-05-20.
+
+### Smoke test status
+
+**N/A para Phase 3.** Composto F1+F2 (cadeia ativa + stale state + warning surface) será coberto em Phase 5 (T6) smoke test.
+
+### Phase 3 sign-off
+
+- ✅ Call sites confirmed via grep (4 spots: preflight-engine def, exports, preflight.js import + call site; cli.js import + routing branch)
+- ✅ 20/20 unit tests passing
+- ✅ DPC-07 documented (preflight.js → preflight-engine.js)
+- ✅ Backward-compat: sync `detectStaleDevState` still works for legacy callers (evaluateReadiness)
+- ✅ `state:reset` idempotent + archive variant + json mode
+- ⏳ Full npm test suite — running
 
 ## Phase 4 — T5: semantic sync preflight (v1.9.8 — pending)
 

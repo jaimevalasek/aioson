@@ -322,8 +322,14 @@ async function readDevState(targetDir) {
   const filePath = path.join(contextDir(targetDir), 'dev-state.md');
   const content = await readFileSafe(filePath);
   if (!content) return { exists: false };
+  // F1 (workflow-handoff-integrity v1.9.7) — corrupt detection (AC-F1-08).
+  // dev-state.md by convention ALWAYS has frontmatter; missing markers OR
+  // unparseable frontmatter both indicate corruption.
+  const hasFrontmatterMarkers = /^---\r?\n[\s\S]*?\r?\n---/.test(content);
   const fm = parseFrontmatter(content);
-  return { exists: true, ...fm, content };
+  const fmIsEmpty = Object.keys(fm).length === 0;
+  const parseError = content.trim().length > 0 && (!hasFrontmatterMarkers || fmIsEmpty);
+  return { exists: true, parseError, ...fm, content };
 }
 
 // ─── Project pulse reader ────────────────────────────────────────────────────
@@ -486,8 +492,18 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
 
 // ─── Stale dev-state detection ───────────────────────────────────────────────
 
+/**
+ * Stale dev-state detection — synchronous baseline.
+ *
+ * F1 (workflow-handoff-integrity v1.9.7) extends the previous 2-condition logic
+ * with parseError detection (AC-F1-08). For richer detection (orphan in
+ * features.md, TTL > 30d), use the async `detectStaleDevStateRich` instead.
+ */
 function detectStaleDevState(devState, slug) {
   if (!devState.exists) return null;
+  if (devState.parseError) {
+    return `dev-state.md is corrupt (missing or unparseable frontmatter) — cannot trust as active context. Run \`aioson state:reset\` to clear, then \`aioson state:save --feature=<slug>\` for the current feature`;
+  }
   if (devState.status === 'done') {
     return `dev-state.md is marked done (feature: ${devState.active_feature || 'unknown'}) — it belongs to a completed session and should not be used as active context`;
   }
@@ -495,6 +511,78 @@ function detectStaleDevState(devState, slug) {
     return `dev-state.md belongs to feature "${devState.active_feature}", not "${slug}" — load the correct dev-state or ignore this one`;
   }
   return null;
+}
+
+/**
+ * Stale dev-state detection — async + features-aware.
+ *
+ * F1 (workflow-handoff-integrity v1.9.7) — extends `detectStaleDevState` with:
+ *   - (a) feature marked `done` or `abandoned` in features.md
+ *   - (b) feature absent from features.md (orphan / cross-project leak)
+ *   - (c) `last_updated` > 30 days vs now
+ *
+ * All warnings embed an actionable command suggestion (state:reset or state:save)
+ * per AC-F1-01.
+ *
+ * @param {object} devState   Result of `readDevState`.
+ * @param {string|null} slug  Active feature slug (for mismatch check).
+ * @param {string} targetDir  Project root (used to read features.md).
+ * @param {number} [now]      Override Date.now() for testing.
+ * @returns {Promise<string|null>}  Warning string or null when not stale.
+ */
+async function detectStaleDevStateRich(devState, slug, targetDir, now = Date.now()) {
+  // Sync baseline first — corrupt / done / mismatch.
+  const baseline = detectStaleDevState(devState, slug);
+  if (baseline) return baseline;
+  if (!devState.exists || !devState.active_feature) return null;
+
+  // (a)+(b) — cross-reference features.md.
+  const featuresPath = path.join(contextDir(targetDir), 'features.md');
+  const featuresContent = await readFileSafe(featuresPath);
+  if (featuresContent) {
+    const featuresMap = parseFeaturesMap(featuresContent);
+    const featureStatus = featuresMap.get(devState.active_feature);
+    if (featureStatus === 'done' || featureStatus === 'abandoned') {
+      return `dev-state.md points to feature "${devState.active_feature}" already marked \`${featureStatus}\` in features.md — run \`aioson state:reset\` to clear, then \`aioson state:save --feature=<new>\` for the next feature`;
+    }
+    if (featureStatus === undefined && featuresMap.size > 0) {
+      return `dev-state.md points to feature "${devState.active_feature}" not present in features.md (orphan or cross-project leak) — run \`aioson state:reset\` to clear`;
+    }
+  }
+
+  // (c) — TTL check.
+  if (devState.last_updated) {
+    const lastUpdatedTs = Date.parse(devState.last_updated);
+    if (!Number.isNaN(lastUpdatedTs)) {
+      const ageMs = now - lastUpdatedTs;
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      if (ageMs > THIRTY_DAYS) {
+        const days = Math.round(ageMs / (24 * 60 * 60 * 1000));
+        return `dev-state.md is ${days} days old (last_updated: ${devState.last_updated}) — likely stale. Run \`aioson state:reset\` or \`aioson state:save --feature=<current>\` to refresh`;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse features.md table into Map<slug, status>.
+ * Tolerant of malformed rows and trailing whitespace.
+ */
+function parseFeaturesMap(content) {
+  const map = new Map();
+  for (const line of String(content || '').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) continue;
+    const parts = trimmed.split('|').map((p) => p.trim());
+    if (parts.length < 5) continue;
+    const slug = parts[1];
+    const status = parts[2];
+    if (!slug || slug === 'slug' || /^-+$/.test(slug)) continue;
+    map.set(slug, status);
+  }
+  return map;
 }
 
 // ─── Readiness evaluator ─────────────────────────────────────────────────────
@@ -638,6 +726,8 @@ module.exports = {
   parseGatesFromSpec,
   readPhaseGates,
   readDevState,
+  detectStaleDevStateRich,
+  parseFeaturesMap,
   readProjectPulse,
   detectClassification,
   parseAgentList,

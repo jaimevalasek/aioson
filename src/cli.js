@@ -177,7 +177,7 @@ const { runClassify } = require('./commands/classify');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
-const { runStateSave } = require('./commands/state-save');
+const { runStateSave, runStateReset } = require('./commands/state-save');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive } = require('./commands/feature-archive');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
@@ -583,6 +583,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'pulse-update',
   'state:save',
   'state-save',
+  'state:reset',
+  'state-reset',
   'dev:state:write',
   'dev-state-write',
   'feature:close',
@@ -1324,6 +1326,8 @@ async function main() {
       command === 'dev-state-write'
     ) {
       result = await runStateSave({ args, options, logger: commandLogger });
+    } else if (command === 'state:reset' || command === 'state-reset') {
+      result = await runStateReset({ args, options, logger: commandLogger });
     } else if (command === 'feature:close' || command === 'feature-close') {
       result = await runFeatureClose({ args, options, logger: commandLogger });
     } else if (command === 'feature:archive' || command === 'feature-archive') {
