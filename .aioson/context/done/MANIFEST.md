@@ -5,7 +5,8 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
-| workflow-handoff-integrity | 2026-05-20 | 7 | Tornar a **auto-orquestração** da cadeia AIOSON estruturalmente confiável: o framework auto-roteia entre agentes com base em estado real em disco, não em "Next  |
+| operator-memory | 2026-05-21 | 7 | Uma camada de memória **por-operador** (não por-projeto, não por-harness) que persiste decisões padrão do dev entre sessões, harnesses e projetos — multi-dev sa |
+| workflow-handoff-integrity | 2026-05-20 | 7 | Tornar a **auto-orquestração** da cadeia AIOSON estruturalmente confiável: o framework auto-roteia entre agentes com base em estado real em disco, não em "Next |
 | release-page-1-9-0 | 2026-05-18 | 1 | Página HTML estática em `tutorials/releases/1-9-0/` que narra os 10 dias de evolução que culminaram no AIOSON v1.9.0, mais polish dos 4 tutoriais existentes pra |
 | lay-user-agent-mode | 2026-05-17 | 4 | Habilitar pessoas tecnicamente curiosas mas não-desenvolvedoras a construírem sistemas complexos usando AIOSON, expondo os agentes em linguagem corrente com dec |
 | dev-state-producer | 2026-05-17 | 2 | Restaurar a fluidez agente→agente prometida pela feature `agent-chain-continuity` (2026-05-07) fazendo com que os agentes upstream do `@dev` produzam `dev-state |
