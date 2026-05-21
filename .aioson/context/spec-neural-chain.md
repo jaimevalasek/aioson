@@ -66,6 +66,34 @@ gate_plan_note: "F4 contract drift documentado (mesmo precedente do workflow-hot
 
 **Próximo:** Phase 1 Slice 3 — agent_event ingest hook em `runAgentDone` (`src/commands/runtime.js`), com EC-NC-05 no-op skip quando session não tem file edits. Slice 3 fecha o segundo edge_type ('agent_event'); junto com Slice 2 git_co_edit a feature ganha source coverage completo.
 
+### Phase 1 Slice 3 — agent_event ingest hook em runAgentDone (2026-05-21)
+
+**Diff sumário:** segundo edge_type ('agent_event') ingest + wiring single-point em `runAgentDone`. Helper isolado, hook best-effort (BR-NC-11), EC-NC-05 explicitly testado.
+
+**Files novos:**
+- `src/neural-chain-agent-ingest.js` (~175 LOC) — exporta `deriveSessionPairs`, `ingestAgentEventEdges`, `runChainHookOnAgentDone`, `queryImpacts`. UPSERT incremental: novos pares começam com `hit_count=1, confidence=1/5=0.2`; re-ingest incrementa `hit_count + 1` e recomputa `confidence = MIN(1.0, (hit_count + 1.0) / 5.0)`. BR-NC-08 hard cap reusa pattern do git ingest (archive oldest by last_seen_at antes do INSERT novo). EC-NC-05: < 2 artifacts → skipped='no_pairs'. Filtra .aioson/* e .git/* dos artifacts. `runChainHookOnAgentDone` emit 1 chain_audit event per artifact + 1 no-op event quando artifacts vazio (mantém série temporal do guardrail metric contínua).
+- `tests/neural-chain-agent-ingest.test.js` (~250 LOC) — 12 acceptance tests cobrindo deriveSessionPairs (empty, single-file, .aioson/git filtering, N*(N-1) pairs), ingestAgentEventEdges (EC-NC-05 skip, initial confidence 1/SATURATION, incremento + saturação até 1.0, BR-NC-08 hard cap archive, invalid db throws), runChainHookOnAgentDone (EC-NC-05 empty session com chain_audit event no-op emitido, per-file events + ingest combinado, invalid db non-throw, audit sees pre-existing edges).
+
+**Files modificados:**
+- `src/commands/runtime.js` — 2 mudanças: (1) require de `runChainHookOnAgentDone`; (2) chamadas best-effort do hook nos 2 branches de runAgentDone (live_event + standalone) APÓS reflect-prepare. Try/catch envelope garante zero impacto em agent:done failure (BR-NC-11).
+
+**Testes:** 12/12 verde nesta suite (495ms). Full regression 2731/2733 + 1 skipped + 1 fail (pre-existing operator-memory AC-P1-07; security-scan WAL flake intermitente — flake conhecido documentado em current-state.md de live-command/context-search, run isolated passa 17/17).
+
+**Decisões arquiteturais desta slice:**
+
+| Decisão | Justificativa |
+|---|---|
+| Helper aceita `artifacts[]` direto (Model A), não query a `agent_events` table | Simpler — runAgentDone já tem `artifactPaths` na mão; query a agent_events seria duplo trabalho. Documentado em spec como deviation aceitável da framing original "lê agent_event rows". |
+| UPSERT incrementa `hit_count + 1` via DO UPDATE; confidence recomputada na transação SQL | SQLite ON CONFLICT(partial uniq) DO UPDATE preserva atomicity; sem race conditions entre check-existing + update. |
+| `hit_count` representa total running de sessions co-touched (sem aging em V1) | BR-NC-01 especifica `count_last_30d`; aging é M2 concern. Confidence satura em 5 hits, então approximation bounded — edges >5 hits têm confidence=1.0 regardless of staleness. Documentado in-code + spec. |
+| `runChainHookOnAgentDone` emit 1 no-op event quando artifacts vazio (EC-NC-05) | Mantém série temporal do guardrail metric contínua; ausência de event seria gap suspeito. |
+| Hook chamado APÓS reflect-prepare (não antes) | Reflect-prepare é Living Memory (mais maduro); chain hook é V1 nova feature — ordem de "primeiro o estabelecido, depois o novo" reduz risco de regressão na Living Memory pipeline. |
+| Audit query reusa formula do Slice 2 chain-audit.js (ORDER BY confidence DESC, hit_count DESC, last_seen_at DESC LIMIT 20) | Consistência com CLI command; futuro refactor pode extrair `auditFileImpacts(db, source, limit)` shared se aparecerem N callers. |
+
+**AC-AUDIT-NC progress:** item 1 (`chain:audit` hook integrado em `runAgentDone` em `src/commands/runtime.js`) ✓ satisfeito por esta slice. Item 4 + 5 (parcial coverage) já estavam satisfeitos. Itens 2, 3, 6, 7 pendentes nos Slices 4-6 + Gate D.
+
+**Próximo:** Phase 1 Slice 4 — noise file write/lifecycle (BR-NC-06). Path: `.aioson/context/noises/{feature-slug}-{YYYYMMDD-HHMM}.md`. Frontmatter YAML + body markdown checkboxes. Lazy `resolved_items` recompute via leitura em chain:audit / @neo. Deletion-on-close trigger automático.
+
 ## Entities added
 
 (Source: `requirements-neural-chain.md` § New entities and fields)

@@ -22,6 +22,7 @@ const { runAutoDelivery } = require('../delivery-runner');
 const { writeHandoff, buildRuntimeLogHandoff } = require('../session-handoff');
 const { backupAiosonDocs, isDocCreatingAgent } = require('../backup-local');
 const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
+const { runChainHookOnAgentDone } = require('../neural-chain-agent-ingest');
 
 const ALLOWED_LAYOUTS = new Set(['document', 'tabs', 'accordion', 'stack', 'mixed']);
 const DEFAULT_TEXT_FIELDS = ['content', 'text', 'body', 'lyrics', 'markdown'];
@@ -1238,6 +1239,18 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         });
       } catch { /* ignore */ }
 
+      // Neural Chain: best-effort agent_event ingest + per-file audit telemetry.
+      // BR-NC-05 (per-session hook), BR-NC-10 (telemetry obligation), BR-NC-11
+      // (failure non-blocking), EC-NC-05 (no-edits skip path still emits event).
+      try {
+        runChainHookOnAgentDone({
+          db,
+          artifacts: artifactPaths,
+          agentName: normalizedAgent,
+          featureSlug: options.feature ? String(options.feature).trim() : null
+        });
+      } catch { /* ignore — never blocks agent_done */ }
+
       return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey };
     }
 
@@ -1297,6 +1310,18 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         logger: { log: () => {}, error: () => {} }
       });
     } catch { /* ignore */ }
+
+    // Neural Chain: best-effort agent_event ingest + per-file audit telemetry.
+    // BR-NC-05 (per-session hook), BR-NC-10 (telemetry obligation), BR-NC-11
+    // (failure non-blocking), EC-NC-05 (no-edits skip path still emits event).
+    try {
+      runChainHookOnAgentDone({
+        db,
+        artifacts: artifactPaths,
+        agentName: normalizedAgent,
+        featureSlug: options.feature ? String(options.feature).trim() : null
+      });
+    } catch { /* ignore — never blocks agent_done */ }
 
     return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey };
   } finally {

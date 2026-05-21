@@ -40,6 +40,12 @@ files:
   added_at: 2026-05-21T21:35:32.036Z
 - path: src/cli.js
   added_at: 2026-05-21T21:35:38.441Z
+- path: src/neural-chain-agent-ingest.js
+  added_at: 2026-05-21T22:05:57.297Z
+- path: tests/neural-chain-agent-ingest.test.js
+  added_at: 2026-05-21T22:06:03.479Z
+- path: src/commands/runtime.js
+  added_at: 2026-05-21T22:06:12.077Z
 modules: []
 patterns: []
 ```
@@ -76,6 +82,11 @@ Phase 1 Slice 1 LANDED 2026-05-21. Schema migration shipped: src/neural-chain-mi
 **2026-05-21T21:36:01.877Z** | @dev | _Agent Trail_
 
 Phase 1 Slice 2 LANDED 2026-05-21. chain:audit CLI + git ingest helper shipped: src/commands/chain-audit.js (read-only command — top-N edges WHERE source_path=? AND end_at IS NULL ORDER BY confidence DESC LIMIT N, telemetry via execution_events event_type=chain_audit per BR-NC-10, failure non-blocking BR-NC-11) + src/neural-chain-git-ingest.js (pure parseGitLog + computeCoEditPairs + ingestGitCoEditEdges + runGitIngest integration wrapper; confidence formula BR-NC-01 saturation 10, hard cap BR-NC-08 archive oldest, 90d window filter, .aioson/* + mega-commits filtered, UPSERT ON CONFLICT respeitando partial UNIQUE index) + 21 tests novos (9 chain-audit + 12 git-ingest). CLI registrado em src/cli.js (require + KNOWN_COMMANDS + dispatch). i18n keys help_chain_audit + chain_audit.{file_required, runtime_unavailable, query_failed, no_impacts, results_header} em 4 locales (en, pt-BR, es, fr). Refactor mid-slice: pairs container mudou de flat Map com string-separator pra nested Map<source, Map<target, ...>> — robustez (paths podem ter qualquer char). Decisões: 2 rows directional per pair (A→B + B→A) pra audit query direta; UPSERT preserva start_at em re-ingest; --limit clamp em HARD_LIMIT_CAP=200; telemetry inline INSERT (sem novo helper). Tests: 33/33 verde nas 3 suites neural-chain (migration+ingest+audit) em 899ms. Regressão completa: 2719/2721 + 1 skipped + 1 pre-existing operator-memory-identity AC-P1-07 (zero novas regressões). AC-AUDIT-NC progress: itens 4 + 5 (coverage parcial chain:audit/ingest paths) satisfeitos; itens 1+2+3+6+7 pendentes (Slices 3-6 + Gate D). Next: Slice 3 agent_event ingest hook em runAgentDone (src/commands/runtime.js) com EC-NC-05 no-op skip quando session sem file edits.
+
+<!-- sha256:7c70195b80616033bfe90c0cbd4009d55a0edb2cd8e412a5636b3e4d1e38b326 -->
+**2026-05-21T22:06:18.670Z** | @dev | _Agent Trail_
+
+Phase 1 Slice 3 LANDED 2026-05-21. agent_event ingest hook wired into runAgentDone (live_event + standalone). Files novos: src/neural-chain-agent-ingest.js (~175 LOC — deriveSessionPairs + ingestAgentEventEdges + runChainHookOnAgentDone + queryImpacts) + tests/neural-chain-agent-ingest.test.js (12/12 verde, 495ms). Files modificados: src/commands/runtime.js (require + 2 best-effort hook calls após reflect-prepare nos 2 branches). Decisão: Model A (artifacts[] direto vs query a agent_events table) — runAgentDone já tem artifactPaths em escopo, query duplicaria trabalho. UPSERT incrementa hit_count+1 + recomputa confidence atomicamente via SQL ON CONFLICT. V1 simplification: running hit_count em vez de count_last_30d (aging é M2 concern); confidence satura em 5 hits então approximation bounded. EC-NC-05 explicitly testado: empty artifacts → skipped='no_pairs' MAS hook ainda emit 1 chain_audit event no-op pra manter série temporal do guardrail metric. Pre-existing edges (git_co_edit) aparecem no audit normal — test confirma audit sees git edge + new agent_event edge after slice 3 hook. Failure best-effort BR-NC-11: try/catch envelope no runtime.js + try/catch em cada SQL boundary do helper. Regression: 2731/2733 + 1 skipped + 1 fail (operator-memory pre-existing AC-P1-07; security-scan WAL race intermitente — flake documentado em current-state.md, isolated passa 17/17). AC-AUDIT-NC item 1 (chain:audit hook integrado em runAgentDone) ✓ satisfeito. Itens 4+5 já satisfeitos por Slices 1+2. Itens 2,3,6,7 pendentes. 3 codemap entries adicionadas. Next: Slice 4 noise file write/lifecycle BR-NC-06.
 
 ## Revision Requests
 

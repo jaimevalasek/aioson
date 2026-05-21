@@ -130,13 +130,36 @@
         "item_4_schema_migration_applied": "satisfied",
         "item_5_coverage_partial_audit_paths": "satisfied (audit + ingest paths covered ≥ 80%)",
         "items_1_2_3_6_7": "pending (future slices + final QA)"
+      },
+      "commit": "cd4c047 feat(neural-chain): Phase 1 Slice 2 — chain:audit + git co-edit ingest"
+    },
+    {
+      "step": "phase_1_slice_3_agent_event_ingest_hook",
+      "agent": "dev",
+      "date": "2026-05-21",
+      "artifacts": [
+        "src/neural-chain-agent-ingest.js",
+        "tests/neural-chain-agent-ingest.test.js"
+      ],
+      "modified": [
+        "src/commands/runtime.js (require runChainHookOnAgentDone + 2 best-effort hook calls in runAgentDone live_event + standalone branches)"
+      ],
+      "tests_added": 12,
+      "tests_passing": 12,
+      "cumulative_neural_chain_tests": 45,
+      "regression_status": "neutral — 2731/2733 + 1 skipped + 1 fail (pre-existing operator-memory AC-P1-07; security-scan WAL race intermittent flake documented in current-state.md, isolated 17/17)",
+      "ac_audit_nc_progress": {
+        "item_1_chain_audit_hook_in_run_agent_done": "satisfied",
+        "item_4_schema_migration_applied": "satisfied",
+        "item_5_coverage_partial_audit_paths": "satisfied",
+        "items_2_3_6_7": "pending (Slices 4-6 + final QA)"
       }
     }
   ],
   "next_action": {
     "agent": "dev",
-    "slice": "Phase 1 Slice 3",
-    "summary": "agent_event ingest hook in runAgentDone",
+    "slice": "Phase 1 Slice 4",
+    "summary": "noise file write/lifecycle (BR-NC-06)",
     "input": [
       ".aioson/context/spec-neural-chain.md",
       ".aioson/context/requirements-neural-chain.md",
@@ -145,14 +168,13 @@
       ".aioson/context/dev-state.md"
     ],
     "output": [
-      "src/commands/runtime.js (modify runAgentDone to call agent_event ingest hook after telemetry write)",
-      "src/neural-chain-agent-ingest.js (new pure helper: read agent_event rows for current session, derive co-edit pairs from source_files of same session, populate chain_edges with edge_type='agent_event' applying BR-NC-01 (count_last_30d/5 saturation) + BR-NC-08 hard cap)",
-      "EC-NC-05 implementation: skip no-op when session has zero file edits (e.g., dossier:add-finding, agent:done without edits)",
-      "tests/neural-chain-agent-ingest.test.js (helper coverage + EC-NC-05 skip path)",
-      "tests/runtime-agent-done-chain-hook.test.js (integration: agent:done with file edits emits chain_audit + populates agent_event edges)"
+      "src/neural-chain-noise-file.js (new helper: writeNoiseFile, lazyRecomputeFrontmatter, deletionOnCloseCheck; path = .aioson/context/noises/{feature-slug}-{YYYYMMDD-HHMM}.md or unspecified-{ts}.md fallback)",
+      "Integration in runChainHookOnAgentDone: when audit returns impacts AND autonomy mode = guarded → write noise file; in standard mode → write noise file ONLY for non-auto-fixable items (slice 6 wires the threshold rules)",
+      "Lazy recompute of resolved_items frontmatter on read (no file watcher)",
+      "Deletion-on-close trigger: when total items resolved → delete file",
+      "tests/neural-chain-noise-file.test.js (write format, frontmatter shape, lazy recompute, deletion trigger, idempotent re-write, EC-NC-09 corrupted frontmatter recovery)"
     ],
     "remaining_phase_1_slices": [
-      "Slice 4: noise file write/lifecycle (BR-NC-06) — write .aioson/context/noises/{feature-slug}-{YYYYMMDD-HHMM}.md when audit returns impacts in guarded mode; deletion-on-close lazy trigger",
       "Slice 5: @neo activation step blocker — read noises/*.md pending at activation, surface count + paths in dashboard (template parity required per brain sheldon-001)",
       "Slice 6: autonomy mode threshold rules (BR-NC-02/03) + chain_auto_threshold config field + auto-migration in @dev/@deyvin flow"
     ]
