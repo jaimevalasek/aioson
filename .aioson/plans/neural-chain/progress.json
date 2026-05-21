@@ -102,13 +102,41 @@
         "items_1_2_3_5_6_7": "pending (future slices + final QA)"
       },
       "workaround_applied": "F4 Gate C drift — spec frontmatter gate_plan=approved + gate_plan_note (precedente hotfix v1.9.3)",
-      "reflect_prompt_status": "deferred (zero capabilities shipped, only schema groundwork; @qa Gate D processa)"
+      "reflect_prompt_status": "deferred (zero capabilities shipped, only schema groundwork; @qa Gate D processa)",
+      "commit": "aaccfb9 feat(neural-chain): Phase 1 Slice 1 — chain_edges schema foundation"
+    },
+    {
+      "step": "phase_1_slice_2_chain_audit_and_git_ingest",
+      "agent": "dev",
+      "date": "2026-05-21",
+      "artifacts": [
+        "src/commands/chain-audit.js",
+        "src/neural-chain-git-ingest.js",
+        "tests/chain-audit.test.js",
+        "tests/neural-chain-git-ingest.test.js"
+      ],
+      "modified": [
+        "src/cli.js (require + KNOWN_COMMANDS + dispatch for chain:audit)",
+        "src/i18n/messages/en.js (help_chain_audit + chain_audit.* keys)",
+        "src/i18n/messages/pt-BR.js (same keys, pt-BR translations)",
+        "src/i18n/messages/es.js (same keys, es translations)",
+        "src/i18n/messages/fr.js (same keys, fr translations)"
+      ],
+      "tests_added": 21,
+      "tests_passing": 21,
+      "cumulative_neural_chain_tests": 33,
+      "regression_status": "neutral — same pre-existing operator-memory-identity AC-P1-07 failure persists; 2719/2721 + 1 skipped",
+      "ac_audit_nc_progress": {
+        "item_4_schema_migration_applied": "satisfied",
+        "item_5_coverage_partial_audit_paths": "satisfied (audit + ingest paths covered ≥ 80%)",
+        "items_1_2_3_6_7": "pending (future slices + final QA)"
+      }
     }
   ],
   "next_action": {
     "agent": "dev",
-    "slice": "Phase 1 Slice 2",
-    "summary": "chain:audit CLI command + git ingest helper",
+    "slice": "Phase 1 Slice 3",
+    "summary": "agent_event ingest hook in runAgentDone",
     "input": [
       ".aioson/context/spec-neural-chain.md",
       ".aioson/context/requirements-neural-chain.md",
@@ -117,17 +145,16 @@
       ".aioson/context/dev-state.md"
     ],
     "output": [
-      "src/commands/chain-audit.js (CLI command: read top-N edges WHERE end_at IS NULL ORDER BY confidence DESC)",
-      "src/neural-chain-git-ingest.js (git log parse bounded last 1000 commits, populate git_co_edit edges with BR-NC-01 formula + BR-NC-08 hard cap archive)",
-      "src/cli.js (register chain:audit in KNOWN_COMMANDS + dispatch + help)",
-      "i18n keys × 4 locales (en, pt-BR, es, fr)",
-      "tests/chain-audit.test.js + tests/neural-chain-git-ingest.test.js"
+      "src/commands/runtime.js (modify runAgentDone to call agent_event ingest hook after telemetry write)",
+      "src/neural-chain-agent-ingest.js (new pure helper: read agent_event rows for current session, derive co-edit pairs from source_files of same session, populate chain_edges with edge_type='agent_event' applying BR-NC-01 (count_last_30d/5 saturation) + BR-NC-08 hard cap)",
+      "EC-NC-05 implementation: skip no-op when session has zero file edits (e.g., dossier:add-finding, agent:done without edits)",
+      "tests/neural-chain-agent-ingest.test.js (helper coverage + EC-NC-05 skip path)",
+      "tests/runtime-agent-done-chain-hook.test.js (integration: agent:done with file edits emits chain_audit + populates agent_event edges)"
     ],
     "remaining_phase_1_slices": [
-      "Slice 3: agent_event ingest hook em runAgentDone",
-      "Slice 4: noise file write/lifecycle (BR-NC-06)",
-      "Slice 5: @neo activation step blocker (template parity required per sheldon-001)",
-      "Slice 6: autonomy mode threshold rules (BR-NC-02/03) + chain_auto_threshold config field + auto-migration"
+      "Slice 4: noise file write/lifecycle (BR-NC-06) — write .aioson/context/noises/{feature-slug}-{YYYYMMDD-HHMM}.md when audit returns impacts in guarded mode; deletion-on-close lazy trigger",
+      "Slice 5: @neo activation step blocker — read noises/*.md pending at activation, surface count + paths in dashboard (template parity required per brain sheldon-001)",
+      "Slice 6: autonomy mode threshold rules (BR-NC-02/03) + chain_auto_threshold config field + auto-migration in @dev/@deyvin flow"
     ]
   },
   "metadata": {

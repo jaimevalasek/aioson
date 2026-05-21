@@ -27,6 +27,15 @@ module.exports = {
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-ou-pasta>] [--max-files=8] [--json] [--locale=pt-BR]',
     help_context_load:
       'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<nome> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=pt-BR]',
+    help_chain_audit:
+      'aioson chain:audit <arquivo> [path] [--limit=N] [--feature=<slug>] [--json] [--locale=pt-BR]',
+    chain_audit: {
+      file_required: 'chain:audit exige um caminho de arquivo. Uso: aioson chain:audit <arquivo> [--limit=N] [--feature=<slug>] [--json]',
+      runtime_unavailable: 'chain:audit runtime db indisponível: {error}',
+      query_failed: 'chain:audit falhou ao consultar chain_edges: {error}',
+      no_impacts: 'chain:audit {file} → nenhum impacto detectado ({duration}ms)',
+      results_header: 'chain:audit {file} → {count} impacto(s) ({duration}ms):'
+    },
     context_load: {
       target_required: 'context:load exige --target=<rule|brain>:<slug>.',
       agent_required: 'context:load exige --agent=<nome>.',

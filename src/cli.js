@@ -14,6 +14,7 @@ const { runAgentsList, runAgentPrompt } = require('./commands/agents');
 const { runContextValidate } = require('./commands/context-validate');
 const { runContextPack } = require('./commands/context-pack');
 const { runContextLoad } = require('./commands/context-load');
+const { runChainAudit } = require('./commands/chain-audit');
 const { runMemorySearch } = require('./commands/memory-search');
 const { runMemoryArchive } = require('./commands/memory-archive');
 const { runMemoryRestore } = require('./commands/memory-restore');
@@ -242,6 +243,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-pack',
   'context:load',
   'context-load',
+  'chain:audit',
+  'chain-audit',
   'test:smoke',
   'test-smoke',
   'test:agents',
@@ -930,6 +933,8 @@ async function main() {
       result = await runContextPack({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {
       result = await runContextLoad({ args, options, logger: commandLogger, t });
+    } else if (command === 'chain:audit' || command === 'chain-audit') {
+      result = await runChainAudit({ args, options, logger: commandLogger, t });
     } else if (command === 'setup:context' || command === 'setup-context') {
       result = await runSetupContext({ args, options, logger: commandLogger, t });
     } else if (command === 'locale:apply' || command === 'locale-apply') {

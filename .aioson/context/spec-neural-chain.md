@@ -34,6 +34,38 @@ gate_plan_note: "F4 contract drift documentado (mesmo precedente do workflow-hot
 
 **Próximo:** Phase 1 Slice 2 — `aioson chain:audit <file>` command + git ingest (co-edit frequency last 90d via `git log --pretty=format:%H --name-only` bounded).
 
+### Phase 1 Slice 2 — chain:audit CLI + git ingest helper (2026-05-21)
+
+**Diff sumário:** read-only query command `chain:audit` + git co-edit ingest helper. CLI registrado em src/cli.js. i18n keys × 4 locales. 20 testes novos.
+
+**Files novos:**
+- `src/commands/chain-audit.js` (~120 LOC) — CLI command lê `chain_edges WHERE source_path = ? AND end_at IS NULL ORDER BY confidence DESC LIMIT N`; emit telemetry via `execution_events` com `event_type='chain_audit'` (BR-NC-10); failure non-blocking (BR-NC-11) — sempre retorna `ok=true` mesmo em SQLite locked, emit event com `error` populated; `--json` desabilita human-readable lines; `--limit` clamped a HARD_LIMIT_CAP=200; default limit=20.
+- `src/neural-chain-git-ingest.js` (~245 LOC) — pure functions `parseGitLog`, `computeCoEditPairs`, `ingestGitCoEditEdges` + integration wrapper `runGitIngest`. Confidence ranking BR-NC-01 (`min(1.0, count/CONFIDENCE_SATURATION)`). Hard cap BR-NC-08 (archive oldest by `last_seen_at` antes do INSERT). UPSERT via `ON CONFLICT(source, target, edge_type) WHERE end_at IS NULL DO UPDATE` (partial unique index respeitado). Idempotência absoluta — re-ingest produz mesmo estado ativo. EC-NC-06: skip if `git rev-list --count HEAD < 50`. Nested Map `Map<source, Map<target, {count, lastSeen}>>` evita ambiguidade de string separator (paths podem ter qualquer char).
+- `tests/chain-audit.test.js` (~210 LOC) — 9 acceptance tests (missing file arg, fresh DB no-impacts, ordering by confidence DESC, archived rows excluded, --limit honored with cap, telemetry emit per invocation BR-NC-10, telemetry empty payload when no edges, JSON vs human mode output, source_path isolation).
+- `tests/neural-chain-git-ingest.test.js` (~245 LOC) — 12 acceptance tests cobrindo parseGitLog (empty/malformed/short+long hashes), computeCoEditPairs (window filter, mega-commits + .aioson/* skip, multi-commit aggregation), ingestGitCoEditEdges (confidence BR-NC-01 saturation, idempotency, hard cap BR-NC-08 archive flow, invalid db throws), runGitIngest (no .git skip, insufficient history skip, structured return).
+
+**Files modificados:**
+- `src/cli.js` — 3 mudanças: require do runChainAudit, KNOWN_COMMANDS adicionou `chain:audit` + `chain-audit`, dispatch branch posicionado depois de context:load
+- `src/i18n/messages/{en,pt-BR,es,fr}.js` — adicionou `help_chain_audit` + `chain_audit: {file_required, runtime_unavailable, query_failed, no_impacts, results_header}` em todos 4 locales
+
+**Testes:** 33/33 ✓ nas 3 suítes neural-chain (migration + git-ingest + chain-audit), 899ms total. Regressão completa **2719/2721 + 1 skipped + 1 fail (operator-memory-identity AC-P1-07 pre-existing em HEAD aaccfb9)** — confirma: minha slice introduziu **zero regressões**.
+
+**Decisões arquiteturais desta slice:**
+
+| Decisão | Justificativa |
+|---|---|
+| Telemetry via `execution_events` direto (INSERT inline) | Sem novo helper; alinha com `appendContextLoadEvent` pattern. Refator pra helper compartilhado fica pra slice futura se outros chamadores aparecerem. |
+| Nested Map<source, Map<target, ...>> em vez de flat Map com `\0` separator | Robustez: paths podem ter qualquer char (espaços, unicode, etc.); evita parsing string ambíguo. |
+| 2 rows directional per co-edit pair (A→B + B→A) | Audit query fica simples (`WHERE source_path = ?`), sem UNION ALL. Doubles storage mas O(2N) é trivial pra V1. |
+| `.aioson/*` paths filtered out do ingest | Framework state churn (briefing/spec/dev-state edits every session) é noise pro grafo de código real. |
+| Mega-commits (> MAX_FILES_PER_COMMIT=50) skipped | Bound N² pair explosion em commits gigantes (release/refactor mass moves). |
+| Window filter 90d via committer_date_iso compare | BR-NC-01 (`count_last_90d / 10`); cutoff é parameter (`now`) pra testes determinísticos. |
+| ON CONFLICT UPSERT (não DELETE+INSERT) | Preserva `id` + `start_at` (validity-window invariant) em re-ingest; atualiza só `confidence/last_seen_at/hit_count`. |
+| `--limit` clamp em HARD_LIMIT_CAP=200 | Proteção operacional contra `--limit=999999` que carregaria 10k linhas no top do prompt. |
+| Failure non-blocking BR-NC-11 já implementado | SQL throw capturado; telemetry event com `error` populated; retorna `ok=true` impacts=[]. |
+
+**Próximo:** Phase 1 Slice 3 — agent_event ingest hook em `runAgentDone` (`src/commands/runtime.js`), com EC-NC-05 no-op skip quando session não tem file edits. Slice 3 fecha o segundo edge_type ('agent_event'); junto com Slice 2 git_co_edit a feature ganha source coverage completo.
+
 ## Entities added
 
 (Source: `requirements-neural-chain.md` § New entities and fields)

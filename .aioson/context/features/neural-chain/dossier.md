@@ -30,6 +30,16 @@ files:
   added_at: 2026-05-21T21:09:55.884Z
 - path: src/runtime-store.js
   added_at: 2026-05-21T21:10:02.632Z
+- path: src/commands/chain-audit.js
+  added_at: 2026-05-21T21:35:13.214Z
+- path: src/neural-chain-git-ingest.js
+  added_at: 2026-05-21T21:35:19.596Z
+- path: tests/chain-audit.test.js
+  added_at: 2026-05-21T21:35:25.837Z
+- path: tests/neural-chain-git-ingest.test.js
+  added_at: 2026-05-21T21:35:32.036Z
+- path: src/cli.js
+  added_at: 2026-05-21T21:35:38.441Z
 modules: []
 patterns: []
 ```
@@ -61,6 +71,11 @@ Requirements + spec produzidos. 1 nova entity (chain_edges table com 10 fields +
 **2026-05-21T21:09:36.884Z** | @dev | _Agent Trail_
 
 Phase 1 Slice 1 LANDED 2026-05-21. Schema migration shipped: src/neural-chain-migration.js (idempotent, no user_version sentinel — coordenaria com learning-loop user_version=3; deferred schema_meta table) + 1 require + 1 call em src/runtime-store.js#ensureLegacyColumns downstream do runLearningLoopMigration + tests/neural-chain-migration.test.js (11/11 verde, 845ms). chain_edges table: 10 fields com CHECKs (edge_type IN canonical 2-set, confidence range [0,1], hit_count > 0) + 3 indexes (idx_source+end_at, idx_target+end_at, uniq_chain_active PARTIAL WHERE end_at IS NULL — permite archive flow do BR-NC-08 sem violar uniqueness). Decisão arquitetural: Option B feature-isolated migration file (matches learning-loop precedent named-after-feature; isolates ownership; sheldon-001 brain template parity não aplica a runtime code). Workaround F4 Gate C: spec frontmatter recebeu gate_plan=approved + gate_plan_note documentando o contract drift (mesmo precedente hotfix v1.9.3 — pm.md:29+126 dizem implementation-plan opcional em SMALL mas preflight ignora classification). Reflect-prompt deferred (zero capabilities shipped, só schema groundwork; @qa Gate D processa). Regressão: 1 failure pre-existing em operator-memory-identity AC-P1-07 (runOpIdentity set <valid-id> stub: undefined vs true) — confirmado via git stash que está em HEAD 92f6769, NÃO introduzido por esta slice; follow-up MICRO separado pra operator-memory team. AC-AUDIT-NC item 4 (schema migration aplicada) satisfeito; itens 1,2,3,5,6,7 ficam pra slices futuras + final QA. bootstrap/current-state.md atualizado (append-only). Próximo: Slice 2 chain:audit command + git ingest.
+
+<!-- sha256:db5e4da3326da218394f59285c5ae4cca20de6d04af35f188dd2e858006c3858 -->
+**2026-05-21T21:36:01.877Z** | @dev | _Agent Trail_
+
+Phase 1 Slice 2 LANDED 2026-05-21. chain:audit CLI + git ingest helper shipped: src/commands/chain-audit.js (read-only command — top-N edges WHERE source_path=? AND end_at IS NULL ORDER BY confidence DESC LIMIT N, telemetry via execution_events event_type=chain_audit per BR-NC-10, failure non-blocking BR-NC-11) + src/neural-chain-git-ingest.js (pure parseGitLog + computeCoEditPairs + ingestGitCoEditEdges + runGitIngest integration wrapper; confidence formula BR-NC-01 saturation 10, hard cap BR-NC-08 archive oldest, 90d window filter, .aioson/* + mega-commits filtered, UPSERT ON CONFLICT respeitando partial UNIQUE index) + 21 tests novos (9 chain-audit + 12 git-ingest). CLI registrado em src/cli.js (require + KNOWN_COMMANDS + dispatch). i18n keys help_chain_audit + chain_audit.{file_required, runtime_unavailable, query_failed, no_impacts, results_header} em 4 locales (en, pt-BR, es, fr). Refactor mid-slice: pairs container mudou de flat Map com string-separator pra nested Map<source, Map<target, ...>> — robustez (paths podem ter qualquer char). Decisões: 2 rows directional per pair (A→B + B→A) pra audit query direta; UPSERT preserva start_at em re-ingest; --limit clamp em HARD_LIMIT_CAP=200; telemetry inline INSERT (sem novo helper). Tests: 33/33 verde nas 3 suites neural-chain (migration+ingest+audit) em 899ms. Regressão completa: 2719/2721 + 1 skipped + 1 pre-existing operator-memory-identity AC-P1-07 (zero novas regressões). AC-AUDIT-NC progress: itens 4 + 5 (coverage parcial chain:audit/ingest paths) satisfeitos; itens 1+2+3+6+7 pendentes (Slices 3-6 + Gate D). Next: Slice 3 agent_event ingest hook em runAgentDone (src/commands/runtime.js) com EC-NC-05 no-op skip quando session sem file edits.
 
 ## Revision Requests
 
