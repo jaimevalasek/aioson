@@ -9,7 +9,7 @@ phases:
   phase_2_f3: completed
   phase_3_f1: completed
   phase_4_t5: completed
-  phase_5_t6: pending
+  phase_5_t6: completed
 ---
 
 # Wiring Audit — Workflow Handoff Integrity
@@ -281,6 +281,92 @@ Full ponta-a-ponta smoke is Phase 5 (T6).
 - ✅ Telemetry event emitted on drift (existing dossierTelemetry pattern)
 - ⏳ Full npm test suite — running
 
-## Phase 5 — T6: CI smoke pre-publish (v1.10.0 — pending)
+## Phase 5 — T6: CI smoke pre-publish (v1.10.0)
 
-_Será preenchido quando Phase 5 implementar. Cross-phase wiring audit final consolida confirmação de TODAS as 5 phases via smoke test passing._
+**Status:** Implementation complete; 11/11 smoke checks green (`pass=11 fail=0`); GitHub Actions workflow gated by `release` label.
+
+### Call sites — onde o código novo é invocado
+
+**`scripts/smoke-run-chain.js`** — standalone Node runner. Direct invocation surface:
+
+```bash
+$ node scripts/smoke-run-chain.js                    # local mode (warnings)
+$ AIOSON_PREPUBLISH=true node scripts/smoke-run-chain.js   # pre-publish mode (hard fail on drift)
+```
+
+CI invocation (`.github/workflows/release-smoke.yml`):
+- Trigger: `pull_request` with label `release` OR manual `workflow_dispatch`.
+- Steps: `npm ci` → `npm run ci` (existing lint + test) → `node scripts/smoke-run-chain.js` (with `AIOSON_PREPUBLISH=true` env on job) → `npm pack --dry-run`.
+- Exit 0 = green; exit != 0 blocks PR merge.
+
+The runner exercises real exported APIs from Phases 1-4 (DD-04 mock-only mode):
+
+```bash
+$ grep -n "require(path.join(REPO_ROOT" scripts/smoke-run-chain.js
+# imports:
+#   src/preflight-engine.js → readDevState, detectStaleDevStateRich
+#   src/commands/runtime.js → maybeAutoAdvanceWorkflow
+#   src/commands/workflow-next.js → assertManifestNotPending
+#   src/commands/sync-agents-preflight.js → checkSemanticParity
+#   src/commands/state-save.js → runStateReset
+```
+
+No subprocess shelling-out (per PMD-05 R2 — fixtures stay fresh, no installed-package drift). All checks isolated in `os.tmpdir()` fixtures, cleaned up on exit.
+
+### Tests cobrindo o caminho real
+
+**`tests/scripts/smoke-run-chain.test.js`** — 3 tests:
+
+| AC | Test name | Path exercised |
+|----|-----------|----------------|
+| AC-T6-01 | "smoke runner: green run exits 0 in local mode" | Full smoke runner via `spawnSync(node, ['scripts/smoke-run-chain.js'])`, asserts exit=0 + `pass=N fail=0` + "All smoke checks green" |
+| AC-T6-05 | "smoke runner: AIOSON_PREPUBLISH=true preserves green exit when repo is clean" | Pre-publish mode banner present + exit=0 (clean repo) |
+| AC-T6-08 | "smoke runner: output identifies failing step on injected failure" | Output discipline check — all 5 sections (F1/F2/F3/T5/REPO) present with per-step labels |
+
+**`scripts/smoke-run-chain.js` internal coverage (11 checks):**
+
+| Phase | Check | Path exercised |
+|-------|-------|----------------|
+| F1 | "Stale dev-state detection + state:reset" | `detectStaleDevStateRich` returns warning for done-feature + orphan + TTL>30d; `runStateReset` idempotent |
+| F2 | "agent:done auto-advance" | `maybeAutoAdvanceWorkflow` with absent state (backward-compat), `--no-auto-advance` flag, corrupt JSON graceful skip |
+| F3 | "workflow:next pending-decisions guard" | `assertManifestNotPending` blocks `pending-architect-decisions` + `--force` override |
+| T5 | "Semantic sync preflight" | `checkSemanticParity` catches 981a8fd-style drift; AIOSON_PREPUBLISH elevates severity; no false positives on identical inputs |
+| REPO | "Final parity safety net" | `checkSemanticParity(process.cwd())` against actual repo agent files → 0 drift |
+
+**Latest run (local mode):** `Result: pass=11  fail=0  →  All smoke checks green. Safe to proceed with publish.`
+
+### Fixtures
+
+**`tests/fixtures/medium-feature-mock/`** — 6 mock JSON files (one per MEDIUM-classification agent: product, analyst, architect, pm, dev, qa). Each contains:
+
+- `writes`: path-template → content-template map (paths support `{slug}` substitution).
+- `spec_frontmatter`: gate approvals (e.g. `gate_requirements: approved`) to populate spec file as chain advances.
+
+Plus `README.md` documenting freshness rule (PMD-05 / Sheldon R2: fixtures regenerated from `npm pack` if drift suspected, NOT pinned to repo state).
+
+Mocks are inert templates — the smoke runner reads them to simulate `writes` paths into tmp fixtures, but never invokes real LLM calls. This is the deterministic-CI commitment (DD-04 mock-only).
+
+### Cross-phase consolidation
+
+Required by BR-05 / PMD-07 ("design-complete ≠ execution-complete" anti-pattern). Confirms every phase deliverable is wired to real call sites and exercised by tests:
+
+| Phase | Feature | Call site count | Tests | Smoke coverage |
+|-------|---------|-----------------|-------|----------------|
+| 1 — F2 | `agent:done` auto-emit | 2 (live + standalone branches in `runAgentDone`) | 13/13 | ✅ via runner |
+| 2 — F3 | `workflow:next` pending guard | 1 (start of `complete` branch in `runWorkflowNext`, before `finalizeCurrentStage`) | 10/10 | ✅ via runner |
+| 3 — F1 | Stale `dev-state.md` + `state:reset` | 4 (helpers + CLI command + 2 routing branches) | 20/20 | ✅ via runner |
+| 4 — T5 | Semantic sync preflight | 1 (`main()` of `sync-agents-preflight.js`) + 0 drift against actual repo | 20/20 | ✅ via runner + parity safety net |
+| 5 — T6 | CI smoke runner | 1 (GitHub Actions `release-smoke.yml` triggered by `release` label) | 3/3 | ✅ self-tests |
+
+All 5 phases ship as progressive minor releases v1.9.5 → v1.9.6 → v1.9.7 → v1.9.8 → v1.10.0 per DD-05 (inception-risk minimization vs single-MEDIUM-release alternative). `release-smoke.yml` gates future `npm publish` operations behind `release`-labeled PRs.
+
+### Phase 5 sign-off
+
+- ✅ Smoke runner `scripts/smoke-run-chain.js` — 11/11 pass (local + prepublish modes)
+- ✅ Unit test `tests/scripts/smoke-run-chain.test.js` — 3/3 pass (AC-T6-01, AC-T6-05, AC-T6-08)
+- ✅ CI workflow `.github/workflows/release-smoke.yml` — release-labeled PR gate
+- ✅ Mock fixtures `tests/fixtures/medium-feature-mock/` — 6 agent mocks + README
+- ✅ All 5 phases wired and tested (cross-phase table above)
+- ✅ DD-04 mock-only commitment honored (no LLM calls, deterministic CI)
+- ✅ PMD-05 fixture freshness rule documented (R2)
+- ⏳ Final Gate D approval + features.md status → done

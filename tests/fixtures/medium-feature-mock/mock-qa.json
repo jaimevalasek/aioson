@@ -1,0 +1,8 @@
+{
+  "agent": "qa",
+  "writes": {},
+  "spec_frontmatter": {
+    "gate_qa": "approved"
+  },
+  "spec_qa_signoff": "\n## QA Sign-off\n\n**Verdict:** PASS\n\nAll smoke checks green.\n"
+}

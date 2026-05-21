@@ -33,6 +33,19 @@ All notable changes to this project will be documented in this file.
 - Safe canonical English agent sources restored after i18n decoupling.
 - Accidentally tracked local directories removed from git tracking.
 
+## [1.10.0] - 2026-05-20
+
+### Added
+- **CI pre-publish smoke chain** (Phase 5 / T6 of `workflow-handoff-integrity` — **closes the feature**). New `scripts/smoke-run-chain.js` standalone runner exercises real exported APIs from Phases 1-4 (F1 stale dev-state + state:reset, F2 agent:done auto-advance, F3 workflow:next pending guard, T5 semantic sync parity) plus a final actual-repo parity safety net. 11 deterministic checks; uses isolated `os.tmpdir()` fixtures (DD-04 mock-only, no LLM calls).
+- **`.github/workflows/release-smoke.yml`** GitHub Actions workflow triggered by the `release` PR label or manual `workflow_dispatch`. Runs the full test suite + smoke chain (`AIOSON_PREPUBLISH=true`) + `npm pack --dry-run` as a merge gate before release-labeled PRs can ship to npm.
+- **`tests/scripts/smoke-run-chain.test.js`** — 3 unit tests covering AC-T6-01 (green exit), AC-T6-05 (prepublish mode green on clean repo), AC-T6-08 (output discipline — all 5 sections present).
+- **`tests/fixtures/medium-feature-mock/`** — 6 mock JSON files (one per MEDIUM agent: product, analyst, architect, pm, dev, qa) with `writes` and `spec_frontmatter` templates, plus README documenting PMD-05 / Sheldon R2 fixture-freshness rule.
+
+### Notes
+- **Feature closure.** `workflow-handoff-integrity` is now fully implemented across F1 (state hygiene) + F2 (forward auto-emit) + F3 (pending-decisions gate) + T5 (structural drift detection) + T6 (CI smoke). Wiring audit cross-phase consolidation completed — see `.aioson/context/wiring-audit-workflow-handoff-integrity.md`.
+- **DD-05 progressive-release strategy completed:** v1.9.5 → v1.9.6 → v1.9.7 → v1.9.8 → v1.10.0 across 5 minor bumps. Each phase was shippable independently; this final v1.10.0 closes the feature with the cross-phase smoke gate.
+- Smoke runner local result: `pass=11 fail=0 — All smoke checks green. Safe to proceed with publish.`
+
 ## [1.9.8] - 2026-05-20
 
 ### Added

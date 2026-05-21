@@ -1,0 +1,9 @@
+{
+  "agent": "pm",
+  "writes": {
+    "implementation-plan-{slug}.md": "---\nfeature: {slug}\nclassification: MEDIUM\ngate: C\ngate_status: approved\nstatus: approved\n---\n# Implementation Plan — Smoke Mock\n\n## Execution Sequence\n| Phase | Scope | Done criteria |\n|---|---|---|\n| 1 | smoke | passes |\n"
+  },
+  "spec_frontmatter": {
+    "gate_plan": "approved"
+  }
+}

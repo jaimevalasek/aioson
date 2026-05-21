@@ -43,6 +43,23 @@ gate_plan: approved
 
 `src/commands/workflow-next.js:429-479` already has integrity check **inverso** (SQL query for `agent_done` events; warns if completed stages lack telemetry). F2 auto-advance is **forward direction** (agent:done → workflow:next emit). Both coexist without conflict — F2 ensures the SQL `agent_done` row is committed BEFORE `runWorkflowNext` is called (AC-F2-04 ordering), satisfying the existing integrity check.
 
+### Phase 5 — T6 (v1.10.0) — 2026-05-20
+
+**Status:** Implementation complete, 11/11 smoke checks green, 3/3 runner unit tests passing. Closes workflow-handoff-integrity feature.
+
+**Changes:**
+
+- **`scripts/smoke-run-chain.js` (NEW):** Standalone Node runner exercising real exported APIs from Phases 1-4 (DD-04 mock-only mode). 11 checks across 5 sections (F1 stale + reset, F2 auto-advance backward-compat/opt-out/corrupt-state, F3 pending guard + force override, T5 drift detect + prepublish severity + no false positive, REPO final parity safety net). Uses isolated `os.tmpdir()` fixtures, cleans up on exit. Exit codes: 0=green, 1=smoke fail, 2=fatal. `AIOSON_PREPUBLISH=true` elevates T5 severity to error.
+- **`.github/workflows/release-smoke.yml` (NEW):** GitHub Actions workflow gated by `release` label (or manual `workflow_dispatch`). Runs `npm ci` → `npm run ci` → `node scripts/smoke-run-chain.js` (with `AIOSON_PREPUBLISH=true`) → `npm pack --dry-run`. Acts as merge gate for release-labeled PRs.
+- **`tests/scripts/smoke-run-chain.test.js` (NEW):** 3 unit tests covering AC-T6-01 (green exit), AC-T6-05 (prepublish mode preserves green exit on clean repo), AC-T6-08 (output discipline — all 5 sections + per-step labels present).
+- **`tests/fixtures/medium-feature-mock/` (NEW):** 6 mock JSON files (one per MEDIUM agent: product, analyst, architect, pm, dev, qa) with `writes` (path→content templates with `{slug}` substitution) + `spec_frontmatter` (gate approvals). README documents PMD-05 / Sheldon R2 freshness rule.
+
+**Coordination notes:**
+
+- DD-04 honored: mock-only CI, no LLM calls. Smoke runner exercises real `require()` of Phase 1-4 modules directly — no subprocess shelling.
+- DD-05 progressive-release strategy completed: v1.9.5 → v1.9.6 → v1.9.7 → v1.9.8 → v1.10.0 across 5 minor bumps. Each phase shippable independently; final v1.10.0 closes the feature with cross-phase smoke gate.
+- PMD-07 / BR-05 wiring audit cross-phase consolidation completed (see `wiring-audit-workflow-handoff-integrity.md` § Cross-phase consolidation table) — every phase has call sites confirmed, unit tests passing, and smoke coverage.
+
 ### Phase 4 — T5 (v1.9.8 candidate) — 2026-05-20
 
 **Status:** Implementation complete, 20/20 unit tests passing, 0 drift against actual repo.

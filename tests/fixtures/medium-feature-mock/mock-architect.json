@@ -1,0 +1,9 @@
+{
+  "agent": "architect",
+  "writes": {
+    "architecture-{slug}.md": "---\nslug: {slug}\ncreated_by: architect\n---\n# Architecture — Smoke Mock\n\nMock architecture for smoke chain.\n"
+  },
+  "spec_frontmatter": {
+    "gate_design": "approved"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "agent": "product",
+  "writes": {
+    "prd-{slug}.md": "---\nslug: {slug}\nclassification: MEDIUM\ncreated_by: product\n---\n# PRD — Smoke Mock\n\n## Vision\nMock feature for T6 smoke chain.\n\n## Problem\nSmoke fixture only; not a real feature.\n\n## Users\n- smoke runner\n\n## MVP scope\n### Must-have 🔴\n- N/A — smoke mock\n\n## Out of scope\n- everything\n"
+  },
+  "spec_frontmatter": {}
+}

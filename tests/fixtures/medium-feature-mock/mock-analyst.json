@@ -1,0 +1,10 @@
+{
+  "agent": "analyst",
+  "writes": {
+    "requirements-{slug}.md": "---\nslug: {slug}\nclassification: MEDIUM\ncreated_by: analyst\n---\n# Requirements — Smoke Mock\n\nFramework-internal smoke fixture. No domain entities.\n",
+    "spec-{slug}.md": "---\nfeature: {slug}\nslug: {slug}\nclassification: MEDIUM\nstatus: in_progress\ngate_requirements: approved\n---\n# Spec — Smoke Mock\n\n## What was built\nFixture content only.\n"
+  },
+  "spec_frontmatter": {
+    "gate_requirements": "approved"
+  }
+}

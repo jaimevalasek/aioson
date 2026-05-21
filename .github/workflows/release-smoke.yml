@@ -1,0 +1,36 @@
+name: Release Smoke (workflow-handoff-integrity T6)
+
+on:
+  pull_request:
+    types: [opened, labeled, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    env:
+      AIOSON_PREPUBLISH: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and test
+        run: npm run ci
+
+      - name: Run pre-publish smoke chain
+        run: node scripts/smoke-run-chain.js
+
+      - name: Verify npm package contents
+        run: npm pack --dry-run
