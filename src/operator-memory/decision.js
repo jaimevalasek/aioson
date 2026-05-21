@@ -209,6 +209,13 @@ function promoteProposal({ identity, proposal: proposalData }) {
     db.close();
   }
 
+  // Post-commit: regenerate MEMORY.md index (best-effort, outside transaction
+  // since MEMORY.md is regenerable from decisions/ — markdown source-of-truth).
+  try {
+    const { regenerateIndex } = require('./index-md');
+    regenerateIndex(identity);
+  } catch { /* index regen failure is non-fatal */ }
+
   return decision;
 }
 
@@ -235,6 +242,11 @@ function forgetEntry(identity, slug) {
     } finally {
       db.close();
     }
+    // Post-commit: regenerate MEMORY.md index after decision removed
+    try {
+      const { regenerateIndex } = require('./index-md');
+      regenerateIndex(identity);
+    } catch { /* index regen failure is non-fatal */ }
     return { mode: 'decision', archivedPath: archived };
   }
   if (fs.existsSync(propFilePath)) {

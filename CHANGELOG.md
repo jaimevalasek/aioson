@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-05-21
+
+### Added
+- **Operator memory — Phase 3 universal loading directive** (3 of 5 phases for the `operator-memory` feature). The cross-cutting integration phase that wires operator-memory into agent prompts framework-wide. **Inception-risk phase** — directive ships behind `AIOSON_OPERATOR_MEMORY=true` flag **default OFF** until Phase 4 (v1.15.0) ships green.
+  - **Universal directive** injected into `template/CLAUDE.md` AND `template/AGENTS.md`: `## Memory loading` + `## Memory capture` sections at consistent position (after `## Mandatory first action`, before `## Agents`). Byte-identical between both files (T5 parity guarantee). Flag-gated: `if process.env.AIOSON_OPERATOR_MEMORY === 'true'` — when unset/false the directive is a no-op (backward-compat per AC-P3-08).
+  - **`aioson op:list` full impl** — replaces Phase 1 stub. Lists active decisions with category + signal_type + reinforced date. Supports `--proposals` (queue view), `--include-archived` (Phase 5 archive tier), `--format=json` (machine-readable).
+  - **`aioson op:show <slug>` full impl** — replaces Phase 1 stub. Prints decision frontmatter + body, or proposal data when slug is in `proposals/`. `--json` supported.
+  - **`src/operator-memory/index-md.js`** (NEW): MEMORY.md tier-based reader/writer. `loadMemoryIndex(identity, tier)` parses frontmatter + link entries. `regenerateIndex(identity)` rebuilds from `decisions/*.md` filesystem (markdown source-of-truth per PMD-AN-06). Hooked into `promoteProposal` + `forgetEntry` post-commit so MEMORY.md auto-refreshes after every state change.
+  - **`src/operator-memory/loader.js`** (NEW): `preflightLoad(identity, taskDescription)` returns `{index, matches}` for agent-side consumption. `matchDecisions(index, taskDescription)` V1 substring + stopword heuristic (V2 will switch to FTS5-backed query).
+  - **`.aioson/docs/operator-memory/memory-md-format.md`** (NEW): canonical cross-harness format spec. Documents MEMORY.md frontmatter + body schema, decision file schema, loading pseudocode, V1 support matrix (Claude Code native + Codex compatible + Gemini compatible; Cursor + Aider TBD V2), and a ~10-line POSIX reference implementation.
+  - **`scripts/memory-budget-audit.js`** (NEW): enforces NFR-02 byte budgets. Per-file warn at 1500B / fail at 2000B; cross-cutting warn at 5000B / fail at 6000B. Phase 3 directive total: 2664 B (well within budget). `--json` supported. Exit 1 on fail.
+  - **`tests/operator-memory-loading.test.js`** — 23 new unit tests covering AC-P3-01..12 including byte-parity between CLAUDE.md/AGENTS.md directives + budget audit self-test + cross-harness format spec sanity.
+  - **`scripts/smoke-run-chain.js`** extended with `[OM3]` section — 3 smoke checks (index regenerates after promote, lazy match returns task-relevant decisions, flag-OFF graceful degrade).
+
+### Notes
+- **Inception risk explicitly mitigated**: `AIOSON_OPERATOR_MEMORY` flag is **OFF by default in this release**. Existing AIOSON sessions are unaffected — directive in template files is a no-op until the env var is set. Phase 4 (v1.15.0) will flip the default to `true` AFTER its CI gate confirms both flag-states are green.
+- The directive is byte-identical between `template/CLAUDE.md` and `template/AGENTS.md` (verified by AC-P3-11 test). This is the parity contract — different file shells, identical directive content.
+- Smoke runner result: 17/17 green (was 14/14 before OM3).
+- MEMORY.md tier-based format (PMD-AN-02): Phase 3 ships single `MEMORY.md` (active tier). Phase 5 decay sweep will partition into `MEMORY.md` + `MEMORY-archive.md` based on category half-life crossing. Format is forward-compatible.
+- Cross-harness V1 support matrix documented: Claude Code + Codex + Gemini CLI all read `CLAUDE.md` or `AGENTS.md`, both of which now contain the universal directive — they participate natively when the env flag is set. Cursor + Aider deferred to V2 (need bridge files).
+
 ## [1.13.0] - 2026-05-21
 
 ### Added

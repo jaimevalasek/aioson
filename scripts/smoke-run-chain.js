@@ -49,6 +49,10 @@ const { captureSignal, readProposal } = require(path.join(REPO_ROOT, 'src', 'ope
 const { promoteProposal, readDecision, forgetEntry } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'decision'));
 const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
 
+// operator-memory Phase 3 (v1.14.0+)
+const { loadMemoryIndex, regenerateIndex } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'index-md'));
+const { matchDecisions, preflightLoad } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'loader'));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 let pass = 0;
@@ -305,6 +309,92 @@ async function smokeRealRepoParity() {
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
 
+// ─── [OM3] operator-memory loading + lazy match (Phase 3, v1.14.0) ───────────
+
+async function smokeOM3IndexRegenerates() {
+  step('OM3 MEMORY.md auto-regenerates after promote (active tier index)');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om3-i-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om3-idx';
+    ensureStorageTree(identity);
+    const slug = deriveSlug('om3 index test alpha');
+    const cap = captureSignal({ identity, slug, signal_type: 'authorization', quote: 'q', proposal: 'om3 index test alpha', source_agent: 'smoke' });
+    promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+
+    const index = loadMemoryIndex(identity, 'active');
+    if (!index) throw new Error('MEMORY.md should exist after promote');
+    if (index.frontmatter.schema_version !== '1.0') throw new Error('schema_version mismatch');
+    if (index.entries.length < 1) throw new Error('index should contain at least 1 entry');
+    if (!index.entries.find((e) => e.slug === slug)) throw new Error('promoted slug missing from index');
+    ok('regenerateIndex wired into promoteProposal post-commit hook');
+  } catch (err) {
+    ko(`OM3 index regenerate: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM3LazyMatch() {
+  step('OM3 matchDecisions returns task-relevant decisions by keyword overlap');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om3-m-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om3-match';
+    ensureStorageTree(identity);
+    const slugA = deriveSlug('commit autonomy after slice approval');
+    const slugB = deriveSlug('npm publish stays manual');
+    const slugC = deriveSlug('use typescript by default');
+
+    for (const [slug, proposal, sig] of [[slugA, 'commit autonomy after slice approval', 'authorization'], [slugB, 'npm publish stays manual', 'exclusion'], [slugC, 'use typescript by default', 'correction']]) {
+      const cap = captureSignal({ identity, slug, signal_type: sig, quote: 'q', proposal, source_agent: 'smoke' });
+      promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+    }
+
+    const { index, matches } = preflightLoad(identity, 'I want to commit and push to main');
+    if (!index) throw new Error('index should load');
+    if (matches.length === 0) throw new Error('should match commit-related decision');
+    if (!matches.find((m) => m.slug === slugA)) throw new Error('expected slug A in matches');
+    ok('lazy match works on commit task → commit-autonomy decision');
+  } catch (err) {
+    ko(`OM3 lazy match: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM3FlagOffNoop() {
+  step('OM3 backward-compat: helpers return null/empty on absent storage (flag-OFF semantics)');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om3-f-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om3-ghost-never-created';
+    const result = preflightLoad(identity, 'whatever task');
+    if (result.index !== null) throw new Error(`preflightLoad on missing storage should return null index, got ${result.index}`);
+    if (result.matches.length !== 0) throw new Error('matches should be empty');
+
+    const index = loadMemoryIndex(identity, 'active');
+    if (index !== null) throw new Error('loadMemoryIndex on missing MEMORY.md should return null');
+    ok('graceful degrade: null index + empty matches');
+  } catch (err) {
+    ko(`OM3 flag-off noop: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
 // ─── [OM2] operator-memory capture + promotion (Phase 2, v1.13.0) ────────────
 
 async function smokeOM2CapturePromote() {
@@ -432,6 +522,11 @@ async function main() {
   await smokeOM2CapturePromote();
   await smokeOM2ForgetIdempotent();
   await smokeOM2SignalValidation();
+
+  console.log('\n[OM3] operator-memory loading + lazy match');
+  await smokeOM3IndexRegenerates();
+  await smokeOM3LazyMatch();
+  await smokeOM3FlagOffNoop();
 
   console.log('\n[REPO] Final parity safety net');
   await smokeRealRepoParity();

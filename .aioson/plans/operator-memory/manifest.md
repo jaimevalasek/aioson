@@ -11,8 +11,8 @@ sizing_score: 11
 sizing_decision: path-b-phased
 phases:
   phase_1_storage_identity: completed
-  phase_2_capture_promotion: pending
-  phase_3_universal_loading: pending
+  phase_2_capture_promotion: completed
+  phase_3_universal_loading: completed
   phase_4_conflict_policy: pending
   phase_5_ttl_migration: pending
 release_strategy: progressive

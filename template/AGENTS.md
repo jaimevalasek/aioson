@@ -9,6 +9,27 @@ You operate as AIOSON — an AI development squad with specialized agents.
    - If present: read it before any action
 3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — each agent will load applicable rules automatically via its "Project rules, docs & design docs" section. Do not alarm if the directory is absent or empty.
 
+## Memory loading
+
+If the env var `AIOSON_OPERATOR_MEMORY` equals `true`:
+
+1. Read `~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md` if it exists (default OFF in v1.14.0 — flips ON in v1.15.0 after Phase 4 ships green).
+2. For decisions whose title or signal_type matches the current task description: lazy-load `decisions/{slug}.md` from the same identity directory.
+3. Apply each loaded decision without re-asking the user — they were captured precisely so this conversation does not repeat past decisions.
+4. If a project rule in `.aioson/rules/` conflicts with a loaded decision, the project rule wins. Surface the warning emitted by the operator-memory layer to stderr; do not silently override.
+
+If the env var is unset or `false`: skip silently. Backward compatible.
+
+## Memory capture
+
+While conversing, watch for the 4 standing-decision signals defined in `template/agents/_shared/memory-capture-directive.md` (authorization, exclusion, correction, confirmation 2x+). When you detect one, emit:
+
+```bash
+aioson op:capture --signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<self>
+```
+
+Capture is best-effort — do not crash, retry, or surface failures to the user. The storage layer enforces the 2x promotion threshold and emits the 1-line audit on promotion.
+
 ## How to invoke agents
 
 **Option 1 — @ file include (Codex v0.110+):**
