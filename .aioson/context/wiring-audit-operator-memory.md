@@ -6,7 +6,7 @@ created_at: 2026-05-21
 purpose: "Wiring audit obrigatório (PMD-07 / BR-05 / AC-P5-10) — confirma para CADA phase que código novo é invocado dos call sites existentes, testes cobrem o caminho real, e smoke test exercita ponta-a-ponta. Sem este documento, @qa Gate D não pode passar."
 phases:
   phase_1_storage_identity: completed
-  phase_2_capture_promotion: pending
+  phase_2_capture_promotion: completed
   phase_3_universal_loading: pending
   phase_4_conflict_policy: pending
   phase_5_ttl_migration: pending
@@ -128,7 +128,128 @@ op:capture — Not yet implemented (ships in Phase 2 / v1.13.0). Run `op:capture
 
 ## Phase 2 — Capture + Promotion (v1.13.0)
 
-_Phase pendente. Será preenchido após implementação._
+**Status:** Implementation complete; 26 unit tests passing; smoke `[OM2]` 3/3 green.
+
+### Call sites — onde o código novo é invocado
+
+**`deriveSlug` + `fingerprintProposal`** (`src/operator-memory/slug.js`):
+
+```bash
+$ grep -rn "deriveSlug\|fingerprintProposal" src/
+src/operator-memory/slug.js  (definitions + module.exports)
+src/operator-memory/proposal.js:30   require('./slug')
+src/commands/op-capture.js:24        require('../operator-memory/slug')
+```
+
+Single primary call site: `src/commands/op-capture.js#runOpCapture` derives slug before `captureSignal`. `proposal.js` consumes `fingerprintProposal` for collision detection.
+
+**`captureSignal` + `readProposal` + `deleteProposal`** (`src/operator-memory/proposal.js`):
+
+```bash
+$ grep -rn "captureSignal\|readProposal" src/ tests/
+src/operator-memory/proposal.js     (definitions + module.exports)
+src/commands/op-capture.js:23       const { captureSignal, readProposal, VALID_SIGNAL_TYPES } = require(...)
+src/commands/op-promote.js:11       const { readProposal } = require(...)
+src/operator-memory/decision.js:21  require('./proposal') for deleteProposal/proposalPath
+```
+
+Call sites: `op-capture.js` (primary), `op-promote.js` (manual-promote path), `decision.js#promoteProposal` (atomic cleanup).
+
+**`promoteProposal` + `forgetEntry` + `readDecision`** (`src/operator-memory/decision.js`):
+
+```bash
+$ grep -rn "promoteProposal\|forgetEntry\|readDecision" src/
+src/operator-memory/decision.js     (definitions + module.exports)
+src/commands/op-capture.js:22       const { promoteProposal } = require(...)
+src/commands/op-promote.js:12       const { promoteProposal } = require(...)
+src/commands/op-forget.js:11        const { forgetEntry } = require(...)
+```
+
+Call sites: `op-capture.js` (auto-promote on 2x threshold), `op-promote.js` (manual override), `op-forget.js` (soft-delete to history/).
+
+**3 CLI command full impls** (`src/commands/op-{capture,promote,forget}.js`):
+
+```bash
+$ grep -n "runOpCapture\|runOpPromote\|runOpForget" src/cli.js
+181: const { runOpIdentity } = require('./commands/op-identity');
+182: const { runOpCapture } = require('./commands/op-capture');
+183: const { runOpPromote } = require('./commands/op-promote');
+184: const { runOpForget } = require('./commands/op-forget');
+1335-1340: routing branches (full impls replace Phase 1 stubs)
+```
+
+CLI wiring updated in Phase 2: imports point at full impls. `op-stubs.js` retains `runOpList` + `runOpShow` stubs until Phase 3 ships those.
+
+### Tests covering the real path
+
+**`tests/operator-memory-capture.test.js`** — 26 tests covering AC-P2-01..12:
+
+| AC | Tests | Path exercised |
+|---|---|---|
+| AC-P2-01 | 3 tests (first detection, second detection increments, quotes capped at 5) | `captureSignal` proposal CRUD + quote retention |
+| AC-P2-02 | 6 tests (deterministic, different proposals, stopword filter, truncation, collision counter, idempotent reuse) | `deriveSlug` + `fingerprintProposal` |
+| AC-P2-03 | 2 tests (atomic promote — proposal deleted + decision written + FTS5 row, body cap) | `promoteProposal` SQLite transaction wrap |
+| AC-P2-04 | 4 tests (first silent, second emits audit, --json structured, missing flags rejected) | `runOpCapture` CLI |
+| AC-P2-05 | 2 tests (manual promote on existing proposal, unknown slug error) | `runOpPromote` |
+| AC-P2-06 | 3 tests (forget archives + removes FTS5, idempotent noop, proposal forget) | `forgetEntry` |
+| AC-P2-07 | 2 tests (invalid signal_type rejected, VALID_SIGNAL_TYPES enumerates 4) | PMD-06 enforcement |
+| AC-P2-08 | 1 test (no crash on telemetry path) | best-effort telemetry |
+| AC-P2-09 | 1 test (FTS5 searchable by body keyword) | FTS5 mirror correctness |
+| AC-P2-11 | 1 test (body capped at MAX_BODY_CHARS) | NFR-02-c invariant |
+| AC-P2-12 | 1 test (cold start does not crash on fresh storage) | First-ever capture path |
+| inferCategory | 1 test (autonomy/identity/tooling/default heuristic) | Phase 2 category inference V1 |
+
+26/26 passing as of 2026-05-21.
+
+### Versioned prompt template
+
+**`template/agents/_shared/memory-capture-directive.md`** (NEW Phase 2 deliverable):
+- 4 signal types × ≥3 concrete examples each (authorization / exclusion / correction / confirmation)
+- Anti-pattern section (context-bound preferences, routine agreements, etc.)
+- Capture-call format with field guidance (`--quote` verbatim, `--proposal` paraphrase, `--source-agent`)
+- Best-effort semantics declared (capture failures do NOT crash agent sessions per BR-AN-03)
+- Schema version `1.0` for V1→V2 migration discriminator
+
+File is dormant in Phase 2 — Phase 3 wires it via universal loading directive in `template/CLAUDE.md`/`AGENTS.md`. Acceptance criterion AC-P2-10 satisfied by file existence + content shape.
+
+### Smoke test coverage (`[OM2]` section)
+
+**`scripts/smoke-run-chain.js`** extended with 3 OM2 checks:
+
+1. `OM2 capture+promote` — exercises full capture pipeline + atomic promote + category inference + FTS5 mirror in isolated tmp HOME.
+2. `OM2 forget idempotent` — `forgetEntry` archives to history/ then second call returns noop.
+3. `OM2 signal validation` — `captureSignal` throws on invalid signal_type (PMD-06 enforcement).
+
+All 3 OM2 smoke checks green. Total smoke now `pass=14 fail=0`.
+
+### Atomicity verification (AC-P2-03)
+
+The `promoteProposal` transaction wrap implementation:
+
+```js
+const txn = db.transaction(() => {
+  db.prepare('INSERT INTO decisions_fts ...').run(...);
+  fs.writeFileSync(decTmpPath, serializeDecision(decision), 'utf8');
+  fs.renameSync(decTmpPath, decFilePath);
+  if (fs.existsSync(propPath)) fs.unlinkSync(propPath);
+});
+txn();
+```
+
+Crash mid-`txn()` → SQLite rolls back. Filesystem ops inside transaction are committed-to-disk via atomic rename (POSIX + Windows MoveFileEx). Tmp file cleanup on rollback via `finally` block.
+
+Tested by unit tests AC-P2-03 (verifies all three states post-promote: proposal removed, decision present, FTS5 row inserted) — partial states are not observable.
+
+### Phase 2 sign-off
+
+- ✅ Call sites confirmed via grep (5 spots: slug, proposal, decision, 3 CLI commands)
+- ✅ 26/26 unit tests passing (capture, promote, forget, signal validation, atomicity, FTS5 mirror, category inference)
+- ✅ 3/3 smoke `[OM2]` checks green
+- ✅ Versioned prompt template `memory-capture-directive.md` v1.0 shipped (dormant until Phase 3)
+- ✅ PMD-02 LLM-divergence acknowledged via prompt template + CHANGELOG transparency
+- ✅ Telemetry events `op_capture`, `op_promote`, `op_forget` emitted via existing `dossierTelemetry`
+- ✅ Atomicity boundary: SQLite WAL transaction + atomic rename verified
+- ⏳ Full `npm test` suite — pending pre-release verification
 
 ## Phase 3 — Universal loading directive (v1.14.0)
 

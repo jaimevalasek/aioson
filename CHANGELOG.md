@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-05-21
+
+### Added
+- **Operator memory — Phase 2 capture + promotion engine** (2 of 5 phases for the `operator-memory` feature). Builds on Phase 1's storage substrate to deliver the actual signal-capture pipeline:
+  - **`aioson op:capture` full impl** — replaces Phase 1 stub. Captures a standing-decision signal of type `authorization | exclusion | correction | confirmation`, derives deterministic slug from `--proposal`, writes to `proposals/{slug}.md` on first detection (silent), promotes to `decisions/{slug}.md` atomically on second detection (per PMD-07 2x threshold) with the 1-line audit `✔ Memory: '<text>'. aioson op:forget <slug> p/ desfazer.` (PMD-08 silent-by-default with audit-on-promotion).
+  - **`aioson op:promote <slug>` full impl** — manual promotion path that skips the 2x threshold for a pending proposal.
+  - **`aioson op:forget <slug>` full impl** — soft-deletes a decision or proposal to `history/{ISO}-{slug}.md`. Idempotent (second call returns noop). Removes FTS5 row inside SQLite transaction.
+  - **`src/operator-memory/slug.js`** new module: `deriveSlug`, `normalize`, `fingerprintProposal`. Deterministic kebab-case + stopword filter + truncation at word boundary + collision-suffix detection.
+  - **`src/operator-memory/proposal.js`** new module: `captureSignal` (write/increment), `readProposal`, `deleteProposal`. Quotes capped at 5 most recent per AC-P2-01.
+  - **`src/operator-memory/decision.js`** new module: `promoteProposal` (atomic via SQLite transaction + atomic rename per AC-P2-03), `forgetEntry`, `readDecision`, `inferCategory` (V1 keyword heuristic for autonomy/identity/tooling/default per PMD-03).
+  - **`template/agents/_shared/memory-capture-directive.md`** — NEW versioned prompt template (`schema_version: "1.0"`). 4 signal types × ≥3 concrete examples + anti-pattern section + capture-call format. PMD-02 acknowledged divergence from AIOSON's deterministic principle. File is dormant in Phase 2 — Phase 3 wires it into `template/CLAUDE.md`/`AGENTS.md`.
+  - **`tests/operator-memory-capture.test.js`** — 26 new unit tests covering AC-P2-01..12 (capture, promote, forget, signal validation, atomicity, FTS5 mirror correctness, category inference, body cap).
+  - **`scripts/smoke-run-chain.js`** extended with `[OM2]` section — 3 smoke checks exercising capture+promote pipeline, idempotent forget, signal validation in isolated tmp HOME.
+  - **`.aioson/context/wiring-audit-operator-memory.md`** Phase 2 entry populated with call sites, tests, atomicity verification.
+
+### Notes
+- Atomicity per AC-P2-03: SQLite `db.transaction()` wraps fs operations (`writeFileSync` to `.tmp` + `renameSync` + `unlinkSync` of proposal). Crash mid-transaction → SQLite rolls back; tmp file cleaned up via `finally`. POSIX `rename(2)` and Windows `MoveFileEx` provide the atomic-rename guarantee.
+- Telemetry events shipped this release: `op_capture`, `op_promote`, `op_forget` via existing `dossierTelemetry.emitDossierEvent` (PMD-12 + DD-04 confirmed: extend, don't fragment).
+- LLM-driven capture is acknowledged divergence from AIOSON's deterministic principle (PMD-02). The prompt template at `template/agents/_shared/memory-capture-directive.md` is the canonical signal-detection spec; versioned `schema_version` field supports V1→V2 migration.
+- Smoke runner result: 14/14 green (was 11/11 before OM2 section).
+- Phase 3 (Universal loading directive, v1.14.0) ships next. **Inception risk:** Phase 3 modifies template files this framework itself uses — flag-gated `AIOSON_OPERATOR_MEMORY=true` default OFF until Phase 4 ships green.
+
 ## [1.12.0] - 2026-05-21
 
 ### Added

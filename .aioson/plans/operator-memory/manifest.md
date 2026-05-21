@@ -10,7 +10,7 @@ sheldon_version: v1.11.0
 sizing_score: 11
 sizing_decision: path-b-phased
 phases:
-  phase_1_storage_identity: pending
+  phase_1_storage_identity: completed
   phase_2_capture_promotion: pending
   phase_3_universal_loading: pending
   phase_4_conflict_policy: pending

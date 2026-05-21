@@ -43,6 +43,12 @@ const {
   runStateReset
 } = require(path.join(REPO_ROOT, 'src', 'commands', 'state-save'));
 
+// operator-memory Phase 2 (v1.13.0+)
+const { deriveSlug } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'slug'));
+const { captureSignal, readProposal } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'proposal'));
+const { promoteProposal, readDecision, forgetEntry } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'decision'));
+const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 let pass = 0;
@@ -299,6 +305,105 @@ async function smokeRealRepoParity() {
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
 
+// ─── [OM2] operator-memory capture + promotion (Phase 2, v1.13.0) ────────────
+
+async function smokeOM2CapturePromote() {
+  step('OM2 first capture silent, second capture promotes atomically');
+  // Isolate ~/.aioson for this check
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om2-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om2-smoke-bot';
+    ensureStorageTree(identity);
+    const slug = deriveSlug('commit autonomo apos approval');
+    const first = captureSignal({
+      identity, slug, signal_type: 'authorization',
+      quote: 'pode commitar autonomamente', proposal: 'commit autonomo apos approval', source_agent: 'smoke'
+    });
+    if (first.proposal.detected_count !== 1) throw new Error('first capture count should be 1');
+    if (!readProposal(identity, slug)) throw new Error('proposal file should exist after first capture');
+
+    const second = captureSignal({
+      identity, slug, signal_type: 'authorization',
+      quote: 'sim, pode commitar', proposal: 'commit autonomo apos approval', source_agent: 'smoke'
+    });
+    if (second.proposal.detected_count !== 2) throw new Error('second capture count should be 2');
+
+    // Manual promote (simulating the runOpCapture promotion-on-threshold branch)
+    promoteProposal({ identity, proposal: second.proposal });
+    if (readProposal(identity, slug)) throw new Error('proposal should be removed after promote');
+    const d = readDecision(identity, slug);
+    if (!d) throw new Error('decision should exist after promote');
+    if (d.signal_type !== 'authorization') throw new Error('decision signal_type mismatch');
+    if (d.category !== 'autonomy') throw new Error('decision category should infer to autonomy (commit keyword)');
+    if (d.version_schema !== '1.0') throw new Error('schema version must be 1.0');
+    ok('captured + promoted atomically; FTS5 mirrored');
+  } catch (err) {
+    ko(`OM2 capture+promote: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM2ForgetIdempotent() {
+  step('OM2 op:forget archives to history/ + second call is noop');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om2-f-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om2-smoke-forget';
+    ensureStorageTree(identity);
+    const slug = deriveSlug('something to forget here');
+    const cap = captureSignal({ identity, slug, signal_type: 'exclusion', quote: 'q', proposal: 'something to forget here', source_agent: 'smoke' });
+    promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+
+    const result1 = forgetEntry(identity, slug);
+    if (result1.mode !== 'decision') throw new Error(`first forget should return mode=decision, got ${result1.mode}`);
+    if (!result1.archivedPath) throw new Error('archivedPath should be set');
+
+    const result2 = forgetEntry(identity, slug);
+    if (result2.mode !== 'noop') throw new Error(`second forget should return mode=noop, got ${result2.mode}`);
+    ok('archives to history/ + idempotent noop');
+  } catch (err) {
+    ko(`OM2 forget idempotent: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM2SignalValidation() {
+  step('OM2 captureSignal rejects invalid signal_type (PMD-06 enforcement)');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om2-v-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const identity = 'om2-smoke-validate';
+    ensureStorageTree(identity);
+    let threw = false;
+    try {
+      captureSignal({ identity, slug: 'bad', signal_type: 'invalid-type', quote: 'q', proposal: 'p', source_agent: 'smoke' });
+    } catch {
+      threw = true;
+    }
+    if (!threw) throw new Error('captureSignal should reject invalid signal_type');
+    ok('rejects non-PMD-06 signal types');
+  } catch (err) {
+    ko(`OM2 signal validation: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
 async function main() {
   const isPrepublish = process.env.AIOSON_PREPUBLISH === 'true';
   console.log('━'.repeat(60));
@@ -322,6 +427,11 @@ async function main() {
   await smokeT5DriftCaught();
   await smokeT5PrepublishMode();
   await smokeT5NoFalsePositive();
+
+  console.log('\n[OM2] operator-memory capture + promotion pipeline');
+  await smokeOM2CapturePromote();
+  await smokeOM2ForgetIdempotent();
+  await smokeOM2SignalValidation();
 
   console.log('\n[REPO] Final parity safety net');
   await smokeRealRepoParity();

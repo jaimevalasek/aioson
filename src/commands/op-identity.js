@@ -28,9 +28,12 @@ const {
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 function parseSubcommand(args) {
-  const positional = (args || []).filter((a) => typeof a === 'string' && !a.startsWith('-'));
-  const sub = positional[1] || 'show';
-  const setValue = sub === 'set' ? positional[2] : null;
+  // parser.js strips the command name, so args contains positional args only.
+  // Filter out a leading '.' (legacy convention from other AIOSON commands that
+  // take a project path; op:* commands are machine-local so '.' is ignored).
+  const positional = (args || []).filter((a) => typeof a === 'string' && !a.startsWith('-') && a !== '.');
+  const sub = positional[0] || 'show';
+  const setValue = sub === 'set' ? positional[1] : null;
   return { sub, setValue };
 }
 
