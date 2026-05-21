@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-05-21
+
+### Added
+- **Operator memory — Phase 1 storage + identity foundation** (1 of 5 phases for the `operator-memory` feature). Establishes the per-operator memory substrate that all subsequent phases build on:
+  - **`aioson op:identity`** CLI command — resolves operator identity via sha256[0..16] hash of `git config user.email`, with `AIOSON_OPERATOR_ID` env override (validated regex `^[a-z0-9][a-z0-9-]{2,31}$`, reserved prefixes `_*` and `aioson-*` blocked per PMD-05). Subcommands: `show` (full), `set <id>` (Phase 1 stub — full impl ships Phase 5).
+  - **`~/.aioson/operators/` storage tree** auto-created per identity: `decisions/`, `proposals/`, `history/` subdirs (Phase 2+ populates). Hybrid storage backend: shared `_index.sqlite` (FTS5 virtual table + `operators` table) for cross-decision search per PMD-01.
+  - **5 CLI command stubs** (`op:capture`, `op:promote`, `op:forget`, `op:list`, `op:show`) — register the command surface, emit `op_command_stub` telemetry on invocation, return exit 1 with structured "Not yet implemented (ships in Phase N / vX.Y.Z)" message. Full impls ship across Phases 2-3.
+  - **`src/operator-memory/{identity,storage}.js`** new pure-helper modules exporting `resolveIdentity`, `validateOverride`, `hashEmail`, `ensureStorageTree`, `openIndexDb`, `migrateIndexSchema`, `recordIdentityActivity`. Reusable by downstream phase commands.
+  - **`tests/operator-memory-identity.test.js`** — 24 unit tests covering AC-P1-01..10 + EC-08 salt rehash + DD-02 hash size invariant.
+  - **`.aioson/context/wiring-audit-operator-memory.md`** — new Gate D blocker doc, Phase 1 entry populated (will accumulate per-phase entries across v1.12.0 → v1.16.0).
+
+### Notes
+- This release opens Phase 1 of `operator-memory` MEDIUM feature (5-phase progressive rollout DD-05 mirroring `workflow-handoff-integrity` v1.9.5 → v1.10.0). Subsequent phases ship as v1.13.0 → v1.16.0.
+- Per PMD-02, signal-detection capture (Phase 2+) acknowledges divergence from AIOSON's deterministic principle: prompt-template-driven inherently fuzzy. Phase 1 ships the substrate only — no LLM behavior is invoked.
+- Per inception risk mitigation: universal loading directive (Phase 3) ships behind `AIOSON_OPERATOR_MEMORY=true` flag default OFF; flip default-on after Phase 4 ships green.
+- DD-02 ratified: 16-char hash provides 2^64 collision space; email entropy (~25-30 bits) is the reverse-lookup bottleneck, not hash output length.
+
 ## [1.11.0] - 2026-05-20
 
 ### Added

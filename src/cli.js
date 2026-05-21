@@ -178,6 +178,8 @@ const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
 const { runStateSave, runStateReset } = require('./commands/state-save');
+const { runOpIdentity } = require('./commands/op-identity');
+const { runOpCapture, runOpPromote, runOpForget, runOpList, runOpShow } = require('./commands/op-stubs');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive } = require('./commands/feature-archive');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
@@ -585,6 +587,18 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'state-save',
   'state:reset',
   'state-reset',
+  'op:identity',
+  'op-identity',
+  'op:capture',
+  'op-capture',
+  'op:promote',
+  'op-promote',
+  'op:forget',
+  'op-forget',
+  'op:list',
+  'op-list',
+  'op:show',
+  'op-show',
   'dev:state:write',
   'dev-state-write',
   'feature:close',
@@ -1328,6 +1342,18 @@ async function main() {
       result = await runStateSave({ args, options, logger: commandLogger });
     } else if (command === 'state:reset' || command === 'state-reset') {
       result = await runStateReset({ args, options, logger: commandLogger });
+    } else if (command === 'op:identity' || command === 'op-identity') {
+      result = await runOpIdentity({ args, options, logger: commandLogger });
+    } else if (command === 'op:capture' || command === 'op-capture') {
+      result = await runOpCapture({ args, options, logger: commandLogger });
+    } else if (command === 'op:promote' || command === 'op-promote') {
+      result = await runOpPromote({ args, options, logger: commandLogger });
+    } else if (command === 'op:forget' || command === 'op-forget') {
+      result = await runOpForget({ args, options, logger: commandLogger });
+    } else if (command === 'op:list' || command === 'op-list') {
+      result = await runOpList({ args, options, logger: commandLogger });
+    } else if (command === 'op:show' || command === 'op-show') {
+      result = await runOpShow({ args, options, logger: commandLogger });
     } else if (command === 'feature:close' || command === 'feature-close') {
       result = await runFeatureClose({ args, options, logger: commandLogger });
     } else if (command === 'feature:archive' || command === 'feature-archive') {
