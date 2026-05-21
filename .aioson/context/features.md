@@ -19,4 +19,4 @@
 | dev-state-producer | done | 2026-05-17 | 2026-05-17 |
 | release-page-1-9-0 | done | 2026-05-18 | 2026-05-18 |
 | workflow-hotfix-1-9-3 | done | 2026-05-19 | 2026-05-19 |
-| workflow-handoff-integrity | in_progress | 2026-05-19 | — |
+| workflow-handoff-integrity | done | 2026-05-19 | 2026-05-20 |
