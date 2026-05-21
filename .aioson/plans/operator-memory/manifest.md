@@ -14,7 +14,8 @@ phases:
   phase_2_capture_promotion: completed
   phase_3_universal_loading: completed
   phase_4_conflict_policy: completed
-  phase_5_ttl_migration: pending
+  phase_5_ttl_migration: completed
+status_final: feature-complete
 release_strategy: progressive
 release_sequence: ["v1.12.0 (storage+identity)", "v1.13.0 (capture)", "v1.14.0 (loading)", "v1.15.0 (conflict)", "v1.16.0 (ttl+migration)"]
 ---

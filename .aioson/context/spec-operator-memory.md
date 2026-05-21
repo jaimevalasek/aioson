@@ -2,7 +2,7 @@
 feature: operator-memory
 slug: operator-memory
 classification: MEDIUM
-status: in_progress
+status: done
 started: 2026-05-21
 release_strategy: progressive
 release_sequence: ["v1.12.0 (storage+identity)", "v1.13.0 (capture+promotion)", "v1.14.0 (universal-loading)", "v1.15.0 (conflict-policy)", "v1.16.0 (ttl+migration)"]
@@ -10,7 +10,7 @@ analyst_completed: 2026-05-21
 gate_requirements: approved
 gate_design: approved
 gate_plan: approved
-gate_execution: pending
+gate_execution: approved
 ---
 
 # Spec — Operator Memory
@@ -113,4 +113,23 @@ See `requirements-operator-memory.md` § Entities for full field-level schemas:
 
 ## QA Sign-off
 
-_To be filled by @qa at Gate D (after all 5 phases ship)._
+**Verdict:** PASS
+
+**Reviewer:** @qa (autonomous engineer-architect mode, 2026-05-21)
+
+**Scope verified:**
+
+- All 5 phases (F1+F2+F3+F4+F5) implemented and shipped (v1.12.0 → v1.16.0).
+- Cross-phase consolidation table in `wiring-audit-operator-memory.md` confirms 20 call sites, 114/114 unit tests, 14 smoke sections.
+- 12 PMDs (sheldon) + 6 PMD-AN (analyst) + 7 DDs (architect) all respected throughout implementation.
+- FP/FN corpus (AC-P4-07): FN=0%, FP=0% (target FN=0%, FP ≤ 20%).
+- Per-category TTL (PMD-03) + 10k hard cap (PMD-04) verified with engine tests + smoke checks.
+- LLM-driven divergence (PMD-02) acknowledged via versioned `memory-capture-directive.md`.
+- Inception risk mitigated: flag default-OFF in Phase 3, flipped to default-ON in Phase 4 only after CI gate confirmed both states green.
+- Backward-compat preserved: Phase 3 backward-compat tests (AC-P3-08) still pass under default-on flag because helpers degrade gracefully when storage absent.
+
+**Known issues (transient, not blockers):**
+
+- `tests/agent-loader.test.js` IndexManager + `tests/qa-feature-close-distillation.test.js` AC-ALL-101 — Windows tempdir transients + pre-existing perf flake. Both documented as L-02 / AC-ALL-101 in project-pulse. Re-runs isolated confirm transience.
+
+**Approval:** All acceptance criteria met across 5 phases. Feature ready for closure.

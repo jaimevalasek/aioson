@@ -62,11 +62,32 @@ async function runOpIdentity({ args = [], options = {}, logger }) {
       if (logger) logger.error(err);
       return { ok: false, error: err, exitCode: 1 };
     }
-    // Phase 1 stub: full op:identity set is shipped in Phase 5.
-    const msg = `op:identity set — Phase 1 stub. For now, export AIOSON_OPERATOR_ID=${setValue} in your shell (current session only) or set it in your CI/launcher. Full op:identity set ships in Phase 5 (v1.16.0).`;
-    if (options.json) return { ok: true, stub: true, suggested_env: { AIOSON_OPERATOR_ID: setValue }, message: msg };
+    // Phase 5 full impl: process.env mutation works only within this Node process.
+    // For shell-session persistence the user must export AIOSON_OPERATOR_ID. This
+    // command initializes the identity storage tree for the new id so subsequent
+    // op:* invocations in the same process see a ready identity.
+    process.env.AIOSON_OPERATOR_ID = setValue;
+    ensureStorageTree(setValue);
+    let db;
+    try {
+      db = openIndexDb();
+      recordIdentityActivity(db, { identity: setValue, source: 'override' });
+    } finally {
+      if (db) { try { db.close(); } catch { /* ignore */ } }
+    }
+    const msg = `op:identity set — process env AIOSON_OPERATOR_ID=${setValue} (this process only). Persist via shell:\n  export AIOSON_OPERATOR_ID=${setValue}\n  # or .bashrc / equivalent`;
+    if (options.json) {
+      return {
+        ok: true,
+        identity: setValue,
+        source: 'override',
+        storage_root: getStorageRoot(setValue),
+        persistence: 'process_env_only',
+        shell_export: `export AIOSON_OPERATOR_ID=${setValue}`
+      };
+    }
     if (logger) logger.log(msg);
-    return { ok: true, stub: true };
+    return { ok: true };
   }
 
   // sub === 'show'

@@ -184,6 +184,8 @@ const { runOpPromote } = require('./commands/op-promote');
 const { runOpForget } = require('./commands/op-forget');
 const { runOpList } = require('./commands/op-list');
 const { runOpShow } = require('./commands/op-show');
+const { runOpReinforce } = require('./commands/op-reinforce');
+const { runOpMigrate } = require('./commands/op-migrate');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive } = require('./commands/feature-archive');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
@@ -603,6 +605,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'op-list',
   'op:show',
   'op-show',
+  'op:reinforce',
+  'op-reinforce',
+  'op:migrate',
+  'op-migrate',
   'dev:state:write',
   'dev-state-write',
   'feature:close',
@@ -1358,6 +1364,10 @@ async function main() {
       result = await runOpList({ args, options, logger: commandLogger });
     } else if (command === 'op:show' || command === 'op-show') {
       result = await runOpShow({ args, options, logger: commandLogger });
+    } else if (command === 'op:reinforce' || command === 'op-reinforce') {
+      result = await runOpReinforce({ args, options, logger: commandLogger });
+    } else if (command === 'op:migrate' || command === 'op-migrate') {
+      result = await runOpMigrate({ args, options, logger: commandLogger });
     } else if (command === 'feature:close' || command === 'feature-close') {
       result = await runFeatureClose({ args, options, logger: commandLogger });
     } else if (command === 'feature:archive' || command === 'feature-archive') {

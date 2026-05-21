@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-05-21
+
+### Added
+- **Operator memory — Phase 5 TTL decay + migration + closure** (5 of 5 phases — **feature complete**).
+  - **`src/operator-memory/decay.js`** (NEW): per-category half-life engine — identity=365d, autonomy=180d, tooling=90d, default=90d (PMD-03). Env override per category via `AIOSON_OPERATOR_DECAY_<CATEGORY>_DAYS`. `findStaleDecisions(identity)` returns past-half-life entries with 30d per-slug debounce via `~/.aioson/operators/{identity}/_decay_state.json`. `cleanupHistory(identity)` hard-deletes `history/*.md` entries older than 365d.
+  - **`src/operator-memory/prune.js`** (NEW): 10k hard cap (PMD-04). `enforceCap(identity, {cap})` prunes oldest non-identity-category decisions first; identity-category decisions are NEVER auto-pruned. Env override via `AIOSON_OPERATOR_MAX_DECISIONS`.
+  - **`aioson op:reinforce <slug>`** (NEW Phase 5 command): refreshes `last_reinforced` + increments `reinforcement_count`. Silences decay prompt for next half-life window.
+  - **`aioson op:migrate`** (NEW Phase 5 command): explicit one-shot import from `.aioson/context/user-profile.md`. 8 known field mappings (autonomy_preference, communication_style, etc.). Idempotent (checks `deprecated_by: operator-memory` frontmatter). Unknown fields preserved. Marks `user-profile.md` deprecated post-migration per PMD-10.
+  - **`aioson op:identity set <id>`** Phase 5 full impl replaces Phase 1 stub: mutates `process.env.AIOSON_OPERATOR_ID` for the current process + initializes the storage tree + returns the shell `export` command for persistence.
+  - **`tests/operator-memory-decay.test.js`** — 23 new unit tests AC-P5-01..09 (closure ACs P5-10..14 verified by archive process).
+  - **`scripts/smoke-run-chain.js`** `[OM5]` section (decay sweep, hard cap, history cleanup) + `[OM-ALL]` cross-phase loader verification (10 modules + 8 CLI commands all exporting expected functions). Total smoke now 25/25.
+  - **`.aioson/context/wiring-audit-operator-memory.md`** Phase 5 entry + **cross-phase consolidation table** (PMD-07 / BR-05 Gate D blocker satisfied). 20 call sites, 114/114 cumulative unit tests, 14 smoke sections green.
+
+### Notes
+- **Feature complete.** Operator-memory shipped end-to-end: F1 (storage+identity) + F2 (capture+promotion) + F3 (universal loading directive) + F4 (conflict policy + flag flip) + F5 (decay+migration). 5 phases × 5 minor releases v1.12.0 → v1.16.0 per DD-05 progressive-release strategy (mirrors workflow-handoff-integrity exitoso).
+- **20 call sites, 114 unit tests, 25 smoke checks** wired and exercised across the 5 phases. Cross-phase consolidation table in wiring-audit doc verifies every phase has call sites grepped + tests passing + smoke coverage (PMD-07 / BR-05 anti-pattern guard).
+- Gate D approved post-QA sign-off. `features.md` operator-memory → `done`. Feature artifacts archived to `.aioson/context/done/operator-memory/`.
+- **First operational test in production:** this very release ships AIOSON_OPERATOR_MEMORY default-ON. Existing users on `~/.aioson/` (e.g. me, who has been operating this dev session) will start participating in capture as new sessions begin. The feature is now self-evidence-generating.
+
 ## [1.15.0] - 2026-05-21
 
 ### Added

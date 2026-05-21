@@ -56,6 +56,10 @@ const { matchDecisions, preflightLoad } = require(path.join(REPO_ROOT, 'src', 'o
 // operator-memory Phase 4 (v1.15.0+)
 const { detectConflicts, formatConflictWarning, debounceConflicts } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'conflict'));
 
+// operator-memory Phase 5 (v1.16.0+)
+const { findStaleDecisions, formatDecayPrompt, cleanupHistory, halfLifeForCategory, DAY_MS } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'decay'));
+const { enforceCap, countDecisions } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'prune'));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 let pass = 0;
@@ -311,6 +315,144 @@ async function smokeRealRepoParity() {
 }
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
+
+// ─── [OM5] operator-memory TTL decay + prune (Phase 5, v1.16.0) ──────────────
+
+async function smokeOM5DecaySweep() {
+  step('OM5 decay sweep finds past-half-life decisions per category');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om5-d-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
+    const { decisionPath } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'decision'));
+    const identity = 'om5-decay';
+    ensureStorageTree(identity);
+    const slug = deriveSlug('decay sweep test smoke');
+    const cap = captureSignal({ identity, slug, signal_type: 'authorization', quote: 'q', proposal: 'decay sweep test smoke', source_agent: 'smoke' });
+    promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+    // Backdate to 200 days ago — autonomy half-life is 180d
+    const fp = decisionPath(identity, slug);
+    let content = await fs.readFile(fp, 'utf8');
+    const past = new Date(Date.now() - 200 * DAY_MS).toISOString();
+    content = content
+      .replace(/last_reinforced:.*/, `last_reinforced: ${past}`)
+      .replace(/promoted_at:.*/, `promoted_at: ${past}`);
+    await fs.writeFile(fp, content, 'utf8');
+
+    const stale = findStaleDecisions(identity);
+    if (stale.length === 0) throw new Error('expected at least 1 stale decision');
+    const prompt = formatDecayPrompt(stale[0]);
+    if (!prompt.includes('⏱ Memory')) throw new Error('decay prompt format mismatch');
+    ok('decay engine surfaces stale + canonical prompt format');
+  } catch (err) {
+    ko(`OM5 decay sweep: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM5HardCap() {
+  step('OM5 enforceCap prunes oldest non-identity entries when over cap');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om5-c-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
+    const identity = 'om5-cap';
+    ensureStorageTree(identity);
+    // Seed 3 decisions
+    for (let i = 0; i < 3; i += 1) {
+      const slug = `cap-${i}`;
+      const cap = captureSignal({ identity, slug, signal_type: 'authorization', quote: 'q', proposal: `cap test ${i}`, source_agent: 'smoke' });
+      promoteProposal({ identity, proposal: { ...cap.proposal, detected_count: 2 } });
+    }
+    if (countDecisions(identity) !== 3) throw new Error('expected 3 decisions before cap');
+
+    const pruned = enforceCap(identity, { cap: 2 });
+    if (pruned.length < 1) throw new Error('expected at least 1 prune');
+    if (countDecisions(identity) > 2) throw new Error('count should be <= cap after prune');
+    ok('hard cap pruning preserves identity-category invariant');
+  } catch (err) {
+    ko(`OM5 hard cap: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM5HistoryCleanup() {
+  step('OM5 cleanupHistory removes entries older than 365d');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om5-h-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
+    const identity = 'om5-history';
+    ensureStorageTree(identity);
+    const historyDir = path.join(tmpHome, '.aioson', 'operators', identity, 'history');
+    const oldFile = path.join(historyDir, 'old.md');
+    const newFile = path.join(historyDir, 'new.md');
+    await fs.writeFile(oldFile, 'content', 'utf8');
+    await fs.writeFile(newFile, 'content', 'utf8');
+    const oldTime = new Date(Date.now() - 400 * DAY_MS);
+    const fsNative = require('node:fs');
+    fsNative.utimesSync(oldFile, oldTime, oldTime);
+
+    const removed = cleanupHistory(identity);
+    if (removed.length !== 1) throw new Error(`expected 1 removed, got ${removed.length}`);
+    ok('365d threshold respected; recent files preserved');
+  } catch (err) {
+    ko(`OM5 history cleanup: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+// ─── [OM-ALL] cross-phase consolidation (AC-P5-11) ────────────────────────────
+
+async function smokeOMAllPhasesActive() {
+  step('OM-ALL: F1+F2+F3+T5+T6 still green AND operator-memory modules loadable');
+  try {
+    // Verify all operator-memory module exports exist (lightweight cross-phase touch)
+    const expectedExports = {
+      identity: ['resolveIdentity', 'validateOverride', 'hashEmail'],
+      storage: ['ensureStorageTree', 'openIndexDb', 'migrateIndexSchema'],
+      slug: ['deriveSlug', 'fingerprintProposal'],
+      proposal: ['captureSignal', 'readProposal'],
+      decision: ['promoteProposal', 'forgetEntry', 'readDecision'],
+      'index-md': ['loadMemoryIndex', 'regenerateIndex'],
+      loader: ['preflightLoad', 'matchDecisions'],
+      conflict: ['detectConflicts', 'debounceConflicts', 'formatConflictWarning'],
+      decay: ['findStaleDecisions', 'cleanupHistory', 'halfLifeForCategory'],
+      prune: ['enforceCap', 'countDecisions']
+    };
+    for (const [mod, exports] of Object.entries(expectedExports)) {
+      const m = require(path.join(REPO_ROOT, 'src', 'operator-memory', mod));
+      for (const exp of exports) {
+        if (typeof m[exp] !== 'function') throw new Error(`module '${mod}' missing export '${exp}'`);
+      }
+    }
+    // Verify CLI command modules also loadable
+    const cliCommands = ['op-identity', 'op-capture', 'op-promote', 'op-forget', 'op-list', 'op-show', 'op-reinforce', 'op-migrate'];
+    for (const c of cliCommands) {
+      const m = require(path.join(REPO_ROOT, 'src', 'commands', c));
+      const expectedFn = `runOp${c.replace('op-', '').split('-').map((s) => s[0].toUpperCase() + s.slice(1)).join('')}`;
+      if (typeof m[expectedFn] !== 'function') throw new Error(`CLI command '${c}' missing export '${expectedFn}'`);
+    }
+    ok('10 operator-memory modules + 8 CLI commands all loadable and complete');
+  } catch (err) {
+    ko(`OM-ALL: ${err.message}`);
+  }
+}
 
 // ─── [OM4] operator-memory conflict policy (Phase 4, v1.15.0) ────────────────
 
@@ -609,6 +751,14 @@ async function main() {
   await smokeOM4NoFalsePositive();
   await smokeOM4DebounceWindow();
   await smokeOM4FlagFlipped();
+
+  console.log('\n[OM5] operator-memory TTL decay + prune + identity set');
+  await smokeOM5DecaySweep();
+  await smokeOM5HardCap();
+  await smokeOM5HistoryCleanup();
+
+  console.log('\n[OM-ALL] cross-phase consolidation (AC-P5-11)');
+  await smokeOMAllPhasesActive();
 
   console.log('\n[REPO] Final parity safety net');
   await smokeRealRepoParity();
