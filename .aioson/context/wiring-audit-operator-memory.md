@@ -8,7 +8,7 @@ phases:
   phase_1_storage_identity: completed
   phase_2_capture_promotion: completed
   phase_3_universal_loading: completed
-  phase_4_conflict_policy: pending
+  phase_4_conflict_policy: completed
   phase_5_ttl_migration: pending
 ---
 
@@ -361,9 +361,94 @@ Total smoke now `pass=17 fail=0`.
 - ✅ MEMORY.md tier-based format (PMD-AN-02): active + archive (archive populated by Phase 5 decay sweep)
 - ⏳ Full `npm test` suite — pending pre-release verification
 
-## Phase 4 — Conflict policy (v1.15.0)
+## Phase 4 — Conflict policy + flag flip (v1.15.0)
 
-_Phase pendente. Será preenchido após implementação._
+**Status:** Implementation complete; 18 unit tests passing (incl. FP/FN corpus); smoke `[OM4]` 4/4 green. **Inception flag flipped** — `AIOSON_OPERATOR_MEMORY` default is now ON (opt-out via env var explicitly).
+
+### Call sites — onde o código novo é invocado
+
+**`detectConflicts` + `debounceConflicts` + `formatConflictWarning`** (`src/operator-memory/conflict.js`):
+
+```bash
+$ grep -rn "detectConflicts\|debounceConflicts\|formatConflictWarning" src/ tests/
+src/operator-memory/conflict.js   (definitions + module.exports)
+src/operator-memory/loader.js     (consumed inside preflightLoad when projectRoot is supplied)
+tests/operator-memory-conflict.test.js  (18 tests)
+scripts/smoke-run-chain.js        ([OM4] section)
+```
+
+Single primary call site: `preflightLoad` wires conflict detection optionally (only when `options.projectRoot` is supplied). This keeps Phase 3 callers unaffected and lets agents opt in to conflict detection by passing `projectRoot`.
+
+**Project rule schema additive change:**
+
+Rules in `.aioson/rules/` may now optionally declare `conflicts_with_signal_types: [authorization, exclusion, ...]` in frontmatter. Rules without this field generate zero false positives (AC-P4-04 verified). Backward-compat: existing rules continue to work — they just don't participate in conflict detection until opted in.
+
+**Auxiliary state file:**
+
+`~/.aioson/operators/{identity}/_conflict_state.json` — per-pair `last_warned_at` timestamps for 60s debounce window. Mirror of F2's `last_workflow_event_at` idempotency pattern.
+
+### Tests covering the real path
+
+**`tests/operator-memory-conflict.test.js`** — 18 tests covering AC-P4-01..10:
+
+| AC | Tests | Path exercised |
+|---|---|---|
+| AC-P4-01 | 2 tests (catches opted-in conflict, signal-type mismatch returns none) | Core detection |
+| AC-P4-02 | 1 test (warning format verbatim) | `formatConflictWarning` |
+| AC-P4-03 | 3 tests (first emits + second suppressed, override window, _conflict_state.json contains last_warned_at) | `debounceConflicts` |
+| AC-P4-04 | 3 tests (array literal frontmatter, multi-line list format, no opt-in → no conflict) | `parseRuleFrontmatter` |
+| AC-P4-05 | 1 test (decision file unchanged after conflict warning) | Read-only contract |
+| AC-P4-06 | 1 test (threshold tunable) | `DEFAULT_KEYWORD_THRESHOLD` override |
+| AC-P4-07 | **2 corpus tests** — 10 conflict pairs (FN=0), 15 non-conflict pairs (FP ≤ 20%) | **Statistical guarantee** |
+| meta | 5 tests (scanProjectRules + README filter, stopword overlap, empty inputs, no projectRoot returns [], malformed rule does not crash) | Robustness |
+
+18/18 passing. **AC-P4-07 statistical targets achieved: FN=0%, FP=0%** (in this corpus). The current heuristic substantially outperforms the 20% FP ceiling because the conflict pairs are deliberately worded to share concrete keywords (commit, push, publish, etc.) while non-conflict pairs share only stopwords or unrelated terms.
+
+### Smoke test coverage (`[OM4]` section)
+
+4 OM4 smoke checks:
+
+1. **OM4 detectConflicts** — binary V1 conflict + canonical warning format.
+2. **OM4 no false positive** — rules without opt-in field generate zero warnings (additive policy preserved).
+3. **OM4 debounce window** — first emit, immediate repeat suppressed (60s default).
+4. **OM4 flag flipped** — verifies `template/CLAUDE.md` and `template/AGENTS.md` directives now read "Default **ON**" with `AIOSON_OPERATOR_MEMORY=false` opt-out path (AC-P4-08 verification).
+
+Total smoke now `pass=21 fail=0`.
+
+### Feature flag flip (AC-P4-08)
+
+The Phase 3 directive in `template/CLAUDE.md` + `template/AGENTS.md` was updated:
+
+**Before (Phase 3, v1.14.0):**
+```
+If the env var `AIOSON_OPERATOR_MEMORY` equals `true`:
+  ...
+If the env var is unset or `false`: skip silently. Backward compatible.
+```
+
+**After (Phase 4, v1.15.0):**
+```
+Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`.
+
+When enabled (default):
+  ...
+If `AIOSON_OPERATOR_MEMORY=false` is set: skip silently. Backward compatible.
+```
+
+Byte parity between CLAUDE.md and AGENTS.md preserved (T5 + AC-P3-11 maintained). New per-file size: 1307 B (down from 1332 B). Total: 2614 B / 6000 B fail threshold.
+
+### Phase 4 sign-off
+
+- ✅ Call sites confirmed via grep (conflict.js primary + loader.js integration)
+- ✅ 18/18 unit tests passing including 2 statistical corpus tests
+- ✅ 4/4 smoke `[OM4]` checks green
+- ✅ FP/FN corpus: FN=0% (target 0%), FP=0% (target ≤ 20%)
+- ✅ Operator decisions unchanged on conflict (AC-P4-05 read-only contract)
+- ✅ Debounce per (decision_slug, rule_basename) pair, 60s default window
+- ✅ Project rule schema additive — existing rules unaffected
+- ✅ Flag flipped: AIOSON_OPERATOR_MEMORY default ON (AC-P4-08)
+- ✅ Telemetry event `op_conflict_warning` available via existing `dossierTelemetry` pattern (PMD-12)
+- ⏳ Full `npm test` suite — pending pre-release verification
 
 ## Phase 5 — TTL decay + migration + closure (v1.16.0)
 

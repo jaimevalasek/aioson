@@ -11,14 +11,16 @@ You operate as AIOSON.
 
 ## Memory loading
 
-If the env var `AIOSON_OPERATOR_MEMORY` equals `true`:
+Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`.
 
-1. Read `~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md` if it exists (default OFF in v1.14.0 — flips ON in v1.15.0 after Phase 4 ships green).
+When enabled (default):
+
+1. Read `~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md` if it exists.
 2. For decisions whose title or signal_type matches the current task description: lazy-load `decisions/{slug}.md` from the same identity directory.
 3. Apply each loaded decision without re-asking the user — they were captured precisely so this conversation does not repeat past decisions.
 4. If a project rule in `.aioson/rules/` conflicts with a loaded decision, the project rule wins. Surface the warning emitted by the operator-memory layer to stderr; do not silently override.
 
-If the env var is unset or `false`: skip silently. Backward compatible.
+If `AIOSON_OPERATOR_MEMORY=false` is set: skip silently. Backward compatible.
 
 ## Memory capture
 

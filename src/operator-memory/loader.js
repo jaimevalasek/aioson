@@ -61,15 +61,40 @@ function matchDecisions(memoryIndex, taskDescription, options = {}) {
 }
 
 /**
- * Convenience wrapper combining load + match for preflight use.
+ * Convenience wrapper combining load + match + conflict detection for preflight use.
  *
- * @returns {{index: object|null, matches: Array}}
+ * @param {string} identity — operator identity hash or override
+ * @param {string} taskDescription — current task / user goal
+ * @param {object} options — { maxMatches, minOverlap, projectRoot, detectConflicts }
+ * @returns {{index, matches, conflicts}} — conflicts is [] when projectRoot absent
+ *   OR when Phase 4 conflict detection is not requested.
  */
 function preflightLoad(identity, taskDescription, options = {}) {
   const index = loadMemoryIndex(identity, 'active');
-  if (!index) return { index: null, matches: [] };
+  if (!index) return { index: null, matches: [], conflicts: [] };
   const matches = matchDecisions(index, taskDescription, options);
-  return { index, matches };
+
+  let conflicts = [];
+  if (options.projectRoot && options.detectConflicts !== false) {
+    try {
+      const { scanProjectRules, detectConflicts, debounceConflicts } = require('./conflict');
+      const { readDecision } = require('./decision');
+      // Resolve full decision data for matched entries so conflict-body checks have content
+      const matchedDecisions = matches
+        .map((m) => {
+          try {
+            const d = readDecision(identity, m.slug);
+            return d ? { slug: m.slug, ...d } : null;
+          } catch { return null; }
+        })
+        .filter(Boolean);
+      const rules = scanProjectRules(options.projectRoot);
+      const detected = detectConflicts(matchedDecisions, rules, options);
+      conflicts = options.skipDebounce ? detected : debounceConflicts(identity, detected, options);
+    } catch { /* conflict detection failure must not crash preflight */ }
+  }
+
+  return { index, matches, conflicts };
 }
 
 module.exports = {

@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-05-21
+
+### Added
+- **Operator memory — Phase 4 conflict policy + flag flip** (4 of 5 phases). Binary V1 conflict detection between operator decisions and project rules in `.aioson/rules/`. **Inception flag `AIOSON_OPERATOR_MEMORY` is now default ON** (opt-out via env var).
+  - **`src/operator-memory/conflict.js`** (NEW): `detectConflicts`, `debounceConflicts`, `formatConflictWarning`, `scanProjectRules`, `parseRuleFrontmatter`. Keyword-overlap heuristic (≥ 2 stopword-filtered shared keywords) intersected with signal-type filter. Configurable threshold via `AIOSON_OPERATOR_CONFLICT_KEYWORD_THRESHOLD`.
+  - **`src/operator-memory/loader.js`** — `preflightLoad` extended with conflict detection when `options.projectRoot` is supplied. Conflicts are debounced per (decision_slug, rule_basename) pair via `_conflict_state.json` (60s default window, mirrors F2 idempotency pattern).
+  - **Project rule schema additive**: `.aioson/rules/*.md` may now declare `conflicts_with_signal_types: [authorization, exclusion, correction, confirmation]` in frontmatter. Rules without this field generate zero false positives (backward-compat preserved — AC-P4-04).
+  - **`tests/operator-memory-conflict.test.js`** — 18 new unit tests AC-P4-01..10 including **statistical corpus** (10 conflict pairs + 15 non-conflict pairs) with verified FN=0%, FP=0%.
+  - **`scripts/smoke-run-chain.js`** `[OM4]` section — 4 smoke checks (binary V1 conflict, additive no-FP, debounce window, flag-flip directive verification).
+  - **`template/CLAUDE.md` + `template/AGENTS.md`** universal directive updated: signals "Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`". Byte parity between the two files preserved (T5 + AC-P3-11). New size: 1307 B per file × 2 = 2614 B total (improvement from 2664 B).
+
+### Changed
+- **`AIOSON_OPERATOR_MEMORY` default flipped from `false` → `true`** per AC-P4-08. Agents now read `MEMORY.md` at preflight (when present) by default. Existing AIOSON behavior is preserved when no MEMORY.md exists per identity — directive degrades gracefully (AC-P3-08 backward-compat unchanged).
+- Updated wording in directive sections to be flip-aware (still byte-identical between CLAUDE.md and AGENTS.md per parity invariant).
+
+### Notes
+- **Operator memory is now active by default.** New users running v1.15.0+ will have their first signal captures land in `~/.aioson/operators/{hash}/proposals/` automatically when agents emit `aioson op:capture`. Promotion at the 2x threshold (PMD-07) continues to be silent on first detection and emits the 1-line audit on promotion.
+- Smoke runner result: 21/21 green (was 17/17 before OM4). The flag-flip safety gate (smoke must be green BOTH flag-off and flag-default) is satisfied — Phase 3's backward-compat tests still pass under default-on mode because the helpers degrade gracefully when no storage exists.
+- Phase 5 (v1.16.0) ships next: per-category TTL decay, 10k hard cap enforcement, `op:reinforce`, `op:migrate` (one-shot import from `user-profile.md`), `op:identity set` full impl, history/ cleanup at 365d, cross-phase wiring audit consolidation, Gate D, and feature:archive. That's the closure release.
+
 ## [1.14.0] - 2026-05-21
 
 ### Added

@@ -53,6 +53,9 @@ const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memo
 const { loadMemoryIndex, regenerateIndex } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'index-md'));
 const { matchDecisions, preflightLoad } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'loader'));
 
+// operator-memory Phase 4 (v1.15.0+)
+const { detectConflicts, formatConflictWarning, debounceConflicts } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'conflict'));
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 let pass = 0;
@@ -309,6 +312,79 @@ async function smokeRealRepoParity() {
 
 // ─── Runner ──────────────────────────────────────────────────────────────────
 
+// ─── [OM4] operator-memory conflict policy (Phase 4, v1.15.0) ────────────────
+
+async function smokeOM4ConflictDetected() {
+  step('OM4 detectConflicts flags authorization-signal decision vs opted-in rule');
+  try {
+    const rules = [{ frontmatter: { conflicts_with_signal_types: ['authorization'] }, body: 'no autonomous commit allowed', path: '/fake/rule.md' }];
+    const decisions = [{ slug: 'commit-auto', signal_type: 'authorization', body: 'commit autonomous after slice approval', category: 'autonomy' }];
+    const conflicts = detectConflicts(decisions, rules);
+    if (conflicts.length !== 1) throw new Error(`expected 1 conflict, got ${conflicts.length}`);
+    const warning = formatConflictWarning(conflicts[0]);
+    if (!warning.startsWith('⚠ Operator memory') || !warning.includes('Project rule applies')) {
+      throw new Error('warning format mismatch');
+    }
+    ok('binary V1 conflict + canonical warning format');
+  } catch (err) {
+    ko(`OM4 conflict detected: ${err.message}`);
+  }
+}
+
+async function smokeOM4NoFalsePositive() {
+  step('OM4 detectConflicts returns 0 for non-opted-in rule (additive policy)');
+  try {
+    const rules = [{ frontmatter: { name: 'passive' }, body: 'commit autonomous after slice', path: '/fake/rule.md' }];
+    const decisions = [{ slug: 'a', signal_type: 'authorization', body: 'commit autonomous after slice approval' }];
+    const conflicts = detectConflicts(decisions, rules);
+    if (conflicts.length !== 0) throw new Error(`expected 0 conflicts (rule did not opt in), got ${conflicts.length}`);
+    ok('rules without conflicts_with_signal_types generate zero false positives');
+  } catch (err) {
+    ko(`OM4 no false positive: ${err.message}`);
+  }
+}
+
+async function smokeOM4DebounceWindow() {
+  step('OM4 debounceConflicts suppresses repeat warnings within window');
+  const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-om4-d-'));
+  const prevHome = process.env.HOME;
+  const prevUserProfile = process.env.USERPROFILE;
+  process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
+  try {
+    const { ensureStorageTree } = require(path.join(REPO_ROOT, 'src', 'operator-memory', 'storage'));
+    const identity = 'om4-debounce-bot';
+    ensureStorageTree(identity);
+    const conflict = { decision_slug: 'd', rule_basename: 'r.md', rule_path: '/x', overlap: 3, severity: 'warning' };
+    const first = debounceConflicts(identity, [conflict]);
+    if (first.length !== 1) throw new Error('first call should emit');
+    const second = debounceConflicts(identity, [conflict]);
+    if (second.length !== 0) throw new Error('second call within window should suppress');
+    ok('debounce: first emit, immediate repeat suppressed');
+  } catch (err) {
+    ko(`OM4 debounce: ${err.message}`);
+  } finally {
+    process.env.HOME = prevHome;
+    process.env.USERPROFILE = prevUserProfile;
+  }
+}
+
+async function smokeOM4FlagFlipped() {
+  step('OM4 directive in template files reads "Default ON" (flag flipped this release)');
+  try {
+    const claudePath = path.join(REPO_ROOT, 'template', 'CLAUDE.md');
+    const agentsPath = path.join(REPO_ROOT, 'template', 'AGENTS.md');
+    const claudeContent = await fs.readFile(claudePath, 'utf8');
+    const agentsContent = await fs.readFile(agentsPath, 'utf8');
+    if (!claudeContent.includes('Default **ON**')) throw new Error('CLAUDE.md should signal default ON');
+    if (!agentsContent.includes('Default **ON**')) throw new Error('AGENTS.md should signal default ON');
+    if (!claudeContent.includes('Opt out via `AIOSON_OPERATOR_MEMORY=false`')) throw new Error('opt-out instruction missing');
+    ok('flag flip verified — directive signals default-on with opt-out path');
+  } catch (err) {
+    ko(`OM4 flag flip: ${err.message}`);
+  }
+}
+
 // ─── [OM3] operator-memory loading + lazy match (Phase 3, v1.14.0) ───────────
 
 async function smokeOM3IndexRegenerates() {
@@ -527,6 +603,12 @@ async function main() {
   await smokeOM3IndexRegenerates();
   await smokeOM3LazyMatch();
   await smokeOM3FlagOffNoop();
+
+  console.log('\n[OM4] operator-memory conflict policy (binary V1)');
+  await smokeOM4ConflictDetected();
+  await smokeOM4NoFalsePositive();
+  await smokeOM4DebounceWindow();
+  await smokeOM4FlagFlipped();
 
   console.log('\n[REPO] Final parity safety net');
   await smokeRealRepoParity();
