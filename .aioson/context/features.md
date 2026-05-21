@@ -21,3 +21,4 @@
 | workflow-hotfix-1-9-3 | done | 2026-05-19 | 2026-05-19 |
 | workflow-handoff-integrity | done | 2026-05-19 | 2026-05-20 |
 | operator-memory | done | 2026-05-20 | 2026-05-21 |
+| neural-chain | in_progress | 2026-05-21 | — |

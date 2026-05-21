@@ -10,6 +10,7 @@ source: "Autonomy/orchestration analysis and planning session"
 
 These capabilities were confirmed during this analysis:
 
+- Neural Chain Phase 1 Slice 1 shipped 2026-05-21: `chain_edges` table (10 fields with CHECKs on edge_type IN {git_co_edit, agent_event}, confidence ∈ [0,1], hit_count > 0) + 3 indexes (source/end_at, target/end_at, UNIQUE partial on active rows) created in `aios.sqlite`. New `src/neural-chain-migration.js` (idempotent, no user_version sentinel — coordinated with learning-loop's `user_version=3` via stateless IF NOT EXISTS guards; deferred a `schema_meta` table until multiple feature migrations multiply). Wired downstream of `runLearningLoopMigration` in `runtime-store.js#ensureLegacyColumns`. 11 tests in `tests/neural-chain-migration.test.js` covering schema shape + CHECK constraints + partial uniqueness on active rows + archive flow (BR-NC-08) + cross-edge_type coexistence + idempotency. Slice closes the data foundation for impact-aware code editing per `prd-neural-chain.md`; remaining Phase 1 slices (chain:audit, agent_event ingest hook, noise lifecycle, @neo blocker, autonomy/threshold) sequenced in dev-state.md.
 - `@dev`, `@qa`, and `@committer` prompts already contain CLI-aware behavior
 - `workflow:next --complete` is the real stage transition primitive
 - `workflow:next --auto-heal` already exists

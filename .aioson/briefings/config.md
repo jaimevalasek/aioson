@@ -1,6 +1,14 @@
 ---
-updated_at: 2026-05-19
+updated_at: 2026-05-21
 briefings:
+  - slug: neural-chain
+    status: implemented
+    source_plans: ["conversational — seed from user idea, 2026-05-21 (uninstall-app-button incident)"]
+    created_at: "2026-05-21"
+    approved_at: "2026-05-21"
+    prd_generated: .aioson/context/prd-neural-chain.md
+    updated_at: "2026-05-21"
+    approval_note: "Approved via manual config.md edit (CLI `briefing:approve` ainda não implementada — mesmo gap dos briefings anteriores). PRD prd-neural-chain.md gerado em 2026-05-21 com classification=SMALL (M1 sozinho), M2 graph-maintenance explicitly out-of-scope como feature follow-up. Single-voice flag honored via guardrail metric (tokens estáveis por chain:audit) que detecta janela sem M2 ficando perigosa."
   - slug: harness-driven-aioson
     status: implemented
     source_plans: ["plans/Harness-Driven/evolucao.txt", "plans/Harness-Driven/resumo.txt"]
@@ -49,6 +57,7 @@ briefings:
 
 | slug | status | source_plans | created | approved | prd | note |
 |------|--------|-------------|---------|----------|-----|------|
+| neural-chain | implemented | conversational (uninstall-app-button incident) | 2026-05-21 | 2026-05-21 | prd-neural-chain.md | classification=SMALL (M1 only); M2 graph-maintenance out-of-scope as feature follow-up; guardrail metric tokens-stable-por-audit |
 | harness-driven-aioson | implemented | plans/Harness-Driven/evolucao.txt, plans/Harness-Driven/resumo.txt | 2026-04-10 | 2026-04-10 | .aioson/context/prd-harness-driven-aioson.md | — |
 | lay-user-agent-mode | implemented | plans/lay-user-agent-mode.md | 2026-05-16 | 2026-05-16 | .aioson/context/prd-lay-user-agent-mode.md | — |
 | agent-chain-continuity-delivery-fix | approved | conversational (@dev diagnostic) | 2026-05-16 | 2026-05-16 | — | PRD deferred (scope-cut to MICRO follow-up) |

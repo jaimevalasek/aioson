@@ -1,12 +1,11 @@
 {
   "version": 1,
   "mode": "feature",
-  "classification": "MEDIUM",
+  "classification": "SMALL",
   "sequence": [
     "product",
     "analyst",
     "dev",
-    "pentester",
     "qa"
   ],
   "current": null,
@@ -15,7 +14,7 @@
     "product"
   ],
   "skipped": [],
-  "featureSlug": "operator-memory",
+  "featureSlug": "neural-chain",
   "detour": null,
-  "updatedAt": "2026-05-21T05:08:04.014Z"
+  "updatedAt": "2026-05-21T20:24:20.238Z"
 }

@@ -1,29 +1,25 @@
 ---
-last_updated: 2026-05-20
-active_feature: workflow-handoff-integrity
+last_updated: 2026-05-21
+active_feature: neural-chain
 active_phase: 1
-next_step: "Phase 1 (F2 v1.9.5) Slice 1 ✓ baseline criado. Próximo Slice 2: EXTEND src/handoff-contract.js com helper getCanonicalArtifactForAgent(agent, state) que consome CONTRACTS map já existente (linhas 15-99). NÃO criar agent-artifact-map.js novo (DPC-03 corrigido em scan 2026-05-20). Depois Slices 3-6: presence-detection + auto-emit + idempotency + --no-auto-advance em src/commands/runtime.js runAgentDone, coordenando com integrity check existente em workflow-next.js:429-479 (DPC-05)."
+next_step: "Phase 1 Slice 2: chain:audit CLI command + git ingest. (1) Criar src/commands/chain-audit.js implementando 'aioson chain:audit <file> [--feature=<slug>] [--json]' que: lê chain_edges WHERE end_at IS NULL AND source_path = <file> ORDER BY confidence DESC LIMIT N (top-N tuneável, default 20); retorna lista de impactos com (target_path, edge_type, confidence, hit_count, last_seen_at). (2) Criar helper src/neural-chain-git-ingest.js que executa 'git log --pretty=format:%H --name-only -n 1000 -- HEAD' (bounded a últimos 1000 commits per pre-decision sheldon I1), parsa pares de arquivos co-edited no mesmo commit, e popula chain_edges com edge_type='git_co_edit' aplicando BR-NC-01 (min(1.0, count/10)) + BR-NC-08 hard cap 10k via archive. (3) Registrar 'chain:audit' em src/cli.js KNOWN_COMMANDS + dispatch + help line. (4) i18n keys novas em 4 locales (en, pt-BR, es, fr) — help_chain_audit + chain_audit.* output messages. (5) Tests cobrindo: audit retorna lista vazia em DB fresca, audit retorna edges ordenadas por confidence, git ingest popula edges a partir de log fixture, cap 10k archiva oldest, idempotency (re-ingest same commits não duplica). Brain dev/patterns sheldon-005 CLI-first integration aplica. ECs cobertos no spec: EC-NC-06 sem git history skip + EC-NC-03 file never-seen first ingest. Slice 3 depois = agent_event ingest hook em runAgentDone."
 status: in_progress
 ---
 
 # Dev State
 
-**Feature:** workflow-handoff-integrity
+**Feature:** neural-chain
 **Phase:** 1
 **Status:** in_progress
-**Next step:** Phase 1 (F2 v1.9.5) Slice 1 ✓ baseline criado. Próximo Slice 2: EXTEND src/handoff-contract.js com helper getCanonicalArtifactForAgent(agent, state) que consome CONTRACTS map já existente (linhas 15-99). NÃO criar agent-artifact-map.js novo (DPC-03 corrigido em scan 2026-05-20). Depois Slices 3-6: presence-detection + auto-emit + idempotency + --no-auto-advance em src/commands/runtime.js runAgentDone, coordenando com integrity check existente em workflow-next.js:429-479 (DPC-05).
+**Next step:** Phase 1 Slice 2: chain:audit CLI command + git ingest. (1) Criar src/commands/chain-audit.js implementando 'aioson chain:audit <file> [--feature=<slug>] [--json]' que: lê chain_edges WHERE end_at IS NULL AND source_path = <file> ORDER BY confidence DESC LIMIT N (top-N tuneável, default 20); retorna lista de impactos com (target_path, edge_type, confidence, hit_count, last_seen_at). (2) Criar helper src/neural-chain-git-ingest.js que executa 'git log --pretty=format:%H --name-only -n 1000 -- HEAD' (bounded a últimos 1000 commits per pre-decision sheldon I1), parsa pares de arquivos co-edited no mesmo commit, e popula chain_edges com edge_type='git_co_edit' aplicando BR-NC-01 (min(1.0, count/10)) + BR-NC-08 hard cap 10k via archive. (3) Registrar 'chain:audit' em src/cli.js KNOWN_COMMANDS + dispatch + help line. (4) i18n keys novas em 4 locales (en, pt-BR, es, fr) — help_chain_audit + chain_audit.* output messages. (5) Tests cobrindo: audit retorna lista vazia em DB fresca, audit retorna edges ordenadas por confidence, git ingest popula edges a partir de log fixture, cap 10k archiva oldest, idempotency (re-ingest same commits não duplica). Brain dev/patterns sheldon-005 CLI-first integration aplica. ECs cobertos no spec: EC-NC-06 sem git history skip + EC-NC-03 file never-seen first ingest. Slice 3 depois = agent_event ingest hook em runAgentDone.
 
 ## Context package
 
 1. project.context.md
-2. spec-workflow-handoff-integrity.md
-3. implementation-plan-workflow-handoff-integrity.md
-4. sheldon-enrichment-workflow-handoff-integrity.md
+2. spec-neural-chain.md
+3. requirements-neural-chain.md
+4. sheldon-enrichment-neural-chain.md
 
 ## History
 
-- 2026-05-18: phase 1 — Implement MVP per prd-release-page-1-9-0.md must-have section
-- 2026-05-18: phase 1 — Implement MVP per prd-release-page-1-9-0.md must-have section
-- 2026-05-19: phase 1 — Begin with RF-01: propagate .aioson/agents/pm.md to template/.aioson/agents/pm.md (full file). Verify EC-08 first (no uncommitted changes in source pm.md). Then RF-03 (manifest output entry), RF-02 (test alignment tokens), and baseline npm test 3x to confirm AC-ALL-101 flake state before further changes.
-- 2026-05-20: phase 1 — Phase 1 (F2 — v1.9.5): Implement agent:done auto-emit per plan-f2-agent-done-auto-emit.md. Slice 1: capture backward-compat baseline (tests/baselines/agent-done-stdout.txt) — locks AC-F2-02. Slice 2: create src/agent-artifact-map.js with mapping from agent-runtime-alignment.test.js tokens. Slice 3+: modify runAgentDone in src/commands/runtime.js per DD-01 (presence-detection gating).
-- 2026-05-20: phase 1 — Phase 1 (F2 v1.9.5) Slice 1 ✓ baseline criado. Próximo Slice 2: EXTEND src/handoff-contract.js com helper getCanonicalArtifactForAgent(agent, state) que consome CONTRACTS map já existente (linhas 15-99). NÃO criar agent-artifact-map.js novo (DPC-03 corrigido em scan 2026-05-20). Depois Slices 3-6: presence-detection + auto-emit + idempotency + --no-auto-advance em src/commands/runtime.js runAgentDone, coordenando com integrity check existente em workflow-next.js:429-479 (DPC-05).
+- 2026-05-21: phase 1 — Phase 1 Slice 2: chain:audit CLI command + git ingest. (1) Criar src/commands/chain-audit.js implementando 'aioson chain:audit <file> [--feature=<slug>] [--json]' que: lê chain_edges WHERE end_at IS NULL AND source_path = <file> ORDER BY confidence DESC LIMIT N (top-N tuneável, default 20); retorna lista de impactos com (target_path, edge_type, confidence, hit_count, last_seen_at). (2) Criar helper src/neural-chain-git-ingest.js que executa 'git log --pretty=format:%H --name-only -n 1000 -- HEAD' (bounded a últimos 1000 commits per pre-decision sheldon I1), parsa pares de arquivos co-edited no mesmo commit, e popula chain_edges com edge_type='git_co_edit' aplicando BR-NC-01 (min(1.0, count/10)) + BR-NC-08 hard cap 10k via archive. (3) Registrar 'chain:audit' em src/cli.js KNOWN_COMMANDS + dispatch + help line. (4) i18n keys novas em 4 locales (en, pt-BR, es, fr) — help_chain_audit + chain_audit.* output messages. (5) Tests cobrindo: audit retorna lista vazia em DB fresca, audit retorna edges ordenadas por confidence, git ingest popula edges a partir de log fixture, cap 10k archiva oldest, idempotency (re-ingest same commits não duplica). Brain dev/patterns sheldon-005 CLI-first integration aplica. ECs cobertos no spec: EC-NC-06 sem git history skip + EC-NC-03 file never-seen first ingest. Slice 3 depois = agent_event ingest hook em runAgentDone.

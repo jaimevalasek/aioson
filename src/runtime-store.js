@@ -10,6 +10,7 @@ const {
   mergeGenomeBindings
 } = require('./genomes/bindings');
 const { runMigration: runLearningLoopMigration } = require('./learning-loop-migration');
+const { runMigration: runNeuralChainMigration } = require('./neural-chain-migration');
 
 const RUNTIME_DIR = path.join('.aioson', 'runtime');
 const DB_FILE = 'aios.sqlite';
@@ -775,6 +776,7 @@ function ensureLegacyColumns(db) {
   `);
 
   runLearningLoopMigration(db);
+  runNeuralChainMigration(db);
 }
 
 function insertEvent(db, record) {

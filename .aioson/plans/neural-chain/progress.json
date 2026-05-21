@@ -1,0 +1,148 @@
+{
+  "v": 1,
+  "slug": "neural-chain",
+  "classification": "SMALL",
+  "sizing_path": "A",
+  "sizing_score": 2,
+  "enrichment_round": 1,
+  "last_updated": "2026-05-21",
+  "status": "in_progress_dev_phase_1",
+  "ready_for_done_gate": false,
+  "circuit_open": false,
+  "last_error": null,
+  "phases": [
+    {
+      "id": "phase_1_implementation",
+      "name": "M1 — impact propagation per-edit",
+      "status": "pending",
+      "owner": "dev",
+      "depends_on": ["gate_a_requirements", "gate_a_spec"]
+    }
+  ],
+  "gates": {
+    "A": {
+      "status": "approved",
+      "owner": "analyst",
+      "produces": ["requirements-neural-chain.md", "spec-neural-chain.md"],
+      "closed_at": "2026-05-21"
+    },
+    "B": {
+      "status": "skipped",
+      "reason": "SMALL classification — @architect skipped per sheldon-002 brain default; 5 architect-territory OQs closed in-place by @sheldon enrichment"
+    },
+    "C": {
+      "status": "skipped",
+      "reason": "SMALL classification — @pm optional per pm.md:30; implementation-plan ownership is @dev for SMALL"
+    },
+    "D": {
+      "status": "pending",
+      "owner": "qa",
+      "blocker": "AC-AUDIT-NC must pass — 7-item audit wiring done gate (see PRD ## Done gate)"
+    }
+  },
+  "completed_steps": [
+    {
+      "step": "briefing_draft",
+      "agent": "briefing",
+      "date": "2026-05-21",
+      "artifact": ".aioson/briefings/neural-chain/briefings.md"
+    },
+    {
+      "step": "briefing_approved",
+      "agent": "briefing",
+      "date": "2026-05-21",
+      "artifact": ".aioson/briefings/config.md (status=approved)"
+    },
+    {
+      "step": "prd_written",
+      "agent": "product",
+      "date": "2026-05-21",
+      "artifact": ".aioson/context/prd-neural-chain.md"
+    },
+    {
+      "step": "enrichment_round_1",
+      "agent": "sheldon",
+      "date": "2026-05-21",
+      "artifact": ".aioson/context/sheldon-enrichment-neural-chain.md",
+      "open_questions_resolved": 5,
+      "open_questions_remaining": 0
+    },
+    {
+      "step": "requirements_spec_written",
+      "agent": "analyst",
+      "date": "2026-05-21",
+      "artifacts": [
+        ".aioson/context/requirements-neural-chain.md",
+        ".aioson/context/spec-neural-chain.md",
+        ".aioson/context/dev-state.md"
+      ],
+      "entities_new": 1,
+      "config_fields_new": 1,
+      "schema_changes_existing": 0,
+      "business_rules": 11,
+      "edge_cases": 10,
+      "open_questions_remaining": 0
+    },
+    {
+      "step": "phase_1_slice_1_schema_migration",
+      "agent": "dev",
+      "date": "2026-05-21",
+      "artifacts": [
+        "src/neural-chain-migration.js",
+        "tests/neural-chain-migration.test.js"
+      ],
+      "modified": [
+        "src/runtime-store.js (+2 lines wiring runNeuralChainMigration)"
+      ],
+      "tests_added": 11,
+      "tests_passing": 11,
+      "regression_status": "neutral — 1 pre-existing failure in operator-memory-identity AC-P1-07 confirmed via git stash on HEAD 92f6769; NOT introduced by this slice",
+      "ac_audit_nc_progress": {
+        "item_4_schema_migration_applied": "satisfied",
+        "items_1_2_3_5_6_7": "pending (future slices + final QA)"
+      },
+      "workaround_applied": "F4 Gate C drift — spec frontmatter gate_plan=approved + gate_plan_note (precedente hotfix v1.9.3)",
+      "reflect_prompt_status": "deferred (zero capabilities shipped, only schema groundwork; @qa Gate D processa)"
+    }
+  ],
+  "next_action": {
+    "agent": "dev",
+    "slice": "Phase 1 Slice 2",
+    "summary": "chain:audit CLI command + git ingest helper",
+    "input": [
+      ".aioson/context/spec-neural-chain.md",
+      ".aioson/context/requirements-neural-chain.md",
+      ".aioson/context/sheldon-enrichment-neural-chain.md",
+      ".aioson/context/features/neural-chain/dossier.md",
+      ".aioson/context/dev-state.md"
+    ],
+    "output": [
+      "src/commands/chain-audit.js (CLI command: read top-N edges WHERE end_at IS NULL ORDER BY confidence DESC)",
+      "src/neural-chain-git-ingest.js (git log parse bounded last 1000 commits, populate git_co_edit edges with BR-NC-01 formula + BR-NC-08 hard cap archive)",
+      "src/cli.js (register chain:audit in KNOWN_COMMANDS + dispatch + help)",
+      "i18n keys × 4 locales (en, pt-BR, es, fr)",
+      "tests/chain-audit.test.js + tests/neural-chain-git-ingest.test.js"
+    ],
+    "remaining_phase_1_slices": [
+      "Slice 3: agent_event ingest hook em runAgentDone",
+      "Slice 4: noise file write/lifecycle (BR-NC-06)",
+      "Slice 5: @neo activation step blocker (template parity required per sheldon-001)",
+      "Slice 6: autonomy mode threshold rules (BR-NC-02/03) + chain_auto_threshold config field + auto-migration"
+    ]
+  },
+  "metadata": {
+    "briefing_source": "neural-chain",
+    "single_voice_flag_honored": true,
+    "open_questions_in_prd": 0,
+    "primary_success_metric": "-50% second-call correction loops in 30d post-release",
+    "guardrail_metric": "chain:audit tokens stable (alert if > 2x/month growth)",
+    "meta_ac": "AC-AUDIT-NC (sheldon-006 done gate audit wiring)",
+    "out_of_scope_v1": [
+      "M2 graph maintenance (skill LLM-judged pruning + chain:prune)",
+      "AST drill-down (symbol-level)",
+      "Multi-language AST",
+      "Obsidian-style visualization",
+      "Concurrent/multi-agent edits (squad)"
+    ]
+  }
+}
