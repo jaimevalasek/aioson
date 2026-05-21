@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-05-20
+
 ### Added
 - **@pentester agent**: adversarial security review agent with structured findings output (`security-findings-{slug}.json`) and Gate D blocking capability for MEDIUM projects.
 - **@discover agent**: system discovery and semantic knowledge cache bootstrap for brownfield projects.
