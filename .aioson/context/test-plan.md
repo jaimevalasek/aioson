@@ -1,217 +1,163 @@
 ---
-generated: "2026-05-14T22:55:00.000Z"
+generated: "2026-05-22T00:00:00.000Z"
 agent: "tester"
-scope: "Squad subsystem audit + cross-cluster regression triage"
-strategy: "Characterization Testing — capture current Windows behavior; defer fixes to @dev"
-supersedes: "2026-04-28 feature-dossier test plan (stale)"
+scope: "Neural Chain feature (Phase 1, Slices 1-6) — post Gate D defensive gap-fill"
+strategy: "Risk-first Gap Filling — bounded scope, no new deps, no production code changes"
+supersedes: "2026-05-14 squad audit test-plan (closed)"
 ---
 
-# Test Plan — Squad audit findings + cross-cluster hypothesis
+# Test Plan — Neural Chain (post Gate D defensive gap-fill)
 
 ## Strategy escolhida
 
-**Characterization Testing** sobre a suite atual + **Risk-first mapping** dos clusters restantes.
+**Risk-first Gap Filling** com scope TIGHT. Justificativa:
 
-Razão: as 18 falhas em `squad-*.test.js` revelaram que o sintoma "tests don't catch bugs" tem duas faces independentes:
+- `@qa` já aprovou Gate D com Verdict PASS (81/81 verde, ratio test/source 1.61).
+- 2 Medium findings residuais do QA (M-01 EC-NC-04 retry + M-02 BR-NC-01 max combination) são **implementation gaps**, não test gaps — pertencem a `@dev`.
+- Os gaps reais de teste são **defensivos**: 2 invariants arquiteturais críticos sem tripwire automatizado (BR-NC-04 anti-execution + BR-NC-10 telemetry schema).
+- Golden rule do projeto: "small project, small solution" — não inflar com Stryker mutation testing / fast-check property quando coverage quantitativa já é alta.
 
-1. **Falhas reais em produção** que não foram exercitadas no test bed (BUG-001 install dry-run = exemplo canônico).
-2. **Falhas espúrias de teste em Windows** mascarando o sinal real (todo o cluster squad).
+Deliverable: **2 tests novos** (A.1 + A.2) totalizando 4 test cases em `tests/neural-chain-invariants.test.js`. Zero novas dependencies. Zero modificações em production code. 81 → 85 testes neural-chain.
 
-Esses 2 problemas se sobrepõem no dashboard de `npm test` — o operador vê 42 falhas e não consegue distinguir qual é qual.
+## Phase 4 — Tests novos shipados
 
-## Bug findings (encontrados durante o audit, não fixar nesta sessão)
+### A.1 — BR-NC-04 anti-execution invariant (2 test cases)
 
-### [bug-found-001] install --dry-run engana o usuário — **FIXED 2026-05-14 (@dev)**
+**Risk endereçado:** se algum slice futuro acidentalmente introduzir `fs.writeFileSync` ou `fs.unlinkSync` fora de `.aioson/context/noises/`, audit code pode passar a modificar arquivos de usuário — violação direta do contrato fundamental "audit nunca modifica código". Hoje a invariant é respeitada (grep confirma única superfície em `noise-file.js`), mas sem tripwire automatizado a regressão seria silenciosa.
 
-- **Arquivo**: `src/commands/install.js:117-138` (branch dry-run isolada do non-TTY)
-- **Sintoma**: output idêntico ao install real ("Installation completed at: ...", "Files copied: 235")
-- **Verificado**: `git status` limpo após `aioson install --dry-run` — efeito é zero, mas o user não tem como saber
-- **Owner**: @dev (precisa criar `install.dry_run_*` i18n keys × 4 locales + branch no install.js) — **CONCLUÍDO**
-- **Test gap**: zero asserções de stdout em dry-run nos 7 install-test files — **CONCLUÍDO** (`tests/install-dry-run.test.js` com AC-DRY-01/02/03)
-- **Fix delivery**:
-  - 4 i18n keys novas × 4 locales (en/pt-BR/es/fr): `dry_run_header`, `dry_run_done_at`, `dry_run_files_copied`, `dry_run_files_skipped`
-  - Branch `else if (dryRun)` em `install.js` usa as keys novas com marker visível `⚠  DRY RUN`
-  - Locales não-en incluem a frase inglesa entre parênteses (`would be copied`/`would be skipped`) para grepabilidade cross-locale em logs de ops
-  - Smoke real: `node bin/aioson.js install . --dry-run --no-interactive` mostra `⚠  DRY RUN — no files were written.` + `Files that would be copied: 240` (antes: `Files copied: 240` sem qualquer marker)
-- **Regression**: 85/85 verde no cluster install (8 arquivos), 2382/2422 verde no full suite (delta zero falhas novas vs baseline 2377/2419)
+**Test cases shipados:**
 
-### [bug-found-002] squad teardown EBUSY no Windows — **FIXED 2026-05-14 (@dev)**
+1. **A.1 (static)** — Lê os 6 source files de neural-chain (5 `src/neural-chain-*.js` + 1 `src/commands/chain-audit.js`), grep `fs\.(writeFile|writeFileSync|unlink|unlinkSync|rm|rmSync|appendFile|appendFileSync|copyFile|copyFileSync|rename|renameSync|truncate|truncateSync|chmod|chmodSync|chown|chownSync)`. Asserta: APENAS `neural-chain-noise-file.js` contém matches, e SÓ os 2 esperados (`fs.writeFileSync` + `fs.unlinkSync`). Qualquer novo fs mutation call em qualquer outro neural-chain source file → test fail.
 
-- **Arquivos**: `tests/squad-{daemon,dashboard,score,api-endpoints,webhook-production}.test.js` (18 testes recuperados, vs 16 estimados pelo @tester)
-- **Sintoma**: `EBUSY: resource busy or locked, unlink ... aios.sqlite`
-- **Root cause (refinado durante o fix)**: dois sintomas distintos sob o mesmo cluster:
-  1. **Tests-side**: chamadas `await openRuntimeDb(tmpDir)` com handle **descartado** (não capturado em variável) — o handle nativo SQLite ficava aberto até o GC do V8 reaparar, mas o `fs.rm` do `finally` rodava antes
-  2. **Production-side (bônus encontrado)**: `src/commands/squad-score.js:284` chamava `openRuntimeDb(projectDir)` **sem `await`** dentro de função async — o destructure pegava undefined, o catch silenciosamente engolia o erro, mas a Promise ainda resolvia e vazava handle. Bug real de produção, não só infra de teste.
-- **Fix delivery**:
-  - Novo helper `tests/helpers/sqlite-cleanup.js` (~30 LOC úteis) com 2 exports: `closeHandles(...items)` swallow-errors, `cleanupTmpDir(tmpDir, { handles: [...] })` que fecha handles + roda `fs.rm` com `{ force: true, maxRetries: 5, retryDelay: 100 }` (cobre janela ~50-100ms de release do lock NTFS pós-close)
-  - 5 test files refatorados: cada teste que abre `openRuntimeDb` agora declara `let handle = null;` no topo do `try` + captura o retorno + usa `cleanupTmpDir(tmpDir, { handles: [handle] })` no `finally`
-  - **Production fix surgical**: 1 linha em `squad-score.js` — adicionado `await` antes do `openRuntimeDb`, comentário explicando o vazamento
-- **Owner**: @dev — **CONCLUÍDO**
-- **Severidade**: medium — bloqueia dev-loop no Windows mas CI Linux passa — **MITIGADO**
-- **Regression**: 100/100 verde no cluster squad (5 arquivos, vs 82/100 baseline). Full suite: 2399/2422 (vs 2382/2422 antes do fix; vs 2377/2419 baseline original). Delta net: +17 passing. As 23 falhas restantes são clusters separados (context-health, live-*, json-schema, sync-agents-preflight, etc) fora do escopo bug-002.
+2. **A.1 (functional)** — Monkey-patch `fs.writeFileSync` + `fs.unlinkSync` durante uma chamada de `runChainHookOnAgentDone` (com seed garantindo impacts → noise file gerado) + subsequente `maybeDeleteNoiseFile` (com items marcados resolved). Captura todos os paths tocados. Asserta: todos os paths começam com `path.join(targetDir, '.aioson', 'context', 'noises')`.
 
-### [bug-found-003] squad-export tar Windows path — **FIXED 2026-05-14 (@dev)**
+### A.2 — BR-NC-10 telemetry schema completeness (2 test cases)
 
-- **Arquivos**: `tests/squad-export.test.js`, `tests/tool-invocation-hardening.test.js#SF-12`
-- **Sintoma**: `tar: Cannot connect to C: resolve failed`
-- **Root cause**: GNU tar interpreta qualquer `HOST:PATH` como host remoto; o `-C C:\dev\foo` casa exatamente esse padrão. Verificado experimentalmente: forward-slash sozinho não resolve (o colon ainda dispara o parser), `--force-local` sozinho corrompe os backslashes na msys tar.
-- **Owner**: @dev (passar `--force-local` ou normalizar paths antes do spawn) — **CONCLUÍDO**
-- **Severidade**: low — feature de export é tier-3
-- **Fix delivery**: 4 linhas em `src/commands/squad-export.js`:
-  1. `tarProjectDir = projectDir.replace(/\\/g, '/')` — forward-slash do `-C` arg
-  2. `tarOutputFile = outputFile.replace(/\\/g, '/')` — forward-slash do `-czf` arg
-  3. `tarArgs = [...]` + `if (process.platform === 'win32') tarArgs.unshift('--force-local')`
-  4. Comentário explicando ambas as decisões e por que cada parte é necessária
-- **Regression**: `squad-export.test.js` 3/3 verde, `tool-invocation-hardening.test.js#SF-12` verde, full suite 2402/2422 (was 2399/2422). Zero regressão nova.
+**Risk endereçado:** BR-NC-10 spec lista 8 fields no payload de `chain_audit` events. Dois emitters distintos (CLI em `chain-audit.js` + hook em `agent-ingest.js`) drift entre si — futuro `aioson chain:stats` ou dashboard agregador vai assumir shape consistente e quebrar quando field esperado faltar.
 
-## Cross-cluster sweep — triagem das 20 falhas remanescentes (Opção C, 2026-05-14 @tester)
+**Test cases shipados:**
 
-Após bug-found-001/002/003 fechados, restavam 20 falhas no full suite. Esta seção é a triagem prometida no test-plan.md original (Opção C — "cross-cluster sweep para EBUSY pattern").
+3. **A.2 (hook)** — Após `runChainHookOnAgentDone` exercitando ambas as branches (per-artifact emit + EC-NC-05 no-op), asserta que cada `execution_events` row com `event_type='chain_audit'` tem o subset universal `{feature_slug, impacts_found}` E o subset operational `{duration_ms}` quando `skipped_reason !== 'no_artifacts'`.
 
-**Artifact JSON com a triagem completa**: `.aioson/context/test-triage.json` (legível por CI/scripts).
+4. **A.2 (CLI)** — Após `runChainAudit` CLI invocation (com `--feature=neural-chain --json`), asserta que o event payload tem `{feature_slug, impacts_found, duration_ms}` + `feature_slug` propaga corretamente o `--feature` flag.
 
-### Buckets — 20 falhas em 7 classes
+**Conservative subset:** A.2 testa só os campos truly universal hoje. Os outros 5 da spec BR-NC-10 (`noise_file`, `auto_fixable_count`, `tokens_used`, `source_files`, `error`) drift entre emitters — tracked em `[bug-found-003]` abaixo.
 
-| Classe | # | Owner | Severidade | ID |
-|---|---|---|---|---|
-| windows-teardown-ebusy | 6 | @dev | high | **bug-found-004** |
-| real-assertion-failure-live-cluster | 6 | @dev | high | **bug-found-005** |
-| test-needs-update-new-check-noise | 2 | @tester | low | test-update-001 |
-| stale-fixture-path | 2 | investigação | low | investigation-001 |
-| drift-from-recent-refactor | 1 | @architect | medium | decision-needed-001 |
-| real-assertion-failure-singleton | 3 | @dev | medium | **bug-found-006** |
-| perf-flake-windows-io | 1 | @tester/@architect | low | known-flake-001 |
+**Results:** 4/4 verde (302ms isolado). Cumulative regression: 2773/2771 + 1 skipped + 1 fail (AC-P1-07 pré-existente, sem relação). **Zero novas regressões.**
 
-### Detalhes por bucket
+## Phase 4.5 — Test smell self-audit (81 → 85 tests)
 
-#### [bug-found-004] context-health EBUSY × 6 — **FIXED 2026-05-14 (@dev)**
+Checklist do agent file aplicado a todos os 7 test files neural-chain (incluindo invariants novo):
 
-- `tests/context-health.test.js:46,59,77,97,115,125`
-- Sintoma idêntico: `EBUSY: resource busy or locked, unlink ... aios.sqlite`
-- **Diagnóstico revisado durante o fix**: NÃO era o padrão de "handle descartado" do bug-002. O test fechava o handle corretamente no `beforeEach` e o `runContextHealth` também fechava na linha 100 do código de produção. O leak eram os **arquivos WAL/SHM** (`aios.sqlite-wal`, `aios.sqlite-shm`) criados quando `openRuntimeDb` ativa WAL mode (linha 59 de `runtime-store.js`). Esses arquivos siblings ficam pendurados ~50-100ms no Windows mesmo após `db.close()` — tempo suficiente pro `fs.rm` do `afterEach` falhar.
-- **Fix entregue**:
-  - Produção: `src/commands/context-health.js` linha 100 — adicionado `db.pragma('wal_checkpoint(TRUNCATE)')` antes de `db.close()`. Força WAL→main e libera siblings sincronamente.
-  - Test: `afterEach` agora usa `cleanupTmpDir(tmpDir)` em vez de `fs.rm` cru — safety net via `maxRetries: 5, retryDelay: 100` caso outro path quebre o checkpoint.
-  - Comentários documentam ambas as decisões e por que cada uma é necessária.
-- **Regressão**: `context-health.test.js` 7/7 verde, full suite **2407/2422** (was 2402/2422). +5 net (6 context-health recuperados, 1 flake elsewhere offsetting).
+| Smell | Verificação | Result |
+|---|---|---|
+| **Eager Test** (> 5 unrelated assertions/test) | Assertion-per-test ratio por suite: agent-ingest 4.0, autonomy 3.6, git-ingest 2.9, invariants 3.75, migration 3.0, noise-file 5.2 (borderline mas assertions agrupadas em frontmatter+body shape verification — aceitável), chain-audit 3.0 | ✓ Pass (1 borderline justificado) |
+| **Mystery Guest** (`Date.now()`, `new Date()` sem arg, `process.env`, `fetch(`) | Grep retornou 0 occurrences nos 7 files. Todos os tests usam `new Date('2026-05-21T14:30:00Z')` com timestamp fixo explícito | ✓ Pass |
+| **Test Run War** (flakes em paralelo) | Cada test usa `mkdtempSync` para temp dir isolado + close db no `finally` block. Sem shared state cross-test | ✓ Pass |
+| **Conditional Test Logic** (if/else/loops dentro do test body) | 7 occurrences de `for`/`if` matchadas: agent-ingest 3 (parametrização — `for (let i=0;i<5;i++)` em saturation tests), autonomy 2 (`for (const mode of [...])` parametrização), git-ingest 1, invariants 2 (`for (const rel of FILES)` + `for (const ev of events)` — iteração sobre resultado esperado), chain-audit 1. Nenhum é `if (cond) expect(...)` branching logic | ✓ Pass |
+| **Redundant Assertion** (`x === x`, repeated) | Grep visual scan: nenhum redundant assertion encontrado | ✓ Pass |
+| **Mock Overdose** (> 50% setup é mock) | Tests usam temp dirs (not mocks) + real `openRuntimeDb` SQLite. Invariants test monkey-patches `fs.writeFileSync` mas APENAS pra captura observacional (não simula comportamento), restore no `finally`. Aceitável | ✓ Pass |
 
-**Note**: o padrão WAL/SHM lingering provavelmente afeta outros testes — durante esta sessão observei `tests/context-search.test.js:15` falhar com `ENOTEMPTY` em `search/` subdir (também é WAL-related). Recomendação: aplicar o mesmo padrão (`wal_checkpoint(TRUNCATE)` + `cleanupTmpDir`) em sessões futuras se ocorrerem flakes similares.
+**Conclusão smell audit:** 0 smells críticos. 1 borderline (noise-file.js assertion ratio 5.2 — justificado por frontmatter+body shape combinada). 81 + 4 novos = 85 tests neural-chain, todos limpos.
 
-#### [bug-found-005] live-* cluster ENOENT × 6 — **FIXED 2026-05-14 (@dev)**
+## Coverage report (Phase 5)
 
-- `tests/live-command.test.js:36,308,394,435`, `tests/live-json-output.test.js:34`, `tests/runtime-command.test.js:610`
-- Sintoma uniforme: `ENOENT: no such file or directory, open '.../runtime/live/direct-session:{ts}:deyvin/state.json'`
-- **Diagnóstico real**: o session key tem formato `direct-session:{ts}:{agent}` com **colons**. NTFS reserva `:` em nomes de arquivo (drive letter, ADS syntax). `mkdir 'direct-session:123:deyvin'` falha com ENOENT no Windows. Os 3 escritores (`writeLiveState`, `appendLiveEvent`, `writeLiveSummary`) tinham `try { ... } catch { /* filesystem is auxiliary */ }` que silenciosamente engolia o erro — `state.json` nunca era escrito. Linha 4621cf3 da história git: o bug está em produção desde que tracked live sessions foram adicionadas; CI roda em Linux onde colons funcionam. **Dashboard live view nunca funcionou em produção no Windows.**
-- **1 root cause, 6 sintomas diferentes**:
-  1. `state.json` ENOENT × 2 — leitura direta falha (nunca escrito)
-  2. "Missing expected rejection" (back-to-back task_started) — validação lê state.json, não acha nada, permite duplicação
-  3. `live:list` 0 sessions — list escaneia state.json files, nenhum existe
-  4. `runtime status child_task_count 2 !== 1` — accounting depende de state.json existir
-  5. live-json-output — espera summary.md no path com colons
-- **Fix entregue**:
-  - Helper `sessionKeyToDirName(key)` em `src/commands/live.js` que troca `:` por `__`
-  - `resolveLivePaths` agora sanitiza antes de `path.join` — único ponto de fronteira FS
-  - Export do helper pra que tests possam construir paths que casam com o layout de disco
-  - `session_key` em SQLite e CLI continua com colons (identificador público); só o nome do diretório é sanitizado
-  - 5 sites em 2 test files atualizados pra usar o helper
-- **Regressão**: live-command 8/8 + live-json-output 2/2 + runtime-command relevante verde. Full suite **2413/2422** (was 2407/2422). +6 net. As 9 falhas restantes incluem 4 flakes intermitentes que passam em isolação.
+**Quantitativa (heurística sem coverage tool — node:test não tem cobertura built-in nativa):**
+- 85 tests / 1252 source LOC ≈ 0.068 tests/LOC (vs typical 0.030 baseline)
+- Test LOC / source LOC = 2057/1252 = 1.64 (acima do baseline industrial 1.0)
+- BRs cobertas: 9/11 directly + 2 partial (BR-NC-01 partial — max combination não implementado; BR-NC-02 rule b deferida)
+- ECs cobertas: 6/10 directly + 2 OUT-OF-SCOPE V1 + 1 partial (EC-NC-04 retry não implementado) + 2 accepted-as-noise (EC-NC-01/02)
 
-#### [test-update-001] sync-agents-preflight × 2 — **FIXED 2026-05-14 (@tester)**
+**Tier ladder posição:**
+- Tier 1 (line coverage ≥ 80% overall, ≥ 90% critical paths): **inferido alcançado** (sem coverage tool baseline mas ratio test/source 1.64 sugere bem acima)
+- Tier 2 (branch coverage ≥ 60% overall, ≥ 80% critical): **provavelmente alcançado** (classifyImpact 7 modo×rule combinações + EC-NC-05/09/10 branches cobertas)
+- Tier 3 (mutation score ≥ 80% critical): **NOT MEASURED** — Stryker não instalado no repo; recomendação deferida (ver below)
+- Tier 4 (property-based invariants): **NOT MEASURED** — fast-check não instalado; recomendação deferida
 
-- `tests/sync-agents-preflight.test.js:146,194`
-- Tests stubam `dossierTelemetry.emitDossierEvent` e contam chamadas. Foram escritos antes do check `learning_loop_template_parity_violation` (Phase 6 active-learning-loop) existir. O novo check emite +1 evento, quebrando as contagens (esperado 1 → recebe 2; esperado 0 → recebe 1).
-- **Fix entregue**:
-  - Test 146: filter `calls` por `payload.type === 'sync_agents_parity_violation'` antes de contar. Mantém todas as outras asserções.
-  - Test 194: refactored. O test original misturava 2 invariants (no parity_violation emit AND global exit code 0). Como main() agora reflete múltiplos checks, removi a asserção de exit code e mantive só a invariant agent-chain-específica. Renomeei o test para refletir o escopo real: "main() does not emit sync_agents_parity_violation when agent-chain parity is clean".
-- **NÃO é bug de produção** — o código está correto, os tests é que não cobriam o cenário pós-Phase 6.
-- **Regressão**: sync-agents-preflight 7/7 verde. Full suite **2418/2422**.
+**Critical paths neural-chain identificados:**
+- `maybeDeleteNoiseFile` — irreversible (unlink); coberto por 2 tests (deletion-on-close + EC-NC-10 race)
+- `chain_edges` state machine (active → archived) — coberto por migration archive-flow test
+- `aioson chain:audit` CLI — public API, coberto por 9 chain-audit tests + A.2 CLI integration
+- `classifyImpact` — state-machine-like decision, coberto por 7 modo×rule combinações
 
-#### [investigation-001] json-schema-files × 2 — **FIXED 2026-05-14 (@tester)**
+**Residual coverage gaps (low priority, deferred):**
+- Mutation testing em `classifyImpact` + `maybeDeleteNoiseFile` (Tier 3) — requer Stryker dep + config
+- Property-based em saturation formula + classifier invariants (Tier 4) — requer fast-check dep
 
-- `tests/json-schema-files.test.js:17,65`
-- Apontava para `docs/en/schemas/index.json` que **não existia** no repo.
-- **Arqueologia git revelou**: commit `20ac2fa` (2026-05-07, "docs(en): phase 1 — mirror docs/pt 5-layer structure") moveu os schemas via `git mv` de `docs/en/schemas/` para `docs/en/5-reference/schemas/`. Test não foi atualizado alongside o move.
-- **Saída escolhida**: opção 3 do triage (update test path) — 22 schemas continuam existindo, só mudou o local.
-- **Fix**: 1 linha no test — `SCHEMAS_DIR` repointado para `docs/en/5-reference/schemas`. Comment com a referência ao commit do `git mv` pra facilitar a próxima vez.
-- **Regressão**: json-schema-files 2/2 verde. Full suite **2420/2422**.
+## Bug findings (encontrados, NOT fixed esta sessão — `@dev` ownership)
 
-#### [decision-needed-001] kernel oversize × 1 — **FIXED 2026-05-14 (@architect)**
+### `[bug-found-001]` EC-NC-04 retry/backoff não implementado
 
-- `tests/agent-contracts.test.js:229`
-- Asserção: "product kernel should stay within the generalist target" — falhou
-- **Achado refinado**: BOTH product (18356 bytes) AND dev (18198 bytes) estavam over 15KB; o test só reportava product por causa do short-circuit. sheldon estava dentro (14481).
-- **@architect decision**: rebudget 15000 → 20000 globalmente.
-- **Rationale**: padrão on-demand-doc (kernels referenciam docs externas) está intacto, então o cap protege contra bloat acidental, não growth documentado. As adições vieram de scope deliberado (active-learning-loop, sub-task scout, dossier protocol). Next dev a estourar 20KB vai receber o mesmo nudge.
+- **Source:** `src/neural-chain-agent-ingest.js`, `src/commands/chain-audit.js`
+- **Spec:** BR-NC-11 + EC-NC-04 — "Retry com backoff exponencial: 3 tentativas (100ms, 200ms, 500ms). Se ainda locked após 3 retries → abort com warning log; emit chain_audit event com error"
+- **Atual:** single-attempt try/catch sem retry. BR-NC-11 non-blocking IS honored mas survival a transient lock é mais fraco que spec.
+- **Severity:** Medium (já documentado como M-01 no QA report)
+- **Fix proposto:** helper `withRetry({attempts: 3, backoffMs: [100,200,500]})` ao redor de queryImpacts + emit OU amend spec aceitando V1 single-attempt como acceptable
+- **Owner:** `@dev` quando endereçar M1.5 / próximo neural-chain slice
 
-#### [bug-found-006] singletons reais — **FIXED 2026-05-14 (@dev)**
+### `[bug-found-002]` BR-NC-01 `max(c_git, c_event)` combination não implementado
 
-- `tests/agent-teams-adapter.test.js:122` — **FIXED**: era Windows path separator. `path.join` no Windows emite backslash; test esperava substring com forward-slash. Fix em `src/squad/agent-teams-adapter.js`: normaliza `agentFile` pra forward-slash após `path.join`.
-- `tests/learning-auto-promote.test.js:92` — **FIXED**: mesmo padrão. Fix em `src/commands/learning-auto-promote.js`: normaliza `promoted_items[].file` pra forward-slash.
-- `tests/live-command.test.js:308` — **FIXED via bug-005**: misclassificado. Era sintoma do state.json nunca escrito (validação back-to-back lia state.json vazio e não rejeitava).
-- **Decisão arquitetural**: a normalização vai em **produção, não em tests**, porque esses campos (`agentFile`, `file`) aparecem em JSON outputs, CLI logs, e são consumidos por automação downstream. Separators mistos entre plataformas seria um problema de interop. Fix em produção via `.replace(/\\/g, '/')` após `path.join`.
-- **Regressão**: agent-teams-adapter 36/36 + learning-auto-promote 10/10 verde. Full suite **2414/2422**.
+- **Source:** `src/neural-chain-agent-ingest.js#queryImpacts`, `src/commands/chain-audit.js`
+- **Spec:** BR-NC-01 — "Quando ambos os tipos existem para o mesmo (source, target): reportar `max(c_git, c_event)` — não soma; evita double-count entre fontes"
+- **Atual:** SQL `WHERE source_path = ? AND end_at IS NULL ORDER BY confidence DESC` retorna AMBAS as rows separadas → duplicação de mesmo `target_path` no noise file (motivos diferentes)
+- **Verified live:** QA session confirmou 2 rows retornadas em vez de 1
+- **Severity:** Medium (já documentado como M-02 no QA report)
+- **Fix proposto:** SQL `SELECT target_path, MAX(confidence) AS confidence, ... GROUP BY target_path ORDER BY confidence DESC` + propagar `edge_type` via window function ou MAX
+- **Test ausente:** dual-source case (mesmo (source, target) com ambos edge_types) — não existe teste hoje porque o behavior atual é "errado mas estável"; quando fix entrar, escrever test cobrindo
+- **Owner:** `@dev` próximo slice
 
-#### [known-flake-001] QA-PERF-01 Windows perf × 1 — **FIXED 2026-05-14 (@architect)**
+### `[bug-found-003]` chain_audit event payload schema drift entre emitters (NOVO)
 
-- `tests/qa-telemetry-foundation.test.js:30`
-- **Diagnóstico refinado**: test PASSA em isolação (~12s total, p99 < 100ms). Falha sob full-suite porque ~100 test files competem por SQLite/disk/temp IO no NTFS — p99 vai pra 1000-1300ms. Não é Windows-slow, é Windows-slow-under-contention.
-- **Tentativa rebudget rejeitada**: SLA Win=250ms ainda media 1222ms na realidade contended. Qualquer valor que sobrevivesse contention seria solto demais pra detectar regressão real.
-- **@architect decision**: skip-on-windows via Node test-runner `skip` option com string de rationale. Linux/CI continua estrito em 100ms. Pra medir Windows perf manualmente: rodar `node --test tests/qa-telemetry-foundation.test.js` isolado.
-- **Resultado**: full suite agora **2421 pass / 0 fail / 1 skipped**.
+- **Source:** `src/commands/chain-audit.js` (CLI emit) vs `src/neural-chain-agent-ingest.js` (hook emit)
+- **Spec:** BR-NC-10 — payload deve ter `{feature_slug, source_files, impacts_found, auto_fixable_count, noise_file, tokens_used, duration_ms, error}` (8 fields)
+- **Atual drift (3 sub-issues):**
+  - **3a — Field set drift entre emitters:** CLI emite `{source_file, feature_slug, impacts_found, limit_applied, duration_ms, error}` (faltando 4: source_files plural, auto_fixable_count, noise_file, tokens_used). Hook per-artifact emite `{agent, source_file, feature_slug, impacts_found, auto_fixable_count, duration_ms, ingest_stats, noise_file, autonomy_mode, chain_auto_threshold, error}` (faltando 2: source_files plural, tokens_used; mas tem 4 EXTRA: agent, ingest_stats, autonomy_mode, chain_auto_threshold). Sem schema validation, `aioson chain:stats` (Should-have feature futura) vai assumir shape e quebrar.
+  - **3b — Singular vs plural drift:** spec diz `source_files: [...]` (plural array); ambos emitters usam `source_file: <string>` (singular). Quebra agregação por session.
+  - **3c — `tokens_used` field nunca emitido:** spec lista mas nenhum emit code path populates. Quebra primary metric instrumentation (PRD guardrail "tokens estáveis por chain:audit").
+  - **3d — EC-NC-05 no-op event omite `duration_ms` + `error`:** quando artifacts vazio, emit envia payload sem esses 2 fields (mesmo que como 0/null). Detected via A.2 hook test que precisou relaxar assertion pra esse caso especial.
+- **Detectado em:** `@tester` invariant test A.2 (em runtime real, não só leitura de código)
+- **Severity:** Medium (downstream impact — break futuro consumer)
+- **Fix proposto:** consolidar emitTelemetry helper compartilhado (em `src/neural-chain-telemetry.js` novo OU em `agent-ingest.js` exportado) com schema completo per BR-NC-10; CLI + hook ambos usam; EC-NC-05 no-op preenche duration_ms=0 + error=null
+- **Test que vai precisar atualização após fix:** A.2 pode promover REQUIRED_BASE + REQUIRED_OPERATIONAL pra mesma constante (REQUIRED_BR_NC_10_FIELDS = todos os 8 spec fields)
+- **Owner:** `@dev` próximo neural-chain slice (provavelmente junto com bug-found-002 num mesmo PR — ambos tocam queryImpacts + emit)
 
-### Recomendação de sequenciamento
+## Verification Triplet (BR-NC-04 invariant)
 
-1. **bug-found-004** primeiro (@dev, mecânico, alto retorno) — recupera 6 testes
-2. **test-update-001** em paralelo (@tester, 5min) — recupera 2 testes
-3. **bug-found-005** depois (@dev, investigação + fix) — recupera 6 testes
-4. **bug-found-006** sequencial (@dev, 3 itens) — recupera 3 testes
-5. **investigation-001** → arqueologia git → decisão (@dev ou @architect)
-6. **decision-needed-001** + **known-flake-001** → @architect
+**truths (behavioral):**
+- ✓ `runChainHookOnAgentDone` em modo guarded escreve noise file APENAS em `.aioson/context/noises/` — test A.1 (functional) confirma
+- ✓ `maybeDeleteNoiseFile` unlink APENAS sobre paths em `.aioson/context/noises/` — test A.1 (functional) confirma
 
-Pós-execução do 1-4: **17 testes recuperados** → suite deve chegar a **2419/2422 verde** (3 itens decision-only restantes).
+**artifacts (structural):**
+- ✓ `src/neural-chain-noise-file.js` — 311 LOC, exports writeNoiseFile + readNoiseFileAndRecompute + maybeDeleteNoiseFile + helpers
+- ✓ `src/neural-chain-agent-ingest.js` — 385 LOC, zero fs mutation calls (test A.1 static confirma)
+- ✓ `src/neural-chain-config.js` + `src/neural-chain-migration.js` + `src/neural-chain-git-ingest.js` + `src/commands/chain-audit.js` — todos zero fs mutation (test A.1 static confirma)
 
-## Veredito do trio bug-found-*
+**key_links (integration):**
+- ✓ `runChainHookOnAgentDone` invocado em `src/commands/runtime.js:1246` (live_event) + `:1319` (standalone) — verificado por QA
+- ✓ `@neo` lê `noises/*.md` via Step 1.5 (workspace + template parity) — verificado por QA
+- ✓ `readChainConfig` lê `.aioson/config.md` frontmatter — testado em 6 readChainConfig tests
 
-Os 3 bugs identificados pelo @tester estão resolvidos. Total dessa sessão @dev:
-- **bug-001** (install --dry-run UX): 4 i18n keys × 4 locales + branch isolada + 3 ACs em characterization test
-- **bug-002** (squad EBUSY): helper `tests/helpers/sqlite-cleanup.js` + 5 test files refatorados + 1 production bug consertado em `squad-score.js` (missing await silenciou função inteira)
-- **bug-003** (squad-export tar Windows): 4 linhas em `squad-export.js` (forward-slash + --force-local condicional Windows)
-- **Net delta full suite**: 2402/2422 vs 2377/2419 baseline @tester — **+22 passing, -22 failing**
-- **3 commits** entregues no `main`: `fix(install)`, `fix(squad)`, `chore(context)` — bug-003 pendente de commit
+## Recommendations to `@dev` (próximo neural-chain slice)
 
-## Test writing plan (Phase 4 — pendente decisão do user)
+Priority order (consolidar num PR se possível, todos tocam mesmo módulo):
 
-Não vou escrever testes até user escolher direção. As opções viáveis em ordem de ROI:
+1. **bug-found-002 (M-02)** — fix `queryImpacts` SQL com GROUP BY + MAX(confidence) para deduplicar (source, target) cross edge_type. **+ 1 test caso dual-source.**
+2. **bug-found-003 (3a/3b/3c/3d)** — extract `emitChainAuditEvent` helper compartilhado entre CLI + hook; schema completo per BR-NC-10 (8 fields); EC-NC-05 no-op preenche duration_ms=0 + error=null. **+ promover A.2 REQUIRED_BASE pra full BR-NC-10 schema.**
+3. **bug-found-001 (M-01)** — decidir: implementar `withRetry({attempts:3, backoffMs:[100,200,500]})` helper OU amend spec aceitando V1 single-attempt. Se implementar, **+ 1 test cobrindo retry behavior + abort após 3 fails**.
 
-### Opção A — BUG-001 characterization (RECOMENDADO)
-Escreve `tests/install-dry-run.test.js` com 3 cases:
-1. `it('AC-DRY-01: dry-run prefixes user output with [DRY RUN]', ...)` — falha hoje
-2. `it('AC-DRY-02: dry-run does not call fs.writeFile or fs.copyFile', ...)` — passa hoje (state-correct)
-3. `it('AC-DRY-03: dry-run summary distinguishes "would copy" from "copied"', ...)` — falha hoje
+Slices 7/8 sugeridos não-prioritários (defer pra M1.5/M2):
+- Stryker mutation testing infra (Tier 3 ladder) — adicionar `npm install --save-dev @stryker-mutator/core @stryker-mutator/api`; targets críticos `classifyImpact` + `maybeDeleteNoiseFile`
+- fast-check property-based (Tier 4 ladder) — adicionar `npm install --save-dev fast-check`; targets `confidence saturation formula` + `classifyImpact invariants`
 
-Custo: ~80 LOC. Benefício: cria a especificação executável que força @dev a corrigir BUG-001.
+## Residual risks (acceptable for V1)
 
-### Opção B — Re-investigar context-health (6 falhas, mesmo cluster suspeito de EBUSY?)
-Roda `node --test tests/context-health.test.js` em isolamento. Se for outro EBUSY/Windows → marca como bug-found-004 (mesma classe do squad). Se for bug real → escreve characterization.
+- **EC-NC-01/02** file rename/delete edges órfãos → spec accepts as noise V1 (M2 graph maintenance limpa)
+- **EC-NC-08** squad/parallel concurrent edits → spec out-of-scope V1
+- **Stryker mutation / fast-check property** → low marginal value pra SMALL feature com ratio coverage 1.64 já alto
 
-### Opção C — Cross-cluster sweep para EBUSY pattern
-Categoriza as 42 falhas em 3 buckets via diagnóstico automatizado:
-- `windows-teardown-ebusy` (sqlite locked)
-- `windows-tar-path`
-- `real-assertion-failure` (bug ou regressão real)
+## Next agent
 
-Output: pequena tabela JSON gravada em `.aioson/context/test-triage.json` que CI pode usar pra decidir o que skipar no Windows.
+- `@dev` — apply bug-found-002 + bug-found-003 fixes (M2-prep PR scope) + bug-found-001 decision
+- OU `@qa` re-verify after fixes land (auto-cycle se Critical/High aparecer; Medium-only não dispara cycle)
 
-### Opção D — Tier-4 smoke suite (escopo maior, definido em test-inventory.md)
-`tests/cli-smoke.test.js`: `aioson <verb> --help` × 80 + `aioson <verb> --dry-run` em verbs aplicáveis. ~160 cases.
-
-## Hard constraints respeitados nesta sessão
-
-- ✓ Nenhuma modificação em código de produção
-- ✓ Anti-loop guard: 2 artefatos escritos antes de Phase 4 (test-inventory.md + test-plan.md)
-- ✓ Bugs documentados, não fixados silenciosamente
-- ✓ Bugs roteados para @dev/@qa conforme protocolo
-
-## Próximo passo
-
-User precisa escolher entre A/B/C/D acima OU dar diretriz alternativa. @tester aguarda confirmação antes de Phase 4.
+Sessão `@tester` registrada via `aioson agent:done`.
