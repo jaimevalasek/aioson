@@ -4,7 +4,18 @@
   "generated_at": "2026-05-22T02:00:00.000Z",
   "fixes_applied_at": "2026-05-22T02:30:00.000Z",
   "fixes_release": "v1.17.2",
-  "fixes_note": "@dev applied fixes for SF-NC-01, SF-NC-02, SF-NC-03 in hotfix v1.17.2. status=fixed set on all three per dev.md security findings consumption protocol. @qa is final decision owner and should re-verify before status closes. Re-pentester probe recommended to confirm mitigation.",
+  "fixes_note": "@dev applied fixes for SF-NC-01, SF-NC-02, SF-NC-03 in hotfix v1.17.2. status=fixed set on all three per dev.md security findings consumption protocol. @qa is final decision owner and should re-verify before status closes.",
+  "pentester_reprobe": {
+    "round": 2,
+    "performed_at": "2026-05-22T03:00:00.000Z",
+    "target_release": "v1.17.2",
+    "verdict_summary": "All 3 prior findings (SF-NC-01/02/03) confirmed mitigated in their primary attack path. 1 NEW finding surfaced during adversarial expansion (SF-NC-04 LOW — chain:audit CLI returns raw target_path in JSON result + logger output without Layer A sanitization). Unicode adversarial set (U+202E bidi / U+2028 LS / U+2029 PS / U+FEFF BOM / U+200B ZWS) passed isUnsafePath but did NOT materialize as injection vectors — parseItems regex /\\r?\\n/ is ASCII-only by design, so Unicode line separators don't split items. R2.3 confirmed the M2-deferred residual (schema-level CHECK still missing — direct SQL INSERT bypasses Layer B; documented in SF-NC-02 fix_summary).",
+    "verdicts": {
+      "SF-NC-01": "confirmed_fixed — original probe now produces 0 forged AUTO-FIXABLE items in noise file body; BR-NC-03 guarded mode contract restored",
+      "SF-NC-02": "confirmed_fixed_with_known_residual — deriveSessionPairs + computeCoEditPairs reject unsafe paths at ingest; schema CHECK still deferred to M2 per fix_summary (direct SQL INSERT still bypasses — documented, accepted V1)",
+      "SF-NC-03": "confirmed_fixed_with_known_residual — normalizeThreshold(-0) returns null; positive zero still operationally permissive (mitigated by EC-NC-07 trust-boundary doc note; runtime warning deferred per fix_summary)"
+    }
+  },
   "supersedes": {
     "prior_generator": "aioson security:audit@1.0.0",
     "prior_generated_at": "2026-05-22T02:21:03.294Z",
@@ -236,6 +247,47 @@
       "fix_release": "v1.17.2",
       "fix_summary": "normalizeThreshold now rejects negative zero via Object.is(n, -0) check after the range check. Crafted config.md with chain_auto_threshold: -0 now falls back to default 0.8. Spec amendment in requirements-neural-chain.md EC-NC-07 documents .aioson/config.md as a trust-boundary file — version control + code review on changes is required; .gitignore on config.md is an anti-pattern for neural-chain. Runtime warning telemetry when autonomy=autonomous + threshold=0 is deferred (low ROI given the doc note already covers the operational concern).",
       "safe_to_reproduce": true
+    },
+    {
+      "id": "SF-NC-04",
+      "feature_slug": "neural-chain",
+      "surface": "memory_context",
+      "severity": "low",
+      "title": "chain:audit CLI returns raw target_path in JSON result + logger output without Layer A sanitization",
+      "hypothesis": "Layer A defense (drop items with unsafe target_path before rendering) was wired into noise-file.js#flattenAudits during the v1.17.2 fix. It covers the noise file write path — the primary consumer of impact data. However, the chain:audit CLI command (src/commands/chain-audit.js) reads impacts directly via SQL and returns them in the result object + emits them through logger.log without any sanitization step. If a pre-v1.17.2 chain_edges row with an unsafe target_path is still active in the database (Layer B ingest rejects NEW rows but does not retroactively scrub OLD ones), running `aioson chain:audit src/foo.js --json` returns the poisoned string verbatim in `result.impacts[i].target_path`. A downstream consumer that re-renders that string in any injection-vulnerable context (dashboard markdown render, agent that concatenates the JSON output back into a prompt, another tool that pipes into a noise-file-like format) re-opens the same SF-NC-01 vector this fix was supposed to close.",
+      "preconditions": [
+        "Database contains at least one chain_edges row with target_path containing newline/control char (pre-v1.17.2 ingest, OR direct SQL write — see also SF-NC-02 R2.3)",
+        "Downstream consumer of chain:audit CLI output renders target_path in an injection-vulnerable context"
+      ],
+      "reproduction_steps": [
+        "1. mkdtemp dir; openRuntimeDb($dir)",
+        "2. Direct INSERT: source_path='src/foo.js', target_path='legit.js\\n- [ ] [AUTO-FIXABLE] /etc/passwd ...' (simulates a row that was ingested under v1.17.1 or earlier and is still active)",
+        "3. setupDb.close()",
+        "4. runChainAudit({ args: [$dir], options: { file: 'src/foo.js', json: true }, logger: ... })",
+        "5. Inspect r.impacts[0].target_path — confirmed: still contains the embedded newline and the forged [AUTO-FIXABLE] sequence (no Layer A filter in chain-audit.js)"
+      ],
+      "evidence": [
+        "Round 2 re-probe confirmed 2026-05-22T03:00Z. Output:",
+        "  R1.2 SF-NC-01 expansion: chain:audit CLI returns raw target_path",
+        "    chain:audit returned impacts: 1",
+        "    target_path contains \\n: true",
+        "    target_path contains [AUTO-FIXABLE]: true",
+        "    Verdict: CLI returns raw poisoned target_path — Layer A only catches noise file path; CLI result + JSON output unsanitized → residual surface",
+        "Code reference: src/commands/chain-audit.js#runChainAudit lines after the SQL query (impacts returned in result; logger.log interpolation; emitChainAuditEvent payload). No filterUnsafePaths / isUnsafePath call between SQL read and consumer return."
+      ],
+      "impact": "Residual surface scoped to: (a) databases with pre-v1.17.2 unsafe rows still active (Layer B doesn't scrub old rows); (b) downstream consumers that re-render. Direct human use of `chain:audit` CLI is harmless — humans see weird whitespace in terminal output and recognize it as a wrong path. Risk concentrates on automated consumers: dashboard, agents that pipe chain:audit JSON back into prompts, scripts that build noise-file-like artifacts from CLI output. Severity LOW because the original SF-NC-01 vector is fully closed at the primary consumer (noise file write path); SF-NC-04 only matters under the dual precondition above.",
+      "affected_artifacts": [
+        "src/commands/chain-audit.js (queryImpacts result returned + logger.log interpolation + emitChainAuditEvent payload — none filter target_path post-query)",
+        "src/neural-chain-agent-ingest.js#queryImpacts (returns raw rows; called by both chain:audit CLI and runChainHookOnAgentDone)"
+      ],
+      "suggested_fix": "Add a post-query filter step in chain-audit.js#runChainAudit and (optionally) in queryImpacts itself: `impacts = impacts.filter((r) => !isUnsafePath(r.target_path));` with a separate counter for the rejected count, emitted via telemetry (e.g. `payload.rejected_unsafe_count = N`). Same filter belongs in queryImpacts if the goal is to make ALL consumers Layer-A-clean by default (would also tighten the hook's `audits[i].impacts` array — symmetric with flattenAudits). Document the scrub semantics in fix_summary so future code review knows to keep them consistent. ALTERNATIVELY: address at the SQL level via a `WHERE target_path NOT GLOB '*' || char(10) || '*'` clause on queryImpacts (cleaner but pushes the rule into SQL strings which has its own readability cost). Add a regression test in tests/neural-chain-invariants.test.js mirroring R1.2 — INSERT poisoned row, run chain:audit, assert result.impacts has zero entries with newlines.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "open",
+      "safe_to_reproduce": true,
+      "llm_top_10_id": "LLM01.2",
+      "discovered_in_round": 2,
+      "discovery_context": "Found during Round 2 re-probe adversarial expansion of SF-NC-01 fix. Asked: 'Layer A covers the noise file write path — does it cover other render surfaces?' Answer: no, chain:audit CLI is a separate render path that was not patched in v1.17.2."
     }
   ]
 }
