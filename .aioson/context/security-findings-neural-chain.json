@@ -5,6 +5,21 @@
   "fixes_applied_at": "2026-05-22T02:30:00.000Z",
   "fixes_release": "v1.17.2",
   "fixes_note": "@dev applied fixes for SF-NC-01, SF-NC-02, SF-NC-03 in hotfix v1.17.2. status=fixed set on all three per dev.md security findings consumption protocol. @qa is final decision owner and should re-verify before status closes.",
+  "qa_signoff": {
+    "round": 2,
+    "performed_at": "2026-05-22T03:30:00.000Z",
+    "target_release": "v1.17.2",
+    "agent": "qa",
+    "verdict_summary": "@qa Round 2 sign-off — v1.17.2 release CLEARED for npm publish. All 3 v1.17.1 findings (SF-NC-01/02/03) independently re-verified as truly fixed (not just per @dev/@pentester reports). SF-NC-04 (new LOW from @pentester Round 2) accepted as residual risk with deferred fix recommendation. Independent verification ran 4 probes: SF-NC-01 repro produces 0 forged items in body, SF-NC-03 normalizeThreshold rejects -0, SF-NC-04 confirmed present (CLI returns raw target_path), isUnsafePath ASCII range coverage CORRECT (33 unsafe = [0-31] + 127). 92/92 neural-chain tests green in 4.6s combo.",
+    "per_finding_verdicts": {
+      "SF-NC-01": "FIXED — @qa independently re-ran the original probe with the same malicious INSERT; noise file body contains 0 forged AUTO-FIXABLE items and zero occurrences of the forged target string. status promoted from `fixed` (dev) to `fixed` (qa-confirmed). Final close.",
+      "SF-NC-02": "FIXED — @qa accepts the app-layer-only fix as sufficient for V1; schema-level CHECK constraint is documented as M2 deferral in fix_summary and acceptable given the runChainAudit + runChainHookOnAgentDone ingest paths are now both protected. status stays `fixed`. Final close (with documented M2 follow-up).",
+      "SF-NC-03": "FIXED — @qa independently confirmed normalizeThreshold(-0)=null + normalizeThreshold('-0')=null + normalizeThreshold(0)=0. Trust-boundary doc note in requirements EC-NC-07 is the right operational mitigation; runtime warning telemetry can remain deferred. status stays `fixed`. Final close.",
+      "SF-NC-04": "ACCEPTED RISK — @qa decision: severity LOW + dual precondition (pre-v1.17.2 unsafe row still active in DB AND injection-vulnerable downstream consumer) does not justify another release cycle. status changed `open` → `accepted_risk`. Recommended fix (queryImpacts filter shared between CLI + hook) added to neural-chain backlog as housekeeping for the next slice that touches src/neural-chain-agent-ingest.js or src/commands/chain-audit.js. v1.17.2 release UNBLOCKED for npm publish."
+    },
+    "ac_audit_nc_status": "7/7 still satisfied after v1.17.1 + v1.17.2 hotfixes. No item regressed.",
+    "release_recommendation": "v1.17.2 CLEARED for `npm publish`. v1.17.0 and v1.17.1 supersede pre-publish; user picks v1.17.2 tag."
+  },
   "pentester_reprobe": {
     "round": 2,
     "performed_at": "2026-05-22T03:00:00.000Z",
@@ -283,11 +298,18 @@
       "suggested_fix": "Add a post-query filter step in chain-audit.js#runChainAudit and (optionally) in queryImpacts itself: `impacts = impacts.filter((r) => !isUnsafePath(r.target_path));` with a separate counter for the rejected count, emitted via telemetry (e.g. `payload.rejected_unsafe_count = N`). Same filter belongs in queryImpacts if the goal is to make ALL consumers Layer-A-clean by default (would also tighten the hook's `audits[i].impacts` array — symmetric with flattenAudits). Document the scrub semantics in fix_summary so future code review knows to keep them consistent. ALTERNATIVELY: address at the SQL level via a `WHERE target_path NOT GLOB '*' || char(10) || '*'` clause on queryImpacts (cleaner but pushes the rule into SQL strings which has its own readability cost). Add a regression test in tests/neural-chain-invariants.test.js mirroring R1.2 — INSERT poisoned row, run chain:audit, assert result.impacts has zero entries with newlines.",
       "recommended_owner": "dev",
       "recommended_gate_status": "note",
-      "status": "open",
+      "status": "accepted_risk",
       "safe_to_reproduce": true,
       "llm_top_10_id": "LLM01.2",
       "discovered_in_round": 2,
-      "discovery_context": "Found during Round 2 re-probe adversarial expansion of SF-NC-01 fix. Asked: 'Layer A covers the noise file write path — does it cover other render surfaces?' Answer: no, chain:audit CLI is a separate render path that was not patched in v1.17.2."
+      "discovery_context": "Found during Round 2 re-probe adversarial expansion of SF-NC-01 fix. Asked: 'Layer A covers the noise file write path — does it cover other render surfaces?' Answer: no, chain:audit CLI is a separate render path that was not patched in v1.17.2.",
+      "qa_signoff_round_2": {
+        "decision": "accepted_risk",
+        "decided_at": "2026-05-22T03:30:00.000Z",
+        "decided_by": "qa",
+        "rationale": "Severity LOW + dual precondition (pre-v1.17.2 unsafe row still active in chain_edges AND downstream consumer re-renders the raw target_path in an injection-vulnerable context). The primary SF-NC-01 attack path is fully closed at the noise file write boundary. Direct human use of `aioson chain:audit ... --json` is harmless — humans see weird whitespace in terminal output. Automated consumers (dashboard, agents that pipe CLI JSON back into prompts) are the only realistic at-risk surface, and they should not blindly re-render raw paths from any source anyway. Fix is small (~5 LOC + 1 test) but does not warrant another release cycle for LOW severity — added to backlog as housekeeping for the next slice that touches src/neural-chain-agent-ingest.js#queryImpacts or src/commands/chain-audit.js#runChainAudit. Recommended approach when picked up: push isUnsafePath filter into queryImpacts (symmetric with flattenAudits) so ALL consumers become Layer-A-clean by default, not just the noise file path.",
+        "release_action": "v1.17.2 UNBLOCKED for npm publish despite this finding remaining open-in-code (status flipped to accepted_risk in this artifact)."
+      }
     }
   ]
 }
