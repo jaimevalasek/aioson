@@ -40,6 +40,12 @@ function normalizeThreshold(value) {
     return null;
   }
   if (!Number.isFinite(n) || n < 0 || n > 1) return null;
+  // SF-NC-03 — reject negative zero. JS quirk: -0 < 0 is false, so the range
+  // check above passes, but using -0 as a threshold is operationally
+  // equivalent to setting threshold=0 (everything above 0 confidence auto-
+  // fixes in standard/autonomous mode) and is a smell that the source value
+  // was crafted to dodge validation. Normalize positive zero only.
+  if (Object.is(n, -0)) return null;
   return n;
 }
 

@@ -20,6 +20,7 @@
 const path = require('node:path');
 const { openRuntimeDb } = require('../runtime-store');
 const { emitChainAuditEvent } = require('../neural-chain-telemetry');
+const { isUnsafePath, sanitizationReason } = require('../neural-chain-sanitize');
 
 const DEFAULT_LIMIT = 20;
 const HARD_LIMIT_CAP = 200;
@@ -43,6 +44,17 @@ async function runChainAudit({ args, options = {}, logger, t }) {
       'chain:audit requires a file path. Usage: aioson chain:audit <file> [--limit=N] [--feature=<slug>] [--json]';
     if (logger && typeof logger.log === 'function' && !json) logger.log(msg);
     return { ok: false, reason: 'missing_file' };
+  }
+
+  // SF-NC-01/02 Layer B (CLI boundary) — reject unsafe file paths before
+  // they reach SQL bind (which is prepared and safe by itself) AND before
+  // they get rendered into the telemetry payload + logger output. Mirrors
+  // the ingest-side guard in agent-ingest.js#deriveSessionPairs.
+  const filePathReason = sanitizationReason(filePath);
+  if (filePathReason !== null) {
+    const msg = `chain:audit rejected unsafe file path (${filePathReason})`;
+    if (logger && typeof logger.log === 'function' && !json) logger.log(msg);
+    return { ok: false, reason: 'unsafe_file_path', rejection_reason: filePathReason };
   }
 
   let dbHandle;

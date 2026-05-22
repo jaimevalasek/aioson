@@ -183,6 +183,8 @@ Skip bootstrap auto-scan; info message log. Agent-event ingest cobre a partir do
 ### EC-NC-07 — Config sem `chain_auto_threshold`
 Auto-migration runtime: lê config, se field ausente → usa default `0.8`. Não força edit ao `.aioson/config.md` (zero migration burden em projetos legados).
 
+**Trust boundary note (hotfix v1.17.2 — SF-NC-03 amendment):** `.aioson/config.md` é arquivo de **trust boundary** — qualquer agente com write access a esse arquivo pode flippar `autonomy_mode=autonomous` + `chain_auto_threshold=0.0`, fazendo a maioria dos impacts virar AUTO-FIXABLE. Mitigations aplicadas em v1.17.2: (1) `normalizeThreshold` rejeita negative zero explicitamente; (2) docs (este note) explicitam que config.md DEVE ficar sob version control + code review; `.gitignore` em config.md é anti-pattern pra neural-chain. Future hardening (deferred): warning telemetry quando `autonomy=autonomous + threshold=0` é resolvido em runtime; checksum/signature opcional em config.md.
+
 ### EC-NC-08 — Multi-agent / squad concurrent edits no mesmo arquivo
 SQLite WAL handles write race natively. Audit lê pós-edit (sem race condition real). **OUT-OF-SCOPE V1**: squad/parallel testing NÃO está no acceptance criteria do `@qa` Gate D.
 

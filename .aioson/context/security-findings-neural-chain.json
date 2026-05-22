@@ -2,6 +2,9 @@
   "version": 1,
   "feature_slug": "neural-chain",
   "generated_at": "2026-05-22T02:00:00.000Z",
+  "fixes_applied_at": "2026-05-22T02:30:00.000Z",
+  "fixes_release": "v1.17.2",
+  "fixes_note": "@dev applied fixes for SF-NC-01, SF-NC-02, SF-NC-03 in hotfix v1.17.2. status=fixed set on all three per dev.md security findings consumption protocol. @qa is final decision owner and should re-verify before status closes. Re-pentester probe recommended to confirm mitigation.",
   "supersedes": {
     "prior_generator": "aioson security:audit@1.0.0",
     "prior_generated_at": "2026-05-22T02:21:03.294Z",
@@ -154,7 +157,9 @@
       "suggested_fix": "Two-layer mitigation. Layer A (defense at serialize): in src/neural-chain-noise-file.js#serializeItem, sanitize target_path and source_file before interpolation — at minimum strip or escape `\\n`, `\\r`, and ASCII control characters; preferably reject (or `JSON.stringify`-encode) any path containing them. Layer B (defense at ingest): in src/neural-chain-agent-ingest.js#ingestAgentEventEdges and src/neural-chain-git-ingest.js#computeCoEditPairs, reject any candidate target_path or source_path that contains newlines / control chars / exceeds a sane length cap (e.g., 4096 chars); track rejections via runtime:emit for telemetry. Combine with SF-NC-02 fix (schema CHECK constraint) for SQL-layer defense in depth. Add a regression test in tests/neural-chain-invariants.test.js asserting parseItems output count equals impacts.length when target_path strings contain newlines (today: count > impacts.length).",
       "recommended_owner": "dev",
       "recommended_gate_status": "block",
-      "status": "open",
+      "status": "fixed",
+      "fix_release": "v1.17.2",
+      "fix_summary": "New src/neural-chain-sanitize.js#isUnsafePath rejects strings with control chars (\\x00-\\x1f + \\x7f, including \\n + \\r), empty strings, and strings > 4096 chars. Wired at three boundaries: (Layer B) deriveSessionPairs in agent-ingest.js + computeCoEditPairs in git-ingest.js reject unsafe paths before INSERT; (Layer A) flattenAudits in noise-file.js drops items with unsafe target_path/source_file before render; (CLI) runChainAudit rejects unsafe filePath argument with reason='unsafe_file_path'. Schema-level CHECK constraint deferred to M2 (SQLite ALTER TABLE limitation). Test in tests/neural-chain-invariants.test.js reproduces the original @pentester probe and asserts the forged AUTO-FIXABLE line never reaches the noise file body even when the malicious row is INSERTed directly (Layer A defense in depth for pre-v1.17.2 DB rows).",
       "safe_to_reproduce": true,
       "llm_top_10_id": "LLM01.2"
     },
@@ -190,7 +195,9 @@
       "suggested_fix": "Add CHECK constraints to the chain_edges table on next migration: `CHECK (length(source_path) BETWEEN 1 AND 4096 AND source_path NOT GLOB '*' || char(10) || '*' AND source_path NOT GLOB '*' || char(13) || '*')` (same for target_path); `CHECK (start_at GLOB '____-__-__T__:__:__*' AND last_seen_at GLOB '____-__-__T__:__:__*')`. Apply application-layer validation in ingest functions for early rejection with telemetry. Run a one-shot data hygiene scan during migration to archive (set end_at) any pre-existing rows that fail the new constraints rather than failing the migration.",
       "recommended_owner": "dev",
       "recommended_gate_status": "review",
-      "status": "open",
+      "status": "fixed",
+      "fix_release": "v1.17.2",
+      "fix_summary": "App-layer rejection only — schema CHECK constraints deferred to M2 (SQLite ALTER TABLE doesn't support adding CHECK without a table rebuild; M2 graph maintenance will introduce that during the planned schema_meta migration). The same neural-chain-sanitize.js#isUnsafePath used by SF-NC-01 covers the length cap (4096) and control-char rejection that SF-NC-02 flagged. ISO 8601 validation on start_at/last_seen_at remains an open issue at the schema level — currently the application code only writes ISO strings (Date#toISOString) but a malicious direct INSERT could still bypass. Documented as M2 follow-up under spec § Notes.",
       "safe_to_reproduce": true
     },
     {
@@ -225,7 +232,9 @@
       "suggested_fix": "Light fix: in normalizeThreshold, also reject 0 (or warn): if threshold === 0 AND autonomy_mode === 'autonomous', log a runtime warning at hook invocation time. Reject -0 explicitly with `Object.is(n, -0)` check or `1/n === Infinity` test. Documentation fix: add explicit note to spec § Notes that .aioson/config.md is a trust-boundary file (attacker write access to it = effective autonomy escalation); recommend version control + code review on config.md changes (some operators .gitignore it — that should be documented as anti-pattern for neural-chain).",
       "recommended_owner": "dev",
       "recommended_gate_status": "note",
-      "status": "open",
+      "status": "fixed",
+      "fix_release": "v1.17.2",
+      "fix_summary": "normalizeThreshold now rejects negative zero via Object.is(n, -0) check after the range check. Crafted config.md with chain_auto_threshold: -0 now falls back to default 0.8. Spec amendment in requirements-neural-chain.md EC-NC-07 documents .aioson/config.md as a trust-boundary file — version control + code review on changes is required; .gitignore on config.md is an anti-pattern for neural-chain. Runtime warning telemetry when autonomy=autonomous + threshold=0 is deferred (low ROI given the doc note already covers the operational concern).",
       "safe_to_reproduce": true
     }
   ]

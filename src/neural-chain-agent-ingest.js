@@ -33,6 +33,7 @@ const {
   DEFAULT_CHAIN_AUTO_THRESHOLD
 } = require('./neural-chain-config');
 const { emitChainAuditEvent } = require('./neural-chain-telemetry');
+const { isUnsafePath } = require('./neural-chain-sanitize');
 
 const CONFIDENCE_SATURATION = 5;
 const HARD_CAP_PER_NODE = 10000;
@@ -99,6 +100,10 @@ function classifyImpact({ impact, sourceFile, autonomyMode, threshold }) {
 function deriveSessionPairs(artifacts) {
   if (!Array.isArray(artifacts)) return [];
 
+  // SF-NC-01/02 Layer B — reject unsafe paths at ingest boundary BEFORE
+  // they reach chain_edges. Centralizes the newline/control-char check that
+  // shuts the BR-NC-03 guarded-mode bypass. Schema-level CHECK constraint
+  // deferred to M2 (SQLite ALTER TABLE doesn't support adding CHECK).
   const files = artifacts.filter(
     (f) =>
       f &&
@@ -106,7 +111,8 @@ function deriveSessionPairs(artifacts) {
       !f.startsWith('.aioson/') &&
       !f.startsWith('.aioson\\') &&
       !f.startsWith('.git/') &&
-      !f.startsWith('.git\\')
+      !f.startsWith('.git\\') &&
+      !isUnsafePath(f)
   );
 
   if (files.length < 2) return [];

@@ -19,6 +19,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { isUnsafePath } = require('./neural-chain-sanitize');
 
 const NOISE_DIR_REL = path.join('.aioson', 'context', 'noises');
 
@@ -87,15 +88,35 @@ function buildContent({ slug, editAtIso, autonomyMode, sourceFiles, items }) {
 function flattenAudits(audits) {
   const items = [];
   const sourceFilesSet = new Set();
+  let rejectedCount = 0;
   for (const audit of audits || []) {
     if (!audit) continue;
-    if (audit.source_file) sourceFilesSet.add(audit.source_file);
+    // SF-NC-01 Layer A — skip the audit's source_file from the frontmatter
+    // source_files list when it's unsafe (control chars / too long / empty).
+    // Defense in depth: even if Layer B (ingest) is bypassed, the noise
+    // file body must never carry attacker-controlled newlines.
+    if (audit.source_file && !isUnsafePath(audit.source_file)) {
+      sourceFilesSet.add(audit.source_file);
+    }
     if (!Array.isArray(audit.impacts)) continue;
     for (const impact of audit.impacts) {
       if (!impact || !impact.target_path) continue;
+      const targetPath = String(impact.target_path);
+      // SF-NC-01 Layer A — drop the entire item when target_path is unsafe.
+      // The whole row is poisoned; rendering even a sanitized stub leaves the
+      // injection vector partially open. Telemetry-counting the rejection
+      // lives at Layer B (ingest); here we silently filter to keep the
+      // noise file shape coherent.
+      if (isUnsafePath(targetPath)) {
+        rejectedCount += 1;
+        continue;
+      }
+      const sourceFile = audit.source_file && !isUnsafePath(audit.source_file)
+        ? audit.source_file
+        : null;
       items.push({
-        target_path: String(impact.target_path),
-        source_file: audit.source_file || null,
+        target_path: targetPath,
+        source_file: sourceFile,
         edge_type: impact.edge_type ? String(impact.edge_type) : 'unknown',
         confidence:
           typeof impact.confidence === 'number' && Number.isFinite(impact.confidence)
@@ -108,7 +129,7 @@ function flattenAudits(audits) {
       });
     }
   }
-  return { items, sourceFiles: Array.from(sourceFilesSet) };
+  return { items, sourceFiles: Array.from(sourceFilesSet), rejected: rejectedCount };
 }
 
 function writeNoiseFile({

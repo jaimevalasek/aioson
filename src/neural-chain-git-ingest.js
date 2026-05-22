@@ -28,6 +28,7 @@
  */
 
 const fs = require('node:fs');
+const { isUnsafePath } = require('./neural-chain-sanitize');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
 
@@ -97,8 +98,16 @@ function computeCoEditPairs(commits, { now = new Date() } = {}) {
     if (Number.isNaN(commitDate.getTime()) || commitDate < cutoff) continue;
 
     // Exclude framework state churn — .aioson/* changes every agent session.
+    // SF-NC-01/02 Layer B — also reject unsafe paths (control chars, oversize,
+    // empty). POSIX allows LF in filenames; git records them as-is. Without
+    // this filter, a crafted commit history could feed the noise-file
+    // injection vector identified in @pentester SF-NC-01.
     const files = commit.files.filter(
-      (f) => f && !f.startsWith('.aioson/') && !f.startsWith('.aioson\\')
+      (f) =>
+        f &&
+        !f.startsWith('.aioson/') &&
+        !f.startsWith('.aioson\\') &&
+        !isUnsafePath(f)
     );
     if (files.length < 2 || files.length > MAX_FILES_PER_COMMIT) continue;
 
