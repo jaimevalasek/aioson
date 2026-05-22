@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "slug": "neural-chain",
+  "generated_at": "2026-05-22T02:21:03.294Z",
+  "generator": "aioson security:audit@1.0.0",
+  "review_contract": {
+    "scope_mode": "feature",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-neural-chain.json"
+  },
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": []
+}
