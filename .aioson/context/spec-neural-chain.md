@@ -156,6 +156,41 @@ Regressão completa: 2746 tests, 2744 pass, 1 skipped, 1 fail (AC-P1-07 pré-exi
 
 **Próximo:** Phase 1 Slice 6 — autonomy mode wiring (ler `chain_auto_threshold` do `.aioson/config.md`, default 0.8 per EC-NC-07) + threshold rules BR-NC-02/03 que decidem auto-fixable vs noise nos modos `standard`/`autonomous`. Provavelmente toca: `src/neural-chain-config.js` (novo helper read-only do config), `src/neural-chain-agent-ingest.js` (substitui hardcoded `autonomyMode='guarded'` por leitura real), `src/commands/runtime.js` (lê autonomy ANTES de chamar hook). Tests cobrindo: 3 modos, threshold variations, EC-NC-07 default fallback.
 
+### Phase 1 Slice 6 — autonomy mode wiring + BR-NC-02/03 threshold rules (2026-05-21)
+
+**Diff sumário:** novo `src/neural-chain-config.js` lê `autonomy_mode` + `chain_auto_threshold` do frontmatter YAML de `.aioson/config.md` (EC-NC-07 defaults `guarded` / 0.8 quando ausente/inválido). `runChainHookOnAgentDone` agora auto-resolve config quando params não passados; classificador `classifyImpact` aplica BR-NC-02 (a) test-pair + BR-NC-02 (c) confidence×edge_type×hit_count e BR-NC-03 mode semantics. Modos `standard`/`autonomous` agora ESCREVEM noise file (não mais skip), com items prefixados `[AUTO-FIXABLE]` ou `[AUTO-FIXABLE-BEST-EFFORT]`. Telemetry payload ganha `auto_fixable_count` + `chain_auto_threshold`. 23 tests novos, 1 test antigo (Slice 4 "standard/autonomous skips noise") reescrito para refletir Slice 6.
+
+**Files novos:**
+- `src/neural-chain-config.js` (~85 LOC) — `readChainConfig({targetDir})` retorna `{autonomyMode, chainAutoThreshold, source}` (`source` ∈ `defaults`/`no_frontmatter`/`config_md`/`read_error` pra debug). Reusa `parseYamlFrontmatter` de `src/context.js`. `normalizeAutonomyMode` rejeita strings fora de `VALID_AUTONOMY_MODES` ('guarded', 'standard', 'autonomous') — invalido vira `null` (caller aplica default). `normalizeThreshold` rejeita NaN/infinity/fora-de-[0,1] e parse de string. EC-NC-07 honrado em 4 caminhos: targetDir null, arquivo missing, frontmatter ausente, valor inválido.
+- `tests/neural-chain-autonomy.test.js` (~330 LOC) — 23 acceptance tests cobrindo readChainConfig 6 cenários (defaults×2, missing-file, no-frontmatter, valid-values, invalid-mode→default, invalid-threshold→default), normalize* helpers, isTestFileFor 6 padrões (JS/TS test+spec, Python test_, Go _test, Ruby -test, non-matches), classifyImpact 7 cenários (guarded always noise, standard rule-a match, standard rule-c match + 2 negative variants, autonomous best-effort, autonomous AUTO-FIXABLE preservation), writeNoiseFile marker rendering, parseItems marker round-trip, hook integration (auto-resolve from config, standard mixed mix, autonomous best-effort, telemetry payload completo, backward-compat guarded).
+
+**Files modificados:**
+- `src/neural-chain-noise-file.js` — `serializeItem` adiciona `markerTag` opcional (`[${item.marker}]` quando truthy); `flattenAudits` propaga `impact.marker` pro item; `parseItems` regex estende pra capturar marker opcional entre checkbox e target_path (`/^- \[([ xX])\](?: \[([A-Z][A-Z0-9_-]*)\])? (.+?)(?: — (.+))?$/`). Backward-compat: items sem marker continuam idênticos ao output Slice 4 (regex matches both).
+- `src/neural-chain-agent-ingest.js` — require de `path` + `readChainConfig` + constants. Novos helpers `escapeRegex` + `isTestFileFor` (BR-NC-02 rule a — 5 patterns: `.test.`, `.spec.`, `test_`, `_test.`, `-test.`). Novo `classifyImpact({impact, sourceFile, autonomyMode, threshold})` retorna `{marker, classification}` aplicando rules a + c (b deferida). `runChainHookOnAgentDone` signature muda: `autonomyMode = null` (era `'guarded'`) + novo `chainAutoThreshold = null`; quando ambos null AND targetDir presente → `readChainConfig`; defaults aplicados se ainda null. Pass-1 agora classifica cada impact (anexa marker no objeto in-place + computa `auto_fixable_count`); writeNoiseFile chamado em TODOS os modos (não só guarded) quando hasAnyImpacts. Telemetry payload adiciona `auto_fixable_count` + `chain_auto_threshold`. Return inclui `autonomy_mode` + `chain_auto_threshold` + `auto_fixable_count`.
+
+**Testes:** 23/23 verde no autonomy suite (448ms). Combo 6 suites neural-chain: 81/81 verde (1.17s). Regressão completa: 2769 tests, 2767 pass, 1 skipped, 1 fail (AC-P1-07 pré-existente). **Zero novas regressões.** +23 tests novos.
+
+**Decisões arquiteturais desta slice:**
+
+| Decisão | Justificativa |
+|---|---|
+| BR-NC-02 rule (b) literal identifier match DEFERIDA | Requer git diff parsing do session anterior — heavy V1, complexidade desproporcional ao ganho marginal. Documentado in-code + spec como follow-up M1.5/M2. Rules (a) test-pair e (c) confidence×type×hit_count cobrem a maioria dos casos. |
+| `readChainConfig` lê de `.aioson/config.md` frontmatter (não `project.context.md`) | Spec/requirements são explícitos: `chain_auto_threshold` vive em `.aioson/config.md`. Atual arquivo é puro markdown sem frontmatter — usuário opta in adicionando `---` block no topo. Sem migration forçada (EC-NC-07). |
+| Hook signature `autonomyMode = null` sentinel (não `'guarded'`) | Permite distinguir "caller não passou" (auto-resolve from config) de "caller explicit guarded". Mantém backward-compat com tests Slice 4 que passam `autonomyMode: 'guarded'` explícito. Slice 3 tests sem `targetDir` caem em default 'guarded' (mesmo behavior). |
+| Modos `standard`/`autonomous` AGORA escrevem noise file | Slice 4 deferiu por design — Slice 6 implementa. Items marcados `[AUTO-FIXABLE]` ou `[AUTO-FIXABLE-BEST-EFFORT]` per BR-NC-03/04 handoff TODO contract. Reaproveita lifecycle existente (deletion-on-close + lazy recompute). |
+| Classifier in-place mutation de `impact.marker` antes de passar pra writeNoiseFile | Mantém writeNoiseFile pura (não classifica) — separação de responsabilidades. Pass-1 do hook já itera; anexar marker é O(1) extra. |
+| `auto_fixable_count` derivado por audit (`audit.impacts.filter(...).length`) no telemetry | Permite agregação per-file via SQL. Total session-level disponível em `result.auto_fixable_count`. Sem novo schema — JSON payload extensível. |
+| `marker` regex aceita apenas `[A-Z][A-Z0-9_-]*` | Limita superfície de injection no parser. Markers válidos hoje: `AUTO-FIXABLE`, `AUTO-FIXABLE-BEST-EFFORT`. Extensão futura (e.g. `URGENT`, `MANUAL`) cabe no padrão. |
+| `source` field no readChainConfig result | Debug-friendly — permite dashboard / log emitir "config loaded from X" sem inspecionar internals. Não breaking pra callers que ignoram. |
+
+**AC-AUDIT-NC progress:** item 3 (`autonomy` mode read via unit test cobrindo 3 modos) ✓ satisfeito (test "auto-resolves autonomy + threshold from .aioson/config.md" + classify tests por modo). Itens 1, 2, 4, 5, 7 já satisfeitos por Slices 1-5. Resta item 6 (CHANGELOG.md entry `[1.17.0] neural-chain`) que será resolvido junto com version bump nas closing tasks.
+
+**Próximo:** Closing tasks Phase 1 antes de Gate D QA:
+1. CHANGELOG.md entry `[1.17.0] - 2026-05-21` listando Slices 1-6 (AC-AUDIT-NC item 6)
+2. Version bump `package.json` 1.16.0 → 1.17.0 + sync `.aioson/context/project.context.md#aioson_version`
+3. Marcar feature `done` em `features.md` após Gate D
+4. `/qa` Gate D execution — validar AC-AUDIT-NC completo (7/7 itens), perf budget (audit ≤ 200ms @ 10k edges), Primary metric instrumentation plan (-50% second-call corrections em 30d pós-release)
+
 ## Entities added
 
 (Source: `requirements-neural-chain.md` § New entities and fields)

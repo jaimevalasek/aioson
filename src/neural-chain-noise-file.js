@@ -56,7 +56,11 @@ function serializeItem(item) {
       ? item.confidence.toFixed(2)
       : String(item.confidence ?? '0.00');
   const sourceTag = item.source_file ? ` (source: ${item.source_file})` : '';
-  return `- [ ] ${item.target_path} — ${item.edge_type} ${conf}${sourceTag}`;
+  // BR-NC-03: classifier (Slice 6) tags items with `[AUTO-FIXABLE]` or
+  // `[AUTO-FIXABLE-BEST-EFFORT]` so the next agent session can execute them
+  // mechanically per BR-NC-04 handoff TODO contract.
+  const markerTag = item.marker ? ` [${item.marker}]` : '';
+  return `- [ ]${markerTag} ${item.target_path} — ${item.edge_type} ${conf}${sourceTag}`;
 }
 
 function buildContent({ slug, editAtIso, autonomyMode, sourceFiles, items }) {
@@ -96,7 +100,11 @@ function flattenAudits(audits) {
         confidence:
           typeof impact.confidence === 'number' && Number.isFinite(impact.confidence)
             ? impact.confidence
-            : 0
+            : 0,
+        // Slice 6: classifier may attach `marker` to impacts before passing
+        // them in (BR-NC-02/03). Pass through verbatim — flatten does not
+        // re-classify.
+        marker: impact.marker || null
       });
     }
   }
@@ -206,14 +214,18 @@ function parseFrontmatter(text) {
 function parseItems(body) {
   const items = [];
   const lines = body.split(/\r?\n/);
-  const re = /^- \[([ xX])\] (.+?)(?: — (.+))?$/;
+  // Optional marker bracket between checkbox and target_path, e.g.:
+  //   - [ ] [AUTO-FIXABLE] src/foo.js — git_co_edit 0.80
+  //   - [x] src/bar.js — agent_event 0.50
+  const re = /^- \[([ xX])\](?: \[([A-Z][A-Z0-9_-]*)\])? (.+?)(?: — (.+))?$/;
   for (const line of lines) {
     const m = re.exec(line);
     if (!m) continue;
     items.push({
       checked: m[1] === 'x' || m[1] === 'X',
-      target_path: m[2].trim(),
-      motivo: m[3] ? m[3].trim() : ''
+      marker: m[2] || null,
+      target_path: m[3].trim(),
+      motivo: m[4] ? m[4].trim() : ''
     });
   }
   return items;

@@ -308,7 +308,7 @@ test('runChainHookOnAgentDone (guarded + impacts) writes noise file', async () =
   }
 });
 
-test('runChainHookOnAgentDone (standard/autonomous mode) skips noise file write', async () => {
+test('runChainHookOnAgentDone (standard/autonomous mode) writes noise file with mode in frontmatter (Slice 6)', async () => {
   const dir = await makeTempProject();
   const { db } = await openRuntimeDb(dir);
   try {
@@ -327,14 +327,11 @@ test('runChainHookOnAgentDone (standard/autonomous mode) skips noise file write'
         now: new Date('2026-05-21T14:30:00Z')
       });
       assert.equal(result.ok, true);
-      assert.equal(result.noise_file, null, `${mode} mode must not write noise file (deferred to Slice 6)`);
-    }
-
-    const noisesDir = path.join(dir, NOISE_DIR_REL);
-    const exists = fs.existsSync(noisesDir);
-    if (exists) {
-      const files = fs.readdirSync(noisesDir);
-      assert.equal(files.length, 0, 'no files materialized under noises/ for non-guarded modes');
+      assert.ok(result.noise_file, `${mode} mode now writes noise file (BR-NC-03 Slice 6)`);
+      const text = fs.readFileSync(result.noise_file, 'utf8');
+      assert.ok(text.includes(`autonomy_mode: ${mode}`), `frontmatter records ${mode}`);
+      // Reset between modes so the next iteration sees a clean slate.
+      fs.unlinkSync(result.noise_file);
     }
   } finally {
     db.close();

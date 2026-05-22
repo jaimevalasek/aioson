@@ -25,10 +25,75 @@
  * never blocks the caller in `runAgentDone`.
  */
 
+const path = require('node:path');
 const { writeNoiseFile } = require('./neural-chain-noise-file');
+const {
+  readChainConfig,
+  DEFAULT_AUTONOMY_MODE,
+  DEFAULT_CHAIN_AUTO_THRESHOLD
+} = require('./neural-chain-config');
 
 const CONFIDENCE_SATURATION = 5;
 const HARD_CAP_PER_NODE = 10000;
+
+// BR-NC-02 rule (a) — common test naming patterns across languages.
+// {stem} below = source module basename minus its extension.
+//   {stem}.test.{ext}   • {stem}.spec.{ext}
+//   test_{stem}.{ext}   • {stem}_test.{ext}   • {stem}-test.{ext}
+const SOURCE_EXT_RE = /\.[a-zA-Z0-9]+$/;
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isTestFileFor(targetPath, sourcePath) {
+  if (!targetPath || !sourcePath) return false;
+  const sourceBase = path.basename(String(sourcePath));
+  const targetBase = path.basename(String(targetPath));
+  const stem = sourceBase.replace(SOURCE_EXT_RE, '');
+  if (!stem || stem === sourceBase) return false; // source has no extension
+  const s = escapeRegex(stem);
+  const re = new RegExp(
+    `^(${s}\\.(test|spec)\\.[a-zA-Z0-9]+|test_${s}\\.[a-zA-Z0-9]+|${s}_test\\.[a-zA-Z0-9]+|${s}-test\\.[a-zA-Z0-9]+)$`,
+    'i'
+  );
+  return re.test(targetBase);
+}
+
+/**
+ * BR-NC-02/03 classifier. Returns the marker to embed in the noise item:
+ *   - 'AUTO-FIXABLE'             — matches BR-NC-02 (a) or (c) in standard/autonomous
+ *   - 'AUTO-FIXABLE-BEST-EFFORT' — non-match in autonomous mode
+ *   - null                       — non-match in standard mode, or guarded mode
+ *
+ * BR-NC-02 (b) (literal identifier match via diff) is deferred — requires
+ * git diff parsing the prior session's edits, heavy for V1; planned as a
+ * follow-up. Documented in spec § "Decisões arquiteturais desta slice".
+ */
+function classifyImpact({ impact, sourceFile, autonomyMode, threshold }) {
+  if (autonomyMode === 'guarded') {
+    return { marker: null, classification: 'noise' };
+  }
+
+  const isTestPair = isTestFileFor(impact && impact.target_path, sourceFile);
+  const isThresholdMatch =
+    impact &&
+    typeof impact.confidence === 'number' &&
+    impact.confidence > threshold &&
+    impact.edge_type === 'agent_event' &&
+    typeof impact.hit_count === 'number' &&
+    impact.hit_count > 5;
+
+  if (isTestPair || isThresholdMatch) {
+    return { marker: 'AUTO-FIXABLE', classification: 'auto_fixable' };
+  }
+
+  if (autonomyMode === 'autonomous') {
+    return { marker: 'AUTO-FIXABLE-BEST-EFFORT', classification: 'auto_fixable_best_effort' };
+  }
+
+  return { marker: null, classification: 'noise' };
+}
 
 function deriveSessionPairs(artifacts) {
   if (!Array.isArray(artifacts)) return [];
@@ -165,12 +230,30 @@ function runChainHookOnAgentDone({
   agentName = null,
   featureSlug = null,
   targetDir = null,
-  autonomyMode = 'guarded',
+  autonomyMode = null,
+  chainAutoThreshold = null,
   now = new Date()
 } = {}) {
   if (!db || typeof db.prepare !== 'function') {
     return { ok: false, reason: 'missing_db' };
   }
+
+  // Slice 6: resolve autonomy mode + threshold from `.aioson/config.md`
+  // frontmatter when not explicitly provided. EC-NC-07: missing file /
+  // missing keys / invalid values → runtime defaults (guarded, 0.8).
+  let resolvedMode = autonomyMode;
+  let resolvedThreshold = chainAutoThreshold;
+  if ((resolvedMode === null || resolvedThreshold === null) && targetDir) {
+    try {
+      const cfg = readChainConfig({ targetDir });
+      if (resolvedMode === null) resolvedMode = cfg.autonomyMode;
+      if (resolvedThreshold === null) resolvedThreshold = cfg.chainAutoThreshold;
+    } catch (_) {
+      // best-effort
+    }
+  }
+  if (resolvedMode === null) resolvedMode = DEFAULT_AUTONOMY_MODE;
+  if (resolvedThreshold === null) resolvedThreshold = DEFAULT_CHAIN_AUTO_THRESHOLD;
 
   const safeArtifacts = Array.isArray(artifacts) ? artifacts.slice() : [];
 
@@ -193,43 +276,61 @@ function runChainHookOnAgentDone({
         source_file: null,
         feature_slug: featureSlug,
         impacts_found: 0,
+        auto_fixable_count: 0,
         skipped_reason: 'no_artifacts',
         noise_file: null,
-        autonomy_mode: autonomyMode,
+        autonomy_mode: resolvedMode,
+        chain_auto_threshold: resolvedThreshold,
         ingest_stats: ingest
       },
       'chain:audit (no-op: no artifacts in session)'
     );
-    return { ok: true, ingest, audits, ec_nc_05: true, noise_file: null };
+    return { ok: true, ingest, audits, ec_nc_05: true, noise_file: null, autonomy_mode: resolvedMode };
   }
 
-  // Pass 1 — collect impacts per source file (no telemetry yet so we can
-  // decide noise_file path before emitting events).
+  // Pass 1 — collect impacts per source file AND classify each via
+  // BR-NC-02/03. Marker is attached to the impact in place so writeNoiseFile
+  // can render the prefix verbatim.
+  let autoFixableCount = 0;
   for (const file of safeArtifacts) {
     const startedAt = Date.now();
-    const impacts = queryImpacts(db, file);
+    const rawImpacts = queryImpacts(db, file);
     const durationMs = Date.now() - startedAt;
+    const classified = Array.isArray(rawImpacts)
+      ? rawImpacts.map((impact) => {
+          const { marker, classification } = classifyImpact({
+            impact,
+            sourceFile: file,
+            autonomyMode: resolvedMode,
+            threshold: resolvedThreshold
+          });
+          if (classification === 'auto_fixable') autoFixableCount += 1;
+          return { ...impact, marker, classification };
+        })
+      : [];
     audits.push({
       source_file: file,
-      impacts: Array.isArray(impacts) ? impacts : [],
-      impacts_found: impacts === null ? 0 : impacts.length,
+      impacts: classified,
+      impacts_found: rawImpacts === null ? 0 : classified.length,
       duration_ms: durationMs,
-      error: impacts === null ? 'query_failed' : null
+      error: rawImpacts === null ? 'query_failed' : null
     });
   }
 
-  // BR-NC-06: in `guarded` autonomy, persist one noise file per session
-  // aggregating every impact returned across the session's source files.
-  // `standard` / `autonomous` are handled by Slice 6 threshold rules.
+  // BR-NC-06/03: noise file is written in `standard` and `autonomous` modes
+  // too (Slice 6) — items carry the `[AUTO-FIXABLE]` / `[AUTO-FIXABLE-BEST-EFFORT]`
+  // prefix when applicable. `guarded` mode still writes one noise file with
+  // unprefixed items (same as Slice 4). Skip the write only when there are
+  // zero impacts across all artifacts.
   let noiseFile = null;
   const hasAnyImpacts = audits.some((a) => a.impacts_found > 0);
-  if (autonomyMode === 'guarded' && targetDir && hasAnyImpacts) {
+  if (targetDir && hasAnyImpacts) {
     try {
       const result = writeNoiseFile({
         targetDir,
         featureSlug,
         audits,
-        autonomyMode,
+        autonomyMode: resolvedMode,
         now
       });
       noiseFile = result.path;
@@ -249,17 +350,27 @@ function runChainHookOnAgentDone({
         source_file: audit.source_file,
         feature_slug: featureSlug,
         impacts_found: audit.error ? null : audit.impacts_found,
+        auto_fixable_count: audit.error ? null : audit.impacts.filter((i) => i.classification === 'auto_fixable').length,
         duration_ms: audit.duration_ms,
         ingest_stats: ingest,
         noise_file: noiseFile,
-        autonomy_mode: autonomyMode,
+        autonomy_mode: resolvedMode,
+        chain_auto_threshold: resolvedThreshold,
         error: audit.error
       },
       `chain:audit ${audit.source_file} → ${audit.error ? 'error' : `${audit.impacts_found} impacts`} (session hook)`
     );
   }
 
-  return { ok: true, ingest, audits, noise_file: noiseFile };
+  return {
+    ok: true,
+    ingest,
+    audits,
+    noise_file: noiseFile,
+    autonomy_mode: resolvedMode,
+    chain_auto_threshold: resolvedThreshold,
+    auto_fixable_count: autoFixableCount
+  };
 }
 
 module.exports = {
@@ -267,6 +378,8 @@ module.exports = {
   ingestAgentEventEdges,
   runChainHookOnAgentDone,
   queryImpacts,
+  classifyImpact,
+  isTestFileFor,
   CONFIDENCE_SATURATION,
   HARD_CAP_PER_NODE
 };
