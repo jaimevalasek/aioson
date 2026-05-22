@@ -50,6 +50,10 @@ files:
   added_at: 2026-05-21T23:00:00.000Z
 - path: tests/neural-chain-noise-file.test.js
   added_at: 2026-05-21T23:00:00.000Z
+- path: .aioson/agents/neo.md
+  added_at: 2026-05-21T23:30:00.000Z
+- path: template/.aioson/agents/neo.md
+  added_at: 2026-05-21T23:30:00.000Z
 modules: []
 patterns: []
 ```
@@ -91,6 +95,11 @@ Phase 1 Slice 2 LANDED 2026-05-21. chain:audit CLI + git ingest helper shipped: 
 **2026-05-21T22:06:18.670Z** | @dev | _Agent Trail_
 
 Phase 1 Slice 3 LANDED 2026-05-21. agent_event ingest hook wired into runAgentDone (live_event + standalone). Files novos: src/neural-chain-agent-ingest.js (~175 LOC — deriveSessionPairs + ingestAgentEventEdges + runChainHookOnAgentDone + queryImpacts) + tests/neural-chain-agent-ingest.test.js (12/12 verde, 495ms). Files modificados: src/commands/runtime.js (require + 2 best-effort hook calls após reflect-prepare nos 2 branches). Decisão: Model A (artifacts[] direto vs query a agent_events table) — runAgentDone já tem artifactPaths em escopo, query duplicaria trabalho. UPSERT incrementa hit_count+1 + recomputa confidence atomicamente via SQL ON CONFLICT. V1 simplification: running hit_count em vez de count_last_30d (aging é M2 concern); confidence satura em 5 hits então approximation bounded. EC-NC-05 explicitly testado: empty artifacts → skipped='no_pairs' MAS hook ainda emit 1 chain_audit event no-op pra manter série temporal do guardrail metric. Pre-existing edges (git_co_edit) aparecem no audit normal — test confirma audit sees git edge + new agent_event edge after slice 3 hook. Failure best-effort BR-NC-11: try/catch envelope no runtime.js + try/catch em cada SQL boundary do helper. Regression: 2731/2733 + 1 skipped + 1 fail (operator-memory pre-existing AC-P1-07; security-scan WAL race intermitente — flake documentado em current-state.md, isolated passa 17/17). AC-AUDIT-NC item 1 (chain:audit hook integrado em runAgentDone) ✓ satisfeito. Itens 4+5 já satisfeitos por Slices 1+2. Itens 2,3,6,7 pendentes. 3 codemap entries adicionadas. Next: Slice 4 noise file write/lifecycle BR-NC-06.
+
+<!-- sha256:slice5-2026-05-21 -->
+**2026-05-21T23:30:00.000Z** | @dev | _Agent Trail_
+
+Phase 1 Slice 5 LANDED 2026-05-21. @neo activation blocker step para noise files pending (AC-AUDIT-NC item 2). Prompt-only — zero código novo em src/. Files modificados: .aioson/agents/neo.md (4 edits) + template/.aioson/agents/neo.md (cp mirror byte-a-byte). Edits no neo.md: (1) row no Step 1 scan table pra .aioson/context/noises/*.md → flag chain_noises_pending; (2) novo Step 1.5 entre Step 1 e Step 2 — detection via regex `^- \[ \]` ou readNoiseFileAndRecompute helper, render dashboard sob ⛔ com path + pendingCount/totalCount + items, routing PAUSADO com confidence:low + clarification; resolução = marcar `- [x]` (lazy unlink via próximo hook EC-NC-10), explicit skip = "skip noises" + reason no routing block; (3) Chain audit pending stage NO TOPO da Step 3 stage table (precedência total); (4) linha condicional adicional no Step 4 dashboard template. Brain sheldon-001 template parity satisfeito via cp + diff -q PARITY_OK (verificado pré-commit). Decisões: Step 1.5 separado de Step 1 pra preservar semantica (descoberta vs evaluation); detection inline regex como fallback quando helper Node não disponível em todos os runtimes; sem comando CLI dedicated pra resolve (lazy mechanism reusa BR-NC-06); explicit skip via natural-language preserva fluxo conversacional. AC-AUDIT-NC: item 2 ✓ + item 7 (template parity) ✓; itens 1+4+5 já satisfeitos por Slices 1-3; itens 3+6 pendentes Slice 6 + closing. Regressão: 2746/2744 + 1 skipped + 1 fail (AC-P1-07 pré-existente, sem AC-ALL-101 nesta run). Zero novas regressões (esperado — prompt-only). 2 codemap entries adicionadas (neo.md workspace + template). Next: Slice 6 autonomy wiring (readChainConfig helper + threshold rules BR-NC-02/03 nos modos standard/autonomous).
 
 <!-- sha256:slice4-2026-05-21 -->
 **2026-05-21T23:00:00.000Z** | @dev | _Agent Trail_

@@ -125,6 +125,37 @@ gate_plan_note: "F4 contract drift documentado (mesmo precedente do workflow-hot
 
 **Próximo:** Phase 1 Slice 5 — `@neo` activation protocol step que detecta noise files pending em `.aioson/context/noises/` e surfa como **blocker** (não info). Mudar tanto `.aioson/agents/neo.md` quanto `template/.aioson/agents/neo.md` em sync (brain sheldon-001 template parity). Manual test: sessão `/neo` com noise file pending → blocker surfaced.
 
+### Phase 1 Slice 5 — @neo noise blocker step (2026-05-21)
+
+**Diff sumário:** prompt-engineering only — zero código novo em `src/`. `@neo` ganha Step 1.5 que detecta noise files pending e bloqueia routing até resolver ou explicit skip. Workspace + template em sync byte-a-byte via `cp` mirror.
+
+**Files modificados:**
+- `.aioson/agents/neo.md` — (1) nova linha na tabela do Step 1 (scan de `.aioson/context/noises/*.md` → flag `chain_noises_pending`); (2) novo `### Step 1.5 — Neural Chain noise check (BLOCKER, takes precedence over routing)` entre Step 1 e Step 2, especificando: detecção via regex `^- \[ \]` ou `readNoiseFileAndRecompute` helper, render no dashboard sob ⛔ com path + `pendingCount/totalCount` + lista de items; routing PAUSADO com `confidence: low` + `clarification` populado; resolução = marcar `- [x]` (próximo `runChainHookOnAgentDone`/`chain:audit` faz unlink automático via `maybeDeleteNoiseFile` EC-NC-10); explicit skip = `reason: skipped <N> noise file(s)` no routing block; (3) nova primeira-linha na tabela de stages do Step 3 ("Chain audit pending" precedência sobre todos os outros stages); (4) linha condicional adicional no dashboard template ("⛔ Chain: {N} noise file(s) with pending items").
+- `template/.aioson/agents/neo.md` — cópia byte-a-byte do workspace (`cp` + `diff -q` PARITY_OK verificado). Brain sheldon-001 satisfeito.
+
+**Testes:** N/A pra prompt-only slice — não há suíte automatizada que valide prompt content. Manual test plan (documentado no dev-state):
+1. Em projeto fixture com noise file `.aioson/context/noises/foo-20260521-1430.md` contendo 2 itens `- [ ]`, ativar `/neo`.
+2. Esperado: dashboard surfa `⛔ Chain: 1 noise file(s) with pending items` + bloco detalhado abaixo + recommended next = "Resolve os items OR diga skip noises".
+3. Marcar todos `- [x]` manualmente, re-ativar `/neo`.
+4. Esperado: noise file ainda presente (deletion é lazy via hook), mas `pendingCount === 0` → routing normal procede; no próximo `agent:done` com hook ativo, `maybeDeleteNoiseFile` faz unlink.
+
+Regressão completa: 2746 tests, 2744 pass, 1 skipped, 1 fail (AC-P1-07 pré-existente). Zero novas regressões (esperado — slice não toca código de runtime).
+
+**Decisões arquiteturais desta slice:**
+
+| Decisão | Justificativa |
+|---|---|
+| Step 1.5 inserido entre Step 1 e Step 2, não absorvido em Step 1 | Step 1 é descoberta de estado neutra (todos os flags); Step 1.5 é evaluation/blocking explícito — separação semântica preserva legibilidade do prompt. |
+| Detection via regex inline OU `readNoiseFileAndRecompute` (ambos válidos) | `@neo` não tem `Bash`/`Node` direto em todos os runtimes (Claude Code SDK varia); regex sobre body do arquivo é fallback robusto. Quando Node disponível, preferir helper pra robustez EC-NC-09. |
+| Resolução por marcar `- [x]` (não comando CLI dedicated) | Reusa o mecanismo lazy do BR-NC-06 — sem novo comando. `maybeDeleteNoiseFile` faz unlink automático no próximo hook. |
+| Explicit skip via natural-language ("skip noises") + routing block reason | Sem flag CLI nova; preserva fluxo conversacional de `@neo`. Auditável via dashboard runtime_events (futuro pode parsear). |
+| BLOCKER stage no topo da tabela de stages (precedência total) | Garante que mesmo se config/PRD/etc estiverem missing, noise pending bloqueia primeiro — alinha com semantica "noise é alerta de impacto de edits passados, deve resolver antes de qualquer trabalho novo". |
+| Sem chamada a comando `aioson chain:noises:list` | Comando não existe ainda; criação fica pra slice futura se @neo precisar de listing programático além do glob direto. |
+
+**AC-AUDIT-NC progress:** item 2 (`@neo` surfa noises como blocker, manual test em sessão `/neo` com noise file pendente) ✓ satisfeito. Item 7 (template parity `diff -q` retorna 0) ✓ verificado. Itens 1, 4, 5 já satisfeitos por Slices 1-3; item 2 agora ✓; itens 3 (autonomy mode read), 6 (CHANGELOG entry) ficam pra Slice 6 + closing tasks.
+
+**Próximo:** Phase 1 Slice 6 — autonomy mode wiring (ler `chain_auto_threshold` do `.aioson/config.md`, default 0.8 per EC-NC-07) + threshold rules BR-NC-02/03 que decidem auto-fixable vs noise nos modos `standard`/`autonomous`. Provavelmente toca: `src/neural-chain-config.js` (novo helper read-only do config), `src/neural-chain-agent-ingest.js` (substitui hardcoded `autonomyMode='guarded'` por leitura real), `src/commands/runtime.js` (lê autonomy ANTES de chamar hook). Tests cobrindo: 3 modos, threshold variations, EC-NC-07 default fallback.
+
 ## Entities added
 
 (Source: `requirements-neural-chain.md` § New entities and fields)
