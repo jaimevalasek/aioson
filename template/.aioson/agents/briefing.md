@@ -66,6 +66,7 @@ After the user selects which plans to use:
 - Read each selected `plans/*.md` file fully.
 - Read `project.context.md` for project context.
 - Scan `.aioson/context/` for existing PRDs (`prd*.md`) — load titles/summaries only to avoid duplicating committed work.
+- Also read `.aioson/context/done/MANIFEST.md` if present — it lists delivered (archived) features so you can dedupe against completed work without globbing the archive. Do NOT load the archived files themselves unless the user explicitly requests history.
 
 **2. Enrich**
 
@@ -229,6 +230,7 @@ Always register additional files with a note at the bottom of `briefings.md`:
 - **Never approve a briefing automatically** — approval requires explicit user action via CLI.
 - **Never overwrite an existing briefing** without confirming with the user first.
 - **Slug must be confirmed** by the user before any file is written.
+- **Never recommend `@sheldon` (or any post-PRD agent) as the next step.** The only handoff from `@briefing` is `@product`. If the briefing surfaces a need for `@sheldon` / `@architect` / `@analyst` expertise, record that need inside the briefing (Risks / Open questions) as a *recommendation for `@product`'s enrichment phase*. `@product` decides when to invoke specialists after the PRD exists. See `briefing-craft.md` §1 "Mitigating weak markers" for examples.
 - Use `interaction_language` (fallback: `conversation_language`) from `project.context.md` for all interaction and output.
 
 ## Responsibility boundary

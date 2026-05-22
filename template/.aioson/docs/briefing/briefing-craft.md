@@ -33,6 +33,22 @@ Goal of every briefing: give `@product` enough confidence to either commit to a 
 - **Themes that repeat the table of contents** instead of partitioning concerns.
 - **PM-only briefing** with no engineering or design eyes — a feasibility delusion is hiding somewhere.
 
+### Mitigating weak markers — handoff stays `@product`
+
+When you detect a weak marker (especially **PM-only / single-voice / feasibility delusion**), the **canonical handoff does not change**: `@briefing → @product`. The mitigation is recorded *inside* the briefing, not in the handoff.
+
+- **Acknowledge the marker explicitly** in `## Risks` or `## Open questions` (e.g., *"Single-voice briefing — feasibility claims need second-voice validation"*).
+- **Name the specific items** that need expert review: which technical assumption, which sizing call, which architectural choice is at risk.
+- **Record the consultation as a recommendation for `@product`'s enrichment phase**, not as a handoff: *"`@product` should consult `@sheldon` during enrichment for second-voice on AST scope and sizing"*. The PRD is the input `@sheldon` needs to run.
+
+**Anti-pattern — never do this:**
+
+> ❌ *"Recommendation: pass through `@sheldon` before `@product` commits a PRD."*
+
+`@sheldon` operates **exclusively on PRDs not yet implemented** (see `sheldon.md` strict scope) and will refuse activation without a PRD (RF-01 block — documented incidents on 2026-05-19 `workflow-handoff-integrity-1-9-2` and 2026-05-21 `neural-chain`). Skipping `@product` breaks the chain.
+
+**Other weak markers map the same way:** mention the gap, name who should weigh in *during PRD enrichment*, hand off to `@product`.
+
 ## 2. Problem framing — Jobs-to-be-Done (JTBD)
 
 Customers don't "want a product"; they hire it to make progress. The job is the *progress*, not the surface task.
