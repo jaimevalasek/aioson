@@ -25,6 +25,8 @@
  * never blocks the caller in `runAgentDone`.
  */
 
+const { writeNoiseFile } = require('./neural-chain-noise-file');
+
 const CONFIDENCE_SATURATION = 5;
 const HARD_CAP_PER_NODE = 10000;
 
@@ -157,7 +159,15 @@ function queryImpacts(db, sourcePath, limit = 20) {
  * via try/catch and emitChainAuditEvent so a partial failure never
  * propagates.
  */
-function runChainHookOnAgentDone({ db, artifacts, agentName = null, featureSlug = null, now = new Date() } = {}) {
+function runChainHookOnAgentDone({
+  db,
+  artifacts,
+  agentName = null,
+  featureSlug = null,
+  targetDir = null,
+  autonomyMode = 'guarded',
+  now = new Date()
+} = {}) {
   if (!db || typeof db.prepare !== 'function') {
     return { ok: false, reason: 'missing_db' };
   }
@@ -184,41 +194,72 @@ function runChainHookOnAgentDone({ db, artifacts, agentName = null, featureSlug 
         feature_slug: featureSlug,
         impacts_found: 0,
         skipped_reason: 'no_artifacts',
+        noise_file: null,
+        autonomy_mode: autonomyMode,
         ingest_stats: ingest
       },
       'chain:audit (no-op: no artifacts in session)'
     );
-    return { ok: true, ingest, audits, ec_nc_05: true };
+    return { ok: true, ingest, audits, ec_nc_05: true, noise_file: null };
   }
 
+  // Pass 1 — collect impacts per source file (no telemetry yet so we can
+  // decide noise_file path before emitting events).
   for (const file of safeArtifacts) {
     const startedAt = Date.now();
     const impacts = queryImpacts(db, file);
     const durationMs = Date.now() - startedAt;
-
-    emitChainAuditEvent(
-      db,
-      {
-        agent: agentName,
-        source_file: file,
-        feature_slug: featureSlug,
-        impacts_found: impacts === null ? null : impacts.length,
-        duration_ms: durationMs,
-        ingest_stats: ingest,
-        error: impacts === null ? 'query_failed' : null
-      },
-      `chain:audit ${file} → ${impacts === null ? 'error' : `${impacts.length} impacts`} (session hook)`
-    );
-
     audits.push({
       source_file: file,
+      impacts: Array.isArray(impacts) ? impacts : [],
       impacts_found: impacts === null ? 0 : impacts.length,
       duration_ms: durationMs,
       error: impacts === null ? 'query_failed' : null
     });
   }
 
-  return { ok: true, ingest, audits };
+  // BR-NC-06: in `guarded` autonomy, persist one noise file per session
+  // aggregating every impact returned across the session's source files.
+  // `standard` / `autonomous` are handled by Slice 6 threshold rules.
+  let noiseFile = null;
+  const hasAnyImpacts = audits.some((a) => a.impacts_found > 0);
+  if (autonomyMode === 'guarded' && targetDir && hasAnyImpacts) {
+    try {
+      const result = writeNoiseFile({
+        targetDir,
+        featureSlug,
+        audits,
+        autonomyMode,
+        now
+      });
+      noiseFile = result.path;
+    } catch (_) {
+      // BR-NC-11 best-effort: noise write must not block agent_done.
+    }
+  }
+
+  // Pass 2 — per-artifact telemetry events. noise_file is the same on every
+  // event (session-scoped) so dashboards can attribute the file regardless of
+  // which event row is sampled.
+  for (const audit of audits) {
+    emitChainAuditEvent(
+      db,
+      {
+        agent: agentName,
+        source_file: audit.source_file,
+        feature_slug: featureSlug,
+        impacts_found: audit.error ? null : audit.impacts_found,
+        duration_ms: audit.duration_ms,
+        ingest_stats: ingest,
+        noise_file: noiseFile,
+        autonomy_mode: autonomyMode,
+        error: audit.error
+      },
+      `chain:audit ${audit.source_file} → ${audit.error ? 'error' : `${audit.impacts_found} impacts`} (session hook)`
+    );
+  }
+
+  return { ok: true, ingest, audits, noise_file: noiseFile };
 }
 
 module.exports = {

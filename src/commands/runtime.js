@@ -1245,6 +1245,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       try {
         runChainHookOnAgentDone({
           db,
+          targetDir,
           artifacts: artifactPaths,
           agentName: normalizedAgent,
           featureSlug: options.feature ? String(options.feature).trim() : null
@@ -1317,6 +1318,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
     try {
       runChainHookOnAgentDone({
         db,
+        targetDir,
         artifacts: artifactPaths,
         agentName: normalizedAgent,
         featureSlug: options.feature ? String(options.feature).trim() : null

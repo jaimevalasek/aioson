@@ -46,6 +46,10 @@ files:
   added_at: 2026-05-21T22:06:03.479Z
 - path: src/commands/runtime.js
   added_at: 2026-05-21T22:06:12.077Z
+- path: src/neural-chain-noise-file.js
+  added_at: 2026-05-21T23:00:00.000Z
+- path: tests/neural-chain-noise-file.test.js
+  added_at: 2026-05-21T23:00:00.000Z
 modules: []
 patterns: []
 ```
@@ -87,6 +91,11 @@ Phase 1 Slice 2 LANDED 2026-05-21. chain:audit CLI + git ingest helper shipped: 
 **2026-05-21T22:06:18.670Z** | @dev | _Agent Trail_
 
 Phase 1 Slice 3 LANDED 2026-05-21. agent_event ingest hook wired into runAgentDone (live_event + standalone). Files novos: src/neural-chain-agent-ingest.js (~175 LOC — deriveSessionPairs + ingestAgentEventEdges + runChainHookOnAgentDone + queryImpacts) + tests/neural-chain-agent-ingest.test.js (12/12 verde, 495ms). Files modificados: src/commands/runtime.js (require + 2 best-effort hook calls após reflect-prepare nos 2 branches). Decisão: Model A (artifacts[] direto vs query a agent_events table) — runAgentDone já tem artifactPaths em escopo, query duplicaria trabalho. UPSERT incrementa hit_count+1 + recomputa confidence atomicamente via SQL ON CONFLICT. V1 simplification: running hit_count em vez de count_last_30d (aging é M2 concern); confidence satura em 5 hits então approximation bounded. EC-NC-05 explicitly testado: empty artifacts → skipped='no_pairs' MAS hook ainda emit 1 chain_audit event no-op pra manter série temporal do guardrail metric. Pre-existing edges (git_co_edit) aparecem no audit normal — test confirma audit sees git edge + new agent_event edge after slice 3 hook. Failure best-effort BR-NC-11: try/catch envelope no runtime.js + try/catch em cada SQL boundary do helper. Regression: 2731/2733 + 1 skipped + 1 fail (operator-memory pre-existing AC-P1-07; security-scan WAL race intermitente — flake documentado em current-state.md, isolated passa 17/17). AC-AUDIT-NC item 1 (chain:audit hook integrado em runAgentDone) ✓ satisfeito. Itens 4+5 já satisfeitos por Slices 1+2. Itens 2,3,6,7 pendentes. 3 codemap entries adicionadas. Next: Slice 4 noise file write/lifecycle BR-NC-06.
+
+<!-- sha256:slice4-2026-05-21 -->
+**2026-05-21T23:00:00.000Z** | @dev | _Agent Trail_
+
+Phase 1 Slice 4 LANDED 2026-05-21. Noise file write/lifecycle (BR-NC-06). Files novos: src/neural-chain-noise-file.js (~225 LOC — writeNoiseFile + readNoiseFileAndRecompute + maybeDeleteNoiseFile + parseFrontmatter + parseItems + sanitizeSlug + formatTimestamp + buildNoiseFilePath, sync fs sem dep nova) + tests/neural-chain-noise-file.test.js (13/13 verde, 296ms). Files modificados: src/neural-chain-agent-ingest.js (require writeNoiseFile + runChainHookOnAgentDone aceita targetDir+autonomyMode; refator pass1/pass2 — pass1 coleta impacts em audits[] sem emitir, decide noise_file se guarded+targetDir+hasAnyImpacts, pass2 emit per-artifact telemetry com noise_file e autonomy_mode payload preservando "1 event per artifact" semantics) + src/commands/runtime.js (targetDir passado em 2 call sites do hook, live_event + standalone branches). Decisões: sync fs (consistência com SQLite sync no mesmo hook, evita rewrite chain best-effort em async); YAML inline array via JSON.stringify/parse (evita parser multiline, robusto a paths com qualquer char); item motivo inclui (source: {file}) pra disambig multi-audit aggregation; HHMM file collision = overwrite (snapshot mais recente canônico); pendingCount === 0 unifica allResolved + body-vazio em maybeDeleteNoiseFile; EC-NC-09 retorna frontmatter:null mas items[] preserved, rewrite lazy próximo writeNoiseFile produz clean file; autonomyMode default 'guarded' no helper (config wiring fica pra Slice 6 sem mudança aqui). 13 tests cobrindo BR-NC-09 (regex anti-:symbol), multi-audit agg, fallback unspecified-{ts}.md (featureSlug=null), lazy recompute, deletion-on-close, EC-NC-09 corrupt+rewrite, EC-NC-10 idempotent unlink+ghost path, hook guarded escreve, standard/autonomous skip, zero-impact skip. Regressão: 2746/2743 + 1 skipped + 2 fail (AC-P1-07 pré-existente + security-audit ENOTEMPTY Windows tmp cleanup flake — passa em isolado, sem relação com slice). AC-AUDIT-NC item 2 parcial (noise file existe quando guarded; @neo activation blocker pendente Slice 5). 2 codemap entries adicionadas. Next: Slice 5 @neo activation step (template parity sheldon-001, prompt-only sem código novo).
 
 ## Revision Requests
 

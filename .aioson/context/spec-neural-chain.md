@@ -94,6 +94,37 @@ gate_plan_note: "F4 contract drift documentado (mesmo precedente do workflow-hot
 
 **Próximo:** Phase 1 Slice 4 — noise file write/lifecycle (BR-NC-06). Path: `.aioson/context/noises/{feature-slug}-{YYYYMMDD-HHMM}.md`. Frontmatter YAML + body markdown checkboxes. Lazy `resolved_items` recompute via leitura em chain:audit / @neo. Deletion-on-close trigger automático.
 
+### Phase 1 Slice 4 — noise file write/lifecycle (2026-05-21)
+
+**Diff sumário:** noise file module + lifecycle helpers + hook integration em modo `guarded`. Sync fs (sem dependência nova). 13 testes acceptance, zero regressões.
+
+**Files novos:**
+- `src/neural-chain-noise-file.js` (~225 LOC) — `writeNoiseFile({targetDir, featureSlug, audits, autonomyMode, now})` produz `.aioson/context/noises/{slug}-{YYYYMMDD-HHMM}.md` (fallback `unspecified-{ts}.md` quando featureSlug=null) com frontmatter YAML (`slug, edit_at, autonomy_mode, source_files, total_items, resolved_items`) + body `# Neural Chain — Impact Audit` + checkboxes `- [ ] {target_path} — {edge_type} {confidence} (source: {source_path})`. Item granularity file-level only (BR-NC-09). `readNoiseFileAndRecompute({path})` parsa YAML + body, recomputa `resolved_items` contando `- [x]`, retorna `{exists, frontmatter, frontmatterOk, items, allResolved, pendingCount, resolvedCount}`. `maybeDeleteNoiseFile({path})` unlink quando `pendingCount === 0` (cobre all-resolved + body-vazio); ENOENT capturado per EC-NC-10.
+- `tests/neural-chain-noise-file.test.js` (~290 LOC) — 13 acceptance tests: timestamp pad, slug sanitize+fallback, path resolution, write frontmatter+body shape (BR-NC-09 verificado por regex anti-`:symbol`), multi-audit aggregation, fallback unspecified path, lazy resolved_items recompute, deletion-on-close trigger, EC-NC-09 corrupted frontmatter (items still parseable + rewrite produz frontmatter limpo), EC-NC-10 idempotent unlink em race delete + ghost path, runChainHookOnAgentDone guarded+impacts → noise file escrito + telemetry carrega `noise_file` payload, standard/autonomous mode skip noise write, guarded+zero impacts skip noise write.
+
+**Files modificados:**
+- `src/neural-chain-agent-ingest.js` — require `writeNoiseFile`. `runChainHookOnAgentDone` recebe `targetDir` + `autonomyMode='guarded'`. Refator interno: pass 1 coleta impacts em `audits[]` (sem emitir telemetry ainda); decide noise_file se `guarded + targetDir + hasAnyImpacts`; pass 2 emit telemetry per-artifact com `noise_file` e `autonomy_mode` payload. Item EC-NC-05 no-op event também recebe `noise_file: null, autonomy_mode` pra simetria.
+- `src/commands/runtime.js` — 2 call sites de `runChainHookOnAgentDone` (live_event branch + standalone branch) agora passam `targetDir`. Autonomy mode default 'guarded' do helper aplica até Slice 6 wire-up de config.
+
+**Testes:** 13/13 verde na nova suite (296ms). Combo 5 suites neural-chain: 58/58 verde (994ms). Regressão completa: 2746 tests, 2743 pass, 2 fail — AC-P1-07 pré-existente (operator-memory) + security-audit ENOTEMPTY Windows tmp cleanup flake (passa em isolado, flake conhecido cross-test under load). **Zero novas regressões reais.**
+
+**Decisões arquiteturais desta slice:**
+
+| Decisão | Justificativa |
+|---|---|
+| Sync `fs` em vez de async `fs/promises` | Hook é chamado sync de `runAgentDone` sem await; sync evita rewriting da chain best-effort. SQLite calls no mesmo módulo já são sync — consistência. |
+| YAML inline array (`source_files: ["a","b"]`) via `JSON.stringify`+`JSON.parse` | Evita parser YAML multiline; paths podem ter qualquer char; round-trip determinístico. |
+| Item motivo inclui `(source: {file})` | Multi-audit aggregation pode duplicar mesmo target_path com sources diferentes — o contexto da fonte é necessário pro humano resolver o item. |
+| Refator pass1/pass2 em `runChainHookOnAgentDone` | Noise file decidido APÓS audits coletados pra incluir `noise_file` no payload de cada per-artifact telemetry event (BR-NC-10 mandate) sem quebrar a expectativa "1 event per artifact" das suítes existentes. |
+| File-level overwrite em colisão de mesmo minuto | HHMM granularidade per dev-state; segundo write no mesmo minuto sobrescreve o primeiro (snapshot mais recente é canônico). Aceitável V1 — human-scale activity raramente colide. |
+| `maybeDeleteNoiseFile` unifica `allResolved` + body-vazio sob `pendingCount === 0` | Condição única captura ambos os casos de BR-NC-06 deletion trigger; impede `if (allResolved || items.length === 0)` redundante. |
+| `frontmatter` retorna `null` quando corrupted (EC-NC-09) mas items[] preserved | Caller decide se reescreve; reescrita lazy via próximo `writeNoiseFile` produz file limpo (test verificado). |
+| `autonomyMode='guarded'` default no helper (não lê config ainda) | Slice 6 fará wire-up de `chain_auto_threshold` + autonomy reading; Slice 4 só implementa o write-side semantics. |
+
+**AC-AUDIT-NC progress:** item 2 (`@neo` surfa noises) parcial — noise file agora existe quando guarded; @neo activation step pendente (Slice 5). Itens 3 (autonomy mode read), 6, 7 pendentes. Itens 1, 4, 5 satisfeitos por Slices 1-3.
+
+**Próximo:** Phase 1 Slice 5 — `@neo` activation protocol step que detecta noise files pending em `.aioson/context/noises/` e surfa como **blocker** (não info). Mudar tanto `.aioson/agents/neo.md` quanto `template/.aioson/agents/neo.md` em sync (brain sheldon-001 template parity). Manual test: sessão `/neo` com noise file pending → blocker surfaced.
+
 ## Entities added
 
 (Source: `requirements-neural-chain.md` § New entities and fields)
