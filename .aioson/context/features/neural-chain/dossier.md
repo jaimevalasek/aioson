@@ -141,6 +141,11 @@ Hotfix v1.17.1 LANDED 2026-05-22. Consolidated patch closing 3 Medium bug-found 
 
 Gate D QA aprovado 2026-05-21. **Verdict: PASS.** AC-AUDIT-NC 7/7 independentemente verificados (grep + schema query + diff -q parity + CHANGELOG presence + test count). 11 BRs cobertos; 10 ECs cobertos (EC-NC-04 partial — ver M-01 abaixo; EC-NC-01/02/08 out-of-scope V1 por design). 81/81 tests verde nas 6 suites neural-chain (1.31s). Regressão completa 2769/2767 + 1 skipped + 1 fail (AC-P1-07 pré-existente operator-memory). Perf: p95 chain:audit = 0.085ms @ 10k edges (budget 200ms — 2350× sob orçamento). Security: aioson security:audit . --slug=neural-chain retorna 0 findings; superfície local SQLite + filesystem, sem auth/secrets/uploads — @pentester não triggered. 2 Medium findings documentados como residual risk (não-bloqueantes — qa.md permite Medium open em sign-off): M-01 EC-NC-04 retry/backoff não implementado (BR-NC-11 non-blocking IS honored via try/catch single-attempt; recomendação: helper withRetry OU amend spec); M-02 BR-NC-01 max(c_git, c_event) não implementado em queryImpacts (rows duplicadas quando ambos edge_types existem pro mesmo (source,target); fix simples GROUP BY + MAX). Primary metric instrumentation planning gap: baseline -50% second-call correction loops requer chain:stats command (PRD Should-have, não shipped) + heurística de detecção sobre execution_events; recomendar 20-30 sessões pre-shipping + 30d post-release delta. Auto-cycle to @dev NÃO triggered (sem Critical/High). spec-neural-chain.md atualizado com QA sign-off section completa + frontmatter gate_d=approved. features.md neural-chain → done (2026-05-21 completed). Next: closure commit + tag opcional + npm publish manual pelo user.
 
+<!-- sha256:28de848bad56bc8c80c3180ccc93f4ca53ff969f56b137faf1b7fd5052b6cfbd -->
+**2026-05-22T03:58:08.141Z** | @validator | _Agent Trail_
+
+Validator verdict: overall_score=0, ready_for_done_gate=false. Failures: harness_contract_missing. Rationale: neural-chain is SMALL classification (no harness-contract.json produced for non-MEDIUM features per RF-05). @validator is not the applicable gate — @qa Gate D + Round 2 sign-off is the canonical close path (already completed).
+
 ## Revision Requests
 
 _(vazio — populado a partir da Phase 2)_
