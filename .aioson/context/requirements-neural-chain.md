@@ -172,6 +172,8 @@ Primeiro edit cria edges com `hit_count=1`, `start_at=now()`. Caminho feliz do i
 ### EC-NC-04 — SQLite locked durante audit
 Retry com backoff exponencial: 3 tentativas (100ms, 200ms, 500ms). Se ainda locked após 3 retries → abort audit com warning log; emit chain_audit event com error; agent:done completa normal (BR-NC-11).
 
+**V1 ACCEPTABLE DEVIATION (hotfix v1.17.1):** retry/backoff NÃO implementado em V1. Single-attempt `try/catch` é suficiente porque BR-NC-11 (non-blocking) é o contrato load-bearing — audit failure jamais propaga pra `runAgentDone`, agent:done completa normal de qualquer jeito. Path sequencial via `runAgentDone` não tem contenção real hoje (apenas Living Memory reflect-prepare + Neural Chain hook sequenciais). Helper `withRetry({attempts:3, backoffMs:[100,200,500]})` deferido pra M1.5/M2 quando concorrência aparecer (squad mode EC-NC-08).
+
 ### EC-NC-05 — `agent_event` sem source_files (ex: dossier:add-finding, agent:done sem edits)
 Hook `chain:audit` é **skipped no-op** quando agent_event da sessão não inclui file edit operations. Reduz overhead pra agents que só fazem CLI calls sem editar (e.g., @neo activation, dossier finds).
 

@@ -32,6 +32,7 @@ const {
   DEFAULT_AUTONOMY_MODE,
   DEFAULT_CHAIN_AUTO_THRESHOLD
 } = require('./neural-chain-config');
+const { emitChainAuditEvent } = require('./neural-chain-telemetry');
 
 const CONFIDENCE_SATURATION = 5;
 const HARD_CAP_PER_NODE = 10000;
@@ -191,23 +192,26 @@ function ingestAgentEventEdges({ db, artifacts, now = new Date() }) {
   return stats;
 }
 
-function emitChainAuditEvent(db, payload, message) {
-  try {
-    db.prepare(`
-      INSERT INTO execution_events (event_type, agent_name, message, payload_json, created_at)
-      VALUES ('chain_audit', ?, ?, ?, ?)
-    `).run(payload.agent || null, message, JSON.stringify(payload), new Date().toISOString());
-  } catch (_) {
-    // BR-NC-10 best-effort: telemetry failure must not propagate.
-  }
-}
-
 function queryImpacts(db, sourcePath, limit = 20) {
   try {
+    // BR-NC-01 — when both `git_co_edit` and `agent_event` edges exist for
+    // the same (source, target), report max(c_git, c_event) — NOT both rows
+    // (which would double-count and duplicate items in the noise file).
+    // Window function dedupes per target_path, keeping the row with the
+    // highest confidence (tiebreaker by hit_count then last_seen_at).
+    // Hotfix v1.17.1 — bug-found-002 from @qa Gate D residual M-02.
     return db.prepare(`
       SELECT target_path, edge_type, confidence, hit_count, last_seen_at
-      FROM chain_edges
-      WHERE source_path = ? AND end_at IS NULL
+      FROM (
+        SELECT target_path, edge_type, confidence, hit_count, last_seen_at,
+               ROW_NUMBER() OVER (
+                 PARTITION BY target_path
+                 ORDER BY confidence DESC, hit_count DESC, last_seen_at DESC
+               ) AS rn
+        FROM chain_edges
+        WHERE source_path = ? AND end_at IS NULL
+      )
+      WHERE rn = 1
       ORDER BY confidence DESC, hit_count DESC, last_seen_at DESC
       LIMIT ?
     `).all(sourcePath, limit);
@@ -269,22 +273,26 @@ function runChainHookOnAgentDone({
   if (safeArtifacts.length === 0) {
     // EC-NC-05: zero edits → emit one no-op audit event so the guardrail
     // metric series stays continuous.
-    emitChainAuditEvent(
-      db,
-      {
-        agent: agentName,
-        source_file: null,
-        feature_slug: featureSlug,
-        impacts_found: 0,
-        auto_fixable_count: 0,
-        skipped_reason: 'no_artifacts',
-        noise_file: null,
-        autonomy_mode: resolvedMode,
-        chain_auto_threshold: resolvedThreshold,
-        ingest_stats: ingest
-      },
-      'chain:audit (no-op: no artifacts in session)'
-    );
+    emitChainAuditEvent(db, {
+      agent: agentName,
+      message: 'chain:audit (no-op: no artifacts in session)',
+      feature_slug: featureSlug,
+      source_files: [],
+      impacts_found: 0,
+      auto_fixable_count: 0,
+      noise_file: null,
+      tokens_used: 0,
+      duration_ms: 0,
+      error: null,
+      // Extra context fields
+      skipped_reason: 'no_artifacts',
+      autonomy_mode: resolvedMode,
+      chain_auto_threshold: resolvedThreshold,
+      ingest_stats: ingest,
+      // Legacy singular alias preserved for backward-compat with any dashboard
+      // queries written against the v1.17.0 schema (will be removed v2).
+      source_file: null
+    });
     return { ok: true, ingest, audits, ec_nc_05: true, noise_file: null, autonomy_mode: resolvedMode };
   }
 
@@ -343,23 +351,24 @@ function runChainHookOnAgentDone({
   // event (session-scoped) so dashboards can attribute the file regardless of
   // which event row is sampled.
   for (const audit of audits) {
-    emitChainAuditEvent(
-      db,
-      {
-        agent: agentName,
-        source_file: audit.source_file,
-        feature_slug: featureSlug,
-        impacts_found: audit.error ? null : audit.impacts_found,
-        auto_fixable_count: audit.error ? null : audit.impacts.filter((i) => i.classification === 'auto_fixable').length,
-        duration_ms: audit.duration_ms,
-        ingest_stats: ingest,
-        noise_file: noiseFile,
-        autonomy_mode: resolvedMode,
-        chain_auto_threshold: resolvedThreshold,
-        error: audit.error
-      },
-      `chain:audit ${audit.source_file} → ${audit.error ? 'error' : `${audit.impacts_found} impacts`} (session hook)`
-    );
+    emitChainAuditEvent(db, {
+      agent: agentName,
+      message: `chain:audit ${audit.source_file} → ${audit.error ? 'error' : `${audit.impacts_found} impacts`} (session hook)`,
+      feature_slug: featureSlug,
+      source_files: safeArtifacts,
+      impacts_found: audit.error ? null : audit.impacts_found,
+      auto_fixable_count: audit.error ? 0 : audit.impacts.filter((i) => i.classification === 'auto_fixable').length,
+      noise_file: noiseFile,
+      tokens_used: 0,
+      duration_ms: audit.duration_ms,
+      error: audit.error,
+      // Extra context fields
+      autonomy_mode: resolvedMode,
+      chain_auto_threshold: resolvedThreshold,
+      ingest_stats: ingest,
+      // Legacy singular alias preserved for backward-compat (removed v2)
+      source_file: audit.source_file
+    });
   }
 
   return {

@@ -235,7 +235,7 @@ Regressão completa: 2746 tests, 2744 pass, 1 skipped, 1 fail (AC-P1-07 pré-exi
 - **EC-NC-01** File renamed/moved → edges órfãos aceitáveis V1 (M2 limpa)
 - **EC-NC-02** File deletado → idem EC-NC-01
 - **EC-NC-03** File nunca-antes-visto → primeiro ingest cria edges com hit_count=1
-- **EC-NC-04** SQLite locked → retry 3x exponencial backoff (100/200/500ms), then abort com log warning
+- **EC-NC-04** SQLite locked → retry 3x exponencial backoff (100/200/500ms), then abort com log warning. **V1 ACCEPTABLE DEVIATION (hotfix v1.17.1):** retry/backoff NÃO implementado em V1; single-attempt try/catch é suficiente porque BR-NC-11 (non-blocking) é o contrato load-bearing (audit failure jamais propaga pra `runAgentDone`). `runChainHookOnAgentDone` é path sequencial sem contenção real hoje. Retry helper deferido pra M1.5/M2 quando concorrência aparecer (squad mode EC-NC-08). Documentado também em CHANGELOG `[1.17.1]` + requirements EC-NC-04.
 - **EC-NC-05** Agent event sem file edits → audit skipped no-op
 - **EC-NC-06** Bootstrap sem git history → skip + agent-event coverage
 - **EC-NC-07** Config sem `chain_auto_threshold` → runtime default 0.8

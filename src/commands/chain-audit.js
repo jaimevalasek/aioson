@@ -19,6 +19,7 @@
 
 const path = require('node:path');
 const { openRuntimeDb } = require('../runtime-store');
+const { emitChainAuditEvent } = require('../neural-chain-telemetry');
 
 const DEFAULT_LIMIT = 20;
 const HARD_LIMIT_CAP = 200;
@@ -28,17 +29,6 @@ function normalizeLimit(value) {
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_LIMIT;
   if (parsed > HARD_LIMIT_CAP) return HARD_LIMIT_CAP;
   return Math.floor(parsed);
-}
-
-function emitTelemetry(db, payload, message) {
-  try {
-    db.prepare(`
-      INSERT INTO execution_events (event_type, agent_name, message, payload_json, created_at)
-      VALUES ('chain_audit', NULL, ?, ?, ?)
-    `).run(message, JSON.stringify(payload), new Date().toISOString());
-  } catch (_) {
-    // Telemetry failure is non-fatal (BR-NC-10 best-effort).
-  }
 }
 
 async function runChainAudit({ args, options = {}, logger, t }) {
@@ -73,10 +63,21 @@ async function runChainAudit({ args, options = {}, logger, t }) {
   let auditError = null;
 
   try {
+    // BR-NC-01 — window function dedupes per target_path so dual-source edges
+    // (same (source,target) with both git_co_edit AND agent_event) report
+    // max(c_git, c_event) as a single row. Hotfix v1.17.1 — bug-found-002.
     impacts = db.prepare(`
       SELECT target_path, edge_type, confidence, hit_count, last_seen_at
-      FROM chain_edges
-      WHERE source_path = ? AND end_at IS NULL
+      FROM (
+        SELECT target_path, edge_type, confidence, hit_count, last_seen_at,
+               ROW_NUMBER() OVER (
+                 PARTITION BY target_path
+                 ORDER BY confidence DESC, hit_count DESC, last_seen_at DESC
+               ) AS rn
+        FROM chain_edges
+        WHERE source_path = ? AND end_at IS NULL
+      )
+      WHERE rn = 1
       ORDER BY confidence DESC, hit_count DESC, last_seen_at DESC
       LIMIT ?
     `).all(filePath, limit);
@@ -86,14 +87,22 @@ async function runChainAudit({ args, options = {}, logger, t }) {
 
   const durationMs = Date.now() - startedAt;
 
-  emitTelemetry(db, {
-    source_file: filePath,
+  emitChainAuditEvent(db, {
+    agent: null,
+    message: `chain:audit ${filePath} → ${auditError ? 'error' : `${impacts.length} impacts`}`,
     feature_slug: featureSlug,
+    source_files: [filePath],
     impacts_found: auditError ? null : impacts.length,
-    limit_applied: limit,
+    auto_fixable_count: 0,
+    noise_file: null,
+    tokens_used: 0,
     duration_ms: durationMs,
-    error: auditError
-  }, `chain:audit ${filePath} → ${auditError ? 'error' : `${impacts.length} impacts`}`);
+    error: auditError,
+    // Extra context fields
+    limit_applied: limit,
+    // Legacy singular alias preserved for backward-compat (removed v2)
+    source_file: filePath
+  });
 
   if (auditError) {
     const msg = (t && t('chain_audit.query_failed', { error: auditError })) ||

@@ -38,18 +38,23 @@ const NEURAL_CHAIN_SRC_FILES = [
 // fs APIs that mutate the filesystem (writes, deletes, renames, perms).
 const FS_MUTATE_RE = /fs\.(writeFile|writeFileSync|unlink|unlinkSync|rm|rmSync|appendFile|appendFileSync|copyFile|copyFileSync|rename|renameSync|truncate|truncateSync|chmod|chmodSync|chown|chownSync)\b/g;
 
-// Required payload fields on every chain_audit event regardless of code path.
-// Spec BR-NC-10 lists 8 fields; the two emitters (CLI vs hook) currently drift
-// on the others. Tracked as `[bug-found-002]` + `[bug-found-003]` in
-// test-plan.md. This test guards only the truly universal subset.
-const REQUIRED_BASE_PAYLOAD_FIELDS = [
+// BR-NC-10 spec — 8 required fields on EVERY chain_audit event payload,
+// regardless of code path (CLI command, hook per-artifact, EC-NC-05 no-op).
+// Hotfix v1.17.1 consolidated the two emitters behind
+// `src/neural-chain-telemetry.js#emitChainAuditEvent` so the same schema
+// applies everywhere. Extra context fields (agent, autonomy_mode,
+// chain_auto_threshold, ingest_stats, skipped_reason, limit_applied, the
+// legacy `source_file` singular alias) are allowed on top — they are
+// emitter-specific context, not part of the contract.
+const REQUIRED_BR_NC_10_FIELDS = [
   'feature_slug',
-  'impacts_found'
-];
-// Additional fields required when an audit actually ran (not on the EC-NC-05
-// no-op event, which currently omits them — `[bug-found-003]`).
-const REQUIRED_OPERATIONAL_PAYLOAD_FIELDS = [
-  'duration_ms'
+  'source_files',
+  'impacts_found',
+  'auto_fixable_count',
+  'noise_file',
+  'tokens_used',
+  'duration_ms',
+  'error'
 ];
 
 async function makeTempProject() {
@@ -192,27 +197,21 @@ test('A.2 BR-NC-10 — every chain_audit event from the hook carries the core pa
 
     for (const ev of events) {
       const payload = JSON.parse(ev.payload_json);
-      for (const field of REQUIRED_BASE_PAYLOAD_FIELDS) {
+      for (const field of REQUIRED_BR_NC_10_FIELDS) {
         assert.ok(
           Object.prototype.hasOwnProperty.call(payload, field),
-          `BR-NC-10 violation: hook event payload missing core field '${field}'. payload keys: ${JSON.stringify(Object.keys(payload))}`
+          `BR-NC-10 violation: hook event payload missing required field '${field}'. payload keys: ${JSON.stringify(Object.keys(payload))}`
         );
       }
-      // Operational fields only required when this is NOT the EC-NC-05 no-op event.
-      const isNoOp = payload.skipped_reason === 'no_artifacts';
-      if (!isNoOp) {
-        for (const field of REQUIRED_OPERATIONAL_PAYLOAD_FIELDS) {
-          assert.ok(
-            Object.prototype.hasOwnProperty.call(payload, field),
-            `BR-NC-10 violation: operational hook event missing field '${field}'. payload keys: ${JSON.stringify(Object.keys(payload))}`
-          );
-        }
-      }
-      // `impacts_found` may be null (query failed) or a number — never undefined.
+      // Type discipline on the 8 required fields.
       assert.ok(
         payload.impacts_found === null || typeof payload.impacts_found === 'number',
         `impacts_found must be number|null, got ${typeof payload.impacts_found}`
       );
+      assert.ok(Array.isArray(payload.source_files), 'source_files must be an array (plural per spec)');
+      assert.equal(typeof payload.duration_ms, 'number', 'duration_ms required as number (0 on no-op)');
+      assert.equal(typeof payload.auto_fixable_count, 'number', 'auto_fixable_count required as number');
+      assert.equal(typeof payload.tokens_used, 'number', 'tokens_used required as number (V1 placeholder = 0)');
     }
   } finally {
     db.close();
@@ -244,15 +243,94 @@ test('A.2 BR-NC-10 — chain:audit CLI also emits the core payload fields', asyn
     assert.equal(events.length, 1, 'CLI emits exactly one chain_audit event per invocation');
 
     const payload = JSON.parse(events[0].payload_json);
-    for (const field of [...REQUIRED_BASE_PAYLOAD_FIELDS, ...REQUIRED_OPERATIONAL_PAYLOAD_FIELDS]) {
+    for (const field of REQUIRED_BR_NC_10_FIELDS) {
       assert.ok(
         Object.prototype.hasOwnProperty.call(payload, field),
-        `BR-NC-10 violation: CLI event payload missing core field '${field}'. payload keys: ${JSON.stringify(Object.keys(payload))}`
+        `BR-NC-10 violation: CLI event payload missing required field '${field}'. payload keys: ${JSON.stringify(Object.keys(payload))}`
       );
     }
     assert.equal(payload.feature_slug, 'neural-chain', '--feature flag propagates to payload');
     assert.ok(payload.impacts_found >= 1, 'audit found at least the seeded edge');
+    assert.deepEqual(payload.source_files, ['src/foo.js'], 'CLI sets source_files to [filePath]');
   } finally {
     db.close();
   }
+});
+
+// ─── M-02 (bug-found-002) — BR-NC-01 dual-source dedupe ──────────────────
+
+test('BR-NC-01 dedupe — same (source, target) with both edge_types returns ONE row with max confidence', async () => {
+  const dir = await makeTempProject();
+  const { db } = await openRuntimeDb(dir);
+  try {
+    // Same (source, target) pair indexed under BOTH edge_types — would have
+    // returned 2 separate rows before hotfix v1.17.1. Spec BR-NC-01 says
+    // report max(c_git, c_event) — a single row, no double-count.
+    db.prepare(`
+      INSERT INTO chain_edges (source_path, target_path, edge_type, confidence, start_at, last_seen_at, hit_count)
+      VALUES ('src/foo.js', 'src/dep.js', 'git_co_edit', 0.6, ?, ?, 6),
+             ('src/foo.js', 'src/dep.js', 'agent_event', 0.9, ?, ?, 8),
+             ('src/foo.js', 'src/other.js', 'agent_event', 0.5, ?, ?, 3)
+    `).run(
+      '2026-05-20T00:00:00Z', '2026-05-20T00:00:00Z',
+      '2026-05-20T00:00:00Z', '2026-05-20T00:00:00Z',
+      '2026-05-20T00:00:00Z', '2026-05-20T00:00:00Z'
+    );
+
+    const r = runChainHookOnAgentDone({
+      db,
+      targetDir: dir,
+      artifacts: ['src/foo.js', 'src/bar.js'],
+      autonomyMode: 'guarded',
+      featureSlug: 'neural-chain',
+      now: new Date('2026-05-22T14:30:00Z')
+    });
+
+    // foo source now has 4 edge rows: (dep, git_co_edit, 0.6) +
+    // (dep, agent_event, 0.9) + (other, agent_event, 0.5) + (bar,
+    // agent_event, 0.2 — ingested by the hook). After BR-NC-01 dedupe by
+    // target_path, that collapses to 3 unique targets — dep appears once
+    // (was 2 rows without dedupe), other/bar each once. Without the fix
+    // this would have been 4 rows.
+    const fooAudit = r.audits.find((a) => a.source_file === 'src/foo.js');
+    assert.ok(fooAudit, 'audit for src/foo.js present');
+    assert.equal(fooAudit.impacts_found, 3, 'dedupe collapsed dep dual-source into 1 row (3 unique targets)');
+
+    const depRows = fooAudit.impacts.filter((i) => i.target_path === 'src/dep.js');
+    assert.equal(depRows.length, 1, 'dep.js appears exactly once after dedupe');
+    assert.equal(depRows[0].confidence, 0.9, 'max(c_git=0.6, c_event=0.9) = 0.9');
+    assert.equal(depRows[0].edge_type, 'agent_event', 'edge_type from the row that won the max');
+
+    // Noise file body should list dep.js exactly once (not twice).
+    const text = fs.readFileSync(r.noise_file, 'utf8');
+    const depMatches = (text.match(/^- \[ \].*src\/dep\.js/gm) || []).length;
+    assert.equal(depMatches, 1, `dep.js must appear once in noise file (got ${depMatches})`);
+  } finally {
+    db.close();
+  }
+});
+
+test('BR-NC-01 dedupe — chain:audit CLI also dedupes dual-source rows', async () => {
+  const dir = await makeTempProject();
+  const { db: setupDb } = await openRuntimeDb(dir);
+  setupDb.prepare(`
+    INSERT INTO chain_edges (source_path, target_path, edge_type, confidence, start_at, last_seen_at, hit_count)
+    VALUES ('src/foo.js', 'src/dep.js', 'git_co_edit', 0.4, ?, ?, 4),
+           ('src/foo.js', 'src/dep.js', 'agent_event', 0.85, ?, ?, 7)
+  `).run(
+    '2026-05-20T00:00:00Z', '2026-05-20T00:00:00Z',
+    '2026-05-20T00:00:00Z', '2026-05-20T00:00:00Z'
+  );
+  setupDb.close();
+
+  const r = await runChainAudit({
+    args: [dir],
+    options: { file: 'src/foo.js', feature: 'neural-chain', json: true },
+    logger: { log: () => {}, error: () => {} }
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.impacts_found, 1, 'CLI dedupes to a single row');
+  assert.equal(r.impacts[0].target_path, 'src/dep.js');
+  assert.equal(r.impacts[0].confidence, 0.85, 'CLI reports the max confidence');
+  assert.equal(r.impacts[0].edge_type, 'agent_event', 'CLI reports the edge_type from the winning row');
 });
