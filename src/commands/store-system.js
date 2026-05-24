@@ -6,6 +6,12 @@ const { exists, ensureDir } = require('../utils');
 const { readConfig } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
 
+let _terser = null;
+function getTerser() {
+  if (!_terser) _terser = require('terser');
+  return _terser;
+}
+
 const DEFAULT_BASE_URL = 'https://aioson.com';
 const SYSTEM_PACKAGES_DIR = '.aioson/system-packages';
 const BACKUPS_DIR = '.aioson/.backups';
@@ -173,7 +179,25 @@ async function collectSystemFiles(dir, { buildMode = false } = {}) {
           errors.push(`Package exceeds ${MAX_PACKAGE_BYTES / 1024 / 1024} MB limit — stop collecting.`);
           return;
         }
-        const content = await fs.readFile(fullPath, 'utf8');
+        let content = await fs.readFile(fullPath, 'utf8');
+
+        if (buildMode && (ext === '.js' || ext === '.mjs' || ext === '.cjs')) {
+          try {
+            const terser = getTerser();
+            const result = await terser.minify(content, {
+              compress: { passes: 2, drop_console: false },
+              mangle: {
+                toplevel: true,
+                properties: { regex: /^_/ },
+              },
+              format: { comments: false },
+            });
+            if (result.code) content = result.code;
+          } catch {
+            // terser failed on this file — keep original compiled JS
+          }
+        }
+
         files[relPath] = content;
       } catch {
         // binary or unreadable — skip silently

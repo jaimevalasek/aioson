@@ -46,6 +46,7 @@
     "ci": "npm run lint && npm test"
   },
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "terser": "^5.48.0"
   }
 }
