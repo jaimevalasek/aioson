@@ -12,6 +12,27 @@ function getTerser() {
   return _terser;
 }
 
+async function createZipBuffer(files) {
+  const archiver = require('archiver');
+  const { PassThrough } = require('stream');
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const stream = new PassThrough();
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.on('error', reject);
+    archive.pipe(stream);
+
+    for (const [relPath, content] of Object.entries(files)) {
+      archive.append(content, { name: relPath });
+    }
+    archive.finalize();
+  });
+}
+
 const DEFAULT_BASE_URL = 'https://aioson.com';
 const SYSTEM_PACKAGES_DIR = '.aioson/system-packages';
 const BACKUPS_DIR = '.aioson/.backups';
@@ -328,13 +349,20 @@ async function runSystemPublish({ args, options, logger, t }) {
     return { ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails };
   }
 
+  logger.log('Creating ZIP package...');
+  const zipBuffer = await createZipBuffer(files);
+  const zipBase64 = zipBuffer.toString('base64');
+  const zipKb = (zipBuffer.length / 1024).toFixed(1);
+  logger.log(`ZIP: ${zipKb} KB (${fileCount} files)`);
+
   logger.log(t('system.publish_sending'));
   const baseUrl = resolveBaseUrl(config);
   const response = await storePost(`${baseUrl}/api/store/systems/publish`, {
     kind: 'aioson.store.system',
     slug: manifest.slug,
     version: manifest.version,
-    files,
+    zipBase64,
+    files: buildMode ? undefined : files,
     manifest,
     visibility,
     paid,
@@ -343,7 +371,7 @@ async function runSystemPublish({ args, options, logger, t }) {
   }, token);
 
   logger.log(t('system.publish_done', { slug: manifest.slug, url: `${baseUrl}/store/systems/${manifest.slug}` }));
-  logger.log(t('system.publish_summary', { files: fileCount, kb: (totalBytes / 1024).toFixed(1) }));
+  logger.log(t('system.publish_summary', { files: fileCount, kb: zipKb }));
   return { ok: true, manifest, fileCount, totalBytes, visibility, paid, response };
 }
 
