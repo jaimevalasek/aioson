@@ -25,6 +25,17 @@ const SYSTEM_ALLOWED_EXTS = new Set([
   '.gitignore',
 ]);
 
+const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
+  '.js', '.jsx', '.mjs', '.cjs',
+  '.json', '.jsonc',
+  '.css',
+  '.html',
+  '.svg', '.ico',
+  '.sql',
+  '.yaml', '.yml',
+  '.prisma',
+]);
+
 // Dirs/files to skip when collecting sources
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.turbo', '.next',
@@ -33,13 +44,21 @@ const SKIP_DIRS = new Set([
   '.aioson', '.claude', '.gemini', '.codex', 'researchs',
 ]);
 
+const SKIP_DIRS_BUILD = new Set([
+  'node_modules', '.git', '.turbo', '.next',
+  '.cache', 'coverage', '.nyc_output',
+  'src', 'dashboard/src',
+  '.aioson', '.claude', '.gemini', '.codex', 'researchs',
+]);
+
 const SKIP_FILES = new Set([
   'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
   'bun.lockb',
 ]);
 
-const MAX_FILE_BYTES = 512 * 1024;        // 512 KB per file
-const MAX_PACKAGE_BYTES = 20 * 1024 * 1024; // 20 MB total
+const MAX_FILE_BYTES = 512 * 1024;             // 512 KB per file (source)
+const MAX_FILE_BYTES_BUILD = 2 * 1024 * 1024;  // 2 MB per file (compiled bundles)
+const MAX_PACKAGE_BYTES = 20 * 1024 * 1024;    // 20 MB total
 
 /**
  * Parseia lista de emails autorizados a partir de:
@@ -114,15 +133,18 @@ async function storeGet(url, token) {
  * Collect all eligible source files under `dir`.
  * Returns { relativePath: content } — only text files with allowed extensions.
  */
-async function collectSystemFiles(dir) {
+async function collectSystemFiles(dir, { buildMode = false } = {}) {
   const files = {};
   let totalBytes = 0;
   const errors = [];
+  const skipDirs = buildMode ? SKIP_DIRS_BUILD : SKIP_DIRS;
+  const allowedExts = buildMode ? SYSTEM_BUILD_ALLOWED_EXTS : SYSTEM_ALLOWED_EXTS;
 
   async function walk(current, rel) {
     const entries = await fs.readdir(current, { withFileTypes: true });
     for (const entry of entries) {
-      if (SKIP_DIRS.has(entry.name)) continue;
+      if (skipDirs.has(entry.name)) continue;
+      if (rel && skipDirs.has(`${rel}/${entry.name}`)) continue;
       if (SKIP_FILES.has(entry.name)) continue;
 
       const fullPath = path.join(current, entry.name);
@@ -137,12 +159,12 @@ async function collectSystemFiles(dir) {
         ? `.${entry.name.split('.').pop().toLowerCase()}`
         : '';
 
-      // Allow dotfiles with no extension (like .gitignore) that match skip list check
-      if (!SYSTEM_ALLOWED_EXTS.has(ext) && ext !== '') continue;
+      if (!allowedExts.has(ext) && ext !== '') continue;
 
       try {
         const stat = await fs.stat(fullPath);
-        if (stat.size > MAX_FILE_BYTES) {
+        const maxBytes = buildMode ? MAX_FILE_BYTES_BUILD : MAX_FILE_BYTES;
+        if (stat.size > maxBytes) {
           errors.push(`File too large (skipped): "${relPath}" (${(stat.size / 1024).toFixed(0)} KB)`);
           continue;
         }
@@ -231,13 +253,27 @@ async function runSystemPublish({ args, options, logger, t }) {
   const config = await readConfig();
   const token = requireToken(config, t);
   const dir = path.resolve(process.cwd(), args[0] || '.');
+  const buildMode = Boolean(options.build);
 
   logger.log(t('system.publish_reading_manifest'));
   const manifest = await readSystemJson(dir, t);
   logger.log(t('system.package_manifest_ok', { slug: manifest.slug, version: manifest.version, name: manifest.name }));
 
-  logger.log(t('system.package_collecting_files'));
-  const { files, totalBytes, errors } = await collectSystemFiles(dir);
+  if (buildMode) {
+    const buildCmd = manifest.build_command || 'npm run build';
+    logger.log(`Building: ${buildCmd}`);
+    const { execSync } = require('child_process');
+    try {
+      execSync(buildCmd, { cwd: dir, stdio: 'inherit', timeout: 300_000 });
+    } catch (e) {
+      throw new Error(`Build failed: ${e.message}`);
+    }
+    logger.log('Build complete. Collecting compiled output (source excluded)...');
+  } else {
+    logger.log(t('system.package_collecting_files'));
+  }
+
+  const { files, totalBytes, errors } = await collectSystemFiles(dir, { buildMode });
 
   if (errors.length > 0) {
     for (const e of errors) logger.log(`  [WARN] ${e}`);
