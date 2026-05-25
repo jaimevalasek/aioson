@@ -259,14 +259,14 @@ Two terminals, running in parallel:
 
 ```bash
 # Terminal 1 — aioson agents
-@setup → @product → @analyst → @architect → @dev
+/aioson:agent:setup → @product → @analyst → @architect → @dev
 
 # Terminal 2 — browser QA (while app is running)
 aioson qa:init --url=http://localhost:3000
 aioson qa:run
 
 # Terminal 1 — continues with merged findings
-@qa   # reads aios-qa-report.md automatically
+/aioson:agent:qa   # reads aios-qa-report.md automatically
 ```
 
 ---

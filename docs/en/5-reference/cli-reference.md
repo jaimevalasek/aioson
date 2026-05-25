@@ -225,13 +225,13 @@ aioson agents --json
 **Output example:**
 ```
 Agents (locale: en):
-@setup (setup)
+/aioson:agent:setup (setup)
   Path: .aioson/locales/en/agents/setup.md
   Active: .aioson/agents/setup.md
   Depends on: none
   Output: .aioson/context/project.context.md
 
-@product (product)
+/aioson:agent:product (product)
   Path: .aioson/locales/en/agents/product.md
   Active: .aioson/agents/product.md
   Depends on: none
@@ -261,7 +261,7 @@ aioson agent:prompt dev --tool=gemini --json
 - `--tool=codex|claude|gemini|opencode` — formats the prompt for the target CLI. Default: `codex`.
 - `--json` — returns structured JSON with the prompt string.
 
-**When to use:** if you're using an AI CLI that doesn't support `/setup` slash commands, run this to get the exact text to paste into the chat.
+**When to use:** if you're using an AI CLI that doesn't support `/aioson:agent:setup` slash commands, run this to get the exact text to paste into the chat.
 
 ```bash
 # Copy the prompt for @analyst in Gemini
@@ -310,7 +310,7 @@ Notes:
 Once the project is set up, each new feature follows a shorter sequence — no `@setup` required:
 
 ```
-@product → @analyst → @dev → @qa
+/aioson:agent:product → @analyst → @dev → @qa
 ```
 
 `@product` creates a feature-scoped `prd-{slug}.md` and registers the feature in `features.md`. `@analyst` produces `requirements-{slug}.md` and `spec-{slug}.md`. `@dev` reads the feature spec. `@qa` closes the feature by running `feature:close --verdict=PASS`, which updates `spec-{slug}.md` with a QA sign-off, marks it `done` in `features.md`, and automatically archives all feature artefacts to `.aioson/context/done/{slug}/`.

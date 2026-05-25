@@ -10,7 +10,7 @@
 ## The trail in one line
 
 ```
-@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev
+/aioson:agent:product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev
                                                               │
                                               (@qa ↔ @dev)  ← autonomous loop
                                                               │

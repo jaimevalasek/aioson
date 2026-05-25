@@ -9,7 +9,7 @@
 Without the scout, `@deyvin` had two bad options when a question required inspecting many files:
 
 1. **Read everything inline** — burns ≥10k tokens in the parent context, pollutes the agent's working memory, and forces the next turn to compete with stale survey content.
-2. **Hand off to `/architect` or pause** — overshoots the actual need (most surveys don't require architectural decisions) and breaks the conversation flow with a full agent switch.
+2. **Hand off to `/aioson:agent:architect` or pause** — overshoots the actual need (most surveys don't require architectural decisions) and breaks the conversation flow with a full agent switch.
 
 The scout resolves this: the parent agent keeps its context lean and receives a structured report of ~500 tokens instead of the raw files.
 
@@ -31,7 +31,7 @@ aioson scout:prep --question="..." --scope-paths="a.js,b.js" ...
   └─ returns { id, prompt, output_path, cap_remaining }
          │
          ▼
-@deyvin calls harness.sub-agent(prompt)
+/aioson:agent:deyvin calls harness.sub-agent(prompt)
   └─ sub-agent runs in ISOLATED context
   └─ allowed tools: [Read, Grep]
   └─ disallowed tools: [Bash, Edit, Write]   ← Nautilus pattern
@@ -50,7 +50,7 @@ aioson scout:commit --input=<output_path>
   └─ emits telemetry action=committed
          │
          ▼
-@deyvin reads findings, confidence, recommendation
+/aioson:agent:deyvin reads findings, confidence, recommendation
   └─ folds into user-facing reply
   └─ parent context grew ~500 tokens (just the report)
      vs inline survey: ~10k+ tokens (raw file contents)
