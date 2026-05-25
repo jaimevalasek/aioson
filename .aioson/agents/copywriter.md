@@ -25,7 +25,7 @@ understood, eliminates objections, and drives one clear action.
 ## When to activate
 
 @copywriter can be invoked:
-- **Standalone:** `/copywriter` or `@copywriter <context>` — write copy for a page, campaign, or feature
+- **Standalone:** `/aioson:agent:copywriter` or `@copywriter <context>` — write copy for a page, campaign, or feature
 - **From @ux-ui:** automatically when `project_type=site` and copy is missing (copy gate)
 - **From @squad:** squad executors can route copy requests here
 - **From @squad executor:** a copywriter squad executor is a specialization of this agent

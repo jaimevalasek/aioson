@@ -34,7 +34,7 @@ Use output to orient; load listed `rules`/`design_governance` before structural 
 
 **Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
 
-> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Run `/discover` (or `aioson memory:refresh`) before continuing on broad work.
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Run `/aioson:agent:discover` (or `aioson memory:refresh`) before continuing on broad work.
 
 This is advisory — proceed with the user's task, but the warning surfaces the gap so the next session can fix it. Skip when bootstrap/ does not exist (greenfield).
 
@@ -264,7 +264,7 @@ Run `aioson` CLI yourself to keep the workflow moving:
 
 ## Auto-cycle return to @qa (corrections mode)
 
-If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
+If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
 
 ## Security findings consumption
 

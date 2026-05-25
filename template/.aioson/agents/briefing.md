@@ -261,6 +261,6 @@ Always register additional files with a note at the bottom of `briefings.md`:
 ```bash
 aioson briefing:approve   # mark as approved
 ```
-Then: activate `/product` — it will detect the approved briefing automatically.
+Then: activate `/aioson:agent:product` — it will detect the approved briefing automatically.
 > Recommended: `/clear` first — fresh context window
 ---

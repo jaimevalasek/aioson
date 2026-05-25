@@ -25,21 +25,21 @@ Before suggesting `/clear` to the user, persist the actionable diagnostic to `pl
 2. /clear is safe — the next agent reads plans/{slug}.md
 ```
 
-`plans/` is the canonical input directory for `/briefing` (and a useful seed for `/product` too). The directory may not exist yet — create it.
+`plans/` is the canonical input directory for `/aioson:agent:briefing` (and a useful seed for `/aioson:agent:product` too). The directory may not exist yet — create it.
 
 ## When to apply
 
 | Situation | Persist? |
 |---|---|
-| Handoff routes to an agent that takes raw plans (`/briefing` first and foremost, sometimes `/product`) | Yes |
-| Handoff routes to an agent that needs a discovery pass (`/analyst`, `/architect`, `/sheldon`) | Yes — they read context from `.aioson/context/` AND from raw plans |
-| Same-session continuation (`/dev` keeps going, `/qa` reviews implementation just done) | No — context is in chat |
+| Handoff routes to an agent that takes raw plans (`/aioson:agent:briefing` first and foremost, sometimes `/aioson:agent:product`) | Yes |
+| Handoff routes to an agent that needs a discovery pass (`/aioson:agent:analyst`, `/aioson:agent:architect`, `/aioson:agent:sheldon`) | Yes — they read context from `.aioson/context/` AND from raw plans |
+| Same-session continuation (`/aioson:agent:dev` keeps going, `/aioson:agent:qa` reviews implementation just done) | No — context is in chat |
 | Handoff happens via tracked live session (`aioson live:handoff`) | No — telemetry already carries the trail |
-| Trivial routing ("you want `/setup` first") with no diagnostic to preserve | No |
+| Trivial routing ("you want `/aioson:agent:setup` first") with no diagnostic to preserve | No |
 
 ## What to write
 
-Structure of `plans/{slug}.md` (lightweight — `/briefing` will enrich it):
+Structure of `plans/{slug}.md` (lightweight — `/aioson:agent:briefing` will enrich it):
 
 ```md
 # {Short title} — raw plan
@@ -89,6 +89,6 @@ Session artifacts written:
 ## Anti-patterns
 
 - **Inlining 2 KB of diagnostic as a "seed prompt" in the routing message.** The user shouldn't have to copy-paste a wall of text. Persist it.
-- **Persisting trivial routings.** A user who asks "what does `/setup` do" doesn't need a `plans/` file written. Apply the table above.
+- **Persisting trivial routings.** A user who asks "what does `/aioson:agent:setup` do" doesn't need a `plans/` file written. Apply the table above.
 - **Persisting code archaeology.** Code lives in code; reading recommendations live in the artifact only when they would otherwise be lost across `/clear`.
 - **Forgetting to mention the file.** If you wrote `plans/{slug}.md` but the handoff message doesn't reference it, the user won't know to read it (or to let the next agent read it).

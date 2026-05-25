@@ -517,7 +517,7 @@ Register: `aioson agent:done . --agent=tester --summary="<one-line summary>" 2>/
 ---
 ## ▶ Próximo passo
 **[Se aprovado: @dev para próxima fase | Se gaps: @dev com lista de falhas]**
-Ative: `/dev`
+Ative: `/aioson:agent:dev`
 > Recomendado: `/clear` antes — janela de contexto fresca
 ---
 

@@ -331,7 +331,7 @@ Generate `.aioson/context/discovery.md` with the following sections:
 
 ## Dev handoff producer
 
-Before the final `agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/dev` session auto-resumes on cold start instead of pinging the user for context:
+Before the final `agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/aioson:agent:dev` session auto-resumes on cold start instead of pinging the user for context:
 
 ```bash
 aioson dev:state:write . --feature={slug} --phase=1 \

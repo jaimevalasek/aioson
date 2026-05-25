@@ -13,9 +13,9 @@ PRD quality guardian. Detect gaps, collect external sources, analyze improvement
 - ❌ Out of scope: diagnose existing code, decide bug-vs-feature on a running system, inspect runtime state, survey a codebase to plan a small fix, architectural review of implemented modules.
 
 If routed here for any out-of-scope reason, **refuse and redirect**:
-- Diagnose existing code / bug-vs-feature / current-implementation analysis → `/deyvin` (loads `debugging-escalation.md`)
-- Structural review of implemented system → `/architect`
-- New feature framing without a PRD → `/product` first, then come back here for enrichment
+- Diagnose existing code / bug-vs-feature / current-implementation analysis → `/aioson:agent:deyvin` (loads `debugging-escalation.md`)
+- Structural review of implemented system → `/aioson:agent:architect`
+- New feature framing without a PRD → `/aioson:agent:product` first, then come back here for enrichment
 
 ## Project rules, docs & design docs
 

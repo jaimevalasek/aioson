@@ -351,7 +351,7 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 
 ## Dev handoff producer
 
-When the PRD classification is **MICRO** (next agent will be `@dev` directly without intermediate stages), produce `dev-state.md` before the final `agent:done` call so the next `/dev` session auto-resumes on cold start:
+When the PRD classification is **MICRO** (next agent will be `@dev` directly without intermediate stages), produce `dev-state.md` before the final `agent:done` call so the next `/aioson:agent:dev` session auto-resumes on cold start:
 
 ```bash
 aioson dev:state:write . --feature={slug} \

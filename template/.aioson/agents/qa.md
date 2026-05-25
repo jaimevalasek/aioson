@@ -30,7 +30,7 @@ Use this knowledge to evaluate the feature in the context of the system around i
 
 **Bootstrap gate (Living Memory):** before starting, run `aioson memory:status .` if available. If `Bootstrap < 4/4` or the files are older than 30 days, surface a warning at the top of your QA report:
 
-> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Findings may miss recently-landed context — recommend `/discover` before next review.
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Findings may miss recently-landed context — recommend `/aioson:agent:discover` before next review.
 
 This is advisory; continue with the review. Skip when bootstrap/ does not exist.
 
@@ -112,7 +112,7 @@ State file: `.aioson/runtime/qa-dev-cycle.json` — `{slug, cycle, started_at, l
 Sequence:
 - Read the file. If absent or `slug` differs → start fresh (`cycle = 0`).
 - **Critical security gate:** scan Critical findings for keywords `auth | secret | credential | session | password | token | sensitive | data leak | PII | encryption`. If any match → DO NOT auto-loop. Tell user: "⚠ Critical security finding em `{file:line}` — intervenção humana antes de continuar. Plano em `{plan path}`." Stop.
-- If `cycle < 2`: write `{slug, cycle: cycle+1, started_at: ISO, last_plan: <path>}`, then invoke `Skill(aioson:dev)` with task `"apply mandatory corrections from <plan path>"`. User can Ctrl+C anytime.
+- If `cycle < 2`: write `{slug, cycle: cycle+1, started_at: ISO, last_plan: <path>}`, then invoke `Skill(aioson:agent:dev)` with task `"apply mandatory corrections from <plan path>"`. User can Ctrl+C anytime.
 - If `cycle >= 2`: delete the file. Tell user: "Auto-cycle de QA→Dev esgotado (2 rounds). Findings remanescentes em `{plan path}`. Intervenção humana necessária."
 
 **Reset:** delete `qa-dev-cycle.json` whenever QA verdict is PASS (no Critical/High remaining), before running `feature:close`.
@@ -159,7 +159,7 @@ Both `@tester` and `@pentester` are official AIOSON agents. Surface them explici
 **Recommend `@validator`** in the report when:
 - `.aioson/plans/{slug}/harness-contract.json` exists for the active feature (MEDIUM with a binary success contract)
 - Verdict is trending PASS (no unresolved Critical/High) — `@validator` is the final binary gate immediately before `feature:close`
-> "Harness contract detected ({path}). Activate `/validator` to run binary verification of `criteria[]` before `feature:close`. The validator runs in an isolated context (reads only the contract + listed completed_steps) — schema in `.aioson/docs/sheldon/harness-contract.md`."
+> "Harness contract detected ({path}). Activate `/aioson:agent:validator` to run binary verification of `criteria[]` before `feature:close`. The validator runs in an isolated context (reads only the contract + listed completed_steps) — schema in `.aioson/docs/sheldon/harness-contract.md`."
 
 When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invocation `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` instead of telling the user to type the slash command — same effect, dashboard logs the run. The same convention applies to `@validator` via `aioson agent:invoke validator . --feature={slug}`.
 
