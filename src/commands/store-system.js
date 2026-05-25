@@ -351,6 +351,10 @@ async function runSystemPublish({ args, options, logger, t }) {
 
   logger.log('Creating ZIP package...');
   const zipBuffer = await createZipBuffer(files);
+  const MAX_ZIP_BYTES = 2 * 1024 * 1024;
+  if (zipBuffer.length > MAX_ZIP_BYTES) {
+    throw new Error(`ZIP exceeds 2 MB limit (${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB). Reduce the number of files or bundle size.`);
+  }
   const zipBase64 = zipBuffer.toString('base64');
   const zipKb = (zipBuffer.length / 1024).toFixed(1);
   logger.log(`ZIP: ${zipKb} KB (${fileCount} files)`);
