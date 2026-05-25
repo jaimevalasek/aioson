@@ -83,7 +83,7 @@ npx @jaimevalasek/aioson init meu-projeto
 cd meu-projeto
 
 # 3. Abra seu cliente AI (Claude Code, Codex, Gemini, OpenCode) e digite:
-@setup
+/aioson:agent:setup
 ```
 
 A partir daí, os agentes guiam você. Detalhes em [Primeiro projeto do zero](./2-comecar/primeiro-projeto.md).

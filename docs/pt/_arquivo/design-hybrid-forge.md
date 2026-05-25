@@ -273,7 +273,7 @@ Anti-sameness:      avoid-generic-hero, signature-surface, motion-with-purpose
 Depois ativar:
 
 ```text
-/design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 → skills primárias: aurora-command-ui + cognitive-core-ui
 → nome sugerido: aurora-cognitive-command
 ```
@@ -299,7 +299,7 @@ Anti-sameness:      color-courage, uneven-rhythm, avoid-generic-hero, domain-spe
 Depois ativar:
 
 ```text
-/design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 → skills primárias: warm-craft-ui + neo-brutalist-ui
 → nome sugerido: warm-brutalist-play
 ```
@@ -325,7 +325,7 @@ Anti-sameness:      domain-specific-ornament, signature-surface, color-courage
 Depois ativar:
 
 ```text
-/design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 → skills primárias: bold-editorial-ui + clean-saas-ui
 → nome sugerido: luxury-editorial-saas
 ```
@@ -355,11 +355,11 @@ aioson design-hybrid:options . --json
 Depois, ativar a skill híbrida gerada:
 
 ```text
-@design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 ```
 
 ou, em clientes com slash commands:
 
 ```text
-/design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 ```

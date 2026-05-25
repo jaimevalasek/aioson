@@ -17,7 +17,7 @@ O AIOSON guarda quatro tipos de memória, com papéis diferentes:
 
 | Camada | O que guarda | Onde mora | Atualização |
 |---|---|---|---|
-| **Bootstrap** (semântica) | Identidade, arquitetura, features, estado atual — em prosa curta | `.aioson/context/bootstrap/*.md` | Reflexão automática + `/discover` manual |
+| **Bootstrap** (semântica) | Identidade, arquitetura, features, estado atual — em prosa curta | `.aioson/context/bootstrap/*.md` | Reflexão automática + `/aioson:agent:discover` manual |
 | **Devlog** (episódica) | O que aconteceu em cada sessão de cada agente | `aioson-logs/devlog-*.md` + SQLite | Cada agente escreve no final |
 | **Brain** (procedural) | Padrões reutilizáveis que ganharam qualidade alta | `.aioson/brains/*.brain.json` | Promoção semi-automática de devlogs |
 | **Runtime** (telemetria) | Eventos minuto-a-minuto: handoffs, gates, reflexões, notifies | `.aioson/runtime/aios.sqlite` | CLI grava em todo comando relevante |
@@ -92,7 +92,7 @@ A heurística é determinística e está no `src/memory-reflect-engine.js`. Verd
 
 Caso contrário: `verdict=skip` — a sessão foi sobre CSS, typo, refactor de testes etc. e não muda nada no resumo semântico.
 
-A heurística é conservadora pelo lado dos *falsos positivos* (custa pouco — só atrasa 5s na geração do manifest), mas o doctor (Fase 4) é o backstop: se bootstrap ficar > 30 dias sem update, ele emite warning na próxima sessão sugerindo `/discover` manual.
+A heurística é conservadora pelo lado dos *falsos positivos* (custa pouco — só atrasa 5s na geração do manifest), mas o doctor (Fase 4) é o backstop: se bootstrap ficar > 30 dias sem update, ele emite warning na próxima sessão sugerindo `/aioson:agent:discover` manual.
 
 ## Como verificar o estado da memória
 

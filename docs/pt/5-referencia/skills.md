@@ -202,7 +202,7 @@ Se você quer o fluxo completo em um só lugar, leia a página dedicada: [design
 
 Fluxo padrão:
 
-1. O usuário ativa `@design-hybrid-forge` no Codex ou `/design-hybrid-forge` no Claude
+1. O usuário ativa `@design-hybrid-forge` no Codex ou `/aioson:agent:design-hybrid-forge` no Claude
 2. Se quiser um overlay visual mais ousado, o usuário pode rodar `aioson design-hybrid:options` para gerar `.aioson/context/design-variation-preset.md`
 3. O comando usa `conversation_language` do projeto quando existir; `--locale` funciona como override manual
 4. O agente pede as 2 skills primárias, até 2 modificadores opcionais e lê o preset visual quando ele existir

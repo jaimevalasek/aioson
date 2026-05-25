@@ -179,7 +179,7 @@ A nova versão da Store permite empacotar, distribuir e instalar não só agente
 | Comando | O que faz | Quando usar |
 |---|---|---|
 | `system:package` | Lê o `system.json` e empacota o projeto local em `.aioson/system-packages` | Quando quiser testar o empacotamento completo do seu sistema antes de submetê-lo |
-| `system:publish` | Empacota e publica seu sistema/boilerplate na AIOSON Store | Quando quiser distribuir uma base arquitetural inteira para que outros comecem projetos rapidamente |
+| `system:publish` | Empacota e publica seu sistema/boilerplate na AIOSON Store. Com `--build`, compila TS/JSX e aplica ofuscação JS (terser). Pacote final em ZIP. | Quando quiser distribuir uma base arquitetural inteira para que outros comecem projetos rapidamente |
 | `system:list` | Lista os sistemas disponíveis localmente ou na nuvem | Para descobrir boilerplates e sistemas base que podem ser instalados |
 | `system:install` | Baixa e inicializa um sistema completo a partir da Store | Para dar kickstart num projeto novo a partir de um `system` já configurado com squads e arquitetura |
 | `squad:list` | Lista squads instaladas localmente ou remotamente na Store `--remote` | Para descobrir e inspecionar quais squads estão ativas ou disponíveis na nuvem |
@@ -488,7 +488,7 @@ aioson agents . --lang=pt-BR
 aioson agent:prompt architect . --tool=codex
 ```
 
-Use `agents` para ver quem existe e `agent:prompt` quando o cliente de IA nao entende `/setup`, `@dev` ou slash commands, ou quando voce quer um handoff direto rastreado no runtime antes de continuar em outro cliente.
+Use `agents` para ver quem existe e `agent:prompt` quando o cliente de IA nao entende `/aioson:agent:setup`, `@dev` ou slash commands, ou quando voce quer um handoff direto rastreado no runtime antes de continuar em outro cliente.
 
 ### 10. Validar agentes e pacote antes de release
 

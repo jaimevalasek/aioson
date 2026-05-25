@@ -78,7 +78,7 @@ Regras do fluxo:
 
 **Como ativar:**
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O que ele pergunta:**
@@ -135,7 +135,7 @@ O `@product` detecta esses arquivos automaticamente e pergunta se deve usá-los 
 
 **Como ativar:**
 ```
-/product
+/aioson:agent:product
 ```
 
 **Entrega:** Arquivo `.aioson/context/prd.md` ou `.aioson/context/prd-{slug}.md` com:
@@ -179,12 +179,12 @@ O `@product` detecta esses arquivos automaticamente e pergunta se deve usá-los 
 
 **Como ativar:**
 ```
-/deyvin
+/aioson:agent:deyvin
 ```
 
 Alias compativel:
 ```text
-@pair
+/aioson:agent:pair
 ```
 
 **Exemplos bons de uso:**
@@ -224,7 +224,7 @@ Alias compativel:
 
 **Como ativar:**
 ```
-/analyst
+/aioson:agent:analyst
 ```
 
 **Exemplo de perguntas que ele faz:**
@@ -265,7 +265,7 @@ Em **modo feature**, entrega adicionalmente:
 
 **Como ativar:**
 ```
-@discovery-design-doc
+/aioson:agent:discovery-design-doc
 ```
 
 **Entrega:**
@@ -297,7 +297,7 @@ Em **modo feature**, entrega adicionalmente:
 
 **Como ativar:**
 ```
-/architect
+/aioson:agent:architect
 ```
 
 **Estruturas que ele propõe (exemplo Laravel SMALL):**
@@ -338,16 +338,16 @@ tests/
 
 **Como ativar o agente UI/UX:**
 ```
-/ux-ui
+/aioson:agent:ux-ui
 ```
 
 **Submodos disponíveis:**
 ```
-/ux-ui research       → pesquisa visual e hipóteses de direção
-/ux-ui audit          → auditoria com inventário, achados por severidade e plano de consolidação
-/ux-ui tokens         → contrato formal de design tokens (primitivos, semânticos, escalas)
-/ux-ui component-map  → mapeamento de componentes (Atomic Design), gap analysis
-/ux-ui a11y           → auditoria WCAG focada, integração com @qa
+/aioson:agent:ux-ui research       → pesquisa visual e hipóteses de direção
+/aioson:agent:ux-ui audit          → auditoria com inventário, achados por severidade e plano de consolidação
+/aioson:agent:ux-ui tokens         → contrato formal de design tokens (primitivos, semânticos, escalas)
+/aioson:agent:ux-ui component-map  → mapeamento de componentes (Atomic Design), gap analysis
+/aioson:agent:ux-ui a11y           → auditoria WCAG focada, integração com @qa
 ```
 
 **Entrega principal:** Arquivo `.aioson/context/ui-spec.md` com:
@@ -381,7 +381,7 @@ tests/
 
 **Como ativar:**
 ```
-/pm
+/aioson:agent:pm
 ```
 
 **Regra de ouro do @pm:** O documento deve ter no máximo 2 páginas. Se passar disso, corte funcionalidades do MVP.
@@ -407,7 +407,7 @@ tests/
 
 **Como ativar:**
 ```
-/orchestrator
+/aioson:agent:orchestrator
 ```
 
 **Ou via CLI para preparar os arquivos:**
@@ -452,7 +452,7 @@ npx @jaimevalasek/aioson parallel:status
 
 **Como ativar:**
 ```
-@squad
+/aioson:agent:squad
 ```
 
 **Entrega:**
@@ -478,7 +478,7 @@ npx @jaimevalasek/aioson parallel:status
 
 **Como ativar:**
 ```
-@genome
+/aioson:agent:genome
 ```
 
 **Entrega:**
@@ -514,7 +514,7 @@ Depois disso, ela passa a ser parte real do pacote local da squad e deve ser con
 
 **Como ativar:**
 ```
-/dev
+/aioson:agent:dev
 ```
 
 **Princípios que ele aplica em qualquer stack:**
@@ -567,7 +567,7 @@ Se o usuário pedir para pular o teste, o `@dev` resiste, explica, e só cede ap
 
 **Como ativar:**
 ```
-/qa
+/aioson:agent:qa
 ```
 
 **Entrega:**
@@ -631,7 +631,7 @@ O root de `.aioson/context/` fica limpo automaticamente. O desenvolvedor não pr
 
 **Como ativar:**
 ```
-/tester
+/aioson:agent:tester
 ```
 
 **Entrega:**
@@ -660,13 +660,13 @@ O root de `.aioson/context/` fica limpo automaticamente. O desenvolvedor não pr
 
 | Modo | Como ativar | O que faz |
 |---|---|---|
-| A — Enriquecimento (padrão) | `/sheldon` | Analisa o PRD alvo e sugere melhorias prioritárias |
-| B — Revisão Global | `/sheldon` + "revisão geral" | Escaneia todos os PRDs e planos ativos |
-| C — Validação Completa | `/sheldon` + "validar" ou "preparar para dev" | Auditoria completa + checklist final antes de codar |
+| A — Enriquecimento (padrão) | `/aioson:agent:sheldon` | Analisa o PRD alvo e sugere melhorias prioritárias |
+| B — Revisão Global | `/aioson:agent:sheldon` + "revisão geral" | Escaneia todos os PRDs e planos ativos |
+| C — Validação Completa | `/aioson:agent:sheldon` + "validar" ou "preparar para dev" | Auditoria completa + checklist final antes de codar |
 
 **Como ativar:**
 ```
-/sheldon
+/aioson:agent:sheldon
 ```
 
 **Entrega:**
@@ -695,7 +695,7 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 **Como ativar:**
 ```
-@committer
+/aioson:agent:committer
 ```
 
 **Entrega:**
@@ -716,7 +716,7 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 **Como ativar:**
 ```
-@copywriter
+/aioson:agent:copywriter
 ```
 
 **Entrega:**
@@ -738,7 +738,7 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 **Como ativar:**
 ```
-@briefing
+/aioson:agent:briefing
 ```
 
 **Entrega:**
@@ -759,7 +759,7 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 **Como ativar:**
 ```
-@design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 ```
 
 **Entrega:**
@@ -779,7 +779,7 @@ Agentes que nao fazem parte do fluxo principal de entrega, mas entram sob demand
 
 **Como ativar:**
 ```
-@discover
+/aioson:agent:discover
 ```
 
 **Ou via CLI:**
@@ -806,7 +806,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@neo
+/aioson:agent:neo
 ```
 
 **Entrega:**
@@ -827,7 +827,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@orache
+/aioson:agent:orache
 ```
 
 **Entrega:**
@@ -849,7 +849,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@pentester
+/aioson:agent:pentester
 ```
 
 **Entrega:**
@@ -870,7 +870,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@profiler-researcher
+/aioson:agent:profiler-researcher
 ```
 
 **Entrega:**
@@ -889,7 +889,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@profiler-enricher
+/aioson:agent:profiler-enricher
 ```
 
 **Entrega:**
@@ -908,7 +908,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@profiler-forge
+/aioson:agent:profiler-forge
 ```
 
 **Entrega:**
@@ -927,7 +927,7 @@ npx @jaimevalasek/aioson scan:project . --folder=src
 
 **Como ativar:**
 ```
-@site-forge
+/aioson:agent:site-forge
 ```
 
 **Exemplos de uso:**
@@ -953,7 +953,7 @@ Extraia o design de https://exemplo.com como uma skill
 
 **Como ativar:**
 ```
-@validator
+/aioson:agent:validator
 ```
 
 **Entrega:**

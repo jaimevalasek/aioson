@@ -72,7 +72,7 @@ Depois siga a sequência natural:
 ### Opção 2: via `@genome`
 
 ```text
-@genome
+/aioson:agent:genome
 Tipo: persona
 Pessoa: Stefan Georgi
 Domínio: direct response copywriting

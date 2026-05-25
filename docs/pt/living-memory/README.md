@@ -71,7 +71,7 @@ A feature `living-memory` foi entregue em 5 fases entre 2026-04 e 2026-05:
 
 | Fase | Entrega | Status |
 |---|---|---|
-| 0 | Slash `/discover` em todos harnesses + `doctor.js` reconhece slashes | ✅ |
+| 0 | Slash `/aioson:agent:discover` em todos harnesses + `doctor.js` reconhece slashes | ✅ |
 | 1 | Engine determinístico + `memory:reflect-prepare/commit` + 3 templates | ✅ |
 | 2 | `autonomy-protocol.json` v1.1 com `tiers` + `permissions-generator` (4 harnesses) + `notify` | ✅ |
 | 3 | Capability `reflect_memory` nos manifests + hooks em `workflow:next` + `runAgentDone` + agentes com Memory reflection | ✅ |

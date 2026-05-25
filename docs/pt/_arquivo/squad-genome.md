@@ -467,7 +467,7 @@ Na prática:
 Exemplo:
 
 ```text
-@squad
+/aioson:agent:squad
 Quero montar um squad para YouTube.
 
 Domínio: YouTube Creator focado em vídeos longos
@@ -489,7 +489,7 @@ Resultado esperado:
 ### Cenário 2: criar um genome depois
 
 ```text
-@genome
+/aioson:agent:genome
 Quero um genome para storytelling com retenção alta em vídeos longos do YouTube Brasil.
 ```
 

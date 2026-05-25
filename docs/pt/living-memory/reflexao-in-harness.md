@@ -173,7 +173,7 @@ ls: cannot access: No such file or directory
 | Cenário | Comportamento |
 |---|---|
 | Git não disponível no projeto | Engine retorna `verdict=skip`, prepare loga `skipped` e não escreve manifest |
-| `bootstrap/` não existe | Prepare retorna `missing_bootstrap`, sugere `/discover` |
+| `bootstrap/` não existe | Prepare retorna `missing_bootstrap`, sugere `/aioson:agent:discover` |
 | Diff range inválido (`HEAD~3` não existe — projeto novo) | Fallback para `git diff HEAD` (working tree). Se ainda assim vazio: skip |
 | Agente edita arquivo fora de `allowed_paths` | Commit rejeita, emite `memory_reflect_failed` com erro `outside allowed_paths` |
 | Agente esquece de atualizar `generated_at` | Reject com `generated_at not updated` |

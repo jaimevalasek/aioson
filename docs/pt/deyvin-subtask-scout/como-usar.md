@@ -95,7 +95,7 @@ Saída:
 }
 ```
 
-Scout persiste com `status: "error"`. `@deyvin` informa o usuário e oferece handoff manual para `/architect` se necessário.
+Scout persiste com `status: "error"`. `@deyvin` informa o usuário e oferece handoff manual para `/aioson:agent:architect` se necessário.
 
 ---
 
@@ -121,7 +121,7 @@ Saída:
 }
 ```
 
-`@deyvin` superfície a mensagem e pergunta ao usuário como prosseguir: normalmente handoff para `/architect` se os surveys continuarem se multiplicando.
+`@deyvin` superfície a mensagem e pergunta ao usuário como prosseguir: normalmente handoff para `/aioson:agent:architect` se os surveys continuarem se multiplicando.
 
 Para aumentar o limite no projeto:
 

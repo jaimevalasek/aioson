@@ -15,11 +15,11 @@
 
 **Diagnóstico:** `.aioson/context/bootstrap/` está vazio ou faltando arquivos. O agente está caindo no fallback de varrer o repo, e isso consome contexto + perde nuances.
 
-**Fix:** rode `/discover` no harness ativo. Esse é o único caminho — bootstrap é **semântico**, precisa do LLM analisando o projeto. `doctor --fix` **não** popula bootstrap (a hint deixa isso explícito).
+**Fix:** rode `/aioson:agent:discover` no harness ativo. Esse é o único caminho — bootstrap é **semântico**, precisa do LLM analisando o projeto. `doctor --fix` **não** popula bootstrap (a hint deixa isso explícito).
 
 ```bash
 # Em qualquer harness:
-/discover
+/aioson:agent:discover
 
 # O agente vai:
 # - Ler o código real
@@ -49,7 +49,7 @@ aioson memory:status .
 
 (Repare: cobertura 4/4 mas advisório por estar antigo — a hint detecta via `generated_at`.)
 
-**Fix:** rode `/discover` novamente — ele sobrescreve com a foto atual. Alternativa para refresh parcial: faça uma sessão de `/dev` que mexa em rotas ou models — a reflexão automática vai atualizar `how-it-works.md` e `current-state.md`.
+**Fix:** rode `/aioson:agent:discover` novamente — ele sobrescreve com a foto atual. Alternativa para refresh parcial: faça uma sessão de `/aioson:agent:dev` que mexa em rotas ou models — a reflexão automática vai atualizar `how-it-works.md` e `current-state.md`.
 
 ---
 
@@ -152,7 +152,7 @@ O fix chama `permissions-generator` automaticamente. Os arquivos anteriores fica
   Hint: Missing: .claude/commands/aioson/agent/discover.md. Run `aioson doctor . --fix` to restore them from the template.
 ```
 
-**Diagnóstico:** `.claude/commands/aioson/agent/<nome>.md` não existe. Os 4 obrigatórios são `setup.md`, `dev.md`, `qa.md`, `discover.md`. Sem o slash, o usuário não consegue invocar `/discover`, `/dev`, etc. em Claude Code.
+**Diagnóstico:** `.claude/commands/aioson/agent/<nome>.md` não existe. Os 4 obrigatórios são `setup.md`, `dev.md`, `qa.md`, `discover.md`. Sem o slash, o usuário não consegue invocar `/aioson:agent:discover`, `/aioson:agent:dev`, etc. em Claude Code.
 
 **Fix:**
 
@@ -215,7 +215,7 @@ Cria o diretório vazio. Dossiês são populados pelos agentes (`@product`, `@de
 
 3. **Agente não está lendo `reflect-prompt.json`?** A seção "Memory reflection" em `dev.md`/`qa.md`/`deyvin.md` instrui ele. Se o agente que você está usando é custom (`.aioson/my-agents/`), adicione a seção lá também.
 
-4. **Bootstrap não existe?** Reflexão pula silenciosamente quando `bootstrap/` não está presente — rode `/discover` primeiro.
+4. **Bootstrap não existe?** Reflexão pula silenciosamente quando `bootstrap/` não está presente — rode `/aioson:agent:discover` primeiro.
 
 ---
 
@@ -274,7 +274,7 @@ O hook do installer regenera as 4 permissões nativas. Próxima invocação do c
 | Forçar reflexão manual | `aioson memory:reflect-prepare . --agent=dev --force` |
 | Apagar manifest pendente | `rm .aioson/runtime/reflect-prompt.json` |
 | Reset full: reinstalar template | `aioson update --all .` (backup automático em `.aioson/backups/`) |
-| Reseed bootstrap | `/discover` no harness ativo |
+| Reseed bootstrap | `/aioson:agent:discover` no harness ativo |
 
 ---
 

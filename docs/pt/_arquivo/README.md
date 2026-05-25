@@ -65,7 +65,7 @@ npx @jaimevalasek/aioson setup:context
 npx @jaimevalasek/aioson doctor
 ```
 
-Depois, abra seu AI IDE e digite `/setup` para começar.
+Depois, abra seu AI IDE e digite `/aioson:agent:setup` para começar.
 
 Fluxo recomendado:
 - `@setup` primeiro

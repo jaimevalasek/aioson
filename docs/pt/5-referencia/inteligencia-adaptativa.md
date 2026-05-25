@@ -64,7 +64,7 @@ aioson learning:apply . --file=.aioson/evolution/pending-2026-03-30T12-00-00.jso
 
 ### Exemplos práticos
 
-**Cenário:** durante 3 sessões com o agente `/dev`, você corrigiu o mesmo erro — o agente tentava criar arquivos `.ts` num projeto que usa apenas `.js`.
+**Cenário:** durante 3 sessões com o agente `/aioson:agent:dev`, você corrigiu o mesmo erro — o agente tentava criar arquivos `.ts` num projeto que usa apenas `.js`.
 
 O agente registrou um learning `correction` a cada sessão. Com frequência 3:
 
@@ -164,7 +164,7 @@ aioson tool:unregister . --name=run_tests
 
 ### Exemplos práticos
 
-**Cenário:** agente `/qa` precisa checar se o servidor local está no ar antes de rodar testes. Em vez de escrever o curl toda vez:
+**Cenário:** agente `/aioson:agent:qa` precisa checar se o servidor local está no ar antes de rodar testes. Em vez de escrever o curl toda vez:
 
 ```bash
 aioson tool:register . \
@@ -180,7 +180,7 @@ aioson tool:call . --name=check_health --input='{}'
 # OK
 ```
 
-**Cenário:** agente `/dev` cria um script mais complexo para validar migrações:
+**Cenário:** agente `/aioson:agent:dev` cria um script mais complexo para validar migrações:
 
 ```bash
 # Agente cria o arquivo

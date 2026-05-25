@@ -240,7 +240,7 @@ O @dev segue estas regras para contratos:
 O @qa em projetos Web3 vai além de testes funcionais:
 
 ```
-/qa
+/aioson:agent:qa
 
 Audite os contratos para:
 - Reentrancy (todas as funções externas que modificam estado)
@@ -288,7 +288,7 @@ Após instalar, você tem acesso a skills estáticas de referência:
 
 Para usar uma skill, referencie no seu AI IDE:
 ```
-/dev Usando a skill web3-security-checklist, audite nosso contrato.
+/aioson:agent:dev Usando a skill web3-security-checklist, audite nosso contrato.
 ```
 
 ---
@@ -762,7 +762,7 @@ async function takeDown(contract: BBoardAPI) {
 #### @qa audita:
 
 ```
-/qa
+/aioson:agent:qa
 
 Revise o bboard.compact para:
 - Replay attack: sequence.increment() executado corretamente no takeDown?

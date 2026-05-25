@@ -189,6 +189,23 @@ O `package.json` do pacote é diferente do seu `package.json` de Node.js. É o m
 
 ---
 
+## Build antes de publicar (v1.17.2+)
+
+Se o seu pacote contém TypeScript, JSX ou código que precisa ser compilado, use a flag `--build`:
+
+```bash
+npx @jaimevalasek/aioson system:publish --slug=legal-compliance --type=squad --build
+```
+
+O `--build`:
+1. Compila TS/JSX antes de empacotar
+2. Aplica ofuscação JS via terser (minificação + mangling)
+3. Gera o pacote final em formato ZIP
+
+Útil para proteger lógica proprietária em squads e skills distribuídos via aioson.com.
+
+---
+
 ## Variações
 
 | Situação | Ajuste |

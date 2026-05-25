@@ -37,7 +37,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 No arquivo CLAUDE.md, o contexto já foi lido. Digite:
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma o contexto pré-configurado:**
@@ -61,7 +61,7 @@ Próximo passo: ative /dev e descreva o que o projeto precisa ter.
 ### Passo 3: Ativar @dev diretamente
 
 ```
-/dev
+/aioson:agent:dev
 
 Preciso de uma landing page com:
 - Hero section com headline e CTA
@@ -114,7 +114,7 @@ npx @jaimevalasek/aioson doctor
 ### Passo 3: @setup
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma:**
@@ -143,13 +143,13 @@ Se você já tiver uma ideia esboçada, crie um arquivo de entrada antes de ativ
 # - notificação por email na confirmação
 ```
 
-Ao ativar `/product`, o agente detecta `plans/agendamentos.md` e pergunta:
+Ao ativar `/aioson:agent:product`, o agente detecta `plans/agendamentos.md` e pergunta:
 > "Encontrei `plans/agendamentos.md`. Quer que eu use como fonte para o PRD?"
 
 Se sim, ele sintetiza o conteúdo e gera o PRD formal. Você pode deletar o arquivo original depois.
 
 ```
-/product
+/aioson:agent:product
 ```
 
 **O @product registra no `prd.md`:**
@@ -161,7 +161,7 @@ Se sim, ele sintetiza o conteúdo e gera o PRD formal. Você pode deletar o arqu
 ### Passo 5: @analyst — Descoberta do domínio
 
 ```
-/analyst
+/aioson:agent:analyst
 ```
 
 **O agente faz suas 6 perguntas:**
@@ -244,7 +244,7 @@ Isso ajuda especialmente quando o projeto já existe e a clínica quer adicionar
 ### Passo 5: @architect — Estrutura do projeto
 
 ```
-/architect
+/aioson:agent:architect
 ```
 
 **O @architect lê o discovery e entrega** `.aioson/context/architecture.md`:
@@ -287,7 +287,7 @@ tests/Feature/AppointmentTest.php
 ### Passo 6: @dev — Implementação com TDD Gate
 
 ```
-/dev
+/aioson:agent:dev
 
 Implemente a feature de agendamentos primeiro.
 Comece pela migration, model, action e controller.
@@ -357,7 +357,7 @@ Roda o teste → **passa** (GREEN). Commit. Próximo passo.
 ### Passo 7: @qa — Testes
 
 ```
-/qa
+/aioson:agent:qa
 
 Revise a CreateAppointmentAction e escreva os testes para:
 - criação com sucesso
@@ -368,7 +368,7 @@ Revise a CreateAppointmentAction e escreva os testes para:
 
 **O @qa entrega** `tests/Feature/AppointmentTest.php` com todos os casos.
 
-> **Quando usar @tester em vez de @qa:** Se após o `@dev` a cobertura estiver em zero ou muito baixa, ative `/tester` em vez de `/qa`. O `@tester` começa por um inventário completo (`test-inventory.md`), mapeia os riscos, escolhe a estratégia e escreve testes em ordem de prioridade — Auth/Authorization > Business rules > Data integrity > UI. O `@qa` é um revisor pontual; o `@tester` é um engenheiro de testes que parte do zero.
+> **Quando usar @tester em vez de @qa:** Se após o `@dev` a cobertura estiver em zero ou muito baixa, ative `/aioson:agent:tester` em vez de `/aioson:agent:qa`. O `@tester` começa por um inventário completo (`test-inventory.md`), mapeia os riscos, escolhe a estratégia e escreve testes em ordem de prioridade — Auth/Authorization > Business rules > Data integrity > UI. O `@qa` é um revisor pontual; o `@tester` é um engenheiro de testes que parte do zero.
 
 ---
 
@@ -397,7 +397,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 ### Passo 2: @setup
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma o plano MEDIUM completo:**
@@ -418,7 +418,7 @@ Próximo: /product
 ### Passo 3: @product
 
 ```
-/product
+/aioson:agent:product
 ```
 
 **O @product gera o PRD base** com visão, problema, usuários, MVP inicial e direção visual.
@@ -463,7 +463,7 @@ src/
 ### Passo 6: UI/UX (`@ux-ui`)
 
 ```
-/ux-ui
+/aioson:agent:ux-ui
 
 Precisamos de:
 - Dashboard principal com lista de projetos
@@ -481,7 +481,7 @@ Precisamos de:
 ### Passo 7: @pm
 
 ```
-/pm
+/aioson:agent:pm
 ```
 
 **O @pm enriquece** `.aioson/context/prd.md` preservando visão, usuários e identidade visual. O foco passa a ser priorização, fases e critérios de aceite compactos:
@@ -515,7 +515,7 @@ Precisamos de:
 ### Passo 8: @orchestrator
 
 ```
-/orchestrator
+/aioson:agent:orchestrator
 ```
 
 Ou via CLI:
@@ -556,7 +556,7 @@ npx @jaimevalasek/aioson parallel:status
 ### Passo 8: @qa
 
 ```
-/qa
+/aioson:agent:qa
 
 Revise as implementações das 3 lanes e escreva testes para:
 - Isolamento de tenant (crítico)
@@ -642,7 +642,7 @@ frontend/
 ### Passo 4: @dev (contratos)
 
 ```
-/dev
+/aioson:agent:dev
 
 Implemente o contrato Marketplace.sol com:
 - ERC-721 listing
@@ -701,7 +701,7 @@ contract Marketplace is ReentrancyGuard {
 ### Passo 5: @qa (auditoria de contrato)
 
 ```
-/qa
+/aioson:agent:qa
 
 Audite o Marketplace.sol para:
 - Vulnerabilidades de reentrancy
@@ -739,7 +739,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 ### Passo 2: @setup
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma:**
@@ -754,7 +754,7 @@ Próximo: /product
 ### Passo 3: @product
 
 ```
-/product
+/aioson:agent:product
 ```
 
 **O @product gera o PRD base** com visão, usuários, escopo do MVP e fora do escopo.
@@ -762,7 +762,7 @@ Próximo: /product
 ### Passo 4: @analyst
 
 ```
-/analyst
+/aioson:agent:analyst
 ```
 
 *Você responde às perguntas:*
@@ -801,7 +801,7 @@ Próximo: /product
 ### Passo 4: @architect
 
 ```
-/architect
+/aioson:agent:architect
 ```
 
 **O @architect entrega** `.aioson/context/architecture.md`:
@@ -844,7 +844,7 @@ test/
 ### Passo 5: @dev
 
 ```
-/dev
+/aioson:agent:dev
 
 Implemente a rota POST /orders e o OrderService.
 Inclua a validação RN01 (mesa com pedido aberto).
@@ -917,7 +917,7 @@ module.exports = async function orderRoutes(fastify) {
 ### Passo 6: @qa
 
 ```
-/qa
+/aioson:agent:qa
 
 Escreva testes para o OrderService:
 - criação com sucesso
@@ -952,7 +952,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 ### Passo 2: @setup
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma:**
@@ -967,7 +967,7 @@ Próximo: /product
 ### Passo 3: @product
 
 ```
-/product
+/aioson:agent:product
 ```
 
 **O @product gera o PRD base** com visão, usuários, escopo do MVP e fora do escopo.
@@ -1046,7 +1046,7 @@ test/models/, test/controllers/
 ### Passo 5: @dev
 
 ```
-/dev
+/aioson:agent:dev
 
 Implemente a move de tarefa via Turbo Stream.
 Quando o usuário arrasta uma tarefa para outra coluna,
@@ -1111,7 +1111,7 @@ export default class extends Controller {
 ### Passo 6: @qa
 
 ```
-/qa
+/aioson:agent:qa
 
 Escreva testes para:
 - RN01: atribuição de tarefa a não-membro (deve falhar)
@@ -1147,7 +1147,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 ### Passo 2: @setup (detectando FastAPI)
 
 ```
-/setup
+/aioson:agent:setup
 ```
 
 **O agente confirma:**
@@ -1168,7 +1168,7 @@ Próximo passo: ative /dev e descreva o que precisa.
 ### Passo 3: @dev direto
 
 ```
-/dev
+/aioson:agent:dev
 
 Crie uma API FastAPI para controle de estoque com:
 - CRUD de produtos (nome, quantidade, preço, categoria)
@@ -1242,7 +1242,7 @@ Domínio único (Produto), sem autenticação, sem integrações externas. O @de
 
 Se você forneceu informações incompletas, pode simplesmente reativar:
 ```
-/analyst
+/aioson:agent:analyst
 
 Preciso adicionar uma informação: o sistema também vai ter integração com Mercado Pago
 ```

@@ -63,7 +63,7 @@ O `spec.md` é o documento mais importante para projetos que duram mais de uma s
 
 ### Como manter
 
-1. Crie via `/setup` (o agente vai perguntar) ou manualmente
+1. Crie via `/aioson:agent:setup` (o agente vai perguntar) ou manualmente
 2. Atualize ao final de cada sessão com `*update-spec`
 3. Releia no início de cada sessão antes de qualquer prompt
 

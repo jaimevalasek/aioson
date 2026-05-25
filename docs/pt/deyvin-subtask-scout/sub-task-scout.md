@@ -9,7 +9,7 @@
 Sem o scout, `@deyvin` tinha duas opções ruins quando uma pergunta precisava inspecionar muitos arquivos:
 
 1. **Ler tudo inline** — queima ≥10k tokens no contexto pai, polui a memória de trabalho do agente e força o próximo turno a competir com conteúdo de survey obsoleto.
-2. **Fazer handoff para `/architect` ou pausar** — ultrapassa a necessidade real (a maioria dos surveys não precisa de decisões arquiteturais) e quebra o fluxo da conversa com uma troca completa de agente.
+2. **Fazer handoff para `/aioson:agent:architect` ou pausar** — ultrapassa a necessidade real (a maioria dos surveys não precisa de decisões arquiteturais) e quebra o fluxo da conversa com uma troca completa de agente.
 
 O scout resolve isso: o agente pai mantém o contexto limpo e recebe um relatório estruturado de ~500 tokens em vez dos arquivos brutos.
 

@@ -81,7 +81,7 @@ Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falh
 **O que fazer:**
 
 1. O scout foi persistido com `status: "error"` em `.aioson/runtime/scouts/{id}.json`.
-2. `@deyvin` informa o usuário e oferece handoff para `/architect` ou resposta direta com o que já sabe.
+2. `@deyvin` informa o usuário e oferece handoff para `/aioson:agent:architect` ou resposta direta com o que já sabe.
 3. Para aumentar os retries: `{ "max_retries_on_malformed_json": 2 }` no config (raramente necessário — se acontece frequentemente, o prompt template precisa de ajuste).
 
 ---

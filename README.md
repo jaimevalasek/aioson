@@ -559,32 +559,34 @@ aioson squad:dashboard              # real-time web monitoring panel
 
 | Agent | Role | Best for |
 |-------|------|----------|
-| `/setup` | Project onboarding & context | First step on any project |
-| `/product` | Product decisions & PRD | Feature scope, user stories |
-| `/sheldon` | Deep technical reasoning & PRD hardening | Hard engineering problems, spec review |
-| `/analyst` | Domain discovery & entity mapping | Understanding the problem space |
-| `/architect` | Project structure & technical decisions | Architecture, stack choices |
-| `/ux-ui` | UI/UX design system & component specs | Dashboards, flows, components |
-| `/pm` | Backlog & user stories | Sprint planning, task breakdown |
-| `/orchestrator` | Session protocol & parallel execution | Multi-agent coordination |
-| `/dev` | Feature implementation (any stack) | Focused dev tasks |
-| `/deyvin` / `/pair` | Pair programming & continuity | Coding — greenfield or brownfield |
-| `/qa` | Risk-first review & test generation | Quality gates before ship |
-| `/tester` | Systematic test engineering | Coverage gaps, legacy code testing |
-| `/pentester` | Adversarial security review | Security gates before release |
-| `/squad` | Parallel agent squads | Large feature sets in parallel |
-| `/genome` | Agent knowledge & learning | Adaptive squad intelligence |
-| `/committer` | Semantic commit messages | High-quality Git commits |
-| `/briefing` | Plan → structured briefing | Pre-production planning, problem framing |
-| `/copywriter` | Conversion copy & content | Marketing pages, VSL scripts |
-| `/discover` | System discovery & semantic cache | Brownfield mapping, knowledge bootstrap |
-| `/neo` | Onboarding & next steps | "Where do I start?" guidance |
-| `/orache` | Market research & competitors | External data gathering |
-| `/profiler-researcher` | Persona research & profiling | DNA mental research |
-| `/profiler-enricher` | Profile enrichment | Cognitive analysis |
-| `/profiler-forge` | Profile generation | Genome 3.0 advisor creation |
-| `/site-forge` | Site cloning & design extraction | Clone, harvest, blend, or forge skills from any URL |
-| `/validator` | Deliverable validation | Pre-gate verification |
+| `/aioson:agent:setup` | Project onboarding & context | First step on any project |
+| `/aioson:agent:product` | Product decisions & PRD | Feature scope, user stories |
+| `/aioson:agent:sheldon` | Deep technical reasoning & PRD hardening | Hard engineering problems, spec review |
+| `/aioson:agent:analyst` | Domain discovery & entity mapping | Understanding the problem space |
+| `/aioson:agent:architect` | Project structure & technical decisions | Architecture, stack choices |
+| `/aioson:agent:ux-ui` | UI/UX design system & component specs | Dashboards, flows, components |
+| `/aioson:agent:pm` | Backlog & user stories | Sprint planning, task breakdown |
+| `/aioson:agent:orchestrator` | Session protocol & parallel execution | Multi-agent coordination |
+| `/aioson:agent:dev` | Feature implementation (any stack) | Focused dev tasks |
+| `/aioson:agent:deyvin` / `/aioson:agent:pair` | Pair programming & continuity | Coding — greenfield or brownfield |
+| `/aioson:agent:qa` | Risk-first review & test generation | Quality gates before ship |
+| `/aioson:agent:tester` | Systematic test engineering | Coverage gaps, legacy code testing |
+| `/aioson:agent:pentester` | Adversarial security review | Security gates before release |
+| `/aioson:agent:squad` | Parallel agent squads | Large feature sets in parallel |
+| `/aioson:agent:genome` | Agent knowledge & learning | Adaptive squad intelligence |
+| `/aioson:agent:committer` | Semantic commit messages | High-quality Git commits |
+| `/aioson:agent:briefing` | Plan → structured briefing | Pre-production planning, problem framing |
+| `/aioson:agent:copywriter` | Conversion copy & content | Marketing pages, VSL scripts |
+| `/aioson:agent:discover` | System discovery & semantic cache | Brownfield mapping, knowledge bootstrap |
+| `/aioson:agent:neo` | Onboarding & next steps | "Where do I start?" guidance |
+| `/aioson:agent:orache` | Market research & competitors | External data gathering |
+| `/aioson:agent:profiler-researcher` | Persona research & profiling | DNA mental research |
+| `/aioson:agent:profiler-enricher` | Profile enrichment | Cognitive analysis |
+| `/aioson:agent:profiler-forge` | Profile generation | Genome 3.0 advisor creation |
+| `/aioson:agent:site-forge` | Site cloning & design extraction | Clone, harvest, blend, or forge skills from any URL |
+| `/aioson:agent:design-hybrid-forge` | Hybrid design system generation | Merge two visual parents into one |
+| `/aioson:agent:discovery-design-doc` | Discovery & design doc generation | Living design doc bridging discovery to implementation |
+| `/aioson:agent:validator` | Deliverable validation | Pre-gate verification |
 
 ---
 
@@ -672,6 +674,9 @@ Package, publish, and distribute squads, genomes, skills, and full systems throu
 # Package and publish your system/boilerplate
 aioson system:package .
 aioson system:publish . --name=my-stack
+
+# Build mode: compile TS/JSX, obfuscate JS (terser), package as ZIP
+aioson system:publish . --name=my-stack --build
 
 # Publish squads, genomes, and skills
 aioson squad:publish . --squad=marketing --version=1.0.0
@@ -924,36 +929,65 @@ aioson scan:project --json
 ## Documentation
 
 **CLI & commands**
-- [CLI reference](docs/en/cli-reference.md) — full docs for every command
-- [JSON schemas](docs/en/json-schemas.md) — `--json` output contracts
+- [CLI reference](docs/en/5-reference/cli-reference.md) — full docs for every command
+- [JSON schemas](docs/en/5-reference/json-schemas.md) — `--json` output contracts
 
 **Feature guides**
-- [Parallel orchestration](docs/en/parallel.md)
-- [MCP guide](docs/en/mcp.md)
-- [Browser QA guide](docs/en/qa-browser.md)
-- [Web3 guide](docs/en/web3.md)
-- [i18n guide](docs/en/i18n.md)
-- [Squad Dashboard](docs/en/squad-dashboard.md)
+- [Parallel orchestration](docs/en/5-reference/parallel.md)
+- [MCP guide](docs/en/5-reference/mcp.md)
+- [Browser QA guide](docs/en/5-reference/qa-browser.md)
+- [Web3 guide](docs/en/5-reference/web3.md)
+- [i18n guide](docs/en/5-reference/i18n.md)
+- [Squad Dashboard](docs/en/5-reference/squad-dashboard.md)
 
 **Portuguese guides**
-- [Início rápido](docs/pt/inicio-rapido.md)
+
+*Entender*
+- [O que é AIOSON](docs/pt/1-entender/o-que-e-aioson.md)
+- [Por que existe](docs/pt/1-entender/por-que-existe.md)
+- [Mapa do ecossistema](docs/pt/1-entender/mapa-do-ecossistema.md)
+- [Glossário](docs/pt/1-entender/glossario.md)
+
+*Começar*
+- [Primeiro projeto](docs/pt/2-comecar/primeiro-projeto.md)
+- [Projeto existente](docs/pt/2-comecar/projeto-existente.md)
+- [Decisões iniciais](docs/pt/2-comecar/decisoes-iniciais.md)
+
+*Receitas*
+- [App SaaS do zero](docs/pt/3-receitas/app-saas-do-zero.md)
+- [Feature completa com Sheldon](docs/pt/3-receitas/feature-completa-com-sheldon.md)
+- [Da ideia ao PRD via briefing](docs/pt/3-receitas/da-ideia-ao-prd-via-briefing.md)
+- [Landing page](docs/pt/3-receitas/landing-page.md)
+- [Continuidade entre sessões](docs/pt/3-receitas/continuidade-entre-sessoes.md)
+- [Integração em codebase grande](docs/pt/3-receitas/integracao-em-codebase-grande.md)
+- [Refatoração grande](docs/pt/3-receitas/refatoracao-grande.md)
+- [Auditoria de segurança](docs/pt/3-receitas/auditoria-seguranca.md)
+- [Clonar design de site](docs/pt/3-receitas/clonar-design-de-site.md)
+- [Publicar no AIOSON Store](docs/pt/3-receitas/publicar-no-aioson-com.md)
+
+*Agentes*
 - [Guia de agentes](docs/pt/agentes.md)
-- [Squad e Genome](docs/pt/squad-genome.md)
-- [Cenários de uso](docs/pt/cenarios.md)
-- [Clientes AI](docs/pt/clientes-ai.md)
-- [Runtime observability](docs/pt/runtime-observability.md)
-- [Recuperação de sessão](docs/pt/recuperacao-de-sessao.md)
-- [Monitor de contexto](docs/pt/monitor-de-contexto.md)
-- [Busca de contexto](docs/pt/busca-de-contexto.md)
-- [Cache de contexto](docs/pt/cache-de-contexto.md)
-- [Sandbox executor](docs/pt/sandbox.md)
-- [Agent sharding](docs/pt/agent-sharding.md)
-- [Guia do engenheiro](docs/pt/guia-engineer.md)
-- [Squad Dashboard (PT)](docs/pt/squad-dashboard.md)
-- [SDD automation scripts](docs/pt/sdd-automation-scripts.md)
-- [Motor hardening](docs/pt/motor-hardening.md)
-- [Design-docs governance](docs/pt/design-docs-governance.md)
-- [Runner system](docs/pt/runner-system.md)
+- [Referência por agente](docs/pt/4-agentes/README.md)
+
+*Referência*
+- [Clientes AI](docs/pt/5-referencia/clientes-ai.md)
+- [SDD framework](docs/pt/5-referencia/sdd-framework.md)
+- [Motor hardening](docs/pt/5-referencia/motor-hardening.md)
+- [Runtime observability](docs/pt/5-referencia/runtime-observability.md)
+- [Live sessions](docs/pt/5-referencia/live-sessions.md)
+- [Memória e contexto](docs/pt/5-referencia/memoria-e-contexto.md)
+- [Feature dossier](docs/pt/5-referencia/feature-dossier.md)
+- [Agent sharding](docs/pt/5-referencia/agent-sharding.md)
+- [Skills](docs/pt/5-referencia/skills.md)
+- [Sandbox executor](docs/pt/5-referencia/sandbox.md)
+- [Squad Dashboard (PT)](docs/pt/5-referencia/squad-dashboard.md)
+- [Design-docs governance](docs/pt/5-referencia/design-docs-governance.md)
+- [Runner system](docs/pt/5-referencia/runner-system.md)
+- [Secure by default](docs/pt/5-referencia/secure-by-default.md)
+
+*Living Memory*
+- [Memória viva](docs/pt/living-memory/memoria-viva.md)
+- [Autonomy contract](docs/pt/living-memory/autonomy-contract.md)
 
 ---
 

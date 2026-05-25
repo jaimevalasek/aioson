@@ -70,7 +70,7 @@ O agente tem **5 modos**. Se você não especificar o modo, ele roda o **onboard
 
 ## Onboarding inteligente
 
-Quando você chamar `/site-forge` sem especificar o modo, o agente pergunta:
+Quando você chamar `/aioson:agent:site-forge` sem especificar o modo, o agente pergunta:
 
 ```
 O que você quer fazer com este site?
@@ -86,11 +86,11 @@ Depois coleta os dados que faltam (URL, skill, ratio) e já avança.
 ## Como invocar
 
 ```text
-/site-forge <url> <skill>              → Modo A (transform)
-/site-forge <url>                      → Onboarding guiado
-/site-forge <url> --skill-only         → Modo D (só a skill)
-/site-forge <url> <skill> --blend      → Modo E (blend 50/50)
-/site-forge <url> <skill> --blend=70   → Modo E (70% site / 30% skill)
+/aioson:agent:site-forge <url> <skill>              → Modo A (transform)
+/aioson:agent:site-forge <url>                      → Onboarding guiado
+/aioson:agent:site-forge <url> --skill-only         → Modo D (só a skill)
+/aioson:agent:site-forge <url> <skill> --blend      → Modo E (blend 50/50)
+/aioson:agent:site-forge <url> <skill> --blend=70   → Modo E (70% site / 30% skill)
 ```
 
 Com flags opcionais:
@@ -195,7 +195,7 @@ aioson design-hybrid:options . --locale=pt-BR
 ### Passo 2 — Forjar a skill híbrida
 
 ```text
-/design-hybrid-forge
+/aioson:agent:design-hybrid-forge
 → skills primárias: aurora-command-ui + cognitive-core-ui
 → nome: aurora-cognitive-command
 ```
@@ -203,7 +203,7 @@ aioson design-hybrid:options . --locale=pt-BR
 ### Passo 3 — Aplicar no clone
 
 ```text
-/site-forge https://datadog.com aurora-cognitive-command
+/aioson:agent:site-forge https://datadog.com aurora-cognitive-command
 ```
 
 Resultado: estrutura e interações do Datadog, visual da `aurora-cognitive-command`.
@@ -219,7 +219,7 @@ Veja a documentação completa do seletor interativo em: [`design-hybrid-forge.m
 ### Modo A — Clone com skill existente
 
 ```text
-/site-forge https://stripe.com aurora-command-ui
+/aioson:agent:site-forge https://stripe.com aurora-command-ui
 ```
 
 Estrutura e fluxo do Stripe, visual da `aurora-command-ui`.
@@ -229,7 +229,7 @@ Estrutura e fluxo do Stripe, visual da `aurora-command-ui`.
 ### Modo B — Réplica fiel + nova skill
 
 ```text
-/site-forge https://linear.app
+/aioson:agent:site-forge https://linear.app
 ```
 
 Forja uma skill em `.aioson/installed-skills/linear.app/` e constrói uma réplica fiel.
@@ -241,7 +241,7 @@ Forja uma skill em `.aioson/installed-skills/linear.app/` e constrói uma répli
 Perguntar o modo via onboarding:
 
 ```text
-/site-forge https://framer.com
+/aioson:agent:site-forge https://framer.com
 → escolha A no onboarding
 → skill: clean-saas-ui
 ```
@@ -253,7 +253,7 @@ Textos e imagens do Framer, layout e visual do `clean-saas-ui`.
 ### Modo D — Só a skill, sem construir
 
 ```text
-/site-forge https://resend.com --skill-only
+/aioson:agent:site-forge https://resend.com --skill-only
 ```
 
 Forja `.aioson/installed-skills/resend.com/`. Nenhuma página é construída.
@@ -263,7 +263,7 @@ Forja `.aioson/installed-skills/resend.com/`. Nenhuma página é construída.
 ### Modo E — Blend 50/50
 
 ```text
-/site-forge https://vercel.com neo-brutalist-ui --blend
+/aioson:agent:site-forge https://vercel.com neo-brutalist-ui --blend
 ```
 
 Tokens mesclados 50% Vercel / 50% `neo-brutalist-ui`.
@@ -273,7 +273,7 @@ Tokens mesclados 50% Vercel / 50% `neo-brutalist-ui`.
 ### Blend assimétrico (70% site)
 
 ```text
-/site-forge https://notion.so glassmorphism-ui --blend=70
+/aioson:agent:site-forge https://notion.so glassmorphism-ui --blend=70
 ```
 
 70% tokens do Notion, 30% tokens da `glassmorphism-ui`.
@@ -284,7 +284,7 @@ Tokens mesclados 50% Vercel / 50% `neo-brutalist-ui`.
 
 ```bash
 cd meu-projeto-nextjs
-/site-forge https://loom.com cognitive-core-ui
+/aioson:agent:site-forge https://loom.com cognitive-core-ui
 ```
 
 O agente detecta o `package.json` com `next` e usa o projeto existente.
@@ -315,4 +315,4 @@ Os textos e imagens extraídos são apenas para estruturar o clone durante o des
 ## Quando não usar
 
 - o site tem proteção pesada (SPA autenticada, bot protection agressivo)
-- você quer criar a estrutura do zero com total liberdade → use `/deyvin` ou `/dev`
+- você quer criar a estrutura do zero com total liberdade → use `/aioson:agent:deyvin` ou `/aioson:agent:dev`
