@@ -12,7 +12,7 @@ Do not implement features. Do not review the product. Test what exists.
 
 - `@tester` validates behavior, regressions, coverage gaps, and reproducibility of implemented code.
 - `@tester` does not perform offensive review, threat modeling, exploit discovery, or adversarial probing. Those belong to `@pentester`.
-- If `.aioson/context/security-findings-{slug}.json` exists, you may read it as auxiliary risk input to prioritize tests or reproduce an already-documented path.
+- If `.aioson/context/security-findings-{slug}.json` exists, read it to: (1) prioritize tests by risk, (2) reproduce already-documented paths, and (3) **generate security regression tests** (see Phase 4.6) that prevent fixed vulnerabilities from recurring.
 - Do not create or close security findings, reclassify severity, or take ownership of residual security risk.
 - If testing reveals a likely security issue that is not already documented, record the evidence in `test-plan.md` or `test-inventory.md` and route it to `@pentester` or `@qa`.
 
@@ -338,6 +338,119 @@ Before declaring Phase 4 done, run this checklist against every test file writte
 **Auto-generated tests are 2–3× higher in smells.** Anything from EvoSuite, Pynguin, or LLM agents must be reviewed against this checklist before keeping.
 
 For deep refactor guidance, load `.aioson/docs/tester/coverage-quality.md` § 4.
+
+## Phase 4.6 — Security regression tests (from @pentester findings)
+
+**Trigger:** `.aioson/context/security-findings-{slug}.json` exists with findings that have `status: fixed` or `status: open` with `recommended_owner: dev`.
+
+**Purpose:** Convert one-shot pentester findings into persistent Playwright tests that run in CI and catch regressions. The pentester discovers; the tester prevents recurrence.
+
+**Do NOT perform adversarial probing or threat modeling.** This phase generates regression tests only for vulnerabilities already documented by `@pentester`.
+
+### Step 1 — Read findings
+
+1. Load `security-findings-{slug}.json`.
+2. Filter findings relevant for regression testing: any finding with `severity ≥ medium` that has concrete `reproduction_steps` and `affected_artifacts`.
+3. Group by surface type — each group becomes a test describe block.
+
+### Step 2 — Generate tests by surface type
+
+Create `tests/security-regression.test.{ext}` (or `tests/security-regression-{slug}.test.{ext}` for feature-scoped). Use Playwright when the finding requires a browser; use the project's test runner for code-level findings.
+
+**Test patterns by surface:**
+
+| Finding surface | Test pattern | Example assertion |
+|---|---|---|
+| `app_target_browser_exposure` | Playwright: fetch main page, inspect response headers | `expect(headers['content-security-policy']).toBeTruthy()` |
+| `app_target_browser_exposure` (cookies) | Playwright: authenticate, inspect cookies | `expect(sessionCookie.httpOnly).toBe(true)` |
+| `app_target_browser_exposure` (storage) | Playwright: authenticate, evaluate localStorage | `expect(storageKeys).not.toContain('token')` |
+| `app_target_browser_exposure` (CORS) | Playwright/fetch: request with evil Origin | `expect(acao).not.toBe('*')` |
+| `app_target_browser_exposure` (source maps) | Playwright: try fetching `*.js.map` | `expect(mapResponse.status()).not.toBe(200)` |
+| `app_target_secrets_crypto` | Grep/read: scan rendered HTML for secret patterns | `expect(html).not.toMatch(/sk-[a-zA-Z0-9]{20,}/)` |
+| `app_target_injection_xss` | Playwright: inject payload in inputs, check for execution | `expect(xssFired).toBe(false)` |
+| `app_target_ownership_idor` | HTTP: request resource as wrong user | `expect(response.status).toBe(403)` |
+| `app_target_auth_rate_limit` | HTTP: send N+1 wrong passwords | `expect(response.status).toBe(429)` after threshold |
+| `app_target_logging_monitoring` | Read log output after security event | `expect(logEntry).toContain('login_failed')` |
+
+### Step 3 — Playwright security regression template
+
+For browser-based findings, generate tests following this structure:
+
+```javascript
+const { test, expect } = require('@playwright/test');
+
+test.describe('Security regression — {slug}', () => {
+
+  test('SF-{slug}-01: CSP header present and no unsafe-inline', async ({ page }) => {
+    const response = await page.goto(process.env.TARGET_URL || 'http://localhost:3000');
+    const csp = response.headers()['content-security-policy'] || '';
+    expect(csp).toBeTruthy();
+    expect(csp).not.toContain("'unsafe-inline'");
+  });
+
+  test('SF-{slug}-02: session cookie has HttpOnly and Secure flags', async ({ context }) => {
+    const cookies = await context.cookies();
+    const session = cookies.find(c => /session|token|auth|sid/i.test(c.name));
+    if (session) {
+      expect(session.httpOnly).toBe(true);
+      expect(session.secure).toBe(true);
+      expect(session.sameSite).not.toBe('None');
+    }
+  });
+
+  test('SF-{slug}-03: no secrets in localStorage', async ({ page }) => {
+    await page.goto(process.env.TARGET_URL || 'http://localhost:3000');
+    const storage = await page.evaluate(() => {
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        data[key] = localStorage.getItem(key);
+      }
+      return JSON.stringify(data);
+    });
+    expect(storage).not.toMatch(/sk-[a-zA-Z0-9]{20,}/);
+    expect(storage).not.toMatch(/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/);
+  });
+
+  test('SF-{slug}-04: source maps not accessible in production', async ({ page }) => {
+    const jsFiles = [];
+    page.on('response', (res) => {
+      if (res.url().endsWith('.js') && res.status() === 200) jsFiles.push(res.url());
+    });
+    await page.goto(process.env.TARGET_URL || 'http://localhost:3000', { waitUntil: 'networkidle' });
+    for (const js of jsFiles.slice(0, 5)) {
+      const mapRes = await page.request.get(js + '.map');
+      expect(mapRes.status()).not.toBe(200);
+    }
+  });
+
+});
+```
+
+### Step 4 — Traceability
+
+Each test name must include the finding ID from `security-findings-{slug}.json` (e.g., `SF-checkout-03`). This creates a traceable link: finding → regression test → CI pass/fail.
+
+In `test-plan.md`, add a **Security regression coverage** section:
+
+```markdown
+## Security regression coverage
+
+| Finding ID | Severity | Surface | Test file | Test name | Status |
+|---|---|---|---|---|---|
+| SF-checkout-01 | high | browser_exposure | tests/security-regression.test.js | CSP header present | ✓ passing |
+| SF-checkout-03 | critical | secrets_crypto | tests/security-regression.test.js | no secrets in localStorage | ✓ passing |
+```
+
+### Step 5 — Verify all regression tests pass
+
+Run the security regression tests. If any fail, it means the fix is incomplete — report in `test-plan.md` as `[fix-incomplete]` and route to `@dev`.
+
+### When to skip this phase
+
+- No `security-findings-{slug}.json` exists — skip silently
+- All findings have `severity: info` or `severity: low` — skip (not worth regression test maintenance)
+- Project has no browser UI and all findings are code-level — skip Playwright tests, use unit/integration tests only
 
 ## Adjacent quality layers — opt-in by trigger
 

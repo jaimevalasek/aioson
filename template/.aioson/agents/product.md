@@ -212,8 +212,10 @@ Check the following conditions in order:
 1. Propose a slug from the feature name (e.g., "shopping cart" → `shopping-cart`).
 2. Confirm: "I'll save this as `prd-shopping-cart.md` — does that work?"
 3. Write `prd-{slug}.md`.
+   After writing the PRD, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="PRD written: {slug}, classification: {class}" 2>/dev/null || true`
 4. Add or update `features.md`: `| {slug} | in_progress | {ISO-date} | — |`
    Create `features.md` if it does not yet exist.
+   After registering, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="Feature registered: {slug}" 2>/dev/null || true`
 
 ## Required input
 - `.aioson/context/project.context.md` (always)
@@ -326,6 +328,8 @@ Action: /copywriter
 
 When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
 
+> **Tip:** before the next agent loads, consider running `aioson context:pack .` to compress context and reduce token cost for the downstream agent.
+
 ## Responsibility boundary
 
 `@product` owns product thinking only:
@@ -364,4 +368,11 @@ aioson dev:state:write . --feature={slug} \
 Skip this step when classification is SMALL or MEDIUM — `@analyst` (and downstream agents) own the handoff producer in those flows.
 
 ## Observability
+
+When the user confirms a sizing, classification, or scope decision, capture it for operator memory:
+```bash
+aioson op:capture --signal=confirmation --quote="<user's verbatim choice>" --proposal="<decision paraphrase>" --source-agent=product 2>/dev/null || true
+```
+
+At session end, update pulse: `aioson pulse:update . --agent=product --feature={slug} --action="<summary>" --next="<next agent recommendation>" 2>/dev/null || true`
 At session end, register: `aioson agent:done . --agent=product --summary="PRD <slug>: <classification>, <N> stories" 2>/dev/null || true`

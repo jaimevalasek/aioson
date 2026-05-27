@@ -268,6 +268,32 @@ scheduled spec.md snapshots. Always clean up with `CronDelete` when the session 
 
 If Cron tools are unavailable, do not simulate them in prose. Use explicit manual checkpoints with `parallel:status` instead.
 
+## Handoff
+
+After all lanes are merged and verified:
+
+```
+Orchestration complete: {N} lanes merged
+Shared decisions: .aioson/context/parallel/shared-decisions.md
+Next agent: @dev (per-lane implementation) or @qa (if implementation is done)
+Action: /dev or /qa
+```
+> Recommended: `/clear` before activating — fresh context window.
+
+## Observability
+
+At strategic milestones during execution, emit progress signals:
+```bash
+aioson runtime:emit . --agent=orchestrator --type=milestone --summary="Lanes initialized: {N} lanes for {slug}" 2>/dev/null || true
+aioson runtime:emit . --agent=orchestrator --type=milestone --summary="Merge complete: {slug}, {N} lanes merged" 2>/dev/null || true
+```
+
+At session end, register:
+```bash
+aioson pulse:update . --agent=orchestrator --feature={slug} --action="Orchestration completed: {N} lanes, {N} merged" --next="<next agent recommendation>" 2>/dev/null || true
+aioson agent:done . --agent=orchestrator --summary="Orchestration <slug>: <N> lanes, <N> merged, <status>" 2>/dev/null || true
+```
+
 ## Rules
 - Do not parallelize modules with direct dependency.
 - Record all cross-module decisions in `shared-decisions.md` before implementing.

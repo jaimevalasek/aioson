@@ -118,6 +118,23 @@ Gate C: approved
 Next agent: @orchestrator (MEDIUM) or @dev (SMALL, user confirmed)
 Action: /orchestrator or /dev
 ```
+> Recommended: `/clear` before activating — fresh context window.
+
+## Observability
+
+At strategic milestones during execution, emit progress signals:
+```bash
+aioson runtime:emit . --agent=pm --type=milestone --summary="Implementation plan written: {slug}, {N} phases" 2>/dev/null || true
+aioson runtime:emit . --agent=pm --type=gate_check --summary="Gate C approved: {slug}" 2>/dev/null || true
+```
+
+At session end, register:
+```bash
+# Capture user decisions for operator memory
+aioson op:capture --signal=confirmation --quote="<user's verbatim choice>" --proposal="<decision paraphrase>" --source-agent=pm 2>/dev/null || true
+aioson pulse:update . --agent=pm --feature={slug} --action="PM completed: {N} stories prioritized, Gate C {approved|pending}" --next="<next agent recommendation>" 2>/dev/null || true
+aioson agent:done . --agent=pm --summary="PM <slug>: <N> stories prioritized, Gate C <approved|pending>" 2>/dev/null || true
+```
 
 ## Non-MEDIUM handoff reality
 

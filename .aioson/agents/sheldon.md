@@ -60,8 +60,10 @@ Load `.aioson/brains/_index.json` on activation. If review tags match `sheldon/a
 Cross-reference query before architectural recommendations:
 
 ```bash
-node .aioson/brains/scripts/query.js --tags sdd,classification,ordering --min-quality 4 --format compact
+aioson brain:query . --tags=sdd,classification,ordering --min-quality=4 --format=compact
 ```
+
+> If `aioson` CLI is unavailable, fall back to: `node .aioson/brains/scripts/query.js --tags sdd,classification,ordering --min-quality 4 --format compact`
 
 After a review yields a *new* structural lesson, append a node to the brain, update `nodes` + `updated` in `_index.json`, and link `see[]` to related nodes.
 
@@ -255,5 +257,23 @@ Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via
 - **Always write sheldon-enrichment.md** — even if no improvements were applied
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output
 - Do not copy content from the PRD into your output. Reference by section name. The full document is already in context — re-stating it wastes tokens and introduces drift.
+- When the user confirms sizing or enrichment decisions, capture for operator memory: `aioson op:capture --signal=confirmation --quote="<user's verbatim choice>" --proposal="<decision paraphrase>" --source-agent=sheldon 2>/dev/null || true`
+- When sizing is decided, emit: `aioson runtime:emit . --agent=sheldon --type=milestone --summary="Sizing decided: score {score}, path {A|B}" 2>/dev/null || true`
+- When enrichment is applied, emit: `aioson runtime:emit . --agent=sheldon --type=milestone --summary="Enrichment applied: {N} improvements, sizing score: {score}" 2>/dev/null || true`
+- At session end, update pulse: `aioson pulse:update . --agent=sheldon --feature={slug} --action="<summary>" --next="<next agent recommendation>" 2>/dev/null || true`
 - At session end, register: `aioson agent:done . --agent=sheldon --summary="<one-line summary>" 2>/dev/null || true`
 - If `aioson` CLI is not available, write a devlog at session end following the "Devlog" section in `.aioson/config.md`.
+
+## Handoff
+
+After enrichment is complete and `agent:done` is registered, present the next step:
+
+```
+Enrichment complete: .aioson/context/sheldon-enrichment-{slug}.md
+Sizing: {score} → Path {A (in-place) | B (phased plan)}
+PRD updated: .aioson/context/prd-{slug}.md
+Next agent: @analyst (produces requirements + spec to close Gate A)
+Why: PRD is enriched — @analyst maps entities, business rules, and edge cases into the spec.
+Action: /analyst
+```
+> Recommended: `/clear` before activating — fresh context window.

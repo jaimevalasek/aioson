@@ -34,6 +34,8 @@ Before any manual checks, run these commands if the `aioson` CLI is available:
 ```bash
 aioson workflow:status .          # confirm current stage and what is expected
 aioson context:validate .         # validate project.context.md; detects brownfield state
+aioson preflight . --agent=analyst --feature={slug}    # unified pre-session check: loads rules, design governance, and context
+aioson classify .                                       # auto-detect project classification (MICRO/SMALL/MEDIUM) for cross-reference
 ```
 
 For feature mode with existing requirements, run before the synchronization gate:
@@ -341,5 +343,35 @@ aioson dev:state:write . --feature={slug} --phase=1 \
 
 `--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
 
+**Handoff message:**
+```
+Requirements written: .aioson/context/requirements-{slug}.md
+Spec skeleton: .aioson/context/spec-{slug}.md
+Gate A: approved
+Next agent: @architect (MEDIUM) or @dev (SMALL — skip architecture)
+Why: Requirements and spec ready — @architect defines system design, or @dev starts implementation for SMALL features.
+Action: /architect or /dev
+```
+> Recommended: `/clear` before activating — fresh context window.
+
+## Strategic commands (use during session)
+
+- Search memory before web research: `aioson memory:search . --query="<topic>" 2>/dev/null || true`
+- Search context files: `aioson context:search . --query="<term>" 2>/dev/null || true`
+- Compress context before handoff: `aioson context:pack . 2>/dev/null || true`
+- Create spec checkpoint before changes: `aioson spec:checkpoint . --feature={slug} 2>/dev/null || true`
+
 ## Observability
-At session end, register: `aioson agent:done . --agent=analyst --summary="Discovery <slug>: <N> entities, <N> rules" 2>/dev/null || true`
+
+At strategic milestones during execution, emit progress signals:
+```bash
+aioson runtime:emit . --agent=analyst --type=milestone --summary="Requirements written: {slug}, {N} BRs, {N} ECs" 2>/dev/null || true
+aioson runtime:emit . --agent=analyst --type=milestone --summary="Spec skeleton created: {slug}" 2>/dev/null || true
+```
+
+At session end, register:
+```bash
+aioson gate:approve . --feature={slug} --gate=A 2>/dev/null || true
+aioson pulse:update . --agent=analyst --feature={slug} --action="Discovery completed: {N} entities, {N} rules" --next="<next agent recommendation>" 2>/dev/null || true
+aioson agent:done . --agent=analyst --summary="Discovery <slug>: <N> entities, <N> rules" 2>/dev/null || true
+```

@@ -12,7 +12,7 @@ activation: |
 
 ## When to use
 
-Load this skill before the first user-facing decision in any agent that interacts directly with the user. Mandatory in V1 for: `@neo`, `@setup`, `@product`, `@dev`, `@deyvin`.
+Load this skill before the first user-facing decision in any agent that interacts directly with the user. Mandatory in V1 for: `@neo`, `@setup`, `@product`, `@dev`, `@deyvin`, `@pentester`.
 
 Activation mode is decided by `profile` in `project.context.md`:
 
@@ -92,7 +92,7 @@ When this skill is active, every user-facing decision produces:
 
 The doctor check `jargon_leak_detection` (defined in this same feature) verifies adherence in CI:
 
-- scope filter: only events from `[neo, setup, product, dev, deyvin]`
+- scope filter: only events from `[neo, setup, product, dev, deyvin, pentester]`
 - profile filter: only runs when active project has `profile=creator`
 - success threshold: `count=0` jargon leaks in a feature MICRO completa run with `profile=creator`
 

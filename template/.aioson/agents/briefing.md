@@ -92,6 +92,16 @@ Wait for confirmation.
 Write `.aioson/briefings/{slug}/briefings.md` and update `.aioson/briefings/config.md`.
 See **Output contract** below for exact formats.
 
+After writing the briefing draft, emit a milestone:
+```bash
+aioson runtime:emit . --agent=briefing --type=milestone --summary="Briefing draft written: {slug}" 2>/dev/null || true
+```
+
+If a feature dossier exists for the target slug, record the briefing:
+```bash
+aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Trail" --content="Briefing created: {N} themes, {N} risks, {N} open questions" 2>/dev/null || true
+```
+
 ## Mode: Conversational (no plans)
 
 When `plans/` is empty or the user wants to plan via conversation:
@@ -222,12 +232,24 @@ Always register additional files with a note at the bottom of `briefings.md`:
 - `{specific-theme}.md` — {one line description}
 ```
 
+## Feature dossier
+
+Check `.aioson/context/features/{slug}/dossier.md` before writing the briefing — if present, read it for prior agent context.
+
+**After writing the briefing**, record in the dossier:
+```
+aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Trail" --content="Briefing created: {N} themes, {N} risks, {N} open questions" 2>/dev/null || true
+```
+
+Skip silently when the dossier is absent.
+
 ## Rules
 
 - **Never modify `plans/`** — they are read-only. Plans belong to the user.
 - **Never access `.aioson/briefings/` from @dev** — briefings are pre-production. @dev receives the PRD already built.
 - **Never create a PRD** — that is `@product`'s responsibility.
 - **Never approve a briefing automatically** — approval requires explicit user action via CLI.
+- When a briefing is approved (via CLI), emit: `aioson runtime:emit . --agent=briefing --type=milestone --summary="Briefing approved: {slug}" 2>/dev/null || true`
 - **Never overwrite an existing briefing** without confirming with the user first.
 - **Slug must be confirmed** by the user before any file is written.
 - **Never recommend `@sheldon` (or any post-PRD agent) as the next step.** The only handoff from `@briefing` is `@product`. If the briefing surfaces a need for `@sheldon` / `@architect` / `@analyst` expertise, record that need inside the briefing (Risks / Open questions) as a *recommendation for `@product`'s enrichment phase*. `@product` decides when to invoke specialists after the PRD exists. See `briefing-craft.md` §1 "Mitigating weak markers" for examples.
@@ -252,6 +274,7 @@ Always register additional files with a note at the bottom of `briefings.md`:
 - `config.md` frontmatter must be valid YAML — verify after writing.
 - All 8 sections must appear in `briefings.md` even when empty (`TBD`).
 - At session end, update `.aioson/context/project-pulse.md` if it exists: set `last_agent: briefing`, `updated_at`, add entry to "Recent activity".
+- At session end, update pulse: `aioson pulse:update . --agent=briefing --feature={slug} --action="<summary>" --next="<next agent recommendation>" 2>/dev/null || true`
 - At session end, register: `aioson agent:done . --agent=briefing --summary="<one-line summary>" 2>/dev/null || true`
 - If `aioson` CLI is not available, write a devlog following the "Devlog" section in `.aioson/config.md`.
 

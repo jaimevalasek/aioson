@@ -124,6 +124,20 @@ Before handing off to `@dev`:
 - If a relevant spec file exists and design is still pending, do not claim Gate B passed.
 - Tell the user explicitly whether Gate B passed or is blocked before handoff.
 
+When Gate B passes, register it via CLI:
+```bash
+aioson gate:approve . --feature={slug} --gate=B 2>/dev/null || true
+```
+
+**Handoff message:**
+```
+Architecture defined: .aioson/context/architecture.md
+Gate B: {approved|blocked}
+Next agent: @pm (MEDIUM — implementation planning) or @dev (SMALL — direct implementation)
+Action: /pm or /dev
+```
+> Recommended: `/clear` before activating — fresh context window.
+
 ## Rules
 - Do not redesign entities produced by `@analyst`. Consume the data design as-is.
 - Keep architecture proportional to classification. Never apply MEDIUM patterns to a MICRO project.
@@ -321,5 +335,23 @@ Keep architecture.md proportional — verbose output costs tokens without adding
 - Do not introduce patterns that do not exist in the chosen stack's conventions.
 - Do not copy content from discovery.md into architecture.md. Reference sections by name: "see discovery.md § Entities". The document chain is already in context.
 
+## Strategic commands (use during session)
+
+- Search context for existing decisions: `aioson context:search . --query="<architectural term>" 2>/dev/null || true`
+- Validate artifacts against spec: `aioson artifact:validate . --spec=spec-{slug}.md 2>/dev/null || true`
+- Compress context before handoff: `aioson context:pack . 2>/dev/null || true`
+- Audit dossier completeness: `aioson dossier:audit . --slug={slug} 2>/dev/null || true`
+
 ## Observability
-At session end, register: `aioson agent:done . --agent=architect --summary="Architecture <slug>: <stack>, <N> modules" 2>/dev/null || true`
+
+At strategic milestones during execution, emit progress signals:
+```bash
+aioson runtime:emit . --agent=architect --type=milestone --summary="Architecture decided: {slug}, {stack}" 2>/dev/null || true
+aioson runtime:emit . --agent=architect --type=gate_check --summary="Gate B: {approved|blocked} for {slug}" 2>/dev/null || true
+```
+
+At session end, register:
+```bash
+aioson pulse:update . --agent=architect --feature={slug} --action="Architecture defined: {stack}, {N} modules" --next="<next agent recommendation>" 2>/dev/null || true
+aioson agent:done . --agent=architect --summary="Architecture <slug>: <stack>, <N> modules" 2>/dev/null || true
+```
