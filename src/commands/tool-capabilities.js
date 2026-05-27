@@ -23,7 +23,7 @@ async function runToolCapabilities({ args: _args, options = {}, logger, t: _t })
   } else {
     payload = {
       tools: TOOL_CAPS,
-      schema_version: 1,
+      schema_version: 2,
     };
   }
 
@@ -49,6 +49,10 @@ async function runToolCapabilities({ args: _args, options = {}, logger, t: _t })
       if (caps.supports_session_picker) {
         logger.log(`  session_picker:        ${(caps.session_picker || []).join(' ')}`);
       }
+    }
+    logger.log(`  supports_yolo:         ${caps.supports_yolo}`);
+    if (caps.supports_yolo) {
+      logger.log(`  yolo_args:             ${(caps.yolo_args || []).join(' ')}`);
     }
   } else {
     logger.log(`Supported tools: ${listSupportedTools().join(', ')}`);

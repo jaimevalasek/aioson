@@ -219,7 +219,7 @@ module.exports = {
     help_runtime_emit:
       'aioson runtime:emit [path] --agent=<name> [--type=<event>] [--summary=<text>] [--title=<text>] [--refs=<file[,file2]>] [--plan-step=<id>] [--meta=<json>] [--json] [--locale=en]',
     help_live_start:
-      'aioson live:start [path] --tool=codex|claude|gemini|opencode --agent=<name> [--tool-bin=<binary>] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
+      'aioson live:start [path] --tool=codex|claude|gemini|opencode --agent=<name> [--tool-bin=<binary>] [--permission-mode=default|yolo] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
     help_live_status:
       'aioson live:status [path] [--agent=<name>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=en]',
     help_live_handoff:
@@ -1093,6 +1093,7 @@ module.exports = {
     json_requires_no_launch: '--json requires --no-launch for live:start because foreground launch is interactive.',
     tool_binary_not_found: 'Tool binary not found in PATH: {binary}',
     tool_mismatch: 'Active session uses tool "{existing}" but --tool={requested} was given. Close the session first or use the same tool.',
+    tool_mismatch_auto_closed: 'Previous live session used "{existing}" and was auto-closed. Starting a new session with "{requested}".',
     micro_task_already_open: 'A live micro-task is already open for {agent}. Emit task_completed before task_started again.',
     handoff_same_agent: 'live:handoff requires different --agent and --to values.',
     handoff_agent_mismatch: 'No active live session found for {agent}.',

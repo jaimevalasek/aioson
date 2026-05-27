@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createTranslator } = require('../src/i18n');
 const {
+  buildLaunchArgs,
   runLiveStart,
   runRuntimeEmit,
   runLiveHandoff,
@@ -33,6 +34,31 @@ function createCollectLogger() {
     }
   };
 }
+
+test('live:start maps permission-mode=yolo through tool capabilities', () => {
+  assert.deepEqual(
+    buildLaunchArgs({ 'permission-mode': 'yolo' }, 'claude'),
+    ['--dangerously-skip-permissions']
+  );
+  assert.deepEqual(
+    buildLaunchArgs({ permissionMode: 'yolo' }, 'codex'),
+    ['--dangerously-bypass-approvals-and-sandbox']
+  );
+});
+
+test('live:start keeps resume before yolo args for codex resume subcommand', () => {
+  assert.deepEqual(
+    buildLaunchArgs({ resume: true, 'permission-mode': 'yolo' }, 'codex'),
+    ['resume', '--last', '--dangerously-bypass-approvals-and-sandbox']
+  );
+});
+
+test('live:start rejects yolo mode for tools without a mapped permission bypass', () => {
+  assert.throws(
+    () => buildLaunchArgs({ 'permission-mode': 'yolo' }, 'opencode'),
+    /permission_mode_unsupported:opencode:yolo/
+  );
+});
 
 test('live session commands track start, plan progress, handoff and close for a no-launch session', async () => {
   const dir = await makeTempDir();
@@ -283,27 +309,40 @@ test('live session commands track start, plan progress, handoff and close for a 
   assert.equal(summary.includes('Duration:'), true);
 });
 
-test('live:start rejects tool mismatch when session is already active', async () => {
+test('live:start auto-closes active session when requested tool changes', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('en');
   const logger = createCollectLogger();
 
-  await runLiveStart({
+  const first = await runLiveStart({
     args: [dir],
     options: { tool: 'codex', 'tool-bin': 'node', agent: 'deyvin', 'no-launch': true, json: true },
     logger,
     t
   });
 
-  await assert.rejects(
-    () => runLiveStart({
-      args: [dir],
-      options: { tool: 'claude', 'tool-bin': 'node', agent: 'deyvin', 'no-launch': true, json: true },
-      logger,
-      t
-    }),
-    /tool/i
-  );
+  const second = await runLiveStart({
+    args: [dir],
+    options: { tool: 'claude', 'tool-bin': 'node', agent: 'deyvin', 'no-launch': true, json: true },
+    logger,
+    t
+  });
+
+  assert.equal(second.ok, true);
+  assert.equal(second.tool, 'claude');
+  assert.notEqual(second.sessionKey, first.sessionKey);
+
+  const ref = await readAgentSession(path.join(dir, '.aioson', 'runtime'), '@deyvin');
+  assert.equal(ref.sessionKey, second.sessionKey);
+
+  const { db } = await openRuntimeDb(dir, { mustExist: true });
+  try {
+    const previousRun = db.prepare('SELECT status, summary FROM agent_runs WHERE run_key = ?').get(first.runKey);
+    assert.equal(previousRun.status, 'completed');
+    assert.match(previousRun.summary, /tool changed from codex to claude/);
+  } finally {
+    db.close();
+  }
 });
 
 test('runtime:emit rejects back-to-back task_started without task_completed', async () => {

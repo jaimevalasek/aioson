@@ -7,6 +7,7 @@
 //
 // Used by:
 //   - `aioson live:start --resume[=last|<id>]` to map to the correct argv
+//   - `aioson live:start --permission-mode=yolo` to map to the correct argv
 //   - `aioson tool:capabilities` to expose this map as JSON to UI clients
 //     (e.g. AIOSON Play) so they don't duplicate the lookup.
 //
@@ -21,6 +22,8 @@ const TOOL_CAPS = {
     resume_session_id: ['--resume', '<id>'],
     supports_session_picker: true,
     session_picker: ['--resume'],
+    supports_yolo: true,
+    yolo_args: ['--dangerously-skip-permissions'],
   },
   codex: {
     install_command: 'npm install -g @openai/codex',
@@ -31,6 +34,8 @@ const TOOL_CAPS = {
     resume_session_id: ['resume', '<id>'],
     supports_session_picker: true,
     session_picker: ['resume'],
+    supports_yolo: true,
+    yolo_args: ['--dangerously-bypass-approvals-and-sandbox'],
   },
   opencode: {
     install_command: 'npm install -g opencode-ai',
@@ -41,6 +46,8 @@ const TOOL_CAPS = {
     resume_session_id: ['--session', '<id>'],
     supports_session_picker: false,
     session_picker: null,
+    supports_yolo: false,
+    yolo_args: null,
   },
   gemini: {
     install_command: 'npm install -g @google/gemini-cli',
@@ -51,6 +58,8 @@ const TOOL_CAPS = {
     resume_session_id: null,
     supports_session_picker: false,
     session_picker: null,
+    supports_yolo: false,
+    yolo_args: null,
   },
 };
 
@@ -94,9 +103,27 @@ function resolveResumeArgs(tool, resumeOpt) {
   return Array.isArray(caps.resume_last) ? [...caps.resume_last] : [];
 }
 
+function resolvePermissionModeArgs(tool, permissionMode) {
+  const mode = String(permissionMode || '').trim().toLowerCase();
+  if (!mode || mode === 'default') return [];
+  if (mode !== 'yolo') {
+    throw new Error(`permission_mode_unknown:${permissionMode}`);
+  }
+
+  const caps = getToolCapabilities(tool);
+  if (!caps) {
+    throw new Error(`tool_unknown:${tool}`);
+  }
+  if (!caps.supports_yolo || !Array.isArray(caps.yolo_args)) {
+    throw new Error(`permission_mode_unsupported:${tool}:yolo`);
+  }
+  return [...caps.yolo_args];
+}
+
 module.exports = {
   TOOL_CAPS,
   getToolCapabilities,
   listSupportedTools,
   resolveResumeArgs,
+  resolvePermissionModeArgs,
 };

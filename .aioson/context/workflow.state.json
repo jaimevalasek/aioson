@@ -8,13 +8,13 @@
     "dev",
     "qa"
   ],
-  "current": null,
+  "current": "analyst",
   "next": "analyst",
   "completed": [
     "product"
   ],
   "skipped": [],
-  "featureSlug": "neural-chain",
+  "featureSlug": "gemini-phaseout",
   "detour": null,
-  "updatedAt": "2026-05-21T20:24:20.238Z"
+  "updatedAt": "2026-05-23T04:00:09.443Z"
 }

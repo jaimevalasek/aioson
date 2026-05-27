@@ -1,6 +1,17 @@
 ---
-updated_at: 2026-05-21
+updated_at: 2026-05-23
 briefings:
+  - slug: cross-tool-project-knowledge
+    status: implemented
+    source_plans: ["plans/cross-tool-project-knowledge-and-gemini-phaseout.md"]
+    created_at: "2026-05-22"
+    approved_at: "2026-05-23"
+    prd_generated:
+      - .aioson/context/prd-cross-tool-project-knowledge.md
+      - .aioson/context/prd-gemini-phaseout.md
+    updated_at: "2026-05-23"
+    approval_note: "Approved via manual config.md edit during /product session (CLI briefing:approve ainda não implementada — mesmo gap dos 5 briefings anteriores). User confirmou aprovação implicitamente ao seguir todos os 3 'Recomendado' do @product (split em 2 PRDs + extend active-learning-loop + Gemini warning-only v1.17). PRD split em 2: prd-cross-tool-project-knowledge.md (SMALL — Theme 1 extend active-learning-loop com materialização disk-first em .aioson/learnings/ + INDEX.md + diretiva universal CLAUDE/AGENTS/OPENCODE.md + import-from-claude; reusa schema project_learnings + memory:archive + feature:close hook existentes) + prd-gemini-phaseout.md (SMALL — Theme 2 com deadline 2026-06-18; v1.17 warning, v1.18 hard removal, v1.20 sunset frozen tier, enterprise preserved)."
+    decision_note: "Single briefing com 2 Themes resolvido via split em 2 PRDs (Q11 confirmed). Theme 1 extend over active-learning-loop em vez de parallel layer (Q1/R0/G0 confirmed) — zero novo CLI namespace, reusa aioson learning + memory:search + memory:archive. Categorias V1: 2 (gotchas/, recipes/). Signal taxonomy V1: 2 sinais (gotcha, resolution). Storage default: committed (com sanitization deferida para Q-CTPK-03 trust-user V1). Gemini v1.20 hard sunset confirmed."
   - slug: neural-chain
     status: implemented
     source_plans: ["conversational — seed from user idea, 2026-05-21 (uninstall-app-button incident)"]
@@ -57,6 +68,7 @@ briefings:
 
 | slug | status | source_plans | created | approved | prd | note |
 |------|--------|-------------|---------|----------|-----|------|
+| cross-tool-project-knowledge | implemented | plans/cross-tool-project-knowledge-and-gemini-phaseout.md | 2026-05-22 | 2026-05-23 | prd-cross-tool-project-knowledge.md + prd-gemini-phaseout.md | Split em 2 PRDs confirmed; Theme 1 extend active-learning-loop (2 categorias gotchas+recipes, 2 sinais gotcha+resolution, committed storage); Theme 2 Gemini warning v1.17 → hard removal v1.18 → sunset v1.20 |
 | neural-chain | implemented | conversational (uninstall-app-button incident) | 2026-05-21 | 2026-05-21 | prd-neural-chain.md | classification=SMALL (M1 only); M2 graph-maintenance out-of-scope as feature follow-up; guardrail metric tokens-stable-por-audit |
 | harness-driven-aioson | implemented | plans/Harness-Driven/evolucao.txt, plans/Harness-Driven/resumo.txt | 2026-04-10 | 2026-04-10 | .aioson/context/prd-harness-driven-aioson.md | — |
 | lay-user-agent-mode | implemented | plans/lay-user-agent-mode.md | 2026-05-16 | 2026-05-16 | .aioson/context/prd-lay-user-agent-mode.md | — |

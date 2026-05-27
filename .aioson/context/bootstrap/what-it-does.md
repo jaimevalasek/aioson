@@ -24,6 +24,10 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
+Active (in_progress) since 2026-05-23: `cross-tool-project-knowledge` (SMALL) — extend `active-learning-loop` com materialização disk-first das learnings em `.aioson/learnings/{gotchas,recipes}/{slug}.md` + `INDEX.md` regenerator + diretiva universal de loading em `CLAUDE.md`/`AGENTS.md`/`OPENCODE.md` para Codex/OpenCode lerem o knowledge cross-harness sem CLI call. Reusa schema `project_learnings`, `memory:archive`, e `feature:close` distillation hook existentes. Sinais novos no capture directive: `gotcha` + `resolution`. M5 add `learning --sub=import-from-claude` one-shot. PRD: `.aioson/context/prd-cross-tool-project-knowledge.md`.
+
+Active (in_progress) since 2026-05-23: `gemini-phaseout` (SMALL) — remoção faseada do Gemini CLI antes do cutoff Google 2026-06-18 do free/personal tier. v1.17 (≤2026-06-10) warning em install-wizard/doctor/permissions-generator + operator-memory matriz V1 marcada deprecated + CHANGELOG. v1.18 (≥2026-06-19) hard removal mecânica de `.gemini/` no template + install-wizard + permissions-generator; `.gemini/permissions.toml` pré-existente preservado (enterprise). v1.20 (Q4-2026) sunset do frozen tier — doctor para de reconhecer. PRD: `.aioson/context/prd-gemini-phaseout.md`.
+
 Active (in_progress) since 2026-05-18: `release-page-1-9-0` (MICRO) — adds a standalone editorial HTML page at `tutorials/releases/1-9-0/index.html` narrating the 10-day evolution that culminated in v1.9.0 (Living Memory, Brains, Active Learning Loop, hardening R4-7, cross-platform, lay-user mode), plus a redesigned `tutorials/index.html` hub and visual polish on the 4 existing tutorials. Standalone HTML (zero build), structure prepared for future `tutorials/releases/{version}/`. Cross-repo work (mirror to `aioson-com`) intentionally out of scope — user copies manually later. PRD: `.aioson/context/prd-release-page-1-9-0.md`.
 
 Feature `living-memory` was completed in 2026-05 (5 phases, 39 new tests, ~1100 lines of production + ~1440 lines of pt-BR documentation under `docs/pt/living-memory/`).

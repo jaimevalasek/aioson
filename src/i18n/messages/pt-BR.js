@@ -217,7 +217,7 @@ module.exports = {
     help_runtime_emit:
       'aioson runtime:emit [path] --agent=<nome> [--type=<evento>] [--summary=<texto>] [--title=<texto>] [--refs=<arquivo[,arquivo2]>] [--plan-step=<id>] [--meta=<json>] [--json] [--locale=pt-BR]',
     help_live_start:
-      'aioson live:start [path] --tool=codex|claude|gemini|opencode --agent=<nome> [--tool-bin=<binario>] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
+      'aioson live:start [path] --tool=codex|claude|gemini|opencode --agent=<nome> [--tool-bin=<binario>] [--permission-mode=default|yolo] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
     help_live_status:
       'aioson live:status [path] [--agent=<nome>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=pt-BR]',
     help_live_handoff:
@@ -1119,6 +1119,7 @@ module.exports = {
     json_requires_no_launch: '--json requer --no-launch para live:start porque o lancamento em primeiro plano e interativo.',
     tool_binary_not_found: 'Binario da ferramenta nao encontrado no PATH: {binary}',
     tool_mismatch: 'A sessao ativa usa a ferramenta "{existing}" mas --tool={requested} foi informado. Encerre a sessao primeiro ou use a mesma ferramenta.',
+    tool_mismatch_auto_closed: 'A sessao live anterior usava "{existing}" e foi fechada automaticamente. Iniciando nova sessao com "{requested}".',
     micro_task_already_open: 'Uma micro-tarefa live ja esta aberta para {agent}. Emita task_completed antes de task_started novamente.',
     handoff_same_agent: 'live:handoff requer valores diferentes para --agent e --to.',
     handoff_agent_mismatch: 'Nenhuma sessao live ativa encontrada para {agent}.',

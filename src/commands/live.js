@@ -19,7 +19,7 @@ const {
 const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
-const { resolveResumeArgs } = require('../lib/tool-capabilities');
+const { resolvePermissionModeArgs, resolveResumeArgs } = require('../lib/tool-capabilities');
 
 const LIVE_EVENTS_LIMIT = 10;
 const LIVE_MESSAGE_LIMIT = 500;
@@ -121,8 +121,10 @@ function parseJsonOption(value) {
 function buildLaunchArgs(options, tool) {
   const resumeOpt = options.resume !== undefined ? options.resume : options.Resume;
   const resumeArgs = resolveResumeArgs(tool, resumeOpt);
+  const permissionMode = options['permission-mode'] || options.permissionMode;
+  const permissionArgs = resolvePermissionModeArgs(tool, permissionMode);
   const userArgs = parseToolArgs(options['tool-args'] || options.toolArgs);
-  return [...resumeArgs, ...userArgs];
+  return [...resumeArgs, ...permissionArgs, ...userArgs];
 }
 
 function parseToolArgs(value) {
@@ -234,7 +236,7 @@ async function resolveExecutablePath(command) {
     .filter(Boolean);
 
   const extensions = process.platform === 'win32'
-    ? Array.from(new Set(['', ...String(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';').map((entry) => entry.toLowerCase())]))
+    ? Array.from(new Set([...String(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';').map((entry) => entry.toLowerCase())]))
     : [''];
 
   for (const dir of pathEntries) {
@@ -1235,57 +1237,80 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           };
         }
       } else {
-        // Non-tmux reuse logic (original behavior)
+        // Non-tmux reuse logic
         const existingTool = state.tool_session || null;
         if (existingTool && existingTool !== tool) {
-          throw new Error(t('live.tool_mismatch', { existing: existingTool, requested: tool }));
-        }
-
-        const attach = Boolean(options.attach);
-        let attachChild = null;
-        let attachResult = null;
-
-        if (attach && !noLaunch) {
-          attachChild = spawn(binaryPath, buildLaunchArgs(options, tool), {
-            cwd: targetDir,
-            env: process.env,
-            stdio: 'inherit'
+          // Auto-close stale session when tool changed (same pattern as tmux recovery above)
+          updateRun(db, {
+            runKey: existing.run.run_key,
+            status: 'completed',
+            summary: `Auto-closed: tool changed from ${existingTool} to ${tool}`,
+            eventType: 'session_closed',
+            phase: 'live',
+            message: `Tool mismatch — auto-closed previous ${existingTool} session`
           });
-          state.child_pid = attachChild.pid || null;
           if (existing.task?.task_key) {
-            const taskMeta = parseTaskMeta(existing.task);
-            taskMeta.child_pid = state.child_pid;
-            updateTask(db, { taskKey: existing.task.task_key, metaJson: taskMeta });
+            updateTask(db, {
+              taskKey: existing.task.task_key,
+              status: 'completed',
+              goal: `Auto-closed after tool change to ${tool}`
+            });
           }
+          await clearAgentSession(runtimeDir, agentName);
+          if (!options.json) {
+            logger.log(t('live.tool_mismatch_auto_closed', { existing: existingTool, requested: tool }) ||
+              `Previous session (${existingTool}) auto-closed — starting new with ${tool}`);
+          }
+          // Fall through to create a new session below
+        } else {
+          // Tools match (or no previous tool) — reuse existing session
+          const attach = Boolean(options.attach);
+          let attachChild = null;
+          let attachResult = null;
+
+          if (attach && !noLaunch) {
+            attachChild = spawn(binaryPath, buildLaunchArgs(options, tool), {
+              cwd: targetDir,
+              env: process.env,
+              stdio: 'inherit',
+              shell: process.platform === 'win32'
+            });
+            state.child_pid = attachChild.pid || null;
+            if (existing.task?.task_key) {
+              const taskMeta = parseTaskMeta(existing.task);
+              taskMeta.child_pid = state.child_pid;
+              updateTask(db, { taskKey: existing.task.task_key, metaJson: taskMeta });
+            }
+          }
+
+          await writeLiveState(runtimeDir, existing.sessionKey, state);
+
+          if (!options.json) {
+            logger.log(t('live.session_already_active', { agent: agentName, session: existing.sessionKey, runKey: existing.run.run_key, dbPath }));
+          }
+
+          if (attachChild) {
+            attachResult = await waitForChild(attachChild);
+          }
+
+          return {
+            ok: true,
+            targetDir,
+            dbPath,
+            agent: existing.agentName,
+            tool: state.tool_session || tool,
+            taskKey: existing.task?.task_key || existing.sessionRef?.taskKey || null,
+            runKey: existing.run.run_key,
+            sessionKey: existing.sessionKey,
+            pid: state.child_pid || null,
+            processState: detectProcessState(state.child_pid),
+            reused: true,
+            open: true,
+            attached: attach,
+            childExitCode: attachResult?.code ?? null,
+            childSignal: attachResult?.signal ?? null
+          };
         }
-
-        await writeLiveState(runtimeDir, existing.sessionKey, state);
-
-        if (!options.json) {
-          logger.log(t('live.session_already_active', { agent: agentName, session: existing.sessionKey, runKey: existing.run.run_key, dbPath }));
-        }
-
-        if (attachChild) {
-          attachResult = await waitForChild(attachChild);
-        }
-
-        return {
-          ok: true,
-          targetDir,
-          dbPath,
-          agent: existing.agentName,
-          tool: state.tool_session || tool,
-          taskKey: existing.task?.task_key || existing.sessionRef?.taskKey || null,
-          runKey: existing.run.run_key,
-          sessionKey: existing.sessionKey,
-          pid: state.child_pid || null,
-          processState: detectProcessState(state.child_pid),
-          reused: true,
-          open: true,
-          attached: attach,
-          childExitCode: attachResult?.code ?? null,
-          childSignal: attachResult?.signal ?? null
-        };
       }
     }
 
@@ -1356,7 +1381,8 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           child = spawn(binaryPath, buildLaunchArgs(options, tool), {
             cwd: targetDir,
             env: process.env,
-            stdio: 'inherit'
+            stdio: 'inherit',
+            shell: process.platform === 'win32'
           });
           taskMeta.child_pid = child.pid || null;
           updateTask(db, {
@@ -1368,7 +1394,8 @@ async function runLiveStart({ args, options = {}, logger, t }) {
         child = spawn(binaryPath, buildLaunchArgs(options, tool), {
           cwd: targetDir,
           env: process.env,
-          stdio: 'inherit'
+          stdio: 'inherit',
+          shell: process.platform === 'win32'
         });
         taskMeta.child_pid = child.pid || null;
         updateTask(db, {
