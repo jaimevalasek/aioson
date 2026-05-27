@@ -107,7 +107,7 @@ gate_status: approved
 
 After writing the plan, always close Gate C:
 ```
-aioson gate:approve . --feature={slug} --gate=C
+aioson gate:approve . --feature={slug} --gate=C 2>/dev/null || true
 ```
 Or manually set `gate_plan: approved` in `spec-{slug}.md`.
 

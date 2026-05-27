@@ -338,9 +338,9 @@ Keep architecture.md proportional — verbose output costs tokens without adding
 ## Strategic commands (use during session)
 
 - Search context for existing decisions: `aioson context:search . --query="<architectural term>" 2>/dev/null || true`
-- Validate artifacts against spec: `aioson artifact:validate . --spec=spec-{slug}.md 2>/dev/null || true`
+- Validate artifacts against spec: `aioson artifact:validate . --feature={slug} 2>/dev/null || true`
 - Compress context before handoff: `aioson context:pack . 2>/dev/null || true`
-- Audit dossier completeness: `aioson dossier:audit . --slug={slug} 2>/dev/null || true`
+- Audit dossier completeness: `aioson dossier:audit . --check=coverage 2>/dev/null || true`
 
 ## Observability
 
