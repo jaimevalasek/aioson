@@ -12,6 +12,7 @@
  */
 
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const {
   loadOrCreateState,
   activateStage,
@@ -26,6 +27,28 @@ const {
   incrementRetryCount,
   buildHealingActivation
 } = require('../self-healing');
+const { CHECKPOINTS_DIR } = require('./gate-approve');
+
+const GATE_ORDER = ['D', 'C', 'B', 'A'];
+
+async function readLatestCheckpoint(targetDir, slug) {
+  const dir = path.join(targetDir, CHECKPOINTS_DIR);
+  try {
+    const files = await fs.readdir(dir);
+    const matching = files
+      .filter((f) => f.endsWith(`-${slug}.json`))
+      .sort((a, b) => {
+        const gateA = a.replace('gate-', '').charAt(0);
+        const gateB = b.replace('gate-', '').charAt(0);
+        return GATE_ORDER.indexOf(gateA) - GATE_ORDER.indexOf(gateB);
+      });
+    if (matching.length === 0) return null;
+    const raw = await fs.readFile(path.join(dir, matching[0]), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 async function runWorkflowHeal({ args, options, logger, t }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
@@ -58,6 +81,10 @@ async function runWorkflowHeal({ args, options, logger, t }) {
     return { ok: false, reason: 'stage_not_in_sequence' };
   }
 
+  // M1 checkpoint-at-gate: read latest checkpoint for recovery context (EC-AO-02: graceful fallback)
+  const featureSlug = state.featureSlug || null;
+  const checkpoint = featureSlug ? await readLatestCheckpoint(targetDir, featureSlug) : null;
+
   // Build healing activation
   let activation;
   try {
@@ -72,6 +99,24 @@ async function runWorkflowHeal({ args, options, logger, t }) {
   } catch (err) {
     logger.error(`Unable to build healing activation: ${err.message}`);
     return { ok: false, reason: 'activation_failed', error: err.message };
+  }
+
+  if (checkpoint) {
+    const sanitize = (s) => String(s || '').replace(/[\r\n]+/g, ' ').slice(0, 200);
+    const files = Array.isArray(checkpoint.prerequisites_snapshot)
+      ? checkpoint.prerequisites_snapshot.map((s) => sanitize(s && s.file)).join(', ') || 'none'
+      : 'none';
+    const cpBlock = [
+      '',
+      '## Checkpoint Recovery Context (auto-injected by AIOSON motor)',
+      '',
+      `> Last approved gate: **${sanitize(checkpoint.gate)}** (${sanitize(checkpoint.timestamp)})`,
+      `> Approved by: ${sanitize(checkpoint.agent)}`,
+      `> Artifacts at gate time: ${files}`,
+      ''
+    ].join('\n');
+    activation.prompt = activation.prompt + cpBlock;
+    activation.checkpoint = checkpoint;
   }
 
   // Increment retry counter
@@ -127,10 +172,11 @@ async function runWorkflowHeal({ args, options, logger, t }) {
     retryCount: newCount,
     maxRetries: 3,
     runtime,
+    checkpoint: checkpoint || null,
     agent: activation.agent,
     instructionPath: activation.instructionPath,
     prompt: activation.prompt
   };
 }
 
-module.exports = { runWorkflowHeal };
+module.exports = { runWorkflowHeal, readLatestCheckpoint };

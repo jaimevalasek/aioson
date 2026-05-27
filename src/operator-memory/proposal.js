@@ -46,7 +46,7 @@ function quotesToYaml(quotes) {
 }
 
 function serializeProposal(data) {
-  return [
+  const lines = [
     '---',
     `slug: ${data.slug}`,
     `signal_type: ${data.signal_type}`,
@@ -56,10 +56,12 @@ function serializeProposal(data) {
     `quotes:${quotesToYaml(data.quotes)}`,
     `proposal: ${escapeYamlString(data.proposal)}`,
     `source_agent: ${data.source_agent}`,
-    `proposal_fingerprint: ${data.proposal_fingerprint}`,
-    '---',
-    ''
-  ].join('\n');
+    `proposal_fingerprint: ${data.proposal_fingerprint}`
+  ];
+  if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
+  if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
+  lines.push('---', '');
+  return lines.join('\n');
 }
 
 function parseProposalFrontmatter(content) {
@@ -130,7 +132,7 @@ function deleteProposal(identity, slug) {
   return false;
 }
 
-function captureSignal({ identity, slug, signal_type, quote, proposal, source_agent }) {
+function captureSignal({ identity, slug, signal_type, quote, proposal, source_agent, feature_slug, session_id }) {
   if (!VALID_SIGNAL_TYPES.includes(signal_type)) {
     throw new Error(`Invalid signal_type '${signal_type}'. Must be one of: ${VALID_SIGNAL_TYPES.join(', ')}`);
   }
@@ -160,7 +162,9 @@ function captureSignal({ identity, slug, signal_type, quote, proposal, source_ag
     quotes: quote ? [String(quote).trim()].filter(Boolean) : [],
     proposal,
     source_agent: source_agent || 'unknown',
-    proposal_fingerprint: fingerprintProposal(proposal)
+    proposal_fingerprint: fingerprintProposal(proposal),
+    feature_slug: feature_slug || null,
+    session_id: session_id || null
   };
   writeProposal(identity, fresh);
   return { proposal: fresh, isNew: true };

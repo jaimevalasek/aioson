@@ -20,12 +20,17 @@ const {
   contextDir,
   readFileSafe,
   fileExists,
+  fileStat,
   parseFrontmatter,
   parseGatesFromSpec,
   GATE_NAMES,
   GATE_ALIASES
 } = require('../preflight-engine');
+const { ensureDir } = require('../utils');
 const { runGateCheck } = require('./gate-check');
+
+const CHECKPOINTS_DIR = '.aioson/runtime/checkpoints';
+const CHECKPOINT_MAX_BYTES = 5120;
 
 const BAR = '━'.repeat(45);
 
@@ -85,6 +90,13 @@ async function runGateApprove({ args, options = {}, logger }) {
   if (!slug) {
     if (options.json) return { ok: false, reason: 'missing_feature' };
     logger.log('--feature=<slug> is required.');
+    return { ok: false };
+  }
+
+  // SF-AO-01: reject slugs with path traversal characters
+  if (slug.includes('/') || slug.includes('\\') || slug.includes('..')) {
+    if (options.json) return { ok: false, reason: 'invalid_feature_slug' };
+    logger.log('--feature slug must not contain path separators (/ \\) or .. segments.');
     return { ok: false };
   }
 
@@ -165,6 +177,48 @@ async function runGateApprove({ args, options = {}, logger }) {
 
   await fs.writeFile(specFile, content, 'utf8');
 
+  // M1 checkpoint-at-gate: best-effort checkpoint write (BR-AO-01)
+  let checkpointWritten = false;
+  try {
+    const checkpointDir = path.join(targetDir, CHECKPOINTS_DIR);
+    await ensureDir(checkpointDir);
+
+    const artifactEvidence = (check.evidence || []).filter((e) => e.type === 'artifact' && e.ok);
+    const snapshot = [];
+    for (const ev of artifactEvidence) {
+      const filePath = path.join(contextDir(targetDir), ev.file);
+      const stat = await fileStat(filePath);
+      if (stat) {
+        snapshot.push({ file: ev.file, mtime: stat.mtime.toISOString() });
+      }
+    }
+
+    const checkpoint = {
+      gate: gateLetter,
+      slug,
+      agent: options.agent ? String(options.agent) : 'unknown',
+      timestamp: new Date().toISOString(),
+      prerequisites_snapshot: snapshot,
+      gate_check_result: check,
+      decision_log: []
+    };
+
+    // BR-AO-03: size cap — truncate decision_log if > 5KB
+    let payload = JSON.stringify(checkpoint, null, 2);
+    if (Buffer.byteLength(payload, 'utf8') > CHECKPOINT_MAX_BYTES) {
+      checkpoint.decision_log = checkpoint.decision_log.slice(-3);
+      checkpoint.decision_log.unshift('[truncated]');
+      payload = JSON.stringify(checkpoint, null, 2);
+    }
+
+    const checkpointFile = path.join(checkpointDir, `gate-${gateLetter}-${slug}.json`);
+    await fs.writeFile(checkpointFile, payload + '\n', 'utf8');
+    checkpointWritten = true;
+  } catch (err) {
+    // EC-AO-01: checkpoint failure never blocks gate:approve
+    process.stderr.write(`[gate:approve] checkpoint write failed: ${err.message}\n`);
+  }
+
   const nextInfo = GATE_NEXT_AGENTS[gateLetter];
   const result = {
     ok: true,
@@ -173,6 +227,7 @@ async function runGateApprove({ args, options = {}, logger }) {
     feature: slug,
     field_written: specFieldName,
     spec_file: `.aioson/context/spec-${slug}.md`,
+    checkpoint_written: checkpointWritten,
     next_agent: nextInfo.agent,
     next_action: nextInfo.action,
     why: nextInfo.why
@@ -195,4 +250,4 @@ async function runGateApprove({ args, options = {}, logger }) {
   return result;
 }
 
-module.exports = { runGateApprove };
+module.exports = { runGateApprove, CHECKPOINTS_DIR };

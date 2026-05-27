@@ -121,6 +121,10 @@ async function buildDevResumeData(projectPath) {
     ? lastHandoff.artifact_uris
     : [];
 
+  const decisionRationale = Array.isArray(lastHandoff && lastHandoff.decision_rationale)
+    ? lastHandoff.decision_rationale
+    : [];
+
   return {
     feature_slug: featureSlug,
     classification,
@@ -128,7 +132,8 @@ async function buildDevResumeData(projectPath) {
     artifacts_consumed: artifactsConsumed,
     code_map_paths: extractCodeMapPaths(dossierRaw),
     sheldon_plan: sheldonPlan,
-    next_step: devStateNext || deriveNextStepFromPlan(planRaw)
+    next_step: devStateNext || deriveNextStepFromPlan(planRaw),
+    decision_rationale: decisionRationale.length > 0 ? decisionRationale : undefined
   };
 }
 

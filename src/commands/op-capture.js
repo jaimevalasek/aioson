@@ -27,6 +27,8 @@ const { captureSignal, readProposal, VALID_SIGNAL_TYPES } = require('../operator
 const { promoteProposal } = require('../operator-memory/decision');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
+const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
+
 const PROMOTION_THRESHOLD = 2;
 
 function existsCheckFactory(identity) {
@@ -55,6 +57,8 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
   const quote = options.quote;
   const proposal = options.proposal;
   const sourceAgent = options['source-agent'] || options.sourceAgent || 'unknown';
+  const featureSlug = options.feature ? String(options.feature) : null;
+  const sessionId = options['session-id'] || options.sessionId || null;
 
   if (!signal || !proposal) {
     const err = `op:capture — required: --signal=<type> --proposal=<paraphrase>. Got signal=${signal}, proposal=${proposal ? 'present' : 'missing'}.`;
@@ -95,13 +99,33 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
       signal_type: signal,
       quote,
       proposal,
-      source_agent: sourceAgent
+      source_agent: sourceAgent,
+      feature_slug: featureSlug,
+      session_id: sessionId
     });
   } catch (err) {
     const errMsg = `op:capture failed: ${err.message}`;
     if (options.json) return { ok: false, error: errMsg };
     if (logger && logger.error) logger.error(errMsg);
     return { ok: false, exitCode: 1, error: errMsg };
+  }
+
+  // M2: append confirmation signals to session accumulator for decision_rationale
+  if (signal === 'confirmation') {
+    try {
+      const accPath = path.join(targetDir, CONFIRMATIONS_JSONL);
+      const accDir = path.dirname(accPath);
+      fs.mkdirSync(accDir, { recursive: true });
+      const entry = JSON.stringify({
+        agent: sourceAgent,
+        decision: proposal,
+        quote: quote || null,
+        timestamp: new Date().toISOString()
+      });
+      fs.appendFileSync(accPath, entry + '\n', 'utf8');
+    } catch {
+      // best-effort — never block op:capture
+    }
   }
 
   const count = result.proposal.detected_count;
@@ -142,5 +166,6 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
 
 module.exports = {
   runOpCapture,
-  PROMOTION_THRESHOLD
+  PROMOTION_THRESHOLD,
+  CONFIRMATIONS_JSONL
 };

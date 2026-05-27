@@ -233,6 +233,39 @@ patterns: []
     }
   });
 
+  it('includes decision_rationale from last-handoff.json when present', async () => {
+    const tmp = await makeProject();
+    try {
+      const rationale = [
+        { agent: 'product', decision: 'extend existing module', alternatives_considered: null, rationale: 'reuses infra', confidence: 'confirmed' },
+        { agent: 'architect', decision: 'SQLite over Postgres', alternatives_considered: null, rationale: 'no new deps', confidence: 'confirmed' }
+      ];
+      await writeLastHandoff(tmp, { feature_slug: 'feat-rationale', decision_rationale: rationale });
+      await writeFeaturesMd(tmp, [{ slug: 'feat-rationale', status: 'in_progress' }]);
+
+      const result = await buildDevResumeData(tmp);
+      assert.ok(Array.isArray(result.decision_rationale), 'decision_rationale must be present');
+      assert.equal(result.decision_rationale.length, 2);
+      assert.equal(result.decision_rationale[0].agent, 'product');
+      assert.equal(result.decision_rationale[1].decision, 'SQLite over Postgres');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('omits decision_rationale when empty or absent in handoff', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'feat-no-rationale' });
+      await writeFeaturesMd(tmp, [{ slug: 'feat-no-rationale', status: 'in_progress' }]);
+
+      const result = await buildDevResumeData(tmp);
+      assert.equal(result.decision_rationale, undefined, 'key absent when no rationale');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
   it('handles feature in_progress without dossier or dev-state gracefully', async () => {
     const tmp = await makeProject();
     try {

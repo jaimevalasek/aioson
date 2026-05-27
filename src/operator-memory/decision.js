@@ -81,7 +81,7 @@ function deriveTitle(proposal) {
 function serializeDecision(data) {
   const body = String(data.body || data.proposal || '').slice(0, MAX_BODY_CHARS);
   const title = deriveTitle(data.title || data.proposal);
-  return [
+  const lines = [
     '---',
     `slug: ${data.slug}`,
     `signal_type: ${data.signal_type}`,
@@ -93,8 +93,13 @@ function serializeDecision(data) {
     `source_agent: ${data.source_agent}`,
     `quotes:${quotesToYaml(data.quotes)}`,
     `version_schema: "${SCHEMA_VERSION}"`,
-    `deprecated_by: ${data.deprecated_by ?? 'null'}`,
-    '---',
+    `deprecated_by: ${data.deprecated_by ?? 'null'}`
+  ];
+  if (data.feature_slug) lines.push(`feature_slug: ${escapeYamlString(data.feature_slug)}`);
+  if (data.session_id) lines.push(`session_id: ${escapeYamlString(data.session_id)}`);
+  lines.push('---');
+  return [
+    ...lines,
     '',
     `# ${title}`,
     '',
@@ -178,7 +183,9 @@ function promoteProposal({ identity, proposal: proposalData }) {
     quotes: proposalData.quotes || [],
     body,
     title: proposalData.proposal,
-    deprecated_by: null
+    deprecated_by: null,
+    feature_slug: proposalData.feature_slug || null,
+    session_id: proposalData.session_id || null
   };
 
   const decFilePath = decisionPath(identity, decision.slug);

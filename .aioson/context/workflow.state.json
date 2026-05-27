@@ -14,7 +14,8 @@
     "product"
   ],
   "skipped": [],
-  "featureSlug": "gemini-phaseout",
+  "featureSlug": "cross-tool-project-knowledge",
   "detour": null,
-  "updatedAt": "2026-05-23T04:00:09.443Z"
+  "updatedAt": "2026-05-27T19:30:23.149Z",
+  "last_workflow_event_at": 1779910223049
 }

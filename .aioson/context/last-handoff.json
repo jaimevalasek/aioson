@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-05-20T18:32:35.505Z",
-  "last_agent": "@analyst",
-  "last_stage": "analyst",
-  "what_was_done": "Stage @analyst completed.",
-  "what_comes_next": "Next stage: @dev",
-  "next_agent": "@dev",
+  "session_ended_at": "2026-05-27T19:30:23.159Z",
+  "last_agent": "@product",
+  "last_stage": "product",
+  "what_was_done": "Stage @product completed.",
+  "what_comes_next": "Next stage: @analyst",
+  "next_agent": "@analyst",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
-  "classification": "MEDIUM",
-  "feature_slug": "workflow-handoff-integrity"
+  "classification": "SMALL",
+  "feature_slug": "cross-tool-project-knowledge"
 }

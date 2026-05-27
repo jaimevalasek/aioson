@@ -6,6 +6,8 @@ const { exists, ensureDir } = require('./utils');
 
 const HANDOFF_RELATIVE_PATH = '.aioson/context/last-handoff.json';
 const HANDOFF_PROTOCOL_RELATIVE_PATH = '.aioson/context/handoff-protocol.json';
+const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
+const DECISION_RATIONALE_MAX = 5;
 
 // handoff-protocol.json schema_version for `artifact_uris`:
 // v1 (legacy) — array of strings; v2 — array of {path, kind, agent, added_at}.
@@ -63,10 +65,52 @@ function coerceArtifactUris(uris, fallbackAgent) {
     .filter(Boolean);
 }
 
+async function collectDecisionRationale(targetDir) {
+  const accPath = path.join(targetDir, CONFIRMATIONS_JSONL);
+  try {
+    const raw = await fs.readFile(accPath, 'utf8');
+    const lines = raw.trim().split('\n').filter(Boolean);
+    const entries = [];
+    for (const line of lines) {
+      try {
+        const obj = JSON.parse(line);
+        entries.push({
+          agent: obj.agent || 'unknown',
+          decision: obj.decision || '',
+          alternatives_considered: null,
+          rationale: obj.quote || null,
+          confidence: 'confirmed'
+        });
+      } catch {
+        // skip malformed lines
+      }
+    }
+    // BR-AO-04: FIFO — keep only the last N entries
+    return entries.slice(-DECISION_RATIONALE_MAX);
+  } catch {
+    return [];
+  }
+}
+
+async function clearConfirmationsAccumulator(targetDir) {
+  const accPath = path.join(targetDir, CONFIRMATIONS_JSONL);
+  try {
+    await fs.unlink(accPath);
+  } catch {
+    // file may not exist
+  }
+}
+
 async function writeHandoff(targetDir, payload) {
   const handoffPath = path.join(targetDir, HANDOFF_RELATIVE_PATH);
   const protocolPath = path.join(targetDir, HANDOFF_PROTOCOL_RELATIVE_PATH);
   await ensureDir(path.dirname(handoffPath));
+
+  // M2: collect decision rationale from session confirmations
+  const sessionRationale = await collectDecisionRationale(targetDir);
+  const existingRationale = Array.isArray(payload.decisionRationale) ? payload.decisionRationale : [];
+  const mergedRationale = [...existingRationale, ...sessionRationale].slice(-DECISION_RATIONALE_MAX);
+
   const handoff = {
     version: 1,
     session_ended_at: new Date().toISOString(),
@@ -79,9 +123,13 @@ async function writeHandoff(targetDir, payload) {
     context_files_updated: Array.isArray(payload.contextFilesUpdated) ? payload.contextFilesUpdated : [],
     workflow_mode: payload.workflowMode || null,
     classification: payload.classification || null,
-    feature_slug: payload.featureSlug || null
+    feature_slug: payload.featureSlug || null,
+    decision_rationale: mergedRationale.length > 0 ? mergedRationale : undefined
   };
   await fs.writeFile(handoffPath, `${JSON.stringify(handoff, null, 2)}\n`, 'utf8');
+
+  // Clear accumulator after writing to handoff
+  await clearConfirmationsAccumulator(targetDir);
 
   const protocol = payload.protocol || buildBasicHandoffProtocol(payload);
   await fs.writeFile(protocolPath, `${JSON.stringify(protocol, null, 2)}\n`, 'utf8');
@@ -283,9 +331,12 @@ function buildRuntimeLogHandoff(agentName, message, summary) {
 module.exports = {
   HANDOFF_RELATIVE_PATH,
   HANDOFF_PROTOCOL_RELATIVE_PATH,
+  CONFIRMATIONS_JSONL,
+  DECISION_RATIONALE_MAX,
   ARTIFACT_KINDS,
   coerceArtifactUri,
   coerceArtifactUris,
+  collectDecisionRationale,
   writeHandoff,
   readHandoff,
   readHandoffProtocol,

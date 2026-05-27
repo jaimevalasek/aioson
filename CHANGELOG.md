@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-05-27
+
+### Added
+- **Agent Orchestration V2 — Phase 1: durable checkpoints, decision rationale, scoped operator memory.** Three must-have milestones shipped:
+  - **M1 — Checkpoint at gate.** `gate:approve` now writes a checkpoint JSON to `.aioson/runtime/checkpoints/gate-{A|B|C|D}-{slug}.json` after successful approval. Contains `prerequisites_snapshot` (artifact paths + mtimes), `gate_check_result`, and `decision_log`. Best-effort write (BR-AO-01: try/catch, never blocks approval). 5KB size cap with `decision_log` truncation (BR-AO-03). `workflow:heal` reads the latest checkpoint for the active feature using latest-gate-wins ordering (D > C > B > A per BR-AO-02) and injects recovery context into the healing prompt. Falls back gracefully when no checkpoint exists (EC-AO-02).
+  - **M2 — Decision rationale in handoffs.** `op:capture` appends confirmation signals to `.aioson/runtime/session-confirmations.jsonl`. `session-handoff.js` auto-collects these into `decision_rationale[]` in `last-handoff.json` (FIFO cap at 5 per BR-AO-04, only `signal=confirmation` per BR-AO-05). `dev:resume-data` passes rationale through to the context package. Accumulator cleared after each handoff.
+  - **M3 — Scoped operator memory.** `op:capture` accepts `--feature=<slug>` and `--session-id=<id>` flags (BR-AO-06: optional, NULL when omitted). Fields stored in proposal/decision markdown frontmatter and propagated on promotion. `op:list` accepts `--feature` and `--agent` filters (AND-composable per BR-AO-07). JSON output with `--feature` follows BR-AO-09 schema.
+
+### Notes
+- **QA findings resolved:** H-01 (spec correction: markdown frontmatter, not SQL ALTER TABLE) and M-02 (confidence field type documented as string `'confirmed'`). Both are spec amendments, not code changes.
+- **S1 (telemetry consumer mapping) and S2 (checkpoint lifecycle cleanup) deferred** as Should-have scope for a follow-up release.
+- **Test coverage:** 36 feature-specific tests (23 by @dev + 13 by @tester). 115/115 related tests green. Full suite regression: 2822/2816 + 1 skipped + 5 fail (all pre-existing: AC-P1-07 operator-memory, AC-ALL-101 perf flake, product kernel size, pentester text contracts, tool-invocation-hardening).
+
 ## [1.17.2] - 2026-05-22
 
 ### Security

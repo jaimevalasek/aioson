@@ -21,13 +21,15 @@ const { readDecision } = require('../operator-memory/decision');
 
 async function runOpList({ args = [], options = {}, logger }) {
   if (options.help === true || args.includes('--help') || args.includes('-h')) {
-    if (logger) logger.log('op:list [--proposals] [--include-archived] [--format=table|json] — list active decisions.');
+    if (logger) logger.log('op:list [--proposals] [--include-archived] [--feature=<slug>] [--agent=<name>] [--format=table|json] — list active decisions.');
     return { ok: true };
   }
 
   const format = options.format || 'table';
   const showProposals = Boolean(options.proposals);
   const includeArchived = Boolean(options['include-archived']);
+  const filterFeature = options.feature ? String(options.feature) : null;
+  const filterAgent = options.agent ? String(options.agent) : null;
 
   const resolved = resolveIdentity();
   ensureStorageTree(resolved.identity);
@@ -65,9 +67,39 @@ async function runOpList({ args = [], options = {}, logger }) {
     }
   }
 
+  // M3: apply --feature and --agent filters (BR-AO-07: AND-composable)
+  if (filterFeature) {
+    items = items.filter((item) => item.feature_slug === filterFeature);
+  }
+  if (filterAgent) {
+    items = items.filter((item) => item.source_agent === filterAgent);
+  }
+
   if (format === 'json' || options.json) {
+    // BR-AO-09: structured JSON output when --feature is used
+    if (filterFeature) {
+      const decisions = items.map((item) => ({
+        agent: item.source_agent || 'unknown',
+        signal: item.signal_type || null,
+        quote: Array.isArray(item.quotes) ? (item.quotes[item.quotes.length - 1] || null) : null,
+        proposal: item.proposal || item.body || item.title || null,
+        timestamp: item.last_reinforced || item.last_detected || null,
+        session_id: item.session_id || null
+      }));
+      const result = {
+        ok: true,
+        feature: filterFeature,
+        decisions,
+        total: decisions.length
+      };
+      if (options.json) return result;
+      if (logger) logger.log(JSON.stringify(result, null, 2));
+      return result;
+    }
+
     const result = {
       ok: true,
+      feature: null,
       identity: resolved.identity,
       identity_source: resolved.source,
       tier: showProposals ? 'proposals' : (includeArchived ? 'active+archive' : 'active'),
