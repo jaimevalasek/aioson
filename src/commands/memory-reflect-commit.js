@@ -70,7 +70,7 @@ async function runMemoryReflectCommit({ args, options = {}, logger }) {
   try {
     manifest = await readJsonFile(manifestPath);
   } catch {
-    const message = `manifest not found at ${path.relative(targetDir, manifestPath)} — run memory:reflect-prepare first`;
+    const message = `manifest not found at ${path.relative(targetDir, manifestPath)} — it may have been consumed by a previous successful reflect-commit; run memory:reflect-prepare to generate a new one`;
     if (!options.json) logger.log(`✗ ${message}`);
     return { ok: false, error: 'missing_manifest', message };
   }

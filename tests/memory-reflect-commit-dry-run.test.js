@@ -142,6 +142,7 @@ test('reflect-commit (real) writes files and consumes the manifest; re-run fails
   });
   assert.equal(again.ok, false);
   assert.equal(again.error, 'missing_manifest');
+  assert.match(again.message, /consumed by a previous successful reflect-commit/);
 });
 
 test('reflect-commit --dry-run followed by a real commit both succeed', async () => {
