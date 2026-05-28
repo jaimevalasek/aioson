@@ -6,7 +6,7 @@ const { getCliVersionSync } = require('./version');
 const TOOLS = [
   { id: 'claude',    label: 'Claude Code',    desc: 'Slash commands, CLAUDE.md, .claude/' },
   { id: 'codex',    label: 'Codex (OpenAI)', desc: 'AGENTS.md protocol' },
-  { id: 'gemini',   label: 'Gemini CLI',     desc: 'GEMINI.md + .gemini/commands/' },
+  { id: 'gemini',   label: 'Gemini CLI',     desc: 'GEMINI.md + .gemini/commands/', deprecated: true },
   { id: 'opencode', label: 'OpenCode',       desc: 'OPENCODE.md protocol' }
 ];
 
@@ -112,7 +112,8 @@ function renderScreen1(cursor, selected, warn, stdout) {
     const tool    = TOOLS[i];
     const pointer = i === cursor ? '►' : ' ';
     const check   = selected.has(tool.id) ? '✓' : ' ';
-    stdout.write(`  ${pointer} [${check}] ${tool.label.padEnd(20)} ${tool.desc}\n`);
+    const deprNote = tool.deprecated ? '  ⚠ [DEPRECATED] free tier ends 2026-06-18' : '';
+    stdout.write(`  ${pointer} [${check}] ${tool.label.padEnd(20)} ${tool.desc}${deprNote}\n`);
   }
   if (warn) stdout.write('\n  ⚠  Select at least one tool to continue.\n');
   stdout.write('\n');

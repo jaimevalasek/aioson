@@ -49,6 +49,9 @@ const TOOL_CAPS = {
     supports_yolo: false,
     yolo_args: null,
   },
+  // DEPRECATED: Gemini CLI free/personal tier ends 2026-06-18. Enterprise
+  // (Code Assist Standard/Enterprise) unaffected. Hard removal in v1.22.
+  // See gemini-phaseout / CHANGELOG v1.21.x.
   gemini: {
     install_command: 'npm install -g @google/gemini-cli',
     binary: 'gemini',

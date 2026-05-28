@@ -241,6 +241,23 @@ async function runDoctor(targetDir) {
     });
   }
 
+  // Gemini CLI deprecation advisory (gemini-phaseout Phase 1 / v1.21.0).
+  // Emits ONLY when the project actually uses Gemini (.gemini/permissions.toml
+  // OR .gemini/GEMINI.md present) so greenfield projects stay silent (BR-GP-03).
+  const geminiInUse =
+    (await exists(path.join(targetDir, '.gemini/permissions.toml'))) ||
+    (await exists(path.join(targetDir, '.gemini/GEMINI.md')));
+  if (geminiInUse) {
+    checks.push({
+      id: 'harness:gemini_deprecation',
+      severity: 'warning',
+      key: 'doctor.gemini_deprecation',
+      params: {},
+      ok: false,
+      hintKey: 'doctor.gemini_deprecation_hint'
+    });
+  }
+
   const contextPath = path.join(targetDir, '.aioson/context/project.context.md');
   checks.push({
     id: 'context:project',

@@ -147,6 +147,11 @@ async function runInstall({ args, options, logger, t }) {
     logger.log(t('install.existing_project_scan_hint'));
   }
 
+  if (installProfile && Array.isArray(installProfile.tools) && installProfile.tools.includes('gemini')) {
+    logger.log('');
+    logger.log(t('install.gemini_deprecation_notice'));
+  }
+
   return {
     ok: true,
     targetDir,

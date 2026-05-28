@@ -198,6 +198,7 @@ module.exports = {
     files_skipped: 'Fichiers ignores : {count}',
     dry_run_header: '⚠  DRY RUN — aucun fichier ecrit. Apercu de ce que install ferait :',
     dry_run_done_at: 'DRY RUN : rien n a ete ecrit dans {targetDir}',
+    gemini_deprecation_notice: '[DEPRECATED] Le palier gratuit/personnel de Gemini CLI sera supprime le 2026-06-18. Envisagez Codex ou OpenCode pour les nouveaux projets. Enterprise (Code Assist Standard/Enterprise) continue de fonctionner.',
     dry_run_files_copied: 'Fichiers qui seraient copies (would be copied) : {count}',
     dry_run_files_skipped: 'Fichiers qui seraient ignores (would be skipped) : {count}',
     next_steps: 'Etapes suivantes :',
@@ -277,6 +278,9 @@ module.exports = {
     context_conversation_language_format: '`conversation_language` n est pas une balise BCP-47 valide',
     context_conversation_language_format_hint: 'Utilisez des valeurs comme en, en-US, pt-BR.',
     node_version: 'Node.js >= 18 (actuel : {version})',
+    gemini_deprecation: 'Gemini CLI utilise - le palier gratuit se termine le 2026-06-18 (enterprise non affecte)',
+    gemini_deprecation_hint:
+      'Lancez `aioson permissions-generator --tool=codex` (ou --tool=opencode) pour migrer. Enterprise (Code Assist Standard/Enterprise) continue de fonctionner; le .gemini/permissions.toml preexistant est conserve.',
     gateway_claude_pointer: 'La passerelle CLAUDE reference les fichiers partages AIOSON',
     gateway_claude_pointer_hint:
       'Assurez-vous que CLAUDE.md reference .aioson/config.md et .aioson/agents/setup.md.',

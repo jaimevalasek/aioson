@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-06-XX
+
+### Added
+- **Gemini CLI deprecation warning (gemini-phaseout Phase 1).** Google announced (2026-05-20) that the Gemini CLI free/personal tier ends 2026-06-18.
+  - `install-wizard` now flags Gemini as `[DEPRECATED]` in the tool list and prints a post-selection notice when Gemini is chosen.
+  - `doctor` reports `harness:gemini_deprecation` (warning) when `.gemini/permissions.toml` or `.gemini/GEMINI.md` is detected — zero output on projects without `.gemini/`.
+  - `permissions-generator` continues to emit `.gemini/permissions.toml` with a header warning (enterprise unaffected).
+  - `tool-capabilities` Gemini entry annotated as deprecated.
+  - Warning strings localized in all 4 locales (en, pt-BR, es, fr).
+  - Enterprise users (Code Assist Standard/Enterprise) are unaffected.
+  - Hard removal scheduled for v1.22 (post 2026-06-18). Pre-existing `.gemini/permissions.toml` will be preserved.
+  - Recommended migration: `--tool=codex` or `--tool=opencode`.
+
 ## [1.18.0] - 2026-05-27
 
 ### Added
