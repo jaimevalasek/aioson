@@ -270,19 +270,42 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   const otherSlugs = await readOtherSlugs(featuresPath, slug);
   const rootFiles = await findSlugFiles(ctxDir, slug, otherSlugs);
   const alreadyArchived = (await dirExists(archiveDir)) ? await findArchivedFiles(archiveDir) : [];
-  const dossierSourceDir = path.join(ctxDir, 'features', slug);
-  const dossierTargetDir = path.join(archiveDir, 'dossier');
-  const hasDossierToMove = await dirExists(dossierSourceDir);
-  const dossierAlreadyArchived = await dirExists(dossierTargetDir);
+
+  const SLUG_DIRS = [
+    { label: 'dossier', sourceBase: path.join(ctxDir, 'features'), archiveLabel: 'dossier' },
+    { label: 'plans', sourceBase: path.join(targetDir, '.aioson', 'plans'), archiveLabel: 'plans' },
+    { label: 'briefings', sourceBase: path.join(targetDir, '.aioson', 'briefings'), archiveLabel: 'briefings' }
+  ];
+
+  const dirPlans = [];
+  for (const dir of SLUG_DIRS) {
+    const sourceDir = path.join(dir.sourceBase, slug);
+    const targetDirPath = path.join(archiveDir, dir.archiveLabel);
+    const hasSource = await dirExists(sourceDir);
+    const alreadyDone = await dirExists(targetDirPath);
+    if (hasSource || alreadyDone) {
+      dirPlans.push({
+        label: dir.label,
+        sourceDir,
+        targetDir: targetDirPath,
+        sourceBase: dir.sourceBase,
+        action: hasSource
+          ? (alreadyDone ? 'skip' : 'move')
+          : (alreadyDone ? 'noop' : null),
+        reason: alreadyDone ? 'already_archived' : null
+      });
+    }
+  }
+
+  const hasAnyDir = dirPlans.some((d) => d.action === 'move' || d.action === 'skip' || d.action === 'noop');
 
   if (
     rootFiles.length === 0 &&
     alreadyArchived.length === 0 &&
-    !hasDossierToMove &&
-    !dossierAlreadyArchived
+    !hasAnyDir
   ) {
     if (jsonOut) return { ok: true, slug, moved: [], skipped: [], alreadyArchived: [], noop: true };
-    log(`No files matched "*-${slug}.{${ARCHIVED_EXTENSIONS.join(',')}}" in .aioson/context/ root and no features/${slug}/ dossier dir — nothing to archive.`);
+    log(`No files matched "*-${slug}.{${ARCHIVED_EXTENSIONS.join(',')}}" in .aioson/context/ root and no slug directories found — nothing to archive.`);
     return { ok: true, noop: true };
   }
 
@@ -305,11 +328,16 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     : null;
   const summary = summarySource ? await extractSummary(summarySource) : null;
 
-  const dossierPlan = hasDossierToMove
-    ? (dossierAlreadyArchived ? { action: 'skip', reason: 'already_archived' } : { action: 'move' })
-    : (dossierAlreadyArchived ? { action: 'noop', reason: 'already_archived' } : null);
-
   if (dryRun) {
+    const dirs = dirPlans
+      .filter((d) => d.action)
+      .map((d) => ({
+        label: d.label,
+        source: path.relative(targetDir, d.sourceDir),
+        target: path.relative(targetDir, d.targetDir),
+        action: d.action,
+        reason: d.reason
+      }));
     const result = {
       ok: true,
       dryRun: true,
@@ -317,13 +345,7 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
       targetDir: path.relative(targetDir, archiveDir),
       move: toMove,
       skip: toSkip,
-      dossier: dossierPlan
-        ? {
-            source: path.relative(targetDir, dossierSourceDir),
-            target: path.relative(targetDir, dossierTargetDir),
-            ...dossierPlan
-          }
-        : null,
+      dirs,
       manifestEntry: {
         slug,
         completed,
@@ -340,10 +362,12 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
       log(`  would skip: ${toSkip.length} file(s)`);
       for (const s of toSkip) log(`    • ${s.name} (${s.reason})`);
     }
-    if (dossierPlan && dossierPlan.action === 'move') {
-      log(`  would move dossier dir: features/${slug}/ → ${path.relative(targetDir, dossierTargetDir)}/`);
-    } else if (dossierPlan && dossierPlan.action === 'skip') {
-      log(`  would skip dossier dir: already archived at ${path.relative(targetDir, dossierTargetDir)}/`);
+    for (const d of dirPlans) {
+      if (d.action === 'move') {
+        log(`  would move ${d.label} dir: ${path.relative(targetDir, d.sourceDir)}/ → ${path.relative(targetDir, d.targetDir)}/`);
+      } else if (d.action === 'skip') {
+        log(`  would skip ${d.label} dir: already archived at ${path.relative(targetDir, d.targetDir)}/`);
+      }
     }
     log(`  manifest entry: | ${slug} | ${completed} | ${toMove.length + alreadyArchived.length} | ${summary || '—'} |`);
     return result;
@@ -359,27 +383,29 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     moved.push(name);
   }
 
-  let dossierResult = null;
-  if (dossierPlan && dossierPlan.action === 'move') {
-    await fs.rename(dossierSourceDir, dossierTargetDir);
-    dossierResult = {
-      action: 'moved',
-      source: path.relative(targetDir, dossierSourceDir),
-      target: path.relative(targetDir, dossierTargetDir)
-    };
-    try {
-      const parent = path.join(ctxDir, 'features');
-      const remaining = await fs.readdir(parent);
-      if (remaining.length === 0) await fs.rmdir(parent);
-    } catch {
-      // parent missing or non-empty — leave it
+  const dirResults = [];
+  for (const d of dirPlans) {
+    if (d.action === 'move') {
+      await fs.mkdir(path.dirname(d.targetDir), { recursive: true });
+      await fs.rename(d.sourceDir, d.targetDir);
+      dirResults.push({
+        label: d.label,
+        action: 'moved',
+        source: path.relative(targetDir, d.sourceDir),
+        target: path.relative(targetDir, d.targetDir)
+      });
+      try {
+        const remaining = await fs.readdir(d.sourceBase);
+        if (remaining.length === 0) await fs.rmdir(d.sourceBase);
+      } catch { /* parent missing or non-empty */ }
+    } else if (d.action === 'skip') {
+      dirResults.push({
+        label: d.label,
+        action: 'skipped',
+        reason: d.reason,
+        target: path.relative(targetDir, d.targetDir)
+      });
     }
-  } else if (dossierPlan && dossierPlan.action === 'skip') {
-    dossierResult = {
-      action: 'skipped',
-      reason: dossierPlan.reason,
-      target: path.relative(targetDir, dossierTargetDir)
-    };
   }
 
   const totalArchived = (await findArchivedFiles(archiveDir)).length;
@@ -399,7 +425,8 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     moved,
     skipped: toSkip,
     totalArchived,
-    dossier: dossierResult,
+    dirs: dirResults.length > 0 ? dirResults : undefined,
+    dossier: dirResults.find((d) => d.label === 'dossier') || null,
     manifestEntry: entry
   };
 
@@ -412,10 +439,12 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     log(`  skipped: ${toSkip.length} file(s) already in archive`);
     for (const s of toSkip) log(`    • ${s.name}`);
   }
-  if (dossierResult && dossierResult.action === 'moved') {
-    log(`  moved dossier dir: ${dossierResult.source}/ → ${dossierResult.target}/`);
-  } else if (dossierResult && dossierResult.action === 'skipped') {
-    log(`  skipped dossier dir: already archived at ${dossierResult.target}/`);
+  for (const d of dirResults) {
+    if (d.action === 'moved') {
+      log(`  moved ${d.label} dir: ${d.source}/ → ${d.target}/`);
+    } else if (d.action === 'skipped') {
+      log(`  skipped ${d.label} dir: already archived at ${d.target}/`);
+    }
   }
   log(`  manifest updated: .aioson/context/done/MANIFEST.md`);
   return result;
@@ -510,4 +539,92 @@ async function runRestore({ slug, ctxDir, archiveDir, manifestPath, dryRun, json
   return result;
 }
 
-module.exports = { runFeatureArchive };
+async function listDoneFeatures(featuresPath) {
+  const content = await readFileSafe(featuresPath);
+  if (!content) return [];
+  const results = [];
+  const lines = content.split(/\r?\n/);
+  for (const line of lines) {
+    const m = line.match(/^\|\s*([a-z][a-z0-9-]*)\s*\|\s*done\s*\|/i);
+    if (m) results.push(m[1].toLowerCase());
+  }
+  return results;
+}
+
+async function listArchivedSlugs(manifestPath) {
+  const content = await readFileSafe(manifestPath);
+  if (!content) return new Set();
+  const slugs = new Set();
+  const lines = content.split(/\r?\n/);
+  for (const line of lines) {
+    const m = line.match(/^\|\s*([a-z][a-z0-9-]+)\s*\|/i);
+    if (m && m[1] !== 'slug') slugs.add(m[1].toLowerCase());
+  }
+  return slugs;
+}
+
+async function runFeatureSweep({ args = [], options = {}, logger }) {
+  const targetDir = path.resolve(process.cwd(), args[0] || '.');
+  const dryRun = Boolean(options['dry-run'] || options.dryRun);
+  const jsonOut = Boolean(options.json);
+  const log = (msg) => { if (logger && !jsonOut) logger.log(msg); };
+
+  const ctxDir = contextDir(targetDir);
+  if (!(await dirExists(ctxDir))) {
+    if (jsonOut) return { ok: false, reason: 'no_context_dir' };
+    log('.aioson/context/ not found. Run aioson setup first.');
+    return { ok: false };
+  }
+
+  const featuresPath = path.join(ctxDir, 'features.md');
+  const manifestPath = path.join(ctxDir, 'done', 'MANIFEST.md');
+
+  const doneSlugs = await listDoneFeatures(featuresPath);
+  const archivedSlugs = await listArchivedSlugs(manifestPath);
+  const pending = doneSlugs.filter((s) => !archivedSlugs.has(s));
+
+  if (pending.length === 0) {
+    const result = { ok: true, pending: [], archived: [] };
+    if (jsonOut) return result;
+    log('All done features are already archived.');
+    return result;
+  }
+
+  if (dryRun) {
+    const result = { ok: true, dryRun: true, pending, archived: [] };
+    if (jsonOut) return result;
+    log(`[dry-run] ${pending.length} done feature(s) not yet archived:`);
+    for (const s of pending) log(`  • ${s}`);
+    return result;
+  }
+
+  const archived = [];
+  const failed = [];
+  for (const slug of pending) {
+    try {
+      const archiveResult = await runFeatureArchive({
+        args: [targetDir],
+        options: { feature: slug, json: true },
+        logger: null
+      });
+      if (archiveResult && archiveResult.ok) {
+        const movedCount = archiveResult.moved ? archiveResult.moved.length : 0;
+        archived.push({ slug, moved: movedCount });
+        log(`  ✓ ${slug} — ${movedCount} file(s) archived`);
+      } else {
+        failed.push({ slug, reason: archiveResult.reason || 'unknown' });
+        log(`  ✗ ${slug} — ${archiveResult.reason || 'unknown'}`);
+      }
+    } catch (err) {
+      failed.push({ slug, reason: err.message || String(err) });
+      log(`  ✗ ${slug} — ${err.message || err}`);
+    }
+  }
+
+  const result = { ok: true, pending, archived, failed: failed.length > 0 ? failed : undefined };
+  if (jsonOut) return result;
+  log(`\nSweep complete: ${archived.length} archived, ${failed.length} failed.`);
+  return result;
+}
+
+module.exports = { runFeatureArchive, runFeatureSweep };

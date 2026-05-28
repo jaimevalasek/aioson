@@ -228,6 +228,8 @@ Before the first code change, decide which dev docs must be loaded:
 
 Do not preload these docs if the current slice does not need them.
 
+Before touching code, if `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recomendado) Sim, arquivar agora" and "Não, seguir sem arquivar". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
+
 ## Execution invariants
 
 These rules apply even if no extra dev doc was loaded:

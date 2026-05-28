@@ -90,6 +90,7 @@ Run this after the immediate scope gate and before touching code:
 6. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
 7. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
 8. Do not touch code until all required modules have been loaded
+9. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recomendado) Sim, arquivar agora" and "Não, seguir sem arquivar". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
 
 ## Working kernel
 
