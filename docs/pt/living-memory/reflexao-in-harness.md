@@ -121,6 +121,8 @@ O agente é livre para usar o LLM como achar melhor para fazer a reescrita. O CL
 
 Se tudo passa: escreve, apaga o manifest, emite `memory_reflect_committed` em runtime. Se falha: emite `memory_reflect_failed` com a lista de erros e o agente tem 1 retry.
 
+> **`--dry-run` (pré-visualização não-destrutiva):** `aioson memory:reflect-commit . --agent=dev --output=<json> --dry-run` roda a validação + containment de path exatamente como o commit real, mas **não escreve nada e não consome o manifest** — retorna `{ ok: true, dryRun: true, would_write: [...] }`. Use pra conferir o output antes de aplicar. Atenção: o manifest é **single-use** — um commit real (sem `--dry-run`) o apaga; pra recomeçar, rode `memory:reflect-prepare` de novo.
+
 ## Exemplo end-to-end
 
 ```bash

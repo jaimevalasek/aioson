@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **`memory:reflect-commit --dry-run` is now non-destructive.** The command never read the `--dry-run` flag, so a "dry run" silently performed the full destructive commit — it wrote the bootstrap files **and** unlinked the single-use manifest, leaving the flow unrecoverable (`missing_manifest`) on the next call. `--dry-run` now runs validation + path containment exactly like a real commit, then returns `{ ok: true, dryRun: true, would_write: [...] }` without writing any file or consuming the manifest, so a real commit can still follow. Regression coverage in `tests/memory-reflect-commit-dry-run.test.js`. Note: the reflect manifest remains single-use — a successful real commit consumes it (re-run by re-running `memory:reflect-prepare`).
+
 ## [1.21.0] - 2026-06-XX
 
 ### Added
