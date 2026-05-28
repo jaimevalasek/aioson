@@ -1,6 +1,6 @@
 'use strict';
 
-// aioson memory:reflect-commit [.] --agent=<name> [--output=<path-to-json>] [--json]
+// aioson memory:reflect-commit [.] --agent=<name> [--output=<path-to-json>] [--json] [--dry-run]
 //
 // Reads the reflect manifest written by memory:reflect-prepare, accepts the
 // agent's reflected output (as a JSON map of relative path → new content),
@@ -63,6 +63,7 @@ async function emitEvent(targetDir, agent, type, message, payload) {
 async function runMemoryReflectCommit({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args?.[0] || '.');
   const agent = String(options.agent || '').trim() || 'unknown';
+  const dryRun = Boolean(options['dry-run'] || options.dryRun);
 
   const manifestPath = path.join(targetDir, REFLECT_PROMPT_RELATIVE);
   let manifest;
@@ -102,9 +103,11 @@ async function runMemoryReflectCommit({ args, options = {}, logger }) {
   // verify that every resolved absolute path stays under the project's
   // bootstrap directory. validate() already rejects absolute paths and
   // `..` segments, but this is the second wall in case the manifest's
-  // allowed_paths is ever extended beyond bootstrap/.
+  // allowed_paths is ever extended beyond bootstrap/. Run this for BOTH
+  // dry-run and real commits so a dry-run validates exactly what a real
+  // commit would do.
   const bootstrapRoot = path.resolve(targetDir, '.aioson/context/bootstrap');
-  const written = [];
+  const planned = [];
   for (const [relPath, content] of Object.entries(files)) {
     const absPath = path.resolve(targetDir, relPath);
     if (!absPath.startsWith(bootstrapRoot + path.sep) && absPath !== bootstrapRoot) {
@@ -116,6 +119,27 @@ async function runMemoryReflectCommit({ args, options = {}, logger }) {
       });
       return { ok: false, error: 'path_escape', message: msg };
     }
+    planned.push({ relPath, absPath, content });
+  }
+
+  // --dry-run: validation + path containment already passed. Report what WOULD
+  // be written and stop — no disk writes, and crucially the manifest is NOT
+  // consumed, so a real commit can still follow. A dry-run must never mutate
+  // state (this is the bug fix: previously --dry-run was ignored and ran the
+  // full destructive commit).
+  if (dryRun) {
+    const wouldWrite = planned.map((p) => p.relPath);
+    if (!options.json) {
+      logger.log('• reflect-commit DRY RUN — no files written, manifest preserved');
+      for (const w of wouldWrite) logger.log(`  - would write: ${w}`);
+    }
+    await emitEvent(targetDir, agent, 'memory_reflect_dry_run',
+      `dry-run validated ${wouldWrite.length} file(s)`, { would_write: wouldWrite });
+    return { ok: true, dryRun: true, would_write: wouldWrite };
+  }
+
+  const written = [];
+  for (const { relPath, absPath, content } of planned) {
     // SF-project-22: scrub zero-width / bidi / HTML-comment injection carriers
     // from the LLM-authored content before it lands in bootstrap. Path
     // containment is already enforced above; this is the content layer of the
