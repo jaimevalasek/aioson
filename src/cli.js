@@ -229,6 +229,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'agents',
   'agent:prompt',
   'agent-prompt',
+  'agent:help',
+  'agent-help',
   'agent:invoke',
   'agent-invoke',
   'setup:context',
@@ -700,6 +702,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'system-install'
 ]);
 
+const AGENT_HELP_COMMANDS = new Set([
+  'agent:prompt', 'agent-prompt', 'agent:invoke', 'agent-invoke', 'agent:help', 'agent-help'
+]);
+
 const LEGACY_DASHBOARD_COMMANDS = new Set([
   'dashboard:init',
   'dashboard-init',
@@ -748,6 +754,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_i18n_add');
   logHelpLine(t, logger, 'cli.help_agents');
   logHelpLine(t, logger, 'cli.help_agent_prompt');
+  logHelpLine(t, logger, 'cli.help_agent_help');
   logHelpLine(t, logger, 'cli.help_agent_invoke');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
@@ -851,6 +858,91 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_squad_grant');
 }
 
+function printAgentHelp(agentName, jsonMode, logger, t) {
+  const { AGENT_DEFINITIONS } = require('./constants');
+  const { normalizeAgentName } = require('./agents');
+
+  if (!agentName) {
+    const list = AGENT_DEFINITIONS.map((a) => ({
+      id: a.id,
+      displayName: a.displayName,
+      description: a.description || ''
+    }));
+    if (jsonMode) {
+      writeJson({ ok: true, agents: list });
+      return;
+    }
+    logger.log(`${t('agents.help_available')}\n`);
+    for (const a of list) {
+      logger.log(`  @${a.id.padEnd(24)} ${a.description}`);
+    }
+    logger.log(`\n${t('agents.help_run_detail')}`);
+    return;
+  }
+
+  const normalized = normalizeAgentName(agentName);
+  const agent = AGENT_DEFINITIONS.find((a) => {
+    if (a.id === normalized) return true;
+    return Array.isArray(a.aliases) && a.aliases.includes(normalized);
+  });
+
+  if (!agent) {
+    if (jsonMode) {
+      writeJson({ ok: false, error: t('agents.help_unknown_agent', { agent: agentName }) });
+    } else {
+      logger.error(t('agents.help_unknown_agent', { agent: agentName }));
+    }
+    process.exitCode = 1;
+    return;
+  }
+
+  if (jsonMode) {
+    writeJson({
+      ok: true,
+      agent: {
+        id: agent.id,
+        displayName: agent.displayName,
+        description: agent.description || '',
+        command: agent.command,
+        path: agent.path,
+        aliases: agent.aliases || [],
+        flags: agent.flags || [],
+        dependsOn: agent.dependsOn,
+        output: agent.output
+      }
+    });
+    return;
+  }
+
+  const aliasLine = agent.aliases && agent.aliases.length > 0
+    ? ` (aliases: ${agent.aliases.join(', ')})`
+    : '';
+  logger.log(`${agent.command} — ${agent.description || agent.displayName}${aliasLine}\n`);
+  logger.log(`${t('agents.help_usage')}`);
+  logger.log(`  aioson agent:prompt ${agent.id} [path] [options]`);
+  logger.log(`  /${agent.id} [task description]                  ${t('agents.help_claude_code')}\n`);
+  logger.log(t('agents.help_common_options'));
+  logger.log(`  --tool=<tool>       ${t('agents.help_opt_tool')}`);
+  logger.log(`  --language=<lang>   ${t('agents.help_opt_language')}`);
+  logger.log(`  --headless          ${t('agents.help_opt_headless')}`);
+  logger.log(`  --output=<path>     ${t('agents.help_opt_output')}`);
+  logger.log(`  --json              ${t('agents.help_opt_json')}`);
+  if (agent.flags && agent.flags.length > 0) {
+    logger.log(`\n${t('agents.help_agent_options', { command: agent.command })}`);
+    for (const flag of agent.flags) {
+      logger.log(`  --${flag.name}=${flag.value.padEnd(Math.max(12 - flag.name.length, 1))} ${flag.description}`);
+    }
+  }
+  if (agent.dependsOn.length > 0) {
+    logger.log(`\n${t('agents.help_requires')}`);
+    for (const dep of agent.dependsOn) {
+      logger.log(`  ${dep}`);
+    }
+  }
+  logger.log(`\n${t('agents.help_produces')}\n  ${agent.output}`);
+  logger.log(`\n${t('agents.help_instruction_file')}\n  ${agent.path}`);
+}
+
 function commandSupportsJson(command) {
   return JSON_SUPPORTED_COMMANDS.has(command);
 }
@@ -868,16 +960,28 @@ async function main() {
   const logger = createLogger();
   const silentLogger = createSilentLogger();
 
-  if (command === 'help' || options.help || command === '--help' || command === '-h') {
-    printHelp(t, logger);
+  if (command === '--version' || command === '-v' || command === 'version' || options.version) {
+    const { getCliVersionSync } = require('./version');
+    const version = getCliVersionSync();
+    if (jsonMode) {
+      writeJson({ ok: true, version });
+    } else {
+      logger.log(`aioson ${version}`);
+    }
     return;
   }
 
-  if (command === '--version' || command === '-v' || command === 'version' || options.version) {
-    const result = await runInfo({ args: ['.'], options, logger, t });
-    if (jsonMode) {
-      writeJson(result);
-    }
+  if (options.help && AGENT_HELP_COMMANDS.has(command)) {
+    printAgentHelp(args[0], jsonMode, logger, t);
+    return;
+  }
+  if (command === 'agent:help' || command === 'agent-help') {
+    printAgentHelp(args[0], jsonMode, logger, t);
+    return;
+  }
+
+  if (command === 'help' || options.help || command === '--help' || command === '-h') {
+    printHelp(t, logger);
     return;
   }
 

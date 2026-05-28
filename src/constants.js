@@ -190,6 +190,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'setup',
     displayName: 'Setup',
+    description: 'Project onboarding and context setup',
     command: '@setup',
     path: '.aioson/agents/setup.md',
     dependsOn: [],
@@ -198,6 +199,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'discovery-design-doc',
     displayName: 'Discovery/Design Doc',
+    description: 'Discovery and design doc generation',
     command: '@discovery-design-doc',
     path: '.aioson/agents/discovery-design-doc.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -206,6 +208,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'discover',
     displayName: 'Discover',
+    description: 'Semantic knowledge discovery and bootstrap cache generation',
     command: '@discover',
     path: '.aioson/agents/discover.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -214,6 +217,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'product',
     displayName: 'Product',
+    description: 'Product vision, PRD and feature scoping',
     command: '@product',
     path: '.aioson/agents/product.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -222,6 +226,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'deyvin',
     displayName: 'Deyvin',
+    description: 'Pair programming partner for continuity sessions',
     command: '@deyvin',
     path: '.aioson/agents/deyvin.md',
     aliases: ['pair'],
@@ -231,6 +236,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'analyst',
     displayName: 'Analyst',
+    description: 'Domain discovery and entity mapping (SMALL/MEDIUM)',
     command: '@analyst',
     path: '.aioson/agents/analyst.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -239,6 +245,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'architect',
     displayName: 'Architect',
+    description: 'Project structure and technical decisions (SMALL/MEDIUM)',
     command: '@architect',
     path: '.aioson/agents/architect.md',
     dependsOn: [
@@ -250,6 +257,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'ux-ui',
     displayName: 'UI/UX',
+    description: 'UI/UX design system and component spec (SMALL/MEDIUM)',
     command: '@ux-ui',
     path: '.aioson/agents/ux-ui.md',
     dependsOn: [
@@ -263,6 +271,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'pm',
     displayName: 'PM',
+    description: 'Backlog and user stories (MEDIUM only)',
     command: '@pm',
     path: '.aioson/agents/pm.md',
     dependsOn: [
@@ -277,6 +286,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'dev',
     displayName: 'Dev',
+    description: 'Feature implementation (any stack)',
     command: '@dev',
     path: '.aioson/agents/dev.md',
     dependsOn: [
@@ -289,8 +299,14 @@ const AGENT_DEFINITIONS = [
   {
     id: 'pentester',
     displayName: 'Pentester',
+    description: 'Adversarial security review and threat-surface mapping',
     command: '@pentester',
     path: '.aioson/agents/pentester.md',
+    flags: [
+      { name: 'mode', value: 'framework_target|app_target', description: 'Target mode for security review' },
+      { name: 'feature', value: '<slug>', description: 'Feature slug (required for app_target)' },
+      { name: 'scope', value: '<scope>', description: 'Target scope (required for app_target)' }
+    ],
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/spec-{slug}.md (active feature)'
@@ -300,6 +316,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'qa',
     displayName: 'QA',
+    description: 'Risk-first review and test generation (SMALL/MEDIUM)',
     command: '@qa',
     path: '.aioson/agents/qa.md',
     dependsOn: ['.aioson/context/discovery.md'],
@@ -308,6 +325,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'validator',
     displayName: 'Validator',
+    description: 'Technical validation against success contract',
     command: '@validator',
     path: '.aioson/agents/validator.md',
     dependsOn: [
@@ -319,6 +337,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'tester',
     displayName: 'Tester',
+    description: 'Systematic test engineering for implemented apps (all sizes)',
     command: '@tester',
     path: '.aioson/agents/tester.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -327,6 +346,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'orchestrator',
     displayName: 'Orchestrator',
+    description: 'Session protocol and parallel execution (MEDIUM)',
     command: '@orchestrator',
     path: '.aioson/agents/orchestrator.md',
     dependsOn: [
@@ -342,6 +362,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'squad',
     displayName: 'Squad',
+    description: 'Squad assembly and management',
     command: '@squad',
     path: '.aioson/agents/squad.md',
     dependsOn: [],
@@ -351,6 +372,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'orache',
     displayName: 'Orache',
+    description: 'Domain investigation and strategic research',
     command: '@orache',
     path: '.aioson/agents/orache.md',
     dependsOn: [],
@@ -359,6 +381,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'genome',
     displayName: 'Genome',
+    description: 'Domain genome creation and application',
     command: '@genome',
     path: '.aioson/agents/genome.md',
     dependsOn: [],
@@ -367,6 +390,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'design-hybrid-forge',
     displayName: 'Design Hybrid Forge',
+    description: 'Generate hybrid design skill from two visual parents',
     command: '@design-hybrid-forge',
     path: '.aioson/agents/design-hybrid-forge.md',
     dependsOn: ['.aioson/context/project.context.md'],
@@ -375,14 +399,61 @@ const AGENT_DEFINITIONS = [
   {
     id: 'site-forge',
     displayName: 'Site Forge',
+    description: 'Clone, extract, and forge sites and design skills from any URL',
     command: '@site-forge',
     path: '.aioson/agents/site-forge.md',
     dependsOn: ['.aioson/context/project.context.md'],
     output: 'src/components/*.tsx + src/app/page.tsx + docs/research/{hostname}/ + public/images/{hostname}/'
   },
   {
+    id: 'neo',
+    displayName: 'Neo',
+    description: 'System router: see the full picture, get guided to the right agent',
+    command: '@neo',
+    path: '.aioson/agents/neo.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: 'routing decision + agent handoff'
+  },
+  {
+    id: 'sheldon',
+    displayName: 'Sheldon',
+    description: 'Deep technical analysis and architecture review',
+    command: '@sheldon',
+    path: '.aioson/agents/sheldon.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: 'enriched PRD or architecture review'
+  },
+  {
+    id: 'committer',
+    displayName: 'Committer',
+    description: 'Professional Git commit generation from changes and context',
+    command: '@committer',
+    path: '.aioson/agents/committer.md',
+    dependsOn: [],
+    output: 'git commit(s)'
+  },
+  {
+    id: 'copywriter',
+    displayName: 'Copywriter',
+    description: 'Conversion-focused marketing copy',
+    command: '@copywriter',
+    path: '.aioson/agents/copywriter.md',
+    dependsOn: [],
+    output: 'marketing copy + content assets'
+  },
+  {
+    id: 'briefing',
+    displayName: 'Briefing',
+    description: 'Pre-production briefings and planning',
+    command: '@briefing',
+    path: '.aioson/agents/briefing.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: '.aioson/briefings/{slug}/'
+  },
+  {
     id: 'profiler-researcher',
     displayName: 'Profiler Researcher',
+    description: 'Clone profiler: research phase',
     command: '@profiler-researcher',
     path: '.aioson/agents/profiler-researcher.md',
     dependsOn: [],
@@ -391,6 +462,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'profiler-enricher',
     displayName: 'Profiler Enricher',
+    description: 'Clone profiler: enrichment phase',
     command: '@profiler-enricher',
     path: '.aioson/agents/profiler-enricher.md',
     dependsOn: ['.aioson/profiler-reports/{person-slug}/research-report.md'],
@@ -399,6 +471,7 @@ const AGENT_DEFINITIONS = [
   {
     id: 'profiler-forge',
     displayName: 'Profiler Forge',
+    description: 'Clone profiler: forge and validate',
     command: '@profiler-forge',
     path: '.aioson/agents/profiler-forge.md',
     dependsOn: ['.aioson/profiler-reports/{person-slug}/enriched-profile.md'],

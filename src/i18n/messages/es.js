@@ -20,6 +20,8 @@ module.exports = {
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=es]',
     help_agent_prompt:
       'aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=<bcp47-tag>] [--locale=es]',
+    help_agent_help:
+      'aioson agent:help [agent] [--json]',
     help_agent_invoke:
       'aioson agent:invoke <agent> [path] [--tool=codex|claude|gemini|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=es]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=es]',
@@ -383,7 +385,22 @@ module.exports = {
       'Pentester app_target requiere --feature=<slug> (o --slug=<slug>).',
     prompt_missing_scope_for_app_target:
       'Pentester app_target requiere --scope=<area>.',
-    prompt_title: 'Prompt para el agente "{agent}" en la herramienta "{tool}" (locale: {locale}):'
+    prompt_title: 'Prompt para el agente "{agent}" en la herramienta "{tool}" (locale: {locale}):',
+    help_available: 'Agentes disponibles:',
+    help_run_detail: 'Ejecute "aioson agent:help <nombre>" para detalles de un agente específico.',
+    help_usage: 'Uso:',
+    help_claude_code: '(Claude Code)',
+    help_common_options: 'Opciones comunes:',
+    help_opt_tool: 'Herramienta destino (codex|claude|gemini|opencode)',
+    help_opt_language: 'Idioma de interacción (ej: pt-BR, en)',
+    help_opt_headless: 'Solo salida del prompt, sin rastreo de runtime',
+    help_opt_output: 'Guardar prompt headless en archivo',
+    help_opt_json: 'Modo de salida JSON',
+    help_agent_options: 'Opciones específicas del agente ({command}):',
+    help_requires: 'Requiere:',
+    help_produces: 'Produce:',
+    help_instruction_file: 'Archivo de instrucción:',
+    help_unknown_agent: 'Agente desconocido: {agent}'
   },
   context_validate: {
     missing_file: 'Archivo de contexto no encontrado: {path}',

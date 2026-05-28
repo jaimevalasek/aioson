@@ -19,6 +19,8 @@ module.exports = {
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_prompt:
       'aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=<bcp47-tag>] [--locale=en]',
+    help_agent_help:
+      'aioson agent:help [agent] [--json]',
     help_agent_invoke:
       'aioson agent:invoke <agent> [path] [--tool=codex|claude|gemini|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
@@ -505,7 +507,22 @@ module.exports = {
       'Pentester app_target requires --feature=<slug> (or --slug=<slug>).',
     prompt_missing_scope_for_app_target:
       'Pentester app_target requires --scope=<area>.',
-    prompt_title: 'Prompt for agent "{agent}" on tool "{tool}" (locale: {locale}):'
+    prompt_title: 'Prompt for agent "{agent}" on tool "{tool}" (locale: {locale}):',
+    help_available: 'Available agents:',
+    help_run_detail: 'Run "aioson agent:help <name>" for details on a specific agent.',
+    help_usage: 'Usage:',
+    help_claude_code: '(Claude Code)',
+    help_common_options: 'Common options:',
+    help_opt_tool: 'Target tool (codex|claude|gemini|opencode)',
+    help_opt_language: 'Interaction language (e.g., pt-BR, en)',
+    help_opt_headless: 'Output prompt only, no runtime tracking',
+    help_opt_output: 'Save headless prompt to file',
+    help_opt_json: 'JSON output mode',
+    help_agent_options: 'Agent-specific options ({command}):',
+    help_requires: 'Requires:',
+    help_produces: 'Produces:',
+    help_instruction_file: 'Instruction file:',
+    help_unknown_agent: 'Unknown agent: {agent}'
   },
   context_validate: {
     missing_file: 'Context file not found: {path}',
