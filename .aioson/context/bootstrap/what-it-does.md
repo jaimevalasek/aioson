@@ -1,6 +1,6 @@
 ---
 generated_by: product
-generated_at: "2026-05-13T00:00:00.000Z"
+generated_at: "2026-05-29T02:02:39.268Z"
 confidence: high
 ---
 
@@ -21,6 +21,7 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 - Exposes `aioson notify --level=info|warn|block` as a visual wrapper over `runtime:emit`, with ℹ/⚠/⛔ prefixes and exit code 2 on `block`.
 - Diagnoses Living Memory health through `aioson doctor` (warning-severity checks for bootstrap coverage, features dir, claude commands, version drift, permissions sync) with `--fix` auto-correcting permissions and structural gaps.
 - Supports marketing-focused work through `@copywriter` Mode 6 (Campaign Package), G2.5 master copywriter selection across 8 schools, alternative copy structures (Tríade, KSTK, CPGC), and a copy gate that halts `@ux-ui` until `copy-{slug}.md` exists.
+- Bounds the per-activation cost of `bootstrap/current-state.md` via the **agent loading contract**: `aioson memory:trim` + a `feature:close` auto-rollup split the hot log from a cold `current-state-archive.md`; `context:health` measures the bootstrap layer; a shared `code-health-analysis` lens loads on-demand for the test/analysis agents. See `.aioson/design-docs/agent-loading-contract.md`.
 
 ## Current improvement focus
 
