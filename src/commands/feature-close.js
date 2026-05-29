@@ -25,6 +25,12 @@ const { loadConfig } = require('../sub-task-engine');
 const { runDistillation, readFeatureClassification } = require('../learning-loop-engine');
 const { openRuntimeDb } = require('../runtime-store');
 const { runNotify } = require('./notify');
+const { splitCurrentState, buildArchiveContent, parseActiveSlugs } = require('../current-state-trim');
+
+// P0 agent-loading-contract: a feature closing is the natural cadence to roll
+// aged-out current-state.md entries into the cold archive. Conservative window
+// (gentle, automatic) — manual `memory:trim --keep=<N>` can trim harder.
+const AUTO_CLOSE_KEEP = 25;
 
 function nowDate() {
   return new Date().toISOString().slice(0, 10);
@@ -529,6 +535,32 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   } else if (verdict === 'PASS' && skipDistill) {
     updates.push('distill: skipped (--no-distill flag)');
+  }
+
+  // Auto-rollup bootstrap/current-state.md (P0 agent-loading-contract). The
+  // just-closed slug is already `done` in features.md, so it no longer counts as
+  // an active-slug exemption — its aged entries become eligible. Best-effort and
+  // non-blocking: a failure here must never break the closure. Opt out: --no-trim.
+  const skipTrim = options['no-trim'] === true || options.trim === false;
+  if (verdict === 'PASS' && !skipTrim) {
+    try {
+      const csPath = path.join(targetDir, '.aioson/context/bootstrap/current-state.md');
+      const csContent = await readFileSafe(csPath);
+      if (csContent) {
+        const activeSlugs = parseActiveSlugs((await readFileSafe(path.join(targetDir, '.aioson/context/features.md'))) || '');
+        const split = splitCurrentState(csContent, { keep: AUTO_CLOSE_KEEP, activeSlugs });
+        if (split.ok && split.archivedEntries.length > 0) {
+          const archPath = path.join(targetDir, '.aioson/context/bootstrap/current-state-archive.md');
+          const eol = /\r\n/.test(csContent) ? '\r\n' : '\n';
+          const existingArchive = (await readFileSafe(archPath)) || '';
+          await fs.writeFile(archPath, buildArchiveContent(existingArchive, split.archivedEntries, nowDate(), eol), 'utf8');
+          await fs.writeFile(csPath, split.hotContent, 'utf8');
+          updates.push(`trim: archived ${split.archivedEntries.length} aged current-state entries (kept ${split.stats.kept})`);
+        }
+      }
+    } catch (err) {
+      updates.push(`trim: hook error (${(err && err.message) || err})`);
+    }
   }
 
   const result = {

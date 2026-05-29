@@ -84,6 +84,34 @@ async function runContextHealth({ args, options = {}, logger }) {
     } catch { /* skip unreadable files */ }
   }
 
+  // bootstrap/*.md is the per-activation memory layer: dev/qa/architect/deyvin
+  // read it on every session start, so it dominates the real activation cost.
+  // It lives in a subdir, so the top-level scan above missed it entirely —
+  // include it here so the heaviest layer is visible, not hidden (P0 of the
+  // agent-loading-contract). Backward-compatible: no bootstrap/ dir → no change.
+  const bootstrapDir = path.join(contextDir, 'bootstrap');
+  let bootstrapFiles = [];
+  try {
+    // Exclude *-archive.md: cold storage is never loaded at activation, so
+    // counting it would inflate the report and mislabel intended bulk as CRITICAL.
+    bootstrapFiles = (await fs.readdir(bootstrapDir))
+      .filter((f) => f.endsWith('.md') && !f.endsWith('-archive.md'));
+  } catch { /* no bootstrap dir — pre-Living-Memory projects */ }
+  for (const file of bootstrapFiles) {
+    try {
+      const content = await fs.readFile(path.join(bootstrapDir, file), 'utf8');
+      const tokens = estimateTokens(content);
+      totalTokens += tokens;
+      report.push({
+        file: `bootstrap/${file}`,
+        sizeBytes: content.length,
+        tokens,
+        heavy: tokens > HEAVY_TOKEN_THRESHOLD,
+        critical: tokens > CRITICAL_TOKEN_THRESHOLD
+      });
+    } catch { /* skip unreadable files */ }
+  }
+
   report.sort((a, b) => b.tokens - a.tokens);
 
   const doneFeatures = await loadFeatureStatuses(contextDir);
@@ -150,8 +178,13 @@ async function runContextHealth({ args, options = {}, logger }) {
     for (const r of heavyFiles) {
       const label = r.critical ? 'CRITICAL' : 'heavy';
       logger.log(`⚠  ${r.file} is ${label} (${formatBytes(r.sizeBytes)}). Consider:`);
-      logger.log(`   → Run: aioson context:pack . --scope=<feature>`);
-      logger.log(`     Creates a scoped context for a specific feature`);
+      if (r.file === 'bootstrap/current-state.md') {
+        logger.log(`   → Run: aioson memory:trim . --dry-run`);
+        logger.log(`     Archives old log entries out of the hot bootstrap (every agent reads this at activation)`);
+      } else {
+        logger.log(`   → Run: aioson context:pack . --scope=<feature>`);
+        logger.log(`     Creates a scoped context for a specific feature`);
+      }
     }
     logger.log('');
   }
