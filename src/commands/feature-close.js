@@ -541,7 +541,11 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // just-closed slug is already `done` in features.md, so it no longer counts as
   // an active-slug exemption — its aged entries become eligible. Best-effort and
   // non-blocking: a failure here must never break the closure. Opt out: --no-trim.
-  const skipTrim = options['no-trim'] === true || options.trim === false;
+  // SECURITY (TS-LC-02): the trim hook calls the engine directly, bypassing the
+  // AIOSON_RUNTIME_HOOK guard that memory:trim enforces. Honor that guard here
+  // too, so a tier-2 memory mutation never fires inside a hook/automation context.
+  const skipTrim = options['no-trim'] === true || options.trim === false
+    || process.env.AIOSON_RUNTIME_HOOK === '1';
   if (verdict === 'PASS' && !skipTrim) {
     try {
       const csPath = path.join(targetDir, '.aioson/context/bootstrap/current-state.md');

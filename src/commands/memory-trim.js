@@ -64,9 +64,24 @@ async function runMemoryTrim({ args, options = {}, logger, t }) {
   }
 
   const currentStatePath = path.join(targetDir, CURRENT_STATE_REL);
-  const archivePath = options.archive
-    ? path.resolve(process.cwd(), String(options.archive))
-    : path.join(targetDir, DEFAULT_ARCHIVE_REL);
+  let archivePath;
+  if (options.archive) {
+    // SECURITY (TS-LC-01): contain --archive under the project root. Resolve
+    // relative to the project (not cwd) and reject absolute escapes / `..`
+    // traversal, so the command can never write/overwrite a file outside the
+    // project — mirrors the containment wall in memory-reflect-commit.js.
+    const root = path.resolve(targetDir);
+    const resolved = path.resolve(root, String(options.archive));
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      if (wantJson) return { ok: false, reason: 'archive_path_escape' };
+      log(tFn(t, 'cli.memory_trim.archive_path_escape', { path: String(options.archive) })
+        || `memory:trim: refused --archive outside the project: ${options.archive}`);
+      return { ok: false, reason: 'archive_path_escape' };
+    }
+    archivePath = resolved;
+  } else {
+    archivePath = path.join(targetDir, DEFAULT_ARCHIVE_REL);
+  }
 
   const content = readFileOrNull(currentStatePath);
   if (content === null) {

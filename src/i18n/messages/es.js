@@ -79,6 +79,7 @@ module.exports = {
     memory_trim: {
       hook_blocked: 'memory:trim no puede invocarse desde un hook de runtime (tier-2 requiere acción humana).',
       no_current_state: 'memory:trim: {path} no encontrado (nada que recortar).',
+      archive_path_escape: 'memory:trim: --archive fuera del proyecto rechazado: {path}',
       section_not_found: 'memory:trim: sección "## What the system already has" no encontrada — nada que hacer.',
       nothing_to_archive: 'memory:trim: {kept} entradas dentro de la ventana keep={keep} — nada que archivar.',
       dry_run_summary: 'memory:trim [dry-run]: archivaría {archived}/{total} entradas (keep={keep}, slug activo exento). {before_kb}KB → {after_kb}KB (ahorra {saved_kb}KB). No se escribió ningún archivo.',
