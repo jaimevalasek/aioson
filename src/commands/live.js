@@ -1144,7 +1144,12 @@ async function getLiveStatusSnapshot(targetDir, t, options = {}) {
 
 async function runLiveStart({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
-  const agentName = normalizeAgentHandle(requireOption(options, 'agent', t));
+  // --agent é OPCIONAL: serve só pra tagueamento/tracking da sessão (session
+  // key, run, runtime emit). live:start NÃO invoca/injeta o agente — isso é
+  // feito DENTRO do harness (o usuário roda /product etc. na própria CLI). Por
+  // isso o caller (ex.: o Play) não precisa forçar um agente. Default 'product'
+  // quando omitido, mantendo o tracking consistente sem exigir a flag.
+  const agentName = normalizeAgentHandle(options.agent || 'product');
   const tool = normalizeLiveTool(requireOption(options, 'tool', t), t);
   const noLaunch = Boolean(options['no-launch']);
 
