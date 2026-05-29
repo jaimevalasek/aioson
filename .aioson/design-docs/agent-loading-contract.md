@@ -2,7 +2,9 @@
 description: "Contrato de carga de memória/contexto dos agentes AIOSON — tiers de loading (sempre / por-gatilho / sob-justificativa), política de retenção+arquivamento de memória append-style (current-state.md), matriz por agente e enforcement. Complementa agent-structural-contract."
 scope: "governance"
 agents: []
-status: proposed
+status: partially-implemented
+implemented: "P0 (rollup), P1 (archive-awareness), tagging, tooling — shipped 2026-05 (v1.21.1)"
+deferred: "P2 (mandatory slug-resolve pre-code), P3 (reflect-prompt hash+path), per-tier budget line in context:health"
 ---
 
 # Agent Loading Contract
@@ -116,14 +118,17 @@ Usar `aioson context:pack . --agent=<a> --goal="<request>"` para obter o conjunt
 
 ## Sequência de implementação (@dev — inception-mirror src/ + template/)
 
-1. **P0 (maior retorno):** split HOT/COLD do `current-state.md` + hook de rollup no `feature:close`
-   (+ verbo `memory:trim` para janela/legado). Tag de slug por entrada going-forward. Derruba ~70-90%
-   do custo de ativação de @dev/@qa/@architect/@deyvin.
-2. **P1:** reescrever a seção "Bootstrap context" de @dev/@qa/@architect/@deyvin para ler HOT + grep,
-   conforme este contrato (template-first, `npm run sync:agents`).
-3. **P2:** reforçar `context:pack --goal` + tornar a resolução de slug obrigatória no pré-código de @dev/@deyvin.
-4. **Tooling:** `context:health` inclui `bootstrap/` + orçamento por tier.
-5. **P3:** `reflect-prompt.json` guarda hash+path em vez de embutir o snapshot completo (encolhe após P0).
+1. ✅ **P0 (maior retorno) — shipped v1.21.1:** `memory:trim` (engine + comando, split HOT/COLD) +
+   hook de rollup no `feature:close` (keep=25, best-effort). Derrubou `current-state.md` 81KB→21KB.
+2. ✅ **P1 — shipped v1.21.1:** seção "Bootstrap context" de @dev/@qa/@architect/@deyvin agora aponta
+   pro `current-state-archive.md` (grep/`memory:search` on-demand). A reescrita pesada "ler parcial + grep
+   head" foi dispensada — pós-trim o arquivo HOT já é pequeno.
+3. ✅ **Tagging — shipped v1.21.1:** reflect-engine + @dev invariant #8 + @committer prefixam
+   entradas com `[{slug} · {YYYY-MM-DD}]`.
+4. ✅ **Tooling — shipped v1.21.1:** `context:health` mede `bootstrap/` e exclui o archive frio.
+   (⬜ linha de orçamento por tier ainda não.)
+5. ⬜ **P2 (adiado):** tornar a resolução de slug + load de dossier/spec obrigatória no pré-código.
+6. ⬜ **P3 (adiado):** `reflect-prompt.json` guardar hash+path em vez do snapshot completo.
 
 ## Não-objetivos / adiado
 
