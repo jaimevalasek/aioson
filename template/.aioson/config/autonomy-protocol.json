@@ -45,6 +45,7 @@
         "memory:refresh",
         "memory:archive",
         "memory:restore",
+        "memory:trim",
         "workflow:next",
         "workflow:heal",
         "live:handoff",

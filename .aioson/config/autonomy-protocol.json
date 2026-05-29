@@ -41,6 +41,7 @@
         "memory:reflect-prepare",
         "memory:reflect-commit",
         "memory:refresh",
+        "memory:trim",
         "workflow:next",
         "workflow:heal",
         "live:handoff",

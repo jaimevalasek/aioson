@@ -18,6 +18,7 @@ const { runChainAudit } = require('./commands/chain-audit');
 const { runMemorySearch } = require('./commands/memory-search');
 const { runMemoryArchive } = require('./commands/memory-archive');
 const { runMemoryRestore } = require('./commands/memory-restore');
+const { runMemoryTrim } = require('./commands/memory-trim');
 const { runSetupContext } = require('./commands/setup-context');
 const { runLocaleApply } = require('./commands/locale-apply');
 const { runSmokeTest } = require('./commands/smoke');
@@ -525,6 +526,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'memory-archive',
   'memory:restore',
   'memory-restore',
+  'memory:trim',
+  'memory-trim',
   'memory:reflect-prepare',
   'memory-reflect-prepare',
   'memory:reflect-commit',
@@ -1355,6 +1358,8 @@ async function main() {
       result = await runMemoryArchive({ args, options, logger: commandLogger, t });
     } else if (command === 'memory:restore' || command === 'memory-restore') {
       result = await runMemoryRestore({ args, options, logger: commandLogger, t });
+    } else if (command === 'memory:trim' || command === 'memory-trim') {
+      result = await runMemoryTrim({ args, options, logger: commandLogger, t });
     } else if (command === 'memory:reflect-prepare' || command === 'memory-reflect-prepare') {
       result = await runMemoryReflectPrepare({ args, options, logger: commandLogger });
     } else if (command === 'memory:reflect-commit' || command === 'memory-reflect-commit') {

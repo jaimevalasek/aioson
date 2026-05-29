@@ -74,6 +74,17 @@ module.exports = {
       dry_run_summary: 'memory:restore [dry-run]: movería {source} → {dest}.',
       restored_success: 'memory:restore ✓ {kind} "{slug}" restaurado a {dest}.'
     },
+    help_memory_trim:
+      'aioson memory:trim [ruta] [--keep=<N>] [--archive=<path>] [--dry-run] [--json] [--locale=es]',
+    memory_trim: {
+      hook_blocked: 'memory:trim no puede invocarse desde un hook de runtime (tier-2 requiere acción humana).',
+      no_current_state: 'memory:trim: {path} no encontrado (nada que recortar).',
+      section_not_found: 'memory:trim: sección "## What the system already has" no encontrada — nada que hacer.',
+      nothing_to_archive: 'memory:trim: {kept} entradas dentro de la ventana keep={keep} — nada que archivar.',
+      dry_run_summary: 'memory:trim [dry-run]: archivaría {archived}/{total} entradas (keep={keep}, slug activo exento). {before_kb}KB → {after_kb}KB (ahorra {saved_kb}KB). No se escribió ningún archivo.',
+      notify_template: 'recortando current-state.md: archivando {archived} entradas frías',
+      trimmed_success: 'memory:trim ✓ {archived} entradas archivadas (conservadas {kept}). {before_kb}KB → {after_kb}KB. Archivo: {archive}'
+    },
     memory_search: {
       query_empty: 'memory:search requiere una consulta no vacía.',
       query_too_long: 'memory:search consulta supera {max} caracteres.',
