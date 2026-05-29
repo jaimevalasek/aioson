@@ -1496,6 +1496,68 @@
       "safe_to_reproduce": true,
       "dev_session_note": "Fixed 2026-05-15 (option 2 — Gate D carve-out only, not option 1): src/handoff-contract.js gains readProjectClassification(targetDir) that reads project.context.md frontmatter independently of any feature PRD. validateHandoffContract resolves both classification (feature-level, may be PRD-overridden) and projectClassification (always project.context.md). checkGateApproval takes a 5th argument projectClassification and short-circuits MICRO only for process gates A/B/C; Gate D short-circuits only when the *project* classification is also MICRO. Option 1 (force feature ≤ project) was rejected as it would override the deyvin-density-validated design that lets MICRO features in MEDIUM projects use a lightweight workflow for A/B/C — option 2 preserves that UX while restoring the security baseline. Updated 1 pre-existing test (qa-stage-MICRO-passes adds writeProjectContext(MICRO) to match the legitimate scenario the test verifies). 4 new regression tests added: MICRO-in-MEDIUM blocks Gate D, MICRO-in-SMALL blocks Gate D, MICRO-in-MEDIUM passes Gate C (process gate, no security implication), MICRO-in-MEDIUM passes Gate D when spec-{slug}.md carries a recorded QA Sign-off PASS verdict. tests/handoff-contract-micro.test.js 11/11 PASS.",
       "qa_decision_note": "Verified 2026-05-15 by @qa: status=fixed confirmed AND design judgment (option 2 only, not option 1) AUDITED AS SOUND. Physically inspected src/handoff-contract.js: line 172-181 (readProjectClassification reads project.context.md independently), line 184-201 (resolveClassification feature-first with project fallback), line 215 (MICRO short-circuit for non-D gates), line 218 (Gate D short-circuit ONLY when project is also MICRO), line 290-295 (validateHandoffContract resolves both classifications), line 304-312 (checkGateApproval receives both as 4th + 5th args). Audited 7 edge cases manually: (1) state.classification='MICRO' override → projectClassification still controls Gate D since readProjectClassification is independent — confirmed; (2) project.context.md missing → readProjectClassification returns null → Gate D falls through to spec check (fail-closed) — confirmed; (3) prd-{slug}.md missing → resolveClassification falls back to projectClassification → consistent behavior — confirmed; (4) prd without classification field → same as (3) — confirmed; (5) MEDIUM feature in MICRO project → classification='MEDIUM' bypasses MICRO short-circuit → full gates apply — confirmed; (6) unknown classification value → falls through to spec check — confirmed; (7) TOCTOU race on project.context.md → readFileSafe returns empty → fail-closed — confirmed. Option 2 alone is sufficient because: (a) security baseline now applies project-wide, (b) fail-closed when project classification unknown, (c) state/PRD overrides do not bypass the baseline (orthogonal layers). Option 1 would have only prevented legitimate MICRO-in-MEDIUM lightweight workflow (a UX cost without security gain given option 2). The pre-existing test update (writeProjectContext(MICRO) added to qa-stage-MICRO-passes) is correct test semantics — the old test was implicitly asserting the exact gate-bypass behavior SF-26 documents, so adding the project context makes the test verify the LEGITIMATE short-circuit scope. handoff-contract-micro.test.js 11/11 PASS + handoff-contract-pentester.test.js + handoff-contract-v2.test.js + handoff-validator.test.js + workflow-next-validator-routing.test.js together = 56/56 PASS (no regression of any handoff-contract behavior). Gate D decision: fixed."
+    },
+    {
+      "id": "TS-LC-01",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "tool_invocation",
+      "severity": "low",
+      "title": "memory:trim --archive=<path> had no project-root containment (path traversal / arbitrary overwrite)",
+      "hypothesis": "--archive was resolved relative to cwd with no boundary check, so a crafted or mistyped path (../.., absolute) could write or overwrite a file outside the project. Tier-2, hook-blocked, human-typed CLI flag — only the human at the terminal can set it, so realistic risk is a foot-gun or a wrapper passing untrusted input.",
+      "preconditions": [
+        "user runs aioson memory:trim with --archive=<path>"
+      ],
+      "reproduction_steps": [
+        "aioson memory:trim . --keep=3 --archive=../escape.md",
+        "(pre-fix) archive written to the parent dir, outside the project"
+      ],
+      "evidence": [
+        "src/commands/memory-trim.js — archivePath = path.resolve(process.cwd(), options.archive) with no containment"
+      ],
+      "impact": "Pre-fix, a malicious/typo path could create or overwrite a file anywhere writable. Low: requires human CLI action; command is AIOSON_RUNTIME_HOOK-blocked so no automation/LLM path reaches it.",
+      "affected_artifacts": [
+        "src/commands/memory-trim.js"
+      ],
+      "suggested_fix": "Resolve --archive under the project root and reject absolute/.. escape (archive_path_escape), mirroring memory-reflect-commit containment.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "fix_release": "v1.21.3",
+      "dev_session_note": "Fixed 2026-05-29 (commit d4d12d4): --archive resolved under project root via path.resolve(root, ...); rejects resolved!==root && !startsWith(root+sep) → archive_path_escape; i18n added in 4 locales (cli.-prefixed). Regression: tests/memory-trim-security.test.js.",
+      "qa_verification": "Verified 2026-05-29 by @qa: containment correct; sibling-prefix bypass (/proj-evil vs /proj/) prevented by +path.sep; 4 tests adequate. Residual R-1 (lexical resolve, no symlink) + R-2 (Windows case-sensitivity, fail-safe) accepted as low. PASS."
+    },
+    {
+      "id": "TS-LC-02",
+      "source": "pentester",
+      "feature_slug": "project",
+      "surface": "runtime_permissions",
+      "severity": "low",
+      "title": "feature:close auto-trim hook bypassed the AIOSON_RUNTIME_HOOK tier-2 guard",
+      "hypothesis": "The feature:close auto-trim hook called the trim engine directly, not gated by the AIOSON_RUNTIME_HOOK block that memory:trim enforces. If feature:close ran in a hook/automation context, a tier-2 memory mutation would fire where memory:trim would refuse — inconsistent with BR-ALL-01.",
+      "preconditions": [
+        "feature:close --verdict=PASS invoked with AIOSON_RUNTIME_HOOK=1"
+      ],
+      "reproduction_steps": [
+        "AIOSON_RUNTIME_HOOK=1 aioson feature:close . --feature=x --verdict=PASS",
+        "(pre-fix) the trim hook mutates current-state.md inside a hook context"
+      ],
+      "evidence": [
+        "src/commands/feature-close.js — trim hook skipTrim did not check AIOSON_RUNTIME_HOOK"
+      ],
+      "impact": "Pre-fix, a tier-2 memory mutation could execute from automation. Low: feature:close PASS is a deliberate Gate-D human action today; defense-in-depth.",
+      "affected_artifacts": [
+        "src/commands/feature-close.js"
+      ],
+      "suggested_fix": "Skip the auto-trim when process.env.AIOSON_RUNTIME_HOOK === 1.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "note",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "fix_release": "v1.21.3",
+      "dev_session_note": "Fixed 2026-05-29 (commit d4d12d4): skipTrim now also true when AIOSON_RUNTIME_HOOK===1. Regression: tests/memory-trim-security.test.js.",
+      "qa_verification": "Verified 2026-05-29 by @qa: guard matches memory:trim hook-block; test confirms hook-context skip. PASS."
     }
   ]
 }
