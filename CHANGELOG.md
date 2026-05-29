@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.21.2] - 2026-05-28
+
+### Added
+- **Agent loading contract + `memory:trim`.** `bootstrap/current-state.md` is an append-only log that every implementation/review agent read in full at activation (~81KB / ~33k tokens, 84% of the bootstrap). New `aioson memory:trim [--keep=<N>] [--archive=<path>] [--dry-run] [--json]` splits its "## What the system already has" section into a HOT log + a cold `current-state-archive.md` (entries MOVED verbatim, never deleted; active-feature entries exempt). `feature:close` (PASS) auto-rolls aged entries (`--no-trim` to opt out). New governance doc `.aioson/design-docs/agent-loading-contract.md` defines the three loading tiers + retention policy. The repo's own current-state was trimmed 81KB → 21KB.
+- **`context:health` now measures `bootstrap/*.md`** — the per-activation layer it previously ignored — and excludes the cold `*-archive.md`; a heavy `current-state.md` now points to `memory:trim`.
+- **Shared code-health analysis lens** `.aioson/docs/quality/code-health-analysis.md` (plan → investigate → refine → operate → test → adjust over coverage, test sufficiency, regression need, execution-chain, performance, componentization), wired on-demand into `@tester`/`@qa`/`@pentester`/`@architect`/`@sheldon`/`@deyvin`.
+- **Current-state entry tagging** — the reflect engine, `@dev`, and `@committer` now prefix new entries with `[{slug} · {YYYY-MM-DD}]` for precise rollup; `@qa`/`@architect`/`@dev`/`@deyvin` bootstrap sections gained archive-awareness (grep the archive before flagging a capability as missing).
+
+### Fixed
+- **`memory:archive` / `memory:restore` / `memory:search` logged raw i18n keys** in every locale — they called message keys without the required `cli.` namespace prefix, so `t()` missed and echoed the key (e.g. `memory_archive.id_required`). All 25 calls now use the `cli.` prefix and localize correctly.
+
 ## [1.21.1] - 2026-06-XX
 
 ### Fixed
