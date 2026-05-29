@@ -253,6 +253,15 @@ async function resolveExecutablePath(command) {
   return null;
 }
 
+// Com `shell: true` (Windows), o comando vai pro cmd.exe. Um caminho com espaços
+// — ex.: "C:\Program Files\nodejs\codex.cmd" — quebra se não for quotado (o
+// cmd.exe corta no primeiro espaço e tenta rodar "C:\Program"). Quotamos o
+// executável; sem shell (Unix) ele vai cru. Resolve o ENOENT/falha ao iniciar
+// codex/claude no Windows quando o npm bin fica no Program Files.
+function spawnExecutable(binaryPath) {
+  return process.platform === 'win32' ? `"${binaryPath}"` : binaryPath;
+}
+
 function detectProcessState(pid) {
   if (!pid) return 'not_tracked';
   try {
@@ -1269,7 +1278,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = spawn(binaryPath, buildLaunchArgs(options, tool), {
+            attachChild = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
               cwd: targetDir,
               env: process.env,
               stdio: 'inherit',
@@ -1378,7 +1387,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = spawn(binaryPath, buildLaunchArgs(options, tool), {
+          child = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
             cwd: targetDir,
             env: process.env,
             stdio: 'inherit',
@@ -1391,7 +1400,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = spawn(binaryPath, buildLaunchArgs(options, tool), {
+        child = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
           cwd: targetDir,
           env: process.env,
           stdio: 'inherit',
