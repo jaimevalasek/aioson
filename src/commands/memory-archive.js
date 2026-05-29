@@ -45,7 +45,7 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
   const log = (msg) => { if (logger && typeof logger.log === 'function') logger.log(msg); };
 
   if (isHookContext()) {
-    const msg = tFn(t, 'memory_archive.hook_blocked')
+    const msg = tFn(t, 'cli.memory_archive.hook_blocked')
       || 'memory:archive cannot be invoked from a runtime hook (BR-ALL-01: tier-2 requires human action).';
     if (wantJson) return { ok: false, reason: 'hook_blocked' };
     log(msg);
@@ -56,14 +56,14 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
   const reason = options.reason ? String(options.reason).trim() : '';
 
   if (!rawId) {
-    const msg = tFn(t, 'memory_archive.id_required')
+    const msg = tFn(t, 'cli.memory_archive.id_required')
       || 'memory:archive requires --id=<rule|learning|brain>:<slug>.';
     if (wantJson) return { ok: false, reason: 'missing_id' };
     log(msg);
     return { ok: false, reason: 'missing_id' };
   }
   if (!reason) {
-    const msg = tFn(t, 'memory_archive.reason_required')
+    const msg = tFn(t, 'cli.memory_archive.reason_required')
       || 'memory:archive requires --reason="<text>".';
     if (wantJson) return { ok: false, reason: 'missing_reason' };
     log(msg);
@@ -73,14 +73,14 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
   const parsed = parseTargetId(rawId);
   const kind = normalizeKind(parsed.kind);
   if (!kind || !TARGET_TYPES.has(kind)) {
-    const msg = tFn(t, 'memory_archive.invalid_id', { value: rawId })
+    const msg = tFn(t, 'cli.memory_archive.invalid_id', { value: rawId })
       || `memory:archive invalid --id value: "${rawId}". Expected rule|learning|brain:<slug>.`;
     if (wantJson) return { ok: false, reason: 'invalid_id', value: rawId };
     log(msg);
     return { ok: false, reason: 'invalid_id' };
   }
   if (!parsed.slug) {
-    const msg = tFn(t, 'memory_archive.invalid_id', { value: rawId })
+    const msg = tFn(t, 'cli.memory_archive.invalid_id', { value: rawId })
       || `memory:archive invalid --id value: "${rawId}". Missing slug after ":".`;
     if (wantJson) return { ok: false, reason: 'invalid_id', value: rawId };
     log(msg);
@@ -89,7 +89,7 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
 
   // BR-ALL-06: emit tier-2 notify BEFORE any mutation (defense in depth).
   // notify.runNotify returns { ok, exitCode } — non-zero aborts.
-  const notifyMessage = tFn(t, 'memory_archive.notify_template', { kind, slug: parsed.slug, reason })
+  const notifyMessage = tFn(t, 'cli.memory_archive.notify_template', { kind, slug: parsed.slug, reason })
     || `archiving ${kind} "${parsed.slug}": ${reason}`;
   let notifyResult;
   try {
@@ -143,11 +143,11 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
   if (!outcome.ok) {
     if (wantJson) return outcome;
     if (outcome.reason === 'already_archived') {
-      const msg = tFn(t, 'memory_archive.already_archived', { path: outcome.archivedAt })
+      const msg = tFn(t, 'cli.memory_archive.already_archived', { path: outcome.archivedAt })
         || `memory:archive: "${parsed.slug}" already archived (${outcome.archivedAt || 'unknown path'}). No-op.`;
       log(msg);
     } else if (outcome.reason === 'target_not_found') {
-      const msg = tFn(t, 'memory_archive.target_not_found', { kind, slug: parsed.slug })
+      const msg = tFn(t, 'cli.memory_archive.target_not_found', { kind, slug: parsed.slug })
         || `memory:archive: ${kind} "${parsed.slug}" not found in active state.`;
       log(msg);
     } else {
@@ -171,7 +171,7 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
   }
 
   if (outcome.dryRun) {
-    const msg = tFn(t, 'memory_archive.dry_run_summary', {
+    const msg = tFn(t, 'cli.memory_archive.dry_run_summary', {
       kind,
       slug: parsed.slug,
       source: outcome.sourcePath || '(no source path)',
@@ -180,7 +180,7 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
     }) || `memory:archive [dry-run]: would move ${outcome.sourcePath || kind + ':' + parsed.slug} → ${outcome.destPath} (active entry: ${outcome.hasActiveEntry ? 'yes' : 'no'}).`;
     log(msg);
   } else {
-    const msg = tFn(t, 'memory_archive.archived_success', {
+    const msg = tFn(t, 'cli.memory_archive.archived_success', {
       kind,
       slug: parsed.slug,
       dest: outcome.destPath

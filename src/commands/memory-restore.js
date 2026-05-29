@@ -40,7 +40,7 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
   const log = (msg) => { if (logger && typeof logger.log === 'function') logger.log(msg); };
 
   if (isHookContext()) {
-    const msg = tFn(t, 'memory_restore.hook_blocked')
+    const msg = tFn(t, 'cli.memory_restore.hook_blocked')
       || 'memory:restore cannot be invoked from a runtime hook (BR-ALL-01: tier-2 requires human action).';
     if (wantJson) return { ok: false, reason: 'hook_blocked' };
     log(msg);
@@ -51,7 +51,7 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
   const reason = options.reason ? String(options.reason).trim() : '';
 
   if (!rawId) {
-    const msg = tFn(t, 'memory_restore.id_required')
+    const msg = tFn(t, 'cli.memory_restore.id_required')
       || 'memory:restore requires --id=<rule|learning|brain>:<slug>.';
     if (wantJson) return { ok: false, reason: 'missing_id' };
     log(msg);
@@ -61,14 +61,14 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
   const parsed = parseTargetId(rawId);
   const kind = normalizeKind(parsed.kind);
   if (!kind || !TARGET_TYPES.has(kind) || !parsed.slug) {
-    const msg = tFn(t, 'memory_restore.invalid_id', { value: rawId })
+    const msg = tFn(t, 'cli.memory_restore.invalid_id', { value: rawId })
       || `memory:restore invalid --id value: "${rawId}". Expected rule|learning|brain:<slug>.`;
     if (wantJson) return { ok: false, reason: 'invalid_id', value: rawId };
     log(msg);
     return { ok: false, reason: 'invalid_id' };
   }
 
-  const notifyMessage = tFn(t, 'memory_restore.notify_template', {
+  const notifyMessage = tFn(t, 'cli.memory_restore.notify_template', {
     kind,
     slug: parsed.slug,
     reason: reason || 'restoring archived artifact'
@@ -125,15 +125,15 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
   if (!outcome.ok) {
     if (wantJson) return outcome;
     if (outcome.reason === 'target_not_archived') {
-      const msg = tFn(t, 'memory_restore.target_not_archived', { kind, slug: parsed.slug })
+      const msg = tFn(t, 'cli.memory_restore.target_not_archived', { kind, slug: parsed.slug })
         || `memory:restore: ${kind} "${parsed.slug}" not found in archive.`;
       log(msg);
     } else if (outcome.reason === 'target_already_active') {
-      const msg = tFn(t, 'memory_restore.target_already_active', { kind, slug: parsed.slug })
+      const msg = tFn(t, 'cli.memory_restore.target_already_active', { kind, slug: parsed.slug })
         || `memory:restore: ${kind} "${parsed.slug}" already active. No-op.`;
       log(msg);
     } else if (outcome.reason === 'target_not_found') {
-      const msg = tFn(t, 'memory_restore.target_not_found', { kind, slug: parsed.slug })
+      const msg = tFn(t, 'cli.memory_restore.target_not_found', { kind, slug: parsed.slug })
         || `memory:restore: ${kind} "${parsed.slug}" not found.`;
       log(msg);
     } else {
@@ -156,7 +156,7 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
   }
 
   if (outcome.dryRun) {
-    const msg = tFn(t, 'memory_restore.dry_run_summary', {
+    const msg = tFn(t, 'cli.memory_restore.dry_run_summary', {
       kind,
       slug: parsed.slug,
       source: outcome.sourcePath || kind,
@@ -164,7 +164,7 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
     }) || `memory:restore [dry-run]: would move ${outcome.sourcePath || kind} → ${outcome.destPath || '(no dest)'}.`;
     log(msg);
   } else {
-    const msg = tFn(t, 'memory_restore.restored_success', {
+    const msg = tFn(t, 'cli.memory_restore.restored_success', {
       kind,
       slug: parsed.slug,
       dest: outcome.destPath || ''

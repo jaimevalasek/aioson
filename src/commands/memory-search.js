@@ -52,13 +52,13 @@ async function runMemorySearch({ args, options = {}, logger, t }) {
   const log = (msg) => { if (logger && typeof logger.log === 'function') logger.log(msg); };
 
   if (!query || !query.trim()) {
-    const msg = tFn(t, 'memory_search.query_empty') || `memory:search requires a non-empty query.`;
+    const msg = tFn(t, 'cli.memory_search.query_empty') || `memory:search requires a non-empty query.`;
     if (wantJson) return { ok: false, reason: 'query_empty' };
     log(msg);
     return { ok: false, reason: 'query_empty' };
   }
   if (query.length > QUERY_MAX_CHARS) {
-    const msg = tFn(t, 'memory_search.query_too_long', { max: QUERY_MAX_CHARS })
+    const msg = tFn(t, 'cli.memory_search.query_too_long', { max: QUERY_MAX_CHARS })
       || `memory:search query exceeds ${QUERY_MAX_CHARS} chars.`;
     if (wantJson) return { ok: false, reason: 'query_too_long', max: QUERY_MAX_CHARS };
     log(msg);
@@ -89,14 +89,14 @@ async function runMemorySearch({ args, options = {}, logger, t }) {
 
   if (!outcome.ok) {
     if (outcome.reason === 'invalid_surface') {
-      const msg = tFn(t, 'memory_search.invalid_surface', { value: outcome.value })
+      const msg = tFn(t, 'cli.memory_search.invalid_surface', { value: outcome.value })
         || `memory:search invalid --surface value: ${outcome.value}.`;
       if (wantJson) return { ok: false, reason: 'invalid_surface', value: outcome.value };
       log(msg);
       return { ok: false, reason: 'invalid_surface' };
     }
     if (outcome.reason === 'query_unparseable') {
-      const msg = tFn(t, 'memory_search.query_unparseable', { value: outcome.value })
+      const msg = tFn(t, 'cli.memory_search.query_unparseable', { value: outcome.value })
         || `memory:search query reduces to empty after sanitization: "${outcome.value}".`;
       if (wantJson) return { ok: false, reason: 'query_unparseable', value: outcome.value };
       log(msg);
@@ -120,12 +120,12 @@ async function runMemorySearch({ args, options = {}, logger, t }) {
   }
 
   if (results.length === 0) {
-    const msg = tFn(t, 'memory_search.no_results', { query }) || `No matches for "${query}".`;
+    const msg = tFn(t, 'cli.memory_search.no_results', { query }) || `No matches for "${query}".`;
     log(msg);
     return { ok: true, result_count: 0 };
   }
 
-  const header = tFn(t, 'memory_search.results_header', { count: results.length, query })
+  const header = tFn(t, 'cli.memory_search.results_header', { count: results.length, query })
     || `Top ${results.length} hits for "${query}":`;
   log(header);
   log(formatTextResults(results));
