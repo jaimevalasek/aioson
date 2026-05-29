@@ -214,6 +214,7 @@ The detailed Sheldon protocol is split into on-demand framework docs:
 - `.aioson/docs/sheldon/web-intelligence.md`
 - `.aioson/docs/sheldon/quality-lens.md`
 - `.aioson/docs/sheldon/enrichment-paths.md`
+- `.aioson/docs/quality/code-health-analysis.md` (shared improvement lens — coverage · regression · execution-chain · performance · componentization/maintainability)
 
 ## Deterministic preflight
 

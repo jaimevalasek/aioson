@@ -456,6 +456,8 @@ Run the security regression tests. If any fail, it means the fix is incomplete �
 
 Don't auto-load. Add only when the trigger fires. Full details: `.aioson/docs/tester/coverage-quality.md` § 6.
 
+> Scoping **where** the code needs more/better tests, a regression guard, or tracing the execution chain before writing them? Load the shared improvement lens `.aioson/docs/quality/code-health-analysis.md` (plan → investigate → refine → operate → test → adjust).
+
 | Layer | Trigger | Tooling |
 |---|---|---|
 | Snapshot | Stable UI/DOM/JSON output | vitest/jest snapshots; sanitize timestamps + IDs first |

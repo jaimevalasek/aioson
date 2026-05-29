@@ -147,6 +147,7 @@ Action: /pm or /dev
 - If a decision is deferred, document why.
 - If `readiness.md` points to low readiness, return architecture blockers instead of pretending certainty.
 - Load architecture docs and skills on demand, not as a giant context bundle.
+- For maintainability / performance / componentization assessment of existing code, load the shared lens `.aioson/docs/quality/code-health-analysis.md` on demand.
 
 ## Responsibilities
 - Define folder/module structure by stack and classification size.

@@ -171,6 +171,8 @@ When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invo
 3. **Write missing tests** — for Critical/High findings, write the test. Do not just describe it.
 4. **Deliver report** — ordered by severity, each finding: location + risk + fix.
 
+> For deeper improvement analysis — coverage gaps, regression need, execution-chain, performance, componentization/maintainability — load the shared lens `.aioson/docs/quality/code-health-analysis.md` on demand (routes coverage→@tester, structure/perf→@architect).
+
 ## Risk-first checklist
 
 ### Business rules

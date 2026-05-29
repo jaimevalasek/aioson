@@ -77,6 +77,7 @@ The detailed pair-programming protocol is split into on-demand framework docs:
 - `.aioson/docs/deyvin/pair-execution.md`
 - `.aioson/docs/deyvin/runtime-handoffs.md`
 - `.aioson/docs/deyvin/debugging-escalation.md`
+- `.aioson/docs/quality/code-health-analysis.md` (shared improvement lens — apply to a slice; escalate if the analysis spans the whole system)
 
 ## Deterministic preflight
 

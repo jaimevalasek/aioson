@@ -68,6 +68,7 @@ const MANAGED_FILES = [
   '.aioson/docs/sheldon/harness-contract.md',
   '.aioson/docs/dev/stack-conventions.md',
   '.aioson/docs/dev/execution-discipline.md',
+  '.aioson/docs/quality/code-health-analysis.md',
   '.aioson/skills/process/decision-presentation/SKILL.md',
   '.aioson/skills/process/decision-presentation/references/jargon-map.en.yaml',
   '.aioson/skills/process/decision-presentation/references/jargon-map.pt-BR.yaml',
