@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.21.3] - 2026-05-28
+
+### Security
+- **`memory:trim --archive=<path>` is now contained under the project root (TS-LC-01).** It was resolved relative to `cwd` with no containment, so a crafted/typo'd path could write or overwrite a file outside the project. Now resolved under the project root and rejected with `archive_path_escape` on absolute or `..`-traversal escape — mirroring the containment wall in `memory-reflect-commit`. Localized message added in all 4 locales.
+- **`feature:close` auto-trim hook now honors `AIOSON_RUNTIME_HOOK` (TS-LC-02).** The hook called the trim engine directly, bypassing the hook-context guard that `memory:trim` enforces. It now skips when running in a hook/automation context, so a tier-2 memory mutation never fires outside explicit human action.
+
+### Tests
+- Coverage pass over the v1.21.2 agent-loading-contract code (`node --test --experimental-test-coverage`): `current-state-trim.js` 98.8%→100% line, `memory-trim.js` 73.9%→88.6% line / 64.4%→76.7% branch. Adds error/edge-path tests (`no_current_state`, `section_not_found`, custom/escaping `--archive`, headerless archive, hook skip paths) and verifies all `cli.memory_{archive,restore,search}` keys resolve.
+
 ## [1.21.2] - 2026-05-28
 
 ### Added
