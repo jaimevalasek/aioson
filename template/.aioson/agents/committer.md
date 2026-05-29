@@ -146,7 +146,7 @@ type(scope): short description in imperative mood
    - run `aioson git:guard . --json` again immediately before commit
    - if still safe, execute the commit
    - if not safe, stop and explain why
-   - **after a successful commit**: if `.aioson/context/bootstrap/current-state.md` exists, append one line under `## What the system already has` summarizing what the commit added (use the commit subject — keep append-only, never replace); then delete `.aioson/context/commit-prep.json` so it is never reused accidentally
+   - **after a successful commit**: if `.aioson/context/bootstrap/current-state.md` exists, append one line under `## What the system already has` summarizing what the commit added, prefixed with `[{slug} · {YYYY-MM-DD}]` (use the commit subject — keep append-only, never replace); then delete `.aioson/context/commit-prep.json` so it is never reused accidentally
 4. If the user does **not** approve the draft, do **not** delete `commit-prep.json` — keep it for the next attempt.
 
 ## Observability

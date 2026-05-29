@@ -248,12 +248,18 @@ async function buildPrompt({ targetDir, agent, evaluation, sessionId }) {
 
 function buildInstructions(targets) {
   const names = targets.map((t) => `bootstrap/${t}`).join(', ');
-  return [
+  const parts = [
     `Edit only: ${names}.`,
     'Remove obsolete entries. Add new capabilities. Preserve YAML frontmatter.',
-    'Update the `generated_at` field in each touched file.',
-    'When done, write the result via `aioson memory:reflect-commit` (do not edit other files).'
-  ].join(' ');
+    'Update the `generated_at` field in each touched file.'
+  ];
+  if (targets.includes('current-state.md')) {
+    // Tag entries so the feature:close / memory:trim rollup can attribute and
+    // date them (agent-loading-contract P0).
+    parts.push('In current-state.md, prefix each new entry under "## What the system already has" with `[{feature-slug} · {YYYY-MM-DD}]`.');
+  }
+  parts.push('When done, write the result via `aioson memory:reflect-commit` (do not edit other files).');
+  return parts.join(' ');
 }
 
 function hasFrontmatter(text) {

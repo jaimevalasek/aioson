@@ -24,7 +24,7 @@ Beyond the bootstrap gate, `@deyvin` operates with 9 memory layers. Load each **
 
 | Layer | Path | When to consult |
 |-------|------|-----------------|
-| Bootstrap (Living Memory) | `.aioson/context/bootstrap/*.md` | Always — first, before reasoning |
+| Bootstrap (Living Memory) | `.aioson/context/bootstrap/*.md` | Always — first, before reasoning. `current-state.md` is the hot log; `current-state-archive.md` is cold (grep / `memory:search` on demand, never at activation) — see `.aioson/design-docs/agent-loading-contract.md` |
 | Project pulse | `.aioson/context/project-pulse.md` | Session start; learn last agent + active feature + blockers |
 | Dev-state | `.aioson/context/dev-state.md` | If a feature is in progress (continuity case) |
 | Feature dossier | `.aioson/context/features/{slug}/dossier.md` | If a feature slug is known — Why/What + code map |

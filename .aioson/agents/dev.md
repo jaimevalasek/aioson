@@ -48,7 +48,7 @@ Read `.aioson/context/dev-state.md` if it exists.
 
 **dev-state.md NOT found (cold start):**
 - Read only: `project.context.md` + `features.md` (if present). Stop there.
-- **Bootstrap:** read `bootstrap/how-it-works.md` + `bootstrap/current-state.md` if present.
+- **Bootstrap:** read `bootstrap/how-it-works.md` + `bootstrap/current-state.md` (hot log) if present. Older shipped work is in `bootstrap/current-state-archive.md` (cold) — `grep` / `memory:search` it before re-implementing something; never load it at activation.
 - Ask what feature/task to work on.
 - Run `aioson memory:summary . --last=5`, then `aioson context:pack . --agent=dev --goal="<goal>"`.
 - Tags: run `aioson brain:query . --tags=<tags> --min-quality=4`.
@@ -241,7 +241,7 @@ These rules apply even if no extra dev doc was loaded:
 5. Run the actual verification command before marking any step done
 6. Keep `skeleton-system.md` current when files materially change
 7. If repeated debugging stalls, load the debugging protocol instead of guessing
-8. After a significant slice or phase lands, append one line to `.aioson/context/bootstrap/current-state.md` under `## What the system already has` describing the new capability. Append-only; never replace existing entries. Skip if `bootstrap/` does not exist.
+8. After a significant slice or phase lands, append one line to `.aioson/context/bootstrap/current-state.md` under `## What the system already has` describing the new capability, prefixed with `[{slug} · {YYYY-MM-DD}]` so it can be archived precisely later. Append-only; never replace existing entries. Skip if `bootstrap/` does not exist.
 
 ## Motor AIOSON — hardening rules (must respect)
 

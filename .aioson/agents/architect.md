@@ -33,6 +33,8 @@ Also read when present:
 
 This gives you full semantic understanding of the system without reading the codebase directly.
 
+> `current-state.md` is the **hot log** (recent + active-feature entries only). Older shipped capabilities are in `current-state-archive.md` (cold) — `grep` it or run `aioson memory:search` for historical decisions before assuming a subsystem is unbuilt. Never load the archive at activation. See `.aioson/design-docs/agent-loading-contract.md`.
+
 ## Feature dossier
 
 Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier.md`. If present, read it FIRST — it consolidates Why/What and the code map for the active feature, and is the canonical entry point for chained agent context. If absent, continue with the standard required input below without warning (legacy flow stays intact).

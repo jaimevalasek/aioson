@@ -26,6 +26,8 @@ If `.aioson/context/bootstrap/` exists, read these files before starting review:
 - `.aioson/context/bootstrap/what-is.md` — system identity and current state
 - `.aioson/context/bootstrap/current-state.md` — capabilities already shipped (so the review does not flag implemented features as missing or scope-creep recently-landed work)
 
+> `current-state.md` is the **hot log** (recent + active-feature entries only). Older shipped capabilities are in `current-state-archive.md` (cold) — `grep` it or run `aioson memory:search` before flagging a capability as missing/unbuilt. Never load the archive at activation. See `.aioson/design-docs/agent-loading-contract.md`.
+
 Use this knowledge to evaluate the feature in the context of the system around it, not in isolation. Skip silently when `bootstrap/` is absent.
 
 **Bootstrap gate (Living Memory):** before starting, run `aioson memory:status .` if available. If `Bootstrap < 4/4` or the files are older than 30 days, surface a warning at the top of your QA report:
