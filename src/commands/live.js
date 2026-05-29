@@ -1248,27 +1248,39 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       } else {
         // Non-tmux reuse logic
         const existingTool = state.tool_session || null;
-        if (existingTool && existingTool !== tool) {
-          // Auto-close stale session when tool changed (same pattern as tmux recovery above)
+        // Reconcilia sessão órfã: se o processo da sessão "ativa" já morreu
+        // (Play/terminal fechado sem close limpo, ou o tool crashou DEPOIS de
+        // gravar o registro), NÃO reusar — senão o start novo só loga "session
+        // already active", o tool nunca sobe e a órfã trava todo restart. Morto
+        // é tratado igual a troca de tool: auto-close + cria sessão nova abaixo.
+        const existingProcessDead = detectProcessState(state.child_pid) === 'dead';
+        const toolChanged = Boolean(existingTool && existingTool !== tool);
+        if (toolChanged || existingProcessDead) {
+          const closeReason = toolChanged
+            ? `tool changed from ${existingTool} to ${tool}`
+            : 'previous process is no longer running';
           updateRun(db, {
             runKey: existing.run.run_key,
             status: 'completed',
-            summary: `Auto-closed: tool changed from ${existingTool} to ${tool}`,
+            summary: `Auto-closed: ${closeReason}`,
             eventType: 'session_closed',
             phase: 'live',
-            message: `Tool mismatch — auto-closed previous ${existingTool} session`
+            message: `Auto-closed previous session — ${closeReason}`
           });
           if (existing.task?.task_key) {
             updateTask(db, {
               taskKey: existing.task.task_key,
               status: 'completed',
-              goal: `Auto-closed after tool change to ${tool}`
+              goal: `Auto-closed (${closeReason})`
             });
           }
           await clearAgentSession(runtimeDir, agentName);
           if (!options.json) {
-            logger.log(t('live.tool_mismatch_auto_closed', { existing: existingTool, requested: tool }) ||
-              `Previous session (${existingTool}) auto-closed — starting new with ${tool}`);
+            const msg = toolChanged
+              ? (t('live.tool_mismatch_auto_closed', { existing: existingTool, requested: tool }) ||
+                 `Previous session (${existingTool}) auto-closed — starting new with ${tool}`)
+              : `Previous ${tool} session was dead — auto-closed, starting fresh`;
+            logger.log(msg);
           }
           // Fall through to create a new session below
         } else {
