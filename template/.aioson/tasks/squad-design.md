@@ -89,16 +89,27 @@ Antes de definir executores, consolide:
 - Investigation aplicada e o que ela muda no design
 - Locale scope do squad
 
-### Passo 3 — Definir executores
-Determine 3-5 roles especializados. Para cada executor, defina:
+### Passo 2.5 — Decomposição de domínio das fontes
+Se há `sourceDocs`, `investigation` ou contexto de domínio colado, **derive o roster das fontes — não chute "3-5 roles"**. Rode as quatro passadas de extração e a derivação descritas em `.aioson/docs/squad/creation-flow.md` § "Domain decomposition":
+- `entities` — substantivos/conceitos centrais do domínio
+- `workflows` — unidades de trabalho como `verbo + objeto` (o que é *feito* com as entidades)
+- `integrations` — sistemas/canais/fontes externas que o trabalho toca
+- `stakeholders` — papéis/personas que o squad serve ou encarna
+
+Registre tudo no blueprint em `analysis`. Sem fontes: pule esta passada e defina o roster pelo objetivo declarado (marque os executores com `confidence` mais baixo).
+
+### Passo 3 — Definir executores (derivados da decomposição)
+Agrupe os `workflows` em **modos de trabalho distintos** (originar / transformar / julgar / orquestrar — adapte ao domínio); cada modo que as fontes realmente exigem vira um executor. O cluster, não o título, define o papel. Funda clusters com sobreposição pesada. Para cada executor, defina:
 - slug (kebab-case)
 - title
 - role (uma frase)
 - focus (3-5 bullets)
+- `traces` — quais `workflows`/`entities` este executor possui (executor que não rastreia nenhum workflow é cerimônia — corte)
+- `confidence` (0-1) — quão bem as fontes justificam este papel; baixo = investigar ou cortar, nunca preencher com enchimento
 - skills que vai usar
 - genomes que herda
 
-Inclua sempre um `orquestrador`.
+Inclua sempre um `orquestrador`. Mantenha 3-5 (a decomposição diz quantos o trabalho real exige — não infle para parecer completo).
 
 ### Passo 3.5 — Detectar e capturar UI/UX capability
 
@@ -149,6 +160,8 @@ O JSON deve seguir o schema `squad-blueprint.schema.json`.
 
 Gere um UUID para o campo `id`. Use `new Date().toISOString()` para `createdAt`.
 
+Quando houve decomposição (Passo 2.5), persista: `analysis` (`entities`, `workflows`, `integrations`, `stakeholders`), `confidence` + `traces` por executor, e `confidence` geral (média dos executores). Estes campos alimentam o self-review e o readiness.
+
 ### Passo 6.5 — Squad Spec Self-Review
 
 Antes de apresentar ao usuário, revisar o blueprint como se fosse outro agente lendo pela primeira vez:
@@ -169,6 +182,8 @@ Antes de apresentar ao usuário, revisar o blueprint como se fosse outro agente 
 - [ ] O squad resolve o problema declarado pelo usuário — nem mais, nem menos
 - [ ] Nenhum executor foi adicionado por "seria útil" sem relação com o objetivo
 - [ ] Se user pediu N executores: verificar que não foram adicionados extras silenciosamente
+- [ ] (Quando houve decomposição) Cada executor rastreia ≥1 `workflow`; nenhum executor órfão de workflow
+- [ ] (Quando houve decomposição) Executores com `confidence` baixo foram investigados, fundidos ou cortados — não entregues como estão
 
 **Calibração:** Só bloqueie se o problema causaria output fundamentalmente errado.
 Preferências de estilo não bloqueiam. Lacunas de detalhe não bloqueiam.
@@ -180,6 +195,7 @@ Se tudo OK: prosseguir para Passo 7.
 ### Passo 7 — Apresentar resumo
 Mostre ao usuário:
 - Executores propostos com roles
+- Decomposição das fontes: entities / workflows / stakeholders (quando houve)
 - Content blueprints definidos
 - Tier de domínio e política de investigação
 - Locale scope

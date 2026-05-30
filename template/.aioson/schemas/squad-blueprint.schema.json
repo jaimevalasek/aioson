@@ -65,6 +65,17 @@
           "title": { "type": "string" },
           "role": { "type": "string" },
           "focus": { "type": "array", "items": { "type": "string" } },
+          "traces": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Workflows/entities (from analysis) this executor owns — derived in design Passo 2.5"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How well the sources justify this executor's role (design decomposition)"
+          },
           "modelTier": {
             "type": "string",
             "enum": ["powerful", "balanced", "fast", "none"]
@@ -188,6 +199,16 @@
     "readiness": {
       "type": "object",
       "description": "Estado de prontidão (detalhado na Fase 2)"
+    },
+    "analysis": {
+      "type": "object",
+      "description": "Domain decomposition from sourceDocs (design Passo 2.5) — the roster is derived from this",
+      "properties": {
+        "entities": { "type": "array", "items": { "type": "string" } },
+        "workflows": { "type": "array", "items": { "type": "string" }, "description": "Units of work as verb+object" },
+        "integrations": { "type": "array", "items": { "type": "string" } },
+        "stakeholders": { "type": "array", "items": { "type": "string" } }
+      }
     },
     "sourceDocs": {
       "type": "array",

@@ -101,6 +101,30 @@ This adjacency list becomes the squad's `operational_breadth` matrix and propaga
 
 Load `.aioson/docs/squad/domain-breadth.md` for the full pattern: `role + backstory + goal + operational_breadth + interaction_principles` template, yes-and response patterns, HEARD method for refusals, and four worked examples (pharmacy, restaurant, gym, hotel).
 
+## Domain decomposition (derive the roster from the sources, don't guess it)
+
+When the squad has `sourceDocs`, an investigation, or pasted domain context, derive the
+executor roster **from that material** instead of guessing a generic "3–5 roles". This is
+the upstream half of squad quality: structure from the sources, then depth per role
+(`package-contract.md` § Executor depth block). Two designers reading the same sources
+should land on a similar roster — if you are inventing roles the sources do not imply, you
+are guessing again.
+
+Run four extraction passes over the source material:
+
+1. **Entities** — the domain's key nouns / concepts / objects the squad reasons about.
+2. **Workflows** — the distinct units of work as `verb + object` (what gets *done* to the entities): `research-competitor`, `draft-script`, `validate-claim`, `reconcile-ledger`. Pull them from action verbs and from any numbered / step lists in the sources.
+3. **Integrations** — external systems, tools, channels, and data sources the work touches.
+4. **Stakeholders** — the roles / personas the squad serves or speaks as.
+
+Then derive the roster:
+
+5. **Cluster workflows into distinct work-modes.** Group workflows that need the *same kind of thinking* into one executor — the cluster, not the title, defines the role. A domain-general lens (adapt per domain): **originate** (research, draft, design, build) · **transform** (edit, refactor, synthesize, reconcile) · **judge** (review, validate, fact-check, approve) · **orchestrate** (always one orquestrador). One executor per work-mode the workflows actually demand. Merge clusters with heavy overlap.
+6. **Confidence per executor (0–1).** How well do the sources justify this role? High when multiple workflows + clear entities back it; low when it rests on one weak signal or an assumption. A low score is a flag to investigate or cut — never a reason to pad.
+7. **Trace.** Each executor names the workflows / entities it owns. An executor that traces to no workflow is ceremony — cut it.
+
+Record the decomposition in the blueprint: `analysis { entities, workflows, integrations, stakeholders }`, per-executor `confidence` and `traces`, and an overall `confidence`. The depth block then fills each derived role with persona + expertise distilled from the same sources.
+
 ## Executor classification
 
 Classify every executor with this tree:
