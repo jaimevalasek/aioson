@@ -21,10 +21,11 @@ Derive the quality bar from the SAME sources that generated the squad.
 - **AIOSON wiring:** extends `quality-lens.md` (evaluative) into an enforced `validate` layer; emit per-claim failure diffs that route to `@squad refresh`. Reuse the manifest's existing `review_criteria`/`voting` primitives.
 - **Caveat:** verifies fidelity-to-spec, not real-world perf → pair with a few task-execution evals; judges fragile to formatting → jury + calibration, not single judge.
 
-## Stage 2 — Citation-grounded persona depth
+## Stage 2 — Citation-grounded persona depth (IMPLEMENTED — MVP, prose-first)
+> Shipped: `docs/squad/persona-grounding.md` (competency-tree extraction, cite-per-item) + `package-contract` Variant A now requires source citations on `frameworks`/`vocabulary` + create Passo 5 + squad.md preflight wire it; the eval-gate `grounding` claim enforces it. Atomic-fidelity scoring in `src/` remains future hardening.
+
 Make the depth block evidence-anchored, not vivid prose.
-- **What:** extract a hierarchical competency tree FROM sources with a **source-span citation per node** (DeepPersona depth-first, 2511.07338); build persona/expertise from cited nodes; gate with atomic fidelity ACC_atom (2506.19352) — reject drift from sources.
-- **AIOSON wiring:** upgrade `package-contract` § Executor depth block + the create distillation step; `expertise.sources` becomes per-node spans, not a flat list.
+- **What:** extract a hierarchical competency tree FROM sources with a **source-span citation per node** (DeepPersona depth-first, 2511.07338); build persona/expertise from cited nodes.
 - **Honest:** CrewAI role+backstory lineage (our depth-block ancestor) is ergonomic, not grounding — "vivid backstory ≠ deep behavior". Ground only where source coverage is real (PRISM trade-off 2603.18507).
 
 ## Stage 3 — Retrieval-grounded role pool
@@ -41,9 +42,9 @@ The generator learns from the squads it produces.
 Manifest already has: `tasks[].review_loop` + `review_criteria` + `max_review_iterations` (evaluator-optimizer), `tasks[].voting` (sampling+consensus), `workflows[].phases[].review`/`vetoConditions`. The jury/eval loop EXTENDS these — not greenfield.
 
 ## Implementation plans — remaining stages (sized honestly)
-- **Stage 2 (persona grounding) — medium, mostly prose.** Add `expertise.sources` as per-node *source spans* (not a flat list) in the depth block (`package-contract`); a create sub-step that mines a competency tree from `sourceDocs` with a citation per node; the eval-gate `grounding` claim already enforces it. ~2-3 doc edits + optional `src/` span extractor.
+- **Stage 2 (persona grounding) — DONE (MVP).** Shipped `persona-grounding.md` + package-contract citation requirement + create/preflight wiring; eval-gate enforces. `src/` atomic-fidelity scoring = future hardening.
 - **Stage 3 (retrieval-grounded role pool) — larger, needs code.** Expand the role-candidate pool in design Passo 2.5 by *retrieval* over `sourceDocs` + `researchs/` (embeddings). Requires a `src/` embedding/retrieval module — not prose-only. Do after Stage 2.
 - **Stage 4 (self-improving generator) — a project on its own.** A Reflector reads eval-gate failures + user rejections, diagnoses which generation rule failed, and appends deltas to a `.aioson/` "what-works" playbook that `creation-flow`/`package-contract` load. Needs trace capture + a delta-memory store in `src/` + safety guardrails (overfit/held-out, no open-ended self-rewrite). Keep staged until Stages 1-2 prove out.
 
 ## Sequencing
-Stage 0 (done) → **Stage 1 (MVP done)** → Stage 2 → Stage 3 → Stage 4 (only after 1-3 prove out). Each stage is independently shippable.
+Stage 0 (done) → **Stage 1 (MVP done)** → **Stage 2 (MVP done)** → Stage 3 → Stage 4 (only after 1-3 prove out). Each stage is independently shippable.

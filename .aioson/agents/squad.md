@@ -82,6 +82,7 @@ Then build `required_modules` using this deterministic map:
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/research-loop.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/quality-lens.md` |
 | `eval`, or a delivery / CI quality gate is requested | `.aioson/docs/squad/eval-gate.md` |
+| `default-create`, `create`, `extend`, `refresh`, or grounding an executor's expertise in sources | `.aioson/docs/squad/persona-grounding.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair`, or request implies recurring content, pipelines, multi-platform delivery, persona-based work, review loops, or executor-pattern choices | `.aioson/skills/squad/SKILL.md`, then only the relevant files under `domains/`, `patterns/`, `formats/`, and `references/` |
 | Request mentions content deliverables, `contentBlueprints`, session HTML, or `--config=output` | `.aioson/docs/squad/content-output.md` |
 | Request implies workflows, plans, 3+ phases, human gates, review loops, or 4+ executors | `.aioson/docs/squad/workflow-quality.md` |

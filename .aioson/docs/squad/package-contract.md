@@ -161,8 +161,8 @@ persona: |
 goal: "The single outcome this executor optimizes for."
 
 expertise:
-  frameworks: ["named methods / mental models this role actually applies"]
-  vocabulary: ["terms of art — extracted from sourceDocs / investigation, not invented"]
+  frameworks: ["named methods this role applies — each grounded item cites its source, e.g. 'source triangulation (src: methods.md)'"]
+  vocabulary: ["terms of art from sourceDocs / investigation (not invented) — each cites its source span"]
   signature_moves: ["what a senior in this role does that a junior wouldn't"]
   sources: ["which sourceDocs / findings inform this executor"]
 
@@ -173,7 +173,7 @@ anti_patterns:
   - "Role-specific failure modes — each must reappear in ## Hard constraints"
 ```
 
-**Source distillation (mandatory when `sourceDocs` or `investigation` exist):** mine them into the depth block — `expertise.vocabulary`, `expertise.frameworks`, `persona` / `backstory`, and `anti_patterns` — and record which source informed each executor in `expertise.sources`. Source material persisted in the manifest but absent from every executor prompt is a defect: the squad was asked to be grounded in those sources and isn't. Never leave `sourceDocs` as unused provenance.
+**Source distillation (mandatory when `sourceDocs` or `investigation` exist):** mine them into the depth block — `expertise.vocabulary`, `expertise.frameworks`, `persona` / `backstory`, and `anti_patterns` — and record which source informed each executor in `expertise.sources`. Source material persisted in the manifest but absent from every executor prompt is a defect: the squad was asked to be grounded in those sources and isn't. Never leave `sourceDocs` as unused provenance. Use the competency-tree method in `.aioson/docs/squad/persona-grounding.md` — *extract, don't write*: each grounded framework/term cites its source span; an item with no citation is a model prior, not grounding.
 
 ### Variant B — Customer-facing executors — mandatory world-context block
 
