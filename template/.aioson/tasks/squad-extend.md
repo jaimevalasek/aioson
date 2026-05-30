@@ -66,3 +66,7 @@ Rodar mentalmente a task squad-validate para confirmar que o pacote está consis
 - SEMPRE mostrar diff antes de persistir
 - NUNCA deletar componentes existentes — extend é somente aditivo
 - Para remoção, oriente o usuário a editar manualmente ou usar repair (Fase 4)
+- **Idempotência:** ao atualizar manifest/agents.md, só adicione a entrada se ela ainda não existe — nunca duplique
+- **Não sobrescrever às cegas:** se o arquivo do componente já existe, pare e peça confirmação (ou exija `--force`); com `--force`, faça backup do arquivo antes de sobrescrever
+- **Slug seguro:** rejeite nomes com `/`, `\`, `..` ou fora de kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`) antes de criar qualquer arquivo
+- **Preservar o existente:** ao tocar manifest/agents.md/CLAUDE.md/AGENTS.md, edite só a seção do novo componente; não reescreva nem reordene o resto

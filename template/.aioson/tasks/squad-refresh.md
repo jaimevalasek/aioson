@@ -1,6 +1,6 @@
 # Task: Squad Refresh
 
-> Atualiza um squad existente com world-model breadth, yes-and patterns, e research focada. Diferente de `analyze` (só diagnostica), `extend` (só adiciona) e `repair` (só conserta estrutura). É a task certa quando o usuário relata que um squad está rejeitando pedidos legítimos ou agindo "narrow demais" (ex: farmácia que só fala de remédio, restaurante que recusa pedido fora do menu).
+> Aprofunda os executores de um squad existente — tanto **profundidade de conhecimento** (persona + expertise: frameworks, vocabulary, signature_moves — Variante A) quanto **world-model breadth** customer-facing (operational_breadth + yes-and — Variante B). Diferente de `analyze` (só diagnostica), `extend` (só adiciona) e `repair` (só conserta estrutura). É a task certa quando `@squad analyze` aponta **executor básico** (nome de papel sem bloco de profundidade), ou quando o usuário relata um squad agindo "narrow demais" (ex: farmácia que só fala de remédio) ou genérico demais (ex: "analista" que só resume a primeira página de resultados).
 
 ## Quando usar
 
@@ -15,9 +15,11 @@
 
 ## Pré-carregamento obrigatório
 
-Antes de qualquer coisa, carregue `.aioson/docs/squad/domain-breadth.md`. É a base do refresh — o template `role + backstory + goal + operational_breadth + interaction_principles`, os padrões yes-and, o método HEARD para refusals, e os 4 worked examples (pharmacy, restaurant, gym, hotel) ficam aqui.
+Antes de qualquer coisa, carregue o contrato de profundidade conforme o tipo de executor que vai refrescar:
+- **Variante A (conhecimento/criativo/técnico):** `.aioson/docs/squad/package-contract.md` § Executor depth block — `persona + expertise (frameworks, vocabulary, signature_moves) + quality_bar + anti_patterns`.
+- **Variante B (customer-facing):** `.aioson/docs/squad/domain-breadth.md` — o template `role + backstory + goal + operational_breadth + interaction_principles`, os padrões yes-and, o método HEARD para refusals, e os 4 worked examples (pharmacy, restaurant, gym, hotel).
 
-Carregue também `.aioson/docs/squad/quality-lens.md` (scorecard com critério "domain breadth").
+Carregue também `.aioson/docs/squad/quality-lens.md` (scorecard com critérios "persona depth" e "domain breadth").
 
 ## Processo
 
@@ -34,15 +36,23 @@ Inventário completo:
 
 Se o slug não tem `squad.manifest.json` (squad legado), rode `squad-repair.md` primeiro para gerar o manifesto antes de continuar.
 
-### Passo 2 — Diagnóstico silencioso de breadth
+### Passo 2 — Diagnóstico silencioso de profundidade
 
-Para cada executor cuja descrição indica papel **customer-facing** (atendimento, vendas, suporte, recepção, host, concierge, etc.), verifique:
+Para **cada** executor, escolha a variante pelo papel e verifique:
 
-- [ ] O prompt tem o bloco `role + backstory + goal` na seção Quick Context (ou equivalente)?
-- [ ] Existe um bloco `operational_breadth` com `primary`, `adjacent` (≥ 5 itens), e `out_of_scope`?
-- [ ] Existem `interaction_principles` que incluem yes-and explícito ("default 'yes, and...'")?
-- [ ] O backstory é ancorado em real-world (cita venues reais, anos de experiência, tipos de cliente reais)? Ou é genérico ("você é um atendente")?
-- [ ] O prompt inclui o anti-padrão "never say 'we only sell X'"?
+**Variante A — executor de conhecimento/criativo/técnico** (researcher, analista, estrategista, redator, editor, engenheiro, especialista):
+
+- [ ] Tem bloco de profundidade no `## Quick context` com `persona` ancorada em senioridade/experiência real (não "você é um analista")?
+- [ ] Tem `expertise` com `frameworks` nomeados, `vocabulary` (termos de arte reais) e `signature_moves`?
+- [ ] Os `anti_patterns` viraram linhas em `## Hard constraints`?
+- [ ] Se o squad tem `sourceDocs`/`analysis`: o vocabulário/frameworks das fontes aparece no prompt, ou o executor é genérico?
+
+**Variante B — executor customer-facing** (atendimento, vendas, suporte, recepção, host, concierge):
+
+- [ ] Tem o bloco `role + backstory + goal` na seção Quick Context (ou equivalente)?
+- [ ] Tem `operational_breadth` com `primary`, `adjacent` (≥ 5 itens), e `out_of_scope`?
+- [ ] Tem `interaction_principles` com yes-and explícito ("default 'yes, and...'")?
+- [ ] O backstory é ancorado em real-world (venues reais, anos de experiência, tipos de cliente)? Inclui o anti-padrão "never say 'we only sell X'"?
 
 Monte uma matriz silenciosa `{executor: [gaps]}`. Não mostre ainda — você vai usar isso ao gerar o plano.
 
@@ -145,6 +155,8 @@ interaction_principles:
 ### Executor: <next>
 ...
 
+> Executor **Variante A** (conhecimento/técnico): o bloco substituído é o depth block `persona + expertise (frameworks, vocabulary, signature_moves) + quality_bar + anti_patterns` (package-contract § Executor depth block) — mesma mecânica do refresh, conteúdo de profundidade em vez de breadth.
+
 ## Files to update
 - `.aioson/squads/<slug>/agents/atendente.md` — replace Quick Context
 - `.aioson/squads/<slug>/agents/orquestrador.md` — add breadth context line
@@ -215,7 +227,7 @@ Conclua com:
 | `analyze` | Diagnóstico de cobertura/estrutura | Não |
 | `extend` | Adicionar NOVOS componentes | Não |
 | `repair` | Consertar inconsistência manifest↔filesystem | Regenera arquivos faltantes apenas |
-| **`refresh`** | **Melhorar world model dos executors** | **Sim — atualiza Quick Context blocks** |
+| **`refresh`** | **Aprofundar executores (depth Variante A + breadth Variante B)** | **Sim — atualiza Quick Context blocks** |
 
 ## Regras
 
@@ -223,7 +235,7 @@ Conclua com:
 - SEMPRE mostrar diff antes
 - Preservar Mission, headers, hard constraints, output contracts dos executors — modificar APENAS o Quick Context block
 - Salvar plano em `.aioson/squads/<slug>/docs/REFRESH-<date>.md` antes de aplicar
-- Carregar `.aioson/docs/squad/domain-breadth.md` no Passo 0 (antes do Passo 1)
+- Carregar o contrato de profundidade da variante no Passo 0 (package-contract § Executor depth block p/ Variante A; domain-breadth.md p/ Variante B) antes do Passo 1
 - Para squads sem manifest formal: rodar `squad-repair` primeiro
 - Bumpar version em `squad.md` a cada refresh aplicado
 - Refresh é incremental: você pode rodar `refresh` várias vezes na mesma squad ao longo do tempo
