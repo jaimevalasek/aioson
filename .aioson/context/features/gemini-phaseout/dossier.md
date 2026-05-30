@@ -67,6 +67,11 @@ Phase 1 (v1.21.0 warnings) LANDED. 6 surfaces: install-wizard marker+notice, doc
 
 QA Phase 1 (v1.21.0) concluido. Verdict: PASS. 0 Critical, 0 High, 1 Medium (M-01 M2 deviation aceita), 2 Low (L-01 [FAIL] icon convention, L-02 install notice nao unit-tested). AC Phase 1: M1 covered (e2e verificado), M2 reinterpretado, M3 covered, M4 = manual publish gate <=2026-06-10. 62/62 feature+afetados, full 2823/2833 (0 novos). Feature NAO fechada: Phases 2/3 date-gated, fica in_progress. Sem security-findings nem harness-contract (sem trigger pentester/validator). Pentester nao necessario (warning-only, sem nova superficie de ataque).
 
+<!-- sha256:88b0830b68bf6f4dd24b12a6d0ba65e27180349002926358fad666e7559ff547 -->
+**2026-05-30T17:46:21.458Z** | @qa | _Agent Trail_
+
+QA re-verification (pre-publish) @ HEAD 1.21.3. Verdict: PASS re-affirmed (prior sign-off 2026-05-28 still holds). Re-ran tests/gemini-phaseout.test.js: 11/11 green despite doctor.js + CHANGELOG.md being touched by later agent-loading-contract work. All 6 surfaces verified in code (doctor guard, permissions header, wizard label, tool-capabilities comment, CHANGELOG [1.21.0], i18n x4). M4 ship-gate now SATISFIED: warning is live on npm (@jaimevalasek/aioson latest=1.21.3, before the 2026-06-10 gate). New Low: CHANGELOG [1.21.0] date still placeholder 2026-06-XX (housekeeping). L-01/L-02 unchanged (accepted). Feature stays in_progress (Phases 2/3 date-gated). No pentester/validator trigger (warning-only).
+
 ## Revision Requests
 
 _(vazio — populado a partir da Phase 2)_
