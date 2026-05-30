@@ -34,7 +34,7 @@ patterns: []
 
 ## Rules & Design-Docs aplicáveis
 
-_(vazio — populado a partir da Phase 2)_
+- [.aioson/rules/security-baseline.md](.aioson/rules/security-baseline.md) — M5 import-from-claude le ~/.claude/ filesystem (path handling) + learnings committed contem PII potencial (trust-user V1)
 
 ## Agent Trail
 
@@ -45,6 +45,57 @@ _(vazio — populado a partir da Phase 2)_
 
 MVP: extend active-learning-loop com materializacao disk-first em .aioson/learnings/{gotchas,recipes}/ + INDEX.md regenerator + diretiva universal em CLAUDE.md/AGENTS.md/OPENCODE.md + capture sinais novos (gotcha, resolution) + learning:import-from-claude one-shot + inception mirror. Constraints: NAO criar novo CLI namespace (evita colisao com aioson learning existente); reusa schema project_learnings + memory:archive + feature:close hook; storage committed default; 2 categorias V1 (gotchas/, recipes/); 2 sinais V1 (gotcha, resolution); inception parity igual active-learning-loop Phase 6.
 
+<!-- sha256:5918596abf8e90e4b55b1dfd07e397b970f69118eae3b2ea2073095f85b5f277 -->
+**2026-05-30T18:20:07.430Z** | @analyst | _Agent Trail_
+
+Requirements + spec produzidos (Gate A). SMALL, estende active-learning-loop. Decisoes: Q-CTPK-01 ADD COLUMN kind (FTS5-safe, nao recreate); Q-CTPK-02 materializacao so em feature:close (hook runDistillation sob lock); Q-CTPK-03 PII trust-user V1. Correcoes vs PRD: nao existe verbo learning capture (captura via devlog -> upsertProjectLearning); memory-capture-directive e da operator-memory, M1 cria learning-capture-directive.md novo. 11 BRs, 10 ECs. Q-CTPK-04/05/06 deferidas a V2. Next: @dev.
+
+<!-- sha256:7d5e1802818ef0ca9824ab15e70be5d3ad90a6d0016fb1afe504ed758cddf824 -->
+**2026-05-30T18:37:42.084Z** | @dev | _Agent Trail_
+
+Slice 1 (schema + M1 capture) LANDED. project_learnings.kind via migration Phase 4 (SCHEMA_VERSION 3->4, idempotent ALTER, FTS5 untouched) + base CREATE TABLE. devlog parser maps [gotcha]/[resolution] -> type=quality+kind; upsertProjectLearning app-level allow-list + non-clobber enrichment. New learning-capture-directive.md (template). 9 tests green; 30 affected suites pass (only pre-existing AC-P1-07 fails, confirmed via stash). Next: Slice 2 = M2 materialization hook in runDistillation + M3 INDEX.md regenerator.
+
+<!-- sha256:283b984d696b6d7759d3b0b83065ad03eb0c0c3508b84fc98061af1117f875eb -->
+**2026-05-30T19:05:35.889Z** | @dev | _Agent Trail_
+
+Slice 2 (M2 materialize + M3 INDEX) LANDED. New src/learning-materialize.js: materializeLearnings writes active gotcha/resolution to .aioson/learnings/{gotchas,recipes}/{slug}.md + regenerates INDEX.md (category ASC, updated_at DESC, <=200 char). Idempotent (rewrite only if newer), EC-CTPK-05 collision disambig, EC-CTPK-09 orphan cleanup (user files safe), EC-CTPK-02 no-op. Hooked into runDistillation (best-effort, never breaks feature:close). +5 tests (14 total green); 13 distillation/learning suites (118 tests) pass. Full suite running. Next: Slice 3 = M4 universal loading directive in CLAUDE.md/AGENTS.md/OPENCODE.md.
+
 ## Revision Requests
 
-_(vazio — populado a partir da Phase 2)_
+- 2026-05-30 — Investigate `aioson update` memory boundaries: update should refresh managed/template/config surfaces, but should not mutate living memory (`.aioson/brains/*`, project learnings, bootstrap/current-state) except explicit managed placeholders. Review why `.aioson/brains/_index.json` and `.aioson/brains/sheldon/architecture-decisions.brain.json` changed during the accidental update/recovery pass and decide whether this is expected migration, stale local drift, or an update bug.
+
+## Code Map
+
+```yaml
+files:
+- path: src/runtime-store.js
+  role: store
+  added_by: dev
+  added_at: 2026-05-30T18:38:30.583Z
+- path: src/learning-loop-migration.js
+  role: schema
+  added_by: dev
+  added_at: 2026-05-30T18:38:30.889Z
+- path: src/commands/devlog-process.js
+  role: command-entry
+  added_by: dev
+  added_at: 2026-05-30T18:38:31.204Z
+- path: template/agents/_shared/learning-capture-directive.md
+  role: config
+  added_by: dev
+  added_at: 2026-05-30T18:38:31.513Z
+- path: tests/cross-tool-project-knowledge.test.js
+  role: test
+  added_by: dev
+  added_at: 2026-05-30T18:38:31.819Z
+- path: src/learning-materialize.js
+  role: core-module
+  added_by: dev
+  added_at: 2026-05-30T19:05:36.502Z
+- path: src/learning-loop-engine.js
+  role: core-module
+  added_by: dev
+  added_at: 2026-05-30T19:05:37.270Z
+modules: []
+patterns: []
+```

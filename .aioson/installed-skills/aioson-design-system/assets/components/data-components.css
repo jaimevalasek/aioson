@@ -1,0 +1,376 @@
+/* ════════════════════════════════════════════════════════════════
+   AIOSON · Data components
+   Stat cards, data tables, form fields, empty state, skeleton,
+   toast, modal, drawer, billing cards.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Stat card grid + card ── */
+.ao-stat-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 24px;
+}
+.ao-stat-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  padding: 16px 18px;
+  display: grid;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.ao-stat-card::before {
+  content: '';
+  position: absolute; inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  opacity: .6;
+}
+.ao-stat-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ao-stat-card-eyebrow {
+  font-family: var(--font-mono);
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted);
+}
+.ao-stat-card-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.ao-stat-card-value {
+  font-size: 1.74rem;
+  letter-spacing: -.03em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text);
+}
+.ao-stat-card-delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-mono);
+  font-size: .68rem; font-weight: 600;
+  color: var(--accent-4);
+}
+.ao-stat-card-delta--down { color: #ff7d7d; }
+[data-theme="light"] .ao-stat-card-delta--down { color: #dc2626; }
+.ao-stat-card-foot {
+  font-size: .76rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Variantes coloridas */
+.ao-stat-card--violet::before { background: linear-gradient(90deg, var(--accent-2), var(--accent-3)); }
+.ao-stat-card--gold::before   { background: linear-gradient(90deg, var(--accent-3), var(--accent)); }
+.ao-stat-card--teal::before   { background: linear-gradient(90deg, var(--accent-4), var(--accent)); }
+.ao-stat-card--violet .ao-stat-card-icon { background: color-mix(in srgb, var(--accent-2-soft) 70%, transparent); color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 18%, var(--border)); }
+.ao-stat-card--gold   .ao-stat-card-icon { background: color-mix(in srgb, var(--accent-3-soft) 70%, transparent); color: var(--accent-3); border-color: color-mix(in srgb, var(--accent-3) 18%, var(--border)); }
+.ao-stat-card--teal   .ao-stat-card-icon { background: color-mix(in srgb, var(--accent-4-soft) 70%, transparent); color: var(--accent-4); border-color: color-mix(in srgb, var(--accent-4) 18%, var(--border)); }
+
+/* ── Card / panel genérico ── */
+.ao-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  padding: 18px;
+}
+.ao-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.ao-card-title { font-size: 1rem; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
+.ao-card-sub { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+/* ── Data table ── */
+.ao-table-wrap {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  overflow: hidden;
+}
+.ao-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .86rem;
+}
+.ao-table thead th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: .6rem; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--surface-soft) 100%, transparent);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ao-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.ao-table tbody tr:last-child td { border-bottom: none; }
+.ao-table tbody tr:hover td { background: color-mix(in srgb, var(--accent-soft) 14%, transparent); }
+.ao-table .num { font-variant-numeric: tabular-nums; text-align: right; }
+.ao-table .mono { font-family: var(--font-mono); font-size: .76rem; color: var(--muted); }
+
+/* Status pill */
+.ao-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.ao-status::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.ao-status--ok    { color: var(--accent-4); background: color-mix(in srgb, var(--accent-4-soft) 80%, transparent); border: 1px solid color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
+.ao-status--info  { color: var(--accent);   background: color-mix(in srgb, var(--accent-soft) 80%, transparent);   border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border)); }
+.ao-status--warn  { color: var(--accent-3); background: color-mix(in srgb, var(--accent-3-soft) 80%, transparent); border: 1px solid color-mix(in srgb, var(--accent-3) 26%, var(--border)); }
+.ao-status--off   { color: var(--muted);    background: var(--surface-soft); border: 1px solid var(--border); }
+.ao-status--err   { color: #ff7d7d; background: rgba(255,90,90,.10); border: 1px solid rgba(255,90,90,.28); }
+[data-theme="light"] .ao-status--err { color: #dc2626; background: rgba(220,38,38,.10); border-color: rgba(220,38,38,.30); }
+
+/* ── Form fields ── */
+.ao-field { display: grid; gap: 6px; }
+.ao-field-label {
+  font-family: var(--font-mono);
+  font-size: .6rem; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+}
+.ao-input, .ao-select, .ao-textarea {
+  font-family: var(--font-body);
+  font-size: .9rem;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  transition: var(--transition-fast);
+  width: 100%;
+}
+.ao-input:focus, .ao-select:focus, .ao-textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.ao-textarea { resize: vertical; min-height: 90px; }
+.ao-help { font-size: .74rem; color: var(--muted); }
+
+/* Switch */
+.ao-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px; height: 20px;
+}
+.ao-switch input { opacity: 0; width: 0; height: 0; }
+.ao-switch span {
+  position: absolute; inset: 0;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ao-switch span::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 2px; top: 2px;
+  background: var(--text-soft);
+  border-radius: 50%;
+  transition: var(--transition-fast);
+}
+.ao-switch input:checked + span {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+.ao-switch input:checked + span::before { transform: translateX(16px); background: #fff; }
+
+/* ── Empty state ── */
+.ao-empty {
+  text-align: center;
+  padding: 56px 24px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 60%, transparent);
+}
+.ao-empty-icon {
+  width: 56px; height: 56px; margin: 0 auto 14px;
+  border-radius: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.ao-empty-title {
+  font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.ao-empty-desc { color: var(--muted); font-size: .88rem; line-height: 1.5; max-width: 44ch; margin: 0 auto 18px; }
+
+/* ── Skeleton ── */
+.ao-skel {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--surface-soft) 100%, transparent) 0%,
+    color-mix(in srgb, var(--accent-soft) 28%, transparent) 50%,
+    color-mix(in srgb, var(--surface-soft) 100%, transparent) 100%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: aoSkel 1.4s ease-in-out infinite;
+}
+@keyframes aoSkel {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ── Toast ── */
+.ao-toast-region {
+  position: fixed; bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 9000;
+}
+.ao-toast {
+  display: flex; align-items: flex-start; gap: 10px;
+  min-width: 280px; max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
+  box-shadow: 0 14px 30px -10px rgba(0,0,0,.40);
+  animation: aoToastIn .22s ease-out;
+}
+@keyframes aoToastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ao-toast-ic {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  color: var(--accent);
+}
+.ao-toast-title { font-size: .86rem; font-weight: 600; color: var(--text); }
+.ao-toast-msg { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+/* ── Modal ── */
+.ao-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2,4,9,.6);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9500;
+  padding: 24px;
+  animation: aoFade .16s ease;
+}
+@keyframes aoFade { from { opacity: 0; } to { opacity: 1; } }
+.ao-modal {
+  width: 100%; max-width: 520px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
+  box-shadow: 0 30px 60px -10px rgba(0,0,0,.55);
+  overflow: hidden;
+  animation: aoModalIn .22s ease-out;
+}
+@keyframes aoModalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.ao-modal-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.ao-modal-title { font-size: 1.05rem; font-weight: 600; letter-spacing: -.01em; color: var(--text); }
+.ao-modal-sub { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+.ao-modal-body { padding: 18px 20px; }
+.ao-modal-foot {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+  background: color-mix(in srgb, var(--surface-soft) 60%, transparent);
+}
+
+/* ── Drawer (right side) ── */
+.ao-drawer-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(2,4,9,.50);
+  backdrop-filter: blur(4px);
+  z-index: 9400;
+  animation: aoFade .14s ease;
+}
+.ao-drawer {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 100%; max-width: 460px;
+  background: color-mix(in srgb, var(--panel-strong) 96%, transparent);
+  border-left: 1px solid var(--border);
+  box-shadow: -20px 0 40px -10px rgba(0,0,0,.40);
+  z-index: 9450;
+  display: flex; flex-direction: column;
+  animation: aoDrawerIn .22s ease-out;
+}
+@keyframes aoDrawerIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ao-drawer-head { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.ao-drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+.ao-drawer-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── Billing / pricing card ── */
+.ao-plan-card {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 92%, transparent);
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  position: relative;
+}
+.ao-plan-card--featured {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent),
+    0 18px 40px -16px color-mix(in srgb, var(--accent-2) 50%, transparent);
+}
+.ao-plan-card-name { font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-family: var(--font-mono); }
+.ao-plan-card-price {
+  display: flex; align-items: baseline; gap: 6px;
+  font-size: 2.2rem; font-weight: 700; letter-spacing: -.03em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ao-plan-card-price small { font-size: .82rem; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.ao-plan-card-features { display: grid; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.ao-plan-card-features li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .86rem; color: var(--text-soft);
+  list-style: none;
+}
+.ao-plan-card-features li::before {
+  content: '';
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-4-soft) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-4) 30%, var(--border));
+  flex-shrink: 0;
+  background-image: linear-gradient(135deg, transparent 38%, var(--accent-4) 38% 60%, transparent 60%);
+  background-size: 8px 1.5px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ── Buttons reuse from base; add neutral ghost ── */
+.ao-btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 80%, transparent);
+  color: var(--text);
+  font-size: .86rem; font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ao-btn-ghost:hover { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); color: var(--accent-strong); }

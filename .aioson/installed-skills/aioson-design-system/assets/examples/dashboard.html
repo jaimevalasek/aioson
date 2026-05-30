@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard · aioson</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../assets/tokens/index.css" />
+<link rel="stylesheet" href="../../assets/components/command-dock.css" />
+<link rel="stylesheet" href="../../assets/components/aurora-rail.css" />
+<link rel="stylesheet" href="../../assets/components/account-menu.css" />
+<link rel="stylesheet" href="../../assets/components/app-shell.css" />
+<link rel="stylesheet" href="../../assets/components/data-components.css" />
+</head>
+<body data-auth-state="logged">
+
+<div class="ao-shell">
+  <!-- DOCK (mesma topbar do site) -->
+  <header class="ao-shell-dock">
+    <!-- usar markup real do command-dock; aqui simplificado por brevidade -->
+    <nav class="cmd-dock" aria-label="Topbar">
+      <div class="cmd-brand">
+        <span class="cmd-mark"><span class="cmd-mark-inner">ao</span></span>
+        <div class="cmd-brand-text">
+          <span class="cmd-brand-name">aioson<span class="cmd-brand-dot">.</span>cloud</span>
+          <span class="cmd-brand-sub">registry · v6</span>
+        </div>
+        <span class="cmd-brand-version">PRO</span>
+      </div>
+      <div class="cmd-center">
+        <div class="cmd-nav">
+          <a class="cmd-nav-item" aria-current="page" href="#"><span class="cmd-nav-glyph">◉</span> Dashboard</a>
+          <a class="cmd-nav-item" href="#">Squads</a>
+          <a class="cmd-nav-item" href="#">Genomes</a>
+          <a class="cmd-nav-item" href="#">Skills</a>
+        </div>
+      </div>
+      <div class="cmd-actions">
+        <button class="cmd-icon-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7a4 4 0 1 1 8 0v3l1.2 2H2.8L4 10z"/></svg><span class="cmd-icon-dot"></span></button>
+        <div style="position:relative">
+          <button class="cmd-account" data-account-toggle aria-expanded="false">
+            <span class="cmd-avatar"><span class="cmd-avatar-inner">TP</span></span>
+            <span class="cmd-account-info"><span class="cmd-account-name">Teste Premium</span><span class="cmd-account-mail">teste@teste.com</span></span>
+            <span class="cmd-account-plan">Pro</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="ao-shell-sidebar ao-sidebar">
+    <div class="ao-sidebar-section">
+      <span class="ao-sidebar-eyebrow">Workspace</span>
+      <a class="ao-sidebar-link" aria-current="page" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg><span class="label">Visão geral</span></a>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12h12M2 8h12M2 4h12"/></svg><span class="label">Atividade</span><span class="badge">12</span></a>
+    </div>
+    <div class="ao-sidebar-section">
+      <span class="ao-sidebar-eyebrow">Meus assets</span>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="6" r="2.5"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4"/></svg><span class="label">Squads</span></a>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M2 8h12"/></svg><span class="label">Genomes</span></a>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 2l2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3 4-.5z"/></svg><span class="label">Skills</span></a>
+    </div>
+    <div class="ao-sidebar-section">
+      <span class="ao-sidebar-eyebrow">Conta</span>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="12" height="8" rx="1.5"/><path d="M2 7h12"/></svg><span class="label">Assinatura</span></a>
+      <a class="ao-sidebar-link" href="#"><svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg><span class="label">Configurações</span></a>
+    </div>
+    <div class="ao-sidebar-foot">
+      <span class="eyebrow">Plano Pro</span>
+      <p>Renova em 12 jun. <a href="#" style="color:var(--accent)">Gerenciar →</a></p>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="ao-shell-content">
+    <div class="ao-content">
+      <header class="ao-page-header">
+        <nav class="ao-breadcrumbs"><a href="#">workspace</a><span class="sep">/</span><span aria-current="page">dashboard</span></nav>
+        <div class="ao-page-header-row">
+          <div class="ao-page-header-copy">
+            <span class="ao-page-header-eyebrow">visão geral</span>
+            <h1 class="ao-page-header-title">Bem-vindo de volta, Teste <span class="ao-page-header-chip">Pro</span></h1>
+            <p class="ao-page-header-desc">Resumo do seu workspace nos últimos 30 dias. Tudo rodando saudável.</p>
+          </div>
+          <div class="ao-page-header-actions">
+            <button class="ao-btn-ghost">Exportar</button>
+            <a href="#" class="cmd-cta">Publicar squad →</a>
+          </div>
+        </div>
+      </header>
+
+      <!-- Stats -->
+      <section class="ao-stat-grid">
+        <article class="ao-stat-card">
+          <div class="ao-stat-card-row"><span class="ao-stat-card-eyebrow">Squads ativas</span><span class="ao-stat-card-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="6" r="2.5"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4"/></svg></span></div>
+          <div class="ao-stat-card-value">12</div>
+          <div class="ao-stat-card-foot"><span class="ao-stat-card-delta">↑ 3</span> vs mês anterior</div>
+        </article>
+        <article class="ao-stat-card ao-stat-card--violet">
+          <div class="ao-stat-card-row"><span class="ao-stat-card-eyebrow">Genomes</span><span class="ao-stat-card-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/></svg></span></div>
+          <div class="ao-stat-card-value">48</div>
+          <div class="ao-stat-card-foot"><span class="ao-stat-card-delta">↑ 12%</span> downloads</div>
+        </article>
+        <article class="ao-stat-card ao-stat-card--gold">
+          <div class="ao-stat-card-row"><span class="ao-stat-card-eyebrow">Receita</span><span class="ao-stat-card-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8h12M5 4l-3 4 3 4"/></svg></span></div>
+          <div class="ao-stat-card-value">R$ 8.420</div>
+          <div class="ao-stat-card-foot"><span class="ao-stat-card-delta">↑ 24%</span> MRR</div>
+        </article>
+        <article class="ao-stat-card ao-stat-card--teal">
+          <div class="ao-stat-card-row"><span class="ao-stat-card-eyebrow">Health</span><span class="ao-stat-card-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8l3 3 9-7"/></svg></span></div>
+          <div class="ao-stat-card-value">99.8%</div>
+          <div class="ao-stat-card-foot">uptime últimos 30d</div>
+        </article>
+      </section>
+
+      <!-- Tabela -->
+      <section class="ao-card" style="padding:0">
+        <div class="ao-card-head" style="padding:18px">
+          <div><div class="ao-card-title">Squads recentes</div><div class="ao-card-sub">12 publicadas neste workspace</div></div>
+          <div class="ao-tabs"><button class="ao-tab" aria-selected="true">Todas</button><button class="ao-tab">Ativas</button><button class="ao-tab">Drafts</button></div>
+        </div>
+        <div class="ao-table-wrap" style="border:none;border-radius:0">
+          <table class="ao-table">
+            <thead><tr><th>Squad</th><th>Versão</th><th>Status</th><th class="num">Downloads</th><th class="num">Receita</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>content-marketing-pro</strong><div class="mono">@aioson-labs</div></td><td class="mono">1.4.0</td><td><span class="ao-status ao-status--ok">ativa</span></td><td class="num">1.248</td><td class="num">R$ 2.480</td><td><button class="ao-btn-ghost">Ver</button></td></tr>
+              <tr><td><strong>full-stack-builder</strong><div class="mono">@aioson-labs</div></td><td class="mono">0.9.0</td><td><span class="ao-status ao-status--info">beta</span></td><td class="num">412</td><td class="num">R$ 980</td><td><button class="ao-btn-ghost">Ver</button></td></tr>
+              <tr><td><strong>architect-domain</strong><div class="mono">@teste</div></td><td class="mono">2.1.0</td><td><span class="ao-status ao-status--ok">ativa</span></td><td class="num">2.142</td><td class="num">R$ 4.020</td><td><button class="ao-btn-ghost">Ver</button></td></tr>
+              <tr><td><strong>rag-over-notion</strong><div class="mono">@teste</div></td><td class="mono">0.3.0</td><td><span class="ao-status ao-status--warn">draft</span></td><td class="num">—</td><td class="num">—</td><td><button class="ao-btn-ghost">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p style="margin-top:32px;color:var(--muted);font-size:.82rem;text-align:center">App Shell · Sidebar contextual · Stat cards · Data table · Status pills · Page header — todos da skill aioson 1.1</p>
+    </div>
+  </main>
+</div>
+
+<script src="../../assets/components/theme-toggle.js"></script>
+<script src="../../assets/components/account-dropdown.js"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AIOSON · Command Dock (logged)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/tokens/index.css" />
+<link rel="stylesheet" href="../assets/components/command-dock.css" />
+<link rel="stylesheet" href="../assets/components/aurora-rail.css" />
+<link rel="stylesheet" href="../assets/components/account-menu.css" />
+<style>
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .demo-info {
+    margin-top: 40px;
+    padding: 24px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.6;
+  }
+  .demo-info code {
+    font-family: var(--font-mono);
+    font-size: .85em;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent-soft) 30%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body data-auth-state="logged">
+
+<div class="wrap">
+
+  <header class="cmd-dock" role="banner">
+    <!-- Brand -->
+    <div class="cmd-brand">
+      <span class="cmd-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4 4 26h6l2-4h8l2 4h6L16 4z" stroke="url(#g1)"/>
+          <path d="M14 18h4" stroke="url(#g1)"/>
+          <defs>
+            <linearGradient id="g1" x1="0" x2="32" y1="0" y2="32">
+              <stop offset="0" stop-color="#5ec8ff"/>
+              <stop offset="1" stop-color="#7a6cff"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </span>
+      <div class="cmd-brand-info">
+        <span class="cmd-brand-title">aioson <span class="cmd-brand-version">v0.9 beta</span></span>
+        <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> registry · online</span>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="cmd-center">
+      <nav class="cmd-nav" aria-label="Principal">
+        <a href="#" class="cmd-nav-item" aria-current="page">Início</a>
+        <a href="#" class="cmd-nav-item">Squads</a>
+        <a href="#" class="cmd-nav-item">Genomes</a>
+        <a href="#" class="cmd-nav-item">Skills</a>
+        <a href="#" class="cmd-nav-item cmd-nav-item-hide">Store <span class="cmd-nav-badge">new</span></a>
+        <a href="#" class="cmd-nav-item cmd-nav-item-hide">Docs</a>
+      </nav>
+      <label class="cmd-bar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m13 13-2.6-2.6"/></svg>
+        <input class="cmd-bar-input" type="search" placeholder="Buscar squads, genomes, skills…" />
+        <span class="cmd-bar-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+      </label>
+    </div>
+
+    <!-- Actions -->
+    <div class="cmd-actions">
+      <button class="cmd-icon-btn" type="button" aria-label="Notificações">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a4 4 0 1 1 8 0v3l1.2 2H2.8L4 10z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+        <span class="cmd-icon-dot"></span>
+      </button>
+      <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+        <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+        <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+      </button>
+      <span class="cmd-divider" aria-hidden="true"></span>
+
+      <!-- Account dropdown wrapper -->
+      <div style="position: relative">
+        <button class="cmd-account" type="button" aria-expanded="false" aria-haspopup="menu" data-account-toggle>
+          <span class="cmd-avatar" aria-hidden="true"><span class="cmd-avatar-inner">TP</span></span>
+          <span class="cmd-account-info">
+            <span class="cmd-account-name">Teste Premium</span>
+            <span class="cmd-account-mail">teste@teste.com</span>
+          </span>
+          <span class="cmd-account-plan">Pro</span>
+          <svg class="cmd-account-chev" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6l4.5 4 4.5-4"/></svg>
+        </button>
+        <div class="cmd-menu" role="menu" data-account-menu>
+          <div class="cmd-menu-head">
+            <span class="cmd-menu-avatar"><span>TP</span></span>
+            <div class="cmd-menu-meta">
+              <span class="name">Teste Premium</span>
+              <span class="mail">teste@teste.com</span>
+              <div class="cmd-menu-plan-row">
+                <span class="cmd-account-plan" style="font-size:.5rem">Pro · ativo</span>
+                <span>renova 12 jun</span>
+              </div>
+            </div>
+          </div>
+
+          <a class="cmd-menu-item" href="#" role="menuitem">
+            <span class="ic"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5.5" height="6" rx="1"/><rect x="2" y="9.5" width="5.5" height="4.5" rx="1"/><rect x="8.5" y="2" width="5.5" height="4.5" rx="1"/><rect x="8.5" y="8" width="5.5" height="6" rx="1"/></svg></span>
+            <span class="label">Dashboard</span>
+            <span class="meta">home</span>
+          </a>
+          <a class="cmd-menu-item cmd-menu-item--violet" href="#" role="menuitem">
+            <span class="ic"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="12" height="8" rx="1.5"/><path d="M2 7h12M5 10h2"/></svg></span>
+            <span class="label">Assinaturas</span>
+            <span class="meta">billing</span>
+          </a>
+          <a class="cmd-menu-item cmd-menu-item--gold" href="#" role="menuitem">
+            <span class="ic"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.5"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4"/></svg></span>
+            <span class="label">Área de membros</span>
+            <span class="meta">bundle</span>
+          </a>
+          <a class="cmd-menu-item cmd-menu-item--teal" href="#" role="menuitem">
+            <span class="ic"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg></span>
+            <span class="label">Workspace</span>
+            <span class="meta">team</span>
+          </a>
+          <a class="cmd-menu-item" href="#" role="menuitem">
+            <span class="ic" style="background:color-mix(in srgb, var(--surface-soft) 100%, transparent);color:var(--muted);border-color:var(--border)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/></svg></span>
+            <span class="label">Configurações</span>
+            <span class="meta">prefs</span>
+          </a>
+          <div class="cmd-menu-divider"></div>
+          <a class="cmd-menu-item cmd-menu-item--logout" href="#" role="menuitem">
+            <span class="ic"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h5"/><path d="M11 5l3 3-3 3M14 8H7"/></svg></span>
+            <span class="label">Sair da conta</span>
+            <span class="meta">logout</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Aurora rail -->
+  <div class="cmd-aurora" aria-hidden="true">
+    <svg class="cmd-aurora-wave" viewBox="0 0 1200 56" preserveAspectRatio="none">
+      <path class="wave-1" d="M0,38 C150,18 280,52 420,32 C580,10 720,46 900,28 C1040,12 1140,40 1200,24"/>
+      <path class="wave-2" d="M0,30 C160,46 320,16 480,36 C640,52 800,18 960,32 C1080,42 1160,22 1200,30"/>
+      <path class="wave-3" d="M0,44 C140,28 320,46 500,38 C680,30 820,48 1000,36 C1100,28 1160,42 1200,38"/>
+    </svg>
+    <span class="cmd-aurora-stat"><span class="blip"></span> registry <strong>online</strong></span>
+    <span class="cmd-aurora-divider"></span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--violet"><span class="blip"></span> <strong>248</strong> squads</span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--teal"><span class="blip"></span> <strong>1.4k</strong> genomes</span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--gold"><span class="blip"></span> <strong>3.2k</strong> skills</span>
+    <a href="#" class="cmd-aurora-cta">Explorar registry →</a>
+  </div>
+
+  <div class="demo-info">
+    <strong style="color: var(--text-soft)">Estado:</strong> logged. Mostra avatar pill com plano e dropdown.
+    Toggle <code>data-auth-state="logged"</code> no <code>&lt;body&gt;</code>.
+    Clique no avatar para abrir o menu — Esc ou clique fora fecha.
+  </div>
+</div>
+
+<script src="../assets/components/theme-toggle.js"></script>
+<script src="../assets/components/account-dropdown.js"></script>
+</body>
+</html>

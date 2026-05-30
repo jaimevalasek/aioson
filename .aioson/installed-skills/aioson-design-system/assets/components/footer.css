@@ -1,0 +1,160 @@
+/* AIOSON Design System — Marketing Footer
+ * Footer das rotas marketing (/, /pricing, /developer, /play, /services).
+ * Estrutura: brand bloco + 3 colunas de links + base com © e legal.
+ * Requer: tokens/index.css
+ */
+
+.site-footer.marketing-footer {
+  margin-top: 80px;
+  padding: 56px 28px 32px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--panel) 40%, transparent) 0%,
+    color-mix(in srgb, var(--bg-deep) 90%, transparent) 100%);
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(140px, 1fr));
+  gap: 40px 32px;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 880px) {
+  .site-footer.marketing-footer {
+    grid-template-columns: 1fr 1fr;
+    padding: 40px 20px 24px;
+    gap: 28px 24px;
+  }
+  .site-footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-footer.marketing-footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Brand block (left) */
+.site-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.site-footer-brand .brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+}
+
+.site-footer-brand .brand-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.site-footer-brand .brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.site-footer-brand .brand-info .eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.site-footer-brand .brand-info .brand-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: -0.01em;
+}
+
+.site-footer-tagline {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 320px;
+  margin: 0;
+}
+
+/* Link columns */
+.marketing-footer .footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.marketing-footer .footer-col-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.marketing-footer .footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.marketing-footer .footer-col a {
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.marketing-footer .footer-col a:hover,
+.marketing-footer .footer-col a:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+/* Base row (full-width across the grid) */
+.site-footer-base {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.site-footer-base > div {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.site-footer-base a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.site-footer-base a:hover,
+.site-footer-base a:focus-visible {
+  color: var(--text);
+  outline: none;
+}

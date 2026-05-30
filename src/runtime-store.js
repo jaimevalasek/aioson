@@ -487,7 +487,8 @@ async function openRuntimeDb(targetDir, options = {}) {
       source_session TEXT,
       evidence TEXT,
       created_at TEXT DEFAULT (datetime('now')),
-      updated_at TEXT DEFAULT (datetime('now'))
+      updated_at TEXT DEFAULT (datetime('now')),
+      kind TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_impl_plans_status ON implementation_plans(status);

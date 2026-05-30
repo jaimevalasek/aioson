@@ -50,11 +50,20 @@ function extractTaggedLearnings(content) {
   for (const line of section.split(/\r?\n/)) {
     const trimmed = line.replace(/^[-*]\s*/, '').trim();
     if (!trimmed) continue;
-    const typeMatch = trimmed.match(/^\[(process|domain|quality|preference)\]\s+(.+)/i);
+    const typeMatch = trimmed.match(/^\[(process|domain|quality|preference|gotcha|resolution)\]\s+(.+)/i);
     if (typeMatch) {
-      learnings.push({ type: typeMatch[1].toLowerCase(), title: typeMatch[2].trim() });
+      const tag = typeMatch[1].toLowerCase();
+      const title = typeMatch[2].trim();
+      // cross-tool-project-knowledge: gotcha/resolution are project-knowledge
+      // signals — persisted under type='quality' with the real signal in `kind`
+      // (project_learnings.type CHECK only allows the 4 base types).
+      if (tag === 'gotcha' || tag === 'resolution') {
+        learnings.push({ type: 'quality', kind: tag, title });
+      } else {
+        learnings.push({ type: tag, kind: null, title });
+      }
     } else if (trimmed.length > 5) {
-      learnings.push({ type: 'process', title: trimmed });
+      learnings.push({ type: 'process', kind: null, title: trimmed });
     }
   }
   return learnings;
@@ -69,25 +78,38 @@ function extractSummary(content) {
   return firstHeading ? firstHeading[1].trim() : null;
 }
 
-function upsertProjectLearning(db, { title, type, featureSlug, evidence, sourceSession }) {
+// cross-tool-project-knowledge: app-level allow-list for project_learnings.kind.
+// The column carries no schema CHECK by repo convention (see
+// learning-loop-migration.js Phase 4). NULL = not a project-knowledge learning.
+const ALLOWED_LEARNING_KINDS = new Set(['gotcha', 'resolution']);
+
+function normalizeKind(kind) {
+  return ALLOWED_LEARNING_KINDS.has(kind) ? kind : null;
+}
+
+function upsertProjectLearning(db, { title, type, kind, featureSlug, evidence, sourceSession }) {
+  const safeKind = normalizeKind(kind);
   const existing = db.prepare(
-    'SELECT learning_id, frequency FROM project_learnings WHERE title = ? AND (feature_slug = ? OR (feature_slug IS NULL AND ? IS NULL))'
+    'SELECT learning_id, frequency, kind FROM project_learnings WHERE title = ? AND (feature_slug = ? OR (feature_slug IS NULL AND ? IS NULL))'
   ).get(title, featureSlug || null, featureSlug || null);
 
   if (existing) {
+    // Enrich kind only when previously unset — a plain re-tag must not clobber
+    // an existing classification.
+    const nextKind = existing.kind || safeKind || null;
     db.prepare(
-      'UPDATE project_learnings SET frequency = ?, last_reinforced = ?, updated_at = ? WHERE learning_id = ?'
-    ).run(existing.frequency + 1, nowIso(), nowIso(), existing.learning_id);
+      'UPDATE project_learnings SET frequency = ?, last_reinforced = ?, updated_at = ?, kind = ? WHERE learning_id = ?'
+    ).run(existing.frequency + 1, nowIso(), nowIso(), nextKind, existing.learning_id);
     return { action: 'updated', learningId: existing.learning_id };
   }
 
   const learningId = createLearningId();
   db.prepare(`
     INSERT INTO project_learnings
-      (learning_id, feature_slug, type, title, confidence, frequency, last_reinforced,
+      (learning_id, feature_slug, type, kind, title, confidence, frequency, last_reinforced,
        applies_to, source_session, evidence, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'medium', 1, ?, 'project', ?, ?, 'active', ?, ?)
-  `).run(learningId, featureSlug || null, type, title, nowIso(), sourceSession || null, evidence || null, nowIso(), nowIso());
+    VALUES (?, ?, ?, ?, ?, 'medium', 1, ?, 'project', ?, ?, 'active', ?, ?)
+  `).run(learningId, featureSlug || null, type, safeKind, title, nowIso(), sourceSession || null, evidence || null, nowIso(), nowIso());
   return { action: 'inserted', learningId };
 }
 
@@ -168,8 +190,8 @@ async function processDevlogFile(db, filePath) {
 
   // Upsert learnings
   const learnings = extractTaggedLearnings(body);
-  for (const { type, title } of learnings) {
-    upsertProjectLearning(db, { title, type, featureSlug, sourceSession: sessionKey || path.basename(filePath) });
+  for (const { type, title, kind } of learnings) {
+    upsertProjectLearning(db, { title, type, kind, featureSlug, sourceSession: sessionKey || path.basename(filePath) });
   }
 
   // Log verdict if present
@@ -291,4 +313,4 @@ async function runDevlogProcess({ args, options = {}, logger }) {
   return { ok: true, results, processed: processed.length, skipped: skipped.length, malformed: malformed.length, totalArtifacts, totalLearnings, dbPath };
 }
 
-module.exports = { runDevlogProcess, processDevlogFile };
+module.exports = { runDevlogProcess, processDevlogFile, extractTaggedLearnings, upsertProjectLearning };

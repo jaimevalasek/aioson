@@ -1,0 +1,31 @@
+/* AIOSON Design System — Tokens (entry point)
+ * Importa tokens dark + light + base do body/typography.
+ * Use este arquivo no projeto consumidor.
+ */
+
+@import url('./dark.css');
+@import url('./light.css');
+
+/* Base do body / typography */
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* Background dark padrão */
+[data-theme="dark"] body, :root:not([data-theme]) body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 38%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 32%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+}

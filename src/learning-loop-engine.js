@@ -32,6 +32,7 @@ const crypto = require('node:crypto');
 // `learning-auto-promote.runLearningAutoPromote` (failure injection) takes
 // effect — direct destructuring would bind the original export.
 const autoPromoteModule = require('./commands/learning-auto-promote');
+const { materializeLearnings } = require('./learning-materialize');
 
 const DEFAULT_TIMEOUT_MS = 5000;
 const MICRO = 'MICRO';
@@ -231,6 +232,18 @@ async function runDistillation(options) {
   };
   releaseLockWithSummary(db, lock.lockId, summary);
 
+  // M2/M3 (cross-tool-project-knowledge) — materialize project-knowledge learnings
+  // (gotcha/resolution) to .aioson/learnings/ + regenerate INDEX.md. Best-effort:
+  // a disk failure here must never break feature:close distillation (BR-CTPK-02).
+  let materialized = null;
+  if (targetDir) {
+    try {
+      materialized = materializeLearnings({ db, targetDir });
+    } catch (err) {
+      materialized = { ok: false, error: String((err && err.message) || err) };
+    }
+  }
+
   return {
     ok: true,
     feature_slug: slug,
@@ -239,7 +252,8 @@ async function runDistillation(options) {
     review_count: review,
     skipped_count: skipped,
     merge_candidate_count: 0,
-    duration_ms: durationMs
+    duration_ms: durationMs,
+    materialized
   };
 }
 

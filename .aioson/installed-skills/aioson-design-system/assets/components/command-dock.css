@@ -1,0 +1,510 @@
+/* AIOSON Design System — Command Dock
+ * Topbar principal: brand cluster + nav pills + cmd bar + actions cluster
+ * Requer: tokens/index.css
+ */
+
+.cmd-dock {
+  position: sticky;
+  top: 14px;
+  z-index: 60;
+  margin: 6px 0 28px;
+  padding: 10px 14px 10px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--panel-strong) 92%, transparent) 0%,
+      color-mix(in srgb, var(--panel) 78%, transparent) 100%);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.04) inset,
+    0 -1px 0 rgba(0,0,0,.32) inset,
+    0 24px 60px -20px rgba(0,0,0,.55),
+    0 0 0 1px rgba(94,200,255,.04);
+  /* overflow: visible para o dropdown poder escapar do dock */
+  overflow: visible;
+}
+
+/* Aurora wash — wrapper com overflow:hidden interno para confinar */
+.cmd-dock::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 8% 50%,  color-mix(in srgb, var(--accent) 22%, transparent), transparent 32%),
+    radial-gradient(circle at 92% 50%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 30%),
+    radial-gradient(circle at 50% 110%, color-mix(in srgb, var(--accent-4) 18%, transparent), transparent 50%);
+  opacity: .55;
+  pointer-events: none;
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+/* Grid sutil */
+.cmd-dock::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 80%);
+  opacity: .25;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Light mode adjustments */
+[data-theme="light"] .cmd-dock {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.92) 0%, rgba(247,250,255,.86) 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.80) inset,
+    0 -1px 0 rgba(15,23,42,.04) inset,
+    0 18px 40px -18px rgba(15,23,42,.18),
+    0 0 0 1px rgba(31,138,255,.06);
+}
+[data-theme="light"] .cmd-dock::before { opacity: .45; mix-blend-mode: multiply; }
+[data-theme="light"] .cmd-dock::after {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px);
+  opacity: .18;
+}
+
+/* ──────────────────────────── Brand cluster ──────────────────────────── */
+
+.cmd-brand {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 14px;
+  padding-right: 14px;
+  border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.cmd-mark {
+  position: relative;
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(94,200,255,.28), transparent 60%),
+    linear-gradient(160deg, #0c1119, #07090d);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent),
+    0 8px 24px -8px color-mix(in srgb, var(--accent-2) 60%, transparent);
+}
+.cmd-mark::before {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 18px;
+  background: conic-gradient(from 0deg,
+    color-mix(in srgb, var(--accent) 60%, transparent),
+    color-mix(in srgb, var(--accent-2) 60%, transparent),
+    color-mix(in srgb, var(--accent-4) 50%, transparent),
+    color-mix(in srgb, var(--accent) 60%, transparent));
+  filter: blur(10px);
+  opacity: .45;
+  z-index: -1;
+  animation: cmdSpin 9s linear infinite;
+}
+.cmd-mark svg { width: 26px; height: 26px; position: relative; z-index: 1; }
+
+[data-theme="light"] .cmd-mark {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(31,138,255,.18), transparent 60%),
+    linear-gradient(160deg, #ffffff, #eef3fb);
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent),
+    0 8px 22px -10px color-mix(in srgb, var(--accent-2) 50%, transparent);
+}
+
+@keyframes cmdSpin { to { transform: rotate(360deg); } }
+
+.cmd-brand-info { display: grid; gap: 2px; line-height: 1; }
+.cmd-brand-title {
+  font-size: 1.05rem;
+  letter-spacing: -.04em;
+  font-weight: 700;
+  color: var(--text-soft);
+  display: flex; align-items: center; gap: 8px;
+}
+.cmd-brand-version {
+  font-family: var(--font-mono);
+  font-size: .6rem; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--accent-2) 38%, var(--border));
+  background: color-mix(in srgb, var(--accent-2-soft) 60%, transparent);
+  color: #c8b9ff;
+}
+[data-theme="light"] .cmd-brand-version {
+  background: color-mix(in srgb, var(--accent-2-soft) 60%, #fff);
+  color: #3b2bd6;
+  border-color: color-mix(in srgb, var(--accent-2) 30%, var(--border));
+}
+
+.cmd-brand-sub {
+  font-family: var(--font-mono);
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.cmd-status-dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--accent-4);
+  position: relative;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-4) 60%, transparent);
+  animation: cmdPulse 2.2s ease-out infinite;
+}
+@keyframes cmdPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-4) 60%, transparent); }
+  70%  { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-4) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-4) 0%, transparent); }
+}
+
+/* ──────────────────────────── Center cluster ──────────────────────────── */
+
+.cmd-center {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  min-width: 0;
+}
+
+.cmd-nav {
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #000 26%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  max-width: 100%;
+  /* overflow visible para o submenu escapar do clipping. */
+  overflow: visible;
+}
+[data-theme="light"] .cmd-nav { background: #f4f7fc; border-color: var(--border); }
+
+.cmd-nav-item {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 30px; padding: 0 12px;
+  border-radius: 10px;
+  font-size: .82rem; font-weight: 500;
+  color: color-mix(in srgb, var(--text) 78%, var(--muted));
+  background: transparent;
+  border: none;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cmd-nav-item .cmd-nav-glyph {
+  width: 14px; height: 14px;
+  display: inline-flex;
+  color: var(--muted);
+  transition: color var(--transition-fast);
+}
+.cmd-nav-item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-soft) 36%, transparent);
+}
+.cmd-nav-item:hover .cmd-nav-glyph { color: var(--accent); }
+.cmd-nav-item[aria-current="page"] {
+  color: var(--text-soft);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent-soft) 70%, transparent),
+    color-mix(in srgb, var(--accent-2-soft) 50%, transparent));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
+    0 4px 12px -4px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color: var(--accent); }
+[data-theme="light"] .cmd-nav-item { color: var(--muted); }
+[data-theme="light"] .cmd-nav-item:hover { color: var(--text); background: #fff; box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+[data-theme="light"] .cmd-nav-item[aria-current="page"] {
+  color: var(--accent-strong);
+  background: #fff;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent),
+    0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.cmd-nav-badge {
+  font-family: var(--font-mono);
+  font-size: .55rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-3-soft) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-3) 36%, transparent);
+  color: var(--accent-3);
+  margin-left: 2px;
+}
+
+/* ──────────────────────────── Nav submenu (dropdown) ──────────────────────────── */
+
+.cmd-nav-group {
+  position: relative;
+  display: inline-flex;
+}
+.cmd-nav-chev {
+  margin-left: 2px;
+  color: var(--muted);
+  transition: transform var(--transition-fast);
+}
+.cmd-nav-group:hover .cmd-nav-chev,
+.cmd-nav-group:focus-within .cmd-nav-chev {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.cmd-nav-submenu {
+  position: absolute;
+  top: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  min-width: 200px;
+  display: flex; flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--panel-strong) 96%, transparent),
+    color-mix(in srgb, var(--panel) 92%, transparent));
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 42px -12px rgba(0, 0, 0, 0.50);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease, transform .14s ease;
+}
+.cmd-nav-group:hover .cmd-nav-submenu,
+.cmd-nav-group:focus-within .cmd-nav-submenu,
+.cmd-nav-submenu:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+/* Ponte invisível que cobre o gap entre o item pai e o dropdown — evita que
+ * o hover quebre quando o mouse passa pelo espaço vazio. Pseudo-element
+ * herda pointer-events do dropdown, então só vira hit-testável depois que
+ * o dropdown abriu (via hover do pai). */
+.cmd-nav-submenu::after {
+  content: '';
+  position: absolute;
+  top: -10px; left: 0; right: 0;
+  height: 10px;
+  /* invisible — apenas hit area */
+}
+/* Pequeno triângulo no topo */
+.cmd-nav-submenu::before {
+  content: '';
+  position: absolute;
+  top: -5px; left: 50%; transform: translateX(-50%) rotate(45deg);
+  width: 10px; height: 10px;
+  background: inherit;
+  border-left: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  border-top: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  z-index: 1;
+}
+
+.cmd-nav-submenu-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem; font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+.cmd-nav-submenu-item:hover {
+  background: color-mix(in srgb, var(--accent-soft) 38%, transparent);
+  color: var(--accent-strong);
+}
+
+[data-theme="light"] .cmd-nav-submenu {
+  background: linear-gradient(180deg, #ffffff, #f7faff);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.80) inset,
+    0 14px 32px -10px rgba(15, 23, 42, 0.18);
+}
+[data-theme="light"] .cmd-nav-submenu-item:hover {
+  background: color-mix(in srgb, var(--accent-soft) 50%, #fff);
+}
+
+/* ──────────────────────────── Actions cluster ──────────────────────────── */
+
+.cmd-actions {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.cmd-actions > * { flex-shrink: 0; }
+
+.cmd-icon-btn {
+  position: relative;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, #000 26%, transparent);
+  color: var(--text);
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+.cmd-icon-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 38%, transparent);
+  color: var(--accent-strong);
+  transform: translateY(-1px);
+}
+.cmd-icon-btn .cmd-icon-dot {
+  position: absolute;
+  top: 7px; right: 7px;
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--accent-3);
+  box-shadow: 0 0 0 2px var(--panel-strong);
+}
+[data-theme="light"] .cmd-icon-btn { background: #ffffff; border-color: var(--border); color: var(--text-soft); }
+[data-theme="light"] .cmd-icon-btn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 40%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  color: var(--accent-strong);
+}
+[data-theme="light"] .cmd-icon-btn .cmd-icon-dot { box-shadow: 0 0 0 2px #fff; }
+
+.cmd-divider {
+  width: 1px; height: 22px;
+  background: color-mix(in srgb, var(--border) 90%, transparent);
+  margin: 0 2px;
+}
+[data-theme="light"] .cmd-divider { background: var(--border); }
+
+.cmd-login {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, #000 22%, transparent);
+  color: var(--text);
+  font-size: .84rem; font-weight: 500;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+.cmd-login:hover {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
+  color: var(--accent-strong);
+}
+[data-theme="light"] .cmd-login {
+  background: #ffffff;
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: 0 1px 0 rgba(15,23,42,.04);
+}
+[data-theme="light"] .cmd-login:hover {
+  background: color-mix(in srgb, var(--accent-soft) 50%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--accent-strong);
+}
+
+.cmd-cta {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 36px; padding: 0 16px 0 14px;
+  border-radius: 11px;
+  font-size: .84rem; font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 76%, #000),
+    color-mix(in srgb, var(--accent-2) 70%, var(--accent)));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  text-decoration: none;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.18) inset,
+    0 -1px 0 rgba(0,0,0,.35) inset,
+    0 8px 22px -6px color-mix(in srgb, var(--accent-2) 70%, transparent);
+  transition: var(--transition-fast);
+  overflow: hidden;
+}
+.cmd-cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform .8s ease;
+}
+.cmd-cta:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.20) inset,
+    0 -1px 0 rgba(0,0,0,.35) inset,
+    0 14px 30px -8px color-mix(in srgb, var(--accent-2) 80%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.cmd-cta:hover::before { transform: translateX(100%); }
+.cmd-cta-arrow { transition: transform var(--transition-fast); }
+.cmd-cta:hover .cmd-cta-arrow { transform: translateX(2px); }
+
+[data-theme="light"] .cmd-cta {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.30) inset,
+    0 -1px 0 rgba(0,0,0,.10) inset,
+    0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+/* ──────────────────────────── Auth state toggles ──────────────────────────── */
+
+[data-auth-state="guest"] .cmd-account,
+[data-auth-state="guest"] .cmd-menu { display: none; }
+
+[data-auth-state="logged"] .cmd-login,
+[data-auth-state="logged"] .cmd-cta { display: none; }
+
+/* ──────────────────────────── Responsive ──────────────────────────── */
+
+/* Avatar info (display name + email) some primeiro — economiza ~180px no
+   cluster de actions sem perder a foto e o plano. */
+@media (max-width: 1080px) {
+  .cmd-account-info { display: none; }
+}
+
+/* Aperto real começa aqui: tighten paddings antes de esconder items. */
+@media (max-width: 920px) {
+  .cmd-dock { gap: 12px; padding: 10px 12px; }
+  .cmd-nav-item { padding: 0 9px; font-size: .78rem; }
+  .cmd-brand-sub { display: none; }
+}
+
+/* Em tablets, esconde os 2 últimos items do nav (acessíveis pelo footer). */
+@media (max-width: 820px) {
+  .cmd-nav .cmd-nav-item-hide { display: none; }
+}
+
+/* Em mobile, dock vira 2 linhas: brand + actions em cima, nav embaixo. */
+@media (max-width: 640px) {
+  .cmd-dock {
+    grid-template-columns: auto 1fr;
+    padding: 10px;
+    gap: 10px;
+  }
+  .cmd-brand { padding-right: 0; border-right: none; }
+  .cmd-center { grid-column: 1 / -1; order: 3; }
+  .cmd-nav { width: 100%; justify-content: space-between; }
+  .cmd-actions { gap: 6px; }
+  .cmd-login, .cmd-divider { display: none; }
+}

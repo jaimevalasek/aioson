@@ -1,0 +1,153 @@
+/* AIOSON Design System — Aurora Rail
+ * Faixa visual abaixo do dock. Substitui marquee tradicional.
+ * Requer: tokens/index.css
+ */
+
+.cmd-aurora {
+  position: relative;
+  margin: -22px auto 28px;
+  width: calc(100% - 56px);
+  min-height: 56px;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  border-top: none;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--panel-strong) 88%, transparent) 0%,
+    color-mix(in srgb, var(--panel) 60%, transparent) 100%);
+  overflow: hidden;
+  display: flex; align-items: center; flex-wrap: wrap;
+  padding: 12px 22px;
+  gap: 22px;
+  box-shadow: 0 14px 30px -22px rgba(0,0,0,.55);
+  isolation: isolate;
+}
+
+.cmd-aurora::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 100% at 50% 130%,
+    color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+    color-mix(in srgb, var(--accent-2) 18%, transparent) 35%,
+    transparent 70%);
+  filter: blur(1px);
+  pointer-events: none;
+  opacity: .7;
+}
+
+/* Animated waves */
+.cmd-aurora-wave {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  opacity: .32;
+  z-index: 0;
+}
+.cmd-aurora-wave path {
+  fill: none;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px currentColor);
+  transform-origin: center;
+}
+.cmd-aurora-wave .wave-1 { stroke: var(--accent);   animation: waveDrift 14s ease-in-out infinite alternate; }
+.cmd-aurora-wave .wave-2 { stroke: var(--accent-2); animation: waveDrift 18s ease-in-out -3s infinite alternate; opacity: .7; }
+.cmd-aurora-wave .wave-3 { stroke: var(--accent-4); animation: waveDrift 22s ease-in-out -6s infinite alternate; opacity: .55; }
+
+@keyframes waveDrift {
+  from { transform: scaleY(1);    opacity: .6; }
+  to   { transform: scaleY(1.18); opacity: .9; }
+}
+
+/* Stats com blip pulsante */
+.cmd-aurora-stat {
+  position: relative; z-index: 2;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  letter-spacing: .06em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.cmd-aurora-stat strong {
+  color: var(--text-soft);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cmd-aurora-stat .blip {
+  position: relative;
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.cmd-aurora-stat .blip::after {
+  content: '';
+  position: absolute; inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  color: var(--accent);
+  opacity: 0;
+  animation: blipPing 2.6s ease-out infinite;
+}
+.cmd-aurora-stat--violet .blip { background: var(--accent-2); }
+.cmd-aurora-stat--violet .blip::after { color: var(--accent-2); animation-delay: -.6s; }
+.cmd-aurora-stat--teal .blip { background: var(--accent-4); }
+.cmd-aurora-stat--teal .blip::after { color: var(--accent-4); animation-delay: -1.2s; }
+.cmd-aurora-stat--gold .blip { background: var(--accent-3); }
+.cmd-aurora-stat--gold .blip::after { color: var(--accent-3); animation-delay: -1.8s; }
+.cmd-aurora-stat--emerald .blip { background: color-mix(in srgb, var(--accent-4) 65%, #0a4a35); }
+.cmd-aurora-stat--emerald .blip::after { color: color-mix(in srgb, var(--accent-4) 65%, #0a4a35); animation-delay: -2.2s; }
+
+@keyframes blipPing {
+  0%   { transform: scale(1);   opacity: .7; }
+  80%  { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+.cmd-aurora-divider {
+  position: relative; z-index: 2;
+  width: 1px; height: 18px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+  flex-shrink: 0;
+}
+
+.cmd-aurora-cta {
+  position: relative; z-index: 2;
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono);
+  font-size: .7rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+.cmd-aurora-cta:hover { color: var(--accent-strong); gap: 9px; }
+
+/* Light mode */
+[data-theme="light"] .cmd-aurora {
+  background: linear-gradient(180deg, #ffffff, #f7faff);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+  box-shadow: 0 10px 22px -16px rgba(15,23,42,.18);
+}
+[data-theme="light"] .cmd-aurora::before { opacity: .25; }
+[data-theme="light"] .cmd-aurora-wave { opacity: .12; }
+[data-theme="light"] .cmd-aurora-wave path {
+  filter: none;
+  stroke-width: 1;
+}
+[data-theme="light"] .cmd-aurora-wave .wave-1 {
+  stroke: color-mix(in srgb, var(--accent) 38%, var(--muted));
+}
+[data-theme="light"] .cmd-aurora-wave .wave-2 {
+  stroke: color-mix(in srgb, var(--accent-2) 38%, var(--muted));
+}
+[data-theme="light"] .cmd-aurora-wave .wave-3 {
+  stroke: color-mix(in srgb, var(--accent-4) 38%, var(--muted));
+}
+[data-theme="light"] .cmd-aurora-divider { background: var(--border); }
+
+/* Esconde em mobile */
+@media (max-width: 720px) {
+  .cmd-aurora { display: none; }
+}

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AIOSON · Command Dock (guest)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/tokens/index.css" />
+<link rel="stylesheet" href="../assets/components/command-dock.css" />
+<link rel="stylesheet" href="../assets/components/aurora-rail.css" />
+<link rel="stylesheet" href="../assets/components/account-menu.css" />
+<style>
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  .demo-info {
+    margin-top: 40px;
+    padding: 24px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.6;
+  }
+  .demo-info code {
+    font-family: var(--font-mono);
+    font-size: .85em;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent-soft) 30%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body data-auth-state="guest">
+
+<div class="wrap">
+
+  <header class="cmd-dock" role="banner">
+    <!-- Brand -->
+    <div class="cmd-brand">
+      <span class="cmd-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4 4 26h6l2-4h8l2 4h6L16 4z" stroke="url(#g1)"/>
+          <path d="M14 18h4" stroke="url(#g1)"/>
+          <defs>
+            <linearGradient id="g1" x1="0" x2="32" y1="0" y2="32">
+              <stop offset="0" stop-color="#5ec8ff"/>
+              <stop offset="1" stop-color="#7a6cff"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </span>
+      <div class="cmd-brand-info">
+        <span class="cmd-brand-title">aioson <span class="cmd-brand-version">v0.9 beta</span></span>
+        <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> registry · online</span>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="cmd-center">
+      <nav class="cmd-nav" aria-label="Principal">
+        <a href="#" class="cmd-nav-item" aria-current="page">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l6-4 6 4v6.5a.5.5 0 0 1-.5.5H10v-4H6v4H2.5a.5.5 0 0 1-.5-.5z"/></svg></span>
+          Início
+        </a>
+        <a href="#" class="cmd-nav-item">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.2"/><circle cx="11" cy="6" r="2.2"/><path d="M2 13c.3-1.6 1.6-2.6 3-2.6S7.7 11.4 8 13M8 13c.3-1.6 1.6-2.6 3-2.6s2.7 1 3 2.6"/></svg></span>
+          Squads
+        </a>
+        <a href="#" class="cmd-nav-item">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"/><circle cx="8" cy="8" r="6"/><path d="M8 2c-1.5 2-1.5 10 0 12M8 2c1.5 2 1.5 10 0 12M2 8h12"/></svg></span>
+          Genomes
+        </a>
+        <a href="#" class="cmd-nav-item">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l5-3 5 3v6l-5 3-5-3z"/><path d="M3 5l5 3 5-3M8 8v6"/></svg></span>
+          Skills
+        </a>
+        <a href="#" class="cmd-nav-item cmd-nav-item-hide">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M3 4v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4M6 7h4"/></svg></span>
+          Store
+          <span class="cmd-nav-badge">new</span>
+        </a>
+        <a href="#" class="cmd-nav-item cmd-nav-item-hide">
+          <span class="cmd-nav-glyph"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h7l3 3v9H3z"/><path d="M5 7h6M5 10h4"/></svg></span>
+          Docs
+        </a>
+      </nav>
+      <label class="cmd-bar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m13 13-2.6-2.6"/></svg>
+        <input class="cmd-bar-input" type="search" placeholder="Buscar squads, genomes, skills…" />
+        <span class="cmd-bar-kbd"><kbd>⌘</kbd><kbd>K</kbd></span>
+      </label>
+    </div>
+
+    <!-- Actions -->
+    <div class="cmd-actions">
+      <button class="cmd-icon-btn" type="button" aria-label="Notificações">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a4 4 0 1 1 8 0v3l1.2 2H2.8L4 10z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+        <span class="cmd-icon-dot"></span>
+      </button>
+      <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
+        <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
+        <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
+      </button>
+      <span class="cmd-divider" aria-hidden="true"></span>
+      <a href="#" class="cmd-login">Login</a>
+      <a href="#" class="cmd-cta">
+        Criar conta
+        <svg class="cmd-cta-arrow" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Aurora rail -->
+  <div class="cmd-aurora" aria-hidden="true">
+    <svg class="cmd-aurora-wave" viewBox="0 0 1200 56" preserveAspectRatio="none">
+      <path class="wave-1" d="M0,38 C150,18 280,52 420,32 C580,10 720,46 900,28 C1040,12 1140,40 1200,24"/>
+      <path class="wave-2" d="M0,30 C160,46 320,16 480,36 C640,52 800,18 960,32 C1080,42 1160,22 1200,30"/>
+      <path class="wave-3" d="M0,44 C140,28 320,46 500,38 C680,30 820,48 1000,36 C1100,28 1160,42 1200,38"/>
+    </svg>
+    <span class="cmd-aurora-stat"><span class="blip"></span> registry <strong>online</strong></span>
+    <span class="cmd-aurora-divider"></span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--violet"><span class="blip"></span> <strong>248</strong> squads</span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--teal"><span class="blip"></span> <strong>1.4k</strong> genomes</span>
+    <span class="cmd-aurora-stat cmd-aurora-stat--gold"><span class="blip"></span> <strong>3.2k</strong> skills</span>
+    <a href="#" class="cmd-aurora-cta">Explorar registry →</a>
+  </div>
+
+  <div class="demo-info">
+    <strong style="color: var(--text-soft)">Estado:</strong> guest (deslogado).
+    Mostra Login + CTA "Criar conta". Toggle <code>data-auth-state="guest"</code> no <code>&lt;body&gt;</code>.
+    O botão da lua/sol troca tema (persiste em localStorage). Pressione <code>⌘K</code> ou <code>Ctrl+K</code> para focar a busca (precisa wire a parte).
+  </div>
+</div>
+
+<script src="../assets/components/theme-toggle.js"></script>
+</body>
+</html>

@@ -4,7 +4,6 @@
   "domain": "architecture-decisions",
   "desc": "Architecture and process decisions @sheldon should default to. Captures structural patterns proven in the AIOSON framework itself. Extend after each architectural review.",
   "updated": "2026-05-07",
-  "nodes_total": 6,
   "nodes": [
     {
       "id": "sheldon-001",
@@ -75,20 +74,6 @@
       "not": "rewriting an artefact's whole structure to add one entry — breaks index sync and loses telemetry",
       "warn": "the CLI fallback path (manual edit) must remain available when CLI is missing — agents that hard-require CLI become unusable in plain Claude Code sessions",
       "see": ["sheldon-001", "sheldon-003"]
-    },
-    {
-      "id": "sheldon-006",
-      "title": "design-complete is not execution-complete — audit wiring before closing a feature",
-      "tags": ["sdd", "feature-lifecycle", "wiring", "validator", "anti-pattern", "audit"],
-      "q": 5,
-      "v": "BEST_PRACTICE",
-      "s": "A feature whose PRD/spec/architecture artefacts are written and archived is NOT done. Mark `done` in features.md only after the implementation also wires the new agents/commands into the existing call sites (workflow:next routing, sibling-agent handoffs, CLI subcommands, gateway hooks). Without this audit, agents can sit orphaned for weeks — like @validator did.",
-      "p": "// before feature:close on a MEDIUM feature, verify:\n// 1. all phase plans in .aioson/plans/{slug}/ are status: done\n// 2. new agents are referenced from upstream agents (qa→validator, dev→qa, etc.)\n// 3. new CLI subcommands are wired in src/cli.js AND invoked from the documented call sites\n// 4. workflow:next has routing for new agent states\n// 5. docs/{lang}/4-agentes/*.md align with .aioson/agents/*.md (no false promises)",
-      "src": "AIOSON harness-driven-aioson Round 2 sheldon (2026-05-07) — @validator orphaned despite full design",
-      "date": "2026-05-07",
-      "not": "marking a feature done because the design is complete and the CLI scaffolding compiles — the wiring audit is the actual done gate",
-      "warn": "this lesson is meta — it is the case for the harness contract itself: AC-HD-11 (done gate enforcement) is the systemic answer to AC-HD-11's own meta-violation",
-      "see": ["sheldon-001", "sheldon-003", "sheldon-005"]
     }
   ]
 }

@@ -10,6 +10,7 @@
  * Phase 1: partial index over execution_events for context:load queries.
  * Phase 2: FTS5 virtual table over project_learnings + 3 sync triggers + backfill.
  * Phase 3: validity-window columns on evolution_log + 3 indexes.
+ * Phase 4: `kind` discriminator column on project_learnings (cross-tool-project-knowledge).
  */
 
 // Phase 3 — evolution_log validity-window columns (requirements § M1).
@@ -82,7 +83,7 @@ const PHASE2_STEPS = [
 // open) skip the IF NOT EXISTS / PRAGMA table_info probes. Bump this constant
 // when a new Phase adds steps to runMigration; the next call against an older
 // DB will then re-run all idempotent steps and update the sentinel.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function readUserVersion(db) {
   const row = db.prepare('PRAGMA user_version').get();
@@ -153,6 +154,19 @@ function runMigration(db) {
     }
     for (const stmt of PHASE3_INDEXES) {
       db.exec(stmt);
+    }
+  }
+
+  // Phase 4 — project_learnings.kind discriminator (cross-tool-project-knowledge).
+  // Project-knowledge learnings (gotcha/resolution) are stored as type='quality'
+  // with kind set; legacy rows keep kind=NULL. The allow-list for kind is enforced
+  // in application code (same convention as Phase 3 — SQLite can't ALTER ADD
+  // CONSTRAINT). ADD COLUMN is O(1) and preserves rowids, so the
+  // project_learnings_fts external-content index stays valid — no rebuild needed.
+  if (hasProjectLearnings) {
+    const plCols = listColumns(db, 'project_learnings');
+    if (!plCols.has('kind')) {
+      db.exec('ALTER TABLE project_learnings ADD COLUMN kind TEXT');
     }
   }
 

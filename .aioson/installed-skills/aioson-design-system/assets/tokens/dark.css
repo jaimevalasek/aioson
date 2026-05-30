@@ -1,0 +1,52 @@
+/* AIOSON Design System — Tokens (tema escuro padrão) */
+
+:root {
+  /* Fontes */
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --transition-fast: 140ms ease;
+  --transition: 220ms ease;
+}
+
+/* Tema escuro — default */
+[data-theme="dark"], :root:not([data-theme]) {
+  color-scheme: dark;
+
+  /* Base */
+  --bg: #07080c;
+  --bg-deep: #0b0d12;
+  --panel: rgba(12,15,21,.88);
+  --panel-strong: #12161d;
+  --surface-soft: rgba(255,255,255,.035);
+  --border: rgba(142,162,194,.12);
+
+  /* Texto */
+  --text: #edf1f5;
+  --text-soft: #f7f9fb;
+  --muted: #7f8796;
+
+  /* Acentos */
+  --accent: #5ec8ff;
+  --accent-strong: #8fdcff;
+  --accent-soft: rgba(94,200,255,.16);
+  --accent-2: #7a6cff;
+  --accent-2-soft: rgba(122,108,255,.14);
+  --accent-3: #e8b05f;
+  --accent-3-soft: rgba(232,176,95,.16);
+  --accent-4: #4dd5a6;
+  --accent-4-soft: rgba(77,213,166,.14);
+
+  /* Sombras */
+  --shadow: 0 18px 44px rgba(0,0,0,.38);
+  --shadow-glow: 0 0 0 1px rgba(94,200,255,.05), 0 10px 28px rgba(3,12,22,.42);
+  --marketing-shadow: 0 16px 34px rgba(0,0,0,.34);
+}

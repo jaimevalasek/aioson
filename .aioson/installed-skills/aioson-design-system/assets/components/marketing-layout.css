@@ -1,0 +1,517 @@
+/* AIOSON Design System — Marketing Layout
+ * Primitivos de página marketing (v6) — sections + strips + grids.
+ *
+ * Composição correta:
+ *   <main class="marketing-shell">
+ *     <CommandDock />                              <!-- topbar -->
+ *     <AuroraRail />                               <!-- faixa abaixo -->
+ *
+ *     <section class="site-hero">...</section>     <!-- hero (componente próprio) -->
+ *
+ *     <section class="site-section">               <!-- sections com header -->
+ *       <header class="site-section-header">
+ *         <p class="eyebrow">...</p>
+ *         <h2 class="site-section-title">...</h2>
+ *         <p class="site-section-subtitle">...</p>
+ *       </header>
+ *       <div class="track-grid">...</div>
+ *     </section>
+ *
+ *     <section class="pipeline-strip">...</section> <!-- strips são self-contained -->
+ *     <div class="dual-grid">                       <!-- container para 2 strips -->
+ *       <section class="surface-strip">...</section>
+ *       <section class="surface-strip">...</section>
+ *     </div>
+ *     <section class="terminal-card">...</section>
+ *     <section class="surface-strip">...</section>
+ *
+ *     <MarketingFooter />
+ *   </main>
+ *
+ * ANTI-PADRÃO: NUNCA envolver strips em outer section com bg+border.
+ *   <section class="site-section-alt">              ❌ outer card
+ *     <PipelineStrip />                              ❌ inner card
+ *   </section>                                       ❌ = card-em-card
+ *
+ * Strips já têm padding + border-top próprios. O divisor entre sections vem
+ * de `.site-section + .site-section { border-top: 1px solid border }`.
+ *
+ * Requer: tokens/index.css
+ */
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Section primitives
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.site-section {
+  padding: 38px 0 14px;
+  position: relative;
+}
+.site-section + .site-section {
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.site-section-header {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 24px;
+  max-width: 64ch;
+}
+.site-section-title {
+  margin-top: 8px;
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+.site-section-title .accent-cyan { color: var(--accent); }
+.site-section-subtitle {
+  margin-top: 8px;
+  max-width: 60ch;
+  font-size: 0.96rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Inline accent helper — usado em títulos */
+.site-cta-heading .accent-cyan,
+.site-section-title .accent-cyan { color: var(--accent); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Pipeline strip (sequência horizontal de etapas)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.pipeline-strip {
+  padding: 38px 0 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  position: relative;
+}
+.pipeline-strip-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.pipeline-strip-head h3 {
+  margin-top: 6px;
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.pipeline-track {
+  display: flex; gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.24);
+  list-style: none; padding: 0; margin: 0;
+}
+.pipeline-step {
+  flex: 1; min-width: 0;
+  padding: 14px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 80%, transparent), transparent);
+  list-style: none;
+}
+.pipeline-step:last-child { border-right: none; }
+.pipeline-step:hover { background: color-mix(in srgb, var(--accent-soft) 16%, transparent); }
+.pipeline-step-num {
+  font-family: var(--font-mono);
+  font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--muted);
+}
+.pipeline-step-cmd {
+  font-family: var(--font-mono);
+  font-size: 0.84rem; font-weight: 600;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+.pipeline-step-name {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.pipeline-step-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.pipeline-step.gate {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 12%, transparent), transparent);
+}
+.pipeline-step.gate .pipeline-step-cmd { color: var(--accent-3); }
+.pipeline-step.gate .pipeline-step-num { color: var(--accent-3); }
+
+/* Companion (e.g. agentes auxiliares) — fora da linha principal */
+.pipeline-companion {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 24%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-soft) 30%, transparent);
+}
+.pipeline-companion .eyebrow { display: block; margin-bottom: 8px; }
+.pipeline-companion ul {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  list-style: none; padding: 0; margin: 0;
+}
+.pipeline-companion-card {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 80%, transparent);
+}
+.pipeline-companion-alias {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Dual grid + Surface strip (gates + concepts em 2 colunas)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.dual-grid {
+  display: grid; gap: 38px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 8px;
+  padding: 38px 0 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.surface-strip {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 6px 0;
+}
+.surface-strip-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+}
+.surface-strip-head h3 {
+  margin-top: 6px;
+  font-size: 1.18rem;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+/* Gates list (quality gates blocantes) */
+.gates-list {
+  display: flex; flex-direction: column; gap: 10px;
+  list-style: none; padding: 0; margin: 0;
+}
+.gate-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
+  transition: var(--transition-fast);
+}
+.gate-row:hover {
+  border-color: color-mix(in srgb, var(--accent-3) 22%, var(--border));
+  background: color-mix(in srgb, var(--accent-3-soft) 16%, var(--panel-strong));
+}
+.gate-num {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent-3-soft) 84%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent-3) 28%, var(--border));
+  font-family: var(--font-mono);
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--accent-3);
+}
+.gate-body { flex: 1; min-width: 0; }
+.gate-title { font-size: 0.92rem; font-weight: 600; color: var(--text-soft); letter-spacing: -0.01em; }
+.gate-desc { margin-top: 2px; font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.gate-owner { font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent); letter-spacing: -0.01em; }
+.gate-status {
+  font-family: var(--font-mono);
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-3) 26%, var(--border));
+  background: color-mix(in srgb, var(--accent-3-soft) 60%, transparent);
+  color: var(--accent-3);
+}
+
+/* Concepts list (cards conceituais com data-tone) */
+.concepts-list {
+  display: flex; flex-direction: column; gap: 10px;
+  list-style: none; padding: 0; margin: 0;
+}
+.concept-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
+}
+.concept-row:hover { border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); }
+.concept-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  color: var(--accent);
+}
+.concept-row[data-tone="violet"] .concept-icon {
+  background: color-mix(in srgb, var(--accent-2-soft) 60%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent-2) 24%, var(--border));
+  color: var(--accent-2);
+}
+.concept-row[data-tone="teal"] .concept-icon {
+  background: color-mix(in srgb, var(--accent-4-soft) 60%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent-4) 24%, var(--border));
+  color: var(--accent-4);
+}
+.concept-row[data-tone="gold"] .concept-icon {
+  background: color-mix(in srgb, var(--accent-3-soft) 60%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent-3) 24%, var(--border));
+  color: var(--accent-3);
+}
+.concept-icon svg { width: 18px; height: 18px; }
+.concept-body { flex: 1; min-width: 0; }
+.concept-title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 0.94rem; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--text-soft);
+}
+.concept-title code {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 500;
+}
+.concept-desc { margin-top: 4px; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Terminal card (CLI demo) — sempre escuro nos dois temas
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.terminal-card {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.28));
+  box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+  margin-top: 0;
+}
+.terminal-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+}
+.terminal-dots { display: flex; gap: 6px; }
+.terminal-dots span { width: 10px; height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.terminal-dots span:nth-child(1) { background: #ff6057; }
+.terminal-dots span:nth-child(2) { background: #febc2e; }
+.terminal-dots span:nth-child(3) { background: #28c840; }
+.terminal-title {
+  font-family: var(--font-mono);
+  font-size: 0.74rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.terminal-body {
+  padding: 18px 22px 22px;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.7;
+  color: #c8d8ee;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Multi-IDE row (cards de IDEs/clients)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.ide-row {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+  list-style: none; padding: 0;
+}
+.ide-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-strong) 90%, transparent);
+  transition: var(--transition-fast);
+  list-style: none;
+}
+.ide-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  transform: translateY(-1px);
+}
+.ide-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.78rem; font-weight: 700;
+  color: var(--accent);
+}
+.ide-info { flex: 1; min-width: 0; }
+.ide-name { font-size: 0.9rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+.ide-tag { margin-top: 2px; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Market grid + cards (catálogo de squads/genomes/skills/systems)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+.market-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+}
+.market-card {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
+}
+.market-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow);
+}
+.market-card.is-featured {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+  box-shadow: var(--shadow-glow);
+}
+.market-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.market-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text-soft);
+}
+.market-tag-cyan {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+}
+.market-tag-violet {
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-2-soft) 60%, transparent);
+}
+.market-tag-teal {
+  color: var(--accent-4);
+  border-color: color-mix(in srgb, var(--accent-4) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-4-soft) 60%, transparent);
+}
+.market-tag-gold {
+  color: var(--accent-3);
+  border-color: color-mix(in srgb, var(--accent-3) 28%, var(--border));
+  background: color-mix(in srgb, var(--accent-3-soft) 60%, transparent);
+}
+.market-icon {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--border);
+}
+.market-title { font-size: 0.94rem; font-weight: 600; color: var(--text-soft); letter-spacing: -0.01em; }
+.market-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.55; flex: 1; margin: 0; }
+.market-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.market-author { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); letter-spacing: 0.06em; }
+.market-price { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--accent-3); letter-spacing: -0.01em; }
+.market-price.free { color: var(--accent-4); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Light theme overrides
+ * ────────────────────────────────────────────────────────────────────────── */
+
+[data-theme="light"] .pipeline-track {
+  background: #ffffff;
+  box-shadow: 0 12px 30px -20px rgba(15, 23, 42, 0.18);
+}
+[data-theme="light"] .pipeline-step {
+  background: linear-gradient(180deg, #fbfdff, transparent);
+}
+[data-theme="light"] .pipeline-step.gate {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 14%, transparent), transparent);
+}
+[data-theme="light"] .pipeline-step:hover {
+  background: color-mix(in srgb, var(--accent-soft) 38%, #fff);
+}
+[data-theme="light"] .pipeline-companion-card {
+  background: #ffffff;
+  box-shadow: 0 6px 18px -12px rgba(15, 23, 42, 0.14);
+}
+[data-theme="light"] .gate-row,
+[data-theme="light"] .concept-row,
+[data-theme="light"] .ide-card,
+[data-theme="light"] .market-card {
+  background: #ffffff;
+  border-color: var(--border);
+  box-shadow: 0 6px 18px -12px rgba(15, 23, 42, 0.14);
+}
+[data-theme="light"] .ide-icon { background: #f4f7fc; }
+[data-theme="light"] .market-icon { background: #f4f7fc; }
+[data-theme="light"] .market-foot { border-top-color: var(--border); }
+[data-theme="light"] .terminal-card {
+  background: linear-gradient(180deg, #0e1320, #0a0f1c);
+  border-color: transparent;
+  box-shadow: 0 22px 48px -22px rgba(15, 23, 42, 0.40);
+}
+[data-theme="light"] .terminal-head {
+  background: #10182a;
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme="light"] .terminal-title { color: #a9b3c7; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Responsive
+ * ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .pipeline-track { flex-wrap: wrap; }
+  .pipeline-step { flex: 1 1 25%; border-bottom: 1px solid var(--border); }
+  .ide-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .market-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .dual-grid { grid-template-columns: 1fr; }
+  .pipeline-step { flex: 1 1 50%; }
+}
+@media (max-width: 560px) {
+  .market-grid { grid-template-columns: 1fr; }
+}

@@ -41,7 +41,6 @@ Runs **after `@setup`** for the first time. Can be re-run at any point to refres
 | 3 | Route files | Entry points, API surface, user flows |
 | 4 | Models / entities / schema | Domain entities, relationships, business objects |
 | 5 | PRDs (`.aioson/context/prd*.md`, `prds/*.md`) | Product intent, features, user needs |
-| 5b | Archived features manifest (`.aioson/context/done/MANIFEST.md`) | Summary of delivered features — read this row-by-row instead of globbing archived PRDs; only load `.aioson/context/done/{slug}/` files if the user explicitly asks for historical detail |
 | 6 | Plans (`plans/*.md`, `.aioson/context/spec*.md`) | Implementation state, decisions, roadmap |
 | 7 | Config (`package.json`, `composer.json`, `.env.example`) | Dependencies, services, environment |
 | 8 | Tests | Expected behavior, edge cases, domain rules |

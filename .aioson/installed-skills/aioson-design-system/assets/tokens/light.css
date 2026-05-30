@@ -1,0 +1,46 @@
+/* AIOSON Design System — Tokens (tema claro)
+ * Acentos recalibrados para legibilidade em fundo claro.
+ * NÃO é inversão automática — cada token tem valor curado.
+ */
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Base — off-white levemente azulado, evita branco gritante */
+  --bg: #f4f6fb;
+  --bg-deep: #e8edf5;
+  --panel: rgba(255,255,255,.92);
+  --panel-strong: #ffffff;
+  --surface-soft: rgba(15,23,42,.04);
+  --border: rgba(15,23,42,.10);
+
+  /* Texto */
+  --text: #0f172a;
+  --text-soft: #1a2236;
+  --muted: #5b6677;
+
+  /* Acentos — escurecidos para contraste em fundo claro */
+  --accent: #1f8aff;          /* cyan → azul mais legível */
+  --accent-strong: #0066d6;
+  --accent-soft: rgba(31,138,255,.12);
+  --accent-2: #5e4dff;        /* violet ajustado */
+  --accent-2-soft: rgba(94,77,255,.12);
+  --accent-3: #c08233;        /* gold em tom amber */
+  --accent-3-soft: rgba(192,130,51,.14);
+  --accent-4: #0fa37a;        /* emerald escurecido */
+  --accent-4-soft: rgba(15,163,122,.12);
+
+  /* Sombras — slate-tinted, não preto */
+  --shadow: 0 14px 38px rgba(15,23,42,.10);
+  --shadow-glow: 0 0 0 1px rgba(31,138,255,.10), 0 12px 28px rgba(31,138,255,.10);
+  --marketing-shadow: 0 14px 30px rgba(15,23,42,.08);
+}
+
+/* Body com aurora suave em tema claro */
+[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 60%, var(--bg-deep) 100%);
+}

@@ -84,43 +84,97 @@
     "codex": {
       "mode": "trusted",
       "fallback_mode": "guarded",
-      "derived_from_tiers": ["tier1_silent", "tier2_notified"],
-      "shell_whitelist": ["git *", "npm *", "npx *", "node *", "aioson *"],
-      "shell_blacklist": ["rm -rf /", "curl * | sh", "*>*"],
-      "aioson_whitelist": ["workflow:next", "workflow:heal", "commit:prepare", "git:guard", "runtime:emit", "live:handoff"],
+      "derived_from_tiers": [
+        "tier1_silent",
+        "tier2_notified"
+      ],
+      "shell_whitelist": [
+        "git *",
+        "npm *",
+        "npx *",
+        "node *",
+        "aioson *"
+      ],
+      "shell_blacklist": [
+        "rm -rf /",
+        "curl * | sh",
+        "*>*"
+      ],
+      "aioson_whitelist": [
+        "workflow:next",
+        "workflow:heal",
+        "commit:prepare",
+        "git:guard",
+        "runtime:emit",
+        "live:handoff"
+      ],
       "requires_tty": false,
       "max_auto_retries": 3
     },
     "claude": {
       "mode": "trusted",
       "fallback_mode": "guarded",
-      "derived_from_tiers": ["tier1_silent", "tier2_notified"],
-      "shell_whitelist": ["git *", "npm *", "npx *", "node *", "aioson *"],
-      "shell_blacklist": ["rm -rf /", "curl * | sh", "*>*"],
-      "aioson_whitelist": ["workflow:next", "workflow:heal", "commit:prepare", "git:guard", "runtime:emit", "live:handoff"],
+      "derived_from_tiers": [
+        "tier1_silent",
+        "tier2_notified"
+      ],
+      "shell_whitelist": [
+        "git *",
+        "npm *",
+        "npx *",
+        "node *",
+        "aioson *"
+      ],
+      "shell_blacklist": [
+        "rm -rf /",
+        "curl * | sh",
+        "*>*"
+      ],
+      "aioson_whitelist": [
+        "workflow:next",
+        "workflow:heal",
+        "commit:prepare",
+        "git:guard",
+        "runtime:emit",
+        "live:handoff"
+      ],
       "requires_tty": false,
       "max_auto_retries": 3
     },
     "gemini": {
       "mode": "guarded",
       "fallback_mode": "guarded",
-      "derived_from_tiers": ["tier1_silent"],
-      "shell_whitelist": ["git status", "git log", "npm test"],
-      "aioson_whitelist": ["workflow:next"],
+      "derived_from_tiers": [
+        "tier1_silent"
+      ],
+      "shell_whitelist": [
+        "git status",
+        "git log",
+        "npm test"
+      ],
+      "aioson_whitelist": [
+        "workflow:next"
+      ],
       "requires_tty": true,
       "max_auto_retries": 1
     },
     "opencode": {
       "mode": "guarded",
       "fallback_mode": "abort",
-      "derived_from_tiers": ["tier1_silent"],
+      "derived_from_tiers": [
+        "tier1_silent"
+      ],
       "shell_whitelist": [],
-      "aioson_whitelist": ["workflow:next"],
+      "aioson_whitelist": [
+        "workflow:next"
+      ],
       "requires_tty": true,
       "max_auto_retries": 0
     }
   },
   "agents": {
-    "committer": { "max_mode": "guarded" }
+    "committer": {
+      "max_mode": "guarded"
+    }
   }
 }
