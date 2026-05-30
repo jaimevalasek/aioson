@@ -28,12 +28,16 @@ Make the depth block evidence-anchored, not vivid prose.
 - **What:** extract a hierarchical competency tree FROM sources with a **source-span citation per node** (DeepPersona depth-first, 2511.07338); build persona/expertise from cited nodes.
 - **Honest:** CrewAI role+backstory lineage (our depth-block ancestor) is ergonomic, not grounding — "vivid backstory ≠ deep behavior". Ground only where source coverage is real (PRISM trade-off 2603.18507).
 
-## Stage 3 — Retrieval-grounded role pool
+## Stage 3 — Retrieval-grounded role pool (IMPLEMENTED — lean, no embeddings)
+> Shipped: `src/commands/squad-role-scan.js` (`aioson squad:role-scan`) — deterministic extraction of entities + work-modes (originate/transform/judge) + terms from sourceDocs, no vector DB. Wired into design Passo 2.5 + creation-flow decomposition. Tests: `tests/squad-role-scan.test.js`. Embedding/semantic retrieval = future hardening if the keyword scan proves insufficient.
+
 Derive the roster from the corpus, not priors.
 - **What:** expand the executor role pool by **retrieval over the source docs** (ARG-Designer document-conditioned generation, AAAI'26 2507.18224; CARD conditioning 2603.01089) instead of the fixed originate/transform/judge lens.
 - **AIOSON wiring:** upgrade design Passo 2.5 decomposition — role candidates retrieved from `researchs/` + sources.
 
-## Stage 4 — Self-improving generator (ambitious; research-grade)
+## Stage 4 — Self-improving generator (IMPLEMENTED — lean MVP, file-backed)
+> Shipped: `src/commands/squad-playbook.js` (`aioson squad:playbook capture|list`) — an append-only, deduped "what-works" delta memory at `.aioson/squads/.playbook/generation-playbook.json`. eval-gate FAIL captures a generalized generation lesson; creation-flow loads the playbook before writing executors (closes the feedback loop the runtime mapped as missing). Tests: `tests/squad-playbook.test.js`. A trace-reading Reflector + SQLite store + held-out-eval guardrails = future hardening (kept out of scope to avoid overfit/safety risk).
+
 The generator learns from the squads it produces.
 - **What:** treat the generator's own rules (creation-flow/package-contract) as an **optimizable playbook**; when a squad fails the gate or a user rejects output, a **Reflector reads traces, diagnoses which generation rule failed, appends a delta** to a `.aioson/` "what-works" memory (GEPA reflective evolution 2507.19457; ACE delta playbooks 2510.04618). Compounds per squad built.
 - **Caveat:** prompt optimizers OVERFIT to dev sets → refreshed held-out evals + multi-signal score. Open-ended self-rewrite (DGM) is research/safety-gated, not infra.
@@ -41,10 +45,10 @@ The generator learns from the squads it produces.
 ## Build-on (already in AIOSON)
 Manifest already has: `tasks[].review_loop` + `review_criteria` + `max_review_iterations` (evaluator-optimizer), `tasks[].voting` (sampling+consensus), `workflows[].phases[].review`/`vetoConditions`. The jury/eval loop EXTENDS these — not greenfield.
 
-## Implementation plans — remaining stages (sized honestly)
-- **Stage 2 (persona grounding) — DONE (MVP).** Shipped `persona-grounding.md` + package-contract citation requirement + create/preflight wiring; eval-gate enforces. `src/` atomic-fidelity scoring = future hardening.
-- **Stage 3 (retrieval-grounded role pool) — larger, needs code.** Expand the role-candidate pool in design Passo 2.5 by *retrieval* over `sourceDocs` + `researchs/` (embeddings). Requires a `src/` embedding/retrieval module — not prose-only. Do after Stage 2.
-- **Stage 4 (self-improving generator) — a project on its own.** A Reflector reads eval-gate failures + user rejections, diagnoses which generation rule failed, and appends deltas to a `.aioson/` "what-works" playbook that `creation-flow`/`package-contract` load. Needs trace capture + a delta-memory store in `src/` + safety guardrails (overfit/held-out, no open-ended self-rewrite). Keep staged until Stages 1-2 prove out.
+## Future hardening (all 4 stages now have MVPs)
+- **Stage 2:** `src/` atomic-fidelity scoring of persona citations.
+- **Stage 3:** semantic/embedding retrieval if the deterministic keyword scan proves insufficient.
+- **Stage 4:** a trace-reading Reflector (auto-derive playbook deltas from runtime traces) + a SQLite-backed store + held-out-eval guardrails before any auto-application. Until then, playbook capture is explicit (the eval-gate calls it) and the generator only *reads* the playbook — no open-ended self-rewrite.
 
 ## Sequencing
-Stage 0 (done) → **Stage 1 (MVP done)** → **Stage 2 (MVP done)** → Stage 3 → Stage 4 (only after 1-3 prove out). Each stage is independently shippable.
+Stage 0 (done) → **Stage 1 (done)** → **Stage 2 (done)** → **Stage 3 (done)** → **Stage 4 (done)** — all four stages now have prose+code MVPs. Remaining work is hardening (above), not new mechanism.

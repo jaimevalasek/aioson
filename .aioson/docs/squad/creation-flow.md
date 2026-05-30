@@ -110,7 +110,7 @@ the upstream half of squad quality: structure from the sources, then depth per r
 should land on a similar roster — if you are inventing roles the sources do not imply, you
 are guessing again.
 
-Run four extraction passes over the source material:
+Run four extraction passes over the source material (the `aioson squad:role-scan` command does a deterministic first pass — entities, work-modes, terms — that you then refine):
 
 1. **Entities** — the domain's key nouns / concepts / objects the squad reasons about.
 2. **Workflows** — the distinct units of work as `verb + object` (what gets *done* to the entities): `research-competitor`, `draft-script`, `validate-claim`, `reconcile-ledger`. Pull them from action verbs and from any numbered / step lists in the sources.
@@ -159,6 +159,19 @@ The chosen profile must shape communication style and decision-making.
 
 Prefer 3 to 5 specialized roles.
 Do not create extra executors just to look comprehensive.
+
+## Generation playbook (learn from past eval-gates)
+
+Before deriving the roster and writing executors, consult the generator's "what-works"
+memory: run `aioson squad:playbook list` (or read `.aioson/squads/.playbook/generation-playbook.json`).
+Each entry is a generation rule that previously produced a basic/ungrounded executor plus
+the lesson that fixes it — apply the active lessons so this squad doesn't repeat them. The
+list is short and high-signal (deduped, frequency-ranked).
+
+The playbook is written by the eval-gate: when `@squad eval` fails an executor, it captures a
+*generalized* delta (`aioson squad:playbook capture --rule=... --lesson=...`) — not the
+squad-specific fix (that goes to `@squad refresh`), but the reusable generation lesson. Over
+time the generator stops making the same mistakes.
 
 ## Pre-write depth gate
 

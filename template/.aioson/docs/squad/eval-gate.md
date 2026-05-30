@@ -63,7 +63,7 @@ Per executor compute `coverage` = met / total, and `agreement` = fraction of non
 - **WARN** — coverage 0.70–0.85, or some `uncertain` claims.
 - **FAIL** — coverage < 0.70, OR any `depth`/`grounding` claim unmet (a basic or ungrounded executor fails outright).
 
-A FAIL is not advisory. Route every unmet claim to `@squad refresh <slug>` as an actionable diff: "claim `<id>` unmet for `<executor>` → `<what to add>`".
+A FAIL is not advisory. Route every unmet claim to `@squad refresh <slug>` as an actionable diff: "claim `<id>` unmet for `<executor>` → `<what to add>`". Then capture the *generalized* lesson to the generation playbook so the generator stops repeating it: `aioson squad:playbook capture --rule="<which generation rule produced this>" --lesson="<what to do instead>" --from=<slug>/<claim>` (see `creation-flow.md` § Generation playbook). Capture the rule, not the squad-specific fix.
 
 ## Honest limits (do not oversell the gate)
 - This verifies **fidelity to the spec/sources**, NOT real-world task performance. Pair it with a few held-out task-execution checks before trusting a squad in production.

@@ -51,8 +51,8 @@ agreement: <0-1>
 - <executor> claim <id> — <why split>
 ```
 
-### Passo 5 — Rotear correções
-Para cada claim FAIL/unmet, recomende `@squad refresh <slug>` com o diff específico. Não corrija aqui — eval só julga e roteia (igual validate; refresh aplica).
+### Passo 5 — Rotear correções e aprender
+Para cada claim FAIL/unmet, recomende `@squad refresh <slug>` com o diff específico. Não corrija aqui — eval só julga e roteia (igual validate; refresh aplica). Depois, capture a lição *generalizada* no playbook do gerador: `aioson squad:playbook capture --rule="<regra de geração que causou>" --lesson="<o que fazer no lugar>" --from=<slug>/<claim>` — a regra, não o conserto específico daquele squad.
 
 ## Saída
 - `.aioson/squads/<slug>/docs/EVAL-<date>.md`

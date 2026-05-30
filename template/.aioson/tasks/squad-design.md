@@ -96,6 +96,8 @@ Se há `sourceDocs`, `investigation` ou contexto de domínio colado, **derive o 
 - `integrations` — sistemas/canais/fontes externas que o trabalho toca
 - `stakeholders` — papéis/personas que o squad serve ou encarna
 
+**Atalho determinístico:** rode `aioson squad:role-scan --docs=<sourceDocs separados por vírgula> --json` (ou `--squad=<slug>` se o pacote já existe) — ele extrai `entities`, `work-modes` (originate/transform/judge) e termos das fontes, sem inventar. Use a saída para semear o role pool antes de clusterizar.
+
 Registre tudo no blueprint em `analysis`. Sem fontes: pule esta passada e defina o roster pelo objetivo declarado (marque os executores com `confidence` mais baixo).
 
 ### Passo 3 — Definir executores (derivados da decomposição)
