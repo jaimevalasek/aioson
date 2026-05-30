@@ -124,3 +124,21 @@ test('role-scan reports missing docs but still scans the readable ones', async (
   assert.equal(result.docCount, 1);
   assert.deepEqual(result.missing, ['gone.md']);
 });
+
+test('role-scan rejects paths outside the project (no traversal / absolute escape) [SF-01]', async () => {
+  const dir = await makeTempDir();
+  const outside = await makeTempDir();
+  await fs.writeFile(path.join(outside, 'secret.env'), 'TopSecret DatabasePassword DatabasePassword');
+  await fs.writeFile(path.join(dir, 'ok.md'), 'Content Strategy research. Research review review.');
+  const logger = collectLogger();
+  const result = await runSquadRoleScan({
+    args: [dir],
+    // absolute path outside the project + a relative `..` escape + one in-scope doc
+    options: { docs: `${path.join(outside, 'secret.env')},../escape.md,ok.md`, json: true },
+    logger,
+  });
+  assert.ok(result.ok); // ok.md is in-scope and readable
+  assert.equal(result.docCount, 1);
+  assert.ok(result.rejected.length >= 2, 'out-of-project paths are rejected, not read');
+  assert.ok(!result.signals.terms.some((t) => t.term === 'databasepassword'), 'secret file never read');
+});

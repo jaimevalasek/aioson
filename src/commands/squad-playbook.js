@@ -35,14 +35,27 @@ function norm(s) {
   return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+// Playbook entries are agent-loaded later, so neutralize injection framing on capture:
+// collapse to one bounded line (no fake multi-line <system> blocks) and strip role/control
+// tags. SF-squad-self-improving-02 (persistent indirect prompt injection).
+function sanitizeText(s, max = 280) {
+  return String(s || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/<\|[^|]*\|>/g, ' ')                          // <|im_start|> / <|im_end|>
+    .replace(/<\/?(system|assistant|user|tool)\b[^>]*>/gi, ' ') // fake role tags
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
 async function runSquadPlaybook({ args = [], options = {}, logger = console } = {}) {
   const sub = args[0] || 'list';
   const projectDir = path.resolve(process.cwd(), options.dir || options.path || '.');
   const file = playbookPath(projectDir);
 
   if (sub === 'capture') {
-    const rule = String(options.rule || '').trim();
-    const lesson = String(options.lesson || '').trim();
+    const rule = sanitizeText(options.rule);
+    const lesson = sanitizeText(options.lesson);
     if (!rule || !lesson) {
       logger.error('Usage: aioson squad:playbook capture --rule="<generation rule>" --lesson="<what works>" [--from=<slug>/<claim>]');
       return { ok: false, error: 'missing_fields' };

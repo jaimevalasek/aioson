@@ -131,8 +131,17 @@ async function runSquadRoleScan({ args = [], options = {}, logger = console } = 
   const texts = [];
   const read = [];
   const missing = [];
+  const rejected = [];
+  const projectRoot = path.resolve(projectDir);
   for (const rel of docPaths) {
-    const abs = path.isAbsolute(rel) ? rel : path.join(projectDir, String(rel).replace(/\\/g, '/'));
+    // Containment: resolve and refuse anything outside the project root — a `..` escape or an
+    // absolute path (via --docs or a shared manifest's sourceDocs) must not read arbitrary
+    // files. SF-squad-self-improving-01 (path traversal / arbitrary file read).
+    const abs = path.resolve(projectDir, String(rel).replace(/\\/g, '/'));
+    if (abs !== projectRoot && !abs.startsWith(projectRoot + path.sep)) {
+      rejected.push(rel);
+      continue;
+    }
     try {
       texts.push(await fs.readFile(abs, 'utf8'));
       read.push(rel);
@@ -142,8 +151,8 @@ async function runSquadRoleScan({ args = [], options = {}, logger = console } = 
   }
 
   if (texts.length === 0) {
-    logger.error('No readable source documents found. Provide --docs or a squad with sourceDocs.');
-    return { ok: false, error: 'no_docs', signals: null, missing };
+    logger.error('No readable source documents found in scope. Provide --docs (inside the project) or a squad with sourceDocs.');
+    return { ok: false, error: 'no_docs', signals: null, missing, rejected };
   }
 
   const corpus = texts.join('\n\n');
@@ -152,13 +161,13 @@ async function runSquadRoleScan({ args = [], options = {}, logger = console } = 
     entities: extractEntities(corpus),
     actions: extractActions(corpus),
   };
-  const result = { ok: true, slug: slug || null, docCount: read.length, missing, signals };
+  const result = { ok: true, slug: slug || null, docCount: read.length, missing, rejected, signals };
 
   if (options.json) return result;
 
   logger.log('');
   logger.log(`== Squad Role Scan ${slug ? `: ${slug}` : ''} ==`);
-  logger.log(`Scanned ${read.length} document(s)${missing.length ? ` (${missing.length} missing)` : ''}`);
+  logger.log(`Scanned ${read.length} document(s)${missing.length ? ` (${missing.length} missing)` : ''}${rejected.length ? ` (${rejected.length} rejected: outside project)` : ''}`);
   logger.log('');
   logger.log('Entities (what the squad reasons about):');
   for (const e of signals.entities.slice(0, 12)) logger.log(`  ${String(e.entity).padEnd(28)} ${e.count}`);
