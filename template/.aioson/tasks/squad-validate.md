@@ -30,6 +30,8 @@ Verifique que existem:
 - Slug do manifesto bate com o nome do diretório
 - Executores no manifesto têm arquivo correspondente
 - Não há executores duplicados
+- **Profundidade do executor:** para cada executor `agent`/`clone`/`assistant`, o `.md` tem o bloco de profundidade no `## Quick context` (Variante A `persona`+`expertise` ou Variante B `operational_breadth` — ver `package-contract.md` § Executor depth block)? `role:` solto sem o bloco = ⚠️ WARNING (executor básico). Em `--strict`, vira ❌ ERROR.
+- **Fontes destiladas:** se o manifest tem `sourceDocs`/`analysis`, ao menos um executor referencia o vocabulário/frameworks das fontes? Se nenhum referencia = ⚠️ WARNING (fontes viraram só metadado).
 
 ### Relatório
 Classifique cada check como:
@@ -43,10 +45,12 @@ Formato de output:
 
 Schema:     ✅ PASS
 Structure:  ✅ PASS (7/7 files found)
+Depth:      ⚠️ 1 warning
+  - executor "analyst": no depth block (basic executor) — run @squad refresh
 Semantics:  ⚠️ 1 warning
   - executor "analyst" has no skills declared
 
-Result: VALID (1 warning)
+Result: VALID (2 warnings)
 ```
 
 ## Saída
@@ -56,3 +60,5 @@ Result: VALID (1 warning)
 ## Regras
 - NÃO corrija problemas automaticamente — apenas reporte
 - SUGIRA o comando de correção quando possível (ex: "run @squad extend to add skills")
+- `--strict`: converte WARNINGs em ERRORs (inclui executor básico) — útil em CI / gate de entrega
+- Gaps de profundidade (executor básico, fontes não-destiladas) roteiam para `@squad refresh <slug>`

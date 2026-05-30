@@ -81,6 +81,16 @@
       "items": { "type": "string" },
       "description": "Project artifacts consumed during squad design"
     },
+    "analysis": {
+      "type": "object",
+      "description": "Domain decomposition from sourceDocs (design Passo 2.5) — the roster was derived from this; read by squad-analyze and squad-validate",
+      "properties": {
+        "entities": { "type": "array", "items": { "type": "string" } },
+        "workflows": { "type": "array", "items": { "type": "string" } },
+        "integrations": { "type": "array", "items": { "type": "string" } },
+        "stakeholders": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "investigation": {
       "type": "object",
       "description": "Reference to a persisted @orache investigation report",
@@ -148,6 +158,17 @@
           },
           "role": { "type": "string" },
           "file": { "type": "string" },
+          "traces": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Workflows/entities (from analysis) this executor owns — from the design decomposition"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How well the sources justify this executor's role (design decomposition)"
+          },
           "deterministic": {
             "type": "boolean",
             "description": "Whether the executor always produces the same output for the same input"

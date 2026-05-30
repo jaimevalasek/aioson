@@ -22,6 +22,7 @@ Se existirem, preserve também:
 - `domainClassification`
 - `investigation`
 - `sourceDocs`
+- `analysis` (decomposição do Passo 2.5 do design) + `confidence`/`traces` por executor
 
 ### Passo 2 — Criar estrutura de diretórios
 ```
@@ -77,6 +78,8 @@ Persistência obrigatória:
 - `domainClassification`: copiar quando existir
 - `investigation`: copiar quando existir
 - `sourceDocs`: copiar quando existir
+- `analysis` (entities/workflows/integrations/stakeholders): copiar quando existir
+- `confidence` + `traces` por executor: copiar do blueprint para cada `executors[]` do manifest (o `squad-analyze` e o `squad-validate` leem esses campos)
 
 ### Passo 4 — Gerar agents.md (manifesto textual)
 Siga `.aioson/docs/squad/package-contract.md` na seção `agents/agents.md`.
