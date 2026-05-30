@@ -136,6 +136,22 @@ The chosen profile must shape communication style and decision-making.
 Prefer 3 to 5 specialized roles.
 Do not create extra executors just to look comprehensive.
 
+## Pre-write depth gate
+
+Depth is forced **before** the prompt is written, not scored after. For each
+executor, before writing its `.md`, produce these inputs explicitly (they become the
+depth block in `package-contract.md` § Executor depth block):
+
+1. **Persona** — who this is, at what seniority, with what lived experience. One paragraph. If you cannot make a senior in this role recognize themselves, you do not understand the role yet — investigate before writing.
+2. **Frameworks / mental models** — the named methods this role actually applies. If you can name fewer than two, the role is underspecified.
+3. **Vocabulary** — terms of art pulled from `sourceDocs` / investigation. If the blueprint had sources and you cannot extract any vocabulary, you have not read them — read them now.
+4. **Signature moves** — what a senior in this role does that a junior wouldn't.
+5. **Anti-patterns** — the role's failure modes; each becomes a `## Hard constraints` line.
+
+If any of 1–5 is empty for a non-trivial executor, **stop and fill it before writing the prompt**. A prompt written without these is the basic-agent failure by construction. Customer-facing executors run the parallel gate in `domain-breadth.md` (backstory + operational_breadth) in place of items 2–4.
+
+This gate is generative — it shapes what you write. The `quality-lens.md` scorecard is evaluative — it catches what slipped through. Run both.
+
 ## Creation outcome
 
 By the end of creation, you should know:

@@ -123,17 +123,17 @@ If an executor is `type: worker`:
 If an executor is `type: agent`, `clone`, or `assistant`:
 
 - create `.aioson/squads/{squad-slug}/agents/{role-slug}.md`
-- keep it concise but dense
+- keep it dense — a bare role label produces a thin executor; length spent on persona, frameworks, and vocabulary pays off
 - make the file immediately usable when invoked via `@`
 
-Recommended structure:
+Required structure:
 
 - `## Mission`
-- `## Quick context`
+- `## Quick context` — **must** carry the mandatory depth block (see below)
 - `## Active genomes`
 - `## Focus`
 - `## Response pattern`
-- `## Hard constraints`
+- `## Hard constraints` — **must** encode the executor's `anti_patterns` as real constraints
 - `## Output contract`
 
 Each executor prompt should make clear:
@@ -142,9 +142,42 @@ Each executor prompt should make clear:
 - when to delegate to another executor
 - when to ask the orchestrator for a temporary subagent
 
-### Customer-facing executors — mandatory world-context block
+### Executor depth block — mandatory for every agent / clone / assistant
 
-Any executor whose role involves direct customer interaction (retail, hospitality, service, support, sales, food service, reception, etc.) **must** include this block in its `## Quick context` section. The block is the world-model anchor — without it, executors produce clipped responses ("we only sell medicine" when asked for candy at a pharmacy):
+The persona description **is** the world model: sparse persona → sparse behavior (full theory and evidence in `.aioson/docs/squad/domain-breadth.md`). The customer-facing breadth failure ("we only sell medicine") is one instance of a general rule — a generic knowledge-work executor ("a researcher who gathers data and analyzes trends") is the *same* failure in a different collar.
+
+So **every** `agent` / `clone` / `assistant` executor must carry a depth block in its `## Quick context`. Pick the variant by role.
+
+**Variant A — knowledge / creative / technical executor** (researcher, analyst, strategist, writer, editor, architect, engineer, domain expert):
+
+```yaml
+role: "Seniority + specialty, never a bare label (e.g. 'Senior investigative researcher — primary-source analysis', not 'Researcher')"
+persona: |
+  3–6 sentences anchoring the executor as a specific, experienced
+  practitioner: the level they operate at, the work they've shipped,
+  the artifacts they produce. A senior and a junior in this role
+  produce different work — say which this is. This paragraph is the
+  world model; invest in it.
+goal: "The single outcome this executor optimizes for."
+
+expertise:
+  frameworks: ["named methods / mental models this role actually applies"]
+  vocabulary: ["terms of art — extracted from sourceDocs / investigation, not invented"]
+  signature_moves: ["what a senior in this role does that a junior wouldn't"]
+  sources: ["which sourceDocs / findings inform this executor"]
+
+quality_bar:
+  - "Concrete standard the output is held to — what 'good' means for this role"
+
+anti_patterns:
+  - "Role-specific failure modes — each must reappear in ## Hard constraints"
+```
+
+**Source distillation (mandatory when `sourceDocs` or `investigation` exist):** mine them into the depth block — `expertise.vocabulary`, `expertise.frameworks`, `persona` / `backstory`, and `anti_patterns` — and record which source informed each executor in `expertise.sources`. Source material persisted in the manifest but absent from every executor prompt is a defect: the squad was asked to be grounded in those sources and isn't. Never leave `sourceDocs` as unused provenance.
+
+### Variant B — Customer-facing executors — mandatory world-context block
+
+Any executor whose role involves direct customer interaction (retail, hospitality, service, support, sales, food service, reception, etc.) **must** instead use this world-context block in its `## Quick context` section — the customer-facing specialization of the depth block above (`operational_breadth` is to a counter clerk what `expertise` is to an analyst). Without it, executors produce clipped responses ("we only sell medicine" when asked for candy at a pharmacy):
 
 ```yaml
 role: "Concrete role title with operational specificity"
