@@ -12,7 +12,9 @@ Move squad generation from **static-template quality** to a **closed loop where 
 - `create` persists `analysis` + per-executor `confidence`/`traces` to the manifest (+schema) — so `squad-analyze` can actually read them.
 - Prereqs already shipped: depth block (9c72b40), domain decomposition (b9813ae), analyze→refresh loop (ffc6cd2).
 
-## Stage 1 — Eval gate (highest leverage, proven; do first)
+## Stage 1 — Eval gate (IMPLEMENTED — MVP, prose-first)
+> Shipped: `docs/squad/eval-gate.md` (method) + `tasks/squad-eval.md` (`@squad eval <slug>`) + wired into `squad.md` routing/preflight + referenced from `squad-validate`. The jury reuses the existing `reviewer`/`cross_ai` primitive (claude/gemini/codex). Hardening (deterministic coverage scoring + judge calibration in `src/`) remains future work.
+
 Derive the quality bar from the SAME sources that generated the squad.
 - **What:** from `sourceDocs`/design intent, synthesize a **binary, citation-grounded rubric** (each executor's mandated responsibilities, handoffs, depth requirements) — YourBench-style (arXiv 2504.01833) + EvalAgent implicit criteria (2504.15219).
 - **Judge:** grade each executor `.md` with a **multi-model jury weighted by reliability** (AutoRubric 2603.00077; BT-σ jury 2602.16610). Gate on coverage + agreement.
@@ -38,5 +40,10 @@ The generator learns from the squads it produces.
 ## Build-on (already in AIOSON)
 Manifest already has: `tasks[].review_loop` + `review_criteria` + `max_review_iterations` (evaluator-optimizer), `tasks[].voting` (sampling+consensus), `workflows[].phases[].review`/`vetoConditions`. The jury/eval loop EXTENDS these — not greenfield.
 
+## Implementation plans — remaining stages (sized honestly)
+- **Stage 2 (persona grounding) — medium, mostly prose.** Add `expertise.sources` as per-node *source spans* (not a flat list) in the depth block (`package-contract`); a create sub-step that mines a competency tree from `sourceDocs` with a citation per node; the eval-gate `grounding` claim already enforces it. ~2-3 doc edits + optional `src/` span extractor.
+- **Stage 3 (retrieval-grounded role pool) — larger, needs code.** Expand the role-candidate pool in design Passo 2.5 by *retrieval* over `sourceDocs` + `researchs/` (embeddings). Requires a `src/` embedding/retrieval module — not prose-only. Do after Stage 2.
+- **Stage 4 (self-improving generator) — a project on its own.** A Reflector reads eval-gate failures + user rejections, diagnoses which generation rule failed, and appends deltas to a `.aioson/` "what-works" playbook that `creation-flow`/`package-contract` load. Needs trace capture + a delta-memory store in `src/` + safety guardrails (overfit/held-out, no open-ended self-rewrite). Keep staged until Stages 1-2 prove out.
+
 ## Sequencing
-Stage 0 (done) → Stage 1 (proven, fixes the gate) → Stage 2 → Stage 3 → Stage 4 (only after 1-3 prove out). Each stage is independently shippable.
+Stage 0 (done) → **Stage 1 (MVP done)** → Stage 2 → Stage 3 → Stage 4 (only after 1-3 prove out). Each stage is independently shippable.

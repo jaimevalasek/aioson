@@ -62,3 +62,4 @@ Result: VALID (2 warnings)
 - SUGIRA o comando de correção quando possível (ex: "run @squad extend to add skills")
 - `--strict`: converte WARNINGs em ERRORs (inclui executor básico) — útil em CI / gate de entrega
 - Gaps de profundidade (executor básico, fontes não-destiladas) roteiam para `@squad refresh <slug>`
+- Este é o gate barato sempre-on (estrutura + presença do depth block). Para o veredito profundo source-grounded (rubrica das fontes + júri multi-modelo), use `@squad eval <slug>` (`.aioson/tasks/squad-eval.md`)

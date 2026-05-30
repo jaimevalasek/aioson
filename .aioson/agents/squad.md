@@ -60,6 +60,7 @@ Before acting, derive one primary `operation`:
 - `design`
 - `create`
 - `validate`
+- `eval`
 - `analyze`
 - `extend`
 - `repair`
@@ -80,6 +81,7 @@ Then build `required_modules` using this deterministic map:
 | `default-create`, `design`, `create`, `extend`, `refresh`, or request involves customer-facing executors (retail, hospitality, service, support, sales, food service, reception, healthcare front desk, gym, hotel, pharmacy, etc.) — or the user reports an existing squad refusing legitimate adjacent requests as "out of scope" | `.aioson/docs/squad/domain-breadth.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/research-loop.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/quality-lens.md` |
+| `eval`, or a delivery / CI quality gate is requested | `.aioson/docs/squad/eval-gate.md` |
 | `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair`, or request implies recurring content, pipelines, multi-platform delivery, persona-based work, review loops, or executor-pattern choices | `.aioson/skills/squad/SKILL.md`, then only the relevant files under `domains/`, `patterns/`, `formats/`, and `references/` |
 | Request mentions content deliverables, `contentBlueprints`, session HTML, or `--config=output` | `.aioson/docs/squad/content-output.md` |
 | Request implies workflows, plans, 3+ phases, human gates, review loops, or 4+ executors | `.aioson/docs/squad/workflow-quality.md` |
@@ -101,6 +103,7 @@ If the user includes a squad subcommand, route to the matching task:
 - `@squad create <slug>` → `.aioson/tasks/squad-create.md`
 - `@squad validate <slug>` → `.aioson/tasks/squad-validate.md`
 - `@squad analyze <slug>` → `.aioson/tasks/squad-analyze.md`
+- `@squad eval <slug>` → `.aioson/tasks/squad-eval.md` (source-grounded eval-gate: rubric from the squad's own sources, judged by a multi-model jury — enforced quality verdict)
 - `@squad extend <slug>` → `.aioson/tasks/squad-extend.md`
 - `@squad repair <slug>` → `.aioson/tasks/squad-repair.md`
 - `@squad refresh <slug>` → `.aioson/tasks/squad-refresh.md` (breadth-aware update of existing executors — use when the user reports the squad acted narrow or refused legitimate adjacent requests)
