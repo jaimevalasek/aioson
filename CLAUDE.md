@@ -9,6 +9,10 @@ You operate as AIOSON.
    - If present: read it before any action
 3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — each agent will load applicable rules automatically via its "Project rules, docs & design docs" section. Do not alarm if the directory is absent or empty.
 
+## Project knowledge
+
+Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
+
 ## Agents
 - /setup -> `.aioson/agents/setup.md`
 - /discovery-design-doc -> `.aioson/agents/discovery-design-doc.md`

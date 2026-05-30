@@ -8,6 +8,12 @@ const {
   promoteProjectLearning,
   getProjectLearningStats
 } = require('../runtime-store');
+const {
+  loadClaudeMemoryCandidates,
+  parseSelection,
+  isSelected
+} = require('../learning-import-claude');
+const { upsertProjectLearning } = require('./devlog-process');
 
 /**
  * Subcommand: list [--status=active|stale|archived|promoted]
@@ -109,6 +115,76 @@ async function handlePromote(projectDir, learningId, promotedTo, { logger, t }) 
 }
 
 /**
+ * Subcommand: import-from-claude [--project-hash=<hash>] [--dry-run] [--select=1,2|all]
+ * Imports technical Claude Code project memory into project_learnings.
+ */
+async function handleImportFromClaude(projectDir, options, { logger }) {
+  let loaded;
+  try {
+    loaded = await loadClaudeMemoryCandidates({
+      targetDir: projectDir,
+      projectHash: options['project-hash'] || options.projectHash,
+      claudeHome: options['claude-home'] || options.claudeHome
+    });
+  } catch (err) {
+    logger.error(err.message);
+    return { ok: false, error: err.code || 'import_failed', candidates: [], promoted: 0 };
+  }
+
+  const selection = parseSelection(options.select);
+  const dryRun = Boolean(options['dry-run'] || options.dryRun);
+  const candidates = loaded.candidates;
+
+  logger.log(`Claude memory candidates (${candidates.length}) — ${loaded.hash}`);
+  for (const candidate of candidates) {
+    const marker = candidate.kind ? candidate.kind : candidate.classification;
+    logger.log(`  [${candidate.index}] ${marker}: ${candidate.title} (${candidate.source})`);
+  }
+
+  if (dryRun || !selection) {
+    if (!selection) logger.log('Run again with --select=<n[,n]|all> to import technical candidates.');
+    return {
+      ok: true,
+      dryRun: true,
+      requiresSelection: !selection,
+      projectHash: loaded.hash,
+      candidates,
+      promoted: 0,
+      skipped: 0
+    };
+  }
+
+  const handle = await openRuntimeDb(projectDir);
+  const { db } = handle;
+  const promoted = [];
+  const skipped = [];
+  try {
+    for (const candidate of candidates) {
+      if (!isSelected(selection, candidate.index)) continue;
+      if (!candidate.kind) {
+        skipped.push({ index: candidate.index, title: candidate.title, reason: candidate.classification });
+        continue;
+      }
+      const result = upsertProjectLearning(db, {
+        title: candidate.title,
+        type: 'quality',
+        kind: candidate.kind,
+        featureSlug: options.feature || null,
+        evidence: candidate.evidence,
+        sourceSession: `claude-memory:${loaded.hash}:${candidate.source}`
+      });
+      promoted.push({ ...result, index: candidate.index, title: candidate.title, kind: candidate.kind });
+    }
+  } finally {
+    db.close();
+  }
+
+  logger.log(`Imported: ${promoted.length}`);
+  if (skipped.length > 0) logger.log(`Skipped: ${skipped.length}`);
+  return { ok: true, dryRun: false, projectHash: loaded.hash, candidates, promoted, skipped };
+}
+
+/**
  * Entry point for CLI integration.
  */
 async function runLearning({ args = [], options = {}, logger = console, t = (k) => k } = {}) {
@@ -126,9 +202,12 @@ async function runLearning({ args = [], options = {}, logger = console, t = (k) 
     const learningId = args[2] || options.id;
     return handlePromote(projectDir, learningId, options.to || null, context);
   }
+  if (sub === 'import-from-claude') {
+    return handleImportFromClaude(projectDir, options, context);
+  }
 
-  logger.error(`Unknown subcommand: ${sub}. Available: list, stats, promote`);
+  logger.error(`Unknown subcommand: ${sub}. Available: list, stats, promote, import-from-claude`);
   return { error: true };
 }
 
-module.exports = { runLearning, handleList, handleStats, handlePromote };
+module.exports = { runLearning, handleList, handleStats, handlePromote, handleImportFromClaude };

@@ -5,6 +5,10 @@
 2. Check `.aioson/context/project.context.md`
 3. If missing, start with `setup`
 
+## Project knowledge
+
+Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
+
 ## Available agents
 - setup -> `.aioson/agents/setup.md`
 - discovery-design-doc -> `.aioson/agents/discovery-design-doc.md`

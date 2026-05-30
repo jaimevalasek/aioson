@@ -60,6 +60,31 @@ Slice 1 (schema + M1 capture) LANDED. project_learnings.kind via migration Phase
 
 Slice 2 (M2 materialize + M3 INDEX) LANDED. New src/learning-materialize.js: materializeLearnings writes active gotcha/resolution to .aioson/learnings/{gotchas,recipes}/{slug}.md + regenerates INDEX.md (category ASC, updated_at DESC, <=200 char). Idempotent (rewrite only if newer), EC-CTPK-05 collision disambig, EC-CTPK-09 orphan cleanup (user files safe), EC-CTPK-02 no-op. Hooked into runDistillation (best-effort, never breaks feature:close). +5 tests (14 total green); 13 distillation/learning suites (118 tests) pass. Full suite running. Next: Slice 3 = M4 universal loading directive in CLAUDE.md/AGENTS.md/OPENCODE.md.
 
+<!-- sha256:21b63aadc43d81dfba135faf1aed37bc13b591649f4639a89ecd10ae1d4a1b17 -->
+**2026-05-30T20:06:34.768Z** | @pm | _Agent Trail_
+
+Plano de implementacao Gate C aprovado. Phases: 4. Prioridade: M4 universal loading directive, depois M5 import-from-claude, M6 inception parity.
+
+<!-- sha256:6613b81d9e6bd3155e060dcb63414d5a5f92f8871c432a65142845c8b6456b24 -->
+**2026-05-30T20:07:48.604Z** | @pm | _Agent Trail_
+
+Correcao de Gate C: implementation plan foi escrito, mas gate:approve C bloqueou porque Gate B esta pending. Proximo formal: @architect fechar Gate B; depois @pm reaprova Gate C.
+
+<!-- sha256:07c3afe97332880456950532dee64c67b490459deeaea129dfc6a6fdded16d1b -->
+**2026-05-30T20:13:57.480Z** | @dev | _Agent Trail_
+
+Slice 3 / M4 LANDED: canonical Project knowledge directive added to AGENTS.md, CLAUDE.md, OPENCODE.md and template mirrors. .gemini untouched per BR-CTPK-06. Next: M5 import-from-claude.
+
+<!-- sha256:a8038644b9a4dcea09297f2311e84ec4dfe8ce957cb8ddfaa407005d0832f47e -->
+**2026-05-30T20:18:16.247Z** | @dev | _Agent Trail_
+
+Slice 4 / M5 LANDED: learning --sub=import-from-claude with safe Claude memory read, dry-run no mutation, --select import path, operator-preference filtering, and CLI --sub dispatch fix. Tests now 16/16. Next: M6 inception parity + .gitkeep placeholders.
+
+<!-- sha256:881e50d6b40bc13006d0b2c207ce206271c6cd40320907e5933313e0a37dab9b -->
+**2026-05-30T20:22:50.798Z** | @dev | _Agent Trail_
+
+Slice 5 / M6 LANDED: inception parity test added for greenfield setup placeholders, universal directive in supported harness entrypoints, Gemini exclusion, and learning --sub=import-from-claude wiring. Added workspace/template .aioson/learnings/{gotchas,recipes}/.gitkeep placeholders. Focused verification green. Next: @qa Gate D.
+
 ## Revision Requests
 
 - 2026-05-30 — Investigate `aioson update` memory boundaries: update should refresh managed/template/config surfaces, but should not mutate living memory (`.aioson/brains/*`, project learnings, bootstrap/current-state) except explicit managed placeholders. Review why `.aioson/brains/_index.json` and `.aioson/brains/sheldon/architecture-decisions.brain.json` changed during the accidental update/recovery pass and decide whether this is expected migration, stale local drift, or an update bug.
@@ -96,6 +121,83 @@ files:
   role: core-module
   added_by: dev
   added_at: 2026-05-30T19:05:37.270Z
+- path: AGENTS.md
+  role: harness-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: CLAUDE.md
+  role: harness-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: OPENCODE.md
+  role: harness-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: template/AGENTS.md
+  role: template-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: template/CLAUDE.md
+  role: template-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: template/OPENCODE.md
+  role: template-entrypoint
+  added_by: dev
+  added_at: 2026-05-30T17:12:43.696-03:00
+- path: src/learning-import-claude.js
+  role: core-module
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/commands/learning.js
+  role: command-entry
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/cli.js
+  role: command-routing
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/i18n/messages/en.js
+  role: i18n
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/i18n/messages/pt-BR.js
+  role: i18n
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/i18n/messages/es.js
+  role: i18n
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: src/i18n/messages/fr.js
+  role: i18n
+  added_by: dev
+  added_at: 2026-05-30T17:17:36.516-03:00
+- path: tests/inception-parity-cross-tool-project-knowledge.test.js
+  role: test
+  coupling_risk: low
+  added_by: dev
+  added_at: 2026-05-30T20:23:01.233Z
+- path: template/.aioson/learnings/gotchas/.gitkeep
+  role: config
+  coupling_risk: low
+  added_by: dev
+  added_at: 2026-05-30T20:23:01.535Z
+- path: template/.aioson/learnings/recipes/.gitkeep
+  role: config
+  coupling_risk: low
+  added_by: dev
+  added_at: 2026-05-30T20:23:01.826Z
+- path: .aioson/learnings/gotchas/.gitkeep
+  role: config
+  coupling_risk: low
+  added_by: dev
+  added_at: 2026-05-30T20:23:02.122Z
+- path: .aioson/learnings/recipes/.gitkeep
+  role: config
+  coupling_risk: low
+  added_by: dev
+  added_at: 2026-05-30T20:23:02.419Z
 modules: []
 patterns: []
 ```

@@ -1,24 +1,26 @@
 ---
-last_updated: 2026-05-30
-last_agent: analyst
-last_gate: PRD split produced — prd-cross-tool-project-knowledge.md (SMALL extend active-learning-loop) + prd-gemini-phaseout.md (SMALL phased v1.17→v1.18→v1.20). Briefing approved via manual config edit (CLI gap conhecido). User confirmou todos os 3 Recomendado: split + extend + Gemini warning-only. 2 features novos in_progress em features.md.
-active_feature: cross-tool-project-knowledge
-active_work: "cross-tool-project-knowledge → @analyst → in_progress"
-blockers: none
-next_recommendation: "@dev (SMALL skips architect)"
+last_updated: 2026-05-30T20:29:15.842Z
+last_agent: qa
+last_gate: Gate D: approved
+active_feature: (none)
+active_work: ""
+blockers: "none"
+next_recommendation: "@product start the next feature"
 ---
 
 # Project Pulse
 
 ## Status
 
-- **Last agent:** @analyst
-- **Active feature:** cross-tool-project-knowledge
-- **Active work:** cross-tool-project-knowledge → @analyst → in_progress
-- **Next:** @dev (SMALL skips architect)
+- **Last agent:** @qa
+- **Last gate:** Gate D: approved
+- **Active feature:** (none)
+- **Active work:** none
+- **Blockers:** none
+- **Next:** @product start the next feature
 
 ## Recent Activity
 
-- 2026-05-29 @tester/@pentester/@dev/@qa → v1.21.3 released+pushed: @tester coverage pass (current-state-trim 100%, memory-trim 88.6% linha), @pentester TS-LC-01/02 (low) fixed + QA-verified; security-findings-project.json atualizado. Manual npm publish pendente."
-- 2026-05-30 @tester → squad-self-improving: Stage 3/4 verified: 4-tier PASS, 15 unit tests, fixed role-scan entity-noise bug; baseline proved zero regressions
 - 2026-05-30 @analyst → cross-tool-project-knowledge: Requirements+spec: 1 schema change (kind col), 11 BRs, 10 ECs
+- 2026-05-30 @dev → cross-tool-project-knowledge: Implemented M4-M6: universal Project knowledge directive, learning import-from-claude, and inception parity placeholders/tests; focused suites pass.
+- 2026-05-30 @qa → cross-tool-project-knowledge (Gate D: approved) VERDICT: PASS: Full repository npm test not rerun; scoped feature and active-learning-loop parity suites passed.

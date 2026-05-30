@@ -197,7 +197,7 @@ module.exports = {
     help_commit_prepare:
       'aioson commit:prepare [path] [--staged-only] [--agent-safe] [--mode=guarded|trusted|headless] [--json] [--locale=pt-BR]',
     help_learning:
-      'aioson learning [path] [--sub=list|stats|promote] [--status=<status>] [--id=<learning-id>] [--locale=pt-BR]',
+      'aioson learning [path] [--sub=list|stats|promote|import-from-claude] [--status=<status>] [--id=<learning-id>] [--project-hash=<hash>] [--dry-run] [--select=<n[,n]|all>] [--locale=pt-BR]',
     help_runtime_init:
       'aioson runtime:init [path] [--json] [--locale=pt-BR]',
     help_runtime_ingest:

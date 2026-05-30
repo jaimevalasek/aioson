@@ -1279,7 +1279,7 @@ async function main() {
     } else if (command === 'spec:tasks' || command === 'spec-tasks') {
       result = await runSpecTasks({ args, options, logger: commandLogger });
     } else if (command.startsWith('learning:') || command === 'learning') {
-      const sub = command === 'learning' ? (args[1] || 'list') : command.split(':')[1];
+      const sub = command === 'learning' ? (options.sub || args[1] || 'list') : command.split(':')[1];
       result = await runLearning({ args, options: { ...options, sub }, logger: commandLogger, t });
     } else if (command.startsWith('plan:') || command === 'plan') {
       const sub = command === 'plan' ? (args[1] || 'show') : command.split(':')[1];

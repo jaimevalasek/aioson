@@ -1,27 +1,32 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-analyst-dev-1780165252331",
-  "created_at": "2026-05-30T18:20:52.331Z",
+  "protocol_id": "hnd-qa-committer-20260530",
+  "created_at": "2026-05-30T20:30:18.224Z",
   "workflow_mode": "feature",
   "classification": "SMALL",
   "feature_slug": "cross-tool-project-knowledge",
   "from": {
-    "agent_id": "analyst",
-    "capability_transferred": "analyze_requirements"
+    "agent_id": "qa",
+    "capability_transferred": "verify_feature"
   },
   "to": {
-    "agent_id": "dev",
-    "capability_required": "implement_feature"
+    "agent_id": "committer",
+    "capability_required": "commit_changes"
   },
   "capabilities_transferred": [
-    "analyze_requirements"
+    "verify_feature"
   ],
-  "artifact_uris": [],
-  "gate_status": {},
+  "artifact_uris": [
+    ".aioson/context/done/cross-tool-project-knowledge/qa-report-cross-tool-project-knowledge.md",
+    ".aioson/context/done/cross-tool-project-knowledge/spec-cross-tool-project-knowledge.md"
+  ],
+  "gate_status": {
+    "D": "approved"
+  },
   "autonomy_mode": "guarded",
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-05-30T18:20:52.331Z"
+    "validated_at": "2026-05-30T20:30:18.224Z"
   }
 }

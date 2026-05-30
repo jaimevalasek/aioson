@@ -177,7 +177,7 @@ module.exports = {
     help_commit_prepare:
       'aioson commit:prepare [path] [--staged-only] [--agent-safe] [--mode=guarded|trusted|headless] [--json] [--locale=fr]',
     help_learning:
-      'aioson learning [path] [--sub=list|stats|promote] [--status=<status>] [--id=<learning-id>] [--locale=fr]',
+      'aioson learning [path] [--sub=list|stats|promote|import-from-claude] [--status=<status>] [--id=<learning-id>] [--project-hash=<hash>] [--dry-run] [--select=<n[,n]|all>] [--locale=fr]',
     dashboard_moved:
       'Le flux `{command}` a été supprimé du CLI. Le dashboard AIOSON est désormais installé séparément. Ouvrez l application dashboard sur votre ordinateur, créez ou ajoutez un projet, puis sélectionnez le dossier qui contient déjà `.aioson/`.',
     dashboard_moved_line: '{message}\n',

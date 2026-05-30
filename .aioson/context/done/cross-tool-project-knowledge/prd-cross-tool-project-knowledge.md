@@ -140,6 +140,22 @@ O usuário confirmou a dor explicitamente na sessão de descoberta (`@dev` em `a
 
 - **Profile selection mecânica no INDEX.md** — V1 não tem profile-aware loading (todos os harnesses leem o mesmo INDEX). V2 pode segmentar (ex.: harness=codex omitir gotchas Windows-only se cwd não é Windows).
 
+## Delivery plan
+
+### Phase 1 — Landed foundation
+
+1. Schema + capture directive — landed em Slice 1.
+2. Materialização + `INDEX.md` — landed em Slice 2.
+
+### Phase 2 — Cross-harness loading
+
+1. Diretiva universal `## Project knowledge` em `CLAUDE.md`, `AGENTS.md`, `OPENCODE.md` e templates correspondentes, sem tocar `.gemini/GEMINI.md`.
+
+### Phase 3 — Import and inception parity
+
+1. `aioson learning --sub=import-from-claude` com `--dry-run` e seleção explícita.
+2. Paridade de setup/template com placeholders `.aioson/learnings/gotchas/.gitkeep` e `.aioson/learnings/recipes/.gitkeep`.
+
 ## User flows
 
 ### Captura durante uma sessão de dev
@@ -190,6 +206,17 @@ O usuário confirmou a dor explicitamente na sessão de descoberta (`@dev` em `a
   Verificável por test fixture análogo ao `tests/inception-parity-active-learning-loop.test.js`.
 
 - **Zero regressão sobre `active-learning-loop`:** após shipping, os 5 metrics existentes do `active-learning-loop` (distillation coverage 100%, memory:search retrieval ≥8/10, prompt-budget ≥10% reduction OR memory:search precision ≥0.8) seguem PASS.
+
+## Acceptance criteria
+
+| AC | Description |
+|---|---|
+| AC-CTPK-01 | Dado um devlog com `[gotcha]` ou `[resolution]`, o pipeline grava `type='quality'` + `kind` correto e mantém compatibilidade com learnings legadas. Verificável por teste `node:test`. |
+| AC-CTPK-02 | Dado `feature:close` com learnings ativas, arquivos em `.aioson/learnings/{gotchas,recipes}/` e `INDEX.md` são gerados de forma idempotente. Verificável por teste e inspeção de paths. |
+| AC-CTPK-03 | Dado um workspace/template AIOSON, `CLAUDE.md`, `AGENTS.md` e `OPENCODE.md` contêm a diretiva `## Project knowledge` idêntica; `.gemini/GEMINI.md` não recebe a diretiva. Verificável por comparação textual. |
+| AC-CTPK-04 | Dado `aioson learning --sub=import-from-claude --dry-run`, candidatos do Claude memory são listados sem mutar SQLite ou disco. Verificável por fixture. |
+| AC-CTPK-05 | Dado `aioson learning --sub=import-from-claude --select=...`, gotchas/resolutions técnicos são promovidos pelo path existente e operator-preferences são filtradas. Verificável por fixture. |
+| AC-CTPK-06 | Dado `aioson setup` em projeto novo, placeholders de learnings e diretivas cross-harness aparecem em paridade com o template. Verificável por teste inception. |
 
 ## Open questions
 

@@ -1,6 +1,6 @@
 ---
 generated_by: product
-generated_at: "2026-05-29T02:02:39.268Z"
+generated_at: "2026-05-30T17:26:51-03:00"
 confidence: high
 ---
 
@@ -25,7 +25,7 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
-Active (in_progress) since 2026-05-23: `cross-tool-project-knowledge` (SMALL) — extend `active-learning-loop` com materialização disk-first das learnings em `.aioson/learnings/{gotchas,recipes}/{slug}.md` + `INDEX.md` regenerator + diretiva universal de loading em `CLAUDE.md`/`AGENTS.md`/`OPENCODE.md` para Codex/OpenCode lerem o knowledge cross-harness sem CLI call. Reusa schema `project_learnings`, `memory:archive`, e `feature:close` distillation hook existentes. Sinais novos no capture directive: `gotcha` + `resolution`. M5 add `learning --sub=import-from-claude` one-shot. PRD: `.aioson/context/prd-cross-tool-project-knowledge.md`.
+Active (ready_for_qa) since 2026-05-23: `cross-tool-project-knowledge` (SMALL) extends `active-learning-loop` with cross-harness project knowledge. M1-M6 are implemented: gotcha/resolution capture persists as `type='quality'` + `kind`, `feature:close` materializes `.aioson/learnings/{gotchas,recipes}/` plus `INDEX.md`, AGENTS/CLAUDE/OPENCODE load project knowledge, `learning --sub=import-from-claude` imports selected Claude memory entries, and greenfield setup ships learnings placeholders. Next: @qa Gate D. PRD: `.aioson/context/prd-cross-tool-project-knowledge.md`.
 
 Active (in_progress) since 2026-05-23: `gemini-phaseout` (SMALL) — remoção faseada do Gemini CLI antes do cutoff Google 2026-06-18 do free/personal tier. v1.17 (≤2026-06-10) warning em install-wizard/doctor/permissions-generator + operator-memory matriz V1 marcada deprecated + CHANGELOG. v1.18 (≥2026-06-19) hard removal mecânica de `.gemini/` no template + install-wizard + permissions-generator; `.gemini/permissions.toml` pré-existente preservado (enterprise). v1.20 (Q4-2026) sunset do frozen tier — doctor para de reconhecer. PRD: `.aioson/context/prd-gemini-phaseout.md`.
 

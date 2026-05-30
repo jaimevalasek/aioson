@@ -177,7 +177,7 @@ module.exports = {
     help_commit_prepare:
       'aioson commit:prepare [path] [--staged-only] [--agent-safe] [--mode=guarded|trusted|headless] [--json] [--locale=es]',
     help_learning:
-      'aioson learning [path] [--sub=list|stats|promote] [--status=<status>] [--id=<learning-id>] [--locale=es]',
+      'aioson learning [path] [--sub=list|stats|promote|import-from-claude] [--status=<status>] [--id=<learning-id>] [--project-hash=<hash>] [--dry-run] [--select=<n[,n]|all>] [--locale=es]',
     dashboard_moved:
       'El flujo `{command}` fue eliminado del CLI. El dashboard de AIOSON ahora se instala por separado. Abre la app del dashboard en tu computadora, crea o agrega un proyecto y selecciona la carpeta que ya contiene `.aioson/`.',
     dashboard_moved_line: '{message}\n',

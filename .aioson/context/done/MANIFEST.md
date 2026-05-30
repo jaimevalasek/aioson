@@ -5,6 +5,7 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| cross-tool-project-knowledge | 2026-05-30 | 6 | Estender `active-learning-loop` com materialização disk-first dos achados técnicos do projeto (`.aioson/learnings/`), tornando o conhecimento legível por qualqu |
 | agent-orchestration-v2 | 2026-05-27 | 5 | Make AIOSON workflows resumable from any gate boundary and operator decisions queryable by feature — closing the two infrastructure gaps identified against Lang |
 | operator-memory | 2026-05-21 | 7 | Uma camada de memória **por-operador** (não por-projeto, não por-harness) que persiste decisões padrão do dev entre sessões, harnesses e projetos — multi-dev sa |
 | neural-chain | 2026-05-21 | 5 | Camada de awareness estrutural de código que mostra ligações implícitas (eventos, listeners, hooks, jobs, classes, testes) a cada edit, pra LLM agents pararem d |

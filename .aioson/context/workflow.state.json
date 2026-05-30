@@ -8,14 +8,16 @@
     "dev",
     "qa"
   ],
-  "current": "dev",
-  "next": "dev",
+  "current": null,
+  "next": null,
   "completed": [
     "product",
-    "analyst"
+    "analyst",
+    "dev",
+    "qa"
   ],
   "skipped": [],
-  "featureSlug": "cross-tool-project-knowledge",
+  "featureSlug": "gemini-phaseout",
   "detour": null,
-  "updatedAt": "2026-05-30T18:20:52.311Z"
+  "updatedAt": "2026-05-30T20:30:18.224Z"
 }

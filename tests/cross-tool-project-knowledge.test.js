@@ -25,6 +25,7 @@ const {
   upsertProjectLearning,
   runDevlogProcess
 } = require('../src/commands/devlog-process');
+const { runLearning } = require('../src/commands/learning');
 
 function hasColumn(db, table, col) {
   return db.prepare(`PRAGMA table_info(${table})`).all().some((r) => r.name === col);
@@ -259,5 +260,103 @@ test('materialize: archived orphan removed; hand-authored file preserved (EC-CTP
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
     db.close();
+  }
+});
+
+// ─────────────────── Slice 4: M5 import-from-claude ───────────────────
+
+async function makeClaudeMemoryFixture() {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'ctpk-claude-'));
+  const projectDir = path.join(tmp, 'project');
+  const homeDir = path.join(tmp, 'home');
+  const hash = 'C--dev-aioson-play';
+  const memoryDir = path.join(homeDir, '.claude', 'projects', hash, 'memory');
+  await fs.mkdir(memoryDir, { recursive: true });
+  await fs.mkdir(projectDir, { recursive: true });
+  await fs.writeFile(path.join(memoryDir, 'MEMORY.md'), `# Claude Memory
+
+- [OpenClaw CSP iframe](openclaw_iframe_csp_patch.md)
+- [External apps orphan processes Windows](external_apps_orphan_processes_windows.md)
+- [Tone preference](operator_preference.md)
+`, 'utf8');
+  await fs.writeFile(path.join(memoryDir, 'openclaw_iframe_csp_patch.md'), `---
+source: claude
+---
+# OpenClaw CSP iframe
+
+OpenClaw 2026.5.19 sends X-Frame-Options and CSP frame-ancestors hardcoded, so the naive iframe assumption fails.
+`, 'utf8');
+  await fs.writeFile(path.join(memoryDir, 'external_apps_orphan_processes_windows.md'), `# External apps orphan processes Windows
+
+Symptom: postgres remains alive after the app exits.
+Root cause: Windows child processes can become orphan processes.
+Fix: cleanup with Stop-Process before relaunch.
+`, 'utf8');
+  await fs.writeFile(path.join(memoryDir, 'operator_preference.md'), `# Tone preference
+
+My preference: always respond in a concise style.
+`, 'utf8');
+  return { tmp, projectDir, homeDir, hash };
+}
+
+function silentLogger() {
+  return { lines: [], log(line) { this.lines.push(String(line)); }, error(line) { this.lines.push(String(line)); } };
+}
+
+test('import-from-claude: dry-run lists candidates without mutating runtime DB', async () => {
+  const fixture = await makeClaudeMemoryFixture();
+  try {
+    const res = await runLearning({
+      args: [fixture.projectDir],
+      options: {
+        sub: 'import-from-claude',
+        'project-hash': fixture.hash,
+        'claude-home': fixture.homeDir,
+        'dry-run': true
+      },
+      logger: silentLogger(),
+      t: (k) => k
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.dryRun, true);
+    assert.equal(res.promoted, 0);
+    assert.deepEqual(res.candidates.map((c) => c.kind), ['gotcha', 'resolution', null]);
+    assert.equal(fsSync.existsSync(path.join(fixture.projectDir, '.aioson/runtime/aios.sqlite')), false);
+  } finally {
+    await fs.rm(fixture.tmp, { recursive: true, force: true });
+  }
+});
+
+test('import-from-claude: selected technical candidates promote through project_learnings', async () => {
+  const fixture = await makeClaudeMemoryFixture();
+  try {
+    const res = await runLearning({
+      args: [fixture.projectDir],
+      options: {
+        sub: 'import-from-claude',
+        'project-hash': fixture.hash,
+        'claude-home': fixture.homeDir,
+        select: '1,2,3'
+      },
+      logger: silentLogger(),
+      t: (k) => k
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.promoted.length, 2);
+    assert.equal(res.skipped.length, 1);
+
+    const db = new Database(path.join(fixture.projectDir, '.aioson/runtime/aios.sqlite'));
+    try {
+      const rows = db.prepare('SELECT title, type, kind, evidence, source_session FROM project_learnings ORDER BY kind').all();
+      assert.equal(rows.length, 2);
+      assert.deepEqual(rows.map((r) => [r.type, r.kind]), [['quality', 'gotcha'], ['quality', 'resolution']]);
+      assert.match(rows[0].evidence, /X-Frame-Options/);
+      assert.match(rows[1].evidence, /Stop-Process/);
+      assert.match(rows[0].source_session, /^claude-memory:C--dev-aioson-play:/);
+    } finally {
+      db.close();
+    }
+  } finally {
+    await fs.rm(fixture.tmp, { recursive: true, force: true });
   }
 });
