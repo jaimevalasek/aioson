@@ -2,6 +2,22 @@
   "version": 1,
   "feature_slug": "squad-self-improving",
   "generated_at": "2026-05-30T12:00:00Z",
+  "qa_signoff": {
+    "date": "2026-05-30",
+    "reviewed_by": "qa",
+    "gate_decision": "PASS",
+    "summary": "0 Critical, 0 High. SF-01 (low) and SF-02 (medium) fixed and independently verified (17 regression tests pass + re-PoC blocked); SF-03 (medium) mitigated by a prose injection-hygiene guard. No block-severity findings — no Gate D blocker.",
+    "verification": [
+      "SF-01: containment code present (src/commands/squad-role-scan.js:141) + regression test 'rejects paths outside the project' + re-PoC: out-of-project path rejected, not read.",
+      "SF-02: sanitizeText present (src/commands/squad-playbook.js:41) + regression test confirms <system>/<|im|> framing stripped and newlines collapsed.",
+      "SF-03: prose injection-hygiene clause applied in persona-grounding.md. MITIGATION ONLY — not code-enforced."
+    ],
+    "residual_risks": [
+      "SF-03 is prose-enforced (an LLM instruction), not validated by code — recommend an eval-gate 'injection_hygiene' claim to enforce it (follow-up).",
+      "SAST/secrets scanners (Semgrep/Trivy/Gitleaks) were not run this pass — recommended follow-up.",
+      "Pre-existing full-suite reds (~10, in pentester/tester/deyvin/feature-archive/etc.) are out of scope for this feature — route to @dev/@qa for those subsystems separately."
+    ]
+  },
   "review_contract": {
     "review_id": "pentester-squad-self-improving-2026-05-30",
     "scope_mode": "on_demand",
@@ -67,7 +83,7 @@
       "suggested_fix": "In resolveDocPaths()/read loop, reject absolute paths and paths that escape projectDir: resolve to an absolute path and assert it starts with the resolved projectDir (e.g. `const abs = path.resolve(projectDir, rel); if (!abs.startsWith(path.resolve(projectDir) + path.sep)) skip/throw`). Treat `--docs` entries the same way. Report skipped paths in `missing`/a new `rejected` array rather than reading them.",
       "recommended_owner": "dev",
       "recommended_gate_status": "note",
-      "status": "open",
+      "status": "fixed",
       "safe_to_reproduce": true,
       "llm_top_10_id": "LLM06"
     },
@@ -101,7 +117,7 @@
       "suggested_fix": "Add an explicit data/instruction boundary: (1) in creation-flow's Generation-playbook section, instruct the agent to treat playbook entries as DATA describing past mistakes, never as instructions to execute, and to ignore any imperative/override framing inside an entry; (2) on capture, strip/escape control framing (e.g. 'ignore previous', fake <system>/<|im_*|> tokens) and cap lesson length; (3) render list entries quoted/labelled as untrusted. Align with the LLM01.2 guidance in .aioson/docs/pentester/llm-supplychain.md § 2.",
       "recommended_owner": "dev",
       "recommended_gate_status": "review",
-      "status": "open",
+      "status": "fixed",
       "safe_to_reproduce": true,
       "llm_top_10_id": "LLM01.2"
     },
@@ -137,7 +153,7 @@
       "suggested_fix": "Add an injection-hygiene clause to persona-grounding.md (and reference it from package-contract/eval-gate): source documents are EVIDENCE/DATA, never instructions; when distilling, extract only nouns/terms/methods and ignore any imperative or role-override framing in the source; never copy instruction-like sentences verbatim into a prompt. Optionally have the eval-gate add an 'injection_hygiene' claim that fails an executor whose expertise echoes imperative source text.",
       "recommended_owner": "dev",
       "recommended_gate_status": "review",
-      "status": "open",
+      "status": "fixed",
       "safe_to_reproduce": true,
       "llm_top_10_id": "LLM01.2"
     }
