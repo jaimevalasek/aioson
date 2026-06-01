@@ -22,19 +22,143 @@ function formatTokens(n) {
 }
 
 async function loadFeatureStatuses(contextDir) {
+  const registry = await loadFeatureRegistry(contextDir);
+  return new Set(registry.done.map((feature) => feature.slug.toLowerCase()));
+}
+
+async function loadFeatureRegistry(contextDir) {
   const featuresPath = path.join(contextDir, 'features.md');
   try {
     const content = await fs.readFile(featuresPath, 'utf8');
-    const done = new Set();
+    const features = [];
     for (const line of content.split(/\r?\n/)) {
-      // Match lines like: - auth: done or | auth | done |
-      const m = line.match(/[-|]\s*([a-z0-9_-]+)\s*[:|]\s*done/i);
-      if (m) done.add(m[1].toLowerCase());
+      const table = line.match(/^\|\s*([a-z0-9_-]+)\s*\|\s*([a-z_ -]+)\s*\|/i);
+      if (table && table[1] !== 'slug') {
+        features.push({ slug: table[1].trim(), status: table[2].trim().toLowerCase() });
+        continue;
+      }
+
+      const list = line.match(/^-\s*([a-z0-9_-]+)\s*:\s*([a-z_ -]+)/i);
+      if (list) {
+        features.push({ slug: list[1].trim(), status: list[2].trim().toLowerCase() });
+      }
     }
-    return done;
+    return {
+      all: features,
+      active: features.filter((feature) => feature.status === 'in_progress'),
+      done: features.filter((feature) => feature.status === 'done')
+    };
   } catch {
-    return new Set();
+    return { all: [], active: [], done: [] };
   }
+}
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return {};
+
+  const result = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    let value = line.slice(idx + 1).trim();
+    value = value.replace(/^["']|["']$/g, '');
+    result[key] = value;
+  }
+  return result;
+}
+
+async function readProjectClassification(contextDir) {
+  try {
+    const content = await fs.readFile(path.join(contextDir, 'project.context.md'), 'utf8');
+    return parseFrontmatter(content).classification || null;
+  } catch {
+    return null;
+  }
+}
+
+async function readWorkflowState(contextDir) {
+  try {
+    const raw = await fs.readFile(path.join(contextDir, 'workflow.state.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function readPulseActiveFeature(contextDir) {
+  try {
+    const content = await fs.readFile(path.join(contextDir, 'project-pulse.md'), 'utf8');
+    const frontmatter = parseFrontmatter(content);
+    return normalizePulseFeature(frontmatter.active_feature || null);
+  } catch {
+    return null;
+  }
+}
+
+function normalizePulseFeature(value) {
+  if (!value) return null;
+  const normalized = String(value).trim().replace(/^["']|["']$/g, '');
+  if (!normalized || ['none', 'project', '(none)', '-', '—'].includes(normalized.toLowerCase())) return null;
+  return normalized;
+}
+
+async function buildDriftWarnings(contextDir) {
+  const warnings = [];
+  const projectClassification = await readProjectClassification(contextDir);
+  const workflowState = await readWorkflowState(contextDir);
+  const featureRegistry = await loadFeatureRegistry(contextDir);
+  const pulseActiveFeature = await readPulseActiveFeature(contextDir);
+
+  if (
+    projectClassification &&
+    workflowState?.mode === 'feature' &&
+    workflowState.classification &&
+    projectClassification.toUpperCase() !== String(workflowState.classification).toUpperCase()
+  ) {
+    warnings.push({
+      id: 'classification_drift',
+      severity: 'warning',
+      message: `Project classification is ${projectClassification}; active workflow feature classification is ${workflowState.classification}.`,
+      suggested_command: 'aioson context:health . --json'
+    });
+  }
+
+  if (featureRegistry.active.length > 1) {
+    warnings.push({
+      id: 'multiple_active_features',
+      severity: 'warning',
+      message: `features.md has multiple in_progress features: ${featureRegistry.active.map((feature) => feature.slug).join(', ')}.`,
+      suggested_command: 'aioson feature:sweep . --dry-run'
+    });
+  }
+
+  const activeFeature = featureRegistry.active[0]?.slug || null;
+  if (activeFeature && pulseActiveFeature && activeFeature !== pulseActiveFeature) {
+    warnings.push({
+      id: 'active_state_drift',
+      severity: 'warning',
+      message: `features.md active feature is ${activeFeature}; project-pulse.md active_feature is ${pulseActiveFeature}.`,
+      suggested_command: 'aioson pulse:update . --feature=' + activeFeature
+    });
+  } else if (activeFeature && pulseActiveFeature === null) {
+    warnings.push({
+      id: 'active_state_drift',
+      severity: 'warning',
+      message: `features.md active feature is ${activeFeature}; project-pulse.md has no active_feature.`,
+      suggested_command: 'aioson pulse:update . --feature=' + activeFeature
+    });
+  } else if (!activeFeature && pulseActiveFeature) {
+    warnings.push({
+      id: 'active_state_drift',
+      severity: 'warning',
+      message: `project-pulse.md active_feature is ${pulseActiveFeature}, but features.md has no in_progress feature with that slug.`,
+      suggested_command: 'aioson pulse:update .'
+    });
+  }
+
+  return warnings;
 }
 
 async function getCacheHitRate(db) {
@@ -138,6 +262,7 @@ async function runContextHealth({ args, options = {}, logger }) {
   }
 
   const skeletonPresent = entries.includes('skeleton-system.md') || entries.includes('skeleton.md');
+  const driftWarnings = await buildDriftWarnings(contextDir);
 
   if (options.json) {
     return {
@@ -145,6 +270,7 @@ async function runContextHealth({ args, options = {}, logger }) {
       totalTokens,
       files: report,
       staleSpecs: staleSpecs.map((s) => s.file),
+      driftWarnings,
       cacheHitRate,
       skeletonPresent,
       dbPath
@@ -199,6 +325,15 @@ async function runContextHealth({ args, options = {}, logger }) {
     logger.log('');
   }
 
+  if (driftWarnings.length > 0) {
+    logger.log(`⚠  ${driftWarnings.length} context drift warning(s):`);
+    for (const warning of driftWarnings) {
+      logger.log(`   → ${warning.message}`);
+      if (warning.suggested_command) logger.log(`     ${warning.suggested_command}`);
+    }
+    logger.log('');
+  }
+
   if (cacheHitRate !== null) {
     logger.log(`✓  Cache hit rate: ${cacheHitRate}% (last 7 days)`);
   }
@@ -211,6 +346,7 @@ async function runContextHealth({ args, options = {}, logger }) {
     totalTokens,
     files: report,
     staleSpecs: staleSpecs.map((s) => s.file),
+    driftWarnings,
     cacheHitRate,
     skeletonPresent,
     dbPath

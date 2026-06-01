@@ -33,12 +33,57 @@ files:
   added_at: 2026-06-01T17:12:35.604Z
 - path: template/.aioson/agents/product.md
   added_at: 2026-06-01T17:12:35.604Z
+- path: src/commands/agent-audit.js
+  role: command-entry
+  added_by: dev
+  added_at: 2026-06-01T17:33:58.908Z
+- path: src/commands/skill-audit.js
+  role: command-entry
+  added_by: dev
+  added_at: 2026-06-01T17:33:59.015Z
+- path: src/commands/context-health.js
+  role: command-entry
+  added_by: dev
+  added_at: 2026-06-01T17:33:59.035Z
+- path: tests/agent-audit.test.js
+  role: test
+  added_by: dev
+  added_at: 2026-06-01T17:33:59.045Z
+- path: tests/skill-audit.test.js
+  role: test
+  added_by: dev
+  added_at: 2026-06-01T17:33:59.084Z
+- path: tests/context-health.test.js
+  role: test
+  added_by: dev
+  added_at: 2026-06-01T17:33:59.146Z
+- path: src/cli.js
+  role: cli
+  added_by: dev
+  added_at: 2026-06-01T17:34:08.357Z
+- path: src/parser.js
+  role: cli
+  added_by: dev
+  added_at: 2026-06-01T17:34:08.380Z
+- path: src/i18n/messages/en.js
+  role: cli
+  added_by: dev
+  added_at: 2026-06-01T17:34:08.433Z
+- path: src/i18n/messages/pt-BR.js
+  role: cli
+  added_by: dev
+  added_at: 2026-06-01T17:34:08.454Z
 modules:
 - workflow-state-transition
 - feature-registry-lifecycle
+- audit-scope-measurement
+- skill-cost-measurement
+- context-drift-health
 patterns:
 - paused-feature-does-not-block
 - stale-workflow-state-reset
+- runtime-template-inception-scope-split
+- advisory-drift-warning
 ```
 
 ## Rules & Design-Docs aplicáveis
@@ -53,6 +98,11 @@ _(populado via dossier:link-rule)_
 **2026-06-01T17:19:16.081Z** | @analyst | _Agent Trail_
 
 Requirements mapped. Edge cases: 6. Pending items: agent audit modes, skill audit, context health drift warnings.
+
+<!-- sha256:269c9e8eac96443495cdda51049e38146ac704b3d7e73ecf734a3324304d719b -->
+**2026-06-01T17:34:21.021Z** | @dev | _Agent Trail_
+
+Implemented measurement correctness: scoped agent:audit modes, skill:audit command, context:health driftWarnings, CLI help/parser wiring, and focused tests. Verification: node --check changed JS; node --test agent-audit, skill-audit, context-health, workflow-next suites; CLI JSON smoke checks passed.
 
 ## Revision Requests
 

@@ -32,6 +32,7 @@ function parseArgv(argv) {
         'agent-safe',
         'selective',
         'status', 'suggest', 'apply',
+        'runtime-only', 'template-only', 'inception', 'locales',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`
         // followed by `--tool=claude` would swallow the next token as its value.

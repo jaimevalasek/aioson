@@ -57,6 +57,7 @@ describe('context-health.js — runContextHealth', () => {
     assert.equal(result.totalTokens, 0);
     assert.equal(result.files.length, 0);
     assert.equal(result.staleSpecs.length, 0);
+    assert.deepEqual(result.driftWarnings, []);
     assert.equal(result.skeletonPresent, false);
   });
 
@@ -137,5 +138,48 @@ describe('context-health.js — runContextHealth', () => {
     });
     assert.equal(result.files[0].file, 'large.md');
     assert.equal(result.files[1].file, 'small.md');
+  });
+
+  it('warns when project and active workflow classifications differ', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, '.aioson', 'context', 'project.context.md'),
+      '---\nclassification: "MEDIUM"\n---\n\n# Context\n'
+    );
+    await fs.writeFile(
+      path.join(tmpDir, '.aioson', 'context', 'workflow.state.json'),
+      JSON.stringify({ mode: 'feature', classification: 'SMALL', featureSlug: 'cost-context-optimization' })
+    );
+
+    const result = await runContextHealth({
+      args: [tmpDir],
+      options: { json: true },
+      logger: mockLogger
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.driftWarnings.some((warning) => warning.id === 'classification_drift'));
+    const warning = result.driftWarnings.find((item) => item.id === 'classification_drift');
+    assert.match(warning.message, /MEDIUM/);
+    assert.match(warning.message, /SMALL/);
+  });
+
+  it('warns when features.md active feature differs from project-pulse.md', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, '.aioson', 'context', 'features.md'),
+      '| slug | status | started | completed |\n|------|--------|---------|-----------|\n| cost-context-optimization | in_progress | 2026-06-01 | - |\n'
+    );
+    await fs.writeFile(
+      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
+      '---\nactive_feature: project\n---\n\n# Pulse\n'
+    );
+
+    const result = await runContextHealth({
+      args: [tmpDir],
+      options: { json: true },
+      logger: mockLogger
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.driftWarnings.some((warning) => warning.id === 'active_state_drift'));
   });
 });

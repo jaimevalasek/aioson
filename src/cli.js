@@ -85,6 +85,7 @@ const { runSquadDependencyGraph } = require('./commands/squad-dependency-graph')
 const { runSquadToolRegister } = require('./commands/squad-tool-register');
 const { runSquadReview } = require('./commands/squad-review');
 const { runAgentAudit } = require('./commands/agent-audit');
+const { runSkillAudit } = require('./commands/skill-audit');
 const { runBriefGen } = require('./commands/brief-gen');
 const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = require('./commands/harness');
 const { runVerifyGate } = require('./commands/verify-gate');
@@ -384,6 +385,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'squad-review',
   'agent:audit',
   'agent-audit',
+  'skill:audit',
+  'skill-audit',
   'brief:gen',
   'harness:init',
   'harness-init',
@@ -820,6 +823,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_squad_roi');
   logHelpLine(t, logger, 'cli.help_squad_score');
   logHelpLine(t, logger, 'cli.help_squad_learning');
+  logHelpLine(t, logger, 'cli.help_agent_audit');
   logHelpLine(t, logger, 'cli.help_learning');
   logHelpLine(t, logger, 'cli.help_runtime_init');
   logHelpLine(t, logger, 'cli.help_runtime_ingest');
@@ -846,6 +850,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_skill_install');
   logHelpLine(t, logger, 'cli.help_skill_list');
   logHelpLine(t, logger, 'cli.help_skill_remove');
+  logHelpLine(t, logger, 'cli.help_skill_audit');
   logHelpLine(t, logger, 'cli.help_design_hybrid_options');
   logHelpLine(t, logger, 'cli.help_cloud_import_squad');
   logHelpLine(t, logger, 'cli.help_cloud_import_genome');
@@ -1228,6 +1233,8 @@ async function main() {
       result = await runSquadReview({ args, options, logger: commandLogger });
     } else if (command === 'agent:audit' || command === 'agent-audit') {
       result = await runAgentAudit({ args, options, logger: commandLogger });
+    } else if (command === 'skill:audit' || command === 'skill-audit') {
+      result = await runSkillAudit({ args, options, logger: commandLogger });
     } else if (command === 'brief:gen' || command === 'brief-gen') {
       result = await runBriefGen({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:init' || command === 'harness-init') {

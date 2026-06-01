@@ -21,6 +21,9 @@
  *   aioson agent:audit .
  *   aioson agent:audit . --verbose          Show per-section breakdown
  *   aioson agent:audit . --locales          Include locale variant files
+ *   aioson agent:audit . --runtime-only     Scan project/runtime surfaces only
+ *   aioson agent:audit . --template-only    Scan template surfaces only
+ *   aioson agent:audit . --inception        Scan project and template surfaces
  *   aioson agent:audit . --fix              Write savings report to .aioson/docs/agent-audit.md
  *   aioson agent:audit . --json
  */
@@ -117,7 +120,7 @@ function parseSections(content) {
 
 // ─── File scanner ─────────────────────────────────────────────────────────────
 
-async function scanAgentFile(filePath, relativePath) {
+async function scanAgentFile(filePath, relativePath, category = 'workspace_agent') {
   let content;
   try {
     content = await fs.readFile(filePath, 'utf8');
@@ -143,6 +146,7 @@ async function scanAgentFile(filePath, relativePath) {
   return {
     file: relativePath,
     slug,
+    category,
     agent_type: typeDef.type,
     chars,
     tokens: estimateTokens(chars),
@@ -156,7 +160,7 @@ async function scanAgentFile(filePath, relativePath) {
   };
 }
 
-async function scanDir(dirPath, projectDir, results) {
+async function scanDir(dirPath, projectDir, results, category = 'workspace_agent') {
   let entries;
   try {
     entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -168,9 +172,67 @@ async function scanDir(dirPath, projectDir, results) {
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     const filePath = path.join(dirPath, entry.name);
     const rel = path.relative(projectDir, filePath).split(path.sep).join('/');
-    const result = await scanAgentFile(filePath, rel);
+    const result = await scanAgentFile(filePath, rel, category);
     if (result) results.push(result);
   }
+}
+
+function normalizeRel(projectDir, filePath) {
+  return path.relative(projectDir, filePath).split(path.sep).join('/');
+}
+
+function getAuditMode(options) {
+  const selected = [
+    options['runtime-only'] ? 'runtime' : null,
+    options['template-only'] ? 'template' : null,
+    options.inception ? 'inception' : null
+  ].filter(Boolean);
+
+  if (selected.length > 1) {
+    return { error: 'conflicting_modes', selected };
+  }
+
+  return { mode: selected[0] || 'inception' };
+}
+
+function buildAgentRoots(targetDir, mode) {
+  const roots = [];
+
+  if (mode === 'runtime' || mode === 'inception') {
+    roots.push({
+      type: 'dir',
+      path: path.join(targetDir, '.aioson', 'agents'),
+      rel: '.aioson/agents',
+      category: 'workspace_agent'
+    });
+    for (const name of ['CLAUDE.md', 'AGENTS.md']) {
+      roots.push({
+        type: 'file',
+        path: path.join(targetDir, name),
+        rel: name,
+        category: 'auto_loaded'
+      });
+    }
+  }
+
+  if (mode === 'template' || mode === 'inception') {
+    roots.push({
+      type: 'dir',
+      path: path.join(targetDir, 'template', '.aioson', 'agents'),
+      rel: 'template/.aioson/agents',
+      category: 'template_agent'
+    });
+    for (const name of ['CLAUDE.md', 'AGENTS.md']) {
+      roots.push({
+        type: 'file',
+        path: path.join(targetDir, 'template', name),
+        rel: `template/${name}`,
+        category: 'auto_loaded'
+      });
+    }
+  }
+
+  return roots;
 }
 
 // ─── Report writer ────────────────────────────────────────────────────────────
@@ -243,55 +305,47 @@ async function runAgentAudit({ args, options = {}, logger }) {
   const verbose = Boolean(options.verbose || options.v);
   const includeLocales = Boolean(options.locales);
   const writeFix = Boolean(options.fix);
+  const modeResult = getAuditMode(options);
 
-  const agentsDir = path.join(targetDir, 'template', '.aioson', 'agents');
-  const rootAgentsDir = path.join(targetDir, '.aioson', 'agents');
+  if (modeResult.error) {
+    if (!options.json) logger.error('Choose only one audit mode: --runtime-only, --template-only, or --inception.');
+    return { ok: false, reason: modeResult.error, selected: modeResult.selected };
+  }
+
+  const mode = modeResult.mode;
+  const scanRoots = buildAgentRoots(targetDir, mode);
 
   const files = [];
 
-  // Scan template agents (this project)
-  if (await dirExists(agentsDir)) {
-    await scanDir(agentsDir, targetDir, files);
-  }
-  // Scan project agents (when used inside a project)
-  if (await dirExists(rootAgentsDir)) {
-    await scanDir(rootAgentsDir, targetDir, files);
-  }
-  // Scan auto-loaded files
-  for (const name of ['CLAUDE.md', 'AGENTS.md']) {
-    for (const base of [path.join(targetDir, 'template'), targetDir]) {
-      const fp = path.join(base, name);
-      const rel = path.relative(targetDir, fp).split(path.sep).join('/');
-      const r = await scanAgentFile(fp, rel);
-      if (r) files.push(r);
+  for (const root of scanRoots) {
+    if (root.type === 'dir') {
+      if (await dirExists(root.path)) await scanDir(root.path, targetDir, files, root.category);
+      continue;
     }
+
+    const r = await scanAgentFile(root.path, normalizeRel(targetDir, root.path), root.category);
+    if (r) files.push(r);
   }
 
   // Optionally include locales
-  if (includeLocales) {
-    const localesBase = path.join(targetDir, 'template', '.aioson', 'locales');
-    try {
-      const langs = await fs.readdir(localesBase, { withFileTypes: true });
-      for (const lang of langs) {
-        if (!lang.isDirectory()) continue;
-        await scanDir(
-          path.join(localesBase, lang.name, 'agents'),
-          targetDir,
-          files
-        );
-      }
-    } catch { /* locales dir optional */ }
+  if (includeLocales && (mode === 'runtime' || mode === 'inception')) {
+    await scanLocaleAgents(path.join(targetDir, '.aioson', 'locales'), targetDir, files, 'workspace_agent');
   }
+  if (includeLocales && (mode === 'template' || mode === 'inception')) {
+    await scanLocaleAgents(path.join(targetDir, 'template', '.aioson', 'locales'), targetDir, files, 'template_agent');
+  }
+
+  const roots = scanRoots.map((r) => r.rel);
 
   if (files.length === 0) {
     if (!options.json) logger.log('No agent files found. Run from the aioson project root or a project with .aioson/agents/.');
-    return { ok: false, reason: 'no_files' };
+    return { ok: false, reason: 'no_files', mode, roots };
   }
 
   // Sort by size descending
   files.sort((a, b) => b.chars - a.chars);
 
-  if (options.json) return { ok: true, files };
+  if (options.json) return { ok: true, mode, roots, files };
 
   // ── Console report ─────────────────────────────────────────────────────────
   const overHard = files.filter((f) => f.status === 'over_hard');
@@ -301,6 +355,8 @@ async function runAgentAudit({ args, options = {}, logger }) {
 
   logger.log('Agent Audit');
   logger.log('─'.repeat(70));
+  logger.log(`Mode           : ${mode}`);
+  logger.log(`Roots          : ${roots.join(', ')}`);
   logger.log(`Files scanned  : ${files.length}`);
   logger.log(`Total tokens   : ~${totalTokens.toLocaleString()} per session`);
   logger.log(`Over hard limit: ${overHard.length}   Over target: ${overTarget.length}`);
@@ -377,12 +433,26 @@ async function runAgentAudit({ args, options = {}, logger }) {
 
   return {
     ok: true,
+    mode,
+    roots,
     files: files.length,
     over_hard: overHard.length,
     over_target: overTarget.length,
     total_tokens: totalTokens,
     potential_savings_tokens: totalSavings
   };
+}
+
+async function scanLocaleAgents(localesBase, targetDir, files, category) {
+  try {
+    const langs = await fs.readdir(localesBase, { withFileTypes: true });
+    for (const lang of langs) {
+      if (!lang.isDirectory()) continue;
+      await scanDir(path.join(localesBase, lang.name, 'agents'), targetDir, files, category);
+    }
+  } catch {
+    // locales dir optional
+  }
 }
 
 async function dirExists(dirPath) {

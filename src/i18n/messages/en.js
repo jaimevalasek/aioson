@@ -184,6 +184,8 @@ module.exports = {
       'aioson squad:plan [path] [--sub=show|status|checkpoint|stale|register] [--squad=<slug>] [--round=<N>] [--locale=en]',
     help_squad_learning:
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=en]',
+    help_agent_audit:
+      'aioson agent:audit [path] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=en]',
     help_squad_dashboard:
       'aioson squad:dashboard [path] [--port=4180] [--squad=<slug>] [--locale=en]',
     help_squad_worker:
@@ -254,6 +256,8 @@ module.exports = {
       'aioson skill:list [path] [--json] [--locale=en]',
     help_skill_remove:
       'aioson skill:remove [path] --slug=<name> [--json] [--locale=en]',
+    help_skill_audit:
+      'aioson skill:audit [path] [--json] [--locale=en]',
     help_design_hybrid_options:
       'aioson design-hybrid:options [path] [--advanced] [--json] [--locale=en]',
     help_cloud_import_squad:

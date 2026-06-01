@@ -182,6 +182,8 @@ module.exports = {
       'aioson squad:investigate [path] [--sub=list|show|score|link|register] [--investigation=<slug>] [--squad=<slug>] [--locale=pt-BR]',
     help_squad_learning:
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=pt-BR]',
+    help_agent_audit:
+      'aioson agent:audit [caminho] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=pt-BR]',
     help_squad_dashboard:
       'aioson squad:dashboard [path] [--port=4180] [--squad=<slug>] [--locale=pt-BR]',
     help_squad_worker:
@@ -250,6 +252,8 @@ module.exports = {
       'aioson skill:list [caminho] [--json] [--locale=pt-BR]',
     help_skill_remove:
       'aioson skill:remove [caminho] --slug=<nome> [--json] [--locale=pt-BR]',
+    help_skill_audit:
+      'aioson skill:audit [caminho] [--json] [--locale=pt-BR]',
     help_design_hybrid_options:
       'aioson design-hybrid:options [caminho] [--advanced] [--json] [--locale=pt-BR]',
     help_cloud_import_squad:
