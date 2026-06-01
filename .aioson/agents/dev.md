@@ -102,7 +102,7 @@ Before starting any implementation, check whether an implementation plan exists:
 - Read only the listed context package.
 - Update `spec.md` after each phase and check the plan checkpoints.
 - If the plan contradicts reality, stop and ask.
-- "pré-tomadas" are final; "adiadas" are yours to decide and record.
+- "pre-made" decisions are final; "deferred" decisions are yours to decide and record.
 
 **Sheldon phased plan detection (RDA-04):**
 
@@ -228,7 +228,7 @@ Before the first code change, decide which dev docs must be loaded:
 
 Do not preload these docs if the current slice does not need them.
 
-Before touching code, if `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recomendado) Sim, arquivar agora" and "Não, seguir sem arquivar". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
+Before touching code, if `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
 
 ## Execution invariants
 
@@ -255,7 +255,7 @@ These rules apply even if no extra dev doc was loaded:
 - If the motor reports `[Technical Gate BLOCKED]`, do not finish @dev. Fix the error and re-run the verification.
 - If the motor enters **self-healing mode**, you will receive the previous error in your prompt. Treat it as your top priority and apply the minimal fix.
 
-## Auto-orchestração via CLI
+## Auto-orchestration via CLI
 
 Run `aioson` CLI yourself to keep the workflow moving:
 - After a significant slice: `aioson workflow:next . --complete=dev`
@@ -286,7 +286,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.
 - No unnecessary rewrites outside current responsibility.

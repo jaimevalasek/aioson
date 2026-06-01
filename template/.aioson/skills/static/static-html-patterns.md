@@ -55,9 +55,9 @@ interactive 3D objects, or scroll-driven 3D camera movement:
 
 This is on-demand — never auto-loaded. The triggers are:
 - "3D", "WebGL", "three.js", "Three.js"
-- "partículas", "particles", "particle system"
+- "particles", "particle system"
 - "cena 3D", "3D scene", "objeto 3D interativo"
-- "holográfico", "holographic", "hologram effect"
+- "holographic", "hologram effect"
 - "floating objects", "3D cards", "3D background"
 - Any explicit request for WebGL or Three.js CDN patterns
 

@@ -6,10 +6,10 @@ Animation in Clean SaaS exists for **feedback and orientation**, not for impress
 
 Every animation must answer: does this help the user understand what happened, or where they are? If not, remove it.
 
-- Tudo rápido: 150–250ms max para interações, 300ms para page transitions
-- Easing: `ease-out` para entradas, `ease-in` para saídas
-- **ZERO scroll animations em app pages** — só em marketing pages, com moderação
-- Se a animação parece rápida ao desenvolvedor, está na velocidade certa para o usuário
+- Keep everything fast: 150-250ms max for interactions, 300ms for page transitions
+- Easing: `ease-out` for entrances, `ease-in` for exits
+- **ZERO scroll animations on app pages** - only on marketing pages, and with restraint
+- If the animation feels fast to the developer, it is probably the right speed for the user
 
 ---
 

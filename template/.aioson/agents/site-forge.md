@@ -61,24 +61,22 @@ Check silently — if absent or empty, move on without mentioning it.
 ### Onboarding questionnaire
 
 ```
-Olá! Vou te guiar para o modo certo de clonagem.
+Use the selected project language to ask the user which cloning mode they want. Present these options:
 
-O que você quer fazer com este site?
+  A - Extract content and images, then build a new site with one of the user's skills.
+      Best when the user likes the source site's content/layout but wants their own visual system.
 
-  A — Extrair conteúdo e imagens → construir um novo site com uma das suas skills
-      Ideal quando: você gosta do conteúdo/layout do site mas quer aplicar seu próprio visual.
+  B - Faithfully clone the site and forge a reusable design skill from it.
+      Best when the user wants a site that looks very close to the original.
 
-  B — Clonar fielmente → criar uma réplica visual + forjar uma skill com o design do site
-      Ideal quando: você quer um site que se parece exatamente com o original.
+  C - Extract only the design system: CSS, animations, and interactions.
+      Best when the user wants to reuse the visual/interaction system later.
+      No site is built; only the skill is produced.
 
-  C — Extrair somente o design (CSS, animações, interações) → criar uma skill reutilizável
-      Ideal quando: você amou o visual/animações do site e quer reusar em projetos futuros.
-      Nenhum site é construído — você recebe apenas a skill.
+  D - Clone original text/images and blend them with one of the user's skills (default 50/50).
+      Best when the user wants the new site to resemble the source while keeping their own brand identity.
 
-  D — Clonar com textos e imagens originais + mesclar com uma das suas skills (50/50)
-      Ideal quando: você quer seu site parecido com o original mas com identidade da sua brand.
-
-Responda A, B, C ou D.
+Ask the user to answer A, B, C, or D.
 ```
 
 **After user answers:**
@@ -123,7 +121,7 @@ Do not proceed past Step 0 if no browser MCP is available.
 
 Confirm to the user:
 ```
-Modo ativo: [A | B | C | D | E]
+Active mode: [A | B | C | D | E]
 URL: <url>
 Skill: <skill-name> (if applicable)
 Blend: <ratio>% (Mode E only)
@@ -136,8 +134,8 @@ Blend: <ratio>% (Mode E only)
 If not found:
 ```
 ⛔ Skill "<skill-name>" not found.
-Skills disponíveis: [list from both paths]
-Para criar uma nova hybrid skill: /design-hybrid-forge
+Available skills: [list from both paths]
+To create a new hybrid skill: /design-hybrid-forge
 ```
 
 **Mode B / D:** Skill forged during Phase 3B — none needed now.
@@ -220,9 +218,9 @@ Load each phase doc at phase entry — not all at once.
 "I want only the skill from [url]"      → Mode D
 "clone [url] and mix it with [skill]"   → Mode E
 "blend [url] with [skill] 50/50"        → Mode E
-"quero só as imagens e conteúdo de [url] para usar com [skill]" → Mode C
-"quero criar uma skill do [url]"        → Mode D
-"quero clonar [url] e mesclar com [skill]" → Mode E
+"I only want images and content from [url] to use with [skill]" -> Mode C
+"I want to create a skill from [url]"       -> Mode D
+"I want to clone [url] and blend it with [skill]" -> Mode E
 ```
 
 **Flags:**

@@ -30,7 +30,7 @@ Check `.aioson/context/features/{slug}/dossier.md` before orchestrating — if p
 
 **After parallelization setup**, record:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=orchestrator --section="Agent Trail" --content="Orquestração iniciada. Lanes: {n}. Gate C: {status}."
+aioson dossier:add-finding . --slug={slug} --agent=orchestrator --section="Agent Trail" --content="Orchestration started. Lanes: {n}. Gate C: {status}."
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

@@ -35,7 +35,7 @@ The lies / misconceptions / false beliefs that keep them stuck.
 
 **Output:** a list of myths to invalidate or reframe in the copy.
 
-### S — Dreams (Sonhos)
+### S — Dreams
 
 What they want — specific, emotional, visualizable.
 

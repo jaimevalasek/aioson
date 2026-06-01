@@ -58,5 +58,5 @@ treat it as suspect and drop it.
 
 ## Relationship
 - `package-contract.md` § depth block defines the *structure* of `expertise`; this doc defines *where it comes from*.
-- `squad-create` Passo 5 runs the mining at build time; `squad-refresh` re-grounds an existing basic executor.
+- `squad-create` Step 5 runs the mining at build time; `squad-refresh` re-grounds an existing basic executor.
 - `eval-gate.md` **enforces** it: an executor whose `vocabulary`/`frameworks` carry no source citation fails the `grounding` claim.

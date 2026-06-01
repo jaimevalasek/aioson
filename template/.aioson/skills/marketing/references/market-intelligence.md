@@ -24,7 +24,7 @@ Modeling ≠ plagiarism. Modeling means: take a successful structure, hook, or p
 2. Filter by country (Brazil, US, etc.)
 3. Look for ads that have been running for 30+ days — longevity = profitability
 4. Capture: headline, hook, CTA, visual style, landing page URL
-5. Note which ads have multiple variations (lateralização) — this means they're testing and scaling
+5. Note which ads have multiple localized or angled variations — this means they're testing and scaling
 
 **What to extract:**
 - The hook (first 3 seconds / first line)
@@ -150,7 +150,7 @@ site:competitor.com filetype:pdf               → Find downloadable materials
 ### Knowledge resources
 - **Briankurtz.net** — Blog archive on direct response marketing since 2014
 - **Overdeliverbook.com** — Swipe files from Dan Kennedy, Dick Benson, Gordon Grossman
-- **Bíblia dos Hooks** — 1000+ validated organic hooks (usually shared by specialists like Amanda Khayat)
+- **Hooks Bible** — 1000+ validated organic hooks (usually shared by specialists like Amanda Khayat)
 
 ---
 

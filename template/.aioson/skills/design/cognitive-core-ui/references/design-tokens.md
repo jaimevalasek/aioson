@@ -15,7 +15,7 @@ Default to **system fonts** first. Add Google Fonts only when the agent decides 
 --font-mono:    ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 ```
 
-**Google Fonts (optional — use when building the Mentes Sintéticas aesthetic explicitly):**
+**Google Fonts (optional - use when building the Synthetic Minds aesthetic explicitly):**
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 

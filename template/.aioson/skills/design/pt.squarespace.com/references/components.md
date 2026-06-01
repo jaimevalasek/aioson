@@ -212,7 +212,7 @@ Sub-menus use CSS grid transition — no JS height calculation:
 ### DOM Structure
 ```html
 <div class="input-wrapper">
-  <input type="text" class="input input--domain" placeholder="Digite seu domínio">
+  <input type="text" class="input input--domain" placeholder="Enter your domain">
 </div>
 ```
 
@@ -261,7 +261,7 @@ A horizontally scrollable row of cards that loop. Each card holds a `<video>` or
       <video autoplay muted loop playsinline preload="none">
         <source src="/videos/website-editing.webm" type="video/webm">
       </video>
-      <span class="card-carousel__label">Edição de website</span>
+      <span class="card-carousel__label">Website editing</span>
     </div>
     <!-- repeat cards -->
   </div>

@@ -10,7 +10,7 @@
 Read this skill when:
 - `framework=React` or `framework=Next.js`
 - The project has visual/marketing pages, landing sections, or dashboards that need motion
-- The user asks for "wow", "animado", "animação", "efeito", "moderno"
+- The user asks for "wow", "animated", "animation", "effect", "modern"
 - `ui_style=Bold & Cinematic` in `project.context.md`
 
 Do NOT apply heavy motion to pure admin/CRUD interfaces — motion must serve the user, not decorate data.

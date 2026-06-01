@@ -31,9 +31,9 @@
 - **Video:** `video-desktop.webm/mp4` (desktop), `video-mobile.webm/mp4` (< 768px)
 - **Height:** ~1007px viewport height
 - **Content:**
-  - H1: "Um site faz acontecer" (`var(--text-3xl)`, `var(--font-light)`, white)
-  - P: "Comece de graça. Não precisa de cartão de crédito." (`var(--text-xl)`, white)
-  - CTA: "Comece já" (`.cta--primary.cta--light` — white button, black text, mix-blend-mode hover)
+  - H1: "A website makes it happen" (`var(--text-3xl)`, `var(--font-light)`, white)
+  - P: "Start free. No credit card required." (`var(--text-xl)`, white)
+  - CTA: "Start now" (`.cta--primary.cta--light` — white button, black text, mix-blend-mode hover)
 
 ### Grow Your Business (#grow-your-business)
 - **Background:** White or off-white
@@ -52,7 +52,7 @@
 ### Your Domain (#your-domain)
 - **Background:** Light gray `rgb(223, 221, 216)`
 - **Layout:** Inline input + button
-- **Input placeholder:** "Digite seu domínio"
+- **Input placeholder:** "Enter your domain"
 
 ### How To (#homepage-how-to)
 - **Background:** White `rgb(255, 255, 255)`

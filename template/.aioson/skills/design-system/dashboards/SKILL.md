@@ -11,7 +11,7 @@ These presets combine the patterns and components into ready-to-build dashboard 
 
 ## Preset 1: Premium Control Center
 
-The "Mentes Sintéticas" signature layout. Command center aesthetic with DNA panels and mode indicators.
+The "Synthetic Minds" signature layout. Command center aesthetic with DNA panels and mode indicators.
 
 **Best for:** AI systems, monitoring, intelligence platforms, premium SaaS.
 
@@ -21,7 +21,7 @@ The "Mentes Sintéticas" signature layout. Command center aesthetic with DNA pan
 ```
 TOP BAR: Logo + COGNITIVE CORE subtitle + Nav + Theme Toggle + [● SYSTEM OPERATIONAL] badge
 STATS ROW: 4 stat cards with large numbers
-TAB BAR: Geral | DNA | Comunicação | História | Artefatos | Prompts | Domínio
+TAB BAR: General | DNA | Communication | History | Artifacts | Prompts | Domain
 SIDEBAR + CONTENT:
   Content top row: [DNA Panel (2/3)] + [Mode Panel (1/3)]
   Section "Sistema Operacional": 4-col info card grid
@@ -36,11 +36,11 @@ SIDEBAR + CONTENT:
 | Apex Score (8.5/100) | Primary metric |
 | Neural Data (9 files) | Data volume / complexity |
 | Top Skill | Primary category or strength |
-| DNA Cirúrgico (sliders) | Attribute breakdown (3-5 axes) |
+| Surgical DNA (sliders) | Attribute breakdown (3-5 axes) |
 | Power Words (tags) | Tags, features, capabilities |
 | Mode Panel | Current status / active mode |
 | Sistema Operacional (cards) | Capabilities, features, rules |
-| Arsenal Retórico (cards w/ quotes) | Tools, strategies, items with descriptions |
+| Rhetorical Arsenal (cards w/ quotes) | Tools, strategies, items with descriptions |
 
 **How to adapt:**
 1. Replace entity name/avatar/role with your domain's primary subject
@@ -170,7 +170,7 @@ Active: `border-left: 3px solid var(--accent)`, `background: var(--bg-elevated)`
    - Apex Score → Stock Health Score
    - DNA Panel → Product metrics (stock level, turnover, margin)
    - System Cards → Features (auto-restock, alerts, tracking, sync)
-   - Mode Panel → "Gestão Inteligente" / current operational mode
+   - Mode Panel -> "Intelligent Management" / current operational mode
 8. **Agent builds** the interface using all tokens and patterns, in whatever technology the agent is targeting
 
 ## Mixing Presets

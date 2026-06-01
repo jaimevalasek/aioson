@@ -1,138 +1,137 @@
 # Task: Squad Design
 
-> Fase de design do lifecycle do squad. Produz um blueprint intermediário.
+> Squad lifecycle design phase. Produces an intermediate blueprint.
 
-## Quando usar
-- `@squad design <nome>` — invocação direta
-- `@squad` sem subcomando quando não existe blueprint para o slug
+## When To Use
+- `@squad design <name>` — direct invocation
+- `@squad` without subcommand when no blueprint exists for the slug
 
-## Entrada
-- Contexto do usuário: domínio, objetivo, constraints, roles desejados
-- Opcional: documentação fonte (arquivos `.md`, texto colado, screenshots)
-- Opcional: domínio hint para guiar a análise
+## Input
+- User context: domain, goal, constraints, desired roles
+- Optional: source documentation (`.md` files, pasted text, screenshots)
+- Optional: domain hint to guide analysis
 
-## Processo
+## Process
 
-### Passo 0 — Verificar contexto do projeto, artisan input e templates disponíveis
+### Step 0 - Check Project Context, Artisan Input, And Available Templates
 
-**0A — Artifacts do pipeline AIOSON**
+**0A — AIOSON pipeline artifacts**
 
-Antes de perguntar qualquer coisa, procure:
+Before asking anything, look for:
 - `.aioson/context/implementation-plan-*.md`
 - `.aioson/context/requirements-*.md`
 - `.aioson/context/architecture.md`
-- `.aioson/context/prd.md` e `prd-*.md`
+- `.aioson/context/prd.md` and `prd-*.md`
 
-Se encontrar arquivos claramente relevantes para o squad atual:
-1. Leia primeiro o `implementation-plan` quando existir
-2. Depois leia `requirements`, `architecture` e `prd` relevantes
-3. Extraia: domain, goal, output type, constraints, expected behaviors, risks e sinais de done
-4. Registre os caminhos consumidos em `sourceDocs`
-5. NÃO repita perguntas cujas respostas já estão explícitas nesses artifacts
-6. Se houver mais de um conjunto possível de artifacts, faça uma única pergunta curta de desambiguação
+If clearly relevant files exist for the current squad:
+1. Read the `implementation-plan` first when it exists.
+2. Then read relevant `requirements`, `architecture`, and `prd` files.
+3. Extract: domain, goal, output type, constraints, expected behaviors, risks, and done signals.
+4. Record consumed paths in `sourceDocs`.
+5. Do not repeat questions whose answers are already explicit in those artifacts.
+6. If more than one artifact set is possible, ask one short disambiguation question in the selected project language.
 
 **0B — Artisan input**
 
-Se o usuário forneceu `--from-artisan <id>`:
-1. Procure `.aioson/squads/.artisan/<id>.md`
-2. Se encontrar, leia o Squad PRD
-3. Extraia: domain, goal, mode, executors propostos, skills, constraints, content blueprints
-4. Use como base para o blueprint — pule para o Passo 5 (calcular readiness)
-5. Mostre ao usuário: "Li o PRD do Artisan. Posso gerar o blueprint com base nele — quer ajustar algo?"
+If the user supplied `--from-artisan <id>`:
+1. Look for `.aioson/squads/.artisan/<id>.md`.
+2. If found, read the Squad PRD.
+3. Extract: domain, goal, mode, proposed executors, skills, constraints, content blueprints.
+4. Use it as the blueprint base; skip to Step 5 (calculate readiness).
+5. Tell the user in the selected project language that you read the Artisan PRD and ask whether anything should be adjusted before generating the blueprint.
 
 **0C — Templates**
-Verifique se existe `.aioson/templates/squads/`. Se existir, liste os templates disponíveis e pergunte:
-"Quer partir de um template? Opções: content-basic, research-analysis, software-delivery, media-channel — ou começar do zero."
-Se o usuário escolher um template, leia o `template.json` e use como base para o blueprint (executores, content blueprints, mode).
+Check whether `.aioson/templates/squads/` exists. If it exists, list available templates and ask in the selected project language whether to start from a template: `content-basic`, `research-analysis`, `software-delivery`, `media-channel`, or from scratch.
+If the user chooses a template, read `template.json` and use it as the blueprint base (executors, content blueprints, mode).
 
-### Passo 1 — Coletar contexto mínimo
-Pergunte em um bloco só (não faça múltiplas rodadas):
-1. Domínio ou tópico do squad
-2. Problema principal ou objetivo
-3. Tipo de output esperado (artigos, scripts, código, análise, etc.)
-4. Constraints (audiência, tom, nível técnico, idioma)
-5. (opcional) Roles específicos desejados
+### Step 1 - Collect Minimal Context
+Ask in one block only; do not run multiple rounds:
+1. Squad domain or topic
+2. Main problem or goal
+3. Expected output type (articles, scripts, code, analysis, etc.)
+4. Constraints (audience, tone, technical level, language)
+5. Optional: specific desired roles
 
-Se o usuário já forneceu contexto suficiente (texto, docs, imagens), infira as respostas e siga em frente. Pergunte somente se há lacunas materiais.
+If the user already supplied enough context (text, docs, images), infer the answers and continue. Ask only when material gaps remain.
 
-### Passo 1.5 — Gate de classificação de domínio + locale scope
+### Step 1.5 - Domain Classification Gate + Locale Scope
 
-Antes de definir executores, classifique o domínio usando `.aioson/docs/squad/domain-classification.md`:
+Before defining executors, classify the domain using `.aioson/docs/squad/domain-classification.md`:
 
-- **Tier 1 — regulado:** investigação via `@squad investigate` / `@orache` é obrigatória. Não finalize o blueprint sem relatório.
-- **Tier 2 — especializado:** recomende fortemente investigação. Se o usuário recusar, registre a limitação em `assumptions` e `risks`.
-- **Tier 3 — comum:** prossiga sem criar fricção desnecessária.
+- **Tier 1 — regulated:** investigation via `@squad investigate` / `@orache` is mandatory. Do not finalize the blueprint without a report.
+- **Tier 2 — specialized:** strongly recommend investigation. If the user refuses, record the limitation in `assumptions` and `risks`.
+- **Tier 3 — common:** proceed without unnecessary friction.
 
-Se já existir investigação relevante, reutilize o relatório em vez de pedir uma nova.
+If relevant investigation already exists, reuse the report instead of requesting a new one.
 
-Depois da classificação:
-- decida `locale_scope` com base em `.aioson/rules/agent-language-policy.md` quando a rule existir
-- sugira `universal` por padrão
-- se o squad for claramente local, confirme um locale específico (`pt-BR`, `es-MX`, etc.) e registre `locale_rationale`
-- capture no blueprint:
+After classification:
+- decide `locale_scope` based on `.aioson/rules/agent-language-policy.md` when the rule exists
+- suggest `universal` by default
+- if the squad is clearly local, confirm a specific locale (`pt-BR`, `es-MX`, etc.) and record `locale_rationale`
+- capture in the blueprint:
   - `domainClassification.tier`
   - `domainClassification.rationale`
-  - `domainClassification.regulations` quando existirem
+  - `domainClassification.regulations` when applicable
   - `domainClassification.investigationPolicy`
   - `locale_scope`
-  - `locale_rationale` quando aplicável
+  - `locale_rationale` when applicable
 
-### Passo 2 — Derivar design-doc mental
-Antes de definir executores, consolide:
-- Problema que está sendo resolvido
-- Objetivo prático do squad
-- Scope e out-of-scope
-- Risks e assumptions
-- Skills e docs que precisam entrar no contexto
-- Mode do squad (content | software | research | mixed)
-- Source docs consumidos
-- Investigation aplicada e o que ela muda no design
-- Locale scope do squad
+### Step 2 - Derive Mental Design Doc
+Before defining executors, consolidate:
+- Problem being solved
+- Practical squad goal
+- Scope and out-of-scope
+- Risks and assumptions
+- Skills and docs that must enter context
+- Squad mode (content | software | research | mixed)
+- Consumed source docs
+- Applied investigation and how it changes design
+- Squad locale scope
 
-### Passo 2.5 — Decomposição de domínio das fontes
-Se há `sourceDocs`, `investigation` ou contexto de domínio colado, **derive o roster das fontes — não chute "3-5 roles"**. Rode as quatro passadas de extração e a derivação descritas em `.aioson/docs/squad/creation-flow.md` § "Domain decomposition":
-- `entities` — substantivos/conceitos centrais do domínio
-- `workflows` — unidades de trabalho como `verbo + objeto` (o que é *feito* com as entidades)
-- `integrations` — sistemas/canais/fontes externas que o trabalho toca
-- `stakeholders` — papéis/personas que o squad serve ou encarna
+### Step 2.5 - Domain Decomposition From Sources
+If there are `sourceDocs`, `investigation`, or pasted domain context, **derive the roster from sources; do not guess "3-5 roles"**. Run the four extraction passes and derivation described in `.aioson/docs/squad/creation-flow.md` § "Domain decomposition":
+- `entities` — central nouns/concepts in the domain
+- `workflows` — work units as `verb + object`, what is done with entities
+- `integrations` — systems/channels/external sources the work touches
+- `stakeholders` — roles/personas the squad serves or embodies
 
-**Atalho determinístico:** rode `aioson squad:role-scan --docs=<sourceDocs separados por vírgula> --json` (ou `--squad=<slug>` se o pacote já existe) — ele extrai `entities`, `work-modes` (originate/transform/judge) e termos das fontes, sem inventar. Use a saída para semear o role pool antes de clusterizar.
+**Deterministic shortcut:** run `aioson squad:role-scan --docs=<comma-separated sourceDocs> --json` (or `--squad=<slug>` if the package already exists). It extracts `entities`, `work-modes` (originate/transform/judge), and source terms without invention. Use the output to seed the role pool before clustering.
 
-Registre tudo no blueprint em `analysis`. Sem fontes: pule esta passada e defina o roster pelo objetivo declarado (marque os executores com `confidence` mais baixo).
+Record everything in blueprint `analysis`. Without sources, skip this pass and define the roster from the stated goal; mark executor confidence lower.
 
-### Passo 3 — Definir executores (derivados da decomposição)
-Agrupe os `workflows` em **modos de trabalho distintos** (originar / transformar / julgar / orquestrar — adapte ao domínio); cada modo que as fontes realmente exigem vira um executor. O cluster, não o título, define o papel. Funda clusters com sobreposição pesada. Para cada executor, defina:
+### Step 3 - Define Executors From Decomposition
+Group `workflows` into distinct work modes (originate / transform / judge / orchestrate; adapt to the domain). Each mode actually required by sources becomes an executor. The cluster, not the title, defines the role. Merge heavily overlapping clusters. For each executor, define:
 - slug (kebab-case)
 - title
-- role (uma frase)
+- role (one sentence)
 - focus (3-5 bullets)
-- `traces` — quais `workflows`/`entities` este executor possui (executor que não rastreia nenhum workflow é cerimônia — corte)
-- `confidence` (0-1) — quão bem as fontes justificam este papel; baixo = investigar ou cortar, nunca preencher com enchimento
-- skills que vai usar
-- genomes que herda
+- `traces` — which `workflows`/`entities` this executor owns; an executor tracing no workflow is ceremony, so cut it
+- `confidence` (0-1) — how well sources justify this role; low = investigate or cut, never fill with padding
+- skills it will use
+- genomes it inherits
 
-Inclua sempre um `orquestrador`. Mantenha 3-5 (a decomposição diz quantos o trabalho real exige — não infle para parecer completo).
+Always include an `orquestrador`. Keep 3-5 unless decomposition proves the real work requires more; do not inflate to look complete.
 
-### Passo 3.5 — Detectar e capturar UI/UX capability
+### Step 3.5 - Detect And Capture UI/UX Capability
 
-Após definir executores, verifique se o squad produz output visual.
+After defining executors, check whether the squad produces visual output.
 
-**Triggers que ativam esta detecção:**
-- Output type contém: site, landing page, sales page, event page, dashboard, web app, HTML, layout, screens, interface, UI, UX
-- Domain contém: marketing, agência, design, produto digital, e-commerce, funil, conversão, branding
-- Goal contém: "criar página", "build a site", "fazer dashboard", "design interface", "páginas para clientes"
+**Triggers that activate this detection:**
+- Output type contains: site, landing page, sales page, event page, dashboard, web app, HTML, layout, screens, interface, UI, UX
+- Domain contains: marketing, agency, design, digital product, e-commerce, funnel, conversion, branding
+- Goal contains: "create page", "build a site", "make dashboard", "design interface", "pages for clients"
 
-**Se detectado, pergunte:**
-> "Este squad vai produzir output visual. Como quer incluir UI/UX?
+**If detected, ask in the selected project language:**
+> This squad will produce visual output. How do you want to include UI/UX?
 >
-> (1) Skills — instala `landing-page-forge` + `ui-ux-modern` como skills do squad (leve, executores referenciam)
-> (2) Executor — adiciona `@ui-specialist` ao squad (autônomo, produz ui-spec + HTML)
-> (3) Externo — sem UI no squad, chama `@ux-ui` separadamente
-> (4) Pular"
+> 1. Skills — install `landing-page-forge` + `ui-ux-modern` as squad skills; lightweight, executors reference them
+> 2. Executor — add `@ui-specialist` to the squad; autonomous, produces `ui-spec.md` + HTML
+> 3. External — no UI inside the squad; call `@ux-ui` separately
+> 4. Skip
 
-**Se não detectado:** prosseguir sem UI capability (equivalente à opção 4).
+**If not detected:** proceed without UI capability, equivalent to option 4.
 
-**Capture a decisão no blueprint** como `uiCapability`:
+**Capture the decision in the blueprint** as `uiCapability`:
 ```json
 "uiCapability": {
   "mode": "skills | executor | external | none",
@@ -141,84 +140,84 @@ Após definir executores, verifique se o squad produz output visual.
 }
 ```
 
-Se `mode = executor`, adicione `ui-specialist` à lista de executores do blueprint antes de continuar.
+If `mode = executor`, add `ui-specialist` to the executor list before continuing.
 
-### Passo 4 — Definir content blueprints
-Se o squad é content-oriented, defina pelo menos 1 content blueprint com:
+### Step 4 - Define Content Blueprints
+If the squad is content-oriented, define at least 1 content blueprint with:
 - slug, contentType, layoutType
-- sections com key, label, blockTypes
+- sections with key, label, blockTypes
 
-### Passo 5 — Calcular readiness
-Avalie cada dimensão:
-- contextReady: há contexto suficiente?
-- blueprintReady: o blueprint está completo?
-- generationReady: dá para gerar os executores?
-- se `domainClassification.tier = tier-1-regulated`: generationReady = false enquanto não houver `investigation`
+### Step 5 - Calculate Readiness
+Evaluate each dimension:
+- contextReady: is there enough context?
+- blueprintReady: is the blueprint complete?
+- generationReady: can the executors be generated?
+- if `domainClassification.tier = tier-1-regulated`: generationReady = false until `investigation` exists
 
-### Passo 6 — Gerar blueprint JSON
-Salve o blueprint em `.aioson/squads/.designs/<slug>.blueprint.json`
+### Step 6 - Generate Blueprint JSON
+Save the blueprint to `.aioson/squads/.designs/<slug>.blueprint.json`.
 
-O JSON deve seguir o schema `squad-blueprint.schema.json`.
+The JSON must follow `squad-blueprint.schema.json`.
 
-Gere um UUID para o campo `id`. Use `new Date().toISOString()` para `createdAt`.
+Generate a UUID for `id`. Use `new Date().toISOString()` for `createdAt`.
 
-Quando houve decomposição (Passo 2.5), persista: `analysis` (`entities`, `workflows`, `integrations`, `stakeholders`), `confidence` + `traces` por executor, e `confidence` geral (média dos executores). Estes campos alimentam o self-review e o readiness.
+When decomposition happened (Step 2.5), persist `analysis` (`entities`, `workflows`, `integrations`, `stakeholders`), `confidence` + `traces` per executor, and overall `confidence` (average of executors). These fields feed self-review and readiness.
 
-### Passo 6.5 — Squad Spec Self-Review
+### Step 6.5 - Squad Spec Self-Review
 
-Antes de apresentar ao usuário, revisar o blueprint como se fosse outro agente lendo pela primeira vez:
+Before presenting to the user, review the blueprint as if another agent were reading it for the first time.
 
-**Verificar completude:**
-- [ ] Cada executor tem role único e não sobrepõe outro executor
-- [ ] Cada executor tem focus com 3-5 bullets concretos (não vagos)
-- [ ] Sem "TBD", "a definir", "conforme necessário" em nenhum campo
-- [ ] Mission do squad é uma frase que explica o que faz E para quem
+**Check completeness:**
+- [ ] Each executor has a unique role and does not overlap another executor.
+- [ ] Each executor has 3-5 concrete focus bullets.
+- [ ] No "TBD", "to define", "as needed", or equivalent placeholder appears in any field.
+- [ ] Squad mission is one sentence explaining what it does and for whom.
 
-**Verificar consistência:**
-- [ ] Sem contradições: tom/audiência do squad vs tone de cada executor
-- [ ] Se mode=content: content blueprints cobrem os outputs esperados
-- [ ] Se mode=software: executores cobrem as fases de desenvolvimento necessárias
-- [ ] Squad não tem mais responsabilidades do que os executores conseguem cobrir
+**Check consistency:**
+- [ ] No contradictions between squad tone/audience and each executor's tone.
+- [ ] If `mode=content`: content blueprints cover expected outputs.
+- [ ] If `mode=software`: executors cover necessary development phases.
+- [ ] Squad does not have more responsibilities than executors can cover.
 
-**Verificar scope:**
-- [ ] O squad resolve o problema declarado pelo usuário — nem mais, nem menos
-- [ ] Nenhum executor foi adicionado por "seria útil" sem relação com o objetivo
-- [ ] Se user pediu N executores: verificar que não foram adicionados extras silenciosamente
-- [ ] (Quando houve decomposição) Cada executor rastreia ≥1 `workflow`; nenhum executor órfão de workflow
-- [ ] (Quando houve decomposição) Executores com `confidence` baixo foram investigados, fundidos ou cortados — não entregues como estão
+**Check scope:**
+- [ ] Squad solves the user's stated problem, no more and no less.
+- [ ] No executor was added because it "could be useful" without relation to the goal.
+- [ ] If the user requested N executors, verify no extras were added silently.
+- [ ] When decomposition happened, every executor traces at least one `workflow`; no workflow-orphan executors.
+- [ ] When decomposition happened, low-confidence executors were investigated, merged, or cut; not delivered as-is.
 
-**Calibração:** Só bloqueie se o problema causaria output fundamentalmente errado.
-Preferências de estilo não bloqueiam. Lacunas de detalhe não bloqueiam.
-Contradições de escopo e roles sem responsabilidade real = bloqueiam.
+**Calibration:** Block only if the issue would make output fundamentally wrong.
+Style preferences do not block. Detail gaps do not block.
+Scope contradictions and roles without real responsibility do block.
 
-Se encontrar problemas: corrigir no blueprint antes de apresentar ao usuário.
-Se tudo OK: prosseguir para Passo 7.
+If problems are found, fix the blueprint before presenting it.
+If everything is OK, continue to Step 7.
 
-### Passo 7 — Apresentar resumo
-Mostre ao usuário:
-- Executores propostos com roles
-- Decomposição das fontes: entities / workflows / stakeholders (quando houve)
-- Content blueprints definidos
-- Tier de domínio e política de investigação
+### Step 7 - Present Summary
+Show the user, in the selected project language:
+- Proposed executors with roles
+- Source decomposition: entities / workflows / stakeholders, when available
+- Defined content blueprints
+- Domain tier and investigation policy
 - Locale scope
-- Assumptions feitas
-- Risks identificados
+- Assumptions made
+- Risks identified
 - Readiness status
 - Confidence score
 
-Pergunte se quer ajustar algo antes de criar.
+Ask whether they want to adjust anything before creation.
 
-## Saída
-- Arquivo: `.aioson/squads/.designs/<slug>.blueprint.json`
-- Resumo no chat para review do usuário
+## Output
+- File: `.aioson/squads/.designs/<slug>.blueprint.json`
+- Chat summary for user review
 
-## Próximo passo
-- Se aprovado: `@squad create <slug>` (que lê o blueprint e gera o pacote)
-- Se precisa ajuste: o usuário indica e o design é atualizado
+## Next Step
+- If approved: `@squad create <slug>`, which reads the blueprint and generates the package
+- If adjustment is needed: user indicates changes and design is updated
 
-## Regras
-- NÃO crie o pacote do squad aqui — isso é responsabilidade da task create
-- NÃO pule o blueprint — ele é obrigatório
-- MANTENHA o blueprint leve — o LLM preenche lacunas na fase create
-- NÃO ignore `implementation-plan` / `requirements` relevantes quando existirem
-- NÃO bypass o gate de domínio regulado
+## Rules
+- Do not create the squad package here; that is the responsibility of `squad-create`.
+- Do not skip the blueprint; it is mandatory.
+- Keep the blueprint lightweight; the LLM fills gaps in the create phase.
+- Do not ignore relevant `implementation-plan` / `requirements` when they exist.
+- Do not bypass the regulated-domain gate.

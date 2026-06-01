@@ -1,6 +1,6 @@
 ---
 name: agent-structural-contract
-description: Contrato estrutural que todo agente AIOSON deve seguir — seções obrigatórias, ordem de observabilidade, padrão de handoff, e integridade de comandos CLI
+description: Structural contract every AIOSON agent must follow — mandatory sections, observability order, handoff pattern, and CLI command integrity
 priority: 5
 version: 1.0.0
 ---

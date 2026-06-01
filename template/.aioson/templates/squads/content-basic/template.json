@@ -1,7 +1,7 @@
 {
   "slug": "content-basic",
   "name": "Content Basic",
-  "description": "Squad genérico de conteúdo: artigos, scripts, copy, estratégia",
+  "description": "Generic content squad: articles, scripts, copy, strategy",
   "mode": "content",
   "suggestedExecutors": [
     { "slug": "writer", "role": "Creates written content, articles, scripts" },

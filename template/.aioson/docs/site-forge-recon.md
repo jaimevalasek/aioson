@@ -128,8 +128,8 @@ Download all collected images to `public/images/<hostname>/`. Skip images > 2MB 
 **Download is mandatory in Modes A, B, C, E.** Skip in Mode D — record URLs only.
 
 **Copyright notice after Phase 1:**
-> "As imagens foram baixadas para `public/images/<hostname>/` como referência.
-> São arquivos temporários — substitua-os pelos seus próprios assets antes de publicar."
+> "Images were downloaded to `public/images/<hostname>/` as references.
+> These are temporary files — replace them with your own assets before publishing."
 
 ## 1.3 Font discovery
 
@@ -332,7 +332,7 @@ Save to `docs/research/<hostname>/videos.json`.
 **Skip in Mode D** — record URLs only.
 
 **Copyright notice (display once):**
-> "Os vídeos foram baixados para `public/videos/<hostname>/` como referência. Substitua-os pelos seus próprios vídeos antes de publicar."
+> "Videos were downloaded to `public/videos/<hostname>/` as references. Replace them with your own videos before publishing."
 
 ## 1.5.4 Scroll recording with DOM mutation tracking
 

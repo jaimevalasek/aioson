@@ -1,36 +1,36 @@
 # Task: Squad Profiler Integration
 
-> Orquestra profiling dentro do flow de criação do squad.
+> Orchestrates profiling inside the squad creation flow.
 
-## Quando usar
-- Automaticamente pelo @squad quando detecta persona-based squad
-- `@squad design --profile` — dispara profiling antes do design
+## When To Use
+- Automatically by `@squad` when it detects a persona-based squad
+- `@squad design --profile` — triggers profiling before design
 
-## Detecção de persona
+## Persona Detection
 
-Heurísticas para oferecer profiling:
-- Usuário menciona uma pessoa específica por nome
-- O goal inclui "no estilo de", "como {pessoa}", "baseado na abordagem de {pessoa}"
-- O domínio é personal branding, criação de conteúdo para um criador específico
+Offer profiling when:
+- The user mentions a specific person by name.
+- The goal includes "in the style of", "as {person}", or "based on {person}'s approach".
+- The domain is personal branding or content creation for a specific creator.
 
-## Processo
+## Process
 
-### Passo 1 — Verificar perfil existente
-Checar se `.aioson/profiler-reports/{person-slug}/` já existe.
-Se existir: ler o perfil enriquecido e pular para aplicação do genome.
+### Step 1 - Check Existing Profile
+Check whether `.aioson/profiler-reports/{person-slug}/` already exists.
+If it exists, read the enriched profile and skip to genome application.
 
-### Passo 2 — Executar pipeline de profiling
-Se não existir perfil:
-1. @profiler-researcher → coleta de evidências
-2. @profiler-enricher → análise de padrões cognitivos
-3. @profiler-forge → geração do genome
+### Step 2 - Run Profiling Pipeline
+If no profile exists:
+1. `@profiler-researcher` — evidence collection
+2. `@profiler-enricher` — cognitive pattern analysis
+3. `@profiler-forge` — genome generation
 
-### Passo 3 — Aplicar genome aos executores
-O genome resultante é aplicado apenas aos executores relevantes:
-- Executores criativos (copywriter, scriptwriter) → SIM
-- Executores de pesquisa e orquestração → NÃO (não precisam da voz da persona)
+### Step 3 - Apply Genome To Executors
+Apply the resulting genome only to relevant executors:
+- Creative executors (copywriter, scriptwriter) → yes
+- Research and orchestration executors → no; they do not need the persona voice
 
-### Passo 4 — Registrar no blueprint
+### Step 4 - Register In Blueprint
 ```json
 "profiling": {
   "person": "{name}",
@@ -41,8 +41,8 @@ O genome resultante é aplicado apenas aos executores relevantes:
 }
 ```
 
-## Regras
-- NÃO execute profiling sem o consentimento do usuário
-- NÃO aplique genome a todos os executores — apenas os que precisam da voz
-- O profiling é uma SUGESTÃO, não uma obrigação
-- Registre a associação profiling → squad no blueprint
+## Rules
+- Do not run profiling without user consent.
+- Do not apply the genome to every executor; only apply it where persona voice is needed.
+- Profiling is a suggestion, not a requirement.
+- Record the profiling → squad association in the blueprint.

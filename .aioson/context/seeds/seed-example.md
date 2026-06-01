@@ -1,27 +1,27 @@
 ---
 slug: example
-title: Exemplo de seed — substitua com sua ideia
+title: Example seed — replace with your idea
 created: {ISO-date}
-trigger: ao iniciar milestone de {feature relacionada}
+trigger: when starting the {related feature} milestone
 scope_estimate: MICRO
 status: dormant
 ---
 
-## Ideia
+## Idea
 
-Descreva a ideia em 2-5 linhas. O que seria implementado e qual valor entregaria.
+Describe the idea in 2-5 lines. What would be implemented and what value it would deliver.
 
-## Codebase breadcrumbs
+## Codebase Breadcrumbs
 
-Onde no código atual isso se encaixaria. O que existiria ou seria modificado.
-Ex: "src/billing/ ainda não existe — seria criada aqui"
+Where this would fit in the current code. What would exist or be modified.
+Example: "`src/billing/` does not exist yet — it would be created here"
 
-## Por que não agora
+## Why Not Now
 
-Razão objetiva para não entrar no backlog agora.
-Ex: "Feature A precisa estar pronta antes", "não há demanda validada ainda"
+Objective reason why this should not enter the backlog yet.
+Example: "Feature A must be ready first", "there is no validated demand yet"
 
-## Trigger condition
+## Trigger Condition
 
-Condição específica que deve fazer esta seed surfaçar.
-Ex: "quando iniciar milestone de pagamentos", "quando usuários pedirem 3+ vezes"
+Specific condition that should surface this seed.
+Example: "when starting payment milestone", "when users request it 3+ times"

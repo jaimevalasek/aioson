@@ -64,9 +64,9 @@ Always load only what the current task needs:
 
 ## Visual signature — three pillars
 
-1. **Professional neutrality** — Cores neutras com um único accent blue (não teal, não terracotta — azul clássico de confiança). Zero personalidade excessiva. O design é invisível — o usuário foca no trabalho, não na UI. Parece que "sempre esteve ali".
-2. **Systematic consistency** — Cada componente segue um grid rígido. Spacing 8px base, strict. Heights de controle fixos. Nenhum componente inventado ad-hoc. Tudo vem do sistema. O resultado parece um kit comercial de alta qualidade (Stripe Dashboard, Linear app).
-3. **Data-friendly density** — Density média: mais compacto que warm-craft, menos que cognitive-core. Tables, forms e lists são cidadãos de primeira classe. O sistema é otimizado para mostrar dados de forma limpa com scan rápido.
+1. **Professional neutrality** - Neutral colors with one accent blue (not teal, not terracotta - a classic trust-building blue). Zero excessive personality. The design is invisible: users focus on the work, not the UI. It feels like it has always been there.
+2. **Systematic consistency** - Every component follows a strict grid. Base spacing is 8px. Control heights are fixed. No ad hoc components. Everything comes from the system. The result should feel like a high-quality commercial kit (Stripe Dashboard, Linear app).
+3. **Data-friendly density** - Medium density: more compact than warm-craft, less dense than cognitive-core. Tables, forms, and lists are first-class citizens. The system is optimized to show data cleanly and make scanning fast.
 
 ## Theme system
 
@@ -75,7 +75,7 @@ Always load only what the current task needs:
 ```
 
 - **Light (default)**: apps, dashboards, admin — a maioria dos SaaS B2B
-- **Dark**: optional, para preferência do usuário ou ambientes low-light
+- **Dark**: optional, for user preference or low-light environments
 - Toggle always available by default
 
 If the user does not specify: default to **light with a theme toggle** in the top bar.

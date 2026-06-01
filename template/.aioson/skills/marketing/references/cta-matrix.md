@@ -35,12 +35,12 @@ EN:
 - "Watch the 2-minute video"
 - "Browse the product"
 
-pt-BR:
-- "Veja como funciona"
-- "Saiba mais"
-- "Leia o estudo de caso"
-- "Assista ao vídeo de 2 minutos"
-- "Conheça o produto"
+Additional canonical examples:
+- "See how it works"
+- "Learn more"
+- "Read the case study"
+- "Watch the 2-minute video"
+- "Explore the product"
 
 **When to use:** content marketing, ad clicks, blog → product pages, awareness campaigns.
 
@@ -55,12 +55,12 @@ EN:
 - "Book a 15-minute demo"
 - "Download the free template"
 
-pt-BR:
-- "Começar meu teste grátis"
-- "Testar por 14 dias"
-- "Receber minha análise gratuita"
-- "Agendar demo de 15 minutos"
-- "Baixar o template grátis"
+Additional canonical examples:
+- "Start my free trial"
+- "Try it for 14 days"
+- "Get my free analysis"
+- "Book a 15-minute demo"
+- "Download the free template"
 
 **When to use:** SaaS product pages, lead magnets, demo bookings, freemium funnels.
 
@@ -76,12 +76,12 @@ EN:
 - "Claim my spot"
 - "Start my 90-day transformation"
 
-pt-BR:
-- "Acessar agora"
-- "Garantir minha vaga"
-- "Comprar o programa"
-- "Assinar com 30% off"
-- "Começar minha transformação de 90 dias"
+Additional canonical examples:
+- "Get instant access"
+- "Claim my spot"
+- "Buy the program"
+- "Subscribe with 30% off"
+- "Start my 90-day transformation"
 
 **When to use:** sales pages, checkout pages, last-chance emails, exit-intent popups for warm traffic.
 
@@ -174,11 +174,11 @@ EN link CTAs:
 - "Compare plans →"
 - "View the full archive →"
 
-pt-BR link CTAs:
-- "Ver preços →"
-- "Ler o estudo de caso →"
-- "Comparar planos →"
-- "Ver arquivo completo →"
+Additional canonical link CTAs:
+- "View pricing →"
+- "Read the case study →"
+- "Compare plans →"
+- "View the full archive →"
 
 **Rule:** one button per fold. Multiple link CTAs OK if they support different secondary intents.
 
@@ -198,13 +198,13 @@ EN:
 - "Free forever — upgrade when ready"
 - "Takes 2 minutes"
 
-pt-BR:
-- "Sem cartão de crédito"
-- "Cancele quando quiser"
-- "Garantia de 30 dias ou seu dinheiro de volta"
-- "Usado por 12 mil+ times"
-- "Grátis para sempre — faça upgrade quando quiser"
-- "Leva 2 minutos"
+Additional canonical examples:
+- "No credit card required"
+- "Cancel anytime"
+- "30-day money-back guarantee"
+- "Used by 12,000+ teams"
+- "Free forever — upgrade when ready"
+- "Takes 2 minutes"
 
 ### Above the button (final qualifier)
 
@@ -215,10 +215,10 @@ EN:
 - "If your team has 3+ people, this is what we recommend:"
 - "Last step before you get instant access:"
 
-pt-BR:
-- "Pronto para começar? Leva menos de um minuto:"
-- "Se seu time tem 3+ pessoas, é isto que recomendamos:"
-- "Último passo antes do acesso imediato:"
+Additional canonical examples:
+- "Ready to start? It takes less than a minute:"
+- "If your team has 3+ people, this is what we recommend:"
+- "Last step before instant access:"
 
 ### Beside the button (inline)
 
@@ -233,16 +233,16 @@ Common in forms.
 
 Different sections need different CTA logic. Here's the canonical map for a 5-Act landing page.
 
-| Section | CTA type | Commitment | Example (EN) | Example (pt-BR) |
+| Section | CTA type | Commitment | Primary example | Alternate example |
 |---|---|---|---|---|
-| Hero | Primary action | Match funnel stage | "Start my free trial" | "Começar meu teste grátis" |
+| Hero | Primary action | Match funnel stage | "Start my free trial" | "Start my free trial" |
 | Authority | (rarely needs CTA) | — | — | — |
-| Mechanism / How it works | Soft secondary | Low | "See how it works in 2 minutes →" | "Veja como funciona em 2 minutos →" |
+| Mechanism / How it works | Soft secondary | Low | "See how it works in 2 minutes →" | "Watch the 2-minute walkthrough →" |
 | Benefits | (no CTA — just benefits) | — | — | — |
-| Offer / Pricing | Primary, high-commitment | High | "Get instant access" | "Acessar agora" |
+| Offer / Pricing | Primary, high-commitment | High | "Get instant access" | "Claim instant access" |
 | Guarantee | (reinforcing copy, not CTA) | — | — | — |
-| FAQ | Final fallback | Match funnel | "Still have questions? Talk to us →" | "Ainda com dúvidas? Fale com a gente →" |
-| Close (final CTA) | Primary repeat | High | "Get the program — 30-day guarantee" | "Garantir o programa — garantia de 30 dias" |
+| FAQ | Final fallback | Match funnel | "Still have questions? Talk to us →" | "Need help deciding? Talk to us →" |
+| Close (final CTA) | Primary repeat | High | "Get the program — 30-day guarantee" | "Get the program — 30-day guarantee" |
 | Footer / sticky | Persistent reminder | Same as primary | (same as hero/close) | (same as hero/close) |
 
 **Rule:** the page should have **one primary CTA repeated 3-5 times** (hero, mid-page, close, sticky). Secondary CTAs should be link-style, not button-style.
@@ -318,9 +318,9 @@ This is hostile, anti-pattern, and erodes trust. Don't ship it.
 | Kennedy | High-commitment, premium-tone, no fake urgency, named risk reversal |
 | Brunson | Personalized first-person ("Yes, I want this!"), high-commitment, story-rooted |
 | Georgi | Mechanism-named CTAs ("Get the [mechanism] now"), value-driven, no hype |
-| Ladeira (BR) | Casual personalized, light-tone, action-driven ("Quero entrar", "Bora começar") |
-| Ícaro (BR) | Sober, autoral, low-hype ("Ler agora", "Comprar o ensaio") |
-| Diogo Gomes (BR) | Aggressive direct, high-commitment, value-loaded, often with named transformation ("Quero zerar minha esteira de 60h/semana") |
+| Ladeira (BR) | Casual personalized, light-tone, action-driven ("I want in", "Let's start") |
+| Ícaro (BR) | Sober, authorial, low-hype ("Read now", "Buy the essay") |
+| Diogo Gomes (BR) | Aggressive direct, high-commitment, value-loaded, often with named transformation ("I want to clear my 60h/week pipeline") |
 
 ---
 

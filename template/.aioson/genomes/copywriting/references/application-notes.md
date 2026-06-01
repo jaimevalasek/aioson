@@ -17,7 +17,7 @@ load_priority: medium
 
 This genome is **niche-agnostic** and tone-neutral. The tone follows:
 - The applied master genome (Halbert = warm/personal; Kennedy = bold/contrarian; etc.)
-- The persona genome if applied (Ladeira = mainstream BR; Diogo = periferia BR; etc.)
+- The persona genome if applied (Ladeira = Brazilian mainstream; Diogo = Brazilian periphery; etc.)
 - The brand voice if applicable
 
 This foundational genome **does NOT impose tone**. It provides discipline.
@@ -41,7 +41,7 @@ Examples:
 - US classical direct mail → foundational + `copywriting-halbert`
 - US course launch → foundational + `copywriting-brunson` + maybe `copywriting-kennedy`
 - BR mainstream copy → foundational + `copywriting-ladeira`
-- BR autoral content → foundational + `copywriting-icaro-de-carvalho`
+- Brazilian authorial content → foundational + `copywriting-icaro-de-carvalho`
 - BR aggressive direct response → foundational + `copywriting-diogo-gomes`
 - Almost any → foundational + `copywriting-schwartz` (theoretical depth)
 

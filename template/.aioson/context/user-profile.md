@@ -7,36 +7,36 @@ questionnaire_completed: false
 # Developer Profile
 
 ## Communication style
-<!-- direto | equilibrado | explicativo -->
-preference: equilibrado
+<!-- direct | balanced | explanatory -->
+preference: balanced
 
 ## Decision style
-<!-- opções-com-tradeoffs | recomendacao-unica | depende-do-contexto -->
-preference: depende-do-contexto
+<!-- options-with-tradeoffs | single-recommendation | context-dependent -->
+preference: context-dependent
 
 ## Tech philosophy
-<!-- explícito | convencional | pragmatico -->
-preference: pragmatico
+<!-- explicit | conventional | pragmatic -->
+preference: pragmatic
 
 ## Autonomy preference
-<!-- aprovacao-por-step | aprovacao-em-gates | execucao-autonoma -->
-preference: aprovacao-em-gates
+<!-- approval-per-step | approval-at-gates | autonomous-execution -->
+preference: approval-at-gates
 
 ## Feedback style
-<!-- critica-direta | colaborativo | neutro -->
-preference: neutro
+<!-- direct-critique | collaborative | neutral -->
+preference: neutral
 
 ## Scope tolerance
-<!-- strict | sugestoes-ok | flexible -->
-preference: sugestoes-ok
+<!-- strict | suggestions-ok | flexible -->
+preference: suggestions-ok
 
 ## Detail level
-<!-- so-resultado | contexto-quando-relevante | sempre-explicar -->
-preference: contexto-quando-relevante
+<!-- result-only | context-when-relevant | always-explain -->
+preference: context-when-relevant
 
 ## Risk tolerance
-<!-- conservador | equilibrado | arrojado -->
-preference: equilibrado
+<!-- conservative | balanced | bold -->
+preference: balanced
 
 ## Notes
-<!-- observações específicas do usuário sobre preferências -->
+<!-- user-specific preference notes -->

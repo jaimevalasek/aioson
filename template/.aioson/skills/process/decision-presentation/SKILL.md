@@ -1,8 +1,8 @@
 ---
 name: decision-presentation
-description: Process skill for profile-aware user-facing decisions. Translates framework jargon, enforces (Recomendado) marker on AskUserQuestion, and caps cadence at 1 question/turn when profile=creator. Load before the first user-facing question regardless of profile.
+description: Process skill for profile-aware user-facing decisions. Translates framework jargon, enforces a localized recommendation marker on AskUserQuestion, and caps cadence at 1 question/turn when profile=creator. Load before the first user-facing question regardless of profile.
 activation: |
-  You are now running the decision-presentation process. Read `profile` from `.aioson/context/project.context.md`. If `profile=creator` (or absent/auto), enforce strict mode: 1 question per turn via AskUserQuestion with explicit (Recomendado) marker on the first option, plain-language `why`, and "Pausar / quero pensar" always available. If `profile=developer`, allow standard cadence (up to 5 numbered questions per batch, jargon permitted). If `profile=team`, behave as developer + emit `summary-{slug}-executive.md` at agent:done.
+  You are now running the decision-presentation process. Read `profile` from `.aioson/context/project.context.md`. If `profile=creator` (or absent/auto), enforce strict mode: 1 question per turn via AskUserQuestion with an explicit localized recommendation marker on the first option, plain-language `why`, and a localized pause option always available. If `profile=developer`, allow standard cadence (up to 5 numbered questions per batch, jargon permitted). If `profile=team`, behave as developer + emit `summary-{slug}-executive.md` at agent:done.
 ---
 
 # Skill: decision-presentation
@@ -18,7 +18,7 @@ Activation mode is decided by `profile` in `project.context.md`:
 
 | profile | cadence | jargon | recommendation marker |
 |---------|---------|--------|----------------------|
-| `creator` (default) | 1 question per turn | translated via dictionary | mandatory `(Recomendado)` |
+| `creator` (default) | 1 question per turn | translated via dictionary | mandatory localized marker |
 | `developer` | up to 5 per batch | permitted | optional |
 | `team` | up to 5 per batch | permitted | optional + executive summary at agent:done |
 
@@ -28,11 +28,11 @@ When `profile` is absent, empty, or `auto`, treat as `creator` (safer default).
 
 ### Rule 1 — AskUserQuestion is mandatory for decisions
 
-When `profile=creator`, never emit free-form open questions to the user. Always use `AskUserQuestion` with 2-4 options. Free-form input is only allowed inside an "Other / Conte com suas palavras" option of an otherwise-structured question.
+When `profile=creator`, never emit free-form open questions to the user. Always use `AskUserQuestion` with 2-4 options. Free-form input is only allowed inside a localized "Other / describe it in your own words" option of an otherwise-structured question.
 
 ### Rule 2 — Recommendation marker on first option
 
-When `profile=creator`, the first option in every `AskUserQuestion` carries `(Recomendado)` in its label AND a one-sentence `description` explaining the recommendation in plain language. Trade-offs are expressed operationally: "se escolher X, demora mais mas evita Y".
+When `profile=creator`, the first option in every `AskUserQuestion` carries a localized recommendation marker in its label (English fallback: `(Recommended)`) AND a one-sentence `description` explaining the recommendation in plain language. Trade-offs are expressed operationally: "choosing X takes longer but avoids Y".
 
 ### Rule 3 — One question per turn (creator mode)
 
@@ -46,14 +46,14 @@ When `profile=developer`, jargon is permitted unaltered. When `profile=team`, ja
 
 ### Rule 5 — Pause option always available
 
-Every `AskUserQuestion` in creator mode includes an option labeled "Pausar / quero pensar" (or its `en` equivalent "Pause / let me think") with `description: "Você pode parar agora e retomar mais tarde. O agente registra o estado e continua na próxima sessão."`
+Every `AskUserQuestion` in creator mode includes a localized pause option. Use "Pause / let me think" in English, or the equivalent in the selected project language, with a same-language description explaining that the user can pause now and resume later from the recorded state.
 
 ### Rule 6 — Five-or-more alternatives escape hatch
 
 `AskUserQuestion` accepts 2-4 options (harness limit). When a decision has 5+ valid alternatives:
 
-1. Surface the 3 strongest alternatives via `AskUserQuestion` with `(Recomendado)` on the first.
-2. Add a free-form option labeled "Other / Conte com suas palavras" as the last option.
+1. Surface the 3 strongest alternatives via `AskUserQuestion` with a localized recommendation marker on the first.
+2. Add a localized free-form option labeled "Other / describe it in your own words" as the last option.
 3. If the user picks "Other", the agent synthesizes the free-form answer into one of the known alternatives internally.
 
 ### Rule 7 — No questions without a decision to make
@@ -70,7 +70,7 @@ Fabricated multi-choice questions waste attention, invite arbitrary implementati
 1. Agent kernel preflight loads this `SKILL.md`.
 2. Agent reads `profile` from `project.context.md`.
 3. When about to emit a framework term, agent lazy-loads `references/jargon-map.{lang}.yaml` (only the file matching `interaction_language` or `conversation_language`).
-4. Translation lookup is case-sensitive with word-boundary matching (regex `\b{term}\b`). Substring matches like "MICRO" inside "MICROserviços" do NOT match.
+4. Translation lookup is case-sensitive with word-boundary matching (regex `\b{term}\b`). Substring matches like "MICRO" inside "MICROservices" do NOT match.
 
 ## API surface (V1 — prompt-level only)
 
@@ -83,9 +83,9 @@ Optional API hook reserved for task-mode override: `force_profile` — an explic
 When this skill is active, every user-facing decision produces:
 
 - one `AskUserQuestion` (creator mode) or up to 5 batched numbered questions (developer/team mode)
-- a `(Recomendado)` marker on the first option (creator mode; optional for developer/team)
+- a localized recommendation marker on the first option (creator mode; optional for developer/team)
 - jargon translated via dictionary (creator mode) or verbatim (developer/team mode)
-- a "Pausar / quero pensar" option (creator mode)
+- a localized pause option (creator mode)
 - no free-form open questions outside the escape hatch
 
 ## Doctor check integration

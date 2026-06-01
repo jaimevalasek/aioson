@@ -74,20 +74,20 @@ Feel:
 
 Composition:
 - sidebar navigation clara, content area com sections bem definidas
-- header actions consistentes no topo da página
-- breadcrumb trail sempre presente
-- collapsible sidebar com transição suave
+- consistent header actions at the top of the page
+- breadcrumb trail always present
+- collapsible sidebar with smooth transition
 
 Visual cues:
-- borders sutis para separação de seções (não shadows)
+- subtle borders for section separation (not shadows)
 - badge chips para status
 - avatar groups para team
 - inline editable fields
 
 Signature ideas:
-- breadcrumb + page title sempre juntos, nunca separados
-- task row com hover reveal de ações inline
-- sidebar com grupos colapsáveis rotulados
+- breadcrumb + page title always together, never separated
+- task row with hover reveal for inline actions
+- sidebar with labeled collapsible groups
 
 ---
 
@@ -107,7 +107,7 @@ Feel:
 - trustworthy
 
 Composition:
-- table como elemento dominante da página
+- table as the dominant page element
 - filter bar horizontal acima da table
 - bulk actions bar aparece ao selecionar linhas
 - column sorting e pagination clean abaixo
@@ -116,7 +116,7 @@ Visual cues:
 - alternating row backgrounds sutis (gray-50 / white)
 - sticky header da tabela
 - inline action buttons aparecem no hover da row
-- badges de status dentro das células
+- status badges inside cells
 
 Signature ideas:
 - advanced filter builder como drawer lateral
@@ -141,28 +141,28 @@ Feel:
 - professional
 
 Composition:
-- multi-section forms com vertical rhythm rígido
+- multi-section forms with strict vertical rhythm
 - section dividers com header e description
 - inline validation em tempo real
-- sticky save bar no rodapé
+- sticky save bar in the footer
 
 Visual cues:
-- label-above-input consistente em todo formulário
+- label-above-input pattern consistent across every form
 - helper text em toda parte (text-xs, text-secondary)
-- section cards com header próprio
+- section cards with their own header
 - progress indicator se for multi-step
 
 Signature ideas:
 - auto-save indicator no header ("Saved 2 min ago")
-- section navigation sidebar à esquerda para forms longas
-- inline diff preview para mudanças críticas
+- left-side section navigation for long forms
+- inline diff preview for critical changes
 
 ---
 
 ### 4. Metric Hub
 
 Use for:
-- dashboards de métricas
+- metrics dashboards
 - reporting
 - KPI tracking
 - executive views
@@ -178,11 +178,11 @@ Composition:
 - KPI cards → charts → tables (hierarquia vertical)
 - date range selector proeminente no header
 - export actions no header
-- drill-down disponível em cada seção
+- drill-down available in every section
 
 Visual cues:
-- chart colors do sistema (blue-first, não cores default de library)
-- stat cards com trends (+ / - e cor semântica)
+- system chart colors (blue-first, not default library colors)
+- stat cards with trends (+ / - and semantic color)
 - sparklines inline nos stat cards
 - chart backgrounds levemente separados do bg-base
 
@@ -210,19 +210,19 @@ Feel:
 Composition:
 - step progress bar no topo
 - content area centralizado, max-width 480–560px
-- clear actions no rodapé (back + continue)
+- clear actions in the footer (back + continue)
 - completion feedback visual
 
 Visual cues:
 - numbered steps com estado visual (done / active / pending)
 - completion percentage ou progress bar
-- ilustrações simples geométricas (não hand-drawn)
+- simple geometric illustrations (not hand-drawn)
 - contextual help tooltips
 
 Signature ideas:
 - checklist progress card como elemento central
-- integration logo grid para conexões
-- inline preview do que será criado
+- integration logo grid for connections
+- inline preview of what will be created
 
 ---
 
@@ -231,23 +231,23 @@ Signature ideas:
 Pick one and commit. Do not apply three weak gestures when one strong one would do.
 
 ### Apps & Dashboards
-- filter bar sempre visível acima de qualquer table — nunca escondida em modal
-- page header consistente: left (title + breadcrumb) + right (actions) — mesma estrutura em todas as páginas
+- filter bar always visible above any table - never hidden in a modal
+- consistent page header: left (title + breadcrumb) + right (actions) - same structure on every page
 - sidebar active item: blue left border 2px + bg-elevated — sem glow, sem gradiente
 
 ### Data Heavy Pages
-- sticky table header com sort indicators sempre visíveis
-- bulk action bar que desliza para cima quando rows são selecionadas
-- inline row actions que aparecem no hover (não em dropdown separado)
+- sticky table header with sort indicators always visible
+- bulk action bar that slides up when rows are selected
+- inline row actions that appear on hover (not in a separate dropdown)
 
 ### Forms & Settings
 - section cards com header azul (text accent) + description text-secondary
 - auto-save indicator discreto no corner superior direito
-- input helper text sempre presente, mesmo antes de erro
+- input helper text always present, even before an error
 
 ### Marketing Pages
 - product screenshot com shadow-lg + radius-xl ligeiramente inclinado (2–3deg)
-- feature grid com ícone + título + descrição — clean, sem background nos cards
+- feature grid with icon + title + description - clean, with no card background
 - pricing table com coluna "most popular" com accent border e slight elevation
 
 ---

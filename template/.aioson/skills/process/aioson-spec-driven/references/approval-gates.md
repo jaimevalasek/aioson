@@ -88,15 +88,15 @@ Required:
 
 ## Checkpoint taxonomy reference
 
-Quando qualquer agente precisa de interação humana durante execução:
+When any agent needs human interaction during execution:
 
-| Tipo | Quando | Frequência esperada |
-|------|--------|---------------------|
-| `verify` | Confirmar comportamento visível | Comum — após cada entrega testável |
-| `decision` | Bifurcação arquitetural ou de produto | Rara — apenas quando não especificado |
-| `action` | Passo que o agente não consegue executar | Muito rara — <1% dos steps |
+| Type | When | Expected frequency |
+|------|------|--------------------|
+| `verify` | Confirm visible behavior | Common - after each testable delivery |
+| `decision` | Architectural or product fork | Rare - only when unspecified |
+| `action` | Step the agent literally cannot execute | Very rare - <1% of steps |
 
-Regra: se o agente consegue executar sem risco, execute. Não peça confirmação desnecessária.
+Rule: if the agent can execute without risk, execute. Do not ask for unnecessary confirmation.
 
 ---
 

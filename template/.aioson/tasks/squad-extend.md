@@ -1,42 +1,43 @@
 # Task: Squad Extend
 
-> Adiciona componentes a um squad existente sem reescrever o pacote.
+> Add components to an existing squad without rewriting the package.
 
-## Quando usar
-- `@squad extend <slug>` — modo interativo
-- `@squad extend <slug> --add executor --name <name>` — modo direto
-- Após `@squad analyze` recomendar adições
+## When To Use
+- `@squad extend <slug>` — interactive mode
+- `@squad extend <slug> --add executor --name <name>` — direct mode
+- After `@squad analyze` recommends additions
 
-## Entrada
-- slug do squad existente
-- tipo do componente: executor | skill | template | blueprint | genome | mcp
-- detalhes do componente (nome, role, etc.)
+## Input
+- Existing squad slug
+- Component type: executor | skill | template | blueprint | genome | mcp
+- Component details (name, role, etc.)
 
-## Processo
+## Process
 
-### Passo 1 — Ler estado atual
-Leia squad.manifest.json e inventarie o que já existe.
+### Step 1 - Read Current State
+Read `squad.manifest.json` and inventory what already exists.
 
-### Passo 2 — Se modo interativo, perguntar o que adicionar
+### Step 2 - In Interactive Mode, Ask What To Add
+Ask in the selected project language:
 ```
-O que deseja adicionar ao squad "<slug>"?
-1. Executor — Novo agente especialista
-2. Skill — Nova capacidade reutilizável
-3. Content Blueprint — Novo tipo de deliverable
-4. Genome — Aplicar genome existente
-5. MCP — Nova integração externa
+What do you want to add to squad "<slug>"?
+1. Executor — new specialist agent
+2. Skill — new reusable capability
+3. Content Blueprint — new deliverable type
+4. Genome — apply an existing genome
+5. MCP — new external integration
 ```
 
-### Passo 3 — Coletar detalhes do componente
-Dependendo do tipo:
-- **Executor:** slug, title, role, focus areas, skills. Gerar o arquivo .md.
-- **Skill:** slug, title, description. Criar em squads/<slug>/skills/
+### Step 3 - Collect Component Details
+Depending on type:
+- **Executor:** slug, title, role, focus areas, skills. Generate the `.md` file.
+- **Skill:** slug, title, description. Create it under `squads/<slug>/skills/`.
 - **Content Blueprint:** slug, contentType, layoutType, sections.
-- **Genome:** slug do genome, scope (squad ou executor específico).
+- **Genome:** genome slug and scope (squad or specific executor).
 - **MCP:** slug, required, purpose.
 
-### Passo 4 — Mostrar diff antes de persistir
-Antes de salvar, mostre exatamente o que será alterado:
+### Step 4 - Show Diff Before Persisting
+Before saving, show exactly what will change:
 ```
 Changes to apply:
 
@@ -53,20 +54,20 @@ Changes to apply:
 Proceed? [Y/n]
 ```
 
-### Passo 5 — Persistir alterações
-- Criar arquivo(s) novo(s)
-- Atualizar squad.manifest.json
-- Atualizar agents.md
-- Atualizar CLAUDE.md e AGENTS.md (se executor)
+### Step 5 - Persist Changes
+- Create new file(s).
+- Update `squad.manifest.json`.
+- Update `agents.md`.
+- Update `CLAUDE.md` and `AGENTS.md` when adding an executor.
 
-### Passo 6 — Validar
-Rodar mentalmente a task squad-validate para confirmar que o pacote está consistente.
+### Step 6 - Validate
+Mentally run `squad-validate` to confirm the package is consistent.
 
-## Regras
-- SEMPRE mostrar diff antes de persistir
-- NUNCA deletar componentes existentes — extend é somente aditivo
-- Para remoção, oriente o usuário a editar manualmente ou usar repair (Fase 4)
-- **Idempotência:** ao atualizar manifest/agents.md, só adicione a entrada se ela ainda não existe — nunca duplique
-- **Não sobrescrever às cegas:** se o arquivo do componente já existe, pare e peça confirmação (ou exija `--force`); com `--force`, faça backup do arquivo antes de sobrescrever
-- **Slug seguro:** rejeite nomes com `/`, `\`, `..` ou fora de kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`) antes de criar qualquer arquivo
-- **Preservar o existente:** ao tocar manifest/agents.md/CLAUDE.md/AGENTS.md, edite só a seção do novo componente; não reescreva nem reordene o resto
+## Rules
+- Always show a diff before persisting.
+- Never delete existing components; `extend` is additive only.
+- For removals, direct the user to manual editing or `repair`.
+- **Idempotency:** when updating manifest/agents.md, add the entry only if it does not already exist.
+- **No blind overwrite:** if the component file already exists, stop and ask for confirmation, or require `--force`; with `--force`, back up the file before overwriting.
+- **Safe slug:** reject names with `/`, `\`, `..`, or outside kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`) before creating any file.
+- **Preserve existing content:** when touching manifest/agents.md/CLAUDE.md/AGENTS.md, edit only the new component section; do not rewrite or reorder the rest.

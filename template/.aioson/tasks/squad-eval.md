@@ -1,33 +1,33 @@
 # Task: Squad Eval
 
-> Portão de qualidade source-grounded: deriva uma rubrica das próprias fontes do squad e julga cada executor com júri multi-modelo. Versão *enforçada* do quality-lens. Opt-in / CI.
+> Source-grounded quality gate: derives a rubric from the squad's own sources and judges each executor with a multi-model jury. This is the enforced version of quality-lens. Opt-in / CI.
 
-## Quando usar
-- `@squad eval <slug>` — invocação direta
-- Antes de entregar/publicar um squad, ou em CI como gate
-- Após `@squad analyze` apontar executores básicos e `@squad refresh` aplicar correções (re-verificar)
+## When To Use
+- `@squad eval <slug>` — direct invocation
+- Before delivering/publishing a squad, or in CI as a gate
+- After `@squad analyze` flags basic executors and `@squad refresh` applies corrections; re-check afterward
 
-## Pré-carregamento obrigatório
-Carregue `.aioson/docs/squad/eval-gate.md` (o método) e `.aioson/docs/squad/package-contract.md` § Executor depth block.
+## Mandatory Preload
+Load `.aioson/docs/squad/eval-gate.md` (method) and `.aioson/docs/squad/package-contract.md` § Executor depth block.
 
-## Entrada
-- slug de um squad existente em `.aioson/squads/<slug>/`
+## Input
+- Existing squad slug under `.aioson/squads/<slug>/`
 
-## Processo
+## Process
 
-### Passo 1 — Reunir contexto-fonte
-Leia `squad.manifest.json` (incl. `sourceDocs`, `analysis`, executores + `traces`/`confidence`), `squad.md`, os prompts em `agents/<executor>.md`, e os `sourceDocs`/investigation quando existirem.
+### Step 1 - Gather Source Context
+Read `squad.manifest.json` (including `sourceDocs`, `analysis`, executors + `traces`/`confidence`), `squad.md`, prompts in `agents/<executor>.md`, and `sourceDocs`/investigation when present.
 
-### Passo 2 — Sintetizar a rubrica
-Para cada executor, extraia os claims atômicos com citação à fonte conforme `eval-gate.md` § Step 1. Cubra os kinds `responsibility`, `depth`, `grounding`, `handoff`, `anti_pattern`, `scope`. Claim sem fonte para citar → não invente, descarte.
+### Step 2 - Synthesize Rubric
+For each executor, extract atomic claims with source citation according to `eval-gate.md` § Step 1. Cover kinds `responsibility`, `depth`, `grounding`, `handoff`, `anti_pattern`, `scope`. If a claim has no source to cite, do not invent it; discard it.
 
-### Passo 3 — Julgar
-Grade cada executor conforme `eval-gate.md` § Step 2. Se o squad tem (ou pode declarar) um executor `reviewer` com `cross_ai`, use o júri multi-modelo real (claude/gemini/codex); senão, simule o júri de 3 lentes adversariais (correctness / grounding / skeptic). Pondere por concordância; marque claims divididos como `uncertain`.
+### Step 3 - Judge
+Grade each executor according to `eval-gate.md` § Step 2. If the squad has, or can declare, a `reviewer` executor with `cross_ai`, use the real multi-model jury (`claude`/`gemini`/`codex`); otherwise simulate a 3-lens adversarial jury (correctness / grounding / skeptic). Weight by agreement; mark split claims as `uncertain`.
 
-### Passo 4 — Gate + relatório
-Calcule coverage/agreement e o veredito (PASS/WARN/FAIL) por executor e do squad conforme `eval-gate.md` § Step 3. Salve `.aioson/squads/<slug>/docs/EVAL-<ISO-date>.md`:
+### Step 4 - Gate + Report
+Calculate coverage/agreement and verdict (PASS/WARN/FAIL) per executor and for the squad according to `eval-gate.md` § Step 3. Save `.aioson/squads/<slug>/docs/EVAL-<ISO-date>.md`:
 
-```
+```markdown
 ---
 slug: <slug>
 created_at: <ISO-date>
@@ -51,17 +51,22 @@ agreement: <0-1>
 - <executor> claim <id> — <why split>
 ```
 
-### Passo 5 — Rotear correções e aprender
-Para cada claim FAIL/unmet, recomende `@squad refresh <slug>` com o diff específico. Não corrija aqui — eval só julga e roteia (igual validate; refresh aplica). Depois, capture a lição *generalizada* no playbook do gerador: `aioson squad:playbook capture --rule="<regra de geração que causou>" --lesson="<o que fazer no lugar>" --from=<slug>/<claim>` — a regra, não o conserto específico daquele squad.
+### Step 5 - Route Corrections And Learn
+For each FAIL/unmet claim, recommend `@squad refresh <slug>` with the specific diff. Do not fix it here; eval only judges and routes, like validate. `refresh` applies corrections.
 
-## Saída
+Then capture the generalized lesson in the generator playbook:
+`aioson squad:playbook capture --rule="<generation rule that caused it>" --lesson="<what to do instead>" --from=<slug>/<claim>`
+
+Capture the rule, not the specific fix for this squad.
+
+## Output
 - `.aioson/squads/<slug>/docs/EVAL-<date>.md`
-- Veredito no chat + próximos comandos
+- Chat verdict + next commands
 
-## Regras
-- NÃO corrija nada — apenas julgue e roteie (refresh aplica)
-- A régua vem das fontes — claim sem citação não entra
-- Veredito FAIL se qualquer claim de `depth` ou `grounding` falhar (executor básico/sem fonte reprova)
-- Reporte coverage + agreement + breakdown por kind — nunca um número só
-- Eval verifica fidelidade ao spec/fonte, NÃO performance real — recomende alguns checks de execução antes de produção
-- Atualize o rubricário quando as fontes mudarem (régua velha aprova squad que derivou)
+## Rules
+- Do not fix anything; judge and route only.
+- The rubric comes from sources; claims without citation do not enter.
+- FAIL if any `depth` or `grounding` claim fails; a basic/source-less executor fails.
+- Report coverage + agreement + breakdown by kind; never only a single number.
+- Eval checks fidelity to spec/source, not real runtime performance. Recommend some execution checks before production.
+- Update the rubric when sources change; an old rubric can approve a drifted squad.

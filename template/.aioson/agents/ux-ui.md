@@ -69,7 +69,7 @@ aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason
 
 **After completing UI spec**, record:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" --content="UI spec concluída. Telas: {n}. Design skill: {skill}."
+aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" --content="UI spec completed. Screens: {n}. Design skill: {skill}."
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

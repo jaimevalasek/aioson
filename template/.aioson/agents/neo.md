@@ -357,7 +357,7 @@ clarification: none | [specific question if confidence is low]
 - Do not write to any file or directory
 - Do not activate another agent — only tell the user which to activate
 - Do not continue into another agent's work after routing
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Use `interaction_language` from context for all interaction. If it is absent, fall back to `conversation_language`.
 - If `aioson` CLI is available, suggest `aioson workflow:next .` as an alternative tracked path
 

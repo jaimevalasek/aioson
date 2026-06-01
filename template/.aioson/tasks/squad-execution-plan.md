@@ -1,176 +1,176 @@
 # Task: Squad Execution Plan
 
-> Gera o plano de execução do squad após criação e validação.
-> Define como os executors vão atacar o objetivo em sequência.
-> Garante consistência entre executors, workflows, e checklists.
+> Generate the squad execution plan after creation and validation.
+> Defines how executors will attack the goal in sequence.
+> Ensures consistency between executors, workflows, and checklists.
 
-## Quando usar
-- Automaticamente após `@squad create` + `@squad validate` + warm-up (para squads qualificados)
-- `@squad plan <slug>` — invocação direta
-- Antes da primeira session produtiva do squad
-- Quando o squad muda (novos executors, nova investigation, workflow redesign)
+## When To Use
+- Automatically after `@squad create` + `@squad validate` + warm-up for qualified squads
+- `@squad plan <slug>` — direct invocation
+- Before the first productive squad session
+- When the squad changes: new executors, new investigation, workflow redesign
 
-## Entrada
+## Input
 - Squad manifest (`squad.manifest.json`)
 - Blueprint (`.designs/{slug}.blueprint.json`)
-- Investigation report (se existir em `squad-searches/`)
-- Workflow definition (se existir em `workflows/`)
-- Quality checklists (se existirem em `checklists/`)
-- Loaded rules de `.aioson/rules/squad/`
-- Loaded skills de `.aioson/skills/squad/`
-- Learnings anteriores (se `learnings/index.md` existir)
+- Investigation report, if present in `squad-searches/`
+- Workflow definition, if present in `workflows/`
+- Quality checklists, if present in `checklists/`
+- Loaded `.aioson/rules/squad/` rules
+- Loaded `.aioson/skills/squad/` skills
+- Prior learnings, if `learnings/index.md` exists
 
-## Processo
+## Process
 
-### Passo 1 — Re-análise cruzada
+### Step 1 - Cross Re-Analysis
 
-Ler o manifest completo e verificar consistência:
+Read the full manifest and verify consistency.
 
-**Coverage analysis — cada executor:**
-- O role cobre algo ÚNICO que nenhum outro executor cobre?
-- Existe gap no coverage? (aspecto do goal que ninguém cobre)
-- Existe overlap? (dois executors fazem a mesma coisa)
-- As skills declaradas existem e são relevantes para o role?
+**Coverage analysis — each executor:**
+- Does the role cover something unique that no other executor covers?
+- Is there a coverage gap? (goal aspect nobody covers)
+- Is there overlap? (two executors do the same thing)
+- Do declared skills exist and fit the role?
 
-**Workflow analysis — se workflow existe:**
-- Cada phase tem executor atribuído que existe no manifest?
-- O output de cada phase é o input esperado da próxima?
-- Existem handoffs sem transformação clara?
-- Human gates estão posicionados em pontos de risco real?
-- Review loops (se configurados) apontam para phases que existem?
+**Workflow analysis — if workflow exists:**
+- Does each phase have an assigned executor that exists in the manifest?
+- Is each phase output the expected input for the next phase?
+- Are there handoffs without clear transformation?
+- Are human gates placed at real risk points?
+- Do review loops point to phases that exist?
 
 **Checklist analysis:**
-- Os critérios do checklist cobrem os aspectos críticos do domínio?
-- Existem critérios genéricos demais? (substituir por específicos)
-- Existe critério que nenhum executor pode avaliar? (gap de competência)
+- Do checklist criteria cover critical domain aspects?
+- Are any criteria too generic? Replace them with specific criteria.
+- Is there a criterion no executor can evaluate? This is a competency gap.
 
-**Investigation analysis — se investigation report existe:**
-- Os anti-patterns descobertos estão refletidos como hard constraints nos executors?
-- O vocabulário de domínio foi injetado nos executors relevantes?
-- Os frameworks descobertos estão sendo usados na estrutura do squad?
-- Os benchmarks de qualidade estão no checklist?
+**Investigation analysis — if investigation report exists:**
+- Are discovered anti-patterns reflected as hard constraints in executors?
+- Was domain vocabulary injected into relevant executors?
+- Are discovered frameworks used in the squad structure?
+- Are quality benchmarks present in the checklist?
 
-Para cada issue, classificar:
-- **ADJUST** — corrigir antes de executar (ex: executor sem coverage)
-- **WARN** — sinalizar mas pode prosseguir (ex: overlap parcial intencional)
-- **INFO** — anotar para consciência do orquestrador (ex: dimension não coberta pela investigation)
+Classify each issue:
+- **ADJUST** — fix before execution, for example executor without coverage
+- **WARN** — signal but may proceed, for example intentional partial overlap
+- **INFO** — note for orchestrator awareness, for example a dimension not covered by investigation
 
-### Passo 2 — Sequência de ativação
+### Step 2 - Activation Sequence
 
-Definir a ordem ideal de rounds para atingir o goal do squad.
+Define the ideal round order for achieving the squad goal.
 
-**Se o squad tem workflow definido:**
-- Usar as phases do workflow como base
-- Mapear cada phase para um round no execution plan
-- Adicionar rounds de review/synthesis entre phases críticas
-- Respeitar o execution mode (sequential/parallel/mixed)
+**If the squad has a defined workflow:**
+- Use workflow phases as base.
+- Map each phase to one round in the execution plan.
+- Add review/synthesis rounds between critical phases.
+- Respect execution mode (sequential/parallel/mixed).
 
-**Se o squad NÃO tem workflow:**
-- Derivar a sequência do manifest + domain knowledge
-- Heurística padrão:
+**If the squad does not have a workflow:**
+- Derive the sequence from manifest + domain knowledge.
+- Default heuristic:
 
 ```
-1. Research / Analysis (executors com focus em pesquisa)
-2. Creation / Production (executors com focus em criação)
-3. Review / Quality (executors com focus em revisão)
+1. Research / Analysis (executors focused on research)
+2. Creation / Production (executors focused on creation)
+3. Review / Quality (executors focused on review)
 4. Synthesis / Delivery (@orquestrador)
 ```
 
-**Para cada round, definir:**
+**For each round, define:**
 
 ```markdown
-### Round {N} — {título descritivo}
+### Round {N} — {descriptive title}
 - **Executor:** @{slug} ({type})
-- **Objective:** {o que este executor vai produzir neste round}
-- **Input:** {o que precisa receber — de quem, qual artefato}
-- **Output esperado:** {artefato concreto que será produzido}
-- **Quality gate:** {critério de aceitação deste round}
-- **Anti-patterns a evitar:** {do investigation report, se disponível}
+- **Objective:** {what this executor will produce in this round}
+- **Input:** {what it must receive — from whom, which artifact}
+- **Expected output:** {concrete artifact produced}
+- **Quality gate:** {acceptance criterion for this round}
+- **Anti-patterns to avoid:** {from investigation report, if available}
 - **Handoff:** output → Round {N+1} input
-- **Parallel:** {true | false — se pode rodar junto com outro round}
+- **Parallel:** {true | false — whether it can run with another round}
 ```
 
-**Rounds especiais:**
-- `Round 0 — Context Loading` (implícito, não um round real): o orquestrador carrega learnings e context
-- `Round N — Synthesis` (sempre o último): @orquestrador sintetiza todos os outputs em deliverable final
-- `Review Round` (após rounds críticos): se review loop está configurado, inserir round de review
+**Special rounds:**
+- `Round 0 — Context Loading` (implicit, not a real round): orchestrator loads learnings and context.
+- `Round N — Synthesis` (always last): `@orquestrador` synthesizes all outputs into final deliverable.
+- `Review Round` after critical rounds when review loop is configured.
 
-### Passo 3 — Context per executor
+### Step 3 - Context Per Executor
 
-Para cada executor no plan, definir o "briefing package":
+For each executor in the plan, define the briefing package:
 
 ```markdown
 ## Briefing: @{executor-slug}
 
-### Deve ler antes de começar
-- Seu agent file (`.aioson/squads/{slug}/agents/{executor}.md`)
-- Output do round anterior (se houver)
-- {artefato específico relevante para este executor}
+### Must read before starting
+- Its agent file (`.aioson/squads/{slug}/agents/{executor}.md`)
+- Previous round output, if any
+- {specific artifact relevant to this executor}
 
-### Contexto injetado pelo orquestrador
-- Goal do squad: {1 frase}
-- Seu objetivo neste round: {1 frase}
-- Anti-patterns a evitar: {lista curta}
-- Vocabulário de domínio: {termos-chave, se da investigation}
+### Context injected by orchestrator
+- Squad goal: {1 sentence}
+- Your objective in this round: {1 sentence}
+- Anti-patterns to avoid: {short list}
+- Domain vocabulary: {key terms, if from investigation}
 
-### O que NÃO precisa ler
-- {artefatos de outros executors que não são input deste round}
-- {investigation completa — só os excerpts relevantes}
+### Does not need to read
+- {artifacts from other executors that are not input for this round}
+- {full investigation — only relevant excerpts}
 ```
 
-### Passo 4 — Success criteria
+### Step 4 - Success Criteria
 
-Definir como saber que o squad cumpriu o objective:
+Define how to know the squad fulfilled the objective:
 
 ```markdown
 ## Success Criteria
 
-### Output final esperado
-- {descrição concreta do deliverable — não "conteúdo de qualidade" mas "3 scripts de vídeo com hook, body, e CTA"}
+### Expected final output
+- {concrete deliverable description — not "quality content" but "3 video scripts with hook, body, and CTA"}
 
-### Quality gates que devem passar
-- {checklist item 1 — do quality.md}
+### Quality gates that must pass
+- {checklist item 1 — from quality.md}
 - {checklist item 2}
-- {item do investigation report, se aplicável}
+- {investigation report item, if applicable}
 
 ### Definition of done
-- [ ] Todos os rounds completados
-- [ ] Output final salvo em `output/{squad-slug}/`
-- [ ] Session HTML gerado em `output/{squad-slug}/{session-id}.html`
-- [ ] Nenhum review loop pendente (se configurados)
-- [ ] Checklists validados
+- [ ] All rounds completed
+- [ ] Final output saved in `output/{squad-slug}/`
+- [ ] Session HTML generated at `output/{squad-slug}/{session-id}.html`
+- [ ] No pending review loop, if configured
+- [ ] Checklists validated
 ```
 
-### Passo 5 — Orchestration notes
+### Step 5 - Orchestration Notes
 
-Instruções específicas para o @orquestrador:
+Specific instructions for `@orquestrador`:
 
 ```markdown
 ## Orchestration Notes
 
 ### Session management
-- {como o orquestrador deve abrir a session}
-- {quando escalar para o usuário vs. decidir autonomamente}
-- {como lidar com review loops se configurados}
+- {how the orchestrator should open the session}
+- {when to escalate to the user vs. decide autonomously}
+- {how to handle review loops if configured}
 
 ### Round transitions
-- Após cada round, verificar o quality gate ANTES de passar ao próximo
-- Se quality gate falha: {retry strategy — do review loop config ou default}
-- Se executor pede ajuda de outro: {routing rules}
+- After each round, check the quality gate BEFORE moving to the next.
+- If quality gate fails: {retry strategy — from review loop config or default}
+- If executor asks for help from another: {routing rules}
 
 ### Escalation policy
-- Se um executor não consegue produzir output: escalar ao usuário
-- Se dois executors conflitam: sintetizar a tensão e perguntar ao usuário
-- Se o quality gate falha após max retries: {strategy}
+- If an executor cannot produce output: escalate to the user.
+- If two executors conflict: synthesize the tension and ask the user.
+- If quality gate fails after max retries: {strategy}
 
 ### Learning capture
-- Ao final da session, detectar learnings (ver squad-learning)
-- Registrar em `learnings/` antes de fechar a session
+- At session end, detect learnings (see squad-learning).
+- Register in `learnings/` before closing the session.
 ```
 
-### Passo 6 — Gerar execution-plan.md
+### Step 6 - Generate execution-plan.md
 
-Salvar em `.aioson/squads/{slug}/docs/execution-plan.md`:
+Save to `.aioson/squads/{slug}/docs/execution-plan.md`:
 
 ```markdown
 ---
@@ -178,7 +178,7 @@ squad: "{squad-slug}"
 created: "{ISO-8601}"
 status: "draft"
 based_on_blueprint: "{blueprint path}"
-based_on_investigation: "{investigation path ou null}"
+based_on_investigation: "{investigation path or null}"
 rounds_total: {N}
 source_artifacts:
   - squad.manifest.json
@@ -188,92 +188,92 @@ source_artifacts:
 
 # Execution Plan: {squad-name}
 
-> Plano de como o squad vai atacar o objetivo.
-> Gerado após criação, aprovado antes da primeira session.
+> Plan for how the squad will attack the objective.
+> Generated after creation and approved before the first session.
 > Status: draft → approved → in_progress → completed
 
 ## Pre-flight check
 
-### Artefatos consolidados
-{inventory do Passo 1}
+### Consolidated artifacts
+{inventory from Step 1}
 
 ### Consistency check
-{issues encontrados, classificados como ADJUST/WARN/INFO}
+{issues found, classified as ADJUST/WARN/INFO}
 
 ### Squad readiness verdict
 {READY | NEEDS_ADJUSTMENT | NOT_READY}
 
 ## Execution Strategy
 
-### Sequência de rounds
-{Rounds do Passo 2}
+### Round sequence
+{Rounds from Step 2}
 
 ## Executor Briefings
-{Briefings do Passo 3}
+{Briefings from Step 3}
 
 ## Success Criteria
-{Critérios do Passo 4}
+{Criteria from Step 4}
 
 ## Orchestration Notes
-{Notas do Passo 5}
+{Notes from Step 5}
 
-## Context Package (para session ou novo chat)
+## Context Package (for session or new chat)
 
-### O que o @orquestrador deve ler no início de cada session
-1. Este execution-plan.md
+### What @orquestrador must read at the start of each session
+1. This execution-plan.md
 2. squad.manifest.json
-3. Último session HTML (se não é a primeira session)
-4. learnings/index.md (se existe)
+3. Last session HTML, if not the first session
+4. learnings/index.md, if it exists
 
-### O que cada executor recebe
-- Seu agent file + briefing deste plan
-- Output do round anterior (se houver)
+### What each executor receives
+- Its agent file + briefing from this plan
+- Previous round output, if any
 ```
 
-### Passo 7 — Apresentar ao usuário
+### Step 7 - Present To User
+
+Show in the selected project language:
 
 ```
-Execution Plan gerado para squad {name}.
+Execution Plan generated for squad {name}.
 
-Rounds: {N} ({M paralelos se houver)
+Rounds: {N} ({M parallel if any})
 Consistency: {N adjusts, M warns, P infos}
 Readiness: {READY | NEEDS_ADJUSTMENT | NOT_READY}
 
-Sequência:
-1. {round 1 — executor — 1 linha}
-2. {round 2 — executor — 1 linha}
+Sequence:
+1. {round 1 — executor — one line}
+2. {round 2 — executor — one line}
 [...]
 
-Success criteria: {1 linha do deliverable final esperado}
+Success criteria: {one-line expected final deliverable}
 ```
 
-Perguntar:
-> "Plano de execução pronto. Quer ajustar algo antes de iniciar a primeira session?"
+Ask whether the user wants to adjust anything before starting the first session.
 
-Se NEEDS_ADJUSTMENT:
-> "Encontrei {N} ajustes necessários. Quer que eu corrija antes de aprovar o plan?"
+If NEEDS_ADJUSTMENT, state the required adjustments and ask whether to fix them before approving the plan.
 
-## Quando gerar automaticamente (decision tree para squad.md)
+## When To Generate Automatically (Decision Tree For squad.md)
 
 ```
-Squad criado e validado
-  ├── 4+ executors? → GERAR automaticamente
-  ├── Workflow definido? → GERAR automaticamente
-  ├── Investigation @orache foi feita? → GERAR automaticamente
-  ├── Mode = software ou mixed? → GERAR automaticamente
-  ├── 3 executors + goal simples? → OFERECER (não obrigar)
-  ├── Ephemeral squad? → PULAR
-  └── 2 executors + flow óbvio? → PULAR
+Squad created and validated
+  ├── 4+ executors? → GENERATE automatically
+  ├── Workflow defined? → GENERATE automatically
+  ├── @orache investigation done? → GENERATE automatically
+  ├── Mode = software or mixed? → GENERATE automatically
+  ├── 3 executors + simple goal? → OFFER, do not force
+  ├── Ephemeral squad? → SKIP
+  └── 2 executors + obvious flow? → SKIP
 ```
 
-## Regras
+## Rules
 
-- NÃO execute nenhum round aqui — SÓ planeje
-- NÃO ignore issues ADJUST — sinalize e ofereça correção
-- NÃO gere rounds vagos como "produzir conteúdo" — detalhe O QUE, COMO, e COM QUAIS inputs
-- O execution plan é PERSISTENTE — salvar em arquivo, não só no chat
-- Se investigation existe, DEVE ser usada para enriquecer o plan
-- Se learnings existem, DEVEM informar a sequência de rounds
-- Rounds review são OPCIONAIS se não há review loop configurado, mas RECOMENDADOS para squads com 4+ executors
-- Após aprovação do usuário, mudar status de `draft` para `approved`
-- Se o squad é editado depois do plan ser aprovado, marcar plan como `stale`
+- Do not execute any round here; plan only.
+- Do not ignore ADJUST issues; signal them and offer correction.
+- Do not generate vague rounds like "produce content"; specify WHAT, HOW, and WITH WHICH inputs.
+- Execution plan is persistent; save it to disk, not only in chat.
+- If investigation exists, it must enrich the plan.
+- If learnings exist, they must inform the round sequence.
+- Review rounds are optional when no review loop is configured, but recommended for squads with 4+ executors.
+- After user approval, change status from `draft` to `approved`.
+- If the squad is edited after plan approval, mark the plan as `stale`.

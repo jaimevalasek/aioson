@@ -34,10 +34,10 @@ EN:
 - "Learn Spanish in 90 days, 15 minutes a day"
 - "Cut your AWS bill 40% without changing a line of code"
 
-pt-BR:
-- "Pele limpa em 30 dias — mesmo que nada tenha funcionado antes"
-- "Inglês fluente em 90 dias estudando 15 minutos por dia"
-- "Reduza sua conta de AWS em 40% sem mexer no código"
+Additional canonical examples:
+- "Clear skin in 30 days — even if nothing worked before"
+- "Fluent English in 90 days, studying 15 minutes a day"
+- "Cut your AWS bill 40% without touching the code"
 
 ### When it works
 
@@ -66,10 +66,10 @@ EN:
 - "The boring spreadsheet that runs a $200M agency"
 - "The one habit that 80% of millionaires share — and it's not what you'd guess"
 
-pt-BR:
-- "O exercício de 4 segundos que reseta seu sistema nervoso"
-- "A planilha que faz uma agência de R$200M rodar"
-- "O hábito que 80% dos milionários têm — e não é o que você imagina"
+Additional canonical examples:
+- "The 4-second exercise that resets your nervous system"
+- "The spreadsheet that runs a R$200M agency"
+- "The habit 80% of millionaires share — and it is not what you think"
 
 ### When it works
 
@@ -98,10 +98,10 @@ EN:
 - "If your back hurts every morning, your mattress isn't the problem"
 - "Working 60-hour weeks and still falling behind?"
 
-pt-BR:
-- "Cansado de listas de e-mail que não convertem por mais 'otimizado' que o funil seja?"
-- "Se sua coluna dói toda manhã, o problema não é o colchão"
-- "Trabalhando 60 horas por semana e ainda atrasado?"
+Additional canonical examples:
+- "Tired of email lists that do not convert, no matter how optimized the funnel is?"
+- "If your back hurts every morning, the mattress is not the problem"
+- "Working 60-hour weeks and still falling behind?"
 
 ### When it works
 
@@ -130,10 +130,10 @@ EN:
 - "The technique that got 47 of our students featured in Forbes"
 - "Why startups with $50M+ ARR are switching from Notion to this"
 
-pt-BR:
-- "Como 12.000 times de SaaS reduziram churn em 28% com este playbook de 3 passos"
-- "A técnica que colocou 47 dos nossos alunos na Forbes"
-- "Por que startups com R$50M+ de ARR estão trocando o Notion por isto"
+Additional canonical examples:
+- "How 12,000 SaaS teams reduced churn by 28% with this 3-step playbook"
+- "The technique that got 47 of our students featured in Forbes"
+- "Why startups with R$50M+ ARR are switching from Notion to this"
 
 ### When it works
 
@@ -162,10 +162,10 @@ EN:
 - "Doors close Friday at midnight"
 - "After tomorrow, this price never returns"
 
-pt-BR:
-- "Restam 47 vagas na turma de setembro — 31 já preenchidas"
-- "As inscrições fecham sexta à meia-noite"
-- "Depois de amanhã, esse preço não volta"
+Additional canonical examples:
+- "Only 47 spots remain in the September cohort — 31 already filled"
+- "Enrollment closes Friday at midnight"
+- "After tomorrow, this price will not come back"
 
 ### When it works
 
@@ -196,10 +196,10 @@ EN:
 - "How to lose 10 lbs without giving up bread"
 - "How to write copy that converts when you're not a writer"
 
-pt-BR:
-- "Como conseguir seus primeiros 5 clientes sem fazer cold-call"
-- "Como perder 5kg sem cortar pão"
-- "Como escrever copy que converte mesmo sem ser escritor"
+Additional canonical examples:
+- "How to get your first 5 clients without cold calling"
+- "How to lose 5 kg without giving up bread"
+- "How to write copy that converts even if you are not a writer"
 
 ### When it works
 
@@ -227,10 +227,10 @@ EN:
 - "12 hooks that consistently 3x ad CTR — with the data"
 - "The 5 questions every founder must answer before raising"
 
-pt-BR:
-- "7 experimentos de retenção que bateram o benchmark da indústria (e 3 que falharam)"
-- "12 hooks que triplicam o CTR de anúncio — com os dados"
-- "As 5 perguntas que todo founder precisa responder antes de captar"
+Additional canonical examples:
+- "7 retention experiments that beat the industry benchmark (and 3 that failed)"
+- "12 hooks that triple ad CTR — with the data"
+- "The 5 questions every founder must answer before raising"
 
 ### When it works
 
@@ -261,10 +261,10 @@ EN:
 - "Why is your team's productivity dropping every quarter — and what nobody is telling you about it?"
 - "Stuck at $10K MRR for the third month?"
 
-pt-BR:
-- "Você está cometendo o erro #1 que mata 84% dos funis de e-mail?"
-- "Por que a produtividade do seu time cai todo trimestre — e o que ninguém te conta?"
-- "Travado nos R$10 mil mensais pelo terceiro mês seguido?"
+Additional canonical examples:
+- "Are you making the #1 mistake that kills 84% of email funnels?"
+- "Why does your team's productivity drop every quarter — and what is nobody telling you?"
+- "Stuck at R$10K/month for the third month in a row?"
 
 ### When it works
 
@@ -292,7 +292,7 @@ Different masters lean naturally on different types. Use this when picking which
 | Brunson | Curiosity, Question, How-To (storytelling/funnel-friendly) | Pure Urgency without story context |
 | Georgi | Benefit + Mechanism teaser, Curiosity (mechanism-driven) | Generic List, vague Question |
 | Ladeira (BR) | Question, How-To, List, Curiosity (irreverent twist) | Heavy Problem-Agitation (too dark for the brand voice) |
-| Ícaro (BR) | Question (autoral), Curiosity (intellectual contrast), Problem-Agitation (calculated) | List (too commodity), pure Benefit |
+| Ícaro (BR) | Question (authorial), Curiosity (intellectual contrast), Problem-Agitation (calculated) | List (too commodity), pure Benefit |
 | Diogo Gomes (BR) | Problem-Agitation, Benefit, Urgency (when real), Curiosity | How-To (too soft for the aggressive voice) |
 
 ---

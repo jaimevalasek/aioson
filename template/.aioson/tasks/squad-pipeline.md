@@ -1,99 +1,99 @@
 # Task: Squad Pipeline
 
-> Gerenciamento de pipelines inter-squad. Conecta squads em fluxos de produção autônomos via DAG.
+> Inter-squad pipeline management. Connects squads into autonomous production flows through a DAG.
 
-## Quando usar
-- `@squad pipeline create <nome>` — cria um novo pipeline
-- `@squad pipeline connect <pipeline> <source-squad>:<port> → <target-squad>:<port>` — conecta squads
-- `@squad pipeline show <pipeline>` — exibe o DAG com nós, arestas e status
-- `@squad pipeline run <pipeline>` — executa o pipeline (aciona handoffs)
+## When To Use
+- `@squad pipeline create <name>` — create a new pipeline
+- `@squad pipeline connect <pipeline> <source-squad>:<port> → <target-squad>:<port>` — connect squads
+- `@squad pipeline show <pipeline>` — show the DAG with nodes, edges, and status
+- `@squad pipeline run <pipeline>` — run the pipeline and trigger handoffs
 
-## Conceito
+## Concept
 
-Um **pipeline** é um grafo dirigido acíclico (DAG) de squads conectados por ports.
-Cada squad declara `ports.inputs` e `ports.outputs` no `squad.manifest.json`.
-Uma aresta conecta um output de um squad ao input de outro.
+A **pipeline** is a directed acyclic graph (DAG) of squads connected by ports.
+Each squad declares `ports.inputs` and `ports.outputs` in `squad.manifest.json`.
+An edge connects one squad output to another squad input.
 
-Quando um squad produz um output, cria um **handoff** (tabela `squad_handoffs`) com o payload.
-O squad downstream lê os handoffs `pending` com `to_squad = seu slug` e os consome.
+When a squad produces output, it creates a **handoff** (`squad_handoffs` table) with payload.
+The downstream squad reads `pending` handoffs where `to_squad = its slug` and consumes them.
 
-## Pré-requisitos
+## Prerequisites
 
-Antes de criar um pipeline, verifique:
-1. Os squads participantes existem em `.aioson/squads/`
-2. Cada squad tem `squad.manifest.json` com a seção `ports` declarada
-3. Os ports de input/output são compatíveis em `dataType`
+Before creating a pipeline, verify:
+1. Participating squads exist in `.aioson/squads/`.
+2. Each squad has `squad.manifest.json` with declared `ports`.
+3. Input/output ports are compatible by `dataType`.
 
-Se um squad não tem ports declarados, oriente o usuário a:
-- Editar `squad.manifest.json` adicionando a seção `ports`
-- Ou use `@squad extend <slug>` para adicionar ports interativamente
+If a squad has no declared ports, guide the user to:
+- Edit `squad.manifest.json` and add the `ports` section.
+- Or use `@squad extend <slug>` to add ports interactively.
 
-## Passo 1 — Criar o pipeline
+## Step 1 - Create Pipeline
 
 ```json
 {
   "slug": "<pipeline-slug>",
-  "name": "<nome legível>",
-  "description": "<descrição opcional>",
+  "name": "<human-readable name>",
+  "description": "<optional description>",
   "status": "draft",
   "triggerMode": "manual"
 }
 ```
 
-Registre via `aioson runtime` ou diretamente no SQLite (`squad_pipelines`).
+Register through `aioson runtime` or directly in SQLite (`squad_pipelines`).
 
-## Passo 2 — Adicionar nós ao pipeline
+## Step 2 - Add Nodes To Pipeline
 
-Para cada squad participante, registre em `pipeline_nodes`:
-- `pipelineSlug` — slug do pipeline
-- `squadSlug` — slug do squad
-- `positionX`, `positionY` — posição no canvas visual (opcional, padrão 0,0)
+For each participating squad, register in `pipeline_nodes`:
+- `pipelineSlug` — pipeline slug
+- `squadSlug` — squad slug
+- `positionX`, `positionY` — visual canvas position; optional, default `0,0`
 
-## Passo 3 — Conectar squads (criar arestas)
+## Step 3 - Connect Squads
 
-Para cada conexão `source:port → target:port`, registre em `pipeline_edges`:
-- `pipelineSlug` — slug do pipeline
-- `sourceSquad`, `sourcePort` — squad origem e port de output
-- `targetSquad`, `targetPort` — squad destino e port de input
-- `transform` — transformação de dados opcional (JSON)
+For each `source:port → target:port` connection, register in `pipeline_edges`:
+- `pipelineSlug` — pipeline slug
+- `sourceSquad`, `sourcePort` — source squad and output port
+- `targetSquad`, `targetPort` — target squad and input port
+- `transform` — optional data transform (JSON)
 
-Valide:
-- Nenhum ciclo no DAG (use ordenação topológica de Kahn)
-- Ports existem nos manifests
-- DataTypes compatíveis (ou `any`)
+Validate:
+- No cycle in the DAG; use Kahn topological sorting.
+- Ports exist in manifests.
+- DataTypes are compatible, or `any`.
 
-## Passo 4 — Exibir o pipeline
+## Step 4 - Show Pipeline
 
-Ao mostrar `@squad pipeline show <pipeline>`, exiba:
+When showing `@squad pipeline show <pipeline>`, display:
 
 ```
-Pipeline: <nome>
+Pipeline: <name>
 Status: draft | active | paused
 Trigger: manual | on_output | scheduled
 
-Fluxo:
-  [squad-a] --output-key--> [squad-b] --outro-key--> [squad-c]
+Flow:
+  [squad-a] --output-key--> [squad-b] --other-key--> [squad-c]
 
-Ordem topológica: squad-a → squad-b → squad-c
+Topological order: squad-a → squad-b → squad-c
 
-Handoffs pendentes: 0
+Pending handoffs: 0
 ```
 
-Se detectar ciclo: "⚠️ Ciclo detectado — pipeline inválido. Verifique as conexões."
+If a cycle is detected, state in the selected project language that the pipeline is invalid and ask the user to check the connections.
 
-## Passo 5 — Executar o pipeline (handoff)
+## Step 5 - Run Pipeline
 
-Ao executar `@squad pipeline run <pipeline>`:
-1. Calcule a ordem topológica
-2. Para cada squad na ordem:
-   - Leia handoffs `pending` com `to_squad = squad_slug`
-   - Crie o contexto de execução com o payload dos handoffs
-   - Notifique o usuário: "Ativando @<squad> com input de @<source>"
-3. Após cada squad processar seu output:
-   - Crie handoffs `pending` para os squads downstream conectados
-   - Marque handoffs consumidos como `consumed`
+When running `@squad pipeline run <pipeline>`:
+1. Calculate topological order.
+2. For each squad in order:
+   - Read `pending` handoffs with `to_squad = squad_slug`.
+   - Create execution context with handoff payloads.
+   - Notify the user in the selected project language that `@<squad>` is being activated with input from `@<source>`.
+3. After each squad processes its output:
+   - Create `pending` handoffs for connected downstream squads.
+   - Mark consumed handoffs as `consumed`.
 
-## Formato de handoff
+## Handoff Format
 
 ```json
 {
@@ -108,15 +108,15 @@ Ao executar `@squad pipeline run <pipeline>`:
 }
 ```
 
-## Output contract
+## Output Contract
 
-- Pipeline registrado em SQLite (`squad_pipelines`, `pipeline_nodes`, `pipeline_edges`)
-- Handoffs em `squad_handoffs`
-- Relatório visual disponível em `/pipelines/<slug>` no dashboard
+- Pipeline registered in SQLite (`squad_pipelines`, `pipeline_nodes`, `pipeline_edges`)
+- Handoffs in `squad_handoffs`
+- Visual report available at `/pipelines/<slug>` in the dashboard
 
-## Hard constraints
+## Hard Constraints
 
-- Nunca criar um pipeline com ciclo — rejeite e explique o problema
-- Validar compatibilidade de dataType antes de conectar
-- Handoffs são imutáveis após criados — crie novos em vez de editar
-- Pipeline em status `active` não pode ter nós removidos sem voltar para `draft`
+- Never create a pipeline with a cycle; reject it and explain the problem.
+- Validate `dataType` compatibility before connecting.
+- Handoffs are immutable after creation; create new ones instead of editing existing ones.
+- A pipeline in `active` status cannot have nodes removed without returning to `draft`.

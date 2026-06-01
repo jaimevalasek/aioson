@@ -1,10 +1,10 @@
 version: 1
 language: pt-BR
-# Dicionário de jargão — traduções pt-BR para a skill decision-presentation.
+# Jargon dictionary — pt-BR translations for the decision-presentation skill.
 # Lookup: case-sensitive, word-boundary (\b{term}\b). Match por substring bloqueado.
-# Carga lazy pela skill só quando vai emitir um termo de framework pra usuário com profile=creator.
-# Adicionar termo: `translation` curto (≤6 palavras), `context` em linguagem corrente (≤120 chars),
-# `examples` cobrindo frases típicas onde o termo aparece.
+# Lazy-load this file only when the skill is about to emit a framework term for a profile=creator user.
+# To add a term: keep `translation` short (≤6 words), `context` in everyday language (≤120 chars),
+# and `examples` covering typical phrases where the term appears.
 
 terms:
   MICRO:

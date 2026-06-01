@@ -87,21 +87,19 @@ These are phases, not rigid steps. Move naturally based on what the user already
 
 Detect spontaneous finalize phrases:
 
-- `finalizar`
 - `finalize`
-- `chega de perguntas`
-- `pode gerar`
+- `no more questions`
+- `go ahead and generate`
 - `wrap up`
 - `just write it`
 - `6`
 
 Detect surprise-mode phrases:
 
-- `me faça uma surpresa`
 - `surprise me`
 - `be creative`
 - `fill in the gaps`
-- `inventa você`
+- `you decide`
 
 ### Finalize mode
 

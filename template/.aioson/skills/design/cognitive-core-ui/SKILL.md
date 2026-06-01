@@ -1,11 +1,11 @@
 ---
 name: cognitive-core-ui
-description: Cognitive Core UI is the visual identity system for premium, command-center-style interfaces inspired by the Mentes Sintéticas platform. Use it when `design_skill: cognitive-core-ui` is set in project.context.md OR when the user explicitly asks for "cognitive core", "mentes sintéticas layout", "cognitive core style", "aquele layout escuro", "dark dashboard command center", or similar. Supports dashboards, admin panels, detail/profile pages, landing pages, and websites — all with dark (default) and light themes via a single toggle. Do NOT use this skill unless explicitly selected.
+description: Cognitive Core UI is the visual identity system for premium, command-center-style interfaces inspired by the Synthetic Minds platform. Use it when `design_skill: cognitive-core-ui` is set in project.context.md OR when the user explicitly asks for "cognitive core", "synthetic minds layout", "cognitive core style", "that dark layout", "dark dashboard command center", or similar. Supports dashboards, admin panels, detail/profile pages, landing pages, and websites — all with dark (default) and light themes via a single toggle. Do NOT use this skill unless explicitly selected.
 ---
 
 # Cognitive Core UI
 
-The Cognitive Core system sits at the intersection of **military-grade data dashboard** and **refined SaaS UI** — dense, structured, and polished. This is the visual identity of the Mentes Sintéticas platform.
+The Cognitive Core system sits at the intersection of **military-grade data dashboard** and **refined SaaS UI** — dense, structured, and polished. This is the visual identity of the Synthetic Minds platform.
 
 **This is one visual system.** Never combine it with another design skill.
 

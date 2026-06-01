@@ -2,11 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://aiosforge.dev/schemas/squad-blueprint.schema.json",
   "title": "AIOSON Squad Blueprint",
-  "description": "Schema para blueprints intermediários de design de squad",
+  "description": "Schema for intermediate squad design blueprints",
   "type": "object",
   "required": ["id", "slug", "name", "problem", "goal", "mode"],
   "properties": {
-    "id": { "type": "string", "description": "UUID do blueprint" },
+    "id": { "type": "string", "description": "Blueprint UUID" },
     "slug": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
@@ -14,17 +14,17 @@
       "maxLength": 50
     },
     "name": { "type": "string", "maxLength": 100 },
-    "problem": { "type": "string", "description": "Problema principal" },
-    "goal": { "type": "string", "description": "Objetivo prático" },
+    "problem": { "type": "string", "description": "Primary problem" },
+    "goal": { "type": "string", "description": "Practical goal" },
     "scope": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "O que está dentro do escopo"
+      "description": "What is in scope"
     },
     "outOfScope": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "O que está explicitamente fora"
+      "description": "What is explicitly out of scope"
     },
     "mode": {
       "type": "string",
@@ -68,7 +68,7 @@
           "traces": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "Workflows/entities (from analysis) this executor owns — derived in design Passo 2.5"
+            "description": "Workflows/entities (from analysis) this executor owns — derived in design Step 2.5"
           },
           "confidence": {
             "type": "number",
@@ -182,7 +182,7 @@
     "assumptions": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Suposições feitas durante o design"
+      "description": "Assumptions made during design"
     },
     "risks": {
       "type": "array",
@@ -198,11 +198,11 @@
     },
     "readiness": {
       "type": "object",
-      "description": "Estado de prontidão (detalhado na Fase 2)"
+      "description": "Readiness state (detailed in Phase 2)"
     },
     "analysis": {
       "type": "object",
-      "description": "Domain decomposition from sourceDocs (design Passo 2.5) — the roster is derived from this",
+      "description": "Domain decomposition from sourceDocs (design Step 2.5) — the roster is derived from this",
       "properties": {
         "entities": { "type": "array", "items": { "type": "string" } },
         "workflows": { "type": "array", "items": { "type": "string" }, "description": "Units of work as verb+object" },
@@ -216,7 +216,7 @@
     },
     "investigation": {
       "type": "object",
-      "description": "Referência à investigação de domínio do @orache",
+      "description": "Reference to the @orache domain investigation",
       "properties": {
         "slug": { "type": "string" },
         "path": { "type": "string" },
@@ -227,7 +227,7 @@
     },
     "profiling": {
       "type": "object",
-      "description": "Referência ao profiling de persona via pipeline profiler",
+      "description": "Reference to persona profiling through the profiler pipeline",
       "properties": {
         "person": { "type": "string" },
         "genomePath": { "type": "string" },
@@ -240,7 +240,7 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1,
-      "description": "Score de confiança geral"
+      "description": "Overall confidence score"
     },
     "createdAt": { "type": "string", "format": "date-time" },
     "userAdjustments": { "type": "integer", "minimum": 0 }

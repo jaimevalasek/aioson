@@ -1,14 +1,14 @@
 # Task: Squad Task Decomposition
 
-> Guia de decomposição de executores em tasks granulares.
+> Guide for decomposing executors into granular task files.
 
-## Quando usar
-- Durante `@squad create`, ao avaliar cada executor
-- `@squad extend` quando o usuário pede task decomposition retroativa
+## When To Use
+- During `@squad create`, while evaluating each executor
+- During `@squad extend` when the user asks for retroactive task decomposition
 
-## Formato de um task file
+## Task File Format
 
-Salvar em `.aioson/squads/{squad-slug}/agents/{executor-slug}/tasks/{task-slug}.md`:
+Save to `.aioson/squads/{squad-slug}/agents/{executor-slug}/tasks/{task-slug}.md`:
 
 ```markdown
 # Task: {task-name}
@@ -39,28 +39,28 @@ Salvar em `.aioson/squads/{squad-slug}/agents/{executor-slug}/tasks/{task-slug}.
 2. {Hard block — output CANNOT have this}
 ```
 
-## Árvore de decisão
+## Decision Tree
 
 ```
 EXECUTOR
-  ├── Faz UMA coisa bem? (reviewer, validator, formatter)
-  │   └── SEM tasks — o agent file é suficiente
+  ├── Does ONE thing well? (reviewer, validator, formatter)
+  │   └── NO tasks — the agent file is enough
   │
-  ├── Tem processo multi-step repetível?
-  │   ├── 2 steps → provavelmente sem tasks (mantenha simples)
-  │   ├── 3+ steps com outputs distintos → SIM, decompor em tasks
-  │   └── 3+ steps internos → SEM tasks (steps no agent file)
+  ├── Has a repeatable multi-step process?
+  │   ├── 2 steps → probably no task files; keep it simple
+  │   ├── 3+ steps with distinct outputs → YES, decompose into tasks
+  │   └── 3+ internal steps → NO task files; keep steps in the agent file
   │
-  ├── As tasks serão reutilizadas?
-  │   └── SIM → decompor (reusabilidade)
+  ├── Will tasks be reused?
+  │   └── YES → decompose for reusability
   │
-  └── Qualidade é crítica e cada step precisa de seus critérios?
-      └── SIM → decompor (controle granular de qualidade)
+  └── Is quality critical and each step needs its own criteria?
+      └── YES → decompose for granular quality control
 ```
 
-## Regras
-- Manter o agent file focado na identidade (missão, foco, restrições)
-- Mover detalhes de processo para task files
-- Cada task deve ser independentemente avaliável
-- Tasks executam sequencialmente — output da task N é input da task N+1
-- Adicionar quality criteria por task, não só por executor
+## Rules
+- Keep the agent file focused on identity: mission, focus, constraints.
+- Move process details into task files.
+- Each task must be independently evaluable.
+- Tasks execute sequentially; output from task N is input to task N+1.
+- Add quality criteria per task, not only per executor.

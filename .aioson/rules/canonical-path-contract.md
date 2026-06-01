@@ -1,6 +1,6 @@
 ---
 name: canonical-path-contract
-description: Distinção obrigatória entre plans/ root, .aioson/plans/{slug}/, docs/pt/ e implementation-plan. Todo agente que escreve artefatos deve consultar este contrato antes de criar arquivos.
+description: Mandatory distinction between root plans/, .aioson/plans/{slug}/, docs/pt/, and implementation-plan. Every artifact-writing agent must consult this contract before creating files.
 priority: 10
 version: 1.0.0
 agents: []

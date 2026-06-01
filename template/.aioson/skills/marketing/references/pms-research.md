@@ -9,9 +9,9 @@ description: PMS (Problems, Myths, Dreams) research framework — structured aud
 
 PMS is the foundational audience research framework for direct response marketing. Before writing a single word of copy, map the prospect's:
 
-- **P — Problems (Problemas):** What frustrates them daily? What have they tried that failed?
-- **M — Myths & Lies (Mitos e Mentiras):** What do they believe that isn't true? What has the industry told them that keeps them stuck?
-- **S — Dreams (Sonhos):** What do they actually want? What does their ideal outcome look like in specific terms?
+- **P — Problems:** What frustrates them daily? What have they tried that failed?
+- **M — Myths & Lies:** What do they believe that isn't true? What has the industry told them that keeps them stuck?
+- **S — Dreams:** What do they actually want? What does their ideal outcome look like in specific terms?
 
 Copy that mirrors PMS back to the prospect in their OWN vocabulary converts. Copy that uses marketing speak doesn't.
 

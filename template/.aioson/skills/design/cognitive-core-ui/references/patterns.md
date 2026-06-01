@@ -64,7 +64,7 @@ For viewing a single entity (person, product, contact, project).
 │  │  [StatCard] [StatCard] [StatCard]    [Badge][Badge]│ │
 │  └───────────────────────────────────────────────────┘ │
 ├────────────────────────────────────────────────────────┤
-│  TAB BAR (Geral | DNA | Comunicação | Histórico | ...) │
+│  TAB BAR (General | DNA | Communication | History | ...) │
 ├───────────┬────────────────────────────────────────────┤
 │ SIDEBAR   │  TAB CONTENT                               │
 │ 180px     │  Varies per tab:                           │

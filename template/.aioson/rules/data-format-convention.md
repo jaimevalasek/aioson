@@ -28,15 +28,15 @@ Use for: ICP profiles, persona profiles, audience segments, offer sheets, pricin
 **Example (`icp-primary.yaml`):**
 ```yaml
 profile:
-  name: "Empreendedor Refém"
-  description: "Dono de negócio que depende de agências ou devs externos"
+  name: "Agency-Dependent Founder"
+  description: "Business owner dependent on agencies or external developers"
 pain_points:
-  - Perda de controle sobre o produto
-  - Atrasos e custos imprevisíveis
-desired_outcome: "Autonomia e velocidade"
-buying_trigger: "Prazo vencendo ou fatura chegando de dev que atrasou"
+  - Loss of control over the product
+  - Unpredictable delays and costs
+desired_outcome: "Autonomy and speed"
+buying_trigger: "Deadline approaching or delayed developer invoice arriving"
 messaging:
-  primary: "Retome o controle do seu produto"
+  primary: "Take back control of your product"
 channels: [instagram, linkedin, youtube]
 ```
 

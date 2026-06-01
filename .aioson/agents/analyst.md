@@ -86,7 +86,7 @@ aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason
 
 **After completing requirements**, record in Agent Trail:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" --content="Requirements mapeados. Edge cases: {n}. Pendências: {items}."
+aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" --content="Requirements mapped. Edge cases: {n}. Pending items: {items}."
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

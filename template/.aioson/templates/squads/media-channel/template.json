@@ -1,7 +1,7 @@
 {
   "slug": "media-channel",
   "name": "Media Channel",
-  "description": "Squad para canal de mídia: YouTube, podcast, newsletter, social",
+  "description": "Media-channel squad: YouTube, podcast, newsletter, social",
   "mode": "content",
   "suggestedExecutors": [
     { "slug": "scriptwriter", "role": "Writes scripts, outlines, narratives" },

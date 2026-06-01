@@ -1,57 +1,57 @@
 # Task: Squad Investigate
 
-> Fase de investigação do lifecycle. Enriquece o design com conhecimento real do domínio.
+> Investigation phase of the squad lifecycle. Enriches design with real domain knowledge.
 
-## Quando usar
-- `@squad investigate <domain>` — investigação standalone
-- `@squad` flow quando o usuário aceita investigação
-- `@squad design --investigate` — dispara investigação antes do design
+## When To Use
+- `@squad investigate <domain>` — standalone investigation
+- `@squad` flow when the user accepts investigation
+- `@squad design --investigate` — triggers investigation before design
 
-## Entrada
-- Domínio ou tópico
-- Goal do squad
-- Output type esperado
-- Opcional: dimensions específicas para focar
+## Input
+- Domain or topic
+- Squad goal
+- Expected output type
+- Optional: specific dimensions to focus on
 
-## Processo
+## Process
 
-### Passo 1 — Ativar @orache
-Leia `.aioson/agents/orache.md` e execute como @orache.
-Passe o contexto do domínio coletado pelo @squad.
+### Step 1 - Activate @orache
+Read `.aioson/agents/orache.md` and execute as `@orache`.
+Pass the domain context collected by `@squad`.
 
-### Passo 2 — Aguardar investigação
-@orache executa o processo de investigação (Steps 1-6 do agent).
+### Step 2 - Wait For Investigation
+`@orache` executes its investigation process (agent steps 1-6).
 
-### Passo 3 — Receber relatório
-@orache salva o relatório em `squad-searches/`.
+### Step 3 - Receive Report
+`@orache` saves the report in `squad-searches/`.
 
-### Passo 3.5 — Extrair payload de integração
-Do relatório, extraia explicitamente:
-- regulações / obrigações
-- vocabulário de domínio
+### Step 3.5 - Extract Integration Payload
+From the report, explicitly extract:
+- regulations / obligations
+- domain vocabulary
 - anti-patterns
-- benchmarks de qualidade
-- padrões estruturais / de workflow
+- quality benchmarks
+- structural / workflow patterns
 
-### Passo 4 — Validar completude
-Verifique que o relatório cobre pelo menos 4 das 7 dimensões.
-Se não cobrir, pergunte ao usuário se quer aprofundar.
+### Step 4 - Validate Completeness
+Verify that the report covers at least 4 of the 7 dimensions.
+If it does not, ask the user in the selected project language whether they want to go deeper.
 
-### Passo 5 — Integrar com design
-Se esta task foi invocada do flow do @squad:
-- Retorne o path do relatório para o @squad
-- Registre no blueprint o objeto `investigation`
-- Use regulações para hard constraints, human gates e review criteria
-- Use anti-patterns para checklist e `vetoConditions`
-- Use benchmarks para qualidade, warm-up e score de cobertura
-- Use vocabulário e padrões estruturais para executores, workflow e content blueprints
+### Step 5 - Integrate With Design
+If this task was invoked from the `@squad` flow:
+- Return the report path to `@squad`.
+- Record the `investigation` object in the blueprint.
+- Use regulations for hard constraints, human gates, and review criteria.
+- Use anti-patterns for checklists and `vetoConditions`.
+- Use benchmarks for quality, warm-up, and coverage scoring.
+- Use vocabulary and structural patterns for executors, workflow, and content blueprints.
 
-## Saída
-- Relatório de investigação salvo em `squad-searches/`
-- Path do relatório disponível para o @squad design
-- Payload de integração disponível para blueprint/checklist/workflow
+## Output
+- Investigation report saved in `squad-searches/`
+- Report path available to `@squad design`
+- Integration payload available for blueprint/checklist/workflow
 
-## Regras
-- NÃO gere o squad aqui — isso é responsabilidade da task create
-- NÃO fabrique descobertas — se não encontrou, diga
-- SEMPRE salve o relatório em arquivo — nunca apenas no chat
+## Rules
+- Do not generate the squad here; that is the responsibility of `squad-create`.
+- Do not fabricate findings; if you did not find something, say so.
+- Always save the report to disk; never only in chat.

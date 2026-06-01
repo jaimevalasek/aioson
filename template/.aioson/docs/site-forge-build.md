@@ -180,7 +180,7 @@ import Image from 'next/image'
 If not downloaded (> 2MB or blocked): placeholder + note in QA report as ⚠️ with original URL.
 
 **Asset lifecycle notice (display once before assembly):**
-> "As imagens em `public/images/<hostname>/` são referências de desenvolvimento. Substitua-as pelos seus próprios assets antes de publicar."
+> "Images in `public/images/<hostname>/` are development references. Replace them with your own assets before publishing."
 
 ## 4.6 Assembly
 

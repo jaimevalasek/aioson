@@ -1,5 +1,5 @@
 # Module Memory: src
-_Generated from .aioson/context/scan-src.md — 2026-04-24T14:29:49Z_
+_Generated from .aioson/context/scan-src.md — 2026-06-01T18:06:15Z_
 
 ## Read this when
 - you are working inside `src/`
@@ -9,29 +9,10 @@ _Generated from .aioson/context/scan-src.md — 2026-04-24T14:29:49Z_
 ## Scope
 - Source folder: `src/`
 - Source scan map: `.aioson/context/scan-src.md`
-- Approx structure: 19 directories, 228 files
+- Approx structure: 0 directories, 0 files
 
 ## Quick map
-```text
-|-- src/
-|  |-- a2a/
-|  |  |-- client.js
-|  |  |-- server.js
-|  |-- commands/
-|  |  |-- agent-audit.js
-|  |  |-- agent-export-skill.js
-|  |  |-- agent-loader.js
-|  |  |-- agents.js
-|  |  |-- artifact-validate.js
-|  |  |-- auth.js
-|  |  |-- backup-local-cmd.js
-|  |  |-- backup.js
-|  |  |-- brief-gen.js
-|  |  |-- brief-validate.js
-|  |  |-- briefing.js
-|  |  |-- classify.js
-|  |  |-- cloud.js
-```
+_No tree preview available_
 
 ## Related memory
 - `.aioson/context/skeleton-system.md` for project-wide structure

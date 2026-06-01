@@ -1,65 +1,65 @@
 # Task: Squad Validate
 
-> Fase de validação do lifecycle. Verifica consistência do pacote.
+> Lifecycle validation phase. Verifies package consistency.
 
-## Quando usar
-- `@squad validate <slug>` — invocação direta
-- Automaticamente após `@squad create`
-- Quando o CLI `aioson squad:validate <slug>` é executado
+## When To Use
+- `@squad validate <slug>` — direct invocation
+- Automatically after `@squad create`
+- When CLI `aioson squad:validate <slug>` is executed
 
-## Entrada
-- slug do squad (deve existir em `.aioson/squads/<slug>/`)
+## Input
+- Squad slug; it must exist under `.aioson/squads/<slug>/`
 
-## Processo
+## Process
 
-### Camada 1 — Validação de schema
-1. Leia `.aioson/squads/<slug>/squad.manifest.json`
-2. Valide contra `.aioson/schemas/squad-manifest.schema.json`
-3. Campos obrigatórios: schemaVersion, slug, name, mode, mission, goal
-4. Se falhar: ERRO com campo faltante e sugestão
+### Layer 1 - Schema Validation
+1. Read `.aioson/squads/<slug>/squad.manifest.json`.
+2. Validate against `.aioson/schemas/squad-manifest.schema.json`.
+3. Required fields: schemaVersion, slug, name, mode, mission, goal.
+4. If validation fails: emit ERROR with the missing field and a suggestion.
 
-### Camada 2 — Validação estrutural
-Verifique que existem:
-- `.aioson/squads/<slug>/squad.manifest.json` (obrigatório)
-- `.aioson/squads/<slug>/agents/agents.md` (obrigatório)
-- `.aioson/squads/<slug>/agents/orquestrador.md` (obrigatório)
-- Para cada executor em manifest.executors: o arquivo referenciado existe
-- Diretórios: `output/<slug>/`, `aioson-logs/<slug>/`
+### Layer 2 - Structural Validation
+Verify that these exist:
+- `.aioson/squads/<slug>/squad.manifest.json` (required)
+- `.aioson/squads/<slug>/agents/agents.md` (required)
+- `.aioson/squads/<slug>/agents/orquestrador.md` (required)
+- For each executor in `manifest.executors`: referenced file exists
+- Directories: `output/<slug>/`, `aioson-logs/<slug>/`
 
-### Camada 3 — Validação semântica (básica nesta fase, aprofundada na Fase 2)
-- Slug do manifesto bate com o nome do diretório
-- Executores no manifesto têm arquivo correspondente
-- Não há executores duplicados
-- **Profundidade do executor:** para cada executor `agent`/`clone`/`assistant`, o `.md` tem o bloco de profundidade no `## Quick context` (Variante A `persona`+`expertise` ou Variante B `operational_breadth` — ver `package-contract.md` § Executor depth block)? `role:` solto sem o bloco = ⚠️ WARNING (executor básico). Em `--strict`, vira ❌ ERROR.
-- **Fontes destiladas:** se o manifest tem `sourceDocs`/`analysis`, ao menos um executor referencia o vocabulário/frameworks das fontes? Se nenhum referencia = ⚠️ WARNING (fontes viraram só metadado).
+### Layer 3 - Semantic Validation
+- Manifest slug matches directory name.
+- Executors in the manifest have corresponding files.
+- There are no duplicate executors.
+- **Executor depth:** for each executor of type `agent`/`clone`/`assistant`, does the `.md` file include a depth block in `## Quick context` (Variant A `persona`+`expertise` or Variant B `operational_breadth`; see `package-contract.md` § Executor depth block)? Standalone `role:` without the block = WARNING (basic executor). In `--strict`, it becomes ERROR.
+- **Distilled sources:** if the manifest has `sourceDocs`/`analysis`, does at least one executor reference the vocabulary/frameworks from those sources? If none reference them = WARNING (sources became metadata only).
 
-### Relatório
-Classifique cada check como:
-- ✅ PASS
-- ⚠️ WARNING (não bloqueia, mas recomenda correção)
-- ❌ ERROR (bloqueia — squad inválido)
+### Report
+Classify each check as:
+- PASS
+- WARNING (does not block, but recommends correction)
+- ERROR (blocks; invalid squad)
 
-Formato de output:
+Output format:
 ```
 ═══ Squad Validation: <slug> ═══
 
-Schema:     ✅ PASS
-Structure:  ✅ PASS (7/7 files found)
-Depth:      ⚠️ 1 warning
+Schema:     PASS
+Structure:  PASS (7/7 files found)
+Depth:      1 warning
   - executor "analyst": no depth block (basic executor) — run @squad refresh
-Semantics:  ⚠️ 1 warning
+Semantics:  1 warning
   - executor "analyst" has no skills declared
 
 Result: VALID (2 warnings)
 ```
 
-## Saída
-- Relatório de validação (console)
+## Output
+- Validation report (console)
 - Status: VALID | VALID_WITH_WARNINGS | INVALID
 
-## Regras
-- NÃO corrija problemas automaticamente — apenas reporte
-- SUGIRA o comando de correção quando possível (ex: "run @squad extend to add skills")
-- `--strict`: converte WARNINGs em ERRORs (inclui executor básico) — útil em CI / gate de entrega
-- Gaps de profundidade (executor básico, fontes não-destiladas) roteiam para `@squad refresh <slug>`
-- Este é o gate barato sempre-on (estrutura + presença do depth block). Para o veredito profundo source-grounded (rubrica das fontes + júri multi-modelo), use `@squad eval <slug>` (`.aioson/tasks/squad-eval.md`)
+## Rules
+- Do not automatically fix problems; report only.
+- Suggest the correction command when possible, for example: `run @squad extend to add skills`.
+- `--strict`: converts WARNINGs into ERRORs, including basic executor warnings; useful in CI/delivery gates.
+- Depth gaps (basic executor, undistilled sources) route to `@squad refresh <slug>`.
+- This is the cheap always-on gate: structure + depth-block presence. For the deep source-grounded verdict (source rubric + multi-model jury), use `@squad eval <slug>` (`.aioson/tasks/squad-eval.md`).

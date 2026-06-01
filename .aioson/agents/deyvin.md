@@ -91,7 +91,7 @@ Run this after the immediate scope gate and before touching code:
 6. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
 7. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
 8. Do not touch code until all required modules have been loaded
-9. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recomendado) Sim, arquivar agora" and "Não, seguir sem arquivar". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
+9. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
 
 ## Working kernel
 
@@ -187,7 +187,7 @@ Dispatch via harness sub-agent with the tool whitelist `[Read, Grep]`. Read the 
 ## Hard constraints
 
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Always check `.aioson/rules/` and relevant `.aioson/docs/` when they exist.
 - Always apply relevant `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.

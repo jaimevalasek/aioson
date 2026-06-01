@@ -23,16 +23,16 @@ Discovery file for installed genomes. Each entry includes the slug, type, langua
 | `copywriting-schwartz/` 📁 | function | en | **0.85** | **4.2 modular** | Foundational theory (1960s) — 5 Awareness Levels + 5 Sophistication Stages + Mass Desire principle. Use as base layer with any applied master. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 8 references (methodology + decision-weights + meta-axioms + 3 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
 | `copywriting-halbert/` 📁 | function | en | 0.80 | **4.2 modular** | Direct mail master (1980s) — Starving Crowd + A-Pile/B-Pile + Market First + long-form sales letters. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 10 references (methodology + decision-weights + meta-axioms + 5 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
 | `copywriting-kennedy/` 📁 | function | en | 0.80 | **4.2 modular** | "No B.S." magnetic marketing — 10 Rules + Magnetic Marketing Triangle + premium positioning. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 10 references (methodology + decision-weights + meta-axioms + 5 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
-| `copywriting-brunson/` 📁 | function | en | 0.75 | **4.2 modular** | Funnel/storytelling school — Origin Story + Perfect Webinar + stack de valor + community/movement. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 11 references (methodology + decision-weights + meta-axioms + 6 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
+| `copywriting-brunson/` 📁 | function | en | 0.75 | **4.2 modular** | Funnel/storytelling school — Origin Story + Perfect Webinar + value stack + community/movement. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 11 references (methodology + decision-weights + meta-axioms + 6 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
 | `copywriting-georgi/` 📁 | function | en | 0.75 | **4.2 modular** | RMBC method — Research → Mechanism → Brief → Copy + big idea + 7-act sales letter. *Track 4.2 migration 2026-05-08 — folder + SKILL.md + manifest.json + 11 references (methodology + decision-weights + meta-axioms + 6 frameworks + evidence-and-attribution + application-notes). No advisor mode (function genome).* |
 
 ## Master Copywriters — Brazilian (pt-BR voice preserved)
 
 | Genome | Type | Lang | Fidelity | Track | School | Descriptor |
 |--------|------|------|----------|-------|--------|------------|
-| `copywriting-ladeira/` 📁🎙️ | persona | pt-BR | **0.85** | **4.2 modular + advisor-ready** | Mainstream | VTSD + Light Copy 3 Cs + Marketing de Premissas + KSTK + Stories 10x. Multi-canal. Irreverente, acessível. Para BR mainstream. *Track 4.2 migration 2026-05-08 — folder structure with SKILL.md + manifest.json + 15 references (consultation-playbook + voice-dna + decision-weights + meta-axioms + identity-core + biographical + 6 frameworks + 3 case studies). **Advisor-ready** — invoke directly via `@genome consulta ladeira`. Fidelity preserved at 0.85 honestly (no new evidence in this round; primary podcast/course transcripts would be required for higher).* |
-| `copywriting-icaro-de-carvalho/` 📁🎙️ | persona | pt-BR | **0.85** | **4.2 modular + advisor-ready** | Confessional-intelectual | Contraste 3 camadas + Vulnerabilidade Calculada + 5-Act Confessional Argumentation + 20/80 Storytelling + Polarização Estratégica + O Novo Mercado Pipeline. Para BR intelectual/premium. *Track 4.2 migration 2026-05-08 — folder structure with SKILL.md + manifest.json + 15 references (consultation-playbook + voice-dna + decision-weights + meta-axioms + identity-core + biographical + 6 frameworks + 3 case studies). **Advisor-ready** — invoke directly via `@genome consulta icaro`. R$272M+ verified, TED Talk + Medium quotes verified. Fidelity preserved at 0.85 honestly (book content + TEDx transcript + podcast transcripts not yet ingested).* |
-| `copywriting-diogo-gomes/` 📁🎙️🧬 | persona | pt-BR | **0.91** | **4.3 cognitive pipeline + advisor-ready** | Periferia | Validated recombination + mapa do tesouro + 4 lead variations. Para BR periferia/aspiracional massivo. *Track 4.3 pilot 2026-05-08 — folder structure with SKILL.md + manifest.json + 18 references (~3300 lines total). Full clone-mind 9-layer cognitive pipeline: viability-assessment (L1), voice-dna (L3), behavioral-patterns (L4a), decision-weights (L4b), cognitive-architecture (L5), identity-core (L6), latticework (L7), meta-axioms+consultation-playbook (L8), quality-report (L9). Per-claim source_ids on top 30+ claims. 7 quality sub-scores (weighted 0.91). **Advisor-ready** — invoke directly via `@genome consulta diogo-gomes`. system-prompt.md exportable on demand.* |
+| `copywriting-ladeira/` 📁🎙️ | persona | pt-BR | **0.85** | **4.2 modular + advisor-ready** | Mainstream | VTSD + Light Copy 3 Cs + Premise Marketing + KSTK + Stories 10x. Multi-channel. Irreverent, accessible. For Brazilian mainstream audiences. *Track 4.2 migration 2026-05-08 — folder structure with SKILL.md + manifest.json + 15 references (consultation-playbook + voice-dna + decision-weights + meta-axioms + identity-core + biographical + 6 frameworks + 3 case studies). **Advisor-ready** — invoke directly via `@genome consult ladeira`. Fidelity preserved at 0.85 honestly (no new evidence in this round; primary podcast/course transcripts would be required for higher).* |
+| `copywriting-icaro-de-carvalho/` 📁🎙️ | persona | pt-BR | **0.85** | **4.2 modular + advisor-ready** | Confessional-intellectual | 3-layer contrast + Calculated Vulnerability + 5-Act Confessional Argumentation + 20/80 Storytelling + Strategic Polarization + O Novo Mercado Pipeline. For Brazilian intellectual/premium audiences. *Track 4.2 migration 2026-05-08 — folder structure with SKILL.md + manifest.json + 15 references (consultation-playbook + voice-dna + decision-weights + meta-axioms + identity-core + biographical + 6 frameworks + 3 case studies). **Advisor-ready** — invoke directly via `@genome consult icaro`. R$272M+ verified, TED Talk + Medium quotes verified. Fidelity preserved at 0.85 honestly (book content + TEDx transcript + podcast transcripts not yet ingested).* |
+| `copywriting-diogo-gomes/` 📁🎙️🧬 | persona | pt-BR | **0.91** | **4.3 cognitive pipeline + advisor-ready** | Periphery | Validated recombination + treasure map + 4 lead variations. For Brazilian periphery/mass aspirational audiences. *Track 4.3 pilot 2026-05-08 — folder structure with SKILL.md + manifest.json + 18 references (~3300 lines total). Full clone-mind 9-layer cognitive pipeline: viability-assessment (L1), voice-dna (L3), behavioral-patterns (L4a), decision-weights (L4b), cognitive-architecture (L5), identity-core (L6), latticework (L7), meta-axioms+consultation-playbook (L8), quality-report (L9). Per-claim source_ids on top 30+ claims. 7 quality sub-scores (weighted 0.91). **Advisor-ready** — invoke directly via `@genome consult diogo-gomes`. system-prompt.md exportable on demand.* |
 
 ## Selection guide
 
@@ -43,9 +43,9 @@ Discovery file for installed genomes. Each entry includes the slug, type, langua
 | US/EN-speaking general | Brunson, Georgi, Kennedy (pick by domain) |
 | US/EN classical direct mail | Halbert |
 | Foundational diagnosis (any audience) | Schwartz (combine with applied) |
-| BR mainstream (B/C massivo) | Ladeira |
-| BR intellectual/premium (B+) | Ícaro de Carvalho |
-| BR periphery/aspirational (C/D/E) | Diogo Gomes |
+| Brazilian mainstream (B/C mass market) | Ladeira |
+| Brazilian intellectual/premium (B+) | Ícaro de Carvalho |
+| Brazilian periphery/aspirational (C/D/E) | Diogo Gomes |
 
 ### By output type
 
@@ -56,9 +56,9 @@ Discovery file for installed genomes. Each entry includes the slug, type, langua
 | Sales letter long-form | Halbert + Schwartz base |
 | Course launch sequence | Brunson + Schwartz base |
 | Premium positioning | Kennedy + Schwartz base |
-| BR Instagram daily content | Ladeira |
-| BR autoral thought leadership | Ícaro de Carvalho |
-| BR aggressive direct response | Diogo Gomes |
+| Brazilian Instagram daily content | Ladeira |
+| Brazilian authorial thought leadership | Ícaro de Carvalho |
+| Brazilian aggressive direct response | Diogo Gomes |
 
 ### Combination rules
 
@@ -69,22 +69,22 @@ Discovery file for installed genomes. Each entry includes the slug, type, langua
 ### Compatibility matrix (relations declared in genomes)
 
 ```
-schwartz ──┬── complementa ── halbert
-           ├── complementa ── kennedy
-           ├── complementa ── brunson
-           ├── complementa ── georgi
-           └── complementa ── icaro-de-carvalho
+schwartz ──┬── complements ── halbert
+           ├── complements ── kennedy
+           ├── complements ── brunson
+           ├── complements ── georgi
+           └── complements ── icaro-de-carvalho
 
-halbert ───── complementa ── kennedy
-brunson ───── complementa ── kennedy
+halbert ───── complements ── kennedy
+brunson ───── complements ── kennedy
 
-ladeira ───── complementa ── diogo-gomes
-ladeira ───── complementa ── kennedy
-icaro ─────── complementa ── ladeira
-icaro ─────── complementa ── diogo-gomes
-icaro ─────── complementa ── kennedy
-diogo ─────── complementa ── brunson
-diogo ─────── sobrepõe ──── georgi
+ladeira ───── complements ── diogo-gomes
+ladeira ───── complements ── kennedy
+icaro ─────── complements ── ladeira
+icaro ─────── complements ── diogo-gomes
+icaro ─────── complements ── kennedy
+diogo ─────── complements ── brunson
+diogo ─────── overlaps ──── georgi
 ```
 
 ## Statistics
@@ -104,18 +104,18 @@ diogo ─────── sobrepõe ──── georgi
 Genomes flagged `advisor_ready: true` can be invoked directly by the user via `@genome` for one-on-one consultation. The genome responds AS the persona (first-person, in-voice), not as `@genome` describing the persona.
 
 **Invocation patterns:**
-- `@genome consulta {slug}` (e.g., `@genome consulta diogo-gomes`)
-- `@genome chama o {nickname}` (e.g., `@genome chama o diogo`)
-- `@genome — pergunta pro {persona}: [question]`
-- `@genome me ajuda com [task] usando {slug}`
+- `@genome consult {slug}` (for example, `@genome consult diogo-gomes`)
+- `@genome call {nickname}` (for example, `@genome call diogo`)
+- `@genome — ask {persona}: [question]`
+- `@genome help me with [task] using {slug}`
 
 **Currently advisor-ready genomes:**
 
 | Genome | Voice language | Best for consultation about |
 |--------|----------------|------------------------------|
-| `copywriting-ladeira` 🎙️ | pt-BR | VTSD architecture, perpetual sales, Light Copy 3 Cs, Marketing de Premissas, multi-channel BR mainstream copy strategy, mindset coaching, Stories 10x cadence, perpetual + launch complementarity |
-| `copywriting-icaro-de-carvalho` 🎙️ | pt-BR | Autoral positioning, polarization strategy (substance test), calculated vulnerability, 5-act confessional argumentation, contraste 3 camadas, 20/80 storytelling, authority through transformation, building autoral education business |
-| `copywriting-diogo-gomes` 🎙️ | pt-BR | Direct response BR/US, VSL strategy, validated recombination, lead generation, mecanismo combo, briefing |
+| `copywriting-ladeira` 🎙️ | pt-BR | VTSD architecture, perpetual sales, Light Copy 3 Cs, Premise Marketing, multi-channel Brazilian mainstream copy strategy, mindset coaching, Stories 10x cadence, perpetual + launch complementarity |
+| `copywriting-icaro-de-carvalho` 🎙️ | pt-BR | Authorial positioning, polarization strategy (substance test), calculated vulnerability, 5-act confessional argumentation, 3-layer contrast, 20/80 storytelling, authority through transformation, building an authorial education business |
+| `copywriting-diogo-gomes` 🎙️ | pt-BR | Brazilian/US direct response, VSL strategy, validated recombination, lead generation, mechanism combo, briefing |
 
 **Requirements for advisor-ready** (validated by `@genome` Advisor-Ready Checklist):
 - Track 4.2 modular format (folder)
@@ -125,7 +125,7 @@ Genomes flagged `advisor_ready: true` can be invoked directly by the user via `@
 - `not_for` list ≥ 3 items in manifest.json
 - ≥ 1 case study reference
 
-To make an existing genome advisor-ready: ask `@genome` to upgrade it. To enrich an advisor-ready genome with new material: use natural language ("@genome enrich {slug} — tem mais conteúdo aqui").
+To make an existing genome advisor-ready: ask `@genome` to upgrade it. To enrich an advisor-ready genome with new material: use natural language (`@genome enrich {slug} — there is more content here`).
 
 ## Maintenance
 
@@ -185,9 +185,9 @@ Library is now uniformly modular. Agents resolve format automatically:
 
 Genomes considered but not yet created:
 
-- **Erico Rocha** (BR launch master — Fórmula de Lançamento) — could add to fill "launch specialist BR" niche
-- **Pedro Sobral** (BR direct response, paid traffic specialist) — could add to fill "performance marketing BR" niche
-- **Vitor Peçanha** (BR content marketing — Rock Content founder) — different domain (content marketing, not direct response)
+- **Erico Rocha** (Brazilian launch master — Launch Formula) — could add to fill the "Brazilian launch specialist" niche
+- **Pedro Sobral** (Brazilian direct response, paid traffic specialist) — could add to fill the "Brazilian performance marketing" niche
+- **Vitor Peçanha** (Brazilian content marketing — Rock Content founder) — different domain (content marketing, not direct response)
 - **Drayton Bird** (UK direct response, Halbert protégé) — could add to UK perspective
 - **John Carlton** (US direct response, "Simple Writing System") — could add to US classical lineage
 - **David Ogilvy** (US classic advertising, "Confessions of an Advertising Man") — would add brand-focused perspective, distinct from direct response

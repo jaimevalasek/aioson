@@ -1,156 +1,156 @@
 # Task: Squad Create
 
-> Fase de criação do lifecycle. Gera o pacote completo a partir de um blueprint.
+> Creation phase of the lifecycle. Generates the full package from a blueprint.
 
-## Quando usar
-- `@squad create <slug>` — invocação direta
-- Automaticamente após `@squad design` ser aprovado
-- `@squad` fluxo rápido (após design inline ser aprovado)
+## When To Use
+- `@squad create <slug>` — direct invocation
+- Automatically after `@squad design` is approved
+- `@squad` fast flow after inline design is approved
 
-## Entrada
-- Blueprint em `.aioson/squads/.designs/<slug>.blueprint.json`
-- Se não existe blueprint: instrua o usuário a rodar `@squad design <slug>` primeiro
-- OU: se o usuário chamou `@squad` sem subcomando, rode design + create em sequência
+## Input
+- Blueprint at `.aioson/squads/.designs/<slug>.blueprint.json`
+- If no blueprint exists: tell the user to run `@squad design <slug>` first.
+- Or, if the user called `@squad` without subcommand, run design + create in sequence.
 
-## Processo
+## Process
 
-### Passo 1 — Ler blueprint
-Leia `.aioson/squads/.designs/<slug>.blueprint.json` e valide que os campos obrigatórios existem (slug, name, problem, goal, mode, executors).
-Se existirem, preserve também:
+### Step 1 - Read Blueprint
+Read `.aioson/squads/.designs/<slug>.blueprint.json` and validate required fields: slug, name, problem, goal, mode, executors.
+If present, also preserve:
 - `locale_scope`
 - `locale_rationale`
 - `domainClassification`
 - `investigation`
 - `sourceDocs`
-- `analysis` (decomposição do Passo 2.5 do design) + `confidence`/`traces` por executor
+- `analysis` (decomposition from design Step 2.5) + `confidence`/`traces` per executor
 
-### Passo 2 — Criar estrutura de diretórios
+### Step 2 - Create Directory Structure
 ```
 .aioson/squads/<slug>/
 ├── agents/
-│   ├── agents.md              # Manifesto textual
-│   ├── orquestrador.md        # Orquestrador
-│   └── <executor-slug>.md     # Um por executor
+│   ├── agents.md              # Text manifest
+│   ├── orquestrador.md        # Orchestrator
+│   └── <executor-slug>.md     # One per executor
 ├── skills/
 ├── templates/
 ├── docs/
 │   ├── design-doc.md
 │   └── readiness.md
-└── squad.manifest.json        # Manifesto JSON formal
+└── squad.manifest.json        # Formal JSON manifest
 
-output/<slug>/                  # Diretório de output
-aioson-logs/<slug>/               # Diretório de logs
-media/<slug>/                   # Diretório de mídia
+output/<slug>/                 # Output directory
+aioson-logs/<slug>/            # Logs directory
+media/<slug>/                  # Media directory
 ```
 
-### Passo 2.5 — Processar UI/UX capability do blueprint
+### Step 2.5 - Process UI/UX Capability From Blueprint
 
-Leia o campo `uiCapability` do blueprint. Se ausente, trate como `mode: none`.
+Read the blueprint `uiCapability` field. If absent, treat it as `mode: none`.
 
-**Se `mode = skills`:**
-1. Copie `.aioson/skills/static/landing-page-forge.md` → `.aioson/squads/{slug}/skills/design/landing-page-forge.md`
-2. Copie `.aioson/skills/static/ui-ux-modern.md` → `.aioson/squads/{slug}/skills/design/ui-ux-modern.md`
-3. Se `design_skill` está em `project.context.md`, copie também esse skill para `skills/design/`
-4. Registre as skills no `squad.manifest.json`
+**If `mode = skills`:**
+1. Copy `.aioson/skills/static/landing-page-forge.md` → `.aioson/squads/{slug}/skills/design/landing-page-forge.md`
+2. Copy `.aioson/skills/static/ui-ux-modern.md` → `.aioson/squads/{slug}/skills/design/ui-ux-modern.md`
+3. If `design_skill` exists in `project.context.md`, also copy that skill to `skills/design/`
+4. Register the skills in `squad.manifest.json`
 
-**Se `mode = executor`:**
-1. Execute os mesmos passos de skills acima (executor depende das skills)
-2. Gere o arquivo `.aioson/squads/{slug}/agents/ui-specialist.md` seguindo `.aioson/docs/squad/package-contract.md`:
-   - usar a mesma estrutura dos demais executores permanentes
-   - missão focada em UI, layout, componentes e direção visual
-   - output esperado: `ui-spec.md` e, quando fizer sentido, HTML/entregável visual
-   - deixar explícito quando delegar contexto de negócio de volta ao `@orquestrador`
-3. Registre o executor no `squad.manifest.json` com `modelTier: powerful` e `behavioralProfile: compliant-dominant`
-4. Adicione ao routing guide do orquestrador: "Visual / UI / layout requests → @ui-specialist"
+**If `mode = executor`:**
+1. Execute the same skill steps above; the executor depends on them.
+2. Generate `.aioson/squads/{slug}/agents/ui-specialist.md` following `.aioson/docs/squad/package-contract.md`:
+   - use the same structure as other permanent executors
+   - mission focused on UI, layout, components, and visual direction
+   - expected output: `ui-spec.md` and, when appropriate, HTML/visual deliverable
+   - make explicit when business context must be delegated back to `@orquestrador`
+3. Register the executor in `squad.manifest.json` with `modelTier: powerful` and `behavioralProfile: compliant-dominant`.
+4. Add to the orchestrator routing guide: "Visual / UI / layout requests → @ui-specialist".
 
-**Se `mode = external`:** Adicione nota em `docs/design-doc.md` indicando que `@ux-ui` é chamado externamente.
+**If `mode = external`:** Add a note in `docs/design-doc.md` saying `@ux-ui` is called externally.
 
-**Se `mode = none`:** Nenhuma ação.
+**If `mode = none`:** No action.
 
-Em todos os casos, salve `uiCapability` no `squad.manifest.json`.
+Always save `uiCapability` in `squad.manifest.json`.
 
-### Passo 3 — Gerar squad.manifest.json
-Monte o manifesto a partir do blueprint. O JSON deve seguir o schema `squad-manifest.schema.json`. Copie executors, skills, mcps, genomes, contentBlueprints do blueprint. Adicione package paths e rules.
+### Step 3 - Generate squad.manifest.json
+Build the manifest from the blueprint. JSON must follow `squad-manifest.schema.json`. Copy executors, skills, mcps, genomes, and contentBlueprints from the blueprint. Add package paths and rules.
 
-Persistência obrigatória:
-- `locale_scope`: usar `"universal"` por padrão quando o blueprint não trouxer valor explícito
-- `locale_rationale`: copiar quando existir
-- `domainClassification`: copiar quando existir
-- `investigation`: copiar quando existir
-- `sourceDocs`: copiar quando existir
-- `analysis` (entities/workflows/integrations/stakeholders): copiar quando existir
-- `confidence` + `traces` por executor: copiar do blueprint para cada `executors[]` do manifest (o `squad-analyze` e o `squad-validate` leem esses campos)
+Mandatory persistence:
+- `locale_scope`: use `"universal"` by default when blueprint has no explicit value
+- `locale_rationale`: copy when present
+- `domainClassification`: copy when present
+- `investigation`: copy when present
+- `sourceDocs`: copy when present
+- `analysis` (entities/workflows/integrations/stakeholders): copy when present
+- `confidence` + `traces` per executor: copy from blueprint into each `executors[]` manifest entry; `squad-analyze` and `squad-validate` read these fields
 
-### Passo 4 — Gerar agents.md (manifesto textual)
-Siga `.aioson/docs/squad/package-contract.md` na seção `agents/agents.md`.
+### Step 4 - Generate agents.md (Text Manifest)
+Follow `.aioson/docs/squad/package-contract.md`, section `agents/agents.md`.
 
-Regras adicionais para o manifesto textual:
-- agrupe executores por tipo quando houver workers, clones, assistants ou human-gates
-- se uma categoria não existir, omita a seção em vez de deixar placeholder
-- reflita `locale_scope`, skills, MCPs e política de revisão quando isso mudar o comportamento real do squad
+Additional rules for the text manifest:
+- group executors by type when workers, clones, assistants, or human-gates exist
+- if a category does not exist, omit the section instead of leaving a placeholder
+- reflect `locale_scope`, skills, MCPs, and review policy when these change real squad behavior
 
-Formato mínimo:
+Minimum format:
 ```markdown
 # Squad <name>
 
 ## Mission
-[do blueprint.mission]
+[from blueprint.mission]
 
 ## Does
-[derivado do scope]
+[derived from scope]
 
-## Does not do
-[derivado do outOfScope]
+## Does Not Do
+[derived from outOfScope]
 
-## Permanent executors
+## Permanent Executors
 - @orquestrador — [role]
 - @<slug> — [role]
 
-## Squad skills
+## Squad Skills
 ## Squad MCPs
-## Subagent policy
-## Outputs and review
+## Subagent Policy
+## Outputs And Review
 ```
 
-### Passo 5 — Gerar cada executor
-Para cada executor no blueprint, crie `.aioson/squads/<slug>/agents/<executor-slug>.md` seguindo `.aioson/docs/squad/package-contract.md` na seção `Executor generation`:
-- **Antes de escrever**, rode o *Pre-write depth gate* de `.aioson/docs/squad/creation-flow.md` para cada executor (persona, frameworks, vocabulário das fontes, signature_moves, anti-patterns). Gate vazio = não escreva ainda.
-- Header com `# Agent @<slug>` + bloco ACTIVATED
-- Mission, Quick context, Active genomes, Focus, Response standard, Hard constraints, Output contract
-- **Bloco de profundidade obrigatório** no `## Quick context` (package-contract § `Executor depth block`): Variante A (persona + expertise: frameworks, vocabulary, signature_moves, quality_bar, anti_patterns) para executores de conhecimento/criativo/técnico; Variante B (operational_breadth) para executores customer-facing. Um `role:` solto sem bloco de profundidade = executor básico — não entregue assim.
-- **Destilar fontes:** se o blueprint tem `sourceDocs` ou `investigation`, leia/reaproveite a extração e injete em cada executor relevante — vocabulário (termos de arte reais, não inventados), frameworks/métodos nomeados, exemplos e anti-patterns. Registre em `expertise.sources` qual fonte alimentou cada executor. Use `analysis.entities`/`analysis.workflows` e os `traces` do executor (decomposição do Passo 2.5) como sementes do `expertise.vocabulary` e dos `focus`. Fonte que ficou só no manifest e não entrou em nenhum prompt é defeito. Siga a árvore de competências em `.aioson/docs/squad/persona-grounding.md` (*extract, don't write*): cada framework/termo cita sua fonte; item sem citação é prior do modelo.
-- Cada `anti_pattern` do bloco de profundidade vira uma linha real em `## Hard constraints`.
-- Antes de passar para o próximo executor, aplique um teste: *um sênior real nesse papel se reconheceria neste prompt?* Se não, aprofunde antes de seguir.
-- Se `locale_scope` for locale-specific, escreva o prompt no idioma do locale; identificadores de código continuam em inglês
+### Step 5 - Generate Each Executor
+For each executor in the blueprint, create `.aioson/squads/<slug>/agents/<executor-slug>.md` following `.aioson/docs/squad/package-contract.md`, section `Executor generation`:
+- **Before writing**, run the *Pre-write depth gate* from `.aioson/docs/squad/creation-flow.md` for each executor: persona, frameworks, source vocabulary, signature_moves, anti-patterns. Empty gate = do not write yet.
+- Header with `# Agent @<slug>` + ACTIVATED block.
+- Mission, Quick context, Active genomes, Focus, Response standard, Hard constraints, Output contract.
+- **Mandatory depth block** in `## Quick context` (package-contract § `Executor depth block`): Variant A (persona + expertise: frameworks, vocabulary, signature_moves, quality_bar, anti_patterns) for knowledge/creative/technical executors; Variant B (operational_breadth) for customer-facing executors. A standalone `role:` without depth block = basic executor; do not deliver it.
+- **Distill sources:** if the blueprint has `sourceDocs` or `investigation`, read/reuse the extraction and inject it into each relevant executor: real terms of art, named frameworks/methods, examples, and anti-patterns. Record in `expertise.sources` which source fed each executor. Use `analysis.entities`/`analysis.workflows` and executor `traces` (design Step 2.5 decomposition) as seeds for `expertise.vocabulary` and `focus`. A source that remains only in the manifest and enters no prompt is a defect. Follow the competency tree in `.aioson/docs/squad/persona-grounding.md` (*extract, don't write*): each framework/term cites its source; uncited items are model priors.
+- Each `anti_pattern` from the depth block becomes a real line in `## Hard constraints`.
+- Before moving to the next executor, apply this test: would a real senior person in this role recognize themselves in this prompt? If not, deepen before continuing.
+- If `locale_scope` is locale-specific, write user-facing behavior examples in that locale's language; code identifiers remain English.
 
-### Passo 6 — Gerar orquestrador
-Crie `.aioson/squads/<slug>/agents/orquestrador.md` seguindo `.aioson/docs/squad/package-contract.md` na seção `Orchestrator prompt`.
-Se `uiCapability.mode = executor`, inclua no routing guide que demandas visuais vão para `@ui-specialist`.
+### Step 6 - Generate Orchestrator
+Create `.aioson/squads/<slug>/agents/orquestrador.md` following `.aioson/docs/squad/package-contract.md`, section `Orchestrator prompt`.
+If `uiCapability.mode = executor`, include routing guidance that visual demands go to `@ui-specialist`.
 
-### Passo 7 — Gerar docs
-- `docs/design-doc.md`: resumo do design derivado do blueprint
-- `docs/readiness.md`: estado de readiness derivado do blueprint
+### Step 7 - Generate Docs
+- `docs/design-doc.md`: design summary derived from the blueprint
+- `docs/readiness.md`: readiness state derived from the blueprint
 
-### Passo 8 — Registrar nos gateways
-Atualize `CLAUDE.md` e `AGENTS.md` no root do projeto conforme `.aioson/docs/squad/package-contract.md` na seção `Gateway registration`.
+### Step 8 - Register In Gateways
+Update root `CLAUDE.md` and `AGENTS.md` according to `.aioson/docs/squad/package-contract.md`, section `Gateway registration`.
 
-### Passo 9 — Salvar metadata
-Salve `.aioson/squads/<slug>/squad.md` conforme `.aioson/docs/squad/package-contract.md` na seção `Squad metadata`.
-Inclua `locale_scope`, `locale_rationale`, `investigation` e `sourceDocs` quando existirem.
+### Step 9 - Save Metadata
+Save `.aioson/squads/<slug>/squad.md` according to `.aioson/docs/squad/package-contract.md`, section `Squad metadata`.
+Include `locale_scope`, `locale_rationale`, `investigation`, and `sourceDocs` when present.
 
-### Passo 10 — Rodar validate
-Após criar tudo, execute mentalmente a task squad-validate (leia `.aioson/tasks/squad-validate.md`) para verificar que o pacote está consistente.
+### Step 10 - Run Validate
+After creating everything, mentally execute `squad-validate` (read `.aioson/tasks/squad-validate.md`) to verify the package is consistent.
 
-### Passo 11 — Warm-up round
-Siga `.aioson/docs/squad/workflow-quality.md` na seção `Confirmation, coverage, and warm-up`: mostre cada especialista com problem reading, initial recommendation, main risk e suggested next step.
+### Step 11 - Warm-Up Round
+Follow `.aioson/docs/squad/workflow-quality.md`, section `Confirmation, coverage, and warm-up`: show each specialist with problem reading, initial recommendation, main risk, and suggested next step.
 
-## Saída
-- Pacote completo em `.aioson/squads/<slug>/`
-- CLAUDE.md e AGENTS.md atualizados
-- Warm-up round executado
+## Output
+- Full package under `.aioson/squads/<slug>/`
+- Updated `CLAUDE.md` and `AGENTS.md`
+- Warm-up round executed
 
-## Regras
-- SEMPRE leia o blueprint antes de gerar
-- SIGA `.aioson/docs/squad/package-contract.md` e `.aioson/docs/squad/workflow-quality.md`
-- MANTENHA o HTML deliverable após cada rodada (regra existente)
-- NÃO pule o warm-up — é mandatório
+## Rules
+- Always read the blueprint before generating.
+- Follow `.aioson/docs/squad/package-contract.md` and `.aioson/docs/squad/workflow-quality.md`.
+- Keep the HTML deliverable after each round according to the existing rule.
+- Do not skip warm-up; it is mandatory.

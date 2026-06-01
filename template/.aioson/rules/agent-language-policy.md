@@ -8,16 +8,16 @@ agents: [squad, genome, orache, design-hybrid-forge, site-forge]
 
 # Agent Language Policy
 
-Agent files are instruction code — default is English (maximizes LLM reasoning, universal reuse). Squads with `locale_scope` declared are the exception.
+Agent files are instruction code. Default is English because it maximizes LLM reasoning quality, reduces token cost, and enables universal reuse. User-facing replies still follow the selected project language (`interaction_language`, fallback `conversation_language`). Locale-scoped generated squads may declare `locale_scope` when their own generated agent files must be locale-native.
 
 ## Language decision tree
 
 ```
-Squad novo ou existente
-  ├── ephemeral: true → qualquer idioma
+New or existing squad
+  ├── ephemeral: true → any language
   └── ephemeral: false
-      ├── locale_scope: "universal" (ou ausente) → agent files em INGLÊS
-      └── locale_scope: "{locale}" declarado → agent files no idioma do locale
+      ├── locale_scope: "universal" (or absent) → agent files in English
+      └── locale_scope: "{locale}" declared → generated squad agent files in that locale language
 ```
 
 ## Declaring locale_scope
@@ -26,9 +26,9 @@ In `squad.manifest.json`:
 
 ```json
 {
-  "slug": "atendimento-farmacia",
+  "slug": "pharmacy-support",
   "locale_scope": "pt-BR",
-  "locale_rationale": "Domínio regulado pela ANVISA — legislação, receituário e interações são exclusivamente brasileiros."
+  "locale_rationale": "Domain regulated by ANVISA; law, prescriptions, and customer interactions are exclusively Brazilian."
 }
 ```
 
@@ -43,8 +43,8 @@ Valid values: `"universal"` (default) or any BCP-47 code: `"pt-BR"`, `"en-US"`, 
 | No portability | Squad never reused in another country without full rewrite? |
 | Native domain reasoning | Technical domain richer in native language? |
 
-Justified: farmácia ANVISA, tributário eSocial, jurídico brasileiro, suporte nacional.
-Not justified: marketing digital, software dev, YouTube creator, psicologia/coaching.
+Justified: ANVISA pharmacy support, eSocial tax/payroll, Brazilian legal support, national support desk.
+Not justified: digital marketing, software development, YouTube creator, psychology/coaching.
 
 ## Rules by layer
 
@@ -68,15 +68,15 @@ Not justified: marketing digital, software dev, YouTube creator, psicologia/coac
 | Agent output | Locale language |
 | Content docs | Locale language |
 
-## Mandatory question during squad creation
+## Mandatory Question During Squad Creation
 
-Before generating any file:
+Before generating any generated squad file, ask in the selected project language:
 
 ```
-Este squad é para uso em um país/idioma específico ou deve ser universal?
+Is this squad for one specific country/language, or should it be universal?
 
-1. Universal (inglês) — reutilizável em qualquer projeto, publicável no aiosforge.com
-2. Locale específico — ex: só para o Brasil, só em português
+1. Universal (English) — reusable in any project, publishable on aiosforge.com
+2. Specific locale — for example Brazil-only in Portuguese
 ```
 
 If (2): request locale code. If unclear: infer from domain and confirm.

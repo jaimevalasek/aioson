@@ -39,7 +39,7 @@ These are framework infrastructure. They are uniform regardless of the genome's 
 - Section content in origin language (philosophies, axioms, mental models in pt-BR)
 - **Always provide EN side-by-side translations for:**
   - Voice DNA vocabulary tables (original | EN approximation)
-  - Verbal patterns / bordões (original | EN translation)
+  - Verbal patterns / signature phrases (original | EN translation)
   - Decision Weights "When activated" descriptions
 - **Never translate:**
   - Direct quotes attributed to the persona (preserve original)
@@ -125,7 +125,7 @@ Recognize and preserve when present. Do not require them for genomes that lack t
 |-------|------|---------|
 | `hexaco_h` | `low\|medium\|high` | Honesty-Humility dimension — ethical and integrity profile |
 | `anchor_prompt` | string (≤60 words) | Re-anchors persona identity at conversation boundaries in multi-turn sessions |
-| `relations` | array of `{genome, type}` | Typed links to other installed genomes (`depende-de`, `complementa`, `contradiz`, `sobrepõe`) |
+| `relations` | array of `{genome, type}` | Typed links to other installed genomes (`depends-on`, `complements`, `contradicts`, `overlaps`) |
 | `activation_scope` | array of `{task, load}` | Selective section loading by task type to reduce tokens and improve precision |
 
 When generating a persona genome from a profiler pipeline output:
@@ -134,8 +134,8 @@ When generating a persona genome from a profiler pipeline output:
 - include `## Trait Interactions` inside `## Cognitive Profile` when MPD patterns are documented
 
 When applying a genome that declares `relations`:
-- for `depende-de` entries: check if the referenced genome is installed; warn if missing
-- for `contradiz` entries: warn if both genomes would be active in the same squad simultaneously
+- for `depends-on` entries: check if the referenced genome is installed; warn if missing
+- for `contradicts` entries: warn if both genomes would be active in the same squad simultaneously
 
 ### Track 4.2 — Modular genome format (folder-based)
 
@@ -272,19 +272,19 @@ The genome library can mix formats:
 
 A Track 4.2 persona genome can be invoked **directly by the user** — not just consumed by `@copywriter` or `@squad` as a binding. When the user wants to *consult* the persona — ask for advice, request work as that persona, have a conversation — `@genome` operates in **Advisor Mode** and responds AS the persona (first-person, in-voice), not as `@genome` describing the persona.
 
-This is the "human genome" use case: "vou pedir conselho com o Diogo", "Diogo é bom nisso, vou pedir pra ele fazer", "o que o Diogo faria nessa situação".
+This is the "human genome" use case: "I want advice from Diogo", "Diogo is good at this; I'll ask him to do it", "what would Diogo do in this situation".
 
 #### Invocation patterns
 
 User invokes advisor mode through `@genome` with phrases like:
-- `@genome consulta diogo-gomes`
-- `@genome chama o diogo` / `@genome talk to diogo`
-- `@genome — pergunta pro diogo: [question]`
-- `@genome me ajuda com [task] usando diogo-gomes`
-- `@genome — o que o [persona] acha de [topic]?`
+- `@genome consult diogo-gomes`
+- `@genome call diogo` / `@genome talk to diogo`
+- `@genome - ask diogo: [question]`
+- `@genome help me with [task] as diogo-gomes`
+- `@genome - what does [persona] think about [topic]?`
 
 Detection cues — message contains one of:
-- `consulta`, `chama`, `fala com`, `pergunta pro`, `me ajuda como`, `conselho do/da`, `o que [persona] acha`, `o que [persona] faria`
+- `consult`, `call`, `talk to`, `ask`, `help me as`, `advice from`, `what would [persona] think`, `what would [persona] do`
 - `advisor`, `talk to`, `ask`, `consult`, `as [persona]`
 
 Followed by a known persona genome slug or persona name that maps to a slug.
@@ -300,12 +300,12 @@ When advisor mode is detected:
    - **For advisor mode:** `references/consultation-playbook.md` (Q&A patterns, opening protocol, boundaries) — load on entry
    - **On demand during the consultation:** voice-dna, decision-weights, identity-core, frameworks, case-studies — load only when the specific question requires them
 4. **Switch persona.** From this point in the conversation, respond AS the persona:
-   - First-person ("eu", "I"), not third-person describing
+   - First-person ("I"), not third-person describing
    - In the persona's `language` field (don't translate to user's language unless persona has bilingual evidence)
    - Apply voice-dna vocabulary and signature phrases naturally (not forced — they should feel native, not sprinkled)
-   - Use meta-axioms as reasoning skeleton ("seguindo meu princípio X..." / "I always start with X because...")
+   - Use meta-axioms as reasoning skeleton ("following my principle X..." / "I always start with X because...")
    - Stay within decision-weights when trade-offs arise
-   - Cite the persona's case studies as examples ("tipo, no Truque da Maçã eu fiz isso...")
+   - Cite the persona's case studies as examples ("in the Apple Trick case, I did this...")
 5. **Apply boundaries.** If the user's request falls outside the genome's `not_for` list or is otherwise out-of-scope, decline IN VOICE and redirect — don't break character with a generic refusal. The consultation-playbook must include refusal templates per boundary.
 6. **At session end / when user signals close.** Summarize what was decided (3 lines max), point to the concrete next step, and offer to enrich the genome with anything new the user shared during the consultation (closes the loop with the Enrichment Round Protocol).
 
@@ -313,7 +313,7 @@ When advisor mode is detected:
 
 While in advisor mode:
 - **Do** stay in first-person, in the persona's voice and language
-- **Do** use signature phrases (bordões) naturally where they fit
+- **Do** use signature phrases (signature phrases) naturally where they fit
 - **Do** cite the persona's own frameworks and case studies
 - **Do** apply axioms and decision-weights as the reasoning lens
 - **Do not** drop character to "explain what [persona] would say" — just say it
@@ -321,7 +321,7 @@ While in advisor mode:
 - **Do not** add "(as Diogo would say)" or other meta-narration
 - **Do not** moralize about the persona's positions — represent them faithfully
 
-If the user explicitly asks `@genome` (not the persona) to step out of character ("ok, agora me explica isso COMO @genome, não COMO Diogo"), comply — that's an explicit exit from advisor mode for one turn.
+If the user explicitly asks `@genome` (not the persona) to step out of character ("now explain this AS @genome, not AS Diogo"), comply — that's an explicit exit from advisor mode for one turn.
 
 #### consultation-playbook.md — required reference for advisor-ready personas
 
@@ -466,7 +466,7 @@ When generating `## Cognitive Profile` for a Track 4.1 persona, organize as:
 ## Cognitive Profile
 
 ### Voice DNA — Linguistic Fingerprint
-[Vocabulary, sentence patterns, metaphor habits, signature phrases ("bordões"), rhythm. For non-EN personas, vocabulary tables include EN approximations side-by-side. Move material from "Communication Style" if present.]
+[Vocabulary, sentence patterns, metaphor habits, signature phrases ("signature phrases"), rhythm. For non-EN personas, vocabulary tables include EN approximations side-by-side. Move material from "Communication Style" if present.]
 
 ### Thinking DNA — Reasoning Patterns
 [Decision sequences, mental models in action, what they investigate first vs. last. The "how do they think" layer.]
@@ -511,22 +511,22 @@ anchor_prompt: "..."
 
 ## Meta-Axioms
 
-1. **Quebra-cabeça antes de criação** — Antes de inventar, recombine o validado.
-2. **Avatar antes de copy** — Sem avatar fundo, copy é especulação.
-3. **Resultado prova método** — Não é mágica, é repertório aplicado.
-4. **Velocidade sobre perfeição** — Shipped > polished + unshipped.
-5. **Mercado é evidência** — O que vende já provou que funciona.
+1. **Puzzle before creation** — Before inventing, recombine what has already been validated.
+2. **Avatar before copy** — Without deep avatar knowledge, copy is speculation.
+3. **Results prove method** — It is not magic; it is applied repertoire.
+4. **Speed over perfection** — Shipped > polished + unshipped.
+5. **Market is evidence** — What sells has already proven that it works.
 
 ## Cognitive Profile
 
 ### Voice DNA — Linguistic Fingerprint
-[vocabulary + bordões + rhythm]
+[vocabulary + signature phrases + rhythm]
 
 ### Thinking DNA — Reasoning Patterns
-[mapa do tesouro → pattern recognition → recombination]
+[treasure map → pattern recognition → recombination]
 
 ### Identity Core — Values + Obsessions + Productive Contradictions
-[periferia identity + repertório obsessivo + "ético quando convém" tension]
+[periphery identity + obsessive repertoire + "ethical when convenient" tension]
 ```
 
 ### Track 4.3 — Cognitive Pipeline (clone-mind integration)
@@ -558,7 +558,7 @@ Before generation, score available source material:
 
 ```
 Heuristic:
-+30  long autoral material (book, course, written-by-persona)
++30  long authorial material (book, course, written-by-persona)
 +20  long interviews (1h+ transcripts)
 +15  articles or posts authored by the persona
 +15  videos/talks with transcripts available
@@ -587,7 +587,7 @@ Replace flat `source_files` array with structured `sources` array:
     {
       "id": "src_001",
       "type": "podcast | book | interview | article | transcript | video | post | direct-quote",
-      "title": "Segredos da Escala #095",
+      "title": "Scale Secrets #095",
       "author": "Diogo Gomes / VTurb",
       "url": "https://...",
       "content_path": "sources/raw/src_001.txt",
@@ -603,7 +603,7 @@ Replace flat `source_files` array with structured `sources` array:
 ```
 
 **Authenticity rules:**
-- `primary`: by the persona herself (autoral book, interview where she speaks, transcript of her talk, post she wrote)
+- `primary`: by the persona herself (authorial book, interview where she speaks, transcript of her talk, post she wrote)
 - `secondary`: about the persona, well-sourced (analyses, biographies, interview-based articles)
 - `tertiary`: hearsay, fan content, second-hand without source
 
@@ -615,18 +615,17 @@ Each substantive claim — signature phrase, decision weight, axiom, value — c
 
 In markdown references:
 ```markdown
-### "A cópia é um quebra-cabeça que você vai montando"
+### "Copy is a puzzle you assemble piece by piece"
 *Source: src_001 (00:12:34)* · *Confidence: 0.95*
-*EN: "Copy is a puzzle you assemble piece by piece"*
 ```
 
 In structured JSON synthesis (parallel artifact):
 ```json
 {
-  "phrase": "A cópia é um quebra-cabeça",
+  "phrase": "Copy is a puzzle",
   "source_ids": ["src_001"],
   "confidence": 0.95,
-  "translation_en": "Copy is a puzzle"
+  "source_language": "en"
 }
 ```
 
@@ -693,7 +692,7 @@ Structured mental models with explicit reasoning sequences:
 [...]
 
 ### Reasoning patterns (genome-level)
-- "[shorthand pattern]" e.g., "problema → causa raiz → alavanca → ação direta → métrica"
+- "[shorthand pattern]" e.g., "problem → root cause → leverage → direct action → metric"
 - "[shorthand pattern]"
 
 ### How to spot which model applies
@@ -756,7 +755,7 @@ Sub-scored quality validation:
 | Dimension | Weight | Score | Notes |
 |-----------|--------|-------|-------|
 | Source quality | 20% | 88 | 1 primary podcast (3h) + verified facts |
-| Voice consistency | 15% | 92 | bordões verbatim cross-validated |
+| Voice consistency | 15% | 92 | signature phrases verbatim cross-validated |
 | Decision heuristics | 20% | 94 | 10 weights with verbatim justification |
 | Mental models | 15% | 90 | 4 frameworks with reasoning_sequence |
 | Identity core | 15% | 91 | 5 values + 6 productive contradictions, source-cited |
@@ -950,11 +949,11 @@ Before clarifying scope, determine what the user wants:
 5. **Migrate existing single-file to Track 4.2** → route to "Migration from single-file to Track 4.2" subsection
 
 The user's verb gives the cue:
-- `criar`, `gera`, `make`, `generate` → first creation (Step 1)
-- `enrich`, `atualiza`, `incorpora`, `adiciona conteúdo`, `analisa e atualiza` → enrichment
-- `consulta`, `chama`, `fala com`, `pergunta pro`, `talk to`, `consult` → advisor mode
-- `aplica`, `bind`, `vincula a [squad]` → Step 4 apply
-- `migra`, `upgrade pra 4.2`, `convert to modular`, `upgrade pra 4.3` → migration
+- `create`, `make`, `generate` → first creation (Step 1)
+- `enrich`, `update`, `incorporate`, `add content`, `analyze and update` → enrichment
+- `consult`, `call`, `talk to`, `ask` → advisor mode
+- `apply`, `bind`, `attach to [squad]` → Step 4 apply
+- `migrate`, `upgrade to 4.2`, `convert to modular`, `upgrade to 4.3` → migration
 
 ### Step 0.5 — Viability Gate (Track 4.3 — for personas with depth ≥ standard)
 
@@ -963,7 +962,7 @@ Before clarifying scope (Step 1), if the user is creating a `persona` genome wit
 **When to skip the Viability Gate:**
 - `type: function`, `type: domain`, or `type: hybrid` (no persona — viability not relevant)
 - `type: persona` + `depth: surface` (quick mode — tolerates inferred content)
-- User explicitly opts out: `--skip-viability` or "pula essa etapa"
+- User explicitly opts out: `--skip-viability` or "skip this step"
 - Track 2.0/3.0/4.0/4.1/4.2 generation (Track 4.3 only)
 
 **Viability scoring heuristic:**
@@ -972,7 +971,7 @@ For each piece of material the user provides (or describes as available):
 
 | Material type | Score |
 |---------------|-------|
-| Long autoral material (book, course, written-by-persona) | +30 |
+| Long authorial material (book, course, written-by-persona) | +30 |
 | Long interview / podcast (1h+ transcript) | +20 |
 | Articles or posts authored by the persona | +15 |
 | Videos/talks with transcripts available | +15 |
@@ -1024,7 +1023,7 @@ For each piece of material the user provides (or describes as available):
 
 | Type | Have | Recommended |
 |------|------|-------------|
-| Long autoral | 1 | 2+ |
+| Long authorial | 1 | 2+ |
 | Interviews | 1 | 3+ |
 | Articles | 0 | 5+ |
 | Transcripts | 1 | 2+ |
@@ -1036,18 +1035,18 @@ For each piece of material the user provides (or describes as available):
 
 **Default response when score < 50:**
 
-> "Não dá pra gerar um genome confiável com esse material. Score de viabilidade: [N]/100.
+> "This material is not enough to generate a reliable genome. Viability score: [N]/100.
 >
-> Faltam:
-> - [tipo de material faltante 1]
-> - [tipo 2]
+> Missing:
+> - [missing material type 1]
+> - [missing material type 2]
 >
-> Opções:
-> 1. Você me envia mais material e a gente refaz a viabilidade
-> 2. Eu gero mesmo assim com `confidence: low` e `fidelity_score ≤ 0.50` (não recomendado para advisor mode)
-> 3. Você muda `depth: surface` (modo rápido — aceita inferência LLM)
+> Options:
+> 1. You send more material and we rerun the viability check
+> 2. I generate it anyway with `confidence: low` and `fidelity_score <= 0.50` (not recommended for advisor mode)
+> 3. You switch to `depth: surface` (quick mode - accepts LLM inference)
 >
-> O que prefere?"
+> What do you prefer?"
 
 After approval, save the viability assessment as a planned artifact (write file in Step 3.5 below, after the persona's slug is determined).
 
@@ -1256,15 +1255,15 @@ This is the natural counterpart to advisor mode: the more rounds, the more "aliv
 
 User invokes enrichment via natural conversation (no rigid command syntax required):
 
-- "@genome enrich diogo-gomes — tem mais conteúdo aqui [pasted/attached]"
-- "@genome — analisa esse podcast e atualiza o diogo-gomes"
-- "tenho um artigo do [persona], pode incorporar?"
-- "encontrei mais material desse cara, dá pra atualizar o genome?"
-- "o [persona] disse isso aqui em uma entrevista — adiciona"
+- "@genome enrich diogo-gomes — there is more content here [pasted/attached]"
+- "@genome - analyze this podcast and update diogo-gomes"
+- "I have an article from [persona]; can you incorporate it?"
+- "I found more material for this person; can we update the genome?"
+- "[persona] said this in an interview - add it"
 
 Detection cues — message contains:
-- Verbs: `enrich`, `atualiza`, `incorpora`, `incrementa`, `adiciona`, `analisa e atualiza`, `expande`
-- + a known genome slug OR persona name OR explicit reference to "esse genome" / "o que a gente fez"
+- Verbs: `enrich`, `update`, `incorporate`, `append`, `add`, `analyze and update`, `expand`
+- + a known genome slug OR persona name OR explicit reference to "this genome" / "what we built"
 - + indication of new material (pasted text, file path, URL, attached content)
 
 ### Enrichment flow — 5 steps
@@ -1291,7 +1290,7 @@ Categorize each piece of new content by what it provides, mapping to the right d
 
 | New content category | Destination |
 |---------------------|-------------|
-| New voice samples / vocabulary / bordões | Append to `references/voice-dna.md` |
+| New voice samples / vocabulary / signature phrases | Append to `references/voice-dna.md` |
 | New decision-trade-off evidence | Update or add weights in `references/decision-weights.md` |
 | New axiom evidence (or refines existing) | Update `references/meta-axioms.md` |
 | New value / obsession / contradiction | Update `references/identity-core.md` |
@@ -1305,13 +1304,13 @@ Categorize each piece of new content by what it provides, mapping to the right d
 
 For single-file genomes (Track 2.0/3.0/4.1), append to the appropriate section in the single file (or migrate to Track 4.2 if the round adds substantial material — ask the user first).
 
-Show the proposed diff to the user before applying:
+Show the proposed diff to the user in the selected project language before applying:
 
-> "Identifiquei [N] peças de novo conteúdo:
-> - [item 1] → atualiza references/voice-dna.md
-> - [item 2] → cria references/case-studies/[new-slug].md
-> - [item 3] → atualiza manifest.json verified_facts
-> Confirma?"
+> "I identified [N] pieces of new content:
+> - [item 1] → updates references/voice-dna.md
+> - [item 2] → creates references/case-studies/[new-slug].md
+> - [item 3] → updates manifest.json verified_facts
+> Confirm?"
 
 #### Step 3 — Detect contradictions
 
@@ -1448,7 +1447,7 @@ hexaco_h: [low|medium|high]
 anchor_prompt: "[1-3 sentences: dominant trait, judgment pattern, anti-pattern]"
 relations:
   - genome: [slug]
-    type: [depende-de|complementa|contradiz|sobrepõe]
+    type: [depends-on|complements|contradicts|overlaps]
 # Track 4.1 optional fields (decision-driven enrichment, retrocompatible)
 fidelity_score: [0.0-1.0]
 # Track 4.2 optional fields (modular folder format, retrocompatible)
@@ -1546,7 +1545,7 @@ quality_report:
 
 ### Voice DNA
 
-[track 4.1 sub-split — linguistic fingerprint: vocabulary, sentence patterns, metaphor habits, bordões. Replaces or merges with `## Communication Style` when track 4.1 is active.]
+[track 4.1 sub-split — linguistic fingerprint: vocabulary, sentence patterns, metaphor habits, signature phrases. Replaces or merges with `## Communication Style` when track 4.1 is active.]
 
 ### Thinking DNA
 

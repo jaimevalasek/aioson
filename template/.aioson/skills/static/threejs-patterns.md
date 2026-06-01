@@ -10,9 +10,9 @@
 
 Apply this skill when the user requests:
 - "3D", "WebGL", "three.js", "Three.js"
-- "partículas", "particles", "sistema de partículas"
+- "particles", "particle system"
 - "cena 3D", "3D scene", "objeto 3D interativo"
-- "holográfico", "holographic", "hologram effect"
+- "holographic", "hologram effect"
 - "floating 3D", "3D objects", "interactive 3D"
 - "hero 3D", "3D background", "particle background"
 - `design_skill: threejs-spatial` set in `project.context.md`

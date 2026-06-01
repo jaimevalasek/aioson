@@ -2,14 +2,14 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://aiosforge.dev/schemas/squad-manifest.schema.json",
   "title": "AIOSON Squad Manifest",
-  "description": "Schema para squad.manifest.json",
+  "description": "Schema for squad.manifest.json",
   "type": "object",
   "required": ["schemaVersion", "slug", "name", "mode", "mission", "goal"],
   "properties": {
     "schemaVersion": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "description": "Versão do schema (semver)"
+      "description": "Schema version (semver)"
     },
     "packageVersion": {
       "type": "string",
@@ -20,7 +20,7 @@
       "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
       "minLength": 2,
       "maxLength": 50,
-      "description": "Identificador kebab-case do squad"
+      "description": "Squad kebab-case identifier"
     },
     "name": {
       "type": "string",
@@ -29,7 +29,7 @@
     "mode": {
       "type": "string",
       "enum": ["content", "software", "research", "mixed"],
-      "description": "Tipo principal do squad"
+      "description": "Primary squad type"
     },
     "mission": { "type": "string", "maxLength": 500 },
     "goal": { "type": "string", "maxLength": 500 },
@@ -83,7 +83,7 @@
     },
     "analysis": {
       "type": "object",
-      "description": "Domain decomposition from sourceDocs (design Passo 2.5) — the roster was derived from this; read by squad-analyze and squad-validate",
+      "description": "Domain decomposition from sourceDocs (design Step 2.5) — the roster was derived from this; read by squad-analyze and squad-validate",
       "properties": {
         "entities": { "type": "array", "items": { "type": "string" } },
         "workflows": { "type": "array", "items": { "type": "string" } },
@@ -631,7 +631,7 @@
     },
     "contextMonitor": {
       "type": "object",
-      "description": "Context window monitoring configuration (Fase 1 — PRD 19.2 §3.1)",
+      "description": "Context window monitoring configuration (Phase 1 — PRD 19.2 §3.1)",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -663,7 +663,7 @@
     },
     "isolation": {
       "type": "object",
-      "description": "Execution isolation strategy for agent branches (Fase 2 — PRD 19.2 §3.5)",
+      "description": "Execution isolation strategy for agent branches (Phase 2 — PRD 19.2 §3.5)",
       "properties": {
         "strategy": {
           "type": "string",
@@ -690,7 +690,7 @@
     },
     "recovery": {
       "type": "object",
-      "description": "Context recovery configuration after a compact event (Fase 3 — PRD 19.2 §3.6)",
+      "description": "Context recovery configuration after a compact event (Phase 3 — PRD 19.2 §3.6)",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -822,7 +822,7 @@
   },
   "ports": {
     "type": "object",
-    "description": "Declaração de inputs e outputs para conexão inter-squad",
+    "description": "Input and output declaration for inter-squad connections",
     "properties": {
       "inputs": {
         "type": "array",

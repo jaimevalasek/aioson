@@ -317,8 +317,8 @@ When NOT to keep consistent:
 | Brunson (storytelling) | Reels/TikTok hooks, YouTube ad opens, email subject lines. Long-form on YouTube |
 | Georgi (RMBC) | Long sales letters, YouTube VSLs, Facebook ad sets with mechanism teaser |
 | Ladeira (BR mainstream) | Reels, TikTok, Instagram, Stories — daily-system content |
-| Ícaro (BR intelectual) | Twitter threads, LinkedIn posts, long captions on Instagram |
-| Diogo Gomes (BR periferia) | Facebook ads, YouTube ads, VSLs — high-volume aggressive direct response |
+| Ícaro (Brazilian intellectual) | Twitter threads, LinkedIn posts, long captions on Instagram |
+| Diogo Gomes (Brazilian periphery) | Facebook ads, YouTube ads, VSLs — high-volume aggressive direct response |
 
 ---
 

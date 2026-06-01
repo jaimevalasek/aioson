@@ -1,46 +1,55 @@
-# Skill: Harness-Driven Validation (pt-BR)
+# Skill: Harness-Driven Validation
 
-> **Uso:** Implementação e Verificação Contratual (Padrão Nautilus).
-> **Agentes:** @dev, @validator.
-> **Contexto:** Projetos MEDIUM ou com `harness-contract.json` presente.
+> **Use:** Implementation and contract validation (Nautilus pattern).
+> **Agents:** @dev, @validator.
+> **Context:** MEDIUM projects or projects with an existing `harness-contract.json`.
 
-## Missão
-Garantir que o ciclo de implementação do implementador (@dev) seja fechado com uma validação imparcial do validador (@validator) antes de qualquer entrega ser considerada concluída.
+## Mission
+Ensure the implementer cycle (@dev) closes with impartial validator review (@validator) before any delivery is considered complete.
 
-## Fluxo de Trabalho do @dev (Harness-Aware)
+## @dev Workflow (Harness-Aware)
 
-### 1. Início de Tarefa
-Antes de escrever o primeiro arquivo de uma feature, verifique se o Harness está inicializado:
+### 1. Task Start
+Before writing the first file of a feature, check whether the Harness is initialized:
+
 ```bash
 aioson harness:init . --slug=<feature-slug>
 ```
-Isso criará o contrato stube em `.aioson/plans/<slug>/harness-contract.json`.
 
-### 2. Implementação com Feedback
-Sempre que concluir um slice lógico (ex: uma migration, um service, uma rota), execute a validação:
+This creates the contract stub at `.aioson/plans/<slug>/harness-contract.json`.
+
+### 2. Implementation with Feedback
+Whenever you complete a logical slice, such as a migration, service, or route, run validation:
+
 ```bash
 aioson harness:validate . --slug=<feature-slug>
 ```
-O sistema invocará o `@validator` em um processo separado. O resultado será injetado no seu `progress.json`.
 
-### 3. Recuperação de Falhas (Circuit Breaker)
-Se a validação falhar:
-- Leia o campo `last_error` em `progress.json`.
-- Corrija apenas o ponto indicado pelo erro.
-- Re-valide imediatamente.
-- **Aviso:** Se falhar repetidamente (conforme `error_streak_limit`), o sistema abrirá o circuito (`OPEN`) e você não poderá continuar sem a intervenção explícita do usuário.
+The system invokes `@validator` in a separate process. The result is injected into `progress.json`.
+
+### 3. Failure Recovery (Circuit Breaker)
+If validation fails:
+
+- Read the `last_error` field in `progress.json`.
+- Fix only the point indicated by the error.
+- Re-validate immediately.
+- **Warning:** If validation fails repeatedly according to `error_streak_limit`, the system opens the circuit (`OPEN`) and you may not continue without explicit user intervention.
 
 ## Done Gate
-O `@dev` não deve tentar marcar a feature como `done` em `features.md` manualmente. O gateway bloqueará a alteração se:
-1. Um `harness-contract.json` existir.
-2. E o `progress.json` não tiver `ready_for_done_gate: true`.
+`@dev` must not manually mark the feature as `done` in `features.md`. The gateway blocks that change when:
 
-## Melhores Práticas
-- **Commits Atômicos:** Faça commit após cada `harness:validate` bem-sucedido.
-- **Contratos Binários:** No contrato, prefira critérios que possam ser validados mecanicamente (arquivos, assinaturas, testes).
-- **Isolamento de Contexto:** Nunca tente "explicar" seu código para o `@validator` através de comentários. O validador deve julgar apenas o arquivo final e o contrato.
+1. A `harness-contract.json` exists.
+2. `progress.json` does not have `ready_for_done_gate: true`.
+
+## Best Practices
+
+- **Atomic commits:** Commit after each successful `harness:validate`.
+- **Binary contracts:** Prefer criteria that can be validated mechanically, such as files, signatures, and tests.
+- **Context isolation:** Never try to explain your code to `@validator` through comments. The validator must judge only the final file and the contract.
 
 ---
-## Referências
-- [Doc] Padrão Nautilus & PBQ — `.aioson/docs/integrations/harness-engineering.md`
-- [CLI] Comandos `harness:init` e `harness:validate` — `/help`
+
+## References
+
+- [Doc] Nautilus & PBQ pattern - `.aioson/docs/integrations/harness-engineering.md`
+- [CLI] `harness:init` and `harness:validate` commands - `/help`

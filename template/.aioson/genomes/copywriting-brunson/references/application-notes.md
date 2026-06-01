@@ -68,8 +68,8 @@ This conflict is documented in `relations: { contradiz }` in manifest.json.
 
 Avoid mixing Brunson with:
 - **Ladeira** (BR mainstream lightcopy) — the registers are very different (Light Copy 3-Cs lean vs. Brunson's storytelling volume)
-- **Ícaro de Carvalho** (BR autoral confessional) — autoral polarization vs. Brunson's tribal aspiration
-- **Diogo Gomes** (BR periferia) — different cultural register
+- **Ícaro de Carvalho** (Brazilian authorial confessional) — authorial polarization vs. Brunson's tribal aspiration
+- **Diogo Gomes** (Brazilian periphery) — different cultural register
 
 For BR markets, use BR personas. For US/EN aspirational direct response, Brunson dominates.
 

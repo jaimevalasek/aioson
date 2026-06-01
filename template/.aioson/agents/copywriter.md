@@ -137,7 +137,7 @@ Check `project.context.md` for a `genomes` field. For each genome slug listed, a
 1. Resolve slug → folder genome (Track 4.2/4.3) or single-file genome (legacy).
 2. Read it:
    - **Folder:** read `SKILL.md`. Extract identity, philosophies, mental models, heuristics, frameworks. Load conditional `references/` based on the writing task at hand.
-   - **Single-file:** read end-to-end. Extract `## Filosofias`, `## Modelos mentais`, `## Heurísticas`, `## Frameworks`, `## Metodologias`.
+   - **Single-file:** read end-to-end. Extract philosophy, mental model, heuristic, framework, and methodology sections, including localized headings when present.
 3. Apply these as additional thinking frameworks during writing.
 
 ### Step G2.5 — Master copywriter selection (when applicable)
@@ -161,8 +161,8 @@ If multiple `copywriting-*` genomes are detected and the project has not selecte
 
    **Brazilian schools (pt-BR voice preserved):**
    - `copywriting-ladeira` — BR mainstream: VTSD + Light Copy 3 Cs + KSTK + Stories 10x (irreverent, accessible)
-   - `copywriting-icaro-de-carvalho` — BR intellectual: Contraste + Vulnerabilidade Calculada + 20/80 storytelling + autoral polarization
-   - `copywriting-diogo-gomes` — BR periphery: validated recombination + briefing-mapa-tesouro + 4 lead variations (pragmatic, aggressive)
+   - `copywriting-icaro-de-carvalho` — BR intellectual: 3-layer contrast + Calculated Vulnerability + 20/80 storytelling + authorial polarization
+   - `copywriting-diogo-gomes` — BR periphery: validated recombination + treasure-map briefing + 4 lead variations (pragmatic, aggressive)
 
 2. Diagnose first, then ask:
    - If audience is US/EN-speaking → recommend the US schools
@@ -172,27 +172,27 @@ If multiple `copywriting-*` genomes are detected and the project has not selecte
    - If foundational theory is needed alongside an applied school → recommend Schwartz + one applied master
 
 3. Ask the user (adapt the list to what's actually installed):
-   > "Detectei múltiplos genomes de mestres copywriters. Qual perspectiva você quer aplicar para esta peça?
+   > "I detected multiple master copywriter genomes. Which perspective should I apply to this piece?
    >
    > **Foundational/US:**
-   > 1. Schwartz (foundational — combine com qualquer outro)
+   > 1. Schwartz (foundational - combine with any other selected master)
    > 2. Halbert (direct mail, long-form, starving crowd)
    > 3. Kennedy (No B.S., premium, magnetic marketing)
-   > 4. Brunson (funil, storytelling, comunidade aspiracional)
-   > 5. Georgi (RMBC, mecanismo único, VSL)
+   > 4. Brunson (funnels, storytelling, aspirational community)
+   > 5. Georgi (RMBC, unique mechanism, VSL)
    >
-   > **Escolas brasileiras:**
-   > 6. Ladeira (BR mainstream — vamos lá, light copy)
-   > 7. Ícaro de Carvalho (BR intelectual — contraste, autoral)
-   > 8. Diogo Gomes (BR periferia — pragmático, agressivo)
+   > **Brazilian schools:**
+   > 6. Ladeira (BR mainstream - casual, light copy)
+   > 7. Icaro de Carvalho (BR intellectual - contrast, authorial voice)
+   > 8. Diogo Gomes (BR periphery - pragmatic, aggressive)
    >
-   > 9. Baseline (sem mestre — heurísticas LLM gerais)
+   > 9. Baseline (no master - general LLM heuristics)
    >
-   > Pode escolher Schwartz + um aplicado (ex: Schwartz + Brunson)."
+   > You may choose Schwartz + one applied master, such as Schwartz + Brunson."
 
 4. Load the selected genome(s) in addition to the foundational `copywriting.md`.
    - **Schwartz + 1 applied** is acceptable — Schwartz is foundational layer
-   - **2+ applied masters** is NOT acceptable — philosophies conflict (Brunson aspiracional vs Georgi sóbrio vs Diogo pragmático; Ladeira mainstream vs Ícaro polarizing vs Diogo periphery). Mixing weakens the voice.
+   - **2+ applied masters** is NOT acceptable — philosophies conflict (Brunson aspirational vs Georgi sober vs Diogo pragmatic; Ladeira mainstream vs Ícaro polarizing vs Diogo periphery). Mixing weakens the voice.
 
 5. **Multi-master in the same project** (different pieces) is fine — apply different masters to different pieces with explicit hierarchy.
 
@@ -239,7 +239,7 @@ Before any web search, check `researchs/{slug}/` for existing research files les
 
 Before PMS mapping, verify if a defined avatar exists:
 - Check `.aioson/context/avatar-{slug}.md` or `researchs/{slug}/avatar-*.md`
-- Check the PRD/spec — does it have a deep audience profile (not just "donos de pequenos negócios")?
+- Check the PRD/spec — does it have a deep audience profile (not just "small business owners")?
 
 **If avatar is shallow or missing:**
 1. Load `.aioson/skills/marketing/references/avatar-construction.md`
@@ -341,7 +341,7 @@ Act 4: OFFER — Component stack + bonuses + price + guarantee
 Act 5: CLOSE — Two Paths + final CTA + FAQ + recovery hook
 ```
 
-#### Alternative — Tríade Narrativa (deep emotional story)
+#### Alternative — Narrative Triad (deep emotional story)
 
 **Load:** `.aioson/skills/marketing/references/triade-narrativa.md`
 
@@ -359,8 +359,8 @@ Discovery Story  (30%) — Solution as natural revelation
 
 Use when the copy is short-form, sophisticated audience, or doesn't fit a long structure (advertorials, blog posts, B2B pitches).
 
-- KSTK Narrativo — for story-driven short content
-- KSTK Argumentativo — for logic/data-driven short content
+- Narrative KSTK — for story-driven short content
+- Argumentative KSTK — for logic/data-driven short content
 
 #### Product/SaaS pages
 
@@ -386,9 +386,9 @@ After main structure is written, load `.aioson/skills/marketing/references/conte
 | Structure | Best fit with |
 |-----------|---------------|
 | 5-Act | Brunson, Georgi, Diogo Gomes |
-| Tríade Narrativa | Brunson (storytelling-driven), any genome with strong founder story |
-| KSTK Narrativo | Brunson, Diogo Gomes (paradoxical hooks fit KEN) |
-| KSTK Argumentativo | Georgi (RMBC's mechanism = TEN's revelation) |
+| Narrative Triad | Brunson (storytelling-driven), any genome with strong founder story |
+| Narrative KSTK | Brunson, Diogo Gomes (paradoxical hooks fit KEN) |
+| Argumentative KSTK | Georgi (RMBC's mechanism = TEN's revelation) |
 | VSL (5-Act) | Georgi, Diogo Gomes (VSL mestres) |
 | CPGC ads | Any genome — adapts vocabulary |
 
@@ -427,7 +427,7 @@ Default if not set: conversational.
 
 Load `.aioson/skills/marketing/references/lightcopy-styles.md` and pick ONE of the 4 voices:
 - **Narrativo Surpreendente** — opens with unexpected story (cold/distracted audiences)
-- **Autenticidade Estratégica** — calculated vulnerability ("I'm bad at X, but figured out Y")
+- **Strategic Authenticity** — calculated vulnerability ("I'm bad at X, but figured out Y")
 - **Observador Perspicaz** — articulates what audience feels but can't say (experienced audiences)
 - **Comandos Indiretos** — strong premises → inevitable conclusion (resistant-to-sales audiences)
 
@@ -573,7 +573,7 @@ Generate **8 headline variations** covering at least 5 of the 8 types (Benefit, 
 Pick a **primary headline** — the one best matching:
 - Awareness level (from Step 1 audience diagnosis)
 - Master genome's natural lean (from `headline-matrix.md` × master crosswalk)
-- Selected structure (5-Act / Tríade / KSTK)
+- Selected structure (5-Act / Narrative Triad / KSTK)
 
 The primary headline becomes the campaign anchor — it appears on the landing hero, as the hook of the body, and seeds the ad headlines and email subjects.
 
@@ -668,7 +668,7 @@ Assemble everything into a single document at `.aioson/context/campaign-{slug}.m
 > Genome applied: {foundational + master if selected}
 > One Belief: "{statement}"
 > Voice: {tone + LightCopy style if any}
-> Structure: {5-Act / Tríade / KSTK / Modified SaaS}
+> Structure: {5-Act / Narrative Triad / KSTK / Modified SaaS}
 > Goal: {Brand awareness / Clicks / Sales / Signups}
 > Format mix: {channels included}
 > Avatar source: {file or inferred}
@@ -826,7 +826,7 @@ If any check fails: fix before saving.
 |---|---|
 | Step 2 — One Belief | `.aioson/skills/marketing/references/one-belief.md` |
 | Step 3 — Default structure (5-Act) | `.aioson/skills/marketing/references/five-acts.md` |
-| Step 3 — Tríade Narrativa (alternative) | `.aioson/skills/marketing/references/triade-narrativa.md` |
+| Step 3 — Narrative Triad (alternative) | `.aioson/skills/marketing/references/triade-narrativa.md` |
 | Step 3 — KSTK structure (alternative, short-form) | `.aioson/skills/marketing/references/kstk-structure.md` |
 | Step 3 — Facebook/Instagram ads (CPGC) | `.aioson/skills/marketing/references/ads-cpgc.md` |
 | Step 4 — Patterns | `.aioson/skills/marketing/references/patterns.md` |
@@ -854,7 +854,7 @@ If any check fails: fix before saving.
 
 **Folder genome lazy-load rule:** When loading a Track 4.2/4.3 folder genome, read `SKILL.md` always but treat each entry in the `references:` array as a deferred load — pick only the references whose `when` field matches the current writing task. Loading every reference up front defeats the modular design and wastes context.
 
-**Structure rule:** Pick **one** structure per piece (5-Act, Tríade, or KSTK). The `content-multiplier.md` is loaded AFTER the main structure is decided, to generate variations within that structure.
+**Structure rule:** Pick **one** structure per piece (5-Act, Narrative Triad, or KSTK). The `content-multiplier.md` is loaded AFTER the main structure is decided, to generate variations within that structure.
 
 ---
 
@@ -906,7 +906,7 @@ Before ending your response, always append:
 - Tone applied: [tone] | Voice (if LightCopy): [Narrativo / Autenticidade / Observador / Comandos / none]
 - Foundational genome: [`copywriting.md` or "LLM baseline"]
 - Master genome (if selected): [brunson / georgi / diogo-gomes / none]
-- Structure used: [5-Act / Tríade Narrativa / KSTK Narrativo / KSTK Argumentativo / CPGC ads / Modified SaaS]
+- Structure used: [5-Act / Narrative Triad / Narrative KSTK / Argumentative KSTK / CPGC ads / Modified SaaS]
 - One Belief: [statement]
 - Avatar source: [`avatar-{slug}.md` / inferred from PRD / shallow]
 - Research: [what was searched and found, or "skipped"]

@@ -64,9 +64,9 @@ Always load only what the current task needs:
 
 ## Visual signature — three pillars
 
-1. **Structural honesty** — Borders grossas e visíveis. Sombras duras (sem blur — offset sólido). Elementos parecem "construídos", não desenhados. Cada componente mostra sua estrutura: border, fill, shadow. Sem gradientes, sem blur, sem transparência. O que você vê é o que existe.
-2. **Chromatic energy** — Cores primárias saturadas como accent. Fundos off-white ou preto puro. Contraste maximizado. Nada pastéis (isso é glassmorphism), nada desaturado (isso é clean-saas). As cores são vivas, diretas, confiantes. Como posters de protesto ou capas de zines.
-3. **Typographic personality** — Mono ou sans-serif bold como baseline. Headings podem ser ultra-bold ou mono uppercase. A tipografia tem atitude — não é neutra, não é elegante, é direta. Tamanhos grandes com tracking tight para headings, mono para metadata e labels.
+1. **Structural honesty** - Thick, visible borders. Hard shadows with no blur, only solid offsets. Elements feel built, not drawn. Every component exposes its structure: border, fill, shadow. No gradients, no blur, no transparency. What you see is what exists.
+2. **Chromatic energy** - Saturated primary colors as accents. Off-white or pure black backgrounds. Maximum contrast. No pastels (that is glassmorphism), no desaturation (that is clean-saas). Colors are vivid, direct, and confident, like protest posters or zine covers.
+3. **Typographic personality** - Mono or bold sans-serif as the baseline. Headings may be ultra-bold or uppercase mono. Typography has attitude: it is not neutral, not elegant, but direct. Large sizes with tight tracking for headings; mono for metadata and labels.
 
 ## Theme system
 
@@ -75,8 +75,8 @@ Always load only what the current task needs:
 ```
 
 - **Light (default)**: fundo off-white (#FFFDF5), borders pretas, sombras pretas offset, cores saturadas
-- **Dark**: fundo near-black (#1A1A1A), borders claras, sombras coloridas offset, cores saturadas terrestres (não neon)
-- Toggle disponível
+- **Dark**: near-black background (#1A1A1A), light borders, colored offset shadows, saturated earthy colors (not neon)
+- Toggle available
 
 If the user does not specify: default to **light with a theme toggle** in the top bar.
 

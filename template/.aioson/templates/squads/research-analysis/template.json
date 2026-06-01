@@ -1,7 +1,7 @@
 {
   "slug": "research-analysis",
   "name": "Research & Analysis",
-  "description": "Squad de pesquisa, benchmarks, relatórios e comparações",
+  "description": "Research squad: benchmarks, reports, comparisons, and analysis",
   "mode": "research",
   "suggestedExecutors": [
     { "slug": "researcher", "role": "Gathers data, finds sources, maps landscape" },

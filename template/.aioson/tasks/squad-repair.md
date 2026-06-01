@@ -1,60 +1,60 @@
 # Task: Squad Repair
 
-> Reconcilia o manifesto com a estrutura real do filesystem. Corrige inconsistências.
+> Reconcile the manifest with the real filesystem structure. Fix inconsistencies.
 
-## Quando usar
-- `@squad repair <slug>` — invocação direta
-- Quando validate reporta erros de estrutura
-- Quando o usuário editou arquivos manualmente e quebrou a consistência
+## When To Use
+- `@squad repair <slug>` — direct invocation
+- When validation reports structural errors
+- When the user manually edited files and broke consistency
 
-## Processo
+## Process
 
-### Passo 0 — Detecção de squad legado
+### Step 0 - Legacy Squad Detection
 
-Se o slug existe como diretório em `.aioson/squads/<slug>/` mas NÃO tem `squad.manifest.json`:
+If the slug exists as a directory at `.aioson/squads/<slug>/` but does not have `squad.manifest.json`:
 
-1. Ler `squad.md` (metadata textual) se existir
-2. Ler `agents/agents.md` se existir
-3. Listar arquivos em `agents/` para descobrir executores
-4. Inferir mode, mission, goal do texto encontrado
-5. Gerar `squad.manifest.json` a partir do que foi descoberto (schemaVersion: "1.0.0")
-6. Apresentar o manifesto gerado para aprovação:
+1. Read `squad.md` if it exists.
+2. Read `agents/agents.md` if it exists.
+3. List files under `agents/` to discover executors.
+4. Infer mode, mission, and goal from the discovered text.
+5. Generate `squad.manifest.json` from the discovered data (`schemaVersion: "1.0.0"`).
+6. Present the generated manifest for approval in the selected project language:
    ```
-   Squad legado detectado: "<slug>"
-   Manifesto inferido:
-     mode: content (inferido)
-     mission: "..." (inferido de squad.md)
-     executors: writer, editor (encontrados em agents/)
-     confidence: LOW — revisar antes de confirmar
+   Legacy squad detected: "<slug>"
+   Inferred manifest:
+     mode: content (inferred)
+     mission: "..." (inferred from squad.md)
+     executors: writer, editor (found in agents/)
+     confidence: LOW — review before confirming
 
-   Criar squad.manifest.json com estes dados? [Y/n]
+   Create squad.manifest.json with this data? [Y/n]
    ```
-7. Se aprovado, salvar e rodar validate
-8. Marcar readiness contextReady e blueprintReady como "partial"
+7. If approved, save it and run validation.
+8. Mark readiness `contextReady` and `blueprintReady` as `partial`.
 
-### Passo 1 — Detectar inconsistências
+### Step 1 - Detect Inconsistencies
 
 Compare manifest vs filesystem:
 
-**Cenário A — Arquivo no manifesto mas não no filesystem:**
-- Executor referenciado mas arquivo não existe
-- Skill declarada mas diretório/arquivo faltando
-- Ação: oferecer REGENERAR o arquivo ou REMOVER do manifesto
+**Scenario A — File in manifest but not in filesystem:**
+- Executor referenced but file missing
+- Skill declared but directory/file missing
+- Action: offer to regenerate the file or remove it from the manifest
 
-**Cenário B — Arquivo no filesystem mas não no manifesto:**
-- Novo executor .md em agents/ não declarado no manifesto
-- Skill instalada em skills/ não declarada
-- Ação: oferecer REGISTRAR no manifesto ou INFORMAR que é órfão
+**Scenario B — File in filesystem but not in manifest:**
+- New executor `.md` under `agents/` not declared in the manifest
+- Skill installed under `skills/` not declared
+- Action: offer to register it in the manifest or report it as orphaned
 
-**Cenário C — Dados inconsistentes:**
-- Slug do manifesto != nome do diretório
-- Executor com file path errado
-- CLAUDE.md/AGENTS.md desatualizado
-- Ação: oferecer CORRIGIR
+**Scenario C — Inconsistent data:**
+- Manifest slug differs from directory name
+- Executor has wrong file path
+- `CLAUDE.md`/`AGENTS.md` outdated
+- Action: offer to fix it
 
-### Passo 2 — Mostrar diff completo
+### Step 2 - Show Full Diff
 
-Antes de qualquer correção, mostre exatamente o que será feito:
+Before any repair, show exactly what will be done:
 ```
 Repair plan for "<slug>":
 
@@ -67,19 +67,19 @@ Repair plan for "<slug>":
 Apply repairs? [Y/n/select specific]
 ```
 
-### Passo 3 — Aplicar correções selecionadas
+### Step 3 - Apply Selected Repairs
 
-- Regenerar arquivos de executor usando o role/skills do manifesto como input (seguir Step 2 de squad-create.md)
-- Atualizar manifesto com novos arquivos encontrados
-- Corrigir paths e slugs
-- Atualizar CLAUDE.md e AGENTS.md
+- Regenerate executor files using the role/skills from the manifest as input; follow Step 5 of `squad-create.md`.
+- Update the manifest with newly found files.
+- Fix paths and slugs.
+- Update `CLAUDE.md` and `AGENTS.md`.
 
-### Passo 4 — Revalidar
+### Step 4 - Revalidate
 
-Ler e executar mentalmente `.aioson/tasks/squad-validate.md` após todas as correções para confirmar que o pacote está consistente.
+Read and mentally execute `.aioson/tasks/squad-validate.md` after all repairs to confirm the package is consistent.
 
-## Regras
-- NUNCA aplicar correções sem aprovação do usuário
-- SEMPRE mostrar diff antes
-- Para executores regenerados: gerar com as instruções de squad-create.md (Step 2 — Passo 5)
-- Se o squad não tem manifest formal (squad antigo): executar Passo 0 primeiro
+## Rules
+- Never apply repairs without user approval.
+- Always show the diff first.
+- For regenerated executors, generate them using the instructions in `squad-create.md` Step 5.
+- If the squad has no formal manifest, execute Step 0 first.

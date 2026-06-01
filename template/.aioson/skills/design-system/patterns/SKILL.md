@@ -55,7 +55,7 @@ For viewing a single entity (product, user, project, contact).
 │  Breadcrumbs: Gallery → Entity Name                    │
 │  PROFILE HEADER (avatar, name, badges, stat cards)     │
 ├────────────────────────────────────────────────────────┤
-│  TAB BAR (Geral | DNA | Comunicação | Histórico)       │
+│  TAB BAR (General | DNA | Communication | History)      │
 ├───────────┬────────────────────────────────────────────┤
 │ SIDEBAR   │  TAB CONTENT                               │
 │           │  (varies per tab — DNA panel, card grid,   │

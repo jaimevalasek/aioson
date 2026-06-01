@@ -1,75 +1,85 @@
-# UI Language — AIOSON Visual Standards
+# UI Language - AIOSON Visual Standards
 
-> Carregue quando um agente precisa apresentar opções, status ou checkpoints ao usuário.
+> Load when an agent needs to present options, status, or checkpoints to the user. Render the text in the selected project language, but keep this canonical reference in English.
 
 ## Status symbols
-✓ completo / aprovado
-✗ falhou / bloqueado
-◆ em progresso
-○ pendente
-⚠ atenção necessária
-⚡ auto-aprovado
+
+✓ complete / approved
+✗ failed / blocked
+◆ in progress
+○ pending
+⚠ attention needed
+⚡ auto-approved
 
 ## Stage banner
-Usar ao iniciar fase principal:
+
+Use when starting a major phase:
+
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- AIOSON ► @{AGENT} — {FASE}
+ AIOSON ► @{AGENT} - {PHASE}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Checkpoint verify (confirmação visual)
-Usar: após implementação que o usuário precisa ver
-```
-┌─────────────────────────────────────────────┐
-│  ✓ VERIFICAR: {título}                      │
-│  {instrução específica}                      │
-│  Confirmar? [s/n]                           │
-└─────────────────────────────────────────────┘
-```
+## Checkpoint verify (visual confirmation)
 
-## Checkpoint decision (AskUserQuestion — radio)
-Usar: quando há bifurcação com outcomes diferentes
-→ AskUserQuestion com multiSelect: false, 2-4 opções
+Use after implementation that the user needs to see:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  ◆ DECISÃO NECESSÁRIA                      │
-│                                             │
-│  {contexto da decisão}                      │
-│                                             │
-│  1. {opção A} — {consequências}            │
-│  2. {opção B} — {consequências}            │
-│                                             │
-│  Escolha [1/2]:                            │
+│  ✓ VERIFY: {title}                          │
+│  {specific instruction}                     │
+│  Confirm? [y/n]                             │
 └─────────────────────────────────────────────┘
 ```
 
-## Checkpoint action (passo manual)
-Usar: apenas para passos que o agente literalmente não pode executar
+## Checkpoint decision (AskUserQuestion - radio)
+
+Use when there is a fork with different outcomes. Use `AskUserQuestion` with `multiSelect: false` and 2-4 options.
+
 ```
 ┌─────────────────────────────────────────────┐
-│  ⚠ AÇÃO MANUAL NECESSÁRIA                  │
+│  ◆ DECISION NEEDED                          │
 │                                             │
-│  {instrução específica}                      │
-│  {onde executar}                             │
+│  {decision context}                         │
 │                                             │
-│  Avise quando estiver pronto.              │
+│  1. {option A} - {consequences}             │
+│  2. {option B} - {consequences}             │
+│                                             │
+│  Choose [1/2]:                              │
 └─────────────────────────────────────────────┘
 ```
 
-## Checkpoint multi-select (AskUserQuestion — checkbox)
-Usar: seleção múltipla (skills, requirements, itens de sprint)
-→ AskUserQuestion com multiSelect: true
+## Checkpoint action (manual step)
+
+Use only for steps the agent literally cannot execute:
+
+```
+┌─────────────────────────────────────────────┐
+│  ⚠ MANUAL ACTION NEEDED                     │
+│                                             │
+│  {specific instruction}                     │
+│  {where to execute it}                      │
+│                                             │
+│  Tell me when it is ready.                  │
+└─────────────────────────────────────────────┘
+```
+
+## Checkpoint multi-select (AskUserQuestion - checkbox)
+
+Use for multiple selections such as skills, requirements, or sprint items. Use `AskUserQuestion` with `multiSelect: true`.
 
 ## Progress bar
-Usar para fases longas com steps definidos:
+
+Use for long phases with defined steps:
+
 ```
-Progresso: ████████░░ 80% (4/5 steps)
+Progress: ████████░░ 80% (4/5 steps)
 ```
 
-## Regras
-- Header máximo 12 caracteres
-- Máximo 4 opções em radio; máximo 8 em checkbox
-- Incluir opção "Nenhuma/Pular" em checkbox quando pertinente
-- Não usar checkbox para decisões que mudam arquitetura (use radio)
+## Rules
+
+- Header length: 12 characters maximum.
+- Radio: maximum 4 options. Checkbox: maximum 8 options.
+- Include a "None / Skip" checkbox option when relevant.
+- Do not use checkboxes for architecture-changing decisions; use radio.

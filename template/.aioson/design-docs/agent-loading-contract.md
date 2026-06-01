@@ -1,5 +1,5 @@
 ---
-description: "Contrato de carga de memória/contexto dos agentes AIOSON — tiers de loading (sempre / por-gatilho / sob-justificativa), política de retenção+arquivamento de memória append-style (current-state.md), matriz por agente e enforcement. Complementa agent-structural-contract."
+description: "AIOSON agent memory/context loading contract — loading tiers (always / trigger-based / justified), append-style memory retention+archival policy (current-state.md), agent matrix, and enforcement. Complements agent-structural-contract."
 scope: "governance"
 agents: []
 status: partially-implemented
@@ -9,130 +9,109 @@ deferred: "P2 (mandatory slug-resolve pre-code), P3 (reflect-prompt hash+path), 
 
 # Agent Loading Contract
 
-> Governança transversal de **quando** cada agente carrega **qual** camada de memória.
-> Complementa `agent-structural-contract.md` (que cobre seções/observabilidade/handoff).
-> Loaded por todos os agentes na seção "Project rules, docs & design governance".
+> Cross-cutting governance for **when** each agent loads **which** memory layer.
+> Complements `agent-structural-contract.md`, which covers sections, observability, and handoff.
+> Loaded by all agents in the "Project rules, docs & design governance" section.
 
-## Por que existe
+## Why This Exists
 
-A doutrina lazy-load já está nos prompts ("never preload all at once", "cost discipline"),
-mas **nunca foi estendida à bootstrap**. Resultado medido (2026-05-28, modo inception):
+The lazy-load doctrine already exists in prompts ("never preload all at once", "cost discipline"), but it was not originally extended to bootstrap memory. Measured result on 2026-05-28 in inception mode:
 
-- `bootstrap/current-state.md` = **81 KB / ~33k tokens** = **84% da bootstrap**, log append-only de
-  172 entradas. Lido **na ativação** por `@dev`, `@qa`, `@architect`, `@deyvin` — os agentes mais usados.
-- `@product`/`@analyst`/`@neo` já leem só os arquivos pequenos (`what-is`/`what-it-does`) — disciplinados.
-- Como `current-state` > cap de leitura (~25k tokens), quem "lê" recebe fatia **truncada e arbitrária**:
-  paga caro **e** vê incompleto.
-- `aioson context:health` mede `.aioson/context/*.md` mas **ignora `bootstrap/`** — subreporta o maior custo.
+- `bootstrap/current-state.md` was **81 KB / ~33k tokens**, or **84% of bootstrap**, an append-only log with 172 entries. It was read **on activation** by `@dev`, `@qa`, `@architect`, and `@deyvin` — the most-used agents.
+- `@product`/`@analyst`/`@neo` already read only small files (`what-is`/`what-it-does`) and were disciplined.
+- Because `current-state` exceeded the read cap (~25k tokens), agents that "read" it received a **truncated and arbitrary slice**: expensive and incomplete.
+- `aioson context:health` measured `.aioson/context/*.md` but ignored `bootstrap/`, underreporting the largest cost.
 
-Dois modos de falha a corrigir:
-- **Over-load:** leitura eager+completa de memória pesada independente da tarefa (desperdício).
-- **Under-load:** contexto específico (dossier/spec da feature) só carrega se o agente *decidir* — gatilho
-  heurístico, não forçado → trabalho sub-informado ("buraco no processo").
+Failure modes to correct:
+- **Over-load:** eager full reading of heavy memory regardless of task.
+- **Under-load:** specific context (feature dossier/spec) loads only if the agent decides to do it; heuristic instead of enforced, leading to under-informed work.
 
-## Princípio
+## Principle
 
-Toda camada de memória tem um **tier de carga** e um **gatilho**. Nada caro entra na ativação por padrão.
-Memória que cresce por append tem **política de retenção** — não acumula para sempre no caminho quente.
+Every memory layer has a **loading tier** and a **trigger**. Expensive context does not enter activation by default.
+Append-growing memory must have a **retention policy**; it must not accumulate forever on the hot path.
 
-## Os três tiers de carga
+## The Three Loading Tiers
 
-### Tier 0 — Sempre (orçamento ≤ ~2k tokens)
-Orientação imediata e barata; responde "o que é + o que está acontecendo + o que falta":
-- `bootstrap/what-is.md` — identidade do sistema
-- `context/project-pulse.md` — último agente, feature ativa, blockers, próximo passo
-- `context/dev-state.md` — estado da feature em desenvolvimento (o que está sendo feito / o que falta)
+### Tier 0 — Always (budget <= ~2k tokens)
+Immediate cheap orientation; answers "what this is + what is happening + what is missing":
+- `bootstrap/what-is.md` — system identity
+- `context/project-pulse.md` — last agent, active feature, blockers, next step
+- `context/dev-state.md` — current development state, when present
 
-(O `.md` do próprio agente e `CLAUDE.md` são sempre carregados pelo harness — fora do orçamento.)
+The agent's own `.md` file and `CLAUDE.md` are loaded by the harness and are outside this budget.
 
-### Tier 1 — Por gatilho (carregar SÓ quando o gatilho dispara)
+### Tier 1 — Trigger-Based (load ONLY when trigger fires)
 
-| Gatilho na tarefa | Carregar |
+| Task trigger | Load |
 |---|---|
-| Precisa de capacidades recém-shipadas (review, não re-descobrir) | `current-state.md` **só a seção HOT**; cold/archive por keyword |
-| Raciocínio arquitetural/estrutural | `bootstrap/how-it-works.md` |
-| Request nomeia/implica uma feature (slug) | `features/{slug}/dossier.md` + `spec-{slug}.md` (+ prd/requirements) |
-| Implementação toca fronteiras de módulo/naming/reuse | `design-docs/*.md` (por relevância) |
-| Rule cujo `agents:` inclui o agente ou é `[]` | aquela rule |
-| Tarefa casa com um processo (SDD, secure-tdd, decision-presentation) | o SKILL correspondente |
+| Needs recently shipped capability context (review, avoid rediscovery) | `current-state.md` **HOT section only**; cold/archive by keyword |
+| Architectural/structural reasoning | `bootstrap/how-it-works.md` |
+| Request names/implies a feature slug | `features/{slug}/dossier.md` + `spec-{slug}.md` (+ prd/requirements) |
+| Implementation touches module/naming/reuse boundaries | Relevant `design-docs/*.md` |
+| Rule whose `agents:` includes the agent or is `[]` | That rule |
+| Task matches a process (SDD, secure-tdd, decision-presentation) | Matching SKILL |
 
-### Tier 2 — Sob justificativa explícita (caro)
-- `brain:query` (memória procedural) — antes de recomendações arquiteturais
-- `git diff/log` — só quando memória+runtime são insuficientes ou o user pede histórico de commit
-- **`current-state.md` completo + `current-state-archive.md`** — só quando um survey precisa do histórico inteiro
-- scan artifacts (`scan-*.md`) — deep-dive brownfield
+### Tier 2 — Explicit Justification (expensive)
+- `brain:query` (procedural memory) before architectural recommendations
+- `git diff/log` only when memory+runtime are insufficient or the user asks for commit history
+- **Full `current-state.md` + `current-state-archive.md`** only when a survey needs the full history
+- scan artifacts (`scan-*.md`) for brownfield deep-dives
 
-## Política de retenção de memória append-style (o coração)
+## Append-Style Memory Retention Policy
 
-> Responde diretamente: *"dá pra ir arquivando as partes do current-state.md que não são necessárias?"* — **sim.**
+`current-state.md` and any state file that grows by append has a **per-entry lifecycle**.
+A "Slice 3 of feature X shipped..." entry is HOT while X is active; after X closes, it becomes history — valuable for archaeology, unnecessary on every activation.
 
-`current-state.md` (e qualquer arquivo de estado que cresce por append) tem **ciclo de vida por entrada**.
-Uma entrada "Slice 3 da feature X shipou…" é HOT enquanto X está ativa; depois que X **fecha**, vira histórico —
-valiosa para arqueologia, **desnecessária em toda ativação**.
+**HOT/COLD structure:**
+- `bootstrap/current-state.md` (**HOT**) — only active features (`in_progress`) + entries inside the recent window (>= latest published minor or ~last 45 days). Target: **<= ~10 KB**.
+- `bootstrap/current-state-archive.md` (**COLD**) — everything else. Never loaded on activation (Tier 2); searchable through `memory:search` / grep.
 
-**Estrutura HOT/COLD:**
-- `bootstrap/current-state.md` (**HOT**) — apenas: features ativas (`in_progress`) + entradas dentro da
-  janela recente (≥ último minor publicado **ou** ~últimos 45 dias). Alvo: **≤ ~10 KB**.
-- `bootstrap/current-state-archive.md` (**COLD**) — todo o resto. Nunca carregado na ativação (Tier-2);
-  permanece pesquisável via `memory:search` / grep.
+**Rollup triggers (move HOT → COLD, never delete):**
+1. **Event-driven** — `feature:close` moves entries for that feature to archive. Requires a slug tag per entry.
+2. **Window-based** — `memory:trim` applies the retention window to legacy/untagged entries.
 
-**Gatilhos de rollup (mover HOT → COLD, nunca apagar):**
-1. **Event-driven** — `feature:close` move as entradas daquela feature para o archive. Requer tag de slug
-   por entrada (ver abaixo).
-2. **Window-based** — verbo `memory:trim` (ou a etapa de reflexão da Living Memory, que já manda
-   *"remove obsolete entries"* — hoje não honrado) aplica a janela de retenção a entradas legadas/sem tag.
+**Entry tag going forward:** append writers (`@dev`, `@committer`, reflection) prefix entries with `[{slug} · {YYYY-MM-DD}]` so rollup is deterministic. Legacy untagged entries fall back to the window rule.
 
-**Tag de entrada (going-forward):** quem faz append (`@dev`, `@committer`, reflexão) prefixa a entrada com
-`[{slug} · {YYYY-MM-DD}]` para tornar o rollup determinístico. Entradas legadas sem tag caem na regra de janela.
+**Reading:** Tier 1 reads only HOT; archive is Tier 2 for archaeology/keyword work.
 
-**Leitura:** Tier-1 lê só o HOT; o archive é Tier-2 (arqueologia/keyword).
+General rule: every append-growing memory file needs retention, not infinite append. Feature folders, plans, and dossiers are already archived under `done/` on `feature:close`; `current-state.md` was the only global log without rollup, and this policy closes that gap.
 
-> Generaliza: **toda memória que cresce por append precisa de política de retenção, não append infinito.**
-> Pastas de feature, plans e dossiers já são arquivados em `done/` no `feature:close`; `current-state.md`
-> é o único log *global* que ainda não tem rollup — esta política fecha essa lacuna.
+## Agent Loading Matrix
 
-## Matriz de loading por agente (sob o contrato)
-
-| Agente | Tier-0 | Gatilhos Tier-1 típicos | Lê `current-state` completo? |
+| Agent | Tier 0 | Typical Tier 1 triggers | Reads full `current-state`? |
 |---|---|---|---|
-| @product, @analyst | what-is + (what-it-does) | dossier/spec se feature nomeada | ❌ nunca |
-| @neo | what-is | — (roteador) | ❌ nunca |
-| @deyvin | Tier-0 | HOT + dossier/spec por slug; pair-exec/debug docs por gatilho | só HOT (full = Tier-2) |
-| @dev | Tier-0 + how-it-works | HOT + dossier/spec + rules(dev) + design-docs por toque | só HOT |
-| @qa | Tier-0 | HOT (evitar re-flag de shipado) + área sob review | só HOT |
-| @architect | Tier-0 + how-it-works | HOT + design-docs governança | só HOT |
+| @product, @analyst | what-is + optional what-it-does | dossier/spec if feature named | never |
+| @neo | what-is | router only | never |
+| @deyvin | Tier 0 | HOT + dossier/spec by slug; pair-exec/debug docs by trigger | HOT only (full = Tier 2) |
+| @dev | Tier 0 + how-it-works | HOT + dossier/spec + dev rules + design-docs on touch | HOT only |
+| @qa | Tier 0 | HOT to avoid re-flagging shipped work + area under review | HOT only |
+| @architect | Tier 0 + how-it-works | HOT + governance design docs | HOT only |
 
-## Gatilhos determinísticos (fecha o under-load)
+## Deterministic Triggers
 
-Quando a request **nomeia ou implica** uma feature, o agente **DEVE** resolver o slug
-(via `features.md` / `project-pulse.md`) e carregar `dossier` + `spec` **antes** de editar código.
-Converte o gatilho de heurístico ("o agente decide") em contrato ("tem que resolver + carregar").
-Usar `aioson context:pack . --agent=<a> --goal="<request>"` para obter o conjunto exato de arquivos.
+When the request **names or implies** a feature, the agent **must** resolve the slug via `features.md` / `project-pulse.md` and load `dossier` + `spec` **before editing code**.
+This converts the trigger from heuristic ("agent decides") into contract ("must resolve + load").
+Use `aioson context:pack . --agent=<a> --goal="<request>"` to get the exact file set.
 
-## Enforcement & medição
+## Enforcement & Measurement
 
-- `aioson context:health` **DEVE** incluir `bootstrap/*.md` (hoje cego) + uma linha de **orçamento por tier**.
-- Orçamentos: Tier-0 ≤ ~2k tokens; ativação (Tier-0 + prompt do agente) alvo ≤ ~8k tokens.
-- `@qa` (Gate D) e `@sheldon` (enrichment) checam os prompts contra este contrato, como já fazem com
-  `agent-structural-contract` — violação = finding Medium `recommended_owner: dev`, nunca bloqueia feature sozinha.
+- `aioson context:health` **must** include `bootstrap/*.md` plus one budget line per tier.
+- Budgets: Tier 0 <= ~2k tokens; activation (Tier 0 + agent prompt) target <= ~8k tokens.
+- `@qa` (Gate D) and `@sheldon` (enrichment) check prompts against this contract, as they already do with `agent-structural-contract`; violation = Medium finding with `recommended_owner: dev`, never blocks a feature by itself.
 
-## Sequência de implementação (@dev — inception-mirror src/ + template/)
+## Implementation Sequence (@dev — inception-mirror src/ + template/)
 
-1. ✅ **P0 (maior retorno) — shipped v1.21.1:** `memory:trim` (engine + comando, split HOT/COLD) +
-   hook de rollup no `feature:close` (keep=25, best-effort). Derrubou `current-state.md` 81KB→21KB.
-2. ✅ **P1 — shipped v1.21.1:** seção "Bootstrap context" de @dev/@qa/@architect/@deyvin agora aponta
-   pro `current-state-archive.md` (grep/`memory:search` on-demand). A reescrita pesada "ler parcial + grep
-   head" foi dispensada — pós-trim o arquivo HOT já é pequeno.
-3. ✅ **Tagging — shipped v1.21.1:** reflect-engine + @dev invariant #8 + @committer prefixam
-   entradas com `[{slug} · {YYYY-MM-DD}]`.
-4. ✅ **Tooling — shipped v1.21.1:** `context:health` mede `bootstrap/` e exclui o archive frio.
-   (⬜ linha de orçamento por tier ainda não.)
-5. ⬜ **P2 (adiado):** tornar a resolução de slug + load de dossier/spec obrigatória no pré-código.
-6. ⬜ **P3 (adiado):** `reflect-prompt.json` guardar hash+path em vez do snapshot completo.
+1. Done — **P0 shipped v1.21.1:** `memory:trim` (engine + command, HOT/COLD split) + rollup hook on `feature:close` (keep=25, best-effort). Reduced `current-state.md` from 81KB to 21KB.
+2. Done — **P1 shipped v1.21.1:** @dev/@qa/@architect/@deyvin "Bootstrap context" sections now point to `current-state-archive.md` for grep/`memory:search` on demand. Heavy "read partial + grep head" rewrite was no longer needed because HOT is small after trim.
+3. Done — **Tagging shipped v1.21.1:** reflect-engine + @dev invariant #8 + @committer prefix entries with `[{slug} · {YYYY-MM-DD}]`.
+4. Done — **Tooling shipped v1.21.1:** `context:health` measures `bootstrap/` and excludes the cold archive. Per-tier budget line still deferred.
+5. Deferred — **P2:** make slug resolution + dossier/spec load mandatory before code.
+6. Deferred — **P3:** store hash+path in `reflect-prompt.json` instead of full snapshot.
 
-## Não-objetivos / adiado
+## Non-Goals / Deferred
 
-- Mudar o **conteúdo** ou schema da memória (só a política de carga/retenção).
-- Memória cross-project; seleção de contexto por LLM; file-watcher.
-- Tocar @product/@analyst/@neo (já disciplinados) além do alinhamento de referência a este doc.
-- **Apagar** histórico — arquivamento move, nunca deleta (arqueologia preservada e pesquisável).
+- Change memory content or schema; only loading/retention policy.
+- Cross-project memory, LLM-based context selection, file watcher.
+- Touch @product/@analyst/@neo beyond reference alignment to this doc.
+- Delete history; archival moves, never deletes, preserving searchable archaeology.

@@ -1,23 +1,23 @@
 # Task: Generate Implementation Plan
 
-> Fase obrigatória entre spec completa e início de implementação.
-> Garante consistência, define sequência, e prepara context package para novo chat.
+> Mandatory bridge between completed spec work and implementation start.
+> Ensures consistency, defines sequence, and prepares a context package for a fresh chat.
 
-## Quando executar
+## When To Run
 
-### Automaticamente (agentes detectam)
-- /dev detecta que NÃO existe `implementation-plan.md` mas EXISTEM:
-  - `architecture.md` (SMALL/MEDIUM) ou `project.context.md` (MICRO)
-  - Pelo menos um de: `prd.md`, `prd-{slug}.md`, `readiness.md`
-- /orchestrator detecta o mesmo no Step 1
+### Automatically (agents detect)
+- `/dev` detects that `implementation-plan.md` does not exist but these do exist:
+  - `architecture.md` (SMALL/MEDIUM) or `project.context.md` (MICRO)
+  - at least one of: `prd.md`, `prd-{slug}.md`, `readiness.md`
+- `/orchestrator` detects the same in Step 1
 
-### Manualmente
-- Usuário pede: "gere o plano de implementação"
-- Após /architect ou /pm finalizar seus artefatos
+### Manually
+- User asks to generate the implementation plan.
+- After `/architect` or `/pm` finishes their artifacts.
 
-### Feature mode
-- Detecta `prd-{slug}.md` existente sem `implementation-plan-{slug}.md`
-- Gera plan scoped à feature
+### Feature Mode
+- Detects an existing `prd-{slug}.md` without `implementation-plan-{slug}.md`.
+- Generates a plan scoped to that feature.
 
 ## Constitution Gate
 
@@ -33,140 +33,140 @@ If one or more items fail, stop and describe what is missing before continuing.
 
 ---
 
-## Processo
+## Process
 
-### Passo 1 — Inventory check
+### Step 1 - Inventory Check
 
-Listar todos os artefatos em `.aioson/context/`. Para cada um, verificar:
-- Existe? Está completo? É consistente com os outros?
-- Sinalizar gaps e contradições
+List all artifacts in `.aioson/context/`. For each one, verify:
+- Does it exist? Is it complete? Is it consistent with the others?
+- Signal gaps and contradictions.
 
-Artefatos a verificar (em ordem de prioridade):
+Artifacts to check, in priority order:
 
-| Artefato | Obrigatório para | Se ausente |
-|----------|-------------------|------------|
-| `project.context.md` | MICRO, SMALL, MEDIUM | STOP — não gere plan sem identidade |
-| `architecture.md` | SMALL, MEDIUM | Warn — plan terá sequência menos precisa |
-| `prd.md` ou `prd-{slug}.md` | Todos (se existe) | Info — plan baseado apenas em architecture |
-| `discovery.md` | SMALL, MEDIUM | Warn — risco de conflitos com entidades existentes |
-| `ui-spec.md` | Se tem UI | Info — fases de UI terão menos detalhe |
-| `readiness.md` | Se existe | Info — plan assume readiness = READY |
-| `spec.md` | Se existe | Info — sem histórico de decisões anteriores |
-| `design-doc.md` / `design-doc-{slug}.md` | Se existe | Warn se `updated` > 60 dias ou ausente — verificar antes de usar como constraint |
-| `requirements-{slug}.md` | Feature mode | Warn — regras de negócio podem faltar |
+| Artifact | Required for | If missing |
+|----------|--------------|------------|
+| `project.context.md` | MICRO, SMALL, MEDIUM | STOP — do not generate a plan without project identity |
+| `architecture.md` | SMALL, MEDIUM | Warn — plan sequence will be less precise |
+| `prd.md` or `prd-{slug}.md` | All, when present | Info — plan based only on architecture |
+| `discovery.md` | SMALL, MEDIUM | Warn — risk of conflicts with existing entities |
+| `ui-spec.md` | UI work | Info — UI phases will have less detail |
+| `readiness.md` | When present | Info — plan assumes readiness = READY |
+| `spec.md` | When present | Info — no prior decision history |
+| `design-doc.md` / `design-doc-{slug}.md` | When present | Warn if `updated` > 60 days old or absent — verify before using as constraint |
+| `requirements-{slug}.md` | Feature mode | Warn — business rules may be missing |
 
-### Passo 2 — Cross-analysis
+### Step 2 - Cross-Analysis
 
-Ler os artefatos na ordem: `project.context` → `discovery` → `architecture` → `prd` → `ui-spec` → `requirements` → `spec` → `design-doc`
+Read artifacts in this order: `project.context` → `discovery` → `architecture` → `prd` → `ui-spec` → `requirements` → `spec` → `design-doc`.
 
-Buscar ativamente:
-- **Entidades fantasma:** referenciadas no PRD mas ausentes no discovery
-- **Contradições técnicas:** decisão no architecture que conflita com o PRD
-- **Dependências invisíveis:** feature no ui-spec que depende de algo não coberto
-- **Assumptions implícitas:** qualquer artefato que assume algo sem declarar
-- **Scope creep:** requisitos que parecem fora do scope declarado
-- **Riscos de integração:** pontos onde módulos diferentes precisam concordar
+Actively look for:
+- **Ghost entities:** referenced in PRD but absent from discovery
+- **Technical contradictions:** architecture decision conflicts with PRD
+- **Invisible dependencies:** ui-spec feature depends on something not covered
+- **Implicit assumptions:** any artifact assumes something without declaring it
+- **Scope creep:** requirements appear outside declared scope
+- **Integration risks:** points where different modules must agree
 
-Para cada issue encontrado, classificar:
-- **BLOCK** — não pode prosseguir sem resolver (ex: entidade central faltando)
-- **WARN** — pode prosseguir com assumption explícita (ex: campo inferido)
-- **INFO** — anotar para o dev ter consciência (ex: possível refatoração futura)
+For each issue, classify:
+- **BLOCK** — cannot proceed without resolution, for example missing central entity
+- **WARN** — can proceed with explicit assumption, for example inferred field
+- **INFO** — note for dev awareness, for example possible future refactor
 
 **Design-doc freshness check:**
-- Se `design-doc.md` ou `design-doc-{slug}.md` existe e tem campo `updated` com data anterior a 60 dias: classificar como **WARN** — "design-doc pode estar desatualizado; verificar se decisões ainda refletem o estado atual antes de usar como constraint"
-- Se o design-doc existe mas não tem campo `updated`: tratar como potencialmente desatualizado — mesmo WARN
-- Se a seção "Decisions still pending" do design-doc tem itens não resolvidos: listar cada um como **INFO** — "decisão pendente no design-doc: {item}"
-- Não bloquear o plano por staleness — apenas garantir que o dev está ciente antes de herdar uma constraint desatualizada
+- If `design-doc.md` or `design-doc-{slug}.md` exists and has `updated` older than 60 days: classify as **WARN** — "design-doc may be stale; verify whether decisions still reflect current state before using as constraint".
+- If the design-doc exists but lacks `updated`: treat as potentially stale; same WARN.
+- If the "Decisions still pending" section has unresolved items: list each as **INFO** — "pending design-doc decision: {item}".
+- Do not block the plan due to staleness; ensure dev is aware before inheriting stale constraints.
 
-### Passo 3 — Sequence planning
+### Step 3 - Sequence Planning
 
-Definir a ordem de implementação baseada em:
+Define implementation order based on:
 
-**Dependências de dados (sempre primeiro):**
+**Data dependencies first:**
 1. Migrations / schemas / contracts
 2. Models / types / entities
 3. Repositories / data access
 
-**Dependências de lógica (depois dos dados):**
+**Logic dependencies next:**
 4. Services / actions / use-cases
-5. Validação / policies / authorization
+5. Validation / policies / authorization
 
-**Dependências de interface (por último):**
+**Interface dependencies last:**
 6. Controllers / API routes / handlers
 7. Views / components / pages
 
-**Módulos independentes:**
-- Identificar módulos que NÃO compartilham entidades → podem ser paralelos
-- Identificar módulos que COMPARTILHAM entidades → devem ser sequenciais
-- Se /orchestrator vai usar, marcar explicitamente: `parallel: true/false`
+**Independent modules:**
+- Identify modules that do not share entities → can run in parallel.
+- Identify modules that share entities → must be sequential.
+- If `/orchestrator` will use this, explicitly mark `parallel: true/false`.
 
-**Para cada fase, definir:**
-- Título descritivo
-- O que implementar (concreto, não vago)
-- De que depende
-- Quais artefatos o /dev precisa ler
-- Critério de done (como saber que terminou)
-- Checkpoint gate (o que verificar antes de seguir)
+**For each phase, define:**
+- Descriptive title
+- What to implement, concrete and not vague
+- Dependencies
+- Which artifacts `/dev` must read
+- Done criterion
+- Checkpoint gate before continuing
 
-### Passo 4 — Context package
+### Step 4 - Context Package
 
-O context package é o conjunto MÍNIMO de arquivos que o próximo agente ou chat precisa ler para executar o plan com qualidade máxima.
+The context package is the minimum file set the next agent or chat needs to execute the plan with high quality.
 
-**Princípios:**
-- Menos é mais — 3-5 arquivos é o ideal, nunca mais de 7
-- O implementation-plan.md SEMPRE é o primeiro arquivo
-- Artefatos já digeridos no plan NÃO precisam ser re-lidos
-- Separar "leitura obrigatória" de "leitura sob demanda"
+**Principles:**
+- Less is more — 3-5 files is ideal, never more than 7.
+- `implementation-plan.md` is always the first file.
+- Artifacts already digested into the plan do not need to be re-read.
+- Separate "required reading" from "on-demand reading".
 
-**Formato do context package:**
+**Context package format:**
 
 ```
-Leitura obrigatória (nesta ordem):
-1. implementation-plan.md ← este arquivo
+Required reading (in this order):
+1. implementation-plan.md ← this file
 2. project.context.md
-3. architecture.md (se SMALL/MEDIUM)
-4. spec.md (se existe — histórico de decisões)
+3. architecture.md (if SMALL/MEDIUM)
+4. spec.md (if present — decision history)
 
-Leitura sob demanda (quando tocar no tema):
-- discovery.md — quando tocar em entidades existentes
-- prd.md — quando tiver dúvida sobre requisito
-- ui-spec.md — quando implementar UI
-- requirements-{slug}.md — quando implementar a feature
+On-demand reading (when touching the topic):
+- discovery.md — when touching existing entities
+- prd.md — when uncertain about a requirement
+- ui-spec.md — when implementing UI
+- requirements-{slug}.md — when implementing the feature
 
-NÃO re-ler (já sintetizado neste plan):
-- [lista de artefatos cujo conteúdo relevante já está no plan]
+Do not re-read (already synthesized in this plan):
+- [list of artifacts whose relevant content is already in the plan]
 ```
 
-### Passo 5 — Decision registry
+### Step 5 - Decision Registry
 
-Separar decisões em duas categorias:
+Separate decisions into two categories:
 
-**Decisões pré-tomadas (NÃO re-discutir):**
-- Decisões do /architect que já foram validadas
-- Escolhas de stack documentadas em project.context.md
-- Convenções definidas em rules/
-- Restrições documentadas no prd
+**Pre-made decisions (do not re-discuss):**
+- Decisions from `/architect` that were already validated
+- Stack choices documented in `project.context.md`
+- Conventions defined in `rules/`
+- Constraints documented in PRD
 
-**Decisões adiadas (o /dev vai tomar):**
-- Trade-offs que só fazem sentido com código na frente
-- Escolhas de implementação (ex: eager vs lazy loading)
-- Otimizações que dependem de profiling
+**Deferred decisions (`/dev` will make):**
+- Trade-offs that only make sense with code in front of the agent
+- Implementation choices, for example eager vs. lazy loading
+- Optimizations that depend on profiling
 
-Para cada decisão adiada: descrever o trade-off e indicar a direção preferida.
+For each deferred decision, describe the trade-off and indicate the preferred direction.
 
-### Passo 6 — Generate plan
+### Step 6 - Generate Plan
 
-Salvar o plan como:
+Save the plan as:
 - **Project mode:** `.aioson/context/implementation-plan.md`
 - **Feature mode:** `.aioson/context/implementation-plan-{slug}.md`
 
-Formato do artefato:
+Artifact format:
 
 ```markdown
 ---
 project: "{project_name}"
 scope: "{project | feature}"
-feature_slug: "{slug ou null}"
+feature_slug: "{slug or null}"
 created: "{ISO-8601}"
 status: "draft"
 classification: "{MICRO | SMALL | MEDIUM}"
@@ -178,150 +178,148 @@ source_artifacts:
 
 # Implementation Plan
 
-> Gerado após consolidação de todos os artefatos de spec.
-> Aprovado pelo usuário antes de qualquer implementação.
+> Generated after consolidating all spec artifacts.
+> Approved by the user before any implementation.
 > Status: draft → approved → in_progress → completed
 
 ## Pre-flight check
 
-### Artefatos lidos
+### Artifacts read
 - [x] project.context.md — ok
 - [x] architecture.md — ok
 - [ ] discovery.md — missing (proceeding with assumptions)
 [...]
 
 ### Consistency check
-{issues encontrados, classificados como BLOCK/WARN/INFO}
+{issues found, classified as BLOCK/WARN/INFO}
 
 ### Readiness verdict
 {READY | READY_WITH_ASSUMPTIONS | NOT_READY}
 
 ## Execution Strategy
 
-### Fase 1 — {título} (estimativa: {N arquivos/commits})
-- **O que:** {descrição concreta — não "implementar o módulo", mas "criar migration users com campos X, Y, Z + model User com relação hasMany Orders"}
-- **Depende de:** nada
-- **Artefatos de entrada:** {lista de arquivos que o dev precisa ler}
-- **Critério de done:** {ex: migration roda sem erro, model passa nos testes de relação}
-- **Checkpoint:** {ex: verificar que a tabela users existe e tem os campos corretos}
+### Phase 1 — {title} (estimate: {N files/commits})
+- **What:** {concrete description — not "implement the module", but "create users migration with fields X, Y, Z + User model with hasMany Orders"}
+- **Depends on:** nothing
+- **Input artifacts:** {files dev must read}
+- **Done criterion:** {example: migration runs without error, model relationship tests pass}
+- **Checkpoint:** {example: verify users table exists and has the correct fields}
 
-### Fase 2 — {título}
+### Phase 2 — {title}
 [...]
 
-### Fases paralelas (se /orchestrator for usar)
-- Fase X e Fase Y podem rodar em paralelo (sem entidades compartilhadas)
-- Fase Z depende de X (compartilham tabela orders)
+### Parallel phases (if /orchestrator will use them)
+- Phase X and Phase Y can run in parallel (no shared entities)
+- Phase Z depends on X (shared orders table)
 
-## Decisões pré-tomadas
-- {decisão 1 — fonte: architecture.md — não re-discutir}
-- {decisão 2 — fonte: prd.md — validado pelo product}
+## Pre-made Decisions
+- {decision 1 — source: architecture.md — do not re-discuss}
+- {decision 2 — source: prd.md — validated by product}
 
-## Decisões adiadas
-- {decisão 1 — trade-off: A vs B — direção preferida: A porque ...}
-- {decisão 2 — depende do resultado da Fase 1}
+## Deferred Decisions
+- {decision 1 — trade-off: A vs B — preferred direction: A because ...}
+- {decision 2 — depends on Phase 1 result}
 
 ## Context Package
 
-### Leitura obrigatória (ordem importa)
-1. `implementation-plan.md` ← este arquivo
+### Required Reading (order matters)
+1. `implementation-plan.md` ← this file
 2. `project.context.md`
 3. `architecture.md`
 4. `spec.md`
 
-### Leitura sob demanda
-- `discovery.md` — quando tocar em entidades
-- `prd.md` — quando tiver dúvida sobre requisito
-- `ui-spec.md` — quando implementar UI
+### On-Demand Reading
+- `discovery.md` — when touching entities
+- `prd.md` — when uncertain about a requirement
+- `ui-spec.md` — when implementing UI
 
-### NÃO re-ler
-- {artefato X — já sintetizado nas fases acima}
+### Do Not Re-Read
+- {artifact X — already synthesized in phases above}
 
-## Instruções para o próximo agente
+## Instructions For The Next Agent
 
-> Para /dev ou /orchestrator:
+> For /dev or /orchestrator:
 >
-> 1. Leia este arquivo PRIMEIRO
-> 2. Siga a sequência de fases na ordem
-> 3. Após cada fase, atualize spec.md com as decisões tomadas
-> 4. Se encontrar contradição com este plano, PARE e pergunte ao usuário
-> 5. Decisões pré-tomadas são final — não re-discutir
-> 6. Decisões adiadas são para você tomar — registre em spec.md
-> 7. Ao completar cada fase, marque o checkpoint
+> 1. Read this file FIRST.
+> 2. Follow the phase sequence in order.
+> 3. After each phase, update spec.md with decisions made.
+> 4. If you find a contradiction with this plan, STOP and ask the user.
+> 5. Pre-made decisions are final — do not re-discuss them.
+> 6. Deferred decisions are yours to make — record them in spec.md.
+> 7. Mark the checkpoint when each phase is complete.
 ```
 
-### Passo 7 — Apresentar ao usuário
+### Step 7 - Present To User
 
-Mostrar resumo conciso:
+Show concise summary in the selected project language:
 
 ```
-Implementation Plan gerado.
+Implementation Plan generated.
 
-Fases: {N} ({M paralelas se orchestrator)
+Phases: {N} ({M parallel if orchestrator})
 Consistency: {N blocks, M warns, P infos}
 Readiness: {READY | READY_WITH_ASSUMPTIONS | NOT_READY}
-Context package: {N arquivos obrigatórios + M sob demanda}
+Context package: {N required files + M on-demand files}
 
-Sequência:
-1. {fase 1 — 1 linha}
-2. {fase 2 — 1 linha}
+Sequence:
+1. {phase 1 — one line}
+2. {phase 2 — one line}
 [...]
 
-Recomendação: {iniciar novo chat para implementação / continuar aqui}
+Recommendation: {start a new chat for implementation / continue here}
 ```
 
-Perguntar:
-> "Plano de implementação pronto. Quer ajustar algo antes de começar?"
+Ask in the selected project language whether the user wants to adjust anything before starting.
 
-Se o chat atual já consumiu muitos tokens com discovery/design:
-> "Recomendo iniciar um novo chat para a implementação — o context package está definido no plano."
+If the current chat already consumed many tokens with discovery/design, recommend starting a new implementation chat and mention that the context package is defined in the plan.
 
-### Modo de execução
+### Execution Mode
 
-Após aprovação do plano, oferecer dois modos:
+After plan approval, offer two modes in the selected project language:
 
-**Modo padrão** (recomendado para MICRO/SMALL):
-> "Implementar fase por fase neste chat com `/dev`."
+**Standard mode** (recommended for MICRO/SMALL):
+> Implement phase by phase in this chat with `/dev`.
 
-**Modo precisão** (recomendado para MEDIUM ou planos com 5+ fases):
-> "Para cada fase, abrir um novo chat com contexto isolado.
-> Isso evita contaminação de contexto entre fases e mantém cada subagent focado.
+**Precision mode** (recommended for MEDIUM or plans with 5+ phases):
+> Open a new chat for each phase with isolated context.
+> This avoids context contamination between phases and keeps each subagent focused.
 >
-> Para cada fase:
-> 1. Abrir novo chat
-> 2. Colar o context package desta fase (definido no plano)
-> 3. Executar com `/dev`
-> 4. Ao terminar: atualizar `spec.md` e retornar ao plano"
+> For each phase:
+> 1. Open a new chat.
+> 2. Paste the context package for that phase, as defined in the plan.
+> 3. Execute with `/dev`.
+> 4. When done: update `spec.md` and return to the plan.
 
-Se MEDIUM e `@orchestrator` disponível: o modo precisão é feito automaticamente via Task tool.
+If MEDIUM and `@orchestrator` is available: precision mode runs automatically via Task tool.
 
-## Adaptação por classificação
+## Classification Adaptation
 
 ### MICRO
-- Plan é **opcional** (overhead pode não valer)
-- Se gerado: 1-3 fases, sem cross-analysis profunda
-- Context package: só `project.context.md` + `implementation-plan.md`
-- Pular passo 2 (cross-analysis) se artefatos são mínimos
+- Plan is optional; overhead may not be worth it.
+- If generated: 1-3 phases, no deep cross-analysis.
+- Context package: only `project.context.md` + `implementation-plan.md`.
+- Skip Step 2 if artifacts are minimal.
 
 ### SMALL
-- Plan é **recomendado**
-- 3-5 fases típicas
-- Context package: 3-4 arquivos
-- Cross-analysis: PRD ↔ architecture + discovery ↔ PRD
+- Plan is recommended.
+- Typically 3-5 phases.
+- Context package: 3-4 files.
+- Cross-analysis: PRD ↔ architecture + discovery ↔ PRD.
 
 ### MEDIUM
-- Plan é **obrigatório** (orchestrator precisa antes de paralelizar)
-- 5-10 fases com dependências explícitas
-- Context package: 4-5 arquivos + subagent-specific packages
-- Cross-analysis: completa entre todos os artefatos
-- Marcar fases paralelas explicitamente
+- Plan is mandatory; orchestrator needs it before parallelizing.
+- 5-10 phases with explicit dependencies.
+- Context package: 4-5 files + subagent-specific packages.
+- Full cross-analysis across all artifacts.
+- Explicitly mark parallel phases.
 
-## Regras
+## Rules
 
-- NÃO comece a implementar nesta task — SÓ planeje
-- NÃO ignore gaps BLOCK — sinalize e PARE
-- NÃO invente requisitos — se não está nos artefatos, é uma decisão adiada
-- O plan é um ARTEFATO PERSISTENTE — salve em arquivo, nunca só no chat
-- Se readiness = NOT_READY, PARE e diga o que falta antes de gerar fases
-- Cada fase deve ser CONCRETA o suficiente para o /dev executar sem ambiguidade
-- Fases vagas como "implementar o backend" são proibidas — detalhe QUAIS arquivos, QUAIS entidades
-- Após aprovação do usuário, mude status de `draft` para `approved`
+- Do not start implementation in this task; plan only.
+- Do not ignore BLOCK gaps; signal them and STOP.
+- Do not invent requirements; if it is not in the artifacts, it is a deferred decision.
+- The plan is a persistent artifact; save it to disk, never only in chat.
+- If readiness = NOT_READY, STOP and state what is missing before generating phases.
+- Each phase must be concrete enough for `/dev` to execute without ambiguity.
+- Vague phases such as "implement the backend" are forbidden; specify which files and entities.
+- After user approval, change status from `draft` to `approved`.

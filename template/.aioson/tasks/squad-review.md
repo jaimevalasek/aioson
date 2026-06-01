@@ -1,26 +1,26 @@
 # Task: Squad Review Loop
 
-> Protocolo de review loop dentro de uma workflow phase.
+> Review-loop protocol inside a workflow phase.
 
-## Quando usar
-- Automaticamente pelo @orquestrador quando uma phase tem `review` declarado
-- O orquestrador NÃO precisa ser instruído — ele lê o manifest e segue
+## When To Use
+- Automatically by `@orquestrador` when a phase declares `review`
+- The orchestrator does not need extra instructions; it reads the manifest and follows it
 
-## Processo
+## Process
 
-### Passo 1 — Fase produz output
-O executor da phase gera seu output normalmente.
+### Step 1 - Phase Produces Output
+The phase executor produces its output normally.
 
-### Passo 2 — Checar veto conditions
-Antes do review, verificar se alguma veto condition é violada:
-- Se `action: block` → parar pipeline, notificar usuário
-- Se `action: reject` → auto-rejeitar sem review (economiza uma rodada)
-- Se `action: warn` → continuar mas marcar warning
+### Step 2 - Check Veto Conditions
+Before review, verify whether any veto condition is violated:
+- If `action: block` → stop the pipeline and notify the user.
+- If `action: reject` → auto-reject without review to save a round.
+- If `action: warn` → continue, but mark a warning.
 
-### Passo 3 — Invocar reviewer
-O executor definido em `review.reviewer` avalia o output com base nos `criteria`.
+### Step 3 - Invoke Reviewer
+The executor defined in `review.reviewer` evaluates the output based on the `criteria`.
 
-O reviewer deve produzir:
+The reviewer must produce:
 ```
 ## Review: {phase-title}
 
@@ -39,23 +39,23 @@ O reviewer deve produzir:
 - {veto condition 1}: passed | triggered
 ```
 
-### Passo 4 — Se aceito
-Marcar phase como completed. Seguir para a próxima.
+### Step 4 - If Accepted
+Mark the phase as completed. Continue to the next phase.
 
-### Passo 5 — Se rejeitado
-1. Incrementar retry counter
-2. Se retry counter > maxRetries → escalate:
-   - `human`: pausar e pedir decisão humana
-   - `skip`: pular a fase com warning
-   - `fail`: falhar o pipeline
-3. Se ainda tem retries:
-   - `feedback` strategy: enviar feedback do reviewer ao executor original
-   - `fresh` strategy: re-executar sem contexto do attempt anterior
-   - `alternative` strategy: pedir a um executor diferente (se disponível)
-4. Voltar ao onReject phase ID
+### Step 5 - If Rejected
+1. Increment retry counter.
+2. If retry counter > maxRetries, escalate:
+   - `human`: pause and request a human decision
+   - `skip`: skip the phase with a warning
+   - `fail`: fail the pipeline
+3. If retries remain:
+   - `feedback` strategy: send reviewer feedback to the original executor
+   - `fresh` strategy: rerun without previous attempt context
+   - `alternative` strategy: ask a different executor when available
+4. Return to the `onReject` phase ID.
 
-## Regras
-- NUNCA permitir mais de maxRetries iterações (hard limit)
-- SEMPRE incluir o feedback do reviewer no retry
-- O reviewer NUNCA deve ser o mesmo executor que criou o output
-- Registrar cada retry no log: attempt number, reason, feedback
+## Rules
+- Never allow more than `maxRetries` iterations.
+- Always include reviewer feedback in the retry.
+- The reviewer must never be the same executor that created the output.
+- Log every retry: attempt number, reason, feedback.

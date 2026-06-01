@@ -1,60 +1,60 @@
 # Task: Squad Analyze
 
-> Diagnostica um squad existente: cobertura, redundâncias, gaps, oportunidades.
+> Diagnose an existing squad: coverage, redundancy, gaps, and improvement opportunities.
 
-## Quando usar
+## When To Use
 - `@squad analyze <slug>`
-- Quando o usuário quer melhorar um squad existente
+- When the user wants to improve an existing squad
 
-## Entrada
-- slug do squad existente
+## Input
+- Existing squad slug
 
-## Processo
+## Process
 
-### Passo 1 — Inventário de componentes
-Leia o squad.manifest.json e o filesystem real. Monte um inventário:
-- Executores: quantos, quais, com/sem skills, com/sem genomes
-- Skills: declaradas vs. instaladas em skills/
-- Content blueprints: quantos, com/sem sections
-- Templates: existem em templates/?
-- Docs: design-doc.md existe? readiness.md existe?
-- Output: há sessões HTML geradas?
+### Step 1 - Component Inventory
+Read `squad.manifest.json` and the real filesystem. Build an inventory:
+- Executors: count, names, with/without skills, with/without genomes
+- Skills: declared vs. installed in `skills/`
+- Content blueprints: count, with/without sections
+- Templates: whether `templates/` exists
+- Docs: whether `design-doc.md` and `readiness.md` exist
+- Output: whether generated HTML sessions exist
 
-### Passo 2 — Métricas de cobertura
-Calcule:
-- % de executores com skills declaradas
-- % de executores com genomes
-- % de content blueprints com sections completas
-- % de docs presentes (design-doc, readiness)
-- Consistency score: manifest vs filesystem (arquivos referenciados que existem)
-- **Profundidade** (a métrica que pega "squad básico"):
-  - % de executores com bloco de profundidade no `## Quick context` (Variante A `persona + expertise` ou Variante B `operational_breadth` — ver `package-contract.md` § Executor depth block)
-  - % de executores cujas fontes foram destiladas (vocabulário/frameworks reais no prompt, não genérico) quando o squad tem `sourceDocs`/`analysis`
-  - % de executores que rastreiam ≥1 workflow (`analysis.workflows`/`traces`) quando houve decomposição
+### Step 2 - Coverage Metrics
+Calculate:
+- % of executors with declared skills
+- % of executors with genomes
+- % of content blueprints with complete sections
+- % of docs present (`design-doc`, `readiness`)
+- Consistency score: manifest vs filesystem, based on referenced files that exist
+- **Depth** (the metric that catches a "basic squad"):
+  - % of executors with a depth block in `## Quick context` (Variant A `persona + expertise` or Variant B `operational_breadth`; see `package-contract.md` § Executor depth block)
+  - % of executors whose sources were distilled into the prompt (real vocabulary/frameworks, not generic text) when the squad has `sourceDocs`/`analysis`
+  - % of executors tracing at least one workflow (`analysis.workflows`/`traces`) when decomposition happened
 
-### Passo 3 — Diagnóstico de problemas
-Identifique:
-- Sobreposição de responsabilidades entre executores (roles muito parecidos)
-- **Executor básico** (a falha de qualidade central): `role:` solto sem bloco de profundidade — sem `persona`+`expertise` (frameworks, vocabulary, signature_moves) nem `operational_breadth`. Um nome de papel com bullets genéricos é o sintoma.
-- **Fontes não-destiladas**: o squad tem `sourceDocs`/`analysis` mas o vocabulário/frameworks delas não aparece em nenhum prompt de executor (fonte virou só metadado).
-- **Executor órfão de workflow**: quando houve decomposição, executor que não rastreia nenhum `workflow` (cerimônia — corte ou justifique).
-- Skills faltantes (executor sem nenhuma skill)
-- Blueprints genéricos demais (sem sections ou com sections vazias)
-- Readiness fraco (dimensões blocked ou partial)
-- Excesso de complexidade (mais de 6 executores sem justificativa)
-- Arquivos órfãos (existem no filesystem mas não no manifesto)
-- Referências quebradas (no manifesto mas não no filesystem)
+### Step 3 - Problem Diagnosis
+Identify:
+- Overlapping responsibilities between executors
+- **Basic executor** (central quality failure): standalone `role:` without a depth block, no `persona`+`expertise` (frameworks, vocabulary, signature_moves) and no `operational_breadth`. A role name with generic bullets is the symptom.
+- **Undistilled sources**: the squad has `sourceDocs`/`analysis`, but their vocabulary/frameworks do not appear in any executor prompt.
+- **Workflow orphan executor**: when decomposition happened, an executor that does not trace any `workflow`; cut it or justify it.
+- Missing skills
+- Overly generic blueprints
+- Weak readiness (`blocked` or `partial` dimensions)
+- Excess complexity (more than 6 executors without justification)
+- Orphan files
+- Broken references
 
-### Passo 4 — Sugestões priorizadas
-Gere sugestões com prioridade (high/medium/low):
-- high: referências quebradas, manifest inconsistente, executor sem role, **executor básico (sem bloco de profundidade)**, **fontes não-destiladas**
-- medium: skills faltantes, blueprints incompletos, docs ausentes, executor órfão de workflow
-- low: readiness parcial, genomes não aplicados, output vazio
+### Step 4 - Prioritized Suggestions
+Generate suggestions with priority:
+- high: broken references, manifest inconsistency, executor without role, **basic executor**, **undistilled sources**
+- medium: missing skills, incomplete blueprints, missing docs, workflow orphan executor
+- low: partial readiness, unapplied genomes, empty output
 
-Para cada sugestão dê o próximo comando concreto. Gaps de profundidade roteiam para `@squad refresh <slug>` (que aprofunda executores básicos, não só breadth customer-facing).
+For each suggestion, provide the next concrete command. Route depth gaps to `@squad refresh <slug>`, which deepens basic executors, not only customer-facing breadth.
 
-### Passo 5 — Relatório
-Apresente com este formato:
+### Step 5 - Report
+Use this format:
 
 ```
 ═══ Squad Analysis: <slug> ═══
@@ -69,7 +69,7 @@ Components
   Docs:        <status>
 
 Coverage
-  Depth:     ███░░░░░░░ 30%   (executores com bloco de profundidade)
+  Depth:     ███░░░░░░░ 30%   (executors with depth block)
   Skills:    ████░░░░░░ 40%
   Genomes:   ██████░░░░ 60%
   Docs:      ████████░░ 80%
@@ -83,11 +83,11 @@ Suggestions (<n>)
 Next: @squad refresh <slug> to deepen basic executors · @squad extend <slug> to add components
 ```
 
-## Saída
-- Relatório no chat
-- Se --format markdown: salvar em .aioson/squads/<slug>/docs/ANALYSIS.md
-- Se --format json: saída JSON parseable
+## Output
+- Chat report
+- If `--format markdown`: save to `.aioson/squads/<slug>/docs/ANALYSIS.md`
+- If `--format json`: parseable JSON output
 
-## Regras
-- NÃO modifique nada — apenas diagnostique e recomende
-- SEMPRE sugira o próximo comando concreto para cada problema
+## Rules
+- Do not modify anything; diagnose and recommend only.
+- Always suggest the next concrete command for each problem.

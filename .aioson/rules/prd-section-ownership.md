@@ -1,6 +1,6 @@
 ---
 name: prd-section-ownership
-description: Define qual agente é dono de cada seção do PRD — outros agentes não podem modificar seções que não são suas
+description: Defines which agent owns each PRD section — other agents cannot modify sections they do not own
 priority: 9
 version: 1.0.0
 agents: [product, pm, analyst, architect, ux-ui, sheldon]
@@ -14,16 +14,16 @@ agents: [product, pm, analyst, architect, ux-ui, sheldon]
 
 | PRD Section | Owner | Others may |
 |---|---|---|
-| `## Objetivo` | `@product` | Read only |
-| `## Problema` | `@product` | Read only |
-| `## Usuários e Personas` | `@product` | Read only |
-| `## Funcionalidades` | `@product` | Read only |
-| `## Critérios de Aceite` | `@product` (structure) / `@pm` (enrichment) | `@analyst`, `@architect` add technical sub-items |
-| `## Fases de Entrega` | `@pm` | Read only |
-| `## Restrições Técnicas` | `@architect` | Read only |
-| `## Considerações de UX` | `@ux-ui` | Read only |
-| `## Riscos` | `@pm` | `@analyst`, `@architect` add new risks only |
-| `## Decisões Registradas` | `@sheldon` (project) / `@pm` (feature) | Read only |
+| `## Objective` | `@product` | Read only |
+| `## Problem` | `@product` | Read only |
+| `## Users And Personas` | `@product` | Read only |
+| `## Features` | `@product` | Read only |
+| `## Acceptance Criteria` | `@product` (structure) / `@pm` (enrichment) | `@analyst`, `@architect` add technical sub-items |
+| `## Delivery Phases` | `@pm` | Read only |
+| `## Technical Constraints` | `@architect` | Read only |
+| `## UX Considerations` | `@ux-ui` | Read only |
+| `## Risks` | `@pm` | `@analyst`, `@architect` add new risks only |
+| `## Registered Decisions` | `@sheldon` (project) / `@pm` (feature) | Read only |
 
 ## Modification rule
 
@@ -32,7 +32,7 @@ An agent may only modify sections it owns. Non-owners may only **add** a new sub
 ## Safe addition pattern
 
 ```markdown
-## Critérios de Aceite
+## Acceptance Criteria
 <!-- @product: owner of this section -->
 
 - CA-01: User can schedule an appointment

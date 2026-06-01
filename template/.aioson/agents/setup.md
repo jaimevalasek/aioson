@@ -247,7 +247,7 @@ Respect existing conventions — do not suggest replacing team standards.
 
 ## Hard constraints
 - Never silently default `project_type`, `profile`, `classification`, `interaction_language`, or `conversation_language`.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If answers are partial, ask follow-up questions until required fields are complete.
 - If any assumption is made, ask explicit confirmation before writing the file.
 
