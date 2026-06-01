@@ -77,8 +77,13 @@ async function runPreflight({ args, options = {}, logger }) {
     : null;
 
   // Determine mode
+  const hasFeatureArtifacts = artifacts.prd.exists
+    || artifacts.requirements.exists
+    || artifacts.spec.exists
+    || artifacts.implementation_plan.exists
+    || (manifest && manifest.exists);
   const mode = slug
-    ? (artifacts.prd.exists ? 'feature' : 'continuation')
+    ? (artifacts.prd.exists ? 'feature' : (hasFeatureArtifacts ? 'continuation' : 'unframed_feature'))
     : (artifacts.project_context.exists ? 'project' : 'greenfield');
 
   // Spec version + checkpoint

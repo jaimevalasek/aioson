@@ -45,6 +45,12 @@ aioson plan:stale . --feature={slug}   # STALE → enter sync mode; OK → check
 
 Trust CLI output over manual date comparisons. Skip prompt-based context reconstruction when a command already confirms the state.
 
+If `aioson preflight` returns `READY_WITH_WARNINGS` because `prd-{slug}.md` is missing and the feature is not framed yet:
+- Do not treat the session as blocked.
+- Do not create `requirements-{slug}.md` or `spec-{slug}.md` without a PRD.
+- If the user asked for exploratory analysis, research, or improvement discovery, continue in project discovery mode and write `discovery.md` or a clearly scoped discovery artifact.
+- If the user expects a formal feature workflow, hand off to `@product` or `@briefing` to create `prd-{slug}.md` first.
+
 ## Synchronization gate
 
 Before starting feature discovery, check whether `requirements-{slug}.md` already exists.
@@ -74,6 +80,12 @@ Check the following before doing anything else:
 **Project mode** — no `prd-{slug}.md`, only `prd.md` or nothing:
 - Run the full 3-phase project discovery below.
 - Output: `discovery.md`.
+
+**Unframed feature mode** — a feature slug exists but `prd-{slug}.md` is missing and no feature artifacts exist yet:
+- Treat this as exploratory discovery, not formal feature analysis.
+- Use the user's question, current project context, and available research to identify gaps, risks, and possible improvement directions.
+- Output `discovery.md` or a project-local discovery note; do not output `requirements-{slug}.md` or `spec-{slug}.md`.
+- Recommend `@product` or `@briefing` when the next step is converting the idea into a PRD.
 
 ## Feature dossier
 

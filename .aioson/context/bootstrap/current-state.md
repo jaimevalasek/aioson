@@ -10,6 +10,7 @@ source: "Autonomy/orchestration analysis and planning session"
 
 These capabilities were confirmed during this analysis:
 
+- [preflight-analyst-unframed-feature · 2026-06-01] `fix(preflight): allow analyst unframed discovery` changed `aioson preflight --agent=analyst --feature=<slug>` so a missing PRD on a not-yet-framed feature returns `mode=unframed_feature` and `READY_WITH_WARNINGS` instead of blocking; `@analyst` now treats this as exploratory discovery/research only and still requires `@product`/`@briefing` before formal `requirements-{slug}.md` and `spec-{slug}.md`.
 - [simple-plan-lane · 2026-06-01] `feat(aioson): add simple plan lane` added a lightweight Simple Plan lane for bounded technical work: `@dev`/`@deyvin` can create `.aioson/context/simple-plans/{slug}.md`, hand off through `dev:state:write --context=simple-plan`, execute directly without PRD/spec/implementation-plan overhead, and pause unfinished work without blocking new features.
 - [cost-context-optimization · 2026-06-01] QA Gate D PASS closed the feature with 14/14 requirements ACs covered, PRD rollup 6/6 covered, no findings, focused node:test + CLI JSON smoke checks passing, and the feature registry marked `done`.
 - [cost-context-optimization · 2026-06-01] `feat(workflow): support paused features` added paused feature lifecycle handling, stale workflow state reset, and the active PRD/dossier for measurement-first cost optimization.

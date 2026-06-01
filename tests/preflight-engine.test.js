@@ -442,6 +442,19 @@ test('evaluateReadiness: BLOCKED when dev spec missing', () => {
   assert.ok(result.blockers.some((b) => b.includes('spec')));
 });
 
+test('evaluateReadiness: analyst can proceed with warning for unframed feature discovery', () => {
+  const artifacts = {
+    project_context: { exists: true },
+    spec: { exists: false },
+    prd: { exists: false },
+    requirements: { exists: false }
+  };
+  const result = evaluateReadiness(artifacts, {}, 'SMALL', 'analyst', { exists: false }, 'code-tab-ide-ux');
+  assert.equal(result.status, 'READY_WITH_WARNINGS');
+  assert.equal(result.blockers.length, 0);
+  assert.ok(result.warnings.some((w) => w.includes('not framed yet')));
+});
+
 // ── extractSpecVersion / extractLastCheckpoint ────────────────────────────────
 
 test('extractSpecVersion: returns null when artifact not exists', () => {

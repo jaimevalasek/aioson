@@ -603,7 +603,9 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
   }
 
   if (agent === 'analyst') {
-    if (!artifacts.prd.exists) blockers.push('prd file missing — @product must produce prd-{slug}.md first');
+    if (slug && !artifacts.prd.exists) {
+      warnings.push('prd file missing — feature is not framed yet; @analyst may run project discovery/research only, or hand off to @product/@briefing to create prd-{slug}.md before formal feature requirements');
+    }
   }
 
   if (agent === 'architect') {

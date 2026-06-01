@@ -1,11 +1,11 @@
 ---
-last_updated: 2026-06-01T17:17:43.0047038-03:00
+last_updated: 2026-06-01T17:49:52.4563583-03:00
 last_agent: dev
-last_gate: "Simple Plan: done"
+last_gate: "Bugfix: validated"
 active_feature: (none)
 active_work: ""
 blockers: "none"
-next_recommendation: "Optional follow-up: add dedicated simple-plan CLI commands"
+next_recommendation: "Commit the preflight analyst unframed-feature fix when ready"
 ---
 
 # Project Pulse
@@ -13,11 +13,11 @@ next_recommendation: "Optional follow-up: add dedicated simple-plan CLI commands
 ## Status
 
 - **Last agent:** @dev
-- **Last gate:** Simple Plan: done
+- **Last gate:** Bugfix: validated
 - **Active feature:** (none)
 - **Active work:** none
 - **Blockers:** none
-- **Next:** Optional follow-up: add dedicated simple-plan CLI commands
+- **Next:** Commit the preflight analyst unframed-feature fix when ready
 
 ## Recent Activity
 
@@ -25,3 +25,4 @@ next_recommendation: "Optional follow-up: add dedicated simple-plan CLI commands
 - 2026-06-01 @pm → cost-context-optimization: Wrote the Gate C implementation plan, approved Gates B/C, and advanced workflow to @qa
 - 2026-06-01 @qa → cost-context-optimization (Gate D: approved) VERDICT: PASS: Full repo regression, SAST, and secrets scanning not run; focused QA passed. See .aioson/context/qa-report-cost-context-optimization.md.
 - 2026-06-01 @dev → simple-plan-lane: Added lightweight simple-plan lane for bounded technical work, plus `dev-state` context token and focused tests.
+- 2026-06-01 @dev → preflight-analyst-unframed-feature: Fixed `aioson preflight --agent=analyst --feature=<slug>` so missing PRD on an unframed feature is `READY_WITH_WARNINGS`, not `BLOCKED`, and added regression tests.

@@ -17,7 +17,8 @@
     ".aioson/context/done/active-learning-loop/spec-active-learning-loop.md",
     ".aioson/plans/active-learning-loop/**",
     ".aioson/context/done/**",
-    "docs/**"
+    "docs/**",
+    "template/.aioson/skills/static/static-html-patterns.md"
   ],
   "blockPaths": [
     "done/**",
