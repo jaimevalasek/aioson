@@ -104,6 +104,11 @@ Requirements mapped. Edge cases: 6. Pending items: agent audit modes, skill audi
 
 Implemented measurement correctness: scoped agent:audit modes, skill:audit command, context:health driftWarnings, CLI help/parser wiring, and focused tests. Verification: node --check changed JS; node --test agent-audit, skill-audit, context-health, workflow-next suites; CLI JSON smoke checks passed.
 
+<!-- sha256:5d45557ecfc4422d0504f4a39d0413fc0e457e00e13bfe850617e7017600c89f -->
+**2026-06-01T17:40:27.733Z** | @pm | _Agent Trail_
+
+Plano de implementação escrito e Gate C aprovado. Stories/ACs refinados no PRD. Prioridade: QA validar a fatia de measurement/state correctness.
+
 ## Revision Requests
 
 _(vazio)_

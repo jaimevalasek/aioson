@@ -49,6 +49,28 @@ Maintainer roda `aioson agent:audit . --runtime-only` -> vê apenas prompts que 
 ### Detectar drift de contexto
 Maintainer roda `aioson context:health .` -> relatório aponta divergências entre `project.context.md`, `workflow.state.json`, `features.md`, dossiers e `project-pulse.md` -> operador corrige o estado antes de otimizar prompts.
 
+## Delivery plan
+### Phase 1 — Measurement and state correctness
+1. Feature lifecycle hygiene — support `paused`, keep paused work visible, and prevent paused work from blocking new features.
+2. Audit scope separation — split agent measurement into runtime, template, and inception modes.
+3. Skill measurement parity — add `skill:audit` for source, installed, and template skills.
+4. Context drift visibility — report advisory drift warnings in `context:health`.
+
+### Phase 2 — QA validation
+1. Validate focused command behavior against requirements and CLI smoke checks.
+2. Confirm drift warnings stay advisory and do not turn `context:health` into a failing command.
+3. Record QA verdict in `spec-cost-context-optimization.md`.
+
+## Acceptance criteria
+| AC | Description |
+|---|---|
+| AC-CCO-01 | Given `gemini-phaseout` is `paused`, @product/workflow status does not treat it as active work. Verifier: @qa. |
+| AC-CCO-02 | Given `agent:audit . --runtime-only --json`, output includes runtime roots only and no template duplicates. Verifier: @qa. |
+| AC-CCO-03 | Given `agent:audit . --template-only --json`, output includes template roots only and no workspace duplicates. Verifier: @qa. |
+| AC-CCO-04 | Given `skill:audit . --json`, output includes totals and separates router/reference/support files. Verifier: @qa. |
+| AC-CCO-05 | Given classification or active-state drift exists, `context:health . --json` returns `driftWarnings[]` while keeping `ok: true`. Verifier: @qa. |
+| AC-CCO-06 | Focused `node:test` suites for workflow reset, agent audit, skill audit, and context health pass. Verifier: @qa. |
+
 ## Success metrics
 - `context:pack` para o objetivo "cost context optimization" não inclui `features/gemini-phaseout/dossier.md` enquanto a feature estiver `paused`.
 - `workflow:status` não reporta `gemini-phaseout` como feature ativa quando `features.md` está `paused`.

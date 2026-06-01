@@ -5,11 +5,13 @@ started: 2026-06-01
 classification: SMALL
 phase_gates:
   requirements: approved
-  design: pending
-  plan: pending
+  design: approved
+  plan: approved
   execution: pending
-last_checkpoint: "@dev implemented measurement correctness slice on 2026-06-01"
+last_checkpoint: "Gate C approved by @pm and workflow advanced to @qa on 2026-06-01"
 gate_requirements: approved
+gate_design: approved
+gate_plan: approved
 ---
 
 # Spec — AIOSON Cost/Context Optimization
@@ -80,4 +82,4 @@ Structured output concepts:
 
 ## Handoff status
 
-`workflow:next --complete=dev` is currently blocked by the formal Gate C contract because `.aioson/context/implementation-plan-cost-context-optimization.md` does not exist. The feature spec classifies this slice as SMALL and allowed @dev after Gate A, but the CLI gate checker still enforces the MEDIUM-style implementation-plan artifact. Next action: @pm should produce/approve the missing plan or the gate policy should be adjusted for SMALL feature slices, then rerun @dev completion and route to @qa.
+Gate C is approved. `.aioson/context/implementation-plan-cost-context-optimization.md` exists with `status: approved`, and `workflow:next --complete=dev --auto-heal --tool=codex` advanced the feature workflow to `@qa`. Next action: @qa verifies AC-CCO-01..06, focused tests, CLI smoke behavior, and records Gate D verdict.

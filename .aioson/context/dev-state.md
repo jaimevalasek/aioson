@@ -2,16 +2,16 @@
 last_updated: 2026-06-01
 active_feature: cost-context-optimization
 active_phase: 1
-next_step: "Implement measurement correctness: agent:audit modes, skill:audit, and context:health drift warnings"
-status: blocked_on_gate_c_plan
+next_step: "QA verification for cost-context-optimization"
+status: ready_for_qa
 ---
 
 # Dev State
 
 **Feature:** cost-context-optimization
 **Phase:** 1
-**Status:** blocked_on_gate_c_plan
-**Next step:** Resolve Gate C plan contract, then complete @dev and route to @qa
+**Status:** ready_for_qa
+**Next step:** QA verification for cost-context-optimization
 
 ## Context package
 
@@ -28,3 +28,4 @@ status: blocked_on_gate_c_plan
 - 2026-05-30: @qa approved and closed cross-tool-project-knowledge (Gate D PASS), archived artifacts under .aioson/context/done/cross-tool-project-knowledge, and restored dev-state to gemini-phaseout Phase 2 date gate.
 - 2026-06-01: phase 1 — Implement measurement correctness: agent:audit modes, skill:audit, and context:health drift warnings
 - 2026-06-01: @dev implemented measurement correctness and verified focused tests; `workflow:next --complete=dev` is blocked because Gate C requires `implementation-plan-cost-context-optimization.md`.
+- 2026-06-01: @pm wrote `implementation-plan-cost-context-optimization.md`, approved Gate B/C, and advanced workflow to @qa.
