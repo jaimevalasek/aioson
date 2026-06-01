@@ -12,6 +12,7 @@ last_checkpoint: "Gate C approved by @pm and workflow advanced to @qa on 2026-06
 gate_requirements: approved
 gate_design: approved
 gate_plan: approved
+gate_execution: approved
 ---
 
 # Spec — AIOSON Cost/Context Optimization
@@ -83,3 +84,11 @@ Structured output concepts:
 ## Handoff status
 
 Gate C is approved. `.aioson/context/implementation-plan-cost-context-optimization.md` exists with `status: approved`, and `workflow:next --complete=dev --auto-heal --tool=codex` advanced the feature workflow to `@qa`. Next action: @qa verifies AC-CCO-01..06, focused tests, CLI smoke behavior, and records Gate D verdict.
+
+## QA Sign-off
+
+- **Date:** 2026-06-01
+- **Verdict:** PASS
+- **Residual:** Full repo regression, SAST, and secrets scanning not run; focused QA passed. See .aioson/context/qa-report-cost-context-optimization.md.
+- **Gate D (execution):** approved
+

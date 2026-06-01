@@ -25,4 +25,4 @@
 | cross-tool-project-knowledge | done | 2026-05-23 | 2026-05-30 |
 | gemini-phaseout | paused | 2026-05-23 | — |
 | agent-orchestration-v2 | done | 2026-05-27 | 2026-05-27 |
-| cost-context-optimization | in_progress | 2026-06-01 | — |
+| cost-context-optimization | done | 2026-06-01 | 2026-06-01 |

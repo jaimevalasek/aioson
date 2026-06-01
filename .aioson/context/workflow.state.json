@@ -1,22 +1,28 @@
 {
   "version": 1,
-  "mode": "feature",
-  "classification": "SMALL",
+  "mode": "project",
+  "classification": "MEDIUM",
   "sequence": [
+    "setup",
     "product",
     "analyst",
+    "architect",
+    "ux-ui",
+    "pm",
+    "orchestrator",
     "dev",
     "qa"
   ],
-  "current": "qa",
-  "next": "qa",
+  "current": null,
+  "next": "ux-ui",
   "completed": [
+    "setup",
     "product",
     "analyst",
-    "dev"
+    "architect"
   ],
   "skipped": [],
-  "featureSlug": "cost-context-optimization",
+  "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-01T17:45:45.836Z"
+  "updatedAt": "2026-06-01T18:10:29.345Z"
 }

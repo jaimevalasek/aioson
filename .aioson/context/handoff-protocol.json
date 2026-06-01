@@ -1,27 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-dev-qa-1780335945873",
-  "created_at": "2026-06-01T17:45:45.873Z",
+  "protocol_id": "hnd-qa-end-1780337403155",
+  "created_at": "2026-06-01T18:10:03.155Z",
   "workflow_mode": "feature",
   "classification": "SMALL",
   "feature_slug": "cost-context-optimization",
   "from": {
-    "agent_id": "dev",
-    "capability_transferred": "implement_feature"
+    "agent_id": "qa",
+    "capability_transferred": "verify_feature"
   },
   "to": {
-    "agent_id": "qa",
-    "capability_required": "verify_feature"
+    "agent_id": null,
+    "capability_required": null
   },
   "capabilities_transferred": [
-    "implement_feature"
+    "verify_feature"
   ],
   "artifact_uris": [],
   "gate_status": {},
-  "autonomy_mode": "guarded",
+  "autonomy_mode": null,
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-06-01T17:45:45.873Z"
+    "validated_at": "2026-06-01T18:10:03.155Z"
   }
 }

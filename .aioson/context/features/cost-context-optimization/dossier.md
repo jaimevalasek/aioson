@@ -109,6 +109,11 @@ Implemented measurement correctness: scoped agent:audit modes, skill:audit comma
 
 Plano de implementação escrito e Gate C aprovado. Stories/ACs refinados no PRD. Prioridade: QA validar a fatia de measurement/state correctness.
 
+<!-- sha256:0cb5192c65b9bc528c56f973baad43f65b1d0de649d1b4316047061faa1255e0 -->
+**2026-06-01T18:08:01.287Z** | @qa | _Agent Trail_
+
+QA completed. Verdict: PASS. Coverage: 14/14 requirements ACs covered; PRD rollup 6/6. Issues: none. Evidence: focused node:test suites and CLI JSON smoke checks passed.
+
 ## Revision Requests
 
 _(vazio)_

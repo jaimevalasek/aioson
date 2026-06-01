@@ -1,6 +1,6 @@
 ---
 generated_by: product
-generated_at: "2026-05-30T17:26:51-03:00"
+generated_at: "2026-06-01T15:12:13-03:00"
 confidence: high
 ---
 
@@ -22,12 +22,17 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 - Diagnoses Living Memory health through `aioson doctor` (warning-severity checks for bootstrap coverage, features dir, claude commands, version drift, permissions sync) with `--fix` auto-correcting permissions and structural gaps.
 - Supports marketing-focused work through `@copywriter` Mode 6 (Campaign Package), G2.5 master copywriter selection across 8 schools, alternative copy structures (Tríade, KSTK, CPGC), and a copy gate that halts `@ux-ui` until `copy-{slug}.md` exists.
 - Bounds the per-activation cost of `bootstrap/current-state.md` via the **agent loading contract**: `aioson memory:trim` + a `feature:close` auto-rollup split the hot log from a cold `current-state-archive.md`; `context:health` measures the bootstrap layer; a shared `code-health-analysis` lens loads on-demand for the test/analysis agents. See `.aioson/design-docs/agent-loading-contract.md`.
+- Supports paused feature lifecycle semantics so parked features remain visible without blocking new workflow routing.
+- Measures prompt/context cost with scoped `agent:audit` modes (runtime, template, inception) and a standalone `skill:audit` command.
+- Reports advisory context drift through `context:health` warnings while preserving non-failing health output for review workflows.
 
 ## Current improvement focus
 
-Active (ready_for_qa) since 2026-05-23: `cross-tool-project-knowledge` (SMALL) extends `active-learning-loop` with cross-harness project knowledge. M1-M6 are implemented: gotcha/resolution capture persists as `type='quality'` + `kind`, `feature:close` materializes `.aioson/learnings/{gotchas,recipes}/` plus `INDEX.md`, AGENTS/CLAUDE/OPENCODE load project knowledge, `learning --sub=import-from-claude` imports selected Claude memory entries, and greenfield setup ships learnings placeholders. Next: @qa Gate D. PRD: `.aioson/context/prd-cross-tool-project-knowledge.md`.
+Recently closed (2026-06-01): `cost-context-optimization` (SMALL) shipped measurement/state correctness: paused lifecycle handling, stale workflow reset, scoped `agent:audit`, standalone `skill:audit`, advisory `context:health` drift warnings, and QA Gate D PASS. Report: `.aioson/context/qa-report-cost-context-optimization.md`.
 
-Active (in_progress) since 2026-05-23: `gemini-phaseout` (SMALL) — remoção faseada do Gemini CLI antes do cutoff Google 2026-06-18 do free/personal tier. v1.17 (≤2026-06-10) warning em install-wizard/doctor/permissions-generator + operator-memory matriz V1 marcada deprecated + CHANGELOG. v1.18 (≥2026-06-19) hard removal mecânica de `.gemini/` no template + install-wizard + permissions-generator; `.gemini/permissions.toml` pré-existente preservado (enterprise). v1.20 (Q4-2026) sunset do frozen tier — doctor para de reconhecer. PRD: `.aioson/context/prd-gemini-phaseout.md`.
+Recently closed (2026-05-30): `cross-tool-project-knowledge` (SMALL) extends `active-learning-loop` with cross-harness project knowledge. Gotcha/resolution capture persists as `type='quality'` + `kind`, `feature:close` materializes `.aioson/learnings/{gotchas,recipes}/` plus `INDEX.md`, AGENTS/CLAUDE/OPENCODE load Project knowledge, `learning --sub=import-from-claude` imports selected Claude memory entries, greenfield setup ships learnings placeholders, and QA Gate D passed with artifacts archived under `.aioson/context/done/cross-tool-project-knowledge/`. PRD: `.aioson/context/done/cross-tool-project-knowledge/prd-cross-tool-project-knowledge.md`.
+
+Paused since 2026-06-01: `gemini-phaseout` (SMALL) remains visible for future decision but no longer blocks new feature routing. The prior Phase 2 hard-removal path was paused after the project decision to remove Gemini work from the active lane.
 
 Active (in_progress) since 2026-05-18: `release-page-1-9-0` (MICRO) — adds a standalone editorial HTML page at `tutorials/releases/1-9-0/index.html` narrating the 10-day evolution that culminated in v1.9.0 (Living Memory, Brains, Active Learning Loop, hardening R4-7, cross-platform, lay-user mode), plus a redesigned `tutorials/index.html` hub and visual polish on the 4 existing tutorials. Standalone HTML (zero build), structure prepared for future `tutorials/releases/{version}/`. Cross-repo work (mirror to `aioson-com`) intentionally out of scope — user copies manually later. PRD: `.aioson/context/prd-release-page-1-9-0.md`.
 
@@ -51,3 +56,4 @@ Recently closed (2026-04-24): `sdlc-process-upgrade` — process-level correctio
 - CLI/runtime should own deterministic state transitions; prompts should not rederive mechanical state when a command can provide it.
 - Living Memory reflection never blocks workflows — hooks in `workflow:next` and `runAgentDone` are best-effort and fail silently.
 - Tier3 commands (`git push`, `npm publish`, `cloud:publish:*`, `genome:publish`, `skill:publish`, `squad:publish`) are NEVER auto-materialized into any harness allow-list, regardless of `derived_from_tiers`. Irreversible operations always require explicit human action.
+
