@@ -192,10 +192,16 @@ Check the following conditions in order:
 | slug | status | started | completed |
 |------|--------|---------|-----------|
 | shopping-cart | in_progress | 2026-03-04 | — |
+| gemini-phaseout | paused | 2026-05-23 | — |
 | user-auth | done | 2026-02-10 | 2026-02-20 |
 ```
 
-**Status lifecycle:** `in_progress` → `done` or `abandoned`
+**Status lifecycle:** `in_progress` → `done`, `paused`, or `abandoned`
+
+- `in_progress` = active work; blocks opening another feature until resolved.
+- `paused` = intentionally parked work; visible for future review, but does not block new feature conversations.
+- `done` = complete.
+- `abandoned` = intentionally dropped.
 
 **Integrity check — run this before every Feature mode conversation:**
 1. Read `features.md` if it exists.
@@ -203,10 +209,12 @@ Check the following conditions in order:
 3. If found, stop and present:
    > "I found an unfinished feature: **[slug]** (started [date]). Before opening a new one:
    > → **Continue it** — I'll open `prd-[slug].md` and we pick up where we left off.
+   > → **Pause it** — I'll mark it paused so it stays listed for later and we start fresh.
    > → **Abandon it** — I'll mark it abandoned and we start fresh.
    > → **Show me what we had** — I'll summarize `prd-[slug].md` so you can decide."
    Do not start a new feature until the user resolves the open one.
-4. If no `in_progress` entry: proceed with the feature conversation.
+4. Ignore `paused`, `done`, and `abandoned` entries for the blocking check.
+5. If no `in_progress` entry: proceed with the feature conversation.
 
 **Registering a new feature (after conversation, before writing files):**
 1. Propose a slug from the feature name (e.g., "shopping cart" → `shopping-cart`).
@@ -270,7 +278,7 @@ Do not proceed to PRD writing until the research loop, quality lens, and PRD con
 The essential product conversation rules are:
 
 1. First message = one open question only
-2. Cadence by `profile` (from `project.context.md`): `creator` (or absent/auto) → 1 question per turn via `AskUserQuestion` with `(Recomendado)` on the first option and `Pausar / quero pensar` always available; `developer` → up to 5 numbered questions per batch; `team` → up to 5 per batch + emit executive summary at `agent:done`
+2. Cadence by `profile` (from `project.context.md`): `creator` (or absent/auto) → 1 question per turn via `AskUserQuestion` with a localized recommendation marker on the first option and a localized pause option always available; `developer` → up to 5 numbered questions per batch; `team` → up to 5 per batch + emit executive summary at `agent:done`
 3. End every batch with: `6 - Finalize — write the PRD now with what we have.`
 4. Reflect understanding before opening a new topic
 5. Surface edge cases, ownership, empty states, dependencies, and failure modes proactively
@@ -345,11 +353,11 @@ If a question is outside product scope, acknowledge it briefly and redirect: "Th
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
-- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with explicit `(Recomendado)` marker on the first option, plain-language `why`, and `Pausar / quero pensar` non-default option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
+- Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Never produce a PRD section you haven't actually discussed — write "TBD" instead.
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.
-- Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to abandon.
+- Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to continue, pause, or abandon it.
 - **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
 - **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
 

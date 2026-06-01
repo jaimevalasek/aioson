@@ -8,16 +8,13 @@
     "dev",
     "qa"
   ],
-  "current": null,
-  "next": null,
+  "current": "analyst",
+  "next": "analyst",
   "completed": [
-    "product",
-    "analyst",
-    "dev",
-    "qa"
+    "product"
   ],
   "skipped": [],
-  "featureSlug": "gemini-phaseout",
+  "featureSlug": "cost-context-optimization",
   "detour": null,
-  "updatedAt": "2026-05-30T20:30:18.224Z"
+  "updatedAt": "2026-06-01T17:12:35.616Z"
 }

@@ -3,10 +3,10 @@ feature_slug: gemini-phaseout
 schema_version: "1.2"
 created_by: dossier-init
 created_at: 2026-05-23T03:37:34.265Z
-status: active
+status: paused
 classification: SMALL
-last_updated_by: dossier-init
-last_updated_at: 2026-05-23T03:37:34.265Z
+last_updated_by: product
+last_updated_at: 2026-06-01T14:08:04.3547485-03:00
 ---
 ## Why
 
@@ -75,3 +75,7 @@ QA re-verification (pre-publish) @ HEAD 1.21.3. Verdict: PASS re-affirmed (prior
 ## Revision Requests
 
 _(vazio — populado a partir da Phase 2)_
+
+**2026-06-01T14:08:04-03:00** | @product | _Status_
+
+Feature paused by explicit user decision. Phase 1 warnings are shipped and QA-approved; Phase 2 hard removal remains future work. Paused features stay visible for later decision but must not block new feature discovery or enter the hot context pack as active work.

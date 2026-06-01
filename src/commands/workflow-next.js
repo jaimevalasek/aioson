@@ -487,15 +487,17 @@ async function loadOrCreateState(targetDir, options = {}) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
   let existing = await readJsonIfExists(statePath);
 
-  // Feature-transition guard: if the persisted state belongs to a different
-  // feature than the currently active one (per features.md), it is stale —
-  // left over from a closed/abandoned feature. Discard it and rebuild from
-  // current features.md. Without this, opening a new feature inherits the
-  // previous feature's slug, classification, and completion record, blocking
-  // the new workflow on gates that don't apply.
-  if (existing && existing.mode === 'feature' && existing.featureSlug) {
+  // Mode/feature-transition guard: if the persisted state no longer matches
+  // the current mode from features.md, it is stale. This covers both directions:
+  // a feature was paused/closed and project mode should resume, or a new
+  // feature was opened while a project workflow state still exists.
+  if (existing) {
     const modeInfo = await detectWorkflowMode(targetDir);
-    if (modeInfo.featureSlug && existing.featureSlug !== modeInfo.featureSlug) {
+    if (
+      existing.mode !== modeInfo.mode ||
+      (modeInfo.mode === 'feature' && existing.featureSlug !== modeInfo.featureSlug) ||
+      (modeInfo.mode !== 'feature' && existing.featureSlug)
+    ) {
       existing = null;
     }
   }

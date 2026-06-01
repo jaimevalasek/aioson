@@ -1,6 +1,6 @@
 ---
 feature: gemini-phaseout
-status: in_progress
+status: paused
 started: 2026-05-28
 classification: SMALL
 phase_scope: "Phase 1 (v1.21.0 — warnings) only; Phases 2/3 date-gated future"

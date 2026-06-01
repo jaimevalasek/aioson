@@ -220,6 +220,11 @@ test('workflow:next syncs workflow task, runs, and canonical events into runtime
 test('loadOrCreateState reconciles stale persisted stages when a later stage is already completed', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| secure-by-default | in_progress | 2026-04-28 | — |\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd-secure-by-default.md'), '# Feature PRD\n');
 
   const statePath = path.join(dir, '.aioson/context/workflow.state.json');
   await writeFileEnsured(
@@ -250,6 +255,77 @@ test('loadOrCreateState reconciles stale persisted stages when a later stage is 
   assert.equal(persisted.current, null);
   assert.equal(persisted.next, null);
   assert.deepEqual(persisted.skipped, ['pentester']);
+});
+
+test('loadOrCreateState discards feature state when the only feature is paused', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# Project PRD\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| gemini-phaseout | paused | 2026-05-23 | — |\n'
+  );
+
+  const statePath = path.join(dir, '.aioson/context/workflow.state.json');
+  await writeFileEnsured(
+    statePath,
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'SMALL',
+      sequence: ['product', 'analyst', 'dev', 'qa'],
+      current: null,
+      next: null,
+      completed: ['product', 'analyst', 'dev', 'qa'],
+      skipped: [],
+      featureSlug: 'gemini-phaseout',
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const loaded = await loadOrCreateState(dir);
+  assert.equal(loaded.created, true);
+  assert.equal(loaded.state.mode, 'project');
+  assert.equal(loaded.state.featureSlug, null);
+});
+
+test('loadOrCreateState discards project state when a new feature is opened', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# Project PRD\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| cost-context-optimization | in_progress | 2026-06-01 | — |\n'
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/prd-cost-context-optimization.md'),
+    '---\nclassification: SMALL\n---\n# Feature PRD\n'
+  );
+
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'MEDIUM',
+      sequence: ['setup', 'product', 'analyst', 'architect', 'ux-ui', 'pm', 'orchestrator', 'dev', 'qa'],
+      current: 'ux-ui',
+      next: 'ux-ui',
+      completed: ['setup', 'product', 'analyst', 'architect'],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const loaded = await loadOrCreateState(dir);
+  assert.equal(loaded.created, true);
+  assert.equal(loaded.state.mode, 'feature');
+  assert.equal(loaded.state.featureSlug, 'cost-context-optimization');
+  assert.equal(loaded.state.classification, 'SMALL');
+  assert.deepEqual(loaded.state.completed, ['product']);
 });
 
 test('workflow:next writes handoff-protocol.json in parallel with last-handoff.json', async () => {

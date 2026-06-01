@@ -1,7 +1,7 @@
 ---
 feature: gemini-phaseout
 classification: SMALL
-status: in_progress
+status: paused
 gate: A
 analyst_date: 2026-05-28
 deadline_hard: 2026-06-18

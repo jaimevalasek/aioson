@@ -23,5 +23,6 @@
 | operator-memory | done | 2026-05-20 | 2026-05-21 |
 | neural-chain | done | 2026-05-21 | 2026-05-21 |
 | cross-tool-project-knowledge | done | 2026-05-23 | 2026-05-30 |
-| gemini-phaseout | in_progress | 2026-05-23 | — |
+| gemini-phaseout | paused | 2026-05-23 | — |
 | agent-orchestration-v2 | done | 2026-05-27 | 2026-05-27 |
+| cost-context-optimization | in_progress | 2026-06-01 | — |

@@ -1,6 +1,6 @@
 ---
 name: spec-level-ownership
-description: spec.md é de projeto, spec-{slug}.md é de feature — os dois níveis nunca se misturam
+description: spec.md is project-level, spec-{slug}.md is feature-level — the two levels never mix
 priority: 9
 version: 1.0.0
 agents: [dev, qa, pm, sheldon]
@@ -27,7 +27,7 @@ Two distinct levels — never mix them.
 ```markdown
 ---
 feature: {slug}
-status: in_progress | done
+status: in_progress | paused | done | abandoned
 phase_gates:
   requirements: approved | pending | skipped
   design: approved | pending | skipped
