@@ -10,6 +10,7 @@
       "inputs": [
         { "type": "artifact", "path_pattern": ".aioson/context/spec-{slug}.md", "required": false },
         { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false },
+        { "type": "artifact", "path_pattern": ".aioson/context/simple-plans/{slug}.md", "required": false },
         { "type": "gate", "path_pattern": "gate:C", "required": false }
       ],
       "outputs": [

@@ -28,6 +28,7 @@
  *   sheldon      → sheldon-enrichment-{slug}.md
  *   design-doc   → design-doc-{slug}.md (falls back to design-doc.md)
  *   dossier      → features/{slug}/dossier.md
+ *   simple-plan  → simple-plans/{slug}.md
  *
  * When --context is omitted, auto-detect kicks in (legacy behavior): include
  * project.context.md + spec-{slug}.md + plan if present.
@@ -47,7 +48,8 @@ const CONTEXT_TYPE_MAP = {
   'impl-plan':   { rel: (slug) => `implementation-plan-${slug}.md` },
   sheldon:       { rel: (slug) => `sheldon-enrichment-${slug}.md` },
   'design-doc':  { rel: (slug) => `design-doc-${slug}.md`, fallback: () => 'design-doc.md' },
-  dossier:       { rel: (slug) => `features/${slug}/dossier.md` }
+  dossier:       { rel: (slug) => `features/${slug}/dossier.md` },
+  'simple-plan': { rel: (slug) => `simple-plans/${slug}.md` }
 };
 
 function nowDate() {

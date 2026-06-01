@@ -48,6 +48,7 @@ agents: [dev, architect, ux-ui, qa, tester, committer]
 | `project-pulse.md` | `.aioson/context/project-pulse.md` |
 | `dev-state.md` | `.aioson/context/dev-state.md` |
 | `commit-prep.json` | `.aioson/context/commit-prep.json` |
+| `simple-plans/{slug}.md` | `.aioson/context/simple-plans/{slug}.md` |
 
 ## Path rules
 
@@ -55,3 +56,4 @@ agents: [dev, architect, ux-ui, qa, tester, committer]
 2. **When the user specifies a target directory, confirm the exact path** before creating files.
 3. **Never create bootstrap or template files in the project root** unless explicitly asked. Default to `.aioson/context/` for framework artifacts.
 4. **Never overwrite `.gitignore`**, `README.md`, or existing config files unless explicitly asked. Append or modify the targeted item only.
+5. **Simple implementation plans** belong in `.aioson/context/simple-plans/{slug}.md`; they are not PRDs, Sheldon plans, or MEDIUM implementation plans.

@@ -30,6 +30,7 @@ Allowed machine-readable exceptions:
 | Security findings | `.aioson/context/security-findings-{slug}.json` ← machine-readable exception |
 | Workflow handoff/runtime state | `.aioson/context/workflow.state.json`, `.aioson/context/handoff-protocol.json`, `.aioson/context/last-handoff.json` |
 | Parallel coordination machine files | `.aioson/context/parallel/*.json` |
+| Simple implementation plans | `.aioson/context/simple-plans/{slug}.md` |
 | Squad definitions | `.aioson/squads/{slug}/` |
 | Skill manifests | `.aioson/skills/{category}/{slug}/SKILL.md` |
 | Feature artifacts | `.aioson/context/{artifact}-{slug}.md` |
@@ -46,6 +47,7 @@ ui-spec-{slug}.md             ← ux-ui
 prd.md / prd-{slug}.md        ← product
 spec-{slug}.md                ← dev
 implementation-plan-{slug}.md ← pm
+simple-plans/{slug}.md       ← dev / deyvin
 features.md                   ← product / pm
 project-pulse.md              ← all agents (update at session end)
 conformance-{slug}.yaml       ← conformance machine-readable exception

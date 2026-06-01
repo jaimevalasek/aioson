@@ -57,6 +57,7 @@ Read `.aioson/context/dev-state.md` if it exists.
 
 | Mode | Load — nothing more |
 |------|---------------------|
+| Simple Plan | `project.context.md` + `simple-plans/{slug}.md` |
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` |
 | Feature SMALL/MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
 | Feature with Sheldon plan | `project.context.md` + `spec-{slug}.md` + `.aioson/plans/{slug}/manifest.md` + current phase file |
@@ -72,6 +73,12 @@ Read `.aioson/context/dev-state.md` if it exists.
 If you've read 5 files without writing code: stop and ask what to focus on.
 
 ## Feature mode detection
+
+If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate in **Simple Plan mode**:
+- Load the simple plan and `.aioson/docs/dev/simple-plan-lane.md`.
+- Do not require `prd-{slug}.md`, `spec-{slug}.md`, requirements, architecture, or implementation-plan artifacts.
+- Implement only the written scope, done criteria, expected files, and verification command.
+- If the work expands beyond the simple-plan lane, mark the plan `paused`, update `dev-state.md`, and hand off to the correct workflow agent.
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
 
@@ -128,6 +135,11 @@ Also check `.aioson/plans/{slug}/manifest.md` before any implementation:
 - Implementation plans are optional.
 - Suggest one only if the user asks or the spec is unusually complex.
 
+**Simple Plan exception:**
+- Formal implementation plans are not used.
+- The simple plan itself is the execution contract for bounded technical work.
+- Keep updates in `.aioson/context/simple-plans/{slug}.md`, not in `implementation-plan-{slug}.md`.
+
 **Stale plan detection:** if `aioson plan:stale . --feature={slug}` says `STALE`, regenerate. Otherwise warn when plan inputs are newer than the plan.
 
 ## Context size detection
@@ -154,6 +166,7 @@ Do NOT load files "just in case." The full list below is the universe of files @
 
 - `.aioson/context/project.context.md` — always
 - `.aioson/context/dev-state.md` — always (if present)
+- `.aioson/context/simple-plans/{slug}.md` — when `dev-state.md` lists it or the active task is simple-plan work
 - `.aioson/context/features.md` — cold start only
 - `.aioson/context/spec-{slug}.md` — active feature only
 - `.aioson/context/implementation-plan-{slug}.md` — if plan exists
@@ -208,6 +221,7 @@ The detailed dev protocol is split into on-demand framework docs:
 
 - `.aioson/docs/dev/stack-conventions.md`
 - `.aioson/docs/dev/execution-discipline.md`
+- `.aioson/docs/dev/simple-plan-lane.md`
 
 ## Security process skill loading
 
@@ -224,6 +238,7 @@ Before the first code change, decide which dev docs must be loaded:
 | Laravel / PHP implementation | `.aioson/docs/dev/stack-conventions.md` |
 | User-facing UI, design skill, component library, React/Next motion, or Web3/dapp work | `.aioson/docs/dev/stack-conventions.md` |
 | Multi-file, ambiguous, or plan-driven implementation | `.aioson/docs/dev/execution-discipline.md` |
+| Simple-plan work, bounded technical request without PRD, or `dev-state.md` context package includes `simple-plans/` | `.aioson/docs/dev/simple-plan-lane.md` |
 | Before the first commit, before marking done, or after repeated failures | `.aioson/docs/dev/execution-discipline.md` |
 
 Do not preload these docs if the current slice does not need them.
@@ -237,7 +252,7 @@ These rules apply even if no extra dev doc was loaded:
 1. Work in small validated slices
 2. Reuse project skills before inventing patterns
 3. Use task tools when available to track slices
-4. Update `spec-{slug}.md` or `spec.md` after significant decisions
+4. Update `spec-{slug}.md`, `spec.md`, or the active `simple-plans/{slug}.md` after significant decisions
 5. Run the actual verification command before marking any step done
 6. Keep `skeleton-system.md` current when files materially change
 7. If repeated debugging stalls, load the debugging protocol instead of guessing

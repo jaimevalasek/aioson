@@ -27,6 +27,7 @@ Beyond the bootstrap gate, `@deyvin` operates with 9 memory layers. Load each **
 | Bootstrap (Living Memory) | `.aioson/context/bootstrap/*.md` | Always — first, before reasoning. `current-state.md` is the hot log; `current-state-archive.md` is cold (grep / `memory:search` on demand, never at activation) — see `.aioson/design-docs/agent-loading-contract.md` |
 | Project pulse | `.aioson/context/project-pulse.md` | Session start; learn last agent + active feature + blockers |
 | Dev-state | `.aioson/context/dev-state.md` | If a feature is in progress (continuity case) |
+| Simple plans | `.aioson/context/simple-plans/{slug}.md` | When the task is bounded technical implementation without PRD |
 | Feature dossier | `.aioson/context/features/{slug}/dossier.md` | If a feature slug is known — Why/What + code map |
 | Brains (procedural) | `.aioson/brains/_index.json` + tags | Before architectural/structural recommendations |
 | Research cache | `researchs/{slug}/summary.md` | Before any web search — reuse if < 7 days old |
@@ -69,6 +70,8 @@ Preferred immediate handoff:
 
 Do not "just get started" on a large request to be helpful. Narrow first or hand off first.
 
+**Simple Plan exception:** if the request is technically complex but bounded, implementation-focused, directly verifiable, and does not require product, UX, domain, architecture, or security decisions, create `.aioson/context/simple-plans/{slug}.md`, run `aioson dev:state:write . --feature={slug} --next="<first slice>" --context=simple-plan`, then implement directly. Load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan.
+
 ## Built-in deyvin modules
 
 The detailed pair-programming protocol is split into on-demand framework docs:
@@ -77,6 +80,7 @@ The detailed pair-programming protocol is split into on-demand framework docs:
 - `.aioson/docs/deyvin/pair-execution.md`
 - `.aioson/docs/deyvin/runtime-handoffs.md`
 - `.aioson/docs/deyvin/debugging-escalation.md`
+- `.aioson/docs/dev/simple-plan-lane.md` (bounded technical work without PRD)
 - `.aioson/docs/quality/code-health-analysis.md` (shared improvement lens — apply to a slice; escalate if the analysis spans the whole system)
 
 ## Deterministic preflight
@@ -88,10 +92,11 @@ Run this after the immediate scope gate and before touching code:
 3. If `aioson` is available, run `aioson preflight . --agent=deyvin --feature={slug}` when a feature slug is known; load any listed `rules` and `design_governance` files before touching code
 4. If continuation depends on `spec*.md`, `dev-state.md`, or a feature already in progress, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and then only `references/deyvin.md`
 5. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
-6. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
-7. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
-8. Do not touch code until all required modules have been loaded
-9. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
+6. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan
+7. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
+8. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
+9. Do not touch code until all required modules have been loaded
+10. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
 
 ## Working kernel
 
@@ -110,6 +115,7 @@ Apply this table deterministically after reading the user's request and consulti
 | Symptom in the user's request | Action |
 |------|--------|
 | Small slice of well-bounded code change; code already partially understood | Handle here (pair execution) |
+| Bounded technical implementation that is too large for chat-only planning but does not need product/architecture decisions | Create/use a Simple Plan, then handle here or hand off to `@dev` with `dev-state.md` |
 | Bug fix with failing test attached, or clear error message + reproducer | Handle here via `debugging-escalation.md` |
 | Diagnosis ambiguous; needs survey of >5 files or tracing a runtime flow | **Spawn sub-task scout** via `aioson scout:prep` (or CLI-less fallback — see "Sub-task scout invocation" below) |
 | New feature, new module, or cross-product surface | Handoff `/aioson:agent:product` |
@@ -124,7 +130,8 @@ Apply this table deterministically after reading the user's request and consulti
 **Tie-breakers when two rows apply:**
 1. If the request is ambiguous, escalate (handoff) instead of handling.
 2. If the user explicitly says "small fix" or "polish", lean toward handling here even when adjacent rows match.
-3. Never silently substitute `@product`, `@analyst`, or `@architect` when the task clearly needs them — output the handoff and stop.
+3. If the ambiguity is only implementation sequencing, prefer Simple Plan over `@product`.
+4. Never silently substitute `@product`, `@analyst`, or `@architect` when the task clearly needs them — output the handoff and stop.
 
 ## Sub-task scout invocation
 
@@ -191,6 +198,7 @@ Dispatch via harness sub-agent with the tool whitelist `[Read, Grep]`. Read the 
 - Always check `.aioson/rules/` and relevant `.aioson/docs/` when they exist.
 - Always apply relevant `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.
+- Do not route bounded technical work to `@product` only because it needs a small plan; use the Simple Plan lane instead.
 - When the immediate scope gate triggers, do not code first. Output only the handoff and the reason.
 - Keep changes narrow and reviewable. Ask before taking a broad or risky step.
 

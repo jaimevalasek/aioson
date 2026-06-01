@@ -10,6 +10,7 @@
       "description": "Pair-programming partner for small validated slices on existing known context.",
       "inputs": [
         { "type": "artifact", "path_pattern": ".aioson/context/spec-{slug}.md", "required": false },
+        { "type": "artifact", "path_pattern": ".aioson/context/simple-plans/{slug}.md", "required": false },
         { "type": "artifact", "path_pattern": ".aioson/context/dev-state.md", "required": false }
       ],
       "outputs": [

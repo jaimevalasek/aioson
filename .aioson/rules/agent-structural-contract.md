@@ -118,7 +118,7 @@ Known correct signatures (reference table):
 | `memory:search` | `--query="<text>"` |
 | `context:search` | `--query="<text>"` |
 | `preflight` | `--agent=<name> --feature=<slug>` |
-| `dev:state:write` | `--feature=<slug> --phase=<n> --next="<description>" --context=<tokens>` |
+| `dev:state:write` | `--feature=<slug> --phase=<n> --next="<description>" --context=<tokens>`; supports `simple-plan` |
 
 ## 7. Template-workspace parity
 

@@ -21,6 +21,7 @@ Two distinct levels — never mix them.
 2. `spec-{slug}.md` never receives project decisions → stack decisions go in `spec.md` or `architecture.md`.
 3. `spec-{slug}.md` is created by `@dev` at feature implementation start. One file per slug. Slug must match `prd-{slug}.md` and `implementation-plan-{slug}.md`.
 4. No `spec-{slug}.md` without a corresponding `prd-{slug}.md`.
+5. Simple-plan work does not require `spec-{slug}.md`; keep its scope and decisions in `.aioson/context/simple-plans/{slug}.md` unless the work expands into a real feature.
 
 ## Mandatory structure: spec-{slug}.md
 

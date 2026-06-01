@@ -371,7 +371,7 @@ aioson dev:state:write . --feature={slug} \
   --context=prd
 ```
 
-`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`), max 4 entries total. For MICRO features `--context=prd` is usually sufficient. Idempotent: re-running with the same args does not duplicate state.
+`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`, `simple-plan`), max 4 entries total. For MICRO features `--context=prd` is usually sufficient. Idempotent: re-running with the same args does not duplicate state.
 
 Skip this step when classification is SMALL or MEDIUM — `@analyst` (and downstream agents) own the handoff producer in those flows.
 

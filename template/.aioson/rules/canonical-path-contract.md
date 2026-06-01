@@ -28,6 +28,7 @@ Every agent that creates or writes files MUST resolve the target path using this
 | Requirements | `.aioson/context/requirements-{slug}.md` | `@analyst` |
 | Architecture | `.aioson/context/architecture.md` | `@architect` |
 | Spec (living memory) | `.aioson/context/spec-{slug}.md` | `@dev` |
+| Simple implementation plan | `.aioson/context/simple-plans/{slug}.md` | `@dev` / `@deyvin` |
 | QA report | `.aioson/context/qa-report-{slug}.md` | `@qa` |
 
 ## Violation behaviors
@@ -45,3 +46,7 @@ Every agent that creates or writes files MUST resolve the target path using this
 | "docs" or "documentation" | Ask: `docs/` root (project docs) or `docs/pt/` (PT system docs) or `.aioson/docs/` (agent on-demand docs)? |
 | "context" | `.aioson/context/` (framework artifacts) |
 | "rules" | `.aioson/rules/` (agent rules) |
+
+## Simple plan distinction
+
+`simple-plans/{slug}.md` is not a PRD, not a Sheldon phased plan, and not a MEDIUM implementation plan. It is a lightweight implementation artifact for bounded technical work that `@dev` or `@deyvin` can execute directly under `.aioson/rules/simple-plan-lane.md`.

@@ -63,8 +63,8 @@ test('parseContextFlag filters out empty entries from trailing/double commas', (
 
 // ─── CONTEXT_TYPE_MAP shape ────────────────────────────────────────────────
 
-test('CONTEXT_TYPE_MAP defines all 8 canonical tokens declared in the PRD', () => {
-  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'dossier'];
+test('CONTEXT_TYPE_MAP defines all canonical tokens declared for dev-state handoff', () => {
+  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'dossier', 'simple-plan'];
   for (const k of expected) {
     assert.ok(CONTEXT_TYPE_MAP[k], `missing token: ${k}`);
     assert.equal(typeof CONTEXT_TYPE_MAP[k].rel, 'function', `${k}.rel must be a function`);
@@ -82,6 +82,10 @@ test('CONTEXT_TYPE_MAP.architecture is slug-independent', () => {
 test('CONTEXT_TYPE_MAP.design-doc declares a fallback', () => {
   assert.equal(typeof CONTEXT_TYPE_MAP['design-doc'].fallback, 'function');
   assert.equal(CONTEXT_TYPE_MAP['design-doc'].fallback(), 'design-doc.md');
+});
+
+test('CONTEXT_TYPE_MAP.simple-plan resolves to the simple-plans directory', () => {
+  assert.equal(CONTEXT_TYPE_MAP['simple-plan'].rel('tiny-fix'), 'simple-plans/tiny-fix.md');
 });
 
 // ─── runStateSave with --context (the producer contract) ───────────────────
@@ -138,6 +142,34 @@ test('producer-contract: missing context files emit warnings (warn-and-skip, nev
   assert.deepEqual(result.context_package, ['project.context.md']);
   assert.equal(result.warnings.length, 3);
   assert.ok(result.warnings.every((w) => w.includes('missing')));
+});
+
+test('producer-contract: simple-plan context token writes a lightweight implementation plan package', async () => {
+  const slug = 'tiny-fix';
+  const dir = await makeFeatureProject({
+    slug,
+    withFiles: [`simple-plans/${slug}.md`]
+  });
+  const result = await runStateSave({
+    args: [dir],
+    options: {
+      feature: slug,
+      next: 'Implement the simple-plan done criteria',
+      context: 'simple-plan',
+      json: true
+    },
+    logger: silentLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.context_package, [
+    'project.context.md',
+    `simple-plans/${slug}.md`
+  ]);
+  assert.deepEqual(result.warnings, []);
+
+  const written = fs.readFileSync(path.join(dir, '.aioson/context/dev-state.md'), 'utf8');
+  assert.match(written, new RegExp(`2\\. simple-plans/${slug}\\.md`));
 });
 
 test('producer-contract: unknown context token warns and skips, does not fail', async () => {

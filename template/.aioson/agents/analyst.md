@@ -341,7 +341,7 @@ aioson dev:state:write . --feature={slug} --phase=1 \
   --context=spec,requirements
 ```
 
-`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
+`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`, `simple-plan`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
 
 **Handoff message:**
 ```

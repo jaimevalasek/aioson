@@ -22,6 +22,7 @@ Every artifact produced by an AIOSON agent MUST be written to disk before sessio
 | `@sheldon` | Manifest | `.aioson/plans/{slug}/manifest.md` |
 | `@pm` | Implementation Plan | `.aioson/context/implementation-plan-{slug}.md` |
 | `@dev` | Feature spec | `.aioson/context/spec-{slug}.md` |
+| `@dev` / `@deyvin` | Simple plan | `.aioson/context/simple-plans/{slug}.md` |
 | `@qa` | QA report | `.aioson/context/qa-report-{slug}.md` |
 | `@squad` | Squad manifest | `.aioson/squads/{slug}/squad.manifest.json` |
 | `@squad` | Agent prompts | `.aioson/squads/{slug}/agents/{agent}.md` |
