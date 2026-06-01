@@ -8,13 +8,15 @@
     "dev",
     "qa"
   ],
-  "current": "analyst",
-  "next": "analyst",
+  "current": "dev",
+  "next": "dev",
   "completed": [
-    "product"
+    "product",
+    "analyst"
   ],
   "skipped": [],
   "featureSlug": "cost-context-optimization",
   "detour": null,
-  "updatedAt": "2026-06-01T17:12:35.616Z"
+  "updatedAt": "2026-06-01T17:19:35.624Z",
+  "last_workflow_event_at": 1780334375481
 }

@@ -1,25 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-init-end-1780325007383",
-  "created_at": "2026-06-01T14:43:27.383Z",
+  "protocol_id": "hnd-analyst-dev-1780334375631",
+  "created_at": "2026-06-01T17:19:35.631Z",
   "workflow_mode": "feature",
   "classification": "SMALL",
-  "feature_slug": "gemini-phaseout",
+  "feature_slug": "cost-context-optimization",
   "from": {
-    "agent_id": null,
-    "capability_transferred": null
+    "agent_id": "analyst",
+    "capability_transferred": "analyze_requirements"
   },
   "to": {
-    "agent_id": null,
-    "capability_required": null
+    "agent_id": "dev",
+    "capability_required": "implement_feature"
   },
-  "capabilities_transferred": [],
+  "capabilities_transferred": [
+    "analyze_requirements"
+  ],
   "artifact_uris": [],
   "gate_status": {},
-  "autonomy_mode": null,
+  "autonomy_mode": "guarded",
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-06-01T14:43:27.383Z"
+    "validated_at": "2026-06-01T17:19:35.631Z"
   }
 }

@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-01T14:43:27.384Z",
-  "last_agent": null,
-  "last_stage": null,
-  "what_was_done": "Workflow state updated.",
-  "what_comes_next": "Workflow is complete. No pending stages.",
-  "next_agent": null,
+  "session_ended_at": "2026-06-01T17:19:35.632Z",
+  "last_agent": "@analyst",
+  "last_stage": "analyst",
+  "what_was_done": "Stage @analyst completed.",
+  "what_comes_next": "Next stage: @dev",
+  "next_agent": "@dev",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "feature",
   "classification": "SMALL",
-  "feature_slug": "gemini-phaseout"
+  "feature_slug": "cost-context-optimization"
 }

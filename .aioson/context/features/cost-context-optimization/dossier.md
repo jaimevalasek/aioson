@@ -49,6 +49,11 @@ _(populado via dossier:link-rule)_
 
 - **2026-06-01T17:12:35.604Z** | @product | _prd_
 
+<!-- sha256:ca36ecc65aaad6b8603dfdba006a13e0e3502dae2aa07b829aa4089ed3580728 -->
+**2026-06-01T17:19:16.081Z** | @analyst | _Agent Trail_
+
+Requirements mapped. Edge cases: 6. Pending items: agent audit modes, skill audit, context health drift warnings.
+
 ## Revision Requests
 
 _(vazio)_
