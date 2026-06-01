@@ -1,32 +1,25 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-qa-committer-20260530",
-  "created_at": "2026-05-30T20:30:18.224Z",
+  "protocol_id": "hnd-init-end-1780325007383",
+  "created_at": "2026-06-01T14:43:27.383Z",
   "workflow_mode": "feature",
   "classification": "SMALL",
-  "feature_slug": "cross-tool-project-knowledge",
+  "feature_slug": "gemini-phaseout",
   "from": {
-    "agent_id": "qa",
-    "capability_transferred": "verify_feature"
+    "agent_id": null,
+    "capability_transferred": null
   },
   "to": {
-    "agent_id": "committer",
-    "capability_required": "commit_changes"
+    "agent_id": null,
+    "capability_required": null
   },
-  "capabilities_transferred": [
-    "verify_feature"
-  ],
-  "artifact_uris": [
-    ".aioson/context/done/cross-tool-project-knowledge/qa-report-cross-tool-project-knowledge.md",
-    ".aioson/context/done/cross-tool-project-knowledge/spec-cross-tool-project-knowledge.md"
-  ],
-  "gate_status": {
-    "D": "approved"
-  },
-  "autonomy_mode": "guarded",
+  "capabilities_transferred": [],
+  "artifact_uris": [],
+  "gate_status": {},
+  "autonomy_mode": null,
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-05-30T20:30:18.224Z"
+    "validated_at": "2026-06-01T14:43:27.383Z"
   }
 }

@@ -1,19 +1,14 @@
 {
   "version": 1,
-  "session_ended_at": "2026-05-30T20:30:18.224Z",
-  "last_agent": "qa",
-  "last_stage": "qa",
-  "what_was_done": "QA approved and closed cross-tool-project-knowledge; artifacts archived under .aioson/context/done/cross-tool-project-knowledge.",
-  "what_comes_next": "Next: @committer for the prepared changes; gemini-phaseout remains date-gated until 2026-06-19.",
-  "next_agent": "@committer",
+  "session_ended_at": "2026-06-01T14:43:27.384Z",
+  "last_agent": null,
+  "last_stage": null,
+  "what_was_done": "Workflow state updated.",
+  "what_comes_next": "Workflow is complete. No pending stages.",
+  "next_agent": null,
   "open_decisions": [],
-  "context_files_updated": [
-    ".aioson/context/done/cross-tool-project-knowledge/",
-    ".aioson/context/features.md",
-    ".aioson/context/project-pulse.md",
-    ".aioson/context/dev-state.md"
-  ],
+  "context_files_updated": [],
   "workflow_mode": "feature",
   "classification": "SMALL",
-  "feature_slug": "cross-tool-project-knowledge"
+  "feature_slug": "gemini-phaseout"
 }
