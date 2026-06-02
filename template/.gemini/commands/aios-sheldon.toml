@@ -1,7 +1,0 @@
-description = "Deep technical analysis and architecture review"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/sheldon.md }
-
-{{args}}
-"""

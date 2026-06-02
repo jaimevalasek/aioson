@@ -1,7 +1,0 @@
-description = "Domain investigation and strategic research"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/orache.md }
-
-{{args}}
-"""

@@ -3,12 +3,12 @@
 /**
  * Cross-AI Review Synthesizer — Phase 4.4
  *
- * Detects available AI CLIs (claude, gemini, codex), sends identical review
+ * Detects available AI CLIs (claude, codex), sends identical review
  * prompts to each (excluding the current runtime), and synthesizes the
  * responses into a REVIEWS.md file.
  *
  * Detection: checks PATH for each CLI binary.
- * Current runtime: detected via AIOSON_TOOL env var (set by claude/gemini/codex hooks).
+ * Current runtime: detected via AIOSON_TOOL env var (set by claude/codex hooks).
  *
  * Output: outputs/REVIEWS.md with consensus, divergences, and per-reviewer sections.
  */
@@ -22,11 +22,6 @@ const CLI_RUNNERS = {
   claude: {
     bin: 'claude',
     buildArgs: (prompt) => ['--print', '--model', 'claude-haiku-4-5-20251001', prompt],
-    parseOutput: (stdout) => stdout.trim()
-  },
-  gemini: {
-    bin: 'gemini',
-    buildArgs: (prompt) => ['-p', prompt],
     parseOutput: (stdout) => stdout.trim()
   },
   codex: {
@@ -216,7 +211,7 @@ async function runCrossAIReview({
   if (clis.length === 0) {
     return {
       ok: false,
-      error: 'No AI CLIs detected. Install claude, gemini, or codex in PATH.',
+      error: 'No AI CLIs detected. Install claude or codex in PATH.',
       detectedCLIs: []
     };
   }

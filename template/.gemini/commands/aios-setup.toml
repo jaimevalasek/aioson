@@ -1,6 +1,0 @@
-description = "Project onboarding"
-prompt = """
-@{ .aioson/agents/setup.md }
-
-{{args}}
-"""

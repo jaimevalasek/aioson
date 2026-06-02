@@ -8,16 +8,32 @@
       "category": "create",
       "description": "Produce the PRD for a project or feature scope.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/project.context.md", "required": true }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/project.context.md",
+          "required": true
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/prd.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd-{slug}.md"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "medium"
 }

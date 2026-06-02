@@ -103,7 +103,6 @@ test('installTemplate writes Forge metadata and gitignore entry', async () => {
   assert.equal(gitignore.includes('aioson-models.json'), true);
   assert.equal(gitignore.includes('!AGENTS.md'), true);
   assert.equal(gitignore.includes('!.claude/**'), true);
-  assert.equal(gitignore.includes('!.gemini/**'), true);
   assert.equal(gitignore.includes('!.aioson/**'), true);
   assert.equal(gitignore.includes('.aioson/agents/'), false, 'agents/ must NOT be gitignored (Codex @ resolution)');
   assert.equal(gitignore.includes('.aioson/locales/'), true);
@@ -118,7 +117,7 @@ test('installTemplate appends keep rules for shared AIOS files even when project
   const dir = await makeTempDir();
   await fs.writeFile(
     path.join(dir, '.gitignore'),
-    '.aioson/\n.claude/\n.gemini/\nAGENTS.md\nCLAUDE.md\nOPENCODE.md\n',
+    '.aioson/\n.claude/\nAGENTS.md\nCLAUDE.md\nOPENCODE.md\n',
     'utf8'
   );
 
@@ -130,7 +129,6 @@ test('installTemplate appends keep rules for shared AIOS files even when project
   assert.equal(gitignore.includes('.aioson/agents/'), false, 'agents/ must NOT be gitignored (Codex @ resolution)');
   assert.equal(gitignore.includes('.aioson/locales/'), true);
   assert.equal(gitignore.includes('!.claude/**'), true);
-  assert.equal(gitignore.includes('!.gemini/**'), true);
   assert.equal(gitignore.includes('!AGENTS.md'), true);
   assert.equal(gitignore.includes('!CLAUDE.md'), true);
   assert.equal(gitignore.includes('!OPENCODE.md'), true);

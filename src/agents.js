@@ -73,10 +73,6 @@ function buildAgentPrompt(agent, tool, options = {}) {
     return `Read ${instructionPath} and execute ${agent.command}. ${dependencyText}${activationBlock}\n\nWrite output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
   }
 
-  if (safeTool === 'gemini') {
-    return `Run the Gemini command mapped to ${instructionPath} and execute ${agent.command}. ${dependencyText}${activationBlock}\n\nSave result to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
-  }
-
   if (safeTool === 'opencode') {
     return `Use agent "${agent.id}" from ${instructionPath}. ${dependencyText}${activationBlock}\n\nSave output to ${agent.output}.${autonomyBlock}${lifecycleBlock}`;
   }

@@ -1,7 +1,7 @@
 'use strict';
 
 // Gateway pointer merge — keeps the AIOSON instructions inside CLAUDE.md,
-// AGENTS.md, OPENCODE.md, and .gemini/GEMINI.md without clobbering any
+// AGENTS.md, and OPENCODE.md without clobbering any
 // project-authored content above the managed block. When the destination
 // file already exists, the prior copy path skipped it entirely, leaving
 // existing projects without the framework instructions. This module wraps
@@ -19,8 +19,7 @@ const BLOCK_NOTICE = '> Managed by AIOSON — edits inside this block will be ov
 const GATEWAY_POINTER_FILES = new Set([
   'CLAUDE.md',
   'AGENTS.md',
-  'OPENCODE.md',
-  '.gemini/GEMINI.md'
+  'OPENCODE.md'
 ]);
 
 function isGatewayPointerPath(rel) {

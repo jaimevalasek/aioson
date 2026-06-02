@@ -8,7 +8,7 @@ const { exists, readTextIfExists } = require('../utils');
 const { extractStackValue, normalizeDatabaseEngine } = require('./mcp-init');
 
 const REQUIRED_CORE_SERVERS = ['filesystem', 'context7'];
-const TOOL_PRESETS = ['claude', 'codex', 'gemini', 'opencode'];
+const TOOL_PRESETS = ['claude', 'codex', 'opencode'];
 
 function normalizeBoolean(value, fallback = false) {
   if (typeof value === 'boolean') return value;

@@ -7,7 +7,7 @@
 
 # Memória e Contexto
 
-> Guia prático para entender quais arquivos o AIOSON gera, qual é a função de cada um e como montar contexto mínimo para trabalhar melhor com LLMs e CLIs como Codex, Claude Code e Gemini.
+> Guia prático para entender quais arquivos o AIOSON gera, qual é a função de cada um e como montar contexto mínimo para trabalhar melhor com LLMs e CLIs como Codex, Claude Code e OpenCode.
 
 ## Visão geral
 
@@ -187,7 +187,7 @@ aioson context:pack . --agent=analyst --goal="consolidar discovery brownfield" -
 
 Depois:
 
-1. Abra Codex, Claude Code ou Gemini CLI.
+1. Abra Codex, Claude Code ou OpenCode.
 2. Rode `@analyst`.
 3. Use os arquivos de scan ou o `context-pack.md` para escrever `discovery.md`.
 4. Depois passe para `@architect`.

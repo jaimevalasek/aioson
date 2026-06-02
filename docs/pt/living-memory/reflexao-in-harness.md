@@ -1,6 +1,6 @@
 # Reflexão In-Harness — pipeline técnica
 
-> Por que "in-harness"? Porque a parte cara — interpretar diff e reescrever prosa — acontece **dentro da sessão do harness** (Claude Code, Codex, Gemini, OpenCode), usando o LLM que você já está pagando. O CLI nunca abre conexão com um provider de IA. Ele decide quando disparar, monta o pacote pro agente, e valida o resultado.
+> Por que "in-harness"? Porque a parte cara — interpretar diff e reescrever prosa — acontece **dentro da sessão do harness** (Claude Code, Codex e OpenCode), usando o LLM que você já está pagando. O CLI nunca abre conexão com um provider de IA. Ele decide quando disparar, monta o pacote pro agente, e valida o resultado.
 
 ## Componentes
 

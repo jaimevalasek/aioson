@@ -1,7 +1,0 @@
-description = "Quality review"
-prompt = """
-@{ .aioson/context/discovery.md }
-@{ .aioson/agents/qa.md }
-
-{{args}}
-"""

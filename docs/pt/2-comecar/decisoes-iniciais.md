@@ -88,7 +88,7 @@ Você pode marcar **mais de um** no wizard — eles convivem no mesmo projeto.
 |---|---|---|
 | **Claude Code** | Agentes longos, refatorações, tarefas planejadas | Skills nativos, slash commands, hooks |
 | **Codex CLI** | Tarefas curtas, foco em código direto | Modo `@` para incluir arquivos |
-| **Gemini CLI** | Multi-modal, custo baixo em alguns planos | Janela de contexto generosa |
+| | Multi-modal, custo baixo em alguns planos | Janela de contexto generosa |
 | **OpenCode** | Open-source, integração com vários providers | Configuração granular |
 
 **Recomendação para iniciante:** comece com Claude Code, é o que tem mais paridade com AIOSON. Adicione outros depois com `aioson install --reconfigure`.
@@ -183,7 +183,7 @@ npx @jaimevalasek/aioson install --no-interactive
 
 | Quero mudar... | Comando |
 |---|---|
-| Adicionar Codex/Gemini ao mesmo projeto | `aioson install --reconfigure` |
+| Adicionar Codex ao mesmo projeto | `aioson install --reconfigure` |
 | Ativar Squads | `aioson install --reconfigure` (e marque) |
 | Trocar design skill | `@ux-ui` no cliente AI ou `aioson install --reconfigure` |
 | Mudar idioma de interação | Edite `interaction_language:` em `project.context.md` ou rode `@setup` de novo |

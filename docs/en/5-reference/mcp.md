@@ -33,7 +33,7 @@ aioson mcp:doctor --json
 Checks include:
 - `servers.local.json` existence and JSON validity
 - Core server baseline (`filesystem`, `context7`)
-- Preset coverage (`claude`, `codex`, `gemini`, `opencode`)
+- Preset coverage (`claude`, `codex`, `opencode`)
 - Required environment variables from enabled servers
 - Context compatibility for database and Web3 (`chain-rpc`)
 

@@ -28,13 +28,11 @@ async function makeMinimalProject({ bootstrap = 0, featuresDir = false, claudeCo
       }, null, 2),
       'utf8'
     );
-    // Pre-generate the 4 native files so permissions are in sync
+    // Pre-generate the native files so permissions are in sync
     await fs.mkdir(path.join(dir, '.claude'), { recursive: true });
     await fs.writeFile(path.join(dir, '.claude/settings.json'), '{"permissions":{"allow":[]}}\n', 'utf8');
     await fs.mkdir(path.join(dir, '.codex'), { recursive: true });
     await fs.writeFile(path.join(dir, '.codex/permissions.json'), '{}\n', 'utf8');
-    await fs.mkdir(path.join(dir, '.gemini'), { recursive: true });
-    await fs.writeFile(path.join(dir, '.gemini/permissions.toml'), '\n', 'utf8');
     await fs.mkdir(path.join(dir, '.opencode'), { recursive: true });
     await fs.writeFile(path.join(dir, '.opencode/permissions.yaml'), '\n', 'utf8');
   }
@@ -146,7 +144,7 @@ test('permissions_in_sync detects drift when generated files are older than the 
   // Realistic scenario: user just edited the protocol; the native files were
   // generated some time ago. Backdate the native files.
   const past = new Date(Date.now() - 60_000);
-  for (const rel of ['.claude/settings.json', '.codex/permissions.json', '.gemini/permissions.toml', '.opencode/permissions.yaml']) {
+  for (const rel of ['.claude/settings.json', '.codex/permissions.json', '.opencode/permissions.yaml']) {
     await fs.utimes(path.join(dir, rel), past, past);
   }
 
@@ -160,7 +158,7 @@ test('permissions_in_sync fix regenerates native files', async () => {
   const dir = await makeMinimalProject({ permissions: true });
   // Backdate native files to force drift, then run fix
   const past = new Date(Date.now() - 60_000);
-  for (const rel of ['.claude/settings.json', '.codex/permissions.json', '.gemini/permissions.toml', '.opencode/permissions.yaml']) {
+  for (const rel of ['.claude/settings.json', '.codex/permissions.json', '.opencode/permissions.yaml']) {
     await fs.utimes(path.join(dir, rel), past, past);
   }
 

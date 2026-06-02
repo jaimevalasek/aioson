@@ -7,7 +7,6 @@ const { resolvePromptTool } = require('../src/prompt-tool');
 test('resolvePromptTool accepts supported tools', () => {
   assert.equal(resolvePromptTool('codex'), 'codex');
   assert.equal(resolvePromptTool('claude'), 'claude');
-  assert.equal(resolvePromptTool('gemini'), 'gemini');
   assert.equal(resolvePromptTool('opencode'), 'opencode');
   assert.equal(resolvePromptTool('  CoDeX  '), 'codex');
 });

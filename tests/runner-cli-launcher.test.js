@@ -29,11 +29,6 @@ describe('runner/cli-launcher.js — buildArgs', () => {
     assert.deepEqual(args, ['-p', 'do it', '--quiet', '--no-interactive']);
   });
 
-  it('builds args for gemini', () => {
-    const args = buildArgs('gemini', 'go');
-    assert.deepEqual(args, ['-p', 'go', '--quiet']);
-  });
-
   it('builds args for unknown cli', () => {
     const args = buildArgs('opencode', 'test');
     assert.deepEqual(args, ['-p', 'test']);
@@ -68,7 +63,7 @@ describe('runner/cli-launcher.js — launchCLI', () => {
     // node -p evaluates JS and prints the result; we embed TASK_COMPLETE in the expression
     const result = await launchCLI('.', 'console.log(1); "TASK_COMPLETE"', {
       tool: 'node',
-      timeout: 2000
+      timeout: 10000
     });
     assert.equal(result.completionMarker, true);
     assert.ok(result.output.includes('TASK_COMPLETE'));

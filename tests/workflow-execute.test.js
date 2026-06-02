@@ -202,13 +202,13 @@ test('workflow:execute: blocks explicit headless mode when tool policy requires 
   const tmpDir = await makeTmpDir();
   const result = await runWorkflowExecute({
     args: [tmpDir],
-    options: { json: true, feature: 'checkout', 'dry-run': true, classification: 'SMALL', tool: 'gemini', mode: 'headless' },
+    options: { json: true, feature: 'checkout', 'dry-run': true, classification: 'SMALL', tool: 'opencode', mode: 'headless' },
     logger: makeLogger()
   });
 
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'headless_not_supported');
-  assert.equal(result.tool, 'gemini');
+  assert.equal(result.tool, 'opencode');
 });
 
 test('workflow:execute: dry-run predicts blockers for an active stage with missing contract items', async () => {

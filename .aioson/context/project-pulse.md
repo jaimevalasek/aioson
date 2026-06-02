@@ -1,24 +1,25 @@
 ---
 last_updated: 2026-06-02
-last_agent: qa
-last_gate: "Gate D PASS_WITH_NOTE"
+last_agent: dev
+last_gate: "Gate C implementation complete"
 active_feature: none
-active_work: "workflow-execute-dry-run-classification QA approved"
-blockers: "none blocking; project-lane preflight/Gate D signal and Windows full-suite/lint limitations remain warnings"
-next_recommendation: "@committer to prepare the commit"
+active_work: "gemini-cli support removed from code, templates, docs, and focused tests"
+blockers: "none blocking; preserved references are historical gemini-phaseout records, Antigravity paths, negative tests, and Gemini API provider"
+next_recommendation: "@qa for final review if full gate validation is required"
 ---
 
 # Project Pulse
 
 ## Status
 
-- **Last agent:** @qa
+- **Last agent:** @dev
 - **Active feature:** none
-- **Active work:** workflow-execute-dry-run-classification QA approved
-- **Next:** @committer to prepare the commit
+- **Active work:** gemini-cli support removed from code, templates, docs, and focused tests
+- **Next:** @qa for final review if full gate validation is required
 
 ## Recent Activity
 
+- 2026-06-02 @dev → gemini-cli phaseout cleanup: removed Gemini CLI support from code paths, install profiles, prompt tools, permissions generator, doctor checks, templates, i18n, docs, and focused tests. Syntax checks passed, package.json parse passed, and focused regression set passed 181/181.
 - 2026-06-02 @analyst → quality-governance-baseline-and-new-regression-gate: Gate A approved: requirements/spec created with 14 requirements and 18 ACs
 - 2026-06-02 @pm → quality-governance-baseline-and-new-regression-gate: PM completed: implementation plan written, Gate C prepared but CLI approval blocked by pending Gate B
 - 2026-06-02 @architect → quality-governance-baseline-and-new-regression-gate: Architecture defined: Node.js CLI quality:audit, 2 modules

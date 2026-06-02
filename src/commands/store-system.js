@@ -68,14 +68,14 @@ const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.turbo', '.next',
   '.cache', 'coverage', '.nyc_output', 'out',
   // AIOSON tooling — não faz parte do código-fonte do sistema
-  '.aioson', '.claude', '.gemini', '.codex', 'researchs',
+  '.aioson', '.claude', '.codex', 'researchs',
 ]);
 
 const SKIP_DIRS_BUILD = new Set([
   'node_modules', '.git', '.turbo', '.next',
   '.cache', 'coverage', '.nyc_output',
   'src', 'dashboard/src',
-  '.aioson', '.claude', '.gemini', '.codex', 'researchs',
+  '.aioson', '.claude', '.codex', 'researchs',
 ]);
 
 const SKIP_FILES = new Set([

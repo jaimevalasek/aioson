@@ -1,8 +1,0 @@
-description = "Project architecture"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/context/discovery.md }
-@{ .aioson/agents/architect.md }
-
-{{args}}
-"""

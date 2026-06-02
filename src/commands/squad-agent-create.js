@@ -34,7 +34,7 @@ function resolveExecutorModelTier(type, modelTier) {
 
 // ---------------------------------------------------------------------------
 // Agent template builder — inspired by AIOX create-agent v3.0 but adapted
-// for aioson's markdown-agent ecosystem (Claude Code, Codex, Gemini CLI).
+// for aioson's markdown-agent ecosystem (Claude Code, Codex, OpenCode).
 //
 // Levels:
 //   0 — Infrastructure (skills, dependencies, file references)

@@ -16,7 +16,7 @@
 
 - Node.js 18+
 - Um projeto de software (existente ou novo)
-- Claude, Codex, Gemini ou OpenCode configurado no seu editor
+- Claude, Codex ou OpenCode configurado no seu editor
 
 ---
 
@@ -24,7 +24,7 @@
 
 Ao rodar o `init` ou `install`, um **wizard interativo** aparece para você escolher:
 
-1. **Quais ferramentas AI** usar (Claude Code, Codex, Gemini, OpenCode)
+1. **Quais ferramentas AI** usar (Claude Code, Codex e OpenCode)
 2. **Qual modo** (Development ou Development + Squads)
 3. **Design system** (opcional) — Clean SaaS UI, Aurora Command UI, Cognitive Core UI, etc.
 4. **Idioma dos agentes** — English, Português, Español, Français
@@ -58,7 +58,7 @@ npx @jaimevalasek/aioson install --all
 ```
 
 **O que o `--all` instala:**
-- Ferramentas: Claude Code, Codex, Gemini, OpenCode
+- Ferramentas: Claude Code, Codex e OpenCode
 - Modo: Development + Squads
 - Design: nenhum
 - Idioma: English
@@ -125,7 +125,7 @@ Se você nao usa API LLM no `aioson`, o caminho manual tambem funciona:
 
 1. Rode `scan:project . --folder=src`
 2. Opcional: rode `context:pack . --agent=analyst --goal="consolidar discovery brownfield" --module=src`
-3. Abra seu Codex, Claude Code, Gemini CLI ou cliente equivalente
+3. Abra seu Codex, Claude Code ou cliente equivalente
 4. Execute `@analyst`
 5. O `@analyst` usa os arquivos de scan para gerar `discovery.md`
 
@@ -172,14 +172,9 @@ No **Codex** (AGENTS.md já configurado — sem slash commands):
 use the @setup agent to onboard this project
 ```
 
-No **Gemini CLI** (`.gemini/commands/` já configurado):
-```
-/aios-setup
-```
-
 O agente `@setup` detecta o framework, faz as perguntas e gera o `project.context.md`.
 
-> Cada CLI tem uma forma diferente de invocar agentes. Consulte o [Guia de CLIs de IA](./clientes-ai.md) para exemplos detalhados de Claude Code, Codex e Gemini.
+> Cada CLI tem uma forma diferente de invocar agentes. Consulte o [Guia de CLIs de IA](../5-referencia/clientes-ai.md) para exemplos detalhados de Claude Code, Codex e OpenCode.
 
 Se voce estiver entrando num projeto ja existente e quiser um companheiro tecnico para retomar uma sessao, diagnosticar algo pequeno ou implementar aos poucos, pode chamar `@deyvin` depois que o contexto minimo estiver pronto.
 
@@ -253,7 +248,7 @@ Exemplos:
 ## Próximos passos
 
 - [Referência completa dos comandos do CLI](./comandos-cli.md)
-- [Como usar com Claude Code, Codex e Gemini](./clientes-ai.md)
+- [Como usar com Claude Code, Codex e OpenCode](../5-referencia/clientes-ai.md)
 - [Cenários completos com exemplos práticos](./cenarios.md)
 - [Guia de agentes: quando usar cada um](./agentes.md)
 - [Hardening do motor: gates, auto-cura e test briefing](./motor-hardening.md)

@@ -21,7 +21,7 @@ Este é um projeto **SMALL** (1 tipo de usuário, 0 integrações externas, sem 
 ## Pré-requisitos
 
 - Node.js 18+ instalado
-- Claude Code (ou Codex/Gemini/OpenCode)
+- Claude Code (ou Codex/OpenCode)
 - AIOSON instalado no projeto (`npx @jaimevalasek/aioson init minha-landing`)
 - Opcional: uma URL de referência para estilo visual (qualquer site público que você admire)
 

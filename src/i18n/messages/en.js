@@ -7,22 +7,22 @@ module.exports = {
     usage: 'Usage:',
     help_item_line: '  {text}',
     help_init:
-      'aioson init <project-name> [--force] [--dry-run] [--all] [--lang=<bcp47-tag>] [--tool=codex|claude|gemini|opencode] [--locale=en]',
+      'aioson init <project-name> [--force] [--dry-run] [--all] [--lang=<bcp47-tag>] [--tool=codex|claude|opencode] [--locale=en]',
     help_install:
-      'aioson install [path] [--force] [--dry-run] [--lang=<bcp47-tag>] [--tool=codex|claude|gemini|opencode] [--locale=en]',
+      'aioson install [path] [--force] [--dry-run] [--lang=<bcp47-tag>] [--tool=codex|claude|opencode] [--locale=en]',
     help_setup:
-      'aioson setup [path] [--defaults] [--framework=<name>] [--lang=<bcp47-tag>] [--project-name=<name>] [--force] [--dry-run] [--tool=codex|claude|gemini|opencode] [--locale=en]',
+      'aioson setup [path] [--defaults] [--framework=<name>] [--lang=<bcp47-tag>] [--project-name=<name>] [--force] [--dry-run] [--tool=codex|claude|opencode] [--locale=en]',
     help_update: 'aioson update [path] [--dry-run] [--lang=<bcp47-tag>] [--locale=en]',
     help_info: 'aioson info [path] [--json] [--locale=en]',
     help_doctor: 'aioson doctor [path] [--fix] [--dry-run] [--json] [--locale=en]',
     help_i18n_add: 'aioson i18n:add <locale> [--force] [--dry-run] [--locale=en]',
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_prompt:
-      'aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=<bcp47-tag>] [--locale=en]',
+      'aioson agent:prompt <agent> [path] [--tool=codex|claude|opencode] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_help:
       'aioson agent:help [agent] [--json]',
     help_agent_invoke:
-      'aioson agent:invoke <agent> [path] [--tool=codex|claude|gemini|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
+      'aioson agent:invoke <agent> [path] [--tool=codex|claude|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
@@ -115,9 +115,9 @@ module.exports = {
     help_workflow_plan:
       'aioson workflow:plan [path] [--classification=MICRO|SMALL|MEDIUM] [--json] [--locale=en]',
     help_workflow_next:
-      'aioson workflow:next [path] [--complete[=<agent>]] [--agent=<agent>] [--skip=<agent>] [--status] [--suggest] [--tool=codex|claude|gemini|opencode] [--json] [--locale=en]',
+      'aioson workflow:next [path] [--complete[=<agent>]] [--agent=<agent>] [--skip=<agent>] [--status] [--suggest] [--tool=codex|claude|opencode] [--json] [--locale=en]',
     help_workflow_status:
-      'aioson workflow:status [path] [--suggest] [--tool=codex|claude|gemini|opencode] [--json] [--locale=en]',
+      'aioson workflow:status [path] [--suggest] [--tool=codex|claude|opencode] [--json] [--locale=en]',
     help_workflow_execute:
       'aioson workflow:execute [path] [--steps=<n>] [--dry-run] [--lane=<n>] [--json] [--locale=en]',
     help_parallel_init:
@@ -133,7 +133,7 @@ module.exports = {
     help_parallel_guard:
       'aioson parallel:guard [path] --lane=<n> --paths=<path[,path2]> [--json] [--locale=en]',
     help_mcp_init:
-      'aioson mcp:init [path] [--tool=claude|codex|gemini|opencode] [--dry-run] [--json] [--locale=en]',
+      'aioson mcp:init [path] [--tool=claude|codex|opencode] [--dry-run] [--json] [--locale=en]',
     help_mcp_doctor:
       'aioson mcp:doctor [path] [--strict-env] [--json] [--locale=en]',
     help_qa_doctor:
@@ -237,7 +237,7 @@ module.exports = {
     help_runtime_emit:
       'aioson runtime:emit [path] --agent=<name> [--type=<event>] [--summary=<text>] [--title=<text>] [--refs=<file[,file2]>] [--plan-step=<id>] [--meta=<json>] [--json] [--locale=en]',
     help_live_start:
-      'aioson live:start [path] --tool=codex|claude|gemini|opencode --agent=<name> [--tool-bin=<binary>] [--permission-mode=default|yolo] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
+      'aioson live:start [path] --tool=codex|claude|opencode --agent=<name> [--tool-bin=<binary>] [--permission-mode=default|yolo] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
     help_live_status:
       'aioson live:status [path] [--agent=<name>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=en]',
     help_live_handoff:
@@ -323,7 +323,7 @@ module.exports = {
   },
   init: {
     usage_error:
-      'Usage: aioson init <project-name> [--force] [--dry-run] [--lang=<bcp47-tag>] [--tool=codex|claude|gemini|opencode] [--locale=en]',
+      'Usage: aioson init <project-name> [--force] [--dry-run] [--lang=<bcp47-tag>] [--tool=codex|claude|opencode] [--locale=en]',
     non_empty_dir: 'Directory is not empty: {targetDir}. Use --force to continue.',
     created_at: 'Project created at: {targetDir}',
     files_copied: 'Files copied: {count}',
@@ -345,7 +345,6 @@ module.exports = {
     files_skipped: 'Files skipped: {count}',
     dry_run_header: '⚠  DRY RUN — no files were written. Showing what install would do:',
     dry_run_done_at: 'DRY RUN: nothing was written to {targetDir}',
-    gemini_deprecation_notice: '[DEPRECATED] Gemini CLI free/personal tier will be discontinued on 2026-06-18. Consider Codex or OpenCode for new projects. Enterprise (Code Assist Standard/Enterprise) continues to work.',
     dry_run_files_copied: 'Files that would be copied: {count}',
     dry_run_files_skipped: 'Files that would be skipped: {count}',
     next_steps: 'Next steps:',
@@ -418,21 +417,12 @@ module.exports = {
     context_conversation_language_format: '`conversation_language` is not a valid BCP-47 tag',
     context_conversation_language_format_hint: 'Use values like en, en-US, pt-BR.',
     node_version: 'Node.js >= 18 (current: {version})',
-    gemini_deprecation: 'Gemini CLI in use - free tier ends 2026-06-18 (enterprise unaffected)',
-    gemini_deprecation_hint:
-      'Run `aioson permissions-generator --tool=codex` (or --tool=opencode) to migrate. Enterprise (Code Assist Standard/Enterprise) keeps working; pre-existing .gemini/permissions.toml is preserved.',
     gateway_claude_pointer: 'CLAUDE gateway references shared AIOSON files',
     gateway_claude_pointer_hint:
       'Ensure CLAUDE.md references .aioson/config.md and .aioson/agents/setup.md.',
     gateway_codex_pointer: 'Codex gateway references shared AIOSON files',
     gateway_codex_pointer_hint:
       'Ensure AGENTS.md references .aioson/config.md and .aioson/agents/.',
-    gateway_gemini_pointer: 'Gemini gateway references shared command and agent paths',
-    gateway_gemini_pointer_hint:
-      'Ensure .gemini/GEMINI.md references .gemini/commands/ and .aioson/agents/.',
-    gateway_gemini_command_pointer: 'Gemini command file maps to shared agent: {file}',
-    gateway_gemini_command_pointer_hint:
-      'Ensure {file} includes @{ .aioson/agents/{agent}.md } in the prompt field.',
     gateway_opencode_pointer: 'OpenCode gateway references shared AIOSON files',
     gateway_opencode_pointer_hint:
       'Ensure OPENCODE.md references .aioson/config.md and .aioson/agents/.',
@@ -521,7 +511,7 @@ module.exports = {
     output_line: '  Output: {value}',
     none: 'none',
     prompt_usage_error:
-      'Usage: aioson agent:prompt <agent> [path] [--tool=codex|claude|gemini|opencode] [--lang=en|pt-BR|es|fr] [--locale=en]',
+      'Usage: aioson agent:prompt <agent> [path] [--tool=codex|claude|opencode] [--lang=en|pt-BR|es|fr] [--locale=en]',
     prompt_unknown_agent: 'Unknown agent: {agent}',
     prompt_invalid_target_mode:
       'Invalid pentester target mode: {mode}. Expected framework_target or app_target.',
@@ -535,7 +525,7 @@ module.exports = {
     help_usage: 'Usage:',
     help_claude_code: '(Claude Code)',
     help_common_options: 'Common options:',
-    help_opt_tool: 'Target tool (codex|claude|gemini|opencode)',
+    help_opt_tool: 'Target tool (codex|claude|opencode)',
     help_opt_language: 'Interaction language (e.g., pt-BR, en)',
     help_opt_headless: 'Output prompt only, no runtime tracking',
     help_opt_output: 'Save headless prompt to file',
@@ -962,7 +952,7 @@ module.exports = {
     presets_coverage_partial: 'Only {existing}/{total} tool presets are present.',
     presets_coverage_partial_hint:
       'Run: aioson mcp:init (without --tool) to generate all presets.',
-    presets_coverage_full: 'All tool presets are present (claude, codex, gemini, opencode).',
+    presets_coverage_full: 'All tool presets are present (claude, codex, opencode).',
     env_none_required: 'No required environment variables in enabled MCP servers.',
     env_missing: '{missing}/{total} required env var(s) are missing: {vars}',
     env_missing_hint_strict: 'Set the missing variables before execution.',
@@ -1213,7 +1203,7 @@ module.exports = {
     folder_required_example_llm:
       '  API automation  : aioson scan:project . --folder=src --with-llm --provider=openai',
     folder_required_example_cli:
-      '  No API in aioson: aioson scan:project . --folder=src  -> then run @analyst in Codex/Claude/Gemini',
+      '  No API in aioson: aioson scan:project . --folder=src  -> then run @analyst in Codex/Claude',
     folder_required_example_prompt:
       '  Ready prompt    : aioson agent:prompt analyst --tool=codex',
     folder_required_example_next:
@@ -1269,7 +1259,7 @@ module.exports = {
     local_path_cli: '  \x1b[36mPath B — Your AI CLI (no API inside aioson)\x1b[0m',
     local_cli_step_analyst: '  2. In Codex, Claude Code, or another client, run @analyst — it can use scan-index.md + scan-folders.md + scan-<folder>.md to write discovery.md',
     local_cli_step_prompt_codex: '  3. If the client does not understand @analyst, generate a ready prompt: aioson agent:prompt analyst --tool=codex',
-    local_cli_step_prompt_claude: '  4. Swap --tool=codex for --tool=claude or --tool=gemini when needed',
+    local_cli_step_prompt_claude: '  4. Swap --tool=codex for --tool=claude when needed',
     local_cli_step_model_hint: '  5. If your client supports model selection, prefer a fast/cheap model for this discovery step',
     local_workflow_title: '\n\x1b[33m  After discovery:\x1b[0m',
     local_step_architect: '  3. Run @architect — generates architecture.md from the consolidated discovery',

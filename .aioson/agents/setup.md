@@ -405,11 +405,11 @@ updated: "<ISO-8601>"
 
 If `framework_installed=true` (code was detected in the workspace), always include this after setup:
 
-> "Your project already has code. Run `aioson scan:project . --folder=src` to generate the local code maps first. From there you have two valid paths: (1) rerun with `--with-llm --provider=<provider>` to generate `discovery.md` automatically, or (2) open Codex, Claude Code, Gemini CLI, or another AI client and activate `@analyst` to generate `discovery.md` from the local scan artifacts. `architecture.md` still comes later from @architect."
+> "Your project already has code. Run `aioson scan:project . --folder=src` to generate the local code maps first. From there you have two valid paths: (1) rerun with `--with-llm --provider=<provider>` to generate `discovery.md` automatically, or (2) open Codex, Claude Code, or another AI client and activate `@analyst` to generate `discovery.md` from the local scan artifacts. `architecture.md` still comes later from @architect."
 
 ### 4. Tell the user which agent to activate next
 
-After setup is complete, always close with the recommended next step. Use the exact `@agent` name so the AI client (Codex, Claude Code, Gemini) can trigger it:
+After setup is complete, always close with the recommended next step. Use the exact `@agent` name so the AI client (Codex, Claude Code) can trigger it:
 
 | project_type | classification | Next agent |
 |---|---|---|

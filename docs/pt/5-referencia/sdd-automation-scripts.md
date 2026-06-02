@@ -366,7 +366,7 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 
 | Flag | Descrição |
 |---|---|
-| `--tool=<tool>` | Ferramenta a usar (`claude`, `codex`, `gemini`) |
+| `--tool=<tool>` | Ferramenta a usar (`claude`, `codex`, `opencode`) |
 | `--classification=<tier>` | Override manual da classificação |
 | `--dry-run` | Mostra o plano sem executar |
 | `--start-from=<agent>` | Pula agentes anteriores ao agente dado |

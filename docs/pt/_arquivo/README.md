@@ -112,7 +112,7 @@ Sem API LLM no `aioson`, ainda existe um caminho valido:
 
 - rode `scan:project . --folder=...` para gerar os mapas locais
 - rode `context:pack` se quiser entregar menos contexto e gastar menos tokens
-- abra Codex, Claude Code, Gemini CLI ou outro cliente de IA
+- abra Codex, Claude Code ou outro cliente de IA
 - ative `@analyst`
 - o `@analyst` pode usar `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md` e `scan-aioson.md` para escrever `discovery.md`
 - se o cliente permitir escolher modelo, prefira um modelo rapido/barato nessa etapa

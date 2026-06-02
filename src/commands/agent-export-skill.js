@@ -4,7 +4,7 @@
  * aioson agent:export-skill — Export AIOSON agent as portable Agent Skills Standard
  *
  * Converts an AIOSON agent (.aioson/agents/<name>.md) into the Agent Skills Standard
- * format (SKILL.md + resources), making it usable in Cursor, Copilot, Gemini CLI,
+ * format (SKILL.md + resources), making it usable in Cursor, Copilot,
  * Codex, JetBrains, and 32+ other tools.
  *
  * Usage:
@@ -221,7 +221,7 @@ async function runAgentExportSkill({ args, options = {}, logger }) {
     logger.log(`  ✓ ${f}`);
   }
   logger.log('');
-  logger.log('This skill is now portable to Cursor, Copilot, Gemini CLI, and 32+ tools.');
+  logger.log('This skill is now portable to Cursor, Copilot, and 32+ tools.');
 
   return { ok: true, agent: agentName, outputDir: path.relative(targetDir, outputDir), files: written };
 }

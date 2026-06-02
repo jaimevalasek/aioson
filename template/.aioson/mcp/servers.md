@@ -19,5 +19,4 @@ Generated files:
 - `.aioson/mcp/servers.local.json`
 - `.aioson/mcp/presets/claude.json`
 - `.aioson/mcp/presets/codex.json`
-- `.aioson/mcp/presets/gemini.json`
 - `.aioson/mcp/presets/opencode.json`

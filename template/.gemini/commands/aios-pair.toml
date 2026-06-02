@@ -1,7 +1,0 @@
-description = "Compatibility alias for aios-deyvin"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/deyvin.md }
-
-{{args}}
-"""

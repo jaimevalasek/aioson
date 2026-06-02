@@ -56,7 +56,7 @@ your-project/
 │   ├── rules/               ← hard rules agents follow (security, etc.)
 │   ├── skills/              ← pluggable packages (design systems, processes)
 │   └── runtime/             ← local telemetry (SQLite)
-├── .claude/  .codex/  .gemini/  .windsurf/   ← integration with each AI client
+├── .claude/  .codex/                         ← native client config
 ├── CLAUDE.md  AGENTS.md  OPENCODE.md         ← per-client instructions
 └── docs/                                      ← optional documentation
 ```
@@ -67,7 +67,7 @@ Open your favorite AI client and type `@setup`, `@product`, `@dev`, etc. — the
 
 Works with **any IDE that has a terminal**:
 
-- Claude Code · Codex CLI · Gemini CLI · OpenCode
+- Claude Code · Codex CLI · OpenCode
 - VS Code, Google Antigravity, Cursor, Windsurf, JetBrains, Zed (with any of the clients above)
 
 Agents are *prompts*, not plugins. They live in `.md` files and your AI client reads them when you invoke via `@name`.

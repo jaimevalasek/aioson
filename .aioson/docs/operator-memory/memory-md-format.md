@@ -5,7 +5,7 @@ schema_version: "1.0"
 
 # Operator Memory — MEMORY.md format spec
 
-This document is the **canonical format spec** for AIOSON operator-memory. Any harness (Claude Code, Codex, Gemini CLI, future) that wants to participate in operator-memory loading reads this spec.
+This document is the **canonical format spec** for AIOSON operator-memory. Any harness (Claude Code, Codex, future) that wants to participate in operator-memory loading reads this spec.
 
 ## File layout
 
@@ -110,7 +110,7 @@ if AIOSON_OPERATOR_MEMORY = "true":
 |---|---|---|
 | Claude Code | **native** | `CLAUDE.md` (project root + global) — `## Memory loading` section auto-injected by `aioson setup` |
 | Codex | **compatible** | `AGENTS.md` (same `## Memory loading` section — Codex reads AGENTS.md, no Claude-specific syntax used) |
-| Gemini CLI | **compatible** | `AGENTS.md` (Gemini reads AGENTS.md via `--agents` flag) |
+| OpenCode | **compatible** | `OPENCODE.md` (same `## Memory loading` section, no Claude-specific syntax used) |
 | Cursor | **TBD (V2)** | Cursor reads `.cursorrules` / `.cursor/rules/*.md` — bridge file needed |
 | Aider | **TBD (V2)** | Aider reads `.aider.conf.yml` + project conventions — bridge needed |
 

@@ -117,11 +117,10 @@ As skills instaladas são distribuídas automaticamente para as ferramentas de I
 | Cursor | `.cursor/skills/` | Acesso direto por path |
 | Windsurf | `.windsurf/skills/` | Acesso direto por path |
 | Codex | `AGENTS.md` | Via referência `@slug` no arquivo AGENTS.md |
-| Gemini CLI | `.aioson/installed-skills/` | Acesso direto por path |
 
 ### Nota sobre gitignore
 
-Mesmo que `.aioson/skills/` esteja no gitignore, todas as ferramentas (Claude Code, Gemini CLI, Codex) conseguem ler os arquivos via path direto no filesystem. O gitignore afeta apenas a descoberta automática do Codex via `@` — mas como as skills são referenciadas por path explícito nos agentes, isso não é um problema.
+Mesmo que `.aioson/skills/` esteja no gitignore, todas as ferramentas (Claude Code, Codex) conseguem ler os arquivos via path direto no filesystem. O gitignore afeta apenas a descoberta automática do Codex via `@` — mas como as skills são referenciadas por path explícito nos agentes, isso não é um problema.
 
 ## Mapeamento framework → skill
 

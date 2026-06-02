@@ -158,7 +158,7 @@ Check `framework_installed` in `project.context.md` before starting any phase.
 - Read `scan-folders.md` and `scan-aioson.md` if present.
 - Read every relevant `scan-<folder>.md` that maps the requested brownfield scope.
 - Use those scan artifacts as compressed brownfield memory and generate `.aioson/context/discovery.md` yourself.
-- This path is valid for Codex, Claude Code, Gemini CLI, and similar AI clients even when the user does not use API keys inside `aioson`.
+- This path is valid for Codex, Claude Code, and similar AI clients even when the user does not use API keys inside `aioson`.
 - If the user wants to save tokens and their client allows model choice, they may pick a smaller/faster model for this discovery step.
 
 **If `framework_installed=true` AND no `discovery.md` exists AND no local scan artifacts exist:**

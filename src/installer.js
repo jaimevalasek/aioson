@@ -37,8 +37,6 @@ const GITIGNORE_POLICY_LINES = [
   '!OPENCODE.md',
   '!.claude/',
   '!.claude/**',
-  '!.gemini/',
-  '!.gemini/**',
   '!.aioson/',
   '!.aioson/**',
   '# AIOSON — managed framework files (do not commit)',
@@ -345,7 +343,7 @@ async function installTemplate(targetDir, options = {}) {
     const dest = path.join(targetDir, rel);
     const destExists = await exists(dest);
 
-    // Gateway pointer files (CLAUDE.md, AGENTS.md, OPENCODE.md, .gemini/GEMINI.md)
+    // Gateway pointer files (CLAUDE.md, AGENTS.md, OPENCODE.md)
     // get block-merged so that an existing project-authored file keeps its content
     // and only the AIOSON-managed block is created or refreshed in place.
     if (isGatewayPointerPath(rel)) {

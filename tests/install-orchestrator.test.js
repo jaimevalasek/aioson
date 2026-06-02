@@ -76,7 +76,7 @@ test('runInstall --reconfigure in non-interactive must reject (no silent install
 
 test('runInstall non-interactive with saved profile honors it (no fallback to install-all)', async () => {
   const dir = await makeTempDir();
-  // Saved profile: claude only — no AGENTS.md, no .gemini/, no OPENCODE.md
+  // Saved profile: claude only — no AGENTS.md, no OPENCODE.md
   await installTemplate(dir, {
     mode: 'install',
     installProfile: { tools: ['claude'], uses: ['development'], design: 'none', locale: 'en' }

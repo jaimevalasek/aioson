@@ -286,5 +286,6 @@ test('AC-P3-07 cross-harness format spec doc exists', () => {
   assert.ok(content.includes('V1 support matrix'));
   assert.ok(content.includes('Claude Code'));
   assert.ok(content.includes('Codex'));
-  assert.ok(content.includes('Gemini'));
+  assert.ok(content.includes('OpenCode'));
+  assert.equal(content.includes('Gemini CLI'), false);
 });

@@ -70,9 +70,9 @@ test('ctrl+c during screen1 returns null', async () => {
 
 // --- static data ---
 
-test('TOOLS list has 4 entries', () => {
-  assert.equal(__test__.TOOLS.length, 4);
-  assert.deepEqual(__test__.TOOLS.map(t => t.id), ['claude', 'codex', 'gemini', 'opencode']);
+test('TOOLS list has 3 entries', () => {
+  assert.equal(__test__.TOOLS.length, 3);
+  assert.deepEqual(__test__.TOOLS.map(t => t.id), ['claude', 'codex', 'opencode']);
 });
 
 test('USES list has development locked and squads unlocked', () => {
@@ -116,7 +116,6 @@ test('renderScreen1 shows all tools and wizard step (1/4)', () => {
   assert.ok(stdout.output.includes('1/4'));
   assert.ok(stdout.output.includes('Claude Code'));
   assert.ok(stdout.output.includes('Codex (OpenAI)'));
-  assert.ok(stdout.output.includes('Gemini CLI'));
   assert.ok(stdout.output.includes('OpenCode'));
 });
 

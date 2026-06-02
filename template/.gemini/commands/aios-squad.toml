@@ -1,7 +1,0 @@
-description = "Squad assembly and management"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/squad.md }
-
-{{args}}
-"""

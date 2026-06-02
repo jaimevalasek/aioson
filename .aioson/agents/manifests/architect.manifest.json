@@ -8,16 +8,33 @@
       "category": "create",
       "description": "Design the technical architecture for the approved scope.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/discovery.md", "required": true },
-        { "type": "gate", "path_pattern": "gate:A", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/discovery.md",
+          "required": true
+        },
+        {
+          "type": "gate",
+          "path_pattern": "gate:A",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/architecture.md" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/architecture.md"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "medium"
 }

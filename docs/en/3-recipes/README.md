@@ -10,7 +10,7 @@ These three trails show **how features reach development** in AIOSON. You almost
 |---|---|---|
 | **[Full feature with @sheldon](./full-feature-with-sheldon.md)** | You have a PRD in mind and want the complete canonical trail (most used) | @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa |
 | [From idea to PRD via @briefing](./from-idea-to-prd-via-briefing.md) | Your idea is still vague, several loose notes | @briefing → @product |
-| [External plans for @product](./external-plans-for-product.md) *(coming soon)* | You already planned in another chat (ChatGPT, Claude.io, Gemini Web) | @product (reads `/plans/`) |
+| [External plans for @product](./external-plans-for-product.md) *(coming soon)* | You already planned in another chat (ChatGPT, Claude.io Web) | @product (reads `/plans/`) |
 
 ## Recipes by scenario
 

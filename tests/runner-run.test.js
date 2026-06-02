@@ -47,11 +47,6 @@ test('buildArgs: codex includes --quiet --no-interactive', () => {
   assert.ok(args.includes('--no-interactive'));
 });
 
-test('buildArgs: gemini includes --quiet', () => {
-  const args = buildArgs('gemini', 'task');
-  assert.ok(args.includes('--quiet'));
-});
-
 test('buildArgs: unknown cli falls back to -p', () => {
   const args = buildArgs('opencode', 'task');
   assert.ok(args.includes('-p'));

@@ -10,7 +10,6 @@ const {
   resolveToolSets,
   buildClaudeSettings,
   buildCodexPermissions,
-  buildGeminiToml,
   buildOpencodeYaml,
   generatePermissions
 } = require('../src/permissions-generator');
@@ -42,11 +41,6 @@ const PROTOCOL_V11 = {
       mode: 'trusted',
       derived_from_tiers: ['tier1_silent', 'tier2_notified'],
       requires_tty: false
-    },
-    gemini: {
-      mode: 'guarded',
-      derived_from_tiers: ['tier1_silent'],
-      requires_tty: true
     },
     opencode: {
       mode: 'guarded',
@@ -134,18 +128,6 @@ test('buildCodexPermissions emits stable JSON shape with mode and tty', () => {
   assert.deepEqual(out.aioson_allowed, ['preflight']);
 });
 
-test('buildGeminiToml emits valid TOML key/value lists', () => {
-  const toml = buildGeminiToml(
-    { shellPatterns: ['git status'], aiosonCommands: ['preflight'] },
-    { mode: 'guarded', requires_tty: true }
-  );
-  assert.match(toml, /version = "1\.1"/);
-  assert.match(toml, /mode = "guarded"/);
-  assert.match(toml, /requires_tty = true/);
-  assert.match(toml, /shell_allowed = \[\s+"git status",\s+\]/);
-  assert.match(toml, /aioson_allowed = \[\s+"preflight",\s+\]/);
-});
-
 test('buildOpencodeYaml emits valid YAML lists', () => {
   const yaml = buildOpencodeYaml(
     { shellPatterns: ['git status'], aiosonCommands: [] },
@@ -156,14 +138,13 @@ test('buildOpencodeYaml emits valid YAML lists', () => {
   assert.match(yaml, /aioson_allowed:\s+\[\]/);
 });
 
-test('generatePermissions writes all four files and reports them', async () => {
+test('generatePermissions writes supported files and reports them', async () => {
   const dir = await makeProject(PROTOCOL_V11);
   const result = await generatePermissions(dir);
   assert.equal(result.missing, false);
   assert.deepEqual(result.written.sort(), [
     '.claude/settings.json',
     '.codex/permissions.json',
-    '.gemini/permissions.toml',
     '.opencode/permissions.yaml'
   ].sort());
 
@@ -273,20 +254,6 @@ test('SF-project-24: buildCodexPermissions emits shell_denied + aioson_denied', 
   );
   assert.deepEqual(out.shell_denied, ['rm -rf /', 'git push *']);
   assert.deepEqual(out.aioson_denied, ['cloud:publish:*']);
-});
-
-test('SF-project-24: buildGeminiToml emits shell_denied + aioson_denied blocks', () => {
-  const toml = buildGeminiToml(
-    {
-      shellPatterns: ['git status'],
-      aiosonCommands: ['preflight'],
-      denyShellPatterns: ['rm -rf *'],
-      denyAiosonCommands: ['cloud:publish:*']
-    },
-    { mode: 'guarded', requires_tty: true }
-  );
-  assert.match(toml, /shell_denied = \[\s+"rm -rf \*",\s+\]/);
-  assert.match(toml, /aioson_denied = \[\s+"cloud:publish:\*",\s+\]/);
 });
 
 test('SF-project-24: buildOpencodeYaml emits shell_denied + aioson_denied lists', () => {

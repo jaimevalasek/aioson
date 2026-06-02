@@ -1,9 +1,0 @@
-description = "Multi-agent orchestration"
-prompt = """
-@{ .aioson/context/discovery.md }
-@{ .aioson/context/architecture.md }
-@{ .aioson/context/prd.md }
-@{ .aioson/agents/orchestrator.md }
-
-{{args}}
-"""

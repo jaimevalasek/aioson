@@ -8,15 +8,40 @@
       "category": "create",
       "description": "Implement code changes according to spec and architecture.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/spec-{slug}.md", "required": false },
-        { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false },
-        { "type": "artifact", "path_pattern": ".aioson/context/simple-plans/{slug}.md", "required": false },
-        { "type": "gate", "path_pattern": "gate:C", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/spec-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/implementation-plan-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/simple-plans/{slug}.md",
+          "required": false
+        },
+        {
+          "type": "gate",
+          "path_pattern": "gate:C",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": "src/**/*" },
-        { "type": "artifact", "path_pattern": "tests/**/*" },
-        { "type": "state", "path_pattern": ".aioson/context/dev-state.md" }
+        {
+          "type": "artifact",
+          "path_pattern": "src/**/*"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": "tests/**/*"
+        },
+        {
+          "type": "state",
+          "path_pattern": ".aioson/context/dev-state.md"
+        }
       ]
     },
     {
@@ -24,10 +49,17 @@
       "category": "transform",
       "description": "Refactor existing code while preserving behavior.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/discovery.md", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/discovery.md",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": "src/**/*" }
+        {
+          "type": "artifact",
+          "path_pattern": "src/**/*"
+        }
       ]
     },
     {
@@ -35,21 +67,48 @@
       "category": "transform",
       "description": "Update bootstrap/*.md after a relevant session by consuming reflect-prompt.json and running memory:reflect-commit.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/runtime/reflect-prompt.json", "required": true },
-        { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/*.md", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/runtime/reflect-prompt.json",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/bootstrap/*.md",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/current-state.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/how-it-works.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/bootstrap/what-it-does.md" },
-        { "type": "event", "path_pattern": "runtime:memory_reflect_committed" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/bootstrap/current-state.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/bootstrap/how-it-works.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/bootstrap/what-it-does.md"
+        },
+        {
+          "type": "event",
+          "path_pattern": "runtime:memory_reflect_committed"
+        }
       ],
       "trigger": "post_agent_done",
       "tier": "tier2_notified"
     }
   ],
-  "autonomy_modes": ["guarded", "trusted"],
+  "autonomy_modes": [
+    "guarded",
+    "trusted"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "medium"
 }

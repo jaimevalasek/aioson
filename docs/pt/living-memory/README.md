@@ -61,7 +61,7 @@ Os comandos abaixo são o vocabulário mínimo da Memória Viva. Cada um tem um 
 | `.aioson/config/autonomy-protocol.json` | Contrato canônico de autonomia (v1.1 com `tiers`) |
 | `.aioson/runtime/reflect-prompt.json` | Manifest pendente de reflexão (efêmero — apagado após commit) |
 | `.aioson/runtime/aios.sqlite` | Telemetria: eventos `memory_reflect_*`, `notify_*` |
-| `.claude/settings.json` + `.codex/`/`.gemini/`/`.opencode/` | Permissões nativas geradas a partir do protocol |
+| `.claude/settings.json` + `.codex/`/`.opencode/` | Permissões nativas geradas a partir do protocol |
 
 ---
 

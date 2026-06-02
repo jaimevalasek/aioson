@@ -11,7 +11,7 @@ test('tool capabilities expose yolo support only for mapped CLIs', () => {
   assert.deepEqual(getToolCapabilities('claude').yolo_args, ['--dangerously-skip-permissions']);
   assert.deepEqual(getToolCapabilities('codex').yolo_args, ['--dangerously-bypass-approvals-and-sandbox']);
   assert.equal(getToolCapabilities('opencode').supports_yolo, false);
-  assert.equal(getToolCapabilities('gemini').supports_yolo, false);
+  assert.equal(getToolCapabilities('gemini'), null);
 });
 
 test('resolvePermissionModeArgs maps default and yolo modes', () => {

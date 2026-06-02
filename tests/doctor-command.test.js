@@ -67,34 +67,6 @@ test('doctor --fix localizes action/detail line wrappers in pt-BR', async () => 
   assert.equal(logger.lines.some((line) => line.startsWith('  Detalhe: ')), true);
 });
 
-test('doctor localizes Gemini command mapping hint with file parameter in pt-BR', async () => {
-  const dir = await makeTempDir();
-  await installTemplate(dir, { mode: 'install' });
-  await fs.writeFile(
-    path.join(dir, '.aioson/context/project.context.md'),
-    `---\nproject_name: "demo"\nproject_type: "web_app"\nprofile: "developer"\nframework: "Node"\nframework_installed: true\nclassification: "MICRO"\nconversation_language: "pt-BR"\naioson_version: "0.1.9"\n---\n\n# Project Context\n`,
-    'utf8'
-  );
-  await fs.writeFile(
-    path.join(dir, '.gemini/commands/aios-dev.toml'),
-    'description = "Dev"\nprompt = "invalid"\n',
-    'utf8'
-  );
-
-  const { t } = createTranslator('pt-BR');
-  const logger = createCollectLogger();
-  const result = await runDoctorCommand({
-    args: [dir],
-    options: {},
-    logger,
-    t
-  });
-
-  assert.equal(result.ok, false);
-  assert.equal(logger.lines.some((line) => line.includes('.gemini/commands/aios-dev.toml')), true);
-  assert.equal(logger.lines.some((line) => line.startsWith('  Dica: ')), true);
-});
-
 test('doctor --fix localizes gateway contract fix action in pt-BR', async () => {
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });

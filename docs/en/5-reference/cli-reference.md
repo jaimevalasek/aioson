@@ -17,7 +17,7 @@ aioson init my-app --no-interactive
 
 **Options:**
 - `--lang=en|pt-BR|es|fr` — sets `conversation_language` in the generated context and applies the matching agent locale pack. Default: `en`.
-- `--tool=codex|claude|gemini|opencode` — configures the primary AI client. Affects which gateway file is used. Default: `codex`.
+- `--tool=codex|claude|opencode` — configures the primary AI client. Affects which gateway file is used. Default: `codex`.
 - `--no-interactive` — skip the wizard and install all files (CI / automation).
 - `--json` — prints structured JSON result instead of human-readable output.
 
@@ -44,8 +44,8 @@ aioson install --no-interactive
 
 **Options:**
 - `--lang=en|pt-BR|es|fr` — sets locale pack.
-- `--tool=codex|claude|gemini|opencode` — configures AI client.
-- `--reconfigure` — re-run the wizard even if a profile already exists (e.g. to add Gemini later).
+- `--tool=codex|claude|opencode` — configures AI client.
+- `--reconfigure` — re-run the wizard even if a profile already exists (e.g. to add another supported tool later).
 - `--no-interactive` — skip the wizard and install all files.
 - `--force` — overwrite existing files.
 - `--dry-run` — preview without writing.
@@ -129,7 +129,7 @@ aioson doctor --json
 
 **Checks performed:**
 - All files in `MANAGED_FILES` exist.
-- Gateway files (`CLAUDE.md`, `AGENTS.md`, `OPENCODE.md`, `.gemini/GEMINI.md`) are present.
+- Gateway files (`CLAUDE.md`, `AGENTS.md`, `OPENCODE.md`, `OPENCODE.md`) are present.
 - `.aioson/agents/` directory is populated.
 - `.aioson/context/` directory exists.
 
@@ -251,22 +251,22 @@ Print the activation prompt for a specific agent, ready to paste into any AI CLI
 aioson agent:prompt setup
 aioson agent:prompt setup --tool=codex
 aioson agent:prompt ux-ui --tool=claude
-aioson agent:prompt dev --tool=gemini --json
+aioson agent:prompt dev --tool=opencode --json
 ```
 
 **Arguments:**
 - `<agent>` — agent id: `setup`, `product`, `analyst`, `architect`, `ux-ui`, `pm`, `dev`, `qa`, `orchestrator`.
 
 **Options:**
-- `--tool=codex|claude|gemini|opencode` — formats the prompt for the target CLI. Default: `codex`.
+- `--tool=codex|claude|opencode` — formats the prompt for the target CLI. Default: `codex`.
 - `--json` — returns structured JSON with the prompt string.
 
 **When to use:** if you're using an AI CLI that doesn't support `/aioson:agent:setup` slash commands, run this to get the exact text to paste into the chat.
 
 ```bash
-# Copy the prompt for @analyst in Gemini
-aioson agent:prompt analyst --tool=gemini
-# → paste the output into Gemini CLI
+# Copy the prompt for @analyst in OpenCode
+aioson agent:prompt analyst --tool=opencode
+# → paste the output into OpenCode
 ```
 
 ---

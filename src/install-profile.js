@@ -9,10 +9,6 @@ const TOOL_FILES = {
   codex: [
     'AGENTS.md'
   ],
-  gemini: [
-    '.gemini/GEMINI.md',
-    /^\.gemini\/commands\//
-  ],
   opencode: [
     'OPENCODE.md'
   ]

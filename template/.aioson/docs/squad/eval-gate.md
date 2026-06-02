@@ -41,7 +41,7 @@ Keep claims few and load-bearing (≈4–8 per executor). **A claim with no sour
 
 ## Step 2 — Grade with a jury (multi-model when available)
 
-Grade each executor's `.md` against its claims. Prefer a **multi-model jury** — AIOSON already ships the primitive: a `reviewer` executor with `cross_ai: true` (`detect_clis: [claude, gemini, codex]`) sends the executor + rubric to multiple model families and synthesizes verdicts. Use it when the CLIs are available.
+Grade each executor's `.md` against its claims. Prefer a **multi-model jury** — AIOSON already ships the primitive: a `reviewer` executor with `cross_ai: true` (`detect_clis: [claude, codex]`) sends the executor + rubric to multiple model families and synthesizes verdicts. Use it when the CLIs are available.
 
 If only one model is available, simulate a 3-lens jury with **distinct, adversarial perspectives** (do not grade the same way thrice):
 - *correctness* lens — is the claim literally satisfied by the prompt text?

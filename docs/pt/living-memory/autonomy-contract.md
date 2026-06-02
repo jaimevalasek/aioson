@@ -1,6 +1,6 @@
 # Autonomy Contract — 3 tiers de autonomia
 
-> O Autonomy Contract responde uma pergunta operacional: **o agente pode rodar este comando sozinho, ou precisa parar e pedir?** A resposta vive em `.aioson/config/autonomy-protocol.json` (schema v1.1) e é materializada nas configurações nativas de cada harness (Claude Code, Codex, Gemini, OpenCode).
+> O Autonomy Contract responde uma pergunta operacional: **o agente pode rodar este comando sozinho, ou precisa parar e pedir?** A resposta vive em `.aioson/config/autonomy-protocol.json` (schema v1.1) e é materializada nas configurações nativas de cada harness (Claude Code, Codex e OpenCode).
 
 ## A ideia em uma linha
 
@@ -47,7 +47,6 @@ A invariante mais importante: **tier 3 nunca é materializado em allow list de t
   "tools": {
     "claude":   { "mode": "trusted",  "derived_from_tiers": ["tier1_silent", "tier2_notified"], "requires_tty": false, "max_auto_retries": 3 },
     "codex":    { "mode": "trusted",  "derived_from_tiers": ["tier1_silent", "tier2_notified"], "requires_tty": false, "max_auto_retries": 3 },
-    "gemini":   { "mode": "guarded",  "derived_from_tiers": ["tier1_silent"],                    "requires_tty": true,  "max_auto_retries": 1 },
     "opencode": { "mode": "guarded",  "derived_from_tiers": ["tier1_silent"],                    "requires_tty": true,  "max_auto_retries": 0 }
   },
   "agents": {
@@ -56,17 +55,16 @@ A invariante mais importante: **tier 3 nunca é materializado em allow list de t
 }
 ```
 
-Cada tool opta nos tiers via `derived_from_tiers`. Claude e Codex podem rodar tier 1 e 2 sem perguntar. Gemini e OpenCode só rodam tier 1 (rest é guarded — pergunta antes).
+Cada tool opta nos tiers via `derived_from_tiers`. Claude e Codex podem rodar tier 1 e 2 sem perguntar. OpenCode só roda tier 1 (rest é guarded — pergunta antes).
 
 ## Como vira permissão nativa por harness
 
-Toda vez que `aioson update` ou `aioson setup` roda, o `permissions-generator` lê o protocol e escreve 4 arquivos:
+Toda vez que `aioson update` ou `aioson setup` roda, o `permissions-generator` lê o protocol e escreve os arquivos nativos:
 
 | Harness | Arquivo gerado | Formato | Merge |
 |---|---|---|---|
 | Claude Code | `.claude/settings.json` | JSON (`permissions.allow[]`) | Merge com entradas existentes (preserva customizações) |
 | Codex CLI | `.codex/permissions.json` | JSON nativo | Sobrescreve (com backup) |
-| Gemini CLI | `.gemini/permissions.toml` | TOML | Sobrescreve (com backup) |
 | OpenCode | `.opencode/permissions.yaml` | YAML | Sobrescreve (com backup) |
 
 A versão anterior é sempre salva em `.aioson/backups/{timestamp}/permissions/`.
@@ -105,7 +103,7 @@ Resultado típico para um claude trusted:
 
 Note que padrões tier 3 (`git push`, `npm publish`) **não estão na lista**. Cada vez que o agente tenta rodar um deles, Claude pergunta. Esse é o ponto.
 
-### Gemini / OpenCode
+### OpenCode
 
 Modo `guarded` por padrão. Só tier 1 é auto-aprovado. Tudo o resto pergunta. Adequado para harnesses com TTY interativo onde o usuário acompanha cada ação.
 

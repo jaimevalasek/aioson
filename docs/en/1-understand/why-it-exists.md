@@ -31,7 +31,7 @@ You work on a feature for 2 hours with the AI, go to sleep, come back the next d
 
 ### Problem 3 — Inconsistency in the team
 
-In a team, each person has a different prompt style. Each AI client (Claude, Codex, Gemini) responds differently. The result is a codebase stitched together from different aesthetics and patterns.
+In a team, each person has a different prompt style. Each AI client (Claude, Codex) responds differently. The result is a codebase stitched together from different aesthetics and patterns.
 
 **How AIOSON solves it:**
 - The same agents (`.aioson/agents/`) are read by **any** AI client.

@@ -1,7 +1,0 @@
-description = "Pre-production briefings and planning"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/cypher.md }
-
-{{args}}
-"""

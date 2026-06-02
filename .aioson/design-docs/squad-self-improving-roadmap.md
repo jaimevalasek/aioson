@@ -13,7 +13,7 @@ Move squad generation from **static-template quality** to a **closed loop where 
 - Prereqs already shipped: depth block (9c72b40), domain decomposition (b9813ae), analyze→refresh loop (ffc6cd2).
 
 ## Stage 1 — Eval gate (IMPLEMENTED — MVP, prose-first)
-> Shipped: `docs/squad/eval-gate.md` (method) + `tasks/squad-eval.md` (`@squad eval <slug>`) + wired into `squad.md` routing/preflight + referenced from `squad-validate`. The jury reuses the existing `reviewer`/`cross_ai` primitive (claude/gemini/codex). Hardening (deterministic coverage scoring + judge calibration in `src/`) remains future work.
+> Shipped: `docs/squad/eval-gate.md` (method) + `tasks/squad-eval.md` (`@squad eval <slug>`) + wired into `squad.md` routing/preflight + referenced from `squad-validate`. The jury reuses the existing `reviewer`/`cross_ai` primitive (claude/codex/opencode). Hardening (deterministic coverage scoring + judge calibration in `src/`) remains future work.
 
 Derive the quality bar from the SAME sources that generated the squad.
 - **What:** from `sourceDocs`/design intent, synthesize a **binary, citation-grounded rubric** (each executor's mandated responsibilities, handoffs, depth requirements) — YourBench-style (arXiv 2504.01833) + EvalAgent implicit criteria (2504.15219).

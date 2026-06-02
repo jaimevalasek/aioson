@@ -106,17 +106,6 @@ async function fileContainsAll(filePath, patterns) {
   }
 }
 
-const GEMINI_COMMAND_EXPECTATIONS = [
-  { file: '.gemini/commands/aios-setup.toml', agent: 'setup' },
-  { file: '.gemini/commands/aios-analyst.toml', agent: 'analyst' },
-  { file: '.gemini/commands/aios-architect.toml', agent: 'architect' },
-  { file: '.gemini/commands/aios-ux-ui.toml', agent: 'ux-ui' },
-  { file: '.gemini/commands/aios-pm.toml', agent: 'pm' },
-  { file: '.gemini/commands/aios-dev.toml', agent: 'dev' },
-  { file: '.gemini/commands/aios-qa.toml', agent: 'qa' },
-  { file: '.gemini/commands/aios-orchestrator.toml', agent: 'orchestrator' }
-];
-
 const DESIGN_GOVERNANCE_FILES = [
   '.aioson/design-docs/code-reuse.md',
   '.aioson/design-docs/componentization.md',
@@ -128,16 +117,7 @@ const DESIGN_GOVERNANCE_FILES = [
 const GATEWAY_FILE_BY_CHECK_ID = {
   'gateway:claude:contract': 'CLAUDE.md',
   'gateway:codex:contract': 'AGENTS.md',
-  'gateway:gemini:contract': '.gemini/GEMINI.md',
-  'gateway:opencode:contract': 'OPENCODE.md',
-  'gateway:gemini:command:setup': '.gemini/commands/aios-setup.toml',
-  'gateway:gemini:command:analyst': '.gemini/commands/aios-analyst.toml',
-  'gateway:gemini:command:architect': '.gemini/commands/aios-architect.toml',
-  'gateway:gemini:command:ux-ui': '.gemini/commands/aios-ux-ui.toml',
-  'gateway:gemini:command:pm': '.gemini/commands/aios-pm.toml',
-  'gateway:gemini:command:dev': '.gemini/commands/aios-dev.toml',
-  'gateway:gemini:command:qa': '.gemini/commands/aios-qa.toml',
-  'gateway:gemini:command:orchestrator': '.gemini/commands/aios-orchestrator.toml'
+  'gateway:opencode:contract': 'OPENCODE.md'
 };
 
 async function restoreTemplateFiles(targetDir, relPaths, options = {}) {
@@ -196,13 +176,6 @@ async function runDoctor(targetDir) {
       patterns: ['.aioson/config.md', '.aioson/agents/']
     },
     {
-      id: 'gateway:gemini:contract',
-      rel: '.gemini/GEMINI.md',
-      key: 'doctor.gateway_gemini_pointer',
-      hintKey: 'doctor.gateway_gemini_pointer_hint',
-      patterns: ['.gemini/commands/', '.aioson/agents/']
-    },
-    {
       id: 'gateway:opencode:contract',
       rel: 'OPENCODE.md',
       key: 'doctor.gateway_opencode_pointer',
@@ -220,41 +193,6 @@ async function runDoctor(targetDir) {
       params: {},
       ok: await fileContainsAll(gatewayPath, gatewayCheck.patterns),
       hintKey: gatewayCheck.hintKey
-    });
-  }
-
-  for (const expectation of GEMINI_COMMAND_EXPECTATIONS) {
-    const commandPath = path.join(targetDir, expectation.file);
-    if (!(await exists(commandPath))) continue;
-    checks.push({
-      id: `gateway:gemini:command:${expectation.agent}`,
-      key: 'doctor.gateway_gemini_command_pointer',
-      params: { file: expectation.file },
-      ok: await fileContainsAll(commandPath, [
-        `@{ .aioson/agents/${expectation.agent}.md }`
-      ]),
-      hintKey: 'doctor.gateway_gemini_command_pointer_hint',
-      hintParams: {
-        file: expectation.file,
-        agent: expectation.agent
-      }
-    });
-  }
-
-  // Gemini CLI deprecation advisory (gemini-phaseout Phase 1 / v1.21.0).
-  // Emits ONLY when the project actually uses Gemini (.gemini/permissions.toml
-  // OR .gemini/GEMINI.md present) so greenfield projects stay silent (BR-GP-03).
-  const geminiInUse =
-    (await exists(path.join(targetDir, '.gemini/permissions.toml'))) ||
-    (await exists(path.join(targetDir, '.gemini/GEMINI.md')));
-  if (geminiInUse) {
-    checks.push({
-      id: 'harness:gemini_deprecation',
-      severity: 'warning',
-      key: 'doctor.gemini_deprecation',
-      params: {},
-      ok: false,
-      hintKey: 'doctor.gemini_deprecation_hint'
     });
   }
 

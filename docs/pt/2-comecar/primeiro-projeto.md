@@ -11,7 +11,7 @@ Vamos construir um **mini-app de TODO** usando o ciclo SMALL. Você verá cada a
 ## Pré-requisitos
 
 - **Node.js 18+** instalado
-- Um cliente AI configurado: **Claude Code**, **Codex CLI**, **Gemini CLI** ou **OpenCode**. Os exemplos aqui usam Claude Code; é trivial trocar.
+- Um cliente AI configurado: **Claude Code**, **Codex CLI** ou **OpenCode**. Os exemplos aqui usam Claude Code; é trivial trocar.
 - Um terminal aberto
 
 Se você não tem cliente AI ainda: o Claude Code é o mais usado pela comunidade AIOSON. Veja [`clientes-ai.md`](../5-referencia/clientes-ai.md).
@@ -52,7 +52,7 @@ meu-todo/
 ## Passo 2 — Abrir o cliente AI no projeto
 
 ```bash
-claude .   # ou: codex .   ou: gemini .   ou: opencode .
+claude .   # ou: codex .   ou: opencode .
 ```
 
 A partir daqui, vamos conversar com a IA.
@@ -296,7 +296,7 @@ Ele te diz quem é o próximo.
 | Quero retomar uma feature interrompida | Rode `@deyvin` — ele lê `dev-state.md` e continua. |
 | Não sei se a classificação certa é SMALL | Pergunte ao `@neo` — ele explica o cálculo. |
 | Falhou ao instalar | `npx @jaimevalasek/aioson doctor` — diagnostica e sugere fix. |
-| Quero adicionar Codex/Gemini depois | `npx @jaimevalasek/aioson install --reconfigure`. |
+| Quero adicionar Codex depois | `npx @jaimevalasek/aioson install --reconfigure`. |
 
 ---
 

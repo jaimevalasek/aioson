@@ -1,7 +1,0 @@
-description = "Clone, extract, and forge sites and design skills"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/site-forge.md }
-
-{{args}}
-"""

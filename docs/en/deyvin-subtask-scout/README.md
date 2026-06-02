@@ -21,7 +21,7 @@ This folder documents the full feature — 3 phases, 3 CLI verbs, 1 advisory che
 - Harness with sub-agent support: Claude Code (Agent tool) or Codex (MultiAgentV2)
 - `.aioson/config/scout-engine.json` in the project (copied automatically by the installer as `{}`, defaults active)
 
-> **Gemini CLI / OpenCode:** emit `harness_unsupported` and automatically fall back to `deyvin.md`'s CLI-less inline flow. Full harness parity is V2.
+> **OpenCode:** emit `harness_unsupported` and automatically fall back to `deyvin.md`'s CLI-less inline flow. Full harness parity is V2.
 
 ---
 

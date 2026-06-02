@@ -5,13 +5,13 @@ const { spawn } = require('node:child_process');
 /**
  * Detecta qual CLI de AI está disponível no sistema.
  * Usa AIOSON_RUNNER_TOOL env var se definida, depois tenta
- * claude, codex, gemini, opencode em sequência.
+ * claude, codex, opencode em sequência.
  */
 async function detectCLI() {
   const envTool = process.env.AIOSON_RUNNER_TOOL;
   if (envTool) return envTool;
 
-  for (const cli of ['claude', 'codex', 'gemini', 'opencode']) {
+  for (const cli of ['claude', 'codex', 'opencode']) {
     const found = await new Promise((resolve) => {
       const child = spawn('which', [cli], { stdio: 'pipe' });
       child.on('close', (code) => resolve(code === 0));
@@ -19,7 +19,7 @@ async function detectCLI() {
     });
     if (found) return cli;
   }
-  throw new Error('No AI CLI found. Install claude, codex, gemini, or opencode.');
+  throw new Error('No AI CLI found. Install claude, codex, or opencode.');
 }
 
 /**
@@ -38,8 +38,6 @@ function buildArgs(cli, prompt, options = {}) {
       ];
     case 'codex':
       return ['-p', prompt, '--quiet', '--no-interactive'];
-    case 'gemini':
-      return ['-p', prompt, '--quiet'];
     default:
       return ['-p', prompt];
   }

@@ -18,7 +18,7 @@ decided_with: product
 |---|---|---|
 | **Q1** | Escopo institucional do AIOSON | **(a) AIOSON enriquece sem mudar foco.** Pega aprendizados do Cursor, não compete com Cursor SDK. Filtra Themes 1, 3, 5 como `[out-of-scope]` automaticamente. |
 | **Q2** | Theme 2 — Context-First soft audit | **Parked.** Variante (a) custaria 1.5-2 dias. Sem pain observado: `deyvin-density` + `agent-chain-continuity` + `dev-state-producer` já cobrem os gaps reais. Reabrir SE incidente de "agente cego" surgir em produção. |
-| **Q3** | Theme 4 — Multi-Model `agent_model_hints` | **Dropped.** Imposição de opinião como config; risco real de quebrar usuários sem Opus / surpresas de fatura; manutenção 3-cliente (Claude/Codex/Gemini). README/tutorial entrega o mesmo valor sem feature. |
+| **Q3** | Theme 4 — Multi-Model `agent_model_hints` | **Dropped.** Imposição de opinião como config; risco real de quebrar usuários sem Opus / surpresas de fatura; manutenção 3-cliente (Claude/Codex/OpenCode). README/tutorial entrega o mesmo valor sem feature. |
 | **Q10** | Themes que viram features dedicadas | **Nenhum.** Briefing fica como referência permanente. |
 
 **Razão de fundo:** o briefing já entregou seu valor — strategic positioning + vocabulário pra rejeitar framework envy. Intake documents podem ser outputs sem gerar features. A diferenciação real do AIOSON (SDD + agentes especializados + context handoff via dossiers/dev-state) está intacta e não precisa do harness do Cursor pra existir.
@@ -33,7 +33,7 @@ O AIOSON nasceu como framework CLI orientado a Spec-Driven Development, hoje na 
 
 ## Problem
 
-O AIOSON precisa decidir, em janela curta, **quais elementos do "harness moderno" (orquestração visual, codebase indexing enforcement, sandbox isolation, tokenomics routing) entram no roadmap próprio e quais permanecem delegados ao cliente de IA (Claude Code, Codex, Gemini, Cursor) ou ao próprio Cursor SDK**. Sem essa decisão consciente: (a) corre risco de *framework envy* — copiar features que não casam com a distribuição npm-CLI e a identidade Lane-2 (hardening); (b) corre risco oposto de *estagnar como wrapper* — manter SDD/agentes especializados sem evoluir o substrato de execução que sustenta esses agentes.
+O AIOSON precisa decidir, em janela curta, **quais elementos do "harness moderno" (orquestração visual, codebase indexing enforcement, sandbox isolation, tokenomics routing) entram no roadmap próprio e quais permanecem delegados ao cliente de IA (Claude Code, Codex, OpenCode, Cursor) ou ao próprio Cursor SDK**. Sem essa decisão consciente: (a) corre risco de *framework envy* — copiar features que não casam com a distribuição npm-CLI e a identidade Lane-2 (hardening); (b) corre risco oposto de *estagnar como wrapper* — manter SDD/agentes especializados sem evoluir o substrato de execução que sustenta esses agentes.
 
 A pergunta JTBD por trás: *"Quando o mercado de harness comoditiza (Cursor SDK em 3 linhas), eu quero diferenciação clara do AIOSON, para continuar tendo razão de existir além do produto Cursor."*
 
@@ -54,7 +54,7 @@ A pergunta JTBD por trás: *"Quando o mercado de harness comoditiza (Cursor SDK 
 - Dashboard existe como app separada (não integrada ao runtime principal).
 - `aioson live:status --watch` é o mais próximo de "ver todas as sessões".
 
-**Gap real:** o AIOSON não compete em UX visual contra Cursor 3 (IDE completa). Mas pode oferecer **agregação multi-sessão** via dashboard para usuários que rodam o AIOSON dentro de Claude Code/Codex/Gemini (clientes que já fornecem janela visual da própria conversa, mas não veem outras sessões AIOSON em paralelo).
+**Gap real:** o AIOSON não compete em UX visual contra Cursor 3 (IDE completa). Mas pode oferecer **agregação multi-sessão** via dashboard para usuários que rodam o AIOSON dentro de Claude Code/Codex/OpenCode (clientes que já fornecem janela visual da própria conversa, mas não veem outras sessões AIOSON em paralelo).
 
 **Opção barata:** ampliar `aioson live:status --watch=2 --json` para servir um endpoint local consumível pela dashboard existente; pinning e drag-spawn ficam de fora.
 

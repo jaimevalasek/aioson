@@ -18,11 +18,6 @@ const TOOL_PRESET_DEFINITIONS = [
     suggestedTargetFile: '.codex/mcp.json'
   },
   {
-    id: 'gemini',
-    label: 'Gemini CLI',
-    suggestedTargetFile: '.gemini/mcp.json'
-  },
-  {
     id: 'opencode',
     label: 'OpenCode',
     suggestedTargetFile: '.opencode/mcp.json'

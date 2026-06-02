@@ -105,7 +105,6 @@ function renderInstallSummary({ result, installProfile, stdout = process.stdout 
   const TOOL_NAMES = {
     claude: 'Claude Code',
     codex: 'Codex',
-    gemini: 'Gemini CLI',
     opencode: 'OpenCode'
   };
 

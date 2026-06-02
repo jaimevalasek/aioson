@@ -30,7 +30,7 @@ A tool opts into tiers via `derived_from_tiers`:
 
 **Hard invariant:** `tier3_blocking` is *never* materialized into a tool's native allow-list, even when listed in `derived_from_tiers`. Tier3 always requires explicit human action.
 
-## How the four harnesses receive it
+## How the native harnesses receive it
 
 `aioson update` (or `aioson setup`) calls `permissions-generator` after copying the template. It reads the protocol and writes:
 
@@ -38,7 +38,6 @@ A tool opts into tiers via `derived_from_tiers`:
 |---|---|---|---|
 | Claude Code | `.claude/settings.json` | JSON (`permissions.allow[]`) | Merges with existing user entries (preserves customizations) |
 | Codex CLI | `.codex/permissions.json` | JSON | Overwrites (with backup) |
-| Gemini CLI | `.gemini/permissions.toml` | TOML | Overwrites (with backup) |
 | OpenCode | `.opencode/permissions.yaml` | YAML | Overwrites (with backup) |
 
 Previous versions are backed up under `.aioson/backups/{timestamp}/permissions/`.
@@ -74,7 +73,7 @@ Internally `notify` calls `runtime:emit` (records in SQLite as event_type `notif
 ## Adding a new command to a tier
 
 1. Edit `template/.aioson/config/autonomy-protocol.json` and add the command under the appropriate `tiers.{tier}.aioson_commands`.
-2. Run `aioson update .` in any consuming project — generator regenerates the four native files.
+2. Run `aioson update .` in any consuming project — generator regenerates the native files.
 3. Update tests in `tests/permissions-generator.test.js` if the command should appear in / be excluded from the generated output.
 
 Never add to `tier3_blocking` for "convenience" — that tier is the safety boundary. If a command needs to be auto-approved, it belongs in tier1 or tier2.

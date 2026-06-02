@@ -46,13 +46,7 @@ test('AC-CTPK-06: greenfield install ships the universal directive only to suppo
       `${rel} missing canonical Project knowledge directive`
     );
   }
-
-  const geminiPath = path.join(dir, '.gemini', 'GEMINI.md');
-  if (fs.existsSync(geminiPath)) {
-    const content = fs.readFileSync(geminiPath, 'utf8');
-    assert.equal(content.includes('## Project knowledge'), false);
-    assert.equal(content.includes('.aioson/learnings/INDEX.md'), false);
-  }
+  assert.equal(fs.existsSync(path.join(dir, '.gemini', 'GEMINI.md')), false);
 });
 
 test('AC-CTPK-06: template mirrors project-learnings placeholders and directive', () => {
@@ -77,13 +71,7 @@ test('AC-CTPK-06: template mirrors project-learnings placeholders and directive'
       `template/${rel} missing canonical Project knowledge directive`
     );
   }
-
-  const geminiTemplatePath = path.join('template', '.gemini', 'GEMINI.md');
-  if (fs.existsSync(geminiTemplatePath)) {
-    const content = fs.readFileSync(geminiTemplatePath, 'utf8');
-    assert.equal(content.includes('## Project knowledge'), false);
-    assert.equal(content.includes('.aioson/learnings/INDEX.md'), false);
-  }
+  assert.equal(fs.existsSync(path.join('template', '.gemini', 'GEMINI.md')), false);
 });
 
 test('AC-CTPK-06: CLI exposes learning --sub=import-from-claude wiring', () => {

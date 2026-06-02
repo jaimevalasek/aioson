@@ -8,16 +8,33 @@
       "category": "verify",
       "description": "Prepare a safe commit draft using guarded staging and commit metadata.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/commit-prep.json", "required": false },
-        { "type": "state", "path_pattern": "git:stage", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/commit-prep.json",
+          "required": false
+        },
+        {
+          "type": "state",
+          "path_pattern": "git:stage",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/commit-prep.json" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/commit-prep.json"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "high"
 }

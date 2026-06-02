@@ -39,7 +39,7 @@
 | Documento | Descrição |
 |---|---|
 | [comandos-cli.md](./comandos-cli.md) | Referência completa de todos os comandos do `aioson` |
-| [clientes-ai.md](./clientes-ai.md) | Como usar com Claude Code, Codex, Gemini CLI e OpenCode |
+| [clientes-ai.md](./clientes-ai.md) | Como usar com Claude Code, Codex e OpenCode |
 | [sandbox.md](./sandbox.md) | Execução segura com timeout, redação de secrets e output summarizado |
 | [compress-agents.md](./compress-agents.md) | Reduzir consumo de tokens comprimindo instruções de agentes |
 | [agent-sharding.md](./agent-sharding.md) | Carregar somente as seções relevantes de um agente para uma tarefa |

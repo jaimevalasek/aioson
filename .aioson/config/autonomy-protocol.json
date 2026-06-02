@@ -141,23 +141,6 @@
       "requires_tty": false,
       "max_auto_retries": 3
     },
-    "gemini": {
-      "mode": "guarded",
-      "fallback_mode": "guarded",
-      "derived_from_tiers": [
-        "tier1_silent"
-      ],
-      "shell_whitelist": [
-        "git status",
-        "git log",
-        "npm test"
-      ],
-      "aioson_whitelist": [
-        "workflow:next"
-      ],
-      "requires_tty": true,
-      "max_auto_retries": 1
-    },
     "opencode": {
       "mode": "guarded",
       "fallback_mode": "abort",

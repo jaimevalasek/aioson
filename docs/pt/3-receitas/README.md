@@ -10,7 +10,7 @@ Estas três trilhas mostram **como features chegam ao desenvolvimento** no AIOSO
 |---|---|---|
 | **[Feature completa com @sheldon](./feature-completa-com-sheldon.md)** | Você tem PRD em mente e quer a trilha canônica completa (a mais usada) | @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa |
 | [Da ideia ao PRD via @briefing](./da-ideia-ao-prd-via-briefing.md) | Sua ideia ainda é vaga, várias anotações soltas | @briefing → @product |
-| [Plans externos para @product](./plans-externos-para-product.md) | Você já planejou em outro chat (ChatGPT, Claude.io, Gemini Web) | @product (lê `/plans/`) |
+| [Plans externos para @product](./plans-externos-para-product.md) | Você já planejou em outro chat (ChatGPT, Claude.io Web) | @product (lê `/plans/`) |
 
 ## Receitas por cenário
 

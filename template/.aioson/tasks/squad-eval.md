@@ -22,7 +22,7 @@ Read `squad.manifest.json` (including `sourceDocs`, `analysis`, executors + `tra
 For each executor, extract atomic claims with source citation according to `eval-gate.md` § Step 1. Cover kinds `responsibility`, `depth`, `grounding`, `handoff`, `anti_pattern`, `scope`. If a claim has no source to cite, do not invent it; discard it.
 
 ### Step 3 - Judge
-Grade each executor according to `eval-gate.md` § Step 2. If the squad has, or can declare, a `reviewer` executor with `cross_ai`, use the real multi-model jury (`claude`/`gemini`/`codex`); otherwise simulate a 3-lens adversarial jury (correctness / grounding / skeptic). Weight by agreement; mark split claims as `uncertain`.
+Grade each executor according to `eval-gate.md` § Step 2. If the squad has, or can declare, a `reviewer` executor with `cross_ai`, use the real multi-model jury (`claude`/`codex`); otherwise simulate a 3-lens adversarial jury (correctness / grounding / skeptic). Weight by agreement; mark split claims as `uncertain`.
 
 ### Step 4 - Gate + Report
 Calculate coverage/agreement and verdict (PASS/WARN/FAIL) per executor and for the squad according to `eval-gate.md` § Step 3. Save `.aioson/squads/<slug>/docs/EVAL-<ISO-date>.md`:

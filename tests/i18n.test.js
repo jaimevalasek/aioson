@@ -118,12 +118,7 @@ test('translator exposes localized doctor gateway contract keys', () => {
   assert.equal(pt.t('doctor.gateway_codex_pointer').includes('Gateway do Codex'), true);
   assert.equal(es.t('doctor.gateway_codex_pointer').includes('gateway de Codex'), true);
   assert.equal(fr.t('doctor.gateway_codex_pointer').includes('passerelle Codex'), true);
-  assert.equal(
-    en.t('doctor.gateway_gemini_command_pointer', { file: '.gemini/commands/aios-dev.toml' }).includes(
-      '.gemini/commands/aios-dev.toml'
-    ),
-    true
-  );
+  assert.equal(en.t('doctor.gateway_opencode_pointer').includes('OpenCode gateway'), true);
 });
 
 test('translator exposes localized cli line wrapper keys', () => {
@@ -158,6 +153,6 @@ test('translator exposes localized init/install onboarding guidance keys', () =>
     true
   );
   assert.equal(es.t('init.step_agents').includes('aioson agents'), true);
-  assert.equal(fr.t('install.step_agent_prompt', { tool: 'gemini' }).includes('--tool=gemini'), true);
+  assert.equal(fr.t('install.step_agent_prompt', { tool: 'opencode' }).includes('--tool=opencode'), true);
   assert.equal(en.t('cli.help_update').includes('--lang='), true);
 });

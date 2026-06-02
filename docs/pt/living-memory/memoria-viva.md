@@ -43,7 +43,7 @@ Quando um agente abre, ele lê esses 4 arquivos primeiro. Eles cabem na janela d
 ## Ciclo de vida de uma sessão
 
 ```
-1. Você abre Claude Code / Codex / Gemini / OpenCode e ativa um agente:
+1. Você abre Claude Code / Codex  / OpenCode e ativa um agente:
    /dev "vamos adicionar paginação em /api/posts"
 
 2. O agente lê:

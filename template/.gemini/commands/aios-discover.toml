@@ -1,6 +1,0 @@
-description = "Semantic knowledge discovery — bootstrap cache"
-prompt = """
-@{ .aioson/agents/discover.md }
-
-{{args}}
-"""

@@ -56,7 +56,7 @@ async function runSquadReview({ args, options = {}, logger }) {
   // Show what CLIs will be queried
   const clis = detectAvailableCLIs({ excludeCurrent });
   if (clis.length === 0) {
-    logger.error('No AI CLIs detected. Install claude, gemini, or codex in PATH.');
+    logger.error('No AI CLIs detected. Install claude or codex in PATH.');
     logger.log('You can override with --include-current to include the current runtime.');
     return { ok: false, error: 'no_clis_detected' };
   }

@@ -1,7 +1,0 @@
-description = "Domain genome creation and application"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/genome.md }
-
-{{args}}
-"""

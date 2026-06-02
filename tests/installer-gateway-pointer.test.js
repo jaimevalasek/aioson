@@ -63,7 +63,7 @@ test('managed block carries an explicit warning that edits inside will be overwr
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });
 
-  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md', '.gemini/GEMINI.md']) {
+  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md']) {
     const content = await fs.readFile(path.join(dir, rel), 'utf8');
     const beginIdx = content.indexOf(MARKER_BEGIN);
     const endIdx = content.indexOf(MARKER_END);
@@ -74,11 +74,11 @@ test('managed block carries an explicit warning that edits inside will be overwr
   }
 });
 
-test('all four gateway pointers receive the managed block on fresh install', async () => {
+test('all gateway pointers receive the managed block on fresh install', async () => {
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });
 
-  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md', '.gemini/GEMINI.md']) {
+  for (const rel of ['CLAUDE.md', 'AGENTS.md', 'OPENCODE.md']) {
     const p = path.join(dir, rel);
     assert.equal(await fileExists(p), true, `${rel} not created`);
     const content = await fs.readFile(p, 'utf8');

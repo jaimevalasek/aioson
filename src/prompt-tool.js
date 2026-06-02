@@ -1,6 +1,6 @@
 'use strict';
 
-const SUPPORTED_PROMPT_TOOLS = new Set(['codex', 'claude', 'gemini', 'opencode']);
+const SUPPORTED_PROMPT_TOOLS = new Set(['codex', 'claude', 'opencode']);
 
 function resolvePromptTool(value) {
   const normalized = String(value || '')

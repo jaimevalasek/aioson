@@ -1,6 +1,6 @@
 # Usando AIOSON com diferentes CLIs de IA
 
-O AIOSON funciona com **Claude Code**, **Codex CLI**, **Gemini CLI** e **OpenCode**. Cada um tem uma forma diferente de ativar agentes — este guia explica como usar cada um sem confusão.
+O AIOSON funciona com **Claude Code**, **Codex CLI** e **OpenCode**. Cada um tem uma forma diferente de ativar agentes — este guia explica como usar cada um sem confusão.
 
 Também funciona em qualquer IDE com terminal: VS Code, Google Antigravity, Cursor, Windsurf, JetBrains IDEs e Zed — basta abrir um dos clientes acima no terminal integrado.
 
@@ -8,13 +8,13 @@ Também funciona em qualquer IDE com terminal: VS Code, Google Antigravity, Curs
 
 ## Comparativo rápido
 
-| | Claude Code | Codex CLI | Gemini CLI | OpenCode |
-|---|---|---|---|---|
-| Arquivo de config | `CLAUDE.md` | `AGENTS.md` | `.gemini/GEMINI.md` | `OPENCODE.md` |
-| Comandos personalizados | `.claude/commands/` | ❌ não suporta | `.gemini/commands/*.toml` | ❌ não suporta |
-| Autocomplete de agentes | `/aioson/` + Tab | ❌ não suporta | `/aios-` + Tab | ❌ não suporta |
-| Como ativar agente | `/aioson/setup` | linguagem natural | `/aios-setup` | linguagem natural |
-| Lê contexto automático | Sim (CLAUDE.md injeta) | Sim (AGENTS.md injeta) | Sim (GEMINI.md injeta) | Sim (OPENCODE.md injeta) |
+| | Claude Code | Codex CLI | OpenCode |
+|---|---|---|---|
+| Arquivo de config | `CLAUDE.md` | `AGENTS.md` | `OPENCODE.md` |
+| Comandos personalizados | `.claude/commands/` | Nao suporta | Nao suporta |
+| Autocomplete de agentes | `/aioson/` + Tab | Nao suporta | Nao suporta |
+| Como ativar agente | `/aioson/setup` | linguagem natural | linguagem natural |
+| Lê contexto automático | Sim (CLAUDE.md injeta) | Sim (AGENTS.md injeta) | Sim (OPENCODE.md injeta) |
 
 ---
 
@@ -181,73 +181,6 @@ Quando você menciona `@setup`, o Codex lê o arquivo correspondente e segue tod
 
 ---
 
-## Gemini CLI
-
-### Como funciona
-
-O Gemini CLI lê `.gemini/GEMINI.md` ao iniciar e reconhece comandos definidos em `.gemini/commands/*.toml`. Os agentes do AIOSON são registrados com o prefixo `aios-`.
-
-O nome humano do agente é **UI/UX**, mas o comando continua sendo `/aios-ux-ui`.
-
-### Ativando agentes
-
-Digite `/aios-` para ver os comandos disponíveis no autocomplete:
-
-```
-/aios-setup
-/aios-analyst
-/aios-architect
-/aios-deyvin
-/aios-ux-ui
-/aios-pm
-/aios-dev
-/aios-qa
-/aios-orchestrator
-```
-
-### Exemplos de uso
-
-```
-/aios-setup
-```
-> Inicia o onboarding do projeto.
-
-```
-/aios-dev
-```
-> Ativa o agente de desenvolvimento.
-
-```
-/aios-deyvin
-```
-> Ativa o agente de continuidade e pair programming.
-
-Alias compativel:
-```text
-/aios-pair
-```
-
-```
-/aios-orchestrator
-```
-> Inicia a orquestração da sessão atual.
-
-### Estrutura dos comandos Gemini
-
-Cada arquivo `.gemini/commands/aios-*.toml` aponta para o agente correspondente usando o campo `prompt` e injeção de arquivo:
-
-```toml
-description = "Project onboarding"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/setup.md }
-
-{{args}}
-"""
-```
-
----
-
 ## Qual CLI usar?
 
 Não há uma resposta única — depende do seu fluxo de trabalho. Algumas considerações:
@@ -256,8 +189,7 @@ Não há uma resposta única — depende do seu fluxo de trabalho. Algumas consi
 |---|---|
 | Quer autocomplete preciso com namespace isolado | Claude Code — `/aioson/*` |
 | Prefere conversa natural sem memória de comandos | Codex — `use @dev to...` |
-| Já usa Gemini CLI como ferramenta principal | Gemini — `/aios-*` |
-| Projeto em equipe com múltiplos CLIs | Todos funcionam — o contexto em `.aioson/` é compartilhado |
+| Projeto em equipe com múltiplos CLIs | Claude, Codex e OpenCode compartilham o contexto em `.aioson/` |
 
 ### O contexto é o mesmo independente do CLI
 
@@ -288,7 +220,6 @@ npx @jaimevalasek/aioson@latest update
 Isso atualiza:
 - `CLAUDE.md` e `.claude/commands/aioson/`
 - `AGENTS.md`
-- `.gemini/GEMINI.md` e `.gemini/commands/`
 - `OPENCODE.md`
 - Todos os agentes em `.aioson/agents/`
 

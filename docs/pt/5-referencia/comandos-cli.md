@@ -132,7 +132,7 @@
 | `runtime:session:log` | Adiciona um passo concluido na sessao direta ativa | Quando quer registrar cada tarefa concluida durante a sessao |
 | `runtime:session:finish` | Encerra a sessao direta ativa | Quando terminou a sessao ou vai fazer handoff |
 | `runtime:session:status` | Mostra o estado da sessao direta e os ultimos eventos | Quando quer saber se a sessao ainda esta aberta ou acompanhar com `--watch` |
-| `live:start` | Abre uma sessao viva rastreada para Codex, Claude, Gemini ou OpenCode | Quando quer iniciar o cliente externo a partir do AIOSON e manter status, agente ativo e logs no dashboard |
+| `live:start` | Abre uma sessao viva rastreada para Codex, Claude ou OpenCode | Quando quer iniciar o cliente externo a partir do AIOSON e manter status, agente ativo e logs no dashboard |
 | `runtime:emit` | Registra eventos compactos da sessão viva atual; aceita `--worker-status`, `--verdict`, `--token-count`, `--progress-pct` | Quando quer marcar tarefa concluída, milestone, block ou step de plano sem abrir uma sessão paralela |
 | `live:status` | Mostra o estado da sessao viva e do processo filho | Quando quer acompanhar `active_agent`, progresso do plano e se o cliente ainda esta vivo |
 | `live:handoff` | Transfere a mesma sessao viva para outro agente AIOSON | Quando o agente atual precisa passar a continuidade para `@product`, `@architect`, `@dev` ou outro agente |
@@ -393,7 +393,7 @@ aioson context:pack . --agent=dev --goal="ajustar captions do YouTube" --module=
 aioson context:pack . --agent=qa --goal="validar regressao do checkout" --module=app --max-files=10
 ```
 
-Use quando você quer mandar para Codex, Claude Code, Gemini ou outro cliente só o contexto mais relevante para a tarefa atual.
+Use quando você quer mandar para Codex, Claude Code ou outro cliente só o contexto mais relevante para a tarefa atual.
 
 O comando escreve `.aioson/context/context-pack.md` e normalmente seleciona:
 
@@ -522,7 +522,7 @@ Importante:
 - `scan:project` nunca gera `architecture.md`
 - se `discovery.md` e `skeleton-system.md` ja existirem e voce rodar com `--with-llm`, o scanner agora entra em modo de atualizacao por padrao: usa os arquivos atuais como memoria base, gera a nova versao consolidada e cria backup automatico em `.aioson/backups/` antes de sobrescrever
 - em projetos SMALL brownfield, o fluxo tipico depois do scan completo e `@analyst` -> `@architect` -> `@dev`
-- sem API LLM configurada, o fluxo local tambem e valido: `scan:project --folder=...` -> `@analyst` no seu Codex/Claude/Gemini -> `@architect` -> `@dev`
+- sem API LLM configurada, o fluxo local tambem e valido: `scan:project --folder=...` -> `@analyst` no seu Codex/Claude -> `@architect` -> `@dev`
 
 O parâmetro `--folder` agora é obrigatório. Ele define quais pastas do projeto devem ganhar um mapa completo com pastas e arquivos. Você pode informar uma pasta ou várias separadas por vírgula.
 
@@ -831,7 +831,7 @@ aioson live:status . --agent=product --watch=2
 aioson live:close . --agent=product --summary="Sessao encerrada com handoff e resumo final"
 ```
 
-Use esse fluxo quando voce quer iniciar Codex, Claude, Gemini ou OpenCode por fora do cliente, manter a mesma `session_key` viva entre varias tarefas e registrar no runtime:
+Use esse fluxo quando voce quer iniciar Codex, Claude ou OpenCode por fora do cliente, manter a mesma `session_key` viva entre varias tarefas e registrar no runtime:
 - agente ativo atual
 - marcos compactos no SQLite
 - `state.json`, `events.ndjson` e `summary.md` em `.aioson/runtime/live/{session_key}/`

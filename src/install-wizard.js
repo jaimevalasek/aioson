@@ -6,7 +6,6 @@ const { getCliVersionSync } = require('./version');
 const TOOLS = [
   { id: 'claude',    label: 'Claude Code',    desc: 'Slash commands, CLAUDE.md, .claude/' },
   { id: 'codex',    label: 'Codex (OpenAI)', desc: 'AGENTS.md protocol' },
-  { id: 'gemini',   label: 'Gemini CLI',     desc: 'GEMINI.md + .gemini/commands/', deprecated: true },
   { id: 'opencode', label: 'OpenCode',       desc: 'OPENCODE.md protocol' }
 ];
 
@@ -112,8 +111,7 @@ function renderScreen1(cursor, selected, warn, stdout) {
     const tool    = TOOLS[i];
     const pointer = i === cursor ? '►' : ' ';
     const check   = selected.has(tool.id) ? '✓' : ' ';
-    const deprNote = tool.deprecated ? '  ⚠ [DEPRECATED] free tier ends 2026-06-18' : '';
-    stdout.write(`  ${pointer} [${check}] ${tool.label.padEnd(20)} ${tool.desc}${deprNote}\n`);
+    stdout.write(`  ${pointer} [${check}] ${tool.label.padEnd(20)} ${tool.desc}\n`);
   }
   if (warn) stdout.write('\n  ⚠  Select at least one tool to continue.\n');
   stdout.write('\n');
@@ -163,7 +161,7 @@ function renderScreen4(cursor, stdout) {
 }
 
 function renderConfirm(tools, uses, design, locale, existingProfile, t, stdout) {
-  const TOOL_NAMES = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI', opencode: 'OpenCode' };
+  const TOOL_NAMES = { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode' };
   const toolNames  = tools.map(id => TOOL_NAMES[id] || id).join(', ');
   const modeLabel  = uses.includes('squads') ? 'Development + Squads' : 'Development';
   // design can be string (single/id/all) or string[] (multiple)

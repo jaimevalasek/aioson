@@ -11,7 +11,7 @@ const { getCliVersion } = require('../version');
 
 // Complete profile used when --all is passed (skip wizard, install everything)
 const ALL_PROFILE = {
-  tools: ['claude', 'codex', 'gemini', 'opencode'],
+  tools: ['claude', 'codex', 'opencode'],
   uses: ['development', 'squads'],
   design: 'all',
   locale: 'en'

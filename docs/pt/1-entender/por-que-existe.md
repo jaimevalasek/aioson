@@ -31,7 +31,7 @@ Você programa uma feature por 2 horas com a IA, vai dormir, volta no dia seguin
 
 ### Problema 3 — Inconsistência no time
 
-Em time, cada pessoa tem um estilo de prompt. Cada IA cliente (Claude, Codex, Gemini) responde diferente. O resultado é um codebase costurado por estéticas e padrões diferentes.
+Em time, cada pessoa tem um estilo de prompt. Cada IA cliente (Claude, Codex) responde diferente. O resultado é um codebase costurado por estéticas e padrões diferentes.
 
 **Como AIOSON resolve:**
 - Os mesmos agentes (`.aioson/agents/`) são lidos por **qualquer** cliente AI.

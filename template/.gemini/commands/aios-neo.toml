@@ -1,6 +1,0 @@
-description = "System router — see the full picture, get guided to the right agent"
-prompt = """
-@{ .aioson/agents/neo.md }
-
-{{args}}
-"""

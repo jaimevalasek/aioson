@@ -117,18 +117,16 @@ test('doctor --fix dry-run does not change files', async () => {
   assert.equal(after.checks.some((c) => c.id === 'file:CLAUDE.md' && !c.ok), true);
 });
 
-test('doctor detects missing OpenCode and Gemini required files', async () => {
+test('doctor detects missing OpenCode required file', async () => {
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });
   await writeValidContext(dir, 'en');
 
   await fs.unlink(path.join(dir, 'OPENCODE.md'));
-  await fs.unlink(path.join(dir, '.gemini/GEMINI.md'));
 
   const report = await runDoctor(dir);
   assert.equal(report.ok, false);
   assert.equal(report.checks.some((c) => c.id === 'file:OPENCODE.md' && !c.ok), true);
-  assert.equal(report.checks.some((c) => c.id === 'file:.gemini/GEMINI.md' && !c.ok), true);
 });
 
 test('doctor validates Codex gateway contract markers', async () => {
@@ -141,22 +139,6 @@ test('doctor validates Codex gateway contract markers', async () => {
   const report = await runDoctor(dir);
   assert.equal(report.ok, false);
   assert.equal(report.checks.some((c) => c.id === 'gateway:codex:contract' && !c.ok), true);
-});
-
-test('doctor validates Gemini command instruction mappings', async () => {
-  const dir = await makeTempDir();
-  await installTemplate(dir, { mode: 'install' });
-  await writeValidContext(dir, 'en');
-
-  await fs.writeFile(
-    path.join(dir, '.gemini/commands/aios-dev.toml'),
-    'description = "Dev"\nprompt = "invalid"\n',
-    'utf8'
-  );
-
-  const report = await runDoctor(dir);
-  assert.equal(report.ok, false);
-  assert.equal(report.checks.some((c) => c.id === 'gateway:gemini:command:dev' && !c.ok), true);
 });
 
 test('doctor --fix restores broken gateway contract files safely', async () => {

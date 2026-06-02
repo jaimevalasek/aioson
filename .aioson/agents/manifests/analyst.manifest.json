@@ -8,19 +8,46 @@
       "category": "analyze",
       "description": "Map requirements, entities, and feature spec artifacts.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/project.context.md", "required": true },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd.md", "required": false },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/project.context.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd-{slug}.md",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/discovery.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/requirements-{slug}.md" },
-        { "type": "artifact", "path_pattern": ".aioson/context/spec-{slug}.md" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/discovery.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/requirements-{slug}.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/spec-{slug}.md"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "low"
 }

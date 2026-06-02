@@ -8,17 +8,38 @@
       "category": "create",
       "description": "Produce UI specification and visual direction for the approved scope.",
       "inputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/architecture.md", "required": true },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd.md", "required": false },
-        { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": false }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/architecture.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd-{slug}.md",
+          "required": false
+        }
       ],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/ui-spec.md" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/ui-spec.md"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "medium"
 }

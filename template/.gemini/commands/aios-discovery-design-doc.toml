@@ -1,7 +1,0 @@
-description = "Discovery and living design doc"
-prompt = """
-@{ .aioson/context/project.context.md }
-@{ .aioson/agents/discovery-design-doc.md }
-
-{{args}}
-"""

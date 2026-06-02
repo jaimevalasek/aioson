@@ -14,7 +14,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **Exemplo:** `@dev` é o agente que implementa código. `@qa` é o que escreve testes. `@pentester` é o que tenta quebrar a feature de propósito.
 
-**Como invocar:** digite `@nome` no seu cliente AI (Claude, Codex, Gemini, OpenCode) ou descreva a intenção em linguagem natural ("vamos implementar a feature").
+**Como invocar:** digite `@nome` no seu cliente AI (Claude, Codex e OpenCode) ou descreva a intenção em linguagem natural ("vamos implementar a feature").
 
 ---
 
@@ -84,7 +84,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **Definição:** o programa onde você de fato conversa com a IA. AIOSON é agnóstico — funciona com vários.
 
-**Suportados oficialmente:** Claude Code, Codex CLI, Gemini CLI, OpenCode.
+**Suportados oficialmente:** Claude Code, Codex CLI, OpenCode.
 **Funciona também via terminal:** VS Code, Cursor, Windsurf, JetBrains IDEs, Zed, Antigravity (qualquer um que abra um terminal).
 
 **Onde ver mais:** `clientes-ai.md`.

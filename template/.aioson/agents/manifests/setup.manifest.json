@@ -9,12 +9,21 @@
       "description": "Create or repair the baseline project context for AIOSON.",
       "inputs": [],
       "outputs": [
-        { "type": "artifact", "path_pattern": ".aioson/context/project.context.md" }
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/project.context.md"
+        }
       ]
     }
   ],
-  "autonomy_modes": ["guarded"],
+  "autonomy_modes": [
+    "guarded"
+  ],
   "default_mode": "guarded",
-  "supported_tools": ["codex", "claude", "gemini", "opencode"],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
   "risk_profile": "medium"
 }

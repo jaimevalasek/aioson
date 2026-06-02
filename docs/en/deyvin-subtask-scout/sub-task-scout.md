@@ -85,7 +85,7 @@ Pure module `src/sub-task-engine.js`: prompt template builder, hand-rolled JSON 
 Three CLI verbs (`scout:prep`, `scout:validate`, `scout:commit`) + state with file-lock in `src/sub-task-state.js`. Config template `template/.aioson/config/scout-engine.json` (empty `{}`; defaults active). Sandbox path check: `scope_paths` outside the project root are rejected.
 
 ### Phase 3 — `wiring-and-lifecycle`
-- `deyvin.md` (workspace + template byte-identical, 13611 bytes, under 15360 limit): new "Sub-task scout invocation" section with CLI path + CLI-less fallback per harness (Claude Code Agent tool, Codex MultiAgentV2, Gemini/OpenCode with `harness_unsupported` message)
+- `deyvin.md` (workspace + template byte-identical, 13611 bytes, under 15360 limit): new "Sub-task scout invocation" section with CLI path + CLI-less fallback per harness (Claude Code Agent tool, Codex MultiAgentV2/OpenCode with `harness_unsupported` message)
 - `feature:close`: archival hook copies scouts with matching `feature_slug` to `.aioson/context/features/{slug}/scouts/`, appends bullet to dossier
 - `memory:summary`: "Scouts dispatched: N (top topics: ...)" row always present — visible in agent cold-load bootstrap
 - `doctor`: `scouts_directory_pruning` advisory check (orphaned scouts >90d); `--fix` deletes them; scouts with `feature_slug` are **never** pruned

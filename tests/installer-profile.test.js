@@ -16,7 +16,7 @@ async function fileExists(p) {
 }
 
 // Profile claude+development: tool-specific non-claude files excluded
-test('installTemplate with claude+development profile skips AGENTS.md, .gemini/, OPENCODE.md', async () => {
+test('installTemplate with claude+development profile skips AGENTS.md and OPENCODE.md', async () => {
   const dir = await makeTempDir();
   const profile = { tools: ['claude'], uses: ['development'] };
 
@@ -56,19 +56,6 @@ test('installTemplate with claude+development profile copies core dev agent setu
   });
 
   assert.equal(result.copied.includes('.aioson/agents/setup.md'), true);
-});
-
-test('installTemplate with claude+gemini+development profile copies .gemini/GEMINI.md', async () => {
-  const dir = await makeTempDir();
-  const profile = { tools: ['claude', 'gemini'], uses: ['development'] };
-
-  await installTemplate(dir, {
-    mode: 'install',
-    installProfile: profile
-  });
-
-  assert.equal(await fileExists(path.join(dir, '.gemini/GEMINI.md')), true);
-  assert.equal(await fileExists(path.join(dir, 'AGENTS.md')), false);
 });
 
 test('installTemplate with development+squads profile copies squad.md', async () => {

@@ -32,7 +32,6 @@ The interactive wizard appears:
 ? Which AI tools? ›
    ◉ Claude Code
    ◉ Codex CLI
-   ◯ Gemini CLI
    ◯ OpenCode
 
 ? Mode? ›
@@ -75,7 +74,7 @@ The scan will:
 ## Step 3 — Run `@setup`
 
 ```bash
-claude .   # or: codex . / gemini . / opencode .
+claude .   # or: codex . / opencode .
 ```
 
 Inside the AI client:

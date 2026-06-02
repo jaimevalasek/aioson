@@ -4,7 +4,14 @@
   "title": "AIOSON Squad Manifest",
   "description": "Schema for squad.manifest.json",
   "type": "object",
-  "required": ["schemaVersion", "slug", "name", "mode", "mission", "goal"],
+  "required": [
+    "schemaVersion",
+    "slug",
+    "name",
+    "mode",
+    "mission",
+    "goal"
+  ],
   "properties": {
     "schemaVersion": {
       "type": "string",
@@ -28,14 +35,28 @@
     },
     "mode": {
       "type": "string",
-      "enum": ["content", "software", "research", "mixed"],
+      "enum": [
+        "content",
+        "software",
+        "research",
+        "mixed"
+      ],
       "description": "Primary squad type"
     },
-    "mission": { "type": "string", "maxLength": 500 },
-    "goal": { "type": "string", "maxLength": 500 },
+    "mission": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "goal": {
+      "type": "string",
+      "maxLength": 500
+    },
     "visibility": {
       "type": "string",
-      "enum": ["private", "public"],
+      "enum": [
+        "private",
+        "public"
+      ],
       "default": "private"
     },
     "locale_scope": {
@@ -53,16 +74,28 @@
       "properties": {
         "tier": {
           "type": "string",
-          "enum": ["tier-1-regulated", "tier-2-specialized", "tier-3-common"]
+          "enum": [
+            "tier-1-regulated",
+            "tier-2-specialized",
+            "tier-3-common"
+          ]
         },
-        "rationale": { "type": "string" },
+        "rationale": {
+          "type": "string"
+        },
         "regulations": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "investigationPolicy": {
           "type": "string",
-          "enum": ["required", "recommended", "optional"]
+          "enum": [
+            "required",
+            "recommended",
+            "optional"
+          ]
         }
       }
     },
@@ -75,44 +108,97 @@
       "type": "string",
       "description": "Time-to-live for ephemeral squads (e.g. '24h', '7d'). After TTL, squad files are eligible for cleanup."
     },
-    "aiosLiteCompatibility": { "type": "string" },
+    "aiosLiteCompatibility": {
+      "type": "string"
+    },
     "sourceDocs": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Project artifacts consumed during squad design"
     },
     "analysis": {
       "type": "object",
       "description": "Domain decomposition from sourceDocs (design Step 2.5) — the roster was derived from this; read by squad-analyze and squad-validate",
       "properties": {
-        "entities": { "type": "array", "items": { "type": "string" } },
-        "workflows": { "type": "array", "items": { "type": "string" } },
-        "integrations": { "type": "array", "items": { "type": "string" } },
-        "stakeholders": { "type": "array", "items": { "type": "string" } }
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stakeholders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "investigation": {
       "type": "object",
       "description": "Reference to a persisted @orache investigation report",
       "properties": {
-        "slug": { "type": "string" },
-        "path": { "type": "string" },
-        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-        "dimensionsCovered": { "type": "integer", "minimum": 0, "maximum": 7 },
-        "date": { "type": "string", "format": "date" }
+        "slug": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "dimensionsCovered": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        }
       }
     },
     "storagePolicy": {
       "type": "object",
       "properties": {
-        "primary": { "type": "string", "enum": ["sqlite", "file"] },
-        "artifacts": { "type": "string" },
+        "primary": {
+          "type": "string",
+          "enum": [
+            "sqlite",
+            "file"
+          ]
+        },
+        "artifacts": {
+          "type": "string"
+        },
         "exports": {
           "type": "object",
           "properties": {
-            "html": { "type": "boolean" },
-            "markdown": { "type": "boolean" },
-            "json": { "type": "boolean" }
+            "html": {
+              "type": "boolean"
+            },
+            "markdown": {
+              "type": "boolean"
+            },
+            "json": {
+              "type": "boolean"
+            }
           }
         }
       }
@@ -120,25 +206,52 @@
     "package": {
       "type": "object",
       "properties": {
-        "rootDir": { "type": "string" },
-        "agentsDir": { "type": "string" },
-        "workersDir": { "type": "string", "description": "Directory for deterministic worker scripts (no LLM)" },
-        "workflowsDir": { "type": "string", "description": "Directory for workflow .md files with phases and handoffs" },
-        "checklistsDir": { "type": "string", "description": "Directory for quality checklist .md files" },
-        "skillsDir": { "type": "string" },
-        "templatesDir": { "type": "string" },
-        "docsDir": { "type": "string" }
+        "rootDir": {
+          "type": "string"
+        },
+        "agentsDir": {
+          "type": "string"
+        },
+        "workersDir": {
+          "type": "string",
+          "description": "Directory for deterministic worker scripts (no LLM)"
+        },
+        "workflowsDir": {
+          "type": "string",
+          "description": "Directory for workflow .md files with phases and handoffs"
+        },
+        "checklistsDir": {
+          "type": "string",
+          "description": "Directory for quality checklist .md files"
+        },
+        "skillsDir": {
+          "type": "string"
+        },
+        "templatesDir": {
+          "type": "string"
+        },
+        "docsDir": {
+          "type": "string"
+        }
       }
     },
     "rules": {
       "type": "object",
       "properties": {
-        "outputsDir": { "type": "string" },
-        "logsDir": { "type": "string" },
-        "mediaDir": { "type": "string" },
+        "outputsDir": {
+          "type": "string"
+        },
+        "logsDir": {
+          "type": "string"
+        },
+        "mediaDir": {
+          "type": "string"
+        },
         "reviewPolicy": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -146,21 +259,44 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["slug", "role"],
+        "required": [
+          "slug",
+          "role"
+        ],
         "properties": {
-          "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "title": { "type": "string" },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
           "type": {
             "type": "string",
-            "enum": ["worker", "agent", "clone", "assistant", "human-gate", "research", "reviewer", "skill"],
+            "enum": [
+              "worker",
+              "agent",
+              "clone",
+              "assistant",
+              "human-gate",
+              "research",
+              "reviewer",
+              "skill"
+            ],
             "default": "agent",
             "description": "Executor type: worker (deterministic script, no LLM), agent (LLM with defined role), clone (cognitive replica of real person), assistant (domain specialist with behavioral profile), human-gate (human approval checkpoint), research (web research with cache, no LLM), reviewer (cross-AI review synthesis), skill (external Agent Skills Standard skill)"
           },
-          "role": { "type": "string" },
-          "file": { "type": "string" },
+          "role": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
           "traces": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Workflows/entities (from analysis) this executor owns — from the design decomposition"
           },
           "confidence": {
@@ -179,7 +315,12 @@
           },
           "runtime": {
             "type": "string",
-            "enum": ["python", "bash", "node", "other"],
+            "enum": [
+              "python",
+              "bash",
+              "node",
+              "other"
+            ],
             "description": "Runtime for worker executors"
           },
           "entrypoint": {
@@ -239,15 +380,26 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "condition": { "type": "string" },
+                    "condition": {
+                      "type": "string"
+                    },
                     "action": {
                       "type": "string",
-                      "enum": ["auto", "consult", "approve", "block"]
+                      "enum": [
+                        "auto",
+                        "consult",
+                        "approve",
+                        "block"
+                      ]
                     },
-                    "consultAgent": { "type": "string" },
+                    "consultAgent": {
+                      "type": "string"
+                    },
                     "notifyVia": {
                       "type": "array",
-                      "items": { "type": "string" }
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   }
                 }
@@ -256,7 +408,12 @@
           },
           "modelTier": {
             "type": "string",
-            "enum": ["powerful", "balanced", "fast", "none"],
+            "enum": [
+              "powerful",
+              "balanced",
+              "fast",
+              "none"
+            ],
             "default": "balanced",
             "description": "Model tier for this executor. powerful: best model (Opus/o3). balanced: good model (Sonnet/GPT-4o). fast: cheap model (Haiku/Flash). none: no LLM (workers)."
           },
@@ -264,14 +421,35 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["slug", "title", "order"],
+              "required": [
+                "slug",
+                "title",
+                "order"
+              ],
               "properties": {
-                "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-                "title": { "type": "string" },
-                "order": { "type": "integer", "minimum": 1 },
-                "file": { "type": "string", "description": "Path to the task .md file" },
-                "input": { "type": "string", "description": "What this task receives" },
-                "output": { "type": "string", "description": "What this task produces" },
+                "slug": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "file": {
+                  "type": "string",
+                  "description": "Path to the task .md file"
+                },
+                "input": {
+                  "type": "string",
+                  "description": "What this task receives"
+                },
+                "output": {
+                  "type": "string",
+                  "description": "What this task produces"
+                },
                 "review_loop": {
                   "type": "boolean",
                   "default": false,
@@ -279,7 +457,9 @@
                 },
                 "review_criteria": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Criteria the evaluator uses to PASS/FAIL the output (used with review_loop: true)"
                 },
                 "max_review_iterations": {
@@ -309,7 +489,11 @@
                     },
                     "on_no_consensus": {
                       "type": "string",
-                      "enum": ["escalate", "use_majority", "fail"],
+                      "enum": [
+                        "escalate",
+                        "use_majority",
+                        "fail"
+                      ],
                       "default": "escalate",
                       "description": "What to do when consensus < threshold"
                     }
@@ -323,15 +507,32 @@
             "type": "object",
             "description": "Configuration for research executor type (type: 'research')",
             "properties": {
-              "topic": { "type": "string", "description": "Cache key / topic slug (e.g. 'youtube-shorts-2026')" },
+              "topic": {
+                "type": "string",
+                "description": "Cache key / topic slug (e.g. 'youtube-shorts-2026')"
+              },
               "urls": {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "description": "URLs to scrape for this research topic"
               },
-              "cache_hours": { "type": "integer", "default": 168, "description": "Cache TTL in hours (default 168 = 7 days)" },
-              "cache_dir": { "type": "string", "default": "researchs/", "description": "Base directory for research cache" },
-              "max_sources": { "type": "integer", "default": 5, "description": "Maximum number of URLs to scrape" }
+              "cache_hours": {
+                "type": "integer",
+                "default": 168,
+                "description": "Cache TTL in hours (default 168 = 7 days)"
+              },
+              "cache_dir": {
+                "type": "string",
+                "default": "researchs/",
+                "description": "Base directory for research cache"
+              },
+              "max_sources": {
+                "type": "integer",
+                "default": 5,
+                "description": "Maximum number of URLs to scrape"
+              }
             }
           },
           "cross_ai": {
@@ -344,35 +545,74 @@
             "properties": {
               "detect_clis": {
                 "type": "array",
-                "items": { "type": "string", "enum": ["claude", "gemini", "codex"] }
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "claude",
+                    "codex"
+                  ]
+                }
               },
-              "exclude_current": { "type": "boolean", "default": true },
-              "synthesize_to": { "type": "string", "description": "Output path for REVIEWS.md" }
+              "exclude_current": {
+                "type": "boolean",
+                "default": true
+              },
+              "synthesize_to": {
+                "type": "string",
+                "description": "Output path for REVIEWS.md"
+              }
             }
           },
           "formats": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Format slugs from the format catalog that this executor uses"
           },
-          "skills": { "type": "array", "items": { "type": "string" } },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "genomes": {
             "type": "array",
             "items": {
               "oneOf": [
-                { "type": "string" },
+                {
+                  "type": "string"
+                },
                 {
                   "type": "object",
-                  "required": ["slug"],
+                  "required": [
+                    "slug"
+                  ],
                   "properties": {
-                    "slug": { "type": "string" },
-                    "type": { "type": "string" },
-                    "mode": { "type": "string" },
-                    "source": { "type": "string" },
-                    "priority": { "type": "integer" },
-                    "version": { "type": "string" },
-                    "evidenceMode": { "type": "string" },
-                    "notes": { "type": "string" }
+                    "slug": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "priority": {
+                      "type": "integer"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "evidenceMode": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
                   }
                 }
               ]
@@ -385,11 +625,19 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["slug"],
+        "required": [
+          "slug"
+        ],
         "properties": {
-          "slug": { "type": "string" },
-          "title": { "type": "string" },
-          "description": { "type": "string" }
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
         }
       }
     },
@@ -397,19 +645,34 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["slug"],
+        "required": [
+          "slug"
+        ],
         "properties": {
-          "slug": { "type": "string" },
-          "required": { "type": "boolean" },
-          "purpose": { "type": "string" }
+          "slug": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "purpose": {
+            "type": "string"
+          }
         }
       }
     },
     "subagents": {
       "type": "object",
       "properties": {
-        "allowed": { "type": "boolean" },
-        "when": { "type": "array", "items": { "type": "string" } }
+        "allowed": {
+          "type": "boolean"
+        },
+        "when": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "genomes": {
@@ -418,8 +681,12 @@
           "type": "array",
           "items": {
             "oneOf": [
-              { "type": "string" },
-              { "type": "object" }
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
             ]
           }
         },
@@ -430,19 +697,39 @@
               "type": "array",
               "items": {
                 "oneOf": [
-                  { "type": "string" },
+                  {
+                    "type": "string"
+                  },
                   {
                     "type": "object",
-                    "required": ["slug"],
+                    "required": [
+                      "slug"
+                    ],
                     "properties": {
-                      "slug": { "type": "string" },
-                      "type": { "type": "string" },
-                      "mode": { "type": "string" },
-                      "source": { "type": "string" },
-                      "priority": { "type": "integer" },
-                      "version": { "type": "string" },
-                      "evidenceMode": { "type": "string" },
-                      "notes": { "type": "string" }
+                      "slug": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "priority": {
+                        "type": "integer"
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "evidenceMode": {
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
                     }
                   }
                 ]
@@ -454,19 +741,39 @@
                 "type": "array",
                 "items": {
                   "oneOf": [
-                    { "type": "string" },
+                    {
+                      "type": "string"
+                    },
                     {
                       "type": "object",
-                      "required": ["slug"],
+                      "required": [
+                        "slug"
+                      ],
                       "properties": {
-                        "slug": { "type": "string" },
-                        "type": { "type": "string" },
-                        "mode": { "type": "string" },
-                        "source": { "type": "string" },
-                        "priority": { "type": "integer" },
-                        "version": { "type": "string" },
-                        "evidenceMode": { "type": "string" },
-                        "notes": { "type": "string" }
+                        "slug": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "mode": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "priority": {
+                          "type": "integer"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "evidenceMode": {
+                          "type": "string"
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
                       }
                     }
                   ]
@@ -482,14 +789,30 @@
       "description": "Quality checklists for post-execution validation",
       "items": {
         "type": "object",
-        "required": ["slug", "file"],
+        "required": [
+          "slug",
+          "file"
+        ],
         "properties": {
-          "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "title": { "type": "string" },
-          "file": { "type": "string", "description": "Path to the checklist .md file" },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string",
+            "description": "Path to the checklist .md file"
+          },
           "scope": {
             "type": "string",
-            "enum": ["squad", "workflow", "phase", "executor"],
+            "enum": [
+              "squad",
+              "workflow",
+              "phase",
+              "executor"
+            ],
             "default": "squad",
             "description": "When this checklist applies"
           },
@@ -505,41 +828,86 @@
       "description": "Pipelines with phases, executors, handoffs, and execution modes",
       "items": {
         "type": "object",
-        "required": ["slug", "title"],
+        "required": [
+          "slug",
+          "title"
+        ],
         "properties": {
-          "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "title": { "type": "string" },
-          "trigger": { "type": "string", "description": "Condition or user action that starts this workflow" },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string",
+            "description": "Condition or user action that starts this workflow"
+          },
           "executionMode": {
             "type": "string",
-            "enum": ["sequential", "parallel", "mixed"],
+            "enum": [
+              "sequential",
+              "parallel",
+              "mixed"
+            ],
             "default": "sequential",
             "description": "How phases run: sequential (each waits for previous), parallel (all at once), mixed (phases declare their own mode)"
           },
-          "estimatedDuration": { "type": "string", "description": "Human-readable estimate, e.g. '30-60min'" },
-          "file": { "type": "string", "description": "Path to the workflow .md file" },
+          "estimatedDuration": {
+            "type": "string",
+            "description": "Human-readable estimate, e.g. '30-60min'"
+          },
+          "file": {
+            "type": "string",
+            "description": "Path to the workflow .md file"
+          },
           "phases": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "title", "executor"],
+              "required": [
+                "id",
+                "title",
+                "executor"
+              ],
               "properties": {
-                "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-                "title": { "type": "string" },
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$"
+                },
+                "title": {
+                  "type": "string"
+                },
                 "executor": {
                   "oneOf": [
-                    { "type": "string" },
-                    { "type": "array", "items": { "type": "string" } }
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   ],
                   "description": "Executor slug(s) responsible for this phase"
                 },
                 "executorType": {
                   "type": "string",
-                  "enum": ["worker", "agent", "clone", "assistant", "human-gate"]
+                  "enum": [
+                    "worker",
+                    "agent",
+                    "clone",
+                    "assistant",
+                    "human-gate"
+                  ]
                 },
                 "dependsOn": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Phase IDs that must complete before this phase starts"
                 },
                 "parallel": {
@@ -547,23 +915,49 @@
                   "default": false,
                   "description": "Whether this phase can run in parallel with siblings"
                 },
-                "input": { "type": "string", "description": "Expected input description or source" },
-                "output": { "type": "string", "description": "Expected output artifact or description" },
+                "input": {
+                  "type": "string",
+                  "description": "Expected input description or source"
+                },
+                "output": {
+                  "type": "string",
+                  "description": "Expected output artifact or description"
+                },
                 "humanGate": {
                   "type": "object",
                   "description": "Optional human approval checkpoint within this phase",
                   "properties": {
-                    "condition": { "type": "string", "description": "Expression that triggers the gate" },
+                    "condition": {
+                      "type": "string",
+                      "description": "Expression that triggers the gate"
+                    },
                     "action": {
                       "type": "string",
-                      "enum": ["auto", "consult", "approve", "block"]
+                      "enum": [
+                        "auto",
+                        "consult",
+                        "approve",
+                        "block"
+                      ]
                     },
-                    "consultAgent": { "type": "string" },
-                    "notifyVia": { "type": "array", "items": { "type": "string" } },
-                    "reason": { "type": "string" }
+                    "consultAgent": {
+                      "type": "string"
+                    },
+                    "notifyVia": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
                   }
                 },
-                "checklist": { "type": "string", "description": "Path to quality checklist for this phase" },
+                "checklist": {
+                  "type": "string",
+                  "description": "Path to quality checklist for this phase"
+                },
                 "review": {
                   "type": "object",
                   "properties": {
@@ -573,7 +967,9 @@
                     },
                     "criteria": {
                       "type": "array",
-                      "items": { "type": "string" },
+                      "items": {
+                        "type": "string"
+                      },
                       "description": "What the reviewer checks"
                     },
                     "onReject": {
@@ -589,13 +985,21 @@
                     },
                     "retryStrategy": {
                       "type": "string",
-                      "enum": ["feedback", "fresh", "alternative"],
+                      "enum": [
+                        "feedback",
+                        "fresh",
+                        "alternative"
+                      ],
                       "default": "feedback",
                       "description": "feedback: send rejection reason back. fresh: restart from scratch. alternative: ask a different executor."
                     },
                     "escalateOnMaxRetries": {
                       "type": "string",
-                      "enum": ["human", "skip", "fail"],
+                      "enum": [
+                        "human",
+                        "skip",
+                        "fail"
+                      ],
                       "default": "human",
                       "description": "What to do when maxRetries exceeded"
                     }
@@ -605,7 +1009,10 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": ["condition", "action"],
+                    "required": [
+                      "condition",
+                      "action"
+                    ],
                     "properties": {
                       "condition": {
                         "type": "string",
@@ -613,7 +1020,11 @@
                       },
                       "action": {
                         "type": "string",
-                        "enum": ["reject", "block", "warn"],
+                        "enum": [
+                          "reject",
+                          "block",
+                          "warn"
+                        ],
                         "description": "reject: auto-retry. block: stop pipeline. warn: continue with warning."
                       },
                       "message": {
@@ -647,16 +1058,34 @@
           "type": "object",
           "description": "Warning level thresholds as ratios (0–1)",
           "properties": {
-            "warning":  { "type": "number", "minimum": 0, "maximum": 1, "default": 0.85 },
-            "critical": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.95 }
+            "warning": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.85
+            },
+            "critical": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.95
+            }
           }
         },
         "notify": {
           "type": "object",
           "description": "Which events trigger notifications",
           "properties": {
-            "contextWarning":  { "type": "boolean", "default": true,  "description": "Notify at warning threshold (default 85%)" },
-            "contextCritical": { "type": "boolean", "default": true,  "description": "Notify at critical threshold (default 95%)" }
+            "contextWarning": {
+              "type": "boolean",
+              "default": true,
+              "description": "Notify at warning threshold (default 85%)"
+            },
+            "contextCritical": {
+              "type": "boolean",
+              "default": true,
+              "description": "Notify at critical threshold (default 95%)"
+            }
           }
         }
       }
@@ -667,7 +1096,11 @@
       "properties": {
         "strategy": {
           "type": "string",
-          "enum": ["worktree", "branch-only", "shared"],
+          "enum": [
+            "worktree",
+            "branch-only",
+            "shared"
+          ],
           "default": "shared",
           "description": "worktree: separate git worktree per agent. branch-only: create branch but no worktree. shared: no isolation."
         },
@@ -713,9 +1146,17 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["task_completed", "decision_made", "handoff"]
+            "enum": [
+              "task_completed",
+              "decision_made",
+              "handoff"
+            ]
           },
-          "default": ["task_completed", "decision_made", "handoff"],
+          "default": [
+            "task_completed",
+            "decision_made",
+            "handoff"
+          ],
           "description": "Runtime event types that trigger an automatic recovery context refresh"
         }
       }
@@ -724,26 +1165,51 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["slug", "contentType", "layoutType"],
+        "required": [
+          "slug",
+          "contentType",
+          "layoutType"
+        ],
         "properties": {
-          "slug": { "type": "string" },
-          "contentType": { "type": "string" },
+          "slug": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
           "layoutType": {
             "type": "string",
-            "enum": ["document", "tabs", "accordion", "stack", "mixed"]
+            "enum": [
+              "document",
+              "tabs",
+              "accordion",
+              "stack",
+              "mixed"
+            ]
           },
-          "description": { "type": "string" },
+          "description": {
+            "type": "string"
+          },
           "sections": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["key", "label"],
+              "required": [
+                "key",
+                "label"
+              ],
               "properties": {
-                "key": { "type": "string" },
-                "label": { "type": "string" },
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
                 "blockTypes": {
                   "type": "array",
-                  "items": { "type": "string" }
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -758,18 +1224,37 @@
     "properties": {
       "mode": {
         "type": "string",
-        "enum": ["files", "sqlite", "hybrid"],
+        "enum": [
+          "files",
+          "sqlite",
+          "hybrid"
+        ],
         "default": "hybrid",
         "description": "Primary output strategy: files (physical output only), sqlite (database only), hybrid (both)"
       },
       "fileOutput": {
         "type": "object",
         "properties": {
-          "enabled": { "type": "boolean", "default": true },
-          "dir": { "type": "string", "description": "Output directory path" },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "dir": {
+            "type": "string",
+            "description": "Output directory path"
+          },
           "formats": {
             "type": "array",
-            "items": { "type": "string", "enum": ["html", "md", "json", "pdf", "csv"] },
+            "items": {
+              "type": "string",
+              "enum": [
+                "html",
+                "md",
+                "json",
+                "pdf",
+                "csv"
+              ]
+            },
             "description": "Enabled export formats"
           }
         }
@@ -777,10 +1262,26 @@
       "dataOutput": {
         "type": "object",
         "properties": {
-          "enabled": { "type": "boolean", "default": true },
-          "storage": { "type": "string", "enum": ["sqlite"], "default": "sqlite" },
-          "table": { "type": "string", "default": "content_items" },
-          "contentItems": { "type": "boolean", "default": true, "description": "Use the content_items model for structured data" }
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "sqlite"
+            ],
+            "default": "sqlite"
+          },
+          "table": {
+            "type": "string",
+            "default": "content_items"
+          },
+          "contentItems": {
+            "type": "boolean",
+            "default": true,
+            "description": "Use the content_items model for structured data"
+          }
         }
       },
       "delivery": {
@@ -790,32 +1291,61 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["slug", "trigger"],
+              "required": [
+                "slug",
+                "trigger"
+              ],
               "properties": {
-                "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-                "url": { "type": "string", "description": "Webhook URL or {{ENV:VAR}} placeholder" },
+                "slug": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+$"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Webhook URL or {{ENV:VAR}} placeholder"
+                },
                 "trigger": {
                   "type": "string",
-                  "enum": ["on-publish", "on-create", "manual"],
+                  "enum": [
+                    "on-publish",
+                    "on-create",
+                    "manual"
+                  ],
                   "default": "on-publish",
                   "description": "When to fire the webhook"
                 },
                 "format": {
                   "type": "string",
-                  "enum": ["json", "form-data"],
+                  "enum": [
+                    "json",
+                    "form-data"
+                  ],
                   "default": "json"
                 },
                 "headers": {
                   "type": "object",
-                  "additionalProperties": { "type": "string" },
+                  "additionalProperties": {
+                    "type": "string"
+                  },
                   "description": "Custom headers (supports {{ENV:VAR}} placeholders)"
                 },
-                "worker": { "type": "string", "description": "Path to delivery worker script" }
+                "worker": {
+                  "type": "string",
+                  "description": "Path to delivery worker script"
+                }
               }
             }
           },
-          "cloudPublish": { "type": "boolean", "default": false, "description": "Publish to aioson.com cloud" },
-          "autoPublish": { "type": "boolean", "default": false, "description": "Auto-publish on content creation (opt-in)" }
+          "cloudPublish": {
+            "type": "boolean",
+            "default": false,
+            "description": "Publish to aioson.com cloud"
+          },
+          "autoPublish": {
+            "type": "boolean",
+            "default": false,
+            "description": "Auto-publish on content creation (opt-in)"
+          }
         }
       }
     }
@@ -828,12 +1358,32 @@
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["key"],
+          "required": [
+            "key"
+          ],
           "properties": {
-            "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-            "dataType": { "type": "string", "enum": ["text", "json", "file", "file-list", "any"], "default": "any" },
-            "description": { "type": "string" },
-            "required": { "type": "boolean", "default": false }
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "dataType": {
+              "type": "string",
+              "enum": [
+                "text",
+                "json",
+                "file",
+                "file-list",
+                "any"
+              ],
+              "default": "any"
+            },
+            "description": {
+              "type": "string"
+            },
+            "required": {
+              "type": "boolean",
+              "default": false
+            }
           }
         }
       },
@@ -841,12 +1391,31 @@
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["key"],
+          "required": [
+            "key"
+          ],
           "properties": {
-            "key": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-            "dataType": { "type": "string", "enum": ["text", "json", "file", "file-list", "any"], "default": "any" },
-            "description": { "type": "string" },
-            "contentBlueprintSlug": { "type": "string" }
+            "key": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "dataType": {
+              "type": "string",
+              "enum": [
+                "text",
+                "json",
+                "file",
+                "file-list",
+                "any"
+              ],
+              "default": "any"
+            },
+            "description": {
+              "type": "string"
+            },
+            "contentBlueprintSlug": {
+              "type": "string"
+            }
           }
         }
       }
@@ -857,7 +1426,10 @@
     "description": "Inter-squad dependencies: this squad will consume published events from these squads before starting a run",
     "items": {
       "type": "object",
-      "required": ["squad", "event"],
+      "required": [
+        "squad",
+        "event"
+      ],
       "properties": {
         "squad": {
           "type": "string",
@@ -871,7 +1443,9 @@
         "input_mapping": {
           "type": "object",
           "description": "Maps event payload fields to task context fields",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     }
@@ -889,7 +1463,9 @@
   "subscriptions": {
     "type": "array",
     "description": "Event patterns this squad subscribes to (consumed at the start of each autorun). Short form of depends_on[*].event.",
-    "items": { "type": "string" }
+    "items": {
+      "type": "string"
+    }
   },
   "additionalProperties": true
 }

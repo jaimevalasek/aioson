@@ -82,7 +82,7 @@ npx @jaimevalasek/aioson init my-project
 # 2. Enter the project
 cd my-project
 
-# 3. Open your AI client (Claude Code, Codex, Gemini, OpenCode) and type:
+# 3. Open your AI client (Claude Code, Codex e OpenCode) and type:
 /aioson:agent:setup
 ```
 

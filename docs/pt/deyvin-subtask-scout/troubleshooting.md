@@ -88,7 +88,7 @@ Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falh
 
 ## Harness sem suporte a sub-agentes (`harness_unsupported`)
 
-**Sintoma:** Gemini CLI ou OpenCode não suportam o Agent tool / sub-agent nativamente.
+**Sintoma:** OpenCode não suportam o Agent tool / sub-agent nativamente.
 
 **O que acontece:** `scout:prep` retorna normalmente, mas o harness emite `harness_unsupported` ao tentar despachar o sub-agente.
 
