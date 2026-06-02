@@ -238,6 +238,10 @@ describe('workflow engine hardening', () => {
 
   it('qa activation auto-runs security:audit for MEDIUM feature workflow and records runtime event', async () => {
     const dir = await setupProject({ classification: 'MEDIUM' });
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'features.md'),
+      '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| feat | in_progress | 2026-06-02 | — |\n'
+    );
     await fs.writeFile(path.join(dir, '.aioson', 'context', 'prd-feat.md'), '# PRD feat\n');
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'requirements-feat.md'),
@@ -297,6 +301,10 @@ describe('workflow engine hardening', () => {
 
   it('qa completion records security_gate_blocked when MEDIUM audit artifact is missing', async () => {
     const dir = await setupProject({ classification: 'MEDIUM' });
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'features.md'),
+      '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| feat | in_progress | 2026-06-02 | — |\n'
+    );
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'spec-feat.md'),
       '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'

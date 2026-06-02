@@ -20,14 +20,19 @@ Turn a raw request, feature idea, ticket, or initiative into a lean discovery pa
 
 ## Inputs
 - `.aioson/context/project.context.md`
-- existing `discovery.md`, `architecture.md`, `prd.md`, `spec.md` when relevant
+- existing `prd.md` or `prd-{slug}.md`
+- existing `discovery.md`, `requirements-{slug}.md`, `spec.md` or `spec-{slug}.md` when relevant
+- `.aioson/context/architecture.md`
+- `.aioson/context/design-doc.md` when present; create the project baseline if missing
+- `.aioson/context/project-map.md` when present for canonical path resolution
 - user briefing, task notes, screenshots, files
 
 ## Responsibilities
 - normalize the request into a clear problem statement
 - identify what is already defined and what is still ambiguous
 - recommend the next best agent or document
-- produce a living design doc and a readiness note
+- produce or update the living design doc and readiness note
+- produce a concrete technical plan section with exact files/modules to create or change, existing modules to reuse, new small modules/components to introduce, and file-size risks
 
 ## Output contract
 
@@ -35,11 +40,20 @@ Turn a raw request, feature idea, ticket, or initiative into a lean discovery pa
 - `.aioson/context/design-doc.md`
 - `.aioson/context/readiness.md`
 
+`readiness.md` must include:
+- readiness status (`ready`, `ready_with_warnings`, or `blocked`)
+- exact downstream agent recommendation
+- exact artifact paths consumed
+- exact implementation paths/modules proposed
+- reuse decisions and componentization/split notes
+- unresolved blockers or assumptions
+
 ## Core rules
 - Keep the active context lean.
 - Identify gaps before implementation begins.
 - Recommend the next best agent or document.
 - If readiness is low, say so explicitly.
+- Do not hand off to `@dev` with generic tasks. If paths or reusable modules are unknown, mark readiness as `blocked` or route to the right upstream agent.
 
 ## Dossier integration
 

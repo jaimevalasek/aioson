@@ -59,6 +59,8 @@ test('artifact:validate: VALID when all required files exist for SMALL', async (
   await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 3\n---\n# Spec');
   await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness');
   await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '---\nstatus: approved\n---\n# Plan');
 
   const result = await runArtifactValidate({
@@ -78,6 +80,8 @@ test('artifact:validate: conformance not required for SMALL classification', asy
   await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 1\n---');
   await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness');
   await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '# Plan');
 
   const result = await runArtifactValidate({
@@ -99,6 +103,8 @@ test('artifact:validate: shows spec version and gates in chain detail', async ()
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md',
     '---\nversion: 5\ngate_requirements: approved\ngate_plan: approved\n---\n# Spec');
   await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness');
   await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '# Plan');
 
   const result = await runArtifactValidate({
@@ -211,6 +217,8 @@ test('artifact:validate: next_agent points to @pm when implementation-plan missi
   await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
   await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness');
   // implementation-plan missing
 
   const result = await runArtifactValidate({
@@ -234,6 +242,8 @@ test('artifact:validate: next_missing and next_agent are null when chain is VALI
   await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
   await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness');
   await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '# Plan');
 
   const result = await runArtifactValidate({

@@ -96,6 +96,8 @@ test('preflight: readiness READY when project context and spec exist for dev', a
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
   await writeFile(tmpDir, '.aioson/context/spec-feat.md', '---\ngate_plan: approved\n---');
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc\n');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness\n');
   const result = await runPreflight({
     args: [tmpDir],
     options: { json: true, agent: 'dev', feature: 'feat' },

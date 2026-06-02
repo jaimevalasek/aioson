@@ -82,6 +82,60 @@ test('workflow:next infers active feature and routes to analyst after product', 
   assert.deepEqual(result.completed, ['product']);
 });
 
+test('workflow:next injects dev-state context package when activating dev for a feature', async () => {
+  const dir = await makeTempDir();
+  const slug = 'quality-governance';
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    `# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| ${slug} | in_progress | 2026-06-02 | — |\n`
+  );
+  await writeFileEnsured(path.join(dir, `.aioson/context/prd-${slug}.md`), '# Feature PRD\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/spec-${slug}.md`), '# Spec\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/sheldon-enrichment-${slug}.md`),
+    '# Sheldon enrichment\n'
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/dev-state.md'),
+    `---\nactive_feature: ${slug}\nactive_phase: 1\nnext_step: "Implement quality audit MVP"\nstatus: in_progress\n---\n\n# Dev State\n\n## Context package\n\n1. project.context.md\n2. spec-${slug}.md\n3. requirements-${slug}.md\n4. sheldon-enrichment-${slug}.md\n`
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'SMALL',
+      sequence: ['product', 'analyst', 'dev', 'qa'],
+      current: 'dev',
+      next: 'dev',
+      completed: ['product', 'analyst'],
+      skipped: [],
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'dev');
+  assert.match(result.prompt, /Check required context files first: \.aioson\/context\/dev-state\.md/);
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/spec-${slug}\\.md`));
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/requirements-${slug}\\.md`));
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/sheldon-enrichment-${slug}\\.md`));
+  assert.doesNotMatch(result.prompt, /Check required context files first: .*\.aioson\/context\/discovery\.md/);
+  assert.doesNotMatch(result.prompt, /Check required context files first: .*\.aioson\/context\/architecture\.md/);
+  assert.match(result.prompt, /Resume source: \.aioson\/context\/dev-state\.md/);
+});
+
 test('workflow:next supports detours and returns to the saved stage', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
@@ -136,7 +190,7 @@ test('workflow:next allows skip until dev but not past dev', async () => {
   });
 
   assert.equal(skipped.agent, 'dev');
-  assert.deepEqual(skipped.skipped, ['analyst', 'architect']);
+  assert.deepEqual(skipped.skipped, ['analyst', 'architect', 'discovery-design-doc']);
 
   await assert.rejects(
     () =>
@@ -147,6 +201,61 @@ test('workflow:next allows skip until dev but not past dev', async () => {
         t
       }),
     /Cannot skip past @dev/
+  );
+});
+
+test('workflow:next routes SMALL project through discovery-design-doc before dev', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'discovery-design-doc');
+  assert.deepEqual(result.completed, ['setup', 'product', 'analyst', 'architect']);
+  assert.match(result.prompt, /design-doc\.md/);
+});
+
+test('workflow:next blocks discovery-design-doc completion until design-doc and readiness exist', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'SMALL',
+      sequence: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      current: 'discovery-design-doc',
+      next: 'dev',
+      completed: ['setup', 'product', 'analyst', 'architect'],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  await assert.rejects(
+    () => runWorkflowNext({
+      args: [dir],
+      options: { tool: 'codex', complete: 'discovery-design-doc' },
+      logger: createQuietLogger(),
+      t
+    }),
+    /expected artifacts are missing/
   );
 });
 

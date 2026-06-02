@@ -422,7 +422,9 @@ test('evaluateReadiness: READY when all conditions met for dev', () => {
     project_context: { exists: true },
     spec: { exists: true },
     prd: { exists: true },
-    requirements: { exists: true }
+    requirements: { exists: true },
+    design_doc: { exists: true },
+    readiness: { exists: true }
   };
   const gates = { plan: 'approved' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'dev');
@@ -435,11 +437,28 @@ test('evaluateReadiness: BLOCKED when dev spec missing', () => {
     project_context: { exists: true },
     spec: { exists: false },
     prd: { exists: true },
-    requirements: { exists: true }
+    requirements: { exists: true },
+    design_doc: { exists: true },
+    readiness: { exists: true }
   };
   const result = evaluateReadiness(artifacts, { plan: 'approved' }, 'SMALL', 'dev');
   assert.equal(result.status, 'BLOCKED');
   assert.ok(result.blockers.some((b) => b.includes('spec')));
+});
+
+test('evaluateReadiness: BLOCKED when dev lacks discovery-design-doc artifacts', () => {
+  const artifacts = {
+    project_context: { exists: true },
+    spec: { exists: true },
+    prd: { exists: true },
+    requirements: { exists: true },
+    design_doc: { exists: false },
+    readiness: { exists: false }
+  };
+  const result = evaluateReadiness(artifacts, { plan: 'approved' }, 'SMALL', 'dev');
+  assert.equal(result.status, 'BLOCKED');
+  assert.ok(result.blockers.some((b) => b.includes('design-doc.md')));
+  assert.ok(result.blockers.some((b) => b.includes('readiness.md')));
 });
 
 test('evaluateReadiness: analyst can proceed with warning for unframed feature discovery', () => {
@@ -511,7 +530,9 @@ test('evaluateReadiness: qa BLOCKED when Gate C not approved for SMALL', () => {
     project_context: { exists: true },
     spec: { exists: true },
     prd: { exists: true },
-    requirements: { exists: true }
+    requirements: { exists: true },
+    design_doc: { exists: true },
+    readiness: { exists: true }
   };
   const gates = { plan: 'pending' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'qa');
@@ -524,7 +545,9 @@ test('evaluateReadiness: qa READY when Gate C approved for SMALL', () => {
     project_context: { exists: true },
     spec: { exists: true },
     prd: { exists: true },
-    requirements: { exists: true }
+    requirements: { exists: true },
+    design_doc: { exists: true },
+    readiness: { exists: true }
   };
   const gates = { plan: 'approved' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'qa');

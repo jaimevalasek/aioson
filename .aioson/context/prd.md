@@ -49,6 +49,73 @@ Durante implementação, quando `@dev` ou `@deyvin` percebe que um arquivo vai u
 - O design-doc base é mutável (agentes o atualizam quando descobrem novos padrões) ou imutável após a criação?
 - Como o alerta de 500 linhas opera em sessões `@deyvin` em modo pair programming, onde o usuário está dirigindo ativamente a implementação?
 
+## Visual identity
+<!-- added by @ux-ui -->
+
+AIOSON não tem uma UI de produto neste repositório. A identidade de experiência deste core é CLI-first: operacional, precisa, densa e orientada a artefatos. O dashboard permanece uma aplicação separada e fora do escopo deste PRD.
+
+Direção confirmada para este projeto:
+- Produto: CLI Node.js para orquestração de agentes e workflow SDD.
+- Superfícies UX: comandos de terminal, help text, saídas JSON, relatórios Markdown, handoffs e artefatos em `.aioson/context/`.
+- Design skill: não aplicável; `project_type=script` e `design_skill` permanece vazio de propósito.
+- Barra de qualidade: toda saída deve tornar estado, bloqueios, próximos comandos e artefatos legíveis sem depender de contexto implícito ou dashboard externo.
+
+## UX Considerations
+<!-- added by @ux-ui -->
+
+- O usuário principal precisa saber rapidamente qual stage está ativo, qual gate bloqueia, qual artefato falta e qual comando executa a próxima transição.
+- Saídas human-readable devem priorizar status, escopo e próxima ação antes de detalhes.
+- Saídas `--json` devem permanecer limpas, estáveis e sem texto humano misturado.
+- Relatórios em Markdown devem começar por status/escopo e listar limitações, advisory e caminhos de artefato.
+- Mensagens localizadas devem respeitar `pt-BR`, preservando nomes de comandos, flags, paths e chaves JSON em inglês.
+- Acessibilidade em CLI significa texto legível em logs, sem dependência de cor e sem símbolos como único indicador de status.
+
+## Delivery plan
+<!-- added by @pm -->
+
+### Phase 1 - Governance baseline
+1. Consolidar `.aioson/context/design-doc.md` como contrato base permanente.
+2. Garantir que `@dev` e `@deyvin` carreguem o design-doc antes de editar código.
+3. Validar que o template instalado também recebe o contrato.
+
+### Phase 2 - Workflow integration
+1. Inserir `@discovery-design-doc` no fluxo SMALL/MEDIUM antes de implementação.
+2. Ajustar handoffs para carregar PRD, discovery, architecture, ui-spec e design-doc sem redescoberta.
+3. Manter `workflow:next` como motor único de transição.
+
+### Phase 3 - Implementation guardrails
+1. Implementar alerta de tamanho de arquivo em agentes de implementação.
+2. Exigir plano técnico com paths exatos antes de `@dev` em trabalho MEDIUM.
+3. Validar nomenclatura, componentização e reuso contra `.aioson/design-docs/`.
+
+### Phase 4 - QA and rollout
+1. QA valida contrato, carregamento obrigatório, template/workspace parity e critérios de arquivo.
+2. Documentar limitações conhecidas e atualizar bootstrap/pulse.
+3. Encerrar apenas quando os artefatos forem suficientes para próxima sessão sem contexto oral.
+
+## Acceptance criteria
+<!-- added by @pm -->
+
+| AC | Description |
+|---|---|
+| AC-01 | Dado um projeto SMALL ou MEDIUM, quando o workflow chega à etapa pré-implementação, `.aioson/context/design-doc.md` existe ou é criado antes de `@dev`. |
+| AC-02 | Dado que `@dev` ou `@deyvin` inicia implementação, o agente registra que carregou o design-doc base antes de qualquer edição de código. |
+| AC-03 | Dado um workflow SMALL ou MEDIUM, `@discovery-design-doc` é roteado antes de implementação ou existe uma justificativa explícita de desvio no handoff. |
+| AC-04 | Dado um plano técnico de feature, cada task de implementação referencia paths ou módulos concretos em vez de descrições genéricas. |
+| AC-05 | Dado que uma alteração pode levar um arquivo acima de 500 linhas, o agente emite alerta explícito e propõe alternativa de split antes de prosseguir. |
+| AC-06 | Dado um projeto instalado via template, as regras e agentes distribuídos preservam o mesmo contrato de design governance do workspace core. |
+| AC-07 | Dado um output de CLI ou relatório de gate, o usuário consegue identificar status, bloqueador, próximo comando e artefato sem abrir o dashboard externo. |
+| AC-08 | Dado QA Gate D, `@qa` consegue verificar todos os itens acima por artefatos em disco e comandos locais, sem depender apenas do histórico de conversa. |
+
+## Planning risks
+<!-- added by @pm -->
+
+| Risk | Mitigation |
+|---|---|
+| Workflow real divergir do PRD e pular `@discovery-design-doc`. | `@orchestrator` deve validar o estado real de `workflow.config.json`/`workflow:status` antes de entregar para `@dev`. |
+| Template e workspace ficarem fora de sincronia. | Toda mudança em agente/rule deve considerar `template/.aioson/` e workspace ativo, com verificação de parity quando aplicável. |
+| Alerta de 500 linhas virar bloqueio rígido demais. | Tratar como guardrail com proposta concreta; QA valida evidência, não contagem cega. |
+
 ## Specify depth
 - Classification: MEDIUM
 - Specify depth applied: full

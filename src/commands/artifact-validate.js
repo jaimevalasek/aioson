@@ -72,6 +72,7 @@ async function runArtifactValidate({ args, options = {}, logger }) {
 
   // Conformance required?
   const conformanceRequired = classification === 'MEDIUM';
+  const designDocRequired = classification === 'SMALL' || classification === 'MEDIUM';
 
   // Build chain items
   const chain = [
@@ -118,6 +119,20 @@ async function runArtifactValidate({ args, options = {}, logger }) {
       indent: 1
     },
     {
+      name: 'design-doc.md',
+      exists: artifacts.design_doc.exists,
+      detail: designDocRequired ? 'pre-dev design governance contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
+      required: designDocRequired,
+      indent: 1
+    },
+    {
+      name: 'readiness.md',
+      exists: artifacts.readiness.exists,
+      detail: designDocRequired ? 'pre-dev readiness contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
+      required: designDocRequired,
+      indent: 1
+    },
+    {
       name: `implementation-plan-${slug}.md`,
       exists: artifacts.implementation_plan.exists,
       detail: planStatus ? `status: ${planStatus}` : null,
@@ -145,6 +160,8 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     [`prd-${slug}.md`]: { agent: '@product', reason: 'PRD not produced yet' },
     [`requirements-${slug}.md`]: { agent: '@analyst', reason: 'requirements not produced yet (Gate A)' },
     'architecture.md': { agent: '@architect', reason: 'architecture not produced yet (Gate B)' },
+    'design-doc.md': { agent: '@discovery-design-doc', reason: 'design governance contract not produced yet' },
+    'readiness.md': { agent: '@discovery-design-doc', reason: 'readiness contract not produced yet' },
     [`implementation-plan-${slug}.md`]: { agent: '@pm', reason: 'implementation plan not produced yet (Gate C)' },
     [`spec-${slug}.md`]: { agent: '@analyst', reason: 'spec not produced yet — @analyst seeds the feature memory' },
     [`conformance-${slug}.yaml`]: { agent: '@analyst', reason: 'conformance contract missing — @analyst creates it for MEDIUM features' }

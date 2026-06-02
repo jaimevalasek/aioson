@@ -186,6 +186,8 @@ module.exports = {
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=en]',
     help_agent_audit:
       'aioson agent:audit [path] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=en]',
+    help_quality_audit:
+      'aioson quality:audit [path] [--feature=<slug>] [--provider-output=<path>] [--baseline=<path>] [--changed=<path[,path]>] [--json] [--locale=en]',
     help_squad_dashboard:
       'aioson squad:dashboard [path] [--port=4180] [--squad=<slug>] [--locale=en]',
     help_squad_worker:

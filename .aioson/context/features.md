@@ -26,3 +26,4 @@
 | gemini-phaseout | paused | 2026-05-23 | — |
 | agent-orchestration-v2 | done | 2026-05-27 | 2026-05-27 |
 | cost-context-optimization | done | 2026-06-01 | 2026-06-01 |
+| quality-governance-baseline-and-new-regression-gate | done | 2026-06-02 | 2026-06-02 |

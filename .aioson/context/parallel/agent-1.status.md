@@ -4,22 +4,21 @@
 - lane: agent-1
 - role: @dev
 - owner: lane-1
-- status: done
+- status: completed
 - priority: high
-- updated_at: 2026-04-24T01:13:55-03:00
+- updated_at: 2026-06-02T04:35:00-03:00
 
 ## Scope
-- Phase 1: Canonical paths and source contract
-- Phase 7: Product and Sheldon flow
-- Keep `docs/pt/` as system documentation only
-- Keep root `plans/` as source-only material
-- Fix Product and Sheldon handoffs so the next agent, reason, artifacts, and pass criteria are explicit
+- Design governance baseline
+- Permanent project design-doc contract for SMALL/MEDIUM execution
+- Template/workspace parity for design-doc and governance rules
+- Resolve the objective design-doc base location from existing project artifacts: project-wide baseline at `.aioson/context/design-doc.md`, mirrored in `template/.aioson/context/design-doc.md`
 
 ## Ownership
 - lane_key: lane-1
-- scope_keys: path-contract, product-sheldon-flow
-- write_scope: rules, path map, product/sheldon prompts and templates
-- write_paths: .aioson/rules/**, .aioson/context/project-map.md, .aioson/agents/product.md, .aioson/agents/sheldon.md, template/.aioson/agents/product.md, template/.aioson/agents/sheldon.md, template/.aioson/rules/**
+- scope_keys: design-doc-baseline, template-workspace-parity, governance-rules
+- write_scope: design-doc baseline, template context, governance rules
+- write_paths: .aioson/context/design-doc.md, template/.aioson/context/design-doc.md, .aioson/rules/**, template/.aioson/rules/**, .aioson/context/project-map.md
 
 ## Dependencies
 - shared-decisions
@@ -30,22 +29,23 @@
 
 ## Context package
 - `.aioson/context/project.context.md`
-- `.aioson/context/requirements-sdlc-process-upgrade.md`
-- `.aioson/context/architecture.md`
-- `.aioson/context/implementation-plan-sdlc-process-upgrade.md`
-- `.aioson/plans/sdlc-process-upgrade/manifest.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-canonical-paths-and-source-contract.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-sheldon-product-flow.md`
+- `.aioson/context/prd.md`
+- `.aioson/context/discovery.md`
+- `.aioson/context/ui-spec.md`
+- `.aioson/rules/canonical-path-contract.md`
+- `.aioson/rules/disk-first-artifacts.md`
+- `.aioson/rules/data-format-convention.md`
 
 ## Deliverables
-- [ ] Universal path rule or updated path map covers product/process agents
-- [ ] Product prompt/template registers feature and handoff clearly
-- [ ] Sheldon prompt/template selects PRD before early-exit
-- [ ] Text tests or fixture checks cover `docs/pt`, root `plans/`, and Sheldon RF-01
+- [x] `.aioson/context/design-doc.md` exists and defines folder, naming, componentization, reuse, and file-size guidance
+- [x] `template/.aioson/context/design-doc.md` mirrors the distributable baseline
+- [x] Governance rule/template parity is preserved where rules are touched
+- [x] Any stale or inconsistent context value is repaired only when objectively inferable
 
 ## Blockers
 - [none]
 
 ## Notes
-- Do not write operational plans in `docs/pt/`.
-- Do not modify root `plans/` except `plans/source-manifest.md` if source consumption must be recorded.
+- Do not create operational plans in root `plans/` or `docs/pt/`.
+- Use Markdown for governance artifacts; JSON only for machine-consumed contracts.
+- Verification: `Compare-Object` returned no differences between workspace and template design-doc baselines; `aioson parallel:guard . --lane=1 --paths='.aioson/context/design-doc.md,template/.aioson/context/design-doc.md,.aioson/context/project-map.md'` passed.

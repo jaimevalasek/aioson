@@ -28,6 +28,8 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
+Active (in_progress) since 2026-06-02: `quality-governance-baseline-and-new-regression-gate` (SMALL) frames a narrow AIOSON quality-governance MVP: define an AIOSON-native quality result contract, add experimental `aioson quality:audit`, use Fallow as the first Node.js provider, baseline existing debt, and gate only new regressions in changed code. PRD: `.aioson/context/prd-quality-governance-baseline-and-new-regression-gate.md`.
+
 Recently closed (2026-06-01): `cost-context-optimization` (SMALL) shipped measurement/state correctness: paused lifecycle handling, stale workflow reset, scoped `agent:audit`, standalone `skill:audit`, advisory `context:health` drift warnings, and QA Gate D PASS. Report: `.aioson/context/qa-report-cost-context-optimization.md`.
 
 Recently closed (2026-05-30): `cross-tool-project-knowledge` (SMALL) extends `active-learning-loop` with cross-harness project knowledge. Gotcha/resolution capture persists as `type='quality'` + `kind`, `feature:close` materializes `.aioson/learnings/{gotchas,recipes}/` plus `INDEX.md`, AGENTS/CLAUDE/OPENCODE load Project knowledge, `learning --sub=import-from-claude` imports selected Claude memory entries, greenfield setup ships learnings placeholders, and QA Gate D passed with artifacts archived under `.aioson/context/done/cross-tool-project-knowledge/`. PRD: `.aioson/context/done/cross-tool-project-knowledge/prd-cross-tool-project-knowledge.md`.

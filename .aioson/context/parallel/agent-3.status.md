@@ -4,21 +4,22 @@
 - lane: agent-3
 - role: @dev
 - owner: lane-3
-- status: done
+- status: completed
 - priority: high
-- updated_at: 2026-04-24T01:13:55-03:00
+- updated_at: 2026-06-02T05:02:00-03:00
 
 ## Scope
-- Phase 4: Implementation plan ownership
-- Phase 6: Dev execution context
-- Align PM, orchestrator, dev, deyvin, QA prompts/templates and SDD references
-- Make active Sheldon manifest precedence explicit in prompts and state
+- Agent prompt guardrails
+- `@discovery-design-doc` technical plan contract with concrete paths/modules/reuse decisions
+- `@dev` and `@deyvin` must load design-doc before writing files
+- File-size alert over 500 lines, including pair/continuity mode
+- Template-first prompt edits with workspace parity verification
 
 ## Ownership
 - lane_key: lane-3
-- scope_keys: pm-ownership, dev-execution-context, orchestrator-handoff
-- write_scope: PM/orchestrator/dev/deyvin prompts, SDD refs, handoff contract
-- write_paths: .aioson/agents/pm.md, .aioson/agents/orchestrator.md, .aioson/agents/dev.md, .aioson/agents/deyvin.md, .aioson/agents/qa.md, template/.aioson/agents/pm.md, template/.aioson/agents/orchestrator.md, template/.aioson/agents/dev.md, template/.aioson/agents/deyvin.md, template/.aioson/agents/qa.md, .aioson/skills/process/aioson-spec-driven/references/**, template/.aioson/skills/process/aioson-spec-driven/references/**, src/handoff-contract.js
+- scope_keys: agent-prompts, technical-plan-contract, dev-deyvin-guardrails
+- write_scope: official workflow agent prompts and SDD implementation references
+- write_paths: template/.aioson/agents/discovery-design-doc.md, template/.aioson/agents/dev.md, template/.aioson/agents/deyvin.md, template/.aioson/agents/pm.md, template/.aioson/agents/orchestrator.md, template/.aioson/agents/qa.md, .aioson/agents/discovery-design-doc.md, .aioson/agents/dev.md, .aioson/agents/deyvin.md, .aioson/agents/pm.md, .aioson/agents/orchestrator.md, .aioson/agents/qa.md, .aioson/skills/process/aioson-spec-driven/references/**, template/.aioson/skills/process/aioson-spec-driven/references/**
 
 ## Dependencies
 - lane-1
@@ -31,25 +32,22 @@
 
 ## Context package
 - `.aioson/context/project.context.md`
-- `.aioson/context/requirements-sdlc-process-upgrade.md`
-- `.aioson/context/spec-sdlc-process-upgrade.md`
-- `.aioson/context/architecture.md`
-- `.aioson/context/implementation-plan-sdlc-process-upgrade.md`
-- `.aioson/plans/sdlc-process-upgrade/manifest.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-implementation-plan-ownership.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-dev-execution-context.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-handoff-and-preflight-readiness.md`
+- `.aioson/context/prd.md`
+- `.aioson/context/discovery.md`
+- `.aioson/context/ui-spec.md`
+- `.aioson/rules/agent-structural-contract.md`
+- `.aioson/rules/canonical-path-contract.md`
+- `.aioson/skills/process/aioson-spec-driven/SKILL.md`
 
 ## Deliverables
-- [ ] `@pm` is canonical owner of initial MEDIUM implementation plan across prompts/rules/SDD refs
-- [ ] `@orchestrator` consumes requirements and full spec body and requires Gate C
-- [ ] `@dev` and `@deyvin` use active manifest precedence
-- [ ] `handoff-contract.js` agrees with Gate C and PM ownership
-- [ ] Tests cover PM ownership and manifest-vs-plan precedence
+- [x] `@discovery-design-doc` reads PRD, architecture, design-doc, project map, and produces an exact technical plan
+- [x] `@dev` prompt/template records design-doc loaded before edits
+- [x] `@deyvin` continuity mode enforces the same design-doc and file-size alert for touched files
+- [x] Agent prompt edits are made in template first, then synced/verified against workspace
 
 ## Blockers
 - [none]
 
 ## Notes
-- Do not let `@dev` invent the initial implementation plan for MEDIUM.
-- Do not remove the direct-mode escape hatch for small continuity work, but it must respect gates.
+- Do not bypass workflow routing with `@deyvin` for new features or broad changes.
+- Verification: template/workspace parity checks returned no differences for touched agent and SDD reference files; `aioson parallel:guard` passed for lane 3 write paths. `node --test tests/agent-contracts.test.js` still fails on pre-existing `product.md` size target outside lane 3 write scope.

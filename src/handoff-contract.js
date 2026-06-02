@@ -46,6 +46,11 @@ const CONTRACTS = {
     gates: ['B'],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
+  'discovery-design-doc': {
+    artifacts: ['.aioson/context/design-doc.md', '.aioson/context/readiness.md'],
+    gates: [],
+    contextUpdates: ['.aioson/context/project-pulse.md']
+  },
   'ux-ui': {
     artifacts: ['.aioson/context/ui-spec.md'],
     gates: ['B'],

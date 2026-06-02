@@ -14,15 +14,20 @@
     "qa"
   ],
   "current": null,
-  "next": "ux-ui",
+  "next": null,
   "completed": [
     "setup",
     "product",
     "analyst",
-    "architect"
+    "architect",
+    "ux-ui",
+    "pm",
+    "orchestrator",
+    "dev",
+    "qa"
   ],
   "skipped": [],
   "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-01T18:10:29.345Z"
+  "updatedAt": "2026-06-02T04:41:23.548Z"
 }

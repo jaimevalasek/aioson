@@ -184,6 +184,8 @@ module.exports = {
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=pt-BR]',
     help_agent_audit:
       'aioson agent:audit [caminho] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=pt-BR]',
+    help_quality_audit:
+      'aioson quality:audit [caminho] [--feature=<slug>] [--provider-output=<caminho>] [--baseline=<caminho>] [--changed=<arquivo[,arquivo]>] [--json] [--locale=pt-BR]',
     help_squad_dashboard:
       'aioson squad:dashboard [path] [--port=4180] [--squad=<slug>] [--locale=pt-BR]',
     help_squad_worker:

@@ -794,3 +794,60 @@ Se `@dev` encontrar caso que a tabela de exit codes não cobre, retornar 11 (inc
 > **Gate B (Phase 2):** Architecture approved — @dev can proceed.
 > **Gate B (Phase 3):** Architecture approved — @dev can proceed.
 > **Gate B (Phase 4):** Architecture approved — @dev can proceed.
+
+---
+
+# Feature Architecture — Quality Governance Baseline and New Regression Gate
+
+## 1. Architecture Overview
+
+This SMALL feature adds one experimental CLI command, `quality:audit`, backed by an AIOSON-owned result contract. The implementation must keep provider-specific details behind a narrow adapter boundary, write workflow evidence as Markdown, and gate only confirmed new regressions in changed code.
+
+## 2. Folder and Module Structure
+
+```text
+src/
+  commands/
+    quality-audit.js
+  lib/
+    quality/
+      result-contract.js
+      provider-adapter.js
+      baseline-comparison.js
+      report-writer.js
+tests/
+  quality-audit.test.js
+  fixtures/
+    quality/
+```
+
+Keep `src/commands/quality-audit.js` as orchestration only. Reusable normalization, comparison, and report generation logic belongs in `src/lib/quality/` because each part has independent tests and a distinct responsibility.
+
+## 3. Models and Relationships
+
+No database entities are introduced. Logical contracts are:
+- `QualityAuditResult` contains provider metadata, changed-file scope, baseline reference, findings, summary, and advisory messages.
+- `QualityFinding` is normalized from provider/governance/adapter sources and classified as `baseline`, `new`, or `unknown`.
+- `QualityReportArtifact` is the Markdown evidence written to `.aioson/context/quality-report-{slug}.md`.
+
+## 4. Integration Architecture
+
+`quality:audit` reads project context, git/changed-file scope, optional baseline data, local/configured provider output, and applicable governance sources. It must not auto-install Fallow or write raw provider JSON into `.aioson/context/`; provider uncertainty is represented as `warn` with advisory details.
+
+## 5. Cross-Cutting Concerns
+
+Secrets and raw environment values must be redacted from JSON and Markdown output. Missing provider, malformed provider output, missing baseline, no changed files, or docs-only scope should fail open as `warn`; confirmed new regressions in changed code should return `fail`.
+
+## 6. Implementation Sequence for @dev
+
+1. Implement and test the normalized result contract.
+2. Implement baseline-vs-new comparison fixtures.
+3. Add `src/commands/quality-audit.js`, CLI registration, and JSON output.
+4. Add Markdown report writing and governance-source listing.
+5. Run focused `node:test` suites and `node bin/aioson.js quality:audit . --json`.
+
+## 7. Explicit Non-Goals and Deferred Items
+
+No additional `quality:*` commands, no provider auto-install, no broad `.fallowrc`/ignore generation, no automatic refactor/deletion/suppression, and no undocumented machine-readable `.aioson/context/*.json` artifact.
+
+> **Gate B:** Architecture approved — @dev can proceed.

@@ -8,6 +8,7 @@
 
 - `maintenance-and-state.md` — use to write and update `spec-{slug}.md` correctly: `phase_gates`, `last_checkpoint`, `pending_review`, and `Key decisions` format
 - `approval-gates.md` — Gate C (plan approval) must be checked before executing a significant batch; Gate D (execution verification) defines done criteria for each phase
+- For SMALL/MEDIUM work, confirm `.aioson/context/design-doc.md` and `.aioson/context/readiness.md` were produced by `@discovery-design-doc` before implementation starts
 
 ### Load when starting a new feature with classification context
 
@@ -45,3 +46,4 @@ Additionally, at session start for SMALL/MEDIUM:
 - Gate C from `approval-gates.md` means the implementation plan is locked — do not re-discuss pre-taken decisions
 - Gate D verification must happen before marking a phase complete — not just "I think it works"
 - If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
+- If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route to `@discovery-design-doc` instead of coding first

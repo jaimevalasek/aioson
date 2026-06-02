@@ -4,24 +4,24 @@
 - lane: agent-2
 - role: @dev
 - owner: lane-2
-- status: done
+- status: completed
 - priority: high
-- updated_at: 2026-04-24T01:13:55-03:00
+- updated_at: 2026-06-02T04:52:00-03:00
 
 ## Scope
-- Phase 2: Gates and approval UX
-- Phase 3: State continuity and next step
-- Phase 5: Handoff and preflight readiness
-- Add deterministic `gate:approve`
-- Make `artifact:validate`, `preflight`, and workflow dry-run agree on `next_missing` and `next_agent`
+- Workflow routing integration
+- Insert `@discovery-design-doc` as the SMALL/MEDIUM pre-implementation stage
+- Keep `aioson workflow:next` as the single routing motor
+- Ensure CLI/status output exposes active stage, blocker, next command, and artifact path without dashboard dependency
 
 ## Ownership
 - lane_key: lane-2
-- scope_keys: gate-approval, preflight-readiness, workflow-state
-- write_scope: CLI gate/preflight/artifact/workflow commands and i18n help
-- write_paths: src/preflight-engine.js, src/commands/gate-check.js, src/commands/gate-approve.js, src/commands/artifact-validate.js, src/commands/preflight.js, src/commands/workflow-execute.js, src/commands/workflow-status.js, src/cli.js, src/i18n/messages/**
+- scope_keys: workflow-routing, discovery-design-doc-stage, cli-status-ux
+- write_scope: workflow command routing and localized CLI/status output
+- write_paths: src/commands/workflow-next.js, src/commands/workflow-status.js, src/commands/workflow-execute.js, src/commands/preflight.js, src/commands/artifact-validate.js, src/cli.js, src/i18n/messages/**
 
 ## Dependencies
+- lane-1
 - shared-decisions
 
 ## Merge
@@ -30,25 +30,22 @@
 
 ## Context package
 - `.aioson/context/project.context.md`
-- `.aioson/context/requirements-sdlc-process-upgrade.md`
-- `.aioson/context/spec-sdlc-process-upgrade.md`
-- `.aioson/context/architecture.md`
-- `.aioson/context/implementation-plan-sdlc-process-upgrade.md`
-- `.aioson/context/conformance-sdlc-process-upgrade.yaml`
-- `.aioson/plans/sdlc-process-upgrade/plan-gates-and-approval-ux.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-state-continuity-and-next-step.md`
-- `.aioson/plans/sdlc-process-upgrade/plan-handoff-and-preflight-readiness.md`
+- `.aioson/context/prd.md`
+- `.aioson/context/discovery.md`
+- `.aioson/context/ui-spec.md`
+- `.aioson/skills/process/aioson-spec-driven/SKILL.md`
+- `.aioson/skills/process/aioson-spec-driven/references/approval-gates.md`
+- `.aioson/skills/process/aioson-spec-driven/references/classification-map.md`
 
 ## Deliverables
-- [ ] `gate:approve` registered and tested
-- [ ] Gate parser contract is deterministic and documented
-- [ ] `artifact:validate` reports `next_missing` and `next_agent`
-- [ ] `preflight` produces role-aware context packages and no false READY
-- [ ] `workflow:execute` help and dry-run match implemented behavior
+- [x] SMALL/MEDIUM workflow requires discovery-design-doc before significant implementation
+- [x] `workflow:next`, status, preflight, and artifact validation agree on missing artifacts and next agent
+- [x] CLI JSON stays machine-consumable and human output stays concise in supported locales
+- [x] No alternate workflow engine, daemon, or dashboard-only state is introduced
 
 ## Blockers
 - [none]
 
 ## Notes
-- `gate:approve` must not write if `gate:check` would block.
-- `preflight --agent=orchestrator` must include requirements and spec body after this lane.
+- If implementation exposes an unresolved product fork, return to workflow instead of silently deciding.
+- Verification: `node --check` passed for touched workflow/preflight/artifact modules. `node --test tests/workflow-next.test.js tests/workflow-status.test.js tests/preflight-engine.test.js tests/preflight-command.test.js` passed. `node --test tests/artifact-validate.test.js tests/sdlc-process-upgrade-regression.test.js` passed.

@@ -36,6 +36,10 @@ describe('workflow engine hardening — end-to-end', () => {
 
   async function writeSpecAndPlan(dir) {
     await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'features.md'),
+      '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| test-feature | in_progress | 2026-06-02 | — |\n'
+    );
+    await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'spec-test-feature.md'),
       `---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n
 # Spec Test Feature\n`

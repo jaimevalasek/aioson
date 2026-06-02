@@ -98,8 +98,9 @@ test('workflow:status reports effective autonomy mode and pending gate for activ
   assert.equal(result.effectiveMode, 'trusted');
   assert.deepEqual(result.pendingGates, ['C']);
   assert.equal(result.contractCheck.ok, false);
-  assert.equal(result.suggestion.action, 'continue_stage');
-  assert.equal(result.suggestion.command, 'aioson workflow:next . --agent=dev --tool=codex');
+  assert.equal(result.suggestion.action, 'resolve_gate_c');
+  assert.equal(result.suggestion.agent, 'pm');
+  assert.equal(result.suggestion.command, 'aioson workflow:next . --agent=pm --tool=codex');
 });
 
 test('workflow:status --suggest recommends completion when the handoff contract is ready', async () => {
@@ -123,6 +124,11 @@ test('workflow:status --suggest recommends completion when the handoff contract 
 test('workflow:status reconciles stale active stages before building the suggestion', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| secure-by-default | in_progress | 2026-04-28 | — |\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd-secure-by-default.md'), '# PRD\n');
   await writeFileEnsured(
     path.join(dir, '.aioson/context/workflow.state.json'),
     JSON.stringify({

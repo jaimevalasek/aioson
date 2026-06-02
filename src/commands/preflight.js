@@ -110,6 +110,8 @@ async function runPreflight({ args, options = {}, logger }) {
         last_checkpoint: lastCheckpoint
       },
       architecture: { exists: artifacts.architecture.exists },
+      design_doc: { exists: artifacts.design_doc.exists, path: artifacts.design_doc.path || null },
+      readiness: { exists: artifacts.readiness.exists, path: artifacts.readiness.path || null },
       implementation_plan: {
         exists: artifacts.implementation_plan.exists,
         path: artifacts.implementation_plan.path || null,
@@ -185,6 +187,8 @@ async function runPreflight({ args, options = {}, logger }) {
       ? [`spec-${slug}.md`, artifacts.spec.exists, specVersion ? `version: ${specVersion}${lastCheckpoint ? ', last: "' + lastCheckpoint + '"' : ''}` : null]
       : null,
     ['architecture.md', artifacts.architecture.exists, null],
+    ['design-doc.md', artifacts.design_doc.exists, classification === 'MICRO' ? 'SMALL/MEDIUM pre-dev only' : null],
+    ['readiness.md', artifacts.readiness.exists, classification === 'MICRO' ? 'SMALL/MEDIUM pre-dev only' : null],
     slug ? [`implementation-plan-${slug}.md`, artifacts.implementation_plan.exists, artifacts.implementation_plan.exists ? `status: ${artifacts.implementation_plan.frontmatter.status || 'unknown'}` : null] : null,
     slug ? [`conformance-${slug}.yaml`, artifacts.conformance.exists, classification === 'SMALL' || classification === 'MICRO' ? 'MEDIUM only — not required' : null] : null
   ].filter(Boolean);

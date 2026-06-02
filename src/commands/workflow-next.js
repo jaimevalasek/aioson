@@ -30,8 +30,8 @@ const EVENTS_RELATIVE_PATH = '.aioson/context/workflow.events.jsonl';
 
 const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MICRO: ['product', 'dev', 'qa'],
-  SMALL: ['product', 'analyst', 'dev', 'qa'],
-  MEDIUM: ['product', 'analyst', 'dev', 'pentester', 'qa']
+  SMALL: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'pentester', 'qa']
 };
 
 function normalizeAgentName(input) {
@@ -52,8 +52,8 @@ function buildDefaultWorkflowConfig() {
     version: 1,
     project: {
       MICRO: ['setup', 'dev'],
-      SMALL: ['setup', 'product', 'analyst', 'architect', 'dev', 'qa'],
-      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'ux-ui', 'pm', 'orchestrator', 'dev', 'qa']
+      SMALL: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,
     rules: {
@@ -250,6 +250,12 @@ async function validateStageArtifacts(targetDir, state, stage) {
 
   if (stage === 'ux-ui') {
     return await exists(path.join(base, 'ui-spec.md'));
+  }
+
+  if (stage === 'discovery-design-doc') {
+    const designDoc = path.join(base, 'design-doc.md');
+    const readiness = path.join(base, 'readiness.md');
+    return (await exists(designDoc)) && (await exists(readiness));
   }
 
   if (stage === 'orchestrator') {
@@ -822,6 +828,103 @@ async function ensureFeatureDossier(targetDir, state) {
   }
 }
 
+async function readTextIfExists(filePath) {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+function parseDevStateContextPackage(raw) {
+  if (!raw) return [];
+  const section = raw.match(/## Context package\r?\n\r?\n([\s\S]*?)(?:\r?\n\r?\n## |\s*$)/);
+  if (!section) return [];
+  return section[1]
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.trim().match(/^\d+\.\s+(.+)$/);
+      return match ? match[1].trim() : null;
+    })
+    .filter(Boolean);
+}
+
+function normalizeContextDependency(relPath) {
+  const cleaned = String(relPath || '').trim().replace(/\\/g, '/');
+  if (!cleaned) return null;
+  if (cleaned.startsWith('.aioson/')) return cleaned;
+  return `.aioson/context/${cleaned}`;
+}
+
+async function resolveStageDependencies(targetDir, state, stageName, agent) {
+  if (stageName === 'discovery-design-doc') {
+    const contextDir = path.join(targetDir, '.aioson', 'context');
+    const slug = state.featureSlug;
+    const candidates = [
+      'project.context.md',
+      slug ? `prd-${slug}.md` : 'prd.md',
+      slug ? `requirements-${slug}.md` : 'discovery.md',
+      slug ? `spec-${slug}.md` : 'spec.md',
+      'architecture.md',
+      'design-doc.md',
+      'project-map.md'
+    ].filter(Boolean);
+    const existing = [];
+    for (const candidate of candidates) {
+      if (await exists(path.join(contextDir, candidate))) {
+        existing.push(normalizeContextDependency(candidate));
+      }
+    }
+    return existing.length > 0 ? existing : agent.dependsOn;
+  }
+
+  if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) {
+    return agent.dependsOn;
+  }
+
+  const contextDir = path.join(targetDir, '.aioson', 'context');
+  const devStatePath = path.join(contextDir, 'dev-state.md');
+  const devStateRaw = await readTextIfExists(devStatePath);
+  const devStatePackage = parseDevStateContextPackage(devStateRaw)
+    .map(normalizeContextDependency)
+    .filter(Boolean);
+
+  if (devStatePackage.length > 0) {
+    return Array.from(new Set(['.aioson/context/dev-state.md', ...devStatePackage]));
+  }
+
+  const slug = state.featureSlug;
+  const candidates = [
+    'project.context.md',
+    `prd-${slug}.md`,
+    `requirements-${slug}.md`,
+    `spec-${slug}.md`,
+    'design-doc.md',
+    'readiness.md',
+    `implementation-plan-${slug}.md`
+  ];
+  const existing = [];
+  for (const candidate of candidates) {
+    if (await exists(path.join(contextDir, candidate))) {
+      existing.push(normalizeContextDependency(candidate));
+    }
+  }
+  return existing.length > 0 ? existing : agent.dependsOn;
+}
+
+function buildStageActivationContext(state, stageName, dependencies) {
+  if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) return '';
+  return [
+    `Feature slug: ${state.featureSlug}`,
+    `Workflow mode: ${state.mode}`,
+    `Classification: ${state.classification || 'unknown'}`,
+    dependencies.includes('.aioson/context/dev-state.md')
+      ? 'Resume source: .aioson/context/dev-state.md'
+      : 'Resume source: active feature artifacts'
+  ].join('\n');
+}
+
 async function activateStage(targetDir, state, locale, tool, explicitAgent = null, requestedMode = null) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
   if (!stageName) {
@@ -922,12 +1025,15 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
   });
 
   const instructionPath = await resolveExistingInstructionPath(targetDir, agent, locale);
+  const dependencies = await resolveStageDependencies(targetDir, state, stageName, agent);
   let prompt = buildAgentPrompt(agent, tool, {
     instructionPath,
     targetDir,
     interactionLanguage: locale,
     autonomyMode: effectiveMode,
-    capabilitySummary: buildAgentCapabilitySummary(agentManifest, tool)
+    capabilitySummary: buildAgentCapabilitySummary(agentManifest, tool),
+    dependsOn: dependencies,
+    activationContext: buildStageActivationContext(state, stageName, dependencies)
   });
 
   if (testBriefing) {

@@ -1,54 +1,54 @@
 {
   "version": 1,
-  "generated_at": "2026-04-24T04:17:11.992Z",
+  "generated_at": "2026-06-02T04:13:08.094Z",
   "lanes": [
     {
       "lane": 1,
       "lane_key": "lane-1",
       "owner": "lane-1",
       "scope_labels": [
-        "Phase 1: Canonical paths and source contract",
-        "Phase 7: Product and Sheldon flow",
-        "Keep docs/pt/ as system documentation only",
-        "Keep root plans/ as source-only material",
-        "Fix Product and Sheldon handoffs so the next agent, reason, artifacts, and pass criteria are explicit"
+        "Design governance baseline",
+        "Permanent project design-doc contract for SMALL/MEDIUM execution",
+        "Template/workspace parity for design-doc and governance rules",
+        "Resolve the objective design-doc base location from existing project artifacts: project-wide baseline at .aioson/context/design-doc.md, mirrored in template/.aioson/context/design-doc.md"
       ],
       "scope_keys": [
-        "phase-1-canonical-paths-and-source-contract",
-        "phase-7-product-and-sheldon-flow",
-        "keep-docs-pt-as-system-documentation-only",
-        "keep-root-plans-as-source-only-material",
-        "fix-product-and-sheldon-handoffs-so-the-next-agent-reason-artifacts-and-pass-criteria-are-explicit"
+        "design-governance-baseline",
+        "permanent-project-design-doc-contract-for-small-medium-execution",
+        "template-workspace-parity-for-design-doc-and-governance-rules",
+        "resolve-the-objective-design-doc-base-location-from-existing-project-artifacts-project-wide-baseline-at-aioson-context-design-doc-md-mirrored-in-template-aioson-context-design-doc-md"
       ],
       "write_paths": [
+        ".aioson/context/design-doc.md",
+        "template/.aioson/context/design-doc.md",
         ".aioson/rules/**",
-        ".aioson/context/project-map.md",
-        ".aioson/agents/product.md",
-        ".aioson/agents/sheldon.md",
-        "template/.aioson/agents/product.md",
-        "template/.aioson/agents/sheldon.md",
-        "template/.aioson/rules/**"
+        "template/.aioson/rules/**",
+        ".aioson/context/project-map.md"
       ],
       "write_scope": [
         {
           "type": "scope_label",
-          "value": "Phase 1: Canonical paths and source contract"
+          "value": "Design governance baseline"
         },
         {
           "type": "scope_label",
-          "value": "Phase 7: Product and Sheldon flow"
+          "value": "Permanent project design-doc contract for SMALL/MEDIUM execution"
         },
         {
           "type": "scope_label",
-          "value": "Keep docs/pt/ as system documentation only"
+          "value": "Template/workspace parity for design-doc and governance rules"
         },
         {
           "type": "scope_label",
-          "value": "Keep root plans/ as source-only material"
+          "value": "Resolve the objective design-doc base location from existing project artifacts: project-wide baseline at .aioson/context/design-doc.md, mirrored in template/.aioson/context/design-doc.md"
         },
         {
-          "type": "scope_label",
-          "value": "Fix Product and Sheldon handoffs so the next agent, reason, artifacts, and pass criteria are explicit"
+          "type": "path_pattern",
+          "value": ".aioson/context/design-doc.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": "template/.aioson/context/design-doc.md"
         },
         {
           "type": "path_pattern",
@@ -56,27 +56,11 @@
         },
         {
           "type": "path_pattern",
-          "value": ".aioson/context/project-map.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/product.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/sheldon.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": "template/.aioson/agents/product.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": "template/.aioson/agents/sheldon.md"
-        },
-        {
-          "type": "path_pattern",
           "value": "template/.aioson/rules/**"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/context/project-map.md"
         }
       ],
       "depends_on": [
@@ -88,70 +72,50 @@
       "lane_key": "lane-2",
       "owner": "lane-2",
       "scope_labels": [
-        "Phase 2: Gates and approval UX",
-        "Phase 3: State continuity and next step",
-        "Phase 5: Handoff and preflight readiness",
-        "Add deterministic gate:approve",
-        "Make artifact:validate, preflight, and workflow dry-run agree on nextmissing and nextagent"
+        "Workflow routing integration",
+        "Insert @discovery-design-doc as the SMALL/MEDIUM pre-implementation stage",
+        "Keep aioson workflow:next as the single routing motor",
+        "Ensure CLI/status output exposes active stage, blocker, next command, and artifact path without dashboard dependency"
       ],
       "scope_keys": [
-        "phase-2-gates-and-approval-ux",
-        "phase-3-state-continuity-and-next-step",
-        "phase-5-handoff-and-preflight-readiness",
-        "add-deterministic-gate-approve",
-        "make-artifact-validate-preflight-and-workflow-dry-run-agree-on-nextmissing-and-nextagent"
+        "workflow-routing-integration",
+        "insert-discovery-design-doc-as-the-small-medium-pre-implementation-stage",
+        "keep-aioson-workflow-next-as-the-single-routing-motor",
+        "ensure-cli-status-output-exposes-active-stage-blocker-next-command-and-artifact-path-without-dashboard-dependency"
       ],
       "write_paths": [
-        "src/preflight-engine.js",
-        "src/commands/gate-check.js",
-        "src/commands/gate-approve.js",
-        "src/commands/artifact-validate.js",
-        "src/commands/preflight.js",
-        "src/commands/workflow-execute.js",
+        "src/commands/workflow-next.js",
         "src/commands/workflow-status.js",
+        "src/commands/workflow-execute.js",
+        "src/commands/preflight.js",
+        "src/commands/artifact-validate.js",
         "src/cli.js",
         "src/i18n/messages/**"
       ],
       "write_scope": [
         {
           "type": "scope_label",
-          "value": "Phase 2: Gates and approval UX"
+          "value": "Workflow routing integration"
         },
         {
           "type": "scope_label",
-          "value": "Phase 3: State continuity and next step"
+          "value": "Insert @discovery-design-doc as the SMALL/MEDIUM pre-implementation stage"
         },
         {
           "type": "scope_label",
-          "value": "Phase 5: Handoff and preflight readiness"
+          "value": "Keep aioson workflow:next as the single routing motor"
         },
         {
           "type": "scope_label",
-          "value": "Add deterministic gate:approve"
-        },
-        {
-          "type": "scope_label",
-          "value": "Make artifact:validate, preflight, and workflow dry-run agree on nextmissing and nextagent"
+          "value": "Ensure CLI/status output exposes active stage, blocker, next command, and artifact path without dashboard dependency"
         },
         {
           "type": "path_pattern",
-          "value": "src/preflight-engine.js"
+          "value": "src/commands/workflow-next.js"
         },
         {
           "type": "path_pattern",
-          "value": "src/commands/gate-check.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/gate-approve.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/artifact-validate.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/preflight.js"
+          "value": "src/commands/workflow-status.js"
         },
         {
           "type": "path_pattern",
@@ -159,7 +123,11 @@
         },
         {
           "type": "path_pattern",
-          "value": "src/commands/workflow-status.js"
+          "value": "src/commands/preflight.js"
+        },
+        {
+          "type": "path_pattern",
+          "value": "src/commands/artifact-validate.js"
         },
         {
           "type": "path_pattern",
@@ -171,6 +139,7 @@
         }
       ],
       "depends_on": [
+        "lane-1",
         "shared-decisions"
       ]
     },
@@ -179,76 +148,59 @@
       "lane_key": "lane-3",
       "owner": "lane-3",
       "scope_labels": [
-        "Phase 4: Implementation plan ownership",
-        "Phase 6: Dev execution context",
-        "Align PM, orchestrator, dev, deyvin, QA prompts/templates and SDD references",
-        "Make active Sheldon manifest precedence explicit in prompts and state"
+        "Agent prompt guardrails",
+        "@discovery-design-doc technical plan contract with concrete paths/modules/reuse decisions",
+        "@dev and @deyvin must load design-doc before writing files",
+        "File-size alert over 500 lines, including pair/continuity mode",
+        "Template-first prompt edits with workspace parity verification"
       ],
       "scope_keys": [
-        "phase-4-implementation-plan-ownership",
-        "phase-6-dev-execution-context",
-        "align-pm-orchestrator-dev-deyvin-qa-prompts-templates-and-sdd-references",
-        "make-active-sheldon-manifest-precedence-explicit-in-prompts-and-state"
+        "agent-prompt-guardrails",
+        "discovery-design-doc-technical-plan-contract-with-concrete-paths-modules-reuse-decisions",
+        "dev-and-deyvin-must-load-design-doc-before-writing-files",
+        "file-size-alert-over-500-lines-including-pair-continuity-mode",
+        "template-first-prompt-edits-with-workspace-parity-verification"
       ],
       "write_paths": [
-        ".aioson/agents/pm.md",
-        ".aioson/agents/orchestrator.md",
-        ".aioson/agents/dev.md",
-        ".aioson/agents/deyvin.md",
-        ".aioson/agents/qa.md",
-        "template/.aioson/agents/pm.md",
-        "template/.aioson/agents/orchestrator.md",
+        "template/.aioson/agents/discovery-design-doc.md",
         "template/.aioson/agents/dev.md",
         "template/.aioson/agents/deyvin.md",
+        "template/.aioson/agents/pm.md",
+        "template/.aioson/agents/orchestrator.md",
         "template/.aioson/agents/qa.md",
+        ".aioson/agents/discovery-design-doc.md",
+        ".aioson/agents/dev.md",
+        ".aioson/agents/deyvin.md",
+        ".aioson/agents/pm.md",
+        ".aioson/agents/orchestrator.md",
+        ".aioson/agents/qa.md",
         ".aioson/skills/process/aioson-spec-driven/references/**",
-        "template/.aioson/skills/process/aioson-spec-driven/references/**",
-        "src/handoff-contract.js"
+        "template/.aioson/skills/process/aioson-spec-driven/references/**"
       ],
       "write_scope": [
         {
           "type": "scope_label",
-          "value": "Phase 4: Implementation plan ownership"
+          "value": "Agent prompt guardrails"
         },
         {
           "type": "scope_label",
-          "value": "Phase 6: Dev execution context"
+          "value": "@discovery-design-doc technical plan contract with concrete paths/modules/reuse decisions"
         },
         {
           "type": "scope_label",
-          "value": "Align PM, orchestrator, dev, deyvin, QA prompts/templates and SDD references"
+          "value": "@dev and @deyvin must load design-doc before writing files"
         },
         {
           "type": "scope_label",
-          "value": "Make active Sheldon manifest precedence explicit in prompts and state"
+          "value": "File-size alert over 500 lines, including pair/continuity mode"
+        },
+        {
+          "type": "scope_label",
+          "value": "Template-first prompt edits with workspace parity verification"
         },
         {
           "type": "path_pattern",
-          "value": ".aioson/agents/pm.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/orchestrator.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/dev.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/deyvin.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/qa.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": "template/.aioson/agents/pm.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": "template/.aioson/agents/orchestrator.md"
+          "value": "template/.aioson/agents/discovery-design-doc.md"
         },
         {
           "type": "path_pattern",
@@ -260,7 +212,39 @@
         },
         {
           "type": "path_pattern",
+          "value": "template/.aioson/agents/pm.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": "template/.aioson/agents/orchestrator.md"
+        },
+        {
+          "type": "path_pattern",
           "value": "template/.aioson/agents/qa.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/discovery-design-doc.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/dev.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/deyvin.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/pm.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/orchestrator.md"
+        },
+        {
+          "type": "path_pattern",
+          "value": ".aioson/agents/qa.md"
         },
         {
           "type": "path_pattern",
@@ -269,10 +253,6 @@
         {
           "type": "path_pattern",
           "value": "template/.aioson/skills/process/aioson-spec-driven/references/**"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/handoff-contract.js"
         }
       ],
       "depends_on": [
@@ -286,87 +266,50 @@
       "lane_key": "lane-4",
       "owner": "lane-4",
       "scope_labels": [
-        "Phase 8: Memory, observability, docs and regression tests",
-        "Complete bootstrap refresh behavior",
-        "Validate devlog processing against fixtures",
-        "Align runtime/pulse recovery records",
-        "Update docs only after behavior is implemented",
-        "Run and extend regression tests"
+        "Regression tests and rollout evidence",
+        "Verify AC-01 through AC-08 via local commands and disk artifacts",
+        "Add or update focused tests for workflow routing, prompt contracts, design-doc parity, and CLI/report UX",
+        "Update public docs only after implemented behavior exists"
       ],
       "scope_keys": [
-        "phase-8-memory-observability-docs-and-regression-tests",
-        "complete-bootstrap-refresh-behavior",
-        "validate-devlog-processing-against-fixtures",
-        "align-runtime-pulse-recovery-records",
-        "update-docs-only-after-behavior-is-implemented",
-        "run-and-extend-regression-tests"
+        "regression-tests-and-rollout-evidence",
+        "verify-ac-01-through-ac-08-via-local-commands-and-disk-artifacts",
+        "add-or-update-focused-tests-for-workflow-routing-prompt-contracts-design-doc-parity-and-cli-report-ux",
+        "update-public-docs-only-after-implemented-behavior-exists"
       ],
       "write_paths": [
-        ".aioson/agents/discover.md",
-        "template/.aioson/agents/discover.md",
-        ".aioson/context/bootstrap/**",
-        "src/commands/devlog-process.js",
-        "src/commands/runtime.js",
-        "src/commands/pulse-update.js",
-        "docs/pt/**",
-        "test/**"
+        "test/**",
+        "tests/**",
+        "docs/pt/**"
       ],
       "write_scope": [
         {
           "type": "scope_label",
-          "value": "Phase 8: Memory, observability, docs and regression tests"
+          "value": "Regression tests and rollout evidence"
         },
         {
           "type": "scope_label",
-          "value": "Complete bootstrap refresh behavior"
+          "value": "Verify AC-01 through AC-08 via local commands and disk artifacts"
         },
         {
           "type": "scope_label",
-          "value": "Validate devlog processing against fixtures"
+          "value": "Add or update focused tests for workflow routing, prompt contracts, design-doc parity, and CLI/report UX"
         },
         {
           "type": "scope_label",
-          "value": "Align runtime/pulse recovery records"
-        },
-        {
-          "type": "scope_label",
-          "value": "Update docs only after behavior is implemented"
-        },
-        {
-          "type": "scope_label",
-          "value": "Run and extend regression tests"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/agents/discover.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": "template/.aioson/agents/discover.md"
-        },
-        {
-          "type": "path_pattern",
-          "value": ".aioson/context/bootstrap/**"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/devlog-process.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/runtime.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "src/commands/pulse-update.js"
-        },
-        {
-          "type": "path_pattern",
-          "value": "docs/pt/**"
+          "value": "Update public docs only after implemented behavior exists"
         },
         {
           "type": "path_pattern",
           "value": "test/**"
+        },
+        {
+          "type": "path_pattern",
+          "value": "tests/**"
+        },
+        {
+          "type": "path_pattern",
+          "value": "docs/pt/**"
         }
       ],
       "depends_on": [

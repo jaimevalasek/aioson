@@ -110,6 +110,16 @@ async function buildKeyArtifacts(targetDir, state) {
       file: '.aioson/context/architecture.md'
     },
     {
+      id: 'design_doc',
+      label: 'design-doc.md',
+      file: '.aioson/context/design-doc.md'
+    },
+    {
+      id: 'readiness',
+      label: 'readiness.md',
+      file: '.aioson/context/readiness.md'
+    },
+    {
       id: 'ui_spec',
       label: 'ui-spec.md',
       file: '.aioson/context/ui-spec.md'
@@ -159,6 +169,18 @@ function extractPendingGates(contractCheck) {
   return Array.from(new Set(gates));
 }
 
+function isGateCPlanBlocker(contractCheck) {
+  if (!contractCheck || !Array.isArray(contractCheck.missing)) return false;
+  return contractCheck.missing.some((item) => {
+    const text = String(item || '').toLowerCase();
+    return (
+      text.includes('gate c not approved') ||
+      text.includes('gate_plan_not_approved') ||
+      text.includes('implementation-plan')
+    );
+  });
+}
+
 function buildSuggestion({
   contextValid,
   state,
@@ -204,6 +226,16 @@ function buildSuggestion({
   }
 
   if (contractCheck && Array.isArray(contractCheck.missing) && contractCheck.missing.length > 0) {
+    if (focusStage === 'dev' && state.mode === 'feature' && state.featureSlug && isGateCPlanBlocker(contractCheck)) {
+      return {
+        action: 'resolve_gate_c',
+        agent: 'pm',
+        command: `aioson workflow:next . --agent=pm --tool=${safeTool}`,
+        reason: `@dev is blocked by Gate C: implementation plan is missing or not approved. Run @pm first.`,
+        details: [...contractCheck.missing]
+      };
+    }
+
     return {
       action: 'continue_stage',
       agent: focusStage,

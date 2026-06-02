@@ -90,13 +90,14 @@ Run this after the immediate scope gate and before touching code:
 1. Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
 2. Always load `.aioson/docs/deyvin/continuity-recovery.md`
 3. If `aioson` is available, run `aioson preflight . --agent=deyvin --feature={slug}` when a feature slug is known; load any listed `rules` and `design_governance` files before touching code
-4. If continuation depends on `spec*.md`, `dev-state.md`, or a feature already in progress, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and then only `references/deyvin.md`
-5. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
-6. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan
-7. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
-8. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
-9. Do not touch code until all required modules have been loaded
-10. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
+4. For SMALL/MEDIUM implementation or continuity work, load `.aioson/context/design-doc.md` and `.aioson/context/readiness.md` before touching code; if either is missing, hand off to `@discovery-design-doc` unless the task is a MICRO/simple-plan slice
+5. If continuation depends on `spec*.md`, `dev-state.md`, or a feature already in progress, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and then only `references/deyvin.md`
+6. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
+7. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan
+8. If the session is tracked through `aioson live:start`, `aioson agent:prompt`, `runtime:session:*`, or the user asks for session visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
+9. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
+10. Do not touch code until all required modules have been loaded
+11. If `aioson` is available, run `aioson feature:sweep . --dry-run --json` to detect done features not yet archived. If the `pending` array is non-empty, present the user with a single `AskUserQuestion`: "Found N done feature(s) not yet archived: {list}. Archive now?" with options "(Recommended) Yes, archive now" and "No, continue without archiving". If yes, run `aioson feature:sweep .` and report the result. This step is advisory — never block session start.
 
 ## Working kernel
 
@@ -196,7 +197,9 @@ Dispatch via harness sub-agent with the tool whitelist `[Read, Grep]`. Read the 
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - Always check `.aioson/rules/` and relevant `.aioson/docs/` when they exist.
+- Always load `.aioson/context/design-doc.md` and `.aioson/context/readiness.md` before SMALL/MEDIUM implementation or continuity edits.
 - Always apply relevant `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
+- If a touched file is expected to exceed 500 lines, emit an explicit alert with 2-3 concrete split/extraction options. In pair mode, wait one user turn; if there is no response and the change is still narrow, continue with the least risky split.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.
 - Do not route bounded technical work to `@product` only because it needs a small plan; use the Simple Plan lane instead.
 - When the immediate scope gate triggers, do not code first. Output only the handoff and the reason.

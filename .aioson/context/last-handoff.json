@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-01T18:10:03.156Z",
+  "session_ended_at": "2026-06-02T04:41:23.803Z",
   "last_agent": "@qa",
   "last_stage": "qa",
   "what_was_done": "Stage @qa completed.",
@@ -8,7 +8,16 @@
   "next_agent": null,
   "open_decisions": [],
   "context_files_updated": [],
-  "workflow_mode": "feature",
-  "classification": "SMALL",
-  "feature_slug": "cost-context-optimization"
+  "workflow_mode": "project",
+  "classification": "MEDIUM",
+  "feature_slug": null,
+  "decision_rationale": [
+    {
+      "agent": "unknown",
+      "decision": "telemetry-1780375199816",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    }
+  ]
 }

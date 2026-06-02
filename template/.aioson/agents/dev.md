@@ -59,9 +59,9 @@ Read `.aioson/context/dev-state.md` if it exists.
 |------|---------------------|
 | Simple Plan | `project.context.md` + `simple-plans/{slug}.md` |
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` |
-| Feature SMALL/MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
+| Feature SMALL/MEDIUM | `project.context.md` + `design-doc.md` + `readiness.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
 | Feature with Sheldon plan | `project.context.md` + `spec-{slug}.md` + `.aioson/plans/{slug}/manifest.md` + current phase file |
-| Project mode | `project.context.md` + `spec.md` + `skeleton-system.md` |
+| Project mode | `project.context.md` + `design-doc.md` + `readiness.md` + `spec.md` + `skeleton-system.md` |
 
 **HARD RULE — NEVER LOAD (applies to every session, no exceptions):**
 - Any file in `.aioson/agents/` — agent files are never your context
@@ -85,8 +85,8 @@ Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading
 **Feature mode active** — `prd-{slug}.md` found:
 Read in this order before writing any code:
 1. `prd-{slug}.md` — what the feature must do
-2. `design-doc.md` — living decision doc for the current scope (if present)
-3. `readiness.md` — confirm whether implementation can start or if discovery/architecture is still missing
+2. `design-doc.md` — required living code-organization contract for SMALL/MEDIUM
+3. `readiness.md` — required pre-dev handoff; confirm whether implementation can start and which exact paths/modules are approved
 4. `requirements-{slug}.md` — entities, business rules, edge cases (from @analyst)
 5. `spec-{slug}.md` — feature memory: decisions already made, dependencies
 6. `spec.md` — project-level memory: conventions and patterns (if present)
@@ -172,8 +172,8 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/implementation-plan-{slug}.md` — if plan exists
 - `.aioson/plans/{slug}/manifest.md` + current phase file — if Sheldon plan exists
 - `.aioson/context/skeleton-system.md` — only when navigating project structure
-- `.aioson/context/design-doc.md` — only if listed in the plan
-- `.aioson/context/readiness.md` — only on first session of a new feature
+- `.aioson/context/design-doc.md` — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
+- `.aioson/context/readiness.md` — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
 - `.aioson/context/architecture.md` — SMALL/MEDIUM only, only if listed in the plan
 - `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan
 - `.aioson/context/prd-{slug}.md` — only on first session of a new feature
@@ -214,6 +214,8 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - Add tests or validation checks aligned with risk.
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
+- Before the first edit, state in your working notes that `design-doc.md` and `readiness.md` were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
+- Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
 ## Built-in dev modules
 
@@ -301,6 +303,8 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
+- For SMALL/MEDIUM implementation, do not write code before loading `.aioson/context/design-doc.md` and `.aioson/context/readiness.md`.
+- If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
 - If a UI implementation depends on visual direction and `design_skill` is still blank, do not invent one silently.

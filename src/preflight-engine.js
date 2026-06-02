@@ -248,6 +248,8 @@ async function scanArtifacts(targetDir, slug) {
     requirements: slug ? await check('requirements', path.join(dir, `requirements-${slug}.md`)) : { exists: false },
     spec: slug ? await check('spec', path.join(dir, `spec-${slug}.md`)) : await check('spec', path.join(dir, 'spec.md')),
     architecture: await check('architecture', path.join(dir, 'architecture.md')),
+    design_doc: await check('design-doc', path.join(dir, 'design-doc.md')),
+    readiness: await check('readiness', path.join(dir, 'readiness.md')),
     implementation_plan: slug ? await check('impl-plan', path.join(dir, `implementation-plan-${slug}.md`)) : { exists: false },
     conformance: slug ? await check('conformance', path.join(dir, `conformance-${slug}.yaml`)) : { exists: false },
     dev_state: await check('dev-state', path.join(dir, 'dev-state.md')),
@@ -449,11 +451,13 @@ async function discoverDesignDocs(targetDir, agent) {
 
 function buildContextPackage(agent, slug, classification, artifacts, devState, manifest) {
   const pkg = [];
+  const designDoc = artifacts.design_doc || { exists: false };
+  const readiness = artifacts.readiness || { exists: false };
 
   if (artifacts.project_context.exists) pkg.push(artifacts.project_context.path);
 
   if (slug) {
-    const downstreamAgents = ['pm', 'orchestrator', 'dev', 'deyvin', 'qa'];
+    const downstreamAgents = ['discovery-design-doc', 'pm', 'orchestrator', 'dev', 'deyvin', 'qa'];
     const shouldCarryFullFeatureContext = downstreamAgents.includes(agent);
 
     if (shouldCarryFullFeatureContext && artifacts.prd.exists) pkg.push(artifacts.prd.path);
@@ -465,6 +469,8 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
     if (artifacts.spec.exists) pkg.push(artifacts.spec.path);
 
     if (shouldCarryFullFeatureContext && artifacts.architecture.exists) pkg.push(artifacts.architecture.path);
+    if (shouldCarryFullFeatureContext && designDoc.exists) pkg.push(designDoc.path);
+    if (shouldCarryFullFeatureContext && readiness.exists) pkg.push(readiness.path);
     if (shouldCarryFullFeatureContext && artifacts.conformance.exists) pkg.push(artifacts.conformance.path);
 
     // Manifest precedence (AC-SDLC-24, AC-SDLC-25):
@@ -590,6 +596,8 @@ function parseFeaturesMap(content) {
 function evaluateReadiness(artifacts, phaseGates, classification, agent, devState, slug) {
   const blockers = [];
   const warnings = [];
+  const designDoc = artifacts.design_doc || { exists: false };
+  const readiness = artifacts.readiness || { exists: false };
 
   if (!artifacts.project_context.exists) blockers.push('project.context.md missing');
 
@@ -623,6 +631,15 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
     }
   }
 
+  if (agent === 'discovery-design-doc') {
+    if (!artifacts.architecture.exists) {
+      blockers.push('architecture.md missing — @architect must complete design first (Gate B)');
+    }
+    if (!designDoc.exists) {
+      warnings.push('design-doc.md missing — @discovery-design-doc must create the project baseline before implementation');
+    }
+  }
+
   if (agent === 'orchestrator') {
     if (!artifacts.requirements.exists) {
       blockers.push('requirements file missing — Gate A not satisfied');
@@ -643,6 +660,14 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
 
   if (agent === 'dev' || agent === 'deyvin') {
     if (!artifacts.spec.exists) blockers.push('spec file missing');
+    if (classification && classification !== 'MICRO') {
+      if (!designDoc.exists) {
+        blockers.push('design-doc.md missing — @discovery-design-doc must run before implementation');
+      }
+      if (!readiness.exists) {
+        blockers.push('readiness.md missing — @discovery-design-doc must run before implementation');
+      }
+    }
     if (classification === 'MEDIUM') {
       const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };
       if (!implementationPlan.exists) {

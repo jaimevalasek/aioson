@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-04-24T04:17:11.992Z",
+  "generated_at": "2026-06-02T04:13:08.094Z",
   "source_file": null,
   "strategy": "lane-index-asc",
   "conflict_policy": "shared-decisions-first",
@@ -16,11 +16,10 @@
       "lane_key": "lane-1",
       "merge_rank": 1,
       "scope_keys": [
-        "phase-1-canonical-paths-and-source-contract",
-        "phase-7-product-and-sheldon-flow",
-        "keep-docs-pt-as-system-documentation-only",
-        "keep-root-plans-as-source-only-material",
-        "fix-product-and-sheldon-handoffs-so-the-next-agent-reason-artifacts-and-pass-criteria-are-explicit"
+        "design-governance-baseline",
+        "permanent-project-design-doc-contract-for-small-medium-execution",
+        "template-workspace-parity-for-design-doc-and-governance-rules",
+        "resolve-the-objective-design-doc-base-location-from-existing-project-artifacts-project-wide-baseline-at-aioson-context-design-doc-md-mirrored-in-template-aioson-context-design-doc-md"
       ],
       "depends_on": [
         "shared-decisions"
@@ -31,13 +30,13 @@
       "lane_key": "lane-2",
       "merge_rank": 2,
       "scope_keys": [
-        "phase-2-gates-and-approval-ux",
-        "phase-3-state-continuity-and-next-step",
-        "phase-5-handoff-and-preflight-readiness",
-        "add-deterministic-gate-approve",
-        "make-artifact-validate-preflight-and-workflow-dry-run-agree-on-nextmissing-and-nextagent"
+        "workflow-routing-integration",
+        "insert-discovery-design-doc-as-the-small-medium-pre-implementation-stage",
+        "keep-aioson-workflow-next-as-the-single-routing-motor",
+        "ensure-cli-status-output-exposes-active-stage-blocker-next-command-and-artifact-path-without-dashboard-dependency"
       ],
       "depends_on": [
+        "lane-1",
         "shared-decisions"
       ]
     },
@@ -46,10 +45,11 @@
       "lane_key": "lane-3",
       "merge_rank": 3,
       "scope_keys": [
-        "phase-4-implementation-plan-ownership",
-        "phase-6-dev-execution-context",
-        "align-pm-orchestrator-dev-deyvin-qa-prompts-templates-and-sdd-references",
-        "make-active-sheldon-manifest-precedence-explicit-in-prompts-and-state"
+        "agent-prompt-guardrails",
+        "discovery-design-doc-technical-plan-contract-with-concrete-paths-modules-reuse-decisions",
+        "dev-and-deyvin-must-load-design-doc-before-writing-files",
+        "file-size-alert-over-500-lines-including-pair-continuity-mode",
+        "template-first-prompt-edits-with-workspace-parity-verification"
       ],
       "depends_on": [
         "lane-1",
@@ -62,12 +62,10 @@
       "lane_key": "lane-4",
       "merge_rank": 4,
       "scope_keys": [
-        "phase-8-memory-observability-docs-and-regression-tests",
-        "complete-bootstrap-refresh-behavior",
-        "validate-devlog-processing-against-fixtures",
-        "align-runtime-pulse-recovery-records",
-        "update-docs-only-after-behavior-is-implemented",
-        "run-and-extend-regression-tests"
+        "regression-tests-and-rollout-evidence",
+        "verify-ac-01-through-ac-08-via-local-commands-and-disk-artifacts",
+        "add-or-update-focused-tests-for-workflow-routing-prompt-contracts-design-doc-parity-and-cli-report-ux",
+        "update-public-docs-only-after-implemented-behavior-exists"
       ],
       "depends_on": [
         "lane-1",
