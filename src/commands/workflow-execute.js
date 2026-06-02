@@ -45,6 +45,7 @@ const STEP_META = {
   product: { description: 'Generate PRD', gate_before: null, gate_after: null },
   analyst: { description: 'Map requirements + spec', gate_before: null, gate_after: 'A' },
   architect: { description: 'Architecture design', gate_before: 'A', gate_after: 'B' },
+  'discovery-design-doc': { description: 'Prepare design-doc and readiness contract', gate_before: 'B', gate_after: null },
   'ux-ui': { description: 'UI/UX design', gate_before: 'A', gate_after: 'B', optional: true },
   pm: { description: 'Backlog + PM plan', gate_before: 'B', gate_after: 'C' },
   orchestrator: { description: 'Coordinate execution lanes', gate_before: 'C', gate_after: null },
@@ -89,6 +90,10 @@ function normalizeClassification(value, fallback = 'SMALL') {
 
 function normalizeAgentName(value) {
   return String(value || '').trim().toLowerCase().replace(/^@/, '');
+}
+
+function quoteCliArg(value) {
+  return `'${String(value || '').replace(/'/g, "'\\''")}'`;
 }
 
 function findNextFromSequence(sequence, completed, skipped = []) {
@@ -215,6 +220,130 @@ async function seedFeatureWorkflowState(targetDir, slug, classification, startFr
   };
 }
 
+async function previewFeatureWorkflowState(targetDir, slug, classification, startFrom) {
+  const existing = await readJsonIfExists(path.join(targetDir, STATE_RELATIVE_PATH));
+  const focusStage = getFocusStage(existing);
+
+  if (
+    existing &&
+    existing.mode === 'feature' &&
+    existing.featureSlug &&
+    existing.featureSlug !== slug &&
+    focusStage
+  ) {
+    return {
+      ok: false,
+      reason: 'different_active_feature',
+      active_feature: existing.featureSlug,
+      active_stage: focusStage
+    };
+  }
+
+  if (existing && existing.mode === 'feature' && existing.featureSlug === slug) {
+    return {
+      ok: true,
+      resumed: true,
+      state: existing,
+      statePath: STATE_RELATIVE_PATH
+    };
+  }
+
+  const artifacts = await scanArtifacts(targetDir, slug);
+  const gates = await readPhaseGates(targetDir, slug);
+  const sequence = await resolveFeatureSequence(targetDir, classification);
+  const completed = inferCompletedStagesFromArtifacts(sequence, artifacts, gates);
+  const normalizedStartFrom = startFrom ? normalizeAgentName(startFrom) : null;
+
+  let skipped = [];
+  let next = findNextFromSequence(sequence, completed, skipped);
+
+  if (normalizedStartFrom && sequence.includes(normalizedStartFrom)) {
+    const targetIndex = sequence.indexOf(normalizedStartFrom);
+    skipped = sequence.slice(0, targetIndex).filter((stage) => !completed.includes(stage));
+    next = normalizedStartFrom;
+  }
+
+  return {
+    ok: true,
+    resumed: false,
+    state: {
+      version: 1,
+      mode: 'feature',
+      classification,
+      sequence,
+      current: null,
+      next,
+      completed,
+      skipped,
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    },
+    statePath: STATE_RELATIVE_PATH
+  };
+}
+
+function buildDryRunSuggestion(planData) {
+  const active = planData.steps.find((step) => step.status === 'active');
+  if (active) {
+    return {
+      action: active.predicted_blockers.length > 0 ? 'complete_stage' : 'continue_stage',
+      agent: active.agent,
+      command: `aioson workflow:next . --complete=${active.agent}`,
+      reason: `Preview stage @${active.agent}.`
+    };
+  }
+
+  const next = planData.steps.find((step) => step.status !== 'completed' && step.status !== 'skipped');
+  if (!next) {
+    return {
+      action: 'workflow_complete',
+      agent: null,
+      command: null,
+      reason: 'Preview workflow has no pending stage.'
+    };
+  }
+
+  return {
+    action: next.status === 'blocked' ? 'blocked' : 'activate_stage',
+    agent: next.agent,
+    command: `aioson workflow:next . --agent=${next.agent}`,
+    reason: next.status === 'blocked'
+      ? `Preview stage @${next.agent} is blocked.`
+      : `Preview next official stage is @${next.agent}.`
+  };
+}
+
+function buildDryRunArtifactsSummary(artifacts) {
+  return Object.entries(artifacts || {}).map(([id, artifact]) => ({
+    id,
+    label: artifact && artifact.path ? path.basename(artifact.path) : id,
+    file: artifact && artifact.path ? artifact.path : null,
+    exists: Boolean(artifact && artifact.exists)
+  }));
+}
+
+function buildDryRunStatusSnapshot({ targetDir, slug, classification, workflowState, planData, tool }) {
+  const suggestion = buildDryRunSuggestion(planData);
+  return {
+    ok: true,
+    projectName: path.basename(targetDir),
+    classification,
+    mode: 'feature',
+    featureSlug: slug,
+    tool,
+    state: workflowState,
+    stateCreated: false,
+    dryRun: true,
+    activeStage: workflowState.current || workflowState.next || null,
+    queuedNextStage: workflowState.next || null,
+    pendingGates: [],
+    contractCheck: null,
+    artifacts: buildDryRunArtifactsSummary(planData.artifacts),
+    suggestion
+  };
+}
+
 async function buildExecutionPlan(targetDir, slug, classification, workflowState = null, startFrom = null) {
   const sequence = workflowState && Array.isArray(workflowState.sequence) && workflowState.sequence.length > 0
     ? [...workflowState.sequence]
@@ -254,7 +383,7 @@ async function buildExecutionPlan(targetDir, slug, classification, workflowState
     const predictedBlockers = [];
     if (status !== 'completed' && status !== 'skipped' && meta.gate_before && !isGateApproved(gates, meta.gate_before)) {
       const responsible = GATE_RESPONSIBLE_AGENT[meta.gate_before] || 'previous agent';
-      const featureArg = slug ? ` --feature=${slug}` : '';
+      const featureArg = slug ? ` --feature=${quoteCliArg(slug)}` : '';
       predictedBlockers.push(
         `Gate ${meta.gate_before} (${GATE_NAMES[meta.gate_before] || meta.gate_before}) not approved — ` +
         `responsible: ${responsible} — ` +
@@ -497,10 +626,9 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     return { ok: false };
   }
 
-  let classification = await detectClassification(targetDir, slug);
-  if (!classification) {
-    classification = options.classification ? String(options.classification).toUpperCase() : 'SMALL';
-  }
+  let classification = options.classification ? String(options.classification).toUpperCase() : null;
+  if (!classification) classification = await detectClassification(targetDir, slug);
+  if (!classification) classification = 'SMALL';
   classification = normalizeClassification(classification, 'SMALL');
 
   const autonomyProtocol = await readAutonomyProtocol(targetDir);
@@ -535,7 +663,9 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     }
   }
 
-  const seeded = await seedFeatureWorkflowState(targetDir, slug, classification, startFrom);
+  const seeded = dryRun
+    ? await previewFeatureWorkflowState(targetDir, slug, classification, startFrom)
+    : await seedFeatureWorkflowState(targetDir, slug, classification, startFrom);
   if (!seeded.ok) {
     if (options.json) return seeded;
     logger.error(
@@ -558,8 +688,18 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
 
   const activePlan = planData.steps.filter((step) => step.status !== 'completed' && !(skipOptional && step.optional));
   const blockedSteps = planData.steps.filter((step) => step.predicted_blockers.length > 0);
-  const statusSnapshot = await readStatusSnapshot(targetDir, tool, t);
-  const resumeCommand = `aioson workflow:execute ${targetDir} --feature=${slug} --tool=${tool}${requestedMode ? ` --mode=${requestedMode}` : ''}${maxCheckpoints !== 1 ? ` --max-checkpoints=${maxCheckpoints}` : ''}`;
+  const statusSnapshot = dryRun
+    ? buildDryRunStatusSnapshot({ targetDir, slug, classification, workflowState: seeded.state, planData, tool })
+    : await readStatusSnapshot(targetDir, tool, t);
+  const resumeCommand = [
+    'aioson',
+    'workflow:execute',
+    quoteCliArg(targetDir),
+    `--feature=${quoteCliArg(slug)}`,
+    `--tool=${quoteCliArg(tool)}`,
+    ...(requestedMode ? [`--mode=${quoteCliArg(requestedMode)}`] : []),
+    ...(maxCheckpoints !== 1 ? [`--max-checkpoints=${quoteCliArg(maxCheckpoints)}`] : [])
+  ].join(' ');
 
   if (dryRun) {
     const result = {

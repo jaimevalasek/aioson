@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "feature_slug": "workflow-execute-dry-run-classification",
+  "generated_at": "2026-06-02T05:25:00-03:00",
+  "review_contract": {
+    "review_id": "pentester-workflow-execute-dry-run-classification-2026-06-02",
+    "scope_mode": "on_demand",
+    "runtime_mode": "local_static",
+    "target_mode": "framework_target",
+    "target_scope": "workflow:execute dry-run classification and state preview",
+    "allowed_targets": [
+      "src/commands/workflow-execute.js",
+      "tests/workflow-execute.test.js",
+      ".aioson/context/simple-plans/workflow-execute-dry-run-classification.md",
+      ".aioson/context/dev-state.md",
+      ".aioson/context/project-pulse.md",
+      ".aioson/context/bootstrap/current-state.md"
+    ],
+    "forbidden_targets": [
+      "external URLs",
+      "public domains",
+      "third-party production systems",
+      "destructive filesystem actions"
+    ],
+    "attack_surfaces": [
+      "memory_context",
+      "tool_invocation",
+      "delegation_handoff",
+      "protocol_contract",
+      "secret_handling",
+      "runtime_permissions"
+    ],
+    "evidence_policy": "safe-proof-only",
+    "findings_artifact_path": ".aioson/context/security-findings-workflow-execute-dry-run-classification.json"
+  },
+  "threat_surfaces": [
+    {
+      "id": "TS-workflow-execute-dry-run-classification-01",
+      "type": "memory_context",
+      "verification_status": "reviewed",
+      "skip_reason": null
+    },
+    {
+      "id": "TS-workflow-execute-dry-run-classification-02",
+      "type": "tool_invocation",
+      "verification_status": "finding",
+      "skip_reason": null
+    },
+    {
+      "id": "TS-workflow-execute-dry-run-classification-03",
+      "type": "delegation_handoff",
+      "verification_status": "reviewed",
+      "skip_reason": null
+    },
+    {
+      "id": "TS-workflow-execute-dry-run-classification-04",
+      "type": "protocol_contract",
+      "verification_status": "reviewed",
+      "skip_reason": null
+    },
+    {
+      "id": "TS-workflow-execute-dry-run-classification-05",
+      "type": "secret_handling",
+      "verification_status": "reviewed",
+      "skip_reason": null
+    },
+    {
+      "id": "TS-workflow-execute-dry-run-classification-06",
+      "type": "runtime_permissions",
+      "verification_status": "reviewed",
+      "skip_reason": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "SF-workflow-execute-dry-run-classification-01",
+      "feature_slug": "workflow-execute-dry-run-classification",
+      "surface": "tool_invocation",
+      "severity": "medium",
+      "title": "resume_command renders user-controlled feature slug without shell quoting",
+      "hypothesis": "A crafted feature slug can inject shell metacharacters into the generated resume command. The CLI does not execute the command itself, but agents/operators may copy or automate the string.",
+      "attack_path": "Run workflow:execute dry-run with a slug containing a shell separator and inspect the returned resume_command.",
+      "preconditions": [
+        "Attacker can influence or propose the feature slug passed to workflow:execute.",
+        "A human operator or automation executes the returned resume_command as a shell command."
+      ],
+      "reproduction_steps": [
+        "Run: node bin/aioson.js workflow:execute . --feature=\"poc;echo AIOSON_POC\" --dry-run --classification=MICRO --json",
+        "Inspect the JSON field resume_command."
+      ],
+      "evidence": [
+        "Observed resume_command: aioson workflow:execute C:\\dev\\aioson --feature=poc;echo AIOSON_POC --tool=claude",
+        "Affected code built resumeCommand with raw ${targetDir}, ${slug}, and ${tool} interpolation in src/commands/workflow-execute.js.",
+        "Dev fix evidence: PoC now returns resume_command: aioson workflow:execute 'C:\\dev\\aioson' --feature='poc;echo AIOSON_POC' --tool='claude'.",
+        "Regression test added: workflow:execute: resume command quotes user-controlled arguments."
+      ],
+      "impact": "If the generated command is copied into a shell or executed by automation, injected shell syntax after the feature slug can run as a separate command in the local environment.",
+      "affected_artifacts": [
+        "src/commands/workflow-execute.js"
+      ],
+      "suggested_fix": "Render resume commands with shell-safe quoting for every dynamic argument, or return a structured command array alongside a display string and ensure agents use the structured form for execution.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "fix_summary": "Added local CLI argument quoting for dynamic command-display arguments and applied it to resume_command plus gate:approve feature arguments.",
+      "fixed_by": "dev",
+      "fixed_at": "2026-06-02T05:25:00-03:00",
+      "qa_validation": {
+        "validated_by": "qa",
+        "validated_at": "2026-06-02T02:24:39-03:00",
+        "verdict": "validated_fixed",
+        "evidence": [
+          "node --test tests/workflow-execute.test.js passed 25/25",
+          "node --test tests/workflow-next.test.js tests/workflow-engine-e2e.test.js tests/workflow-next-pentester.test.js passed 31/31",
+          "PoC resume_command contains --feature='poc;echo AIOSON_POC' and does not contain unquoted --feature=poc;echo AIOSON_POC"
+        ]
+      },
+      "safe_to_reproduce": true
+    }
+  ]
+}

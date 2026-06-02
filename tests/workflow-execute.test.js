@@ -113,6 +113,64 @@ test('workflow:execute: reads classification from project.context.md', async () 
   assert.equal(result.classification, 'MEDIUM');
 });
 
+test('workflow:execute: explicit --classification overrides project context during dry-run', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'small-fix', 'dry-run': true, classification: 'MICRO' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.classification, 'MICRO');
+  assert.deepEqual(result.steps.map((step) => step.agent), ['product', 'dev', 'qa']);
+  assert.equal(result.status_snapshot.classification, 'MICRO');
+  assert.equal(Array.isArray(result.status_snapshot.artifacts), true);
+  assert.equal(Object.hasOwn(result.status_snapshot.artifacts[0], 'content'), false);
+});
+
+test('workflow:execute: dry-run does not create workflow state or execution checkpoint', async () => {
+  const tmpDir = await makeTmpDir();
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'preview-only', 'dry-run': true, classification: 'SMALL' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  await assert.rejects(
+    fs.access(path.join(tmpDir, '.aioson/context/workflow.state.json')),
+    { code: 'ENOENT' }
+  );
+  await assert.rejects(
+    fs.access(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH)),
+    { code: 'ENOENT' }
+  );
+});
+
+test('workflow:execute: resume command quotes user-controlled arguments', async () => {
+  const tmpDir = await makeTmpDir();
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: {
+      json: true,
+      feature: 'poc;echo AIOSON_POC',
+      'dry-run': true,
+      classification: 'MICRO',
+      tool: 'codex'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(result.resume_command, /--feature='poc;echo AIOSON_POC'/);
+  assert.doesNotMatch(result.resume_command, /--feature=poc;echo/);
+  assert.match(result.resume_command, /--tool='codex'/);
+});
+
 test('workflow:execute: dry-run human output mentions plan', async () => {
   const tmpDir = await makeTmpDir();
   const logger = makeLogger();
@@ -161,12 +219,17 @@ test('workflow:execute: dry-run predicts blockers for an active stage with missi
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\ngate_requirements: approved\ngate_plan: pending\n---\n# Spec');
   await writeFile(
     tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-06-02 | — |\n'
+  );
+  await writeFile(
+    tmpDir,
     '.aioson/context/workflow.state.json',
     JSON.stringify({
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
       completed: ['product', 'analyst'],
@@ -202,6 +265,11 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\ngate_requirements: approved\ngate_plan: approved\n---\n# Spec');
   await writeFile(tmpDir, '.aioson/context/project-pulse.md', '# Pulse');
   await writeFile(tmpDir, '.aioson/context/dev-state.md', '# Dev State');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-06-02 | — |\n'
+  );
   await writeFile(
     tmpDir,
     '.aioson/config/autonomy-protocol.json',
@@ -284,12 +352,17 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
   await writeFile(tmpDir, '.aioson/context/project-pulse.md', '# Pulse');
   await writeFile(
     tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-06-02 | — |\n'
+  );
+  await writeFile(
+    tmpDir,
     '.aioson/context/workflow.state.json',
     JSON.stringify({
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: 'product',
       next: 'analyst',
       completed: [],
@@ -308,7 +381,7 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
 
   assert.equal(result.ok, true);
   assert.equal(result.max_checkpoints, 2);
-  assert.equal(result.active_stage, 'dev');
+  assert.equal(result.active_stage, 'architect');
   assert.ok(Array.isArray(result.transitions));
   assert.equal(result.transitions.length, 2);
   assert.deepEqual(
@@ -319,16 +392,16 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     result.transitions.map((transition) => transition.agent),
     ['product', 'analyst']
   );
-  assert.equal(result.execution_state.checkpoint.active_stage, 'dev');
-  assert.equal(result.execution_state.status_snapshot.activeStage, 'dev');
-  assert.equal(result.execution_state.suggestion.action, 'complete_stage');
-  assert.ok(result.resume_command.includes('--max-checkpoints=2'));
+  assert.equal(result.execution_state.checkpoint.active_stage, 'architect');
+  assert.equal(result.execution_state.status_snapshot.activeStage, 'architect');
+  assert.equal(result.execution_state.suggestion.action, 'continue_stage');
+  assert.ok(result.resume_command.includes("--max-checkpoints='2'"));
 
   const executionState = JSON.parse(
     await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8')
   );
   assert.equal(executionState.status, 'active');
-  assert.equal(executionState.checkpoint.active_stage, 'dev');
+  assert.equal(executionState.checkpoint.active_stage, 'architect');
   assert.ok(Array.isArray(executionState.history));
   assert.equal(executionState.history.length, 1);
 });
@@ -347,15 +420,20 @@ test('workflow:execute: completes cleanly when the workflow has no pending stage
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: null,
       next: null,
-      completed: ['product', 'analyst', 'dev', 'qa'],
+      completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       skipped: [],
       featureSlug: 'checkout',
       detour: null,
       updatedAt: new Date().toISOString()
     }, null, 2)
+  );
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| checkout | in_progress | 2026-06-02 | — |\n'
   );
 
   const result = await runWorkflowExecute({
@@ -375,6 +453,11 @@ test('workflow:execute: completes cleanly when the workflow has no pending stage
 test('workflow:execute: refuses to override a different active feature workflow', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| billing | in_progress | 2026-06-02 | — |\n'
+  );
   await writeFile(
     tmpDir,
     '.aioson/context/workflow.state.json',
@@ -603,7 +686,7 @@ test('workflow:execute: blocked step message includes feature slug in gate:appro
 
   const blockerMsg = architectStep.predicted_blockers[0];
   assert.ok(
-    blockerMsg.includes('--feature=my-feature'),
+    blockerMsg.includes("--feature='my-feature'"),
     `blocker must include feature slug in gate:approve command, got: ${blockerMsg}`
   );
 });
