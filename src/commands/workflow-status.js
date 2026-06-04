@@ -86,8 +86,21 @@ function getQueuedNextStage(state) {
   return null;
 }
 
+async function preferExistingArtifact(targetDir, candidates) {
+  for (const candidate of candidates.filter(Boolean)) {
+    if (await exists(path.join(targetDir, candidate))) return candidate;
+  }
+  return candidates.filter(Boolean)[0];
+}
+
 async function buildKeyArtifacts(targetDir, state) {
   const featureSlug = state && state.featureSlug ? String(state.featureSlug) : null;
+  const designDocFile = await preferExistingArtifact(targetDir, featureSlug
+    ? [`.aioson/context/design-doc-${featureSlug}.md`, '.aioson/context/design-doc.md']
+    : ['.aioson/context/design-doc.md']);
+  const readinessFile = await preferExistingArtifact(targetDir, featureSlug
+    ? [`.aioson/context/readiness-${featureSlug}.md`, '.aioson/context/readiness.md']
+    : ['.aioson/context/readiness.md']);
   const artifacts = [
     {
       id: 'project_context',
@@ -111,13 +124,13 @@ async function buildKeyArtifacts(targetDir, state) {
     },
     {
       id: 'design_doc',
-      label: 'design-doc.md',
-      file: '.aioson/context/design-doc.md'
+      label: path.basename(designDocFile),
+      file: designDocFile
     },
     {
       id: 'readiness',
-      label: 'readiness.md',
-      file: '.aioson/context/readiness.md'
+      label: path.basename(readinessFile),
+      file: readinessFile
     },
     {
       id: 'ui_spec',

@@ -195,6 +195,22 @@ When done, say "ready" or "analyze".
 
 **No sources is valid** — if the user says "analyze" immediately, proceed with PRD-only analysis.
 
+### Decision-gating pattern
+
+Apply a short, branch-by-branch decision style:
+
+- Before asking, mine the PRD, briefing source, feature dossier, features registry, rules, docs, design docs, research cache, brain memory, and prior handoffs.
+- Do not ask the user to restate facts already present in those sources.
+- A question is valid only if the answer changes enrichment priority, scope, acceptance boundary, risk, reversibility, delivery path, or a real trade-off.
+- Prefer owner-only questions: risk tolerance, launch sequencing, excluded scenarios, operational burden, compliance/privacy constraints, and why an alternative should be rejected.
+- Present one candidate improvement at a time, with one-line rationale.
+- For each candidate, include one recommended choice by default.
+- Do not move to the next cluster until the user classifies the current candidate as:
+  - apply now
+  - defer
+  - reject (with reason)
+- Keep decision notes short and durable; avoid restating the same rationale in multiple sections.
+
 ## Source processing (RF-04)
 
 For each source received:
@@ -236,6 +252,15 @@ After consolidating sources:
 - ask the user which improvements to apply
 - score the scope
 - justify whether the result should stay in-place or become a phased external plan
+- If the PRD has a `briefing_source`, prioritize resolving `## Identified gaps` and `## Open questions` from that briefing before proposing new external assumptions.
+
+### Concise output style
+
+When writing recommendations and the final sizing rationale:
+
+- use compact bullets; avoid long narrative paragraphs
+- keep wording to decisions and consequences
+- include explicit "why this is reversible / non-reversible" when proposing ADR-like recommendations
 
 The exact sizing thresholds, writing rules, file schemas, enrichment log contract, and handoff text live in:
 

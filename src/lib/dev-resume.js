@@ -50,9 +50,9 @@ function readClassificationFromFrontmatters(rawList) {
 }
 
 function extractDevStateFields(raw) {
-  if (!raw) return { active_phase: null, next_step: null };
+  if (!raw) return { active_feature: null, active_phase: null, next_step: null, status: null };
   const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fmMatch) return { active_phase: null, next_step: null };
+  if (!fmMatch) return { active_feature: null, active_phase: null, next_step: null, status: null };
   const fm = {};
   for (const line of fmMatch[1].split(/\r?\n/)) {
     const idx = line.indexOf(':');
@@ -62,9 +62,20 @@ function extractDevStateFields(raw) {
     fm[key] = val;
   }
   return {
+    active_feature: fm.active_feature || null,
     active_phase: fm.active_phase || null,
-    next_step: fm.next_step || null
+    next_step: fm.next_step || null,
+    status: fm.status || null
   };
+}
+
+function isCurrentDevStateForFeature(fields, featureSlug) {
+  if (!fields) return false;
+  if (!fields.active_feature) return false;
+  const status = String(fields.status || '').toLowerCase();
+  if (status === 'done' || status === 'abandoned') return false;
+  if (fields.active_feature !== featureSlug) return false;
+  return true;
 }
 
 function extractCodeMapPaths(dossierRaw) {
@@ -111,7 +122,8 @@ async function buildDevResumeData(projectPath) {
   const classification = readClassificationFromFrontmatters([dossierRaw, prdRaw, specRaw]);
 
   const devStateRaw = await readFileOrNull(path.join(ctxDir, 'dev-state.md'));
-  const { active_phase, next_step: devStateNext } = extractDevStateFields(devStateRaw);
+  const devStateFields = extractDevStateFields(devStateRaw);
+  const useDevState = isCurrentDevStateForFeature(devStateFields, featureSlug);
 
   const planManifestPath = path.join(targetDir, '.aioson', 'plans', featureSlug, 'manifest.md');
   const planRaw = await readFileOrNull(planManifestPath);
@@ -128,11 +140,11 @@ async function buildDevResumeData(projectPath) {
   return {
     feature_slug: featureSlug,
     classification,
-    current_phase: active_phase || 'unknown',
+    current_phase: useDevState && devStateFields.active_phase ? devStateFields.active_phase : 'unknown',
     artifacts_consumed: artifactsConsumed,
     code_map_paths: extractCodeMapPaths(dossierRaw),
     sheldon_plan: sheldonPlan,
-    next_step: devStateNext || deriveNextStepFromPlan(planRaw),
+    next_step: useDevState && devStateFields.next_step ? devStateFields.next_step : deriveNextStepFromPlan(planRaw),
     decision_rationale: decisionRationale.length > 0 ? decisionRationale : undefined
   };
 }
@@ -140,6 +152,7 @@ async function buildDevResumeData(projectPath) {
 module.exports = {
   buildDevResumeData,
   extractDevStateFields,
+  isCurrentDevStateForFeature,
   extractCodeMapPaths,
   deriveNextStepFromPlan
 };

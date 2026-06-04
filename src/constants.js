@@ -15,6 +15,7 @@ const MANAGED_FILES = [
   '.aioson/agents/deyvin.md',
   '.aioson/agents/pair.md',
   '.aioson/agents/pm.md',
+  '.aioson/agents/sheldon.md',
   '.aioson/agents/dev.md',
   '.aioson/agents/qa.md',
   '.aioson/agents/validator.md',
@@ -24,12 +25,15 @@ const MANAGED_FILES = [
   '.aioson/agents/squad.md',
   '.aioson/agents/orache.md',
   '.aioson/agents/genome.md',
+  '.aioson/agents/neo.md',
   '.aioson/agents/design-hybrid-forge.md',
   '.aioson/agents/site-forge.md',
   '.aioson/agents/profiler-researcher.md',
   '.aioson/agents/profiler-enricher.md',
   '.aioson/agents/profiler-forge.md',
+  '.aioson/agents/committer.md',
   '.aioson/agents/copywriter.md',
+  '.aioson/agents/briefing.md',
   '.aioson/docs/squad/package-contract.md',
   '.aioson/docs/squad/creation-flow.md',
   '.aioson/docs/squad/research-loop.md',
@@ -179,7 +183,7 @@ const AGENT_DEFINITIONS = [
     command: '@discovery-design-doc',
     path: '.aioson/agents/discovery-design-doc.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/design-doc.md + .aioson/context/readiness.md'
+    output: '.aioson/context/design-doc*.md + .aioson/context/readiness*.md'
   },
   {
     id: 'discover',
@@ -393,11 +397,11 @@ const AGENT_DEFINITIONS = [
   {
     id: 'sheldon',
     displayName: 'Sheldon',
-    description: 'Deep technical analysis and architecture review',
+    description: 'PRD quality review and pre-implementation enrichment',
     command: '@sheldon',
     path: '.aioson/agents/sheldon.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: 'enriched PRD or architecture review'
+    output: 'enriched PRD or phased execution plan'
   },
   {
     id: 'committer',

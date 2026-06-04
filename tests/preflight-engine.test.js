@@ -215,6 +215,21 @@ test('scanArtifacts: detects existing prd and spec files', async () => {
   assert.equal(result.spec.frontmatter.version, '2');
 });
 
+test('scanArtifacts: prefers slugged design-doc and readiness for feature context', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Project Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Project Readiness');
+  await writeFile(tmpDir, '.aioson/context/design-doc-checkout.md', '# Checkout Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness-checkout.md', '# Checkout Readiness');
+
+  const result = await scanArtifacts(tmpDir, 'checkout');
+
+  assert.equal(result.design_doc.exists, true);
+  assert.ok(result.design_doc.path.endsWith('design-doc-checkout.md'));
+  assert.equal(result.readiness.exists, true);
+  assert.ok(result.readiness.path.endsWith('readiness-checkout.md'));
+});
+
 // ── parseGatesFromSpec ────────────────────────────────────────────────────────
 
 test('parseGatesFromSpec: returns empty object for empty content', () => {

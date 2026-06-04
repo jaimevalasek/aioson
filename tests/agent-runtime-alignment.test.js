@@ -40,7 +40,9 @@ test('pm prompt and manifest align with the living PRD workflow stage', async ()
     '## MEDIUM implementation plan (mandatory output for MEDIUM)',
     'For MEDIUM features, `@pm` MUST produce `implementation-plan-{slug}.md`',
     '## Non-MEDIUM handoff reality',
-    'aioson gate:approve . --feature={slug} --gate=C'
+    'aioson gate:approve . --feature={slug} --gate=C',
+    'aioson workflow:next . --complete=pm --tool=<tool>',
+    'Never recommend a bare `/orchestrator` activation for a feature'
   ];
 
   for (const token of promptChecks) {
@@ -68,7 +70,9 @@ test('orchestrator prompt and manifest align with the existing parallel CLI runt
     'aioson parallel:doctor . --fix',
     'Do not reference `.aioson/tasks/implementation-plan.md` as if it were an executable runtime primitive.',
     'If the current client does not expose native task tools',
-    'If Cron tools are unavailable, do not simulate them in prose.'
+    'If Cron tools are unavailable, do not simulate them in prose.',
+    'inspect `.aioson/context/features.md` for exactly one `in_progress` feature',
+    'inspect `.aioson/context/implementation-plan-*.md`'
   ];
 
   for (const token of promptChecks) {

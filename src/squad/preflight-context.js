@@ -19,14 +19,15 @@ const crypto = require('node:crypto');
 
 const SQUADS_DIR = path.join('.aioson', 'squads');
 
-// Default limits (chars). These mirror what the Claude Code harness injects.
+// Default limits (chars). Agent files are read manually and are not subject to
+// auto-loaded gateway truncation; the larger limit is the documented hard cap.
 const DEFAULT_LIMITS = {
-  agent_file: 4000,
-  config: 4000,
+  agent_file: 40000,
+  config: 40000,
   project_context: 4000,
-  rules: 4000,
+  rules: 40000,
   squad_files: 8000,
-  claude_md: 8000
+  claude_md: 4000
 };
 
 // ─── File size reader ────────────────────────────────────────────────────────
@@ -136,7 +137,9 @@ async function estimateContext(projectDir, options = {}) {
   };
   components.push(agentEntry);
   if (agentFile.chars > DEFAULT_LIMITS.agent_file) {
-    warnings.push(`${agent}.md is ${formatSize(agentFile.chars)} — will be TRUNCATED by harness`);
+    warnings.push(`${agent}.md is ${formatSize(agentFile.chars)} — exceeds the agent hard budget`);
+  } else if (agentFile.chars > 15000) {
+    warnings.push(`${agent}.md is ${formatSize(agentFile.chars)} — over the recommended agent target, but not auto-truncated`);
   }
 
   // 2. config.md
@@ -230,7 +233,7 @@ async function estimateContext(projectDir, options = {}) {
 
   // Exit code semantics
   let exitCode = 0;
-  if (warnings.some((w) => w.includes('TRUNCATED'))) exitCode = 1;
+  if (warnings.some((w) => w.includes('hard budget'))) exitCode = 1;
   if (totalChars > totalLimit) exitCode = 2;
 
   // Clean content from response (only needed internally)

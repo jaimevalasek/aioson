@@ -1,27 +1,27 @@
 ---
-last_updated: 2026-06-02
-active_feature: workflow-execute-dry-run-classification
-active_phase: 4
-next_step: "done"
+last_updated: 2026-06-04
+active_feature: agent-output-routing-bugs
+active_phase: 1
+next_step: "Simple Plan completed; no active dev work remains"
 status: done
 ---
 
 # Dev State
 
-**Feature:** workflow-execute-dry-run-classification
+**Feature:** agent-output-routing-bugs
+**Phase:** 1
 **Status:** done
-**Next step:** done
+**Next step:** Simple Plan completed; no active dev work remains
 
 ## Context package
 
 1. project.context.md
-2. simple-plans/workflow-execute-dry-run-classification.md
+2. simple-plans/agent-output-routing-bugs.md
 
 ## History
 
-- 2026-06-01: @pm wrote `implementation-plan-cost-context-optimization.md`, approved Gate B/C, and advanced workflow to @qa.
-- 2026-06-02: phase 1 — Implement quality:audit MVP from requirements: result contract, provider boundary, baseline/new comparison, Markdown report
-- 2026-06-02: @dev completed phases 1-4 — quality:audit command, AIOSON result contract, baseline/new comparison, Markdown report, governance evidence, and focused tests; quality report status is warn because local Fallow provider is absent by design.
-- 2026-06-02: @dev completed project design-governance lanes 1-4 — design-doc baseline parity, workflow/preflight/artifact validation routing through `@discovery-design-doc`, implementation-agent prompt guardrails, and focused regression updates. Focused design-governance regression set passed 201/201; full-suite/lint limitations are documented in lane 4.
-- 2026-06-02: @dev fixed `workflow:execute --dry-run` classification/state preview behavior; explicit `--classification` now wins and dry-run no longer writes workflow state.
-- 2026-06-02: @dev fixed pentester finding SF-workflow-execute-dry-run-classification-01; dynamic arguments in generated resume/gate commands are now quoted.
+- 2026-06-03: phase 4 — identify readiness gate and add focused regression
+- 2026-06-03: phase 4 — done
+- 2026-06-03: review pass — extended slugged readiness/design-doc handling across handoff-contract, workflow-status, artifact:validate, state:save, and discovery-design-doc prompts; focused regression set passed 188/188.
+- 2026-06-04: phase 1 — fix command regressions and align tests
+- 2026-06-04: phase 1 — Simple Plan completed; no active dev work remains

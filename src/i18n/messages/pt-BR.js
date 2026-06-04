@@ -222,6 +222,8 @@ module.exports = {
       'aioson runtime:fail [path] --run=<chave> [--message=<texto>] [--summary=<texto>] [--output=<path>] [--json] [--locale=pt-BR]',
     help_runtime_status:
       'aioson runtime:status [path] [--json] [--locale=pt-BR]',
+    help_agent_recover:
+      'aioson agent:recover [path] [--dry-run] [--older-than=<24h|7d>] [--json] [--locale=pt-BR]',
     help_runtime_log:
       'aioson runtime:log [path] --agent=<nome> --message=<texto> [--type=<evento>] [--finish] [--status=completed|failed] [--summary=<texto>] [--title=<titulo-task>] [--json] [--locale=pt-BR]',
     help_runtime_session_start:

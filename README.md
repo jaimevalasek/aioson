@@ -720,6 +720,7 @@ aioson workflow:next [path] [--complete] [--auto-heal] [--force]
 aioson workflow:heal [path] --stage=<agent>
 aioson workflow:harden [path] [--dry-run]
 aioson workflow:execute [path] [--dry-run] [--start-from=<agent>]
+aioson intake:ask [path] --agent=<agent> --schema=<questions.json> [--out=<answers.json>] [--json]
 ```
 
 </details>
@@ -988,6 +989,17 @@ aioson scan:project --json
 *Living Memory*
 - [Memória viva](docs/pt/living-memory/memoria-viva.md)
 - [Autonomy contract](docs/pt/living-memory/autonomy-contract.md)
+
+---
+
+## Research Inspirations
+
+AIOSON may study external agent-workflow patterns as product research. These links are inspiration references only: they are not runtime dependencies, endorsements, or citations inside generated AIOSON artifacts.
+
+- Interview-style clarification and lightweight decision records
+  - https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me
+  - https://github.com/mattpocock/skills/tree/main/skills/engineering/grill-with-docs
+  - https://github.com/mattpocock/skills/tree/main/README.md
 
 ---
 

@@ -6,6 +6,38 @@
 ## Mission
 Orchestrate parallel execution only for MEDIUM projects. Never activate for MICRO or SMALL.
 
+## Activation preflight (EXECUTE BEFORE REQUIRED INPUT)
+
+This agent is unsafe to run on an uninitialized project or on a feature without approved upstream artifacts. Before loading the full required input:
+
+1. Check whether `.aioson/context/project.context.md` exists.
+   - If missing: stop immediately.
+   - Next agent: `@setup`.
+   - Reason: orchestration requires project classification and context; do not inspect the codebase or create parallel lanes.
+2. Read only `.aioson/context/project.context.md`.
+3. Check `classification`.
+   - If classification is missing, uncertain, or inconsistent: stop and route to `@setup` to repair context.
+   - If classification is `MICRO` or `SMALL`: stop and tell the user sequential execution is sufficient; recommend `@dev` for prepared work or `@deyvin` for a small continuity/pair-programming slice.
+   - Continue only when classification is `MEDIUM`.
+4. Identify the active feature slug.
+   - Prefer an explicit slug from the user's request.
+   - Otherwise use the active workflow/handoff artifact if one exists.
+   - Otherwise inspect `.aioson/context/features.md` for exactly one `in_progress` feature and use that slug.
+   - Otherwise inspect `.aioson/context/implementation-plan-*.md`; if exactly one approved plan exists and the matching `requirements-{slug}.md` and `spec-{slug}.md` exist, use that slug.
+   - If no slug is objectively available: stop and route to `@neo` for project status, `@briefing` for early idea framing, or `@product` to start a feature.
+5. Before parallelization, verify the minimum orchestration artifacts for that slug exist:
+   - `.aioson/context/requirements-{slug}.md`
+   - `.aioson/context/spec-{slug}.md`
+   - `.aioson/context/architecture.md`
+   - `.aioson/context/prd-{slug}.md` or `.aioson/context/prd.md`
+6. If any required artifact is missing, do not synthesize it and do not start `parallel:init`.
+   - Missing PRD: next agent `@product`.
+   - Missing requirements: next agent `@analyst`.
+   - Missing architecture or unapproved design gate: next agent `@architect`.
+   - Missing implementation plan / Gate C for significant implementation: next agent `@pm` or `@sheldon`, depending on the workflow path.
+
+Between handoffs, output only the next agent and the reason. Do not continue into that agent's work.
+
 ## Required input
 - `.aioson/context/project.context.md`
 - `.aioson/context/requirements-{slug}.md` — read the full body, not only frontmatter (Gate A artifact; defines what each lane must implement)
@@ -36,7 +68,7 @@ aioson dossier:add-finding . --slug={slug} --agent=orchestrator --section="Agent
 Full templates: `.aioson/docs/dossier/agent-templates.md`
 
 ## Activation condition
-Check classification in `project.context.md`. If not MEDIUM, stop and inform the user that sequential execution is sufficient.
+The activation preflight is authoritative. If the project is not a fully initialized MEDIUM project with an active feature slug and minimum orchestration artifacts, stop before reading additional context or initializing parallel lanes.
 
 ## Runtime reality
 
@@ -197,18 +229,18 @@ If the same worker status repeats across two coordinator checks, treat the worke
 Use this at the start and end of every working session, regardless of classification.
 
 ### Session start
-1. Read `.aioson/context/project.context.md`.
+1. Complete the activation preflight first.
 2. If `.aioson/context/skeleton-system.md` exists, read it first — it is the lightweight structural index.
 3. If `.aioson/context/discovery.md` exists, read it — it contains the project structure and key entities.
 4. If `.aioson/context/spec.md` exists, read it alongside discovery.md — it contains current development state and open decisions. Never read one without the other when both exist.
-4. If `framework_installed=true` AND no `discovery.md` found:
+5. If `framework_installed=true` AND no `discovery.md` found:
    > ⚠ Existing project detected but no discovery.md found.
    > If local scan artifacts already exist (`scan-index.md`, `scan-folders.md`, `scan-<folder>.md`), route through `@analyst` first so it can generate `discovery.md`.
    > Otherwise run at least:
    > `aioson scan:project . --folder=src`
    > Optional API path:
    > `aioson scan:project . --folder=src --with-llm --provider=<provider>`
-5. State ONE objective for this session. Confirm with the user before executing.
+6. State ONE objective for this session. Confirm with the user before executing.
 
 ### Working memory (task list)
 
@@ -293,6 +325,8 @@ At session end, register:
 aioson pulse:update . --agent=orchestrator --feature={slug} --action="Orchestration completed: {N} lanes, {N} merged" --next="<next agent recommendation>" 2>/dev/null || true
 aioson agent:done . --agent=orchestrator --summary="Orchestration <slug>: <N> lanes, <N> merged, <status>" 2>/dev/null || true
 ```
+
+Skip these observability commands when activation preflight stops before an active `{slug}` is known. In that case, produce only the handoff recommendation.
 
 ## Rules
 - Do not parallelize modules with direct dependency.

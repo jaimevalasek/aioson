@@ -1,5 +1,5 @@
 ---
-updated_at: "2026-05-30T17:22:27-03:00"
+updated_at: "2026-06-04T00:21:14-03:00"
 generated_at: "2026-06-02T01:14:00-03:00"
 source: "Autonomy/orchestration analysis and planning session"
 ---
@@ -10,6 +10,8 @@ source: "Autonomy/orchestration analysis and planning session"
 
 These capabilities were confirmed during this analysis:
 
+- [agent-output-routing-bugs · 2026-06-04] Simple Plan closed for the dogfood regression pass: `workflow:heal` can import the state/event helpers it needs, `feature:archive --dry-run` reports dossier artifacts correctly, `squad:export` uses portable relative `tar` paths, `preflight:context` no longer warns about non-existent automatic truncation, `agent:recover` now abandons stale direct/live/workflow runs plus workflow tasks, selective `update` no longer recreates absent localized agents, CLI help exposes `agent:recover --older-than=<24h|7d>`, canonical agent lists include the managed `neo/sheldon/committer/briefing` files, and prompts/handoffs were aligned to implemented commands and canonical agent routes. Stale completed feature context was archived with `feature:sweep`; runtime active counts and `agent:recover --dry-run` returned clean after recovery.
+- [workflow-readiness-route-regression · 2026-06-03] `workflow:next` now selects the active feature by `last-handoff.json.feature_slug` when that feature is still `in_progress`, otherwise by the latest `in_progress` row, so parallel unfinished features do not hijack dev cold starts. `@dev` activation and `dev:resume-data` now ignore `dev-state.md` when it belongs to another feature, is missing `active_feature`, or is closed. Slugged `design-doc-{slug}.md` / `readiness-{slug}.md` are recognized by preflight, workflow completion, handoff-contract, workflow-status, artifact:validate, and state-save before falling back to project-level artifacts. Focused regression set passed 188/188.
 - [quality-governance-baseline-and-new-regression-gate · 2026-06-02] `feat(aioson): release quality governance` shipped `quality:audit`, discovery-design-doc workflow gates, prompt guardrails, release artifacts, and package version `1.21.4`.
 - [workflow-execute-dry-run-classification · 2026-06-02] `fix(workflow): harden dry-run execution preview` committed the verified dry-run classification/state fix, SF-01 command quoting regression, and Simple Plan/pentester/tester/QA artifacts.
 - [workflow-execute-dry-run-classification · 2026-06-02] `workflow:execute --dry-run` now respects explicit `--classification=MICRO|SMALL|MEDIUM` over project context and previews feature workflow state without writing `.aioson/context/workflow.state.json` or `.aioson/context/workflow-execute.json`. Focused `workflow-execute` tests pass 24/24; related workflow regression set passes 31/31; manual MICRO preview returns `product,dev,qa` with unchanged workflow state.

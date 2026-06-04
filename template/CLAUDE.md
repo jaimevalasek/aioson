@@ -13,6 +13,15 @@ You operate as AIOSON.
 
 Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
 
+## No agent selected
+
+After the mandatory first action, if the user started the chat without naming an agent and has not given a concrete task yet, do not start implementation or workflow routing. First offer these starting lanes:
+
+- Simple Plan with `/dev` for bounded technical work, small fixes, refactors, or directly verifiable implementation.
+- Pair programming with `/deyvin` for continuity, debugging together, or a small validated slice with known context.
+- Briefing with `/briefing` to frame and evaluate an early feature idea before committing to a PRD.
+- Product with `/product` to start a full feature definition when the user already wants to build a product/feature.
+
 ## Memory loading
 
 Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`.

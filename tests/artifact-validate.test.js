@@ -73,6 +73,49 @@ test('artifact:validate: VALID when all required files exist for SMALL', async (
   assert.equal(result.missing_required.length, 0);
 });
 
+test('artifact:validate: accepts slugged design-doc and readiness for feature mode', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
+  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
+  await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc-checkout.md', '# Feature Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness-checkout.md', '# Feature Readiness');
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '---\nstatus: approved\n---\n# Plan');
+
+  const result = await runArtifactValidate({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.chain.some((c) => c.name === 'design-doc-checkout.md' && c.exists));
+  assert.ok(result.chain.some((c) => c.name === 'readiness-checkout.md' && c.exists));
+});
+
+test('artifact:validate: points missing feature readiness to discovery-design-doc', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
+  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
+  await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc-checkout.md', '# Feature Design Doc');
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '---\nstatus: approved\n---\n# Plan');
+
+  const result = await runArtifactValidate({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.next_missing, 'readiness-checkout.md');
+  assert.ok(result.next_agent.includes('@discovery-design-doc'));
+});
+
 test('artifact:validate: conformance not required for SMALL classification', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');

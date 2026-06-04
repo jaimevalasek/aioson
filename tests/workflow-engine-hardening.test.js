@@ -11,7 +11,10 @@ const {
   buildDefaultWorkflowConfig
 } = require('../src/commands/workflow-next');
 const { runTechnicalGate } = require('../src/workflow-gates');
-const { validateHandoffContract } = require('../src/handoff-contract');
+const {
+  validateHandoffContract,
+  getCanonicalArtifactsForAgent
+} = require('../src/handoff-contract');
 const { buildTestBriefing } = require('../src/test-briefing');
 const { buildPathGuardBlock } = require('../src/path-guard');
 const { openRuntimeDb } = require('../src/runtime-store');
@@ -116,6 +119,60 @@ describe('workflow engine hardening', () => {
 
     const check = await validateHandoffContract(dir, { mode: 'feature', featureSlug: 'test', sequence: ['dev'] }, 'dev');
     assert.strictEqual(check.ok, true);
+  });
+
+  it('handoff contract accepts feature-scoped discovery-design-doc artifacts', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'design-doc-checkout.md'), '# Design Doc\n');
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'readiness-checkout.md'), '# Readiness\n');
+
+    const check = await validateHandoffContract(
+      dir,
+      { mode: 'feature', featureSlug: 'checkout', sequence: ['discovery-design-doc'] },
+      'discovery-design-doc'
+    );
+
+    assert.strictEqual(check.ok, true);
+  });
+
+  it('handoff contract reports feature-scoped discovery docs when they are missing', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+
+    const check = await validateHandoffContract(
+      dir,
+      { mode: 'feature', featureSlug: 'checkout', sequence: ['discovery-design-doc'] },
+      'discovery-design-doc'
+    );
+
+    assert.strictEqual(check.ok, false);
+    assert.ok(check.missing.some((m) => m.includes('design-doc-checkout.md')));
+    assert.ok(check.missing.some((m) => m.includes('readiness-checkout.md')));
+  });
+
+  it('canonical discovery-design-doc artifacts prefer slugged paths in feature mode', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+
+    const artifacts = await getCanonicalArtifactsForAgent(
+      '@discovery-design-doc',
+      dir,
+      { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
+    );
+
+    assert.ok(artifacts.some((artifact) => artifact.endsWith('design-doc-checkout.md')));
+    assert.ok(artifacts.some((artifact) => artifact.endsWith('readiness-checkout.md')));
+  });
+
+  it('canonical discovery-design-doc artifacts keep global fallback paths for auto-advance', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+
+    const artifacts = await getCanonicalArtifactsForAgent(
+      '@discovery-design-doc',
+      dir,
+      { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
+    );
+
+    assert.ok(artifacts.some((artifact) => artifact.endsWith('design-doc.md')));
+    assert.ok(artifacts.some((artifact) => artifact.endsWith('readiness.md')));
   });
 
   it('test briefing extracts mock helpers and ui strings', async () => {

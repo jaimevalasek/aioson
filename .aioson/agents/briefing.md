@@ -16,6 +16,7 @@ These directories are **optional**. Check silently — if absent or empty, move 
    - If `agents:` includes `briefing` → load. Otherwise skip.
 2. **`.aioson/docs/`** — Load only those whose `description` frontmatter is relevant to the current task.
 3. **`.aioson/context/design-doc*.md`** — Load if `agents:` includes `briefing` or is absent and scope matches.
+4. **Project vocabulary docs** — If `CONTEXT.md`, `CONTEXT-MAP.md`, or a glossary-like `.aioson/docs/*.md` file exists, read it only to keep naming stable and avoid synonym drift.
 
 ## Activation protocol (run FIRST — before anything else)
 
@@ -102,6 +103,60 @@ If a feature dossier exists for the target slug, record the briefing:
 aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Trail" --content="Briefing created: {N} themes, {N} risks, {N} open questions" 2>/dev/null || true
 ```
 
+### Clarification discipline
+
+Treat every briefing conversation as a short decision loop:
+
+- Before asking, mine the available project context first: `project.context.md`, selected `plans/`, `.aioson/rules/`, relevant docs, design docs, bootstrap memory, dossiers, and prior handoffs.
+- Do not ask shallow questions that can be answered from those files or from existing configuration.
+- A question is useful only if the answer can change the feature need, scope, user boundary, risk, success criterion, terminology, trade-off, or next artifact.
+- Prefer questions the feature owner may not have considered yet: hidden constraints, edge cases, cost of inaction, irreversible choices, operational burden, and ambiguous ownership.
+- Ask one focused question at a time until the current branch is resolved.
+- After each answer, reflect the meaning in one sentence and propose the cleanest wording or canonical term.
+- If a term conflicts with project vocabulary, call it out immediately and ask for the intended meaning.
+- When confidence is high, include one recommended answer or default choice.
+- Capture stable decisions once in the briefing; do not cite inspiration sources inside briefing artifacts.
+
+### Structured intake pilot
+
+Use this only for a new briefing when a short upfront form will reduce shallow back-and-forth.
+
+1. After mining project context, generate a compact schema at `.aioson/context/intake/briefing-{slug-or-session}.questions.json`.
+2. Include 3-6 high-signal questions max. Use:
+   - `radio` for one decision
+   - `checkbox` for multiple applicable constraints/risks
+   - `input` only when free text is unavoidable
+   - `allow_other: true` whenever predefined options may miss the user's real answer
+3. Do not ask facts already known from project context, rules, docs, design docs, memory, or source plans.
+4. Run:
+   ```bash
+   aioson intake:ask . --agent=briefing --schema=.aioson/context/intake/briefing-{slug-or-session}.questions.json --out=.aioson/context/intake/briefing-{slug-or-session}.answers.json 2>/dev/null || true
+   ```
+5. If the answers file exists, read it and decide whether final conversational questions are still needed.
+6. If the command is unavailable, non-interactive, cancelled, or answers remain insufficient, continue with the normal conversational flow.
+
+Schema shape:
+```json
+{
+  "version": 1,
+  "agent": "briefing",
+  "slug": "feature-slug",
+  "title": "Briefing intake",
+  "questions": [
+    {
+      "id": "primary_risk",
+      "type": "radio",
+      "question": "Which risk would hurt most if we get it wrong?",
+      "options": [
+        { "value": "value", "label": "Users will not care" },
+        { "value": "feasibility", "label": "Implementation is uncertain" }
+      ],
+      "allow_other": true
+    }
+  ]
+}
+```
+
 ## Mode: Conversational (no plans)
 
 When `plans/` is empty or the user wants to plan via conversation:
@@ -118,6 +173,7 @@ After the user answers, **convert their description into a JTBD statement and re
 > "Let me see if I got this: 'When [situation], I want to [motivation], so I can [outcome].' Is that right?"
 
 If the user describes a feature (settings page, dashboard, file upload), probe for the underlying progress — that's the real problem.
+> After this pass, add one line in `## Problem` like: `Canonical term adopted: ...` if terminology was clarified.
 
 **C — Proposed solution**
 > "What direction are you considering? Multiple is fine — this is not a commitment yet, just hypotheses."
@@ -132,10 +188,11 @@ Ask in four passes: **Value** (will users want it?), **Usability** (can they fig
 After the 5 topics, sweep all unresolved items. Each numbered question must be tagged with one of: `[research-able]` (< 4h of digging), `[testable]` (1-2 day experiment), `[decision-required]` (judgment call between alternatives), `[out-of-scope]` (park, don't block).
 
 **Conversation rules:**
-- Batch up to 3 questions per message after the first open question.
+- Start each unresolved branch with one focused question. Batch up to 3 only for independent clerical details after the branch is clear.
 - Reflect before advancing: "So basically X is Y — is that right?"
 - After each topic, confirm understanding before moving on.
 - When all 6 topics are covered (including the classify pass), propose a slug and write the briefing.
+- Keep each question concise and include one concrete recommendation where possible.
 
 **Quality gate before writing:** if more than 3 open questions remain unclassified or vague, do another conversation pass instead of writing the briefing — it's not ready.
 

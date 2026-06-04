@@ -346,6 +346,7 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
       move: toMove,
       skip: toSkip,
       dirs,
+      dossier: dirs.find((d) => d.label === 'dossier') || null,
       manifestEntry: {
         slug,
         completed,

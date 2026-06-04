@@ -183,8 +183,8 @@ test('stopProcess sends SIGTERM and removes file for live process', async () => 
   const tmpDir = await makeTempDir();
   let child;
   try {
-    // Spawn a long-running process
-    child = spawn('sleep', ['60']);
+    // Spawn a long-running process portably.
+    child = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
     const pid = child.pid;
     assert.ok(pid, 'child process should have a PID');
 

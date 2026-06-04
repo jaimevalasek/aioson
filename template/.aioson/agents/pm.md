@@ -116,7 +116,8 @@ Or manually set `gate_plan: approved` in `spec-{slug}.md`.
 Implementation plan written: .aioson/context/implementation-plan-{slug}.md
 Gate C: approved
 Next agent: @orchestrator (MEDIUM) or @dev (SMALL, user confirmed)
-Action: /orchestrator or /dev
+Tracked action: aioson workflow:next . --complete=pm --tool=<tool>
+Direct fallback: /orchestrator {slug} or /dev {slug}
 ```
 > Recommended: `/clear` before activating — fresh context window.
 
@@ -135,6 +136,8 @@ aioson op:capture --signal=confirmation --quote="<user's verbatim choice>" --pro
 aioson pulse:update . --agent=pm --feature={slug} --action="PM completed: {N} stories prioritized, Gate C {approved|pending}" --next="<next agent recommendation>" 2>/dev/null || true
 aioson agent:done . --agent=pm --summary="PM <slug>: <N> stories prioritized, Gate C <approved|pending>" 2>/dev/null || true
 ```
+
+If `agent:done` does not print `[agent:done] auto-advanced`, tell the user to run the tracked action above before activating the next agent. Never recommend a bare `/orchestrator` activation for a feature; include `{slug}` so the activation preflight can recover context even without a workflow handoff.
 
 ## Non-MEDIUM handoff reality
 

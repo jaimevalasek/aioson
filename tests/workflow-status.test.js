@@ -121,6 +121,30 @@ test('workflow:status --suggest recommends completion when the handoff contract 
   assert.deepEqual(result.pendingGates, []);
 });
 
+test('workflow:status reports feature-scoped design-doc and readiness artifacts', async () => {
+  const dir = await makeTempDir();
+  await seedFeatureWorkflow(dir, { gatePlanApproved: true });
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/design-doc-protocol-contracts.md'),
+    '# Feature Design Doc\n'
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/readiness-protocol-contracts.md'),
+    '# Feature Readiness\n'
+  );
+
+  const result = await runWorkflowStatus({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t: (key) => key
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.artifacts.some((artifact) => artifact.label === 'design-doc-protocol-contracts.md' && artifact.exists));
+  assert.ok(result.artifacts.some((artifact) => artifact.label === 'readiness-protocol-contracts.md' && artifact.exists));
+});
+
 test('workflow:status reconciles stale active stages before building the suggestion', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'MEDIUM');

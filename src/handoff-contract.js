@@ -47,7 +47,15 @@ const CONTRACTS = {
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   'discovery-design-doc': {
-    artifacts: ['.aioson/context/design-doc.md', '.aioson/context/readiness.md'],
+    artifacts: (targetDir, state) => {
+      if (state.mode === 'feature' && state.featureSlug) {
+        return [
+          `.aioson/context/design-doc-${state.featureSlug}.md`,
+          `.aioson/context/readiness-${state.featureSlug}.md`
+        ];
+      }
+      return ['.aioson/context/design-doc.md', '.aioson/context/readiness.md'];
+    },
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
@@ -159,6 +167,42 @@ async function resolveArtifacts(contract, targetDir, state) {
     ? contract.artifacts(targetDir, state)
     : contract.artifacts;
   return raw.map((p) => path.join(targetDir, p));
+}
+
+async function validateDiscoveryDesignDocArtifacts(targetDir, state) {
+  const slug = state?.mode === 'feature' && state?.featureSlug ? state.featureSlug : null;
+  const pairs = slug
+    ? [
+        [
+          `.aioson/context/design-doc-${slug}.md`,
+          `.aioson/context/readiness-${slug}.md`
+        ],
+        [
+          '.aioson/context/design-doc.md',
+          '.aioson/context/readiness.md'
+        ]
+      ]
+    : [
+        [
+          '.aioson/context/design-doc.md',
+          '.aioson/context/readiness.md'
+        ]
+      ];
+
+  for (const pair of pairs) {
+    const [designDoc, readiness] = pair;
+    if (
+      await fileExists(path.join(targetDir, designDoc)) &&
+      await fileExists(path.join(targetDir, readiness))
+    ) {
+      return [];
+    }
+  }
+
+  const expected = slug
+    ? `.aioson/context/design-doc-${slug}.md + .aioson/context/readiness-${slug}.md`
+    : '.aioson/context/design-doc.md + .aioson/context/readiness.md';
+  return [`missing artifact: ${expected}`];
 }
 
 function parseFrontmatterValue(markdown, key) {
@@ -299,10 +343,14 @@ async function validateHandoffContract(targetDir, state, stageName) {
   const projectClassification = await readProjectClassification(targetDir);
 
   // 1. Artifacts
-  const artifactPaths = await resolveArtifacts(contract, targetDir, state);
-  for (const p of artifactPaths) {
-    if (!(await fileExists(p))) {
-      missing.push(`missing artifact: ${path.relative(targetDir, p)}`);
+  if (stageName === 'discovery-design-doc') {
+    missing.push(...await validateDiscoveryDesignDocArtifacts(targetDir, state));
+  } else {
+    const artifactPaths = await resolveArtifacts(contract, targetDir, state);
+    for (const p of artifactPaths) {
+      if (!(await fileExists(p))) {
+        missing.push(`missing artifact: ${path.relative(targetDir, p)}`);
+      }
     }
   }
 
@@ -415,8 +463,9 @@ async function getBlockingRevisions(targetDir, featureSlug) {
  *
  * Public lookup helper used by `runAgentDone` (F2 — workflow-handoff-integrity v1.9.5)
  * to determine which artifact paths an agent is expected to produce. Returns the
- * paths declared by the agent's contract in CONTRACTS, fully resolved against the
- * workflow state.
+ * paths declared by the agent's contract in CONTRACTS, plus accepted fallback
+ * candidates for contracts that support legacy artifact names, fully resolved
+ * against the workflow state.
  *
  * @param {string} agent       Agent name (with or without leading `@`).
  * @param {string} targetDir   Project root path (absolute).
@@ -431,6 +480,14 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
   if (!normalizedAgent) return null;
   const contract = CONTRACTS[normalizedAgent];
   if (!contract) return null;
+  if (normalizedAgent === 'discovery-design-doc' && state?.mode === 'feature' && state?.featureSlug) {
+    return [
+      `.aioson/context/design-doc-${state.featureSlug}.md`,
+      `.aioson/context/readiness-${state.featureSlug}.md`,
+      '.aioson/context/design-doc.md',
+      '.aioson/context/readiness.md'
+    ].map((p) => path.join(targetDir, p));
+  }
   return await resolveArtifacts(contract, targetDir, state || {});
 }
 

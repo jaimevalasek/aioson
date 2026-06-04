@@ -47,8 +47,10 @@ function getActiveAgentPath(agentId) {
 async function applyAgentLocale(targetDir, locale, options = {}) {
   const interactionLanguage = normalizeInteractionLanguage(locale || 'en');
   const dryRun = Boolean(options.dryRun);
+  const selectiveUpdate = Boolean(options.selectiveUpdate);
   const copied = [];
   const missing = [];
+  const skipped = [];
 
   for (const agent of AGENT_DEFINITIONS) {
     const sourceRel = getActiveAgentPath(agent.id);
@@ -58,6 +60,11 @@ async function applyAgentLocale(targetDir, locale, options = {}) {
 
     if (!(await exists(sourceAbs))) {
       missing.push(sourceRel);
+      continue;
+    }
+
+    if (selectiveUpdate && !(await exists(destAbs))) {
+      skipped.push({ source: sourceRel, target: destRel, reason: 'not-installed' });
       continue;
     }
 
@@ -73,6 +80,7 @@ async function applyAgentLocale(targetDir, locale, options = {}) {
     promptLocale: 'en',
     copied,
     missing,
+    skipped,
     dryRun
   };
 }

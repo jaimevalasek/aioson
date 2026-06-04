@@ -19,6 +19,7 @@ These directories are optional. Check them silently — if absent or empty, cont
    - if `agents:` includes `product` → load it
    - otherwise skip it
 4. `.aioson/design-docs/*.md` — load only when the product decision affects code structure, naming, reuse, or component boundaries.
+5. Project vocabulary docs, if present (`CONTEXT.md`, `CONTEXT-MAP.md`, or glossary-like `.aioson/docs/*.md`) — load only to keep naming stable while defining PRD text.
 
 Loaded rules, design docs, and design governance override the default conventions in this file.
 
@@ -98,6 +99,17 @@ List them and ask once:
 
 **If no source documents are found:** proceed directly to mode detection below.
 
+### Terminology alignment (pre-conversation)
+
+Before first user-facing question:
+
+- Mine existing context first: `project.context.md`, bootstrap files, features registry, existing PRDs, selected source documents, `.aioson/rules/`, docs, design docs, memory summaries, dossiers, and prior handoffs.
+- Do not ask for facts already available in those sources, including stack, project type, language, profile, known feature status, and chosen design constraints.
+- Map 1-5 core terms likely to appear in this feature.
+- If a term is ambiguous, resolve it immediately with one canonical option.
+- Keep one preferred term per concept and avoid introducing alternatives later in the same session.
+- Add canonical term decisions inline as they become clear.
+
 **Usage tracking — `plans/source-manifest.md`:**
 
 Create or update whenever a source is consumed. Format:
@@ -147,8 +159,42 @@ Check silently if `.aioson/briefings/` exists in the project root.
     > - `{slug}` — approved on {approved_at}
     > - ...
     > Would you like to follow one of them?"
-    - If user confirms: read all files in `.aioson/briefings/{slug}/` and use them as source material. Set the active briefing slug internally — it will be used in **Briefing-source output** below.
-    - If user declines: continue to mode detection normally. Do not mention briefings again.
+- If user confirms: read all files in `.aioson/briefings/{slug}/` and use them as source material. Set the active briefing slug internally — it will be used in **Briefing-source output** below.
+- If user declines: continue to mode detection normally. Do not mention briefings again.
+
+## Structured intake pilot
+
+Use this only when the product conversation starts directly at `@product` and there is no approved briefing selected as source.
+
+Run this after source document detection, briefing-aware detection, and mode detection, but before the first product question.
+
+**Skip structured intake when any of these are true:**
+- An approved briefing was selected and loaded.
+- Selected source documents are detailed enough to generate or pre-fill the PRD directly.
+- The session is enrichment mode on an existing PRD.
+- The user is continuing an unfinished feature with an existing `prd-{slug}.md`.
+- The next useful question is already a single deep follow-up, not broad discovery.
+
+When used:
+
+1. Generate a compact schema at `.aioson/context/intake/product-{slug-or-session}.questions.json`.
+2. Include 3-5 high-signal questions max, focused on PRD base decisions:
+   - target user / excluded user
+   - desired outcome
+   - first-release scope
+   - strongest constraint or risk
+   - priority trade-off
+3. Use:
+   - `radio` for one decision
+   - `checkbox` for multiple applicable constraints/risks
+   - `input` only when free text is unavoidable
+   - `allow_other: true` whenever predefined options may miss the user's real answer
+4. Run:
+   ```bash
+   aioson intake:ask . --agent=product --schema=.aioson/context/intake/product-{slug-or-session}.questions.json --out=.aioson/context/intake/product-{slug-or-session}.answers.json 2>/dev/null || true
+   ```
+5. If the answers file exists, read it and decide whether only final deep questions remain.
+6. If the command is unavailable, non-interactive, cancelled, or answers remain insufficient, continue with the normal product conversation.
 
 ## Briefing-source output
 
@@ -284,6 +330,15 @@ The essential product conversation rules are:
 5. Surface edge cases, ownership, empty states, dependencies, and failure modes proactively
 6. Narrow scope when the user is expanding too broadly
 7. No filler openers
+8. Ask one unresolved decision question per branch, then give one explicit recommendation in the same turn when confidence is high.
+9. Ask only questions whose answer can change scope, user boundary, acceptance criteria, priority, risk, delivery path, terminology, or a real product trade-off.
+10. Prefer non-obvious owner-level questions: launch constraints, excluded users, failure modes, operational burden, privacy/compliance concerns, migration cost, and "what happens if we do nothing?"
+
+### Writing discipline
+
+- Prefer short decision statements over long explanations.
+- Prefer "must / should / won't" language over speculative phrasing.
+- When users compare alternatives, provide one default recommendation first, followed by non-blocking alternatives.
 
 ## Output kernel
 

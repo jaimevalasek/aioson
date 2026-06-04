@@ -259,11 +259,11 @@ test('AC-P1-07 runOpIdentity set <invalid-id> returns ok=false with error', asyn
   assert.ok(result.error && result.error.includes('reserved-prefix'));
 });
 
-test('AC-P1-07 runOpIdentity set <valid-id> returns stub message (Phase 1)', async () => {
+test('AC-P1-07 runOpIdentity set <valid-id> initializes the process-local override identity', async () => {
   const logger = silentLogger();
   const result = await runOpIdentity({ args: ['.', 'set', 'ci-bot-shared'], options: {}, logger });
   assert.equal(result.ok, true);
-  assert.equal(result.stub, true);
+  assert.equal(result.stub, undefined);
   assert.ok(logger.lines.some((l) => l.includes('AIOSON_OPERATOR_ID=ci-bot-shared')));
 });
 

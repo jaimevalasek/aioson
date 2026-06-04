@@ -64,7 +64,7 @@ test('parseContextFlag filters out empty entries from trailing/double commas', (
 // ─── CONTEXT_TYPE_MAP shape ────────────────────────────────────────────────
 
 test('CONTEXT_TYPE_MAP defines all canonical tokens declared for dev-state handoff', () => {
-  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'dossier', 'simple-plan'];
+  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'readiness', 'dossier', 'simple-plan'];
   for (const k of expected) {
     assert.ok(CONTEXT_TYPE_MAP[k], `missing token: ${k}`);
     assert.equal(typeof CONTEXT_TYPE_MAP[k].rel, 'function', `${k}.rel must be a function`);
@@ -82,6 +82,12 @@ test('CONTEXT_TYPE_MAP.architecture is slug-independent', () => {
 test('CONTEXT_TYPE_MAP.design-doc declares a fallback', () => {
   assert.equal(typeof CONTEXT_TYPE_MAP['design-doc'].fallback, 'function');
   assert.equal(CONTEXT_TYPE_MAP['design-doc'].fallback(), 'design-doc.md');
+});
+
+test('CONTEXT_TYPE_MAP.readiness declares a fallback', () => {
+  assert.equal(CONTEXT_TYPE_MAP.readiness.rel('checkout'), 'readiness-checkout.md');
+  assert.equal(typeof CONTEXT_TYPE_MAP.readiness.fallback, 'function');
+  assert.equal(CONTEXT_TYPE_MAP.readiness.fallback(), 'readiness.md');
 });
 
 test('CONTEXT_TYPE_MAP.simple-plan resolves to the simple-plans directory', () => {
@@ -185,6 +191,26 @@ test('producer-contract: unknown context token warns and skips, does not fail', 
   assert.equal(result.context_package.includes(`spec-${slug}.md`), true);
   assert.equal(result.warnings.some((w) => w.includes('unknown context type "unknown-type"')), true);
   assert.equal(result.warnings.some((w) => w.includes('unknown context type "nope"')), true);
+});
+
+test('producer-contract: readiness context token prefers feature-scoped handoff artifact', async () => {
+  const slug = 'checkout';
+  const dir = await makeFeatureProject({
+    slug,
+    withFiles: [`readiness-${slug}.md`, 'readiness.md']
+  });
+  try {
+    const result = await runStateSave({
+      args: [dir],
+      options: { feature: slug, next: 'go', context: 'readiness', json: true },
+      logger: silentLogger()
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.context_package, ['project.context.md', `readiness-${slug}.md`]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('producer-contract: respects 4-entry cap (project.context.md + 3 tokens)', async () => {

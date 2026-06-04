@@ -241,6 +241,21 @@ async function scanArtifacts(targetDir, slug) {
     };
   }
 
+  async function checkFirst(name, filePaths) {
+    for (const filePath of filePaths) {
+      const result = await check(name, filePath);
+      if (result.exists) return result;
+    }
+    return { exists: false };
+  }
+
+  const designDocCandidates = slug
+    ? [path.join(dir, `design-doc-${slug}.md`), path.join(dir, 'design-doc.md')]
+    : [path.join(dir, 'design-doc.md')];
+  const readinessCandidates = slug
+    ? [path.join(dir, `readiness-${slug}.md`), path.join(dir, 'readiness.md')]
+    : [path.join(dir, 'readiness.md')];
+
   const results = {
     project_context: await check('project.context', path.join(dir, 'project.context.md')),
     prd: slug ? await check('prd', path.join(dir, `prd-${slug}.md`)) : { exists: false },
@@ -248,8 +263,8 @@ async function scanArtifacts(targetDir, slug) {
     requirements: slug ? await check('requirements', path.join(dir, `requirements-${slug}.md`)) : { exists: false },
     spec: slug ? await check('spec', path.join(dir, `spec-${slug}.md`)) : await check('spec', path.join(dir, 'spec.md')),
     architecture: await check('architecture', path.join(dir, 'architecture.md')),
-    design_doc: await check('design-doc', path.join(dir, 'design-doc.md')),
-    readiness: await check('readiness', path.join(dir, 'readiness.md')),
+    design_doc: await checkFirst('design-doc', designDocCandidates),
+    readiness: await checkFirst('readiness', readinessCandidates),
     implementation_plan: slug ? await check('impl-plan', path.join(dir, `implementation-plan-${slug}.md`)) : { exists: false },
     conformance: slug ? await check('conformance', path.join(dir, `conformance-${slug}.yaml`)) : { exists: false },
     dev_state: await check('dev-state', path.join(dir, 'dev-state.md')),

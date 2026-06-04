@@ -38,8 +38,9 @@ async function writeLastHandoff(tmp, payload) {
 
 describe('dev-resume — helpers', () => {
   it('extractDevStateFields parses active_phase and next_step from frontmatter', () => {
-    const raw = '---\nactive_phase: 3\nnext_step: "Phase 3.2 implementation"\nstatus: in_progress\n---\nbody';
+    const raw = '---\nactive_feature: demo\nactive_phase: 3\nnext_step: "Phase 3.2 implementation"\nstatus: in_progress\n---\nbody';
     const out = extractDevStateFields(raw);
+    assert.equal(out.active_feature, 'demo');
     assert.equal(out.active_phase, '3');
     assert.equal(out.next_step, 'Phase 3.2 implementation');
   });
@@ -174,7 +175,7 @@ describe('buildDevResumeData', () => {
       );
       await fs.writeFile(
         path.join(tmp, '.aioson', 'context', 'dev-state.md'),
-        '---\nactive_phase: 5\nnext_step: "Implement phase 5"\n---\nbody',
+        '---\nactive_feature: feat-active\nactive_phase: 5\nnext_step: "Implement phase 5"\n---\nbody',
         'utf8'
       );
       const featDir = path.join(tmp, '.aioson', 'context', 'features', 'feat-active');
@@ -228,6 +229,53 @@ patterns: []
       const result = await buildDevResumeData(tmp);
       assert.equal(result.sheldon_plan, '.aioson/plans/feat-planned/manifest.md');
       assert.equal(result.next_step, 'step one');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores dev-state phase and next_step when dev-state belongs to another feature', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'bridge-apps-integration-builder' });
+      await writeFeaturesMd(tmp, [{ slug: 'bridge-apps-integration-builder', status: 'in_progress' }]);
+      await fs.writeFile(
+        path.join(tmp, '.aioson', 'context', 'dev-state.md'),
+        '---\nactive_feature: maintenance-harness-picker\nactive_phase: 7\nnext_step: "Old stale step"\nstatus: in_progress\n---\nbody',
+        'utf8'
+      );
+      const planDir = path.join(tmp, '.aioson', 'plans', 'bridge-apps-integration-builder');
+      await fs.mkdir(planDir, { recursive: true });
+      await fs.writeFile(path.join(planDir, 'manifest.md'), '# manifest\n- [ ] Current bridge step', 'utf8');
+
+      const result = await buildDevResumeData(tmp);
+
+      assert.equal(result.feature_slug, 'bridge-apps-integration-builder');
+      assert.equal(result.current_phase, 'unknown');
+      assert.equal(result.next_step, 'Current bridge step');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores dev-state phase and next_step when active_feature is missing', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'feat-active' });
+      await writeFeaturesMd(tmp, [{ slug: 'feat-active', status: 'in_progress' }]);
+      await fs.writeFile(
+        path.join(tmp, '.aioson', 'context', 'dev-state.md'),
+        '---\nactive_phase: 5\nnext_step: "Ambiguous old step"\nstatus: in_progress\n---\nbody',
+        'utf8'
+      );
+      const planDir = path.join(tmp, '.aioson', 'plans', 'feat-active');
+      await fs.mkdir(planDir, { recursive: true });
+      await fs.writeFile(path.join(planDir, 'manifest.md'), '# manifest\n- [ ] Plan-derived step', 'utf8');
+
+      const result = await buildDevResumeData(tmp);
+
+      assert.equal(result.current_phase, 'unknown');
+      assert.equal(result.next_step, 'Plan-derived step');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }

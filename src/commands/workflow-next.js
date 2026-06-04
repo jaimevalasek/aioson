@@ -82,6 +82,15 @@ function parseFeaturesMarkdown(markdown) {
     .filter((row) => !/^-+$/ .test(row.slug));
 }
 
+function chooseActiveFeature(features, preferredSlug = null) {
+  const activeFeatures = (features || []).filter((feature) => feature.status === 'in_progress');
+  if (preferredSlug) {
+    const preferred = activeFeatures.find((feature) => feature.slug === preferredSlug);
+    if (preferred) return preferred;
+  }
+  return activeFeatures.length > 0 ? activeFeatures[activeFeatures.length - 1] : null;
+}
+
 async function readJsonIfExists(filePath) {
   if (!(await exists(filePath))) return null;
   const content = await fs.readFile(filePath, 'utf8');
@@ -191,10 +200,13 @@ async function resolveExistingInstructionPath(targetDir, agent, locale) {
 async function detectWorkflowMode(targetDir) {
   const prdPath = path.join(targetDir, '.aioson/context/prd.md');
   const featuresPath = path.join(targetDir, '.aioson/context/features.md');
+  const handoffPath = path.join(targetDir, '.aioson/context/last-handoff.json');
   const hasProjectPrd = await exists(prdPath);
   const featuresMarkdown = await fs.readFile(featuresPath, 'utf8').catch(() => '');
   const features = parseFeaturesMarkdown(featuresMarkdown);
-  const activeFeature = features.find((feature) => feature.status === 'in_progress') || null;
+  const lastHandoff = await readJsonIfExists(handoffPath).catch(() => null);
+  const preferredSlug = lastHandoff && lastHandoff.feature_slug ? lastHandoff.feature_slug : null;
+  const activeFeature = chooseActiveFeature(features, preferredSlug);
 
   if (activeFeature) {
     return {
@@ -220,6 +232,12 @@ function getSequenceForMode(config, mode, classification) {
 async function validateStageArtifacts(targetDir, state, stage) {
   const base = path.join(targetDir, '.aioson/context');
   const slug = state.featureSlug;
+  const anyExists = async (candidates) => {
+    for (const candidate of candidates) {
+      if (await exists(candidate)) return true;
+    }
+    return false;
+  };
 
   if (stage === 'setup') {
     const context = await validateProjectContextFile(targetDir);
@@ -253,9 +271,13 @@ async function validateStageArtifacts(targetDir, state, stage) {
   }
 
   if (stage === 'discovery-design-doc') {
-    const designDoc = path.join(base, 'design-doc.md');
-    const readiness = path.join(base, 'readiness.md');
-    return (await exists(designDoc)) && (await exists(readiness));
+    const designDocCandidates = slug
+      ? [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')]
+      : [path.join(base, 'design-doc.md')];
+    const readinessCandidates = slug
+      ? [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')]
+      : [path.join(base, 'readiness.md')];
+    return (await anyExists(designDocCandidates)) && (await anyExists(readinessCandidates));
   }
 
   if (stage === 'orchestrator') {
@@ -850,6 +872,31 @@ function parseDevStateContextPackage(raw) {
     .filter(Boolean);
 }
 
+function parseDevStateFrontmatter(raw) {
+  if (!raw) return {};
+  const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fmMatch) return {};
+  const fm = {};
+  for (const line of fmMatch[1].split(/\r?\n/)) {
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+    if (key) fm[key] = value;
+  }
+  return fm;
+}
+
+function shouldUseDevStateForFeature(raw, featureSlug) {
+  if (!raw) return false;
+  const fm = parseDevStateFrontmatter(raw);
+  if (!fm.active_feature) return false;
+  const status = String(fm.status || '').toLowerCase();
+  if (status === 'done' || status === 'abandoned') return false;
+  if (fm.active_feature !== featureSlug) return false;
+  return true;
+}
+
 function normalizeContextDependency(relPath) {
   const cleaned = String(relPath || '').trim().replace(/\\/g, '/');
   if (!cleaned) return null;
@@ -867,7 +914,10 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
       slug ? `requirements-${slug}.md` : 'discovery.md',
       slug ? `spec-${slug}.md` : 'spec.md',
       'architecture.md',
+      slug ? `design-doc-${slug}.md` : null,
+      slug ? `readiness-${slug}.md` : null,
       'design-doc.md',
+      'readiness.md',
       'project-map.md'
     ].filter(Boolean);
     const existing = [];
@@ -886,9 +936,11 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
   const contextDir = path.join(targetDir, '.aioson', 'context');
   const devStatePath = path.join(contextDir, 'dev-state.md');
   const devStateRaw = await readTextIfExists(devStatePath);
-  const devStatePackage = parseDevStateContextPackage(devStateRaw)
-    .map(normalizeContextDependency)
-    .filter(Boolean);
+  const devStatePackage = shouldUseDevStateForFeature(devStateRaw, state.featureSlug)
+    ? parseDevStateContextPackage(devStateRaw)
+      .map(normalizeContextDependency)
+      .filter(Boolean)
+    : [];
 
   if (devStatePackage.length > 0) {
     return Array.from(new Set(['.aioson/context/dev-state.md', ...devStatePackage]));
@@ -900,6 +952,8 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
     `prd-${slug}.md`,
     `requirements-${slug}.md`,
     `spec-${slug}.md`,
+    `design-doc-${slug}.md`,
+    `readiness-${slug}.md`,
     'design-doc.md',
     'readiness.md',
     `implementation-plan-${slug}.md`
@@ -1439,6 +1493,9 @@ module.exports = {
   readWorkflowConfig,
   detectWorkflowMode,
   loadOrCreateState,
+  persistState,
+  appendWorkflowEvent,
+  resolveLocaleForTarget,
   reconcileWorkflowState,
   finalizeCurrentStage,
   applySkip,

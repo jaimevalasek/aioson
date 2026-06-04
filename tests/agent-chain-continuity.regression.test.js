@@ -270,7 +270,7 @@ describe('agent-chain-continuity — AC regression bundle', () => {
       await writePrd(tmp, 'acc-09');
       await fs.writeFile(
         path.join(tmp, '.aioson', 'context', 'dev-state.md'),
-        '---\nactive_phase: 7\nnext_step: "Phase 7"\n---\nbody',
+        '---\nactive_feature: acc-09\nactive_phase: 7\nnext_step: "Phase 7"\n---\nbody',
         'utf8'
       );
       const r = await runDevResumeData({ args: [tmp], options: { json: true } });

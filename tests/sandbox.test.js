@@ -24,7 +24,7 @@ test('executeInSandbox — exitCode on failure', async () => {
 });
 
 test('executeInSandbox — timeout enforcement', async () => {
-  const result = await executeInSandbox('sleep 10', { timeout: 200 });
+  const result = await executeInSandbox('node -e "setInterval(function(){}, 1000)"', { timeout: 200 });
   assert.equal(result.timedOut, true, 'should mark as timed out');
   assert.equal(result.ok, false, 'should return ok:false on timeout');
 }, { timeout: 5000 });

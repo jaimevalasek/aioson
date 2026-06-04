@@ -62,6 +62,47 @@ function summarizeOutput(output, intent = '', maxSize = MAX_OUTPUT_BYTES) {
   return `${head}\n\n[... ${omitted} bytes omitted${intentNote} ...]\n\n${tail}`;
 }
 
+function terminateProcessTree(child) {
+  if (!child || !child.pid) return;
+
+  if (process.platform === 'win32') {
+    const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    killer.on('error', () => {
+      try { child.kill('SIGKILL'); } catch { /* best-effort */ }
+    });
+    return;
+  }
+
+  try { child.kill('SIGTERM'); } catch { /* best-effort */ }
+  const forceKill = setTimeout(() => {
+    try { child.kill('SIGKILL'); } catch { /* best-effort */ }
+  }, 500);
+  if (forceKill.unref) forceKill.unref();
+}
+
+function buildSandboxResult({ stdoutChunks, stderrChunks, maxOutput, intent, timedOut, code = null, signal = null, error = null, timeout = null }) {
+  const rawStdout = Buffer.concat(stdoutChunks).toString('utf8');
+  const rawStderr = Buffer.concat(stderrChunks).toString('utf8');
+
+  const stdout = redactCredentials(summarizeOutput(rawStdout, intent, maxOutput));
+  const stderr = timedOut && !rawStderr
+    ? `Command timed out after ${timeout}ms`
+    : redactCredentials(summarizeOutput(rawStderr, intent, maxOutput));
+
+  return {
+    ok: !timedOut && code === 0,
+    stdout,
+    stderr,
+    exitCode: code,
+    timedOut,
+    signal: signal || null,
+    ...(error ? { error } : {})
+  };
+}
+
 /**
  * Execute a shell command in a sandboxed subprocess with timeout and redaction.
  *
@@ -94,14 +135,10 @@ async function executeInSandbox(command, opts = {}) {
   }
 
   return new Promise((resolve) => {
-    const controller = new AbortController();
     let timedOut = false;
-    let killed = false;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, timeout);
+    let settled = false;
+    let timer = null;
+    let fallbackTimer = null;
 
     const stdoutChunks = [];
     const stderrChunks = [];
@@ -110,8 +147,15 @@ async function executeInSandbox(command, opts = {}) {
 
     const baseOpts = {
       cwd,
-      env: { ...process.env, ...(opts.env || {}) },
-      signal: controller.signal
+      env: { ...process.env, ...(opts.env || {}) }
+    };
+
+    const finish = (payload) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      resolve(payload);
     };
 
     let child;
@@ -124,10 +168,25 @@ async function executeInSandbox(command, opts = {}) {
         child = spawn(parts[0], parts.slice(1), { ...baseOpts, shell: false });
       }
     } catch (err) {
-      clearTimeout(timer);
-      resolve({ ok: false, stdout: '', stderr: err.message, exitCode: null, timedOut: false, error: err.message });
+      finish({ ok: false, stdout: '', stderr: err.message, exitCode: null, timedOut: false, error: err.message });
       return;
     }
+
+    timer = setTimeout(() => {
+      timedOut = true;
+      terminateProcessTree(child);
+      fallbackTimer = setTimeout(() => {
+        finish(buildSandboxResult({
+          stdoutChunks,
+          stderrChunks,
+          maxOutput,
+          intent,
+          timedOut: true,
+          timeout
+        }));
+      }, 2000);
+      if (fallbackTimer.unref) fallbackTimer.unref();
+    }, timeout);
 
     child.stdout.on('data', (chunk) => {
       if (stdoutSize < maxOutput * 2) {
@@ -144,49 +203,38 @@ async function executeInSandbox(command, opts = {}) {
     });
 
     child.on('close', (code, signal) => {
-      if (killed) return;
-      clearTimeout(timer);
-
-      const rawStdout = Buffer.concat(stdoutChunks).toString('utf8');
-      const rawStderr = Buffer.concat(stderrChunks).toString('utf8');
-
-      const stdout = redactCredentials(summarizeOutput(rawStdout, intent, maxOutput));
-      const stderr = redactCredentials(summarizeOutput(rawStderr, intent, maxOutput));
-
-      resolve({
-        ok: !timedOut && code === 0,
-        stdout,
-        stderr,
-        exitCode: code,
+      finish(buildSandboxResult({
+        stdoutChunks,
+        stderrChunks,
+        maxOutput,
+        intent,
         timedOut,
-        signal: signal || null
-      });
+        code,
+        signal,
+        timeout
+      }));
     });
 
     child.on('error', (err) => {
-      if (killed) return;
-      clearTimeout(timer);
-
-      if (err.code === 'ABORT_ERR' || timedOut) {
-        resolve({
-          ok: false,
-          stdout: '',
-          stderr: `Command timed out after ${timeout}ms`,
-          exitCode: null,
+      if (timedOut) {
+        finish(buildSandboxResult({
+          stdoutChunks,
+          stderrChunks,
+          maxOutput,
+          intent,
           timedOut: true,
-          signal: null
-        });
-      } else {
-        resolve({
-          ok: false,
-          stdout: '',
-          stderr: err.message,
-          exitCode: null,
-          timedOut: false,
-          error: err.message
-        });
+          timeout
+        }));
+        return;
       }
-      killed = true;
+      finish({
+        ok: false,
+        stdout: '',
+        stderr: err.message,
+        exitCode: null,
+        timedOut: false,
+        error: err.message
+      });
     });
   });
 }

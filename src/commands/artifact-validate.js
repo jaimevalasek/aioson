@@ -30,6 +30,11 @@ function gateDisplay(gates) {
   }).join(' ');
 }
 
+function artifactDisplayName(artifact, fallbackName) {
+  if (artifact && artifact.exists && artifact.path) return path.basename(artifact.path);
+  return fallbackName;
+}
+
 async function runArtifactValidate({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.feature ? String(options.feature) : null;
@@ -73,6 +78,8 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   // Conformance required?
   const conformanceRequired = classification === 'MEDIUM';
   const designDocRequired = classification === 'SMALL' || classification === 'MEDIUM';
+  const designDocName = artifactDisplayName(artifacts.design_doc, `design-doc-${slug}.md`);
+  const readinessName = artifactDisplayName(artifacts.readiness, `readiness-${slug}.md`);
 
   // Build chain items
   const chain = [
@@ -119,14 +126,14 @@ async function runArtifactValidate({ args, options = {}, logger }) {
       indent: 1
     },
     {
-      name: 'design-doc.md',
+      name: designDocName,
       exists: artifacts.design_doc.exists,
       detail: designDocRequired ? 'pre-dev design governance contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
       required: designDocRequired,
       indent: 1
     },
     {
-      name: 'readiness.md',
+      name: readinessName,
       exists: artifacts.readiness.exists,
       detail: designDocRequired ? 'pre-dev readiness contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
       required: designDocRequired,
@@ -160,8 +167,8 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     [`prd-${slug}.md`]: { agent: '@product', reason: 'PRD not produced yet' },
     [`requirements-${slug}.md`]: { agent: '@analyst', reason: 'requirements not produced yet (Gate A)' },
     'architecture.md': { agent: '@architect', reason: 'architecture not produced yet (Gate B)' },
-    'design-doc.md': { agent: '@discovery-design-doc', reason: 'design governance contract not produced yet' },
-    'readiness.md': { agent: '@discovery-design-doc', reason: 'readiness contract not produced yet' },
+    [designDocName]: { agent: '@discovery-design-doc', reason: 'design governance contract not produced yet' },
+    [readinessName]: { agent: '@discovery-design-doc', reason: 'readiness contract not produced yet' },
     [`implementation-plan-${slug}.md`]: { agent: '@pm', reason: 'implementation plan not produced yet (Gate C)' },
     [`spec-${slug}.md`]: { agent: '@analyst', reason: 'spec not produced yet — @analyst seeds the feature memory' },
     [`conformance-${slug}.yaml`]: { agent: '@analyst', reason: 'conformance contract missing — @analyst creates it for MEDIUM features' }

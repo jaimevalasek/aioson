@@ -36,7 +36,7 @@ async function runUpdate({ args, options, logger, t }) {
       (result.savedProfile && result.savedProfile.locale
         ? result.savedProfile.locale
         : 'en');
-    localeSync = await applyAgentLocale(targetDir, language, { dryRun });
+    localeSync = await applyAgentLocale(targetDir, language, { dryRun, selectiveUpdate: selective && !all });
   }
 
   logger.log(t('update.done_at', { targetDir }));

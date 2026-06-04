@@ -206,6 +206,7 @@ const { runWorkflowExecute } = require('./commands/workflow-execute');
 const { runRunnerQueueFromPlan } = require('./commands/runner-queue-from-plan');
 const { runLearningAutoPromote } = require('./commands/learning-auto-promote');
 const { runBriefValidate } = require('./commands/brief-validate');
+const { runIntakeAsk } = require('./commands/intake-ask');
 const { runPreflightContext } = require('./commands/preflight-context');
 const { runContextCompact } = require('./commands/context-compact');
 const { runSquadScaffold } = require('./commands/squad-scaffold');
@@ -402,6 +403,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'verify-gate',
   'brief:validate',
   'brief-validate',
+  'intake:ask',
+  'intake-ask',
   'preflight:context',
   'preflight-context',
   'context:compact',
@@ -839,6 +842,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_runtime_task_fail');
   logHelpLine(t, logger, 'cli.help_runtime_fail');
   logHelpLine(t, logger, 'cli.help_runtime_status');
+  logHelpLine(t, logger, 'cli.help_agent_recover');
   logHelpLine(t, logger, 'cli.help_runtime_session_start');
   logHelpLine(t, logger, 'cli.help_runtime_session_log');
   logHelpLine(t, logger, 'cli.help_runtime_session_finish');
@@ -1254,6 +1258,8 @@ async function main() {
 
     } else if (command === 'brief:validate' || command === 'brief-validate') {
       result = await runBriefValidate({ args, options, logger: commandLogger });
+    } else if (command === 'intake:ask' || command === 'intake-ask') {
+      result = await runIntakeAsk({ args, options, logger: commandLogger });
     } else if (command === 'preflight:context' || command === 'preflight-context') {
       result = await runPreflightContext({ args, options, logger: commandLogger });
     } else if (command === 'context:compact' || command === 'context-compact') {

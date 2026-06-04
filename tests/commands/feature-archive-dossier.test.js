@@ -25,7 +25,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   process.chdir(prevCwd);
-  await fs.rm(root, { recursive: true, force: true });
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
 });
 
 async function seedFeaturesMd(status = 'done') {
@@ -64,7 +64,7 @@ describe('feature:archive — dossier dir extension (AC-F1-08)', () => {
   });
   afterEach(async () => {
     process.chdir(prevCwd);
-    await fs.rm(root, { recursive: true, force: true });
+    await fs.rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
   });
 
   it('moves features/{slug}/ → done/{slug}/dossier/', async () => {

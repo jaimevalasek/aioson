@@ -34,7 +34,7 @@ Use output to orient; load listed `rules`/`design_governance` before structural 
 
 **Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
 
-> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Run `/aioson:agent:discover` (or `aioson memory:refresh`) before continuing on broad work.
+> ⚠ [bootstrap] coverage <N>/4 (or stale <D>d). Run `/aioson:agent:discover` before continuing on broad work.
 
 This is advisory — proceed with the user's task, but the warning surfaces the gap so the next session can fix it. Skip when bootstrap/ does not exist (greenfield).
 
@@ -152,9 +152,9 @@ If flagged, recommend a new chat and offer a handoff with slug, completed phase,
 
 Check `.aioson/context/features/{slug}/dossier.md` before per-slug PRD/spec. If present, read it FIRST — it consolidates Why/What + code map and is the canonical entry point for chained context. If absent, continue with standard input (legacy flow).
 
-**Auto-resume (session start):** `aioson dev:resume-data .` returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then `runtime-log --type=dev_auto_resume --summary="<feature>: phase <N>"`.
+**Auto-resume (session start):** `aioson dev:resume-data .` returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then emit `aioson runtime:emit . --agent=dev --type=dev_auto_resume --summary="<feature>: phase <N> auto-resumed" 2>/dev/null || true`.
 
-**Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan, or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `runtime-log --type=dev_drift_detected`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision. Reason."`.
+**Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan, or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `aioson runtime:emit . --agent=dev --type=dev_drift_detected --summary="Drift detected: {what}" 2>/dev/null || true`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision. Reason."`.
 
 **Per slice:** `dossier:add-codemap` per file + `dossier:add-finding --section="Agent Trail" --content="Slice: {desc}. Next: {next}."`. Templates in `.aioson/docs/dossier/agent-templates.md`.
 

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const Database = require('better-sqlite3');
 const { createTranslator } = require('../src/i18n');
 const {
   runRuntimeInit,
@@ -18,7 +19,8 @@ const {
   runRuntimeSessionStart,
   runRuntimeSessionLog,
   runRuntimeSessionFinish,
-  runRuntimeSessionStatus
+  runRuntimeSessionStatus,
+  runAgentRecover
 } = require('../src/commands/runtime');
 const {
   runLiveStart,
@@ -156,6 +158,79 @@ test('runtime flow initializes store and tracks start/update/finish lifecycle', 
   assert.equal(status.recentExecutionEvents.some((event) => event.run_key === start.runKey && event.event_type === 'start'), true);
   assert.equal(status.recentExecutionEvents.some((event) => event.run_key === start.runKey && event.event_type === 'progress'), true);
   assert.equal(status.recentExecutionEvents.some((event) => event.run_key === start.runKey && event.event_type === 'finish'), true);
+});
+
+test('agent:recover closes stale workflow runs and workflow tasks', async () => {
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+
+  const init = await runRuntimeInit({ args: [dir], options: {}, logger, t });
+  assert.equal(init.ok, true);
+
+  const task = await runRuntimeTaskStart({
+    args: [dir],
+    options: {
+      session: 'workflow:feature:feature:demo',
+      title: 'Workflow da feature demo',
+      goal: 'Govern demo',
+      by: '@workflow'
+    },
+    logger,
+    t
+  });
+
+  const run = await runRuntimeStart({
+    args: [dir],
+    options: {
+      task: task.taskKey,
+      agent: '@dev',
+      session: 'workflow:feature:feature:demo',
+      title: 'Workflow stage @dev'
+    },
+    logger,
+    t
+  });
+
+  const oldIso = '2026-01-01T00:00:00.000Z';
+  const db = new Database(init.dbPath);
+  try {
+    db.prepare(`
+      UPDATE tasks
+      SET created_by = '@workflow', session_key = 'workflow:feature:feature:demo', status = 'running', created_at = ?, updated_at = ?
+      WHERE task_key = ?
+    `).run(oldIso, oldIso, task.taskKey);
+    db.prepare(`
+      UPDATE agent_runs
+      SET source = 'workflow', workflow_id = 'workflow:feature:feature:demo', workflow_stage = 'dev', status = 'running', started_at = ?, updated_at = ?
+      WHERE run_key = ?
+    `).run(oldIso, oldIso, run.runKey);
+  } finally {
+    db.close();
+  }
+
+  const recovered = await runAgentRecover({
+    args: [dir],
+    options: { 'older-than': '1h', json: true },
+    logger
+  });
+
+  assert.equal(recovered.ok, true);
+  assert.ok(recovered.recovered.some((r) => r.source === 'workflow_run' && r.runKey === run.runKey));
+
+  const verifyDb = new Database(init.dbPath, { readonly: true });
+  try {
+    assert.equal(
+      verifyDb.prepare('SELECT status FROM agent_runs WHERE run_key = ?').get(run.runKey).status,
+      'abandoned'
+    );
+    assert.equal(
+      verifyDb.prepare('SELECT status FROM tasks WHERE task_key = ?').get(task.taskKey).status,
+      'abandoned'
+    );
+  } finally {
+    verifyDb.close();
+  }
 });
 
 test('runtime direct session commands keep one tracked session open across multiple logs', async () => {

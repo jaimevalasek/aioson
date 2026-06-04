@@ -61,8 +61,8 @@ test('mcp:init writes plan from existing context', async () => {
   assert.equal(result.plan.database_engine, 'postgresql');
   assert.equal(result.plan.web3_enabled, true);
   assert.equal(result.plan.web3_networks.includes('solana'), true);
-  assert.equal(result.presetCount, 4);
-  assert.equal(result.presetFiles.length, 4);
+  assert.equal(result.presetCount, 3);
+  assert.equal(result.presetFiles.length, 3);
   assert.equal(
     await fileExists(path.join(dir, '.aioson/mcp/presets/codex.json')),
     true

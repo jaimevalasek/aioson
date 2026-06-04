@@ -5,6 +5,8 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| quality-governance-baseline-and-new-regression-gate | 2026-06-02 | 7 | Give AIOSON agents deterministic quality evidence after code changes, starting with a narrow baseline plus new-regression gate that improves maintainability wit |
+| cost-context-optimization | 2026-06-01 | 5 | Reduzir custo de tokens e ruído de contexto no AIOSON sem enfraquecer a qualidade dos agentes, começando por medições confiáveis e estado de feature correto. |
 | cross-tool-project-knowledge | 2026-05-30 | 6 | Estender `active-learning-loop` com materialização disk-first dos achados técnicos do projeto (`.aioson/learnings/`), tornando o conhecimento legível por qualqu |
 | agent-orchestration-v2 | 2026-05-27 | 5 | Make AIOSON workflows resumable from any gate boundary and operator decisions queryable by feature — closing the two infrastructure gaps identified against Lang |
 | operator-memory | 2026-05-21 | 7 | Uma camada de memória **por-operador** (não por-projeto, não por-harness) que persiste decisões padrão do dev entre sessões, harnesses e projetos — multi-dev sa |

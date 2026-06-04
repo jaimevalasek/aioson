@@ -136,6 +136,176 @@ test('workflow:next injects dev-state context package when activating dev for a 
   assert.match(result.prompt, /Resume source: \.aioson\/context\/dev-state\.md/);
 });
 
+test('workflow:next ignores stale dev-state package when activating dev for another feature', async () => {
+  const dir = await makeTempDir();
+  const slug = 'bridge-apps-integration-builder';
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    `# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| maintenance-harness-picker | in_progress | 2026-06-01 | — |\n| ${slug} | in_progress | 2026-06-03 | — |\n`
+  );
+  await writeFileEnsured(path.join(dir, `.aioson/context/prd-${slug}.md`), '---\nclassification: MEDIUM\n---\n# Feature PRD\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/spec-${slug}.md`), '# Spec\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/design-doc.md'), '# Design Doc\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/readiness.md'), '# Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/dev-state.md'),
+    `---\nactive_feature: maintenance-harness-picker\nactive_phase: 9\nnext_step: "Old feature step"\nstatus: in_progress\n---\n\n# Dev State\n\n## Context package\n\n1. project.context.md\n2. spec-maintenance-harness-picker.md\n3. implementation-plan-maintenance-harness-picker.md\n`
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/last-handoff.json'),
+    JSON.stringify({ feature_slug: slug }, null, 2)
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      current: 'dev',
+      next: 'dev',
+      completed: ['product', 'analyst', 'architect', 'discovery-design-doc'],
+      skipped: [],
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'dev');
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/spec-${slug}\\.md`));
+  assert.match(result.prompt, /\.aioson\/context\/readiness\.md/);
+  assert.doesNotMatch(result.prompt, /spec-maintenance-harness-picker/);
+  assert.doesNotMatch(result.prompt, /Resume source: \.aioson\/context\/dev-state\.md/);
+  assert.match(result.prompt, /Resume source: active feature artifacts/);
+});
+
+test('workflow:next ignores dev-state package when active_feature is missing', async () => {
+  const dir = await makeTempDir();
+  const slug = 'bridge-apps-integration-builder';
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    `# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| ${slug} | in_progress | 2026-06-03 | — |\n`
+  );
+  await writeFileEnsured(path.join(dir, `.aioson/context/prd-${slug}.md`), '---\nclassification: MEDIUM\n---\n# Feature PRD\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/spec-${slug}.md`), '# Spec\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Feature Design Doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Feature Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/dev-state.md'),
+    `---\nactive_phase: 9\nnext_step: "Ambiguous old feature step"\nstatus: in_progress\n---\n\n# Dev State\n\n## Context package\n\n1. project.context.md\n2. spec-old-feature.md\n`
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      current: 'dev',
+      next: 'dev',
+      completed: ['product', 'analyst', 'architect', 'discovery-design-doc'],
+      skipped: [],
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'dev');
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/design-doc-${slug}\\.md`));
+  assert.match(result.prompt, new RegExp(`\\.aioson/context/readiness-${slug}\\.md`));
+  assert.doesNotMatch(result.prompt, /spec-old-feature/);
+  assert.doesNotMatch(result.prompt, /Resume source: \.aioson\/context\/dev-state\.md/);
+});
+
+test('workflow:next prefers last-handoff feature when multiple features are in progress', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| old-feature | in_progress | 2026-06-01 | — |\n| bridge-apps-integration-builder | in_progress | 2026-06-03 | — |\n'
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/last-handoff.json'),
+    JSON.stringify({ feature_slug: 'bridge-apps-integration-builder' }, null, 2)
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/prd-bridge-apps-integration-builder.md'),
+    '---\nclassification: MEDIUM\n---\n# PRD\n'
+  );
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.equal(loaded.state.mode, 'feature');
+  assert.equal(loaded.state.featureSlug, 'bridge-apps-integration-builder');
+});
+
+test('workflow:next completes discovery-design-doc when feature-scoped design artifacts exist', async () => {
+  const dir = await makeTempDir();
+  const slug = 'bridge-apps-integration-builder';
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    `# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| ${slug} | in_progress | 2026-06-03 | — |\n`
+  );
+  await writeFileEnsured(path.join(dir, `.aioson/context/prd-${slug}.md`), '---\nclassification: MEDIUM\n---\n# PRD\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/spec-${slug}.md`), '# Spec\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Feature Design Doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Feature Readiness\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      current: 'discovery-design-doc',
+      next: 'dev',
+      completed: ['product', 'analyst', 'architect'],
+      skipped: [],
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', complete: 'discovery-design-doc' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.completedStage, 'discovery-design-doc');
+  assert.equal(result.agent, 'dev');
+});
+
 test('workflow:next supports detours and returns to the saved stage', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');

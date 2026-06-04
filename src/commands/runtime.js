@@ -2026,8 +2026,9 @@ function parseDurationMs(value, defaultHours = 24) {
  *
  * Sources checked:
  *   1. Session files in .aioson/.sessions/ with finished=false older than threshold.
- *   2. agent_runs rows with status='running'/'queued' and started_at older than threshold
+ *   2. agent_runs rows with status='running'/'queued' older than threshold
  *      that have no corresponding live session file (orphaned DB records).
+ *   3. workflow tasks/runs left running after a workflow finished or was abandoned.
  *
  * --older-than  Duration threshold. Accepts: 24h (default), 8h, 30m, 7d.
  * --dry-run     Report what would be recovered without making any changes.
@@ -2110,23 +2111,26 @@ async function runAgentRecover({ args, options = {}, logger }) {
 
     // ── 2. Scan DB for orphaned running runs (no session file) ────────────────
     const orphanedRuns = db.prepare(`
-      SELECT run_key, task_key, agent_name, started_at
+      SELECT run_key, task_key, agent_name, source, started_at
       FROM agent_runs
       WHERE status IN ('running', 'queued')
-        AND source = 'direct'
-        AND started_at < ?
+        AND COALESCE(started_at, updated_at, '') < ?
     `).all(cutoffIso);
 
     for (const run of orphanedRuns) {
       // Skip if already recovered via session file
       if (recovered.some((r) => r.runKey === run.run_key)) continue;
+      const source = run.source === 'workflow' ? 'workflow_run' : 'orphaned_run';
+      const summary = source === 'workflow_run'
+        ? 'Recovered: stale workflow run left running'
+        : 'Recovered: orphaned run with no session file';
 
       if (!dryRun) {
         db.prepare(`
           UPDATE agent_runs
-          SET status = 'abandoned', summary = 'Recovered: orphaned run with no session file', updated_at = ?, finished_at = ?
+          SET status = 'abandoned', summary = ?, updated_at = ?, finished_at = ?
           WHERE run_key = ?
-        `).run(now, now, run.run_key);
+        `).run(summary, now, now, run.run_key);
 
         if (run.task_key) {
           const taskRow = db.prepare('SELECT task_key, status FROM tasks WHERE task_key = ?').get(run.task_key);
@@ -2140,7 +2144,36 @@ async function runAgentRecover({ args, options = {}, logger }) {
         }
       }
 
-      recovered.push({ source: 'orphaned_run', agent: run.agent_name, runKey: run.run_key, taskKey: run.task_key, startedAt: run.started_at });
+      recovered.push({ source, agent: run.agent_name, runKey: run.run_key, taskKey: run.task_key, startedAt: run.started_at });
+    }
+
+    // ── 3. Scan DB for stale workflow tasks without a recovered run ───────────
+    const staleWorkflowTasks = db.prepare(`
+      SELECT task_key, title, created_by, session_key, created_at, updated_at
+      FROM tasks
+      WHERE status IN ('running', 'queued')
+        AND (created_by = '@workflow' OR session_key LIKE 'workflow:%')
+        AND COALESCE(updated_at, created_at, '') < ?
+    `).all(cutoffIso);
+
+    for (const task of staleWorkflowTasks) {
+      if (recovered.some((r) => r.taskKey === task.task_key)) continue;
+
+      if (!dryRun) {
+        db.prepare(`
+          UPDATE tasks
+          SET status = 'abandoned', updated_at = ?, finished_at = ?
+          WHERE task_key = ?
+        `).run(now, now, task.task_key);
+      }
+
+      recovered.push({
+        source: 'workflow_task',
+        agent: task.created_by || '@workflow',
+        runKey: null,
+        taskKey: task.task_key,
+        startedAt: task.updated_at || task.created_at
+      });
     }
 
     // ── Output ────────────────────────────────────────────────────────────────
