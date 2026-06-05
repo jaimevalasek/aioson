@@ -38,6 +38,38 @@ async function writeProjectContext(dir, classification = 'SMALL') {
   );
 }
 
+async function writeFeatureWorkflowState(dir, payload) {
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'MEDIUM',
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'pentester', 'qa'],
+      current: null,
+      next: 'product',
+      completed: [],
+      skipped: [],
+      featureSlug: 'official-dashboard-reform',
+      detour: null,
+      updatedAt: new Date().toISOString(),
+      ...payload
+    }, null, 2)
+  );
+}
+
+async function writeActiveFeature(dir, slug, classification = 'MEDIUM') {
+  await writeProjectContext(dir, classification);
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/features.md'),
+    `# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| ${slug} | in_progress | 2026-06-05 | - |\n`
+  );
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/prd-${slug}.md`),
+    `---\nclassification: ${classification}\n---\n# PRD\n`
+  );
+}
+
 test('workflow:next infers project progress from existing artifacts', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
@@ -80,6 +112,220 @@ test('workflow:next infers active feature and routes to analyst after product', 
   assert.equal(result.featureSlug, 'compact-layout');
   assert.equal(result.agent, 'analyst');
   assert.deepEqual(result.completed, ['product']);
+});
+
+test('workflow:next reconciles stale feature state from approved upstream artifacts', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, { featureSlug: slug });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'architect');
+  assert.equal(result.current, 'architect');
+  assert.equal(result.next, 'architect');
+  assert.deepEqual(result.completed, ['product', 'analyst']);
+
+  const persisted = JSON.parse(await fs.readFile(path.join(dir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(persisted.next, 'architect');
+  assert.deepEqual(persisted.completed, ['product', 'analyst']);
+});
+
+test('workflow:next keeps stale feature state at analyst when Gate A is pending', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: pending\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, { featureSlug: slug });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'analyst');
+  assert.equal(result.current, 'analyst');
+  assert.equal(result.next, 'analyst');
+  assert.deepEqual(result.completed, ['product']);
+
+  const persisted = JSON.parse(await fs.readFile(path.join(dir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.deepEqual(persisted.completed, ['product']);
+  assert.equal(persisted.next, 'analyst');
+});
+
+test('workflow:next accepts phase_gates requirements approval during stale-state reconciliation', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\nphase_gates: \'{"requirements":"approved"}\'\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, { featureSlug: slug });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'architect');
+  assert.deepEqual(result.completed, ['product', 'analyst']);
+});
+
+test('workflow:next accepts textual Gate A approval during stale-state reconciliation', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '# Spec\n\nGate A: approved\n'
+  );
+  await writeFeatureWorkflowState(dir, { featureSlug: slug });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'architect');
+  assert.deepEqual(result.completed, ['product', 'analyst']);
+});
+
+test('workflow:next repairs stale skipped stages when artifacts prove completion', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    skipped: ['analyst']
+  });
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.deepEqual(loaded.state.completed, ['product', 'analyst']);
+  assert.deepEqual(loaded.state.skipped, []);
+  assert.equal(loaded.state.next, 'architect');
+});
+
+test('workflow:next does not infer mainline progress while a detour is active', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    current: 'ux-ui',
+    next: 'product',
+    detour: {
+      active: true,
+      agent: 'ux-ui',
+      returnTo: 'product'
+    }
+  });
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.deepEqual(loaded.state.completed, []);
+  assert.equal(loaded.state.current, 'ux-ui');
+  assert.equal(loaded.state.next, 'product');
+  assert.deepEqual(loaded.state.detour, {
+    active: true,
+    agent: 'ux-ui',
+    returnTo: 'product'
+  });
+});
+
+test('workflow:next does not infer completed stages while a mainline stage is active', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\n---\n# Spec\n'
+  );
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    current: 'product',
+    next: 'analyst'
+  });
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.deepEqual(loaded.state.completed, []);
+  assert.equal(loaded.state.current, 'product');
+  assert.equal(loaded.state.next, 'analyst');
+});
+
+test('workflow:next reconciles stale project state from upstream artifacts', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'MEDIUM',
+      sequence: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'scope-check', 'dev', 'qa'],
+      current: null,
+      next: 'product',
+      completed: [],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.mode, 'project');
+  assert.equal(result.agent, 'architect');
+  assert.deepEqual(result.completed, ['setup', 'product', 'analyst']);
 });
 
 test('workflow:next injects dev-state context package when activating dev for a feature', async () => {

@@ -290,32 +290,40 @@ async function checkGateApproval(targetDir, gateLetter, slug, classification, pr
   const gateNames = { A: 'requirements', B: 'design', C: 'plan', D: 'execution' };
   const gateName = gateNames[gateLetter];
 
-  // Parse frontmatter
+  // Parse frontmatter when present. Explicit gate fields take precedence over
+  // free-text gate lines so `gate_requirements: pending` cannot be overridden
+  // accidentally by stale prose elsewhere in the spec.
   const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fmMatch) return { ok: false, reason: 'no_frontmatter' };
+  if (fmMatch) {
+    const fm = {};
+    for (const line of fmMatch[1].split(/\r?\n/)) {
+      const idx = line.indexOf(':');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+      if (key) fm[key] = val;
+    }
 
-  const fm = {};
-  for (const line of fmMatch[1].split(/\r?\n/)) {
-    const idx = line.indexOf(':');
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    const val = line.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
-    if (key) fm[key] = val;
-  }
+    // Check explicit gate field
+    const gateVal = fm[`gate_${gateName}`] || fm[`gate${gateLetter}`] || fm[`gate_${gateLetter}`];
+    if (gateVal) {
+      return gateVal.toLowerCase() === 'approved'
+        ? { ok: true }
+        : { ok: false, reason: `gate_${gateName}_not_approved` };
+    }
 
-  // Check explicit gate field
-  const gateVal = fm[`gate_${gateName}`] || fm[`gate${gateLetter}`] || fm[`gate_${gateLetter}`];
-  if (gateVal && gateVal.toLowerCase() === 'approved') {
-    return { ok: true };
-  }
-
-  // Check phase_gates JSON
-  if (fm.phase_gates) {
-    try {
-      const parsed = JSON.parse(fm.phase_gates.replace(/'/g, '"'));
-      if (parsed[gateName] === 'approved') return { ok: true };
-    } catch {
-      // ignore
+    // Check phase_gates JSON
+    if (fm.phase_gates) {
+      try {
+        const parsed = JSON.parse(fm.phase_gates.replace(/'/g, '"'));
+        if (parsed[gateName]) {
+          return parsed[gateName] === 'approved'
+            ? { ok: true }
+            : { ok: false, reason: `gate_${gateName}_not_approved` };
+        }
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -335,7 +343,7 @@ async function checkGateApproval(targetDir, gateLetter, slug, classification, pr
     }
   }
 
-  return { ok: false, reason: `gate_${gateName}_not_approved` };
+  return { ok: false, reason: fmMatch ? `gate_${gateName}_not_approved` : 'no_frontmatter' };
 }
 
 async function validateHandoffContract(targetDir, state, stageName) {

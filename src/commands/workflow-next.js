@@ -471,9 +471,45 @@ async function inferCompletedStages(targetDir, draftState) {
     if (!isInferableStage(stage)) break;
     const valid = await validateStageArtifacts(targetDir, draftState, stage);
     if (!valid) break;
+    const contractCheck = await validateHandoffContract(targetDir, draftState, normalizeAgentName(stage));
+    if (!contractCheck.ok) break;
     completed.push(normalizeAgentName(stage));
   }
   return completed;
+}
+
+function mergeInferredCompletedStages(state, inferredCompleted) {
+  if (!state || !Array.isArray(state.sequence) || !Array.isArray(inferredCompleted)) {
+    return { state, changed: false };
+  }
+
+  const sequence = state.sequence.map(normalizeAgentName);
+  const completedSet = new Set((state.completed || []).map(normalizeAgentName).filter(Boolean));
+  const skippedSet = new Set((state.skipped || []).map(normalizeAgentName).filter(Boolean));
+  let changed = false;
+
+  for (const stage of inferredCompleted.map(normalizeAgentName).filter(Boolean)) {
+    if (!sequence.includes(stage)) continue;
+    if (!completedSet.has(stage)) {
+      completedSet.add(stage);
+      changed = true;
+    }
+    if (skippedSet.delete(stage)) {
+      changed = true;
+    }
+  }
+
+  if (!changed) return { state, changed: false };
+
+  return {
+    changed: true,
+    state: buildStatePayload({
+      ...state,
+      sequence,
+      completed: sequence.filter((stage) => completedSet.has(stage)),
+      skipped: sequence.filter((stage) => skippedSet.has(stage))
+    })
+  };
 }
 
 // SF-project-18: cross-check workflow.state.json#completed against runtime
@@ -560,10 +596,16 @@ async function loadOrCreateState(targetDir, options = {}) {
       await detectUnsubstantiatedCompletions(targetDir, existing.completed, options.logger);
     }
     const reconciled = reconcileWorkflowState(existing);
-    if (reconciled.changed) {
-      await writeJson(statePath, reconciled.state);
+    const inferredCompleted = (reconciled.state.current || (reconciled.state.detour && reconciled.state.detour.active))
+      ? []
+      : await inferCompletedStages(targetDir, reconciled.state);
+    const merged = mergeInferredCompletedStages(reconciled.state, inferredCompleted);
+    const finalReconciled = merged.changed ? reconcileWorkflowState(merged.state) : reconciled;
+    const changed = reconciled.changed || merged.changed || finalReconciled.changed;
+    if (changed) {
+      await writeJson(statePath, finalReconciled.state);
     }
-    return { statePath, state: reconciled.state, created: false };
+    return { statePath, state: finalReconciled.state, created: false };
   }
 
   const context = await validateProjectContextFile(targetDir);
