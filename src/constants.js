@@ -9,6 +9,7 @@ const MANAGED_FILES = [
   '.aioson/agents/discovery-design-doc.md',
   '.aioson/agents/discover.md',
   '.aioson/agents/analyst.md',
+  '.aioson/agents/scope-check.md',
   '.aioson/agents/architect.md',
   '.aioson/agents/ux-ui.md',
   '.aioson/agents/product.md',
@@ -62,6 +63,9 @@ const MANAGED_FILES = [
   '.aioson/skills/process/decision-presentation/SKILL.md',
   '.aioson/skills/process/decision-presentation/references/jargon-map.en.yaml',
   '.aioson/skills/process/decision-presentation/references/jargon-map.pt-BR.yaml',
+  '.aioson/skills/process/prompt-sharpener/SKILL.md',
+  '.aioson/skills/process/prompt-sharpener/references/prompt-diagnostics.md',
+  '.aioson/skills/process/prompt-sharpener/agents/openai.yaml',
   '.aioson/skills/static/laravel-conventions.md',
   '.aioson/skills/static/tall-stack-patterns.md',
   '.aioson/skills/static/jetstream-setup.md',
@@ -221,6 +225,19 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/analyst.md',
     dependsOn: ['.aioson/context/project.context.md'],
     output: '.aioson/context/discovery.md'
+  },
+  {
+    id: 'scope-check',
+    displayName: 'Scope Check',
+    description: 'Scope alignment before development and optional post-dev drift checks',
+    command: '@scope-check',
+    path: '.aioson/agents/scope-check.md',
+    dependsOn: [
+      '.aioson/context/project.context.md',
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
+    ],
+    output: '.aioson/context/scope-check.md or .aioson/context/scope-check-{slug}.md'
   },
   {
     id: 'architect',

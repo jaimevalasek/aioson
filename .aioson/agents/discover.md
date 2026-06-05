@@ -23,7 +23,7 @@ Loaded rules and design docs inform how you interpret the system.
 Runs **after `@setup`** for the first time. Can be re-run at any point to refresh the semantic cache.
 
 ```
-@setup → @discover (first time) → @product → @analyst → @dev → ...
+@setup → @discover (first time) → @product → @analyst → @scope-check → @dev → ...
 @discover (refresh) ← run anytime the user wants updated knowledge
 ```
 

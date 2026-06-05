@@ -164,10 +164,10 @@ test('workflow:next ignores stale dev-state package when activating dev for anot
       version: 1,
       mode: 'feature',
       classification: 'MEDIUM',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'qa'],
       current: 'dev',
       next: 'dev',
-      completed: ['product', 'analyst', 'architect', 'discovery-design-doc'],
+      completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check'],
       skipped: [],
       featureSlug: slug,
       detour: null,
@@ -215,10 +215,10 @@ test('workflow:next ignores dev-state package when active_feature is missing', a
       version: 1,
       mode: 'feature',
       classification: 'MEDIUM',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'qa'],
       current: 'dev',
       next: 'dev',
-      completed: ['product', 'analyst', 'architect', 'discovery-design-doc'],
+      completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check'],
       skipped: [],
       featureSlug: slug,
       detour: null,
@@ -283,9 +283,9 @@ test('workflow:next completes discovery-design-doc when feature-scoped design ar
       version: 1,
       mode: 'feature',
       classification: 'MEDIUM',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'qa'],
       current: 'discovery-design-doc',
-      next: 'dev',
+      next: 'scope-check',
       completed: ['product', 'analyst', 'architect'],
       skipped: [],
       featureSlug: slug,
@@ -303,7 +303,7 @@ test('workflow:next completes discovery-design-doc when feature-scoped design ar
   });
 
   assert.equal(result.completedStage, 'discovery-design-doc');
-  assert.equal(result.agent, 'dev');
+  assert.equal(result.agent, 'scope-check');
 });
 
 test('workflow:next supports detours and returns to the saved stage', async () => {
@@ -360,7 +360,7 @@ test('workflow:next allows skip until dev but not past dev', async () => {
   });
 
   assert.equal(skipped.agent, 'dev');
-  assert.deepEqual(skipped.skipped, ['analyst', 'architect', 'discovery-design-doc']);
+  assert.deepEqual(skipped.skipped, ['analyst', 'scope-check', 'architect', 'discovery-design-doc']);
 
   await assert.rejects(
     () =>
@@ -374,7 +374,7 @@ test('workflow:next allows skip until dev but not past dev', async () => {
   );
 });
 
-test('workflow:next routes SMALL project through discovery-design-doc before dev', async () => {
+test('workflow:next routes SMALL project through scope-check after analyst', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
   await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
@@ -389,8 +389,70 @@ test('workflow:next routes SMALL project through discovery-design-doc before dev
     t
   });
 
+  assert.equal(result.agent, 'scope-check');
+  assert.deepEqual(result.completed, ['setup', 'product', 'analyst']);
+  assert.match(result.prompt, /scope-check\.md/);
+});
+
+test('workflow:next can invoke optional post-dev scope-check detour', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/scope-check.md'), '# Scope Check\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/design-doc.md'), '# Design Doc\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/readiness.md'), '# Readiness\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'SMALL',
+      sequence: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      current: 'qa',
+      next: 'qa',
+      completed: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev'],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'scope-check');
+  assert.equal(result.detour.active, true);
+  assert.equal(result.detour.returnTo, 'qa');
+  assert.match(result.prompt, /Scope-check mode: post-dev/);
+  assert.match(result.prompt, /actual implementation diff/);
+});
+
+test('workflow:next routes SMALL project through discovery-design-doc after scope-check and architect', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/scope-check.md'), '# Scope Check\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
   assert.equal(result.agent, 'discovery-design-doc');
-  assert.deepEqual(result.completed, ['setup', 'product', 'analyst', 'architect']);
+  assert.deepEqual(result.completed, ['setup', 'product', 'analyst', 'scope-check', 'architect']);
   assert.match(result.prompt, /design-doc\.md/);
 });
 
@@ -406,10 +468,10 @@ test('workflow:next blocks discovery-design-doc completion until design-doc and 
       version: 1,
       mode: 'project',
       classification: 'SMALL',
-      sequence: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: 'discovery-design-doc',
       next: 'dev',
-      completed: ['setup', 'product', 'analyst', 'architect'],
+      completed: ['setup', 'product', 'analyst', 'scope-check', 'architect'],
       skipped: [],
       featureSlug: null,
       detour: null,

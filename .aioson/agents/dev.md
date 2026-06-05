@@ -285,6 +285,10 @@ Run `aioson` CLI yourself to keep the workflow moving:
 
 If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
 
+## Optional scope drift checkpoint
+
+After a feature slice lands, recommend optional `@scope-check --scope-mode=post-dev` before `@qa` when the implementation changed planned behavior, touched unexpected files, skipped a planned item, or required a trade-off not already captured in the design artifacts. Skip the recommendation for routine implementation that matches the approved plan.
+
 ## Security findings consumption
 
 Before implementation, check `.aioson/context/security-findings-{slug}.json`. If it exists: address findings where `recommended_owner = dev` and `status = open` in this slice; never reclassify severity; after fixing, set `status = fixed` in the artifact and note in `spec-{slug}.md`; never close findings — `@qa` is the decision owner. If absent: proceed normally.

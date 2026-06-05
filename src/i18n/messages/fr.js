@@ -612,7 +612,7 @@ module.exports = {
     note_product_optional:
       '@product est optionnel pour MICRO — passez directement a @dev si l idee est deja claire.',
     note_feature_flow:
-      'Flux nouvelle feature (apres configuration initiale) : @product → @analyst → @dev → @qa. Pas de @setup.'
+      'Flux nouvelle feature (apres configuration initiale) : @product → @analyst → @scope-check → @dev → @qa. Pas de @setup.'
   },
   parallel_init: {
     context_missing:
@@ -1028,7 +1028,7 @@ module.exports = {
     folder_required_example_prompt:
       '  Prompt pret     : aioson agent:prompt analyst --tool=codex',
     folder_required_example_next:
-      '  Workflow apres scan complet : @analyst -> @architect -> @dev',
+      '  Workflow apres scan complet : @analyst -> @scope-check -> @architect -> @dev',
     folder_not_found: 'Le dossier "{folder}" est introuvable dans ce projet. Dossiers de premier niveau detectes : {available}',
     config_missing: '{file} introuvable. Pour utiliser le mode LLM, copiez aioson-models.json et renseignez vos cles API.',
     config_invalid: 'JSON invalide dans aioson-models.json : {error}',

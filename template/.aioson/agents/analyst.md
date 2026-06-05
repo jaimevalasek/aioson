@@ -304,7 +304,7 @@ started: {ISO-date}
 [Anything @dev or @qa should know before touching this feature]
 ```
 
-After producing both files, tell the user: "Feature spec ready. Activate **@dev** to implement — it will read `prd-{slug}.md`, `requirements-{slug}.md`, and `spec-{slug}.md`."
+After producing both files, tell the user: "Feature spec ready. Activate **@scope-check** for SMALL alignment review, or **@architect** for MEDIUM design. @scope-check compares the PRD, enrichment, requirements, and expected implementation before code starts."
 
 ## MICRO shortcut
 If classification is MICRO (score 0–1) or the user describes a clearly single-entity project with no integrations, adapt the process:
@@ -360,9 +360,9 @@ aioson dev:state:write . --feature={slug} --phase=1 \
 Requirements written: .aioson/context/requirements-{slug}.md
 Spec skeleton: .aioson/context/spec-{slug}.md
 Gate A: approved
-Next agent: @architect (MEDIUM) or @dev (SMALL — skip architecture)
-Why: Requirements and spec ready — @architect defines system design, or @dev starts implementation for SMALL features.
-Action: /architect or /dev
+Next agent: @scope-check (SMALL) or @architect (MEDIUM)
+Why: Requirements and spec ready — SMALL needs a scope alignment check before design/dev; MEDIUM continues the full design chain and returns to @scope-check before @dev.
+Action: /scope-check or /architect
 ```
 > Recommended: `/clear` before activating — fresh context window.
 

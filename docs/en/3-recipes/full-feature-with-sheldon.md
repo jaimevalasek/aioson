@@ -10,7 +10,7 @@
 ## The trail in one line
 
 ```
-/aioson:agent:product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev
+/aioson:agent:product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev
                                                               │
                                               (@qa ↔ @dev)  ← autonomous loop
                                                               │
@@ -299,7 +299,7 @@ Six months from now, anyone (or any AI) reads these files and understands **ever
 `@product → @dev → @qa`. Skip `@sheldon`, `@analyst`, `@architect`, `@ux-ui`, `@pm`, `@orchestrator`. The Constitution Article II (*Right-Sized Process*) protects you from unnecessary ceremony.
 
 ### SMALL without UI
-`@product → @sheldon → @analyst → @architect → @dev → @qa`. Skip `@ux-ui`, `@pm`, `@orchestrator`.
+`@product → @sheldon → @analyst → @scope-check → @architect → @dev → @qa`. Skip `@ux-ui`, `@pm`, `@orchestrator`.
 
 ### Full MEDIUM
 The complete trail above.

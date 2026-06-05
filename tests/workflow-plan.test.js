@@ -48,7 +48,7 @@ test('buildWorkflowPlan maps classifications to agent sequence', () => {
   assert.deepEqual(micro.commands, ['@setup', '@dev']);
 
   const small = buildWorkflowPlan({ classification: 'SMALL' });
-  assert.deepEqual(small.commands, ['@setup', '@product', '@analyst', '@architect', '@dev', '@qa']);
+  assert.deepEqual(small.commands, ['@setup', '@product', '@analyst', '@scope-check', '@architect', '@dev', '@qa']);
 
   const medium = buildWorkflowPlan({ classification: 'MEDIUM' });
   assert.deepEqual(medium.commands, [
@@ -59,6 +59,7 @@ test('buildWorkflowPlan maps classifications to agent sequence', () => {
     '@ux-ui',
     '@pm',
     '@orchestrator',
+    '@scope-check',
     '@dev',
     '@qa'
   ]);

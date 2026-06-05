@@ -23,6 +23,7 @@ Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or
 - discovery-design-doc -> `.aioson/agents/discovery-design-doc.md`
 - discover -> `.aioson/agents/discover.md`
 - analyst -> `.aioson/agents/analyst.md`
+- scope-check -> `.aioson/agents/scope-check.md`
 - architect -> `.aioson/agents/architect.md`
 - ux-ui (UI/UX) -> `.aioson/agents/ux-ui.md`
 - product -> `.aioson/agents/product.md`

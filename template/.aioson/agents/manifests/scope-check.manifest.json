@@ -1,0 +1,61 @@
+{
+  "agent_id": "scope-check",
+  "version": "1.0",
+  "display_name": "Scope Check",
+  "capabilities": [
+    {
+      "id": "check_scope_alignment",
+      "category": "verify",
+      "description": "Compare product intent against planned artifacts before code, and optionally compare approved scope against implementation or correction diffs after development.",
+      "inputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/project.context.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd.md or .aioson/context/prd-{slug}.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": "git diff, .aioson/context/dev-state.md, QA/tester/pentester findings, or last handoff for post-dev/post-fix/final modes",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/scope-check.md"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/scope-check-{slug}.md"
+        }
+      ]
+    }
+  ],
+  "autonomy_modes": [
+    "guarded",
+    "trusted"
+  ],
+  "default_mode": "guarded",
+  "check_modes": [
+    "pre-dev",
+    "post-dev",
+    "post-fix",
+    "final"
+  ],
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
+  "risk_profile": "medium"
+}

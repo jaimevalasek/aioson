@@ -521,8 +521,8 @@ Importante:
 - `scan:project` sozinho nao gera `discovery.md`
 - `scan:project` nunca gera `architecture.md`
 - se `discovery.md` e `skeleton-system.md` ja existirem e voce rodar com `--with-llm`, o scanner agora entra em modo de atualizacao por padrao: usa os arquivos atuais como memoria base, gera a nova versao consolidada e cria backup automatico em `.aioson/backups/` antes de sobrescrever
-- em projetos SMALL brownfield, o fluxo tipico depois do scan completo e `@analyst` -> `@architect` -> `@dev`
-- sem API LLM configurada, o fluxo local tambem e valido: `scan:project --folder=...` -> `@analyst` no seu Codex/Claude -> `@architect` -> `@dev`
+- em projetos SMALL brownfield, o fluxo tipico depois do scan completo e `@analyst` -> `@scope-check` -> `@architect` -> `@dev`
+- sem API LLM configurada, o fluxo local tambem e valido: `scan:project --folder=...` -> `@analyst` no seu Codex/Claude -> `@scope-check` -> `@architect` -> `@dev`
 
 O parâmetro `--folder` agora é obrigatório. Ele define quais pastas do projeto devem ganhar um mapa completo com pastas e arquivos. Você pode informar uma pasta ou várias separadas por vírgula.
 
@@ -574,8 +574,8 @@ Quando usar cada modo:
 
 Fluxos recomendados:
 
-- **Com API no aioson:** `scan:project --folder=src --with-llm --provider=...` -> `@analyst` -> `@architect` -> `@dev`
-- **Sem API no aioson:** `scan:project --folder=src` -> abrir seu AI CLI -> `@analyst` -> `@architect` -> `@dev`
+- **Com API no aioson:** `scan:project --folder=src --with-llm --provider=...` -> `@analyst` -> `@scope-check` -> `@architect` -> `@dev`
+- **Sem API no aioson:** `scan:project --folder=src` -> abrir seu AI CLI -> `@analyst` -> `@scope-check` -> `@architect` -> `@dev`
 - **Com contexto mínimo para tarefa específica:** `scan:project --folder=src` -> `context:pack --agent=dev --goal="..." --module=src`
 - Se o seu cliente nao entender `@analyst`, gere um prompt pronto com `aioson agent:prompt analyst --tool=codex` ou troque `--tool` para o cliente correto
 

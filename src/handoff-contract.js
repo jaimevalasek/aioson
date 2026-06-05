@@ -41,6 +41,16 @@ const CONTRACTS = {
     gates: ['A'], // Gate A must be approved
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
+  'scope-check': {
+    artifacts: (targetDir, state) => {
+      if (state.mode === 'feature' && state.featureSlug) {
+        return [`.aioson/context/scope-check-${state.featureSlug}.md`];
+      }
+      return ['.aioson/context/scope-check.md'];
+    },
+    gates: [],
+    contextUpdates: ['.aioson/context/project-pulse.md']
+  },
   architect: {
     artifacts: ['.aioson/context/architecture.md'],
     gates: ['B'],

@@ -735,7 +735,7 @@ module.exports = {
       'dApp context detected; include Web3 skills during @architect and @dev.',
     note_micro_scope: 'Keep implementation scope minimal and avoid optional agents.',
     note_product_optional: '@product is optional for MICRO — skip it and go straight to @dev if the idea is already clear.',
-    note_feature_flow: 'New feature workflow (after initial setup): @product → @analyst → @dev → @qa. No @setup required.'
+    note_feature_flow: 'New feature workflow (after initial setup): @product → @analyst → @scope-check → @dev → @qa. No @setup required.'
   },
   workflow_next: {
     title: 'Workflow handoff for {mode} ({classification}):',
@@ -1209,7 +1209,7 @@ module.exports = {
     folder_required_example_prompt:
       '  Ready prompt    : aioson agent:prompt analyst --tool=codex',
     folder_required_example_next:
-      '  Workflow after full scan: @analyst -> @architect -> @dev',
+      '  Workflow after full scan: @analyst -> @scope-check -> @architect -> @dev',
     folder_not_found: 'Folder "{folder}" was not found in this project. Top-level directories detected: {available}',
     config_missing: '{file} not found. To use LLM mode, copy aioson-models.json and fill in your API keys.',
     config_invalid: 'Invalid JSON in aioson-models.json: {error}',

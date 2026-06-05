@@ -27,11 +27,12 @@ const { emitDossierEvent } = require('../lib/dossier-telemetry');
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
 const EVENTS_RELATIVE_PATH = '.aioson/context/workflow.events.jsonl';
+const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 
 const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MICRO: ['product', 'dev', 'qa'],
-  SMALL: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
-  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'pentester', 'qa']
+  SMALL: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'pentester', 'qa']
 };
 
 function normalizeAgentName(input) {
@@ -52,8 +53,8 @@ function buildDefaultWorkflowConfig() {
     version: 1,
     project: {
       MICRO: ['setup', 'dev'],
-      SMALL: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
-      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'dev', 'qa']
+      SMALL: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'scope-check', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,
     rules: {
@@ -80,6 +81,21 @@ function parseFeaturesMarkdown(markdown) {
     }))
     .filter((row) => row.slug && row.slug !== 'slug')
     .filter((row) => !/^-+$/ .test(row.slug));
+}
+
+function normalizeScopeCheckMode(input) {
+  const mode = String(input || '').trim().toLowerCase();
+  return SCOPE_CHECK_MODES.has(mode) ? mode : null;
+}
+
+function getScopeCheckModeOption(options = {}) {
+  return normalizeScopeCheckMode(
+    options.scopeMode ||
+    options['scope-mode'] ||
+    options.checkMode ||
+    options['check-mode'] ||
+    options.mode
+  );
 }
 
 function chooseActiveFeature(features, preferredSlug = null) {
@@ -262,6 +278,13 @@ async function validateStageArtifacts(targetDir, state, stage) {
     return await exists(path.join(base, 'discovery.md'));
   }
 
+  if (stage === 'scope-check') {
+    if (state.mode === 'feature' && slug) {
+      return await exists(path.join(base, `scope-check-${slug}.md`));
+    }
+    return await exists(path.join(base, 'scope-check.md'));
+  }
+
   if (stage === 'architect') {
     return await exists(path.join(base, 'architecture.md'));
   }
@@ -404,7 +427,7 @@ function reconcileWorkflowState(state) {
 }
 
 function isInferableStage(stage) {
-  return ['setup', 'product', 'analyst', 'architect', 'ux-ui', 'orchestrator'].includes(
+  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'ux-ui', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }
@@ -905,6 +928,36 @@ function normalizeContextDependency(relPath) {
 }
 
 async function resolveStageDependencies(targetDir, state, stageName, agent) {
+  if (stageName === 'scope-check') {
+    const contextDir = path.join(targetDir, '.aioson', 'context');
+    const slug = state.featureSlug;
+    const candidates = [
+      'project.context.md',
+      'features.md',
+      slug ? `prd-${slug}.md` : 'prd.md',
+      slug ? `requirements-${slug}.md` : 'discovery.md',
+      slug ? `spec-${slug}.md` : 'spec.md',
+      slug ? `sheldon-enrichment-${slug}.md` : 'sheldon-enrichment.md',
+      'architecture.md',
+      slug ? `design-doc-${slug}.md` : null,
+      slug ? `readiness-${slug}.md` : null,
+      'design-doc.md',
+      'readiness.md',
+      'ui-spec.md',
+      slug ? `implementation-plan-${slug}.md` : 'implementation-plan.md',
+      'dev-state.md',
+      'last-handoff.json',
+      'project-pulse.md'
+    ].filter(Boolean);
+    const existing = [];
+    for (const candidate of candidates) {
+      if (await exists(path.join(contextDir, candidate))) {
+        existing.push(normalizeContextDependency(candidate));
+      }
+    }
+    return existing.length > 0 ? existing : agent.dependsOn;
+  }
+
   if (stageName === 'discovery-design-doc') {
     const contextDir = path.join(targetDir, '.aioson', 'context');
     const slug = state.featureSlug;
@@ -956,6 +1009,8 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
     `readiness-${slug}.md`,
     'design-doc.md',
     'readiness.md',
+    `scope-check-${slug}.md`,
+    'scope-check.md',
     `implementation-plan-${slug}.md`
   ];
   const existing = [];
@@ -967,7 +1022,41 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
   return existing.length > 0 ? existing : agent.dependsOn;
 }
 
-function buildStageActivationContext(state, stageName, dependencies) {
+function inferScopeCheckMode(state, requestedMode = null) {
+  if (requestedMode) return requestedMode;
+  const completed = Array.isArray(state.completed) ? state.completed.map(normalizeAgentName) : [];
+  const current = normalizeAgentName(state.current || state.next);
+  if (completed.includes('dev')) return 'post-dev';
+  if (completed.includes('qa') || completed.includes('tester') || completed.includes('pentester')) return 'post-fix';
+  if (current === 'scope-check') return 'pre-dev';
+  return 'pre-dev';
+}
+
+function buildScopeCheckActivationContext(state, mode) {
+  const resolvedMode = inferScopeCheckMode(state, mode);
+  const lines = [
+    `Scope-check mode: ${resolvedMode}`,
+    `Workflow mode: ${state.mode || 'unknown'}`,
+    `Classification: ${state.classification || 'unknown'}`
+  ];
+  if (state.featureSlug) lines.push(`Feature slug: ${state.featureSlug}`);
+  if (resolvedMode === 'pre-dev') {
+    lines.push('Compare user intent against planning artifacts before implementation.');
+  } else if (resolvedMode === 'post-dev') {
+    lines.push('Compare the approved scope-check/design artifacts against the actual implementation diff and changed files before QA.');
+  } else if (resolvedMode === 'post-fix') {
+    lines.push('Compare approved scope, QA/tester/pentester findings, and the correction diff; confirm the fix did not change product intent.');
+  } else if (resolvedMode === 'final') {
+    lines.push('Reconcile intent, plan, delivered behavior, and remaining exclusions before close/commit/release.');
+  }
+  return lines.join('\n');
+}
+
+function buildStageActivationContext(state, stageName, dependencies, scopeCheckMode = null) {
+  if (stageName === 'scope-check') {
+    return buildScopeCheckActivationContext(state, scopeCheckMode);
+  }
+
   if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) return '';
   return [
     `Feature slug: ${state.featureSlug}`,
@@ -979,7 +1068,7 @@ function buildStageActivationContext(state, stageName, dependencies) {
   ].join('\n');
 }
 
-async function activateStage(targetDir, state, locale, tool, explicitAgent = null, requestedMode = null) {
+async function activateStage(targetDir, state, locale, tool, explicitAgent = null, requestedMode = null, scopeCheckMode = null) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
   if (!stageName) {
     return {
@@ -1087,7 +1176,7 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
     autonomyMode: effectiveMode,
     capabilitySummary: buildAgentCapabilitySummary(agentManifest, tool),
     dependsOn: dependencies,
-    activationContext: buildStageActivationContext(state, stageName, dependencies)
+    activationContext: buildStageActivationContext(state, stageName, dependencies, scopeCheckMode)
   });
 
   if (testBriefing) {
@@ -1358,7 +1447,10 @@ async function runWorkflowNext({ args, options, logger, t }) {
     requestedAgent = 'validator';
   }
 
-  const activation = await activateStage(targetDir, state, locale, tool, requestedAgent, options.mode || null);
+  const activationAgent = normalizeAgentName(requestedAgent || state.current || state.next);
+  const scopeCheckMode = activationAgent === 'scope-check' ? getScopeCheckModeOption(options) : null;
+  const requestedAutonomyMode = scopeCheckMode && activationAgent === 'scope-check' ? null : options.mode || null;
+  const activation = await activateStage(targetDir, state, locale, tool, requestedAgent, requestedAutonomyMode, scopeCheckMode);
   state = activation.state;
 
   // ── Living Memory: if a reflect manifest is pending (created above by the

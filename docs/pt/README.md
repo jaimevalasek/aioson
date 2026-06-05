@@ -22,7 +22,7 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 ### Quero uma receita pronta para o meu caso
 
 **Trilhas canônicas — como features chegam ao dev:**
-1. **[Feature completa com @sheldon](./3-receitas/feature-completa-com-sheldon.md)** — a trilha principal: `@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa` (com gates opcionais de `@tester` e `@pentester`)
+1. **[Feature completa com @sheldon](./3-receitas/feature-completa-com-sheldon.md)** — a trilha principal: `@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa` (com gates opcionais de `@tester` e `@pentester`)
 2. [Da ideia ao PRD via @briefing](./3-receitas/da-ideia-ao-prd-via-briefing.md) — quando a ideia ainda é vaga
 3. [Plans externos para @product](./3-receitas/plans-externos-para-product.md) — quando você planejou em ChatGPT/Claude.io e quer trazer
 

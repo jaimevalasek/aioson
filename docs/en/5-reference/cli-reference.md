@@ -255,7 +255,7 @@ aioson agent:prompt dev --tool=opencode --json
 ```
 
 **Arguments:**
-- `<agent>` — agent id: `setup`, `product`, `analyst`, `architect`, `ux-ui`, `pm`, `dev`, `qa`, `orchestrator`.
+- `<agent>` — agent id: `setup`, `product`, `analyst`, `scope-check`, `architect`, `ux-ui`, `pm`, `dev`, `qa`, `orchestrator`.
 
 **Options:**
 - `--tool=codex|claude|opencode` — formats the prompt for the target CLI. Default: `codex`.
@@ -302,18 +302,18 @@ Notes:
 
 **Sequences by classification:**
 - `MICRO`: `@setup → @product (optional) → @dev`
-- `SMALL`: `@setup → @product → @analyst → @architect → @dev → @qa`
-- `MEDIUM`: `@setup → @product → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa`
+- `SMALL`: `@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`
+- `MEDIUM`: `@setup → @product → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa`
 
 **Feature development workflow (after initial setup):**
 
 Once the project is set up, each new feature follows a shorter sequence — no `@setup` required:
 
 ```
-/aioson:agent:product → @analyst → @dev → @qa
+/aioson:agent:product → @analyst → @scope-check → @dev → @qa
 ```
 
-`@product` creates a feature-scoped `prd-{slug}.md` and registers the feature in `features.md`. `@analyst` produces `requirements-{slug}.md` and `spec-{slug}.md`. `@dev` reads the feature spec. `@qa` closes the feature by running `feature:close --verdict=PASS`, which updates `spec-{slug}.md` with a QA sign-off, marks it `done` in `features.md`, and automatically archives all feature artefacts to `.aioson/context/done/{slug}/`.
+`@product` creates a feature-scoped `prd-{slug}.md` and registers the feature in `features.md`. `@analyst` produces `requirements-{slug}.md` and `spec-{slug}.md`. `@scope-check` compares intent against the planned implementation before coding. `@dev` reads the feature spec. `@qa` closes the feature by running `feature:close --verdict=PASS`, which updates `spec-{slug}.md` with a QA sign-off, marks it `done` in `features.md`, and automatically archives all feature artefacts to `.aioson/context/done/{slug}/`.
 
 The `SMALL` and MEDIUM outputs include a note reminding you of this sequence.
 

@@ -124,6 +124,7 @@ async function writeHandoff(targetDir, payload) {
     workflow_mode: payload.workflowMode || null,
     classification: payload.classification || null,
     feature_slug: payload.featureSlug || null,
+    optional_handoffs: Array.isArray(payload.optionalHandoffs) ? payload.optionalHandoffs : [],
     decision_rationale: mergedRationale.length > 0 ? mergedRationale : undefined
   };
   await fs.writeFile(handoffPath, `${JSON.stringify(handoff, null, 2)}\n`, 'utf8');
@@ -216,6 +217,7 @@ async function readHandoffProtocol(targetDir) {
 function buildWorkflowHandoff(state, completedStage, nextAgent) {
   const agentLabel = completedStage ? `@${completedStage}` : null;
   const nextLabel = nextAgent ? `@${nextAgent}` : null;
+  const optionalHandoffs = buildOptionalWorkflowHandoffs(state, completedStage);
 
   return {
     lastAgent: agentLabel,
@@ -229,8 +231,35 @@ function buildWorkflowHandoff(state, completedStage, nextAgent) {
     nextAgent: nextLabel,
     workflowMode: state.mode || null,
     classification: state.classification || null,
-    featureSlug: state.featureSlug || null
+    featureSlug: state.featureSlug || null,
+    optionalHandoffs
   };
+}
+
+function buildOptionalWorkflowHandoffs(state, completedStage) {
+  const stage = String(completedStage || '').replace(/^@/, '').trim().toLowerCase();
+  const featureArg = state && state.featureSlug ? ` --feature=${state.featureSlug}` : '';
+  if (stage === 'dev') {
+    return [
+      {
+        agent: '@scope-check',
+        mode: 'post-dev',
+        command: `aioson workflow:next . --agent=scope-check --scope-mode=post-dev${featureArg}`,
+        reason: 'Optional drift check: compare the approved plan against the implementation diff before QA when behavior, files, or scope changed unexpectedly.'
+      }
+    ];
+  }
+  if (stage === 'qa' || stage === 'tester' || stage === 'pentester') {
+    return [
+      {
+        agent: '@scope-check',
+        mode: 'post-fix',
+        command: `aioson workflow:next . --agent=scope-check --scope-mode=post-fix${featureArg}`,
+        reason: 'Optional post-fix check: use only when verification or security corrections changed behavior or product scope.'
+      }
+    ];
+  }
+  return [];
 }
 
 function mapStageToCapability(stageName) {
@@ -241,6 +270,7 @@ function mapStageToCapability(stageName) {
     setup: 'initialize_project_context',
     product: 'define_product_scope',
     analyst: 'analyze_requirements',
+    'scope-check': 'check_scope_alignment',
     architect: 'design_architecture',
     'ux-ui': 'design_ui_spec',
     pm: 'plan_delivery',

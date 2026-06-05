@@ -46,8 +46,8 @@ Before routing the user, check the project's spec-driven state:
 
 2. For routing decisions, respect classification depth:
    - MICRO: @product → @dev (skip @analyst, @architect unless user asks)
-   - SMALL: @product → @sheldon → @analyst → @dev
-   - MEDIUM: @product → @sheldon → @analyst → @architect → @dev → @qa
+   - SMALL: @product → @sheldon → @analyst → @scope-check → @dev
+   - MEDIUM: @product → @sheldon → @analyst → @architect → @scope-check → @dev → @qa
 
 3. If the user asks "what should I do next?" or "where did we stop?":
    - Read `project-pulse.md` first (global state)

@@ -41,7 +41,7 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 - Página estática de portfólio
 - Mini-API de 3 endpoints
 
-#### SMALL — `@setup → @product → @analyst → @architect → @dev → @qa`
+#### SMALL — `@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`
 
 - Para: a maioria dos apps reais.
 - Tem o ciclo completo de discovery+desenvolvimento+QA.

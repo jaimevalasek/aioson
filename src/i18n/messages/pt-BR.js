@@ -709,7 +709,7 @@ module.exports = {
     note_product_optional:
       '@product e opcional para MICRO — pule e va direto ao @dev se a ideia ja esta clara.',
     note_feature_flow:
-      'Fluxo para nova feature (apos configuracao inicial): @product → @analyst → @dev → @qa. Sem @setup.'
+      'Fluxo para nova feature (apos configuracao inicial): @product → @analyst → @scope-check → @dev → @qa. Sem @setup.'
   },
   workflow_next: {
     title: 'Handoff do workflow para {mode} ({classification}):',
@@ -1234,7 +1234,7 @@ module.exports = {
     folder_required_example_prompt:
       '  Prompt pronto   : aioson agent:prompt analyst --tool=codex',
     folder_required_example_next:
-      '  Workflow apos scan completo: @analyst -> @architect -> @dev',
+      '  Workflow apos scan completo: @analyst -> @scope-check -> @architect -> @dev',
     folder_not_found: 'A pasta "{folder}" nao foi encontrada neste projeto. Pastas de nivel superior detectadas: {available}',
     config_missing: '{file} nao encontrado. Para usar o modo com LLM, copie aioson-models.json e preencha suas chaves de API.',
     config_invalid: 'JSON invalido em aioson-models.json: {error}',

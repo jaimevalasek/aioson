@@ -61,7 +61,7 @@ test('workflow:execute: dry-run returns plan without executing', async () => {
   assert.ok(result.suggestion);
 });
 
-test('workflow:execute: dry-run SMALL has product, analyst, dev, qa steps', async () => {
+test('workflow:execute: dry-run SMALL has product, analyst, scope-check, dev, qa steps', async () => {
   const tmpDir = await makeTmpDir();
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -71,6 +71,7 @@ test('workflow:execute: dry-run SMALL has product, analyst, dev, qa steps', asyn
   const agents = result.steps.map((s) => s.agent);
   assert.ok(agents.includes('product'));
   assert.ok(agents.includes('analyst'));
+  assert.ok(agents.includes('scope-check'));
   assert.ok(agents.includes('dev'));
   assert.ok(agents.includes('qa'));
 });
@@ -229,7 +230,7 @@ test('workflow:execute: dry-run predicts blockers for an active stage with missi
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
       completed: ['product', 'analyst'],
@@ -362,7 +363,7 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: 'product',
       next: 'analyst',
       completed: [],
@@ -381,7 +382,7 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
 
   assert.equal(result.ok, true);
   assert.equal(result.max_checkpoints, 2);
-  assert.equal(result.active_stage, 'architect');
+  assert.equal(result.active_stage, 'scope-check');
   assert.ok(Array.isArray(result.transitions));
   assert.equal(result.transitions.length, 2);
   assert.deepEqual(
@@ -392,8 +393,8 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     result.transitions.map((transition) => transition.agent),
     ['product', 'analyst']
   );
-  assert.equal(result.execution_state.checkpoint.active_stage, 'architect');
-  assert.equal(result.execution_state.status_snapshot.activeStage, 'architect');
+  assert.equal(result.execution_state.checkpoint.active_stage, 'scope-check');
+  assert.equal(result.execution_state.status_snapshot.activeStage, 'scope-check');
   assert.equal(result.execution_state.suggestion.action, 'continue_stage');
   assert.ok(result.resume_command.includes("--max-checkpoints='2'"));
 
@@ -401,7 +402,7 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8')
   );
   assert.equal(executionState.status, 'active');
-  assert.equal(executionState.checkpoint.active_stage, 'architect');
+  assert.equal(executionState.checkpoint.active_stage, 'scope-check');
   assert.ok(Array.isArray(executionState.history));
   assert.equal(executionState.history.length, 1);
 });
@@ -420,10 +421,10 @@ test('workflow:execute: completes cleanly when the workflow has no pending stage
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       current: null,
       next: null,
-      completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      completed: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
       skipped: [],
       featureSlug: 'checkout',
       detour: null,
@@ -615,8 +616,8 @@ test('workflow:execute: parallel_guard is null when no --lane is provided', asyn
 
 // ── AC-SDLC-08: gate-blocked message format (gate:approve + responsible agent) ─
 
-// Note: the default MEDIUM feature sequence is ['product', 'analyst', 'dev', 'pentester', 'qa'].
-// architect/orchestrator/pm are not in the default feature sequence.
+// Note: the default MEDIUM feature sequence includes design, scope-check, dev, pentester, and qa.
+// Some tests use custom workflow.config.json to isolate a specific gate.
 // These tests use a custom workflow.config.json to include the relevant agent in the sequence,
 // or use 'qa' (which has gate_before='C' and IS in the default feature sequence).
 
@@ -693,7 +694,6 @@ test('workflow:execute: blocked step message includes feature slug in gate:appro
 
 test('workflow:execute: Gate C blocked qa step names @pm or @dev as responsible', async () => {
   const tmpDir = await makeTmpDir();
-  // MEDIUM feature sequence = ['product', 'analyst', 'dev', 'pentester', 'qa']
   // qa has gate_before='C' and IS in the default MEDIUM feature sequence
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
   await writeFile(tmpDir, '.aioson/context/prd-feat.md', '# PRD');

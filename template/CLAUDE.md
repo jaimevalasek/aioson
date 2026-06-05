@@ -49,6 +49,7 @@ Capture is best-effort — do not crash, retry, or surface failures to the user.
 - /setup -> `.aioson/agents/setup.md`
 - /discovery-design-doc -> `.aioson/agents/discovery-design-doc.md`
 - /analyst -> `.aioson/agents/analyst.md`
+- /scope-check -> `.aioson/agents/scope-check.md`
 - /architect -> `.aioson/agents/architect.md`
 - /ux-ui (UI/UX) -> `.aioson/agents/ux-ui.md`
 - /product -> `.aioson/agents/product.md`
@@ -86,7 +87,7 @@ AIOSON follows a Spec-Driven Development (SDD) methodology. Key governance files
 
 The process depth scales with project classification:
 - **MICRO** (0-1): lightweight — @product → @dev
-- **SMALL** (2-3): standard — @product → @analyst → @dev
+- **SMALL** (2-3): standard — @product → @analyst → @scope-check(pre-dev) → @architect → @discovery-design-doc → @dev, with optional @scope-check(post-dev) before @qa when implementation drift is likely
 - **MEDIUM** (4-6): full — all agents, all gates, all artifacts
 
 Classification is determined by @analyst during discovery. See `aioson-spec-driven` skill for details.

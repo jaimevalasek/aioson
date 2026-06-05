@@ -41,7 +41,7 @@ The sum of three factors (each worth 0, 1, or 2 points):
 - Static portfolio page
 - Mini API with 3 endpoints
 
-#### SMALL — `@setup → @product → @analyst → @architect → @dev → @qa`
+#### SMALL — `@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`
 
 - For: most real apps.
 - Full discovery+development+QA cycle.

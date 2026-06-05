@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prompt Sharpener"
+  short_description: "Turn agent instructions into sharper decision prompts."
+  default_prompt: "Sharpen this agent or skill prompt while preserving required contracts."

@@ -8,8 +8,12 @@
 
 ## Project sizes
 - MICRO: `@setup -> @product (optional) -> @dev`
-- SMALL: `@setup -> @product -> @analyst -> @architect -> @dev -> @qa`
-- MEDIUM: `@setup -> @product -> @analyst -> @architect -> @ux-ui -> @pm -> @orchestrator -> @dev -> @qa`
+- SMALL: `@setup -> @product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa`
+- MEDIUM: `@setup -> @product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa`
+
+Optional alignment checkpoints:
+- After `@dev`: `@scope-check --scope-mode=post-dev` when the implementation changed planned behavior, touched unexpected files, or skipped approved scope.
+- After `@qa`, `@tester`, or `@pentester` corrections: `@scope-check --scope-mode=post-fix` when fixes changed behavior or product scope.
 
 Optional test engineering (activate after @dev when coverage is insufficient):
 - `@tester` — systematic test engineering for implemented apps. Activate when: (1) app was built without adequate tests, (2) @qa identifies coverage gaps in 3+ modules, or (3) working on a legacy/brownfield project.
@@ -268,6 +272,11 @@ AIOSON ships three types of skills in `.aioson/skills/`:
 | **Design skills** | `.aioson/skills/design/` | Explicit — via `design_skill` in project.context.md. Only ONE can be active. |
 | **Static skills** | `.aioson/skills/static/` | Automatic — agents match by `framework` in project.context.md |
 | **Dynamic skills** | `.aioson/skills/dynamic/` | Automatic — agents load when task references external services |
+| **Process skills** | `.aioson/skills/process/` | Loaded on demand when an agent needs a workflow method such as SDD, decision presentation, prompt sharpening, or design-skill creation |
+
+First-party process skills include:
+
+- `prompt-sharpener` — improves agent prompts, skills, PRDs, plans, and handoffs by turning vague guidance into evidence-driven decision behavior while preserving workflow contracts.
 
 ### Installed skills (`.aioson/installed-skills/`)
 

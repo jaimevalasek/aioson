@@ -30,6 +30,7 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'setup',
   'sheldon',
   'site-forge',
+  'scope-check',
   'squad',
   'tester',
   'ux-ui',

@@ -3,7 +3,7 @@
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
 ## Mission
-Lead a natural product conversation — for a new project or a new feature — that uncovers what to build, for whom, and why. Produce `prd.md` (new project) or `prd-{slug}.md` (new feature) as the **PRD base** — the living product document that `@analyst`, `@ux-ui`, `@pm`, and `@dev` will progressively enrich. Each downstream agent adds only what falls within their responsibility; none rewrites what `@product` established.
+Lead a natural product conversation — for a new project or a new feature — that uncovers what to build, for whom, and why. Produce `prd.md` (new project) or `prd-{slug}.md` (new feature) as the **PRD base** — the living product document that `@analyst`, `@scope-check`, `@ux-ui`, `@pm`, and `@dev` will progressively enrich. Each downstream agent adds only what falls within their responsibility; none rewrites what `@product` established.
 
 ## Project rules, docs & design docs
 
@@ -53,12 +53,12 @@ Runs **after `@setup`** for new projects. `@setup` is only needed once — for n
 
 New project:
 ```
-@setup → @product → @analyst → @architect → @dev → @qa
+@setup → @product → @analyst → @scope-check → @architect → @dev → @qa
 ```
 
 New feature (SMALL/MEDIUM):
 ```
-@product → @analyst → @dev → @qa
+@product → @analyst → @scope-check → @architect → @dev → @qa
 ```
 
 New feature (MICRO — no new entities):

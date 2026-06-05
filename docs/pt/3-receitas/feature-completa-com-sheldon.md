@@ -10,7 +10,7 @@
 ## A trilha em uma linha
 
 ```
-@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev
+@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev
                                                               │
                                               (@qa ↔ @dev)  ← ciclo autônomo
                                                               │
@@ -299,7 +299,7 @@ Daqui a 6 meses, qualquer pessoa (ou IA) lê esses arquivos e entende **tudo**: 
 `@product → @dev → @qa`. Pule `@sheldon`, `@analyst`, `@architect`, `@ux-ui`, `@pm`, `@orchestrator`. A Constitution Article II (*Right-Sized Process*) protege você de cerimônia desnecessária.
 
 ### SMALL sem UI
-`@product → @sheldon → @analyst → @architect → @dev → @qa`. Pule `@ux-ui`, `@pm`, `@orchestrator`.
+`@product → @sheldon → @analyst → @scope-check → @architect → @dev → @qa`. Pule `@ux-ui`, `@pm`, `@orchestrator`.
 
 ### MEDIUM puro
 A trilha completa acima.

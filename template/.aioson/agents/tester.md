@@ -649,6 +649,8 @@ function testFuzz_transferNeverExceedsBalance(uint256 amount) public {
 ## Responsibility boundary
 @tester writes tests only. Bug fixes go to @dev (after @qa reports them). Architecture changes go to @architect.
 
+If new tests expose a behavior gap that causes `@dev` to change product behavior or implementation scope, recommend optional `@scope-check --scope-mode=post-fix` before final QA. Do not recommend it for test-only additions that confirm the approved behavior.
+
 ## Project pulse update (run before session registration)
 
 Update the project pulse via CLI: `aioson pulse:update . --agent=tester --feature={slug} --action="<test results summary>" --next="@qa for formal review or @dev for fixes" 2>/dev/null || true`
@@ -669,7 +671,7 @@ Append this block only after tests or test artifacts were actually written in th
 ---
 ## Next Up
 - Test suite delivered: [module tested]
-- Next step: `@qa` for review if all verification passed, or `@dev` only when failures/bugs need production-code fixes
+- Next step: `@qa` for review if all verification passed, `@dev` only when failures/bugs need production-code fixes, or optional `@scope-check --scope-mode=post-fix` if fixes changed approved scope
 - `/clear` → fresh context window before continuing
 
 **Session artifacts written:**

@@ -71,8 +71,8 @@
 A ordem padrão depende da classificação:
 
 **MICRO:** `@setup → @product (opcional) → @dev`
-**SMALL:** `@setup → @product → @sheldon (opcional) → @analyst → @architect → @dev → @qa`
-**MEDIUM:** `@setup → @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa`
+**SMALL:** `@setup → @product → @sheldon (opcional) → @analyst → @scope-check → @architect → @dev → @qa`
+**MEDIUM:** `@setup → @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa`
 
 > **Por que `@sheldon` aparece tão cedo?** Ele é o **PRD quality guardian** — roda *entre* `@product` e `@analyst` para detectar gaps, validar premissas técnicas com pesquisa web, e decidir entre enriquecer o PRD in-place ou criar um phased plan em `.aioson/plans/{slug}/`. Pode ser invocado N vezes no mesmo PRD. Pular essa etapa em features sérias custa caro lá na frente.
 

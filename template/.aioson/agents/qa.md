@@ -298,6 +298,7 @@ Test written: tests/Feature/AppointmentAuthTest.php
 ### Recommended next agents (when triggers fire — see "Specialized agent triggers")
 - `@tester` — coverage gap on critical paths or no mutation tests on auth/money modules.
 - `@pentester` — feature touches sensitive surface (auth/secrets/data/upload/external URL/supply chain).
+- `@scope-check --scope-mode=post-fix` — dev/QA/security corrections changed behavior, files, or scope enough that delivery should be reconciled against the approved plan before final sign-off.
 - `@validator` — `.aioson/plans/{slug}/harness-contract.json` is present (binary contract gates `feature:close` via `progress.json.ready_for_done_gate`).
 
 ### Summary: X Critical, X High, X Medium, X Low. AC: X/Y covered.

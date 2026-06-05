@@ -41,7 +41,7 @@ These directories are **optional**. Check silently — if a directory is absent 
               ↓
     (enriched PRD or phased plan created)
               ↓
-   @analyst → @architect → @ux-ui → @dev → @qa
+   @analyst → @scope-check → @architect → @ux-ui → @dev → @qa
 ```
 
 **Rule**: `@sheldon` can only be activated on PRDs not yet implemented. After the target PRD is selected, only `features.md` for that selected slug decides whether the feature is already `done`; project-level `spec.md` never blocks enrichment.

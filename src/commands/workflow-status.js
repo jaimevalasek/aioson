@@ -429,6 +429,15 @@ async function runWorkflowStatus({ args, options, logger, t }) {
       if (handoff.last_agent) logger.log(`  Agent: ${handoff.last_agent}`);
       if (handoff.what_was_done) logger.log(`  Done: ${handoff.what_was_done}`);
       if (handoff.what_comes_next) logger.log(`  Next: ${handoff.what_comes_next}`);
+      if (Array.isArray(handoff.optional_handoffs) && handoff.optional_handoffs.length > 0) {
+        logger.log('  Optional handoffs:');
+        for (const optional of handoff.optional_handoffs) {
+          const label = optional.agent || '@unknown';
+          const mode = optional.mode ? ` (${optional.mode})` : '';
+          const command = optional.command ? ` — ${optional.command}` : '';
+          logger.log(`    - ${label}${mode}${command}`);
+        }
+      }
       if (handoff.session_ended_at) logger.log(`  When: ${timeSince(handoff.session_ended_at)} ago`);
       logger.log('');
     }

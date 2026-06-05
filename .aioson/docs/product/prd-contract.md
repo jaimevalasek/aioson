@@ -102,6 +102,6 @@ After the PRD is produced:
 |---|---|
 | MICRO | `@dev` |
 | SMALL | `@analyst` |
-| MEDIUM | `@analyst` → `@architect` → `@dev` → `@qa` |
+| MEDIUM | `@analyst` → `@architect` → `@scope-check` → `@dev` → `@qa` |
 
 Assess feature complexity from the conversation and state the next agent explicitly.

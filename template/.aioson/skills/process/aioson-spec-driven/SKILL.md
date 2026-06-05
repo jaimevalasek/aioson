@@ -20,6 +20,7 @@ Do NOT load the entire `references/` folder. Load only the file matching your cu
 | Specify | `prd*.md` | @product | lite | full | full |
 | Research/Discuss | `sheldon-enrichment*.md` | @sheldon | optional | recommended | required |
 | Requirements | `requirements-{slug}.md` | @analyst | skip | required | required |
+| Alignment Check | `scope-check*.md` | @scope-check | skip | early | final before dev |
 | Design | `architecture.md`, `design-doc*.md` | @architect | skip | selective | required |
 | Tasks/Plan | `implementation-plan*.md` | @dev | optional | recommended | required |
 | Execute | code, commits, spec updates | @dev, @deyvin | — | — | — |
@@ -28,8 +29,8 @@ Do NOT load the entire `references/` folder. Load only the file matching your cu
 ## Phase depth by classification
 
 - **MICRO**: Specify (lite) + Execute. Skip Requirements, Design, Plan unless complexity warrants it.
-- **SMALL**: Specify + Requirements + selective Design + Plan. @sheldon recommended before downstream.
-- **MEDIUM**: Full pack — all phases, all artifacts, @sheldon validation before @analyst, implementation plan required.
+- **SMALL**: Specify + Requirements + scope check + selective Design + Plan. @sheldon recommended before downstream.
+- **MEDIUM**: Full pack — all phases, all artifacts, @sheldon validation before @analyst, final scope check before @dev, implementation plan required.
 
 ## References available
 

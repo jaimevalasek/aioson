@@ -73,7 +73,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **Como funciona:**
 - 0–1 ponto → **MICRO** (`@setup → @product → @dev`)
-- 2–3 pontos → **SMALL** (`@setup → @product → @analyst → @architect → @dev → @qa`)
+- 2–3 pontos → **SMALL** (`@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`)
 - 4–6 pontos → **MEDIUM** (workflow completo, todos os gates, todos os artefatos)
 
 **Onde aparece:** `classification:` no frontmatter do `project.context.md`.
