@@ -37,7 +37,7 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 11. [Continuidade entre sessões](./3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
 
 ### Quero a referência técnica de um agente ou comando
-- **[Fichas dos 28 agentes](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
+- **[Fichas dos 29 agentes](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
 - **[Referência técnica completa](./5-referencia/README.md)** — 32 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
 - [Guia de agentes (legado)](./agentes.md) — visão tabular alternativa
 

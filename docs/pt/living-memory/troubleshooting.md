@@ -44,7 +44,7 @@ aioson memory:status .
 
 ```
 [FAIL] Bootstrap coverage: 4/4
-  Hint: Run /discover to refresh the bootstrap files (or `aioson memory:refresh` if implemented).
+  Hint: Run /discover to refresh the bootstrap files (or `aioson memory:reflect-prepare . --agent=dev` for manual reflection).
 ```
 
 (Repare: cobertura 4/4 mas advisório por estar antigo — a hint detecta via `generated_at`.)

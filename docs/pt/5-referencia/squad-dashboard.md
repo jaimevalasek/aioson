@@ -9,7 +9,7 @@ Não requer instalação adicional. Vem incluso quando você instala o aioson.
 ## Pré-requisitos
 
 - aioson instalado globalmente (`npm install -g @jaimevalasek/aioson`)
-- Pelo menos um squad criado no projeto (`aioson squad:create`)
+- Pelo menos um squad criado no projeto (`aioson squad:scaffold . --slug=<slug>`)
 - Node.js ≥ 18 (já exigido pelo aioson)
 - Browser moderno (Chrome, Firefox, Safari, Edge)
 
@@ -333,7 +333,7 @@ ls .aioson/squads/*/squad.manifest.json
 
 Se não existir, crie o squad primeiro:
 ```bash
-aioson squad:create . --squad=meu-squad
+aioson squad:scaffold . --slug=meu-squad --name="Meu Squad" --mode=mixed
 ```
 
 ### Painéis aparecem vazios

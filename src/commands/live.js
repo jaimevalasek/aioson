@@ -1573,23 +1573,51 @@ async function runRuntimeEmit({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const agentName = normalizeAgentHandle(requireOption(options, 'agent', t));
   const eventType = String(options.type || 'note').trim() || 'note';
+  const now = new Date().toISOString();
+  const refs = parseRefs(options.refs);
+  const planStep = options['plan-step'] ? String(options['plan-step']).trim() : null;
+  const summary = truncateMessage(
+    options.summary || options.message || options.title || `${eventType} emitted by ${agentName}`
+  );
+  const meta = parseJsonOption(options.meta);
+  const payload = meta && typeof meta === 'object' ? { ...meta } : {};
+  if (refs.length > 0) payload.refs = refs;
+  if (planStep) payload.plan_step = planStep;
 
-  const { db, dbPath, runtimeDir, context } = await requireActiveLiveContext(targetDir, agentName, t, {
-    limit: options.limit
-  });
+  let liveHandle;
+  if (await runtimeStoreExists(targetDir)) {
+    try {
+      liveHandle = await requireActiveLiveContext(targetDir, agentName, t, {
+        limit: options.limit
+      });
+    } catch (err) {
+      const noActive = t('live.no_active_session', { agent: agentName });
+      const notActive = t('live.session_not_active', { agent: agentName });
+      if (err && !(err.message === noActive || err.message === notActive)) {
+        throw err;
+      }
+    }
+  }
+
+  if (!liveHandle) {
+    const standalone = await emitStandaloneRuntimeEvent({
+      targetDir,
+      agentName,
+      eventType,
+      summary,
+      payload,
+      options,
+      now
+    });
+    if (!options.json) {
+      logger.log(`runtime:emit — ${agentName} | standalone event logged | run: ${standalone.runKey} (${standalone.dbPath})`);
+    }
+    return standalone;
+  }
+
+  const { db, dbPath, runtimeDir, context } = liveHandle;
 
   try {
-    const now = new Date().toISOString();
-    const refs = parseRefs(options.refs);
-    const planStep = options['plan-step'] ? String(options['plan-step']).trim() : null;
-    const summary = truncateMessage(
-      options.summary || options.message || options.title || `${eventType} emitted by ${agentName}`
-    );
-    const meta = parseJsonOption(options.meta);
-    const payload = meta && typeof meta === 'object' ? { ...meta } : {};
-    if (refs.length > 0) payload.refs = refs;
-    if (planStep) payload.plan_step = planStep;
-
     const state = context.state || createLiveState(targetDir, context.run, context.task, {
       sessionKey: context.sessionKey,
       activeAgent: context.agentName,
@@ -1727,6 +1755,67 @@ async function runRuntimeEmit({ args, options = {}, logger, t }) {
       taskKey: currentTaskKey || context.task.task_key,
       currentTask: nextCurrentTask,
       open: true
+    };
+  } finally {
+    db.close();
+  }
+}
+
+async function emitStandaloneRuntimeEvent({
+  targetDir,
+  agentName,
+  eventType,
+  summary,
+  payload,
+  options = {},
+  now
+}) {
+  const { db, dbPath } = await openRuntimeDb(targetDir);
+  try {
+    const taskKey = startTask(db, {
+      title: options.title ? String(options.title).trim() : `runtime:emit ${agentName}`,
+      goal: summary,
+      status: 'completed',
+      createdBy: agentName,
+      taskKind: 'runtime_event',
+      metaJson: {
+        mode: 'standalone',
+        reason: 'no_active_live_session'
+      }
+    });
+    const runKey = startRun(db, {
+      taskKey,
+      agentName,
+      agentKind: 'official',
+      source: 'direct',
+      title: options.title ? String(options.title).trim() : `runtime:emit ${agentName}`,
+      status: 'completed',
+      summary,
+      eventType,
+      phase: 'direct',
+      message: summary,
+      payload: Object.keys(payload).length > 0 ? {
+        ...payload,
+        standalone: true,
+        reason: 'no_active_live_session'
+      } : {
+        standalone: true,
+        reason: 'no_active_live_session'
+      }
+    });
+
+    return {
+      ok: true,
+      targetDir,
+      dbPath,
+      agent: agentName,
+      eventType,
+      sessionKey: null,
+      runKey,
+      taskKey,
+      currentTask: null,
+      open: false,
+      standalone: true
     };
   } finally {
     db.close();

@@ -255,7 +255,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **Exemplo:** squad "compliance jurídico" com agentes `@regulator`, `@attorney`, `@auditor`, sob comando do `@squad`.
 
-**Comandos:** `aioson squad:assemble`, `squad:agent-create`, `squad:refresh`.
+**Comandos:** `aioson squad:scaffold`, `squad:agent-create`, `squad:doctor`.
 
 ---
 

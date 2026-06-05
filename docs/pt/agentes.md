@@ -16,6 +16,7 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 @deyvin       ← companheiro tecnico para continuidade e pequenas implementacoes
 @discovery-design-doc ← quando precisa clarear escopo e gerar design doc vivo
 @analyst      ← projetos SMALL e MEDIUM
+@scope-check  ← valida alinhamento antes de codar ou depois de fix relevante
 @architect    ← projetos SMALL e MEDIUM
 @ux-ui        ← UI/UX quando há interfaces (SMALL e MEDIUM)
 @pm           ← apenas MEDIUM
@@ -53,7 +54,7 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 Quando o projeto ja existe e voce roda `scan:project`, o handoff correto agora e:
 
 ```text
-scan:project -> @analyst -> @architect -> @dev
+scan:project -> @analyst -> @scope-check -> @architect -> @dev
 ```
 
 Regras do fluxo:

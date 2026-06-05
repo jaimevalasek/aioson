@@ -16,6 +16,9 @@ Cada agente produz arquivos que os agentes subsequentes leem. Nenhum agente lê 
                ↓
 @analyst → lê sheldon-enrichment → discovery.md / requirements-{slug}.md + spec-{slug}.md
                ↓
+@scope-check → confronta intenção, plano e artefatos antes do código
+               gera scope-check-{slug}.md quando a feature é nomeada
+               ↓
 @dev → carrega minimum context package → implementa fase por fase
 ```
 
@@ -86,7 +89,7 @@ O `spec-{slug}.md` é o **artefato de handoff para @dev** — ele inclui as deci
 | Modo | O que @dev carrega |
 |---|---|
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` |
-| Feature SMALL/MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
+| Feature SMALL/MEDIUM | `project.context.md` + `spec-{slug}.md` + `scope-check-{slug}.md` + `implementation-plan-{slug}.md` |
 | Feature com plano do Sheldon | `project.context.md` + `spec-{slug}.md` + `.aioson/plans/{slug}/manifest.md` + arquivo da fase atual |
 | Modo projeto | `project.context.md` + `spec.md` + `skeleton-system.md` |
 
@@ -159,6 +162,7 @@ Esta é a lista completa de arquivos que @dev pode consultar em qualquer sessão
 | `dev-state.md` | Sempre (se existir — define o restante) |
 | `features.md` | Cold start apenas |
 | `spec-{slug}.md` | Feature ativa |
+| `scope-check-{slug}.md` | Antes da primeira implementação e após fixes relevantes |
 | `implementation-plan-{slug}.md` | Se plano existe |
 | `.aioson/plans/{slug}/manifest.md` + fase atual | Se plano Sheldon existe |
 | `skeleton-system.md` | Só ao navegar estrutura do projeto |
@@ -173,7 +177,7 @@ Esta é a lista completa de arquivos que @dev pode consultar em qualquer sessão
 
 ## Veja também
 
-- [Fichas dos 28 agentes](../4-agentes/README.md) — quando usar cada agente e o que ele entrega
+- [Fichas dos 29 agentes](../4-agentes/README.md) — quando usar cada agente e o que ele entrega
 - [Receitas práticas](../3-receitas/README.md) — exemplos end-to-end por cenário
 - [Continuidade entre sessões](../3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
 - [Feature Archive](./feature-archive.md) — o que acontece com os artefatos quando a feature fecha

@@ -2,7 +2,7 @@
 
 > **Para quem é:** quem quer ver o time inteiro de uma vez.
 > **Tempo de leitura:** 8 min.
-> **O que você vai sair sabendo:** quem são os 28 agentes, em que momento cada um entra, e como eles se conversam.
+> **O que você vai sair sabendo:** quem são os 29 agentes, em que momento cada um entra, e como eles se conversam.
 
 ---
 

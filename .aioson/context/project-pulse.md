@@ -1,23 +1,26 @@
 ---
 last_updated: 2026-06-05
-last_agent: codex
-last_gate: scope-check modes and prompt-sharpener skill verified
-active_work: "none"
+last_agent: dev
+last_gate: runtime emit standalone fallback verified
+active_feature: runtime-emit-standalone-fallback
+active_work: "runtime-emit-standalone-fallback -> @dev -> done"
 blockers: none
-next_recommendation: "Pilot prompt-sharpener on @analyst and @sheldon after observing @scope-check in real workflows."
+next_recommendation: "Optional @qa focused review for runtime/live telemetry fallback."
 ---
 
 # Project Pulse
 
 ## Status
 
-- **Last agent:** Codex
-- **Last gate:** scope-check modes and prompt-sharpener skill verified
-- **Active work:** none
-- **Next:** Pilot prompt-sharpener on @analyst and @sheldon after observing @scope-check in real workflows.
+- **Last agent:** @dev
+- **Active feature:** runtime-emit-standalone-fallback
+- **Last gate:** runtime emit standalone fallback verified
+- **Active work:** runtime-emit-standalone-fallback -> @dev -> done
+- **Next:** Optional @qa focused review for runtime/live telemetry fallback.
 
 ## Recent Activity
 
-- 2026-06-04 @dev → agent-output-routing-bugs: Fixed command/export/runtime regressions, prompt/handoff inconsistencies, Windows-sensitive tests, and stale runtime state; Simple Plan closed.
 - 2026-06-04 Codex → scope-check-agent: Added @scope-check as pre-implementation alignment checker; wired CLI definitions, workflow sequences, handoff contract, manifests, prompts, docs, and workflow regression tests.
 - 2026-06-05 Codex → scope-check-modes-prompt-sharpener: Added pre-dev/post-dev/post-fix/final modes, optional handoff suggestions, prompt-sharpener process skill, adoption plan, workflow/status support, and full-suite validation.
+- 2026-06-05 @codex → agent-command-audit: Hardened agent command references and CLI error-handling contract; added regression for unknown CLI references.
+- 2026-06-05 @dev → runtime-emit-standalone-fallback: Added direct standalone fallback for `runtime:emit` when no live session/runtime DB exists; focused live/runtime tests passed 17/17.

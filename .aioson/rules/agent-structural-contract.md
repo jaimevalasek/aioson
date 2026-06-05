@@ -84,13 +84,32 @@ Rules:
 
 ## 5. CLI error handling
 
-Every `aioson` CLI command in an agent file MUST end with `2>/dev/null || true` to prevent silent failures from breaking the session.
+Best-effort `aioson` CLI commands in agent files MUST end with `2>/dev/null || true` to prevent optional telemetry or context helpers from breaking the session when the CLI is unavailable.
 
 ```
 aioson <command> . --flag=value 2>/dev/null || true
 ```
 
-The ONLY exception is commands inside "Quick start" or "Prerequisites" sections where the user runs them manually (not the agent).
+Do not silence blocking commands whose result controls safety, routing, or user action. These commands must run normally, and the agent must inspect their result before continuing.
+
+Blocking examples:
+- `aioson git:guard`
+- `aioson commit:prepare`
+- `aioson gate:check`
+- `aioson preflight`
+- `aioson workflow:status`
+- `aioson context:validate`
+
+Best-effort examples:
+- `aioson runtime:emit`
+- `aioson pulse:update`
+- `aioson agent:done`
+- `aioson dossier:*`
+- `aioson memory:search`
+- `aioson context:search`
+- `aioson context:pack`
+
+Commands inside "Quick start" or "Prerequisites" sections are user-run examples and do not need the best-effort suffix.
 
 ## 6. CLI flag integrity
 

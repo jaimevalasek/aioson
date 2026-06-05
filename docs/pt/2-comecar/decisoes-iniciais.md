@@ -99,7 +99,7 @@ Você pode marcar **mais de um** no wizard — eles convivem no mesmo projeto.
 
 ### Development (padrão)
 
-Inclui os 28 agentes oficiais (product, analyst, dev, qa, etc.). Suficiente para 95% dos projetos.
+Inclui os 29 agentes oficiais (product, analyst, dev, qa, etc.). Suficiente para 95% dos projetos.
 
 ### Development + Squads
 
@@ -112,10 +112,10 @@ Adiciona o sistema de squads — você pode criar squads customizados para domí
 
 ```bash
 # Dentro do cliente AI
-> @squad assemble compliance
+> @squad montar compliance
 
 # Ou via CLI
-npx @jaimevalasek/aioson squad:assemble compliance
+npx @jaimevalasek/aioson squad:scaffold compliance
 ```
 
 **Quando ativar Squads:**

@@ -1,6 +1,6 @@
 # Guia de Agentes AIOSON
 
-> Índice completo dos 28 agentes, com situação de uso e saída esperada.
+> Índice completo dos 29 agentes, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
 
 ---
@@ -11,6 +11,7 @@
 |---|---|---|---|
 | [@product](./product.md) | Define visão, PRD e escopo da feature | Início de projeto ou nova feature | `prd.md`, `spec.md` |
 | [@analyst](./analyst.md) | Descobre domínio, entidades, fluxos | Após `@product`, antes de `@architect` | `architecture.md` (domínio) |
+| [@scope-check](./scope-check.md) | Confronta intenção, plano e artefatos antes do código | Antes de `@dev` e após fixes relevantes | `scope-check.md` |
 | [@architect](./architect.md) | Decide stack, estrutura, integração técnica | Após `@analyst` | `architecture.md` (técnico) |
 | [@ux-ui](./ux-ui.md) | Design system e specs de componentes | MEDIUM, após `@architect` | `design-doc.md`, `discovery.md` |
 | [@pm](./pm.md) | Backlog, user stories, ACs detalhados | MEDIUM, após `@ux-ui` | `tasks.md` |

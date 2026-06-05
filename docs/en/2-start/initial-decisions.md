@@ -112,10 +112,10 @@ Adds the squad system — you can create custom squads for domains outside the s
 
 ```bash
 # Inside the AI client
-> @squad assemble compliance
+> @squad scaffold compliance
 
 # Or via CLI
-npx @jaimevalasek/aioson squad:assemble compliance
+npx @jaimevalasek/aioson squad:scaffold . --slug=compliance --name="Compliance" --mode=mixed
 ```
 
 **When to activate Squads:**

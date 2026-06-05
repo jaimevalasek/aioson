@@ -95,10 +95,10 @@ Antes de criar, o `@squad` lê:
 
 ```bash
 # Criar squad via CLI
-aioson squad:assemble <slug>
+aioson squad:scaffold . --slug=<slug> --name="Meu Squad" --mode=mixed
 
-# Atualizar squad existente (breadth-aware)
-aioson squad:refresh <slug>
+# Diagnosticar squad existente
+aioson squad:doctor . --squad=<slug>
 
 # Publicar no aioson.com
 aioson system:publish --type=squad --slug=<slug>

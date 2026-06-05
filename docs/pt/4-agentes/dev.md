@@ -10,7 +10,7 @@
 
 ## Para que serve
 
-Você passou por `@product`, `@analyst`, `@architect`. A spec existe, as decisões técnicas estão em disco. Agora é hora de escrever código — mas de forma que o próximo agente (`@qa`, `@validator`) consiga verificar o que foi feito sem perguntar "o que você implementou?".
+Você passou por `@product`, `@analyst`, `@architect` e, nos fluxos SMALL/MEDIUM atuais, por `@scope-check` antes de abrir implementação. A spec existe, as decisões técnicas estão em disco. Agora é hora de escrever código — mas de forma que o próximo agente (`@qa`, `@validator`) consiga verificar o que foi feito sem perguntar "o que você implementou?".
 
 `@dev` lê os artefatos, implementa, e grava um `dev-state.md` com o resumo do que foi feito, quais arquivos foram tocados, e qual é o próximo passo. Isso é o que permite continuar de onde parou em outra sessão, sem depender do histórico de chat.
 
@@ -20,7 +20,7 @@ Você passou por `@product`, `@analyst`, `@architect`. A spec existe, as decisõ
 
 ## Quando invocar
 
-- Após `@architect` (SMALL/MEDIUM) ou `@product` (MICRO).
+- Após `@scope-check` (SMALL/MEDIUM) ou `@product` (MICRO).
 - Para retomar uma feature interrompida — `@dev` lê `dev-state.md` e sabe onde parou.
 - Para correções apontadas pelo `@qa` (ciclo autônomo, até 2 iterações).
 
@@ -43,7 +43,7 @@ Você > @dev
        Lendo project.context.md... Node.js, SMALL, checkout-stripe.
        Lendo spec-checkout-stripe.md e implementation-plan-checkout-stripe.md...
        
-       Plano aprovado. Implementando:
+       Scope-check aprovado. Implementando:
        
        1. db/migrations/add-payment-table.sql       ← Payment schema
        2. src/models/payment.js                     ← model com validação básica
@@ -124,7 +124,7 @@ aioson memory:summary . --last=5
 
 ## Handoff típico
 
-- **Vem de:** `@architect` (SMALL/MEDIUM) ou `@product` (MICRO)
+- **Vem de:** `@scope-check` (SMALL/MEDIUM) ou `@product` (MICRO)
 - **Vai para:** `@qa`
 
 ---

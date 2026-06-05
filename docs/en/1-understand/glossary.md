@@ -255,7 +255,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 **Example:** a "legal compliance" squad with agents `@regulator`, `@attorney`, `@auditor`, under the command of `@squad`.
 
-**Commands:** `aioson squad:assemble`, `squad:agent-create`, `squad:refresh`.
+**Commands:** `aioson squad:scaffold`, `squad:agent-create`, `squad:doctor`.
 
 ---
 

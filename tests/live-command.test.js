@@ -309,6 +309,64 @@ test('live session commands track start, plan progress, handoff and close for a 
   assert.equal(summary.includes('Duration:'), true);
 });
 
+test('runtime:emit records a standalone event when no live session is active', async () => {
+  const dir = await makeTempDir();
+  const { t } = createTranslator('pt-BR');
+  const logger = createCollectLogger();
+
+  const emitted = await runRuntimeEmit({
+    args: [dir],
+    options: {
+      agent: 'orchestrator',
+      type: 'milestone',
+      summary: 'agent-1 completed lane work',
+      refs: '.aioson/context/parallel/agent-1.status.md',
+      meta: '{"worker":"agent-1"}',
+      json: true
+    },
+    logger,
+    t
+  });
+
+  assert.equal(emitted.ok, true);
+  assert.equal(emitted.standalone, true);
+  assert.equal(emitted.open, false);
+  assert.equal(emitted.sessionKey, null);
+  assert.equal(emitted.agent, '@orchestrator');
+
+  const { db, runtimeDir } = await openRuntimeDb(dir, { mustExist: true });
+  try {
+    const run = db.prepare(`
+      SELECT run_key, agent_name, source, status
+      FROM agent_runs
+      WHERE run_key = ?
+    `).get(emitted.runKey);
+    assert.equal(run.agent_name, '@orchestrator');
+    assert.equal(run.source, 'direct');
+    assert.equal(run.status, 'completed');
+
+    const event = db.prepare(`
+      SELECT event_type, message, payload_json
+      FROM agent_events
+      WHERE run_key = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `).get(emitted.runKey);
+    assert.equal(event.event_type, 'milestone');
+    assert.equal(event.message, 'agent-1 completed lane work');
+
+    const payload = JSON.parse(event.payload_json);
+    assert.equal(payload.worker, 'agent-1');
+    assert.equal(payload.standalone, true);
+    assert.deepEqual(payload.refs, ['.aioson/context/parallel/agent-1.status.md']);
+
+    const sessionRef = await readAgentSession(runtimeDir, '@orchestrator');
+    assert.equal(sessionRef, null);
+  } finally {
+    db.close();
+  }
+});
+
 test('live:start auto-closes active session when requested tool changes', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('en');

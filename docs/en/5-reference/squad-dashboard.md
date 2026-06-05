@@ -9,7 +9,7 @@ No additional installation required. It ships with aioson.
 ## Prerequisites
 
 - aioson installed globally (`npm install -g @jaimevalasek/aioson`)
-- At least one squad created in the project (`aioson squad:create`)
+- At least one squad created in the project (`aioson squad:scaffold . --slug=<slug>`)
 - Node.js ≥ 18 (already required by aioson)
 - A modern browser (Chrome, Firefox, Safari, Edge)
 
@@ -332,7 +332,7 @@ ls .aioson/squads/*/squad.manifest.json
 
 If not, create the squad first:
 ```bash
-aioson squad:create . --squad=my-squad
+aioson squad:scaffold . --slug=my-squad --name="My Squad" --mode=mixed
 ```
 
 ### Panels appear empty

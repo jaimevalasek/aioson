@@ -1878,15 +1878,15 @@ The CLI auto-detects format from response (`format` field, OR presence of `files
 - **DB schema** — should track `format: "folder" | "single-file"` per genome to route response correctly
 - **Migration** — backend may store folder format internally and convert to single-file on legacy installs (out of scope here)
 
-### Future CLI commands (not yet implemented — placeholders)
+### Future CLI subcommands (not implemented — do not run)
 
-| Command | Status | Function |
-|---------|--------|----------|
-| `aioson genome:enrich --slug=<slug> --source=<file>` | not implemented | Enrichment Round (currently runs via `@genome` agent conversation only) |
-| `aioson genome:export --slug=<slug> --as=system-prompt` | not implemented | Export Track 4.3 system-prompt.md (currently runs via `@genome` agent only) |
-| `aioson genome:viability --slug=<slug>` | not implemented | Standalone Viability Gate scoring (currently part of `@genome` Step 0.5) |
+| Future subcommand | Status | Function |
+|-------------------|--------|----------|
+| `genome:enrich` | not implemented | Enrichment Round (currently runs via `@genome` agent conversation only) |
+| `genome:export` | not implemented | Export Track 4.3 system-prompt.md (currently runs via `@genome` agent only) |
+| `genome:viability` | not implemented | Standalone Viability Gate scoring (currently part of `@genome` Step 0.5) |
 
-These are documented for future implementation. For now, the agent (`@genome`) handles them in-conversation.
+These are documented for future implementation only. Do not run them as CLI commands until they are registered in `src/cli.js`. For now, the agent (`@genome`) handles them in-conversation.
 
 ## Continuation Protocol
 
