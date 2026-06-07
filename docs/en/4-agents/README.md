@@ -1,12 +1,12 @@
 # Agent cards — AIOSON (EN)
 
-This layer will hold one card per AIOSON agent (28 total), translated from [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md).
+This layer will hold one card per AIOSON agent (29 total), translated from [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md).
 
 Cards are being translated progressively. Until a card is available here, the PT version is the canonical reference — it follows the same format and covers the same agents.
 
 ---
 
-## The 28 agents
+## The 29 agents (plus @pair alias)
 
 ### Workflow core (pipeline order)
 
@@ -17,6 +17,7 @@ Cards are being translated progressively. Until a card is available here, the PT
 | `@product` | PRD — vision, problem, users, scope, acceptance criteria |
 | `@sheldon` | PRD quality guardian — gap detection, web research, sizing, in-place enrichment or phased plan |
 | `@analyst` | Domain discovery — entities, flows, brownfield mapping |
+| `@scope-check` | Alignment gate before implementation — validates intent vs plan and catches scope drift |
 | `@architect` | Technical decisions — structure, libraries, integration boundaries |
 | `@ux-ui` | Design system and UI component specs (MEDIUM) |
 | `@pm` | Backlog and user stories (MEDIUM) |
@@ -49,7 +50,7 @@ Cards are being translated progressively. Until a card is available here, the PT
 | `@design-hybrid-forge` | Combine two design skills into a hybrid |
 | `@orache` | Domain investigation and strategic research |
 | `@copywriter` | Conversion copy — landing pages, VSL scripts |
-| `@discovery-design-doc` | Combined discovery + design doc generation |
+| [`@discovery-design-doc`](./discovery-design-doc.md) | Discovery, readiness, and design doc package |
 
 ---
 

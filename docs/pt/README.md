@@ -37,7 +37,7 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 11. [Continuidade entre sessões](./3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
 
 ### Quero a referência técnica de um agente ou comando
-- **[Fichas dos 29 agentes](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
+- **[Fichas dos 29 agentes (30 entradas com 1 alias)](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
 - **[Referência técnica completa](./5-referencia/README.md)** — 32 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
 - [Guia de agentes (legado)](./agentes.md) — visão tabular alternativa
 
@@ -99,7 +99,7 @@ Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legado
 ## Status desta documentação
 
 **Fase A (entender + começar)** — concluída · 8 docs em `1-entender/` e `2-comecar/`.
-**Fase B (receitas práticas + ficha por agente)** — concluída · 11 receitas em `3-receitas/` + 28 fichas em `4-agentes/`.
+**Fase B (receitas práticas + ficha por agente)** — concluída · 11 receitas em `3-receitas/` + 29 fichas em `4-agentes/`.
 **Fase C (referência técnica completa)** — concluída · 32 docs em `5-referencia/`, com 6 totalmente novos cobrindo features 2026 antes não documentadas em PT.
 **Fase D (trilhas de workflow)** — concluída · 3 trilhas canônicas de feature: briefing→PRD, plans externos, e trilha completa com @sheldon.
 

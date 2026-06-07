@@ -1,27 +1,25 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-qa-end-1780375283802",
-  "created_at": "2026-06-02T04:41:23.802Z",
+  "protocol_id": "hnd-init-end-1780672897607",
+  "created_at": "2026-06-05T15:21:37.607Z",
   "workflow_mode": "project",
   "classification": "MEDIUM",
   "feature_slug": null,
   "from": {
-    "agent_id": "qa",
-    "capability_transferred": "verify_feature"
+    "agent_id": null,
+    "capability_transferred": null
   },
   "to": {
     "agent_id": null,
     "capability_required": null
   },
-  "capabilities_transferred": [
-    "verify_feature"
-  ],
+  "capabilities_transferred": [],
   "artifact_uris": [],
   "gate_status": {},
   "autonomy_mode": null,
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-06-02T04:41:23.802Z"
+    "validated_at": "2026-06-05T15:21:37.607Z"
   }
 }

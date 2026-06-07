@@ -1,7 +1,8 @@
 # Guia de Agentes AIOSON
 
-> Índice completo dos 29 agentes, com situação de uso e saída esperada.
+> Índice com 29 agentes e 1 alias, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
+> `@pair` é alias de `@deyvin` e não possui ficha separada.
 
 ---
 
@@ -52,7 +53,7 @@
 | [@design-hybrid-forge](./design-hybrid-forge.md) | Combina dois design skills num híbrido | Quer visual que não existe nos padrões | novo design skill |
 | [@orache](./orache.md) | Investigação de domínio e pesquisa estratégica | Antes de entrar num mercado novo | relatório de domínio |
 | [@copywriter](./copywriter.md) | Copy de conversão: landing pages, emails | Quando precisa de texto que converte | copy entregável |
-| [@discovery-design-doc](./discovery-design-doc.md) | Discovery + design doc combinados | Projetos que precisam dos dois de uma vez | `discovery.md` + `design-doc.md` |
+| [@discovery-design-doc](./discovery-design-doc.md) | Consolida discovery, readiness e design doc | Escopo vago ou etapa pré-dev SMALL/MEDIUM | `design-doc*.md` + `readiness*.md` |
 
 ---
 

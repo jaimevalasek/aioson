@@ -99,7 +99,7 @@ You can mark **more than one** in the wizard — they coexist in the same projec
 
 ### Development (default)
 
-Includes the 28 official agents (product, analyst, dev, qa, etc.). Sufficient for 95% of projects.
+Includes the 29 official agents (product, analyst, dev, qa, etc.; `@pair` is alias of `@deyvin`). Sufficient for 95% of projects.
 
 ### Development + Squads
 

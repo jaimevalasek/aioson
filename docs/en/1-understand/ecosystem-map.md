@@ -2,7 +2,7 @@
 
 > **Who this is for:** anyone who wants to see the full team at once.
 > **Reading time:** 8 min
-> **What you'll know after:** who the 28 agents are, when each one enters, and how they communicate.
+> **What you'll know after:** who the 29 agents are, when each one enters, and how they communicate.
 
 ---
 

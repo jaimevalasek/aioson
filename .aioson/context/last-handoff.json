@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-02T04:41:23.803Z",
-  "last_agent": "@qa",
-  "last_stage": "qa",
-  "what_was_done": "Stage @qa completed.",
+  "session_ended_at": "2026-06-05T15:21:37.617Z",
+  "last_agent": null,
+  "last_stage": null,
+  "what_was_done": "Workflow state updated.",
   "what_comes_next": "Workflow is complete. No pending stages.",
   "next_agent": null,
   "open_decisions": [],
@@ -11,10 +11,32 @@
   "workflow_mode": "project",
   "classification": "MEDIUM",
   "feature_slug": null,
+  "optional_handoffs": [],
   "decision_rationale": [
     {
       "agent": "unknown",
-      "decision": "telemetry-1780375199816",
+      "decision": "telemetry-1780633639002",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "unknown",
+      "decision": "telemetry-1780636259149",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "unknown",
+      "decision": "telemetry-1780641610875",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "unknown",
+      "decision": "telemetry-1780641747656",
       "alternatives_considered": null,
       "rationale": "q",
       "confidence": "confirmed"

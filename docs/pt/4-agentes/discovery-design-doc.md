@@ -1,20 +1,22 @@
-# @discovery-design-doc — Discovery e design doc em uma sessão combinada
+# @discovery-design-doc — Discovery, readiness e design doc
 
-> **Para quem é:** quem tem uma ideia ou request e quer clareza completa — problema, ambiguidades, próximos passos — antes de qualquer implementação.
+> **Para quem é:** quem precisa transformar uma ideia vaga em clareza inicial ou consolidar PRD, requisitos e arquitetura num contrato técnico antes do `@dev`.
 > **Tempo de leitura:** 3 min.
 > **O que você vai sair sabendo:**
-> - Quando usar este agente vs usar `@analyst` e `@architect` separados
-> - O que o design doc entrega e como ele guia os próximos agentes
+> - Os dois modos corretos de uso: exploratório e pré-dev
+> - Por que ele pode aparecer depois de `@analyst` e `@architect` no workflow
+> - O que o design doc e o readiness entregam para os próximos agentes
 
 ---
 
 ## Para que serve
 
-Às vezes um request chega vago: um ticket, uma ideia de feature, uma anotação de reunião. Antes de abrir `@product` e percorrer o ciclo completo, você quer **normalizar o problema, identificar o que já está definido, e saber o que ainda está aberto** — tudo em uma sessão.
+O `@discovery-design-doc` tem dois usos válidos:
 
-O `@discovery-design-doc` faz exatamente isso: transforma um request bruto num design doc enxuto e num documento de readiness que diz ao próximo agente "aqui está o que você precisa, e aqui está o que ainda falta".
+- **Modo exploratório:** quando um request chega vago, como ticket, ideia de feature ou anotação de reunião. Ele normaliza o problema, identifica ambiguidades e recomenda o próximo agente.
+- **Modo pré-dev no workflow:** quando o projeto SMALL/MEDIUM já passou por `@analyst` e `@architect`. Nesse caso, ele consolida PRD, requisitos, spec e arquitetura num `design-doc` vivo e num `readiness` com plano técnico concreto para o `@dev`.
 
-É um atalho para quando o ciclo completo seria pesado demais — ou para quando você quer um checkpoint antes de decidir qual agente acionar.
+Ou seja: ele pode ser um atalho antes do ciclo completo **ou** uma etapa de segurança entre arquitetura e implementação. No workflow atual, esse segundo uso é esperado para SMALL/MEDIUM.
 
 ---
 
@@ -23,18 +25,47 @@ O `@discovery-design-doc` faz exatamente isso: transforma um request bruto num d
 - Você tem um ticket, briefing ou ideia e quer transformar em documento estruturado rapidamente
 - Você quer saber o que está bem definido vs o que ainda é ambíguo antes de acionar `@product` ou `@dev`
 - Você está em modo exploratório e quer um checkpoint de clareza sem comprometer o workflow completo
+- Você está no workflow SMALL/MEDIUM após `@architect` e precisa gerar o contrato técnico pré-dev
+- O `@dev` precisa de caminhos, módulos, decisões de reuso e riscos de tamanho de arquivo antes de editar código
 
 ---
 
 ## Quando NÃO invocar
 
-- A feature já tem spec e PRD definidos — acione diretamente `@dev` ou `@qa`
+- Para refazer discovery amplo quando PRD, requirements, spec e architecture já estão claros
 - Você precisa de discovery profundo com mapeamento de domínio — use `@analyst` dentro do workflow SMALL/MEDIUM
 - Você quer um briefing pré-PRD com frameworks de framing — use `@briefing`
+- A tarefa é MICRO e já possui um plano simples suficiente para `@dev`
+
+> Ter PRD/spec definidos **não impede** o uso deste agente. No workflow SMALL/MEDIUM, eles são justamente entradas para o `design-doc` e o `readiness` pré-dev.
 
 ---
 
-## Diálogo típico
+## Onde entra no workflow
+
+Fluxo exploratório manual:
+
+```
+@setup -> @discovery-design-doc -> próximo agente recomendado
+```
+
+Fluxo SMALL atual:
+
+```
+@product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa
+```
+
+Fluxo MEDIUM atual:
+
+```
+@product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa
+```
+
+O papel dele no meio da feature não é substituir `@analyst` nem `@architect`. Ele transforma esses artefatos em um pacote executável para implementação.
+
+---
+
+## Diálogo típico — modo exploratório
 
 ```
 Você > @discovery-design-doc
@@ -61,11 +92,36 @@ Você > @discovery-design-doc
 
 ---
 
+## Diálogo típico — modo pré-dev
+
+```
+Você > @discovery-design-doc
+       Consolidar a feature checkout depois da arquitetura.
+
+@discovery-design-doc > Lendo PRD, requirements, spec e architecture...
+                        Escopo: checkout com pagamento único
+                        Readiness: ready_with_warnings
+
+                        Plano técnico:
+                        - Reusar módulo de pedidos existente
+                        - Criar service de pagamento em src/lib/payments/
+                        - Evitar alterar fluxo de carrinho fora do checkout
+                        - Risco: controller pode passar de 500 linhas; dividir em service + validator
+
+@discovery-design-doc > Design doc criado em: .aioson/context/design-doc-checkout.md
+                        Readiness criado em: .aioson/context/readiness-checkout.md
+                        Recomendação: seguir para @dev quando Gate B estiver aprovado.
+```
+
+---
+
 ## Saídas em disco
 
 ```
-.aioson/context/design-doc.md      ← design doc enxuto (vivo, atualizado por agentes futuros)
-.aioson/context/readiness.md       ← status de clareza + ambiguidades abertas
+.aioson/context/design-doc.md              ← design doc do projeto
+.aioson/context/readiness.md               ← readiness do projeto
+.aioson/context/design-doc-{slug}.md       ← design doc da feature
+.aioson/context/readiness-{slug}.md        ← readiness da feature
 ```
 
 ---
@@ -73,7 +129,9 @@ Você > @discovery-design-doc
 ## Como ele lê seu projeto
 
 - `.aioson/context/project.context.md`
-- Artefatos existentes: `discovery.md`, `architecture.md`, `prd.md`, `spec.md` (quando relevantes)
+- Artefatos existentes: `prd.md`, `prd-{slug}.md`, `requirements-{slug}.md`, `spec.md`, `spec-{slug}.md`, `discovery.md`, `architecture.md` (quando relevantes)
+- Design docs existentes: `design-doc.md`, `design-doc-{slug}.md`, `readiness.md`, `readiness-{slug}.md`
+- `.aioson/context/project-map.md` quando existir, para resolver caminhos canônicos
 - Input direto: briefing, ticket, screenshots, arquivos que você fornecer
 
 ---
@@ -81,7 +139,8 @@ Você > @discovery-design-doc
 ## Handoff típico
 
 - **Vem de:** pedido direto com um request vago ou ticket
-- **Vai para:** o agente recomendado no `readiness.md` — tipicamente `@product` (para fechar escopo) ou `@dev` (quando readiness é ALTO)
+- **Também vem de:** `@architect` no workflow SMALL/MEDIUM, como consolidação pré-dev
+- **Vai para:** o agente recomendado no `readiness.md` — tipicamente `@product` quando o escopo ainda está aberto, ou `@dev` quando o readiness está pronto
 
 ---
 

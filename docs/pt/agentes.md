@@ -2,6 +2,8 @@
 
 > **Versão tabular alternativa (legado).** Para fichas individuais detalhadas com diálogos, saídas em disco e handoff, veja [`4-agentes/README.md`](./4-agentes/README.md).
 
+> `@pair` é alias de `@deyvin` e não possui ficha separada.
+
 > Quando usar cada agente, o que ele entrega e como ativá-lo.
 
 ---

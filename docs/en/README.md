@@ -40,7 +40,7 @@ This is the entry door to the English documentation. It is not an alphabetical i
 See [3-recipes/README.md](./3-recipes/README.md) for the full list.
 
 ### I want the technical reference for an agent or command
-- **[Agent cards (in progress)](./4-agents/README.md)** — stub today; full set is in [docs/pt/4-agentes/](../pt/4-agentes/README.md) (28 cards)
+- **[Agent cards (in progress)](./4-agents/README.md)** — stub today; full set is in [docs/pt/4-agentes/](../pt/4-agentes/README.md) (29 cards)
 - **[Technical reference](./5-reference/README.md)** — 11 docs migrated from the previous flat structure (CLI, MCP, parallel, QA browser, squad dashboard, web3, i18n, JSON schemas, release flow)
 
 ### Highlights of `5-reference/`
@@ -109,7 +109,7 @@ This English portal is being **incrementally translated** from `docs/pt/`. The p
 - 4-agents (stub README; full agent cards pending)
 
 **Phase 2 (next)** — remaining 8 scenario recipes in 3-recipes/.
-**Phase 3 (next)** — 28 agent cards in 4-agents/.
+**Phase 3 (next)** — 29 agent cards in 4-agents/.
 **Phase 4 (next)** — remaining ~18 reference docs in 5-reference/ (feature-dossier, agent-chain-continuity, sdd-framework, live-sessions, secure-by-default, aioson-com-store, etc.).
 
 For anything not yet in English, the PT version is current and authoritative — the AIOSON behaviors, agent prompts, and CLI commands are language-agnostic.
