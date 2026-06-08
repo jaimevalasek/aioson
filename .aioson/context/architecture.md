@@ -851,3 +851,92 @@ Secrets and raw environment values must be redacted from JSON and Markdown outpu
 No additional `quality:*` commands, no provider auto-install, no broad `.fallowrc`/ignore generation, no automatic refactor/deletion/suppression, and no undocumented machine-readable `.aioson/context/*.json` artifact.
 
 > **Gate B:** Architecture approved — @dev can proceed.
+
+---
+
+# Feature Architecture — Briefing Refiner
+
+## 1. Architecture Overview
+
+Implementar o `@briefing-refiner` como agente prompt-first com helpers pequenos para geração/aplicação de artefatos de revisão em `.aioson/briefings/{slug}/`. A feature não cria banco, servidor ou dashboard: usa arquivos locais, prompt canônico template-first e contratos de feedback estruturado.
+
+Decisão de status: se um briefing `approved` for alterado pelo refinador e `prd_generated` ainda for `null`, ele volta para `draft` e `approved_at: null`. Isso reaproveita `aioson briefing:approve` como reaprovação explícita e evita um novo status incompatível com o CLI atual.
+
+## 2. Folder and Module Structure
+
+```text
+template/.aioson/agents/
+  briefing-refiner.md             # prompt canônico do novo agente
+.aioson/agents/
+  briefing-refiner.md             # cópia workspace após sync/paridade
+src/
+  lib/
+    briefing-refiner/
+      briefing-registry.js        # read/write seguro de .aioson/briefings/config.md
+      briefing-sections.js        # parse/serialize das seções obrigatórias de briefings.md
+      feedback-schema.js          # validate/build refinement-feedback.json
+      review-html.js              # buildReviewHtml(data) sem servidor externo
+      refinement-report.js        # buildRefinementReport(data)
+      apply-feedback.js           # aplica feedback confirmado preservando contrato @briefing
+  constants.js                    # MANAGED_FILES + AGENT_DEFINITIONS
+  commands/
+    agents.js                     # direct prompt reconhece novo agent via constants
+    briefing.js                   # reutilizar parse/serialize ou migrar para lib compartilhada
+tests/
+  briefing-refiner.test.js        # ciclo review -> feedback -> apply
+  agent-registry.test.js          # constants/getAgentDefinition/listing/paridade
+```
+
+Não criar `src/commands/briefing-refiner.js` na V1. A ativação é por agente, não por comando CLI. Um comando `aioson briefing:refine` fica fora do escopo.
+
+## 3. Models and Relationships
+
+Usar as entidades de `.aioson/context/requirements-briefing-refiner.md`: Briefing Refinement Session, Review Section, Refinement Feedback, Review Comment, Review Decision e Refinement Report. Todas são filesystem-backed; não há migração SQLite.
+
+Relações principais: sessão pertence a um item de `.aioson/briefings/config.md`; feedback pertence ao hash de um `briefings.md`; relatório resume uma aplicação de feedback; `@product` só consome briefing depois de `status: approved`.
+
+## 4. Integration Architecture
+
+- `src/constants.js`: adicionar `.aioson/agents/briefing-refiner.md` em `MANAGED_FILES` e novo item `AGENT_DEFINITIONS` com `id: 'briefing-refiner'`, `command: '@briefing-refiner'`, `dependsOn: ['.aioson/context/project.context.md', '.aioson/briefings/config.md']`, `output: '.aioson/briefings/{slug}/review.html + refinement-feedback.json + refinement-report.md'`.
+- `src/agents.js` e `src/commands/agents.js`: não precisam de arquitetura nova; consomem `AGENT_DEFINITIONS`. Testar que `getAgentDefinition('briefing-refiner')` resolve.
+- `src/commands/briefing.js`: extrair parse/serialize de config para `src/lib/briefing-refiner/briefing-registry.js` ou módulo compartilhado equivalente; manter `briefing:approve` e `briefing:unapprove` funcionando.
+- `AGENTS.md`, `CLAUDE.md`, `template/AGENTS.md`, `template/CLAUDE.md`: adicionar o agente na lista, exemplos de natural language e mapeamento de arquivo.
+- `src/commands/test-agents.js` e `src/commands/dossier-audit.js`: incluir `briefing-refiner` apenas se o teste/auditoria for usado como inventário de agentes oficiais; se o escopo desses arquivos for deliberadamente parcial, documentar em teste.
+
+## 5. Review HTML Contract
+
+`review.html` deve ser gerado como HTML estático autocontido. Ele recebe um JSON inicial embutido com seções, hashes, comentários e decisões; usa `contenteditable="plaintext-only"` quando disponível; captura mudanças com `input`; trata `beforeinput` como melhoria opcional.
+
+Persistência: tentar File System Access API somente com detecção de capacidade e ação explícita do usuário. Fallback obrigatório: download/copy/export de `refinement-feedback.json`. O agente reentrada aceita arquivo salvo no path esperado ou JSON colado/exportado, mas nunca usa o DOM editado como fonte canônica.
+
+## 6. Cross-Cutting Concerns
+
+- Validation: validar slug, existência do briefing, schema version, source hash, seções obrigatórias e status permitido antes de aplicar feedback.
+- Error handling: feedback inválido, slug divergente, hash stale, briefing implementado e bloqueios abertos resultam em recusa segura com relatório, não aplicação parcial silenciosa.
+- Security: sanitizar texto editável no HTML; tratar feedback JSON como entrada não confiável; nunca permitir path fora de `.aioson/briefings/{slug}/`.
+- Observability: `@briefing-refiner` deve usar `pulse:update` antes de `agent:done` e registrar no dossier quando existir.
+- Compatibility: manter formato atual de `.aioson/briefings/config.md`; novos campos de refinamento são opcionais e não quebram `briefing:approve`.
+
+## 7. Implementation Sequence for @dev
+
+1. Criar `template/.aioson/agents/briefing-refiner.md` seguindo `agent-structural-contract`; sincronizar/criar `.aioson/agents/briefing-refiner.md`.
+2. Adicionar `briefing-refiner` a `src/constants.js` e às listas gerenciadas/documentais (`AGENTS.md`, `CLAUDE.md`, templates).
+3. Extrair ou compartilhar leitura/escrita de `.aioson/briefings/config.md` sem quebrar `briefing:approve`/`unapprove`.
+4. Implementar helpers em `src/lib/briefing-refiner/` para parse de seções, schema de feedback, HTML, relatório e aplicação.
+5. Escrever testes focados para registry, geração de review, fallback/export state, stale hash, apply confirmado, approved->draft e no-PRD/no-auto-approval.
+6. Rodar `node --test` focado e checar paridade template/workspace do novo agente.
+
+## 8. Explicit Non-Goals and Deferred Items
+
+- Sem `aioson briefing:refine` na V1.
+- Sem servidor local, dashboard ou sincronização multiusuário.
+- Sem mudança em `@product` além de continuar respeitando `status: approved` + `prd_generated: null`.
+- Sem novo status `needs_reapproval`; usar `draft` para compatibilidade.
+- Sem leitura de `.aioson/briefings/` por `@dev`.
+
+## 9. Handoff
+
+Next agent: `@discovery-design-doc`.
+Why: SMALL workflow do AIOSON exige um design-doc/readiness feature-scoped antes do `@dev`; ele deve mapear paths exatos e confirmar reuse/split antes da implementação.
+
+> **Gate B:** Architecture approved — @dev can proceed after `@discovery-design-doc` produces the feature readiness/design package.

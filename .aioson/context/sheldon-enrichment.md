@@ -1,32 +1,33 @@
 ---
-target_prd: .aioson/context/prd-quality-governance-baseline-and-new-regression-gate.md
+target_prd: .aioson/context/prd-briefing-refiner.md
 round_count: 1
-last_enrichment_date: 2026-06-02
+last_enrichment_date: 2026-06-08
 plan_path: null
-sizing_score: 3
-sizing_decision: in-place
-readiness: ready_for_downstream
+sizing_score: 4
+sizing_decision: "Path A — enrich PRD in place; add Delivery plan if user confirms"
+readiness: ready_for_analyst_with_pending_product_decisions
 sources_used:
-  - .aioson/context/prd-quality-governance-baseline-and-new-regression-gate.md
-  - .aioson/context/sheldon-enrichment-quality-governance-baseline-and-new-regression-gate.md
-  - .aioson/briefings/fallow-quality-governance/briefings.md
-  - researchs/fallow-rs-ai-agent-code-quality-2026/summary.md
+  - .aioson/context/prd-briefing-refiner.md
+  - .aioson/context/sheldon-enrichment-briefing-refiner.md
+  - .aioson/context/features/briefing-refiner/dossier.md
+  - researchs/file-system-access-api-2026/summary.md
+  - researchs/local-html-editable-review-ui-2026/summary.md
 improvements_applied:
-  - Enrichment recommendations written to sheldon-enrichment-quality-governance-baseline-and-new-regression-gate.md
-  - P0/P1 recommendations applied to prd-quality-governance-baseline-and-new-regression-gate.md after user confirmation
+  - Enrichment recommendations written to sheldon-enrichment-briefing-refiner.md
+  - PRD left unchanged pending user confirmation
 improvements_discarded: []
-status: ready_for_downstream
+status: ready_for_analyst_with_pending_product_decisions
 ---
 
-# Sheldon Enrichment Log — quality-governance-baseline-and-new-regression-gate
+# Sheldon Enrichment Log — briefing-refiner
 
 ## Summary
 - O PRD cabe como SMALL e não precisa de plano faseado externo.
-- O enriquecimento necessário é conectar `quality:audit` aos contratos existentes de rules, docs, design-docs, Markdown-first context e Gate D.
-- O PRD foi enriquecido em-place com as recomendações P0/P1 confirmadas pelo usuário.
+- O enriquecimento necessário fecha contrato de persistência, schema de feedback, status de briefing aprovado e plano de entrega.
+- O PRD ainda não foi alterado; recomendações P0/P1 aguardam confirmação.
 
 ## Artifact
-- `.aioson/context/sheldon-enrichment-quality-governance-baseline-and-new-regression-gate.md`
+- `.aioson/context/sheldon-enrichment-briefing-refiner.md`
 
 ## Next
-Encaminhar para `@analyst` fechar Gate A com requirements/spec.
+Confirmar se P0/P1 devem ser aplicados ao PRD ou encaminhar para `@analyst` fechar Gate A com as recomendações como insumo.

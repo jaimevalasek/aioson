@@ -14,134 +14,13 @@
  * Format: YAML frontmatter (briefings: array) + Markdown table
  */
 
-const fs = require('node:fs/promises');
 const path = require('node:path');
 const readline = require('node:readline');
-
-// ─── Config path ──────────────────────────────────────────────────────────────
-
-function configPath(projectDir) {
-  return path.join(projectDir, '.aioson', 'briefings', 'config.md');
-}
-
-// ─── YAML frontmatter parser (briefings-specific) ────────────────────────────
-
-/**
- * Parse .aioson/briefings/config.md frontmatter.
- * Returns { updated_at, briefings: [...] }
- *
- * Expected format:
- *   ---
- *   updated_at: 2026-04-10
- *   briefings:
- *     - slug: foo
- *       status: draft
- *       source_plans: [plans/x.md]
- *       created_at: "2026-04-10"
- *       approved_at: null
- *       prd_generated: null
- *   ---
- */
-function parseConfigFrontmatter(content) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return null;
-
-  const raw = match[1];
-  const lines = raw.split(/\r?\n/);
-
-  const result = { updated_at: null, briefings: [] };
-  let inBriefings = false;
-  let currentItem = null;
-
-  for (const line of lines) {
-    if (/^updated_at:\s*(.*)$/.test(line)) {
-      result.updated_at = line.replace(/^updated_at:\s*/, '').trim().replace(/^["']|["']$/g, '');
-      continue;
-    }
-
-    if (/^briefings:/.test(line)) {
-      inBriefings = true;
-      continue;
-    }
-
-    if (!inBriefings) continue;
-
-    // New item in array
-    if (/^\s{2}-\s+slug:\s*(.+)/.test(line)) {
-      if (currentItem) result.briefings.push(currentItem);
-      const slug = line.replace(/^\s{2}-\s+slug:\s*/, '').trim().replace(/^["']|["']$/g, '');
-      currentItem = { slug, status: 'draft', source_plans: [], created_at: null, approved_at: null, prd_generated: null };
-      continue;
-    }
-
-    if (currentItem) {
-      const fieldMatch = line.match(/^\s{4}(\w+):\s*(.*)/);
-      if (!fieldMatch) continue;
-      const [, key, rawVal] = fieldMatch;
-      const val = rawVal.trim().replace(/^["']|["']$/g, '');
-
-      if (key === 'source_plans') {
-        // Parse inline array: [plans/x.md, plans/y.md]
-        const arrMatch = val.match(/^\[(.+)\]$/);
-        currentItem.source_plans = arrMatch
-          ? arrMatch[1].split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''))
-          : val === '' ? [] : [val];
-      } else if (val === 'null' || val === '') {
-        currentItem[key] = null;
-      } else {
-        currentItem[key] = val;
-      }
-    }
-  }
-
-  if (currentItem) result.briefings.push(currentItem);
-  return result;
-}
-
-// ─── Config serializer ────────────────────────────────────────────────────────
-
-function serializeSourcePlans(plans) {
-  if (!plans || plans.length === 0) return '[]';
-  const items = plans.map((p) => `"${p}"`).join(', ');
-  return `[${items}]`;
-}
-
-function serializeConfigFrontmatter(data) {
-  const lines = ['---', `updated_at: ${data.updated_at || new Date().toISOString().slice(0, 10)}`, 'briefings:'];
-
-  for (const b of data.briefings) {
-    lines.push(`  - slug: ${b.slug}`);
-    lines.push(`    status: ${b.status}`);
-    lines.push(`    source_plans: ${serializeSourcePlans(b.source_plans)}`);
-    lines.push(`    created_at: "${b.created_at || ''}"`);
-    lines.push(`    approved_at: ${b.approved_at ? `"${b.approved_at}"` : 'null'}`);
-    lines.push(`    prd_generated: ${b.prd_generated ? `"${b.prd_generated}"` : 'null'}`);
-  }
-
-  lines.push('---');
-  return lines.join('\n');
-}
-
-// ─── Markdown table builder ───────────────────────────────────────────────────
-
-function buildMarkdownTable(briefings) {
-  const header = '| slug | status | source_plans | created | approved | prd |';
-  const sep = '|------|--------|-------------|---------|----------|-----|';
-  const rows = briefings.map((b) => {
-    const sources = (b.source_plans || []).join(', ') || '—';
-    return `| ${b.slug} | ${b.status} | ${sources} | ${b.created_at || '—'} | ${b.approved_at || '—'} | ${b.prd_generated || '—'} |`;
-  });
-  return [header, sep, ...rows].join('\n');
-}
-
-// ─── Config writer ────────────────────────────────────────────────────────────
-
-async function writeConfig(configFile, data) {
-  const frontmatter = serializeConfigFrontmatter(data);
-  const table = buildMarkdownTable(data.briefings);
-  const body = `\n# Briefings Registry\n\n${table}\n`;
-  await fs.writeFile(configFile, `${frontmatter}\n${body}`, 'utf8');
-}
+const {
+  configPath: registryConfigPath,
+  readBriefingRegistry,
+  writeBriefingRegistry
+} = require('../lib/briefing-refiner/briefing-registry');
 
 // ─── Interactive prompt helpers ───────────────────────────────────────────────
 
@@ -205,21 +84,19 @@ function promptCheckboxDeselect(items, promptText) {
 async function runBriefingApprove({ args, options = {}, logger }) {
   const projectDir = path.resolve(process.cwd(), args[0] || '.');
   const slugOpt = String(options.slug || '').trim() || null;
-  const configFile = configPath(projectDir);
+  const configFile = registryConfigPath(projectDir);
 
   // ── Read config ────────────────────────────────────────────────────────────
-  let raw;
+  let data;
   try {
-    raw = await fs.readFile(configFile, 'utf8');
-  } catch {
+    data = await readBriefingRegistry(projectDir);
+  } catch (error) {
+    if (error && error.code === 'invalid_frontmatter') {
+      logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
+      return { ok: false, error: 'invalid_frontmatter' };
+    }
     logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
     return { ok: false, error: 'no_config' };
-  }
-
-  const data = parseConfigFrontmatter(raw);
-  if (!data) {
-    logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
-    return { ok: false, error: 'invalid_frontmatter' };
   }
 
   const drafts = data.briefings.filter((b) => b.status === 'draft');
@@ -259,7 +136,7 @@ async function runBriefingApprove({ args, options = {}, logger }) {
   briefingEntry.approved_at = today;
   data.updated_at = today;
 
-  await writeConfig(configFile, data);
+  await writeBriefingRegistry(projectDir, data);
 
   logger.log(`✓ Briefing "${target.slug}" aprovado.`);
   logger.log('  Ative @product para gerar o PRD — ele detectará o briefing aprovado automaticamente.');
@@ -272,21 +149,19 @@ async function runBriefingApprove({ args, options = {}, logger }) {
 async function runBriefingUnapprove({ args, options = {}, logger }) {
   const projectDir = path.resolve(process.cwd(), args[0] || '.');
   const slugOpt = String(options.slug || '').trim() || null;
-  const configFile = configPath(projectDir);
+  const configFile = registryConfigPath(projectDir);
 
   // ── Read config ────────────────────────────────────────────────────────────
-  let raw;
+  let data;
   try {
-    raw = await fs.readFile(configFile, 'utf8');
-  } catch {
+    data = await readBriefingRegistry(projectDir);
+  } catch (error) {
+    if (error && error.code === 'invalid_frontmatter') {
+      logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
+      return { ok: false, error: 'invalid_frontmatter' };
+    }
     logger.error('Nenhum briefing encontrado. Ative @briefing para criar o primeiro briefing.');
     return { ok: false, error: 'no_config' };
-  }
-
-  const data = parseConfigFrontmatter(raw);
-  if (!data) {
-    logger.error('config.md com frontmatter inválido. Verifique o arquivo manualmente.');
-    return { ok: false, error: 'invalid_frontmatter' };
   }
 
   // Only approved and non-implemented briefings can be unapproved
@@ -333,7 +208,7 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
   }
   data.updated_at = today;
 
-  await writeConfig(configFile, data);
+  await writeBriefingRegistry(projectDir, data);
 
   const names = targets.map((b) => b.slug);
   logger.log(`✓ ${names.length === 1 ? `Briefing "${names[0]}" retornado` : `Briefings retornados`} para draft: ${names.join(', ')}`);

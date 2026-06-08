@@ -35,6 +35,7 @@ const MANAGED_FILES = [
   '.aioson/agents/committer.md',
   '.aioson/agents/copywriter.md',
   '.aioson/agents/briefing.md',
+  '.aioson/agents/briefing-refiner.md',
   '.aioson/docs/squad/package-contract.md',
   '.aioson/docs/squad/creation-flow.md',
   '.aioson/docs/squad/research-loop.md',
@@ -446,6 +447,15 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/briefing.md',
     dependsOn: ['.aioson/context/project.context.md'],
     output: '.aioson/briefings/{slug}/'
+  },
+  {
+    id: 'briefing-refiner',
+    displayName: 'Briefing Refiner',
+    description: 'Interactive refinement of briefing artifacts before Product PRD generation',
+    command: '@briefing-refiner',
+    path: '.aioson/agents/briefing-refiner.md',
+    dependsOn: ['.aioson/context/project.context.md', '.aioson/briefings/config.md'],
+    output: '.aioson/briefings/{slug}/review.html + refinement-feedback.json + refinement-report.md'
   },
   {
     id: 'profiler-researcher',

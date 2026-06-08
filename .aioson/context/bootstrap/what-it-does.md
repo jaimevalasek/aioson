@@ -28,6 +28,8 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
+Active (in_progress) since 2026-06-08: `briefing-refiner` (SMALL) introduces a pre-production refinement agent between `@briefing` and `@product`. It will read `.aioson/briefings/{slug}/briefings.md`, generate an interactive local `review.html` for human specification review, persist structured edits/comments in `refinement-feedback.json`, reapply confirmed changes back to the briefing, and leave a `refinement-report.md` before approval and PRD generation. PRD: `.aioson/context/prd-briefing-refiner.md`.
+
 Active (in_progress) since 2026-06-02: `quality-governance-baseline-and-new-regression-gate` (SMALL) frames a narrow AIOSON quality-governance MVP: define an AIOSON-native quality result contract, add experimental `aioson quality:audit`, use Fallow as the first Node.js provider, baseline existing debt, and gate only new regressions in changed code. PRD: `.aioson/context/prd-quality-governance-baseline-and-new-regression-gate.md`.
 
 Recently closed (2026-06-01): `cost-context-optimization` (SMALL) shipped measurement/state correctness: paused lifecycle handling, stale workflow reset, scoped `agent:audit`, standalone `skill:audit`, advisory `context:health` drift warnings, and QA Gate D PASS. Report: `.aioson/context/qa-report-cost-context-optimization.md`.

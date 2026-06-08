@@ -1,0 +1,381 @@
+schema_version: "1.0"
+feature: briefing-refiner
+created_at: "2026-06-08"
+created_by: analyst
+source_requirements: ".aioson/context/requirements-briefing-refiner.md"
+source_prd: ".aioson/context/prd-briefing-refiner.md"
+classification:
+  project: MEDIUM
+  feature_depth: SMALL
+notes:
+  - "Generated after QA because artifact validation required a conformance contract in this MEDIUM repository."
+  - "This contract structures the existing 17 acceptance criteria; it does not change requirements or Gate D status."
+  - "AC-008 is currently known blocked by QA until @dev implements declined-feedback report support."
+
+acceptance_criteria:
+  - id: AC-BRIEFING-REFINER-001
+    requirement: REQ-BRIEFING-REFINER-001
+    title: "Missing briefing registry does not generate review artifacts"
+    preconditions:
+      - ".aioson/briefings/config.md is absent or unreadable."
+      - "The agent is activated as @briefing-refiner."
+    actions:
+      - "Resolve briefing candidates from the registry path."
+    expected_outcomes:
+      - "User is told that a briefing must be created first via @briefing."
+      - "No .aioson/briefings/{slug}/review.html is written."
+      - "No .aioson/briefings/{slug}/refinement-feedback.json is written."
+      - "No .aioson/briefings/{slug}/refinement-report.md is written."
+    negative_cases:
+      - "The agent must not infer a slug from unrelated folders."
+      - "The agent must not create a placeholder registry."
+    evidence:
+      type: prompt_or_manual
+      target_paths:
+        - ".aioson/agents/briefing-refiner.md"
+
+  - id: AC-BRIEFING-REFINER-002
+    requirement: REQ-BRIEFING-REFINER-002
+    title: "Multiple refinable briefings require explicit selection"
+    preconditions:
+      - ".aioson/briefings/config.md contains more than one refinable briefing."
+      - "The user did not provide a slug."
+    actions:
+      - "List only draft or approved briefings with prd_generated null."
+      - "Wait for user selection before reading a specific briefings.md."
+    expected_outcomes:
+      - "Candidates are shown to the user."
+      - "review.html is not generated before selection."
+    negative_cases:
+      - "Briefings with prd_generated set are excluded."
+      - "Implemented briefings are excluded."
+    evidence:
+      type: automated_or_prompt
+      target_paths:
+        - "src/lib/briefing-refiner/briefing-registry.js"
+        - ".aioson/agents/briefing-refiner.md"
+
+  - id: AC-BRIEFING-REFINER-003
+    requirement: REQ-BRIEFING-REFINER-003
+    title: "Selected briefing generates all review artifacts"
+    preconditions:
+      - "A selected refinable slug exists in .aioson/briefings/config.md."
+      - ".aioson/briefings/{slug}/briefings.md exists and contains mandatory sections."
+    actions:
+      - "Parse briefings.md."
+      - "Generate review artifacts for the selected slug."
+    expected_outcomes:
+      - ".aioson/briefings/{slug}/review.html exists."
+      - ".aioson/briefings/{slug}/refinement-feedback.json exists."
+      - ".aioson/briefings/{slug}/refinement-report.md exists."
+    negative_cases:
+      - "Artifacts are not written outside .aioson/briefings/{slug}/."
+      - "No prd*.md file is created."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/lib/briefing-refiner/review-html.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-004
+    requirement: REQ-BRIEFING-REFINER-004
+    title: "Review HTML exposes implementation-review controls"
+    preconditions:
+      - "A valid feedback object with mandatory sections is available."
+    actions:
+      - "Build review.html."
+    expected_outcomes:
+      - "HTML shows all mandatory briefing sections."
+      - "HTML has per-section status controls."
+      - "HTML has comments or notes per section."
+      - "HTML shows blocking indicators."
+      - "HTML has a summary of changed, blocked, and noted items."
+    negative_cases:
+      - "The HTML must not require a server or external script."
+      - "The HTML must not present as a marketing or landing page surface."
+    evidence:
+      type: automated_or_manual
+      target_paths:
+        - "src/lib/briefing-refiner/review-html.js"
+
+  - id: AC-BRIEFING-REFINER-005
+    requirement: REQ-BRIEFING-REFINER-005
+    title: "HTML edits update structured feedback state"
+    preconditions:
+      - "review.html is opened locally."
+      - "A section editor or status control is changed."
+    actions:
+      - "Trigger input or change event in the page."
+      - "Export or save feedback JSON."
+    expected_outcomes:
+      - "The exported JSON includes section id."
+      - "The exported JSON preserves original hash."
+      - "The exported JSON includes proposed current_text."
+      - "The exported JSON includes status."
+      - "The exported JSON updates last_modified_at."
+    negative_cases:
+      - "HTML formatting must not become canonical rich text."
+      - "Edited DOM is not consumed unless exported into structured JSON."
+    evidence:
+      type: manual_or_dom_test
+      target_paths:
+        - "src/lib/briefing-refiner/review-html.js"
+
+  - id: AC-BRIEFING-REFINER-006
+    requirement: REQ-BRIEFING-REFINER-006
+    title: "Review HTML provides export fallback"
+    preconditions:
+      - "Browser lacks File System Access API support or user denies direct save."
+    actions:
+      - "Click Save JSON, Download JSON, or Copy JSON."
+    expected_outcomes:
+      - "Direct save falls back to download when unavailable."
+      - "Download JSON exports refinement-feedback.json."
+      - "Copy JSON copies the same structured feedback payload or falls back to download on failure."
+    negative_cases:
+      - "The only persistence path must not be File System Access API."
+    evidence:
+      type: automated_or_manual
+      target_paths:
+        - "src/lib/briefing-refiner/review-html.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-007
+    requirement: REQ-BRIEFING-REFINER-007
+    title: "Reentry summarizes pending feedback before confirmation"
+    preconditions:
+      - ".aioson/briefings/{slug}/refinement-feedback.json exists."
+      - "The feedback has unapplied edits, comments, or blocking items."
+    actions:
+      - "Activate @briefing-refiner for the same slug."
+      - "Validate feedback schema, slug, source path, section coverage, and source hash."
+      - "Summarize proposed changes and blockers in the harness."
+    expected_outcomes:
+      - "The user sees proposed edits before any write to briefings.md."
+      - "The user is asked for explicit confirmation before applying."
+    negative_cases:
+      - "The agent must not silently apply feedback."
+      - "The agent must not infer changes from review.html DOM."
+    evidence:
+      type: prompt_or_manual
+      target_paths:
+        - ".aioson/agents/briefing-refiner.md"
+        - "src/lib/briefing-refiner/feedback-schema.js"
+
+  - id: AC-BRIEFING-REFINER-008
+    requirement: REQ-BRIEFING-REFINER-008
+    title: "Declined feedback records skipped changes"
+    known_status: ready_for_qa
+    preconditions:
+      - "A valid refinement-feedback.json exists with one or more changed sections or decisions."
+      - "The user declines application in the harness."
+    actions:
+      - "Handle the declined application path."
+    expected_outcomes:
+      - "briefings.md remains byte-for-byte unchanged."
+      - "refinement-report.md is written or updated."
+      - "refinement-report.md includes skipped_changes for the declined edits."
+      - "Report status indicates declined or not_applied."
+    negative_cases:
+      - "Declining must not write section changes into briefings.md."
+      - "Declining must not leave the audit trail empty."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/lib/briefing-refiner/apply-feedback.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-009
+    requirement: REQ-BRIEFING-REFINER-009
+    title: "Confirmed feedback updates briefing while preserving mandatory sections"
+    preconditions:
+      - "A valid refinement-feedback.json exists for the selected slug."
+      - "User confirmation is explicit."
+    actions:
+      - "Apply confirmed structured feedback."
+    expected_outcomes:
+      - "briefings.md reflects confirmed section changes."
+      - "All mandatory sections remain present: Context, Problem, Proposed solution, Themes, Risks, Identified gaps, Sources, Open questions."
+      - "refinement-report.md records applied changes."
+    negative_cases:
+      - "Application fails if mandatory sections are missing from feedback."
+      - "Application fails if source hash is stale unless reconciliation is explicitly allowed."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/lib/briefing-refiner/apply-feedback.js"
+        - "src/lib/briefing-refiner/briefing-sections.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-010
+    requirement: REQ-BRIEFING-REFINER-010
+    title: "Stale source feedback is blocked before automatic apply"
+    preconditions:
+      - "feedback.source_hash differs from current briefings.md hash."
+      - "allowStale is false or absent."
+    actions:
+      - "Validate feedback before applying."
+    expected_outcomes:
+      - "Validation returns stale warning."
+      - "Automatic application is refused."
+      - "The agent asks for human reconciliation before any write."
+    negative_cases:
+      - "No partial write occurs when stale feedback is rejected."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/lib/briefing-refiner/feedback-schema.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-011
+    requirement: REQ-BRIEFING-REFINER-011
+    title: "Blocking items prevent product-ready handoff"
+    preconditions:
+      - "Feedback contains unresolved blocking_items."
+    actions:
+      - "Apply or summarize feedback."
+      - "Build refinement report and final handoff."
+    expected_outcomes:
+      - "refinement-report.md next_action is resolve_blockers."
+      - "The handoff does not route directly to @product."
+    negative_cases:
+      - "Blocking feedback must not be reported as ready for product."
+    evidence:
+      type: automated_and_prompt
+      target_paths:
+        - "src/lib/briefing-refiner/apply-feedback.js"
+        - ".aioson/agents/briefing-refiner.md"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-012
+    requirement: REQ-BRIEFING-REFINER-012
+    title: "Modified approved briefing requires renewed approval"
+    preconditions:
+      - "Registry entry status is approved."
+      - "Registry entry prd_generated is null."
+      - "Confirmed feedback changes at least one section."
+    actions:
+      - "Apply confirmed feedback."
+    expected_outcomes:
+      - "Registry entry status becomes draft."
+      - "Registry entry approved_at becomes null."
+      - "User is instructed to run briefing approval before @product."
+    negative_cases:
+      - "Briefing must not remain approved after content changes."
+      - "The agent must not auto-approve the briefing."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/lib/briefing-refiner/apply-feedback.js"
+        - "src/lib/briefing-refiner/briefing-registry.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-013
+    requirement: REQ-BRIEFING-REFINER-013
+    title: "Briefings with generated PRD are not refinable by default"
+    preconditions:
+      - "Registry entry prd_generated is non-null."
+    actions:
+      - "Resolve refinable candidates or process selected slug."
+    expected_outcomes:
+      - "The briefing is excluded from refinable candidates."
+      - "If directly selected, the agent refuses default refinement and explains the PRD enrichment or new feature route."
+    negative_cases:
+      - "The agent must not overwrite post-PRD briefing state by default."
+    evidence:
+      type: automated_and_prompt
+      target_paths:
+        - "src/lib/briefing-refiner/briefing-registry.js"
+        - ".aioson/agents/briefing-refiner.md"
+
+  - id: AC-BRIEFING-REFINER-014
+    requirement: REQ-BRIEFING-REFINER-014
+    title: "Briefing refiner never creates or edits PRDs"
+    preconditions:
+      - "@briefing-refiner generates review artifacts or applies feedback."
+    actions:
+      - "Run review generation or confirmed feedback application."
+    expected_outcomes:
+      - "No prd*.md file is created."
+      - "No existing prd*.md file is modified."
+    negative_cases:
+      - "Handoff to @product is allowed only after explicit briefing approval."
+    evidence:
+      type: automated_or_git_diff
+      target_paths:
+        - "src/lib/briefing-refiner/"
+        - ".aioson/agents/briefing-refiner.md"
+
+  - id: AC-BRIEFING-REFINER-015
+    requirement: REQ-BRIEFING-REFINER-016
+    title: "Agent prompt exists in template and workspace with parity"
+    preconditions:
+      - "New agent prompt is added."
+    actions:
+      - "Compare template and workspace agent files."
+    expected_outcomes:
+      - "template/.aioson/agents/briefing-refiner.md exists."
+      - ".aioson/agents/briefing-refiner.md exists."
+      - "The files match after sync."
+    negative_cases:
+      - "Workspace-only prompt edits are rejected as drift."
+    evidence:
+      type: automated
+      target_paths:
+        - "template/.aioson/agents/briefing-refiner.md"
+        - ".aioson/agents/briefing-refiner.md"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-016
+    requirement: REQ-BRIEFING-REFINER-016
+    title: "Routing registries recognize briefing-refiner as an official agent"
+    preconditions:
+      - "Agent definition is added."
+    actions:
+      - "Resolve getAgentDefinition('briefing-refiner')."
+      - "Check dossier canonical agent list."
+    expected_outcomes:
+      - "Agent definition resolves with id briefing-refiner."
+      - "The agent is official but not mandatory in workflow stages."
+      - "Dossier accepts briefing-refiner as a canonical agent id."
+    negative_cases:
+      - "The agent must not be added to mandatory workflow stages in V1."
+    evidence:
+      type: automated
+      target_paths:
+        - "src/constants.js"
+        - "src/dossier/schema.js"
+        - "tests/agents.test.js"
+        - "tests/briefing-refiner.test.js"
+
+  - id: AC-BRIEFING-REFINER-017
+    requirement: REQ-BRIEFING-REFINER-017
+    title: "Focused tests cover review, reentry, transitions, stale detection, and safety constraints"
+    preconditions:
+      - "Implementation is complete enough to run tests."
+    actions:
+      - "Run focused test suite for briefing-refiner and agent contracts."
+    expected_outcomes:
+      - "Tests cover artifact generation."
+      - "Tests cover feedback reentry or confirmation behavior."
+      - "Tests cover approved-to-draft status transition."
+      - "Tests cover stale source detection."
+      - "Tests cover no-PRD and no-auto-approval constraints."
+    negative_cases:
+      - "Known AC gaps must have failing or missing tests documented in QA."
+    evidence:
+      type: automated
+      target_paths:
+        - "tests/briefing-refiner.test.js"
+        - "tests/agents.test.js"
+        - "tests/agent-contracts.test.js"
+
+gate_a:
+  status: approved
+  rationale: "Requirements already contain clear objectives, constraints, REQ IDs, AC IDs, and edge cases."
+
+gate_d_dependency:
+  status: ready_for_qa
+  blocking_ac: AC-BRIEFING-REFINER-008
+  required_owner: qa
+  required_action: "Re-verify declined-feedback report support and Gate D."

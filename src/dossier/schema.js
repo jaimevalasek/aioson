@@ -7,6 +7,7 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'analyst',
   'architect',
   'briefing',
+  'briefing-refiner',
   'committer',
   'copywriter',
   'cypher',

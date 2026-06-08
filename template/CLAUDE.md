@@ -20,6 +20,7 @@ After the mandatory first action, if the user started the chat without naming an
 - Simple Plan with `/dev` for bounded technical work, small fixes, refactors, or directly verifiable implementation.
 - Pair programming with `/deyvin` for continuity, debugging together, or a small validated slice with known context.
 - Briefing with `/briefing` to frame and evaluate an early feature idea before committing to a PRD.
+- Briefing refinement with `/briefing-refiner` to review, annotate, and refine an existing briefing before PRD generation.
 - Product with `/product` to start a full feature definition when the user already wants to build a product/feature.
 
 ## Memory loading
@@ -68,6 +69,7 @@ Capture is best-effort — do not crash, retry, or surface failures to the user.
 - /committer -> `.aioson/agents/committer.md`
 - /copywriter -> `.aioson/agents/copywriter.md`
 - /briefing -> `.aioson/agents/briefing.md`
+- /briefing-refiner -> `.aioson/agents/briefing-refiner.md`
 - /orache -> `.aioson/agents/orache.md`
 - /genome -> `.aioson/agents/genome.md`
 - /profiler-researcher -> `.aioson/agents/profiler-researcher.md`

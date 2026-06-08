@@ -7,27 +7,25 @@
     "product",
     "analyst",
     "architect",
+    "discovery-design-doc",
     "ux-ui",
     "pm",
     "orchestrator",
+    "scope-check",
     "dev",
     "qa"
   ],
-  "current": null,
-  "next": null,
+  "current": "discovery-design-doc",
+  "next": "discovery-design-doc",
   "completed": [
     "setup",
     "product",
     "analyst",
     "architect",
-    "ux-ui",
-    "pm",
-    "orchestrator",
-    "dev",
     "qa"
   ],
   "skipped": [],
   "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-02T04:41:23.548Z"
+  "updatedAt": "2026-06-08T20:38:59.955Z"
 }

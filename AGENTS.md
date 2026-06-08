@@ -20,6 +20,7 @@ After the mandatory first action, if the user started the chat without naming an
 - Simple Plan with `@dev` for bounded technical work, small fixes, refactors, or directly verifiable implementation.
 - Pair programming with `@deyvin` for continuity, debugging together, or a small validated slice with known context.
 - Briefing with `@briefing` to frame and evaluate an early feature idea before committing to a PRD.
+- Briefing refinement with `@briefing-refiner` to review, annotate, and refine an existing briefing before PRD generation.
 - Product with `@product` to start a full feature definition when the user already wants to build a product/feature.
 
 ## How to invoke agents
@@ -55,6 +56,7 @@ Describe your intent. The agent system will match and execute.
 | @committer | "commit my changes", "generate commit message", "use the committer agent" |
 | @copywriter | "write copy for this page", "conversion strategy", "use the copywriter agent" |
 | @briefing | "create a briefing from plans", "pre-production planning", "frame the problem", "I have an idea but not sure if it's a feature yet", "structure my plans before PRD", "use the briefing agent" |
+| @briefing-refiner | "refine this briefing", "review the briefing before PRD", "create an editable briefing review", "apply briefing refinement feedback" |
 | @genome | "generate a genome", "use the genome agent", "gerar genome" |
 | @profiler-researcher | "start the profiler research", "profile this person", "pesquisar DNA mental" |
 | @profiler-enricher | "enrich this profile", "analyze this person's cognition", "consolidar perfil cognitivo" |
@@ -115,6 +117,7 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - @committer → `.aioson/agents/committer.md`
 - @copywriter → `.aioson/agents/copywriter.md`
 - @briefing → `.aioson/agents/briefing.md`
+- @briefing-refiner → `.aioson/agents/briefing-refiner.md`
 - @genome → `.aioson/agents/genome.md`
 - @profiler-researcher → `.aioson/agents/profiler-researcher.md`
 - @profiler-enricher → `.aioson/agents/profiler-enricher.md`
@@ -277,6 +280,7 @@ Describe your intent. The agent system will match and execute.
 | @committer | "commit my changes", "generate commit message", "use the committer agent" |
 | @copywriter | "write copy for this page", "conversion strategy", "use the copywriter agent" |
 | @briefing | "create a briefing from plans", "pre-production planning", "frame the problem", "I have an idea but not sure if it's a feature yet", "structure my plans before PRD", "use the briefing agent" |
+| @briefing-refiner | "refine this briefing", "review the briefing before PRD", "create an editable briefing review", "apply briefing refinement feedback" |
 | @genome | "generate a genome", "use the genome agent", "gerar genome" |
 | @profiler-researcher | "start the profiler research", "profile this person", "pesquisar DNA mental" |
 | @profiler-enricher | "enrich this profile", "analyze this person's cognition", "consolidar perfil cognitivo" |
@@ -337,6 +341,7 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - @committer → `.aioson/agents/committer.md`
 - @copywriter → `.aioson/agents/copywriter.md`
 - @briefing → `.aioson/agents/briefing.md`
+- @briefing-refiner → `.aioson/agents/briefing-refiner.md`
 - @genome → `.aioson/agents/genome.md`
 - @profiler-researcher → `.aioson/agents/profiler-researcher.md`
 - @profiler-enricher → `.aioson/agents/profiler-enricher.md`

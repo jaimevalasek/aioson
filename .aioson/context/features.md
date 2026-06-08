@@ -27,3 +27,4 @@
 | agent-orchestration-v2 | done | 2026-05-27 | 2026-05-27 |
 | cost-context-optimization | done | 2026-06-01 | 2026-06-01 |
 | quality-governance-baseline-and-new-regression-gate | done | 2026-06-02 | 2026-06-02 |
+| briefing-refiner | done | 2026-06-08 | 2026-06-08 |

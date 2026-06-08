@@ -1,42 +1,35 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-05T15:21:37.617Z",
-  "last_agent": null,
-  "last_stage": null,
-  "what_was_done": "Workflow state updated.",
-  "what_comes_next": "Workflow is complete. No pending stages.",
-  "next_agent": null,
+  "session_ended_at": "2026-06-08T20:38:59.983Z",
+  "last_agent": "@qa",
+  "last_stage": "qa",
+  "what_was_done": "Stage @qa completed.",
+  "what_comes_next": "Next stage: @discovery-design-doc",
+  "next_agent": "@discovery-design-doc",
   "open_decisions": [],
   "context_files_updated": [],
   "workflow_mode": "project",
   "classification": "MEDIUM",
   "feature_slug": null,
-  "optional_handoffs": [],
+  "optional_handoffs": [
+    {
+      "agent": "@scope-check",
+      "mode": "post-fix",
+      "command": "aioson workflow:next . --agent=scope-check --scope-mode=post-fix",
+      "reason": "Optional post-fix check: use only when verification or security corrections changed behavior or product scope."
+    }
+  ],
   "decision_rationale": [
     {
       "agent": "unknown",
-      "decision": "telemetry-1780633639002",
+      "decision": "telemetry-1780949398368",
       "alternatives_considered": null,
       "rationale": "q",
       "confidence": "confirmed"
     },
     {
       "agent": "unknown",
-      "decision": "telemetry-1780636259149",
-      "alternatives_considered": null,
-      "rationale": "q",
-      "confidence": "confirmed"
-    },
-    {
-      "agent": "unknown",
-      "decision": "telemetry-1780641610875",
-      "alternatives_considered": null,
-      "rationale": "q",
-      "confidence": "confirmed"
-    },
-    {
-      "agent": "unknown",
-      "decision": "telemetry-1780641747656",
+      "decision": "telemetry-1780951053023",
       "alternatives_considered": null,
       "rationale": "q",
       "confidence": "confirmed"

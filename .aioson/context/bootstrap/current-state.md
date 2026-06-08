@@ -8,8 +8,11 @@ source: "Autonomy/orchestration analysis and planning session"
 
 ## What the system already has
 
+- [briefing-refiner · 2026-06-08] Briefing-refiner file operations are path-traversal hardened: `src/lib/briefing-refiner/briefing-paths.js` (`assertSafeSlug` + `resolveBriefingPath`) validates the slug and asserts containment before any read/write, plus duplicate-section and registry-injection guards — fixes @pentester SF-01..SF-06 (SF-05 deferred to @qa).
+- [briefing-refiner · 2026-06-08] Declined briefing refinement feedback now writes a declined `refinement-report.md` with skipped changes while preserving `briefings.md` unchanged.
 These capabilities were confirmed during this analysis:
 
+- [briefing-refiner · 2026-06-08] `@briefing-refiner` implementation landed as an optional pre-PRD agent: template/workspace prompt parity, agent/slash/docs registry updates, shared briefing registry, local static review HTML generation, canonical `refinement-feedback.json`, refinement report generation, confirmed feedback application, approved→draft transition, and focused regression coverage.
 - [docs-update · 2026-06-07] docs: add scope-check and discovery docs (documentation refresh for agent inventory, discovery-design-doc, and docs counts).
 - [workflow-stale-state-reconciliation · 2026-06-05] `fix(workflow): reconcile stale state` shipped package version `1.21.7`; `workflow:next` now reconciles stale persisted workflow pointers from verified upstream artifacts only when no mainline stage or detour is active, requires handoff contracts/gate approval before inferring completion, and aligns textual/JSON gate parsing across handoff checks. Regression coverage now protects pending Gate A, `phase_gates`, textual Gate A approvals, stale skipped stages, active detours, active mainline stages, project-mode drift, and `workflow:execute --max-checkpoints`.
 - [runtime-emit-standalone-fallback · 2026-06-05] `runtime:emit` now records a completed direct standalone runtime event when no live session is active or the runtime DB does not exist yet, instead of failing with "no active live session"; active live-session behavior remains unchanged. Standalone events preserve refs/meta payload such as lane worker IDs (`worker=agent-1`) and do not create stale agent session files. Focused live/runtime regression passed 17/17.

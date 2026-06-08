@@ -50,6 +50,14 @@ test('getAgentDefinition resolves profiler-forge agent', () => {
   assert.equal(agent.output.includes('.aioson/advisors/{person-slug}-advisor.md'), true);
 });
 
+test('getAgentDefinition resolves briefing-refiner agent', () => {
+  const agent = getAgentDefinition('briefing-refiner');
+  assert.equal(Boolean(agent), true);
+  assert.equal(agent.id, 'briefing-refiner');
+  assert.equal(agent.command, '@briefing-refiner');
+  assert.equal(agent.output.includes('refinement-feedback.json'), true);
+});
+
 test('buildAgentPrompt includes target output', () => {
   const agent = getAgentDefinition('analyst');
   const prompt = buildAgentPrompt(agent, 'codex', {
