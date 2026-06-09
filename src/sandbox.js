@@ -76,9 +76,22 @@ function terminateProcessTree(child) {
     return;
   }
 
-  try { child.kill('SIGTERM'); } catch { /* best-effort */ }
+  const killGroup = (signal) => {
+    try {
+      process.kill(-child.pid, signal);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (!killGroup('SIGTERM')) {
+    try { child.kill('SIGTERM'); } catch { /* best-effort */ }
+  }
   const forceKill = setTimeout(() => {
-    try { child.kill('SIGKILL'); } catch { /* best-effort */ }
+    if (!killGroup('SIGKILL')) {
+      try { child.kill('SIGKILL'); } catch { /* best-effort */ }
+    }
   }, 500);
   if (forceKill.unref) forceKill.unref();
 }
@@ -147,7 +160,8 @@ async function executeInSandbox(command, opts = {}) {
 
     const baseOpts = {
       cwd,
-      env: { ...process.env, ...(opts.env || {}) }
+      env: { ...process.env, ...(opts.env || {}) },
+      detached: process.platform !== 'win32'
     };
 
     const finish = (payload) => {

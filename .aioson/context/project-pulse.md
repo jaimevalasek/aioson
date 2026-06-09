@@ -1,11 +1,11 @@
 ---
-last_updated: 2026-06-08
+last_updated: 2026-06-09
 last_agent: dev
-last_gate: Gate D pending
-active_feature: briefing-refiner
-active_work: "briefing-refiner → AC-008 fixed by @dev → awaiting @qa re-verification"
+last_gate: Gate D verified
+active_feature: project
+active_work: "CI timeout fix: sandbox POSIX process groups prevent orphan subprocess hangs"
 blockers: none
-next_recommendation: "@qa re-verify Gate D for briefing-refiner."
+next_recommendation: "Push fix and confirm GitHub Actions no longer reaches the 6h timeout."
 ---
 
 # Project Pulse
@@ -13,12 +13,12 @@ next_recommendation: "@qa re-verify Gate D for briefing-refiner."
 ## Status
 
 - **Last agent:** @dev
-- **Active feature:** briefing-refiner
-- **Active work:** briefing-refiner → AC-008 fixed by @dev → awaiting @qa re-verification
-- **Next:** @qa re-verify Gate D for briefing-refiner.
+- **Active feature:** project
+- **Active work:** CI timeout fix: sandbox POSIX process groups prevent orphan subprocess hangs
+- **Next:** Push fix and confirm GitHub Actions no longer reaches the 6h timeout.
 
 ## Recent Activity
 
+- 2026-06-09 @dev → project: Fixed CI timeout root cause by killing POSIX sandbox process groups; `npm run ci` passed locally.
 - 2026-06-08 @analyst → briefing-refiner: Generated conformance-briefing-refiner.yaml and restored artifact chain validity.
 - 2026-06-08 @dev → briefing-refiner: Fixed AC-008 by adding declined-feedback report support and regression coverage.
-- 2026-06-08 @dev → briefing-refiner: Fixed AC-008 declined-feedback report path and added regression coverage.

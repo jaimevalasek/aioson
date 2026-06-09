@@ -8,6 +8,7 @@ source: "Autonomy/orchestration analysis and planning session"
 
 ## What the system already has
 
+- [ci-timeout-fix · 2026-06-09] `executeInSandbox` starts POSIX subprocesses in their own process group and kills the group on timeout, preventing shell grandchildren from surviving sandbox timeouts and pinning GitHub Actions until the 6h job cap.
 - [release · 2026-06-08] chore(release): prepare v1.21.8
 - [feat-cli-add-feature-export-workflow · 2026-06-08] `feat(cli): add feature export workflow` adds `feature:export` plus its docs, template dossier, and regression coverage, and broadens workflow inference/commit prep/runtime helpers around the new export path.
 - [feature-export · 2026-06-08] `aioson feature:export . --feature={slug}` copies all of a feature's artefacts (root `*-{slug}.*`, dossier/plans/briefings dirs, and `done/{slug}`) into a clean `--out` dir non-destructively, with `--flatten`, `--no-index`, `--dry-run`, `--json`; reuses `feature-archive.js`'s slug-collision-safe enumeration via the new exported `collectFeatureArtifacts` helper. Turns AIOSON output into a portable deliverable.
