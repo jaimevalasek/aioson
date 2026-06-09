@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.21.8] - 2026-06-08
 
 ### Added
 - **`feature:export` — copy a feature's artefacts to a clean output directory.** Non-destructive sibling of `feature:archive`: instead of *moving* artefacts into `.aioson/context/done/{slug}/`, it *copies* the full surface (root `*-{slug}.{md,yaml,yml,json}` minus global files, the per-slug `dossier/`/`plans/`/`briefings/` directories, and `context/done/{slug}/` when archived) into an arbitrary `--out` (default `<target>/{slug}-export`), leaving the source tree untouched. Flags: `--flatten` (collapse to one level), `--no-index` (skip the generated `INDEX.md` manifest), `--dry-run`, `--json`. Reuses the archive's slug-collision guard via the new exported `collectFeatureArtifacts` helper, so a sibling slug (`checkout-v2`) never leaks into a `checkout` export. No `features.md` status guard — works on in-progress features too. Turns AIOSON's markdown output into a portable deliverable. Docs: `docs/pt/5-referencia/feature-export.md` + `docs/en/5-reference/cli-reference.md`.

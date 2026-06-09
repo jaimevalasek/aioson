@@ -18,7 +18,8 @@
     ".aioson/plans/active-learning-loop/**",
     ".aioson/context/done/**",
     "docs/**",
-    "template/.aioson/skills/static/static-html-patterns.md"
+    "template/.aioson/skills/static/static-html-patterns.md",
+    "src/context-search.js"
   ],
   "blockPaths": [
     "done/**",
