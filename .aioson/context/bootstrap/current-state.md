@@ -110,3 +110,4 @@ After that:
 
 - evaluate whether parallel lanes need worktree-backed isolation instead of shared-workspace coordination
 
+- [workflow-autopilot-handoff · 2026-06-09] Autopilot handoff (opt-in `auto_handoff: true` in project.context.md frontmatter): feature-workflow agents @analyst → @scope-check/@architect/@discovery-design-doc auto-invoke the next agent's skill (deterministic routing from workflow state) instead of stopping for manual activation, breaking the chain at the @dev handoff or on any stop condition (verdict not clean, gate/readiness blocked, context ≥ threshold). Protocol: `.aioson/docs/autopilot-handoff.md`; carve-outs in CLAUDE.md/AGENTS.md hard constraints; `buildAgentPrompt` autoHandoff option wired from workflow-next. Research: researchs/auto-handoff-pipeline-2026.

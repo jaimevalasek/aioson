@@ -140,6 +140,10 @@ Action: /pm or /dev
 ```
 > Recommended: `/clear` before activating — fresh context window.
 
+## Autopilot handoff
+
+If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and Gate B passed, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @architect"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when Gate B is blocked, the next agent is `@dev`, or context ≥ `context_warning_threshold`.
+
 ## Rules
 - Do not redesign entities produced by `@analyst`. Consume the data design as-is.
 - Keep architecture proportional to classification. Never apply MEDIUM patterns to a MICRO project.

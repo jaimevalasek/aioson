@@ -31,6 +31,7 @@ function buildAgentPrompt(agent, tool, options = {}) {
   const targetDir = options.targetDir ? String(options.targetDir) : '.';
   const interactionLanguage = String(options.interactionLanguage || 'en');
   const autonomyMode = String(options.autonomyMode || '').trim();
+  const autoHandoff = options.autoHandoff === true;
   const capabilitySummary = String(options.capabilitySummary || '').trim();
   const activationContext = String(options.activationContext || '').trim();
   const dependsOn = Array.isArray(options.dependsOn) ? options.dependsOn : agent.dependsOn;
@@ -66,7 +67,7 @@ function buildAgentPrompt(agent, tool, options = {}) {
     '',
     `**Language boundary:** Agent instructions are canonical in English. All user-facing communication must be in ${interactionLanguage}.`,
     '',
-    `**Scope boundary:** You operate exclusively as ${agent.command}. Do not perform work that belongs to another agent. When your work is complete, output only the handoff — which agent is next and why. Do not continue into that agent\'s territory.`,
+    `**Scope boundary:** You operate exclusively as ${agent.command}. Do not perform work that belongs to another agent. When your work is complete, output only the handoff — which agent is next and why. Do not continue into that agent\'s territory.${autoHandoff ? ' Exception: autopilot handoff is active for this stage — follow `.aioson/docs/autopilot-handoff.md` and auto-invoke the next agent\'s skill when no stop condition applies, never past the `@dev` handoff.' : ''}`,
   ].join('\n');
 
   if (safeTool === 'claude') {

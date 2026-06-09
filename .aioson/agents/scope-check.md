@@ -154,6 +154,10 @@ Optional handoff: {when useful, suggest `@scope-check --scope-mode=post-dev|post
 - `post-dev` can route to `@qa` or `@pentester` only when drift is resolved.
 - `post-fix` can route to `@qa` when verification owns the final decision.
 
+## Autopilot Handoff
+
+If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and status is `approved` or `patched`, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @scope-check"`. No user prompt — Ctrl+C interrupts. Never auto-invoke when status is `needs-*` or `blocked`, when the next agent is `@dev`, or when context ≥ `context_warning_threshold` — emit the manual handoff instead.
+
 ## Hard Constraints
 
 - Use the project interaction language for all user-facing text.

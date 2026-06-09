@@ -35,6 +35,10 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'pentester', 'qa']
 };
 
+// Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
+// The chain always breaks at the @dev handoff — see .aioson/docs/autopilot-handoff.md.
+const AUTOPILOT_HANDOFF_STAGES = new Set(['analyst', 'scope-check', 'architect', 'discovery-design-doc']);
+
 function normalizeAgentName(input) {
   return String(input || '')
     .trim()
@@ -1226,6 +1230,20 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
     requestedMode
   });
 
+  let autoHandoff = false;
+  if (
+    AUTOPILOT_HANDOFF_STAGES.has(stageName) &&
+    state.mode === 'feature' &&
+    (state.classification === 'SMALL' || state.classification === 'MEDIUM')
+  ) {
+    try {
+      const projectContext = await validateProjectContextFile(targetDir);
+      autoHandoff = Boolean(projectContext && projectContext.data && projectContext.data.auto_handoff === true);
+    } catch {
+      autoHandoff = false;
+    }
+  }
+
   const instructionPath = await resolveExistingInstructionPath(targetDir, agent, locale);
   const dependencies = await resolveStageDependencies(targetDir, state, stageName, agent);
   let prompt = buildAgentPrompt(agent, tool, {
@@ -1235,6 +1253,7 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
     autonomyMode: effectiveMode,
     capabilitySummary: buildAgentCapabilitySummary(agentManifest, tool),
     dependsOn: dependencies,
+    autoHandoff,
     activationContext: buildStageActivationContext(state, stageName, dependencies, scopeCheckMode)
   });
 

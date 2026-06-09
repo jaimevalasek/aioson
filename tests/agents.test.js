@@ -77,6 +77,21 @@ test('buildAgentPrompt includes target output', () => {
   assert.equal(prompt.includes('aioson agent:prompt'), true);
 });
 
+test('buildAgentPrompt appends autopilot exception only when autoHandoff is true', () => {
+  const agent = getAgentDefinition('analyst');
+  const baseOptions = {
+    instructionPath: resolveInstructionPath(agent, 'en'),
+    interactionLanguage: 'en',
+    autonomyMode: 'guarded'
+  };
+  const manualPrompt = buildAgentPrompt(agent, 'claude', baseOptions);
+  assert.equal(manualPrompt.includes('autopilot-handoff.md'), false);
+
+  const autopilotPrompt = buildAgentPrompt(agent, 'claude', { ...baseOptions, autoHandoff: true });
+  assert.equal(autopilotPrompt.includes('.aioson/docs/autopilot-handoff.md'), true);
+  assert.equal(autopilotPrompt.includes('never past the `@dev` handoff'), true);
+});
+
 test('listAgentDefinitions returns non-empty list', () => {
   const list = listAgentDefinitions();
   assert.equal(list.length > 0, true);

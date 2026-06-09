@@ -366,6 +366,10 @@ Action: /scope-check or /architect
 ```
 > Recommended: `/clear` before activating — fresh context window.
 
+## Autopilot handoff
+
+If `auto_handoff: true` in `project.context.md` frontmatter and a feature workflow is active, follow `.aioson/docs/autopilot-handoff.md`: after Gate A is approved and all closing duties above are done, do not stop for manual activation. Determine the next agent from the workflow state (never guess) and auto-invoke `Skill(aioson:agent:<next>)` with `"continue feature {slug} — autopilot handoff from @analyst"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when any stop condition applies: next agent is `@dev`, Gate A not approved, context ≥ `context_warning_threshold`, or routing is ambiguous.
+
 ## Strategic commands (use during session)
 
 - Search memory before web research: `aioson memory:search . --query="<topic>" 2>/dev/null || true`

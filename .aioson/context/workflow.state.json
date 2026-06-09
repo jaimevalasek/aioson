@@ -15,17 +15,24 @@
     "dev",
     "qa"
   ],
-  "current": "discovery-design-doc",
-  "next": "discovery-design-doc",
+  "current": null,
+  "next": null,
   "completed": [
     "setup",
     "product",
     "analyst",
     "architect",
+    "discovery-design-doc",
+    "ux-ui",
     "qa"
   ],
-  "skipped": [],
+  "skipped": [
+    "pm",
+    "orchestrator",
+    "scope-check",
+    "dev"
+  ],
   "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-08T20:38:59.955Z"
+  "updatedAt": "2026-06-09T21:43:46.914Z"
 }
