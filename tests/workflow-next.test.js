@@ -239,6 +239,30 @@ test('workflow:next repairs stale skipped stages when artifacts prove completion
   assert.equal(loaded.state.next, 'architect');
 });
 
+test('workflow:next infers scope-check (after discovery-design-doc) in a MEDIUM feature from artifacts', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design Doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/scope-check-${slug}.md`), '# Scope Check\n');
+  await writeFeatureWorkflowState(dir, { featureSlug: slug });
+
+  const loaded = await loadOrCreateState(dir);
+
+  // Before the fix, inference stopped at discovery-design-doc (non-inferable) and
+  // scope-check could never be recovered — leaving next stuck at discovery-design-doc.
+  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check']);
+  assert.deepEqual(loaded.state.skipped, []);
+  assert.equal(loaded.state.next, 'dev');
+});
+
 test('workflow:next does not infer mainline progress while a detour is active', async () => {
   const dir = await makeTempDir();
   const slug = 'official-dashboard-reform';

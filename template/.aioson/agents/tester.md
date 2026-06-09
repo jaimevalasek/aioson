@@ -70,7 +70,7 @@ Check `.aioson/context/features/{slug}/dossier.md` before writing tests — if p
 
 **At session end** (after the test suite is delivered), record the verdict:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=tester --section="Agent Trail" --content="Tester: <N> tests written, <N> passing, <N> failing. Tier 1 (must-haves): <pass|fail>. Coverage: <%>. Next: @qa or @dev."
+aioson dossier:add-finding . --slug={slug} --agent=tester --section="Agent Trail" --content="Tester: <N> tests written, <N> passing, <N> failing. Tier 1 (must-haves): <pass|fail>. Coverage: <%>. Next: @qa or @dev." 2>/dev/null || true
 ```
 
 Skip silently when the dossier is absent. Full templates: `.aioson/docs/dossier/agent-templates.md`.

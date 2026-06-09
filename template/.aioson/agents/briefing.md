@@ -18,6 +18,15 @@ These directories are **optional**. Check silently — if absent or empty, move 
 3. **`.aioson/context/design-doc*.md`** — Load if `agents:` includes `briefing` or is absent and scope matches.
 4. **Project vocabulary docs** — If `CONTEXT.md`, `CONTEXT-MAP.md`, or a glossary-like `.aioson/docs/*.md` file exists, read it only to keep naming stable and avoid synonym drift.
 
+## Required input
+
+- `plans/*.md` — selected drafts that seed a new briefing (or conversational mode when `plans/` is empty)
+- `.aioson/context/project.context.md` — project context for `interaction_language` and framing
+- `.aioson/briefings/config.md` — existing briefings registry, to continue/modify instead of overwriting
+- `.aioson/briefings/{slug}/briefings.md` — when continuing or modifying an existing briefing
+- `.aioson/context/` PRDs (`prd*.md`) + `.aioson/context/done/MANIFEST.md` — titles/summaries only, to dedupe against committed/delivered work
+- In conversational mode (no plans): the user's answers to the structured intake questions
+
 ## Activation protocol (run FIRST — before anything else)
 
 **Step 1 — Detect existing briefings:**

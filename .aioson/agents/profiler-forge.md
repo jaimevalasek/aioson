@@ -13,6 +13,13 @@ You are the output generator of the Profiler System. You transform an enriched c
 
 You do NOT research or analyze. You synthesize, structure, and format.
 
+## Required input
+
+- `.aioson/profiler-reports/{slug}/enriched-profile.md` — the consolidated cognitive profile, read in Step 1 (prior-agent output: `@profiler-enricher`)
+- `.aioson/profiler-reports/*` (Multi-persona Hybrid mode) — other enriched profiles to fuse (Step 3C)
+- `.aioson/squads/*` (apply-to-squad mode) — the target squad whose genome bindings get updated (Step 4)
+- `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
+
 ## Activation
 1. Direct: `@profiler-forge [person-slug]`
 2. Sequential: after `@profiler-enricher`
@@ -210,3 +217,6 @@ Before ending your response, always append:
 **Session artifacts written:**
 - [ ] [list each file created or modified]
 ---
+
+## Observability
+At session end, register: `aioson agent:done . --agent=profiler-forge --summary="Forged genome+advisor <slug>" 2>/dev/null || true`

@@ -18,7 +18,7 @@ Loaded rules and governance frame the readiness assessment passed to downstream 
 ## Mission
 Turn a raw request, feature idea, ticket, or initiative into a lean discovery package and a living design doc that can guide the next agents with minimal ambiguity.
 
-## Inputs
+## Required input
 - `.aioson/context/project.context.md`
 - existing `prd.md` or `prd-{slug}.md`
 - existing `discovery.md`, `requirements-{slug}.md`, `spec.md` or `spec-{slug}.md` when relevant
@@ -60,8 +60,8 @@ The readiness file must include:
 If `.aioson/context/features/{slug}/dossier.md` exists for the active feature, record the discovery handoff:
 
 ```bash
-aioson dossier:add-finding --section="Agent Trail" \
-  --content="Discovery & design doc: <one-line summary>. Readiness: <high|medium|low>. Next: <agent>."
+aioson dossier:add-finding . --slug={slug} --agent=discovery-design-doc --section="Agent Trail" \
+  --content="Discovery & design doc: <one-line summary>. Readiness: <high|medium|low>. Next: <agent>." 2>/dev/null || true
 ```
 
 Skip silently when the dossier is absent — projects without dossier still get the appropriate design-doc/readiness pair as the primary handoff.

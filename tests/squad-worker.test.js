@@ -154,7 +154,7 @@ test('scaffoldWorker creates worker files', async () => {
     const readme = await fs.readFile(path.join(result.workerDir, 'README.md'), 'utf8');
     assert.ok(readme.includes('Confirmador'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -167,7 +167,7 @@ test('loadWorkerConfig returns config for existing worker', async () => {
     const config = await loadWorkerConfig(tmpDir, 'squad1', 'worker1');
     assert.equal(config.slug, 'worker1');
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -177,7 +177,7 @@ test('loadWorkerConfig returns null for missing worker', async () => {
     const config = await loadWorkerConfig(tmpDir, 'squad1', 'nonexistent');
     assert.equal(config, null);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -192,7 +192,7 @@ test('listWorkers returns all workers for squad', async () => {
     assert.ok(slugs.includes('w1'));
     assert.ok(slugs.includes('w2'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -202,7 +202,7 @@ test('listWorkers returns empty for squad without workers', async () => {
     const workers = await listWorkers(tmpDir, 'empty-squad');
     assert.deepEqual(workers, []);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -229,7 +229,7 @@ process.exit(0);
     assert.equal(result.output.greeting, 'hello Jaime');
     assert.ok(result.durationMs >= 0);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -250,7 +250,7 @@ process.exit(1);
     assert.ok(!result.ok);
     assert.ok(result.error.includes('something went wrong'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -261,7 +261,7 @@ test('runWorker fails for missing worker config', async () => {
     assert.ok(!result.ok);
     assert.ok(result.error.includes('not found'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -278,7 +278,7 @@ test('runWorker validates required inputs', async () => {
     assert.ok(!result.ok);
     assert.ok(result.error.includes('phone'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -292,7 +292,7 @@ test('worker_runs table is created by openRuntimeDb', async () => {
     assert.equal(tables.length, 1);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -326,7 +326,7 @@ test('insertWorkerRun and listWorkerRuns work correctly', async () => {
     assert.equal(runs[1].status, 'completed');
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -345,6 +345,6 @@ test('getWorkerRunStats aggregates correctly', async () => {
     assert.equal(completed.avg_duration_ms, 150);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });

@@ -222,6 +222,7 @@ Scripts determinísticos que movem verificações de estado, validação de arte
 | `state:save` | Salva ponto de continuação em `dev-state.md` (fase, status, spec-version, histórico) | Durante `@dev` ao fim de cada fase ou antes de encerrar |
 | `feature:close` | Fecha feature com verdict PASS/FAIL: atualiza spec, features.md, project-pulse.md e dispara archivamento automático | Após QA sign-off — chamado pelo `@qa` automaticamente |
 | `feature:archive` | Move artefatos de uma feature `done` para `.aioson/context/done/{slug}/` e atualiza o manifest | Chamado pelo `feature:close` automaticamente; também disponível para retroativo com `--dry-run` e `--restore` |
+| `feature:export` | **Copia** todos os artefatos de uma feature para um `--out` limpo, sem mexer na origem; gera `INDEX.md` | Exportar specs para analisar fora, entregar a cliente, ou usar o AIOSON só como gerador de specs. Veja [feature-export.md](./feature-export.md) |
 | `gate:check` | Valida pré-requisitos e artefatos de um phase gate (A/B/C/D); retorna PASS ou BLOCKED | Antes de avançar para o próximo agente |
 | `artifact:validate` | Verifica a cadeia completa de artefatos de uma feature (PRD → spec → plano → conformance) | A qualquer momento para checar completude |
 | `workflow:execute` | Monta e executa o plano de agentes baseado na classificação; aceita `--dry-run` e `--start-from` | Para orquestrar features sem o dashboard |

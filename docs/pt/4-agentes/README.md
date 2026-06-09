@@ -32,6 +32,7 @@
 | [@setup](./setup.md) | Onboarding: detecta stack, classifica projeto | Sempre primeiro num projeto novo | `project.context.md` |
 | [@neo](./neo.md) | Roteador: diz qual agente é o próximo | Quando você está perdido | Orientação verbal |
 | [@briefing](./briefing.md) | Transforma anotações soltas em briefing pré-PRD | Antes de `@product`, quando ideia ainda vaga | `briefing.md` |
+| [@briefing-refiner](./briefing-refiner.md) | Revisa e refina um briefing existente via superfície HTML local | Após `@briefing`, antes de `@product` | `review.html`, `refinement-report.md` |
 | [@deyvin](./deyvin.md) | Pair-programming e continuidade de sessão | Retomar feature interrompida | continuação do trabalho |
 | [@pair](./deyvin.md) | Alias de `@deyvin` | — | — |
 | [@sheldon](./sheldon.md) | Análise técnica profunda, revisão de arquitetura | Decisões grandes, código legado | relatório de revisão |

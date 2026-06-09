@@ -261,7 +261,7 @@ test('renderSquadApiSection: returns section with endpoints when squad has api_e
     assert.ok(section.includes('Busca produtos'));
     assert.ok(section.includes('3001'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -271,7 +271,7 @@ test('renderSquadApiSection: returns empty string when no squads have api_endpoi
     const section = await renderSquadApiSection(tmpDir);
     assert.equal(section, '');
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -285,7 +285,7 @@ test('renderSquadApiSection: squad without squad.json is skipped', async () => {
     const section = await renderSquadApiSection(tmpDir);
     assert.equal(section, '');
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -323,7 +323,7 @@ test('squad:validate fails with clear message if api_endpoints worker does not e
     const errorMsg = result.errors.find(e => e.includes('missing-worker'));
     assert.ok(errorMsg, `Expected error about missing-worker, got: ${JSON.stringify(result.errors)}`);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -363,6 +363,6 @@ test('squad:validate passes api_endpoints check when worker directory exists', a
     const apiErrors = result.errors.filter(e => e.includes('api_endpoints'));
     assert.equal(apiErrors.length, 0, `Unexpected api_endpoints errors: ${JSON.stringify(apiErrors)}`);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });

@@ -1135,6 +1135,7 @@ module.exports = {
     session_already_active: 'Live session already active: {agent} | session: {session} | run: {runKey} ({dbPath})',
     session_started: 'Live session started: {agent} | tool: {tool} | session: {session} ({dbPath})',
     event_recorded: 'Live event recorded: {agent} | {eventType} | {session} ({dbPath})',
+    standalone_event_recorded: 'Standalone runtime event recorded: {agent} | {eventType} | run: {runKey} ({dbPath})',
     handoff_recorded: 'Live handoff recorded: {from} -> {to} | {session} ({dbPath})',
     session_closed: 'Live session closed: {agent} | {session} ({dbPath})',
     process_dead_warning: 'Process is dead while the live session is still open. Close it manually with `aioson live:close . --status=failed`.',

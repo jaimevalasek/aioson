@@ -90,9 +90,35 @@ test('pulse:update: appends to existing pulse keeping last 3 activity entries', 
 
   const pulsePath = path.join(tmpDir, '.aioson', 'context', 'project-pulse.md');
   const content = await fs.readFile(pulsePath, 'utf8');
-  // Should have recent activity entries
+  // Should have recent activity entries AND preserve prior history (keep last 3).
   assert.ok(content.includes('dev'));
   assert.ok(content.includes('Recent Activity'));
+  assert.ok(content.includes('@architect: did design'), 'prior LF entry preserved');
+});
+
+test('pulse:update: preserves prior history when the existing pulse uses CRLF line endings', async () => {
+  const tmpDir = await makeTmpDir();
+
+  // Existing pulse with CRLF endings (as produced by git core.autocrlf on Windows).
+  const crlf = '---\r\nlast_agent: analyst\r\n---\r\n## Recent Activity\r\n\r\n'
+    + '- 2026-01-01 @analyst: did analysis\r\n- 2026-01-02 @architect: did design\r\n';
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', crlf);
+
+  await runPulseUpdate({
+    args: [tmpDir],
+    options: { json: true, agent: 'dev', feature: 'feat', action: 'Implemented feature' },
+    logger: makeLogger()
+  });
+
+  const pulsePath = path.join(tmpDir, '.aioson', 'context', 'project-pulse.md');
+  const content = await fs.readFile(pulsePath, 'utf8');
+  // Before the fix, the LF-only regex failed to match CRLF and the two prior
+  // entries were silently dropped, leaving only the new line.
+  assert.ok(content.includes('@analyst: did analysis'), 'oldest entry preserved (keep last 3)');
+  assert.ok(content.includes('@architect: did design'), 'prior entry preserved');
+  assert.ok(content.includes('@dev'), 'new entry appended');
+  // No stray carriage returns should leak into the rewritten (LF) entries.
+  assert.ok(!content.includes('did design\r'), 'no trailing CR on captured entries');
 });
 
 test('pulse:update: human output confirms update', async () => {

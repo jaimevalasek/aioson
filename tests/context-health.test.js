@@ -43,7 +43,7 @@ describe('context-health.js — runContextHealth', () => {
       assert.equal(result.ok, false);
       assert.equal(result.reason, 'no_context_dir');
     } finally {
-      await fs.rm(emptyDir, { recursive: true, force: true });
+      await fs.rm(emptyDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
   });
 

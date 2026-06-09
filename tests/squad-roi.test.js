@@ -31,7 +31,7 @@ test('squad_roi_config table is created by openRuntimeDb', async () => {
     assert.equal(tables.length, 1);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -60,7 +60,7 @@ test('upsertROIConfig and getROIConfig roundtrip', async () => {
     assert.equal(config.contract_months, 12);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -76,7 +76,7 @@ test('upsertROIConfig updates existing config', async () => {
     assert.equal(config.percentage_fee, 15);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -90,7 +90,7 @@ test('deleteROIConfig removes config', async () => {
     assert.equal(getROIConfig(db, 'del'), undefined);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -101,7 +101,7 @@ test('getROIConfig returns undefined for missing', async () => {
     assert.equal(getROIConfig(db, 'nonexistent'), undefined);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -204,6 +204,6 @@ test('squad_metrics CRUD works for ROI tracking', async () => {
     assert.ok(metrics.some(m => m.metric_key === 'revenue'));
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });

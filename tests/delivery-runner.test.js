@@ -93,7 +93,7 @@ test('runAutoDelivery returns no_manifest when manifest is missing', async () =>
     assert.equal(result.reason, 'no_manifest');
   } finally {
     db.close();
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -115,7 +115,7 @@ test('runAutoDelivery returns auto_publish_disabled when disabled', async () => 
     assert.equal(result.reason, 'auto_publish_disabled');
   } finally {
     db.close();
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -172,7 +172,7 @@ test('runAutoDelivery sends webhook when autoPublish is true', async () => {
   } finally {
     db.close();
     await closeServer(server);
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -224,7 +224,7 @@ test('runAutoDelivery retries on 500 errors', async () => {
   } finally {
     db.close();
     await closeServer(server);
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -265,7 +265,7 @@ test('runAutoDelivery fails after max retries', async () => {
   } finally {
     db.close();
     await closeServer(server);
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -306,7 +306,7 @@ test('runManualDelivery fires all webhooks on manual trigger', async () => {
   } finally {
     db.close();
     await closeServer(server);
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -346,6 +346,6 @@ test('runAutoDelivery does not retry on 4xx errors (except 429)', async () => {
   } finally {
     db.close();
     await closeServer(server);
-    await fs.rm(dir, { recursive: true, force: true });
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });

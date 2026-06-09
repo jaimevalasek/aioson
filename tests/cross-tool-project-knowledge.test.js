@@ -166,7 +166,7 @@ fixture devlog
       db.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -197,7 +197,7 @@ test('materialize: gotcha->gotchas/, resolution->recipes/ with frontmatter + ord
     assert.match(index, /# Project Learnings/);
     assert.ok(index.indexOf('gotchas/openclaw') < index.indexOf('recipes/paperclip'), 'gotchas listed before recipes');
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     db.close();
   }
 });
@@ -212,7 +212,7 @@ test('materialize: idempotent — re-run with same updated_at skips writes (BR-C
     assert.equal(second.written, 0);
     assert.equal(second.skipped, 1);
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     db.close();
   }
 });
@@ -226,7 +226,7 @@ test('materialize: newer row updated_at triggers a rewrite', async () => {
     db.prepare("UPDATE project_learnings SET updated_at = '2026-05-09T00:00:00Z' WHERE learning_id = 'l1'").run();
     assert.equal(materializeLearnings({ db, targetDir: tmp }).written, 1);
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     db.close();
   }
 });
@@ -239,7 +239,7 @@ test('materialize: no active learnings + no dir is a true no-op (EC-CTPK-02)', a
     assert.equal(res.total, 0);
     assert.equal(fsSync.existsSync(path.join(tmp, '.aioson/learnings')), false);
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     db.close();
   }
 });
@@ -258,7 +258,7 @@ test('materialize: archived orphan removed; hand-authored file preserved (EC-CTP
     assert.equal(fsSync.existsSync(path.join(tmp, '.aioson/learnings/gotchas/will-be-archived.md')), false);
     await fs.access(userFile); // user-authored file untouched
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     db.close();
   }
 });
@@ -323,7 +323,7 @@ test('import-from-claude: dry-run lists candidates without mutating runtime DB',
     assert.deepEqual(res.candidates.map((c) => c.kind), ['gotcha', 'resolution', null]);
     assert.equal(fsSync.existsSync(path.join(fixture.projectDir, '.aioson/runtime/aios.sqlite')), false);
   } finally {
-    await fs.rm(fixture.tmp, { recursive: true, force: true });
+    await fs.rm(fixture.tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -357,6 +357,6 @@ test('import-from-claude: selected technical candidates promote through project_
       db.close();
     }
   } finally {
-    await fs.rm(fixture.tmp, { recursive: true, force: true });
+    await fs.rm(fixture.tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });

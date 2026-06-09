@@ -341,7 +341,7 @@ test('failed backup during update is recorded in failedBackups but does not bloc
 
   // Pre-create a regular FILE at .aioson/backups so the next nowStamp() subdir creation under it fails.
   const backupsRoot = path.join(dir, '.aioson/backups');
-  await fs.rm(backupsRoot, { recursive: true, force: true }).catch(() => {});
+  await fs.rm(backupsRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }).catch(() => {});
   await fs.writeFile(backupsRoot, 'not a dir', 'utf8');
 
   // Suppress expected console.warn during the test

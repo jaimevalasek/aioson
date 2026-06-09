@@ -64,7 +64,7 @@ Check `.aioson/context/features/{slug}/dossier.md` before starting review — if
 
 **After QA sign-off**, record verdict:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=qa --section="Agent Trail" --content="QA completed. Verdict: {PASS|FAIL}. Coverage: {n}%. Issues: {list}."
+aioson dossier:add-finding . --slug={slug} --agent=qa --section="Agent Trail" --content="QA completed. Verdict: {PASS|FAIL}. Coverage: {n}%. Issues: {list}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

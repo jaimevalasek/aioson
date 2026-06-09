@@ -41,17 +41,17 @@ Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier
 
 **After defining architecture**, register key modules in the code map:
 ```
-aioson dossier:add-codemap . --slug={slug} --file=<path> --role=<role> --coupling=<low|medium|high> --added-by=architect
+aioson dossier:add-codemap . --slug={slug} --file=<path> --role=<role> --coupling=<low|medium|high> --added-by=architect 2>/dev/null || true
 ```
 
 **Link applicable design-docs and rules:**
 ```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/design-docs/{doc}.md --reason="..."
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/design-docs/{doc}.md --reason="..." 2>/dev/null || true
 ```
 
 **After completing architecture**, record in Agent Trail:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=architect --section="Agent Trail" --content="Arquitetura definida: {decisions}."
+aioson dossier:add-finding . --slug={slug} --agent=architect --section="Agent Trail" --content="Arquitetura definida: {decisions}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

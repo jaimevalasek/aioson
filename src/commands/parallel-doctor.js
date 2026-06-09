@@ -528,7 +528,8 @@ function buildChecks(context, state, prerequisites, workersOption, force, analys
 }
 
 async function applyParallelFixes(targetDir, context, state, options) {
-  const dryRun = Boolean(options.dryRun);
+  // accept both --dry-run (kebab, as the parser stores it) and --dryRun (camel)
+  const dryRun = Boolean(options.dryRun || options['dry-run']);
   const generatedAt = new Date().toISOString();
   const projectName =
     String((context.data && context.data.project_name) || '').trim() || path.basename(targetDir) || 'project';

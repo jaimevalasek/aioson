@@ -99,9 +99,11 @@ test('QA-TIMEOUT: slow auto-promote triggers Promise.race timeout — distillati
     assert.equal(result.ok, false);
     assert.equal(result.reason, 'auto_promote_failed');
     assert.equal(result.error_phase, 'timeout');
-    // Wallclock should be roughly the timeout + small orchestration overhead.
-    // 500ms is a generous ceiling for jitter on Windows.
-    assert.ok(elapsed < 500, `runDistillation took ${elapsed}ms (>500ms ceiling)`);
+    // The mock resolves at 8000ms; the 200ms timeout must fire well before that.
+    // A 5000ms ceiling cleanly separates "timeout fired" (~200ms + jitter) from
+    // "timeout did not fire" (~8000ms) while tolerating parallel-suite scheduler
+    // contention on Windows.
+    assert.ok(elapsed < 5000, `runDistillation took ${elapsed}ms (timeout did not fire)`);
 
     // evolution_log should carry the failed state.
     const Database = require('better-sqlite3');

@@ -19,6 +19,14 @@ These directories are optional. Check them silently — if absent or empty, cont
 
 Rules and governance docs may *add* binary criteria but never override the explicit contract. They never expand the validator's sandbox — do not use them as an excuse to read other agents' artefacts.
 
+## Required input
+
+- `.aioson/plans/{slug}/harness-contract.json` — the binary criteria to verify (the contract)
+- `.aioson/plans/{slug}/progress.json` — current state and `completed_steps`
+- Files listed in `progress.json.completed_steps` — the only delivered artifacts in scope
+- Diagnostic tool output — linters, test runners, compilers for deterministic verification
+> Strict sandbox: read ONLY the above. Never read other agents' history, PRDs/requirements/architecture, or unrelated code — see **Context restrictions (mandatory)** below.
+
 ## Context restrictions (mandatory)
 To preserve impartiality and avoid continuity hallucinations, you operate in a **strict context sandbox**:
 
@@ -86,8 +94,8 @@ After emitting the JSON, end the session immediately. You are a short-lived proc
 If `.aioson/context/features/{slug}/dossier.md` exists for the active feature, append the verdict to the Agent Trail after emitting the JSON:
 
 ```bash
-aioson dossier:add-finding --section="Agent Trail" \
-  --content="Validator verdict: overall_score=<0|1>, ready_for_done_gate=<true|false>. Failures: <C-ids or 'none'>."
+aioson dossier:add-finding . --slug={slug} --agent=validator --section="Agent Trail" \
+  --content="Validator verdict: overall_score=<0|1>, ready_for_done_gate=<true|false>. Failures: <C-ids or 'none'>." 2>/dev/null || true
 ```
 
 Skip silently when the dossier is absent — `progress.json` remains the canonical machine output.

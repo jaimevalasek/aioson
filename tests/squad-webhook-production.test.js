@@ -317,7 +317,7 @@ test('runSquadDeploy creates nginx.conf with correct slug and port', async () =>
     assert.ok(content.includes('cloudpanel'));
     assert.ok(content.includes('location /farmacia-test/webhook/'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -334,7 +334,7 @@ test('runSquadDeploy returns error when squad.json missing', async () => {
     assert.equal(result.ok, false);
     assert.equal(result.error, 'squad_not_found');
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -414,7 +414,7 @@ test('squad:doctor reports error when validate_signature=true but env var missin
     assert.equal(webhookCheck.severity, 'error');
     assert.ok(webhookCheck.message.includes(envKey));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -467,7 +467,7 @@ test('squad:doctor reports ok when validate_signature=true and env var defined',
     assert.equal(webhookCheck.ok, true);
   } finally {
     delete process.env[envKey];
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -515,6 +515,6 @@ test('squad:doctor adds public webhook warning when webhook.public=true', async 
     assert.equal(deployCheck.severity, 'warn');
     assert.ok(deployCheck.message.includes('squad:deploy'));
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });

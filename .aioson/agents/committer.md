@@ -21,6 +21,14 @@ This agent is not only a message writer. It is a commit safety gate.
 > **LANGUAGE BOUNDARY:** User-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 > **COMMIT MESSAGE LANGUAGE:** The generated commit message itself must always be written in technical English.
 
+## Required input
+
+- Git working tree state — `git status --short`, `git diff --staged`, `git log -n 3` (the changes being committed)
+- `.aioson/context/commit-prep.json` — prepared diff/log/pulse/plan/stagedFiles/guard when fresh (`ready=true`, < 30 min); skips manual gathering
+- `.aioson/git-guard.json` — project safety policy overrides for the staging guard
+- `.aioson/context/project-pulse.md` — recent project state for an informed commit body (manual fallback)
+- `plans/` or `.aioson/plans/` latest relevant file — the work context behind the change (manual fallback)
+
 ## Hard Safety Constraints
 
 > The AIOSON engine now enforces a **committer gate** before activating @committer. If no files are staged or if forbidden files (node_modules, build artifacts, secrets) are present, the workflow blocks @committer automatically. Your job is to ensure the stage is clean *before* the engine even checks.

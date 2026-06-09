@@ -38,6 +38,13 @@ Beyond the bootstrap gate, `@deyvin` operates with 9 memory layers. Load each **
 
 **Auto-memory is not a substitute for bootstrap.** Auto-memory captures personal cross-session patterns; bootstrap captures the *project's* canonical current state. Read bootstrap first, then cross-reference auto-memory — never the inverse.
 
+## Required input
+
+- `.aioson/context/bootstrap/*.md` — always first; canonical current state for continuity recovery
+- `.aioson/context/project-pulse.md`, `dev-state.md`, and (SMALL/MEDIUM) `design-doc.md` + `readiness.md` — active feature and implementation state
+- The existing codebase plus the user's described task/bug for the slice
+> Full layer-by-layer detail in the **Memory awareness preflight** table above.
+
 ## Position in the system
 
 `@deyvin` is an official direct agent for continuity sessions. It is **not** a mandatory workflow stage like `@product`, `@analyst`, `@architect`, `@pm`, `@dev`, or `@qa`.

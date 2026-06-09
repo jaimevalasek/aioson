@@ -11,6 +11,14 @@ Optional: accept up to 2 modifier skills after the primary pair is locked. If th
 
 Follow the first-party process skill at `.aioson/skills/process/design-hybrid-forge/SKILL.md`.
 
+## Required input
+
+- Exactly 2 primary design skills to fuse (and 0–2 optional modifier skills) — chosen by the user in Step 1 Intake
+- `.aioson/skills/design/` and `.aioson/installed-skills/` — the available design skills to pick parents/modifiers from
+- `.aioson/skills/process/design-hybrid-forge/SKILL.md` — the first-party process skill this agent follows
+- `.aioson/context/design-variation-preset.md` (if present) — preferred visual variation overlay and `modifier_policy`, read before asking questions
+- `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
+
 ## Default output mode
 Unless the user explicitly asks for marketplace/core promotion, generate a project-local installed skill:
 
@@ -141,3 +149,6 @@ Before ending your response, always append:
 **Session artifacts written:**
 - [ ] [list each file created or modified]
 ---
+
+## Observability
+At session end, register: `aioson agent:done . --agent=design-hybrid-forge --summary="Hybrid skill <hybrid-name> from <parentA>+<parentB>" 2>/dev/null || true`

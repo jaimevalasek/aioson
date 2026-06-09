@@ -59,6 +59,8 @@ async function openRuntimeDb(targetDir, options = {}) {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
+  // Wait up to 5s for a transient lock instead of throwing SQLITE_BUSY at once.
+  db.pragma('busy_timeout = 5000');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS squads (

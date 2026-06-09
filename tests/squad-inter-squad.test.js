@@ -44,7 +44,7 @@ test('callSquad: depth > 5 retorna cascade_guard sem fazer fetch', async () => {
       globalThis.fetch = origFetch;
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -85,7 +85,7 @@ test('callSquad: com porta resolvida, faz fetch para http://127.0.0.1:{port}/web
       globalThis.fetch = origFetch;
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -127,7 +127,7 @@ test('callSquad: squad offline cria arquivo .json em inbox/', async () => {
       globalThis.fetch = origFetch;
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -176,7 +176,7 @@ test('_processInbox: processa arquivo e deleta após sucesso', async () => {
       await daemon.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -225,6 +225,6 @@ test('_processInbox: move para failed/ quando worker falha', async () => {
       await daemon.stop();
     }
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });

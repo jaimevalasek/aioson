@@ -130,17 +130,17 @@ Check `.aioson/context/features/{slug}/dossier.md` before enrichment — if pres
 
 **For each research consulted or produced** (`researchs/{research-slug}/summary.md`):
 ```
-aioson dossier:add-research . --slug={slug} --research-slug={research-slug} --agent=sheldon --verdict={confirmed|has-alternatives|outdated|deprecated} --why-relevant="..."
+aioson dossier:add-research . --slug={slug} --research-slug={research-slug} --agent=sheldon --verdict={confirmed|has-alternatives|outdated|deprecated} --why-relevant="..." 2>/dev/null || true
 ```
 
 **Link applicable rules and design-docs:**
 ```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..." 2>/dev/null || true
 ```
 
 **After enrichment**, record in Agent Trail (NOT Why — that belongs to @product):
 ```
-aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="Agent Trail" --content="Sizing: {n}. Decision: {in-place|phased-plan}. Plan: {link}. Code findings: {list}."
+aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="Agent Trail" --content="Sizing: {n}. Decision: {in-place|phased-plan}. Plan: {link}. Code findings: {list}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

@@ -427,7 +427,11 @@ function reconcileWorkflowState(state) {
 }
 
 function isInferableStage(stage) {
-  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'ux-ui', 'orchestrator'].includes(
+  // discovery-design-doc is inferable from its design-doc + readiness artifacts
+  // (it has both a validateStageArtifacts branch and a handoff contract). Without
+  // it, MEDIUM sequences — where scope-check sits AFTER discovery-design-doc —
+  // could never infer scope-check as completed during stale-state recovery.
+  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }
@@ -529,35 +533,48 @@ async function detectUnsubstantiatedCompletions(targetDir, completedStages, logg
   let dbExists;
   try { dbExists = await runtimeStore.runtimeStoreExists(targetDir); } catch { return []; }
   if (!dbExists) return [];
-  let db;
+  let handle;
   try {
-    db = await runtimeStore.openRuntimeDb(targetDir);
+    handle = await runtimeStore.openRuntimeDb(targetDir);
   } catch {
     return [];
   }
+  // openRuntimeDb resolves to { db, dbPath, runtimeDir } — the raw better-sqlite3
+  // handle lives on `.db`.
+  const db = handle && handle.db;
   if (!db || typeof db.prepare !== 'function') {
     try { if (db && typeof db.close === 'function') db.close(); } catch { /* ignore */ }
     return [];
   }
-  const unsubstantiated = [];
+  let unsubstantiated = [];
   try {
     let stmt;
     try {
+      // agent identity lives on execution_events.agent_name (agent_events has no
+      // agent column). agent_done/stage_completed events are written there by
+      // appendRunEvent for every tracked run.
       stmt = db.prepare(
-        "SELECT 1 FROM agent_events WHERE agent = ? AND event_type IN ('agent_done', 'stage_completed') LIMIT 1"
+        "SELECT 1 FROM execution_events WHERE agent_name = ? AND event_type IN ('agent_done', 'stage_completed') LIMIT 1"
       );
     } catch {
       // schema differences across versions — abort the cross-check.
       return [];
     }
+    const missing = [];
+    let substantiated = 0;
     for (const stage of completedStages) {
       try {
-        const row = stmt.get(stage);
-        if (!row) unsubstantiated.push(stage);
+        if (stmt.get(stage)) substantiated += 1;
+        else missing.push(stage);
       } catch {
         return [];
       }
     }
+    // Only treat missing stages as suspicious when the workflow demonstrably
+    // emits per-stage telemetry (≥1 completed stage has an agent_done event).
+    // Projects that never emit per-stage telemetry would otherwise warn on every
+    // run — keep the cross-check best-effort and silent for them.
+    unsubstantiated = substantiated > 0 ? missing : [];
   } finally {
     try { db.close(); } catch { /* ignore */ }
   }

@@ -88,3 +88,34 @@ test('commit:prepare succeeds in agent-safe mode when using staged-only', async 
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('commit:prepare parses non-ASCII paths without git C-quoting', async () => {
+  const dir = await makeRepo();
+  try {
+    // git's default core.quotePath=true would emit this non-ASCII path as a
+    // C-style double-quoted/escaped string, so the parsed path no longer matches
+    // the real file and a later `git add -- <path>` would miss it.
+    await writeFile(dir, 'src/relatório-café.js', 'console.log("unicode");\n');
+    git(dir, ['add', '--', 'src/relatório-café.js']);
+
+    const result = await runCommitPrepare({
+      args: [dir],
+      options: { json: true, 'agent-safe': true, 'staged-only': true, mode: 'headless' },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.stagedCount, 1);
+
+    const prep = JSON.parse(
+      await fs.readFile(path.join(dir, '.aioson', 'context', 'commit-prep.json'), 'utf8')
+    );
+    const staged = prep.stagedFiles[0];
+    assert.ok(!staged.startsWith('"'), `path should not be C-quoted: ${staged}`);
+    assert.ok(!staged.includes('\\'), `path should not be C-escaped: ${staged}`);
+    assert.ok(staged.includes('caf') && staged.endsWith('.js'), `expected the literal path, got: ${staged}`);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

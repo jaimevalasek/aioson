@@ -100,7 +100,7 @@ test('saveIntegrationConfig and loadIntegrationConfig roundtrip', async () => {
     const loaded = await loadIntegrationConfig(tmpDir, 'test-squad', 'whatsapp');
     assert.deepStrictEqual(loaded, config);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -110,7 +110,7 @@ test('loadIntegrationConfig returns null for missing', async () => {
     const result = await loadIntegrationConfig(tmpDir, 'nope', 'nope');
     assert.equal(result, null);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -125,7 +125,7 @@ test('listIntegrations returns all configured integrations', async () => {
     const slugs = list.map(i => i.slug).sort();
     assert.deepStrictEqual(slugs, ['tg', 'wa']);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -135,7 +135,7 @@ test('listIntegrations returns empty for no dir', async () => {
     const list = await listIntegrations(tmpDir, 'no-squad');
     assert.equal(list.length, 0);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -168,7 +168,7 @@ test('mcp_status table is created by openRuntimeDb', async () => {
     assert.equal(tables.length, 1);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -184,7 +184,7 @@ test('upsertMcpStatus and getMcpStatus work', async () => {
     assert.equal(row.calls_total, 0);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -201,7 +201,7 @@ test('incrementMcpCalls increments counters', async () => {
     assert.equal(row.calls_failed, 1);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -215,6 +215,6 @@ test('listMcpStatus returns all for squad', async () => {
     assert.equal(rows.length, 2);
     db.close();
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });

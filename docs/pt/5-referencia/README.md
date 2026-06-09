@@ -28,6 +28,7 @@
 |---|---|
 | [fluxo-artefatos.md](./fluxo-artefatos.md) | Mapa de quem cria o quê: @product → @sheldon → @analyst → @dev → @qa |
 | [feature-archive.md](./feature-archive.md) | Arquivamento automático de features concluídas via feature:close |
+| [feature-export.md](./feature-export.md) | Exportar (copiar) todos os artefatos de uma feature para um local limpo — entregável portátil |
 | [memoria-e-contexto.md](./memoria-e-contexto.md) | Memória persistente, context cache, context search, context monitor — guia consolidado |
 | [runtime-observability.md](./runtime-observability.md) | Telemetria SQLite, dashboard, runtime:emit, agent:done |
 | [hooks-session-guard.md](./hooks-session-guard.md) | Hooks automáticos de visibilidade no dashboard para Claude Code, Antigravity e Codex |

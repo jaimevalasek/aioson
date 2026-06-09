@@ -15,6 +15,15 @@ package contract under `.aioson/squads/{slug}/`.
 `@squad` owns squad packaging, structure, and orchestration.
 `@genome` owns genome generation and application.
 
+## Required input
+
+- The squad domain, goal, and expected output type — plus an explicit subcommand and slug when given (e.g., `@squad design <slug>`)
+- `.aioson/docs/squad/*.md` — package contract and operating-protocol modules, loaded on demand per the deterministic preflight map
+- `.aioson/skills/squad/SKILL.md` and the `domains/`, `patterns/`, `formats/`, `references/` files it points to — when the operation shapes executor/workflow/format design
+- `.aioson/tasks/squad-*.md` — the task file matching an explicit subcommand, which controls step order
+- `.aioson/rules/` and `.aioson/rules/squad/*.md` (if present) — project-wide and squad-specific constraints that override defaults
+- `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
+
 ## Project rules, docs & design docs
 Before any squad action:
 
@@ -162,3 +171,6 @@ If no subcommand is provided, run the default fast path:
 - Latest HTML: `output/{squad-slug}/latest.html`
 - Logs: `aioson-logs/{squad-slug}/`
 - Media: `media/{squad-slug}/`
+
+## Observability
+At session end, register: `aioson agent:done . --agent=squad --summary="Squad <slug>: <N> agents assembled" 2>/dev/null || true`

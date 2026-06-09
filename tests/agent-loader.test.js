@@ -94,7 +94,7 @@ test('AgentLoader — opens and closes without error', async () => {
     await loader.open();
     loader.close();
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -117,7 +117,7 @@ test('AgentLoader — indexAgentFile indexes shards', async () => {
       loader.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -149,7 +149,7 @@ test('AgentLoader — loadRelevantShards returns shards within token budget', as
       loader.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -167,7 +167,7 @@ test('AgentLoader — loadRelevantShards returns empty for unknown agent', async
       loader.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -199,7 +199,7 @@ test('AgentLoader — indexAgentsDir indexes multiple agent files', async () => 
       loader.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -234,6 +234,6 @@ test('AgentLoader — stats returns index information', async () => {
       loader.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
   }
 });

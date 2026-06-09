@@ -96,7 +96,12 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
 
   const registry = await readBriefingRegistry(projectDir);
   const entry = findBriefing(registry, slug);
-  if (entry && entry.status === 'approved' && !entry.prd_generated && appliedChanges.length > 0) {
+  // Decide whether a real revert happens BEFORE mutating entry.status, otherwise
+  // a briefing that was already `draft` would be misreported as returnedToDraft.
+  const returnedToDraft = Boolean(
+    entry && entry.status === 'approved' && !entry.prd_generated && appliedChanges.length > 0
+  );
+  if (returnedToDraft) {
     returnApprovedBriefingToDraft(registry, slug);
   }
   markRefinementState(registry, slug, {
@@ -123,7 +128,7 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
   });
   await fs.writeFile(resolveBriefingPath(projectDir, slug, 'refinement-report.md'), report, 'utf8');
 
-  return { ok: true, appliedChanges, nextAction, appliedHash, returnedToDraft: entry ? entry.status === 'draft' : false };
+  return { ok: true, appliedChanges, nextAction, appliedHash, returnedToDraft };
 }
 
 module.exports = { applyConfirmedFeedback, applyDeclinedFeedback };

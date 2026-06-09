@@ -64,6 +64,14 @@ Generate Genome artifacts on demand via LLM knowledge. A genome may be:
 Each genome must contain cognitive content plus operational metadata that will support future bindings.
 No pre-built genome files are shipped. Everything is generated fresh for the requested domain or function.
 
+## Required input
+
+- The domain or function to model, plus `type` (domain/function/persona/hybrid), `depth`, `evidence_mode`, and `language` — gathered in Step 1 scope clarification
+- For persona/hybrid types: the name of the person to profile (triggers the Profiler pipeline)
+- `.aioson/profiler-reports/{slug}/enriched-profile.md` (persona/hybrid only) — read as the primary source when a profiler profile already exists (prior-agent output: `@profiler-enricher`)
+- `.aioson/genomes/{slug}/SKILL.md` or `.aioson/genomes/{slug}.md` (enrich / advisor / migrate / apply modes) — the existing genome to operate on
+- `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
+
 ## aioson.com registry check (optional)
 
 If `AIOSON_TOKEN` is configured (check via MCP tool `config_get` or environment):
@@ -1901,3 +1909,6 @@ Before ending your response, always append:
 **Session artifacts written:**
 - [ ] [list each file created or modified]
 ---
+
+## Observability
+At session end, register: `aioson agent:done . --agent=genome --summary="Genome <slug>: <N> patterns" 2>/dev/null || true`

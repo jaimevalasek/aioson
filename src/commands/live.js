@@ -1610,7 +1610,12 @@ async function runRuntimeEmit({ args, options = {}, logger, t }) {
       now
     });
     if (!options.json) {
-      logger.log(`runtime:emit — ${agentName} | standalone event logged | run: ${standalone.runKey} (${standalone.dbPath})`);
+      logger.log(t('live.standalone_event_recorded', {
+        agent: agentName,
+        eventType,
+        runKey: standalone.runKey,
+        dbPath: standalone.dbPath
+      }));
     }
     return standalone;
   }

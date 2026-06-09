@@ -64,12 +64,12 @@ Check `.aioson/context/features/{slug}/dossier.md` before loading context — if
 
 **Link applicable design skills or rules:**
 ```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..." 2>/dev/null || true
 ```
 
 **After completing UI spec**, record:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" --content="UI spec completed. Screens: {n}. Design skill: {skill}."
+aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" --content="UI spec completed. Screens: {n}. Design skill: {skill}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

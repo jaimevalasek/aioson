@@ -93,12 +93,12 @@ Before loading per-slug PRD/spec, check `.aioson/context/features/{slug}/dossier
 
 **Link applicable rules identified during analysis:**
 ```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..."
+aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule}.md --reason="..." 2>/dev/null || true
 ```
 
 **After completing requirements**, record in Agent Trail:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" --content="Requirements mapped. Edge cases: {n}. Pending items: {items}."
+aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" --content="Requirements mapped. Edge cases: {n}. Pending items: {items}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

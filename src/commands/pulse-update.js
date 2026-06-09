@@ -45,9 +45,9 @@ async function runPulseUpdate({ args, options = {}, logger }) {
   // Extract existing recent_activity lines (keep last 2 to add 1 new = 3 total)
   const existingActivities = [];
   if (existing) {
-    const activityMatch = existing.match(/## Recent Activity\n([\s\S]*?)(?=\n##|\s*$)/);
+    const activityMatch = existing.match(/## Recent Activity\r?\n([\s\S]*?)(?=\r?\n##|\s*$)/);
     if (activityMatch) {
-      const lines = activityMatch[1].split('\n').filter((l) => l.trim().startsWith('-'));
+      const lines = activityMatch[1].split(/\r?\n/).filter((l) => l.trim().startsWith('-'));
       existingActivities.push(...lines.slice(-2));
     }
   }

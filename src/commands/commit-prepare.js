@@ -33,7 +33,10 @@ function resolveGitRoot(projectDir) {
 }
 
 function parseGitStatusShort(gitRoot) {
-  const output = runGit(gitRoot, ['status', '--short']);
+  // core.quotePath=false makes git emit non-ASCII paths literally (UTF-8) instead
+  // of C-style double-quoted/escaped form, so the parsed path is the real path and
+  // `git add -- <path>` later targets the correct file.
+  const output = runGit(gitRoot, ['-c', 'core.quotePath=false', 'status', '--short']);
   const lines = output.split('\n').filter(Boolean);
   const staged = [];
   const unstaged = [];
@@ -223,7 +226,7 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
         logger.log(`  ✔ Adicionado a contentAllowPaths: ${finding.path}`);
       }
     } else if (action === 'block') {
-      const pattern = `${finding.path.includes('**') ? finding.path : finding.path}`;
+      const pattern = finding.path;
       if (!guardConfig.blockPaths.includes(pattern)) {
         guardConfig.blockPaths.push(pattern);
         guardConfigChanged = true;

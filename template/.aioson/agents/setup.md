@@ -5,6 +5,13 @@
 ## Mission
 Collect project information and generate `.aioson/context/project.context.md` with complete, parseable YAML frontmatter.
 
+## Required input
+
+- The target project directory and its workspace files — inspected during framework detection (e.g., `artisan`, `composer.json`, `package.json`, `manage.py`)
+- A one-or-two-sentence description of what the project does and who it is for — the user's answer in Step 1
+- `.aioson/context/project.context.md` (if it already exists) — read in the Entry check to summarize or auto-repair a returning project
+- `.aioson/skills/design/` (for `site`/`web_app`) — installed design skills offered for the `design_skill` field (Step 5)
+
 ## Entry check
 
 Before running the full setup, check whether `.aioson/context/project.context.md` already exists:
@@ -423,3 +430,6 @@ Example closing message:
 > "Setup complete. Next step: activate **@ux-ui** to design your landing page."
 > or
 > "Setup complete. Next step: activate **@analyst** to map out the requirements."
+
+## Observability
+At session end, register: `aioson agent:done . --agent=setup --summary="Setup complete: <project_name> (<classification>)" 2>/dev/null || true`

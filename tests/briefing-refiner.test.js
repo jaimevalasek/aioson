@@ -161,6 +161,20 @@ test('briefing approve and unapprove still round-trip through shared registry', 
   assert.equal(entry.approved_at, null);
 });
 
+test('briefing:unapprove refuses an approved briefing that already generated a PRD', async () => {
+  const dir = await makeProject();
+  const logger = { log() {}, error() {} };
+
+  // idea-three is approved AND prd_generated — it must not be unapprovable.
+  const result = await runBriefingUnapprove({ args: [dir], options: { slug: 'idea-three' }, logger });
+  assert.deepEqual(result, { ok: false, error: 'slug_not_found' });
+
+  const registry = await readBriefingRegistry(dir);
+  const entry = registry.briefings.find((item) => item.slug === 'idea-three');
+  assert.equal(entry.status, 'approved'); // untouched
+  assert.equal(entry.prd_generated, '.aioson/context/prd-idea-three.md');
+});
+
 test('review artifact generation writes html, feedback json, and report', async () => {
   const dir = await makeProject();
   const parsed = parseBriefingSections(BRIEFING, '.aioson/briefings/idea-one/briefings.md');
@@ -223,6 +237,32 @@ test('confirmed feedback applies markdown changes and returns approved briefing 
   assert.equal(entry.status, 'draft');
   assert.equal(entry.approved_at, null);
   assert.equal(entry.refinement_status, 'applied');
+});
+
+test('confirmed feedback on an already-draft briefing reports returnedToDraft false', async () => {
+  const dir = await makeProject();
+  // idea-two is a draft — give it a briefings.md to refine.
+  await fs.mkdir(path.join(dir, '.aioson', 'briefings', 'idea-two'), { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson', 'briefings', 'idea-two', 'briefings.md'), BRIEFING, 'utf8');
+
+  const parsed = parseBriefingSections(BRIEFING, '.aioson/briefings/idea-two/briefings.md');
+  const feedback = buildInitialFeedback({
+    slug: 'idea-two',
+    sourcePath: '.aioson/briefings/idea-two/briefings.md',
+    sourceHash: parsed.source_hash,
+    sections: parsed.sections
+  });
+  const problem = feedback.sections.find((section) => section.title === 'Problem');
+  problem.status = 'change_requested';
+  problem.current_text = 'Refined draft problem.';
+
+  const result = await applyConfirmedFeedback(dir, 'idea-two', feedback, { confirmed: true });
+  assert.equal(result.ok, true);
+  assert.equal(result.returnedToDraft, false); // it was already draft — nothing reverted
+
+  const registry = await readBriefingRegistry(dir);
+  const entry = registry.briefings.find((item) => item.slug === 'idea-two');
+  assert.equal(entry.status, 'draft');
 });
 
 test('declined feedback leaves briefing unchanged and records skipped changes', async () => {

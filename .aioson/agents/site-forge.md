@@ -20,6 +20,15 @@ Clone the structure, content, and/or visual design of a real website. Build a Ne
 
 ---
 
+## Required input
+
+- A target site URL — the source to clone (every mode requires it), or `--from-local <path>` pointing at a saved site directory
+- A design-skill name — required for Modes A, C, E; resolved from `.aioson/installed-skills/<name>/SKILL.md` or `.aioson/skills/design/<name>/SKILL.md`
+- A blend ratio — Mode E only (default 50% site / 50% skill)
+- A browser MCP (Playwright/Puppeteer/Browserbase) — mandatory prerequisite for screenshots, asset enumeration, and interaction testing (Step 0 blocks without it)
+- A Next.js project (existing or scaffolded) — output target for build Modes A, B, C, E (not Mode D)
+> See the **Five modes** table above for exactly which inputs each mode needs.
+
 ## Brain (procedural memory)
 
 Load `.aioson/brains/_index.json` on activation — it's ~2KB.
@@ -277,5 +286,5 @@ Copy assets from `<path>/fonts/`, `<path>/media/`, `<path>/images/` directly to 
 
 At session end:
 ```bash
-aioson agent:done . --agent=site-forge --summary="Cloned <hostname> [Mode A/B/C/D/E: description]"
+aioson agent:done . --agent=site-forge --summary="Cloned <hostname> [Mode A/B/C/D/E: description]" 2>/dev/null || true
 ```

@@ -30,8 +30,8 @@ If the current working directory path contains `com.aioson.play/drafts/` (Linux/
 When this detection triggers:
 
 1. **Skip the regular PRD/discovery flow.** The user is not writing a product brief — they want a working app at the end of the chat.
-2. Load `.aioson/skills/process/aioson-play-app-scaffold/SKILL.md` immediately.
-3. Follow that skill's workflow: ask kind (System vs Sidecar), pick slug, scaffold the file tree, write `manifest.json`, run `aioson scaffold:complete --slug=<slug>` at the end.
+2. Load `.aioson/skills/process/aioson-play-app-scaffold/SKILL.md` if present; otherwise follow the inline steps below.
+3. Follow this workflow: ask kind (System vs Sidecar), pick slug, scaffold the file tree, write `manifest.json`, run `aioson scaffold:complete --slug=<slug>` at the end.
 4. Do **not** create `.aioson/context/prd-{slug}.md` for this draft — drafts are ephemeral until promoted to `apps/{slug}/`. The Play handles persistence.
 
 Detect by inspecting `process.cwd()` (Node) or `pwd` output. Do not ask the user "is this a Play draft?" — you can see the path.
@@ -141,7 +141,7 @@ Check `.aioson/context/features/{slug}/dossier.md` before loading PRD — if pre
 
 **After writing/updating PRD**, record scope:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="MVP: {scope}. Constraints: {constraints}."
+aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="MVP: {scope}. Constraints: {constraints}." 2>/dev/null || true
 ```
 
 Templates: `.aioson/docs/dossier/agent-templates.md`
@@ -391,7 +391,7 @@ Action: /copywriter
 
 When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
 
-> **Tip:** before the next agent loads, consider running `aioson context:pack .` to compress context and reduce token cost for the downstream agent.
+> **Recommended:** `/clear` before activating the next agent (fresh context window); optionally run `aioson context:pack .` first to compress context.
 
 ## Responsibility boundary
 

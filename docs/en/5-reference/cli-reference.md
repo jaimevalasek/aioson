@@ -400,6 +400,32 @@ aioson feature:archive . --feature=checkout --force
 
 ---
 
+## feature:export
+
+**Copy** all artefacts of a feature into a clean output directory, leaving the source tree untouched. Sibling of `feature:archive`, but a non-destructive copy to an arbitrary `--out` — turns AIOSON's markdown output into a portable deliverable. Use it to analyse a feature's specs outside the project, hand them to a client, or use AIOSON purely as a spec generator.
+
+```bash
+aioson feature:export . --feature=checkout
+aioson feature:export . --feature=checkout --out=../checkout-specs
+aioson feature:export . --feature=checkout --flatten
+aioson feature:export . --feature=checkout --no-index
+aioson feature:export . --feature=checkout --dry-run --json
+```
+
+**Options:**
+- `--feature=<slug>` — feature identifier (required).
+- `--out=<dir>` — destination directory. Default: `<target>/{slug}-export`.
+- `--flatten` — collapse the mirrored structure into a single level; nested files become `label-...-file.ext` (collision-free). Default: mirrored (`dossier/`, `plans/`, `briefings/`, `done/`).
+- `--no-index` — skip the generated `INDEX.md`. Default: an `INDEX.md` manifest is written listing every exported file and its source.
+- `--dry-run` — preview what would be copied without writing anything.
+- `--json` — structured JSON output with `outDir`, `count`, `copied`, and `index`.
+
+**What it copies:** the same surface `feature:archive` enumerates — root `*-{slug}.{md,yaml,yml,json}` files (minus global files), the per-slug `dossier/`, `plans/`, and `briefings/` directories, plus `context/done/{slug}/` when the feature is already archived. The slug-collision guard is honoured, so a sibling slug (`checkout-v2`) never leaks into a `checkout` export.
+
+**Non-destructive:** the source artefacts are never moved or deleted. Re-running overwrites files in the out dir but does not remove stale ones. Unlike `feature:archive`, there is no `features.md` status guard — you can export an in-progress feature.
+
+---
+
 ## test:smoke
 
 End-to-end integration test that installs AIOSON in a temporary directory, runs all major commands, and verifies the output. Used for CI and release validation.

@@ -26,6 +26,14 @@ MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @scope-ch
 After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when code or behavior changed materially.
 ```
 
+## Required input
+
+- User intent — `prd-{slug}.md`/`prd.md`, briefing, Sheldon enrichment, source manifest, or dossier Why/What
+- Planned work — `requirements-{slug}.md`/`spec*.md`, `architecture.md`, `design-doc*.md`, `readiness*.md`, implementation plan
+- Delivered work (post-* modes) — `git diff`, changed files, `dev-state.md`, test output, QA/tester/pentester findings, last handoff
+- The selected mode (`pre-dev` default, or `post-dev`/`post-fix`/`final`) — determines which of the above are compared
+> Pick the highest-authority source per claim — see the **Evidence** section below.
+
 ## Project Rules, Docs & Design Governance
 
 Check silently and load only what is relevant:

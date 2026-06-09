@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **`feature:export` — copy a feature's artefacts to a clean output directory.** Non-destructive sibling of `feature:archive`: instead of *moving* artefacts into `.aioson/context/done/{slug}/`, it *copies* the full surface (root `*-{slug}.{md,yaml,yml,json}` minus global files, the per-slug `dossier/`/`plans/`/`briefings/` directories, and `context/done/{slug}/` when archived) into an arbitrary `--out` (default `<target>/{slug}-export`), leaving the source tree untouched. Flags: `--flatten` (collapse to one level), `--no-index` (skip the generated `INDEX.md` manifest), `--dry-run`, `--json`. Reuses the archive's slug-collision guard via the new exported `collectFeatureArtifacts` helper, so a sibling slug (`checkout-v2`) never leaks into a `checkout` export. No `features.md` status guard — works on in-progress features too. Turns AIOSON's markdown output into a portable deliverable. Docs: `docs/pt/5-referencia/feature-export.md` + `docs/en/5-reference/cli-reference.md`.
+
+### Fixed
+- **`briefing:list` no longer re-surfaces PRD-generated briefings.** The "approved" filter ignored `prd_generated`, so a briefing already converted to a PRD could be picked up again and reverted to draft. It now filters `status === 'approved' && !prd_generated`.
+- **`briefing-refiner` `returnedToDraft` is computed before mutation.** The return flag was read from the entry *after* the status was rewritten, reporting the post-mutation state instead of whether the refinement actually returned an approved/non-PRD briefing to draft.
+- **`workflow:next` no longer false-flags substantiated stages as unsubstantiated.** `detectUnsubstantiatedCompletions` queried the wrong table/columns (`agent_events.agent` instead of `execution_events.agent_name`) and destructured `openRuntimeDb` incorrectly, so the completion-evidence check silently found nothing; it now reads `execution_events` and only reports `missing` stages when at least one stage *was* substantiated (no false positives on an empty event log). `discovery-design-doc` added to the inferable-stage set.
+- **`pulse:update` is CRLF-safe.** The "## Recent Activity" parser matched LF-only (`\n`), so on Windows (CRLF) line endings it failed to capture history and clobbered the existing activity list. Regex and line-split now accept `\r?\n`.
+- **`commit:prepare` reads unicode/spaced paths correctly.** `git status --short` ran without `core.quotePath=false`, so non-ASCII paths came back octal-escaped. Also removed a dead no-op ternary in the pattern builder.
+- **`parallel:doctor --dry-run` is recognized.** The handler read only `options.dryRun`, missing the kebab `--dry-run` form; it now accepts both.
+- **`scan:project` guards malformed LLM responses.** Direct `data.choices[0].message.content` / `data.content[0].text` dereferences could throw an opaque `TypeError` on an unexpected provider payload; both now validate the shape and throw a descriptive `Unexpected … response shape` error.
+- **`agent:manifest` validation now whitelists `check_modes`.** `sanitizeManifest` filters `check_modes` against `ALLOWED_CHECK_MODES` (`pre-dev`, `post-dev`, `post-fix`, `final`), mirroring the existing autonomy-mode guard.
+- **`runtime:emit` standalone-event line is localized.** The standalone path logged a hard-coded English string; it now uses the `live.standalone_event_recorded` i18n key (added in all locales).
+
+### Changed
+- **Agent structural-contract enforcement swept across all agent prompts.** Added the mandatory `## Required input` section to 18 agents that lacked it, a `## Observability` section with the `aioson agent:done … 2>/dev/null || true` call to 9 agents, the §5 best-effort suffix to `agent:done` calls that were missing it (pentester/discover/site-forge), per-slug `dossier:*` flags where required (discovery-design-doc/validator), and the `/clear` handoff cue to `product`. The previously-missing dossier templates (`agent-templates.md`, `schema.md` — referenced by 10 agents) are now shipped under `template/.aioson/docs/dossier/`, closing a packaging gap.
+- **Transient SQLite locks now wait instead of failing.** Added `busy_timeout = 5000` to the runtime store (`runtime-store.js`) and context-search index (`context-search.js`), so a WAL checkpoint or AV file-lock retries for up to 5s rather than throwing `SQLITE_BUSY` immediately — a production-robustness improvement that also stabilizes the suite under parallel load.
+
+### Tests
+- New `tests/agent-structural-contract.test.js` pins the §1–§6 structural contract (LANGUAGE BOUNDARY, mandatory sections, `Required input`, `agent:done`, §5 best-effort suffix, dossier flag integrity).
+- New `tests/feature-export.test.js` (8 cases: mirrored/flatten/no-index/done-inclusion/dry-run/noop/validation/default-out).
+- Windows file-lock hardening: recursive `fs.rm` cleanups in 14 SQLite-touching test files now pass `maxRetries: 5, retryDelay: 50`; over-tight latency ceilings in `telemetry-foundation` and `qa-feature-close-distillation` loosened to hang-guards (full suite: 2993 pass, 0 fail, 1 skip).
+
 ## [1.21.3] - 2026-05-28
 
 ### Security

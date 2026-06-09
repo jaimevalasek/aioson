@@ -164,8 +164,11 @@ async function runBriefingUnapprove({ args, options = {}, logger }) {
     return { ok: false, error: 'no_config' };
   }
 
-  // Only approved and non-implemented briefings can be unapproved
-  const approveds = data.briefings.filter((b) => b.status === 'approved');
+  // Only approved briefings that have NOT yet generated a PRD can be unapproved.
+  // Reverting a prd_generated briefing would desync it from its downstream PRD,
+  // so it is excluded here (mirrors the registry-level guard in
+  // returnApprovedBriefingToDraft).
+  const approveds = data.briefings.filter((b) => b.status === 'approved' && !b.prd_generated);
 
   if (approveds.length === 0) {
     logger.log('Nenhum briefing aprovado disponível para retornar a draft.');

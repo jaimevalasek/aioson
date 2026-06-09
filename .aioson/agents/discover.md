@@ -229,7 +229,7 @@ This agent reads many files. Be strategic:
 
 At the end of the session, run:
 ```bash
-aioson agent:done . --agent=discover
+aioson agent:done . --agent=discover --summary="Discovery cache refreshed" 2>/dev/null || true
 ```
 
 Skip if the `aioson` CLI is not installed.

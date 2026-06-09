@@ -131,6 +131,42 @@ async function findArchivedFiles(archiveDir) {
   return entries.filter((e) => e.isFile()).map((e) => e.name);
 }
 
+/**
+ * Enumerate every artefact that belongs to a feature slug — the exact surface
+ * `feature:archive` would move — but as a pure read-only discovery, for
+ * non-destructive consumers (e.g. `feature:export`). Never mutates the tree.
+ *
+ * Reuses the slug-collision guard (readOtherSlugs/findSlugFiles) so a longer
+ * sibling slug (`checkout-v2`) never leaks into `checkout`.
+ *
+ * @returns {{ rootFiles: string[], dirs: Array<{label:string, sourceDir:string}>, doneDir: string|null }}
+ *   rootFiles are bare names under `.aioson/context/`; dirs/doneDir are absolute paths.
+ */
+async function collectFeatureArtifacts({ ctxDir, targetDir, slug, includeDone = true }) {
+  const featuresPath = path.join(ctxDir, 'features.md');
+  const otherSlugs = await readOtherSlugs(featuresPath, slug);
+  const rootFiles = await findSlugFiles(ctxDir, slug, otherSlugs);
+
+  const slugDirCandidates = [
+    { label: 'dossier', sourceDir: path.join(ctxDir, 'features', slug) },
+    { label: 'plans', sourceDir: path.join(targetDir, '.aioson', 'plans', slug) },
+    { label: 'briefings', sourceDir: path.join(targetDir, '.aioson', 'briefings', slug) }
+  ];
+  const dirs = [];
+  for (const d of slugDirCandidates) {
+    // eslint-disable-next-line no-await-in-loop
+    if (await dirExists(d.sourceDir)) dirs.push(d);
+  }
+
+  let doneDir = null;
+  if (includeDone) {
+    const candidate = path.join(ctxDir, 'done', slug);
+    if (await dirExists(candidate)) doneDir = candidate;
+  }
+
+  return { rootFiles, dirs, doneDir };
+}
+
 async function extractSummary(prdPath) {
   const content = await readFileSafe(prdPath);
   if (!content) return null;
@@ -628,4 +664,4 @@ async function runFeatureSweep({ args = [], options = {}, logger }) {
   return result;
 }
 
-module.exports = { runFeatureArchive, runFeatureSweep };
+module.exports = { runFeatureArchive, runFeatureSweep, collectFeatureArtifacts };

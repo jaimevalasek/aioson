@@ -194,6 +194,7 @@ aioson feature:archive . --feature=checkout --json
 
 ## Veja também
 
+- [Feature Export](./feature-export.md) — **copiar** (não mover) os artefatos para um local limpo, sem mexer na origem
 - [Feature Dossier](./feature-dossier.md) — o que o dossier carrega *antes* de arquivar a feature
 - [Continuidade entre sessões](../3-receitas/continuidade-entre-sessoes.md) — retomar feature interrompida com dossier + dev-resume
 - [Fluxo de artefatos](./fluxo-artefatos.md) — mapa de quem cria o quê e quem consome

@@ -49,7 +49,7 @@ Check `.aioson/context/features/{slug}/dossier.md` before loading context — if
 
 **After completing user stories / plan**, record:
 ```
-aioson dossier:add-finding . --slug={slug} --agent=pm --section="Agent Trail" --content="Plano refinado. Stories: {n}. Prioridade: {priority}."
+aioson dossier:add-finding . --slug={slug} --agent=pm --section="Agent Trail" --content="Plano refinado. Stories: {n}. Prioridade: {priority}." 2>/dev/null || true
 ```
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`

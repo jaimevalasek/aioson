@@ -355,7 +355,13 @@ async function callOpenAICompatible(baseUrl, apiKey, model, prompt) {
   }
 
   const data = JSON.parse(text);
-  return data.choices[0].message.content;
+  const content = data && data.choices && data.choices[0] && data.choices[0].message
+    ? data.choices[0].message.content
+    : undefined;
+  if (typeof content !== 'string') {
+    throw new Error(`Unexpected LLM response shape: ${String(text).slice(0, 300)}`);
+  }
+  return content;
 }
 
 async function callAnthropic(apiKey, model, prompt) {
@@ -365,7 +371,11 @@ async function callAnthropic(apiKey, model, prompt) {
     { model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] }
   );
   const data = JSON.parse(text);
-  return data.content[0].text;
+  const content = data && data.content && data.content[0] ? data.content[0].text : undefined;
+  if (typeof content !== 'string') {
+    throw new Error(`Unexpected Anthropic response shape: ${String(text).slice(0, 300)}`);
+  }
+  return content;
 }
 
 async function callLLM(providerName, providerCfg, prompt) {

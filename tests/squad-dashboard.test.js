@@ -140,7 +140,7 @@ test('loadSquadList returns empty array when no squads dir', async () => {
     const squads = await loadSquadList(tmpDir);
     assert.deepEqual(squads, []);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 
@@ -160,7 +160,7 @@ test('loadSquadList reads squad manifest', async () => {
     assert.equal(squads[0].mode, 'content');
     assert.equal(squads[0].executorCount, 2);
   } finally {
-    await fs.rm(tmpDir, { recursive: true });
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
 

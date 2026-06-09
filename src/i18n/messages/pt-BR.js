@@ -1160,6 +1160,7 @@ module.exports = {
     session_already_active: 'Sessao live ja ativa: {agent} | sessao: {session} | run: {runKey} ({dbPath})',
     session_started: 'Sessao live iniciada: {agent} | ferramenta: {tool} | sessao: {session} ({dbPath})',
     event_recorded: 'Evento live registrado: {agent} | {eventType} | {session} ({dbPath})',
+    standalone_event_recorded: 'Evento de runtime standalone registrado: {agent} | {eventType} | run: {runKey} ({dbPath})',
     handoff_recorded: 'Handoff live registrado: {from} -> {to} | {session} ({dbPath})',
     session_closed: 'Sessao live encerrada: {agent} | {session} ({dbPath})',
     process_dead_warning: 'O processo morreu enquanto a sessao live ainda esta aberta. Encerre manualmente com `aioson live:close . --status=failed`.',

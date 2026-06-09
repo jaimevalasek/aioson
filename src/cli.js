@@ -194,6 +194,7 @@ const { runOpReinforce } = require('./commands/op-reinforce');
 const { runOpMigrate } = require('./commands/op-migrate');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive, runFeatureSweep } = require('./commands/feature-archive');
+const { runFeatureExport } = require('./commands/feature-export');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
 const { runDossierAddResearch } = require('./commands/dossier-add-research');
 const { runDossierAudit } = require('./commands/dossier-audit');
@@ -640,6 +641,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'feature-archive',
   'feature:sweep',
   'feature-sweep',
+  'feature:export',
+  'feature-export',
   'dossier:init',
   'dossier-init',
   'dossier:show',
@@ -1523,6 +1526,8 @@ async function main() {
       }
     } else if (command === 'feature:sweep' || command === 'feature-sweep') {
       result = await runFeatureSweep({ args, options, logger: commandLogger });
+    } else if (command === 'feature:export' || command === 'feature-export') {
+      result = await runFeatureExport({ args, options, logger: commandLogger });
     } else if (command === 'dossier:init' || command === 'dossier-init') {
       result = await runDossierInit({ args, options, logger: commandLogger });
     } else if (command === 'dossier:show' || command === 'dossier-show') {

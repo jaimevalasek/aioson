@@ -51,3 +51,30 @@ test('readAgentManifest returns null for unknown agent without crashing', async 
   const manifest = await readAgentManifest(projectRoot, 'nonexistent-agent-xyz');
   assert.equal(manifest, null);
 });
+
+test('scope-check manifest exposes validated check_modes', async () => {
+  const manifest = await readAgentManifest(projectRoot, 'scope-check');
+  assert.equal(Boolean(manifest), true);
+  assert.deepEqual(manifest.check_modes, ['pre-dev', 'post-dev', 'post-fix', 'final']);
+});
+
+test('sanitizeManifest filters out unknown check_modes so the field cannot drift', async () => {
+  const { readAgentManifest: read } = require('../src/agent-manifests');
+  const os = require('node:os');
+  const fs = require('node:fs/promises');
+
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-manifest-modes-'));
+  await fs.mkdir(path.join(dir, '.aioson/agents/manifests'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.aioson/agents/manifests/scope-check.manifest.json'),
+    JSON.stringify({
+      agent_id: 'scope-check',
+      version: '1.0',
+      check_modes: ['pre-dev', 'made-up-mode', 'post-fix']
+    }),
+    'utf8'
+  );
+
+  const manifest = await read(dir, 'scope-check');
+  assert.deepEqual(manifest.check_modes, ['pre-dev', 'post-fix']); // 'made-up-mode' dropped
+});
