@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.22.0] - 2026-06-10
+
+### Added
+- **Loop guardrails for self-implementation harnesses.** `self:loop` now runs from an active contract with schema validation, active-contract discovery, scope enforcement, budget ceilings, attempt artifacts, criteria verification, failure-signature escalation, and human approval gates.
+- **Harness gate/status commands.** Added `harness:status` and human gate approval/rejection flows so paused loop work can be inspected, resumed, or explicitly blocked without losing context.
+- **Contract-aware git guard integration.** `git:guard` now merges declared `forbidden_files` from the active harness contract while preserving safe human commit behavior for lockfiles unless the contract explicitly forbids them.
+
+### Changed
+- **Dev/QA prompts now understand loop guardrails.** Workspace and template agent prompts were updated so implementation, QA, correction loops, and handoffs consume the new guarded harness model consistently.
+- **Loop-guardrails feature artifacts are now durable.** PRD, requirements, readiness, design, scope-check, Sheldon enrichment, dossier, corrections plan, and progress artifacts were recorded under `.aioson/context/` and `.aioson/plans/`.
+
+### Tests
+- Added regression coverage for contract schema validation, glob matching, scope guard behavior, budget enforcement, criteria execution, human gates, active-contract discovery, git guard contract merging, and self-loop guardrails.
+
 ## [1.21.8] - 2026-06-08
 
 ### Added

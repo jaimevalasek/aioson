@@ -22,6 +22,10 @@ const PROJECT_KNOWLEDGE_DIRECTIVE = [
   'Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.'
 ].join('\n');
 
+function normalizeNewlines(text) {
+  return String(text).replace(/\r\n/g, '\n');
+}
+
 test('AC-CTPK-06: greenfield install ships project-learnings placeholders', async () => {
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'aioson-ctpk-parity-'));
   await installTemplate(dir, { overwrite: true, mode: 'install' });
@@ -40,7 +44,7 @@ test('AC-CTPK-06: greenfield install ships the universal directive only to suppo
   await installTemplate(dir, { overwrite: true, mode: 'install' });
 
   for (const rel of ['AGENTS.md', 'CLAUDE.md', 'OPENCODE.md']) {
-    const content = fs.readFileSync(path.join(dir, rel), 'utf8');
+    const content = normalizeNewlines(fs.readFileSync(path.join(dir, rel), 'utf8'));
     assert.ok(
       content.includes(PROJECT_KNOWLEDGE_DIRECTIVE),
       `${rel} missing canonical Project knowledge directive`
@@ -65,7 +69,7 @@ test('AC-CTPK-06: template mirrors project-learnings placeholders and directive'
   }
 
   for (const rel of ['AGENTS.md', 'CLAUDE.md', 'OPENCODE.md']) {
-    const content = fs.readFileSync(path.join('template', rel), 'utf8');
+    const content = normalizeNewlines(fs.readFileSync(path.join('template', rel), 'utf8'));
     assert.ok(
       content.includes(PROJECT_KNOWLEDGE_DIRECTIVE),
       `template/${rel} missing canonical Project knowledge directive`
