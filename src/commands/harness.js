@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createCircuitBreaker } = require('../harness/circuit-breaker');
+const { validateContract } = require('../harness/contract-schema');
 
 /**
  * aioson harness:init — Inicializa o contrato e progresso da feature.
@@ -36,8 +37,17 @@ async function runHarnessInit({ args, options = {}, logger, t }) {
     governor: {
       max_steps: 50,
       error_streak_limit: 5,
-      cost_ceiling_tokens: null
+      cost_ceiling_tokens: null,
+      max_runtime_minutes: null,
+      max_changed_files: null,
+      max_diff_lines: null
     },
+    // Scope guard (loop-guardrails): allowed_files ausente = sem allowlist;
+    // forbidden_files é SEMPRE mesclado com os defaults embutidos (.env*, *.pem,
+    // *.key, secrets/**, .git/**, node_modules/**, lockfiles) — não-removíveis.
+    forbidden_files: [],
+    // human_gate ausente = nenhum gate (retrocompat). Exemplo:
+    // "human_gate": { "required_for": ["payment_logic_change", "publish"] }
     criteria: [
       {
         id: "C1",
@@ -47,6 +57,13 @@ async function runHarnessInit({ args, options = {}, logger, t }) {
       }
     ]
   };
+
+  const schemaResult = validateContract(contract);
+  if (!schemaResult.ok) {
+    const first = schemaResult.errors[0];
+    logger.error(`Contract schema invalid: ${first.field} — ${first.reason}`);
+    return { ok: false, error: 'contract_schema_invalid', errors: schemaResult.errors };
+  }
 
   const cb = createCircuitBreaker(contractPath, progressPath);
   fs.writeFileSync(contractPath, JSON.stringify(contract, null, 2), 'utf8');

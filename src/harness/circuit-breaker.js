@@ -47,6 +47,13 @@ class CircuitBreaker {
     const { circuit_state, iterations, consecutive_errors } = this.progress;
     const { max_steps, error_streak_limit } = this.contract.governor;
 
+    // HUMAN_GATE (loop-guardrails D4): gate humano pendente nega execução até
+    // decisão via harness:approve / harness:reject (REQ-12/15).
+    const pendingGates = Array.isArray(this.progress.pending_gates) ? this.progress.pending_gates : [];
+    if (this.progress.status === 'human_gate' || pendingGates.length > 0) {
+      return { allowed: false, reason: 'human_gate_pending' };
+    }
+
     if (circuit_state === 'OPEN') {
       return { allowed: false, reason: 'circuit_open' };
     }

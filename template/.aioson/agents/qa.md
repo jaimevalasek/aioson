@@ -78,19 +78,26 @@ If `.aioson/plans/{slug}/manifest.md` exists:
 - Mark in the AC coverage table for each phase: covered / partial / missing
 - A phase can only be marked `qa_approved` when all its Critical/High findings are resolved
 
-**Corrections plan creation:**
+**After corrections verified and approved:**
 
-When findings are discovered after implementation:
+- Update phase `status` in the manifest to `qa_approved`
+- Tell the user:
+> "Phase [N] approved by QA.
+> For routine fixes and small adjustments, you can use `@deyvin` directly."
+
+## Corrections plan & auto-cycle (ANY FAIL verdict — with or without Sheldon manifest)
+
+When mandatory findings (Critical/High, or anything that blocks Gate D) are discovered after implementation, run this protocol. It does NOT depend on `.aioson/plans/{slug}/manifest.md` existing — a missing manifest must never leave the corrections trail chat-only.
 
 1. Create `.aioson/plans/{slug}/corrections-{ISO-date}.md`:
 ```markdown
 ---
-phase: NN
+phase: NN            # omit when no Sheldon manifest exists for the slug
 created: {ISO-date}
 status: open   # open | in_progress | resolved
 ---
 
-# Corrections Plan — Phase NN — {date}
+# Corrections Plan — {slug} — {date}
 
 ## Context
 QA ran on {date} and found {N} Critical, {N} High.
@@ -107,9 +114,17 @@ Affected AC: AC-NN
 ...
 ```
 
-2. **Auto-cycle to @dev (cap = 2 cycles, per-slug, persists across chats):**
+2. **Persist the trail for @dev (MANDATORY — never chat-only):**
 
-State file: `.aioson/runtime/qa-dev-cycle.json` — `{slug, cycle, started_at, last_plan}`.
+```
+aioson dev:state:write . --feature={slug} --next="Apply mandatory corrections from .aioson/plans/{slug}/corrections-{date}.md (C-01..C-NN), then return to @qa for re-verification" --status=corrections_pending --context=spec,requirements 2>/dev/null || true
+```
+
+If the CLI is unavailable, edit `.aioson/context/dev-state.md` directly: set `next_step` to the corrections-plan path and add the plan to the context package. `aioson dev:resume-data` also auto-surfaces any `corrections-*.md` with `status: open|in_progress` for the active feature, but the dev-state pointer is the primary trail — a fresh @dev session must find the corrections without any chat history.
+
+3. **Auto-cycle to @dev (cap = 2 cycles, per-slug, persists across chats):**
+
+State file: `.aioson/runtime/qa-dev-cycle.json` — `{slug, cycle, started_at, last_plan}`. Write it regardless of whether a Sheldon manifest exists.
 
 Sequence:
 - Read the file. If absent or `slug` differs → start fresh (`cycle = 0`).
@@ -119,16 +134,9 @@ Sequence:
 
 **Reset:** delete `qa-dev-cycle.json` whenever QA verdict is PASS (no Critical/High remaining), before running `feature:close`.
 
-3. **Fallback (when auto-loop is blocked or skipped):** Inform the user:
+4. **Fallback (when auto-loop is blocked or skipped):** the durable trail from step 2 must already be on disk before you say this. Inform the user:
 > "Corrections plan created at `.aioson/plans/{slug}/corrections-{date}.md`.
 > Activate `@dev` to apply the corrections. After fixing, return to `@qa` for re-verification."
-
-**After corrections verified and approved:**
-
-- Update phase `status` in the manifest to `qa_approved`
-- Tell the user:
-> "Phase [N] approved by QA.
-> For routine fixes and small adjustments, you can use `@deyvin` directly."
 
 ## Brownfield memory handoff
 

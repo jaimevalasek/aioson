@@ -399,6 +399,12 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'harness-validate',
   'harness:apply-validation',
   'harness-apply-validation',
+  'harness:approve',
+  'harness-approve',
+  'harness:reject',
+  'harness-reject',
+  'harness:status',
+  'harness-status',
   'brief-gen',
   'verify:gate',
   'verify-gate',
@@ -1256,6 +1262,15 @@ async function main() {
       result = await runHarnessValidate({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:apply-validation' || command === 'harness-apply-validation') {
       result = await runHarnessApplyValidation({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:approve' || command === 'harness-approve') {
+      const { runHarnessApprove } = require('./commands/harness-gate');
+      result = await runHarnessApprove({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:reject' || command === 'harness-reject') {
+      const { runHarnessReject } = require('./commands/harness-gate');
+      result = await runHarnessReject({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:status' || command === 'harness-status') {
+      const { runHarnessStatus } = require('./commands/harness-status');
+      result = await runHarnessStatus({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:gate' || command === 'verify-gate') {
       result = await runVerifyGate({ args, options, logger: commandLogger, t });
 

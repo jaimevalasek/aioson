@@ -1,0 +1,13 @@
+{
+  "feature": "loop-guardrails",
+  "phase": 2,
+  "status": "in_progress",
+  "completed_steps": [
+    "phase-1: glob-match, contract-schema, git-baseline, scope-guard, budget-guard, attempt-artifacts, guard-events, preflight+hook D5, harness:init template",
+    "phase-2: human-gate, HUMAN_GATE circuit-breaker, criteria-runner, harness:approve/reject/status, publish gate feature:close, git:guard merge"
+  ],
+  "last_error": null,
+  "session_count": 2,
+  "last_updated": "2026-06-09T23:55:00Z",
+  "circuit_state": "CLOSED"
+}

@@ -152,7 +152,7 @@ If flagged, recommend a new chat and offer a handoff with slug, completed phase,
 
 Check `.aioson/context/features/{slug}/dossier.md` before per-slug PRD/spec. If present, read it FIRST — it consolidates Why/What + code map and is the canonical entry point for chained context. If absent, continue with standard input (legacy flow).
 
-**Auto-resume (session start):** `aioson dev:resume-data .` returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step}` or `null` (cold start). Skip discovery, start on `next_step`, then emit `aioson runtime:emit . --agent=dev --type=dev_auto_resume --summary="<feature>: phase <N> auto-resumed" 2>/dev/null || true`.
+**Auto-resume (session start):** `aioson dev:resume-data .` returns `{feature_slug, classification, current_phase, artifacts_consumed, code_map_paths, sheldon_plan, next_step, open_corrections?}` or `null` (cold start). When `open_corrections` is non-empty, those QA corrections plans are the top priority regardless of any other pointer. Skip discovery, start on `next_step`, then emit `aioson runtime:emit . --agent=dev --type=dev_auto_resume --summary="<feature>: phase <N> auto-resumed" 2>/dev/null || true`.
 
 **Drift detection (prompt-driven):** before modifying/creating a file, check if its path is in `code_map_paths`. If registered AND your change diverges from the upstream plan, or a Sheldon plan step already ran without an Agent Trail entry → DRIFT. On DRIFT: emit `aioson runtime:emit . --agent=dev --type=dev_drift_detected --summary="Drift detected: {what}" 2>/dev/null || true`, give the user 3 options (proceed/revise/abort), record `dossier:add-finding --section="Agent Trail" --content="DRIFT: {what}. Decision. Reason."`.
 
@@ -284,6 +284,8 @@ Run `aioson` CLI yourself to keep the workflow moving:
 ## Auto-cycle return to @qa (corrections mode)
 
 If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
+
+**Safety net — open corrections without the cycle file:** on every activation with an active feature, also check `.aioson/plans/{active-feature}/corrections-*.md`. If any has frontmatter `status: open` or `in_progress`, those mandatory corrections take priority over the dev-state `next_step` — apply them first, mark the plan `resolved`, then hand off to `@qa` for re-verification. `aioson dev:resume-data` surfaces them as `open_corrections` and already rewrites `next_step` accordingly; trust that over a stale dev-state pointer. This covers QA sessions that created a corrections plan but failed to persist the trail.
 
 ## Optional scope drift checkpoint
 

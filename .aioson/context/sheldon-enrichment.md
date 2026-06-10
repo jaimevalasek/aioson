@@ -1,33 +1,36 @@
 ---
-target_prd: .aioson/context/prd-briefing-refiner.md
+target_prd: .aioson/context/prd-loop-guardrails.md
 round_count: 1
-last_enrichment_date: 2026-06-08
+last_enrichment_date: 2026-06-09
 plan_path: null
-sizing_score: 4
-sizing_decision: "Path A — enrich PRD in place; add Delivery plan if user confirms"
-readiness: ready_for_analyst_with_pending_product_decisions
+sizing_score: 6
+sizing_decision: "Path A — enrich PRD in place + ## Delivery plan (2 fases)"
+readiness: ready_for_analyst
 sources_used:
-  - .aioson/context/prd-briefing-refiner.md
-  - .aioson/context/sheldon-enrichment-briefing-refiner.md
-  - .aioson/context/features/briefing-refiner/dossier.md
-  - researchs/file-system-access-api-2026/summary.md
-  - researchs/local-html-editable-review-ui-2026/summary.md
+  - plans/plano-relatorio-aioson-loop-engine.md
+  - researchs/scope-guard-coding-agents-2026/summary.md
+  - researchs/llm-token-estimation-2026/summary.md
+  - researchs/multi-agent-token-budget-2026/summary.md
+  - researchs/auto-handoff-pipeline-2026/summary.md
+  - .aioson/context/features/loop-guardrails/dossier.md
 improvements_applied:
-  - Enrichment recommendations written to sheldon-enrichment-briefing-refiner.md
-  - PRD left unchanged pending user confirmation
-improvements_discarded: []
-status: ready_for_analyst_with_pending_product_decisions
+  - 11 melhorias aplicadas in-place no PRD (5 críticas, 5 importantes, 1 refinamento)
+  - 3 open questions resolvidas com evidência de código/pesquisa
+  - "## Delivery plan" com 2 fases adicionado ao PRD
+improvements_discarded:
+  - "security_high_finding como tema de gate — adiado (registrado em Out of scope)"
+status: ready_for_analyst
 ---
 
-# Sheldon Enrichment Log — briefing-refiner
+# Sheldon Enrichment Log — loop-guardrails
 
 ## Summary
-- O PRD cabe como SMALL e não precisa de plano faseado externo.
-- O enriquecimento necessário fecha contrato de persistência, schema de feedback, status de briefing aprovado e plano de entrega.
-- O PRD ainda não foi alterado; recomendações P0/P1 aguardam confirmação.
+- Score 6 → Path A: PRD enriquecido in-place com Delivery plan de 2 fases; sem plano externo.
+- Gaps críticos fechados eram mecânicos: untracked files invisíveis ao `git diff`, baseline indefinido, ausência de validador de schema do contrato, mapa tema→caminho dos gates e semântica de resume do HUMAN_GATE.
+- RF-05 (SMALL): `progress.json` criado em `.aioson/plans/loop-guardrails/`.
 
 ## Artifact
-- `.aioson/context/sheldon-enrichment-briefing-refiner.md`
+- `.aioson/context/sheldon-enrichment-loop-guardrails.md`
 
-## Next
-Confirmar se P0/P1 devem ser aplicados ao PRD ou encaminhar para `@analyst` fechar Gate A com as recomendações como insumo.
+## Sessão anterior (briefing-refiner — done)
+- Histórico preservado em `.aioson/context/sheldon-enrichment-briefing-refiner.md`.

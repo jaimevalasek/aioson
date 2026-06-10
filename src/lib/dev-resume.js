@@ -91,6 +91,42 @@ function extractCodeMapPaths(dossierRaw) {
   return Array.from(new Set(paths));
 }
 
+function readCorrectionsStatus(raw) {
+  const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  // No frontmatter or no status field: treat as open — a corrections plan
+  // must never be silently skipped because of a malformed header.
+  if (!fmMatch) return 'open';
+  for (const line of fmMatch[1].split(/\r?\n/)) {
+    const m = line.match(/^status:\s*([^#]*)/);
+    if (m) {
+      const val = m[1].trim().replace(/^["']|["']$/g, '').toLowerCase();
+      return val || 'open';
+    }
+  }
+  return 'open';
+}
+
+async function listOpenCorrections(targetDir, featureSlug) {
+  const planDir = path.join(targetDir, '.aioson', 'plans', featureSlug);
+  let entries;
+  try {
+    entries = await fs.readdir(planDir);
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return [];
+    throw err;
+  }
+  const out = [];
+  for (const name of entries.filter((n) => /^corrections-.+\.md$/.test(n)).sort()) {
+    const raw = await readFileOrNull(path.join(planDir, name));
+    if (!raw) continue;
+    const status = readCorrectionsStatus(raw);
+    if (status === 'open' || status === 'in_progress') {
+      out.push(`.aioson/plans/${featureSlug}/${name}`);
+    }
+  }
+  return out;
+}
+
 function deriveNextStepFromPlan(planRaw) {
   if (!planRaw) return null;
   const lines = planRaw.split('\n');
@@ -137,6 +173,14 @@ async function buildDevResumeData(projectPath) {
     ? lastHandoff.decision_rationale
     : [];
 
+  // QA corrections plans with status open/in_progress take precedence over any
+  // persisted next_step: a stale dev-state pointer must not hide mandatory
+  // corrections from a fresh @dev session (loop-guardrails incident, 2026-06-09).
+  const openCorrections = await listOpenCorrections(targetDir, featureSlug);
+  const baseNextStep = useDevState && devStateFields.next_step
+    ? devStateFields.next_step
+    : deriveNextStepFromPlan(planRaw);
+
   return {
     feature_slug: featureSlug,
     classification,
@@ -144,7 +188,10 @@ async function buildDevResumeData(projectPath) {
     artifacts_consumed: artifactsConsumed,
     code_map_paths: extractCodeMapPaths(dossierRaw),
     sheldon_plan: sheldonPlan,
-    next_step: useDevState && devStateFields.next_step ? devStateFields.next_step : deriveNextStepFromPlan(planRaw),
+    next_step: openCorrections.length > 0
+      ? `Apply mandatory corrections from ${openCorrections[0]}, then return to @qa for re-verification`
+      : baseNextStep,
+    open_corrections: openCorrections.length > 0 ? openCorrections : undefined,
     decision_rationale: decisionRationale.length > 0 ? decisionRationale : undefined
   };
 }
@@ -154,5 +201,7 @@ module.exports = {
   extractDevStateFields,
   isCurrentDevStateForFeature,
   extractCodeMapPaths,
-  deriveNextStepFromPlan
+  deriveNextStepFromPlan,
+  readCorrectionsStatus,
+  listOpenCorrections
 };

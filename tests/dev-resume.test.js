@@ -10,7 +10,9 @@ const {
   buildDevResumeData,
   extractDevStateFields,
   extractCodeMapPaths,
-  deriveNextStepFromPlan
+  deriveNextStepFromPlan,
+  readCorrectionsStatus,
+  listOpenCorrections
 } = require('../src/lib/dev-resume');
 const { runDevResumeData } = require('../src/commands/dev-resume');
 
@@ -109,6 +111,21 @@ patterns: []
 - [x] all done
 - [x] really`;
     assert.equal(deriveNextStepFromPlan(plan), null);
+  });
+
+  it('readCorrectionsStatus strips inline comments from the status value', () => {
+    const raw = '---\nphase: 2\ncreated: 2026-06-09\nstatus: open   # open | in_progress | resolved\n---\n# Plan';
+    assert.equal(readCorrectionsStatus(raw), 'open');
+  });
+
+  it('readCorrectionsStatus treats missing frontmatter or status as open (fail-safe)', () => {
+    assert.equal(readCorrectionsStatus('# Corrections without frontmatter'), 'open');
+    assert.equal(readCorrectionsStatus('---\nphase: 1\n---\nbody'), 'open');
+  });
+
+  it('readCorrectionsStatus reads resolved status', () => {
+    const raw = '---\nstatus: resolved\n---\nbody';
+    assert.equal(readCorrectionsStatus(raw), 'resolved');
   });
 });
 
@@ -309,6 +326,67 @@ patterns: []
 
       const result = await buildDevResumeData(tmp);
       assert.equal(result.decision_rationale, undefined, 'key absent when no rationale');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('surfaces open corrections plans and overrides a stale next_step', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'feat-corr' });
+      await writeFeaturesMd(tmp, [{ slug: 'feat-corr', status: 'in_progress' }]);
+      await fs.writeFile(
+        path.join(tmp, '.aioson', 'context', 'dev-state.md'),
+        '---\nactive_feature: feat-corr\nactive_phase: 2\nnext_step: "Handoff to @qa (Gate D)"\nstatus: implementation_done\n---\nbody',
+        'utf8'
+      );
+      const planDir = path.join(tmp, '.aioson', 'plans', 'feat-corr');
+      await fs.mkdir(planDir, { recursive: true });
+      await fs.writeFile(
+        path.join(planDir, 'corrections-2026-06-09.md'),
+        '---\nphase: 2\ncreated: 2026-06-09\nstatus: open   # open | in_progress | resolved\n---\n# Corrections',
+        'utf8'
+      );
+
+      const result = await buildDevResumeData(tmp);
+      assert.deepEqual(result.open_corrections, ['.aioson/plans/feat-corr/corrections-2026-06-09.md']);
+      assert.match(result.next_step, /Apply mandatory corrections from \.aioson\/plans\/feat-corr\/corrections-2026-06-09\.md/);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('omits resolved corrections and keeps the dev-state next_step', async () => {
+    const tmp = await makeProject();
+    try {
+      await writeLastHandoff(tmp, { feature_slug: 'feat-resolved' });
+      await writeFeaturesMd(tmp, [{ slug: 'feat-resolved', status: 'in_progress' }]);
+      await fs.writeFile(
+        path.join(tmp, '.aioson', 'context', 'dev-state.md'),
+        '---\nactive_feature: feat-resolved\nactive_phase: 3\nnext_step: "Continue phase 3"\nstatus: in_progress\n---\nbody',
+        'utf8'
+      );
+      const planDir = path.join(tmp, '.aioson', 'plans', 'feat-resolved');
+      await fs.mkdir(planDir, { recursive: true });
+      await fs.writeFile(
+        path.join(planDir, 'corrections-2026-06-01.md'),
+        '---\nstatus: resolved\n---\n# Corrections',
+        'utf8'
+      );
+
+      const result = await buildDevResumeData(tmp);
+      assert.equal(result.open_corrections, undefined);
+      assert.equal(result.next_step, 'Continue phase 3');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('listOpenCorrections returns [] when the plans dir does not exist', async () => {
+    const tmp = await makeProject();
+    try {
+      assert.deepEqual(await listOpenCorrections(tmp, 'no-such-feature'), []);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }

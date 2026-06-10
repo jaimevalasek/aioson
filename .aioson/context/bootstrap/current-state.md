@@ -1,16 +1,20 @@
 ---
-updated_at: "2026-06-04T00:21:14-03:00"
-generated_at: "2026-06-02T01:14:00-03:00"
-source: "Autonomy/orchestration analysis and planning session"
+updated_at: "2026-06-10T00:10:00-03:00"
+generated_at: "2026-06-10T00:10:00-03:00"
+source: "Living Memory reflection — fechamento de loop-guardrails (QA re-verificacao PASS, Gate D aprovado, feature done) — @scope-check 2026-06-10"
 ---
 
 # Current State
 
 ## What the system already has
 
+- [loop-guardrails · 2026-06-09] Correções QA C-01..C-03 aplicadas: descoberta de contrato ativo extraída para `src/harness/active-contract.js` e compartilhada por `git:guard` + `self:loop` (sem `--contract`/`--spec` o loop descobre o contrato ativo em disco; sem contrato ativo loga "guardrails inactive — no harness contract loaded"); governor EFETIVO (presets de `contract_mode` via `resolveContract`) agora alcança o circuit-breaker (`check`/`recordError`) e o teto de iterações; camada de commit do `git:guard` aplica apenas `forbidden_files` DECLARADOS (defaults não-removíveis valem só dentro do loop — lockfile humano commitável de novo). QA-H-01 verde, QA-C-02/QA-C-03 novos; suíte completa 3102/3105 (2 CRLF pré-existentes). Re-verificação @qa: PASS — Gate D aprovado via `workflow:next --complete=qa` (2026-06-09); feature `loop-guardrails` marcada `done` em features.md; residuais Low O-01..O-04 documentados no QA Sign-off de spec-loop-guardrails.md.
+- [qa-corrections-handoff-trail · 2026-06-09] Trilha durável @qa→@dev para corrections plans: a maquinaria de corrections + auto-cycle do qa.md saiu do gate RDA-05 (vale para QUALQUER FAIL, com ou sem Sheldon manifest) e ganhou passo obrigatório `dev:state:write --status=corrections_pending`; dev.md ganhou safety net que varre `.aioson/plans/{feature}/corrections-*.md` (`status: open|in_progress`) mesmo sem `qa-dev-cycle.json`; `dev:resume-data` agora retorna `open_corrections` e reescreve `next_step` deterministicamente quando há correções abertas (fail-safe: frontmatter malformado = open). Template parity OK; 6 testes novos em tests/dev-resume.test.js. Follow-ups MEDIUM registrados no simple plan (trilhas @tester e @scope-check).
+
+- [loop-guardrails · 2026-06-09] `self:loop` agora é controlado por contrato verificável (Fases 1+2): scope guard com defaults proibidos não-removíveis (`.env*`, `*.pem`, `*.key`, `secrets/**`, lockfiles; deny vence allow; detecção via `git status --porcelain -uall` − baseline do preflight, `.aioson/**` isento; re-hash D2 de dirty paths proibidos), validação de schema do contrato no preflight (`src/harness/contract-schema.js` — typo bloqueia antes de executar), enforcement de `cost_ceiling_tokens` (chars/4 em acumulador no `progress.json`, política 80/100%) + `max_runtime_minutes` + limites de diff, human gates temáticos persistidos em `gates/{id}.json` com `harness:approve`/`harness:reject` (estado HUMAN_GATE no circuit-breaker; tema `publish` intercepta `feature:close` e `--force` não bypassa), `criteria[].verification` avaliados via `executeInSandbox` com assinatura de falha sha1 (2x no run → escala), artefatos por tentativa em `attempts/{n}/`, presets `safe`/`builder`/`autopilot` no `contract_mode`, `harness:status [--json]` e merge de `forbidden_files` do contrato ativo no `git:guard`. 9 módulos novos em `src/harness/` + 3 comandos novos; 94 testes novos; retrocompatibilidade total (contratos antigos válidos).
 - [medium-feature-pm-stage-autopilot · 2026-06-09] MEDIUM feature sequence now routes through `@pm` after `@discovery-design-doc` and before pre-dev `@scope-check` (was: dead-end — Gate C demanded `implementation-plan-{slug}.md` but no stage produced it). `pm` added to `AUTOPILOT_HANDOFF_STAGES`, `validateStageArtifacts` (feature mode: requires the implementation plan) and `isInferableStage` (stale-state recovery). pm.md gained an Autopilot handoff section (stop on Gate C blocked); autopilot-handoff.md + config.md updated in template and workspace. In-flight states keep frozen sequences (backward compatible).
 - [workflow-classification-and-autopilot-fixes · 2026-06-09] `detectClassification` (preflight-engine) now resolves feature spec/PRD classification BEFORE project context — same precedence contract as `resolveClassification`/`workflow:next`; `gate:check` Gate C requires `implementation-plan-{slug}.md` only for MEDIUM, so SMALL features clear Gate C via `gate:approve` with Gates A+B (no more manual `gate_plan` frontmatter workaround). `auto_handoff: true` activated in project.context.md (autopilot analyst→dev was implemented but silently inactive); new `aioson doctor` warning `context:auto_handoff_declared` flags installed-but-undeclared autopilot (i18n en/pt-BR/es/fr).
-
+- [workflow-autopilot-handoff · 2026-06-09] Autopilot handoff (opt-in `auto_handoff: true` in project.context.md frontmatter): feature-workflow agents @analyst → @scope-check/@architect/@discovery-design-doc auto-invoke the next agent's skill (deterministic routing from workflow state) instead of stopping for manual activation, breaking the chain at the @dev handoff or on any stop condition (verdict not clean, gate/readiness blocked, context ≥ threshold). Protocol: `.aioson/docs/autopilot-handoff.md`; carve-outs in CLAUDE.md/AGENTS.md hard constraints; `buildAgentPrompt` autoHandoff option wired from workflow-next. Research: researchs/auto-handoff-pipeline-2026.
 - [ci-timeout-fix · 2026-06-09] `executeInSandbox` starts POSIX subprocesses in their own process group and kills the group on timeout, preventing shell grandchildren from surviving sandbox timeouts and pinning GitHub Actions until the 6h job cap.
 - [release · 2026-06-08] chore(release): prepare v1.21.8
 - [feat-cli-add-feature-export-workflow · 2026-06-08] `feat(cli): add feature export workflow` adds `feature:export` plus its docs, template dossier, and regression coverage, and broadens workflow inference/commit prep/runtime helpers around the new export path.
@@ -18,8 +22,6 @@ source: "Autonomy/orchestration analysis and planning session"
 - [briefing-refiner · 2026-06-08] feat(briefing): add briefing refiner workflow.
 - [briefing-refiner · 2026-06-08] Briefing-refiner file operations are path-traversal hardened: `src/lib/briefing-refiner/briefing-paths.js` (`assertSafeSlug` + `resolveBriefingPath`) validates the slug and asserts containment before any read/write, plus duplicate-section and registry-injection guards — fixes @pentester SF-01..SF-06 (SF-05 deferred to @qa).
 - [briefing-refiner · 2026-06-08] Declined briefing refinement feedback now writes a declined `refinement-report.md` with skipped changes while preserving `briefings.md` unchanged.
-These capabilities were confirmed during this analysis:
-
 - [briefing-refiner · 2026-06-08] `@briefing-refiner` implementation landed as an optional pre-PRD agent: template/workspace prompt parity, agent/slash/docs registry updates, shared briefing registry, local static review HTML generation, canonical `refinement-feedback.json`, refinement report generation, confirmed feedback application, approved→draft transition, and focused regression coverage.
 - [docs-update · 2026-06-07] docs: add scope-check and discovery docs (documentation refresh for agent inventory, discovery-design-doc, and docs counts).
 - [workflow-stale-state-reconciliation · 2026-06-05] `fix(workflow): reconcile stale state` shipped package version `1.21.7`; `workflow:next` now reconciles stale persisted workflow pointers from verified upstream artifacts only when no mainline stage or detour is active, requires handoff contracts/gate approval before inferring completion, and aligns textual/JSON gate parsing across handoff checks. Regression coverage now protects pending Gate A, `phase_gates`, textual Gate A approvals, stale skipped stages, active detours, active mainline stages, project-mode drift, and `workflow:execute --max-checkpoints`.
@@ -76,7 +78,7 @@ These capabilities were confirmed during this analysis:
 
 These are real gaps, not already-delivered work:
 
-- hard enforcement of isolated write scopes inside the edit/execution harness itself
+- hard enforcement of isolated write scopes inside the edit/execution harness — PARTIALLY CLOSED by loop-guardrails Fases 1+2 (2026-06-09): the `self:loop` harness now enforces contract `forbidden_files` + non-removable defaults via git-baseline diff detection and merges them into `git:guard`. Remaining gap: the same enforcement does not yet cover parallel-lane edits outside `self:loop` (preflight `parallel:guard` is still validation-only there).
 - real filesystem/worktree isolation per lane during implementation
 
 ## Correct reading of the backlog
@@ -112,5 +114,3 @@ If a future agent resumes this topic, the safest next implementation slice is:
 After that:
 
 - evaluate whether parallel lanes need worktree-backed isolation instead of shared-workspace coordination
-
-- [workflow-autopilot-handoff · 2026-06-09] Autopilot handoff (opt-in `auto_handoff: true` in project.context.md frontmatter): feature-workflow agents @analyst → @scope-check/@architect/@discovery-design-doc auto-invoke the next agent's skill (deterministic routing from workflow state) instead of stopping for manual activation, breaking the chain at the @dev handoff or on any stop condition (verdict not clean, gate/readiness blocked, context ≥ threshold). Protocol: `.aioson/docs/autopilot-handoff.md`; carve-outs in CLAUDE.md/AGENTS.md hard constraints; `buildAgentPrompt` autoHandoff option wired from workflow-next. Research: researchs/auto-handoff-pipeline-2026.

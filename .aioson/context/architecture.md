@@ -940,3 +940,85 @@ Next agent: `@discovery-design-doc`.
 Why: SMALL workflow do AIOSON exige um design-doc/readiness feature-scoped antes do `@dev`; ele deve mapear paths exatos e confirmar reuse/split antes da implementação.
 
 > **Gate B:** Architecture approved — @dev can proceed after `@discovery-design-doc` produces the feature readiness/design package.
+
+---
+
+# Feature Architecture — Loop Guardrails
+
+## 1. Architecture Overview
+
+Guards como módulos puros em `src/harness/` (padrão já estabelecido por `circuit-breaker.js`), ancorados em dois pontos do `self:loop`: preflight (antes do `for`) e hook pós-attempt (após `runVerification`, `src/commands/self-implement-loop.js:224`). O `harness-contract.json` evolui in-place; o circuit-breaker ganha o estado `HUMAN_GATE`. Nenhum subsistema, executor ou namespace novo. Entidades e schemas: consumir `requirements-loop-guardrails.md` §2–§4 como estão.
+
+## 2. Module Structure
+
+```text
+src/harness/
+  circuit-breaker.js        # existente — check() passa a negar com reason='human_gate_pending'
+  contract-schema.js        # REQ-1: validação estrita + defaults proibidos + presets (REQ-19) + mapa tema→paths
+  glob-match.js             # matcher mínimo determinístico, sem dependência (ver decisão D1)
+  git-baseline.js           # REQ-2/3: baseline (HEAD, dirty_paths, hashes) + changed-set (porcelain − dirty), paths normalizados '/'
+  scope-guard.js            # REQ-4/5/6: deny-vence-allow + REQ-10 max_changed_files/max_diff_lines
+  budget-guard.js           # REQ-7/8: chars/4, acumulador em progress.json, política 80/100%
+  attempt-artifacts.js      # REQ-9: writer de attempts/{n}/ (changed-files.json, checks/, diff.patch)
+  human-gate.js             # REQ-12/13/15: detecção por tema, gates/{id}.json, retomada idempotente
+  criteria-runner.js        # REQ-16/17: criteria[].verification via executeInSandbox + assinatura de falha
+src/commands/
+  self-implement-loop.js    # integração: preflight + hook pós-attempt; sem mudança de assinatura CLI
+  harness.js                # existente — harness:init ganha campos novos no template; preflight valida schema
+  harness-gate.js           # novo: harness:approve / harness:reject (REQ-14)
+  harness-status.js         # novo: harness:status [--json] (REQ-18)
+  feature-close.js          # REQ-13: intercepta gate de comando `publish`
+  git-guard.js              # REQ-20 (should-have): merge de forbidden_files do contrato ativo
+```
+
+Registro em `src/cli.js` no padrão existente. Testes: `tests/harness-{contract-schema,scope-guard,budget-guard,human-gate,criteria-runner,glob-match}.test.js` + integração em `tests/self-loop-guardrails.test.js`, todos `node:test` com fixtures git temporárias.
+
+## 3. Key Decisions
+
+- **D1 — Globs sem dependência nova**: o repo tem 3 deps de runtime e Node ≥18 (sem `path.matchesGlob`). `glob-match.js` implementa o subset `**`, `*`, `?` (com `**/` e `/**`); o validador de schema **rejeita** sintaxe fora do subset (`{}[]!()` extglob) com erro explícito — nunca mismatch silencioso em fronteira de segurança. `picomatch` fica como upgrade path documentado (mesmo padrão chars/4→tokenx do PRD).
+- **D2 — EC-2 resolvido (path sujo proibido)**: o baseline grava `git hash-object` apenas dos dirty paths que casam `forbidden_files` (conjunto pequeno e bounded). Re-hash por tentativa; hash mudou → `scope_violation`. Warning no preflight mantido. Fecha a decisão fina deixada pelo @analyst sem custo perceptível.
+- **D3 — Fonte do orçamento**: enforcement lê acumulador em `progress.json` (`budget: { tokens_estimated, warned_80, run_started_at, run_id }`) — guard determinístico, sem query SQLite no hot path. `execution_events.token_count` continua sendo a telemetria por evento (EC-10: "run atual" = acumulador zerado a cada run novo, legados null irrelevantes).
+- **D4 — HUMAN_GATE no circuit-breaker**: `progress.status='human_gate'` + `pending_gates[]`; `cb.check()` nega com `human_gate_pending`. `harness:approve` persiste decisão, remove o gate de `pending_gates` e restaura `status='in_progress'`; `reject` encerra com `loop.summary`. Entrar no gate encerra o processo (estado em disco); retomada = re-executar `self:loop` (EC-9 sem re-detecção: gates `pending` existentes são reapresentados antes de nova detecção).
+- **D5 — Ordem do hook pós-attempt**: (1) artifacts (registrar sempre, mesmo em falha) → (2) scope guard + D2 re-hash → (3) diff limits → (4) human gates → (5) criteria checks → (6) budget/runtime. Registrar primeiro, julgar depois; violação de escopo precede gate (arquivo fora do escopo não merece aprovação humana, merece rollback).
+- **D6 — Eventos**: via `insertExecutionEvent` (`src/runtime-store.js:823`) com os `event_type` novos de requirements §2.5, sempre em `try/catch` best-effort — telemetria nunca quebra o loop (espelha BR-NC-11 do neural-chain).
+- **D7 — Assinatura de falha**: `sha1(criterion_id + exitCode + primeira linha não-vazia de stderr normalizada)` (strip de paths absolutos, números de linha e timestamps). Persistida em `progress.json.failure_signatures[]` por run; 2 ocorrências → para com `failure_signature_repeat`.
+
+## 4. Models and Relationships
+
+Sem banco novo, sem migration — ver requirements §2 (schemas JSON em `.aioson/plans/{slug}/`) e §4 (relacionamentos). Consumidos como estão.
+
+## 5. Integration Architecture
+
+- **Preflight do `self:loop`** (antes do loop): `contract-schema.validate()` → erro explícito (campo + motivo) encerra antes de qualquer execução; `git-baseline.capture()` grava `baseline.json` + inicia `run_id`/budget novo em `progress.json`.
+- **`feature:close`**: quando o contrato ativo lista `publish` em `human_gate.required_for` e não há gate `publish` aprovado no run → cria `gates/{id}.json` pending e encerra com instrução de approve (REQ-13).
+- **`git:guard`** (should-have): `runGitGuard` mescla `forbidden_files` do contrato da feature ativa (progress `in_progress`/`human_gate` mais recente) na política de `.aioson/git-guard.json` em tempo de verificação — camada 2 do enforcement.
+- **Sandbox**: `criteria-runner` usa `executeInSandbox(cmd, { cwd, timeout })` (`src/sandbox.js:126`) — timeout/kill/redaction já resolvidos; timeout = check falho com assinatura própria (EC-7).
+
+## 6. Cross-Cutting Concerns
+
+- **Retrocompat (REQ-11)**: validador aceita contratos antigos (campos novos opcionais); ausência ativa só defaults proibidos. `harness:init` continua gerando contrato válido. `npm test` verde por fase.
+- **Segurança**: defaults proibidos não-removíveis implementam SEC-SBD-05 na fronteira do loop; deny vence allow; `harness:approve` valida slug/gate-id e não tem efeito colateral em erro (EC-8).
+- **Windows**: toda comparação de path após `replaceAll('\\','/')`; testes cobrem os dois separadores (EC-6).
+- **Inception**: mudanças em `src/` não tocam `template/`; se prompts de agentes forem ajustados (ex.: @dev citando harness:status), editar `template/` primeiro + `npm run sync:agents`.
+
+## 7. Implementation Sequence for @dev
+
+**Fase 1** (fecha com `npm test` verde + testes próprios):
+1. `glob-match.js` + testes (base de tudo).
+2. `contract-schema.js` (validação, defaults, presets) + integração no preflight do `self:loop` e em `harness:init`.
+3. `git-baseline.js` (captura + changed-set + hashes D2).
+4. `scope-guard.js` + `attempt-artifacts.js` + wiring do hook pós-attempt (D5, passos 1–3).
+5. `budget-guard.js` + `max_runtime_minutes` + eventos D6.
+6. Testes de integração com violação proposital (success metric do PRD).
+
+**Fase 2**:
+7. `human-gate.js` + estado no circuit-breaker (D4) + `harness-gate.js` (approve/reject) + interceptação em `feature-close.js`.
+8. `criteria-runner.js` + assinatura de falha (D7).
+9. `harness-status.js` (+ `--json`; rodapé referenciando `spec:status`).
+10. `git:guard` merge (should-have, pode ser corte se a fase apertar).
+
+## 8. Explicit Non-Goals and Deferred Items
+
+Herdados do PRD/requirements §8 (sem `.aioson/loops/`, sem `loop:*`, sem juiz IA, sem UI Play, sem USD real, sem `security_high_finding`). Adicionais desta arquitetura: sem watcher de filesystem (detecção só nas fronteiras de tentativa), sem worktree isolation (gap conhecido do projeto, fora desta feature), sem leitura SQLite no caminho de enforcement (D3).
+
+> **Gate B:** Architecture approved — @dev can proceed.

@@ -333,6 +333,46 @@ async function runFeatureClose({ args, options = {}, logger }) {
     const contractContent = await readFileSafe(contractPath);
     const progressContent = await readFileSafe(progressPath);
 
+    // REQ-13 (loop-guardrails): tema `publish` é gate de COMANDO — intercepta
+    // o feature:close quando o contrato ativo o exige e não há gate publish
+    // aprovado. Nunca detectado por diff. `--force` NÃO bypassa: a aprovação
+    // humana é o propósito do gate (decisão registrada no spec da feature).
+    if (contractContent) {
+      try {
+        const contract = JSON.parse(contractContent);
+        const requiredFor = contract && contract.human_gate && Array.isArray(contract.human_gate.required_for)
+          ? contract.human_gate.required_for
+          : [];
+        if (requiredFor.includes('publish')) {
+          const { hasApprovedPublishGate, pendingGates, createGate } = require('../harness/human-gate');
+          const { emitGuardEvent } = require('../harness/guard-events');
+          if (!hasApprovedPublishGate(planDir)) {
+            let gate = pendingGates(planDir).find((g) => g.theme === 'publish');
+            if (!gate) {
+              gate = createGate(planDir, {
+                theme: 'publish',
+                attempt: 0,
+                triggeredBy: [],
+                diffSummary: `feature:close ${slug}`,
+                runId: null
+              });
+              await emitGuardEvent(targetDir, {
+                eventType: 'human_gate_requested',
+                message: `publish gate ${gate.id} requested by feature:close`,
+                payload: { slug, gate_id: gate.id, theme: 'publish' }
+              });
+            }
+            const errMsg = `[Publish Gate BLOCKED] Feature "${slug}" requires human approval before closing (human_gate.required_for includes "publish"). Approve with: aioson harness:approve . --slug=${slug} --gate=${gate.id}`;
+            if (options.json) {
+              return { ok: false, reason: 'publish_gate_pending', feature: slug, gate: gate.id, error: errMsg };
+            }
+            logger.log(errMsg);
+            return { ok: false };
+          }
+        }
+      } catch { /* contrato ilegível — o done gate abaixo lida com o estado */ }
+    }
+
     if (contractContent && progressContent) {
       const force = options.force === true;
       let progress = null;

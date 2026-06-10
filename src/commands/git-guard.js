@@ -12,11 +12,63 @@
  */
 
 const path = require('node:path');
+const fs = require('node:fs');
 const {
   inspectStagedChanges,
   installPreCommitHook,
   uninstallPreCommitHook
 } = require('../lib/git-commit-guard');
+
+/**
+ * REQ-20 (loop-guardrails, should-have): mescla `forbidden_files` do contrato
+ * ATIVO (progress `in_progress`/`human_gate` mais recente) na verificação do
+ * guard em tempo de execução — camada 2 do scope guard no pre-commit.
+ * Best-effort: nunca quebra o guard; contrato inválido é ignorado (o preflight
+ * do self:loop já bloqueia o loop nesse caso). Paths `.aioson/**` ficam fora
+ * (estado do framework precisa ser commitável).
+ *
+ * C-03 (QA 2026-06-09): nesta camada aplicam-se apenas os globs DECLARADOS no
+ * contrato. Os defaults não-removíveis (lockfiles, node_modules, .env*, ...)
+ * existem para conter o LOOP do agente; no pre-commit pegariam mudanças
+ * humanas legítimas (ex.: package-lock.json após `npm install`). Segredos
+ * (.env*, *.pem, *.key, secrets/**) continuam bloqueados pela policy baseline
+ * do próprio git-guard.
+ */
+const { findActiveContract } = require('../harness/active-contract');
+
+function applyActiveContractPolicy(targetDir, result) {
+  const active = findActiveContract(targetDir);
+  if (!active) return null;
+  const { validateContract } = require('../harness/contract-schema');
+  const { matchGlob, matchAny } = require('../harness/glob-match');
+  const contract = JSON.parse(fs.readFileSync(active.contractPath, 'utf8'));
+  if (!validateContract(contract).ok) return null;
+  const declaredForbidden = Array.isArray(contract.forbidden_files) ? contract.forbidden_files : [];
+  if (!declaredForbidden.length) return { slug: active.slug, findings: 0 };
+
+  let added = 0;
+  for (const file of result.files) {
+    if (matchGlob('.aioson/**', file.path)) continue;
+    const matched = matchAny(declaredForbidden, file.path);
+    if (!matched) continue;
+    const finding = {
+      type: 'path',
+      severity: 'error',
+      id: 'contract_forbidden_file',
+      path: file.path,
+      reason: `matches forbidden glob "${matched}" from active harness contract "${active.slug}"`,
+      line: null
+    };
+    file.findings.push(finding);
+    result.errors.push(finding);
+    added += 1;
+  }
+  if (added > 0) {
+    result.ok = false;
+    result.summary.errorCount = result.errors.length;
+  }
+  return { slug: active.slug, findings: added };
+}
 
 function formatFinding(prefix, finding) {
   const line = finding.line ? `:${finding.line}` : '';
@@ -111,9 +163,15 @@ async function runGitGuard({ args, options = {}, logger }) {
     return failure;
   }
 
+  let contractPolicy = null;
+  try {
+    contractPolicy = applyActiveContractPolicy(targetDir, result);
+  } catch { /* best-effort: contrato ilegível nunca quebra o guard */ }
+
   const output = {
     ok: result.ok,
     projectDir: targetDir,
+    contractPolicy,
     gitRoot: result.gitRoot,
     strict: result.strict,
     policy: result.policy,
