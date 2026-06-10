@@ -424,6 +424,8 @@ module.exports = {
     bootstrap_coverage_hint_seed: 'Rode /discover para criar .aioson/context/bootstrap/{what-is,how-it-works,what-it-does,current-state}.md',
     features_dir_present: 'Diretorio de features presente (.aioson/context/features/)',
     features_dir_present_hint: 'Crie .aioson/context/features/ para hospedar dossies por feature (doctor --fix cria automaticamente).',
+    auto_handoff_declared: 'Flag de autopilot handoff declarada (auto_handoff no project.context.md)',
+    auto_handoff_declared_hint: 'O protocolo autopilot-handoff esta instalado mas auto_handoff nao esta definido no frontmatter do project.context.md — o autopilot fica inativo. Defina auto_handoff: true para ativar, ou auto_handoff: false para silenciar este aviso.',
     claude_commands_present: 'Slash commands do Claude presentes ({missing} ausentes de {required})',
     claude_commands_present_hint: 'Ausentes: {paths}. Rode `aioson doctor . --fix` para restaurar a partir do template.',
     version_drift: 'Versao do CLI bate com project.context.md (contexto: {context}, CLI: {cli})',

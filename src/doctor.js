@@ -227,6 +227,22 @@ async function runDoctor(targetDir) {
     }
   }
 
+  // Autopilot handoff: protocol doc installed but flag never declared in the
+  // context frontmatter — autopilot stays silently inactive (absent = manual
+  // handoffs). An explicit true/false is a deliberate choice and passes.
+  const autopilotDocExists = await exists(path.join(targetDir, '.aioson/docs/autopilot-handoff.md'));
+  if (autopilotDocExists && contextValidation.exists && contextValidation.data) {
+    const autoHandoffDeclared = Object.prototype.hasOwnProperty.call(contextValidation.data, 'auto_handoff');
+    checks.push({
+      id: 'context:auto_handoff_declared',
+      severity: 'warning',
+      key: 'doctor.auto_handoff_declared',
+      params: {},
+      ok: autoHandoffDeclared,
+      hintKey: autoHandoffDeclared ? undefined : 'doctor.auto_handoff_declared_hint'
+    });
+  }
+
   const major = parseMajor(process.version);
   checks.push({
     id: 'node:version',

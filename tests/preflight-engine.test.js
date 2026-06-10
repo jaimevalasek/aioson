@@ -328,6 +328,32 @@ test('detectClassification: reads from spec frontmatter when context has no clas
   assert.equal(result, 'SMALL');
 });
 
+test('detectClassification: feature spec classification takes precedence over project context', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nclassification: SMALL\n---');
+  const result = await detectClassification(tmpDir, 'checkout');
+  assert.equal(result, 'SMALL');
+});
+
+test('detectClassification: feature PRD classification takes precedence over project context', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nfeature: checkout\n---'); // no classification
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nclassification: SMALL\n---');
+  const result = await detectClassification(tmpDir, 'checkout');
+  assert.equal(result, 'SMALL');
+});
+
+test('detectClassification: falls back to project context when feature artifacts have no classification', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nfeature: checkout\n---');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nfeature: checkout\n---');
+  const result = await detectClassification(tmpDir, 'checkout');
+  assert.equal(result, 'MEDIUM');
+});
+
 // ── discoverRules ─────────────────────────────────────────────────────────────
 
 test('parseAgentList: parses inline YAML arrays', () => {

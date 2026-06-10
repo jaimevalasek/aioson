@@ -8,6 +8,8 @@ source: "Autonomy/orchestration analysis and planning session"
 
 ## What the system already has
 
+- [workflow-classification-and-autopilot-fixes · 2026-06-09] `detectClassification` (preflight-engine) now resolves feature spec/PRD classification BEFORE project context — same precedence contract as `resolveClassification`/`workflow:next`; `gate:check` Gate C requires `implementation-plan-{slug}.md` only for MEDIUM, so SMALL features clear Gate C via `gate:approve` with Gates A+B (no more manual `gate_plan` frontmatter workaround). `auto_handoff: true` activated in project.context.md (autopilot analyst→dev was implemented but silently inactive); new `aioson doctor` warning `context:auto_handoff_declared` flags installed-but-undeclared autopilot (i18n en/pt-BR/es/fr).
+
 - [ci-timeout-fix · 2026-06-09] `executeInSandbox` starts POSIX subprocesses in their own process group and kills the group on timeout, preventing shell grandchildren from surviving sandbox timeouts and pinning GitHub Actions until the 6h job cap.
 - [release · 2026-06-08] chore(release): prepare v1.21.8
 - [feat-cli-add-feature-export-workflow · 2026-06-08] `feat(cli): add feature export workflow` adds `feature:export` plus its docs, template dossier, and regression coverage, and broadens workflow inference/commit prep/runtime helpers around the new export path.

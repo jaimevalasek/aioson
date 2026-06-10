@@ -85,6 +85,42 @@ test('bootstrap_coverage passes when all 4 files exist', async () => {
   assert.equal(check.ok, true);
 });
 
+test('auto_handoff_declared: check absent when autopilot protocol doc is not installed', async () => {
+  const dir = await makeMinimalProject();
+  await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson/context/project.context.md'),
+    '---\nproject_name: "x"\nclassification: MICRO\n---\n', 'utf8');
+  const report = await runDoctor(dir);
+  assert.equal(findCheck(report, 'context:auto_handoff_declared'), undefined);
+});
+
+test('auto_handoff_declared: warns when protocol doc exists but flag is not declared', async () => {
+  const dir = await makeMinimalProject();
+  await fs.mkdir(path.join(dir, '.aioson/docs'), { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson/docs/autopilot-handoff.md'), '# Autopilot\n', 'utf8');
+  await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
+  await fs.writeFile(path.join(dir, '.aioson/context/project.context.md'),
+    '---\nproject_name: "x"\nclassification: MICRO\n---\n', 'utf8');
+  const report = await runDoctor(dir);
+  const check = findCheck(report, 'context:auto_handoff_declared');
+  assert.equal(check.ok, false);
+  assert.equal(check.severity, 'warning');
+  assert.ok(check.hintKey, 'must surface a hint when the flag is undeclared');
+});
+
+test('auto_handoff_declared: passes when flag is declared (true or false)', async () => {
+  for (const value of ['true', 'false']) {
+    const dir = await makeMinimalProject();
+    await fs.mkdir(path.join(dir, '.aioson/docs'), { recursive: true });
+    await fs.writeFile(path.join(dir, '.aioson/docs/autopilot-handoff.md'), '# Autopilot\n', 'utf8');
+    await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
+    await fs.writeFile(path.join(dir, '.aioson/context/project.context.md'),
+      `---\nproject_name: "x"\nclassification: MICRO\nauto_handoff: ${value}\n---\n`, 'utf8');
+    const report = await runDoctor(dir);
+    assert.equal(findCheck(report, 'context:auto_handoff_declared').ok, true, `auto_handoff: ${value} must pass`);
+  }
+});
+
 test('features_dir_present fails when missing and passes after fix', async () => {
   const dir = await makeMinimalProject({ featuresDir: false });
   let report = await runDoctor(dir);

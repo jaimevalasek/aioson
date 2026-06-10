@@ -8,6 +8,7 @@ classification: "MEDIUM"
 conversation_language: "pt-BR"
 design_skill: ""
 test_runner: "node:test"
+auto_handoff: true
 web3_enabled: false
 web3_networks: ""
 contract_framework: ""

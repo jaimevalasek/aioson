@@ -362,25 +362,29 @@ async function readProjectPulse(targetDir) {
 // ─── Classification reader ────────────────────────────────────────────────────
 
 async function detectClassification(targetDir, slug) {
-  // 1. Try project context
-  const ctx = await loadProjectContext(targetDir);
-  if (ctx.data.classification) return ctx.data.classification.toUpperCase();
-
-  // 2. Try spec frontmatter
+  // Feature classification takes precedence over the project classification —
+  // same contract as resolveClassification (handoff-contract.js) and
+  // workflow:next sequencing. A SMALL feature inside a MEDIUM project must be
+  // gated as SMALL; the project value is only the fallback.
   if (slug) {
+    // 1. Try spec frontmatter
     const specContent = await readFileSafe(path.join(contextDir(targetDir), `spec-${slug}.md`));
     if (specContent) {
       const fm = parseFrontmatter(specContent);
       if (fm.classification) return fm.classification.toUpperCase();
     }
 
-    // 3. Try PRD frontmatter
+    // 2. Try PRD frontmatter
     const prdContent = await readFileSafe(path.join(contextDir(targetDir), `prd-${slug}.md`));
     if (prdContent) {
       const fm = parseFrontmatter(prdContent);
       if (fm.classification) return fm.classification.toUpperCase();
     }
   }
+
+  // 3. Fall back to project context
+  const ctx = await loadProjectContext(targetDir);
+  if (ctx.data.classification) return ctx.data.classification.toUpperCase();
 
   return null;
 }

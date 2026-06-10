@@ -115,6 +115,51 @@ test('gate:check: Gate C PASS when all prerequisites met', async () => {
   assert.equal(result.result, 'PASS');
 });
 
+test('gate:check: Gate C for SMALL feature in MEDIUM project does not require implementation plan', async () => {
+  const tmpDir = await makeTmpDir();
+  // Regression: SMALL feature inside a MEDIUM project — the SMALL sequence
+  // never routes through @pm, so Gate C must not demand implementation-plan.
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nclassification: SMALL\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md',
+    '---\ngate_requirements: approved\ngate_design: approved\n---\n');
+  const result = await runGateCheck({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', gate: 'C' },
+    logger: makeLogger()
+  });
+  assert.equal(result.result, 'PASS');
+  assert.ok(!result.missing.some((m) => m.includes('implementation-plan')));
+});
+
+test('gate:check: Gate C for MEDIUM feature still requires implementation plan', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md',
+    '---\ngate_requirements: approved\ngate_design: approved\n---\n');
+  const result = await runGateCheck({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', gate: 'C' },
+    logger: makeLogger()
+  });
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((m) => m.includes('implementation-plan-checkout.md')));
+  assert.ok(result.recommendation.includes('@pm'));
+});
+
+test('gate:check: Gate C blocked recommendation for SMALL does not route to @pm', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nclassification: SMALL\n---');
+  // Gates A/B not approved → blocked, but the fix recommendation must not demand @pm
+  const result = await runGateCheck({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', gate: 'C' },
+    logger: makeLogger()
+  });
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(!result.recommendation.includes('@pm'));
+});
+
 test('gate:check: Gate D BLOCKED without QA sign-off', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md',

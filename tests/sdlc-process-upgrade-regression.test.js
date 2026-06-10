@@ -197,7 +197,9 @@ test('gate:check Gate C: recommendation mentions @pm when plan is missing', asyn
   const tmpDir = await makeTmpDir();
   const slug = 'missing-plan';
 
-  // Gate A and B approved in spec
+  // Gate A and B approved in spec — MEDIUM, the only classification where
+  // implementation-plan-{slug}.md is required (AC-SDLC-15)
+  await writeFile(tmpDir, `.aioson/context/project.context.md`, '---\nclassification: MEDIUM\n---\n# Context\n');
   await writeFile(tmpDir, `.aioson/context/spec-${slug}.md`,
     '---\nfeature: missing-plan\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
   );

@@ -36,7 +36,10 @@ const GATE_PREREQUISITES = {
 const GATE_REQUIRED_ARTIFACTS = {
   A: (slug) => [`requirements-${slug}.md`],
   B: (slug) => ['architecture.md'],
-  C: (slug) => [`implementation-plan-${slug}.md`],
+  // implementation-plan-{slug}.md is a MEDIUM-only artifact (@pm owns it,
+  // AC-SDLC-15/16). SMALL/MICRO sequences never route through @pm, so
+  // requiring it unconditionally dead-ends Gate C for those features.
+  C: (slug, classification) => (classification === 'MEDIUM' ? [`implementation-plan-${slug}.md`] : []),
   D: (slug) => [] // Gate D validated by QA sign-off in spec
 };
 
@@ -75,7 +78,7 @@ async function checkGate(targetDir, slug, gateLetter) {
   }
 
   // Check required artifacts
-  const requiredFiles = GATE_REQUIRED_ARTIFACTS[gateLetter](slug);
+  const requiredFiles = GATE_REQUIRED_ARTIFACTS[gateLetter](slug, classification);
   for (const fileName of requiredFiles) {
     const filePath = path.join(dir, fileName);
     const exists = await fileExists(filePath);
@@ -150,7 +153,9 @@ async function checkGate(targetDir, slug, gateLetter) {
     const fixAgents = {
       A: `activate @analyst to produce requirements-${slug}.md, then run: aioson gate:approve . --feature=${slug} --gate=A`,
       B: `activate @architect to produce architecture.md, then run: aioson gate:approve . --feature=${slug} --gate=B`,
-      C: `activate @pm to produce and approve implementation-plan-${slug}.md, then run: aioson gate:approve . --feature=${slug} --gate=C`,
+      C: classification === 'MEDIUM'
+        ? `activate @pm to produce and approve implementation-plan-${slug}.md, then run: aioson gate:approve . --feature=${slug} --gate=C`
+        : `approve Gates A and B first, then run: aioson gate:approve . --feature=${slug} --gate=C`,
       D: `activate @qa for final verification; if QA passes, run: aioson gate:approve . --feature=${slug} --gate=D`
     };
     recommendation = `BLOCKED — ${fixAgents[gateLetter] || 'resolve missing items'}`;
