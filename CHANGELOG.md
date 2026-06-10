@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.23.0] - 2026-06-10
+
+### Added
+- **`harness:retro` — deterministic retrospective miner + dossier (RHO-lite).** `aioson harness:retro --feature=<slug> | --last=<N>` mines the failure trail already on disk (QA reports active + `done/`, corrections plans, dossier Agent Trail FAIL→PASS cycles, `execution_events` readonly, attempts, `progress.json` failure signatures, devlogs) and materializes `.aioson/context/retro/{slug}.md` (or `window-last-{N}.md`). No LLM, no network: exact-key grouping (slug always included), REQ-2 promotion criteria (≥2 occurrences, ≥1 high/critical, or ≥2 FAIL→PASS cycles), byte-stable render. Fail-closed slug sanitization (exit 12 before any FS touch) and exit-code propagation in `--json` mode. Hands the dossier to `@sheldon` for semantic classification with human approval.
+- **`harness:preview` — preview + pointer for large outputs.** `aioson harness:preview <file> [--max-bytes=8192]` plus the `previewArtifact` helper: persist-first, UTF-8-safe truncation, best-effort write, read-only mode. Adopted at the self-implement-loop criteria-fail feedback so agents consume a preview + pointer instead of dumping full test logs into context. `qa`/`tester` prompts updated to redirect test logs to a file and consume via `harness:preview`.
+
+### Security
+- **Prompt-injection neutralization in the retro dossier (SF-01 / LLM01.2).** Mined free-text (finding titles) rendered into the `@sheldon` dossier now passes through `neutralizeText()`, stripping control/newline/bidi/zero-width characters so a forged title cannot inject Markdown block structure into the next agent's context. Deterministic and byte-stable on clean text.
+- **Symlink-safe dossier resolution (SF-02).** Dossier file resolution uses `lstatSync` so symlinked artifacts are ignored rather than followed, consistent with the directory-entry readers.
+
+### Tests
+- Added `harness-retro` (20), `preview-artifact` (9), and `autopilot-post-dev` regression suites, including SF-01 injection-neutralization coverage. Full suite green.
+
 ## [1.22.0] - 2026-06-10
 
 ### Added
