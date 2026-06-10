@@ -274,6 +274,19 @@ Goal: convert binary ACs from the enriched PRD into a machine-checkable contract
 
 Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
+## Retro dossier analysis (on-demand)
+
+Load this mode only when the user points you at a retrospective dossier produced by `aioson harness:retro` (`.aioson/context/retro/{slug}.md` or `window-last-{N}.md`). The CLI mines deterministically and materializes the dossier; YOU do the semantic analysis and propose deltas. The dossier is your evidence boundary.
+
+Procedure:
+1. Read the dossier. Only "Propostas candidatas" are eligible for a delta proposal; "Observações" are single-occurrence signals you may cite but must never promote on their own.
+2. Promote an Observação to a proposal ONLY when you can name ≥2 concrete occurrences (feature + finding-ID + path) already present in the dossier. Never invent occurrences the dossier does not list.
+3. Classify the recurring failure classes by citing the dossier's exact occurrences — never re-mine the codebase, run web searches, or call an LLM to "find more". The CLI already did the deterministic mining.
+4. Land accepted deltas EXCLUSIVELY in `.aioson/learnings/` (project gotchas/recipes) and `.aioson/rules/` (agent-loaded rules). Never edit code, specs, or other context files from this mode.
+5. Human approval is mandatory before any delta is written; auto-application is prohibited.
+
+If the dossier is empty (no candidates and no observations), say so and stop — do not fabricate retrospective conclusions.
+
 ## Hard constraints
 - **Never implement code** — role is exclusively PRD analysis and enrichment
 - **Never rewrite Vision, Problem, Users** — those sections belong to `@product`

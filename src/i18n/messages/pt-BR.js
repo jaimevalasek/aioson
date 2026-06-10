@@ -152,6 +152,27 @@ module.exports = {
       'aioson harness:init [path] --slug=<slug> [--mode=BALANCED|URGENT|ECONOMICAL] [--locale=pt-BR]',
     help_harness_validate:
       'aioson harness:validate [path] --slug=<slug> [--artifact=<path>] [--locale=pt-BR]',
+    help_harness_retro:
+      'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=pt-BR]',
+    help_harness_preview:
+      'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=pt-BR]',
+    harnessRetro: {
+      need_target: 'harness:retro requer --feature=<slug> ou --last=<N>.',
+      invalid_slug: 'Slug inválido: {slug} (deve casar ^[a-z0-9][a-z0-9-]*$).',
+      invalid_last: 'Valor inválido para --last: {value} (use inteiro >= 1).',
+      feature_not_found: 'Feature não encontrada: {slug} (procurado em .aioson/context/, .aioson/plans/{slug}/, .aioson/context/features/{slug}/, .aioson/context/done/{slug}/).',
+      no_closed_features: 'Nenhuma feature fechada em .aioson/context/done/ para minerar.',
+      written: 'Dossiê retrospectivo gerado: {path} ({candidates} candidatos, {observations} observações).',
+      empty: 'Dossiê gerado sem propostas: {path} (fontes sem trilha minerável).',
+      io_error: 'Erro de I/O ao escrever o dossiê: {error}',
+      window_truncated: '--last={n} excede features disponíveis ({available}); minerando todas.',
+      undatable_excluded: '{count} feature(s) sem data de PASS determinável excluída(s) da janela: {slugs}'
+    },
+    harnessPreview: {
+      file_required: 'harness:preview requer um caminho de arquivo <file>.',
+      not_found: 'Arquivo não encontrado: {path}',
+      read_error: 'Não foi possível ler o arquivo: {path} ({error})'
+    },
     help_web_map:
       'aioson web:map [path] --url=<url> [--depth=<N>] [--max-pages=<N>] [--include-external] [--json] [--locale=pt-BR]',
     help_web_scrape:

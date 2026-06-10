@@ -31,6 +31,7 @@ const { captureBaseline, computeChangedSet, captureDiffPatch } = require('../har
 const { checkScope, checkDiffLimits, buildRollbackFeedback } = require('../harness/scope-guard');
 const { estimateTokens, startRunBudget, recordAttemptTokens, checkBudget, buildBudgetSummary } = require('../harness/budget-guard');
 const { writeAttemptArtifacts } = require('../harness/attempt-artifacts');
+const { previewArtifact } = require('../harness/preview-artifact');
 const { emitGuardEvent } = require('../harness/guard-events');
 const { detectGates, createGate, enterHumanGate, resolveGateState, pendingGates, loadGates } = require('../harness/human-gate');
 const { runCriteria, registerFailureSignatures, startRunSignatures } = require('../harness/criteria-runner');
@@ -293,9 +294,18 @@ async function runPostAttemptGuards({ targetDir, guards, cb, logger, attempt, ag
       } else if (failed.length > 0) {
         logger.log(`  ✗ Criteria checks falharam: ${failed.map((c) => c.id).join(', ')}`);
         outcome.reason = 'criteria_check_failed';
+        // AC-13: feedback = preview + ponteiro para attempts/{n}/checks/{id}.log
+        // (já persistido integralmente por writeAttemptArtifacts acima — persist-first
+        // satisfeito pelo fluxo existente). Evita dump integral no contexto do agente.
         outcome.feedback = failed
-          .map((c) => `Criterion ${c.id} failed (exit ${c.exitCode}${c.timedOut ? ', timeout' : ''}): ${(c.stderr || c.stdout || '').split('\n').find((l) => l.trim()) || 'no output'}`)
-          .join('\n');
+          .map((c) => {
+            const safeId = String(c.id || 'check').replace(/[^A-Za-z0-9._-]/g, '_');
+            const logPath = path.join(planDir, 'attempts', String(attempt), 'checks', `${safeId}.log`);
+            const raw = `${c.stdout || ''}${c.stderr ? `\n${c.stderr}` : ''}`.trim() || 'no output';
+            const { preview } = previewArtifact(raw, { maxBytes: 1024, artifactPath: logPath, persist: false });
+            return `Criterion ${c.id} failed (exit ${c.exitCode}${c.timedOut ? ', timeout' : ''}):\n${preview}`;
+          })
+          .join('\n\n');
         outcome.issues = [{ message: outcome.feedback }];
       }
     }

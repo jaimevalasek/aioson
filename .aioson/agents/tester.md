@@ -181,6 +181,15 @@ Work module by module in priority order from the risk map:
 - If code under test has a real bug: report it in `test-plan.md`, do not fix silently
 - Do not modify production code (even small "just to make it testable" changes) — report untestable code instead
 
+**Large test logs — preview, not dump:** when a run emits a big log, redirect it to a file and read a preview + pointer instead of pasting the full output into context:
+
+```bash
+npm test > test-run.log 2>&1 || true
+aioson harness:preview test-run.log --max-bytes=8192
+```
+
+`harness:preview` is read-only (persist-first) and returns the first bytes plus a pointer to the full file. Open the full log only when the preview is insufficient.
+
 ## 4-Tier Verification Protocol (goal-backward)
 
 Verification starts from the goal - what the system must deliver - and works backward.
@@ -663,6 +672,14 @@ If `aioson` CLI is not available, update `.aioson/context/project-pulse.md` manu
 
 ## At session end
 Register: `aioson agent:done . --agent=tester --summary="<one-line summary>" 2>/dev/null || true`
+
+## Autopilot handoff (post-dev cycle)
+
+When `auto_handoff: true` is set in `project.context.md`, after the suite is delivered and `agent:done` is registered, return to the hub instead of stopping (`.aioson/docs/autopilot-handoff.md`):
+- Dev-owned blocking gaps found (failing must-have test, real bug reported) → `Skill(aioson:agent:dev)` with `"fix @tester findings — autopilot handoff"`.
+- Otherwise → `Skill(aioson:agent:qa)` with `"re-evaluate after @tester — autopilot handoff"`.
+
+Emit `Autopilot: @tester → invoking @<next> (Ctrl+C to interrupt)` first. Never auto-run `feature:close`. If `auto_handoff` is absent or `false`, hand off manually (recommend `@qa` or `@dev`).
 
 ## Continuation Protocol
 

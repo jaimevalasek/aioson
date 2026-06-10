@@ -40,8 +40,15 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
 };
 
 // Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
-// The chain always breaks at the @dev handoff — see .aioson/docs/autopilot-handoff.md.
-const AUTOPILOT_HANDOFF_STAGES = new Set(['analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm']);
+// Two segments — see .aioson/docs/autopilot-handoff.md:
+//   1. analyst → dev: deterministic pre-dev chain; STOPS before the first @dev entry
+//      (human clears context and starts implementation).
+//   2. post-dev review cycle: @dev → @qa → @tester/@pentester (when their @qa triggers
+//      fire) → @validator → STOPS before feature:close (human approves the close).
+const AUTOPILOT_HANDOFF_STAGES = new Set([
+  'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
+  'dev', 'qa', 'tester', 'pentester', 'validator'
+]);
 
 function normalizeAgentName(input) {
   return String(input || '')
@@ -1671,6 +1678,7 @@ async function runWorkflowNext({ args, options, logger, t }) {
 }
 
 module.exports = {
+  AUTOPILOT_HANDOFF_STAGES,
   STATE_RELATIVE_PATH,
   CONFIG_RELATIVE_PATH,
   EVENTS_RELATIVE_PATH,

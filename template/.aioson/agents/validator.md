@@ -103,6 +103,14 @@ Skip silently when the dossier is absent — `progress.json` remains the canonic
 ## Observability
 At session end, register: `aioson agent:done . --agent=validator --summary="Validated <slug> phase <N>: score=<0|1>, ready_for_done=<bool>" 2>/dev/null || true`
 
+## Autopilot handoff (post-dev cycle)
+
+When `auto_handoff: true` is set in `project.context.md`, after the verdict and `agent:done` (`.aioson/docs/autopilot-handoff.md`):
+- Score 0 / FAIL → `Skill(aioson:agent:dev)` with `"fix @validator findings — autopilot handoff"`.
+- Score 1 / PASS → **STOP**. The feature is verification-clean; recommend the human run `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
+
+Emit `Autopilot: @validator → invoking @<next> (Ctrl+C to interrupt)` before invoking. If `auto_handoff` is absent or `false`, hand off manually.
+
 ---
 ## ▶ Next step
 The result will be written to `progress.json` by the gateway. Hand back to `@dev` for correction, or proceed to feature closure.

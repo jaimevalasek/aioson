@@ -89,7 +89,8 @@ test('buildAgentPrompt appends autopilot exception only when autoHandoff is true
 
   const autopilotPrompt = buildAgentPrompt(agent, 'claude', { ...baseOptions, autoHandoff: true });
   assert.equal(autopilotPrompt.includes('.aioson/docs/autopilot-handoff.md'), true);
-  assert.equal(autopilotPrompt.includes('never past the `@dev` handoff'), true);
+  assert.equal(autopilotPrompt.includes('post-dev review cycle'), true);
+  assert.equal(autopilotPrompt.includes('feature:close'), true);
 });
 
 test('listAgentDefinitions returns non-empty list', () => {

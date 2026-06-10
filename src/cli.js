@@ -268,6 +268,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'workflow-next',
   'workflow:status',
   'workflow-status',
+  'harness:retro',
+  'harness-retro',
+  'harness:preview',
+  'harness-preview',
   'agent:next',
   'agent-next',
   'parallel:init',
@@ -405,6 +409,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'harness-reject',
   'harness:status',
   'harness-status',
+  'harness:retro',
+  'harness-retro',
+  'harness:preview',
+  'harness-preview',
   'brief-gen',
   'verify:gate',
   'verify-gate',
@@ -817,6 +825,8 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_qa_run');
   logHelpLine(t, logger, 'cli.help_qa_scan');
   logHelpLine(t, logger, 'cli.help_qa_report');
+  logHelpLine(t, logger, 'cli.help_harness_retro');
+  logHelpLine(t, logger, 'cli.help_harness_preview');
   logHelpLine(t, logger, 'cli.help_web_map');
   logHelpLine(t, logger, 'cli.help_web_scrape');
   logHelpLine(t, logger, 'cli.help_scan_project');
@@ -1271,6 +1281,12 @@ async function main() {
     } else if (command === 'harness:status' || command === 'harness-status') {
       const { runHarnessStatus } = require('./commands/harness-status');
       result = await runHarnessStatus({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:retro' || command === 'harness-retro') {
+      const { runHarnessRetro } = require('./commands/harness-retro');
+      result = await runHarnessRetro({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:preview' || command === 'harness-preview') {
+      const { runHarnessPreview } = require('./commands/harness-preview');
+      result = await runHarnessPreview({ args, options, logger: commandLogger, t });
     } else if (command === 'verify:gate' || command === 'verify-gate') {
       result = await runVerifyGate({ args, options, logger: commandLogger, t });
 

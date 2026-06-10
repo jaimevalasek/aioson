@@ -29,3 +29,5 @@
 | quality-governance-baseline-and-new-regression-gate | done | 2026-06-02 | 2026-06-02 |
 | briefing-refiner | done | 2026-06-08 | 2026-06-08 |
 | loop-guardrails | done | 2026-06-09 | 2026-06-09 |
+| harness-retrospective-optimization | done | 2026-06-10 | 2026-06-10 |
+| harness-retrospective-optimization | done | 2026-06-10 | 2026-06-10 |

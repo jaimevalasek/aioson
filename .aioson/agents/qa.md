@@ -224,6 +224,17 @@ When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invo
 - [ ] Business rule violations produce the correct error
 - [ ] External services mocked
 
+### Capturing large test logs (preview, not dump)
+
+When a full test run produces a large log, redirect it to a file and consume a **preview + pointer** instead of pasting the entire output into context:
+
+```bash
+npm test > test-run.log 2>&1 || true
+aioson harness:preview test-run.log --max-bytes=8192
+```
+
+`harness:preview` returns the first bytes plus a pointer to the full file (persist-first; the log is read-only). Read the full file only when the preview is insufficient — this keeps the QA verdict grounded in real output without flooding the session.
+
 ## Stack-specific test patterns
 
 ### Laravel (Pest)
@@ -383,6 +394,19 @@ When QA is complete and all Critical and High findings are resolved:
 > "Feature **{slug}** is QA-approved and marked as `done` in `features.md`.
 > Residual risks are documented in `spec-{slug}.md`.
 > To start the next feature, activate **@product**."
+
+## Autopilot handoff (post-dev hub)
+
+When `auto_handoff: true` is set in `project.context.md`, you are the hub of the post-dev review cycle (`.aioson/docs/autopilot-handoff.md`). After your verdict and closing duties, route automatically instead of stopping — the four agents (`@dev`/`@qa`/`@tester`/`@pentester`) are always chained, but `@tester`/`@pentester` only run when their trigger fires:
+
+- **Verdict FAIL (Critical/High):** the corrections auto-cycle above already invokes `@dev` (cap 2, security gate). That path takes precedence — do not also route here.
+- **Verdict PASS — evaluate in order; auto-invoke the FIRST that applies and is not already done clean this cycle:**
+  1. `@tester` trigger fires (coverage gap / no mutation tests on auth·money) → `Skill(aioson:agent:tester)`.
+  2. `@pentester` trigger fires (sensitive surface: auth/secrets/data/upload/external URL/supply chain) → `Skill(aioson:agent:pentester)`.
+  3. harness contract present (`.aioson/plans/{slug}/harness-contract.json`) and validator not yet PASS → `Skill(aioson:agent:validator)`.
+  4. nothing pending → **STOP**. Tell the user the feature is QA-approved and recommend `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
+
+**Re-entry guard (no loops):** before invoking a specialized agent, confirm via on-disk evidence it has not already returned clean this cycle — clean `security-findings-{slug}.json` ⇒ `@pentester` done; no new coverage gap ⇒ `@tester` done; validator PASS in `progress.json`/spec ⇒ `@validator` done. Emit `Autopilot: @qa → invoking @<next> (Ctrl+C to interrupt)` before each hop. If `auto_handoff` is absent or `false`, fall back to the manual recommendations in your report.
 
 > **Never mark `done` if any Critical or High finding is unresolved.** Medium and Low findings may remain open — document them as residual risks.
 

@@ -136,6 +136,27 @@ module.exports = {
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=fr]',
     help_qa_report:
       'aioson qa:report [path] [--html] [--json] [--locale=fr]',
+    help_harness_retro:
+      'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=fr]',
+    help_harness_preview:
+      'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=fr]',
+    harnessRetro: {
+      need_target: 'harness:retro requiert --feature=<slug> ou --last=<N>.',
+      invalid_slug: 'Slug invalide : {slug} (doit correspondre à ^[a-z0-9][a-z0-9-]*$).',
+      invalid_last: 'Valeur --last invalide : {value} (utilisez un entier >= 1).',
+      feature_not_found: 'Feature introuvable : {slug} (cherché dans .aioson/context/, .aioson/plans/{slug}/, .aioson/context/features/{slug}/, .aioson/context/done/{slug}/).',
+      no_closed_features: 'Aucune feature clôturée dans .aioson/context/done/ à miner.',
+      written: 'Dossier rétrospectif généré : {path} ({candidates} candidats, {observations} observations).',
+      empty: 'Dossier généré sans propositions : {path} (sources sans piste exploitable).',
+      io_error: 'Erreur d’E/S lors de l’écriture du dossier : {error}',
+      window_truncated: '--last={n} dépasse les features disponibles ({available}) ; minage de toutes.',
+      undatable_excluded: '{count} feature(s) sans date de PASS résoluble exclue(s) de la fenêtre : {slugs}'
+    },
+    harnessPreview: {
+      file_required: 'harness:preview requiert un chemin de fichier <file>.',
+      not_found: 'Fichier introuvable : {path}',
+      read_error: 'Impossible de lire le fichier : {path} ({error})'
+    },
     help_web_map:
       'aioson web:map [path] --url=<url> [--depth=<N>] [--max-pages=<N>] [--include-external] [--json] [--locale=fr]',
     help_web_scrape:

@@ -150,6 +150,27 @@ module.exports = {
       'aioson harness:init [path] --slug=<slug> [--mode=BALANCED|URGENT|ECONOMICAL] [--locale=en]',
     help_harness_validate:
       'aioson harness:validate [path] --slug=<slug> [--artifact=<path>] [--locale=en]',
+    help_harness_retro:
+      'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=en]',
+    help_harness_preview:
+      'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=en]',
+    harnessRetro: {
+      need_target: 'harness:retro requires --feature=<slug> or --last=<N>.',
+      invalid_slug: 'Invalid slug: {slug} (must match ^[a-z0-9][a-z0-9-]*$).',
+      invalid_last: 'Invalid --last value: {value} (use an integer >= 1).',
+      feature_not_found: 'Feature not found: {slug} (searched .aioson/context/, .aioson/plans/{slug}/, .aioson/context/features/{slug}/, .aioson/context/done/{slug}/).',
+      no_closed_features: 'No closed features under .aioson/context/done/ to mine.',
+      written: 'Retro dossier written: {path} ({candidates} candidates, {observations} observations).',
+      empty: 'Retro dossier written with no proposals: {path} (no minable trail).',
+      io_error: 'I/O error writing the dossier: {error}',
+      window_truncated: '--last={n} exceeds available features ({available}); mining all of them.',
+      undatable_excluded: '{count} feature(s) without a resolvable PASS date excluded from the window: {slugs}'
+    },
+    harnessPreview: {
+      file_required: 'harness:preview requires a <file> path argument.',
+      not_found: 'File not found: {path}',
+      read_error: 'Could not read file: {path} ({error})'
+    },
     help_web_map:
       'aioson web:map [path] --url=<url> [--depth=<N>] [--max-pages=<N>] [--include-external] [--json] [--locale=en]',
     help_web_scrape:

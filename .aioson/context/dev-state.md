@@ -1,36 +1,27 @@
 ---
-last_updated: 2026-06-09
-active_feature: loop-guardrails
-active_phase: 2
-next_step: "Feature fechada — QA PASS 2026-06-09. Workflow avançou para @scope-check post-fix (modo projeto)."
-status: done
+last_updated: 2026-06-10
+active_feature: harness-retrospective-optimization
+active_phase: 1
+next_step: "DEV COMPLETO (Tema 1 + Tema 2). Próximo: @qa verificar AC-1..AC-16 contra requirements §8. Implementado: src/lib/retro/{retro-sources,retro-aggregate,retro-render}.js, src/commands/harness-retro.js + harness-preview.js, src/harness/preview-artifact.js, wiring cli.js (KNOWN+JSON_SUPPORTED+dispatch+help), i18n cli.harnessRetro.*/cli.harnessPreview.* (4 locales), adoção self-implement-loop.js (AC-13), paridade template+workspace de sheldon.md/qa.md/tester.md/aioson-context-boundary.md + project-map.md. Testes: tests/harness-retro.test.js (18) + tests/preview-artifact.test.js (9). Suíte 3131/3132 verde, 0 fail. Piloto real gerado: .aioson/context/retro/loop-guardrails.md (C-01 candidato, 1 ciclo FAIL→PASS, 6 observações)."
+status: dev_complete
 ---
 
 # Dev State
 
-**Feature:** loop-guardrails
-**Status:** done (QA re-verificação PASS em 2026-06-09; Gate D aprovado via `workflow:next --complete=qa`; feature `done` em features.md)
-**Next step:** @scope-check post-fix (decisão do motor) — residuais O-01..O-04 documentados no QA Sign-off do spec
+**Feature:** harness-retrospective-optimization
+**Phase:** 1
+**Status:** dev_complete
+**Next step:** DEV COMPLETO (Tema 1 + Tema 2). Próximo: @qa verificar AC-1..AC-16 contra requirements §8. Suíte completa 3131/3132 verde, 0 fail. Piloto real em `.aioson/context/retro/loop-guardrails.md`.
 
 ## Context package
 
 1. project.context.md
-2. .aioson/plans/loop-guardrails/corrections-2026-06-09.md (resolved — para re-verificação)
-3. spec-loop-guardrails.md (decisões @dev, incl. seção "Decisões do ciclo de correções QA")
-4. requirements-loop-guardrails.md
+2. architecture.md
 
 ## History
 
-- 2026-06-09: Fase 1 — glob-match, contract-schema, git-baseline, scope-guard, budget-guard, attempt-artifacts, guard-events; preflight + hook D5 no self:loop; template harness:init. Integração com violação proposital (success metric nº 1). Suíte completa: 3074 testes, 2 falhas pré-existentes CRLF (CI verde).
 - 2026-06-09: Fase 2 — human-gate + HUMAN_GATE (D4), criteria-runner (D7), harness:approve/reject/status, publish gate no feature:close, git:guard merge (REQ-20). Integração e2e: gate→approve→retomada, failure signature repeat, publish, REQ-20.
-
-## History (cont.)
-
-- 2026-06-09: @qa Gate D FAIL — corrections plan criado em `.aioson/plans/loop-guardrails/corrections-2026-06-09.md` (C-01 High: guards silenciosamente inativos sem `--spec`/`--contract`; C-02: presets de `contract_mode` não chegam ao circuit-breaker; C-03: git:guard layer-2 bloqueia commits humanos legítimos de lockfiles). Teste `QA-H-01` falhando de propósito até C-01 ser corrigido.
-- 2026-06-09: @dev aplicou C-01..C-03 — helper compartilhado `src/harness/active-contract.js` (self:loop auto-descobre contrato ativo sem flags + log explícito "guardrails inactive"); governor efetivo (`resolveContract`) injetado no circuit-breaker e no teto de iterações; `applyActiveContractPolicy` do git:guard usa só `forbidden_files` declarados. QA-H-01 verde + QA-C-02/QA-C-03 novos. Suíte completa: 3105 testes, 3102 pass, 2 fail (AC-CTPK-06 CRLF pré-existentes, passam em CI), 1 skipped. Plano marcado `resolved`.
-
-## Residuals para @qa
-
-- i18n dos comandos novos (strings inglesas diretas, sem `t()`)
-- `aioson help` não lista harness:approve/reject/status
-- 2 falhas AC-CTPK-06 pré-existentes (artefato CRLF Windows, passam em CI)
+- 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes fechadas: D1..D7 em architecture.md; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje, baseline suite 3104/3105
+- 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105
+- 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105
+- 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md §Feature Architecture RHO-lite; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105

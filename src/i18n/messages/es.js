@@ -136,6 +136,27 @@ module.exports = {
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=es]',
     help_qa_report:
       'aioson qa:report [path] [--html] [--json] [--locale=es]',
+    help_harness_retro:
+      'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=es]',
+    help_harness_preview:
+      'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=es]',
+    harnessRetro: {
+      need_target: 'harness:retro requiere --feature=<slug> o --last=<N>.',
+      invalid_slug: 'Slug inválido: {slug} (debe cumplir ^[a-z0-9][a-z0-9-]*$).',
+      invalid_last: 'Valor inválido para --last: {value} (use un entero >= 1).',
+      feature_not_found: 'Feature no encontrada: {slug} (buscado en .aioson/context/, .aioson/plans/{slug}/, .aioson/context/features/{slug}/, .aioson/context/done/{slug}/).',
+      no_closed_features: 'No hay features cerradas en .aioson/context/done/ para minar.',
+      written: 'Dosier retrospectivo generado: {path} ({candidates} candidatos, {observations} observaciones).',
+      empty: 'Dosier generado sin propuestas: {path} (fuentes sin rastro minable).',
+      io_error: 'Error de E/S al escribir el dosier: {error}',
+      window_truncated: '--last={n} supera las features disponibles ({available}); minando todas.',
+      undatable_excluded: '{count} feature(s) sin fecha de PASS resoluble excluida(s) de la ventana: {slugs}'
+    },
+    harnessPreview: {
+      file_required: 'harness:preview requiere una ruta de archivo <file>.',
+      not_found: 'Archivo no encontrado: {path}',
+      read_error: 'No se pudo leer el archivo: {path} ({error})'
+    },
     help_web_map:
       'aioson web:map [path] --url=<url> [--depth=<N>] [--max-pages=<N>] [--include-external] [--json] [--locale=es]',
     help_web_scrape:

@@ -287,6 +287,17 @@ If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active 
 
 **Safety net — open corrections without the cycle file:** on every activation with an active feature, also check `.aioson/plans/{active-feature}/corrections-*.md`. If any has frontmatter `status: open` or `in_progress`, those mandatory corrections take priority over the dev-state `next_step` — apply them first, mark the plan `resolved`, then hand off to `@qa` for re-verification. `aioson dev:resume-data` surfaces them as `open_corrections` and already rewrites `next_step` accordingly; trust that over a stale dev-state pointer. This covers QA sessions that created a corrections plan but failed to persist the trail.
 
+## Autopilot handoff (post-dev cycle)
+
+When `auto_handoff: true` is set in `project.context.md` and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
+
+1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
+2. Finish closing duties (spec/dossier/dev-state updates, `agent:done`).
+3. Emit: `Autopilot: @dev done → invoking @qa (Ctrl+C to interrupt)`.
+4. Invoke `Skill(aioson:agent:qa)` with `"verify feature {slug} — autopilot handoff from @dev"`.
+
+Stop and hand off manually instead when any stop condition in `.aioson/docs/autopilot-handoff.md` applies (gate/verification blocked, context usage ≥ `context_warning_threshold`, genuine ambiguity). Never auto-run `feature:close`/publish. If `auto_handoff` is absent or `false`, hand off manually as before.
+
 ## Optional scope drift checkpoint
 
 After a feature slice lands, recommend optional `@scope-check --scope-mode=post-dev` before `@qa` when the implementation changed planned behavior, touched unexpected files, skipped a planned item, or required a trade-off not already captured in the design artifacts. Skip the recommendation for routine implementation that matches the approved plan.

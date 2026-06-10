@@ -1,27 +1,27 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-scope-check-end-1781061597525",
-  "created_at": "2026-06-10T03:19:57.525Z",
-  "workflow_mode": "project",
-  "classification": "MEDIUM",
-  "feature_slug": null,
+  "protocol_id": "hnd-dev-qa-1781072548963",
+  "created_at": "2026-06-10T06:22:28.963Z",
+  "workflow_mode": "feature",
+  "classification": "SMALL",
+  "feature_slug": "harness-retrospective-optimization",
   "from": {
-    "agent_id": "scope-check",
-    "capability_transferred": "check_scope_alignment"
+    "agent_id": "dev",
+    "capability_transferred": "implement_feature"
   },
   "to": {
-    "agent_id": null,
-    "capability_required": null
+    "agent_id": "qa",
+    "capability_required": "verify_feature"
   },
   "capabilities_transferred": [
-    "check_scope_alignment"
+    "implement_feature"
   ],
   "artifact_uris": [],
   "gate_status": {},
-  "autonomy_mode": null,
+  "autonomy_mode": "guarded",
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-06-10T03:19:57.525Z"
+    "validated_at": "2026-06-10T06:22:28.963Z"
   }
 }

@@ -1022,3 +1022,70 @@ Sem banco novo, sem migration — ver requirements §2 (schemas JSON em `.aioson
 Herdados do PRD/requirements §8 (sem `.aioson/loops/`, sem `loop:*`, sem juiz IA, sem UI Play, sem USD real, sem `security_high_finding`). Adicionais desta arquitetura: sem watcher de filesystem (detecção só nas fronteiras de tentativa), sem worktree isolation (gap conhecido do projeto, fora desta feature), sem leitura SQLite no caminho de enforcement (D3).
 
 > **Gate B:** Architecture approved — @dev can proceed.
+
+---
+
+# Feature Architecture — Harness Retrospective Optimization (RHO-lite)
+
+## 1. Architecture Overview
+
+Comando determinístico `harness:retro` no padrão consolidado: orquestração fina em `src/commands/`, lógica pura e testável em `src/lib/retro/`, helper de preview em `src/harness/` (path fixado em requirements §3.3). Mineração read-only sobre fontes existentes; única escrita: `.aioson/context/retro/`. Zero dependência nova, zero store novo, zero LLM. Entidades e contratos: requirements §3 consumidos como estão.
+
+## 2. Module Structure
+
+```text
+src/lib/retro/
+  retro-sources.js      # 1 leitor por fonte → FindingRecord[] (§3.2) + warnings[]; cada leitor best-effort independente (padrão attempt-artifacts.js)
+  retro-aggregate.js    # chave determinística, critério de promoção REQ-2, ordenação severidade→data, custo REQ-4
+  retro-render.js       # dossiê Markdown (frontmatter §3.1 + 4 seções fixas); saída byte-estável exceto generated_at (AC-4)
+src/harness/
+  preview-artifact.js   # T2 — contrato §3.3: persist-first, corte em boundary UTF-8, best-effort
+src/commands/
+  harness-retro.js      # flags, sanitização de slug (REQ-8), enumeração de features, escrita do dossiê
+  harness-preview.js    # T2 — wrapper fino de previewArtifact em modo leitura sobre arquivo já persistido
+```
+
+Registro em `src/cli.js` no padrão `harness:status` (KNOWN_COMMANDS + dispatch + usage/help — guard AC-9 da classe not-wired). Testes: `tests/harness-retro.test.js`, `tests/preview-artifact.test.js`, fixtures sintéticas para attempts/, progress.json e devlogs (vazios no repo hoje).
+
+## 3. Key Decisions (fecha requirements §11)
+
+- **D1 — Verbo de preview confirmado: `harness:preview <file> [--max-bytes=8192] [--json]`.** O namespace `harness:*` já agrupa os comandos de loop (status/approve/reject) e o helper vive em `src/harness/` — nenhum nome melhor justifica divergir da recomendação do @analyst. Arquivo inexistente/ilegível → exit 12.
+- **D2 — Data de PASS: trail vence.** Timestamp ISO completo das entradas do Agent Trail > frontmatter date-only de QA report. Fallback: frontmatter do QA report; sem nenhuma das duas → feature excluída da janela `--last=N` com aviso nominal (req §5.1).
+- **D3 — Bytes de corrections: incluído** como contagem no bloco de custo (`corrections_bytes` via `fs.stat` dos planos já minerados — custo zero, determinístico, coerente com REQ-4). Nunca convertido em "tokens estimados".
+- **D4 — Exit codes via `result.exitCode`**: `cli.js:1649` já propaga `result.exitCode` numérico — o comando retorna `{ exitCode }` no objeto de resultado em modo texto E `--json` (mesmo caminho de código = guard estrutural da classe exit-code-collapsed). Tabela: 0 sucesso (inclusive dossiê vazio), 1 I/O inesperado, 12 input inválido. Teste binário cobre AC-3.
+- **D5 — Ciclo FAIL→PASS do trail**: parse das entradas `**{ISO}** | @{agent} | _{secao}_`; verdict extraído por regex determinística case-insensitive (`\b(?:verdict|veredicto)\b[^\n]*?\b(PASS|FAIL)\b` com fallback `\b(PASS|FAIL)\b` apenas em entradas de @qa). Ciclo = FAIL seguido de PASS em timestamps crescentes na mesma feature. Entrada sem timestamp/sha marker → "entradas ilegíveis" na Trilha minerada (edge 9). Piloto loop-guardrails (AC-1) ancora a regex contra dados reais.
+- **D6 — Enumeração de features fechadas**: subdiretórios de `.aioson/context/done/`; paths por slug reutilizam `collectFeatureArtifacts` (`src/commands/feature-archive.js:145`, já exportado) — não inventar segundo enumerador. Qualquer uso de `--last` produz `window-last-{N}.md` (modo combinado incluído).
+- **D7 — execution_events sem coluna de feature**: o schema não tem `feature_slug`; associação vive em `payload_json` (ex.: `payload.slug` dos guard events). Filtro: `JSON.parse(payload_json)` best-effort por linha, match exato `payload.slug === slug`; linha sem payload parseável é ignorada para o filtro. Abertura sempre `new Database(p, { readonly: true, fileMustExist: true })` em try/catch → falha vira aviso (REQ-3, edge 1).
+
+## 4. Integration Architecture
+
+- **Fontes por feature** (ativas E arquivadas, req §5.1): QA reports + corrections em `.aioson/context/` / `.aioson/plans/{slug}/` / `done/{slug}/` (+ `done/{slug}/plans/`); dossier em `features/{slug}/dossier.md`; `aios.sqlite` readonly (D7); `attempts/{n}/` via estrutura de `attempt-artifacts.js`; `progress.json.failure_signatures[]`; `aioson-logs/` devlogs.
+- **Adoção T2 no `self:loop`**: `self-implement-loop.js:296` — o feedback de criteria checks falhos passa a ser construído com `previewArtifact` apontando para `attempts/{n}/checks/{id}.log` (já persistido integralmente na linha 267 — persist-first satisfeito pelo fluxo existente; AC-13).
+- **Prompts (template-first + `npm run sync:agents`, REQ-11)**: `sheldon.md` ganha seção on-demand "Retro dossier analysis"; `qa.md`/`tester.md` instruem redirecionar log de teste para arquivo e consumir via `harness:preview`. `aioson-context-boundary.md` (template + workspace) lista `retro/{slug}.md`; `project-map.md` registra o diretório.
+- **i18n**: chaves novas `cli.harnessRetro.*` / `cli.harnessPreview.*` nos 4 locales (gotcha do prefixo `cli.`).
+
+## 5. Cross-Cutting Concerns
+
+- **Path safety (REQ-8)**: slug validado contra `^[a-z0-9][a-z0-9-]*$` ANTES de qualquer `path.join`; falha → exit 12 sem tocar o filesystem (fail-closed, classe path-containment).
+- **Determinismo (AC-4)**: ordenação estável (severidade critical→low, depois data ASC, depois source_path); nenhuma fonte de não-determinismo além de `generated_at`.
+- **Windows**: comparações e rendering de paths após `replaceAll('\\', '/')` (padrão loop-guardrails EC-6).
+- **Degradação (REQ-3)**: cada leitor de fonte retorna `{ findings, warnings }`; warning vira linha da Trilha minerada, nunca exceção propagada. Dossiê vazio = exit 0.
+
+## 6. Implementation Sequence for @dev
+
+**Tema 1** (fecha com `npm test` verde — baseline 3104/3105):
+1. `retro-sources.js` + fixtures sintéticas (fontes vazias primeiro — AC-2 é o teste mais barato).
+2. `retro-aggregate.js` (chave determinística, REQ-2, custo REQ-4 + D3) — testes com fixture de cada critério (AC-5, AC-6).
+3. `retro-render.js` (frontmatter §3.1, 4 seções fixas, placeholders) + idempotência (AC-4).
+4. `harness-retro.js` (REQ-8, D6, `--feature`/`--last`/`--json`) + registro no `cli.js` + i18n + piloto loop-guardrails (AC-1, AC-7..10).
+5. Boundary rule + project-map + `sheldon.md` (template→sync, AC-11, AC-16).
+
+**Tema 2** (cortável sem afetar Tema 1 — edge 12):
+6. `preview-artifact.js` + testes unitários (AC-12).
+7. Adoção em `self-implement-loop.js:296` (AC-13) + `harness-preview.js` + prompts qa/tester (AC-14).
+
+## 7. Explicit Non-Goals and Deferred Items
+
+Herdados de requirements §10 (RHO completo, auto-aplicação, agente novo, trigger em `feature:close`, store novo, tiering, backfill de token_count, classificação semântica na CLI). Adicionais desta arquitetura: sem cache de mineração (re-mineração integral a cada run — janelas são pequenas), sem paralelização de leitores, sem schema novo de evento (telemetria opcional via `agent:done` apenas).
+
+> **Gate B:** Architecture approved — @dev can proceed.

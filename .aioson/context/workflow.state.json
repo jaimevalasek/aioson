@@ -16,7 +16,7 @@
     "qa"
   ],
   "current": null,
-  "next": null,
+  "next": "dev",
   "completed": [
     "setup",
     "product",
@@ -26,13 +26,10 @@
     "ux-ui",
     "pm",
     "orchestrator",
-    "scope-check",
-    "qa"
+    "scope-check"
   ],
-  "skipped": [
-    "dev"
-  ],
+  "skipped": [],
   "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-10T03:19:57.352Z"
+  "updatedAt": "2026-06-10T15:52:51.320Z"
 }

@@ -54,6 +54,7 @@ agents: [product, analyst, architect, ux-ui, pm, orchestrator, sheldon, dev, dey
 | `dev-state.md` | `.aioson/context/dev-state.md` |
 | `commit-prep.json` | `.aioson/context/commit-prep.json` |
 | `simple-plans/{slug}.md` | `.aioson/context/simple-plans/{slug}.md` |
+| `retro/{slug}.md` | `.aioson/context/retro/{slug}.md` (harness:retro dossier; `window-last-{N}.md` for windows) |
 
 ## Path rules
 

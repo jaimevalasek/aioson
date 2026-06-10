@@ -5,6 +5,7 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| harness-retrospective-optimization | 2026-06-10 | 5 | Fechar o loop de melhoria do harness AIOSON: a trilha de falhas que o framework já coleta deixa de ser write-only e passa a gerar propostas de correção do própr |
 | quality-governance-baseline-and-new-regression-gate | 2026-06-02 | 7 | Give AIOSON agents deterministic quality evidence after code changes, starting with a narrow baseline plus new-regression gate that improves maintainability wit |
 | cost-context-optimization | 2026-06-01 | 5 | Reduzir custo de tokens e ruído de contexto no AIOSON sem enfraquecer a qualidade dos agentes, começando por medições confiáveis e estado de feature correto. |
 | cross-tool-project-knowledge | 2026-05-30 | 6 | Estender `active-learning-loop` com materialização disk-first dos achados técnicos do projeto (`.aioson/learnings/`), tornando o conhecimento legível por qualqu |

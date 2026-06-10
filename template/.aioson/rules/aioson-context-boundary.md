@@ -31,6 +31,7 @@ Allowed machine-readable exceptions:
 | Workflow handoff/runtime state | `.aioson/context/workflow.state.json`, `.aioson/context/handoff-protocol.json`, `.aioson/context/last-handoff.json` |
 | Parallel coordination machine files | `.aioson/context/parallel/*.json` |
 | Simple implementation plans | `.aioson/context/simple-plans/{slug}.md` |
+| Retrospective dossier | `.aioson/context/retro/{slug}.md` (or `window-last-{N}.md`) ← harness:retro |
 | Squad definitions | `.aioson/squads/{slug}/` |
 | Skill manifests | `.aioson/skills/{category}/{slug}/SKILL.md` |
 | Feature artifacts | `.aioson/context/{artifact}-{slug}.md` |
@@ -48,6 +49,7 @@ prd.md / prd-{slug}.md        ← product
 spec-{slug}.md                ← dev
 implementation-plan-{slug}.md ← pm
 simple-plans/{slug}.md       ← dev / deyvin
+retro/{slug}.md               ← harness:retro (retrospective dossier; window-last-{N}.md for windows)
 features.md                   ← product / pm
 project-pulse.md              ← all agents (update at session end)
 conformance-{slug}.yaml       ← conformance machine-readable exception
