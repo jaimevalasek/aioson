@@ -4,7 +4,7 @@ description: "Autopilot handoff protocol: automatic agent chaining from @analyst
 
 # Autopilot handoff (analyst → dev)
 
-Opt-in protocol that removes manual handoff confirmations in the deterministic segment of the feature workflow. Participating agents: `@analyst`, `@scope-check`, `@architect`, `@discovery-design-doc`. Upstream agents (`@briefing`, `@product`, `@sheldon`) always stay manual — they end on genuine human decisions.
+Opt-in protocol that removes manual handoff confirmations in the deterministic segment of the feature workflow. Participating agents: `@analyst`, `@scope-check`, `@architect`, `@discovery-design-doc`, and `@pm` (MEDIUM features only — it sits between `@discovery-design-doc` and pre-dev `@scope-check` to produce the implementation plan and close Gate C). Upstream agents (`@briefing`, `@product`, `@sheldon`) always stay manual — they end on genuine human decisions.
 
 ## Activation
 
@@ -35,7 +35,7 @@ When autopilot is active and no stop condition applies:
 
 1. **Next agent is `@dev`** — goal reached. Produce `dev-state.md` (dev handoff producer), emit the standard handoff message, and recommend `/clear` + a fresh chat for `@dev`. Never auto-invoke `@dev`.
 2. **Verdict not clean** — `@scope-check` status is anything other than `approved`/`patched` (`needs-*`, `blocked`): route per Handoff Rules, manually.
-3. **Gate or readiness blocked** — `@architect` Gate B blocked, or `@discovery-design-doc` readiness = `blocked`: stop and route to the owner.
+3. **Gate or readiness blocked** — `@architect` Gate B blocked, `@discovery-design-doc` readiness = `blocked`, or `@pm` Gate C blocked: stop and route to the owner.
 4. **Context budget** — estimated context usage ≥ `context_warning_threshold` (`.aioson/config.md`): write the compaction checkpoint to `.aioson/context/last-handoff.json`, stop, and recommend `/clear`. The workflow resumes from `workflow.state.json` — the next session re-enters autopilot automatically.
 5. **Ambiguity** — workflow state unavailable AND classification/sequence ambiguous, or any real decision requires user input: stop and ask, manually.
 

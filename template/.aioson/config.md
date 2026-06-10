@@ -63,7 +63,7 @@ Optional testing fields:
 - `test_runner` (for example `pest`, `jest`, `vitest`, `pytest`, `rspec`, `foundry`)
 
 Optional workflow fields:
-- `auto_handoff` (boolean, default `false`) — when `true`, the feature-workflow agents from `@analyst` through `@discovery-design-doc` chain automatically via skill auto-invocation instead of stopping for manual activation, until the `@dev` handoff. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`. Upstream agents (`@briefing`, `@product`, `@sheldon`) always hand off manually.
+- `auto_handoff` (boolean, default `false`) — when `true`, the feature-workflow agents from `@analyst` up to the `@dev` handoff (including `@pm` on MEDIUM features) chain automatically via skill auto-invocation instead of stopping for manual activation. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`. Upstream agents (`@briefing`, `@product`, `@sheldon`) always hand off manually.
 
 Allowed `project_type` values:
 - `web_app`

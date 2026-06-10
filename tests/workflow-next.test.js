@@ -263,6 +263,55 @@ test('workflow:next infers scope-check (after discovery-design-doc) in a MEDIUM 
   assert.equal(loaded.state.next, 'dev');
 });
 
+test('workflow:next MEDIUM feature: fresh state sequences pm before scope-check and infers it from the implementation plan', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design Doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/scope-check-${slug}.md`), '# Scope Check\n');
+  // No workflow.state.json — fresh state built from the default MEDIUM feature sequence
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.deepEqual(
+    loaded.state.sequence,
+    ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa']
+  );
+  assert.deepEqual(
+    loaded.state.completed,
+    ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check']
+  );
+  assert.equal(loaded.state.next, 'dev');
+});
+
+test('workflow:next MEDIUM feature: inference stops at pm while the implementation plan is missing', async () => {
+  const dir = await makeTempDir();
+  const slug = 'official-dashboard-reform';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design Doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/scope-check-${slug}.md`), '# Scope Check\n');
+
+  const loaded = await loadOrCreateState(dir);
+
+  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'architect', 'discovery-design-doc']);
+  assert.equal(loaded.state.next, 'pm');
+});
+
 test('workflow:next does not infer mainline progress while a detour is active', async () => {
   const dir = await makeTempDir();
   const slug = 'official-dashboard-reform';

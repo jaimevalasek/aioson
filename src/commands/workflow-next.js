@@ -32,12 +32,16 @@ const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MICRO: ['product', 'dev', 'qa'],
   SMALL: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
-  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'scope-check', 'dev', 'pentester', 'qa']
+  // MEDIUM routes through @pm after discovery-design-doc (mirrors the
+  // project-mode position): Gate C requires implementation-plan-{slug}.md and
+  // @pm is its canonical owner (AC-SDLC-15/16) — without the stage, the
+  // sequence dead-ends at @dev preflight with no agent to produce the plan.
+  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa']
 };
 
 // Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
 // The chain always breaks at the @dev handoff — see .aioson/docs/autopilot-handoff.md.
-const AUTOPILOT_HANDOFF_STAGES = new Set(['analyst', 'scope-check', 'architect', 'discovery-design-doc']);
+const AUTOPILOT_HANDOFF_STAGES = new Set(['analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm']);
 
 function normalizeAgentName(input) {
   return String(input || '')
@@ -307,6 +311,16 @@ async function validateStageArtifacts(targetDir, state, stage) {
     return (await anyExists(designDocCandidates)) && (await anyExists(readinessCandidates));
   }
 
+  if (stage === 'pm') {
+    // Feature mode: @pm's canonical artifact is the implementation plan
+    // (Gate C input). Project mode has no single canonical pm artifact —
+    // the handoff contract covers feature MEDIUM (AC-SDLC-16).
+    if (state.mode === 'feature' && slug) {
+      return await exists(path.join(base, `implementation-plan-${slug}.md`));
+    }
+    return true;
+  }
+
   if (stage === 'orchestrator') {
     return await exists(path.join(base, 'parallel'));
   }
@@ -435,7 +449,9 @@ function isInferableStage(stage) {
   // (it has both a validateStageArtifacts branch and a handoff contract). Without
   // it, MEDIUM sequences — where scope-check sits AFTER discovery-design-doc —
   // could never infer scope-check as completed during stale-state recovery.
-  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'orchestrator'].includes(
+  // pm is inferable from implementation-plan-{slug}.md for the same reason:
+  // it sits before scope-check in the MEDIUM feature sequence.
+  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }

@@ -36,7 +36,9 @@ test('pm prompt and manifest align with the living PRD workflow stage', async ()
 
   const promptChecks = [
     '## Workflow position reality',
-    'The default feature workflow does **not** route through `@pm`.',
+    'The default MEDIUM **feature** workflow routes through `@pm` after `@discovery-design-doc`',
+    'SMALL and MICRO feature workflows do **not** route through `@pm`.',
+    '## Autopilot handoff',
     '## MEDIUM implementation plan (mandatory output for MEDIUM)',
     'For MEDIUM features, `@pm` MUST produce `implementation-plan-{slug}.md`',
     '## Non-MEDIUM handoff reality',

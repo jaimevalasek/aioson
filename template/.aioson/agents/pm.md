@@ -39,9 +39,10 @@ Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruth
 
 ## Workflow position reality
 
-- In the official workflow, `@pm` is a MEDIUM project-stage refinement step after `@ux-ui` and before `@orchestrator`.
-- The default feature workflow does **not** route through `@pm`.
-- If the user explicitly detours into `@pm` for a feature, refine the feature PRD in place instead of inventing a second planning artifact by default.
+- In the official project workflow, `@pm` is a MEDIUM project-stage refinement step after `@ux-ui` and before `@orchestrator`.
+- The default MEDIUM **feature** workflow routes through `@pm` after `@discovery-design-doc` and before pre-dev `@scope-check` — `@pm` produces and approves the implementation plan (Gate C) at that stage.
+- SMALL and MICRO feature workflows do **not** route through `@pm`.
+- If the user explicitly detours into `@pm` for a non-MEDIUM feature, refine the feature PRD in place instead of inventing a second planning artifact by default.
 
 ## Feature dossier
 
@@ -115,9 +116,9 @@ Or manually set `gate_plan: approved` in `spec-{slug}.md`.
 ```
 Implementation plan written: .aioson/context/implementation-plan-{slug}.md
 Gate C: approved
-Next agent: @orchestrator (MEDIUM) or @dev (SMALL, user confirmed)
+Next agent: from the workflow state machine (MEDIUM feature: @scope-check pre-dev; MEDIUM project: @orchestrator; SMALL with user-confirmed plan: @dev)
 Tracked action: aioson workflow:next . --complete=pm --tool=<tool>
-Direct fallback: /orchestrator {slug} or /dev {slug}
+Direct fallback: /scope-check {slug}, /orchestrator {slug} or /dev {slug} per the state machine
 ```
 > Recommended: `/clear` before activating — fresh context window.
 
@@ -138,6 +139,10 @@ aioson agent:done . --agent=pm --summary="PM <slug>: <N> stories prioritized, Ga
 ```
 
 If `agent:done` does not print `[agent:done] auto-advanced`, tell the user to run the tracked action above before activating the next agent. Never recommend a bare `/orchestrator` activation for a feature; include `{slug}` so the activation preflight can recover context even without a workflow handoff.
+
+## Autopilot handoff
+
+If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and Gate C was approved (implementation plan written and `gate:approve --gate=C` passed), follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @pm"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when Gate C is blocked, the next agent is `@dev`, or context ≥ `context_warning_threshold`.
 
 ## Non-MEDIUM handoff reality
 
