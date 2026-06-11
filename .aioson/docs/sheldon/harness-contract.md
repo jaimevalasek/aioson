@@ -37,13 +37,27 @@ For every AC in the enriched PRD with an objective, mechanically verifiable asse
   "id": "C1",
   "description": "<AC text — human-readable for PR review>",
   "assertion": "<machine-verifiable expression — e.g. 'tests/foo.test.js passes' or 'src/x/y.js exports parseX'>",
-  "binary": true
+  "binary": true,
+  "verification": "<shell command whose exit code 0 = pass — e.g. 'node --test tests/foo.test.js'>"
 }
 ```
 
 ACs that are subjective (UX feel, code style preference) get `binary: false` and become advisory only — `@validator` ignores them in the score.
 
 **Rule of thumb:** if the assertion can be answered by a single shell command exit code or a single test, it qualifies as `binary: true`. Otherwise mark it advisory and let `@qa` cover it.
+
+### 2b. Author `verification` commands
+
+Every `binary: true` criterion **must** carry a `verification` shell command whenever one is mechanically possible. Exit code 0 = pass; anything else = fail. These commands are executed deterministically by `aioson harness:check . --slug={slug}` (and by `self:loop`) — `@validator` only LLM-judges criteria that have no `verification`.
+
+Authoring rules for `verification`:
+
+- **Prefer the project's own test runner** (`node --test tests/x.test.js`, `npm test -- --grep "..."`, `pytest tests/test_x.py`). A criterion backed by a real test is the gold standard.
+- **One-liner assertions** when no test exists yet: `node -e "const m = require('./src/x'); process.exit(typeof m.parseX === 'function' ? 0 : 1)"`.
+- **Deterministic only**: no network calls, no wall-clock dependence, no interactive prompts.
+- **Cross-platform**: single commands or npm scripts — avoid shell chaining (`&&`, `||`) and POSIX-only utilities (`grep`, `test -f`) on Windows-first projects; use `node -e` for file/shape assertions instead.
+- **Self-contained**: the command must pass/fail on a clean checkout after install — no hidden setup steps.
+- A `binary: true` criterion **without** `verification` remains valid (judged by `@validator`, as before), but the contract schema emits a coverage warning — treat each one as debt and justify it in the enrichment log.
 
 ### 3. Set `contract_mode`
 
@@ -90,11 +104,14 @@ Safe defaults for `BALANCED`:
       "id": "C1",
       "description": "...",
       "assertion": "...",
-      "binary": true
+      "binary": true,
+      "verification": "node --test tests/foo.test.js"
     }
   ]
 }
 ```
+
+`verification` is optional per criterion (legacy contracts remain valid), executed via `aioson harness:check` with exit code 0 = pass.
 
 ### `progress.json`
 

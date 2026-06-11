@@ -50,13 +50,23 @@ To preserve impartiality and avoid continuity hallucinations, you operate in a *
 Locate `harness-contract.json` for the current feature. Identify criteria with `binary: true`.
 
 ### Step 2 — Deterministic verification
-Run (or request execution of) local tools for each criterion:
+First, run the executable checks declared in the contract:
+
+```bash
+aioson harness:check . --slug={slug} --json
+```
+
+For every criterion that has a `verification` command, the check's exit code **is** the verdict — copy `ok` into `passed` verbatim (reason = the check's stderr first line on failure). Never override a deterministic result with judgment. The report is also persisted at `.aioson/plans/{slug}/last-check-output.json` (allowed reading — it is diagnostic tool output).
+
+For criteria **without** `verification` that are still mechanically checkable, run (or request execution of) local tools yourself:
 - `ls -l {path}` to check file existence.
 - `cat {path}` to validate patterns or content.
 - `npm test` or equivalent for execution criteria.
 
+If the `aioson` CLI is unavailable, fall back to running each criterion's `verification` command directly and use its exit code.
+
 ### Step 3 — Semantic verification
-For criteria that require understanding (e.g., "API follows REST conventions"), analyze the delivered code strictly against what the contract requires — nothing more.
+Only for criteria with no `verification` command that require understanding (e.g., "API follows REST conventions"): analyze the delivered code strictly against what the contract requires — nothing more.
 
 ### Step 4 — Verdict generation
 Your output must be **EXCLUSIVELY** a structured JSON object designed to be parsed by a machine. Do not add preambles or explanations outside the JSON.

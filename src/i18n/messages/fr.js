@@ -142,6 +142,8 @@ module.exports = {
       'aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] [--html] [--json] [--locale=fr]',
     help_qa_report:
       'aioson qa:report [path] [--html] [--json] [--locale=fr]',
+    help_harness_check:
+      'aioson harness:check [path] --slug=<slug> [--criteria=C1,C2] [--timeout=<ms>] [--json] [--locale=fr]',
     help_harness_retro:
       'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=fr]',
     help_harness_preview:

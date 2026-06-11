@@ -173,7 +173,7 @@ Both `@tester` and `@pentester` are official AIOSON agents. Surface them explici
 **Recommend `@validator`** in the report when:
 - `.aioson/plans/{slug}/harness-contract.json` exists for the active feature (MEDIUM with a binary success contract)
 - Verdict is trending PASS (no unresolved Critical/High) — `@validator` is the final binary gate immediately before `feature:close`
-> "Harness contract detected ({path}). Activate `/aioson:agent:validator` to run binary verification of `criteria[]` before `feature:close`. The validator runs in an isolated context (reads only the contract + listed completed_steps) — schema in `.aioson/docs/sheldon/harness-contract.md`."
+> "Harness contract detected ({path}). Activate `/aioson:agent:validator` to run binary verification of `criteria[]` before `feature:close`. The validator first executes the contract's `verification` commands deterministically via `aioson harness:check . --slug={slug}` and only LLM-judges criteria without one. It runs in an isolated context (reads only the contract + listed completed_steps) — schema in `.aioson/docs/sheldon/harness-contract.md`."
 
 When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invocation `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` instead of telling the user to type the slash command — same effect, dashboard logs the run. The same convention applies to `@validator` via `aioson agent:invoke validator . --feature={slug}`.
 

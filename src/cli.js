@@ -416,6 +416,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'harness-reject',
   'harness:status',
   'harness-status',
+  'harness:check',
+  'harness-check',
   'harness:retro',
   'harness-retro',
   'harness:preview',
@@ -843,6 +845,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_qa_run');
   logHelpLine(t, logger, 'cli.help_qa_scan');
   logHelpLine(t, logger, 'cli.help_qa_report');
+  logHelpLine(t, logger, 'cli.help_harness_check');
   logHelpLine(t, logger, 'cli.help_harness_retro');
   logHelpLine(t, logger, 'cli.help_harness_preview');
   logHelpLine(t, logger, 'cli.help_web_map');
@@ -1301,6 +1304,9 @@ async function main() {
     } else if (command === 'harness:status' || command === 'harness-status') {
       const { runHarnessStatus } = require('./commands/harness-status');
       result = await runHarnessStatus({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:check' || command === 'harness-check') {
+      const { runHarnessCheck } = require('./commands/harness-check');
+      result = await runHarnessCheck({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:retro' || command === 'harness-retro') {
       const { runHarnessRetro } = require('./commands/harness-retro');
       result = await runHarnessRetro({ args, options, logger: commandLogger, t });

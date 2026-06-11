@@ -219,6 +219,7 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
 - Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
+- If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` before declaring a phase done — read-only deterministic check of executable criteria; `@validator` remains the gate.
 - Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
 ## Built-in dev modules

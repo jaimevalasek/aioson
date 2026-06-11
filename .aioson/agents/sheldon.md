@@ -272,7 +272,7 @@ Run after writing `sheldon-enrichment-{slug}.md` only when `classification: MEDI
 
 Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
 
-Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
+Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check`), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
 ## Retro dossier analysis (on-demand)
 

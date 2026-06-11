@@ -28,10 +28,33 @@ function legacyContract(extra = {}) {
 }
 
 describe('harness/contract-schema — validateContract (REQ-1)', () => {
-  test('legacy contract is valid with no warnings (EC-12)', () => {
+  test('legacy contract is valid; binary criterion without verification only warns (EC-12)', () => {
     const result = validateContract(legacyContract());
     assert.strictEqual(result.ok, true);
     assert.deepStrictEqual(result.errors, []);
+    // Único warning permitido no shape legado: cobertura executável (advisory).
+    assert.strictEqual(result.warnings.length, 1);
+    assert.strictEqual(result.warnings[0].field, 'criteria[0].verification');
+    assert.match(result.warnings[0].reason, /no executable verification/);
+  });
+
+  test('binary criterion with verification produces no coverage warning', () => {
+    const result = validateContract(legacyContract({
+      criteria: [
+        { id: 'C1', description: 'Estrutura', assertion: 'all files exist', binary: true, verification: 'node --test tests/foo.test.js' }
+      ]
+    }));
+    assert.strictEqual(result.ok, true);
+    assert.deepStrictEqual(result.warnings, []);
+  });
+
+  test('advisory criterion (binary: false) without verification produces no coverage warning', () => {
+    const result = validateContract(legacyContract({
+      criteria: [
+        { id: 'C1', description: 'UX feel', assertion: 'looks polished', binary: false }
+      ]
+    }));
+    assert.strictEqual(result.ok, true);
     assert.deepStrictEqual(result.warnings, []);
   });
 
@@ -70,8 +93,8 @@ describe('harness/contract-schema — validateContract (REQ-1)', () => {
   test('allowed_files: [] is a warning, not an error (EC-5)', () => {
     const result = validateContract(legacyContract({ allowed_files: [] }));
     assert.strictEqual(result.ok, true);
-    assert.strictEqual(result.warnings.length, 1);
-    assert.strictEqual(result.warnings[0].field, 'allowed_files');
+    const allowedWarnings = result.warnings.filter((w) => w.field === 'allowed_files');
+    assert.strictEqual(allowedWarnings.length, 1);
   });
 
   test('invalid contract_mode is rejected; presets accepted case-insensitively (REQ-19)', () => {

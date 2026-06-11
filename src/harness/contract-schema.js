@@ -250,6 +250,14 @@ function validateContract(contract) {
         if (criterion.binary !== undefined && typeof criterion.binary !== 'boolean') {
           errors.push({ field: `criteria[${i}].binary`, reason: 'must be a boolean' });
         }
+        // Cobertura executável: critério binário sem verification continua
+        // válido (julgado pelo @validator), mas é dívida de verificação.
+        if (criterion.binary === true && criterion.verification === undefined) {
+          warnings.push({
+            field: `criteria[${i}].verification`,
+            reason: `binary criterion "${criterion.id}" has no executable verification command — @validator will LLM-judge it`
+          });
+        }
       });
     }
   }

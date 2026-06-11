@@ -156,6 +156,8 @@ module.exports = {
       'aioson harness:init [path] --slug=<slug> [--mode=BALANCED|URGENT|ECONOMICAL] [--locale=en]',
     help_harness_validate:
       'aioson harness:validate [path] --slug=<slug> [--artifact=<path>] [--locale=en]',
+    help_harness_check:
+      'aioson harness:check [path] --slug=<slug> [--criteria=C1,C2] [--timeout=<ms>] [--json] [--locale=en]',
     help_harness_retro:
       'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=en]',
     help_harness_preview:
@@ -1082,7 +1084,11 @@ module.exports = {
     contract_not_found: 'Contract not found for slug: {slug}',
     validating: 'Validating harness for {slug}...',
     blocked: 'Execution paused: {reason}',
-    init_dry_run: '[dry-run] Would initialize harness for {slug}'
+    init_dry_run: '[dry-run] Would initialize harness for {slug}',
+    check_header: 'Harness check — {slug}',
+    check_no_executable: '  No criteria with verification commands ({total} criteria total). @validator judges them all.',
+    check_summary: '  Checks: {passed}/{executable} passed ({skipped} without verification — judged by @validator)',
+    check_unknown_criteria: 'Unknown criteria ids: {ids}'
   },
   web_map: {
     url_missing: 'Missing required option: --url=<url>.',
