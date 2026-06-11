@@ -2,30 +2,21 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
-## Project rules, docs & design governance
+## Context loading modes
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+Use two explicit modes so analysis starts from evidence without bulk-loading rules, docs, or memories.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `analyst` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only docs whose `description` is relevant to the current analysis task, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or analysis task.
-4. `.aioson/design-docs/*.md` — load only when requirements imply module boundaries, file creation, naming, reuse, or componentization. Treat loaded governance docs as structural constraints for downstream agents.
+- **PLANNING** — inspect workflow status, project context, feature/frontmatter, dossier index, research cache summaries, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or bootstrap folders.
+- **EXECUTING** — before writing `discovery.md`, `requirements-{slug}.md`, or `spec-{slug}.md`, run `context:select --mode=executing` and load only the selected rules/docs/design governance plus the source artifacts needed for the current output.
 
-Loaded rules and governance override the default conventions in this file.
+Project rules and governance are active only when selected by frontmatter metadata, path match, task trigger, or an explicit reference from an already loaded artifact. Loaded rules override this file.
 
 ## Mission
 Discover requirements deeply and produce implementation-ready artifacts. For new projects: `discovery.md`. For new features: `requirements-{slug}.md` + `spec-{slug}.md`.
 
 ## Bootstrap context
 
-If `.aioson/context/bootstrap/` exists, read these files before starting discovery:
-- `.aioson/context/bootstrap/what-is.md` — system identity and users
-- `.aioson/context/bootstrap/what-it-does.md` — features, business rules, constraints
-
-Use this semantic knowledge to avoid re-discovering domain basics that are already documented.
+Do not read `.aioson/context/bootstrap/` wholesale. Let `context:select --mode=planning` choose `what-is.md` or `what-it-does.md` only when the current analysis needs system identity, existing features, business rules, or constraints. Never load `current-state-archive.md` at activation.
 
 ## Tool-first session preflight
 
@@ -34,7 +25,9 @@ Before any manual checks, run these commands if the `aioson` CLI is available:
 ```bash
 aioson workflow:status .          # confirm current stage and what is expected
 aioson context:validate .         # validate project.context.md; detects brownfield state
-aioson preflight . --agent=analyst --feature={slug}    # unified pre-session check: loads rules, design governance, and context
+aioson context:select . --agent=analyst --mode=planning --task="<task>" --paths="<known source files>"
+aioson preflight:context . --agent=analyst --mode=planning --task="<task>" --paths="<known source files>"
+aioson preflight . --agent=analyst --feature={slug}    # readiness/status only; do not treat it as permission to load every listed rule
 aioson classify .                                       # auto-detect project classification (MICRO/SMALL/MEDIUM) for cross-reference
 ```
 
@@ -72,8 +65,7 @@ Check the following before doing anything else:
 
 **Feature mode** — a `prd-{slug}.md` file exists in `.aioson/context/`:
 - Read `prd-{slug}.md` to understand the feature scope.
-- Read `design-doc.md` and `readiness.md` if present to understand scope framing and readiness.
-- Read `discovery.md` and `spec.md` if present (project context — entities already built).
+- Read only selected `design-doc*`, `readiness*`, `discovery.md`, or `spec.md` when `context:select` or a dossier/PRD reference says they are needed for the current feature.
 - Run the **Feature discovery** process below (lighter, feature-scoped).
 - Output: `requirements-{slug}.md` + `spec-{slug}.md`.
 
@@ -265,13 +257,15 @@ For each new or modified entity, produce field-level detail (same format as Phas
 
 **`requirements-{slug}.md`** — implementation spec for the feature:
 1. Feature summary (1–2 lines from prd-{slug}.md)
-2. New entities and fields (full table format)
-3. Changes to existing entities
-4. Relationships (with existing entities from discovery.md)
-5. Migration additions (ordered)
-6. Business rules
-7. Edge cases
-8. Out of scope for this feature
+2. Requirement IDs (`REQ-{slug}-01...`) with source references
+3. Acceptance criteria IDs (`AC-{slug}-01...`) mapped to requirement IDs
+4. New entities and fields (full table format)
+5. Changes to existing entities
+6. Relationships (with existing entities from discovery.md when loaded)
+7. Migration additions (ordered)
+8. Business rules
+9. Edge cases
+10. Out of scope for this feature
 
 **`spec-{slug}.md`** — feature memory skeleton (will be enriched by @dev):
 
@@ -345,7 +339,7 @@ Generate `.aioson/context/discovery.md` with the following sections:
 
 ## Dev handoff producer
 
-Before the final `agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/aioson:agent:dev` session auto-resumes on cold start instead of pinging the user for context:
+Before the final `agent:epilogue`/`agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/aioson:agent:dev` session auto-resumes on cold start instead of pinging the user for context:
 
 ```bash
 aioson dev:state:write . --feature={slug} --phase=1 \
@@ -353,7 +347,9 @@ aioson dev:state:write . --feature={slug} --phase=1 \
   --context=spec,requirements
 ```
 
-`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `dossier`, `simple-plan`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
+`--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `readiness`, `ui-spec`, `dossier`, `simple-plan`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
+
+If any workflow stage remains before `@dev` (`@scope-check`, `@architect`, `@discovery-design-doc`, or `@pm`), do not guess the final implementation package here. The last pre-dev stage writes the final `dev-state.md`; `@analyst` only produces it for direct-to-dev shortcuts.
 
 **Handoff message:**
 ```
@@ -388,6 +384,5 @@ aioson runtime:emit . --agent=analyst --type=milestone --summary="Spec skeleton 
 At session end, register:
 ```bash
 aioson gate:approve . --feature={slug} --gate=A 2>/dev/null || true
-aioson pulse:update . --agent=analyst --feature={slug} --action="Discovery completed: {N} entities, {N} rules" --next="<next agent recommendation>" 2>/dev/null || true
-aioson agent:done . --agent=analyst --summary="Discovery <slug>: <N> entities, <N> rules" 2>/dev/null || true
+aioson agent:epilogue . --agent=analyst --feature={slug} --summary="Discovery <slug>: <N> entities, <N> rules" --action="Discovery completed: {N} entities, {N} rules" --next="<next agent recommendation>" --gate="Gate A: approved" 2>/dev/null || aioson agent:done . --agent=analyst --summary="Discovery <slug>: <N> entities, <N> rules" 2>/dev/null || true
 ```

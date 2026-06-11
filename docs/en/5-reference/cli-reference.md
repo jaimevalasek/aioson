@@ -663,3 +663,88 @@ aioson scout:commit --input=<path> --json
 **Exit codes:** 0 = committed (or no-op); 1 = file not found, lock failure.
 
 See [Sub-task Scout — CLI reference](../deyvin-subtask-scout/cli-commands.md) for full details.
+
+---
+
+## harness:approve
+
+Approve a pending human gate in the self:loop (loop guardrails). Persists the decision (who, when) to `.aioson/plans/{slug}/gates/{id}.json` and resumes the loop.
+
+```bash
+aioson harness:approve . --slug=<feature> --gate=<gate-id>
+aioson harness:approve . --slug=checkout --gate=database_destructive_change-1
+```
+
+**Options:**
+- `--slug=<feature>` — **required**. Feature slug matching the harness contract.
+- `--gate=<id>` — **required**. Gate id shown in `harness:status` output.
+- `--by=<name>` — override the "decided by" field (defaults to `git config user.name`).
+
+**Idempotent:** re-approving an already-decided gate is a no-op with a warning.
+
+---
+
+## harness:reject
+
+Reject a pending human gate. Ends the current loop attempt with a summary. Requires `--reason`.
+
+```bash
+aioson harness:reject . --slug=<feature> --gate=<gate-id> --reason="needs revert"
+```
+
+**Options:**
+- `--slug`, `--gate` — same as `harness:approve`.
+- `--reason=<text>` — **required** on reject. Recorded in the gate decision file.
+
+---
+
+## harness:status
+
+Human-readable view of the current loop state for a feature.
+
+```bash
+aioson harness:status . --slug=<feature>
+aioson harness:status . --slug=checkout --json
+```
+
+**Shows:** circuit state (open/closed), current iteration / max, estimated token budget (used/ceiling), last-attempt checks (passed/failed), last failure signature, pending human gates, and recommended next action.
+
+**Options:**
+- `--slug=<feature>` — **required**.
+- `--json` — structured output.
+
+---
+
+## harness:retro
+
+Deterministically mine the failure trail of a feature and materialize a retrospective dossier at `.aioson/context/retro/{slug}.md`. LLM-free, network-free. Source files are never modified.
+
+```bash
+aioson harness:retro . --feature=<slug>
+aioson harness:retro . --last=<N>          # last N features by PASS date
+aioson harness:retro . --feature=checkout --json
+```
+
+**Options:**
+- `--feature=<slug>` — mine a specific feature (mutually exclusive with `--last`).
+- `--last=<N>` — mine the N most recently completed features.
+- `--json` — structured output; exit codes are propagated.
+- `--locale=<l>` — output locale (default: project `interaction_language`).
+
+**Exit codes:** 0 = success (including empty dossier); 1 = unexpected I/O error; 12 = input error (invalid slug, conflicting flags, feature not found).
+
+**Sources mined:** QA reports, correction plans, dossier FAIL→PASS cycles, execution events, attempt artifacts, failure signatures, devlogs.
+
+---
+
+## harness:preview
+
+Display a truncated, UTF-8-safe preview of an artifact file. Used in self:loop criteria-fail feedback to avoid dumping full file contents into the agent context.
+
+```bash
+aioson harness:preview <file>
+aioson harness:preview .aioson/context/retro/checkout.md
+```
+
+Read-only. Best-effort write for the preview artifact.
+

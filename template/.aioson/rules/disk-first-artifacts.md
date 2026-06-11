@@ -18,7 +18,7 @@ Every artifact produced by an AIOSON agent MUST be written to disk before sessio
 | `@analyst` | Discovery | `.aioson/context/discovery.md` |
 | `@analyst` | Requirements | `.aioson/context/requirements-{slug}.md` |
 | `@architect` | Architecture | `.aioson/context/architecture.md` |
-| `@ux-ui` | UI Spec | `.aioson/context/ui-spec-{slug}.md` |
+| `@ux-ui` | UI Spec | `.aioson/context/ui-spec.md` (current canonical; `ui-spec-{slug}.md` is accepted only when explicitly feature-scoped) |
 | `@sheldon` | Manifest | `.aioson/plans/{slug}/manifest.md` |
 | `@pm` | Implementation Plan | `.aioson/context/implementation-plan-{slug}.md` |
 | `@dev` | Feature spec | `.aioson/context/spec-{slug}.md` |

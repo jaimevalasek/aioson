@@ -233,6 +233,9 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
 
   const checks = [
     [product, '## Built-in product modules'],
+    [product, '## Context loading modes'],
+    [product, '## Evidence-backed structured intake'],
+    [product, 'Ask only after local artifacts, code evidence, memory summaries, selected context, and fresh research/cache cannot answer safely.'],
     [product, '.aioson/docs/product/conversation-playbook.md'],
     [product, '.aioson/docs/product/research-loop.md'],
     [product, '.aioson/docs/product/quality-lens.md'],
@@ -269,6 +272,29 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   assert.ok(Buffer.byteLength(product, 'utf8') <= KERNEL_BUDGET_BYTES, 'product kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(sheldon, 'utf8') <= KERNEL_BUDGET_BYTES, 'sheldon kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');
+});
+
+test('briefing and product prompts prefer evidence-backed intake over shallow questions', async () => {
+  const briefing = await read(path.join(ROOT, 'template/.aioson/agents/briefing.md'));
+  const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+  const webResearch = await read(path.join(ROOT, 'template/.aioson/skills/static/web-research-cache.md'));
+
+  const checks = [
+    [briefing, '## Context loading modes'],
+    [briefing, '### Evidence-backed structured intake'],
+    [briefing, 'same terminal picker style as `commit:prepare`'],
+    [briefing, 'Do not treat search snippets as evidence.'],
+    [product, '## Evidence-first product discovery'],
+    [product, 'same picker style as `commit:prepare`'],
+    [product, 'Do not treat search snippets as evidence.'],
+    [webResearch, '## Search quality model'],
+    [webResearch, 'Search result snippets are routing signals, not evidence.'],
+    [webResearch, 'Use adapters behind the same cache contract']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing evidence-backed token: ${token}`);
+  }
 });
 
 test('product, sheldon, and dev on-demand docs are managed and preserve critical guidance', async () => {

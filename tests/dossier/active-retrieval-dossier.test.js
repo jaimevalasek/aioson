@@ -91,6 +91,30 @@ describe('active-retrieval — context:pack includes active dossiers', () => {
     assert.ok(hasDossier, `Expected active-feat/dossier.md in pack, got: ${paths.join(', ')}`);
   });
 
+  it('does not include stale active dossier when no pointer or slug match exists', async () => {
+    const dossierDir = path.join(ctxDir, 'features', 'active-feat');
+    await fs.mkdir(dossierDir, { recursive: true });
+    await fs.writeFile(path.join(ctxDir, 'project-pulse.md'), '---\nactive_feature: (none)\n---\n# Pulse\n', 'utf8');
+    await fs.writeFile(path.join(dossierDir, 'dossier.md'), ACTIVE_DOSSIER, 'utf8');
+
+    const output = await createContextPack({ targetDir: tmp, agent: 'dev', goal: 'analyze context loading cost', maxFiles: 10 });
+    const paths = output.selectedFiles.map(f => f.path);
+    const hasDossier = paths.some(p => p.includes('active-feat') && p.includes('dossier.md'));
+    assert.equal(hasDossier, false, `Expected stale active-feat/dossier.md to stay out, got: ${paths.join(', ')}`);
+  });
+
+  it('includes active dossier when project-pulse points to it', async () => {
+    const dossierDir = path.join(ctxDir, 'features', 'active-feat');
+    await fs.mkdir(dossierDir, { recursive: true });
+    await fs.writeFile(path.join(ctxDir, 'project-pulse.md'), '---\nactive_feature: active-feat\n---\n# Pulse\n', 'utf8');
+    await fs.writeFile(path.join(dossierDir, 'dossier.md'), ACTIVE_DOSSIER, 'utf8');
+
+    const output = await createContextPack({ targetDir: tmp, agent: 'dev', goal: 'implement next task', maxFiles: 10 });
+    const paths = output.selectedFiles.map(f => f.path);
+    const hasDossier = paths.some(p => p.includes('active-feat') && p.includes('dossier.md'));
+    assert.ok(hasDossier, `Expected pointed active-feat/dossier.md in pack, got: ${paths.join(', ')}`);
+  });
+
   it('does NOT include closed dossier', async () => {
     const dossierDir = path.join(ctxDir, 'features', 'closed-feat');
     await fs.mkdir(dossierDir, { recursive: true });

@@ -1,5 +1,10 @@
 ---
 description: "UI/UX site delivery — landing-page composition rules, hero law, motion standards, copy expectations, CSS techniques, and final HTML structure."
+agents: [ux-ui]
+modes: [executing]
+task_types: [site-delivery, landing-page, static-html]
+load_tier: trigger
+triggers: [project_type site, landing page, marketing page, index.html, static site, full-page HTML]
 ---
 
 # UX/UI Site Delivery

@@ -1,5 +1,10 @@
 ---
 description: "UI/UX design execution — entry check, refine-vs-rebuild routing, design intent, domain exploration, direction selection, and delivery quality rules."
+agents: [ux-ui]
+modes: [executing]
+task_types: [ui-design, ui-spec-writing, refine-spec, visual-direction]
+load_tier: trigger
+triggers: [default-create, refine-spec, writing ui-spec, rebuild UI, existing UI]
 ---
 
 # UX/UI Design Execution

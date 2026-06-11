@@ -1,12 +1,17 @@
 ---
 description: "File size guidelines, alert thresholds, and split strategies"
 scope: "governance"
-agents: []
+agents: [dev, deyvin, architect]
+modes: [planning, executing]
+task_types: [implementation, refactor, extraction, file-size]
+load_tier: trigger
+triggers: [large file, over 500 lines, split file, extract module, file size, growing file]
+paths: [src/**, app/**, lib/**, template/**, tests/**]
 ---
 
 # File Size — Governance Rules
 
-> Loaded automatically by @dev and @deyvin. Override per-project via `.aioson/rules/`.
+> Loaded by the context selector when file size, split, extraction, or large-file risk is in scope. Override per-project via `.aioson/rules/`.
 
 ## Thresholds
 

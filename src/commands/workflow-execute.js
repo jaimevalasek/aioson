@@ -39,6 +39,7 @@ const {
 
 const BAR = '━'.repeat(45);
 const EXECUTION_STATE_RELATIVE_PATH = '.aioson/context/workflow-execute.json';
+const DEFAULT_AGENTIC_MAX_CYCLES = 3;
 
 const STEP_META = {
   setup: { description: 'Initialize project context', gate_before: null, gate_after: null },
@@ -94,6 +95,96 @@ function normalizeAgentName(value) {
 
 function quoteCliArg(value) {
   return `'${String(value || '').replace(/'/g, "'\\''")}'`;
+}
+
+function parsePositiveIntegerOption(value, fallback, min = 1, max = 10) {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  if (!Number.isInteger(parsed)) return fallback;
+  if (parsed < min) return min;
+  if (parsed > max) return max;
+  return parsed;
+}
+
+function isAgenticRequested(options = {}) {
+  return Boolean(
+    options.agentic ||
+    options['agentic-run'] ||
+    options.autopilot === 'agentic' ||
+    options.autopilot === 'runtime'
+  );
+}
+
+function buildAgenticPolicy(options = {}, classification = 'SMALL') {
+  const enabled = isAgenticRequested(options);
+  if (!enabled) return null;
+
+  const maxDevQaCycles = parsePositiveIntegerOption(
+    options['max-dev-qa-cycles'] || options.maxDevQaCycles || options['max-cycles'],
+    DEFAULT_AGENTIC_MAX_CYCLES
+  );
+  const maxTesterCycles = parsePositiveIntegerOption(
+    options['max-tester-cycles'] || options.maxTesterCycles || options['max-specialist-cycles'],
+    DEFAULT_AGENTIC_MAX_CYCLES
+  );
+  const maxPentesterCycles = parsePositiveIntegerOption(
+    options['max-pentester-cycles'] || options.maxPentesterCycles || options['max-specialist-cycles'],
+    DEFAULT_AGENTIC_MAX_CYCLES
+  );
+
+  return {
+    enabled: true,
+    mode: 'runtime_policy',
+    source: 'workflow:execute',
+    stop_conditions: [
+      'feature_status_done',
+      'human_decision_required',
+      'gate_blocked',
+      'context_budget_exceeded',
+      'cycle_limit_reached',
+      'critical_security_human_gate',
+      'feature_close_human_gate'
+    ],
+    review_cycle: {
+      hub: 'qa',
+      max_dev_qa_cycles: maxDevQaCycles,
+      max_tester_correction_cycles: maxTesterCycles,
+      max_pentester_correction_cycles: maxPentesterCycles,
+      qa_fail_route: 'dev',
+      tester_route: 'tester after qa coverage trigger',
+      pentester_route: 'pentester after sensitive-surface trigger or MEDIUM sequence stage',
+      validator_route: 'validator when harness contract is present',
+      feature_close: 'human_gate'
+    },
+    lanes: {
+      enabled: classification === 'MEDIUM',
+      strategy: 'parallelize_only_independent_write_scopes',
+      guard_command: 'aioson parallel:guard . --lane=<n>',
+      conflict_action: 'block_lane'
+    },
+    sidecars: {
+      scouts: {
+        enabled: true,
+        read_only: true,
+        max_per_session: 3,
+        max_files_in_scope: 20,
+        allowed_parent_agents: ['deyvin', 'dev', 'product', 'briefing', 'orache']
+      },
+      research: {
+        enabled: true,
+        cache_dir: 'researchs/',
+        cache_ttl_days: 7
+      }
+    }
+  };
+}
+
+function formatAgenticPolicyLines(policy) {
+  if (!policy || !policy.enabled) return [];
+  return [
+    `Agentic policy: enabled (dev<->qa max ${policy.review_cycle.max_dev_qa_cycles} cycles)`,
+    `Review loop: qa fail -> dev; tester max ${policy.review_cycle.max_tester_correction_cycles}; pentester max ${policy.review_cycle.max_pentester_correction_cycles}; close=${policy.review_cycle.feature_close}`,
+    `Parallel lanes: ${policy.lanes.enabled ? 'enabled for independent write scopes' : 'disabled for this classification'}`
+  ];
 }
 
 function findNextFromSequence(sequence, completed, skipped = []) {
@@ -475,6 +566,7 @@ async function writeExecutionCheckpoint(targetDir, payload) {
     status_snapshot: payload.statusSnapshot || null,
     suggestion: payload.suggestion || null,
     resume_command: payload.resumeCommand || null,
+    agentic_policy: payload.agenticPolicy || null,
     history
   };
   await writeJson(execPath, nextPayload);
@@ -630,6 +722,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
   if (!classification) classification = await detectClassification(targetDir, slug);
   if (!classification) classification = 'SMALL';
   classification = normalizeClassification(classification, 'SMALL');
+  const agenticPolicy = buildAgenticPolicy(options, classification);
 
   const autonomyProtocol = await readAutonomyProtocol(targetDir);
   const toolPolicy = getToolPolicy(autonomyProtocol, tool);
@@ -698,7 +791,17 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     `--feature=${quoteCliArg(slug)}`,
     `--tool=${quoteCliArg(tool)}`,
     ...(requestedMode ? [`--mode=${quoteCliArg(requestedMode)}`] : []),
-    ...(maxCheckpoints !== 1 ? [`--max-checkpoints=${quoteCliArg(maxCheckpoints)}`] : [])
+    ...(maxCheckpoints !== 1 ? [`--max-checkpoints=${quoteCliArg(maxCheckpoints)}`] : []),
+    ...(agenticPolicy ? ['--agentic'] : []),
+    ...(agenticPolicy && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+      ? [`--max-dev-qa-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_dev_qa_cycles)}`]
+      : []),
+    ...(agenticPolicy && agenticPolicy.review_cycle.max_tester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+      ? [`--max-tester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_tester_correction_cycles)}`]
+      : []),
+    ...(agenticPolicy && agenticPolicy.review_cycle.max_pentester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+      ? [`--max-pentester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_pentester_correction_cycles)}`]
+      : [])
   ].join(' ');
 
   if (dryRun) {
@@ -720,6 +823,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       status_snapshot: statusSnapshot,
       suggestion: statusSnapshot && statusSnapshot.suggestion ? statusSnapshot.suggestion : null,
       resume_command: resumeCommand,
+      agentic_policy: agenticPolicy,
       parallel_guard: parallelGuard
     };
 
@@ -742,6 +846,9 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     logger.log(`Resume state: ${seeded.resumed ? 'existing workflow state reused' : 'new workflow state seeded'}`);
     if (statusSnapshot && statusSnapshot.suggestion && statusSnapshot.suggestion.command) {
       logger.log(`Suggested command: ${statusSnapshot.suggestion.command}`);
+    }
+    for (const line of formatAgenticPolicyLines(agenticPolicy)) {
+      logger.log(line);
     }
     logger.log('');
     return result;
@@ -826,7 +933,8 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     checkpoint: buildCheckpointPayload(activation, handoff, handoffProtocol),
     statusSnapshot: refreshedStatus,
     suggestion: refreshedStatus && refreshedStatus.suggestion ? refreshedStatus.suggestion : null,
-    resumeCommand
+    resumeCommand,
+    agenticPolicy
   });
 
   const result = {
@@ -844,6 +952,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     status_snapshot: refreshedStatus,
     suggestion: refreshedStatus && refreshedStatus.suggestion ? refreshedStatus.suggestion : null,
     resume_command: resumeCommand,
+    agentic_policy: agenticPolicy,
     transitions: executionTransitions,
     active_stage: activation && activation.agent ? activation.agent : null,
     next_stage: activation && activation.next ? activation.next : null,
@@ -864,6 +973,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
 
 module.exports = {
   EXECUTION_STATE_RELATIVE_PATH,
+  buildAgenticPolicy,
   buildExecutionPlan,
   seedFeatureWorkflowState,
   runWorkflowExecute

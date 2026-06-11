@@ -17,6 +17,14 @@ Autopilot is active only when ALL are true:
 2. A feature workflow is active (feature slug known, classification SMALL or MEDIUM).
 3. The current agent's own gate/verdict passed (see stop conditions).
 
+Preferred runtime entrypoint:
+
+```bash
+aioson workflow:execute . --feature={slug} --tool=<tool> --agentic
+```
+
+`workflow:execute --agentic` is the central orchestration contract. It writes `.aioson/context/workflow-execute.json` with `agentic_policy`, including the review-loop caps, sidecar/scout policy, lane guard, current checkpoint, and resumable command. Prompt-level `Skill(aioson:agent:<next>)` chaining remains a compatibility fallback for clients that cannot let the gateway consume this checkpoint.
+
 ## Routing — deterministic, never LLM-chosen
 
 The next agent comes from the workflow state machine and on-disk evidence, not from model judgment:
@@ -30,15 +38,18 @@ Never skip a stage, reorder, or pick an agent the state machine / routing table 
 
 When autopilot is active and no stop condition applies:
 
-1. Finish your own closing duties first (artifacts on disk, gate registration, dossier/spec updates, `pulse:update`, `agent:done`).
-2. Emit a one-line transition notice: `Autopilot: @<current> done → invoking @<next> (Ctrl+C to interrupt)`.
-3. Invoke `Skill(aioson:agent:<next>)` with the task `"continue feature {slug} — autopilot handoff from @<current>"`. No user prompt — Ctrl+C interrupts.
+1. Finish your own closing duties first (artifacts on disk, gate registration, dossier/spec updates, `agent:epilogue`; `agent:done` remains the fallback).
+2. If the runtime checkpoint contains `agentic_policy.enabled=true`, let the gateway continue from `.aioson/context/workflow-execute.json`; do not ask the user to confirm the next deterministic stage.
+3. If no runtime gateway is available, emit a one-line transition notice: `Autopilot: @<current> done → invoking @<next> (Ctrl+C to interrupt)`.
+4. Invoke `Skill(aioson:agent:<next>)` with the task `"continue feature {slug} — autopilot handoff from @<current>"`. No user prompt — Ctrl+C interrupts.
 
 ## Segment 1 — pre-dev chain (`@analyst` → `@dev`)
 
-`@analyst` → `@scope-check` → `@architect` → `@discovery-design-doc` → (`@pm` on MEDIUM) → **STOP before `@dev`**.
+SMALL feature: `@analyst` → `@scope-check` → `@architect` → `@discovery-design-doc` → `@dev`.
 
-The pre-dev chain stops before the FIRST `@dev` activation. The human clears context (`/clear`) and starts implementation with a fresh budget — `@dev` is a heavy phase and benefits from a clean context window. Produce `dev-state.md` (the dev handoff producer), emit the standard handoff message, and recommend `/clear` + `/dev`. **Never auto-invoke the initial `@dev` entry.**
+MEDIUM feature: `@analyst` → `@architect` → `@discovery-design-doc` → `@pm` → `@scope-check` → `@dev`.
+
+The prompt-only fallback still stops before the FIRST `@dev` activation because `@dev` is a heavy phase and benefits from a fresh context window. Runtime agentic mode may cross this boundary only by starting a fresh `@dev` activation from the checkpoint/context package, not by carrying the upstream chat context forward. If the gateway cannot start that fresh activation, stop with the normal `/clear` + `/dev` recommendation.
 
 ## Segment 2 — post-dev review cycle (hub = `@qa`)
 
@@ -49,8 +60,8 @@ Routing table (each row is followed only when autopilot is active and no stop co
 | Current | Condition | Auto-invoke |
 |---|---|---|
 | `@dev` (first pass) | tests green, gates clear, no open corrections cycle | `@qa` |
-| `@dev` (corrections) | corrections applied, tests green (`qa-dev-cycle.json` present) | `@qa` (re-verify) |
-| `@qa` | verdict **FAIL** (Critical/High) | `@dev` via the corrections auto-cycle (cap 2, security gate) |
+| `@dev` (corrections) | corrections applied, tests green (`review-cycle:status` active; `qa-dev-cycle.json` is legacy QA compatibility) | `@qa` (re-verify) |
+| `@qa` | verdict **FAIL** (Critical/High) | `@dev` via the corrections auto-cycle (cap 3, security gate) |
 | `@qa` | verdict **PASS** + `@tester` trigger fires AND `@tester` not yet run clean | `@tester` |
 | `@qa` | verdict **PASS** + `@pentester` trigger fires AND `@pentester` not yet run clean | `@pentester` |
 | `@qa` | verdict **PASS** + harness contract present AND `@validator` not yet PASS | `@validator` |
@@ -69,8 +80,8 @@ Routing table (each row is followed only when autopilot is active and no stop co
 ## Stop conditions — break the chain and emit the normal manual handoff
 
 1. **`feature:close` / publish** — ALWAYS the human gate. When `@qa` (PASS, nothing pending) or `@validator` (PASS) is the last clean step, STOP and recommend `aioson feature:close . --feature={slug}`. Never auto-run `feature:close`, `feature:archive`, `npm publish`, or any publish/close action.
-2. **First `@dev` entry** — the pre-dev chain stops here (Segment 1). The human clears context and starts implementation.
-3. **Corrections cap reached** — the `@qa`↔`@dev` auto-cycle is bounded at 2 rounds (`qa-dev-cycle.json`); when exhausted, stop and escalate to the human.
+2. **First `@dev` entry without runtime gateway** — prompt-only clients stop here (Segment 1). Runtime agentic mode may continue only through a fresh checkpointed `@dev` activation.
+3. **Corrections cap reached** — review cycles are bounded by `agentic_policy.review_cycle` (default 3); when `review-cycle:advance` returns `stop_cycle_limit`, stop and escalate to the human.
 4. **Critical security finding** — the `@qa` corrections security gate (auth/secret/credential/session/password/token/PII/encryption keywords) blocks the auto-loop; stop and require human intervention.
 5. **Verdict not clean / gate or readiness blocked** — `@scope-check` not `approved`/`patched`, `@architect` Gate B blocked, `@discovery-design-doc` readiness `blocked`, `@pm` Gate C blocked, `@validator` FAIL with no safe corrections path: stop and route to the owner manually.
 6. **Context budget** — estimated usage ≥ `context_warning_threshold` (`.aioson/config.md`): write the compaction checkpoint to `.aioson/context/last-handoff.json`, stop, and recommend `/clear`. The workflow resumes from `workflow.state.json` — the next session re-enters autopilot automatically.

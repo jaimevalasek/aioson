@@ -29,6 +29,14 @@ describe('parser.js — parseArgv', () => {
     assert.equal(result.options.agent, 'dev');
   });
 
+  it('parses --agentic as a boolean-only flag', () => {
+    const result = parseArgv(['node', 'aioson', 'workflow:execute', '--agentic', '.', '--feature', 'checkout']);
+    assert.equal(result.command, 'workflow:execute');
+    assert.equal(result.options.agentic, true);
+    assert.deepEqual(result.args, ['.']);
+    assert.equal(result.options.feature, 'checkout');
+  });
+
   it('parses short flags', () => {
     const result = parseArgv(['node', 'aioson', 'setup', '.', '-f', '-h', '-j', '-v']);
     assert.equal(result.options.force, true);

@@ -4,25 +4,21 @@ description: "Deyvin continuity recovery — session start order, resumption rul
 
 # Deyvin Continuity Recovery
 
-Load this module at the start of every `@deyvin` session before touching code.
+Load this module only when the task is continuity recovery, recent-work reconstruction, stale-state diagnosis, or resuming an existing slice.
 
 ## Session start order
 
 Build context in this order:
 
-1. If `aioson` is available, run `aioson memory:summary . --last=5` as the fast continuity bootstrap
+1. If `aioson` is available, run `aioson memory:summary . --last=5` as the fast continuity bootstrap.
 2. Read `.aioson/context/project.context.md`
-3. Check `.aioson/rules/`; load universal rules and rules targeted at `deyvin`
-4. Check `.aioson/docs/`; load docs referenced by rules or relevant to the task
-5. If the task is specific, run `aioson context:pack . --agent=deyvin --goal="<task>"` and read the generated pack
-6. Read `.aioson/context/memory-index.md` if present
-7. Read `.aioson/context/spec-current.md` and `.aioson/context/spec-history.md` if present
-8. Read `.aioson/context/spec.md` if present
-9. Read `.aioson/context/features.md` if present; if a feature is in progress, also read `prd-{slug}.md`, `requirements-{slug}.md`, and `spec-{slug}.md`
-10. Read `.aioson/context/skeleton-system.md`, `discovery.md`, and `architecture.md` as needed
-11. When the task matches procedural tags, run `aioson brain:query . --tags=<tags> --min-quality=4`
-12. Inspect recent runtime state in `.aioson/runtime/aios.sqlite` when memory summary is insufficient
-13. Use Git only as a fallback after memory + runtime + rules/docs
+3. Run `aioson context:select . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>"`.
+4. Load only the selected PLANNING files. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, `discovery.md`, or `architecture.md` from this step alone.
+5. If a feature slug is known, load its dossier/spec only when `context:select`, `dev-state.md`, or `project-pulse.md` points to that slug; use `spec-current.md` for active spec and `spec-history.md` only for history.
+6. If code inspection/editing is about to start, run `aioson context:select . --agent=deyvin --mode=executing --task="<task>" --paths="<files to touch>"` and load only the selected EXECUTING files.
+7. When the task matches procedural tags, run `aioson brain:query . --tags=<tags> --min-quality=4`.
+8. Inspect recent runtime state in `.aioson/runtime/aios.sqlite` when memory summary is insufficient.
+9. Use Git only as a fallback after memory + runtime + selected rules/docs.
 
 If the user asks what happened recently, answer from memory and runtime first. Go to Git only if those sources are insufficient.
 
@@ -41,7 +37,7 @@ Do not duplicate or rewrite the shared SDD references inside `@deyvin`.
 
 If `framework_installed=true` in `project.context.md` and the task depends on existing system behavior:
 
-- prefer `discovery.md` + `spec.md` as the primary memory pair
+- prefer selected module memory, `memory-index.md`, dossier, or spec before opening broad `discovery.md` / `architecture.md`
 - use `skeleton-system.md` or `memory-index.md` first for faster orientation
 - if `discovery.md` is missing but scan artifacts exist, stop and hand off to `@analyst`
 - if broad architecture decisions are required, hand off to `@architect`

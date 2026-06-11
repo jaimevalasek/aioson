@@ -145,6 +145,100 @@ test('workflow:status reports feature-scoped design-doc and readiness artifacts'
   assert.ok(result.artifacts.some((artifact) => artifact.label === 'readiness-protocol-contracts.md' && artifact.exists));
 });
 
+test('workflow:status hides stale feature handoff when active workflow is project mode', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'MEDIUM');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'MEDIUM',
+      sequence: ['setup', 'dev'],
+      current: null,
+      next: 'dev',
+      completed: ['setup'],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/last-handoff.json'),
+    JSON.stringify({
+      version: 1,
+      session_ended_at: new Date().toISOString(),
+      last_agent: '@dev',
+      workflow_mode: 'feature',
+      feature_slug: 'old-feature',
+      next_agent: '@qa'
+    }, null, 2)
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/handoff-protocol.json'),
+    JSON.stringify({
+      version: '1.0',
+      workflow_mode: 'feature',
+      feature_slug: 'old-feature',
+      from: { agent_id: 'dev' },
+      to: { agent_id: 'qa' },
+      artifact_uris: []
+    }, null, 2)
+  );
+
+  const result = await runWorkflowStatus({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t: (key) => key
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, 'project');
+  assert.equal(result.featureSlug, null);
+  assert.equal(result.handoff, null);
+  assert.equal(result.handoffProtocol, null);
+});
+
+test('workflow:status keeps handoff when feature slug matches active workflow', async () => {
+  const dir = await makeTempDir();
+  await seedFeatureWorkflow(dir, { gatePlanApproved: true });
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/last-handoff.json'),
+    JSON.stringify({
+      version: 1,
+      session_ended_at: new Date().toISOString(),
+      last_agent: '@architect',
+      workflow_mode: 'feature',
+      feature_slug: 'protocol-contracts',
+      next_agent: '@dev'
+    }, null, 2)
+  );
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/handoff-protocol.json'),
+    JSON.stringify({
+      version: '1.0',
+      workflow_mode: 'feature',
+      feature_slug: 'protocol-contracts',
+      from: { agent_id: 'architect' },
+      to: { agent_id: 'dev' },
+      artifact_uris: []
+    }, null, 2)
+  );
+
+  const result = await runWorkflowStatus({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t: (key) => key
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.handoff.feature_slug, 'protocol-contracts');
+  assert.equal(result.handoffProtocol.feature_slug, 'protocol-contracts');
+});
+
 test('workflow:status reconciles stale active stages before building the suggestion', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'MEDIUM');

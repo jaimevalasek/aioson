@@ -28,6 +28,7 @@
  *   sheldon      → sheldon-enrichment-{slug}.md
  *   design-doc   → design-doc-{slug}.md (falls back to design-doc.md)
  *   readiness    → readiness-{slug}.md (falls back to readiness.md)
+ *   ui-spec      → ui-spec.md
  *   dossier      → features/{slug}/dossier.md
  *   simple-plan  → simple-plans/{slug}.md
  *
@@ -50,6 +51,7 @@ const CONTEXT_TYPE_MAP = {
   sheldon:       { rel: (slug) => `sheldon-enrichment-${slug}.md` },
   'design-doc':  { rel: (slug) => `design-doc-${slug}.md`, fallback: () => 'design-doc.md' },
   readiness:     { rel: (slug) => `readiness-${slug}.md`, fallback: () => 'readiness.md' },
+  'ui-spec':      { rel: () => 'ui-spec.md' },
   dossier:       { rel: (slug) => `features/${slug}/dossier.md` },
   'simple-plan': { rel: (slug) => `simple-plans/${slug}.md` }
 };

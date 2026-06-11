@@ -6,6 +6,13 @@
 ## Mission
 Orchestrate parallel execution only for MEDIUM projects. Never activate for MICRO or SMALL.
 
+## Context loading modes
+
+- **PLANNING** — activation preflight, project context, feature slug, artifact presence/frontmatter, workflow state, approved plan summary, and `context:select` output. Do not load full requirements/spec/architecture/UI documents until the slug and Gate C are verified.
+- **EXECUTING** — lane creation and coordination. Load only the sections/files needed by the lane being assigned or conflict being resolved; use `implementation-plan-{slug}.md` as the primary phase index.
+
+If the approved plan already contains a Required Context Package, respect it as the upstream context contract. Do not widen the package unless a lane blocker proves a missing artifact is necessary.
+
 ## Activation preflight (EXECUTE BEFORE REQUIRED INPUT)
 
 This agent is unsafe to run on an uninitialized project or on a feature without approved upstream artifacts. Before loading the full required input:
@@ -40,13 +47,20 @@ Between handoffs, output only the next agent and the reason. Do not continue int
 
 ## Required input
 - `.aioson/context/project.context.md`
-- `.aioson/context/requirements-{slug}.md` — read the full body, not only frontmatter (Gate A artifact; defines what each lane must implement)
-- `.aioson/context/spec-{slug}.md` — read the full body (living feature memory; has gate status, decisions, and lane context)
-- `.aioson/context/architecture.md`
-- `.aioson/context/prd.md` or `prd-{slug}.md`
-- `.aioson/context/implementation-plan-{slug}.md` when present (Gate C; defines execution phases for lane assignment)
-- `.aioson/context/ui-spec-{slug}.md` when present
+- `.aioson/context/implementation-plan-{slug}.md` when present (Gate C; primary phase index for lane assignment)
+- `.aioson/context/spec-{slug}.md` (living feature memory; read gates/decisions first, deeper sections only when lanes need them)
+- `.aioson/context/requirements-{slug}.md` when assigning data/business-rule lanes
+- `.aioson/context/architecture.md` when assigning module-boundary, integration, security, or shared-contract lanes
+- `.aioson/context/prd.md` or `prd-{slug}.md` only for product-scope ambiguities
+- `.aioson/context/ui-spec.md` when assigning UI/frontend lanes
 - `.aioson/context/parallel/` when resuming an existing orchestration session
+
+Before optional deep loads, run:
+
+```bash
+aioson context:select . --agent=orchestrator --mode=planning --task="<orchestration task>" --paths="<plan/status paths>"
+aioson preflight:context . --agent=orchestrator --mode=planning --task="<orchestration task>" --paths="<plan/status paths>"
+```
 
 ## Skills and docs on demand
 
@@ -99,7 +113,7 @@ Before creating any worker or subagent for implementation:
 4. Only create workers for phases whose prerequisite gates are already approved.
 
 ### Step 1 — Identify modules and dependencies
-Read `prd.md` and `architecture.md`. List every module and identify direct dependencies between them.
+Use `implementation-plan-{slug}.md` first. If it lacks dependency information, read the relevant `architecture.md` sections and list every module with direct dependencies between them.
 
 Example dependency graph:
 ```
@@ -122,7 +136,7 @@ Implementation plans are optional support artifacts in the current runtime:
    - use its sequencing only when it still matches the current architecture and PRD
 3. If no plan exists:
    - do not pretend one exists
-   - derive lane boundaries from PRD, architecture, discovery, and ui-spec
+   - derive lane boundaries from PRD, architecture, discovery, and `ui-spec.md`
    - record any shared-contract constraints in `shared-decisions.md`
 4. Do not reference `.aioson/tasks/implementation-plan.md` as if it were an executable runtime primitive.
 
@@ -322,8 +336,7 @@ aioson runtime:emit . --agent=orchestrator --type=milestone --summary="Merge com
 
 At session end, register:
 ```bash
-aioson pulse:update . --agent=orchestrator --feature={slug} --action="Orchestration completed: {N} lanes, {N} merged" --next="<next agent recommendation>" 2>/dev/null || true
-aioson agent:done . --agent=orchestrator --summary="Orchestration <slug>: <N> lanes, <N> merged, <status>" 2>/dev/null || true
+aioson agent:epilogue . --agent=orchestrator --feature={slug} --summary="Orchestration <slug>: <N> lanes, <N> merged, <status>" --action="Orchestration completed: {N} lanes, {N} merged" --next="<next agent recommendation>" 2>/dev/null || aioson agent:done . --agent=orchestrator --summary="Orchestration <slug>: <N> lanes, <N> merged, <status>" 2>/dev/null || true
 ```
 
 Skip these observability commands when activation preflight stops before an active `{slug}` is known. In that case, produce only the handoff recommendation.

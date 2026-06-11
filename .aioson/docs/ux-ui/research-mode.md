@@ -1,5 +1,10 @@
 ---
 description: "UI/UX research mode — visual benchmarking, domain patterns, anti-patterns, and directional hypotheses before design work begins."
+agents: [ux-ui]
+modes: [planning]
+task_types: [ui-research, visual-benchmarking, domain-patterns]
+load_tier: trigger
+triggers: [research, benchmark, visual references, competitor UI, domain patterns]
 ---
 
 # UX/UI Research Mode

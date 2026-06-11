@@ -1,12 +1,17 @@
 ---
 description: "When and how to extract components, modules, and abstractions"
 scope: "governance"
-agents: []
+agents: [dev, deyvin, architect]
+modes: [planning, executing]
+task_types: [implementation-architecture, module-boundary, refactor, extraction]
+load_tier: trigger
+triggers: [extract component, extract module, split module, abstraction, componentization, refactor duplicated logic]
+paths: [src/**, app/**, lib/**, template/**]
 ---
 
 # Componentization — Governance Rules
 
-> Loaded automatically by @dev and @deyvin. Override per-project via `.aioson/rules/`.
+> Loaded by the context selector when extraction, module boundaries, duplication, or abstraction decisions are in scope. Override per-project via `.aioson/rules/`.
 
 ## When to extract
 

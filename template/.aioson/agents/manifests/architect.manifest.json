@@ -11,7 +11,17 @@
         {
           "type": "artifact",
           "path_pattern": ".aioson/context/discovery.md",
-          "required": true
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/requirements-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/spec-{slug}.md",
+          "required": false
         },
         {
           "type": "gate",

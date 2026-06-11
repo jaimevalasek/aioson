@@ -44,7 +44,7 @@ project.context.md            ← setup
 discovery.md                  ← analyst
 requirements-{slug}.md        ← analyst
 architecture.md               ← architect
-ui-spec-{slug}.md             ← ux-ui
+ui-spec.md / ui-spec-{slug}.md ← ux-ui (`ui-spec.md` is the current canonical runtime artifact)
 prd.md / prd-{slug}.md        ← product
 spec-{slug}.md                ← dev
 implementation-plan-{slug}.md ← pm

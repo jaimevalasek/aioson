@@ -29,7 +29,7 @@ function parseArgv(argv) {
         'all', 'force', 'dry-run', 'no-interactive', 'fix', 'json',
         'help', 'version', 'no-launch', 'attach', 'tmux',
         'allow-warnings', 'install-hook', 'uninstall-hook', 'remove-hook',
-        'agent-safe',
+        'agent-safe', 'agentic',
         'selective',
         'status', 'suggest', 'apply',
         'runtime-only', 'template-only', 'inception', 'locales',

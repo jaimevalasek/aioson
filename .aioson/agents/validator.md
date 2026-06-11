@@ -101,11 +101,11 @@ aioson dossier:add-finding . --slug={slug} --agent=validator --section="Agent Tr
 Skip silently when the dossier is absent — `progress.json` remains the canonical machine output.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=validator --summary="Validated <slug> phase <N>: score=<0|1>, ready_for_done=<bool>" 2>/dev/null || true`
+At session end, register: `aioson agent:epilogue . --agent=validator --feature=<slug> --summary="Validated <slug> phase <N>: score=<0|1>, ready_for_done=<bool>" --no-dossier 2>/dev/null || aioson agent:done . --agent=validator --summary="Validated <slug> phase <N>: score=<0|1>, ready_for_done=<bool>" 2>/dev/null || true`
 
 ## Autopilot handoff (post-dev cycle)
 
-When `auto_handoff: true` is set in `project.context.md`, after the verdict and `agent:done` (`.aioson/docs/autopilot-handoff.md`):
+When `auto_handoff: true` is set in `project.context.md`, after the verdict and `agent:epilogue`/`agent:done` (`.aioson/docs/autopilot-handoff.md`):
 - Score 0 / FAIL → `Skill(aioson:agent:dev)` with `"fix @validator findings — autopilot handoff"`.
 - Score 1 / PASS → **STOP**. The feature is verification-clean; recommend the human run `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
 

@@ -41,3 +41,18 @@ test('nenhum agente do ciclo auto-roda feature:close (gate humano preservado)', 
       `${id}.md deve tratar feature:close como gate humano`);
   }
 });
+
+test('autopilot usa limite de 3 ciclos qa-dev', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  for (const file of [
+    '.aioson/agents/qa.md',
+    'template/.aioson/agents/qa.md',
+    '.aioson/docs/autopilot-handoff.md',
+    'template/.aioson/docs/autopilot-handoff.md'
+  ]) {
+    const text = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
+    assert.match(text, /cap (?:= )?3|bounded at 3|3 rounds/, `${file} deve manter limite 3`);
+    assert.doesNotMatch(text, /cap (?:= )?2|bounded at 2|2 rounds/, `${file} nao deve manter limite 2`);
+  }
+});

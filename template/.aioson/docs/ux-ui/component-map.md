@@ -1,5 +1,10 @@
 ---
 description: "UI/UX component map mode — component inventory, atomic classification, variants, states, and gap analysis between spec and implementation."
+agents: [ux-ui]
+modes: [planning, executing]
+task_types: [component-map, component-inventory, ui-components]
+load_tier: trigger
+triggers: [component-map, component inventory, variants, states, duplicate components]
 ---
 
 # UX/UI Component Map

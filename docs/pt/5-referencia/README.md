@@ -10,6 +10,9 @@
 
 | Documento | Descrição |
 |---|---|
+| [loop-guardrails.md](./loop-guardrails.md) | Contrato verificável para o self:loop: scope guard, budget, human gates, criteria evaluation (v1.22.0) |
+| [harness-retro.md](./harness-retro.md) | Minerar o histórico de falhas de uma feature sem LLM — dossiê retrospectivo + harness:preview (v1.23.0) |
+| [autopilot-handoff.md](./autopilot-handoff.md) | Encadeamento automático de agentes pré-dev e pós-dev — opt-in via auto_handoff: true (v1.21.x–v1.22.0) |
 | [feature-dossier.md](./feature-dossier.md) | Dossier de feature: ponto único de verdade (spec, plano, histórico, status) |
 | [agent-chain-continuity.md](./agent-chain-continuity.md) | Sistema de continuidade entre sessões — Fases 1–8 (dev-resume, drift detection, handoff v2) |
 | [sdd-framework.md](./sdd-framework.md) | Spec-Driven Development: Constitution, project-pulse, skill aioson-spec-driven, MICRO/SMALL/MEDIUM |

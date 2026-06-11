@@ -1,12 +1,17 @@
 ---
 description: "DRY principles, reuse hierarchy, and composition patterns"
 scope: "governance"
-agents: []
+agents: [dev, deyvin, architect]
+modes: [planning, executing]
+task_types: [implementation-architecture, file-creation, refactor, reuse]
+load_tier: trigger
+triggers: [creating files, adding shared utility, reusing code, avoiding duplication, extending existing module]
+paths: [src/**, app/**, lib/**, template/**]
 ---
 
 # Code Reuse — Governance Rules
 
-> Loaded automatically by @dev and @deyvin. Override per-project via `.aioson/rules/`.
+> Loaded by the context selector when creating files, reusing code, extending modules, or avoiding duplication is in scope. Override per-project via `.aioson/rules/`.
 
 ## Before creating any new file
 

@@ -54,7 +54,7 @@ Required for the gate to pass:
 Required for the gate to pass:
 - [ ] Execution sequence is defined
 - [ ] Checkpoints are listed with criteria of done
-- [ ] Context package is listed (which files to read before each phase)
+- [ ] Context package is listed as a short primary activation package plus phase-triggered loads (which files to read before each phase, and why)
 - [ ] Review / QA requirements are noted
 - [ ] Decisions marked "pre-taken" are FINAL — @dev does not re-discuss
 

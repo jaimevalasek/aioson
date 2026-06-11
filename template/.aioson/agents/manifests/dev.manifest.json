@@ -20,6 +20,21 @@
         },
         {
           "type": "artifact",
+          "path_pattern": ".aioson/context/design-doc-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/readiness-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/ui-spec.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
           "path_pattern": ".aioson/context/simple-plans/{slug}.md",
           "required": false
         },

@@ -225,7 +225,7 @@ const AGENT_DEFINITIONS = [
     command: '@analyst',
     path: '.aioson/agents/analyst.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/discovery.md'
+    output: '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
   },
   {
     id: 'scope-check',
@@ -248,7 +248,7 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/architect.md',
     dependsOn: [
       '.aioson/context/project.context.md',
-      '.aioson/context/discovery.md'
+      '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
     ],
     output: '.aioson/context/architecture.md'
   },
@@ -275,11 +275,13 @@ const AGENT_DEFINITIONS = [
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md (feature mode)',
       '.aioson/context/discovery.md',
       '.aioson/context/architecture.md',
+      '.aioson/context/design-doc-{slug}.md + .aioson/context/readiness-{slug}.md (feature mode, when present)',
       '.aioson/context/ui-spec.md (when present)'
     ],
-    output: '.aioson/context/prd.md or prd-{slug}.md (enriched with delivery plan and acceptance criteria)'
+    output: '.aioson/context/prd.md or prd-{slug}.md (enriched with acceptance criteria) + .aioson/context/implementation-plan-{slug}.md for MEDIUM features'
   },
   {
     id: 'dev',

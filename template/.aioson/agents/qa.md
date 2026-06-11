@@ -122,17 +122,21 @@ aioson dev:state:write . --feature={slug} --next="Apply mandatory corrections fr
 
 If the CLI is unavailable, edit `.aioson/context/dev-state.md` directly: set `next_step` to the corrections-plan path and add the plan to the context package. `aioson dev:resume-data` also auto-surfaces any `corrections-*.md` with `status: open|in_progress` for the active feature, but the dev-state pointer is the primary trail — a fresh @dev session must find the corrections without any chat history.
 
-3. **Auto-cycle to @dev (cap = 2 cycles, per-slug, persists across chats):**
+3. **Auto-cycle to @dev (runtime-managed, cap from `agentic_policy`, default 3):**
 
-State file: `.aioson/runtime/qa-dev-cycle.json` — `{slug, cycle, started_at, last_plan}`. Write it regardless of whether a Sheldon manifest exists.
+Before looping, scan Critical findings for keywords `auth | secret | credential | session | password | token | sensitive | data leak | PII | encryption`. If any match, pass `--critical-security`.
 
-Sequence:
-- Read the file. If absent or `slug` differs → start fresh (`cycle = 0`).
-- **Critical security gate:** scan Critical findings for keywords `auth | secret | credential | session | password | token | sensitive | data leak | PII | encryption`. If any match → DO NOT auto-loop. Tell the user in the selected project language: "Critical security finding in `{file:line}` requires human intervention before continuing. Plan: `{plan path}`." Stop.
-- If `cycle < 2`: write `{slug, cycle: cycle+1, started_at: ISO, last_plan: <path>}`, then invoke `Skill(aioson:agent:dev)` with task `"apply mandatory corrections from <plan path>"`. User can Ctrl+C anytime.
-- If `cycle >= 2`: delete the file. Tell the user in the selected project language: "QA-to-Dev auto-cycle exhausted after 2 rounds. Remaining findings are in `{plan path}`. Human intervention is required."
+```bash
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/plans/{slug}/corrections-{date}.md --source=qa --to=dev --json 2>/dev/null || true
+```
 
-**Reset:** delete `qa-dev-cycle.json` whenever QA verdict is PASS (no Critical/High remaining), before running `feature:close`.
+Interpret the JSON action:
+- `invoke_dev`: invoke `Skill(aioson:agent:dev)` with the returned `task`. User can Ctrl+C anytime.
+- `human_gate`: tell the user that the Critical security finding requires human intervention before continuing. Include the plan path.
+- `stop_cycle_limit`: tell the user the QA-to-Dev auto-cycle exhausted after `max_cycles`; remaining findings are in the returned plan path.
+- command unavailable: use the legacy state file `.aioson/runtime/qa-dev-cycle.json` with `{slug, cycle, started_at, last_plan}` and the same 3-round behavior.
+
+**Reset:** on QA PASS (no Critical/High remaining), run `aioson review-cycle:reset . --feature={slug} --source=qa --to=dev 2>/dev/null || true` before `feature:close`.
 
 4. **Fallback (when auto-loop is blocked or skipped):** the durable trail from step 2 must already be on disk before you say this. Inform the user:
 > "Corrections plan created at `.aioson/plans/{slug}/corrections-{date}.md`.
@@ -399,7 +403,7 @@ When QA is complete and all Critical and High findings are resolved:
 
 When `auto_handoff: true` is set in `project.context.md`, you are the hub of the post-dev review cycle (`.aioson/docs/autopilot-handoff.md`). After your verdict and closing duties, route automatically instead of stopping — the four agents (`@dev`/`@qa`/`@tester`/`@pentester`) are always chained, but `@tester`/`@pentester` only run when their trigger fires:
 
-- **Verdict FAIL (Critical/High):** the corrections auto-cycle above already invokes `@dev` (cap 2, security gate). That path takes precedence — do not also route here.
+- **Verdict FAIL (Critical/High):** the corrections auto-cycle above already invokes `@dev` (cap 3, security gate). That path takes precedence — do not also route here.
 - **Verdict PASS — evaluate in order; auto-invoke the FIRST that applies and is not already done clean this cycle:**
   1. `@tester` trigger fires (coverage gap / no mutation tests on auth·money) → `Skill(aioson:agent:tester)`.
   2. `@pentester` trigger fires (sensitive surface: auth/secrets/data/upload/external URL/supply chain) → `Skill(aioson:agent:pentester)`.
@@ -466,4 +470,7 @@ aioson workflow:next .
 If `.aioson/runtime/reflect-prompt.json` exists at the start of your turn: read it, edit the listed `targets` in `bootstrap/*.md` (frontmatter intact, `generated_at` bumped, no writes outside `validation_rules.allowed_paths`), then `aioson memory:reflect-commit . --agent=qa --output=<path>` with `{ "files": { "<rel>": "<content>" } }`. See `.aioson/docs/autonomy-protocol.md` for tier semantics. Skip silently if no manifest is present.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=qa --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" 2>/dev/null || true`
+At session end, prefer the consolidated epilogue:
+```bash
+aioson agent:epilogue . --agent=qa --feature=<slug> --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" --verdict=<PASS|FAIL> 2>/dev/null || aioson agent:done . --agent=qa --summary="Reviewed <slug>: <N> findings (<H> high, <M> med)" 2>/dev/null || true
+```

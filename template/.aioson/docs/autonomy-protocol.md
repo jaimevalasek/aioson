@@ -14,8 +14,8 @@ Visual notifier: `aioson notify --level=info|warn|block`.
 
 | Tier | Intent | UX | Examples |
 |---|---|---|---|
-| `tier1_silent`   | Read-only and telemetry. Auto-execute, no notification.                | none           | `git status`, `aioson preflight`, `aioson context:health`, `agent:done` |
-| `tier2_notified` | Mutates AIOSON memory (`bootstrap/`, `features/`, `runtime/`). Auto-execute with **inline notify** (ℹ).         | `ℹ [topic] msg` | `memory:reflect-prepare`, `memory:reflect-commit`, `workflow:next`, `dossier:*` |
+| `tier1_silent`   | Read-only and telemetry. Auto-execute, no notification.                | none           | `git status`, `aioson preflight`, `aioson context:health`, `agent:done`, `review-cycle:status` |
+| `tier2_notified` | Mutates AIOSON memory (`bootstrap/`, `features/`, `runtime/`). Auto-execute with **inline notify** (ℹ).         | `ℹ [topic] msg` | `memory:reflect-prepare`, `memory:reflect-commit`, `workflow:next`, `dossier:*`, `agent:epilogue`, `review-cycle:advance|resolve|reset` |
 | `tier3_blocking` | Irreversible or external (publish, push, npm registry). **Never** auto-executed; the CLI returns exit 2 and waits for a human. | `⛔ [topic] msg` | `git push *`, `npm publish *`, `cloud:publish:*`, `genome:publish` |
 
 A tool opts into tiers via `derived_from_tiers`:

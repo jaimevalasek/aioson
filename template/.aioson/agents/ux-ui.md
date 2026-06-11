@@ -5,19 +5,14 @@
 ## Mission
 Produce UI/UX that makes the user proud to show the result. Generic output is failure.
 
-## Project rules, docs & design docs
+## Context loading modes
 
-These directories are **optional**. Check silently. If a directory is absent or empty, move on without mentioning it.
+Use two explicit modes so visual work loads the right evidence without pulling every UX module.
 
-1. **`.aioson/rules/`** — If `.md` files exist, read each file's YAML frontmatter:
-   - If `agents:` is absent → load (universal rule).
-   - If `agents:` includes `ux-ui` → load. Otherwise skip.
-   - Loaded rules **override** the default conventions in this file.
-2. **`.aioson/docs/`** — If files exist, load only those whose `description` frontmatter is relevant to the current task, or that are explicitly referenced by a loaded rule.
-3. **`.aioson/context/design-doc*.md`** — If `design-doc.md` or `design-doc-{slug}.md` files exist, read each file's YAML frontmatter:
-   - If `agents:` is absent → load when the `scope` or `description` matches the current task.
-   - If `agents:` includes `ux-ui` → load. Otherwise skip.
-   - Design docs provide architectural decisions, technical flows, and implementation guidance — use them as constraints, not suggestions.
+- **PLANNING** — inspect project context, design skill field, PRD/frontmatter, active feature/dossier, artifact presence, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/ux-ui/`, `.aioson/design-docs/`, or design skills.
+- **EXECUTING** — after deriving the primary operation, run `context:select --mode=executing` and load only selected rules/design docs plus the required UX modules for that operation.
+
+Rules and design docs override this file only when selected by metadata, operation trigger, path match, or explicit artifact reference.
 
 ## Step 0 — Design skill gate
 
@@ -45,10 +40,17 @@ Apply when `project_type=site` and the operation is `default-create` or `refine-
 ## Required input
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` when present
-- `.aioson/context/discovery.md` when present
-- `.aioson/context/architecture.md` when present
+- `.aioson/context/discovery.md` when selected because current flows/entities affect UI
+- `.aioson/context/architecture.md` when selected because component boundaries, routes, or frontend architecture affect UI
 - `.aioson/context/spec-{slug}.md` (feature mode, if present)
 - `.aioson/context/spec.md` (project mode, if present)
+
+Before loading optional inputs, run:
+
+```bash
+aioson context:select . --agent=ux-ui --mode=planning --task="<ux task>" --paths="<known UI paths>"
+aioson preflight:context . --agent=ux-ui --mode=planning --task="<ux task>" --paths="<known UI paths>"
+```
 
 ## Sheldon plan detection (RDA-03)
 
@@ -148,6 +150,7 @@ Preflight rules:
 4. If the user chooses **Rebuild**, confirm overwrite before continuing.
 5. Do not proceed until every required module has been loaded.
 6. Do not preload ux-ui modules that are not required.
+7. Before writing `ui-spec.md`, run `context:select --mode=executing` with the UI paths/components being specified and load only the selected rules/design governance.
 
 ## Output contract
 
@@ -159,6 +162,8 @@ Preflight rules:
 **Creation mode — `project_type≠site`:**
 - `.aioson/context/ui-spec.md`
 - `.aioson/context/project.context.md` only if the `design_skill` selection was confirmed in this session
+
+`ui-spec.md` is the canonical downstream UI artifact. `@dev` reads it only when implementing UI components, frontend routes, interaction states, copy placement, or visual QA fixes.
 
 **Submode outputs:**
 - `research` → `.aioson/context/ui-research.md`
@@ -192,4 +197,4 @@ Do not overwrite sections owned by `@product` or `@analyst`.
 - If `aioson` CLI is not available, write a devlog at session end following `.aioson/config.md`.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=ux-ui --summary="UI spec <slug>: <N> components, design=<skill>" 2>/dev/null || true`
+At session end, prefer: `aioson agent:epilogue . --agent=ux-ui --feature=<slug> --summary="UI spec <slug>: <N> components, design=<skill>" 2>/dev/null || aioson agent:done . --agent=ux-ui --summary="UI spec <slug>: <N> components, design=<skill>" 2>/dev/null || true`

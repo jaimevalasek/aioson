@@ -2,19 +2,21 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
-## Project rules, docs & design governance
+## Context loading modes
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+Use two modes and do not blur them:
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `dev` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only docs whose `description` is relevant to the current implementation task, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or implementation task.
-4. `.aioson/design-docs/*.md` — load only when implementation implies module boundaries, file creation, naming, reuse, or componentization. Treat loaded governance docs as constraints during implementation.
+- **PLANNING** — inspect status, frontmatter, indexes, and `aioson context:select`; do not load full rules/docs/design governance.
+- **EXECUTING** — before the first code edit, load only the files selected for the concrete task and paths.
 
-Loaded rules and governance override the default conventions in this file. This fallback applies even when the `aioson` CLI is unavailable.
+If `aioson` is available, select context with:
+
+```bash
+aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
+aioson context:select . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>"
+```
+
+If the CLI is unavailable, read YAML frontmatter only and apply the same rule: `agents`, `modes`, `task_types`, `triggers`, and `paths` decide what to load. Rules and governance override this file only after they are selected by mode/task/path.
 
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.
@@ -27,10 +29,11 @@ If `aioson` is available:
 aioson workflow:status .
 aioson context:validate .
 aioson preflight . --agent=dev --feature={slug}
-aioson preflight:context . --agent=dev
+aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
+aioson preflight:context . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
 aioson memory:status .
 ```
-Use output to orient; load listed `rules`/`design_governance` before structural code changes. If CLI unavailable, proceed to Step 1.
+Use output to orient. Do not load full `rules`, `.aioson/docs/`, or `.aioson/design-docs/` until `context:select --mode=executing` names them for the concrete edit. If CLI is unavailable, proceed to Step 1 with frontmatter-only selection.
 
 **Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
 
@@ -42,8 +45,9 @@ This is advisory — proceed with the user's task, but the warning surfaces the 
 Read `.aioson/context/dev-state.md` if it exists.
 
 **dev-state.md found:**
-- It contains the exact `context_package` (2–4 files max) for the current task.
-- Load ONLY those files. Nothing else.
+- It contains the exact primary `context_package` (2–4 files max) for the current task.
+- Load ONLY those primary files at activation.
+- Open plan-listed phase loads only when starting that phase and touching related paths.
 - Start on `next_step` immediately — no exploration, no discovery pass.
 
 **dev-state.md NOT found (cold start):**
@@ -59,7 +63,8 @@ Read `.aioson/context/dev-state.md` if it exists.
 |------|---------------------|
 | Simple Plan | `project.context.md` + `simple-plans/{slug}.md` |
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` |
-| Feature SMALL/MEDIUM | `project.context.md` + `design-doc-{slug}.md` + `readiness-{slug}.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
+| Feature SMALL | `project.context.md` + `spec-{slug}.md` + `design-doc-{slug}.md` or `readiness-{slug}.md` |
+| Feature MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` + one readiness/design handoff artifact |
 | Feature with Sheldon plan | `project.context.md` + `spec-{slug}.md` + `.aioson/plans/{slug}/manifest.md` + current phase file |
 | Project mode | `project.context.md` + `design-doc.md` + `readiness.md` + `spec.md` + `skeleton-system.md` |
 
@@ -83,14 +88,13 @@ If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
 
 **Feature mode active** — `prd-{slug}.md` found:
-Read in this order before writing any code:
-1. `prd-{slug}.md` — what the feature must do
-2. `design-doc-{slug}.md` (project mode: `design-doc.md`) — required living code-organization contract for SMALL/MEDIUM
-3. `readiness-{slug}.md` (project mode: `readiness.md`) — required pre-dev handoff; confirm whether implementation can start and which exact paths/modules are approved
-4. `requirements-{slug}.md` — entities, business rules, edge cases (from @analyst)
-5. `spec-{slug}.md` — feature memory: decisions already made, dependencies
-6. `spec.md` — project-level memory: conventions and patterns (if present)
-7. `discovery.md` — existing entity map (to avoid conflicts with existing tables)
+Load the primary package first. Then load phase-triggered files from the plan, readiness, or `context:select --mode=executing`:
+
+- `requirements-{slug}.md` — data shape, rules, ACs, migrations, edge cases.
+- `architecture.md` — module boundaries, integrations, auth/security, shared contracts.
+- `ui-spec.md` — UI components, frontend routes, states, copy placement, visual QA.
+- PRD / Sheldon enrichment — only when product ambiguity blocks implementation.
+- `discovery.md` / `spec.md` — only when project-level entity maps or conventions are needed.
 
 During implementation, update `spec-{slug}.md` after each significant decision. Touch `spec.md` only for project-wide architecture changes.
 
@@ -106,7 +110,7 @@ Before starting any implementation, check whether an implementation plan exists:
 
 **If plan exists AND status = approved:**
 - Follow it phase by phase.
-- Read only the listed context package.
+- Read the primary activation package first, then the phase-triggered context files listed for the current phase only.
 - Update `spec.md` after each phase and check the plan checkpoints.
 - If the plan contradicts reality, stop and ask.
 - "pre-made" decisions are final; "deferred" decisions are yours to decide and record.
@@ -174,8 +178,8 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/skeleton-system.md` — only when navigating project structure
 - `.aioson/context/design-doc-{slug}.md` (project mode: `design-doc.md`) — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
 - `.aioson/context/readiness-{slug}.md` (project mode: `readiness.md`) — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
-- `.aioson/context/architecture.md` — SMALL/MEDIUM only, only if listed in the plan
-- `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan
+- `.aioson/context/architecture.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
+- `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
 - `.aioson/context/prd-{slug}.md` — only on first session of a new feature
 - `.aioson/context/ui-spec.md` — only when implementing UI components
 
@@ -231,9 +235,9 @@ If `.aioson/skills/process/secure-tdd/SKILL.md` exists and the active feature is
 
 ## Deterministic preflight
 
-Always load `.aioson/skills/process/decision-presentation/SKILL.md` before the first user-facing question. Mandatory regardless of profile.
+Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question. Do not load it for status checks, context selection, or routine execution.
 
-Before the first code change, decide which dev docs must be loaded:
+Before the first code change, run `aioson context:select . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>"` when available. Load only the selected rules/docs/design-governance files plus any required feature artifacts. Then decide which dev docs must be loaded:
 
 | Condition | Required module |
 |---|---|
@@ -283,16 +287,16 @@ Run `aioson` CLI yourself to keep the workflow moving:
 
 ## Auto-cycle return to @qa (corrections mode)
 
-If `.aioson/runtime/qa-dev-cycle.json` exists and its `slug` matches the active feature, you're in an auto-correction cycle started by `@qa`. After applying the plan in `last_plan` and tests pass: (1) update dossier + spec, (2) mark plan `status: resolved`, (3) auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. No user prompt — Ctrl+C interrupts. If the file is absent or slug differs, manual handoff as before.
+Check active review cycles in order with `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|tester> --to=dev --json`. If a result has `exists: true` and matching `state.slug`, apply `state.last_plan` with that same `source`. After tests pass, update dossier/spec, run `aioson review-cycle:resolve . --feature={slug} --plan=<plan path> --source=<same> --to=dev --json 2>/dev/null || true`, then auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. If the CLI is unavailable, fall back to `.aioson/runtime/qa-dev-cycle.json` for QA-origin cycles only.
 
-**Safety net — open corrections without the cycle file:** on every activation with an active feature, also check `.aioson/plans/{active-feature}/corrections-*.md`. If any has frontmatter `status: open` or `in_progress`, those mandatory corrections take priority over the dev-state `next_step` — apply them first, mark the plan `resolved`, then hand off to `@qa` for re-verification. `aioson dev:resume-data` surfaces them as `open_corrections` and already rewrites `next_step` accordingly; trust that over a stale dev-state pointer. This covers QA sessions that created a corrections plan but failed to persist the trail.
+**Safety net:** on activation, `.aioson/plans/{active-feature}/corrections-*.md` with `status: open|in_progress` overrides `dev-state` and must be applied first; `aioson dev:resume-data` already surfaces this as `open_corrections`.
 
 ## Autopilot handoff (post-dev cycle)
 
 When `auto_handoff: true` is set in `project.context.md` and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
 
 1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
-2. Finish closing duties (spec/dossier/dev-state updates, `agent:done`).
+2. Finish closing duties (spec/dossier/dev-state updates, `agent:epilogue`).
 3. Emit: `Autopilot: @dev done → invoking @qa (Ctrl+C to interrupt)`.
 4. Invoke `Skill(aioson:agent:qa)` with `"verify feature {slug} — autopilot handoff from @dev"`.
 
@@ -320,7 +324,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
-- For SMALL/MEDIUM implementation, do not write code before loading the design-doc and readiness artifacts (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode).
+- For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
 - If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
@@ -333,4 +337,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 If `.aioson/runtime/reflect-prompt.json` exists at the start of your turn, before any other action: read it, edit the listed `targets` in `bootstrap/*.md` (frontmatter intact, `generated_at` bumped, no writes outside `validation_rules.allowed_paths`), then `aioson memory:reflect-commit . --agent=dev --output=<path>` with `{ "files": { "<rel>": "<content>" } }`. See `.aioson/docs/autonomy-protocol.md` for tier semantics. Skip silently if no manifest is present.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=dev --summary="Implemented <slug>: phase <N>/<total>, <N> files" 2>/dev/null || true`
+At session end, prefer the consolidated epilogue:
+```bash
+aioson agent:epilogue . --agent=dev --feature=<slug> --summary="Implemented <slug>: phase <N>/<total>, <N> files" --artifacts="<files>" 2>/dev/null || aioson agent:done . --agent=dev --summary="Implemented <slug>: phase <N>/<total>, <N> files" 2>/dev/null || true
+```

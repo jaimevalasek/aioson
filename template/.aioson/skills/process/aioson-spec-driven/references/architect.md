@@ -21,3 +21,4 @@
 - Gate B is the handoff signal — @dev must not start implementation without Gate B passing (MEDIUM) or being explicitly waived (SMALL)
 - Decision rationale is mandatory for non-obvious choices — `approval-gates.md` Gate B checklist item applies
 - `design-doc*.md` is @architect's scope-specific decision document — see `artifact-map.md`
+- `architecture.md` should include dev context triggers so @dev knows when to load architecture sections instead of reading the full file at activation

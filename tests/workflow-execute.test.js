@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const {
+  buildAgenticPolicy,
   runWorkflowExecute,
   EXECUTION_STATE_RELATIVE_PATH
 } = require('../src/commands/workflow-execute');
@@ -59,6 +60,55 @@ test('workflow:execute: dry-run returns plan without executing', async () => {
   assert.equal(typeof result.resume_command, 'string');
   assert.ok(result.status_snapshot);
   assert.ok(result.suggestion);
+});
+
+test('workflow:execute: buildAgenticPolicy encodes bounded review loops and sidecars', () => {
+  const policy = buildAgenticPolicy({
+    agentic: true,
+    'max-dev-qa-cycles': '3',
+    'max-tester-cycles': '2',
+    'max-pentester-cycles': '4'
+  }, 'MEDIUM');
+
+  assert.equal(policy.enabled, true);
+  assert.equal(policy.mode, 'runtime_policy');
+  assert.equal(policy.review_cycle.max_dev_qa_cycles, 3);
+  assert.equal(policy.review_cycle.max_tester_correction_cycles, 2);
+  assert.equal(policy.review_cycle.max_pentester_correction_cycles, 4);
+  assert.equal(policy.review_cycle.feature_close, 'human_gate');
+  assert.equal(policy.lanes.enabled, true);
+  assert.equal(policy.lanes.strategy, 'parallelize_only_independent_write_scopes');
+  assert.ok(policy.sidecars.scouts.allowed_parent_agents.includes('dev'));
+  assert.ok(policy.stop_conditions.includes('cycle_limit_reached'));
+});
+
+test('workflow:execute: dry-run --agentic returns runtime policy and resumable command', async () => {
+  const tmpDir = await makeTmpDir();
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: {
+      json: true,
+      feature: 'checkout',
+      'dry-run': true,
+      classification: 'MEDIUM',
+      agentic: true,
+      'max-dev-qa-cycles': '4',
+      'max-tester-cycles': '2',
+      'max-pentester-cycles': '5'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.agentic_policy.enabled, true);
+  assert.equal(result.agentic_policy.review_cycle.max_dev_qa_cycles, 4);
+  assert.equal(result.agentic_policy.review_cycle.max_tester_correction_cycles, 2);
+  assert.equal(result.agentic_policy.review_cycle.max_pentester_correction_cycles, 5);
+  assert.equal(result.agentic_policy.lanes.enabled, true);
+  assert.match(result.resume_command, /--agentic/);
+  assert.match(result.resume_command, /--max-dev-qa-cycles='4'/);
+  assert.match(result.resume_command, /--max-tester-cycles='2'/);
+  assert.match(result.resume_command, /--max-pentester-cycles='5'/);
 });
 
 test('workflow:execute: dry-run SMALL has product, analyst, scope-check, dev, qa steps', async () => {
@@ -310,7 +360,7 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
 
   const result = await runWorkflowExecute({
     args: [tmpDir],
-    options: { json: true, feature: 'checkout', tool: 'codex' },
+    options: { json: true, feature: 'checkout', tool: 'codex', agentic: true },
     logger: makeLogger()
   });
 
@@ -322,6 +372,8 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
   assert.ok(result.status_snapshot);
   assert.ok(result.suggestion);
   assert.equal(typeof result.resume_command, 'string');
+  assert.equal(result.agentic_policy.enabled, true);
+  assert.equal(result.agentic_policy.review_cycle.max_dev_qa_cycles, 3);
 
   const executionState = JSON.parse(
     await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8')
@@ -334,6 +386,8 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
   assert.ok(executionState.status_snapshot);
   assert.ok(executionState.suggestion);
   assert.equal(typeof executionState.resume_command, 'string');
+  assert.equal(executionState.agentic_policy.enabled, true);
+  assert.equal(executionState.agentic_policy.review_cycle.max_dev_qa_cycles, 3);
 });
 
 test('workflow:execute: advances multiple checkpoints when --max-checkpoints is provided', async () => {

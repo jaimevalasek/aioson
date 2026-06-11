@@ -23,9 +23,13 @@ module.exports = {
       'aioson agent:help [agent] [--json]',
     help_agent_invoke:
       'aioson agent:invoke <agent> [path] [--tool=codex|claude|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
+    help_agent_epilogue:
+      'aioson agent:epilogue [path] --agent=<agent> --summary=<text> [--feature=<slug>] [--approve-gate=A|B|C|D] [--json] [--locale=en]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
+    help_context_select:
+      'aioson context:select [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--json] [--locale=en]',
     help_context_load:
       'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<name> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=en]',
     help_chain_audit:
@@ -119,7 +123,9 @@ module.exports = {
     help_workflow_status:
       'aioson workflow:status [path] [--suggest] [--tool=codex|claude|opencode] [--json] [--locale=en]',
     help_workflow_execute:
-      'aioson workflow:execute [path] [--steps=<n>] [--dry-run] [--lane=<n>] [--json] [--locale=en]',
+      'aioson workflow:execute [path] [--feature=<slug>] [--agentic] [--max-dev-qa-cycles=<n>] [--max-tester-cycles=<n>] [--max-pentester-cycles=<n>] [--dry-run] [--lane=<n>] [--json] [--locale=en]',
+    help_review_cycle:
+      'aioson review-cycle:<status|advance|resolve|reset> [path] --feature=<slug> [--plan=<path>] [--source=qa|tester|pentester] [--json] [--locale=en]',
     help_parallel_init:
       'aioson parallel:init [path] [--workers=2..6] [--force] [--dry-run] [--json] [--locale=en]',
     help_parallel_doctor:

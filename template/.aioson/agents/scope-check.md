@@ -22,7 +22,7 @@ Recommended workflow:
 
 ```
 SMALL:  @product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> [@scope-check(post-dev) optional] -> @qa
-MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @scope-check(pre-dev) -> @dev -> [@scope-check(post-dev) optional] -> @pentester -> @qa
+MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @pm -> @scope-check(pre-dev) -> @dev -> [@scope-check(post-dev) optional] -> @pentester -> @qa
 After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when code or behavior changed materially.
 ```
 
@@ -34,16 +34,19 @@ After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when cod
 - The selected mode (`pre-dev` default, or `post-dev`/`post-fix`/`final`) — determines which of the above are compared
 > Pick the highest-authority source per claim — see the **Evidence** section below.
 
-## Project Rules, Docs & Design Governance
+## Context Loading Modes
 
-Check silently and load only what is relevant:
+- **PLANNING** — inspect workflow status, selected mode, project context, feature/frontmatter, artifact presence, and `context:select` output. Do not bulk-load rules/docs/design governance.
+- **EXECUTING** — before writing or patching `scope-check*.md` or `dev-state.md`, run `context:select --mode=executing` and load only selected rules/docs/design governance plus the source artifacts needed for the comparison.
 
-1. `.aioson/rules/` — universal rules or `agents:` including `scope-check`.
-2. `.aioson/docs/` — docs whose `description` matches the active feature or artifact.
-3. `.aioson/context/design-doc*.md` and `.aioson/design-docs/*.md` — when structure, naming, reuse, UI, or implementation path matters.
-4. `.aioson/skills/process/aioson-spec-driven/SKILL.md` — for spec workflows; then load only `references/artifact-map.md` and `references/approval-gates.md` unless a specific reference is needed.
+Load `aioson-spec-driven/SKILL.md` for spec workflows, then only `references/artifact-map.md` and `references/approval-gates.md` unless a specific reference is needed.
 
-Load other skills on demand. Do not bulk-load.
+Before optional deep loads, run:
+
+```bash
+aioson context:select . --agent=scope-check --mode=planning --task="<scope-check mode and feature>" --paths="<known artifacts>"
+aioson preflight:context . --agent=scope-check --mode=planning --task="<scope-check mode and feature>" --paths="<known artifacts>"
+```
 
 ## Evidence
 
@@ -154,6 +157,26 @@ Optional handoff: {when useful, suggest `@scope-check --scope-mode=post-dev|post
 - `post-dev` can route to `@qa` or `@pentester` only when drift is resolved.
 - `post-fix` can route to `@qa` when verification owns the final decision.
 
+## Dev-State Producer
+
+In `pre-dev` mode, when the verdict is `approved` or `patched` and the next workflow stage is `@dev`, write the final cold-start handoff before `agent:epilogue`/`agent:done`:
+
+```bash
+aioson dev:state:write . --feature={slug} --phase=1 \
+  --next="<first concrete implementation slice from scope-check + plan/readiness>" \
+  --context=spec,design-doc,readiness
+```
+
+For MEDIUM features with `implementation-plan-{slug}.md`, use:
+
+```bash
+aioson dev:state:write . --feature={slug} --phase=1 \
+  --next="<first phase from implementation-plan-{slug}.md>" \
+  --context=spec,impl-plan,readiness
+```
+
+If the first implementation slice is UI/frontend work, replace the least relevant optional token with `ui-spec`. Keep the package short; `implementation-plan-{slug}.md` carries phase-triggered loads for requirements, architecture, UI spec, and PRD sections.
+
 ## Autopilot Handoff
 
 If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and status is `approved` or `patched`, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @scope-check"`. No user prompt — Ctrl+C interrupts. Never auto-invoke when status is `needs-*` or `blocked`, when the next agent is `@dev`, or when context ≥ `context_warning_threshold` — emit the manual handoff instead.
@@ -171,6 +194,5 @@ If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow 
 At session end:
 
 ```bash
-aioson pulse:update . --agent=scope-check --feature={slug} --action="Scope check {mode}: {status}" --next="{next agent}" 2>/dev/null || true
-aioson agent:done . --agent=scope-check --summary="Scope check {slug}: {mode}/{status}" 2>/dev/null || true
+aioson agent:epilogue . --agent=scope-check --feature={slug} --summary="Scope check {slug}: {mode}/{status}" --action="Scope check {mode}: {status}" --next="{next agent}" 2>/dev/null || aioson agent:done . --agent=scope-check --summary="Scope check {slug}: {mode}/{status}" 2>/dev/null || true
 ```

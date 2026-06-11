@@ -1,5 +1,10 @@
 ---
 description: "UI/UX audit mode — inventory scan, design quality checks, severity-based reporting, and fix recommendation format for existing UI."
+agents: [ux-ui]
+modes: [planning, executing]
+task_types: [ui-audit, design-review, visual-qa]
+load_tier: trigger
+triggers: [audit, existing UI, design quality, visual QA, review UI]
 ---
 
 # UX/UI Audit Mode

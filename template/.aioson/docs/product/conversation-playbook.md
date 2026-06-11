@@ -1,5 +1,10 @@
 ---
 description: "Product conversation playbook — opening messages, batching rules, proactive triggers, conversation phases, and finalize/surprise handling."
+agents: [product]
+modes: [planning]
+task_types: [product-conversation, product-intake, feature-definition, prd-scoping]
+load_tier: trigger
+triggers: [asking product questions, structured intake, broad product discovery, visual preferences, finalize conversation]
 ---
 
 # Product Conversation Playbook

@@ -1,12 +1,17 @@
 ---
 description: "Naming conventions for files, variables, functions, and classes"
 scope: "governance"
-agents: []
+agents: [dev, deyvin, architect]
+modes: [planning, executing]
+task_types: [implementation-architecture, file-creation, naming, refactor]
+load_tier: trigger
+triggers: [naming files, naming APIs, creating files, adding functions, adding classes, choosing names]
+paths: [src/**, app/**, lib/**, template/**, tests/**]
 ---
 
 # Naming — Governance Rules
 
-> Loaded automatically by @dev and @deyvin. Override per-project via `.aioson/rules/`.
+> Loaded by the context selector when naming files, APIs, functions, classes, or implementation paths is in scope. Override per-project via `.aioson/rules/`.
 
 ## Files
 

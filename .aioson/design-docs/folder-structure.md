@@ -1,12 +1,17 @@
 ---
 description: "Universal folder organization rules — hierarchy, depth, naming, grouping"
 scope: "governance"
-agents: []
+agents: [dev, deyvin, architect]
+modes: [planning, executing]
+task_types: [implementation-architecture, file-creation, module-boundary, refactor]
+load_tier: trigger
+triggers: [creating files, moving files, splitting modules, designing implementation structure, folder structure]
+paths: [src/**, app/**, lib/**, template/**, tests/**]
 ---
 
 # Folder Structure — Governance Rules
 
-> Loaded automatically by @dev and @deyvin. Override per-project via `.aioson/rules/`.
+> Loaded by the context selector when implementation structure, file creation, moves, or module boundaries are in scope. Override per-project via `.aioson/rules/`.
 
 ## Depth
 

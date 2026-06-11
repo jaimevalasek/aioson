@@ -1224,7 +1224,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       }
 
       // F2 (workflow-handoff-integrity v1.9.5) — best-effort auto-advance workflow pointer
-      await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
+      const autoAdvance = await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
 
       if (isDocCreatingAgent(normalizedAgent)) {
         backupAiosonDocs(targetDir).catch(() => {});
@@ -1252,7 +1252,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         });
       } catch { /* ignore — never blocks agent_done */ }
 
-      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey };
+      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance };
     }
 
     // No active session — create a standalone task+run and immediately complete it.
@@ -1297,7 +1297,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
     }
 
     // F2 (workflow-handoff-integrity v1.9.5) — best-effort auto-advance workflow pointer
-    await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
+    const autoAdvance = await maybeAutoAdvanceWorkflow({ targetDir, normalizedAgent, options, logger, t });
 
     if (isDocCreatingAgent(normalizedAgent)) {
       backupAiosonDocs(targetDir).catch(() => {});
@@ -1325,7 +1325,7 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       });
     } catch { /* ignore — never blocks agent_done */ }
 
-    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey };
+    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance };
   } finally {
     db.close();
   }

@@ -1,5 +1,10 @@
 ---
 description: "UI/UX token contract mode — extraction and normalization of design tokens for colors, spacing, typography, and semantic ownership."
+agents: [ux-ui]
+modes: [executing]
+task_types: [design-tokens, token-contract, visual-system]
+load_tier: trigger
+triggers: [tokens, design tokens, colors, spacing, typography, visual system]
 ---
 
 # UX/UI Token Contract

@@ -2,36 +2,21 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
-## Project rules, docs & design governance
+## Context loading modes
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+Use two explicit modes. Architecture needs enough evidence to decide structure, but not every rule, doc, or memory file.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `architect` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only docs whose `description` is relevant to the current architecture task, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or architecture task.
-4. `.aioson/design-docs/*.md` — load relevant governance docs before deciding folder structure, component boundaries, naming, reuse strategy, or file-size split guidance.
+- **PLANNING** — inspect workflow status, project context, Gate A status, artifact frontmatter, dossier/code-map, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or bootstrap folders.
+- **EXECUTING** — before writing `architecture.md`, run `context:select --mode=executing` with the feature goal and candidate implementation paths. Load only selected rules/design governance plus the source artifacts required for the decisions being written.
 
-Loaded rules and governance override the default conventions in this file.
+Rules and governance override this file only when selected by metadata, path match, task trigger, or explicit reference.
 
 ## Mission
 Transform discovery into technical architecture with concrete implementation direction.
 
 ## Bootstrap context
 
-If `.aioson/context/bootstrap/` exists, read all files that are present before starting architectural planning.
-
-Prioritize:
-- `current-state.md`
-- `how-it-works.md`
-
-Also read when present:
-- `what-is.md`
-- `what-it-does.md`
-
-This gives you full semantic understanding of the system without reading the codebase directly.
+Do not read `.aioson/context/bootstrap/` wholesale. Let `context:select --mode=planning` choose `how-it-works.md`, `what-is.md`, or `what-it-does.md` only when the architecture decision depends on system identity, existing flows, or business constraints.
 
 > `current-state.md` is the **hot log** (recent + active-feature entries only). Older shipped capabilities are in `current-state-archive.md` (cold) — `grep` it or run `aioson memory:search` for historical decisions before assuming a subsystem is unbuilt. Never load the archive at activation. See `.aioson/design-docs/agent-loading-contract.md`.
 
@@ -72,6 +57,8 @@ Before entering PLANNING MODE, run these commands if the `aioson` CLI is availab
 aioson workflow:status .           # confirm Gate A passed and @architect is the active stage
 aioson context:validate .          # validate project.context.md; confirms discovery.md exists
 aioson context:health .            # shows context file sizes and token costs before loading
+aioson context:select . --agent=architect --mode=planning --task="<architecture task>" --paths="<candidate paths>"
+aioson preflight:context . --agent=architect --mode=planning --task="<architecture task>" --paths="<candidate paths>"
 ```
 
 For feature mode, also run:
@@ -135,8 +122,8 @@ aioson gate:approve . --feature={slug} --gate=B 2>/dev/null || true
 ```
 Architecture defined: .aioson/context/architecture.md
 Gate B: {approved|blocked}
-Next agent: @pm (MEDIUM — implementation planning) or @dev (SMALL — direct implementation)
-Action: /pm or /dev
+Next agent: from the workflow state machine (usually @discovery-design-doc, then @pm on MEDIUM features, then @scope-check before @dev)
+Action: aioson workflow:next . --complete=architect --tool=<tool>
 ```
 > Recommended: `/clear` before activating — fresh context window.
 
@@ -323,7 +310,8 @@ Generate `.aioson/context/architecture.md` with:
 5. **Integration architecture** — external services and how they connect
 6. **Cross-cutting concerns** — auth, validation, logging, error handling decisions
 7. **Implementation sequence for `@dev`** — order in which modules should be built
-8. **Explicit non-goals/deferred items** — what was deliberately excluded and why
+8. **Dev context triggers** — exactly when `@dev` must load `architecture.md` sections (module boundaries, integrations, auth/security, migrations, cross-cutting concerns)
+9. **Explicit non-goals/deferred items** — what was deliberately excluded and why
 
 When frontend quality is important, add a handoff section for `@ux-ui` covering:
 - Key screens
@@ -359,6 +347,5 @@ aioson runtime:emit . --agent=architect --type=gate_check --summary="Gate B: {ap
 
 At session end, register:
 ```bash
-aioson pulse:update . --agent=architect --feature={slug} --action="Architecture defined: {stack}, {N} modules" --next="<next agent recommendation>" 2>/dev/null || true
-aioson agent:done . --agent=architect --summary="Architecture <slug>: <stack>, <N> modules" 2>/dev/null || true
+aioson agent:epilogue . --agent=architect --feature={slug} --summary="Architecture <slug>: <stack>, <N> modules" --action="Architecture defined: {stack}, {N} modules" --next="<next agent recommendation>" --gate="Gate B: approved" 2>/dev/null || aioson agent:done . --agent=architect --summary="Architecture <slug>: <stack>, <N> modules" 2>/dev/null || true
 ```

@@ -1,5 +1,10 @@
 ---
 description: "UI/UX accessibility audit mode — WCAG-focused scan, remediation format, and QA handoff guidance for UI accessibility issues."
+agents: [ux-ui]
+modes: [planning, executing]
+task_types: [accessibility, a11y, wcag, ui-audit]
+load_tier: trigger
+triggers: [a11y, accessibility, WCAG, screen reader, keyboard navigation, contrast]
 ---
 
 # UX/UI Accessibility Audit

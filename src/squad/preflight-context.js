@@ -16,6 +16,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { selectContext } = require('../context-selector');
 
 const SQUADS_DIR = path.join('.aioson', 'squads');
 
@@ -121,7 +122,7 @@ function formatSize(chars) {
  * @returns {Promise<object>}  — { components[], total, totalLimit, duplicates[], warnings[] }
  */
 async function estimateContext(projectDir, options = {}) {
-  const { agent = 'dev', squad, verbose } = options;
+  const { agent = 'dev', squad, verbose, mode = 'planning', task = '', paths = '' } = options;
   const components = [];
   const warnings = [];
 
@@ -164,25 +165,23 @@ async function estimateContext(projectDir, options = {}) {
     content: ctxFile.content
   });
 
-  // 4. Active rules
-  const rulesDir = path.join(projectDir, '.aioson', 'rules');
-  let rulesChars = 0;
-  let rulesContent = '';
-  try {
-    const entries = await fs.readdir(rulesDir);
-    const mdFiles = entries.filter((f) => f.endsWith('.md'));
-    for (const f of mdFiles) {
-      const r = await readFileChars(path.join(rulesDir, f));
-      rulesChars += r.chars;
-      rulesContent += r.content + '\n';
-    }
-  } catch { /* no rules dir */ }
+  // 4. Selected context (rules/docs/design governance/memory) by mode + task.
+  const selection = await selectContext(projectDir, { agent, mode, task, paths });
+  let selectedChars = 0;
+  let selectedContent = '';
+  for (const item of selection.selected) {
+    if (item.path === '.aioson/context/project.context.md') continue;
+    const selected = await readFileChars(path.join(projectDir, item.path));
+    selectedChars += selected.chars;
+    selectedContent += selected.content + '\n';
+  }
   components.push({
-    label: 'active rules',
-    path: rulesDir,
-    chars: rulesChars,
+    label: `selected context (${mode})`,
+    path: path.join(projectDir, '.aioson'),
+    chars: selectedChars,
     limit: DEFAULT_LIMITS.rules,
-    content: rulesContent
+    content: selectedContent,
+    selected: selection.selected.map((item) => item.path)
   });
 
   // 5. Squad-specific files (if --squad provided)

@@ -281,6 +281,19 @@ function timeSince(isoString) {
   return `${days}d`;
 }
 
+function handoffMatchesState(handoff, state) {
+  if (!handoff || !state) return false;
+  const stateMode = state.mode || null;
+  const handoffMode = handoff.workflow_mode || null;
+  if (stateMode && handoffMode && stateMode !== handoffMode) return false;
+
+  const stateFeature = state.featureSlug || null;
+  const handoffFeature = handoff.feature_slug || null;
+  if (stateFeature || handoffFeature) return stateFeature === handoffFeature;
+
+  return true;
+}
+
 async function runWorkflowStatus({ args, options, logger, t }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const tool = options.tool || 'codex';
@@ -311,8 +324,15 @@ async function runWorkflowStatus({ args, options, logger, t }) {
   const focusStage = getFocusStage(state);
   const queuedNextStage = getQueuedNextStage(state);
 
-  const handoff = await readHandoff(targetDir);
-  const handoffProtocol = await readHandoffProtocol(targetDir);
+  const rawHandoff = await readHandoff(targetDir);
+  const handoff = handoffMatchesState(rawHandoff, state) ? rawHandoff : null;
+  const rawHandoffProtocol = await readHandoffProtocol(targetDir);
+  const handoffProtocol = handoffMatchesState({
+    workflow_mode: rawHandoffProtocol && rawHandoffProtocol.workflow_mode,
+    feature_slug: rawHandoffProtocol && rawHandoffProtocol.feature_slug
+  }, state)
+    ? rawHandoffProtocol
+    : null;
   const artifacts = await buildKeyArtifacts(targetDir, state);
   const squads = await scanSquads(targetDir);
   const genomeCount = await scanGenomes(targetDir);

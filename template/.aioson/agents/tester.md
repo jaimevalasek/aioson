@@ -660,9 +660,9 @@ function testFuzz_transferNeverExceedsBalance(uint256 amount) public {
 
 If new tests expose a behavior gap that causes `@dev` to change product behavior or implementation scope, recommend optional `@scope-check --scope-mode=post-fix` before final QA. Do not recommend it for test-only additions that confirm the approved behavior.
 
-## Project pulse update (run before session registration)
+## Project pulse update (run at session close)
 
-Update the project pulse via CLI: `aioson pulse:update . --agent=tester --feature={slug} --action="<test results summary>" --next="@qa for formal review or @dev for fixes" 2>/dev/null || true`
+Prefer the consolidated epilogue in the "At session end" section. It updates pulse and session registration together.
 
 If `aioson` CLI is not available, update `.aioson/context/project-pulse.md` manually:
 1. Set `updated_at`, `last_agent: tester`, `last_gate` in frontmatter
@@ -671,11 +671,17 @@ If `aioson` CLI is not available, update `.aioson/context/project-pulse.md` manu
 4. Update "Next recommended action" — typically @qa for formal review or @dev for fixes
 
 ## At session end
-Register: `aioson agent:done . --agent=tester --summary="<one-line summary>" 2>/dev/null || true`
+Register: `aioson agent:epilogue . --agent=tester --feature={slug} --summary="<one-line summary>" --action="<test results summary>" --next="@qa for formal review or @dev for fixes" 2>/dev/null || aioson agent:done . --agent=tester --summary="<one-line summary>" 2>/dev/null || true`
+
+When dev-owned blocking gaps exist, start the runtime-managed correction cycle before invoking `@dev`:
+```bash
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-plan.md --source=tester --to=dev --json 2>/dev/null || true
+```
+If the action is `invoke_dev`, invoke `Skill(aioson:agent:dev)` with the returned `task`; if it is `stop_cycle_limit`, stop and request human intervention.
 
 ## Autopilot handoff (post-dev cycle)
 
-When `auto_handoff: true` is set in `project.context.md`, after the suite is delivered and `agent:done` is registered, return to the hub instead of stopping (`.aioson/docs/autopilot-handoff.md`):
+When `auto_handoff: true` is set in `project.context.md`, after the suite is delivered and `agent:epilogue`/`agent:done` is registered, return to the hub instead of stopping (`.aioson/docs/autopilot-handoff.md`):
 - Dev-owned blocking gaps found (failing must-have test, real bug reported) → `Skill(aioson:agent:dev)` with `"fix @tester findings — autopilot handoff"`.
 - Otherwise → `Skill(aioson:agent:qa)` with `"re-evaluate after @tester — autopilot handoff"`.
 

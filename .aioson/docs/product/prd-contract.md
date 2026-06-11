@@ -1,5 +1,10 @@
 ---
 description: "Product PRD contract — exact PRD structure, visual identity block, output paths, and next-step routing."
+agents: [product]
+modes: [executing]
+task_types: [prd-writing, prd-finalization, output-contract, artifact-writing]
+load_tier: trigger
+triggers: [writing PRD, updating PRD, PRD contract, output path, next-step routing, visual identity]
 ---
 
 # Product PRD Contract

@@ -5,22 +5,14 @@
 ## Mission
 Enrich the living PRD with prioritization, sequencing, and testable acceptance clarity without rewriting product intent.
 
-## Project rules, docs & design docs
+## Context loading modes
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+Use two explicit modes. Planning should consolidate upstream decisions, not reload every source document forever.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `pm` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only the docs whose `description` is relevant to the current backlog task, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — if `design-doc.md` or `design-doc-{slug}.md` exists, treat it as a planning constraint:
-   - if `agents:` is absent → load it when `scope` or `description` matches the current task
-   - if `agents:` includes `pm` → load it
-   - otherwise skip it
-4. `.aioson/design-docs/*.md` — load relevant governance docs before defining file boundaries, module sequencing, or reuse constraints for `@dev`.
+- **PLANNING** — inspect workflow status, project context, PRD/frontmatter, Gate B status, dossier, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or historical memories.
+- **EXECUTING** — before writing `implementation-plan-{slug}.md` or editing PRD sections owned by `@pm`, run `context:select --mode=executing` and load only selected rules/design governance plus source artifacts needed for the plan.
 
-Loaded rules, design docs, and design governance override the default conventions in this file.
+Rules and design docs override this file only when selected by metadata, path match, task trigger, or explicit artifact reference.
 
 ## Golden rule
 Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruthlessly.
@@ -33,9 +25,18 @@ Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruth
 ## Required input
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` — **read first**; this is the PRD base from `@product`. Preserve all existing sections unless they belong to `@pm`.
-- `.aioson/context/discovery.md`
-- `.aioson/context/architecture.md`
-- `.aioson/context/ui-spec.md` when present
+- `.aioson/context/requirements-{slug}.md` and `spec-{slug}.md` in feature mode
+- `.aioson/context/discovery.md` only when project-level entities/flows are needed for sequencing
+- `.aioson/context/architecture.md` when Gate B or module ordering is relevant
+- `.aioson/context/design-doc*.md` / `readiness*.md` when they define implementation paths or readiness
+- `.aioson/context/ui-spec.md` only when UI/frontend phases are in scope
+
+Before optional inputs, run:
+
+```bash
+aioson context:select . --agent=pm --mode=planning --task="<planning task>" --paths="<known artifacts>"
+aioson preflight:context . --agent=pm --mode=planning --task="<planning task>" --paths="<known artifacts>"
+```
 
 ## Workflow position reality
 
@@ -92,7 +93,7 @@ gate_status: approved
 [Why Gate C is approved — prerequisites satisfied]
 
 ## Required Context Package
-[Ordered list of files @dev must read]
+[Ordered list of files @dev must read, split into "Primary activation package" and "Phase-triggered loads"]
 
 ## Pre-Taken Decisions
 [Decisions already made — @dev does not re-discuss these]
@@ -105,6 +106,12 @@ gate_status: approved
 ## Checkpoints
 [After each phase, what @dev must update]
 ```
+
+Required Context Package rules:
+- Keep the primary activation package to 2-4 files: `project.context.md`, `spec-{slug}.md`, `implementation-plan-{slug}.md`, and optionally the most relevant `design-doc/readiness` artifact.
+- Put heavier sources under phase-triggered loads, not activation: `requirements-{slug}.md` for data/business rules, `architecture.md` for module boundaries/integrations/security, `ui-spec.md` for UI work, PRD/Sheldon enrichment only for product ambiguity.
+- Each execution phase must state: files to read, files allowed to change, upstream decisions to respect, and verification expected.
+- Never copy whole upstream documents into the plan. Reference artifact paths and sections.
 
 After writing the plan, always close Gate C:
 ```
@@ -134,11 +141,10 @@ At session end, register:
 ```bash
 # Capture user decisions for operator memory
 aioson op:capture --signal=confirmation --quote="<user's verbatim choice>" --proposal="<decision paraphrase>" --source-agent=pm 2>/dev/null || true
-aioson pulse:update . --agent=pm --feature={slug} --action="PM completed: {N} stories prioritized, Gate C {approved|pending}" --next="<next agent recommendation>" 2>/dev/null || true
-aioson agent:done . --agent=pm --summary="PM <slug>: <N> stories prioritized, Gate C <approved|pending>" 2>/dev/null || true
+aioson agent:epilogue . --agent=pm --feature={slug} --summary="PM <slug>: <N> stories prioritized, Gate C <approved|pending>" --action="PM completed: {N} stories prioritized, Gate C {approved|pending}" --next="<next agent recommendation>" --gate="Gate C: <approved|pending>" 2>/dev/null || aioson agent:done . --agent=pm --summary="PM <slug>: <N> stories prioritized, Gate C <approved|pending>" 2>/dev/null || true
 ```
 
-If `agent:done` does not print `[agent:done] auto-advanced`, tell the user to run the tracked action above before activating the next agent. Never recommend a bare `/orchestrator` activation for a feature; include `{slug}` so the activation preflight can recover context even without a workflow handoff.
+If `agent:epilogue`/`agent:done` does not report workflow auto-advance, tell the user to run the tracked action above before activating the next agent. Never recommend a bare `/orchestrator` activation for a feature; include `{slug}` so the activation preflight can recover context even without a workflow handoff.
 
 ## Autopilot handoff
 

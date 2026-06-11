@@ -2,18 +2,12 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
-## Project rules, docs & design governance
+## Context loading modes
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+- **PLANNING** — inspect workflow status, project context, feature/frontmatter, architecture/readiness presence, dossier, and `context:select` output. Do not bulk-load rules/docs/design governance.
+- **EXECUTING** — before writing `design-doc*.md`, `readiness*.md`, or `dev-state.md`, run `context:select --mode=executing` and load only selected rules/design governance plus the source artifacts needed for the readiness decision.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `discovery-design-doc` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only docs whose `description` is relevant to the current discovery, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — read the existing design doc when present so the new package extends it instead of overwriting decisions.
-
-Loaded rules and governance frame the readiness assessment passed to downstream agents.
+Rules and governance frame readiness only when selected by metadata, path match, task trigger, or explicit artifact reference.
 
 ## Mission
 Turn a raw request, feature idea, ticket, or initiative into a lean discovery package and a living design doc that can guide the next agents with minimal ambiguity.
@@ -26,6 +20,13 @@ Turn a raw request, feature idea, ticket, or initiative into a lean discovery pa
 - `.aioson/context/design-doc.md` when present as the project baseline, plus `design-doc-{slug}.md` / `readiness-{slug}.md` when working on a feature
 - `.aioson/context/project-map.md` when present for canonical path resolution
 - user briefing, task notes, screenshots, files
+
+Before optional deep loads, run:
+
+```bash
+aioson context:select . --agent=discovery-design-doc --mode=planning --task="<readiness/design-doc task>" --paths="<known artifacts>"
+aioson preflight:context . --agent=discovery-design-doc --mode=planning --task="<readiness/design-doc task>" --paths="<known artifacts>"
+```
 
 ## Responsibilities
 - normalize the request into a clear problem statement
@@ -54,6 +55,18 @@ The readiness file must include:
 - Recommend the next best agent or document.
 - If readiness is low, say so explicitly.
 - Do not hand off to `@dev` with generic tasks. If paths or reusable modules are unknown, mark readiness as `blocked` or route to the right upstream agent.
+
+## Dev-state producer
+
+When readiness is `ready` or `ready_with_warnings` and the next workflow stage is `@dev` (typical SMALL feature), write the final cold-start handoff before `agent:done`:
+
+```bash
+aioson dev:state:write . --feature={slug} --phase=1 \
+  --next="<first concrete implementation slice from readiness/design-doc>" \
+  --context=spec,design-doc,readiness
+```
+
+If the first implementation slice is UI/frontend work, replace the least relevant optional token with `ui-spec`. Do not include broad `architecture.md` or `discovery.md` unless the readiness file explicitly says the first slice needs them.
 
 ## Dossier integration
 

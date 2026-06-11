@@ -349,7 +349,7 @@ project.context.md
 ## workflow:execute
 
 ```
-aioson workflow:execute [path] --feature=<slug> [--tool=<tool>] [--classification=<tier>] [--dry-run] [--start-from=<agent>] [--json]
+aioson workflow:execute [path] --feature=<slug> [--tool=<tool>] [--classification=<tier>] [--agentic] [--max-dev-qa-cycles=<n>] [--max-tester-cycles=<n>] [--max-pentester-cycles=<n>] [--dry-run] [--start-from=<agent>] [--json]
 ```
 
 Monta e executa o plano de agentes para uma feature com base na classificação.
@@ -368,6 +368,10 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 |---|---|
 | `--tool=<tool>` | Ferramenta a usar (`claude`, `codex`, `opencode`) |
 | `--classification=<tier>` | Override manual da classificação |
+| `--agentic` | Emite/persiste `agentic_policy` para o gateway continuar handoffs determinísticos |
+| `--max-dev-qa-cycles=<n>` | Limite do loop `@dev` ↔ `@qa` no modo agentic (padrão: 3) |
+| `--max-tester-cycles=<n>` | Limite de correções após `@tester` no modo agentic (padrão: 3) |
+| `--max-pentester-cycles=<n>` | Limite de correções após `@pentester` no modo agentic (padrão: 3) |
 | `--dry-run` | Mostra o plano sem executar |
 | `--start-from=<agent>` | Pula agentes anteriores ao agente dado |
 
@@ -377,6 +381,7 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 aioson workflow:execute . \
   --feature=checkout \
   --classification=SMALL \
+  --agentic \
   --dry-run \
   --json
 ```
@@ -387,6 +392,13 @@ aioson workflow:execute . \
   "dry_run": true,
   "feature": "checkout",
   "classification": "SMALL",
+  "agentic_policy": {
+    "enabled": true,
+    "review_cycle": {
+      "max_dev_qa_cycles": 3,
+      "feature_close": "human_gate"
+    }
+  },
   "steps": [
     { "agent": "product", "skip": false, "reason": "prd not found" },
     { "agent": "analyst", "skip": false },

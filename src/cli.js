@@ -13,6 +13,7 @@ const { runI18nAdd } = require('./commands/i18n-add');
 const { runAgentsList, runAgentPrompt } = require('./commands/agents');
 const { runContextValidate } = require('./commands/context-validate');
 const { runContextPack } = require('./commands/context-pack');
+const { runContextSelect } = require('./commands/context-select');
 const { runContextLoad } = require('./commands/context-load');
 const { runChainAudit } = require('./commands/chain-audit');
 const { runMemorySearch } = require('./commands/memory-search');
@@ -183,6 +184,7 @@ const { runClassify } = require('./commands/classify');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
+const { runAgentEpilogue } = require('./commands/agent-epilogue');
 const { runStateSave, runStateReset } = require('./commands/state-save');
 const { runOpIdentity } = require('./commands/op-identity');
 const { runOpCapture } = require('./commands/op-capture');
@@ -204,6 +206,7 @@ const { runGateCheck } = require('./commands/gate-check');
 const { runGateApprove } = require('./commands/gate-approve');
 const { runArtifactValidate } = require('./commands/artifact-validate');
 const { runWorkflowExecute } = require('./commands/workflow-execute');
+const { runReviewCycle } = require('./commands/review-cycle');
 const { runRunnerQueueFromPlan } = require('./commands/runner-queue-from-plan');
 const { runLearningAutoPromote } = require('./commands/learning-auto-promote');
 const { runBriefValidate } = require('./commands/brief-validate');
@@ -240,6 +243,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'agent-help',
   'agent:invoke',
   'agent-invoke',
+  'agent:epilogue',
+  'agent-epilogue',
   'setup:context',
   'setup-context',
   'locale:apply',
@@ -250,6 +255,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-validate',
   'context:pack',
   'context-pack',
+  'context:select',
+  'context-select',
   'context:load',
   'context-load',
   'chain:audit',
@@ -689,6 +696,14 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'artifact-validate',
   'workflow:execute',
   'workflow-execute',
+  'review-cycle:status',
+  'review-cycle-status',
+  'review-cycle:advance',
+  'review-cycle-advance',
+  'review-cycle:resolve',
+  'review-cycle-resolve',
+  'review-cycle:reset',
+  'review-cycle-reset',
   'runner:queue:from-plan',
   'runner-queue-from-plan',
   'learning:auto-promote',
@@ -793,8 +808,10 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_prompt');
   logHelpLine(t, logger, 'cli.help_agent_help');
   logHelpLine(t, logger, 'cli.help_agent_invoke');
+  logHelpLine(t, logger, 'cli.help_agent_epilogue');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
+  logHelpLine(t, logger, 'cli.help_context_select');
   logHelpLine(t, logger, 'cli.help_context_load');
   logHelpLine(t, logger, 'cli.help_memory_status');
   logHelpLine(t, logger, 'cli.help_memory_summary');
@@ -812,6 +829,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_workflow_next');
   logHelpLine(t, logger, 'cli.help_workflow_status');
   logHelpLine(t, logger, 'cli.help_workflow_execute');
+  logHelpLine(t, logger, 'cli.help_review_cycle');
   logHelpLine(t, logger, 'cli.help_parallel_init');
   logHelpLine(t, logger, 'cli.help_parallel_doctor');
   logHelpLine(t, logger, 'cli.help_parallel_assign');
@@ -1078,6 +1096,8 @@ async function main() {
       result = await runContextValidate({ args, options, logger: commandLogger, t });
     } else if (command === 'context:pack' || command === 'context-pack') {
       result = await runContextPack({ args, options, logger: commandLogger, t });
+    } else if (command === 'context:select' || command === 'context-select') {
+      result = await runContextSelect({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {
       result = await runContextLoad({ args, options, logger: commandLogger, t });
     } else if (command === 'chain:audit' || command === 'chain-audit') {
@@ -1522,6 +1542,8 @@ async function main() {
       result = await runDetectTestRunner({ args, options, logger: commandLogger });
     } else if (command === 'pulse:update' || command === 'pulse-update') {
       result = await runPulseUpdate({ args, options, logger: commandLogger });
+    } else if (command === 'agent:epilogue' || command === 'agent-epilogue') {
+      result = await runAgentEpilogue({ args, options, logger: commandLogger, t });
     } else if (
       command === 'state:save' ||
       command === 'state-save' ||
@@ -1591,6 +1613,9 @@ async function main() {
       result = await runArtifactValidate({ args, options, logger: commandLogger });
     } else if (command === 'workflow:execute' || command === 'workflow-execute') {
       result = await runWorkflowExecute({ args, options, logger: commandLogger });
+    } else if (command.startsWith('review-cycle:') || command.startsWith('review-cycle-')) {
+      const sub = command.replace(/^review-cycle[:-]/, '');
+      result = await runReviewCycle({ args, options: { ...options, sub }, logger: commandLogger, t });
     } else if (command === 'runner:queue:from-plan' || command === 'runner-queue-from-plan') {
       result = await runRunnerQueueFromPlan({ args, options, logger: commandLogger });
     } else if (command === 'learning:auto-promote' || command === 'learning-auto-promote') {

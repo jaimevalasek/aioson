@@ -792,6 +792,7 @@ async function writeDerivedContextMemory({
 
 async function collectActiveDossiers(targetDir) {
   const featuresDir = path.join(targetDir, CONTEXT_DIR, 'features');
+  const activeFeatureSlugs = await readActiveFeatureSlugs(targetDir);
   let slugs = [];
   try {
     const entries = await fs.readdir(featuresDir, { withFileTypes: true });
@@ -812,6 +813,7 @@ async function collectActiveDossiers(targetDir) {
       active.push({
         relPath,
         slug,
+        isPointedActive: activeFeatureSlugs.has(slug),
         lastUpdatedAt: updatedMatch ? updatedMatch[1] : null,
         title: `Feature Dossier (${slug})`,
         group: 'dossier',
@@ -835,18 +837,41 @@ async function collectActiveDossiers(targetDir) {
   return active;
 }
 
+function extractFrontmatterValue(content, key) {
+  const re = new RegExp(`^${key}:\\s*(.+?)\\s*$`, 'm');
+  const match = String(content || '').match(re);
+  if (!match) return '';
+  return match[1].trim().replace(/^["']|["']$/g, '');
+}
+
+function normalizeFeaturePointer(value) {
+  const raw = String(value || '').trim();
+  if (!raw || raw === '(none)' || raw.toLowerCase() === 'none' || raw === '-') return '';
+  return raw;
+}
+
+async function readActiveFeatureSlugs(targetDir) {
+  const out = new Set();
+  const pulse = await readTextIfExists(path.join(targetDir, CONTEXT_DIR, 'project-pulse.md'));
+  const devState = await readTextIfExists(path.join(targetDir, CONTEXT_DIR, 'dev-state.md'));
+  const pulseFeature = normalizeFeaturePointer(extractFrontmatterValue(pulse, 'active_feature'));
+  const devFeature = normalizeFeaturePointer(extractFrontmatterValue(devState, 'active_feature'));
+  if (pulseFeature) out.add(pulseFeature);
+  if (devFeature) out.add(devFeature);
+  return out;
+}
+
 function rankDossier(dossier, { agent, goal }, rank) {
-  // Base score: between PRD (45) and bootstrap (65). Most recent dossier gets 60.
-  let score = 60 - rank * 5;
-  const reasons = [`active feature dossier (${dossier.slug})`];
+  let score = 0;
+  const reasons = [];
   const lookupText = `${normalizeForLookup(agent)} ${normalizeForLookup(goal)}`.trim();
-  if (lookupText.includes(dossier.slug.replace(/-/g, ' '))) {
-    score += 15;
-    reasons.push('matches active feature slug');
+  if (dossier.isPointedActive) {
+    score += 70 - rank * 2;
+    reasons.push(`active feature pointer (${dossier.slug})`);
   }
-  if (/(dev|architect|qa|implement|feature|dossier)/.test(lookupText)) {
-    score += 10;
-    reasons.push('agent/goal matches dossier context');
+  if (lookupText.includes(dossier.slug.replace(/-/g, ' '))) {
+    score += 75;
+    reasons.push(`matches feature slug (${dossier.slug})`);
   }
   return { score: Math.max(score, 0), reasons };
 }

@@ -1,5 +1,10 @@
 ---
 description: "Product quality lens — strong patterns, anti-pattern replacements, and a compact scorecard for higher-quality PRDs."
+agents: [product]
+modes: [executing]
+task_types: [prd-writing, prd-finalization, prd-review, quality-review]
+load_tier: trigger
+triggers: [writing PRD, updating PRD, finalize PRD, PRD quality, review scorecard]
 ---
 
 # Product Quality Lens

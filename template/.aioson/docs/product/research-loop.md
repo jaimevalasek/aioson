@@ -1,5 +1,10 @@
 ---
 description: "Product research loop — extract short keyword phrases, consult research cache, search fresh sources, and fold the findings back into the PRD conversation."
+agents: [product]
+modes: [planning, executing]
+task_types: [product-research, external-validation, market-scouting, competitor-research, product-patterns]
+load_tier: trigger
+triggers: [web search, research cache, market assumptions, competitor, pricing, compliance, time-sensitive UX, external evidence]
 ---
 
 # Product Research Loop

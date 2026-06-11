@@ -1,5 +1,11 @@
 ---
 description: "Oracle deep guide — strong vs weak briefing examples, JTBD problem framing, Opportunity Solution Tree, Cagan's four risks, gap analysis, open-questions taxonomy, conversation playbook. Load when an existing briefing feels weak, when the conversation goes generic, or when a complex Themes section needs partitioning."
+agents: [briefing]
+modes: [planning, executing]
+task_types: [briefing-craft, jtbd-framing, opportunity-mapping, gap-classification, briefing-quality]
+load_tier: justified
+triggers: [weak briefing, generic conversation, JTBD, opportunity solution tree, four risks, more than 3 open questions, complex themes, switch interview]
+tags: [briefing, jtbd, gaps, risks]
 ---
 
 # Oracle — Briefing Craft

@@ -1,5 +1,10 @@
 ---
 description: "UI/UX design gate — context repair, design skill selection, isolation rules, and style ambiguity handling before visual direction is chosen."
+agents: [ux-ui]
+modes: [planning, executing]
+task_types: [ui-design, design-skill-selection, visual-direction]
+load_tier: trigger
+triggers: [design skill, visual direction, style ambiguity, project_type site, project_type web_app]
 ---
 
 # UX/UI Design Gate

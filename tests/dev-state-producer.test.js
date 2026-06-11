@@ -64,7 +64,7 @@ test('parseContextFlag filters out empty entries from trailing/double commas', (
 // ─── CONTEXT_TYPE_MAP shape ────────────────────────────────────────────────
 
 test('CONTEXT_TYPE_MAP defines all canonical tokens declared for dev-state handoff', () => {
-  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'readiness', 'dossier', 'simple-plan'];
+  const expected = ['prd', 'requirements', 'spec', 'architecture', 'impl-plan', 'sheldon', 'design-doc', 'readiness', 'ui-spec', 'dossier', 'simple-plan'];
   for (const k of expected) {
     assert.ok(CONTEXT_TYPE_MAP[k], `missing token: ${k}`);
     assert.equal(typeof CONTEXT_TYPE_MAP[k].rel, 'function', `${k}.rel must be a function`);
@@ -92,6 +92,10 @@ test('CONTEXT_TYPE_MAP.readiness declares a fallback', () => {
 
 test('CONTEXT_TYPE_MAP.simple-plan resolves to the simple-plans directory', () => {
   assert.equal(CONTEXT_TYPE_MAP['simple-plan'].rel('tiny-fix'), 'simple-plans/tiny-fix.md');
+});
+
+test('CONTEXT_TYPE_MAP.ui-spec resolves to the canonical UI handoff artifact', () => {
+  assert.equal(CONTEXT_TYPE_MAP['ui-spec'].rel('checkout'), 'ui-spec.md');
 });
 
 // ─── runStateSave with --context (the producer contract) ───────────────────
@@ -208,6 +212,26 @@ test('producer-contract: readiness context token prefers feature-scoped handoff 
 
     assert.equal(result.ok, true);
     assert.deepEqual(result.context_package, ['project.context.md', `readiness-${slug}.md`]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('producer-contract: ui-spec token includes UI spec when present', async () => {
+  const slug = 'checkout-ui';
+  const dir = await makeFeatureProject({
+    slug,
+    withFiles: ['ui-spec.md']
+  });
+  try {
+    const result = await runStateSave({
+      args: [dir],
+      options: { feature: slug, next: 'implement UI phase', context: 'ui-spec', json: true },
+      logger: silentLogger()
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.context_package, ['project.context.md', 'ui-spec.md']);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

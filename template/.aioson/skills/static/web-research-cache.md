@@ -28,9 +28,29 @@ Before running any WebSearch:
 
 ## Step 2 — Run the search
 
-- Formulate the query including the **current year** so results are fresh
-- Maximum **4 queries per session** — focus on the decisions with highest risk of being outdated
+- Formulate the query including the **current year** when recency matters
+- Prefer specific keyword phrases over broad prompts: user segment, domain noun, workflow, technology, pricing/compliance/risk term
+- For technical/library decisions, prefer primary sources first: official docs, changelog/release notes, GitHub repo, standards, or vendor API reference
+- For product/domain decisions, prefer sources that expose real patterns: official product docs, pricing pages, support docs, market reports, competitor docs, or credible case studies
+- Open/extract the source pages before using them. Search result snippets are routing signals, not evidence.
+- Run at most one query expansion pass if the first query returns weak results: add domain/source constraints, synonyms, or the concrete decision being evaluated
+- Maximum **4 queries per session** — focus on decisions with highest risk of being outdated or materially wrong
 - If WebSearch fails for a query: record the error in `summary.md` and continue — do not block
+
+## Search quality model
+
+Good research is a pipeline, not a single search call:
+
+1. **Plan** — name the decision and what would change if the answer is different.
+2. **Search** — retrieve candidate sources.
+3. **Read/extract** — inspect the pages that actually support the finding.
+4. **Compress** — keep only source-grounded deltas that change options, risks, defaults, or open questions.
+
+Optional provider guidance for future integrations:
+
+- Agent/RAG search APIs such as Tavily, Exa, Firecrawl, or Brave can improve retrieval and extraction, especially when they return page content, highlights, or grounded answers.
+- Open-source extraction tools such as Crawl4AI are useful when AIOSON needs self-hosted crawling/scraping.
+- Do not make any provider mandatory in the core prompt. Use adapters behind the same cache contract so agents keep working with built-in web tools.
 
 ## Step 3 — Save results
 
@@ -108,6 +128,7 @@ If all findings are `confirmed`:
 
 - **Never search without saving** — unsaved results are lost after the session
 - **Never block on search failure** — record the error and continue
+- **Never use snippets as final evidence** — inspect source pages or use cached summaries
 - **Never show `confirmed` findings** — they add noise without value
 - **Never modify the PRD/plan without user confirmation** — surface findings, let the user decide
 - **Cache is shared across all agents** — if another agent already searched the same topic this week, use their result

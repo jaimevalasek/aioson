@@ -23,6 +23,7 @@
 
 - @pm is the **Gate C owner** — the plan is not complete until `spec-{slug}.md` has `phase_gates.plan: approved` and `implementation-plan-{slug}.md` (if MEDIUM) has `status: approved`
 - Gate C is **blocking in MEDIUM** — @dev and @orchestrator must not execute without Gate C passing
+- The implementation plan's context package must stay short at activation and list phase-triggered loads separately; @dev should not need to re-read the whole artifact chain to start
 - Gate C is **informational in SMALL** — flag if the plan looks thin, but do not block
 - Gate C is **skipped in MICRO** — @dev reads prd.md directly; @pm does not run for MICRO
 - ACs produced by @pm must match or extend the ACs in `conformance-{slug}.yaml` when it exists — never contradict the analyst's behavioral contracts

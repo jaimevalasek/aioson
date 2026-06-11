@@ -10,6 +10,7 @@ prd*.md
   → requirements-{slug}.md         (entities, rules, ACs — @analyst)
   → spec-{slug}.md                 (feature memory — @analyst seeds, @dev fills)
   → architecture.md                (tech decisions — @architect)
+  → ui-spec.md                     (UI/UX contract — @ux-ui when UI is in scope)
   → design-doc*.md                 (scope-specific decisions — @architect)
   → implementation-plan-{slug}.md  (execution sequence — @pm for MEDIUM, AC-SDLC-15)
   → spec-{slug}.md (updated)       (living state during execution — @dev)
@@ -28,11 +29,22 @@ prd*.md
 | `spec.md` | @dev | @dev | @dev, @deyvin |
 | `architecture.md` | @architect | — | @dev, @ux-ui |
 | `design-doc*.md` | @architect | — | @dev, @ux-ui |
+| `ui-spec.md` | @ux-ui | — | @dev only for UI/frontend implementation, @pm/@orchestrator when UI phases exist |
 | `implementation-plan-{slug}.md` | @pm (MEDIUM, AC-SDLC-15) | — | @dev, @deyvin, @orchestrator |
+
+## Dev context contract
+
+`@dev` should not activate with the entire artifact chain loaded. The final pre-dev agent writes `dev-state.md` with a short primary package, and `implementation-plan-{slug}.md` carries phase-triggered loads:
+
+- `requirements-{slug}.md` — data, rules, ACs, migrations, edge cases
+- `architecture.md` — module boundaries, integrations, security, cross-cutting concerns
+- `design-doc*.md` / `readiness*.md` — implementation paths, reuse decisions, readiness blockers
+- `ui-spec.md` — UI components, frontend routes, interaction states, visual QA
+- PRD / Sheldon enrichment — only for product ambiguity
 
 ## Naming conventions
 
-- Project-level artifacts: `prd.md`, `discovery.md`, `spec.md`, `architecture.md`
+- Project-level artifacts: `prd.md`, `discovery.md`, `spec.md`, `architecture.md`, `ui-spec.md`
 - Feature-level artifacts: always use `{slug}` suffix — `prd-{slug}.md`, `requirements-{slug}.md`, `spec-{slug}.md`
 - Enrichment: `sheldon-enrichment.md` (project) or `sheldon-enrichment-{slug}.md` (feature)
 - Plans: `.aioson/plans/{slug}/manifest.md` + `plan-{slug-fase}.md` files

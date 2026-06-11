@@ -298,12 +298,24 @@ Três comandos de inteligência de sistema para otimizar tokens, gerar contexto 
 | `brief:gen` | Lê uma fase do plano de implementação + `architecture.md` + `spec.md` e gera um brief 100% autocontido para um worker | Antes de entregar uma fase a um executor de squad — garante que o worker tem tudo que precisa sem buscar contexto adicional. Veja [Geração de Brief](#40-gerar-brief-de-worker-briefgen) |
 | `verify:gate` | Verificação de olhos frescos: compara spec vs artefato entregue sem histórico de conversa; emite `PASS`, `PASS_WITH_NOTES`, `FAIL_WITH_ISSUES` ou `BLOCKED` | Após cada entrega de fase — detecta bugs que o agente gerador não consegue ver por viés de contexto. Veja [Verify Gate](#41-verificar-entrega-verifygate) |
 
+### Loop Guardrails e harness
+
+Controle do loop autônomo `self:loop` com scope guard, budget enforcement, human gates e retrospectiva. Veja [Loop Guardrails](./loop-guardrails.md) e [harness:retro](./harness-retro.md).
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `harness:approve` | Aprova um gate humano pendente no loop (persiste decisão auditável) | Quando o loop pausou em `HUMAN_GATE` e você quer retomá-lo |
+| `harness:reject` | Rejeita um gate humano (encerra a tentativa com resumo; requer `--reason`) | Quando quer cancelar a tentativa atual após revisão humana |
+| `harness:status` | Visão do estado do loop: circuito, iteração N/M, budget, checks, gates pendentes, próxima ação | Sempre que quiser saber o que o loop está fazendo ou por que parou |
+| `harness:retro` | Minera deterministicamente o histórico de falhas de uma feature e gera dossiê retrospectivo — sem LLM | Após features com múltiplas iterações, antes de `@qa` ou `@validator` |
+| `harness:preview` | Exibe prévia de um artefato com truncação segura (usado no feedback de critério do loop) | Quando quer inspecionar um artefato sem despejar conteúdo no contexto |
+
 ### Git e committer
 
 | Comando | O que faz | Quando usar |
 |---|---|---|
 | `commit:prepare` | Coleta diff staged, roda `git:guard`, gera `commit-prep.json` com tipo, escopo e descrição candidata | Antes de ativar `@committer` — automatiza a preparação e aplica guardrails de segurança |
-| `git:guard` | Verifica stage proibido (`node_modules/`, secrets, build artifacts) e pode instalar pre-commit hook | Antes de qualquer commit; use `--install-hook` para proteção contínua |
+| `git:guard` | Verifica stage proibido (`node_modules/`, secrets, build artifacts); integra `forbidden_files` do contrato ativo e pode instalar pre-commit hook | Antes de qualquer commit; use `--install-hook` para proteção contínua |
 
 ### Feature Dossier
 
@@ -1714,6 +1726,9 @@ aioson workflow:execute . \
 # Executar de verdade
 aioson workflow:execute . --feature=checkout --tool=claude
 
+# Executar com política agentica persistida para o gateway
+aioson workflow:execute . --feature=checkout --tool=codex --agentic --max-dev-qa-cycles=3
+
 # Retomar do dev (pular product e analyst)
 aioson workflow:execute . \
   --feature=checkout \
@@ -1809,6 +1824,57 @@ Regras do guard:
 - Bloqueia stage vazio
 - Bloqueia arquivos em `node_modules/`, `dist/`, `.next/`, `*.db`, secrets
 - Pode instalar hook em `.git/hooks/pre-commit`
+
+---
+
+### 56. Controlar o self:loop com guardrails
+
+O `self:loop` agora suporta contrato verificável. Veja [Loop Guardrails](./loop-guardrails.md) para o guia completo.
+
+```bash
+# Ver estado atual do loop de uma feature
+aioson harness:status . --slug=checkout
+aioson harness:status . --slug=checkout --json
+
+# Aprovar gate humano (ex: mudança em migrations detectada automaticamente)
+aioson harness:approve . --slug=checkout --gate=database_destructive_change-1
+
+# Rejeitar gate (cancela tentativa atual)
+aioson harness:reject . --slug=checkout --gate=database_destructive_change-1 --reason="revert necessário"
+```
+
+**Campos novos no harness-contract.json:**
+```json
+{
+  "contract_mode": "safe",
+  "allowed_files": ["src/modules/checkout/**"],
+  "human_gate": { "required_for": ["database_destructive_change"] }
+}
+```
+
+Use `contract_mode: "safe"` para loops conservadores (10 steps, 200k tokens), `"builder"` para desenvolvimento ativo, `"autopilot"` para loops longos.
+
+---
+
+### 57. Retrospectiva de falhas com harness:retro
+
+```bash
+# Dossiê da feature checkout
+aioson harness:retro . --feature=checkout
+
+# Dossiê das últimas 5 features (ordenadas por data de PASS)
+aioson harness:retro . --last=5
+
+# Formato JSON (com exit codes propagados)
+aioson harness:retro . --feature=checkout --json
+```
+
+Saída em `.aioson/context/retro/checkout.md`. Fontes mineradas: QA reports, planos de correção, trilha FAIL→PASS do dossier, eventos de execução, tentativas, assinaturas de falha e devlogs. Operação de leitura — arquivos-fonte nunca são alterados.
+
+```bash
+# Exibir prévia de um artefato com truncação segura
+aioson harness:preview .aioson/context/retro/checkout.md
+```
 
 ---
 

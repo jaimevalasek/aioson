@@ -20,7 +20,27 @@
         },
         {
           "type": "artifact",
+          "path_pattern": ".aioson/context/requirements-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/spec-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
           "path_pattern": ".aioson/context/architecture.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/design-doc-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/readiness-{slug}.md",
           "required": false
         },
         {
