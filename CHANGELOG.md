@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.26.0] - 2026-06-11
+
+### Added
+- **`spec:analyze` — deterministic cross-artifact content consistency.** `aioson spec:analyze [path] --feature=<slug> [--json]` is the content sibling of `artifact:validate` (chain presence — untouched): it confronts the feature's artifacts before the execution gate and reports findings by severity. Checks: REQ/AC **ID traceability** (ids declared in `requirements-{slug}.md` never referenced downstream = coverage gap; ids referenced downstream but never declared = orphan/drift signal — both noise-guarded: prose-style plans that cite no ids produce no gap findings), **staleness ordering** (upstream artifact modified after a downstream one was produced, 60s tolerance, project-global `architecture.md` excluded), **readiness states** (`blocked` = error, `ready_with_warnings` = info), **harness-contract sanity** (schema errors = error; executable-coverage warnings = info, via `validateContract`), and **AC→contract linkage** (no declared AC mentioned in the contract = info). Persists `spec-analyze-{slug}.json` to `.aioson/context/` (collected by `feature:export`/`archive`); `error` findings flip `ok: false` (exit 1 in `--json` mode) for gate scripting. Reuses `scanArtifacts`/`detectClassification` from the preflight engine.
+
+### Changed
+- **`@scope-check` preflight runs `spec:analyze`.** The deterministic pass executes before deep loads: `error` findings are blockers routed to the owner agent; `warning` findings enter the drift comparison as pre-computed evidence to confirm or dismiss explicitly. Template mirror synced.
+
+### Tests
+- Added `spec-analyze` suite (11 cases: traceability gaps/orphans, prose-plan noise guard, staleness via mtime, readiness blocked, contract schema/coverage/AC-linkage, persistence, JSON mode). Full suite green (3198 pass).
+
 ## [1.25.0] - 2026-06-11
 
 ### Added
