@@ -166,6 +166,63 @@ test('spec:analyze: AC declarado sem menção no contrato gera info contract_ac_
   assert.strictEqual(unlinked[0].severity, 'info');
 });
 
+test('spec:analyze: fases na mesma wave com arquivos sobrepostos geram wave_file_overlap', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'waves-overlap';
+  await writeContext(dir, {
+    [`implementation-plan-${slug}.md`]: [
+      '# Plan',
+      '## Execution Sequence',
+      '| Phase | Wave | Scope | Primary files | Done criteria |',
+      '|---|---|---|---|---|',
+      '| 1 | 1 | data | `src/db.js`, `src/models.js` | tests pass |',
+      '| 2 | 2 | api | `src/api.js`, `src/db.js` | tests pass |',
+      '| 3 | 2 | ui | `src/ui.js`, src/db.js | tests pass |',
+      ''
+    ].join('\n')
+  });
+  const result = await runSpecAnalyze({ args: [dir], options: { feature: slug }, logger: makeLogger() });
+  const overlaps = findingsBy(result, 'wave_file_overlap');
+  assert.strictEqual(overlaps.length, 1, 'apenas o par da wave 2 compartilha arquivo');
+  assert.match(overlaps[0].message, /wave 2/);
+  assert.match(overlaps[0].message, /src\/db\.js/);
+  assert.strictEqual(result.ok, true, 'overlap é warning, não bloqueia');
+});
+
+test('spec:analyze: waves disjuntas não geram findings', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'waves-clean';
+  await writeContext(dir, {
+    [`implementation-plan-${slug}.md`]: [
+      '## Execution Sequence',
+      '| Phase | Wave | Scope | Primary files | Done criteria |',
+      '|---|---|---|---|---|',
+      '| 1 | 1 | data | `src/db.js` | ok |',
+      '| 2 | 2 | api | `src/api.js` | ok |',
+      '| 3 | 2 | ui | `src/ui.js` | ok |'
+    ].join('\n')
+  });
+  const result = await runSpecAnalyze({ args: [dir], options: { feature: slug }, logger: makeLogger() });
+  assert.strictEqual(findingsBy(result, 'wave_file_overlap').length, 0);
+});
+
+test('spec:analyze: plano sem coluna Wave não dispara o check (retrocompat)', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'waves-legacy';
+  await writeContext(dir, {
+    [`implementation-plan-${slug}.md`]: [
+      '## Execution Sequence',
+      '| Phase | Scope | Primary files | Done criteria |',
+      '|---|---|---|---|',
+      '| 1 | data | `src/db.js` | ok |',
+      '| 2 | api | `src/db.js` | ok |'
+    ].join('\n')
+  });
+  const result = await runSpecAnalyze({ args: [dir], options: { feature: slug }, logger: makeLogger() });
+  assert.strictEqual(findingsBy(result, 'wave_file_overlap').length, 0);
+  assert.strictEqual(result.ok, true);
+});
+
 test('spec:analyze: persiste spec-analyze-{slug}.json em .aioson/context', async () => {
   const dir = await makeTmpDir();
   const slug = 'persist';

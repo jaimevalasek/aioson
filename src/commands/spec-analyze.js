@@ -55,6 +55,54 @@ function extractIds(content, regex) {
   return new Set(String(content || '').match(regex) || []);
 }
 
+/**
+ * Extrai as fases da tabela "Execution Sequence" do implementation-plan
+ * quando ela tem a coluna Wave (pm.md, Fase 4 — marcadores de paralelismo).
+ * Sem coluna Wave: retorna null (check desligado — guarda anti-ruído para
+ * planos anteriores à convenção).
+ *
+ * @returns {Array<{phase, wave, files: string[]}>|null}
+ */
+function parseExecutionWaves(content) {
+  const lines = String(content || '').split(/\r?\n/);
+  let columns = null;
+  const rows = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      if (columns && rows.length) break; // fim da tabela alvo
+      columns = columns && rows.length === 0 ? columns : null;
+      continue;
+    }
+    const cells = trimmed.split('|').slice(1, -1).map((c) => c.trim());
+    const lower = cells.map((c) => c.toLowerCase());
+
+    if (!columns) {
+      if (lower.includes('wave') && lower.some((c) => c.includes('phase')) && lower.some((c) => c.includes('file'))) {
+        columns = {
+          phase: lower.findIndex((c) => c.includes('phase')),
+          wave: lower.indexOf('wave'),
+          files: lower.findIndex((c) => c.includes('file'))
+        };
+      }
+      continue;
+    }
+
+    if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue; // separador
+
+    const wave = parseInt(cells[columns.wave], 10);
+    if (!Number.isInteger(wave)) continue;
+    const files = (cells[columns.files] || '')
+      .split(/,|<br\s*\/?\s*>/i)
+      .map((f) => f.replace(/`/g, '').trim().replace(/\\/g, '/').toLowerCase())
+      .filter((f) => f && !/^(\.{3}|-|—)$/.test(f));
+    rows.push({ phase: cells[columns.phase] || `row ${rows.length + 1}`, wave, files });
+  }
+
+  return columns ? rows : null;
+}
+
 function mtimeMs(targetDir, artifact) {
   if (!artifact || !artifact.exists || !artifact.path) return null;
   try {
@@ -158,6 +206,34 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
           message: `${upstream.label} was modified after ${downstreamArtifact.label} was produced — ${downstreamArtifact.label} may be stale (re-run its owner agent or confirm the change is editorial)`,
           artifacts: [upstream.key, downstreamArtifact.key]
         });
+      }
+    }
+  }
+
+  // ── Waves de paralelismo do implementation-plan ──────────────────────────
+  if (artifacts.implementation_plan.exists) {
+    const waves = parseExecutionWaves(artifacts.implementation_plan.content);
+    if (waves && waves.length > 0) {
+      const byWave = new Map();
+      for (const row of waves) {
+        if (!byWave.has(row.wave)) byWave.set(row.wave, []);
+        byWave.get(row.wave).push(row);
+      }
+      for (const [wave, phases] of byWave) {
+        if (phases.length < 2) continue;
+        for (let i = 0; i < phases.length; i += 1) {
+          for (let j = i + 1; j < phases.length; j += 1) {
+            const shared = phases[i].files.filter((f) => phases[j].files.includes(f));
+            if (shared.length > 0) {
+              findings.push({
+                severity: 'warning',
+                check: 'wave_file_overlap',
+                message: `wave ${wave}: phases ${phases[i].phase} and ${phases[j].phase} are marked parallel but share Primary files: ${shared.join(', ')} — same-wave phases must be file-disjoint (split the files or separate the waves)`,
+                artifacts: ['implementation_plan']
+              });
+            }
+          }
+        }
       }
     }
   }

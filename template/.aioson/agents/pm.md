@@ -99,13 +99,19 @@ gate_status: approved
 [Decisions already made — @dev does not re-discuss these]
 
 ## Execution Sequence
-| Phase | Scope | Primary files | Done criteria |
-|---|---|---|---|
-| 1 | ... | ... | ... |
+| Phase | Wave | Scope | Primary files | Done criteria |
+|---|---|---|---|---|
+| 1 | 1 | ... | ... | ... |
 
 ## Checkpoints
 [After each phase, what @dev must update]
 ```
+
+Wave column rules (parallelism markers):
+- Phases sharing a Wave number are **file-disjoint and dependency-free with respect to each other** — they may be executed in parallel (isolated subagents/worktrees) or in any order. Waves execute in ascending order.
+- Assign the same Wave to two phases ONLY when their Primary files do not overlap AND neither consumes the other's output (no shared data contract, migration, or API shape in flight).
+- Default is sequential: when in doubt, each phase gets its own Wave. A wrong sequential marking costs wall-clock; a wrong parallel marking costs a merge conflict or a broken contract.
+- `aioson spec:analyze` verifies Wave consistency deterministically (same-wave phases with overlapping Primary files are flagged) — keep Primary files explicit per phase so the check has signal.
 
 Required Context Package rules:
 - Keep the primary activation package to 2-4 files: `project.context.md`, `spec-{slug}.md`, `implementation-plan-{slug}.md`, and optionally the most relevant `design-doc/readiness` artifact.
