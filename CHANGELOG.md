@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.24.0] - 2026-06-11
+
+### Added
+- **`harness:check` — standalone deterministic runner for `criteria[].verification`.** `aioson harness:check [path] --slug=<slug> [--criteria=C1,C2] [--timeout=<ms>] [--json]` executes the contract's executable checks outside `self:loop`, reusing the existing `runCriteria`/`executeInSandbox` stack (timeouts, process-tree kill, credential redaction, failure signatures). Read-only over `progress.json` — circuit/breaker state mutation remains exclusive to the `harness:validate`/`apply-validation` cycle. Persists the report to `.aioson/plans/{slug}/last-check-output.json` (mirroring `last-validator-output.json`), emits `criteria_check_failed` telemetry best-effort, auto-discovers the active contract when `--slug` is omitted, and supports criterion-subset runs via `--criteria`.
+- **`verification` is now a first-class authored field.** The canonical contract doc (`.aioson/docs/sheldon/harness-contract.md` + template mirror) documents `criteria[].verification` with authoring rules (exit 0 = pass, deterministic, cross-platform, prefer the project test runner); `@sheldon` RF-05 instructs producing it for every mechanically checkable `binary: true` criterion. Legacy contracts without the field remain fully valid.
+- **Executable-coverage warning in contract schema validation.** `validateContract` now emits an advisory warning (never an error) for each `binary: true` criterion lacking a `verification` command, surfacing verification debt at `harness:init`/preflight without breaking any existing contract.
+
+### Changed
+- **`@validator` consumes deterministic checks first.** Step 2 of the validator protocol now runs `aioson harness:check . --slug={slug} --json` and copies each executable check's exit-code verdict verbatim into `results[].passed`; LLM judgment is reserved for criteria without `verification`. Output JSON schema unchanged — `harness:apply-validation` and the circuit-breaker cycle are untouched. `@qa`'s validator recommendation and `@dev`'s implementation strategy mention the new command (template mirrors synced).
+
+### Tests
+- Added `harness-check` suite (10 cases: pass/fail/signature, progress.json immutability, subset filter, unknown ids, active-contract auto-discovery, JSON mode, schema rejection) and coverage-warning cases in `harness-contract-schema`. Full suite green (3178 pass).
+
 ## [1.23.0] - 2026-06-10
 
 ### Added
