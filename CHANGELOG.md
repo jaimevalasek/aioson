@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.27.0] - 2026-06-11
+
+### Added
+- **Wave column — parallelism markers in the MEDIUM implementation plan.** `@pm`'s Execution Sequence gains a `Wave` column: phases sharing a Wave are file-disjoint and dependency-free with respect to each other (parallelizable via isolated subagents/worktrees); waves execute in ascending order. Marking rules are conservative by design — same Wave only when Primary files do not overlap AND neither phase consumes the other's output; when in doubt, sequential (a wrong sequential marking costs wall-clock; a wrong parallel marking costs a merge conflict). This is the cheap prerequisite for any future fan-out execution lane, and forces explicit file-boundary thinking even without one. Template mirror synced.
+- **`wave_file_overlap` check in `spec:analyze`.** The deterministic pass now parses the Execution Sequence table and flags same-wave phases whose Primary files overlap (warning). Noise-guarded for backward compatibility: plans without a Wave column skip the check entirely; placeholder cells (`...`, `-`) and non-integer waves are ignored; paths normalized (backticks stripped, separators unified, case-insensitive).
+
+### Tests
+- Added wave overlap/disjoint/legacy-plan cases to the `spec-analyze` suite (14 total). Full suite green (3201 pass).
+
 ## [1.26.0] - 2026-06-11
 
 ### Added
