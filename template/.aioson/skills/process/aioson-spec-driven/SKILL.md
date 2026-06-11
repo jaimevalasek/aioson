@@ -11,6 +11,8 @@ Load this skill when:
 - preparing a clean handoff to the next agent
 - retaking work after a session break (check `last_checkpoint` + `phase_gates` first)
 
+Do not load this skill for `@deyvin` activation-only recovery. A bare `@deyvin` activation is status recovery, not spec work; run Deyvin's fast path and stop before opening this file.
+
 Do NOT load the entire `references/` folder. Load only the file matching your current need.
 
 ## What phases exist

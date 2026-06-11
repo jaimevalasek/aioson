@@ -369,6 +369,8 @@ test('deyvin contract prioritizes memory and hard-gates oversized requests', asy
   const deyvin = await read(path.join(ROOT, 'template/.aioson/agents/deyvin.md'));
 
   const tokens = [
+    '## Activation-only fast path',
+    'Evaluate this immediately after the bootstrap gate and before loading any process skill',
     '## Immediate scope gate',
     'do not start implementation',
     '## Built-in deyvin modules',
@@ -384,6 +386,36 @@ test('deyvin contract prioritizes memory and hard-gates oversized requests', asy
 
   for (const token of tokens) {
     assert.equal(deyvin.includes(token), true, `missing deyvin token: ${token}`);
+  }
+
+  assert.ok(
+    deyvin.indexOf('## Activation-only fast path') < deyvin.indexOf('## Memory awareness preflight'),
+    'activation-only fast path must run before broader memory preflight'
+  );
+  assert.ok(
+    deyvin.indexOf('## Activation-only fast path') < deyvin.indexOf('.aioson/skills/process/aioson-spec-driven/SKILL.md'),
+    'activation-only fast path must appear before SDD loading guidance'
+  );
+});
+
+test('gateway SDD guidance is on-demand and excludes deyvin activation-only recovery', async () => {
+  const agentsGateway = await read(path.join(ROOT, 'template/AGENTS.md'));
+  const claudeGateway = await read(path.join(ROOT, 'template/CLAUDE.md'));
+  const specSkill = await read(path.join(ROOT, 'template/.aioson/skills/process/aioson-spec-driven/SKILL.md'));
+
+  assert.equal(claudeGateway.includes('agents load this automatically'), false);
+
+  const checks = [
+    [agentsGateway, 'For concrete spec/workflow work'],
+    [agentsGateway, 'A bare `@deyvin` activation is not spec work'],
+    [agentsGateway, 'not during `@deyvin` activation-only recovery'],
+    [claudeGateway, 'agents load this on demand for concrete spec/workflow work'],
+    [claudeGateway, '/deyvin` activation-only recovery must not load it'],
+    [specSkill, 'Do not load this skill for `@deyvin` activation-only recovery']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing on-demand SDD token: ${token}`);
   }
 });
 

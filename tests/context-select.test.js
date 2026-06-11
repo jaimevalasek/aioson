@@ -105,6 +105,7 @@ test('context:select keeps active feature specs out of deyvin activation-only pl
     await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
     await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: checkout\n---\n# Pulse');
     await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: checkout\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/memory-index.md', '# Memory Index');
     await writeFile(dir, '.aioson/context/spec-checkout.md', '---\nfeature: checkout\n---\n# Spec');
     await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
 
@@ -118,6 +119,7 @@ test('context:select keeps active feature specs out of deyvin activation-only pl
     assert.ok(activationSelected.includes('.aioson/context/project.context.md'));
     assert.ok(activationSelected.includes('.aioson/context/project-pulse.md'));
     assert.ok(activationSelected.includes('.aioson/context/dev-state.md'));
+    assert.equal(activationSelected.includes('.aioson/context/memory-index.md'), false);
     assert.equal(activationSelected.includes('.aioson/context/spec-checkout.md'), false);
     assert.equal(activationSelected.includes('.aioson/context/features/checkout/dossier.md'), false);
 

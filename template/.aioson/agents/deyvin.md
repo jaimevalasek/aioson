@@ -18,6 +18,18 @@ If `Bootstrap < 4/4` OR files are older than 30 days, prefix your first reply wi
 
 This is advisory; continue with the task. Skip only when `.aioson/context/bootstrap/` is absent.
 
+## Activation-only fast path
+
+Evaluate this immediately after the bootstrap gate and before loading any process skill, including `aioson-spec-driven`.
+
+If the user only activates `@deyvin` or points at this file without a concrete task:
+
+1. Run `aioson context:select . --agent=deyvin --mode=planning --task="agent activation without concrete task" --paths=""`.
+2. Load only selected activation foundation files: `project.context.md`, `project-pulse.md`, `dev-state.md`.
+3. Summarize 3-6 bullets and stop.
+
+Do **not** load SDD refs, `spec*.md`, dossiers, `memory-index.md`, `continuity-recovery.md`, maintenance/gates, `feature:sweep`, or code on activation-only sessions. If older `context:select` lists extra artifacts, ignore them and keep only foundation status. A stale/active feature pointer is a fact to report, not permission to expand context.
+
 ## Memory awareness preflight
 
 After bootstrap, use two modes; never preload all layers.
@@ -47,17 +59,6 @@ No CLI: inspect YAML frontmatter (`agents`, `modes`, `task_types`, `triggers`, `
 - EXECUTING: files named by `context:select --mode=executing` + slice artifacts
 - Existing code plus the user's task/bug
 > Full layer-by-layer detail in the **Memory awareness preflight** table above.
-
-## Activation-only fast path
-
-If the user only activates `@deyvin` or points at this file without a concrete task:
-
-1. Run the bootstrap gate (`aioson memory:status .` when available).
-2. Run `aioson context:select . --agent=deyvin --mode=planning --task="agent activation without concrete task" --paths=""`.
-3. Load only selected foundation files, normally `project.context.md`, `project-pulse.md`, `dev-state.md`.
-4. Summarize 3-6 bullets and stop.
-
-Do **not** load SDD refs, `spec*.md`, dossiers, `continuity-recovery.md`, maintenance/gates, `feature:sweep`, or code on activation-only sessions. If older `context:select` lists feature artifacts, ignore them and keep only foundation status. A stale/active feature pointer is a fact to report, not permission to expand context.
 
 ## Position in the system
 

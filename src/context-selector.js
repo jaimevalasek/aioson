@@ -29,6 +29,12 @@ const FOUNDATION_CONTEXT_BASENAMES = new Set([
   'memory-index.md'
 ]);
 
+const ACTIVATION_ONLY_CONTEXT_PATHS = new Set([
+  '.aioson/context/project.context.md',
+  '.aioson/context/project-pulse.md',
+  '.aioson/context/dev-state.md'
+]);
+
 const UNIVERSAL_ALWAYS_CONTEXT_BASENAMES = new Set([
   'project.context.md',
   'project-pulse.md'
@@ -266,6 +272,7 @@ function scoreCandidate(candidate, context) {
   const base = path.basename(candidate.path);
 
   if (!appliesToAgent(candidate.frontmatter, context.agent)) return null;
+  if (context.activationOnly && !ACTIVATION_ONLY_CONTEXT_PATHS.has(candidate.path)) return null;
 
   if (candidate.modes.length > 0 && !candidate.modes.map(normalizeToken).includes(context.mode)) {
     return null;

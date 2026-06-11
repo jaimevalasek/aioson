@@ -85,7 +85,7 @@ AIOSON follows a Spec-Driven Development (SDD) methodology. Key governance files
 
 - **`.aioson/constitution.md`** — 6 governing principles all agents must respect
 - **`.aioson/context/project-pulse.md`** — global project state; read at session start, update at session end
-- **`.aioson/skills/process/aioson-spec-driven/SKILL.md`** — process methodology; agents load this automatically
+- **`.aioson/skills/process/aioson-spec-driven/SKILL.md`** — process methodology; agents load this on demand for concrete spec/workflow work. `/deyvin` activation-only recovery must not load it.
 
 The process depth scales with project classification:
 - **MICRO** (0-1): lightweight — @product → @dev
