@@ -1,6 +1,6 @@
 # SDD Automation Scripts — Regra dos 80%
 
-> Referência completa dos 12 comandos determinísticos do AIOSON que movem trabalho de arquivo/estado/validação para fora do contexto LLM.
+> Referência completa dos comandos determinísticos do AIOSON que movem trabalho de arquivo/estado/validação para fora do contexto LLM.
 >
 > **Veja também:** [SDD Framework](./sdd-framework.md) — os princípios e a metodologia por trás desses scripts.
 
@@ -346,6 +346,43 @@ project.context.md
 
 ---
 
+## spec:analyze
+
+```
+aioson spec:analyze [path] --feature=<slug> [--json]
+```
+
+Irmão de **conteúdo** do `artifact:validate`. Enquanto `artifact:validate` checa a **presença** da cadeia, `spec:analyze` checa a **consistência cruzada** entre os artefatos da feature antes do gate de execução — tudo deterministicamente, sem LLM.
+
+**Checagens:**
+
+| Checagem | O que detecta | Severidade |
+|---|---|---|
+| **Rastreabilidade REQ/AC** | ids declarados em `requirements-{slug}.md` nunca referenciados downstream = gap de cobertura; ids referenciados downstream sem declaração = órfão/drift | warning |
+| **Staleness** | artefato upstream modificado depois de um downstream já gerado (tolerância 60s, `architecture.md` global excluído) | warning |
+| **Readiness** | `blocked` = error; `ready_with_warnings` = info | error / info |
+| **Sanidade do contrato** | erros de schema do `harness-contract.json` = error; warnings de cobertura executável = info | error / info |
+| **Vínculo AC→contrato** | nenhum AC declarado mencionado no contrato | info |
+| **wave_file_overlap** | fases da mesma Wave com Primary files sobrepostos no plano de implementação | warning |
+
+A rastreabilidade tem **guarda anti-ruído**: plano em prosa que não cita ids não gera gap. O `wave_file_overlap` pula o check quando o plano não tem a coluna `Wave`; placeholders e waves não-inteiras são ignorados, paths são normalizados.
+
+**Severidades e exit code:** `error` vira `ok:false` (exit 1 em `--json`) para scripting de gate; `warning` = drift provável; `info` = dívida. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`.
+
+**Quem roda:** o `@scope-check` chama no preflight — errors são blockers roteados ao agente dono; warnings viram evidência de drift pré-computada para confirmar ou descartar.
+
+```bash
+# Consistência cruzada antes do gate de execução
+aioson spec:analyze . --feature=checkout
+
+# Em pipeline de gate (errors → exit 1)
+aioson spec:analyze . --feature=checkout --json
+```
+
+Veja [Comandos CLI — spec:analyze](./comandos-cli.md#59-validar-consistência-cruzada-com-specanalyze).
+
+---
+
 ## workflow:execute
 
 ```
@@ -514,6 +551,73 @@ aioson learning:auto-promote . --threshold=5
   ]
 }
 ```
+
+---
+
+## harness:check
+
+```
+aioson harness:check [path] --slug=<slug> [--criteria=C1,C2] [--timeout=<ms>] [--json]
+```
+
+Roda os comandos `criteria[].verification` do `harness-contract.json` deterministicamente, **fora do self:loop**. Exit 0 = pass. É o surface avulso do mesmo motor de verificação que o loop usa internamente — reusa `runCriteria`/`executeInSandbox` (timeouts, kill de process-tree, redaction de credenciais, failure signatures).
+
+- **Read-only** sobre `progress.json` — o estado do circuit breaker continua exclusivo de `harness:validate`/`apply-validation`.
+- Persiste `last-check-output.json` e emite telemetria `criteria_check_failed`.
+- Auto-descobre o contrato ativo se `--slug` for omitido; `--criteria` roda um subconjunto.
+
+O `verification` é campo autorado por critério: o `@sheldon` o escreve para todo critério `binary:true` mecanicamente verificável (preferindo o test runner do projeto; determinístico; cross-platform; exit 0 = pass). Contratos legados sem o campo continuam válidos — `validateContract` emite apenas um WARNING advisory (nunca erro).
+
+No gate de execução, o `@validator` roda `harness:check` **primeiro** e copia o veredito do exit code verbatim em `results[].passed`; só julga por LLM os critérios sem `verification`.
+
+```bash
+# Verificação determinística avulsa antes do @validator
+aioson harness:check . --slug=checkout
+
+# Subconjunto de critérios + JSON (exit 0 = pass)
+aioson harness:check . --slug=checkout --criteria=C1,C3 --json
+```
+
+Veja [Loop Guardrails](./loop-guardrails.md) para o motor compartilhado e [Comandos CLI — harness:check](./comandos-cli.md#58-verificar-critérios-deterministicamente-com-harnesscheck).
+
+---
+
+## forge:compile (Lane B)
+
+```
+aioson forge:compile [path] --feature=<slug> [--json]
+```
+
+A **Lane B** é uma lane de execução compilada, opt-in, para features MEDIUM. Em vez de orquestrar agentes em tempo real (como `workflow:execute`), o `forge:compile` compila os artefatos da feature num `.aioson/plans/{slug}/forge-run.workflow.js` — um script de dynamic workflow auditável e versionável (Workflow tool do Claude Code), commitado junto da spec.
+
+**Estrutura compilada:**
+
+1. Um `parallel()` por **Wave** (devs em arquivos disjuntos; parada antecipada se uma wave bloqueia).
+2. Loop de convergência determinístico no `harness:check`, limitado pelo `error_streak_limit` do governor (fixes **sequenciais** — só waves provam disjunção) + guarda de orçamento de tokens.
+3. Revisão adversarial de 3 lentes (correção / completude / risco-de-regressão; maioria sobrevive, refuta-por-default) para critérios binários **sem** `verification`.
+4. Estágio de validador fresh-context fechando pelo ciclo normal `harness:validate` → `last-validator-output.json` → `apply-validation`.
+
+**Preflights duros** recusam compilar e nomeiam o agente dono:
+
+| Recusa | Agente dono |
+|---|---|
+| Contrato inválido/ausente, zero critério executável | `@sheldon` |
+| Plano sem coluna Wave, `wave_file_overlap` (warning na análise, **erro aqui**) | `@pm` |
+| Errors do `spec:analyze`, readiness | `@discovery-design-doc` |
+
+O código gerado respeita o contrato do runtime: meta literal puro, JS plano, sem `Date.now`/`Math.random`/`new Date`, texto de artefatos via `JSON.stringify` (seguro contra injeção). O script **nunca** roda `feature:close`/publish.
+
+A entrada da Lane B é o agente `@forge-run` (`/forge-run`): compila → revisa com o usuário (aviso de custo) → executa via runtime de workflows (nunca emulado na mão) → reporta. PASS recomenda o humano rodar `feature:close`; FAIL volta ao `@dev` pela lane normal. Uma feature por run.
+
+```bash
+# Compilar a feature MEDIUM num workflow auditável
+aioson forge:compile . --feature=checkout
+
+# JSON (preflights duros podem recusar)
+aioson forge:compile . --feature=checkout --json
+```
+
+Veja [Comandos CLI — forge:compile](./comandos-cli.md#60-compilar-a-lane-b-com-forgecompile).
 
 ---
 

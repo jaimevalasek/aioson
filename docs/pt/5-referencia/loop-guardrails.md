@@ -164,6 +164,25 @@ Cada critério pode declarar um comando de verificação:
 - Logs gravados em `.aioson/plans/{slug}/attempts/{n}/checks/{id}.log`.
 - **Mesma assinatura de falha por 2 tentativas consecutivas** → circuito abre e escala para humano (detecção de loop estéril).
 
+O campo `verification` é **autorado por critério**. O `@sheldon` o escreve para todo critério `binary:true` mecanicamente verificável — preferindo o test runner do projeto, determinístico, cross-platform, com exit 0 = pass. Contratos legados sem o campo continuam válidos; `validateContract` apenas emite um WARNING advisory (nunca erro) para critério `binary:true` sem `verification`.
+
+---
+
+## harness:check — verificação determinística avulsa
+
+O mesmo motor de verificação que o `self:loop` usa internamente também é exposto como comando autônomo:
+
+```bash
+aioson harness:check . --slug=<feature>
+aioson harness:check . --slug=<feature> --criteria=C1,C3 --timeout=120000 --json
+```
+
+`harness:check` roda os comandos `criteria[].verification` do contrato deterministicamente, **fora do self:loop**. Exit 0 = pass. Reusa exatamente o mesmo `runCriteria`/`executeInSandbox` da avaliação de critérios acima — timeouts, kill de process-tree, redaction de credenciais e failure signatures idênticos.
+
+Diferença chave de governança: é **read-only sobre `progress.json`**. O estado do circuit breaker continua exclusivo de `harness:validate`/`apply-validation` — `harness:check` nunca abre nem fecha o circuito, só reporta o veredito. Persiste `last-check-output.json` e emite telemetria `criteria_check_failed`. Auto-descobre o contrato ativo se `--slug` for omitido; `--criteria` roda um subconjunto.
+
+É a base do gate de execução: o `@validator` roda `harness:check` **primeiro** e copia o veredito do exit code verbatim em `results[].passed`, julgando por LLM apenas os critérios sem `verification`. Veja [Comandos CLI — harness:check](./comandos-cli.md#58-verificar-critérios-deterministicamente-com-harnesscheck).
+
 ---
 
 ## Artefatos por tentativa

@@ -666,6 +666,63 @@ See [Sub-task Scout — CLI reference](../deyvin-subtask-scout/cli-commands.md) 
 
 ---
 
+## harness:check
+
+Run the `criteria[].verification` shell commands from `harness-contract.json` deterministically — **outside** the self:loop and **read-only** over `progress.json`. Each criterion's command runs in the sandbox; exit code `0` = pass. Reuses the loop's `runCriteria`/`executeInSandbox` machinery (timeouts, process-tree kill, credential redaction, failure signatures). Persists `last-check-output.json` and emits `criteria_check_failed` telemetry on failure.
+
+```bash
+# Run every verifiable criterion of the active contract (auto-discovered)
+aioson harness:check . --slug=checkout
+
+# Run only a subset of criteria
+aioson harness:check . --slug=checkout --criteria=C1,C3
+
+# Custom timeout and JSON output (exit 0 = pass)
+aioson harness:check . --slug=checkout --timeout=120000 --json
+```
+
+**Options:**
+- `--slug=<feature>` — feature slug matching the harness contract. If omitted, the active contract is auto-discovered.
+- `--criteria=C1,C2` — run only the listed criteria instead of all verifiable ones.
+- `--timeout=<ms>` — per-criterion timeout override.
+- `--json` — structured output; exit code propagated.
+
+**What it does:** the `verification` field is authored per criterion by `@sheldon` for every mechanically-checkable `binary: true` criterion (prefer the project test runner; deterministic; cross-platform; exit 0 = pass). `harness:check` is the standalone deterministic verification of those criteria — it never touches the circuit-breaker state (that stays exclusive to `harness:validate`/`apply-validation`). Legacy contracts without `verification` remain valid; `validateContract` only emits an advisory **warning** for `binary: true` criteria lacking it. `@validator` runs `harness:check` first and copies the exit-code verdicts verbatim into `results[].passed`, LLM-judging only the criteria without `verification`.
+
+See [Executable verification](./executable-verification.md) for the full theme.
+
+---
+
+## harness:validate
+
+Generate the `validator-prompt.txt` for the binary success contract and append a self-contained **review payload** so the validator can judge in a fresh, isolated context. Consumes the verdict back through the circuit breaker.
+
+```bash
+# Generate the validator prompt with review payload
+aioson harness:validate . --slug=checkout
+
+# Resolve the diff against an explicit base
+aioson harness:validate . --slug=checkout --base=main
+
+# Skip the diff (review payload still includes check results + changed files)
+aioson harness:validate . --slug=checkout --no-diff
+
+# Cap the embedded diff size
+aioson harness:validate . --slug=checkout --max-diff-bytes=200000
+```
+
+**Options:**
+- `--slug=<feature>` — **required**. Feature slug matching the harness contract.
+- `--base=<ref>` — git ref to diff against. Resolution order: `--base` > `baseline.json` head > merge-base with `main`/`master` > `HEAD`.
+- `--no-diff` — pure boolean flag; omit the unified diff from the review payload.
+- `--max-diff-bytes=<n>` — cap the embedded diff (default `200000`); truncation happens on a line boundary.
+
+**What it does:** the review payload (built by `src/harness/review-payload.js`) contains (a) the `harness:check` results, (b) the changed-file list (untracked files included, `.aioson/**` framework state filtered out), and (c) a unified diff against the resolved base. It degrades gracefully outside a git repo. The protocol is that `@validator` runs in a **fresh, isolated context** (a subagent / Task tool, or a separate session) — never inline in the implementing session, because implementation history biases the verdict. Typical flow: `harness:check` → `harness:validate` → isolated subagent run → re-run `harness:validate` to consume the verdict through the circuit breaker.
+
+See [Executable verification](./executable-verification.md) for the full theme.
+
+---
+
 ## harness:approve
 
 Approve a pending human gate in the self:loop (loop guardrails). Persists the decision (who, when) to `.aioson/plans/{slug}/gates/{id}.json` and resumes the loop.
@@ -747,4 +804,61 @@ aioson harness:preview .aioson/context/retro/checkout.md
 ```
 
 Read-only. Best-effort write for the preview artifact.
+
+---
+
+## spec:analyze
+
+The **content** sibling of `artifact:validate` (which checks chain **presence** — unchanged). Runs deterministic cross-artifact consistency checks before the execution gate. Persists `spec-analyze-{slug}.json`.
+
+```bash
+# Analyze cross-artifact consistency for a feature
+aioson spec:analyze . --feature=checkout
+
+# JSON output for gate scripting (errors → exit 1)
+aioson spec:analyze . --feature=checkout --json
+```
+
+**Options:**
+- `--feature=<slug>` — **required**. Feature slug.
+- `--json` — structured output; `error` findings flip `ok: false` (exit 1).
+
+**What it does:** runs five deterministic checks across the feature's artifacts:
+1. **REQ/AC ID traceability** — declared-but-unreferenced IDs = coverage-gap warning; referenced-but-undeclared IDs = orphan/drift warning (noise-guarded for prose plans).
+2. **Staleness** — an upstream artifact modified after a downstream one = warning (60s tolerance; the project-global `architecture.md` is excluded).
+3. **Readiness** — `blocked` = error; `ready_with_warnings` = info.
+4. **Harness-contract sanity** — schema errors = error; executable-coverage = info.
+5. **AC→contract linkage** = info.
+
+An `error` flips `ok: false` (exit 1 in `--json`). `@scope-check` runs `spec:analyze` in preflight: errors are blockers, warnings are pre-computed drift evidence. When the plan carries a `Wave` column, it also runs the `wave_file_overlap` check (same-wave phases sharing Primary files = warning; plans without a `Wave` column skip it).
+
+See [Executable verification](./executable-verification.md) for the full theme.
+
+---
+
+## forge:compile
+
+**Lane B.** Compile a MEDIUM feature's artifacts into `.aioson/plans/{slug}/forge-run.workflow.js` — an auditable, versionable Claude Code dynamic-workflow script that is committed alongside the spec. Opt-in entry point is the `@forge-run` agent.
+
+```bash
+# Compile the feature into a forge-run.workflow.js
+aioson forge:compile . --feature=checkout
+
+# JSON output (hard preflights may refuse compilation)
+aioson forge:compile . --feature=checkout --json
+```
+
+**Options:**
+- `--feature=<slug>` — **required**. Feature slug.
+- `--json` — structured output; refusals are reported with the owning agent named.
+
+**What it does:** the generated workflow mirrors the executable-verification roadmap:
+- one `parallel()` per **Wave** (file-disjoint dev agents; blocked-wave early stop),
+- a deterministic `harness:check` convergence loop bounded by the governor's `error_streak_limit` (sequential fixes — only waves prove disjointness) plus a token-budget guard,
+- a 3-lens adversarial review (correctness / completeness / regression-risk; majority survives; refute-by-default) for binary criteria **without** `verification`,
+- a fresh-context validator stage closing through `harness:validate` → `last-validator-output.json` → `apply-validation`.
+
+**Hard preflights** refuse compilation and name the owning agent: invalid/missing contract, zero executable criteria, plan without a `Wave` column, `spec:analyze` errors, and `wave_file_overlap` (a *warning* in `spec:analyze`, an **error** here). Generated code is deterministic by construction: pure-literal metadata, plain JS, no `Date.now`/`Math.random`/`new Date`, artifact text via `JSON.stringify` (injection-safe). It **never** runs `feature:close`. New module: `src/harness/plan-waves.js`.
+
+See [@forge-run](../4-agents/forge-run.md) and [Executable verification](./executable-verification.md).
 

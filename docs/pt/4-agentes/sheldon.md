@@ -69,6 +69,8 @@ O `@sheldon` decide entre **enriquecer in-place** ou **criar plano faseado** dep
 
 **Re-entrante:** se `sheldon-enrichment.md` já existir, o `@sheldon` detecta e oferece nova rodada sem refazer do zero. Você pode invocá-lo 2, 3, N vezes — cada rodada fecha mais gaps.
 
+**Campo `verification` no contrato (v1.24.0+):** ao gerar o `harness-contract.json`, o `@sheldon` agora autora um comando de shell `verification` para **todo critério `binary:true` mecanicamente verificável** (exit 0 = pass). Ele prefere o test runner do próprio projeto, mira em comandos determinísticos e cross-platform. Com isso, `aioson harness:check` consegue verificar o critério de forma determinística, fora do `self:loop`, e o `@validator` copia o exit code verbatim no veredicto. Contratos legados sem o campo continuam válidos (o `@validator` cai no julgamento por LLM para esses critérios).
+
 ## Como ele lê seu projeto
 
 1. `.aioson/context/project.context.md` — stack e classificação.

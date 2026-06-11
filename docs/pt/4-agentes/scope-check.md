@@ -11,9 +11,26 @@ Ele evita drift de escopo: antes de codar, confere se tudo que foi decidido est�
 - Após `@dev` e/ou correções de `@qa`/`@tester`/`@pentester`, quando houve mudança material de código ou comportamento.
 - Em reaberturas de feature com risco de quebra de contrato entre o que foi planejado e o que está sendo entregue.
 
+## Preflight determinístico: `spec:analyze` (v1.26.0+)
+
+No modo `pre-dev`, antes de julgar, o `@scope-check` roda `aioson spec:analyze . --feature={slug}` — uma checagem **determinística** de consistência entre artefatos, executada **antes do gate de execução**. Ela cobre:
+
+- rastreabilidade REQ/AC (gaps e órfãos);
+- staleness (upstream modificado depois do downstream);
+- readiness `blocked` (vira `error`);
+- sanidade do contrato e vínculo AC→contrato;
+- `wave_file_overlap` (mesma wave + arquivos sobrepostos — ver coluna `Wave` do [@pm](./pm.md)).
+
+Interpretação:
+
+- **`errors` são blockers** — `spec:analyze` retorna `ok:false` e o `@scope-check` não libera para `@dev`.
+- **`warnings` são evidência de drift pré-computada** — entram no relatório como divergências a confirmar, sem necessariamente bloquear.
+
+O resultado é persistido em `spec-analyze-{slug}.json`.
+
 ## Modos
 
-- `pre-dev` (padrão): valida intenção e plano antes da primeira implementação.
+- `pre-dev` (padrão): valida intenção e plano antes da primeira implementação (roda `spec:analyze`).
 - `post-dev` (opcional): valida se o diff entregue bate com o plano aprovado.
 - `post-fix` (opcional): valida se correções mantiveram o escopo e contrato.
 - `final` (opcional): reconcilia intenção, plano e resultado de fechamento.
@@ -34,6 +51,7 @@ Cria/atualiza:
 
 - `.aioson/context/scope-check.md` (modo projeto)
 - `.aioson/context/scope-check-{slug}.md` (modo feature)
+- `.aioson/plans/{slug}/spec-analyze-{slug}.json` (resultado do `spec:analyze` no `pre-dev`)
 
 O relatório deve indicar:
 

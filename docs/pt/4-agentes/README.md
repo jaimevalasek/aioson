@@ -1,6 +1,6 @@
 # Guia de Agentes AIOSON
 
-> Índice com 29 agentes e 1 alias, com situação de uso e saída esperada.
+> Índice com 30 agentes e 1 alias, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
 > `@pair` é alias de `@deyvin` e não possui ficha separada.
 
@@ -20,6 +20,7 @@
 | [@dev](./dev.md) | Implementa a feature | Após planning completo | código + `dev-state.md` |
 | [@qa](./qa.md) | Testa, valida ACs, ciclo autônomo com `@dev` | Após `@dev` | `test-plan.md`, `qa-report-*.md` |
 | [@validator](./validator.md) | Gate final: valida contrato binário de sucesso | Após `@qa`, antes de fechar feature | veredicto em `last-handoff.json` |
+| [@forge-run](./forge-run.md) | Lane B opt-in: compila e roda o workflow de verificação executável de uma feature MEDIUM | MEDIUM com contrato `verification` + plano com Wave | `forge-run.workflow.js` |
 | [@tester](./tester.md) | Engenharia de testes para apps já existentes | Legacy/brownfield ou lacunas graves | `test-inventory.md` |
 | [@pentester](./pentester.md) | Revisão adversarial de segurança | Antes de publicar ou por demanda | `security-findings-*.json` |
 

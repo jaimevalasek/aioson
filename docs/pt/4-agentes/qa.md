@@ -115,6 +115,8 @@ aioson dossier:show . --slug=checkout-stripe
 - **Vem de:** `@dev`
 - **Vai para:** `@validator` (quando há harness-contract) ou encerramento da feature
 
+> Desde a v1.24.0, o `@validator` roda `aioson harness:check` **primeiro** (verificação determinística, exit 0 = pass) e julga por LLM só os critérios sem `verification`. Ele é ativado a partir do `validator-prompt.txt` autocontido (critérios + resultados do check + diff vs. base) em **contexto fresco e isolado** — não na sessão que implementou. Ver [Ficha do @validator](./validator.md).
+
 ---
 
 ## Próximo passo

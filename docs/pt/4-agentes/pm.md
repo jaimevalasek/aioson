@@ -35,6 +35,14 @@ Para o projeto completo (configuração inicial), `@pm` entra após `@ux-ui` e a
 
 ---
 
+## Coluna `Wave` na Execution Sequence (v1.27.0+)
+
+A tabela **Execution Sequence** do `implementation-plan-{slug}.md` ganhou a coluna `Wave`. Fases marcadas na **mesma wave** são **disjuntas em arquivos** (não tocam nos mesmos arquivos) e, portanto, **paralelizáveis** — é exatamente essa marcação que a Lane B do [@forge-run](./forge-run.md) compila em blocos `parallel()`.
+
+A marcação é **conservadora**: na dúvida, o `@pm` deixa sequencial. Só agrupa na mesma wave quando tem certeza de que não há sobreposição de arquivos.
+
+O `aioson spec:analyze` verifica a consistência das waves: mesma wave com arquivos sobrepostos dispara o warning `wave_file_overlap`, que o [@scope-check](./scope-check.md) trata como drift pré-computado.
+
 ## Quando invocar
 
 - Features MEDIUM (obrigatório no workflow — produz Gate C).

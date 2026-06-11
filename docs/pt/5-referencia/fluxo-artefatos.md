@@ -17,6 +17,7 @@ Cada agente produz arquivos que os agentes subsequentes leem. Nenhum agente lê 
 @analyst → lê sheldon-enrichment → discovery.md / requirements-{slug}.md + spec-{slug}.md
                ↓
 @scope-check → confronta intenção, plano e artefatos antes do código
+               roda spec:analyze (consistência cruzada) no preflight
                gera scope-check-{slug}.md quando a feature é nomeada
                ↓
 @dev → carrega minimum context package → implementa fase por fase
@@ -175,9 +176,33 @@ Esta é a lista completa de arquivos que @dev pode consultar em qualquer sessão
 
 ---
 
+## Verificação executável: campos e artefatos adicionais
+
+Além da cadeia acima, a camada de **verificação executável** adiciona campos e artefatos opcionais que tornam o gate de execução determinístico. Tudo é aditivo — features que não os usam seguem a lane normal sem mudança.
+
+### Campo `verification` no harness-contract.json
+
+Quando o `@sheldon` autora o `harness-contract.json`, ele escreve um comando `verification` para todo critério `binary:true` mecanicamente verificável (preferindo o test runner do projeto; determinístico; cross-platform; exit 0 = pass). Esse campo é o que o `aioson harness:check` roda deterministicamente fora do loop, e o que o `@validator` copia verbatim antes de julgar por LLM os critérios restantes. Contratos legados sem o campo continuam válidos.
+
+### Coluna `Wave` no plano de implementação
+
+A tabela **Execution Sequence** gerada pelo `@pm` ganha a coluna `Wave`. Fases na mesma Wave são disjuntas em arquivos e sem dependência entre si — paralelizáveis via subagentes/worktrees isolados; waves executam em ordem crescente. A marcação é conservadora: mesma Wave só quando os Primary files não se sobrepõem **e** nenhuma fase consome a saída da outra; na dúvida, sequencial. É essa coluna que a Lane B usa para montar os `parallel()` do workflow compilado.
+
+### spec:analyze como passe de consistência pré-execução
+
+Antes do gate de execução, o `@scope-check` roda `aioson spec:analyze --feature={slug}` — o irmão de **conteúdo** do `artifact:validate`. Enquanto `artifact:validate` checa a presença da cadeia, `spec:analyze` checa a consistência cruzada entre os artefatos: rastreabilidade REQ/AC, staleness (upstream modificado após downstream gerado), readiness, sanidade do contrato, vínculo AC→contrato e `wave_file_overlap`. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`: errors são blockers roteados ao agente dono; warnings viram evidência de drift pré-computada.
+
+### forge-run.workflow.js como artefato de saída compilado
+
+Para features MEDIUM, a **Lane B** (`@forge-run` → `aioson forge:compile`) compila os artefatos da feature num `.aioson/plans/{slug}/forge-run.workflow.js` — um script de dynamic workflow auditável e versionável, **commitado junto da spec**. Ele embute parallel-por-Wave, convergência no `harness:check`, revisão adversarial e validador fresh-context. É a forma compilada e reproduzível dos mesmos artefatos descritos acima; nunca roda `feature:close`/publish.
+
+---
+
 ## Veja também
 
 - [Fichas dos 29 agentes](../4-agentes/README.md) — quando usar cada agente e o que ele entrega
 - [Receitas práticas](../3-receitas/README.md) — exemplos end-to-end por cenário
 - [Continuidade entre sessões](../3-receitas/continuidade-entre-sessoes.md) — feature dossier, dev-resume, drift detection
 - [Feature Archive](./feature-archive.md) — o que acontece com os artefatos quando a feature fecha
+- [Loop Guardrails](./loop-guardrails.md) — `harness:check` e o campo `verification` do harness-contract
+- [SDD Automation Scripts](./sdd-automation-scripts.md) — `spec:analyze` e a Lane B (`forge:compile`)

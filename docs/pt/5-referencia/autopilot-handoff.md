@@ -57,6 +57,25 @@ Uma vez que o `@dev` inicial termina, o autopilot retoma automaticamente:
 
 `@tester` e `@pentester` só executam quando os seus triggers disparam (`@qa` identifica gaps de cobertura → `@tester`; superfície sensível auth/secrets/data → `@pentester`).
 
+### Protocolo de contexto fresco do @validator
+
+O `@validator` roda em contexto **fresco e isolado** (subagente/Task tool ou sessão separada), nunca inline na sessão que implementou — o histórico de implementação enviesa o veredito. Quando o autopilot roteia para `@validator`, a sequência é:
+
+```
+harness:check                  → roda os criteria[].verification deterministicamente (exit code = veredito)
+  ↓
+harness:validate               → gera validator-prompt.txt com REVIEW PAYLOAD autocontido:
+                                   (a) resultados do harness:check
+                                   (b) lista de arquivos alterados (untracked incluídos, .aioson/** filtrado)
+                                   (c) diff unificado vs base resolvida (--base > baseline.json > merge-base > HEAD)
+  ↓
+execução isolada em subagente  → @validator julga só os critérios sem verification, em contexto limpo
+  ↓
+harness:validate (de novo)     → consome o veredito pelo circuit breaker (waiting_validation/apply-validation)
+```
+
+O review payload torna o prompt do validador **autocontido**: ele não precisa explorar o repositório. O diff tem teto de tamanho (`--max-diff-bytes`, default 200KB, truncamento em fronteira de linha); `--no-diff` omite o diff; fora de repo git, degrada graciosamente. A máquina de estados `waiting_validation`/`apply-validation` permanece inalterada.
+
 ---
 
 ## Condições de parada
@@ -121,6 +140,20 @@ Você > /dev  (implementação manual — contexto limpo)
 
 Você > aioson feature:close . --feature=minha-feature
 ```
+
+---
+
+## Lane B — execução compilada (alternativa opt-in)
+
+Para features **MEDIUM**, existe uma lane de execução alternativa ao autopilot em tempo real: a **Lane B**, acionada pelo agente `@forge-run` (`/forge-run`). Em vez de encadear agentes vivos, o `@forge-run` **compila** os artefatos da feature num `.aioson/plans/{slug}/forge-run.workflow.js` (via `aioson forge:compile`) e o executa pelo runtime de workflows.
+
+O workflow compilado embute o mesmo ciclo de revisão: um `parallel()` por Wave → convergência no `harness:check` → revisão adversarial de 3 lentes para critérios binários sem `verification` → validador fresh-context fechando por `harness:validate` → `apply-validation`. Como a lane normal, ele **nunca** roda `feature:close`/publish: PASS recomenda o humano rodar `feature:close`; FAIL volta ao `@dev` pela lane normal. Uma feature por run.
+
+Quando preferir cada uma:
+- **Autopilot (lane normal)** — handoffs determinísticos entre agentes vivos; padrão para SMALL e MEDIUM.
+- **Lane B (`@forge-run`)** — execução compilada, reproduzível e versionável de uma feature MEDIUM; opt-in, com aviso de custo antes de rodar.
+
+Veja [SDD Automation Scripts — forge:compile](./sdd-automation-scripts.md#forgecompile-lane-b).
 
 ---
 

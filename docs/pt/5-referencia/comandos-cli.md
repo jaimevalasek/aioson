@@ -225,6 +225,8 @@ Scripts determinísticos que movem verificações de estado, validação de arte
 | `feature:export` | **Copia** todos os artefatos de uma feature para um `--out` limpo, sem mexer na origem; gera `INDEX.md` | Exportar specs para analisar fora, entregar a cliente, ou usar o AIOSON só como gerador de specs. Veja [feature-export.md](./feature-export.md) |
 | `gate:check` | Valida pré-requisitos e artefatos de um phase gate (A/B/C/D); retorna PASS ou BLOCKED | Antes de avançar para o próximo agente |
 | `artifact:validate` | Verifica a cadeia completa de artefatos de uma feature (PRD → spec → plano → conformance) | A qualquer momento para checar completude |
+| `spec:analyze` | Irmão de **conteúdo** do `artifact:validate`: consistência cruzada entre os artefatos (rastreabilidade REQ/AC, staleness, readiness, sanidade do contrato, vínculo AC→contrato, overlap de waves) antes do gate de execução | No preflight do `@scope-check` — errors viram blockers, warnings viram evidência de drift |
+| `forge:compile` | **Lane B:** compila os artefatos de uma feature MEDIUM num `forge-run.workflow.js` auditável e versionável (parallel por Wave → convergência no `harness:check` → revisão adversarial → validador fresh-context) | Quando quer execução compilada e reproduzível via `@forge-run`; nunca roda `feature:close`/publish |
 | `workflow:execute` | Monta e executa o plano de agentes baseado na classificação; aceita `--dry-run` e `--start-from` | Para orquestrar features sem o dashboard |
 | `runner:run` | Executa uma tarefa ou worker diretamente pelo runner | Quando quer executar fora do loop principal de sessão |
 | `runner:queue` | Enfileira tarefas no runner com prioridade e agente designado | Para execução assíncrona ou batch de tarefas |
@@ -304,6 +306,8 @@ Controle do loop autônomo `self:loop` com scope guard, budget enforcement, huma
 
 | Comando | O que faz | Quando usar |
 |---|---|---|
+| `harness:check` | Roda os comandos `criteria[].verification` do contrato deterministicamente, **fora do self:loop** (read-only sobre `progress.json`); exit 0 = pass | Verificação determinística avulsa dos critérios; o `@validator` roda primeiro e copia o veredito verbatim |
+| `harness:validate` | Gera o `validator-prompt.txt` com **review payload autocontido** (resultados do `harness:check` + arquivos alterados + diff vs base resolvida) e consome o veredito pelo circuit breaker | Antes de executar o `@validator` em contexto fresco e isolado |
 | `harness:approve` | Aprova um gate humano pendente no loop (persiste decisão auditável) | Quando o loop pausou em `HUMAN_GATE` e você quer retomá-lo |
 | `harness:reject` | Rejeita um gate humano (encerra a tentativa com resumo; requer `--reason`) | Quando quer cancelar a tentativa atual após revisão humana |
 | `harness:status` | Visão do estado do loop: circuito, iteração N/M, budget, checks, gates pendentes, próxima ação | Sempre que quiser saber o que o loop está fazendo ou por que parou |
@@ -1668,7 +1672,7 @@ Valida pré-requisitos e artefatos. Retorna PASS ou BLOCKED com lista de evidên
 aioson artifact:validate . --feature=checkout --json
 ```
 
-Verifica toda a cadeia PRD → spec → plano → conformance e indica o próximo artefato faltante.
+Verifica toda a cadeia PRD → spec → plano → conformance e indica o próximo artefato faltante. Para checar a **consistência de conteúdo** entre os artefatos (não só a presença), veja `spec:analyze` no exemplo 58.
 
 ### 48. Atualizar pulse ao final da sessão
 
@@ -1875,6 +1879,57 @@ Saída em `.aioson/context/retro/checkout.md`. Fontes mineradas: QA reports, pla
 # Exibir prévia de um artefato com truncação segura
 aioson harness:preview .aioson/context/retro/checkout.md
 ```
+
+---
+
+### 58. Verificar critérios deterministicamente com harness:check
+
+Roda os comandos `criteria[].verification` do `harness-contract.json` **fora do self:loop**, de forma determinística. Read-only sobre `progress.json` — o estado do circuit breaker continua exclusivo de `harness:validate`/`apply-validation`.
+
+```bash
+# Rodar todos os critérios verificáveis do contrato ativo (auto-descoberto)
+aioson harness:check . --slug=checkout
+
+# Rodar um subconjunto de critérios
+aioson harness:check . --slug=checkout --criteria=C1,C3
+
+# Com timeout customizado e saída JSON (exit 0 = pass)
+aioson harness:check . --slug=checkout --timeout=120000 --json
+```
+
+Reusa o mesmo motor do loop (timeouts, kill de process-tree, redaction de credenciais, failure signatures). Persiste `last-check-output.json` e emite telemetria `criteria_check_failed`. O `verification` é campo autorado por critério — o `@sheldon` o escreve para todo critério `binary:true` mecanicamente verificável; contratos legados sem o campo continuam válidos (gera apenas WARNING advisory). O `@validator` roda `harness:check` **primeiro** e copia o veredito do exit code verbatim. Veja [Loop Guardrails](./loop-guardrails.md#harnesscheck--verificação-determinística-avulsa).
+
+---
+
+### 59. Validar consistência cruzada com spec:analyze
+
+Irmão de **conteúdo** do `artifact:validate` (que checa só presença). Roda checagens determinísticas entre os artefatos da feature antes do gate de execução.
+
+```bash
+# Analisar a consistência cruzada dos artefatos da feature
+aioson spec:analyze . --feature=checkout
+
+# Saída JSON para scripting de gate (errors → exit 1)
+aioson spec:analyze . --feature=checkout --json
+```
+
+Checagens: rastreabilidade REQ/AC (ids declarados nunca usados downstream = gap; ids usados sem declaração = órfão/drift), staleness (upstream modificado após downstream gerado), readiness (`blocked` = error, `ready_with_warnings` = info), sanidade do contrato e vínculo AC→contrato, mais `wave_file_overlap` (fases da mesma Wave com Primary files sobrepostos). Severidades: **error** vira `ok:false`/exit 1; **warning** = drift provável; **info** = dívida. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`. O `@scope-check` roda no preflight: errors são blockers, warnings viram evidência de drift pré-computada.
+
+---
+
+### 60. Compilar a Lane B com forge:compile
+
+Compila os artefatos de uma feature MEDIUM num script de dynamic workflow auditável e versionável, commitado junto da spec. Entrada opt-in via `@forge-run`.
+
+```bash
+# Compilar a feature num forge-run.workflow.js
+aioson forge:compile . --feature=checkout
+
+# Saída JSON (preflights duros podem recusar a compilação)
+aioson forge:compile . --feature=checkout --json
+```
+
+Gera `.aioson/plans/{slug}/forge-run.workflow.js`: um `parallel()` por Wave (devs em arquivos disjuntos) → loop de convergência no `harness:check` (fixes sequenciais, limitado pelo `error_streak_limit` do governor + guarda de orçamento) → revisão adversarial de 3 lentes para critérios binários **sem** `verification` → estágio de validador fresh-context fechando pelo ciclo normal `harness:validate` → `apply-validation`. Preflights duros recusam compilar (contrato inválido/ausente, zero critério executável, plano sem coluna Wave, errors do `spec:analyze`, `wave_file_overlap`) e nomeiam o agente dono (`@sheldon`, `@pm`, `@discovery-design-doc`). O script gerado **nunca** roda `feature:close`/publish.
 
 ---
 

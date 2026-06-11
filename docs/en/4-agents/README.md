@@ -25,6 +25,7 @@ Cards are being translated progressively. Until a card is available here, the PT
 | `@dev` | Feature implementation — any stack |
 | `@qa` | Risk-first review, test generation, autonomous fix/test loop |
 | `@validator` | Binary contract verification against `harness-contract.json` |
+| [`@forge-run`](./forge-run.md) | Lane B (opt-in) — compile a MEDIUM feature's specs into an executable workflow and run it (`forge:compile`) |
 | `@tester` | Systematic test engineering — legacy and coverage gaps |
 | `@pentester` | Adversarial security review — OWASP Top 10, LLM Top 10, supply chain |
 
@@ -53,5 +54,7 @@ Cards are being translated progressively. Until a card is available here, the PT
 | [`@discovery-design-doc`](./discovery-design-doc.md) | Discovery, readiness, and design doc package |
 
 ---
+
+For the executable-verification theme that `@forge-run`, `@validator`, `@scope-check`, `@sheldon`, and `@pm` participate in, see [Executable verification](../5-reference/executable-verification.md).
 
 Full PT cards with dialogue examples, disk outputs, and handoff maps: [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md)

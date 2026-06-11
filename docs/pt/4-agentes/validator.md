@@ -86,6 +86,26 @@ Apenas e exclusivamente:
 
 ---
 
+## Ativação em contexto fresco (v1.24.0+)
+
+A ativação preferida do `@validator` é o **`validator-prompt.txt` autocontido** gerado por `aioson harness:validate`. Esse prompt embute um REVIEW PAYLOAD com tudo que ele precisa para julgar sem depender de chat anterior:
+
+- os critérios do `harness-contract.json`;
+- os **resultados do `harness:check`** (verificação determinística, exit 0 = pass);
+- a lista de arquivos alterados e o **diff unificado vs. base resolvida** (`--base` > `baseline.json` > merge-base `main`/`master` > `HEAD`; default `--max-diff-bytes` 200KB; `--no-diff` omite). Fora de git, degrada graciosamente.
+
+Por isso o `@validator` roda em **contexto fresco e isolado** — subagente (Task tool) ou sessão separada, nunca inline na sessão que implementou. O histórico de implementação enviesa o veredicto.
+
+**Ordem de operações:**
+
+1. Roda `harness:check` **primeiro** e copia o exit code **verbatim** em `results[].passed` — não re-julga o que a máquina já decidiu.
+2. Só usa julgamento por LLM nos critérios **sem** `verification` (não verificáveis mecanicamente).
+3. O schema de saída permanece inalterado (`overall_score: 1 | 0`).
+
+Fluxo completo: `harness:check` → `harness:validate` → execução isolada → re-rodar `harness:validate` para o output ser consumido pelo circuit breaker (`apply-validation`).
+
+---
+
 ## Handoff típico
 
 - **Vem de:** `@qa` (recomenda `@validator` no relatório quando `harness-contract.json` existe).
