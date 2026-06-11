@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.28.0] - 2026-06-11
+
+### Added
+- **`forge:compile` — spec → workflow-script compiler (Lane B, opt-in).** `aioson forge:compile [path] --feature=<slug> [--json]` compiles a MEDIUM feature's completed artifacts into `.aioson/plans/{slug}/forge-run.workflow.js` — an auditable, versionable dynamic-workflow script meant to be committed alongside the spec. Compiled structure: one `parallel()` stage per Wave (file-disjoint dev agents, blocked-wave early stop), a deterministic convergence loop on `aioson harness:check` bounded by the governor's `error_streak_limit` (fixes run **sequentially** — criteria don't prove file-disjointness, only waves do) plus a token-budget guard, 3-lens adversarial review (correctness/completeness/regression-risk, majority survives, refute-by-default) for binary criteria without `verification`, and a fresh-context validator stage that closes through the normal `harness:validate` → `last-validator-output.json` → `apply-validation` circuit-breaker cycle. Hard preflights — invalid/missing contract, zero executable criteria, plan without Wave column, `spec:analyze` errors, and `wave_file_overlap` (warning in analyze, **error** here) all refuse compilation with owner-agent guidance. Generated code honors the workflow runtime contract: pure-literal `meta`, plain JS, no `Date.now()`/`Math.random()`/`new Date()`, and all artifact-derived text embedded via `JSON.stringify` (no interpolable template literals — injection-safe). The script never runs `feature:close`/publish.
+- **`@forge-run` agent — the Lane B entry point.** New opt-in agent (`/forge-run`): compile (refusals route to the owner agent), review the compile report with the user (cost warning included), execute the generated script via the workflow runtime (never hand-emulated), and report — PASS recommends the human run `feature:close`, FAIL routes to `@dev` through the normal lane. Registered across CLAUDE.md/AGENTS.md/OPENCODE.md, `.claude/commands` wrapper, `src/constants.js` (MANAGED_FILES + AGENTS), and all template mirrors.
+- **`src/harness/plan-waves.js`** — shared Execution Sequence parser (waves + scope + done columns, `groupByWave`), extracted from `spec:analyze` and reused by the compiler. `spec:analyze` behavior unchanged.
+
+### Tests
+- Added `forge-compile` suite (9 cases: preflight refusals, governor-derived fix-loop cap, wave→parallel structure, runtime-constraint bans, byte-identical recompilation determinism, template-injection invariant, JSON mode). Full suite green (3210 pass).
+
 ## [1.27.0] - 2026-06-11
 
 ### Added
