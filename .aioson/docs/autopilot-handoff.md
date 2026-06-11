@@ -77,6 +77,8 @@ Routing table (each row is followed only when autopilot is active and no stop co
 
 **Re-entry guard (no infinite loops):** before auto-invoking a specialized agent, `@qa` checks on-disk evidence that it already ran clean this cycle (e.g. `security-findings-{slug}.json` clean → `@pentester` done; a tester coverage artifact present with no new gap → `@tester` done; `progress.json.ready_for_done_gate` / validator PASS recorded → `@validator` done). An agent that already returned clean is not re-invoked.
 
+**`@validator` runs fresh-context:** when routing to `@validator` with a harness contract present, do not run it inline in the current session — the implementation history biases the verdict. Instead: (1) `aioson harness:check . --slug={slug}` (deterministic checks), (2) `aioson harness:validate . --slug={slug}` — the generated `validator-prompt.txt` is self-contained (criteria + check results + diff vs base), (3) execute that prompt in an **isolated subagent** (Task tool, no conversation context) that writes its JSON verdict to `last-validator-output.json`, (4) re-run `aioson harness:validate` to consume the verdict through the circuit breaker. Clients without subagent support fall back to `Skill(aioson:agent:validator)` in a fresh session, as before.
+
 ## Stop conditions — break the chain and emit the normal manual handoff
 
 1. **`feature:close` / publish** — ALWAYS the human gate. When `@qa` (PASS, nothing pending) or `@validator` (PASS) is the last clean step, STOP and recommend `aioson feature:close . --feature={slug}`. Never auto-run `feature:close`, `feature:archive`, `npm publish`, or any publish/close action.

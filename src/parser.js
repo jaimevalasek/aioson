@@ -36,6 +36,8 @@ function parseArgv(argv) {
         // feature:export structure/output toggles — pure booleans; without these
         // a following positional (e.g. `--flatten .`) would be swallowed as the value.
         'flatten', 'no-index',
+        // harness:validate — pure boolean; `--no-diff .` must not swallow the path.
+        'no-diff',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`
         // followed by `--tool=claude` would swallow the next token as its value.

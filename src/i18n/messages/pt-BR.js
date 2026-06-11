@@ -157,7 +157,7 @@ module.exports = {
     help_harness_init:
       'aioson harness:init [path] --slug=<slug> [--mode=BALANCED|URGENT|ECONOMICAL] [--locale=pt-BR]',
     help_harness_validate:
-      'aioson harness:validate [path] --slug=<slug> [--artifact=<path>] [--locale=pt-BR]',
+      'aioson harness:validate [path] --slug=<slug> [--base=<ref>] [--no-diff] [--max-diff-bytes=<n>] [--artifact=<path>] [--locale=pt-BR]',
     help_harness_check:
       'aioson harness:check [path] --slug=<slug> [--criteria=C1,C2] [--timeout=<ms>] [--json] [--locale=pt-BR]',
     help_harness_retro:

@@ -291,6 +291,27 @@ async function runHarnessValidate({ args, options = {}, logger, t }) {
     return { ok: false, error: 'agent_prompt_failed', detail: promptResult };
   }
 
+  // Fase 2 (fresh-context review): anexa diff + check results + instrução de
+  // saída ao prompt, tornando-o autocontido para um contexto isolado.
+  // Best-effort: payload degradado (sem git) ainda é anexado; falha de I/O
+  // no append não derruba o fluxo de validação.
+  let reviewPayload = null;
+  const skipDiff = options['no-diff'] === true || options.noDiff === true;
+  if (!skipDiff) {
+    const { buildReviewPayload } = require('../harness/review-payload');
+    reviewPayload = buildReviewPayload(targetDir, planDir, {
+      slug,
+      baseRef: options.base ? String(options.base) : null,
+      maxDiffBytes: options['max-diff-bytes'] || options.maxDiffBytes,
+      outputPath: validatorOutputPath
+    });
+    try {
+      fs.appendFileSync(promptPath, reviewPayload.text, 'utf8');
+    } catch (err) {
+      logger.error(`Could not append review payload to prompt: ${err.message}`);
+    }
+  }
+
   // Mark feature as awaiting validation — drives workflow:next routing (AC-HD-14).
   // Reset by runHarnessApplyValidation after the validator output is consumed.
   cb.progress.status = 'waiting_validation';
@@ -299,9 +320,12 @@ async function runHarnessValidate({ args, options = {}, logger, t }) {
 
   logger.log('');
   logger.log(`Validator prompt saved to: ${promptPath}`);
+  if (reviewPayload && reviewPayload.ok) {
+    logger.log(`  Review payload: diff vs ${reviewPayload.base} (${reviewPayload.baseSource}), ${reviewPayload.changedFiles.length} changed file(s)${reviewPayload.truncated ? ', diff truncated' : ''}${reviewPayload.hasChecks ? ', harness:check results included' : ''}`);
+  }
   logger.log('');
   logger.log('Next steps:');
-  logger.log(`  1. Open the prompt in an LLM tool (Claude Code, Codex, etc.) with @validator activated`);
+  logger.log(`  1. Run the prompt in a FRESH isolated context — a subagent/Task tool of the orchestrating session, or a separate LLM session with @validator activated. Never inline in the implementing session.`);
   logger.log(`  2. Save the JSON output to: ${validatorOutputPath}`);
   logger.log(`  3. Re-run: aioson harness:validate . --slug=${slug}`);
   logger.log(`     (or:    aioson harness:apply-validation . --slug=${slug})`);
@@ -311,7 +335,18 @@ async function runHarnessValidate({ args, options = {}, logger, t }) {
     status: 'awaiting_validation',
     slug,
     promptPath,
-    expectedOutputPath: validatorOutputPath
+    expectedOutputPath: validatorOutputPath,
+    reviewPayload: reviewPayload
+      ? {
+          ok: reviewPayload.ok,
+          base: reviewPayload.base,
+          baseSource: reviewPayload.baseSource,
+          changedFiles: reviewPayload.changedFiles.length,
+          untracked: reviewPayload.untracked.length,
+          truncated: reviewPayload.truncated,
+          hasChecks: reviewPayload.hasChecks
+        }
+      : null
   };
 }
 
