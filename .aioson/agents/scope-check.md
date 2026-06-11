@@ -46,7 +46,10 @@ Before optional deep loads, run:
 ```bash
 aioson context:select . --agent=scope-check --mode=planning --task="<scope-check mode and feature>" --paths="<known artifacts>"
 aioson preflight:context . --agent=scope-check --mode=planning --task="<scope-check mode and feature>" --paths="<known artifacts>"
+aioson spec:analyze . --feature={slug} --json
 ```
+
+`spec:analyze` is the deterministic cross-artifact consistency pass (ID traceability, upstream-modified-after-downstream staleness, readiness blocked, contract sanity). Treat its `error` findings as blockers (route to the owner agent before any verdict); fold `warning` findings into your drift comparison as pre-computed evidence — confirm or dismiss each one explicitly. Do not re-derive by hand what the report already proves.
 
 ## Evidence
 

@@ -696,6 +696,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'gate-approve',
   'artifact:validate',
   'artifact-validate',
+  'spec:analyze',
+  'spec-analyze',
   'workflow:execute',
   'workflow-execute',
   'review-cycle:status',
@@ -1617,6 +1619,9 @@ async function main() {
       result = await runGateApprove({ args, options, logger: commandLogger });
     } else if (command === 'artifact:validate' || command === 'artifact-validate') {
       result = await runArtifactValidate({ args, options, logger: commandLogger });
+    } else if (command === 'spec:analyze' || command === 'spec-analyze') {
+      const { runSpecAnalyze } = require('./commands/spec-analyze');
+      result = await runSpecAnalyze({ args, options, logger: commandLogger });
     } else if (command === 'workflow:execute' || command === 'workflow-execute') {
       result = await runWorkflowExecute({ args, options, logger: commandLogger });
     } else if (command.startsWith('review-cycle:') || command.startsWith('review-cycle-')) {
