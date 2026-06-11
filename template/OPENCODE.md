@@ -45,6 +45,7 @@ Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or
 - orache -> `.aioson/agents/orache.md`
 - design-hybrid-forge -> `.aioson/agents/design-hybrid-forge.md`
 - site-forge -> `.aioson/agents/site-forge.md`
+- forge-run -> `.aioson/agents/forge-run.md`
 
 ## Rule
 Do not duplicate rules outside `.aioson/`.

@@ -88,6 +88,7 @@ Describe your intent. The agent system will match and execute.
 | @design-hybrid-forge | "create hybrid design skill", "combine two design skills", "use the design-hybrid-forge agent" |
 | @site-forge | "clone this site with [skill]", "rebuild [url] using [skill]", "[url] in the style of [skill]", "extract the design from [url] as a skill", "use the site-forge agent" |
 | @discover | "discover the system", "scan and understand the project", "build semantic knowledge cache", "refresh bootstrap", "use the discover agent" |
+| @forge-run | "compile the workflow harness for [slug]", "run lane B for [slug]", "execute the compiled harness", "use the forge-run agent" |
 
 When an agent file is included via @ or described via natural language, read the corresponding file and execute its instructions immediately from the first step.
 Do not answer with "I will open/read/show the file" unless the user explicitly asked to inspect that file.
@@ -148,6 +149,7 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - @orache → `.aioson/agents/orache.md`
 - @design-hybrid-forge → `.aioson/agents/design-hybrid-forge.md`
 - @site-forge → `.aioson/agents/site-forge.md`
+- @forge-run → `.aioson/agents/forge-run.md`
 
 ## Spec-Driven Development (SDD)
 

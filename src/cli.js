@@ -698,6 +698,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'artifact-validate',
   'spec:analyze',
   'spec-analyze',
+  'forge:compile',
+  'forge-compile',
   'workflow:execute',
   'workflow-execute',
   'review-cycle:status',
@@ -1622,6 +1624,9 @@ async function main() {
     } else if (command === 'spec:analyze' || command === 'spec-analyze') {
       const { runSpecAnalyze } = require('./commands/spec-analyze');
       result = await runSpecAnalyze({ args, options, logger: commandLogger });
+    } else if (command === 'forge:compile' || command === 'forge-compile') {
+      const { runForgeCompile } = require('./commands/forge-compile');
+      result = await runForgeCompile({ args, options, logger: commandLogger });
     } else if (command === 'workflow:execute' || command === 'workflow-execute') {
       result = await runWorkflowExecute({ args, options, logger: commandLogger });
     } else if (command.startsWith('review-cycle:') || command.startsWith('review-cycle-')) {

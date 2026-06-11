@@ -81,6 +81,7 @@ Capture is best-effort — do not crash, retry, or surface failures to the user.
 - /design-hybrid-forge -> `.aioson/agents/design-hybrid-forge.md`
 - /site-forge -> `.aioson/agents/site-forge.md`
 - /discover -> `.aioson/agents/discover.md`
+- /forge-run -> `.aioson/agents/forge-run.md`
 
 ## Spec-Driven Development framework
 

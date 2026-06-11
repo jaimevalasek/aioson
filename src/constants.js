@@ -36,6 +36,7 @@ const MANAGED_FILES = [
   '.aioson/agents/copywriter.md',
   '.aioson/agents/briefing.md',
   '.aioson/agents/briefing-refiner.md',
+  '.aioson/agents/forge-run.md',
   '.aioson/docs/squad/package-contract.md',
   '.aioson/docs/squad/creation-flow.md',
   '.aioson/docs/squad/research-loop.md',
@@ -404,6 +405,15 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/site-forge.md',
     dependsOn: ['.aioson/context/project.context.md'],
     output: 'src/components/*.tsx + src/app/page.tsx + docs/research/{hostname}/ + public/images/{hostname}/'
+  },
+  {
+    id: 'forge-run',
+    displayName: 'Forge Run',
+    description: 'Compile and run the Lane B workflow harness for a MEDIUM feature',
+    command: '@forge-run',
+    path: '.aioson/agents/forge-run.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: '.aioson/plans/{slug}/forge-run.workflow.js + workflow run verdict (stops before feature:close)'
   },
   {
     id: 'neo',
