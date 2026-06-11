@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.25.0] - 2026-06-11
+
+### Added
+- **Fresh-context review payload in `harness:validate`.** The generated `validator-prompt.txt` is now self-contained for isolated execution: it appends a review payload with the deterministic `harness:check` results (exit-code verdicts to copy verbatim), the changed-file list (including untracked, framework state filtered out), and the unified diff vs a resolved base ref — explicit `--base=<ref>`, the loop's `baseline.json` HEAD, merge-base with main/master, or `HEAD` as fallback. Diff is size-capped (`--max-diff-bytes`, default 200KB) with a line-boundary truncation marker; `--no-diff` skips the payload. Degrades gracefully outside a git repository (existing router flows untouched). New module `src/harness/review-payload.js`.
+- **Fresh-context validation protocol.** `@validator` documents the generated prompt as its preferred activation surface — run in a fresh, isolated context (subagent/Task tool or separate session), never inline in the session that implemented the feature. `.aioson/docs/autopilot-handoff.md` post-dev cycle routes `@validator` through the isolated-subagent flow (check → validate → isolated run → re-validate to consume the verdict through the circuit breaker); `@qa`'s recommendation mentions the route. Template mirrors synced.
+
+### Changed
+- **`harness:validate` next-steps guidance** now instructs running the prompt in a fresh isolated context, and the command result exposes a `reviewPayload` summary (base, changed-file count, truncation, checks included). The `waiting_validation`/`apply-validation` state machine is unchanged.
+- **Parser:** `--no-diff` registered as a pure boolean flag (mirrors `--no-index` precedent).
+
+### Tests
+- Added `review-payload` suite (10 cases: git fixtures for base resolution, untracked + framework-state filtering, truncation, check-summary embedding, `harness:validate` integration, `--no-diff`). Full suite green (3187 pass).
+
 ## [1.24.0] - 2026-06-11
 
 ### Added
