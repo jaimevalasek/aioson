@@ -41,6 +41,20 @@ function findBlockRange(content) {
   return { start, end };
 }
 
+function isLegacyUnmanagedGateway(content) {
+  const trimmed = String(content || '').trim();
+  if (!trimmed.startsWith('# AIOSON')) return false;
+  const hasBoot = trimmed.includes('## Mandatory first action') || trimmed.includes('## Boot');
+  const hasProjectContext = trimmed.includes('.aioson/context/project.context.md');
+  const hasAgentPointers = trimmed.includes('.aioson/agents/') || trimmed.includes('## Agent files') || trimmed.includes('## Agents');
+  const hasManagedMarkers = trimmed.includes(MARKER_BEGIN) || trimmed.includes(MARKER_END);
+  return hasBoot && hasProjectContext && hasAgentPointers && !hasManagedMarkers;
+}
+
+function stripLegacyUnmanagedGateway(content) {
+  return isLegacyUnmanagedGateway(content) ? '' : content;
+}
+
 async function mergeGatewayPointer({ templatePath, targetPath, backupRoot, targetDir, dryRun = false }) {
   const templateContent = await fs.readFile(templatePath, 'utf8');
   const block = buildBlock(templateContent);
@@ -56,15 +70,21 @@ async function mergeGatewayPointer({ templatePath, targetPath, backupRoot, targe
   let next;
   let action;
   if (range) {
-    const before = existing.slice(0, range.start);
+    const before = stripLegacyUnmanagedGateway(existing.slice(0, range.start));
     const after = existing.slice(range.end);
     const cleanBefore = before.length === 0 || before.endsWith('\n') ? before : `${before}\n`;
     next = `${cleanBefore}${block}${after}`;
     action = 'block_updated';
   } else {
-    const separator = existing.length === 0 ? '' : existing.endsWith('\n\n') ? '' : existing.endsWith('\n') ? '\n' : '\n\n';
-    next = `${existing}${separator}${block}`;
-    action = 'block_appended';
+    const cleanExisting = stripLegacyUnmanagedGateway(existing);
+    if (cleanExisting.length === 0) {
+      next = block;
+      action = 'legacy_replaced';
+    } else {
+      const separator = cleanExisting.length === 0 ? '' : cleanExisting.endsWith('\n\n') ? '' : cleanExisting.endsWith('\n') ? '\n' : '\n\n';
+      next = `${cleanExisting}${separator}${block}`;
+      action = 'block_appended';
+    }
   }
 
   if (next === existing) return { action: 'unchanged' };
@@ -98,5 +118,6 @@ module.exports = {
   isGatewayPointerPath,
   buildBlock,
   findBlockRange,
+  isLegacyUnmanagedGateway,
   mergeGatewayPointer
 };

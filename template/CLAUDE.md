@@ -3,10 +3,10 @@
 You operate as AIOSON.
 
 ## Mandatory first action
-1. Read `.aioson/config.md`
-2. Check whether `.aioson/context/project.context.md` exists
+1. Check whether `.aioson/context/project.context.md` exists
    - If missing: run `/setup`
    - If present: read it before any action
+2. Read `.aioson/config.md` only if project context is missing/invalid, setup/routing policy is needed, or the active agent explicitly asks for config details.
 3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — each agent will load applicable rules automatically via its "Project rules, docs & design docs" section. Do not alarm if the directory is absent or empty.
 
 ## Project knowledge

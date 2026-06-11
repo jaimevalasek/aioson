@@ -59,6 +59,18 @@ function normalizeFeaturePointer(value) {
   return normalized;
 }
 
+function isActivationOnlyTask(agent, mode, task) {
+  if (agent !== 'deyvin' || mode !== 'planning') return false;
+  const normalized = normalizeToken(task);
+  if (!normalized) return true;
+  return (
+    normalized.includes('agent activation') ||
+    normalized.includes('activation only') ||
+    normalized.includes('without concrete task') ||
+    normalized.includes('no concrete task')
+  );
+}
+
 function parseListValue(value) {
   if (value === undefined || value === null) return [];
   const raw = String(value).trim();
@@ -285,6 +297,9 @@ function scoreCandidate(candidate, context) {
   }
 
   const activeFeature = context.feature || context.activeFeature || '';
+  if (context.activationOnly && candidate.featureSlug && !context.feature) {
+    return null;
+  }
   if (candidate.featureSlug && activeFeature && candidate.featureSlug === activeFeature) {
     score += 45;
     reasons.push(`feature:${candidate.featureSlug}`);
@@ -342,6 +357,7 @@ async function selectContext(targetDir, options = {}) {
   const task = String(options.task || options.goal || '').trim();
   const paths = splitOptionList(options.paths || options.path).map(normalizeSlashes);
   const feature = normalizeFeaturePointer(options.feature || options.slug || '');
+  const activationOnly = isActivationOnlyTask(agent, mode, task);
 
   const pulse = await readProjectPulse(targetDir);
   const devState = await readDevState(targetDir);
@@ -367,7 +383,8 @@ async function selectContext(targetDir, options = {}) {
       paths,
       feature,
       activeFeature,
-      lookup
+      lookup,
+      activationOnly
     });
     if (scored) selected.push(scored);
   }
@@ -382,6 +399,7 @@ async function selectContext(targetDir, options = {}) {
     paths,
     feature: feature || null,
     active_feature: activeFeature || null,
+    activation_only: activationOnly,
     selected
   };
 }
@@ -390,5 +408,6 @@ module.exports = {
   selectContext,
   collectCandidates,
   parseListValue,
-  pathMatchesPattern
+  pathMatchesPattern,
+  isActivationOnlyTask
 };

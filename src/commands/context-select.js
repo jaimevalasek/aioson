@@ -18,6 +18,7 @@ async function runContextSelect({ args, options = {}, logger }) {
   logger.log(`Context selection for @${result.agent} (${result.mode})`);
   if (result.task) logger.log(`Task: ${result.task}`);
   if (result.paths.length > 0) logger.log(`Paths: ${result.paths.join(', ')}`);
+  logger.log('Boundary: load only the selected files until the task, mode, feature, or touched paths change.');
   if (result.selected.length === 0) {
     logger.log('No context files selected.');
     return result;

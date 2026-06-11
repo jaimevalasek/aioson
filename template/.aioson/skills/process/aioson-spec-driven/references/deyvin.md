@@ -4,14 +4,18 @@
 
 ## Which references to load for continuation and resume flows
 
-### Always load when this skill is active
+### Activation-only sessions
 
-- `maintenance-and-state.md` — @deyvin's primary job is resumption; use this to read `phase_gates`, `last_checkpoint`, and `pending_review` correctly before any action
-- `approval-gates.md` — use to check which gates are already approved before proceeding; never advance past a gate that is not yet passed
+If the user only activates `@deyvin` without a concrete task, stop after the lightweight context summary from `context:select`. Do not load this reference's downstream files.
+
+### Load only for concrete continuation
+
+- `maintenance-and-state.md` — load when the concrete task requires reading or writing `spec*.md`, `last_checkpoint`, or `pending_review`
+- `approval-gates.md` — load when the next action could cross a phase gate, approve/deny readiness, or continue implementation past Gate C/D
 
 ### Load when the continuation context is unclear
 
-- `artifact-map.md` — use to quickly orient which artifacts exist and which are missing when resuming a session with incomplete context
+- `artifact-map.md` — use to quickly orient which artifacts exist and which are missing after a concrete continuation task names a feature but the selected artifacts contradict each other
 
 ### Do not load for @deyvin
 
@@ -21,7 +25,7 @@
 
 ## Behavioral notes
 
-- `last_checkpoint` in `spec-{slug}.md` is the first thing @deyvin reads — see `maintenance-and-state.md` for format
+- `last_checkpoint` in `spec-{slug}.md` is the first thing @deyvin reads only after a concrete continuation task selects that spec — see `maintenance-and-state.md` for format
 - Do not re-read the full spec pack unless `last_checkpoint` is null or contradictory
 - `phase_gates` from `approval-gates.md` defines what is locked — @deyvin does not re-open locked decisions
 - `pending_review` items must be surfaced to the user before proceeding past them

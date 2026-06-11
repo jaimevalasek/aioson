@@ -99,6 +99,42 @@ test('context:select keeps implementation-only foundation out of product plannin
   }
 });
 
+test('context:select keeps active feature specs out of deyvin activation-only planning', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: checkout\n---\n# Pulse');
+    await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: checkout\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/spec-checkout.md', '---\nfeature: checkout\n---\n# Spec');
+    await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
+
+    const activation = await selectContext(dir, {
+      agent: 'deyvin',
+      mode: 'planning',
+      task: 'agent activation without concrete task'
+    });
+    const activationSelected = activation.selected.map((item) => item.path);
+    assert.equal(activation.activation_only, true);
+    assert.ok(activationSelected.includes('.aioson/context/project.context.md'));
+    assert.ok(activationSelected.includes('.aioson/context/project-pulse.md'));
+    assert.ok(activationSelected.includes('.aioson/context/dev-state.md'));
+    assert.equal(activationSelected.includes('.aioson/context/spec-checkout.md'), false);
+    assert.equal(activationSelected.includes('.aioson/context/features/checkout/dossier.md'), false);
+
+    const continuation = await selectContext(dir, {
+      agent: 'deyvin',
+      mode: 'planning',
+      task: 'continue checkout implementation'
+    });
+    const continuationSelected = continuation.selected.map((item) => item.path);
+    assert.equal(continuation.activation_only, false);
+    assert.ok(continuationSelected.includes('.aioson/context/spec-checkout.md'));
+    assert.ok(continuationSelected.includes('.aioson/context/features/checkout/dossier.md'));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:select loads governance for executing file creation paths', async () => {
   const dir = await makeTmpDir();
   try {

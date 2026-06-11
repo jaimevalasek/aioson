@@ -59,6 +59,63 @@ test('re-install replaces the AIOSON block in place without duplicating it', asy
   assert.ok(content.includes('You operate as AIOSON.'), 'fresh template body missing');
 });
 
+test('update prunes legacy unmanaged AIOSON preamble before managed block', async () => {
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+
+  const target = path.join(dir, 'AGENTS.md');
+  const managed = await fs.readFile(target, 'utf8');
+  const legacy = [
+    '# AIOSON',
+    '',
+    'You operate as AIOSON — legacy gateway.',
+    '',
+    '## Mandatory first action',
+    '1. Read `.aioson/config.md`',
+    '2. Check whether `.aioson/context/project.context.md` exists',
+    '',
+    '## Agent files',
+    '- @dev -> `.aioson/agents/dev.md`',
+    '',
+    '## Golden rule',
+    'Small project, small solution.',
+    ''
+  ].join('\n');
+  await fs.writeFile(target, `${legacy}\n${managed}`, 'utf8');
+
+  await installTemplate(dir, { mode: 'update', overwrite: true, backupOnOverwrite: true });
+
+  const content = await fs.readFile(target, 'utf8');
+  assert.equal(content.startsWith(MARKER_BEGIN), true, 'legacy preamble should be removed');
+  assert.equal(content.match(new RegExp(MARKER_BEGIN, 'g')).length, 1, 'managed block should not duplicate');
+  assert.equal(content.includes('legacy gateway'), false, 'legacy unmanaged template survived');
+});
+
+test('update replaces standalone legacy gateway content with managed block', async () => {
+  const dir = await makeTempDir();
+  const legacy = [
+    '# AIOSON',
+    '',
+    'You operate as AIOSON.',
+    '',
+    '## Boot',
+    '1. Read `.aioson/config.md`',
+    '2. Check `.aioson/context/project.context.md`',
+    '',
+    '## Available agents',
+    '- dev -> `.aioson/agents/dev.md`',
+    ''
+  ].join('\n');
+  await fs.writeFile(path.join(dir, 'OPENCODE.md'), legacy, 'utf8');
+
+  await installTemplate(dir, { mode: 'update', overwrite: true, backupOnOverwrite: true });
+
+  const content = await fs.readFile(path.join(dir, 'OPENCODE.md'), 'utf8');
+  assert.equal(content.startsWith(MARKER_BEGIN), true, 'standalone legacy gateway should be replaced');
+  assert.equal(content.includes('## Boot'), true, 'fresh template body missing');
+  assert.equal(content.includes('1. Read `.aioson/config.md`'), false, 'old eager config read survived');
+});
+
 test('managed block carries an explicit warning that edits inside will be overwritten', async () => {
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });

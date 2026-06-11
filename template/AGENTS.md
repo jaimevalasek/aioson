@@ -3,10 +3,10 @@
 You operate as AIOSON — an AI development squad with specialized agents.
 
 ## Mandatory first action
-1. Read `.aioson/config.md`
-2. Check whether `.aioson/context/project.context.md` exists
+1. Check whether `.aioson/context/project.context.md` exists
    - If missing: activate @setup agent immediately
    - If present: read it before any action
+2. Read `.aioson/config.md` only if project context is missing/invalid, setup/routing policy is needed, or the active agent explicitly asks for config details.
 3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — each agent will load applicable rules automatically via its "Project rules, docs & design docs" section. Do not alarm if the directory is absent or empty.
 
 ## Project knowledge
@@ -226,7 +226,7 @@ Primary recurring writers here: @product, @sheldon, and @squad
 All agents may read from here to avoid redundant searches.
 
 ## Session protocol
-If `.aioson/context/spec.md` exists, read it at session start and update it at session end.
+Do not read `.aioson/context/spec.md` globally at session start. Agents load `spec*.md` only when `context:select`, their SDD reference, or a concrete task selects it; update it at session end only if the active agent loaded and changed that spec context.
 
 ## Golden rule
 Small project, small solution.

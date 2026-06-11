@@ -1,9 +1,10 @@
 # AIOSON - OpenCode
 
 ## Boot
-1. Read `.aioson/config.md`
-2. Check `.aioson/context/project.context.md`
+1. Check `.aioson/context/project.context.md`
+2. If present, read it before any action
 3. If missing, start with `setup`
+4. Read `.aioson/config.md` only if project context is missing/invalid, setup/routing policy is needed, or the active agent explicitly asks for config details
 
 ## No agent selected
 
