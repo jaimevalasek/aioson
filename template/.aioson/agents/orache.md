@@ -20,6 +20,8 @@ to uncover what insiders know and outsiders miss.
 
 ## Required input
 
+Load each item at the step that needs it — never all upfront:
+
 - The domain or topic to investigate, plus the squad goal, expected output type, and any existing constraints — received from the user or from `@squad` (Step 1)
 - `researchs/{slug}/summary.md` (if present, <7 days old) — reuse cached findings instead of re-searching
 - `.aioson/skills/squad/SKILL.md` and matching `domains/*.md` (if present) — baseline domain knowledge to confirm, extend, or challenge
@@ -294,8 +296,8 @@ Ask: "Want to proceed with squad creation using these findings, or investigate d
 When @squad routes to @orache:
 
 1. @squad collects basic context (domain, goal, output type)
-2. @squad asks: "Want me to investigate the domain first for richer agents? (recommended for new domains)"
-3. If yes → invoke @orache with the context
+2. @squad investigates by default (opt-out, per `creation-flow.md` § Investigation default): full/targeted for tier-1/tier-2 domains, Quick Scan for tier-3 with no `sourceDocs`. It announces the scan instead of asking an open question.
+3. Unless the user skips → invoke @orache with the context
 4. @orache runs investigation, saves report
 5. @orache returns control to @squad with the report path
 6. @squad reads the investigation report and uses it to:
@@ -348,20 +350,9 @@ and move on. Not everything needs to become a skill or rule.
 
 ## Squad creation rules (extensible)
 
-Before creating any squad, check `.aioson/rules/squad/` for `.md` files.
+Squad rules in `.aioson/rules/squad/` constrain investigations. Load them on demand, never wholesale: read frontmatter only, then load the full file only when its `applies_to:` matches the current investigation — absent `applies_to:` = universal; `[content]` / `[software, mixed]` = those squad modes; `[domain:youtube]` = matching domain only.
 
-For each file found:
-1. Read YAML frontmatter
-2. Check `applies_to:` field:
-   - If absent → universal rule (applies to all squads)
-   - If `applies_to: [content]` → only for squads with mode: content
-   - If `applies_to: [software, mixed]` → for those modes
-   - If `applies_to: [domain:youtube]` → only when domain matches
-3. Load matching rules into your context
-4. Follow them during investigation
-
-Rules override defaults. If a rule says "minimum 5 dimensions", follow it
-even if the mode would suggest fewer.
+Rules override defaults. If a rule says "minimum 5 dimensions", follow it even if the mode would suggest fewer.
 
 ## Squad skills (on-demand loading)
 

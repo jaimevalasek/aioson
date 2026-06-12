@@ -20,7 +20,7 @@ Start direct squad creation with:
 > 4. important constraints
 > 5. roles you want in the squad, or I can choose"
 
-If the user later wants genomes, route to `@genome`.
+Genomes are part of creation — the create phase runs a genome pass (`squad-create` Step 5.5) for specialized domains. Route to `@genome` directly only for standalone genome work.
 
 ## Project artifact detection
 
@@ -86,6 +86,24 @@ If readiness is low:
 
 - ask 1 to 3 short questions, or
 - proceed with explicit assumptions when the user requested autonomy
+
+## Investigation default (opt-out)
+
+Ungrounded squads are the #1 cause of shallow executors: with no `sourceDocs` and no investigation, depth blocks get filled from model priors and every role comes out generic. Investigation is therefore **opt-out, not opt-in**:
+
+- **Tier 1 (regulated):** full `@orache` investigation is mandatory (existing gate).
+- **Tier 2 (specialized):** run `@orache` (full or targeted) by default before deriving the roster. Skip only when the user explicitly declines — record the limitation in `assumptions` and `risks`.
+- **Tier 3 (common) with no `sourceDocs`:** run an `@orache` Quick Scan (Mode 3, 1–2 rounds) by default — frameworks, anti-patterns, and vocabulary are cheap and feed the depth blocks directly. Skip when the user asks for speed or a relevant investigation/cache already exists.
+
+Never ask "want me to investigate?" as an open question — announce the default ("I'll run a quick domain scan first — say skip if you don't want it") and proceed.
+
+## Genome pass (deepen executors at creation)
+
+Genomes give a created executor a reusable cognitive layer (frameworks, decision weights, vocabulary) beyond its own depth block. Do not leave them as a post-creation manual step:
+
+- At design time, record in the blueprint which executors warrant a genome (`assistant`/`clone` types and specialized-domain agents) and of which type (`domain` / `function`; `persona` only via the Profiler pipeline).
+- At create time, `squad-create` Step 5.5 reuses or generates the missing genomes via `@genome` and binds them — manifest `genomes` + `genomeBindings`, executor `## Active genomes`, and `squad.md` — following `.aioson/docs/squad/genome-bindings.md`.
+- A specialized-domain squad delivered with every `## Active genomes` empty is a defect: either bind the genomes or hand the user the exact pending `@genome` command in the creation summary.
 
 ## Domain breadth probe (mandatory for customer-facing squads)
 

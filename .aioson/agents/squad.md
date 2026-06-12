@@ -89,7 +89,7 @@ Then build `required_modules` using this deterministic map:
 | Request mentions content deliverables, `contentBlueprints`, session HTML, or `--config=output` | `.aioson/docs/squad/content-output.md` |
 | Request implies workflows, plans, 3+ phases, human gates, review loops, or 4+ executors | `.aioson/docs/squad/workflow-quality.md` |
 | Request implies ephemeral work, investigation, inter-squad routing, learnings, dashboard guidance, or recurring runs | `.aioson/docs/squad/session-operations.md` |
-| Request mentions genomes, existing `genomes` / `genomeBindings`, or binding repair | `.aioson/docs/squad/genome-bindings.md` |
+| Request mentions genomes, existing `genomes` / `genomeBindings`, binding repair, or the create-phase genome pass (`squad-create` Step 5.5) | `.aioson/docs/squad/genome-bindings.md` |
 
 Preflight rules:
 
@@ -134,8 +134,8 @@ If no subcommand is provided, run the default fast path:
 - Do not skip the warm-up round after creating a persistent squad
 
 ## Responsibility boundaries
-- Use `@genome` when the user wants to generate or apply genomes.
-- Use `@orache` when deep domain investigation is required.
+- Use `@genome` to generate or apply genomes — including the create-phase genome pass (`squad-create` Step 5.5), not only on explicit user request.
+- Use `@orache` for domain investigation — default-on for new domains (opt-out Quick Scan), mandatory for regulated ones.
 - Use task files for explicit squad operations.
 - Use squad docs for package contract and operating protocol.
 - Use squad skills for domain patterns, workflow templates, review loops, and format choices.

@@ -644,6 +644,34 @@ test('squad and genome contracts stay canonical and preserve squad package and g
   assert.ok(Buffer.byteLength(squad, 'utf8') <= 12000, 'squad kernel should stay within the orchestrator prompt target');
 });
 
+test('squad creation defaults to investigation and runs the genome pass', async () => {
+  const creationFlow = await read(path.join(ROOT, 'template/.aioson/docs/squad/creation-flow.md'));
+  const packageContract = await read(path.join(ROOT, 'template/.aioson/docs/squad/package-contract.md'));
+  const squadDesign = await read(path.join(ROOT, 'template/.aioson/tasks/squad-design.md'));
+  const squadCreate = await read(path.join(ROOT, 'template/.aioson/tasks/squad-create.md'));
+  const orache = await read(path.join(ROOT, 'template/.aioson/agents/orache.md'));
+  const squad = await read(path.join(ROOT, 'template/.aioson/agents/squad.md'));
+
+  const checks = [
+    [creationFlow, '## Investigation default (opt-out)'],
+    [creationFlow, '## Genome pass (deepen executors at creation)'],
+    [creationFlow, 'Never ask "want me to investigate?" as an open question'],
+    [squadDesign, 'run investigation by default (opt-out)'],
+    [squadDesign, 'default to an `@orache` Quick Scan'],
+    [squadDesign, 'the create phase generates and binds them (`squad-create` Step 5.5)'],
+    [squadCreate, '### Step 5.5 - Genome Pass (bind or queue genomes)'],
+    [squadCreate, 'reuse before generating'],
+    [squadCreate, '`genomeBindings` entry with `status: pending`'],
+    [packageContract, '`## Active genomes` lists the genomes bound to this executor'],
+    [orache, '@squad investigates by default (opt-out'],
+    [squad, 'or the create-phase genome pass (`squad-create` Step 5.5)']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing squad-quality token: ${token}`);
+  }
+});
+
 test('squad on-demand docs are shipped, managed, and preserve critical guidance', async () => {
   const managedDocs = [
     '.aioson/docs/squad/package-contract.md',

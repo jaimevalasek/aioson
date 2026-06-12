@@ -59,8 +59,8 @@ If the user already supplied enough context (text, docs, images), infer the answ
 Before defining executors, classify the domain using `.aioson/docs/squad/domain-classification.md`:
 
 - **Tier 1 — regulated:** investigation via `@squad investigate` / `@orache` is mandatory. Do not finalize the blueprint without a report.
-- **Tier 2 — specialized:** strongly recommend investigation. If the user refuses, record the limitation in `assumptions` and `risks`.
-- **Tier 3 — common:** proceed without unnecessary friction.
+- **Tier 2 — specialized:** run investigation by default (opt-out). If the user declines, record the limitation in `assumptions` and `risks`.
+- **Tier 3 — common:** with no `sourceDocs`, default to an `@orache` Quick Scan (announce it, let the user skip); proceed directly only when relevant sources or cached investigation already exist.
 
 If relevant investigation already exists, reuse the report instead of requesting a new one.
 
@@ -108,7 +108,7 @@ Group `workflows` into distinct work modes (originate / transform / judge / orch
 - `traces` — which `workflows`/`entities` this executor owns; an executor tracing no workflow is ceremony, so cut it
 - `confidence` (0-1) — how well sources justify this role; low = investigate or cut, never fill with padding
 - skills it will use
-- genomes it inherits
+- genomes it should inherit — record planned genomes (`type: domain|function`) for assistants/clones and specialized-domain agents; the create phase generates and binds them (`squad-create` Step 5.5)
 
 Always include an `orquestrador`. Keep 3-5 unless decomposition proves the real work requires more; do not inflate to look complete.
 

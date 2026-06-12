@@ -136,6 +136,8 @@ Required structure:
 - `## Hard constraints` — **must** encode the executor's `anti_patterns` as real constraints
 - `## Output contract`
 
+`## Active genomes` lists the genomes bound to this executor (mirror of `squad.manifest.json` `genomeBindings`). When the genome pass (`squad-create` Step 5.5) queued a genome instead of binding it, write `pending: {genome-slug} — run @genome` rather than leaving the section empty.
+
 Each executor prompt should make clear:
 
 - which squad skills it relies on

@@ -123,6 +123,17 @@ For each executor in the blueprint, create `.aioson/squads/<slug>/agents/<execut
 - Before moving to the next executor, apply this test: would a real senior person in this role recognize themselves in this prompt? If not, deepen before continuing.
 - If `locale_scope` is locale-specific, write user-facing behavior examples in that locale's language; code identifiers remain English.
 
+### Step 5.5 - Genome Pass (bind or queue genomes)
+
+Load `.aioson/docs/squad/genome-bindings.md`. Then, for each executor whose blueprint entry plans a genome — and for every `assistant`/`clone` in a tier-1/tier-2 domain even when the blueprint is silent:
+
+1. Check `.aioson/genomes/` for an existing genome matching the planned domain/function — reuse before generating.
+2. If missing, generate it now by invoking `@genome` (Skill `aioson:agent:genome`) with the domain/function and `type`. `persona` genomes are never auto-generated — queue them for the Profiler pipeline instead.
+3. Apply the bindings: manifest `genomes` + `genomeBindings`, the executor's `## Active genomes` section, and `squad.md` (squad-level and per-agent genomes).
+4. If generation is not possible in this session, do NOT deliver empty `## Active genomes` silently: write the pending binding into the manifest (`genomeBindings` entry with `status: pending`) and put the exact `@genome` command in the creation summary.
+
+Skip this step only for tier-3 squads whose executors are all `worker` / plain `agent` types with no specialized expertise.
+
 ### Step 6 - Generate Orchestrator
 Create `.aioson/squads/<slug>/agents/orquestrador.md` following `.aioson/docs/squad/package-contract.md`, section `Orchestrator prompt`.
 If `uiCapability.mode = executor`, include routing guidance that visual demands go to `@ui-specialist`.
