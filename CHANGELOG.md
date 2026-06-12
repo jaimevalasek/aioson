@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.0] - 2026-06-11
+
+### Added
+- **Activation-only fast paths across the entry agents.** `@briefing`, `@product`, `@sheldon`, `@analyst`, and `@copywriter` join `@deyvin`: bare activation loads only foundation context (plus registry frontmatter / filename listings where the agent needs a menu), presents the starting options, and stops. Required inputs are now declared with the step that needs each item — never all upfront. `@product` was compressed to fit the fast path inside its 25KB kernel budget (24,999 bytes).
+- **Activation guards on the mid-flow agents.** `@architect`, `@ux-ui`, `@pm`, `@qa`, `@orchestrator`, `@scope-check`, and `@discovery-design-doc`: activation without a feature slug reads foundation context only, reports the current stage, asks which feature to work on, and stops. `@qa`'s legacy eager loading section (the "design governance" variant) is replaced by `context:select`-backed Context loading modes. `@validator` heading aligned (its strict sandbox semantics were already the tightest loader in the framework).
+- **The eager rules/docs loading section is retired framework-wide.** `@tester`, `@squad`, `@site-forge`, and `@discover` replace "Project rules, docs & design docs" with on-demand Context loading modes; gateways (CLAUDE.md/AGENTS.md) describe rule loading as on-demand; a contract test bans every variant of the eager section in every template agent.
+- **Selector-routable rules and docs.** All template rules carry routing frontmatter (`modes`, `task_types`, `triggers`, `paths`, `load_tier`) — description-only rules were selector-invisible (+20 < threshold 30). 41 template docs (squad, sheldon, dev, deyvin, pentester, tester, dossier, site-forge, governance) gain the same routing fields. `context:select` activation-only mode generalized to all workflow agents (per-agent foundation allowlist).
+- **`aioson rules:lint [--docs] [--strict] [--json]`** — flags selector-invisible rules (and docs with `--docs`), missing required fields, and suggests routing metadata. `--strict` exits 1 on warnings for CI. Template ships 67/67 selector-visible files, locked by test.
+- **Squad creation: investigation is opt-out and genomes enter the loop.** Tier-2 domains run `@orache` by default; tier-3 with no sourceDocs gets an announced Quick Scan. New `squad-create` Step 5.5 (genome pass): planned genomes are reused or generated via `@genome` and bound (manifest `genomes`+`genomeBindings`, executor `## Active genomes`, `squad.md`); pending bindings are queued with `status: pending` and surfaced — never silently empty.
+- **Operational-method layer in the persona pipeline.** Benchmarked against practitioner source prompts (Stefan Georgi / RMBC): `@profiler-enricher` Module 9 extracts the executable method (procedure, output structure, style metrics, prohibitions, delivery checklist) from evidence; `@profiler-forge` emits it as five required Genome 3.0 sections; `@genome` treats a missing `## Operating Procedure` on function/practitioner-persona genomes as a generation defect; genome-bindings propagate Prohibitions → executor Hard constraints, Delivery Checklist → squad checklists, Operating Procedure → Response pattern.
+- **`@copywriter` genome menu via `INDEX.md`.** New Step G2.4 discovers all installed genomes (masters, personas, domain, brand-voice) through `.aioson/genomes/INDEX.md` with its audience/output-type selection guides; the hardcoded master list becomes the index-absent fallback. The menu serves marketing pages, content, site copy, and system/UI microcopy. Operational sections of a selected genome are binding for the piece (procedure, prohibitions, style metrics, delivery checklist).
+
+### Changed
+- `@orache` squad rules load by frontmatter match instead of wholesale scan; `@squad` decision-gating and `@sheldon` mining restricted to selected context; `@sheldon` brain index loads after PRD selection instead of on activation.
+
+### Tests
+- Contract suites for every fast path/guard (tokens + section ordering), per-agent activation-only selection, rules/docs routing visibility (67/67), `rules:lint` behavior, squad investigation/genome-pass tokens, operational-method tokens across the pipeline, and copywriter INDEX discovery. Full suite green (3227 pass).
+
 ## [1.28.0] - 2026-06-11
 
 ### Added
