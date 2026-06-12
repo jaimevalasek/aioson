@@ -391,6 +391,31 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
   }
 });
 
+test('product contract enforces activation-only fast path before source and context loading', async () => {
+  const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+
+  const tokens = [
+    '## Activation-only fast path',
+    'Evaluate this immediately after reading this file and before loading any other context, doc, or skill.',
+    'names only — no file contents',
+    'Do NOT load on activation:',
+    'On bare activation, follow the **Activation-only fast path**.'
+  ];
+
+  for (const token of tokens) {
+    assert.equal(product.includes(token), true, `missing product token: ${token}`);
+  }
+
+  assert.ok(
+    product.indexOf('## Activation-only fast path') < product.indexOf('## Context loading modes'),
+    'activation-only fast path must appear before context loading modes'
+  );
+  assert.ok(
+    product.indexOf('## Activation-only fast path') < product.indexOf('## Source document detection'),
+    'activation-only fast path must appear before source document detection'
+  );
+});
+
 test('template rules carry routing frontmatter so context:select can load them on demand', async () => {
   const rulesDir = path.join(ROOT, 'template/.aioson/rules');
   const entries = await fs.readdir(rulesDir);
