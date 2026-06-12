@@ -14,8 +14,9 @@ function hasValue(raw) {
 
 function lintRule(relPath, frontmatter) {
   const warnings = [];
+  const isRule = relPath.startsWith('.aioson/rules/');
 
-  if (!hasValue(frontmatter.name)) warnings.push('missing required field: name');
+  if (isRule && !hasValue(frontmatter.name)) warnings.push('missing required field: name');
   if (!hasValue(frontmatter.description)) warnings.push('missing required field: description');
 
   const loadTier = String(frontmatter.load_tier || 'trigger').trim().toLowerCase();
@@ -38,27 +39,48 @@ function lintRule(relPath, frontmatter) {
   };
 }
 
-async function runRulesLint({ args, options = {}, logger }) {
-  const targetDir = path.resolve(process.cwd(), args[0] || '.');
-  const rulesDir = path.join(targetDir, '.aioson', 'rules');
-  const relDir = '.aioson/rules';
-
+async function collectMarkdownFiles(absDir, relDir, recursive) {
   let entries = [];
   try {
-    entries = await fs.readdir(rulesDir, { withFileTypes: true });
+    entries = await fs.readdir(absDir, { withFileTypes: true });
   } catch {
+    return [];
+  }
+  const files = [];
+  for (const entry of entries) {
+    if (entry.name.toLowerCase() === 'readme.md') continue;
+    const absChild = path.join(absDir, entry.name);
+    const relChild = `${relDir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (recursive) files.push(...await collectMarkdownFiles(absChild, relChild, recursive));
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+    files.push({ abs: absChild, rel: relChild });
+  }
+  return files;
+}
+
+async function runRulesLint({ args, options = {}, logger }) {
+  const targetDir = path.resolve(process.cwd(), args[0] || '.');
+  const relDir = '.aioson/rules';
+
+  const files = await collectMarkdownFiles(path.join(targetDir, '.aioson', 'rules'), relDir, false);
+  if (options.docs) {
+    files.push(...await collectMarkdownFiles(path.join(targetDir, '.aioson', 'docs'), '.aioson/docs', true));
+  }
+
+  if (files.length === 0) {
     const result = { ok: true, dir: relDir, rules: [], total: 0, warnings: 0 };
     if (options.json) return result;
-    logger.log(`No rules directory found at ${relDir} — nothing to lint.`);
+    logger.log(`No rule${options.docs ? '/doc' : ''} files found under ${relDir}${options.docs ? ' or .aioson/docs' : ''} — nothing to lint.`);
     return result;
   }
 
   const rules = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
-    if (entry.name.toLowerCase() === 'readme.md') continue;
-    const content = await fs.readFile(path.join(rulesDir, entry.name), 'utf8');
-    rules.push(lintRule(`${relDir}/${entry.name}`, parseFrontmatter(content)));
+  for (const file of files) {
+    const content = await fs.readFile(file.abs, 'utf8');
+    rules.push(lintRule(file.rel, parseFrontmatter(content)));
   }
 
   const warningsCount = rules.reduce((sum, rule) => sum + rule.warnings.length, 0);

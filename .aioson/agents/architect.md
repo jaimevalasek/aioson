@@ -41,7 +41,14 @@ aioson dossier:add-finding . --slug={slug} --agent=architect --section="Agent Tr
 
 Full templates: `.aioson/docs/dossier/agent-templates.md`
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=architect --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to design, and stop. Do not load discovery, specs, or governance before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/design-doc.md` (if present)
 - `.aioson/context/readiness.md` (if present)

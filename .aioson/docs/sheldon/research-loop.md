@@ -1,5 +1,8 @@
 ---
 description: "Sheldon research loop — extract short keyword phrases from the PRD and sources, consult research cache, and use fresh findings to prioritize enrichment."
+agents: [sheldon]
+task_types: [research]
+triggers: [research loop, web search, keywords]
 ---
 
 # Sheldon Research Loop

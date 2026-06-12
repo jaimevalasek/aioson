@@ -37,7 +37,14 @@ Apply when `project_type=site` and the operation is `default-create` or `refine-
 3. **If present:** read the copy file before any layout decision. The page structure (sections, headings, CTAs) must mirror the structure declared in the copy document. Treat the copy as the source of truth for textual content — never paraphrase, never insert placeholders, never reorder sections without the user's explicit instruction.
 4. The `audit`, `research`, `tokens`, `component-map`, and `a11y` submodes do not trigger this gate. They may run on existing UI without copy.
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=ux-ui --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to design, and stop. Do not load PRDs, discovery, or architecture before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` when present
 - `.aioson/context/discovery.md` when selected because current flows/entities affect UI

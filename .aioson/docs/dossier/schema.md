@@ -1,5 +1,8 @@
 ---
 description: "Feature dossier schema (canônico v1.0 + v1.1 Phase 3 + v1.2 Research Index) e handoff-protocol artifact_uris v2. Lido por src/dossier/schema.js e src/session-handoff.js — toda mudança aqui exige bump de schema_version."
+agents: [product, analyst, sheldon, architect, pm, dev, qa, tester, briefing]
+task_types: [dossier]
+triggers: [dossier schema, dossier structure]
 ---
 
 # Feature Dossier — Schema canônico

@@ -1,5 +1,8 @@
 ---
 description: "Simple Plan lane for @dev and @deyvin: bounded technical implementation without PRD, with disk-first scope, done criteria, verification, and dev-state handoff."
+agents: [dev, deyvin, qa, neo]
+task_types: [simple-plan, bounded-work]
+triggers: [simple plan, bounded technical work]
 ---
 
 # Simple Plan Lane

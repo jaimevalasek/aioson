@@ -1,5 +1,8 @@
 ---
 description: "Sheldon harness contract generation procedure — schemas, criteria population, governor and contract_mode selection, MICRO/SMALL/MEDIUM rules."
+agents: [sheldon, validator]
+task_types: [harness, contract]
+triggers: [harness contract, binary criteria, acceptance criteria]
 ---
 
 # Sheldon Harness Contract Generation

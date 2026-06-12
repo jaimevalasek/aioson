@@ -1,5 +1,8 @@
 ---
 description: "Tester deep guide — mutation testing, property-based patterns, test smells catalog, contract testing, adjacent quality layers. Load when entering Phase 4 on critical modules or when a coverage gap requires graduated assertion quality."
+agents: [tester, qa]
+task_types: [testing, coverage]
+triggers: [coverage quality, mutation testing, property based]
 ---
 
 # Tester — Coverage Quality Beyond Line %

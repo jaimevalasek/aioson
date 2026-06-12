@@ -1,5 +1,8 @@
 ---
 description: "Templates concretos por agente da cadeia (9 chain agents) para escrita no dossier via dossier:add-finding, dossier:add-codemap, dossier:link-rule e dossier:add-research. Bumped Phase 4 (agent-chain-continuity): @sheldon override (Why → Agent Trail + Research Index); novos templates para @ux-ui, @pm, @orchestrator; convenção DRIFT: para @dev."
+agents: [product, analyst, sheldon, architect, pm, dev, qa, tester, briefing]
+task_types: [dossier]
+triggers: [dossier, agent trail, add finding]
 ---
 
 # Agent Dossier Templates

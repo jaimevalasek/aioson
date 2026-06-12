@@ -476,11 +476,32 @@ test('no template agent keeps the eager rules/docs loading section', async () =>
   for (const name of agentFiles) {
     const content = await read(path.join(agentsDir, name));
     assert.equal(
-      content.includes('## Project rules, docs & design docs'),
+      content.includes('## Project rules,'),
       false,
-      `agent must use on-demand context loading instead of the eager section: ${name}`
+      `agent must use on-demand context loading instead of the eager section (any variant): ${name}`
     );
   }
+});
+
+test('mid-flow workflow agents carry an activation guard', async () => {
+  const agents = ['architect', 'ux-ui', 'pm', 'qa', 'orchestrator', 'scope-check', 'discovery-design-doc'];
+
+  for (const agent of agents) {
+    const content = await read(path.join(ROOT, 'template/.aioson/agents', `${agent}.md`));
+    assert.equal(content.includes('## Activation guard'), true, `missing activation guard: ${agent}`);
+    assert.equal(
+      content.includes('agent activation without concrete task'),
+      true,
+      `activation guard must use the activation-only selector task: ${agent}`
+    );
+  }
+
+  const qa = await read(path.join(ROOT, 'template/.aioson/agents/qa.md'));
+  assert.equal(qa.includes('## Context loading modes'), true, 'qa must use context loading modes');
+  assert.ok(
+    qa.indexOf('## Activation guard') < qa.indexOf('## Context loading modes'),
+    'qa activation guard must come before context loading modes'
+  );
 });
 
 test('template rules carry routing frontmatter so context:select can load them on demand', async () => {

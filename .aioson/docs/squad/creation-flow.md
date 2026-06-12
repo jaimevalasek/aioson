@@ -1,5 +1,8 @@
 ---
 description: "Squad creation flow — entry message, project artifact detection, intake questions, autonomy, discovery mini-package, and executor classification."
+agents: [squad]
+task_types: [squad-creation]
+triggers: [creating squads, blueprint, intake]
 ---
 
 # Squad Creation Flow

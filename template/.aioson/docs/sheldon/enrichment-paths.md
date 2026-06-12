@@ -1,5 +1,8 @@
 ---
 description: "Sheldon enrichment paths — gap analysis dimensions, sizing, in-place vs phased plan outputs, enrichment log, and handoff."
+agents: [sheldon]
+task_types: [enrichment, sizing]
+triggers: [enrichment paths, sizing, phased plan]
 ---
 
 # Sheldon Enrichment Paths

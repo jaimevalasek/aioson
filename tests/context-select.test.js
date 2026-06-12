@@ -212,7 +212,7 @@ test('context:select restricts sheldon and analyst activation-only planning to f
     await writeFile(dir, '.aioson/context/prd-checkout.md', '---\nfeature: checkout\n---\n# PRD');
     await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
 
-    for (const agent of ['sheldon', 'analyst']) {
+    for (const agent of ['sheldon', 'analyst', 'architect', 'ux-ui', 'pm', 'qa', 'orchestrator', 'scope-check', 'discovery-design-doc']) {
       const activation = await selectContext(dir, {
         agent,
         mode: 'planning',

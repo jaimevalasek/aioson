@@ -1,5 +1,8 @@
 ---
 description: "Squad session operations — ephemeral squads, investigation, inter-squad routing, learnings, dashboard guidance, and recurring tasks."
+agents: [squad]
+task_types: [session, operations]
+triggers: [squad session, ephemeral, learnings]
 ---
 
 # Squad Session Operations

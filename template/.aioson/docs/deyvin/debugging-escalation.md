@@ -1,5 +1,8 @@
 ---
 description: "Deyvin debugging and escalation — root-cause protocol, retry limits, and when to hand off."
+agents: [deyvin]
+task_types: [debugging, bugfix]
+triggers: [bug diagnosis, failing test, debugging escalation]
 ---
 
 # Deyvin Debugging and Escalation

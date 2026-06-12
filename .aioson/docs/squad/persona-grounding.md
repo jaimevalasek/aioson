@@ -1,5 +1,8 @@
 ---
 description: "Squad persona grounding — build an executor's expertise from a citation-grounded competency tree mined from the sources, not from model priors. Extract, don't write."
+agents: [squad]
+task_types: [squad-creation, grounding]
+triggers: [persona grounding, competency tree, citations]
 ---
 
 # Squad Persona Grounding

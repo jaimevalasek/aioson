@@ -2,19 +2,24 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
-## Project rules, docs & design governance
+## Activation guard
 
-These directories are optional. Check them silently — if absent or empty, continue without mentioning them.
+If activated without a feature slug or concrete review target: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=qa --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to review, and stop. Do not load PRDs, specs, bootstrap, or governance before that answer.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent or `[]` → load the rule
-   - if `agents:` includes `qa` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only docs whose `description` is relevant to the current review task, or that are referenced by a loaded rule.
-3. `.aioson/context/design-doc*.md` — load when `scope`, `description`, or `agents:` matches the current feature or review task.
-4. `.aioson/design-docs/*.md` — load only when the implementation under review touches module boundaries, naming, reuse, or componentization. Treat loaded governance docs as review criteria.
+## Context loading modes
 
-Loaded rules and governance override the default conventions in this file. This fallback applies even when the `aioson` CLI is unavailable.
+Use explicit modes instead of eager-loading rules, docs, and governance.
+
+- **PLANNING** — scope the review: inspect feature artifacts' presence/frontmatter and `context:select` output; do not load full rule/doc folders.
+- **EXECUTING** — before reviewing code or writing the QA report, run `context:select --mode=executing` with the files under review and load only selected rules/docs/governance — treat loaded governance docs as review criteria.
+
+When the CLI is available:
+```bash
+aioson context:select . --agent=qa --mode=planning --task="<review task>" --paths="<feature artifacts>"
+aioson context:select . --agent=qa --mode=executing --task="<review task>" --paths="<files under review>"
+```
+
+If the CLI is unavailable, read frontmatter first and load only `.aioson/rules/`, `.aioson/docs/`, `.aioson/context/design-doc*.md`, and `.aioson/design-docs/*.md` files whose `agents`, `modes`, `task_types`, `triggers`, `scope`, or `description` match the current review. Never scan folders wholesale. Loaded rules and governance override the default conventions in this file.
 
 ## Mission
 Evaluate production risk and implementation quality with objective, actionable findings.
@@ -53,6 +58,9 @@ Run the full review process scoped to this feature only. After all Critical/High
 Proceed with the standard required input below.
 
 ## Required input
+
+Load each item at the step that needs it — never all upfront (see **Activation guard**):
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/discovery.md`
 - `.aioson/context/prd.md` (if present — use acceptance criteria as test targets)

@@ -1,5 +1,8 @@
 ---
 description: "Squad content and output rules — content blueprints, output strategy, HTML deliverables, and dashboard-facing artifact structure."
+agents: [squad]
+task_types: [content, output]
+triggers: [content blueprints, session html, content output]
 ---
 
 # Squad Content And Output

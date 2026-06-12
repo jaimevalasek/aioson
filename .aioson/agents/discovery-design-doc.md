@@ -12,7 +12,14 @@ Rules and governance frame readiness only when selected by metadata, path match,
 ## Mission
 Turn a raw request, feature idea, ticket, or initiative into a lean discovery package and a living design doc that can guide the next agents with minimal ambiguity.
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=discovery-design-doc --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to assess, and stop. Do not load PRDs, specs, or architecture before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
+
 - `.aioson/context/project.context.md`
 - existing `prd.md` or `prd-{slug}.md`
 - existing `discovery.md`, `requirements-{slug}.md`, `spec.md` or `spec-{slug}.md` when relevant

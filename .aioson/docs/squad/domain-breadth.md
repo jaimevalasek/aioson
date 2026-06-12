@@ -1,5 +1,8 @@
 ---
 description: "Squad domain breadth — how to design executors that handle adjacent customer requests beyond the literal role label. Load when creating customer-facing squads (retail, hospitality, service, support, sales) or when an existing squad shows narrow-scope failures (refusing legitimate adjacent requests as 'out of scope')."
+agents: [squad]
+task_types: [squad-creation, breadth]
+triggers: [customer facing, operational breadth, adjacent requests]
 ---
 
 # Squad — Domain Breadth

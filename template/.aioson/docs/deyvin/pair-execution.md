@@ -1,5 +1,8 @@
 ---
 description: "Deyvin pair execution — working mode, small-slice loop, memory updates, and implementation governance."
+agents: [deyvin]
+task_types: [implementation, pair-session]
+triggers: [pair execution, small slice, polish]
 ---
 
 # Deyvin Pair Execution

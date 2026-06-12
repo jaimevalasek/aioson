@@ -1,5 +1,7 @@
 ---
 description: "site-forge Phase 3A — Transform Layer (Modes A/C), Phase 3B — Skill Forge (Modes B/D/E), Phase 3E — Blend Layer (Mode E)"
+task_types: [site-clone, transform]
+triggers: [transforming site, rebrand, adapting content]
 agents: [site-forge]
 ---
 

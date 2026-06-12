@@ -1,5 +1,8 @@
 ---
 description: "Squad domain classification — regulated vs specialized vs common domains, mandatory investigation policy, locale_scope decision, and persistence rules."
+agents: [squad]
+task_types: [squad-creation, classification]
+triggers: [regulated domain, domain classification, locale scope]
 ---
 
 # Squad Domain Classification

@@ -1,5 +1,8 @@
 ---
 description: "Squad quality lens — patterns, anti-pattern replacements, and a compact rubric for non-generic squad packages."
+agents: [squad]
+task_types: [quality, review]
+triggers: [squad quality, scorecard, anti-patterns]
 ---
 
 # Squad Quality Lens

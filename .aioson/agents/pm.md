@@ -22,7 +22,14 @@ Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruth
 - **SMALL** projects: optional — activate if user explicitly asks for delivery planning.
 - **MICRO** projects: skip — `@dev` reads context and architecture directly. Do not produce an implementation plan for MICRO.
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=pm --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to plan, and stop. Do not load PRDs, requirements, or specs before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` — **read first**; this is the PRD base from `@product`. Preserve all existing sections unless they belong to `@pm`.
 - `.aioson/context/requirements-{slug}.md` and `spec-{slug}.md` in feature mode

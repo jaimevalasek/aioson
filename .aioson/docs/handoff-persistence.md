@@ -1,5 +1,7 @@
 ---
 description: "Persist context to plans/{slug}.md before suggesting /clear in a cross-session handoff — preserves the diagnostic so the next agent works from an artifact, not from chat memory."
+task_types: [handoff]
+triggers: [handoff, session persistence, last handoff]
 ---
 
 # Handoff Persistence

@@ -1,5 +1,7 @@
 ---
 description: "Autopilot handoff protocol: automatic agent chaining across the feature workflow — the analyst→dev pre-dev chain and the post-dev review cycle (dev→qa→tester/pentester→validator) — with deterministic routing and explicit stop conditions. The chain never auto-runs feature:close/publish."
+task_types: [handoff, autopilot]
+triggers: [auto handoff, autopilot, next agent]
 ---
 
 # Autopilot handoff (analyst → dev → review cycle)

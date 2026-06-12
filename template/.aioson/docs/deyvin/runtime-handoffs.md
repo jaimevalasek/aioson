@@ -1,5 +1,8 @@
 ---
 description: "Deyvin runtime and handoffs — tracked session behavior, live milestones, direct sessions, and dashboard visibility."
+agents: [deyvin]
+task_types: [runtime, handoff]
+triggers: [live session, runtime handoff, tracked session]
 ---
 
 # Deyvin Runtime and Handoffs

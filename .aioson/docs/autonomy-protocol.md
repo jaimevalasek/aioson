@@ -1,5 +1,7 @@
 ---
 description: "Autonomy Contract: 3-tier permission model that drives native harness permissions and the `aioson notify` UX. Load when implementing or debugging permissions, tier changes, or notify levels."
+task_types: [autonomy, approval]
+triggers: [autonomy mode, approval gates, autopilot]
 ---
 
 # Autonomy Contract — 3-tier permission model

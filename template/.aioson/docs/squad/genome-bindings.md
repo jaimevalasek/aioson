@@ -1,5 +1,8 @@
 ---
 description: "Squad genome binding rules — when to route to @genome, how to persist bindings, and how to preserve legacy compatibility."
+agents: [squad, genome]
+task_types: [genome, bindings]
+triggers: [genomes, genome bindings, binding repair]
 ---
 
 # Squad Genome Bindings

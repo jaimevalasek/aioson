@@ -1,5 +1,7 @@
 ---
 description: "site-forge Phase 1 — Reconnaissance and Phase 1.5 — Deep Animation & Video Extraction"
+task_types: [site-clone, recon]
+triggers: [site recon, scanning site, cloning site]
 agents: [site-forge]
 ---
 

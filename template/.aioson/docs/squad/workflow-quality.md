@@ -1,5 +1,8 @@
 ---
 description: "Squad workflow and quality rules — workflow generation, review loops, model tiering, plans, checklists, coverage score, and warm-up."
+agents: [squad]
+task_types: [workflow, quality]
+triggers: [squad workflows, review loops, warm-up]
 ---
 
 # Squad Workflow And Quality

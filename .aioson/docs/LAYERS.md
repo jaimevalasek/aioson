@@ -1,5 +1,7 @@
 ---
 description: "Guide to the three project memory layers: rules, docs, and design-docs — when to use each"
+task_types: [framework-structure]
+triggers: [framework layers, docs structure]
 agents: []
 ---
 

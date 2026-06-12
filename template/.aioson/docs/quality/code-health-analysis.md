@@ -1,5 +1,7 @@
 ---
 description: "Code-health / improvement analysis playbook — coverage gaps, test sufficiency, regression need, execution-chain tracing, performance hotspots, componentization/maintainability. Shared on-demand lens for @tester/@qa/@pentester/@architect/@sheldon/@deyvin. Load only when the trigger fires; do not inline."
+task_types: [quality, analysis]
+triggers: [code health, improvement lens, regression]
 agents: [tester, qa, pentester, architect, sheldon, deyvin]
 ---
 

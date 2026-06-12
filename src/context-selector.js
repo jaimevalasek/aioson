@@ -29,43 +29,31 @@ const FOUNDATION_CONTEXT_BASENAMES = new Set([
   'memory-index.md'
 ]);
 
+const FOUNDATION_ACTIVATION_PATHS = new Set([
+  '.aioson/context/project.context.md',
+  '.aioson/context/project-pulse.md'
+]);
+
+const FOUNDATION_ACTIVATION_AGENTS = [
+  'briefing',
+  'product',
+  'sheldon',
+  'analyst',
+  'architect',
+  'ux-ui',
+  'pm',
+  'qa',
+  'orchestrator',
+  'scope-check',
+  'discovery-design-doc'
+];
+
 const ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT = new Map([
   [
     'deyvin',
-    new Set([
-      '.aioson/context/project.context.md',
-      '.aioson/context/project-pulse.md',
-      '.aioson/context/dev-state.md'
-    ])
+    new Set([...FOUNDATION_ACTIVATION_PATHS, '.aioson/context/dev-state.md'])
   ],
-  [
-    'briefing',
-    new Set([
-      '.aioson/context/project.context.md',
-      '.aioson/context/project-pulse.md'
-    ])
-  ],
-  [
-    'product',
-    new Set([
-      '.aioson/context/project.context.md',
-      '.aioson/context/project-pulse.md'
-    ])
-  ],
-  [
-    'sheldon',
-    new Set([
-      '.aioson/context/project.context.md',
-      '.aioson/context/project-pulse.md'
-    ])
-  ],
-  [
-    'analyst',
-    new Set([
-      '.aioson/context/project.context.md',
-      '.aioson/context/project-pulse.md'
-    ])
-  ]
+  ...FOUNDATION_ACTIVATION_AGENTS.map((agent) => [agent, FOUNDATION_ACTIVATION_PATHS])
 ]);
 
 const UNIVERSAL_ALWAYS_CONTEXT_BASENAMES = new Set([

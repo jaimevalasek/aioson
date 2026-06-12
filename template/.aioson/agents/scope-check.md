@@ -26,7 +26,13 @@ MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @pm -> @s
 After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when code or behavior changed materially.
 ```
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=scope-check --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature and mode to check, and stop. Do not load PRDs, specs, or diffs before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
 
 - User intent — `prd-{slug}.md`/`prd.md`, briefing, Sheldon enrichment, source manifest, or dossier Why/What
 - Planned work — `requirements-{slug}.md`/`spec*.md`, `architecture.md`, `design-doc*.md`, `readiness*.md`, implementation plan

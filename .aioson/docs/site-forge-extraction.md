@@ -1,5 +1,7 @@
 ---
 description: "site-forge Phase 2 — Selective Extraction: section specs, component inventory, interaction specs, aesthetic capture"
+task_types: [site-clone, extraction]
+triggers: [extracting design, design tokens, scraping site]
 agents: [site-forge]
 ---
 

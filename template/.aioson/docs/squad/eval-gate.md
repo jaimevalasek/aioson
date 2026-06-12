@@ -1,5 +1,8 @@
 ---
 description: "Squad eval-gate — derive a citation-grounded quality rubric from the squad's own sources and grade each executor with a multi-model jury. The enforced, source-grounded counterpart of quality-lens.md."
+agents: [squad]
+task_types: [eval, quality]
+triggers: [eval gate, jury, rubric]
 ---
 
 # Squad Eval-Gate

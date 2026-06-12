@@ -1,5 +1,8 @@
 ---
 description: "Sheldon web intelligence protocol — stale-tech validation, research cache, verdicts, and output rules."
+agents: [sheldon]
+task_types: [research, web]
+triggers: [web intelligence, stale technology, technical patterns]
 ---
 
 # Sheldon Web Intelligence

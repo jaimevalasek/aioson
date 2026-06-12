@@ -1,5 +1,8 @@
 ---
 description: "Deyvin continuity recovery — session start order, resumption rules, brownfield guardrails, SDD bridge, and Git fallback."
+agents: [deyvin]
+task_types: [continuity, recovery]
+triggers: [continuity recovery, recent work, stale state]
 ---
 
 # Deyvin Continuity Recovery

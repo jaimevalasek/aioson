@@ -45,7 +45,14 @@ This agent is unsafe to run on an uninitialized project or on a feature without 
 
 Between handoffs, output only the next agent and the reason. Do not continue into that agent's work.
 
+## Activation guard
+
+If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=orchestrator --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to orchestrate, and stop. Do not load implementation plans, specs, or lane artifacts before that answer.
+
 ## Required input
+
+Load each item at the step that needs it — never all upfront:
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/implementation-plan-{slug}.md` when present (Gate C; primary phase index for lane assignment)
 - `.aioson/context/spec-{slug}.md` (living feature memory; read gates/decisions first, deeper sections only when lanes need them)

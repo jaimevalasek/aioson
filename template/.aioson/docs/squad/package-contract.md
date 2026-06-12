@@ -1,5 +1,8 @@
 ---
 description: "Squad package contract — required filesystem layout, manifests, executor prompts, metadata, and gateway registration."
+agents: [squad]
+task_types: [squad-creation, package]
+triggers: [squad package, manifest, executors]
 ---
 
 # Squad Package Contract

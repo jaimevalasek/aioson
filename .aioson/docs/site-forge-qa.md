@@ -1,6 +1,8 @@
 ---
 description: "site-forge Phase 5 — Visual QA, screenshot comparison, interaction testing, skill fidelity check, output contract"
 agents: [site-forge]
+task_types: [site-clone, qa]
+triggers: [site qa, visual parity, link check]
 ---
 
 # site-forge: Phase 5 — Visual QA

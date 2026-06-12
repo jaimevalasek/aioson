@@ -1,5 +1,7 @@
 ---
 description: "Template for documenting an external API integration context — replace with real content"
+task_types: [integration]
+triggers: [external api, integration context]
 scope: "global"
 agents: []
 ---

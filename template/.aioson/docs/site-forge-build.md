@@ -1,5 +1,7 @@
 ---
 description: "site-forge Phase 4 — Build Layer: component implementation, interactions, video, asset wiring, assembly"
+task_types: [site-clone, build]
+triggers: [building site, scaffolding pages]
 agents: [site-forge]
 ---
 

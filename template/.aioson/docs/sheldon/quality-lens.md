@@ -1,5 +1,8 @@
 ---
 description: "Sheldon quality lens — high-signal enrichment patterns, anti-pattern replacements, and a compact review rubric."
+agents: [sheldon]
+task_types: [quality, review]
+triggers: [quality lens, improvements, scorecard]
 ---
 
 # Sheldon Quality Lens

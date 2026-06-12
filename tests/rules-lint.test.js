@@ -127,16 +127,60 @@ test('rules:lint handles missing rules directory and prints human summary', asyn
   }
 });
 
-test('template rules are all selector-visible', async () => {
-  const templateRoot = path.resolve(__dirname, '..', 'template');
-  const result = await runRulesLint({ args: [templateRoot], options: { json: true, strict: true }, logger: logger() });
+test('rules:lint --docs lints docs recursively without requiring a name field', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/rules/routed.md', [
+      '---',
+      'name: routed-rule',
+      'description: "Routed rule"',
+      'triggers: [money]',
+      '---',
+      '# Routed'
+    ].join('\n'));
+    await writeFile(dir, '.aioson/docs/dev/tagged.md', [
+      '---',
+      'description: "Tagged doc"',
+      'agents: [dev]',
+      'triggers: [implementing features]',
+      '---',
+      '# Tagged'
+    ].join('\n'));
+    await writeFile(dir, '.aioson/docs/dev/invisible.md', [
+      '---',
+      'description: "Doc with only description"',
+      '---',
+      '# Invisible'
+    ].join('\n'));
 
-  assert.ok(result.total > 0, 'template should ship rules');
+    const withoutDocs = await runRulesLint({ args: [dir], options: { json: true }, logger: logger() });
+    assert.equal(withoutDocs.total, 1);
+
+    const withDocs = await runRulesLint({ args: [dir], options: { json: true, docs: true }, logger: logger() });
+    assert.equal(withDocs.total, 3);
+
+    const byPath = new Map(withDocs.rules.map((rule) => [rule.path, rule]));
+    const tagged = byPath.get('.aioson/docs/dev/tagged.md');
+    assert.equal(tagged.ok, true);
+    assert.equal(tagged.warnings.some((warning) => warning.includes('missing required field: name')), false);
+
+    const invisible = byPath.get('.aioson/docs/dev/invisible.md');
+    assert.ok(invisible.warnings.some((warning) => warning.includes('selector-invisible')));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('template rules and docs are all selector-visible', async () => {
+  const templateRoot = path.resolve(__dirname, '..', 'template');
+  const result = await runRulesLint({ args: [templateRoot], options: { json: true, strict: true, docs: true }, logger: logger() });
+
+  assert.ok(result.total > 0, 'template should ship rules and docs');
   for (const rule of result.rules) {
     assert.deepEqual(
       rule.warnings.filter((warning) => warning.includes('selector-invisible')),
       [],
-      `template rule must be selector-visible: ${rule.path}`
+      `template rule/doc must be selector-visible: ${rule.path}`
     );
   }
 });

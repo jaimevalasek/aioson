@@ -1,5 +1,8 @@
 ---
 description: "Dev stack conventions — Laravel, UI/UX, design skill, motion, Web3, and any-stack separation rules."
+agents: [dev, deyvin]
+task_types: [implementation, conventions]
+triggers: [stack conventions, framework patterns, implementing features]
 ---
 
 # Dev Stack Conventions

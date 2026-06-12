@@ -1,5 +1,8 @@
 ---
 description: "Squad research loop — extract short domain phrases, consult research cache, and use fresh findings to improve executors, workflows, and output quality."
+agents: [squad]
+task_types: [research]
+triggers: [squad research, web search]
 ---
 
 # Squad Research Loop
