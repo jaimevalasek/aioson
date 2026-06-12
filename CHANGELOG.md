@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.1] - 2026-06-12
+
+### Docs
+- **Documented the v1.29.0 selective-context model in the project docs.** New "Carregamento seletivo de contexto" section in `memoria-e-contexto.md` (the two modes, activation fast paths, mid-flow activation guards, selector-routable rules/docs frontmatter, and `rules:lint`); `context:select` and `rules:lint` added to the CLI reference; per-agent notes for squad (investigation opt-out + create-phase genome pass), copywriter (INDEX-driven genome menu + binding operational sections), genome and the profiler pipeline (operational-method layer), and activation fast-path cross-links on briefing/sheldon.
+
 ## [1.29.0] - 2026-06-11
 
 ### Added
