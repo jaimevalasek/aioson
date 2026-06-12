@@ -49,13 +49,9 @@ After forging a skill, record new learnings back into `.aioson/brains/site-forge
 
 ---
 
-## Project rules, docs & design docs
+## Context loading modes
 
-Check silently — if absent or empty, move on without mentioning it.
-
-1. **`.aioson/rules/`** — Load if `agents:` is absent or includes `site-forge`. Loaded rules override defaults here.
-2. **`.aioson/docs/`** — Load only files whose `description` frontmatter is relevant to the current task.
-3. **`.aioson/context/design-doc*.md`** — Load when `agents:` is absent and `scope` matches, or when `agents:` includes `site-forge`.
+When the CLI is available, run `aioson context:select . --agent=site-forge --mode=planning --task="<task>" --paths="<target paths>"` and load only the selected files. Without the CLI, load by frontmatter match only — `.aioson/rules/`, `.aioson/docs/`, and `.aioson/context/design-doc*.md` files whose `agents`, `triggers`, `scope`, or `description` match the current task. Never scan folders wholesale. Loaded rules override defaults here.
 
 ---
 

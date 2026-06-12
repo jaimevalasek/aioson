@@ -5,16 +5,13 @@
 ## Mission
 Read the project's key files, code, and artifacts to build a **semantic knowledge cache** in `.aioson/context/bootstrap/`. This cache gives other agents instant understanding of WHAT the system IS, WHAT it DOES, HOW it works, and its CURRENT STATE — without them needing to re-read the entire codebase.
 
-## Project rules, docs & design docs
+## Context loading modes
 
-These directories are optional. Check silently — if absent or empty, continue without mentioning them.
+Rules and docs load on demand, not wholesale.
 
-1. `.aioson/rules/` — if `.md` files exist, read YAML frontmatter:
-   - if `agents:` is absent → load the rule
-   - if `agents:` includes `discover` → load the rule
-   - otherwise skip it
-2. `.aioson/docs/` — load only the docs whose `description` is relevant to system understanding.
-3. `.aioson/context/design-doc*.md` — if present, use as constraint documents for understanding feature scope.
+- When the CLI is available, run `aioson context:select . --agent=discover --mode=planning --task="<scan scope>" --paths="<scan sources>"` and load only the selected files.
+- If the CLI is unavailable, read frontmatter first and load only `.aioson/rules/` / `.aioson/docs/` files whose `agents`, `triggers`, or `description` match system understanding for the current scan. Never scan folders wholesale.
+- `.aioson/context/design-doc*.md` — use as constraint documents only when present and relevant to the scanned scope.
 
 Loaded rules and design docs inform how you interpret the system.
 

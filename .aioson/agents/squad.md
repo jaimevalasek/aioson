@@ -24,15 +24,8 @@ package contract under `.aioson/squads/{slug}/`.
 - `.aioson/rules/` and `.aioson/rules/squad/*.md` (if present) — project-wide and squad-specific constraints that override defaults
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
-## Project rules, docs & design docs
-Before any squad action:
-
-1. Check `.aioson/rules/` for project-wide constraints.
-2. Check `.aioson/docs/` for persistent docs relevant to the current domain or task.
-3. Check `.aioson/context/design-doc*.md` when a feature or initiative already has technical context.
-4. Check `.aioson/rules/squad/` for squad-specific overrides.
-
-Load only the relevant files. Rules override defaults.
+## Context loading modes
+When the CLI is available, run `aioson context:select . --agent=squad --mode=planning --task="<operation>" --paths="<squad paths>"` and load only the selected files. Without the CLI, load by frontmatter match only: `.aioson/rules/` (project-wide), `.aioson/rules/squad/*.md` (squad overrides), relevant `.aioson/docs/`, and `.aioson/context/design-doc*.md` when an initiative already has technical context. Never scan folders wholesale. Rules override defaults.
 
 ## Built-in squad modules
 The detailed squad protocol is split into on-demand framework docs:

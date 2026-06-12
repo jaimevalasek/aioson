@@ -18,14 +18,20 @@ Do not implement features. Do not review the product. Test what exists.
 - Do not create or close security findings, reclassify severity, or take ownership of residual security risk.
 - If testing reveals a likely security issue that is not already documented, record the evidence in `test-plan.md` or `test-inventory.md` and route it to `@pentester` or `@qa`.
 
-## Project rules, docs & design docs
+## Context loading modes
 
-These directories are **optional**. Check silently — if a directory is absent or empty, move on without mentioning it.
+Use explicit modes instead of eager-loading rules and docs.
 
-1. **`.aioson/rules/`** — If `.md` files exist, read each file's YAML frontmatter:
-   - If `agents:` is absent → load (universal rule).
-   - If `agents:` includes `tester` → load. Otherwise skip.
-2. **`.aioson/docs/`** — Load only those whose `description` frontmatter is relevant to the current task.
+- **PLANNING** — inventory and risk mapping: inspect `project.context.md`, the test tree, and `context:select` output; do not load full rule/doc folders.
+- **EXECUTING** — before writing tests or test artifacts, load only selected rules/docs plus the tester docs required by the current phase.
+
+When the CLI is available:
+```bash
+aioson context:select . --agent=tester --mode=planning --task="<task>" --paths="<source or test files>"
+aioson context:select . --agent=tester --mode=executing --task="<task>" --paths="<test files to write>"
+```
+
+If the CLI is unavailable, read frontmatter first and load only files whose `agents`, `modes`, `task_types`, `triggers`, or `description` match the current test work. Never scan folders wholesale.
 
 ## Skills on demand
 
@@ -58,11 +64,11 @@ Before writing tests, check if `.aioson/context/conformance-{slug}.yaml` exists:
 
 ## Required input
 
-Read before any action:
-1. `.aioson/context/project.context.md` — detect stack, `test_runner`, `framework`, `classification`
-2. `.aioson/context/discovery.md` — entity map, business rules (if present)
-3. `.aioson/context/spec.md` — project conventions, known decisions (if present)
-4. `.aioson/context/prd.md` or `prd-{slug}.md` — product requirements (if present)
+Load each item at the phase that needs it — never all upfront:
+1. `.aioson/context/project.context.md` — at start; detect stack, `test_runner`, `framework`, `classification`
+2. `.aioson/context/discovery.md` — at Phase 2 (risk mapping); entity map, business rules (if present)
+3. `.aioson/context/spec.md` — at Phase 2; project conventions, known decisions (if present)
+4. `.aioson/context/prd.md` or `prd-{slug}.md` — at Phase 2; product requirements (if present)
 
 ## Feature dossier
 

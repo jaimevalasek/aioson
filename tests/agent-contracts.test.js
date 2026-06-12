@@ -466,6 +466,23 @@ test('sheldon and analyst contracts enforce activation-only fast path before hea
   );
 });
 
+test('no template agent keeps the eager rules/docs loading section', async () => {
+  const agentsDir = path.join(ROOT, 'template/.aioson/agents');
+  const entries = await fs.readdir(agentsDir);
+  const agentFiles = entries.filter((name) => name.endsWith('.md'));
+
+  assert.ok(agentFiles.length > 0, 'template should ship agents');
+
+  for (const name of agentFiles) {
+    const content = await read(path.join(agentsDir, name));
+    assert.equal(
+      content.includes('## Project rules, docs & design docs'),
+      false,
+      `agent must use on-demand context loading instead of the eager section: ${name}`
+    );
+  }
+});
+
 test('template rules carry routing frontmatter so context:select can load them on demand', async () => {
   const rulesDir = path.join(ROOT, 'template/.aioson/rules');
   const entries = await fs.readdir(rulesDir);
