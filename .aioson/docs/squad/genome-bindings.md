@@ -16,6 +16,8 @@ If the user asks for a genome during a squad session:
 - finish or confirm the squad package first
 - then route explicitly to `@genome`
 
+The create-phase genome pass (`squad-create` Step 5.5) follows the same order by design: executors are written first, then genomes are generated/bound.
+
 ## Binding persistence
 
 When a genome is applied to an existing squad:
@@ -40,6 +42,15 @@ If the user asks for repair or normalize:
 - materialize `genomeBindings`
 - preserve old data
 - keep reads compatible with both formats
+
+## Operational propagation
+
+When a bound genome carries operational sections, apply them to the bound executors — binding a genome that changes nothing in the executor prompt is a defect:
+
+- `## Prohibitions` → each becomes a line in the executor's `## Hard constraints`
+- `## Delivery Checklist` → materialize or extend a checklist in `.aioson/squads/{slug}/checklists/`
+- `## Operating Procedure` → reference it in the executor's `## Response pattern` — the executor works the method's numbered steps, not a generic flow
+- `## Style Metrics` / `## Output Structure` → fold into the executor's `## Output contract` when the executor produces that deliverable
 
 ## Non-negotiable boundary
 

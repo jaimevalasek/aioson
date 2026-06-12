@@ -733,6 +733,33 @@ test('squad on-demand docs are shipped, managed, and preserve critical guidance'
   }
 });
 
+test('persona pipeline encodes the operational method, not just identity', async () => {
+  const enricher = await read(path.join(ROOT, 'template/.aioson/agents/profiler-enricher.md'));
+  const forge = await read(path.join(ROOT, 'template/.aioson/agents/profiler-forge.md'));
+  const genome = await read(path.join(ROOT, 'template/.aioson/agents/genome.md'));
+  const bindings = await read(path.join(ROOT, 'template/.aioson/docs/squad/genome-bindings.md'));
+
+  const checks = [
+    [enricher, '### Module 9 - Operational method (what they DO, not just who they ARE)'],
+    [enricher, '## Operational Method'],
+    [enricher, '### Delivery Checklist'],
+    [enricher, 'do not invent one'],
+    [forge, '- `## Operating Procedure`'],
+    [forge, '- `## Prohibitions`'],
+    [forge, '- `## Delivery Checklist`'],
+    [forge, 'simulates opinions, not work'],
+    [genome, 'recognize the operational sections `## Operating Procedure`'],
+    [genome, 'treat a missing `## Operating Procedure` as a generation defect'],
+    [bindings, '## Operational propagation'],
+    [bindings, '`## Prohibitions` → each becomes a line in the executor\'s `## Hard constraints`'],
+    [bindings, 'binding a genome that changes nothing in the executor prompt is a defect']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing operational-method token: ${token}`);
+  }
+});
+
 test('profiler agents ship canonical prompts with interaction-language guidance', async () => {
   const researcher = await read(path.join(ROOT, 'template/.aioson/agents/profiler-researcher.md'));
   const enricher = await read(path.join(ROOT, 'template/.aioson/agents/profiler-enricher.md'));

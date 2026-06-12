@@ -227,6 +227,18 @@ Run MPD for all combinations that show score contrast ≥ 2 levels or where evid
 
 Capture at least 3 MPD patterns. If fewer than 3 are supported by evidence, mark the section partial.
 
+### Module 9 - Operational method (what they DO, not just who they ARE)
+
+A profile that captures philosophy and voice but not the working method produces a genome that simulates opinions, not work. Extract from the evidence:
+
+- **Procedure** — the person's named method as numbered, executable steps (e.g., RMBC: Research → Mechanism → Brief → Copy), each step with its concrete actions and inputs/outputs
+- **Output structure** — how their deliverable is organized, with proportions when evidenced (e.g., lead 10%, relationship-building 20%)
+- **Style metrics** — measurable style rules the person demonstrably follows (sentence length, paragraph size, ratios)
+- **Prohibitions** — the absolute "never do X" rules the person teaches or observes
+- **Delivery checklist** — the verification criteria the person applies before shipping work
+
+Each item cites evidence. When the method is implied but not documented step-by-step, reconstruct it and mark it `inferred`. If the person has no documented method at all, say so — do not invent one.
+
 If evidence is insufficient for any module, mark the section as low confidence instead of guessing harder.
 
 ## Step 4 - Produce the enriched profile
@@ -286,6 +298,13 @@ mpd_patterns: [count — number of documented trait interactions]
 ## Values and Principles
 
 ## Expertise and Operating Context
+
+## Operational Method
+### Procedure
+### Output Structure
+### Style Metrics
+### Prohibitions
+### Delivery Checklist
 
 ## Biases and Blind Spots
 

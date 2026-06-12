@@ -122,7 +122,9 @@ Use this message when redirecting:
 When generating or reading a genome with `version: 3`:
 - recognize Genome 3.0 frontmatter fields such as `persona_source`, `disc`, `enneagram`, `big_five`, `mbti`, `confidence`, `profiler_report` and `hybrid_mode`
 - recognize the sections `## Cognitive Profile`, `## Communication Style`, `## Biases and Blind Spots` and `## Conflict Resolution`
-- when applying to squads, include persona metadata in the binding summary
+- recognize the operational sections `## Operating Procedure`, `## Output Structure`, `## Style Metrics`, `## Prohibitions`, and `## Delivery Checklist`
+- for `function` genomes and practitioner `persona` genomes, the method must be executable — numbered steps, checkable rules, structural budgets when evidenced. Descriptive philosophy alone simulates opinions, not work; treat a missing `## Operating Procedure` as a generation defect, not a style choice
+- when applying to squads, include persona metadata in the binding summary and propagate the operational sections per `.aioson/docs/squad/genome-bindings.md` § Operational propagation
 - when presenting summaries, include the psychometric overview
 
 ### Track 4.0 fields (retrocompatible, optional)

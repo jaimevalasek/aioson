@@ -96,6 +96,11 @@ Required sections:
 - `## Heuristicas`
 - `## Frameworks`
 - `## Metodologias`
+- `## Operating Procedure`
+- `## Output Structure`
+- `## Style Metrics`
+- `## Prohibitions`
+- `## Delivery Checklist`
 - `## Mentes`
 - `## Skills`
 - `## Perfil Cognitivo`
@@ -111,6 +116,7 @@ Generation rules:
 - `Estilo de Comunicacao` captures tone, persuasion, structure, and signature expressions
 - `Vieses e Pontos Cegos` captures bias patterns, error modes, and compensations
 - `Trait Interactions` translates the MPD patterns from the enriched profile into behavioral implications for the genome user — each pattern becomes an actionable note: "When this agent does X, expect Y because of [trait combination]"
+- `Operating Procedure`, `Output Structure`, `Style Metrics`, `Prohibitions`, and `Delivery Checklist` come from the enriched profile `## Operational Method` — encode the method as numbered executable steps and checkable rules, never as descriptions. A persona genome without an Operating Procedure simulates opinions, not work. When the profile lacks a documented method, mark these sections `inferred` (with rationale) rather than omitting them.
 - every major section must reference evidence
 - include a confidence disclaimer because the profile is inferred
 
