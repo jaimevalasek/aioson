@@ -3,6 +3,11 @@ name: data-format-convention
 description: Which file format to use when producing or consuming structured data — YAML for agent-readable reference data, Markdown for narrative, JSON for machine-consumed data
 priority: 8
 version: 1.0.0
+modes: [executing]
+task_types: [artifact-write, data-format]
+load_tier: trigger
+triggers: [choosing format, structured data, writing yaml, writing json, producing output, data file]
+paths: [output/**, .aioson/squads/**]
 ---
 
 # Data Format Convention

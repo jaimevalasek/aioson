@@ -4,6 +4,11 @@ description: Lightweight implementation lane for bounded technical work that doe
 priority: 9
 version: 1.0.0
 agents: [dev, deyvin, qa, neo]
+modes: [planning, executing]
+task_types: [simple-plan, bounded-work, refactor]
+load_tier: trigger
+triggers: [simple plan, bounded technical work, small fix, refactor, polish]
+paths: [.aioson/context/simple-plans/**]
 ---
 
 # Simple Plan Lane

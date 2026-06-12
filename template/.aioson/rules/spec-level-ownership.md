@@ -4,6 +4,11 @@ description: spec.md is project-level, spec-{slug}.md is feature-level — the t
 priority: 9
 version: 1.0.0
 agents: [dev, qa, pm, sheldon]
+modes: [planning, executing]
+task_types: [spec-write, spec-update]
+load_tier: trigger
+triggers: [spec, feature spec, project spec, updating spec, writing spec]
+paths: [.aioson/context/spec*.md]
 ---
 
 # Spec Ownership: Project vs Feature Level

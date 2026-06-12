@@ -3,6 +3,11 @@ name: agent-structural-contract
 description: Structural contract every AIOSON agent must follow — mandatory sections, observability order, handoff pattern, and CLI command integrity
 priority: 5
 version: 1.0.0
+modes: [planning, executing]
+task_types: [agent-contract, agent-authoring]
+load_tier: trigger
+triggers: [editing agent files, creating agents, agent prompt, handoff contract, observability block, milestone order]
+paths: [.aioson/agents/**, template/.aioson/agents/**, .aioson/squads/**]
 ---
 
 # Agent Structural Contract

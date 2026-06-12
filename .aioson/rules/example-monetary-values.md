@@ -4,6 +4,10 @@ description: All monetary values must be stored as integer cents, never as float
 agents: [dev, architect, qa]
 priority: 5
 version: 1.0.0
+modes: [planning, executing]
+task_types: [payment, billing, pricing]
+load_tier: trigger
+triggers: [money, monetary values, price, pricing, currency, cents, payment, billing, checkout, invoice, refund]
 ---
 
 # Monetary Values Convention

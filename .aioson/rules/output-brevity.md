@@ -3,6 +3,8 @@ name: output-brevity
 description: All agents must produce terse, direct output — no preambles, no trailing summaries, no narration of actions
 priority: 8
 version: 1.0.0
+modes: [planning, executing]
+load_tier: always
 ---
 
 # Output Brevity

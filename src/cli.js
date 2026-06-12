@@ -14,6 +14,7 @@ const { runAgentsList, runAgentPrompt } = require('./commands/agents');
 const { runContextValidate } = require('./commands/context-validate');
 const { runContextPack } = require('./commands/context-pack');
 const { runContextSelect } = require('./commands/context-select');
+const { runRulesLint } = require('./commands/rules-lint');
 const { runContextLoad } = require('./commands/context-load');
 const { runChainAudit } = require('./commands/chain-audit');
 const { runMemorySearch } = require('./commands/memory-search');
@@ -257,6 +258,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-pack',
   'context:select',
   'context-select',
+  'rules:lint',
+  'rules-lint',
   'context:load',
   'context-load',
   'chain:audit',
@@ -1105,6 +1108,8 @@ async function main() {
       result = await runContextPack({ args, options, logger: commandLogger, t });
     } else if (command === 'context:select' || command === 'context-select') {
       result = await runContextSelect({ args, options, logger: commandLogger, t });
+    } else if (command === 'rules:lint' || command === 'rules-lint') {
+      result = await runRulesLint({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {
       result = await runContextLoad({ args, options, logger: commandLogger, t });
     } else if (command === 'chain:audit' || command === 'chain-audit') {

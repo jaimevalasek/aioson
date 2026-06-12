@@ -4,6 +4,11 @@ description: Agent files default to English for universal reuse. Locale-specific
 priority: 9
 version: 1.1.0
 agents: [squad, genome, orache, design-hybrid-forge, site-forge]
+modes: [planning, executing]
+task_types: [squad-creation, agent-generation, localization]
+load_tier: trigger
+triggers: [creating squads, generating agents, choosing language, locale scope, translating agents]
+paths: [.aioson/squads/**]
 ---
 
 # Agent Language Policy

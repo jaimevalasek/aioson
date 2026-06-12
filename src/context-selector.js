@@ -29,10 +29,22 @@ const FOUNDATION_CONTEXT_BASENAMES = new Set([
   'memory-index.md'
 ]);
 
-const ACTIVATION_ONLY_CONTEXT_PATHS = new Set([
-  '.aioson/context/project.context.md',
-  '.aioson/context/project-pulse.md',
-  '.aioson/context/dev-state.md'
+const ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT = new Map([
+  [
+    'deyvin',
+    new Set([
+      '.aioson/context/project.context.md',
+      '.aioson/context/project-pulse.md',
+      '.aioson/context/dev-state.md'
+    ])
+  ],
+  [
+    'briefing',
+    new Set([
+      '.aioson/context/project.context.md',
+      '.aioson/context/project-pulse.md'
+    ])
+  ]
 ]);
 
 const UNIVERSAL_ALWAYS_CONTEXT_BASENAMES = new Set([
@@ -66,7 +78,7 @@ function normalizeFeaturePointer(value) {
 }
 
 function isActivationOnlyTask(agent, mode, task) {
-  if (agent !== 'deyvin' || mode !== 'planning') return false;
+  if (!ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT.has(agent) || mode !== 'planning') return false;
   const normalized = normalizeToken(task);
   if (!normalized) return true;
   return (
@@ -272,7 +284,10 @@ function scoreCandidate(candidate, context) {
   const base = path.basename(candidate.path);
 
   if (!appliesToAgent(candidate.frontmatter, context.agent)) return null;
-  if (context.activationOnly && !ACTIVATION_ONLY_CONTEXT_PATHS.has(candidate.path)) return null;
+  if (context.activationOnly) {
+    const allowedActivationPaths = ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT.get(context.agent);
+    if (!allowedActivationPaths || !allowedActivationPaths.has(candidate.path)) return null;
+  }
 
   if (candidate.modes.length > 0 && !candidate.modes.map(normalizeToken).includes(context.mode)) {
     return null;

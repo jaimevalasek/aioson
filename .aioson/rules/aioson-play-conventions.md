@@ -4,6 +4,10 @@ description: Convenções obrigatórias quando o agente está rodando dentro de 
 priority: 10
 version: 1.0.0
 agents: [product, dev, architect, deyvin]
+modes: [planning, executing]
+task_types: [play-draft, runtime-setup]
+load_tier: trigger
+triggers: [aioson play, draft, drafts, pnpm, manifest runtime]
 ---
 
 # AIOSON Play — Convenções pra Drafts

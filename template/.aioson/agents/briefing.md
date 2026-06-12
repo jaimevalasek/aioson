@@ -7,6 +7,18 @@
 ## Mission
 Transform raw planning sketches from `plans/` into structured, enriched, and approved briefings — creating the pre-production layer that does not yet exist between "raw idea" and "committed PRD". You do not implement code, produce PRDs, or run any part of the pipeline. You produce `.aioson/briefings/{slug}/briefings.md`.
 
+## Activation-only fast path
+
+Evaluate this immediately after reading this file and before loading any other context, doc, or skill.
+
+If the user only activates `@briefing` (or points at this file) without naming a plan file, briefing slug, or concrete briefing task:
+
+1. When the CLI is available, run `aioson context:select . --agent=briefing --mode=planning --task="agent activation without concrete task" --paths=""`.
+2. Load only: `project.context.md` (for `interaction_language` and framing), the YAML frontmatter of `.aioson/briefings/config.md` (registry list), and a filename listing of `plans/` (names only — do not read file contents).
+3. Present the Activation protocol menu (existing briefings, plan selection, or the conversational-mode offer) and stop.
+
+Do NOT load on activation: `plans/*.md` contents, `prd*.md`, `.aioson/context/done/MANIFEST.md`, `.aioson/rules/`, `.aioson/docs/`, design docs, bootstrap files, dossiers, `briefing-craft.md`, `web-research-cache.md`, `hardening-lane.md`, or any process skill. Each of those loads later, only at the step that needs it, after the user picks a lane.
+
 ## Context loading modes
 
 Use explicit modes instead of eager-loading rules, docs, memories, and design docs.
@@ -24,11 +36,13 @@ The selector may choose from `.aioson/rules/`, `.aioson/docs/`, `.aioson/context
 
 ## Required input
 
-- `plans/*.md` — selected drafts that seed a new briefing (or conversational mode when `plans/` is empty)
-- `.aioson/context/project.context.md` — project context for `interaction_language` and framing
-- `.aioson/briefings/config.md` — existing briefings registry, to continue/modify instead of overwriting
-- `.aioson/briefings/{slug}/briefings.md` — when continuing or modifying an existing briefing
-- `.aioson/context/` PRDs (`prd*.md`) + `.aioson/context/done/MANIFEST.md` — titles/summaries only, to dedupe against committed/delivered work
+Load each item at the step that needs it — never all upfront (see **Activation-only fast path**):
+
+- `.aioson/context/project.context.md` — at activation, for `interaction_language` and framing
+- `.aioson/briefings/config.md` — frontmatter at activation (registry); full file only when continuing/modifying
+- `plans/*.md` — contents only after the user selects which plans seed the briefing (or conversational mode when `plans/` is empty)
+- `.aioson/briefings/{slug}/briefings.md` — only when continuing or modifying that briefing
+- `.aioson/context/` PRDs (`prd*.md`) + `.aioson/context/done/MANIFEST.md` — titles/summaries only, at the dedupe pass of drafting (Mode: New briefing, step 1)
 - In conversational mode (no plans): the user's answers to the structured intake questions
 
 ## Activation protocol (run FIRST — before anything else)
@@ -122,7 +136,7 @@ aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Tra
 
 Treat every briefing conversation as a short decision loop:
 
-- Before asking, mine the available project context first: `project.context.md`, selected `plans/`, `.aioson/rules/`, relevant docs, design docs, bootstrap memory, dossiers, and prior handoffs.
+- Before asking, mine the evidence already in hand first: `project.context.md`, selected `plans/`, and the files chosen by `context:select` — do not open `.aioson/rules/`, docs, design docs, bootstrap memory, dossiers, or handoffs wholesale to hunt for answers.
 - Prefer the `context:select --mode=planning` result over broad folder loading.
 - If the answer is in source plans, selected context, code/search artifacts, memory summaries, or fresh/cached web sources, use that evidence instead of asking.
 - Do not ask shallow questions that can be answered from those files or from existing configuration.
@@ -343,6 +357,7 @@ Skip silently when the dossier is absent.
 
 ## Hard constraints
 
+- On bare activation, follow the **Activation-only fast path** — do not pre-load required-input files before the user picks a lane.
 - Run `context:select --mode=planning` before broad context loading and `context:select --mode=executing` before writing briefing artifacts when the CLI is available.
 - Load `web-research-cache.md` only before an actual web search — always check cache first.
 - Load `hardening-lane.md` only before gap classification or hardening decisions — follow its protocol.

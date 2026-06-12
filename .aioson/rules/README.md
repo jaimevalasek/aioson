@@ -16,6 +16,11 @@ description: One-line description of what this rule enforces
 agents: [dev, architect]   # omit to apply to ALL agents
 priority: 10               # optional: higher = loaded first (default: 0)
 version: 1.0.0
+modes: [planning, executing]              # optional: restrict to a context:select mode
+task_types: [payment, billing]            # routing: matched against the current task
+load_tier: trigger                        # trigger (default) | always | justified
+triggers: [money, pricing, checkout]      # routing: keywords/phrases matched against the task
+paths: [src/billing/**]                   # routing: matched against the files being touched
 ---
 ```
 
@@ -30,6 +35,11 @@ version: 1.0.0
 | `agents` | no | List of agent names. If absent → all agents load it |
 | `priority` | no | Loading order. Higher = loaded first. Default: 0 |
 | `version` | no | Semantic version for tracking changes |
+| `modes` | no | `planning`, `executing`, or both. If declared, the rule is only eligible in those modes |
+| `task_types` | no | Task categories matched against the `context:select` task description |
+| `load_tier` | no | `trigger` (default, loads on match), `always` (loads on every select), `justified` (higher match bar) |
+| `triggers` | no | Keywords or short verb phrases matched against the task (e.g. `creating files` matches "create a new file") |
+| `paths` | no | Glob patterns matched against `--paths` (files about to be touched) |
 
 ---
 
@@ -40,6 +50,24 @@ version: 1.0.0
 - Loaded rules **override** the agent's built-in defaults
 - Rules are loaded silently — agents do not announce which rules were loaded
 - An agent named `dev` matches a rule with `agents: [dev]`
+
+### On-demand routing via context:select
+
+Agents load rules on demand through `aioson context:select`. A rule is selected when its
+metadata scores above the load threshold for the current task: `task_types`/`triggers`
+matches weigh most, `paths` matches add when the touched files overlap, and the
+`description` adds a small boost. **A rule with only `agents` + `description` is
+selector-invisible** — it never scores above the threshold, so agents will not load it
+on demand. Either give it routing metadata (`task_types`, `triggers`, `paths`) or mark
+it `load_tier: always` when it is genuinely global (keep always-rules small).
+
+Check the health of your rules with:
+
+```bash
+aioson rules:lint .
+```
+
+It flags rules that are selector-invisible or missing required fields.
 
 ---
 

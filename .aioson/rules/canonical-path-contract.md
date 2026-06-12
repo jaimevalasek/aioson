@@ -4,6 +4,11 @@ description: Mandatory distinction between root plans/, .aioson/plans/{slug}/, d
 priority: 10
 version: 1.0.0
 agents: []
+modes: [planning, executing]
+task_types: [artifact-write, file-creation, plan-write]
+load_tier: trigger
+triggers: [writing plans, creating files, saving artifacts, choosing paths, artifact destination]
+paths: [plans/**, .aioson/plans/**, .aioson/context/**, docs/**]
 ---
 
 # Canonical Path Contract

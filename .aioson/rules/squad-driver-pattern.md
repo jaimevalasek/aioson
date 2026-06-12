@@ -4,6 +4,11 @@ description: Territory boundaries and integration pattern for AIOSON squads — 
 priority: 9
 version: 1.0.0
 agents: [dev, sheldon, pm, qa, architect]
+modes: [planning, executing]
+task_types: [squad-integration, driver]
+load_tier: trigger
+triggers: [squad, driver, embedding prompts, squad runner, llm call]
+paths: [.aioson/squads/**, src/services/**]
 ---
 
 # Squad Driver Pattern

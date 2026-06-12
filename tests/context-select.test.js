@@ -137,6 +137,39 @@ test('context:select keeps active feature specs out of deyvin activation-only pl
   }
 });
 
+test('context:select restricts briefing activation-only planning to foundation context', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: checkout\n---\n# Pulse');
+    await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: checkout\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/prd-checkout.md', '---\nfeature: checkout\n---\n# PRD');
+    await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
+
+    const activation = await selectContext(dir, {
+      agent: 'briefing',
+      mode: 'planning',
+      task: 'agent activation without concrete task'
+    });
+    const activationSelected = activation.selected.map((item) => item.path);
+    assert.equal(activation.activation_only, true);
+    assert.ok(activationSelected.includes('.aioson/context/project.context.md'));
+    assert.ok(activationSelected.includes('.aioson/context/project-pulse.md'));
+    assert.equal(activationSelected.includes('.aioson/context/dev-state.md'), false);
+    assert.equal(activationSelected.includes('.aioson/context/prd-checkout.md'), false);
+    assert.equal(activationSelected.includes('.aioson/context/features/checkout/dossier.md'), false);
+
+    const drafting = await selectContext(dir, {
+      agent: 'briefing',
+      mode: 'planning',
+      task: 'draft briefing for checkout feature'
+    });
+    assert.equal(drafting.activation_only, false);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:select loads governance for executing file creation paths', async () => {
   const dir = await makeTmpDir();
   try {

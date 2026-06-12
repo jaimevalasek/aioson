@@ -4,6 +4,11 @@ description: Defines which agent owns each PRD section — other agents cannot m
 priority: 9
 version: 1.0.0
 agents: [product, pm, analyst, architect, ux-ui, sheldon]
+modes: [planning, executing]
+task_types: [prd-edit, prd-enrichment]
+load_tier: trigger
+triggers: [prd, acceptance criteria, delivery phases, editing prd, enriching prd]
+paths: [.aioson/context/prd*.md]
 ---
 
 # PRD Section Ownership

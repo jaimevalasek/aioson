@@ -4,6 +4,10 @@ description: Secure by Default baseline controls for technical agents
 priority: 10
 version: 1.0.0
 agents: [analyst, architect, dev, qa]
+modes: [planning, executing]
+task_types: [security, auth, hardening]
+load_tier: trigger
+triggers: [security, auth, login, password, upload, secret, token, permission, ownership, rate limit, payment, multi-tenant, sanitize]
 ---
 
 # Security Baseline — Secure by Default

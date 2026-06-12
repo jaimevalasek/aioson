@@ -297,6 +297,32 @@ test('briefing and product prompts prefer evidence-backed intake over shallow qu
   }
 });
 
+test('briefing contract enforces activation-only fast path before context loading', async () => {
+  const briefing = await read(path.join(ROOT, 'template/.aioson/agents/briefing.md'));
+
+  const tokens = [
+    '## Activation-only fast path',
+    'Evaluate this immediately after reading this file and before loading any other context, doc, or skill.',
+    'names only — do not read file contents',
+    'Do NOT load on activation:',
+    'Load each item at the step that needs it — never all upfront',
+    'On bare activation, follow the **Activation-only fast path**'
+  ];
+
+  for (const token of tokens) {
+    assert.equal(briefing.includes(token), true, `missing briefing token: ${token}`);
+  }
+
+  assert.ok(
+    briefing.indexOf('## Activation-only fast path') < briefing.indexOf('## Context loading modes'),
+    'activation-only fast path must appear before context loading modes'
+  );
+  assert.ok(
+    briefing.indexOf('## Activation-only fast path') < briefing.indexOf('## Activation protocol'),
+    'activation-only fast path must appear before the activation protocol menu'
+  );
+});
+
 test('product, sheldon, and dev on-demand docs are managed and preserve critical guidance', async () => {
   const managedDocs = [
     '.aioson/docs/product/conversation-playbook.md',
@@ -362,6 +388,28 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
 
   for (const [content, token] of checks) {
     assert.equal(content.includes(token), true, `missing core-agent doc token: ${token}`);
+  }
+});
+
+test('template rules carry routing frontmatter so context:select can load them on demand', async () => {
+  const rulesDir = path.join(ROOT, 'template/.aioson/rules');
+  const entries = await fs.readdir(rulesDir);
+  const ruleFiles = entries.filter(
+    (name) => name.endsWith('.md') && name.toLowerCase() !== 'readme.md'
+  );
+
+  assert.ok(ruleFiles.length > 0, 'template should ship rules');
+
+  for (const name of ruleFiles) {
+    const content = await read(path.join(rulesDir, name));
+    const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    assert.ok(frontmatter, `rule must have frontmatter: ${name}`);
+    const alwaysLoaded = /^load_tier:\s*always\s*$/m.test(frontmatter[1]);
+    const hasRouting = /^(task_types|triggers|paths):\s*\[.+\]\s*$/m.test(frontmatter[1]);
+    assert.ok(
+      alwaysLoaded || hasRouting,
+      `rule must declare task_types/triggers/paths or load_tier: always: ${name}`
+    );
   }
 });
 
