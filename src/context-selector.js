@@ -51,6 +51,20 @@ const ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT = new Map([
       '.aioson/context/project.context.md',
       '.aioson/context/project-pulse.md'
     ])
+  ],
+  [
+    'sheldon',
+    new Set([
+      '.aioson/context/project.context.md',
+      '.aioson/context/project-pulse.md'
+    ])
+  ],
+  [
+    'analyst',
+    new Set([
+      '.aioson/context/project.context.md',
+      '.aioson/context/project-pulse.md'
+    ])
   ]
 ]);
 

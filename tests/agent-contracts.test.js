@@ -416,6 +416,56 @@ test('product contract enforces activation-only fast path before source and cont
   );
 });
 
+test('sheldon and analyst contracts enforce activation-only fast path before heavy loading', async () => {
+  const sheldon = await read(path.join(ROOT, 'template/.aioson/agents/sheldon.md'));
+  const analyst = await read(path.join(ROOT, 'template/.aioson/agents/analyst.md'));
+
+  const sheldonTokens = [
+    '## Activation-only fast path',
+    '## Context loading modes',
+    'names only — no contents',
+    'Do NOT load on activation:',
+    'after the target PRD is selected (RF-01) — never on bare activation',
+    'On bare activation, follow the **Activation-only fast path**.'
+  ];
+  const analystTokens = [
+    '## Activation-only fast path',
+    'names only — no contents',
+    'Do NOT load on activation:',
+    'Run the full tool-first preflight only after a concrete task or feature is named.',
+    'On bare activation, follow the **Activation-only fast path**.'
+  ];
+
+  for (const token of sheldonTokens) {
+    assert.equal(sheldon.includes(token), true, `missing sheldon token: ${token}`);
+  }
+  for (const token of analystTokens) {
+    assert.equal(analyst.includes(token), true, `missing analyst token: ${token}`);
+  }
+
+  assert.ok(
+    sheldon.indexOf('## Activation-only fast path') < sheldon.indexOf('## Context loading modes'),
+    'sheldon fast path must appear before context loading modes'
+  );
+  assert.ok(
+    sheldon.indexOf('## Activation-only fast path') < sheldon.indexOf('## PRD target detection'),
+    'sheldon fast path must appear before PRD target detection'
+  );
+  assert.equal(
+    sheldon.includes('## Project rules, docs & design docs'),
+    false,
+    'sheldon must not keep the eager rules/docs loading section'
+  );
+  assert.ok(
+    analyst.indexOf('## Activation-only fast path') < analyst.indexOf('## Context loading modes'),
+    'analyst fast path must appear before context loading modes'
+  );
+  assert.ok(
+    analyst.indexOf('## Activation-only fast path') < analyst.indexOf('## Tool-first session preflight'),
+    'analyst fast path must appear before the tool-first preflight'
+  );
+});
+
 test('template rules carry routing frontmatter so context:select can load them on demand', async () => {
   const rulesDir = path.join(ROOT, 'template/.aioson/rules');
   const entries = await fs.readdir(rulesDir);

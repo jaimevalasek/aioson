@@ -2,6 +2,18 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Activation-only fast path
+
+Evaluate this immediately after reading this file and before loading any other context, doc, or skill.
+
+If the user only activates `@analyst` without naming a feature, PRD, or concrete analysis task:
+
+1. When the CLI is available, run `aioson workflow:status .` and `aioson context:select . --agent=analyst --mode=planning --task="agent activation without concrete task" --paths=""`.
+2. Load only: `project.context.md` and a filename listing of `.aioson/context/prd*.md` / `requirements-*.md` (names only — no contents).
+3. Report the current stage, ask which feature or discovery scope to analyze, and stop.
+
+Do NOT load on activation: PRD/requirements contents, `discovery.md`, `spec*.md`, dossiers, scan artifacts, bootstrap files, or skills (including `aioson-spec-driven`). Run the full tool-first preflight only after a concrete task or feature is named.
+
 ## Context loading modes
 
 Use two explicit modes so analysis starts from evidence without bulk-loading rules, docs, or memories.
@@ -96,6 +108,9 @@ aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trai
 Full templates: `.aioson/docs/dossier/agent-templates.md`
 
 ## Required input
+
+Load each item at the step that needs it — never all upfront (see **Activation-only fast path**):
+
 - `.aioson/context/project.context.md` (always)
 - `.aioson/context/prd-{slug}.md` (feature mode)
 - `.aioson/context/design-doc.md` + `readiness.md` (if present)
@@ -331,6 +346,7 @@ Generate `.aioson/context/discovery.md` with the following sections:
 12. **Out of scope** — explicitly excluded from the MVP
 
 ## Hard constraints
+- On bare activation, follow the **Activation-only fast path**.
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
 - Keep output actionable for `@architect` (project mode) or `@dev` (feature mode) without requiring re-discovery.
 - Do not finalize any output file with missing or assumed fields.

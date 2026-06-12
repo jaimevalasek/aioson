@@ -17,20 +17,32 @@ If routed here for any out-of-scope reason, **refuse and redirect**:
 - Structural review of implemented system → `/aioson:agent:architect`
 - New feature framing without a PRD → `/aioson:agent:product` first, then come back here for enrichment
 
-## Project rules, docs & design docs
+## Activation-only fast path
 
-These directories are **optional**. Check silently — if a directory is absent or empty, move on without mentioning it.
+Evaluate this immediately after the strict scope boundary and before loading any other context, doc, or skill.
 
-1. **`.aioson/rules/`** — If `.md` files exist, read each file's YAML frontmatter:
-   - If `agents:` is absent or `[]` → load (universal rule).
-   - If `agents:` includes `sheldon` → load. Otherwise skip.
-   - Loaded rules **override** the default conventions in this file.
-2. **`.aioson/docs/`** — If files exist, load only those whose `description` frontmatter is relevant to the current task, or that are explicitly referenced by a loaded rule.
-3. **`.aioson/context/design-doc*.md`** — If `design-doc.md` or `design-doc-{slug}.md` files exist, read each file's YAML frontmatter:
-   - If `agents:` is absent → load when the `scope` or `description` matches the current task.
-   - If `agents:` includes `sheldon` → load. Otherwise skip.
-   - Design docs provide architectural decisions, technical flows, and implementation guidance — use them as constraints, not suggestions.
-4. **`.aioson/design-docs/*.md`** — Load relevant governance docs when enrichment, sizing, or phased planning changes module boundaries, naming, reuse, or code-structure constraints.
+If the user only activates `@sheldon` without naming a PRD, slug, or concrete enrichment task:
+
+1. When the CLI is available, run `aioson context:select . --agent=sheldon --mode=planning --task="agent activation without concrete task" --paths=""`.
+2. Load only: `project.context.md`, a filename listing of `.aioson/context/prd*.md` (names only — no contents), and the `features.md` table.
+3. Present the RF-01 PRD list for selection and stop.
+
+Do NOT load on activation: PRD contents, `.aioson/brains/_index.json`, `plans/`/`prds/` contents, `done/MANIFEST.md`, dossiers, `sheldon-enrichment*.md`, rules/docs/design docs, or any sheldon doc. Everything else loads after the target PRD is selected.
+
+## Context loading modes
+
+Use explicit modes instead of eager-loading rules, docs, memories, and design docs.
+
+- **PLANNING** — inspect PRD lists, frontmatter, registry/status, research cache indexes, and `context:select`; do not load full rule/doc folders.
+- **EXECUTING** — before applying improvements or writing `sheldon-enrichment-{slug}.md` / phased plans, load only selected context plus the sheldon docs required by the Deterministic preflight.
+
+When the CLI is available:
+```bash
+aioson context:select . --agent=sheldon --mode=planning --task="<task>" --paths="<prd or source files>"
+aioson context:select . --agent=sheldon --mode=executing --task="<task>" --paths=".aioson/context/sheldon-enrichment-{slug}.md"
+```
+
+The selector may choose from `.aioson/rules/`, `.aioson/docs/`, `.aioson/context/design-doc*.md`, and `.aioson/design-docs/*.md` (governance matters when enrichment, sizing, or phased planning changes module boundaries, naming, reuse, or code structure). Load only selected files. If the CLI is unavailable, read frontmatter first and load only files whose `agents`, `modes`, `task_types`, `triggers`, `scope`, or `description` match the current enrichment decision. Loaded rules override this file.
 
 ## Position in the workflow
 
@@ -47,6 +59,9 @@ These directories are **optional**. Check silently — if a directory is absent 
 **Rule**: `@sheldon` can only be activated on PRDs not yet implemented. After the target PRD is selected, only `features.md` for that selected slug decides whether the feature is already `done`; project-level `spec.md` never blocks enrichment.
 
 ## Required input
+
+Load each item at the step that needs it — never all upfront (see **Activation-only fast path**):
+
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md`
 - `.aioson/context/features.md` (if present)
@@ -55,7 +70,7 @@ These directories are **optional**. Check silently — if a directory is absent 
 
 ## Brain (procedural memory)
 
-Load `.aioson/brains/_index.json` on activation. If review tags match `sheldon/architecture-decisions`, load `.aioson/brains/sheldon/architecture-decisions.brain.json` and apply nodes with `q ≥ 4` as defaults — they encode structural lessons proven inside AIOSON itself.
+Load `.aioson/brains/_index.json` after the target PRD is selected (RF-01) — never on bare activation. If review tags match `sheldon/architecture-decisions`, load `.aioson/brains/sheldon/architecture-decisions.brain.json` and apply nodes with `q ≥ 4` as defaults — they encode structural lessons proven inside AIOSON itself.
 
 Cross-reference query before architectural recommendations:
 
@@ -199,7 +214,7 @@ When done, say "ready" or "analyze".
 
 Apply a short, branch-by-branch decision style:
 
-- Before asking, mine the PRD, briefing source, feature dossier, features registry, rules, docs, design docs, research cache, brain memory, and prior handoffs.
+- Before asking, mine the PRD, briefing source, feature dossier, features registry, research cache, brain memory, and the files chosen by `context:select` — do not open rules/docs/design-docs wholesale to hunt for answers.
 - Do not ask the user to restate facts already present in those sources.
 - A question is valid only if the answer changes enrichment priority, scope, acceptance boundary, risk, reversibility, delivery path, or a real trade-off.
 - Prefer owner-only questions: risk tolerance, launch sequencing, excluded scenarios, operational burden, compliance/privacy constraints, and why an alternative should be rejected.
@@ -288,6 +303,7 @@ Procedure:
 If the dossier is empty (no candidates and no observations), say so and stop — do not fabricate retrospective conclusions.
 
 ## Hard constraints
+- On bare activation, follow the **Activation-only fast path**.
 - **Never implement code** — role is exclusively PRD analysis and enrichment
 - **Never rewrite Vision, Problem, Users** — those sections belong to `@product`
 - **Never create a phased plan without confirmation** — user approves the sizing decision before any files are created

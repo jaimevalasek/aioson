@@ -203,6 +203,41 @@ test('context:select restricts product activation-only planning to foundation co
   }
 });
 
+test('context:select restricts sheldon and analyst activation-only planning to foundation context', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: checkout\n---\n# Pulse');
+    await writeFile(dir, '.aioson/context/dev-state.md', '---\nactive_feature: checkout\n---\n# Dev State');
+    await writeFile(dir, '.aioson/context/prd-checkout.md', '---\nfeature: checkout\n---\n# PRD');
+    await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
+
+    for (const agent of ['sheldon', 'analyst']) {
+      const activation = await selectContext(dir, {
+        agent,
+        mode: 'planning',
+        task: 'agent activation without concrete task'
+      });
+      const selected = activation.selected.map((item) => item.path);
+      assert.equal(activation.activation_only, true, `${agent} activation must be activation-only`);
+      assert.ok(selected.includes('.aioson/context/project.context.md'), agent);
+      assert.ok(selected.includes('.aioson/context/project-pulse.md'), agent);
+      assert.equal(selected.includes('.aioson/context/dev-state.md'), false, agent);
+      assert.equal(selected.includes('.aioson/context/prd-checkout.md'), false, agent);
+      assert.equal(selected.includes('.aioson/context/features/checkout/dossier.md'), false, agent);
+
+      const concrete = await selectContext(dir, {
+        agent,
+        mode: 'planning',
+        task: 'enrich the checkout PRD'
+      });
+      assert.equal(concrete.activation_only, false, `${agent} concrete task must not be activation-only`);
+    }
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:select loads governance for executing file creation paths', async () => {
   const dir = await makeTmpDir();
   try {
