@@ -105,6 +105,7 @@ aioson system:publish --type=genome --slug=<slug>
 ## Detalhes recentes
 
 - **Genome 4.0 (2026):** novos campos `anchor_prompt`, `relations`, `hexaco_h`, e `trait_interactions` — o genome passou a modelar como traços interagem entre si, não apenas listá-los isoladamente
+- **Camada de método operacional (v1.29.0):** genomes de função e de persona-praticante agora carregam **o que a pessoa FAZ**, não só quem ela é. Cinco seções obrigatórias — `## Operating Procedure` (o método em passos executáveis, ex: RMBC), `## Output Structure`, `## Style Metrics`, `## Prohibitions`, `## Delivery Checklist` — extraídas das evidências pelo pipeline de persona. Um genome de praticante sem `## Operating Procedure` simula opiniões, não trabalho, e é tratado como defeito de geração. Ao vincular num squad, essas seções se propagam: proibições viram hard constraints do executor, o checklist vira checklist do squad, e o procedimento dirige o padrão de resposta.
 
 ---
 

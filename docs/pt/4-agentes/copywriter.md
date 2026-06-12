@@ -53,6 +53,8 @@ A grande diferença em relação a um "prompt de copy genérico" é que ele tem 
 
 ## Selecionar a mente do copywriter (genomes)
 
+> **Menu via INDEX (v1.29.0):** a descoberta de genomes agora lê o `.aioson/genomes/INDEX.md` — o registro de **todos** os genomes instalados (mestres, personas, domínio, brand-voice), com guias de seleção por audiência e por tipo de output. O menu aparece quando você pergunta "quais genomes tenho", na ativação seca, ou quando mais de um genome serve para a peça. Vale para qualquer entrega: páginas de marketing, conteúdo, copy de site e **microcopy de sistema** (botões, empty states, onboarding, mensagens de erro). Quando o genome escolhido tem seções operacionais (geradas pelo pipeline de persona — `## Operating Procedure`, `## Prohibitions`, `## Style Metrics`, `## Delivery Checklist`), elas são **vinculantes** para a peça: o procedimento dirige o fluxo, as proibições viram hard constraints e o checklist roda na validação final.
+
 Quando há múltiplos genomes de mestres instalados, o `@copywriter` pergunta qual perspectiva aplicar. **8 mestres disponíveis** organizados em 2 hemisférios:
 
 ### Mestres universais (US, em inglês — adaptam-se ao idioma do projeto)

@@ -260,6 +260,66 @@ Quando a zona é `warning` ou `critical`, um evento é automaticamente registrad
 
 ---
 
+## Carregamento seletivo de contexto (v1.29.0+)
+
+As 3 camadas acima resolvem *onde* a memória mora. Esta seção resolve um problema diferente: *quando* cada arquivo entra na janela de contexto. Antes, ativar um agente carregava de tudo — regras, docs, design-docs, specs — logo de cara, mesmo que a tarefa não precisasse. A partir da v1.29.0 isso é seletivo: o agente carrega só o que a task atual exige, e o resto entra sob demanda.
+
+### Os dois modos
+
+Todo agente que mexe com contexto opera em dois modos explícitos, via `context:select`:
+
+| Modo | Quando | O que carrega |
+|---|---|---|
+| **PLANNING** | Inspecionar status, listar fontes, decidir o próximo passo | Só fundação + frontmatter; nunca pastas inteiras de regras/docs |
+| **EXECUTING** | Antes de escrever/editar um artefato ou código | Só as regras/docs/design-docs selecionados para os arquivos em questão |
+
+```bash
+aioson context:select . --agent=dev --mode=planning  --task="<tarefa>" --paths="<arquivos conhecidos>"
+aioson context:select . --agent=dev --mode=executing --task="<tarefa>" --paths="<arquivos a tocar>"
+```
+
+A saída traz a linha **Boundary**: *"carregue só os arquivos selecionados até a task, o modo, a feature ou os paths mudarem"*. Ou seja: quando o assunto muda no meio da conversa, o agente roda o seletor de novo com a task nova — não fica preso ao que carregou na entrada.
+
+### Fast path de ativação (agentes de entrada)
+
+Ativar um agente "seco" — `@briefing`, `@product`, `@sheldon`, `@analyst`, `@copywriter` (e `@deyvin`) sem nomear feature/tarefa — carrega **só o contexto de fundação** (`project.context.md` + `project-pulse.md`, mais o registro/listagem que o agente precisa para o menu), apresenta as opções de início e para. Nada de PRDs, dossiers, regras ou skills antes de você dizer o que fazer.
+
+### Guarda de ativação (agentes de meio de fluxo)
+
+`@architect`, `@ux-ui`, `@pm`, `@qa`, `@orchestrator`, `@scope-check` e `@discovery-design-doc` ganharam uma **guarda de ativação**: ativados sem slug de feature, leem só a fundação, reportam o estágio atual do workflow, perguntam qual feature trabalhar e param. Os artefatos pesados (specs, requirements, arquitetura) entram só na etapa que os usa.
+
+### Regras e docs roteáveis pelo seletor
+
+Para o `context:select` conseguir escolher uma regra ou doc, o arquivo precisa de **frontmatter de roteamento** — senão ele é "invisível ao seletor" e nunca é carregado sob demanda:
+
+```yaml
+---
+description: "..."
+agents: [dev, qa]          # quem pode carregar
+modes: [planning, executing]
+task_types: [payment, billing]
+triggers: [money, pricing, checkout]   # palavras/frases batidas contra a task
+paths: [src/billing/**]                # globs batidos contra os arquivos tocados
+load_tier: trigger                     # trigger (padrão) | always | justified
+---
+```
+
+Uma regra só com `description` (sem `task_types`/`triggers`/`paths` e sem `load_tier: always`) pontua abaixo do corte e o seletor nunca a carrega. Para auditar isso:
+
+```bash
+aioson rules:lint .            # acusa regras invisíveis ao seletor
+aioson rules:lint . --docs     # inclui .aioson/docs/ na varredura
+aioson rules:lint . --strict   # sai com código 1 se houver avisos (para CI)
+```
+
+> **Depois de `aioson update` em um projeto:** rode `aioson rules:lint . --docs`. Ele aponta exatamente quais regras/docs locais seus ficaram sem metadata de roteamento e precisam de `triggers`/`task_types`/`paths` para o seletor enxergá-los.
+
+### Por que isso reduz tokens
+
+Lazy-loading rende ~10x mais que comprimir prosa: deixar de carregar PRDs/dossiers/regras inteiros na ativação economiza ~10–25k tokens por sessão, contra ~1k de uma compressão de texto. Os dois se somam — o [`compress:agents`](./compress-agents.md) enxuga o arquivo do agente; o carregamento seletivo evita puxar arquivos que a task nem usa.
+
+---
+
 ## Onde tudo vive
 
 ```

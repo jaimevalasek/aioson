@@ -71,6 +71,8 @@ Você > proceed
 └── enriched-profile.md      ← saída desta etapa
 ```
 
+> **Método operacional (v1.29.0):** além do perfil psicométrico (DISC, Big Five, etc.), o enricher extrai das evidências o **método executável** da pessoa — procedimento em passos, estrutura de output, métricas de estilo, proibições e checklist de entrega (a seção `## Operational Method` do perfil). É o que faz o genome simular *o que a pessoa faz*, não só suas opiniões. Quando a fonte não documenta um método passo a passo, ele é reconstruído e marcado `inferred` — nunca inventado.
+
 ---
 
 ## Como ele lê seu projeto

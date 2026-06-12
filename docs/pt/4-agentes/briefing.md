@@ -70,6 +70,8 @@ Você > Todos.
 4. `.aioson/context/prd*.md` e `prds/*.md` — evita duplicar trabalho já comprometido.
 5. Web search quando há premissas que precisam de validação externa.
 
+> **Fast path de ativação (v1.29.0):** ativar `@briefing` "seco", sem nomear plano ou tarefa, carrega **só** o `project.context.md`, o frontmatter do registro e a *listagem de nomes* de `plans/` — apresenta o menu e para. O conteúdo dos planos e PRDs acima entra só no passo que os usa. Veja [Carregamento seletivo de contexto](../5-referencia/memoria-e-contexto.md#carregamento-seletivo-de-contexto-v1290).
+
 ## Handoff típico
 
 - **Vem de:** você, com anotações em `plans/` ou uma ideia conversacional.

@@ -80,6 +80,8 @@ O `@sheldon` decide entre **enriquecer in-place** ou **criar plano faseado** dep
 5. `.aioson/briefings/{slug}/briefings.md` — se `briefing_source` está no PRD.
 6. `plans/*.md` e `prds/*.md` — fontes de pesquisa pré-produção do usuário.
 
+> **Fast path de ativação (v1.29.0):** ativar `@sheldon` "seco", sem PRD/slug, carrega **só** o `project.context.md`, a listagem de nomes dos `prd*.md` e a tabela `features.md` — apresenta a lista de PRDs para seleção e para. O conteúdo do PRD e o índice de brains entram só depois da escolha do alvo. Veja [Carregamento seletivo de contexto](../5-referencia/memoria-e-contexto.md#carregamento-seletivo-de-contexto-v1290).
+
 ## Handoff típico
 
 - **Vem de:** `@product` (PRD gerado) — pode ser ativado N vezes antes de ir adiante.

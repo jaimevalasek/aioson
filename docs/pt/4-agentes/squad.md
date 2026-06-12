@@ -117,6 +117,8 @@ aioson system:publish --type=squad --slug=<slug>
 
 - **domain breadth (Mai/2026):** executores que antes recusavam pedidos adjacentes ao seu escopo agora respondem com mais amplitude contextual
 - **squad refresh:** `@squad refresh <slug>` atualiza um squad existente com nova investigação sem recriar do zero
+- **investigação opt-out (v1.29.0):** a investigação de domínio com `@orache` agora roda **por padrão** — completa para domínios regulados/especializados, Quick Scan (1–2 rodadas) para domínios comuns sem fontes. É o que aterra os executores em frameworks/vocabulário reais em vez de priors do modelo (a causa nº1 de executor raso). O `@squad` anuncia o scan em vez de perguntar; diga "pula" para dispensar.
+- **genome pass na criação (v1.29.0):** os genomes planejados por executor são gerados e vinculados **durante** a criação do squad — não mais como passo manual depois. Um squad de domínio especializado nunca sai com `## Active genomes` vazio: ou vincula o genome, ou entrega o comando `@genome` exato pendente no resumo da criação. Para re-aterrar executores rasos de squads antigos, rode `@squad refresh <slug>`.
 
 ---
 

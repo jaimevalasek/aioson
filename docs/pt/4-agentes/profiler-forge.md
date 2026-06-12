@@ -71,6 +71,8 @@ Você > 3
 .aioson/genomes/{slug}-advisor.md        ← advisor como prompt utilizável
 ```
 
+> **Seções operacionais (v1.29.0):** o forge emite o método capturado pelo enricher como cinco seções obrigatórias no genome — `## Operating Procedure`, `## Output Structure`, `## Style Metrics`, `## Prohibitions`, `## Delivery Checklist`. Um genome de persona-praticante sem `## Operating Procedure` é tratado como defeito de geração. Veja [genome.md](./genome.md) para como essas seções se propagam ao vincular num squad.
+
 ---
 
 ## Como ele lê seu projeto
