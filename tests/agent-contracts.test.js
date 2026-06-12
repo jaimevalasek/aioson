@@ -733,6 +733,34 @@ test('squad on-demand docs are shipped, managed, and preserve critical guidance'
   }
 });
 
+test('copywriter discovers genomes via INDEX and honors operational sections', async () => {
+  const copywriter = await read(path.join(ROOT, 'template/.aioson/agents/copywriter.md'));
+
+  const tokens = [
+    '## Activation-only fast path',
+    '.aioson/genomes/INDEX.md',
+    '### Step G2.4 — Installed genome menu (INDEX-driven discovery)',
+    'marketing pages, content pieces, site copy, and system/UI microcopy alike',
+    '**Operational sections are binding.**',
+    '`## Operating Procedure` — work the method\'s numbered steps',
+    'run it in Phase 5 in addition to the anti-pattern checklist',
+    'A selected genome\'s `## Prohibitions` are hard constraints'
+  ];
+
+  for (const token of tokens) {
+    assert.equal(copywriter.includes(token), true, `missing copywriter token: ${token}`);
+  }
+
+  assert.ok(
+    copywriter.indexOf('## Activation-only fast path') < copywriter.indexOf('## Phase 1'),
+    'copywriter fast path must appear before Phase 1 context gathering'
+  );
+  assert.ok(
+    copywriter.indexOf('### Step G2.4') < copywriter.indexOf('### Step G2.5'),
+    'INDEX-driven menu must come before the hardcoded master fallback'
+  );
+});
+
 test('persona pipeline encodes the operational method, not just identity', async () => {
   const enricher = await read(path.join(ROOT, 'template/.aioson/agents/profiler-enricher.md'));
   const forge = await read(path.join(ROOT, 'template/.aioson/agents/profiler-forge.md'));
