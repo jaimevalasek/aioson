@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const ignore = require('ignore');
 const { exists, ensureDir } = require('../utils');
 const { readConfig } = require('./config');
 const { readWorkspace, findProjectRoot } = require('./workspace');
@@ -12,7 +13,55 @@ function getTerser() {
   return _terser;
 }
 
+let _obfuscator = null;
+function getObfuscator() {
+  if (!_obfuscator) _obfuscator = require('javascript-obfuscator');
+  return _obfuscator;
+}
+
+// Ofusca JS compilado no publish --build (minify + string-array encoding +
+// mangling). Funcionalidade do framework — o app não configura nada. Conservador
+// (renameGlobals/controlFlowFlattening/selfDefending OFF) pra não quebrar runtime
+// Node (require/exports, prisma) nem bundles de frontend. Falha num arquivo →
+// devolve o compilado original (não derruba o publish).
+// Detecta JS já minificado (bundle de frontend tipo vite/webpack): linhas muito
+// longas e poucas quebras. Não vale re-ofuscar — incha o pacote, pode quebrar o
+// React e o ganho é baixo (já está minificado). O alvo de valor é o backend (tsc,
+// código legível), esse sim é ofuscado.
+function looksMinified(code) {
+  const newlines = (code.match(/\n/g) || []).length;
+  const avgLineLen = code.length / (newlines + 1);
+  return code.length > 30000 && avgLineLen > 200;
+}
+
+function obfuscateJs(code) {
+  if (looksMinified(code)) return code; // já minificado → mantém como está
+  try {
+    return getObfuscator()
+      .obfuscate(code, {
+        compact: true,
+        controlFlowFlattening: false,
+        deadCodeInjection: false,
+        stringArray: true,
+        stringArrayEncoding: ['base64'],
+        stringArrayThreshold: 0.75,
+        identifierNamesGenerator: 'hexadecimal',
+        renameGlobals: false,
+        selfDefending: false,
+        debugProtection: false,
+        disableConsoleOutput: false,
+        sourceMap: false,
+      })
+      .getObfuscatedCode();
+  } catch {
+    return code;
+  }
+}
+
 async function createZipBuffer(files) {
+  // archiver fica fixado em ^7 (CJS, API chamável `archiver('zip', opts)`). A v8
+  // virou ESM e trocou a API por classes nomeadas (sem função default) — o que
+  // quebrava com "archiver is not a function" no Node 23. Ver package.json.
   const archiver = require('archiver');
   const { PassThrough } = require('stream');
   return new Promise((resolve, reject) => {
@@ -46,6 +95,7 @@ const SYSTEM_ALLOWED_EXTS = new Set([
   '.svg', '.ico',
   '.md', '.txt',
   '.sql',
+  '.prisma',
   '.env', '.env.example', '.env.template',
   '.yaml', '.yml',
   '.toml',
@@ -81,7 +131,66 @@ const SKIP_DIRS_BUILD = new Set([
 const SKIP_FILES = new Set([
   'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
   'bun.lockb',
+  // Arquivo de credenciais LLM local (convenção AIOSON) — NUNCA publicar, mesmo
+  // que tenha sido commitado por engano. Defense-in-depth: o filtro de
+  // .gitignore abaixo também pega, mas isto cobre apps sem .gitignore.
+  'aioson-models.json',
 ]);
+
+// `.aioson` é tooling/dev e fica de fora do pacote (SKIP_DIRS), MAS algumas
+// coisas dali os squads leem EM RUNTIME — sem elas o app quebra (ex.:
+// SQUAD_MANIFEST_INVALID procurando `.aioson/squads/<slug>/squad.manifest.json`).
+//
+// Modelo: `.aioson/squads` é SEMPRE incluído (obrigatório). O resto é OPT-IN —
+// o dev declara só o que o squad realmente precisa num `.aioson/build-options.json`
+// (não viaja peso à toa). Cada entrada é um caminho relativo a `.aioson/` e pode
+// ser pasta (`docs`), subpasta (`skills/skill-x`) ou arquivo (`docs/guia.md`).
+//   { "include": ["docs", "skills/atendimento", "rules/foo.md"] }
+const AIOSON_MANDATORY_INCLUDES = ['squads'];
+
+/** Resolve o que incluir do `.aioson` de um app: `squads` (sempre) + o que o
+ *  `build-options.json` declarar. Normaliza e descarta entradas inseguras. */
+async function readAiosonIncludes(aiosonDir) {
+  const includes = new Set(AIOSON_MANDATORY_INCLUDES);
+  try {
+    const optsPath = path.join(aiosonDir, 'build-options.json');
+    if (await exists(optsPath)) {
+      const opts = JSON.parse(await fs.readFile(optsPath, 'utf8'));
+      const list = Array.isArray(opts.include) ? opts.include : [];
+      for (let entry of list) {
+        if (typeof entry !== 'string') continue;
+        entry = entry.replace(/^\.aioson[\\/]/i, '').replace(/^[\\/]+/, '').replace(/[\\/]+$/, '').trim();
+        if (!entry || entry.split(/[\\/]/).includes('..')) continue; // anti path-traversal
+        includes.add(entry);
+      }
+    }
+  } catch { /* build-options.json inválido → só os obrigatórios */ }
+  return [...includes];
+}
+
+// No modo --build, estas pastas são a SAÍDA do build (compilado/minificado) e
+// DEVEM viajar no pacote — mesmo estando no .gitignore (build output costuma ser
+// gitignored). Sem isso, o filtro de .gitignore mataria o `dist/` e o app
+// instalado não teria o que rodar.
+const BUILD_OUTPUT_DIRS = new Set(['dist', 'build', 'out', '.next']);
+
+// Testes / mocks NUNCA vão no pacote — são peso morto em runtime (e ainda
+// inflavam o pacote ao serem ofuscados). O check é INCONDICIONAL: pega também os
+// testes COMPILADOS dentro do `dist/` (que viajam mesmo com `src/` excluído).
+const TEST_DIRS = new Set(['__tests__', '__mocks__', '__snapshots__']);
+const TEST_FILE_RE = /\.(test|spec)\.[cm]?[jt]sx?$/i;
+
+// Config de runtime que PRECISA viajar mesmo no --build (mesmo sendo .ts, que
+// normalmente é excluído): o `vite preview` (frontend em produção) lê o
+// `vite.config.*` pra porta + proxy do /api. Sem ele, instalação limpa quebra o
+// frontend. NÃO é ofuscado (é config lida pelo vite, não lógica a proteger).
+const RUNTIME_CONFIG_RE = /^vite\.config\.[cm]?[jt]s$/i;
+
+// Dentro das pastas de runtime do `.aioson`, os arquivos são majoritariamente
+// markdown (definições de agentes/skills, docs) além de json/yaml — então
+// ampliamos as extensões permitidas pra esse subconjunto, senão os `.md` seriam
+// filtrados e o squad subiria sem os agentes.
+const AIOSON_RUNTIME_EXTS = new Set(['.md', '.mdx', '.txt']);
 
 const MAX_FILE_BYTES = 512 * 1024;             // 512 KB per file (source)
 const MAX_FILE_BYTES_BUILD = 2 * 1024 * 1024;  // 2 MB per file (compiled bundles)
@@ -167,62 +276,115 @@ async function collectSystemFiles(dir, { buildMode = false } = {}) {
   const skipDirs = buildMode ? SKIP_DIRS_BUILD : SKIP_DIRS;
   const allowedExts = buildMode ? SYSTEM_BUILD_ALLOWED_EXTS : SYSTEM_ALLOWED_EXTS;
 
-  async function walk(current, rel) {
+  // Respeita o .gitignore do app: arquivos/pastas locais ou gerados em runtime
+  // NÃO devem viajar no pacote. Sem isso vazavam coisas como `aioson-models.json`
+  // (chave LLM do dev!), `.env` e `atendimento-config.json` (config por-instalação
+  // que gateia o onboarding). NÃO se aplica às pastas de runtime do `.aioson`
+  // (forceInclude) — essas viajam por design, mesmo que gitignored.
+  const ig = ignore();
+  try {
+    const gitignorePath = path.join(dir, '.gitignore');
+    if (await exists(gitignorePath)) {
+      ig.add(await fs.readFile(gitignorePath, 'utf8'));
+    }
+  } catch { /* sem .gitignore → não filtra por ignore */ }
+
+  let limitHit = false;
+
+  // Processa UM arquivo (checa skip/ignore/extensão/tamanho, lê, ofusca se build,
+  // grava). Usado pelo walk e pelos includes pontuais do `.aioson` (que podem ser
+  // arquivo único). `forceInclude` = bypassa skip/ignore/extensão (pastas runtime).
+  async function addFile(fullPath, relPath, forceInclude, entryName) {
+    if (limitHit) return;
+    if (!forceInclude && SKIP_FILES.has(entryName)) return;
+    if (!forceInclude && ig.ignores(relPath)) return;
+
+    const ext = entryName.includes('.')
+      ? `.${entryName.split('.').pop().toLowerCase()}`
+      : '';
+    const extAllowed =
+      allowedExts.has(ext) ||
+      (forceInclude && AIOSON_RUNTIME_EXTS.has(ext)) ||
+      RUNTIME_CONFIG_RE.test(entryName); // vite.config.* viaja mesmo no --build
+    if (!extAllowed && ext !== '') return;
+
+    try {
+      const stat = await fs.stat(fullPath);
+      const maxBytes = buildMode ? MAX_FILE_BYTES_BUILD : MAX_FILE_BYTES;
+      if (stat.size > maxBytes) {
+        errors.push(`File too large (skipped): "${relPath}" (${(stat.size / 1024).toFixed(0)} KB)`);
+        return;
+      }
+      totalBytes += stat.size;
+      if (totalBytes > MAX_PACKAGE_BYTES) {
+        errors.push(`Package exceeds ${MAX_PACKAGE_BYTES / 1024 / 1024} MB limit — stop collecting.`);
+        limitHit = true;
+        return;
+      }
+      let content = await fs.readFile(fullPath, 'utf8');
+      if (
+        buildMode &&
+        (ext === '.js' || ext === '.mjs' || ext === '.cjs') &&
+        !RUNTIME_CONFIG_RE.test(entryName) // não ofuscar config lida pelo vite
+      ) {
+        content = obfuscateJs(content);
+      }
+      files[relPath] = content;
+    } catch {
+      // binary or unreadable — skip silently
+    }
+  }
+
+  async function walk(current, rel, forceInclude = false) {
+    if (limitHit) return;
     const entries = await fs.readdir(current, { withFileTypes: true });
     for (const entry of entries) {
-      if (skipDirs.has(entry.name)) continue;
-      if (rel && skipDirs.has(`${rel}/${entry.name}`)) continue;
-      if (SKIP_FILES.has(entry.name)) continue;
-
       const fullPath = path.join(current, entry.name);
       const relPath = rel ? `${rel}/${entry.name}` : entry.name;
 
+      // Testes/mocks fora do pacote — incondicional (pega até dentro do dist).
+      if (entry.isDirectory() && TEST_DIRS.has(entry.name)) continue;
+      if (!entry.isDirectory() && TEST_FILE_RE.test(entry.name)) continue;
+
       if (entry.isDirectory()) {
-        await walk(fullPath, relPath);
+        // `.aioson`: normalmente fica fora, mas descemos só nas subpastas de
+        // runtime (squads/docs/skills/rules/genomes/agents) pra o app não
+        // quebrar. As subpastas entram em modo forceInclude (mantém estrutura
+        // e arquivos originais). Vale pra qualquer nível onde apareça `.aioson`.
+        if (entry.name === '.aioson' && !forceInclude) {
+          // `squads` (sempre) + o que o build-options.json declarar. Cada include
+          // pode ser pasta/subpasta (→ walk) ou arquivo único (→ addFile).
+          const includes = await readAiosonIncludes(fullPath);
+          for (const inc of includes) {
+            const incPath = path.join(fullPath, inc);
+            if (!(await exists(incPath))) continue;
+            const st = await fs.stat(incPath);
+            if (st.isDirectory()) {
+              await walk(incPath, `${relPath}/${inc}`, true);
+            } else {
+              await addFile(incPath, `${relPath}/${inc}`, true, path.basename(inc));
+            }
+          }
+          continue;
+        }
+        // Saída do build (--build): viaja mesmo gitignored. forceInclude bypassa
+        // o filtro de .gitignore; o filtro de extensão + minify continuam (sourcemaps
+        // `.map` ficam de fora por não estarem nas extensões permitidas → não vaza fonte).
+        if (buildMode && !forceInclude && BUILD_OUTPUT_DIRS.has(entry.name)) {
+          await walk(fullPath, relPath, true);
+          continue;
+        }
+        if (!forceInclude) {
+          if (skipDirs.has(entry.name)) continue;
+          if (rel && skipDirs.has(`${rel}/${entry.name}`)) continue;
+          if (ig.ignores(relPath)) continue; // gitignored → não viaja
+        }
+        await walk(fullPath, relPath, forceInclude);
         continue;
       }
 
-      const ext = entry.name.includes('.')
-        ? `.${entry.name.split('.').pop().toLowerCase()}`
-        : '';
-
-      if (!allowedExts.has(ext) && ext !== '') continue;
-
-      try {
-        const stat = await fs.stat(fullPath);
-        const maxBytes = buildMode ? MAX_FILE_BYTES_BUILD : MAX_FILE_BYTES;
-        if (stat.size > maxBytes) {
-          errors.push(`File too large (skipped): "${relPath}" (${(stat.size / 1024).toFixed(0)} KB)`);
-          continue;
-        }
-        totalBytes += stat.size;
-        if (totalBytes > MAX_PACKAGE_BYTES) {
-          errors.push(`Package exceeds ${MAX_PACKAGE_BYTES / 1024 / 1024} MB limit — stop collecting.`);
-          return;
-        }
-        let content = await fs.readFile(fullPath, 'utf8');
-
-        if (buildMode && (ext === '.js' || ext === '.mjs' || ext === '.cjs')) {
-          try {
-            const terser = getTerser();
-            const result = await terser.minify(content, {
-              compress: { passes: 2, drop_console: false },
-              mangle: {
-                toplevel: true,
-                properties: { regex: /^_/ },
-              },
-              format: { comments: false },
-            });
-            if (result.code) content = result.code;
-          } catch {
-            // terser failed on this file — keep original compiled JS
-          }
-        }
-
-        files[relPath] = content;
-      } catch {
-        // binary or unreadable — skip silently
-      }
+      // Arquivo — processado pelo addFile (skip/ignore/ext/tamanho/ofuscação).
+      await addFile(fullPath, relPath, forceInclude, entry.name);
     }
   }
 
@@ -248,7 +410,89 @@ async function readSystemJson(dir, t) {
   if (!manifest.slug) throw new Error(t('system.error_manifest_missing_slug'));
   if (!manifest.version) throw new Error(t('system.error_manifest_missing_version'));
   if (!manifest.name) throw new Error(t('system.error_manifest_missing_name'));
+  validateListingFields(manifest);
   return manifest;
+}
+
+/**
+ * Valida os campos opcionais de listing da loja (modelo Chrome Web Store).
+ * Todos são opcionais — apps antigos sem eles publicam normalmente. Falha cedo,
+ * com mensagem clara, quando um campo presente está num formato inválido.
+ * Imagens (icon/screenshots) são URLs http(s) externas (Opção A — sem hosting).
+ */
+function isHttpUrl(value) {
+  return typeof value === 'string' && /^https?:\/\/.+/i.test(value.trim());
+}
+
+function validateListingFields(m) {
+  const fail = (msg) => { throw new Error(`system.json: ${msg}`); };
+
+  if (m.summary != null) {
+    if (typeof m.summary !== 'string') fail('"summary" deve ser texto.');
+    if (m.summary.length > 132) fail(`"summary" deve ter no máximo 132 caracteres (tem ${m.summary.length}).`);
+  }
+  if (m.purpose != null) {
+    if (typeof m.purpose !== 'string') fail('"purpose" deve ser texto.');
+    if (m.purpose.length > 280) fail(`"purpose" deve ter no máximo 280 caracteres (tem ${m.purpose.length}).`);
+  }
+  if (m.category != null && typeof m.category !== 'string') fail('"category" deve ser texto.');
+  if (m.permissions_note != null && typeof m.permissions_note !== 'string') fail('"permissions_note" deve ser texto.');
+
+  if (m.tags != null) {
+    if (!Array.isArray(m.tags) || m.tags.some((x) => typeof x !== 'string')) fail('"tags" deve ser uma lista de textos.');
+    if (m.tags.length > 10) fail('"tags" aceita no máximo 10 itens.');
+  }
+
+  if (m.icon != null && !isHttpUrl(m.icon)) fail('"icon" deve ser uma URL http(s) (Opção A — imagem hospedada externamente).');
+
+  if (m.screenshots != null) {
+    if (!Array.isArray(m.screenshots)) fail('"screenshots" deve ser uma lista de URLs.');
+    if (m.screenshots.length > 5) fail('"screenshots" aceita no máximo 5 itens.');
+    for (const s of m.screenshots) {
+      if (!isHttpUrl(s)) fail('cada item de "screenshots" deve ser uma URL http(s).');
+    }
+  }
+
+  for (const key of ['homepage_url', 'support_url', 'privacy_url']) {
+    if (m[key] != null && !isHttpUrl(m[key])) fail(`"${key}" deve ser uma URL http(s).`);
+  }
+  if (m.support_email != null) {
+    if (typeof m.support_email !== 'string' || !m.support_email.includes('@')) fail('"support_email" deve ser um e-mail válido.');
+  }
+}
+
+/**
+ * Sincroniza a versão dos package.json do app com o system.json (fonte da
+ * verdade do publish). Sem isso o package.json fica preso (ex.: 1.0.0) e os logs
+ * mostram `app@1.0.0` enquanto a loja publica 1.2.13 — divergência que só
+ * confunde. O Play usa a versão do system.json/manifest; aqui só alinhamos os
+ * package.json (raiz + `dashboard/` em apps split-stack) pra não divergir. Roda
+ * ANTES do build/coleta, então a versão sincronizada já entra no pacote.
+ * Best-effort: package.json ausente/ilegível não bloqueia o publish.
+ */
+async function syncPackageVersions(dir, version, logger) {
+  const candidates = [
+    path.join(dir, 'package.json'),
+    path.join(dir, 'dashboard', 'package.json'),
+  ];
+  for (const pkgPath of candidates) {
+    if (!(await exists(pkgPath))) continue;
+    let pkg;
+    try {
+      pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+    } catch {
+      continue;
+    }
+    if (pkg.version === version) continue;
+    const prev = pkg.version || '(ausente)';
+    pkg.version = version;
+    try {
+      await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+      logger.log(`package.json sincronizado: ${path.relative(dir, pkgPath) || 'package.json'} ${prev} → ${version}`);
+    } catch {
+      // best-effort — não bloqueia o publish
+    }
+  }
 }
 
 // ── system:package ──────────────────────────────────────────────────────────
@@ -259,6 +503,11 @@ async function runSystemPackage({ args, options, logger, t }) {
   logger.log(t('system.package_reading_manifest'));
   const manifest = await readSystemJson(dir, t);
   logger.log(t('system.package_manifest_ok', { slug: manifest.slug, version: manifest.version, name: manifest.name }));
+
+  // Alinha os package.json à versão do system.json antes de coletar.
+  if (!options['dry-run']) {
+    await syncPackageVersions(dir, manifest.version, logger);
+  }
 
   logger.log(t('system.package_collecting_files'));
   const { files, totalBytes, errors } = await collectSystemFiles(dir);
@@ -304,6 +553,11 @@ async function runSystemPublish({ args, options, logger, t }) {
   const manifest = await readSystemJson(dir, t);
   logger.log(t('system.package_manifest_ok', { slug: manifest.slug, version: manifest.version, name: manifest.name }));
 
+  // Alinha os package.json à versão do system.json antes de buildar/coletar.
+  if (!options['dry-run']) {
+    await syncPackageVersions(dir, manifest.version, logger);
+  }
+
   if (buildMode) {
     const buildCmd = manifest.build_command || 'npm run build';
     logger.log(`Building: ${buildCmd}`);
@@ -337,6 +591,22 @@ async function runSystemPublish({ args, options, logger, t }) {
 
   const visibility = options.private ? 'private' : 'public';
   const paid = Boolean(options.paid);
+
+  // app-licensing-revenue-share (Fase 5 / BR-01): app PAID exige preço na fonte
+  // única (system.json). Falha cedo aqui, antes do upload — o servidor também
+  // recusa na criação. Aceita priceInCents | price_in_cents | price (em unidades).
+  if (paid) {
+    const priceCents =
+      Number(manifest.priceInCents) ||
+      Number(manifest.price_in_cents) ||
+      (Number(manifest.price) > 0 ? Math.round(Number(manifest.price) * 100) : 0);
+    if (!priceCents || priceCents <= 0) {
+      throw new Error(
+        'App PAID exige preço: defina "priceInCents" (centavos) ou "price" no system.json antes de publicar com --paid.'
+      );
+    }
+  }
+
   const ws = await readWorkspace(dir);
 
   // Lista de emails autorizados a instalar quando visibility=private.
@@ -351,9 +621,13 @@ async function runSystemPublish({ args, options, logger, t }) {
 
   logger.log('Creating ZIP package...');
   const zipBuffer = await createZipBuffer(files);
-  const MAX_ZIP_BYTES = 2 * 1024 * 1024;
+  // 10 MB: a ofuscação (string-array/base64 + alta entropia) incha e comprime
+  // pior que a fonte, então 2 MB era apertado demais pra `--build`. O servidor
+  // (aioson-com) não impõe limite na rota (só `request.json()`).
+  const MAX_ZIP_BYTES = 10 * 1024 * 1024;
   if (zipBuffer.length > MAX_ZIP_BYTES) {
-    throw new Error(`ZIP exceeds 2 MB limit (${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB). Reduce the number of files or bundle size.`);
+    const mb = (MAX_ZIP_BYTES / 1024 / 1024).toFixed(0);
+    throw new Error(`ZIP exceeds ${mb} MB limit (${(zipBuffer.length / 1024 / 1024).toFixed(2)} MB). Reduce the number of files or bundle size.`);
   }
   const zipBase64 = zipBuffer.toString('base64');
   const zipKb = (zipBuffer.length / 1024).toFixed(1);
