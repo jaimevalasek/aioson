@@ -1,6 +1,6 @@
 {
   "name": "@jaimevalasek/aioson",
-  "version": "1.29.1",
+  "version": "1.29.2",
   "description": "AI operating framework for hyper-personalized software.",
   "keywords": [
     "ai",
@@ -46,8 +46,10 @@
     "ci": "npm run lint && npm test"
   },
   "dependencies": {
-    "archiver": "^8.0.0",
+    "archiver": "^7.0.1",
     "better-sqlite3": "^12.6.2",
+    "ignore": "^7.0.5",
+    "javascript-obfuscator": "^5.4.3",
     "terser": "^5.48.0"
   }
 }

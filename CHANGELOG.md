@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.2] - 2026-06-13
+
+### Fixed
+- **`aioson system:publish` crashava com `Error: archiver is not a function`.** O `archiver` tinha sido atualizado para `^8.0.0`, uma reescrita ESM que removeu a API chamável `archiver('zip', opts)` e passou a exportar só classes nomeadas (`Archiver`, `ZipArchive`, …) — sem função default. Fixado de volta em `^7.0.1` (CommonJS, API chamável que `createZipBuffer` em `src/commands/store-system.js` espera), o que também elimina o `ExperimentalWarning` de ESM-em-require no Node 23.
+
 ## [1.29.1] - 2026-06-12
 
 ### Docs
