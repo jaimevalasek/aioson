@@ -605,6 +605,12 @@ async function runSystemPublish({ args, options, logger, t }) {
         'App PAID exige preço: defina "priceInCents" (centavos) ou "price" no system.json antes de publicar com --paid.'
       );
     }
+    // SF-alrs-03: visibility=PAID e preço são geridos no banco do aioson.com (dashboard
+    // da loja) — NÃO via este flag. O --paid só valida o preço localmente; não publica
+    // o app como pago por si só.
+    logger.log(
+      'Nota: visibility=PAID e preço são definidos no aioson.com (dashboard da loja). O flag --paid valida o preço localmente, mas não publica o app como pago sozinho.'
+    );
   }
 
   const ws = await readWorkspace(dir);

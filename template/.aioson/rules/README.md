@@ -54,12 +54,16 @@ paths: [src/billing/**]                   # routing: matched against the files b
 ### On-demand routing via context:select
 
 Agents load rules on demand through `aioson context:select`. A rule is selected when its
-metadata scores above the load threshold for the current task: `task_types`/`triggers`
-matches weigh most, `paths` matches add when the touched files overlap, and the
-`description` adds a small boost. **A rule with only `agents` + `description` is
-selector-invisible** — it never scores above the threshold, so agents will not load it
-on demand. Either give it routing metadata (`task_types`, `triggers`, `paths`) or mark
-it `load_tier: always` when it is genuinely global (keep always-rules small).
+metadata and semantic relevance score above the load threshold for the current task:
+`task_types`/`triggers` matches weigh most, `paths` matches add when the touched files
+overlap, `description` adds a small boost, and semantic search over the rule body can
+recover relevant rules when the task wording does not exactly match the metadata.
+
+Semantic search is a recall aid, not a permission bypass. `agents`, `modes`,
+activation-only boundaries, and path/feature constraints still apply before a rule can
+be selected. A rule with only `agents` + `description` is still weakly routed and will be
+flagged by lint; either give it routing metadata (`task_types`, `triggers`, `paths`) or
+mark it `load_tier: always` when it is genuinely global (keep always-rules small).
 
 Check the health of your rules with:
 

@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const Database = require('better-sqlite3');
 const {
   parseFrontmatter,
   parseAgentList,
@@ -10,8 +11,75 @@ const {
   readProjectPulse,
   readDevState
 } = require('./preflight-engine');
+const { openRuntimeDb } = require('./runtime-store');
+const { searchProjectLearnings } = require('./learning-loop-fts5');
 
 const VALID_MODES = new Set(['planning', 'executing']);
+const SEMANTIC_MAX_TERMS = 24;
+const SEMANTIC_RESULT_LIMIT = 80;
+const MEMORY_RESULT_LIMIT = 5;
+
+const SHORT_SEMANTIC_TERMS = new Set(['api', 'sql', 'orm', 'php', 'mvc', 'dto', 'ui', 'ux']);
+const KNOWN_FRAMEWORK_TERMS = new Set([
+  'adonis', 'angular', 'astro', 'django', 'express', 'fastapi', 'flask', 'hono',
+  'laravel', 'next', 'node', 'nuxt', 'phoenix', 'rails', 'react', 'remix',
+  'svelte', 'symfony', 'vue'
+]);
+
+const SEMANTIC_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'by', 'com', 'como', 'da', 'das', 'de', 'do', 'dos',
+  'e', 'em', 'for', 'from', 'in', 'into', 'no', 'nos', 'o', 'os', 'of', 'on',
+  'ou', 'para', 'por', 'que', 'the', 'to', 'um', 'uma', 'with',
+  'agent', 'agente', 'agents', 'aioson', 'dev', 'deyvin', 'architect',
+  'feature', 'funcionalidade', 'task', 'tarefa', 'work', 'trabalho',
+  'create', 'criar', 'fazer', 'implementar', 'implement', 'implementation',
+  'nova', 'novo', 'new', 'ajuste', 'change', 'update',
+  'evitar', 'exposto', 'http',
+  'boundary', 'code', 'codigo', 'código', 'component', 'developer', 'model',
+  'module', 'script', 'source', 'test'
+]);
+
+const SEMANTIC_SYNONYMS = new Map([
+  ['ingles', ['english']],
+  ['english', ['ingles']],
+  ['fonte', []],
+  ['padrao', ['pattern', 'convention']],
+  ['padroes', ['patterns', 'conventions']],
+  ['pattern', ['convention']],
+  ['patterns', ['conventions']],
+  ['pasta', ['folder', 'directory']],
+  ['pastas', ['folders', 'directories']],
+  ['folder', ['directory']],
+  ['folders', ['directories']],
+  ['componentizacao', ['componentization']],
+  ['componentizando', ['componentization']],
+  ['componentizar', ['componentization']],
+  ['separacao', ['separation', 'boundary']],
+  ['separar', ['separation', 'boundary']],
+  ['manutencao', ['maintainability']],
+  ['manutenivel', ['maintainable']],
+  ['consulta', ['query', 'queries']],
+  ['consultas', ['query', 'queries']],
+  ['query', ['queries']],
+  ['queries', ['query']],
+  ['banco', ['database', 'data']],
+  ['dados', ['data', 'database']],
+  ['frameworks', ['framework']],
+  ['framework', ['convention']],
+  ['laravel', ['eloquent', 'artisan']],
+  ['php', ['laravel']],
+  ['controller', ['controllers']],
+  ['controllers', ['controller']],
+  ['service', ['services']],
+  ['services', ['service']],
+  ['repository', ['repositories']],
+  ['repositories', ['repository']],
+  ['migration', ['migrations']],
+  ['migrations', ['migration']],
+  ['eloquent', ['laravel']],
+  ['raw', ['sql']],
+  ['sql', ['query', 'database']]
+]);
 
 const SURFACES = [
   { key: 'rules', dir: path.join('.aioson', 'rules'), recursive: false, defaultTier: 'trigger' },
@@ -113,6 +181,14 @@ function parseListValue(value) {
     .split(',')
     .map((item) => item.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
+}
+
+function semanticSearchEnabled(options) {
+  const raw = options.semantic;
+  if (raw === false) return false;
+  if (typeof raw === 'string' && raw.trim().toLowerCase() === 'false') return false;
+  if (options.noSemantic === true || options['no-semantic'] === true) return false;
+  return true;
 }
 
 function modeFromOptions(mode) {
@@ -251,12 +327,221 @@ async function collectCandidates(targetDir) {
         scope: fm.scope || '',
         featureSlug: fm.feature_slug || fm.feature || inferred.featureSlug || '',
         tags: [...new Set([...parseListValue(fm.tags), ...inferred.tags])],
-        loadTier: fm.load_tier || inferred.loadTier || surface.defaultTier
+        loadTier: fm.load_tier || inferred.loadTier || surface.defaultTier,
+        searchText: content.slice(0, 100_000)
       });
     }
   }
 
   return candidates;
+}
+
+function normalizeForSemantic(value) {
+  return normalizeToken(value).replace(/[/-]+/g, ' ');
+}
+
+function addSemanticTerm(out, term) {
+  const normalized = normalizeForSemantic(term).trim();
+  if (!normalized) return;
+  for (const part of normalized.split(/\s+/)) {
+    if (!part) continue;
+    if (SEMANTIC_STOP_WORDS.has(part)) continue;
+    if (part.length < 4 && !SHORT_SEMANTIC_TERMS.has(part)) continue;
+    out.add(part);
+    if (part.endsWith('s') && part.length > 4) out.add(part.slice(0, -1));
+    const synonyms = SEMANTIC_SYNONYMS.get(part) || [];
+    for (const synonym of synonyms) out.add(synonym);
+  }
+}
+
+function projectSemanticTerms(candidates) {
+  const project = candidates.find((candidate) => candidate.path === '.aioson/context/project.context.md');
+  if (!project) return [];
+  const fm = project.frontmatter || {};
+  return [
+    fm.framework
+  ].filter(Boolean);
+}
+
+function buildSemanticTerms({ task, paths, feature, activeFeature }, candidates) {
+  const terms = new Set();
+  const rawValues = [
+    task,
+    paths.join(' '),
+    feature,
+    activeFeature
+  ].filter(Boolean);
+
+  for (const raw of rawValues) addSemanticTerm(terms, raw);
+  const taskAlreadyNamesFramework = [...terms].some((term) => KNOWN_FRAMEWORK_TERMS.has(term));
+  if (!taskAlreadyNamesFramework) {
+    for (const raw of projectSemanticTerms(candidates)) addSemanticTerm(terms, raw);
+  }
+  return [...terms].slice(0, SEMANTIC_MAX_TERMS);
+}
+
+function buildFtsQuery(terms) {
+  return terms
+    .map((term) => `"${String(term).replace(/"/g, '').trim()}"`)
+    .filter((term) => term !== '""')
+    .join(' OR ');
+}
+
+function semanticBaseScore(candidate) {
+  if (candidate.surface === 'rules') return 26;
+  if (candidate.surface === 'design_governance') return 24;
+  if (candidate.surface === 'docs') return 22;
+  if (candidate.surface === 'bootstrap') return 24;
+  if (candidate.surface === 'feature_dossier') return 18;
+  return 16;
+}
+
+function semanticMinimumTerms(candidate) {
+  if (candidate.surface === 'docs') return 4;
+  if (candidate.surface === 'bootstrap') return 3;
+  if (candidate.surface === 'context') return 3;
+  return 3;
+}
+
+function semanticCandidateAllowed(candidate) {
+  const base = path.basename(candidate.path);
+  if (candidate.loadTier === 'always') return false;
+  if (candidate.surface === 'bootstrap') return base !== 'current-state-archive.md';
+  if (candidate.surface === 'context') {
+    if (candidate.featureSlug) return true;
+    return base === 'design-doc.md' || base === 'readiness.md';
+  }
+  return ['rules', 'design_governance', 'docs', 'feature_dossier'].includes(candidate.surface);
+}
+
+function matchSemanticTerms(candidate, terms) {
+  const haystack = normalizeForSemantic([
+    candidate.path,
+    candidate.description,
+    candidate.scope,
+    candidate.tags.join(' '),
+    candidate.searchText
+  ].join(' '));
+  return terms.filter((term) => haystack.includes(term));
+}
+
+function buildLexicalSemanticMatches(candidates, terms) {
+  const matches = new Map();
+  if (terms.length === 0) return matches;
+
+  for (const candidate of candidates) {
+    if (!semanticCandidateAllowed(candidate)) continue;
+    const matched = matchSemanticTerms(candidate, terms);
+    if (matched.length === 0) continue;
+    const score = Math.min(50, semanticBaseScore(candidate) + matched.length * 7);
+    matches.set(candidate.path, {
+      score,
+      terms: matched.slice(0, 6),
+      reason: `semantic:${matched.slice(0, 6).join(',')}`
+    });
+  }
+
+  return matches;
+}
+
+function buildSemanticMatches(candidates, terms) {
+  if (terms.length === 0) return new Map();
+  const query = buildFtsQuery(terms);
+  if (!query) return new Map();
+
+  let db;
+  try {
+    db = new Database(':memory:');
+    db.exec(`
+      CREATE VIRTUAL TABLE candidates USING fts5(
+        candidate_id UNINDEXED,
+        path,
+        title,
+        body,
+        tokenize = "unicode61 remove_diacritics 2"
+      );
+    `);
+    const insert = db.prepare('INSERT INTO candidates (candidate_id, path, title, body) VALUES (?, ?, ?, ?)');
+    const insertMany = db.transaction((items) => {
+      for (let i = 0; i < items.length; i += 1) {
+        const candidate = items[i];
+        insert.run(
+          i,
+          candidate.path,
+          candidate.description || path.basename(candidate.path),
+          [
+            candidate.path,
+            candidate.description,
+            candidate.scope,
+            candidate.tags.join(' '),
+            candidate.searchText
+          ].join('\n')
+        );
+      }
+    });
+    insertMany(candidates);
+
+    const rows = db.prepare(`
+      SELECT candidate_id
+      FROM candidates
+      WHERE candidates MATCH ?
+      ORDER BY rank
+      LIMIT ?
+    `).all(query, SEMANTIC_RESULT_LIMIT);
+
+    const matches = new Map();
+    for (const row of rows) {
+      const candidate = candidates[Number(row.candidate_id)];
+      if (!candidate) continue;
+      if (!semanticCandidateAllowed(candidate)) continue;
+      const matched = matchSemanticTerms(candidate, terms);
+      if (matched.length === 0) continue;
+      const score = Math.min(50, semanticBaseScore(candidate) + matched.length * 7);
+      matches.set(candidate.path, {
+        score,
+        terms: matched.slice(0, 6),
+        reason: `semantic:${matched.slice(0, 6).join(',')}`
+      });
+    }
+    return matches;
+  } catch {
+    return buildLexicalSemanticMatches(candidates, terms);
+  } finally {
+    if (db) db.close();
+  }
+}
+
+async function collectMemoryMatches(targetDir, terms) {
+  if (terms.length === 0) return [];
+  const query = terms.slice(0, 8).join(' ');
+  if (!query) return [];
+
+  let handle = null;
+  try {
+    handle = await openRuntimeDb(targetDir, { mustExist: true });
+    if (!handle || !handle.db) return [];
+    const outcome = searchProjectLearnings(handle.db, {
+      query,
+      limit: MEMORY_RESULT_LIMIT,
+      surface: 'all',
+      includeArchived: false
+    });
+    if (!outcome.ok) return [];
+    return outcome.results.map((result) => ({
+      surface: 'memory',
+      target_type: result.target_type,
+      target_id: result.target_id,
+      feature_slug: result.feature_slug || '',
+      status: result.status,
+      score: result.score,
+      snippet: result.snippet || '',
+      reason: `memory_fts:${query}`
+    }));
+  } catch {
+    return [];
+  } finally {
+    if (handle && handle.db) handle.db.close();
+  }
 }
 
 function keywordMatches(haystack, needles) {
@@ -322,13 +607,26 @@ function scoreCandidate(candidate, context) {
       if (pathMatchesPattern(requestedPath, pattern)) matchedPaths.push(`${requestedPath}~${pattern}`);
     }
   }
+  const directPathMatch = context.paths.some((requestedPath) => {
+    const normalized = normalizeSlashes(requestedPath);
+    return normalized === candidate.path || pathMatchesPattern(candidate.path, normalized);
+  });
   if (matchedPaths.length > 0) {
     score += 10;
     reasons.push(`paths:${matchedPaths.slice(0, 3).join(',')}`);
   }
+  if (directPathMatch) {
+    score += 10;
+    reasons.push('paths:direct');
+  }
 
   const activeFeature = context.feature || context.activeFeature || '';
+  const featureMentioned = candidate.featureSlug
+    && context.lookup.includes(normalizeToken(candidate.featureSlug).replace(/-/g, ' '));
   if (context.activationOnly && candidate.featureSlug && !context.feature) {
+    return null;
+  }
+  if (candidate.featureSlug && candidate.featureSlug !== activeFeature && !featureMentioned && !directPathMatch) {
     return null;
   }
   if (candidate.featureSlug && activeFeature && candidate.featureSlug === activeFeature) {
@@ -336,7 +634,7 @@ function scoreCandidate(candidate, context) {
     reasons.push(`feature:${candidate.featureSlug}`);
   }
 
-  if (candidate.featureSlug && context.lookup.includes(normalizeToken(candidate.featureSlug).replace(/-/g, ' '))) {
+  if (featureMentioned) {
     score += 45;
     reasons.push(`feature-mentioned:${candidate.featureSlug}`);
   }
@@ -369,6 +667,22 @@ function scoreCandidate(candidate, context) {
     reasons.push(`description:${descriptionHits.slice(0, 2).join(',')}`);
   }
 
+  const semanticHit = context.semanticMatches && context.semanticMatches.get(candidate.path);
+  const featureRouted = Boolean(
+    (candidate.featureSlug && activeFeature && candidate.featureSlug === activeFeature) || featureMentioned
+  );
+  const hardRoutingHit = matchedPaths.length > 0
+    || directPathMatch
+    || matchedTaskTypes.length > 0
+    || matchedTriggers.length > 0
+    || featureRouted;
+  const weakJustifiedSemanticHit = candidate.loadTier === 'justified' && semanticHit && semanticHit.terms.length < 3;
+  const weakPureSemanticHit = semanticHit && !hardRoutingHit && semanticHit.terms.length < semanticMinimumTerms(candidate);
+  if (semanticHit && effectiveLoadTier !== 'always' && !weakJustifiedSemanticHit && !weakPureSemanticHit) {
+    score += semanticHit.score;
+    reasons.push(semanticHit.reason);
+  }
+
   const threshold = effectiveLoadTier === 'justified' ? 50 : 30;
   if (score < threshold) return null;
 
@@ -397,14 +711,19 @@ async function selectContext(targetDir, options = {}) {
   );
 
   const lookup = normalizeToken([
-    agent,
-    mode,
     task,
     paths.join(' '),
     activeFeature
   ].filter(Boolean).join(' '));
 
   const candidates = await collectCandidates(targetDir);
+  const semanticEnabled = semanticSearchEnabled(options) && !activationOnly;
+  const semanticTerms = semanticEnabled
+    ? buildSemanticTerms({ task, paths, feature, activeFeature }, candidates)
+    : [];
+  const semanticMatches = semanticEnabled
+    ? buildSemanticMatches(candidates, semanticTerms)
+    : new Map();
   const selected = [];
   for (const candidate of candidates) {
     const scored = scoreCandidate(candidate, {
@@ -415,12 +734,14 @@ async function selectContext(targetDir, options = {}) {
       feature,
       activeFeature,
       lookup,
-      activationOnly
+      activationOnly,
+      semanticMatches
     });
     if (scored) selected.push(scored);
   }
 
   selected.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+  const memory = semanticEnabled ? await collectMemoryMatches(targetDir, semanticTerms) : [];
 
   return {
     ok: true,
@@ -431,6 +752,11 @@ async function selectContext(targetDir, options = {}) {
     feature: feature || null,
     active_feature: activeFeature || null,
     activation_only: activationOnly,
+    semantic: {
+      enabled: semanticEnabled,
+      terms: semanticTerms
+    },
+    memory,
     selected
   };
 }

@@ -24,7 +24,7 @@ function lintRule(relPath, frontmatter) {
 
   if (loadTier !== 'always' && routing.length === 0) {
     warnings.push(
-      'selector-invisible: no task_types, triggers, or paths — context:select can never score this rule above the load threshold, so agents will not load it on demand. Add routing metadata or set load_tier: always.'
+      'selector-invisible: no task_types, triggers, or paths — metadata-only routing cannot score this rule above the load threshold; semantic fallback may still find it, but rules should declare routing metadata or set load_tier: always.'
     );
   }
 
@@ -107,7 +107,7 @@ async function runRulesLint({ args, options = {}, logger }) {
   const clean = rules.filter((rule) => rule.ok).length;
   logger.log(`Summary: ${clean}/${rules.length} ok, ${warningsCount} warning${warningsCount === 1 ? '' : 's'}.`);
   if (warningsCount > 0) {
-    logger.log('Tip: add task_types/triggers/paths frontmatter so context:select can load the rule on demand (see .aioson/rules/README.md).');
+    logger.log('Tip: add task_types/triggers/paths frontmatter so context:select can route the rule deterministically; semantic fallback is only a recall aid (see .aioson/rules/README.md).');
   }
 
   return result;

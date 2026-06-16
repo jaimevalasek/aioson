@@ -10,7 +10,9 @@ async function runContextSelect({ args, options = {}, logger }) {
     mode: options.mode || 'planning',
     task: options.task || options.goal || '',
     paths: options.paths || options.path || '',
-    feature: options.feature || options.slug || ''
+    feature: options.feature || options.slug || '',
+    semantic: options.semantic,
+    noSemantic: options.noSemantic || options['no-semantic']
   });
 
   if (options.json) return result;
@@ -19,13 +21,20 @@ async function runContextSelect({ args, options = {}, logger }) {
   if (result.task) logger.log(`Task: ${result.task}`);
   if (result.paths.length > 0) logger.log(`Paths: ${result.paths.join(', ')}`);
   logger.log('Boundary: load only the selected files until the task, mode, feature, or touched paths change.');
-  if (result.selected.length === 0) {
+  if (result.selected.length === 0 && (!result.memory || result.memory.length === 0)) {
     logger.log('No context files selected.');
     return result;
   }
 
   for (const item of result.selected) {
     logger.log(`- ${item.path} [${item.surface}; ${item.load_tier}] ${item.reason}`);
+  }
+
+  if (result.memory && result.memory.length > 0) {
+    logger.log('Memory matches:');
+    for (const item of result.memory) {
+      logger.log(`- [${item.target_type}] ${item.target_id} ${item.reason}`);
+    }
   }
 
   return result;

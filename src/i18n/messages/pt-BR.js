@@ -30,7 +30,7 @@ module.exports = {
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-ou-pasta>] [--max-files=8] [--json] [--locale=pt-BR]',
     help_context_select:
-      'aioson context:select [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--feature=<slug>] [--json] [--locale=pt-BR]',
+      'aioson context:select [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=pt-BR]',
     help_context_load:
       'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<nome> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=pt-BR]',
     help_chain_audit:

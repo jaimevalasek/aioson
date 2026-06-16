@@ -465,3 +465,88 @@ test('context:select loads briefing craft only when justified by briefing trigge
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('context:select semantic search loads eligible rules by body content without bypassing agent scope', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', [
+      '---',
+      'framework: Laravel',
+      'project_type: web-app',
+      '---',
+      '# Project'
+    ].join('\n'));
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: (none)\n---\n# Pulse');
+    await writeFile(dir, '.aioson/rules/implementation-style.md', [
+      '---',
+      'name: implementation-style',
+      'description: "General implementation style"',
+      'agents: [dev, deyvin]',
+      'modes: [executing]',
+      'load_tier: trigger',
+      '---',
+      '# Implementation Style',
+      '',
+      'Source code identifiers must be English and Laravel controllers should stay thin.'
+    ].join('\n'));
+    await writeFile(dir, '.aioson/rules/squad-only.md', [
+      '---',
+      'name: squad-only',
+      'description: "Squad language rule"',
+      'agents: [squad]',
+      'modes: [executing]',
+      'load_tier: trigger',
+      '---',
+      '# Squad Only',
+      '',
+      'Source code identifiers must be English.'
+    ].join('\n'));
+
+    const result = await selectContext(dir, {
+      agent: 'dev',
+      mode: 'executing',
+      task: 'implementar controller Laravel com código em inglês',
+      paths: 'app/Http/Controllers/OrderController.php'
+    });
+    const selected = result.selected.map((item) => item.path);
+
+    assert.ok(result.semantic.enabled);
+    assert.ok(result.semantic.terms.includes('english'));
+    assert.ok(selected.includes('.aioson/rules/implementation-style.md'));
+    assert.equal(selected.includes('.aioson/rules/squad-only.md'), false);
+    assert.ok(
+      result.selected.find((item) => item.path === '.aioson/rules/implementation-style.md').reason.includes('semantic:')
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('context:select loads implementation structure rules for Laravel data-access tasks', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeFile(dir, '.aioson/context/project.context.md', [
+      '---',
+      'framework: Laravel',
+      'project_type: web-app',
+      '---',
+      '# Project'
+    ].join('\n'));
+    await writeFile(dir, '.aioson/context/project-pulse.md', '---\nactive_feature: checkout\n---\n# Pulse');
+    await writeFile(dir, '.aioson/rules/source-code-language-convention.md', await fs.readFile(path.join(__dirname, '..', 'template/.aioson/rules/source-code-language-convention.md'), 'utf8'));
+    await writeFile(dir, '.aioson/rules/implementation-structure-and-data-access.md', await fs.readFile(path.join(__dirname, '..', 'template/.aioson/rules/implementation-structure-and-data-access.md'), 'utf8'));
+
+    const result = await selectContext(dir, {
+      agent: 'deyvin',
+      mode: 'executing',
+      task: 'componentizar feature Laravel e evitar query builder exposto no controller',
+      paths: 'app/Http/Controllers/CheckoutController.php,app/Services/CheckoutService.php'
+    });
+    const selected = result.selected.map((item) => item.path);
+
+    assert.ok(selected.includes('.aioson/rules/source-code-language-convention.md'));
+    assert.ok(selected.includes('.aioson/rules/implementation-structure-and-data-access.md'));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
