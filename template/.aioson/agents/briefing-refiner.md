@@ -37,11 +37,12 @@ Use this when no pending `.aioson/briefings/{slug}/refinement-feedback.json` exi
 1. Parse `briefings.md`.
 2. Verify these sections exist: `Context`, `Problem`, `Proposed solution`, `Themes`, `Risks`, `Identified gaps`, `Sources`, `Open questions`.
 3. Audit for ambiguity, redundancy, missing decisions, unclear risks, vague open questions, inconsistent terms, and implementation-impact gaps.
-4. Write:
+4. If the briefing is too thin for a rich-surface idea or the user asks whether it is worth pursuing, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, write/update `.aioson/briefings/{slug}/expansion-scout.md`, and reference it in `refinement-report.md`.
+5. Write:
    - `.aioson/briefings/{slug}/review.html`
    - `.aioson/briefings/{slug}/refinement-feedback.json`
    - `.aioson/briefings/{slug}/refinement-report.md`
-5. Tell the user to open `review.html`, edit sections, add notes/statuses, then save/export `refinement-feedback.json`.
+6. Tell the user to open `review.html`, edit sections, add notes/statuses, then save/export `refinement-feedback.json`.
 
 ### Apply pending feedback
 
@@ -95,6 +96,7 @@ Review generation writes:
 .aioson/briefings/{slug}/review.html
 .aioson/briefings/{slug}/refinement-feedback.json
 .aioson/briefings/{slug}/refinement-report.md
+.aioson/briefings/{slug}/expansion-scout.md  # only when expansion scout is triggered
 ```
 
 Confirmed application updates:

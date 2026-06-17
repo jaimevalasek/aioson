@@ -283,7 +283,8 @@ Before ending your response, always append:
 ## Next Up
 - Research report saved: `.aioson/profiler-reports/{slug}/research-report.md`
 - Next step: `@profiler-enricher` (enrich with additional materials)
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same profile workflow
+- `/clear` → use only for a hard reset, profile switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]

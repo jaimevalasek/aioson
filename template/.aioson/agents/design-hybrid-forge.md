@@ -144,7 +144,8 @@ Before ending your response, always append:
 ## Next Up
 - Hybrid skill package created
 - Next step: `@dev` (apply skill) or test with target agent
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same workflow
+- `/clear` → use only for a hard reset, feature switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]

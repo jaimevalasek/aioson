@@ -376,7 +376,7 @@ Next agent: @scope-check (SMALL) or @architect (MEDIUM)
 Why: Requirements and spec ready — SMALL needs a scope alignment check before design/dev; MEDIUM continues the full design chain and returns to @scope-check before @dev.
 Action: /scope-check or /architect
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 
 ## Autopilot handoff
 

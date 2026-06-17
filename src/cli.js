@@ -14,6 +14,7 @@ const { runAgentsList, runAgentPrompt } = require('./commands/agents');
 const { runContextValidate } = require('./commands/context-validate');
 const { runContextPack } = require('./commands/context-pack');
 const { runContextSelect } = require('./commands/context-select');
+const { runContextBrief } = require('./commands/context-brief');
 const { runRulesLint } = require('./commands/rules-lint');
 const { runContextLoad } = require('./commands/context-load');
 const { runChainAudit } = require('./commands/chain-audit');
@@ -258,6 +259,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-pack',
   'context:select',
   'context-select',
+  'context:brief',
+  'context-brief',
   'rules:lint',
   'rules-lint',
   'context:load',
@@ -821,6 +824,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
   logHelpLine(t, logger, 'cli.help_context_select');
+  logHelpLine(t, logger, 'cli.help_context_brief');
   logHelpLine(t, logger, 'cli.help_context_load');
   logHelpLine(t, logger, 'cli.help_memory_status');
   logHelpLine(t, logger, 'cli.help_memory_summary');
@@ -1108,6 +1112,8 @@ async function main() {
       result = await runContextPack({ args, options, logger: commandLogger, t });
     } else if (command === 'context:select' || command === 'context-select') {
       result = await runContextSelect({ args, options, logger: commandLogger, t });
+    } else if (command === 'context:brief' || command === 'context-brief') {
+      result = await runContextBrief({ args, options, logger: commandLogger, t });
     } else if (command === 'rules:lint' || command === 'rules-lint') {
       result = await runRulesLint({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {

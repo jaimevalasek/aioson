@@ -134,4 +134,4 @@ Rationale: implement prompt-first briefing-refiner, local review artifacts, feed
 Action: /dev
 ```
 
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.

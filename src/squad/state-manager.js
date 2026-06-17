@@ -6,7 +6,7 @@
  * Maintains a cross-session memory file per squad at:
  *   .aioson/squads/{slug}/STATE.md
  *
- * The STATE.md survives /clear and gives the next session instant context on:
+ * The STATE.md survives /compact or /clear and gives the next session instant context on:
  *   - Current position in the squad's lifecycle
  *   - Velocity metrics
  *   - Active blockers

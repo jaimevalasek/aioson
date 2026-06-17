@@ -79,12 +79,13 @@ Every workflow agent MUST end with a handoff block following this template:
 Next agent: @[name] ([condition or rationale])
 Action: /[agent-name]
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 ```
 
 Rules:
 - The handoff message MUST include at least: artifact path, next agent, and rationale.
-- `/clear` recommendation MUST be present.
+- `/compact` recommendation MUST be present for same-feature continuation.
+- `/clear` MUST be described only as a hard reset option.
 - Do NOT continue into the next agent's work — output only the handoff and stop.
 
 ## 5. CLI error handling

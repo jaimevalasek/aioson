@@ -132,7 +132,7 @@ Gate B: {approved|blocked}
 Next agent: from the workflow state machine (usually @discovery-design-doc, then @pm on MEDIUM features, then @scope-check before @dev)
 Action: aioson workflow:next . --complete=architect --tool=<tool>
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 
 ## Autopilot handoff
 

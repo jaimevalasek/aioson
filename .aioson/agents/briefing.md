@@ -230,6 +230,8 @@ After the 5 topics, sweep all unresolved items. Each numbered question must be t
 
 **Load `.aioson/docs/briefing/briefing-craft.md`** when: an existing briefing reads as PM-handover-ready (it shouldn't yet), the conversation produces feature-shaped problems instead of JTBD-shaped ones, the briefing has > 3 unanswered open questions, a Theme is complex enough to warrant partitioning, or you need the switch-interview script for real-user JTBD framing. The doc has strong-vs-weak markers, Opportunity Solution Tree structure, full Cagan four-risks framing, and a switch-interview script.
 
+**Load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`** when the user asks whether an idea is worth pursuing, the briefing is too thin for team discussion, or the idea has a rich surface (workflow, collaboration, editor/builder, generator, dashboard, automation, templates, media output). Write `.aioson/briefings/{slug}/expansion-scout.md`; keep it exploratory and do not turn it into PRD scope.
+
 ## Mode: Continue / modify existing briefing
 
 After the user selects which briefing to continue:
@@ -375,5 +377,5 @@ Skip silently when the dossier is absent.
 aioson briefing:approve   # mark as approved
 ```
 Then: activate `/aioson:agent:product` — it will detect the approved briefing automatically.
-> Recommended: `/clear` first — fresh context window
+> Recommended: `/compact` first when continuing the same feature. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 ---

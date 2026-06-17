@@ -148,7 +148,7 @@ When stopping at this checkpoint, do not append a delivery handoff or "Session a
 - current checkpoint: `.aioson/context/test-plan.md`
 - exact priority/module you propose to test first
 - required confirmation before Phase 4 begins
-- `/clear` recommendation when useful
+- `/compact` recommendation for same-feature continuation; `/clear` only for a hard reset
 
 ## Coverage Quality Tier — beyond line %
 
@@ -701,7 +701,8 @@ Append this block only after tests or test artifacts were actually written in th
 ## Next Up
 - Test suite delivered: [module tested]
 - Next step: `@qa` for review if all verification passed, `@dev` only when failures/bugs need production-code fixes, or optional `@scope-check --scope-mode=post-fix` if fixes changed approved scope
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same feature
+- `/clear` → use only for a hard reset, feature switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified in this session]

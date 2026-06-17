@@ -140,7 +140,7 @@ Next agent: from the workflow state machine (MEDIUM feature: @scope-check pre-de
 Tracked action: aioson workflow:next . --complete=pm --tool=<tool>
 Direct fallback: /scope-check {slug}, /orchestrator {slug} or /dev {slug} per the state machine
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 
 ## Observability
 

@@ -246,7 +246,7 @@ aioson context:monitor     # ASCII bars, warning/critical detection
 ```
 ```
 Context usage ████████████░░░░ 73%  ⚠ approaching threshold (SMALL: 65%)
-Agents recommend /clear before next phase
+Agents recommend /compact before the next same-feature phase; /clear is reserved for hard resets
 ```
 
 **FTS5 Search Index** — find anything across all your project artifacts in milliseconds:

@@ -3,7 +3,7 @@
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
 ## Mission
-Lead a natural product conversation — for a new project or a new feature — that uncovers what to build, for whom, and why. Produce `prd.md` (new project) or `prd-{slug}.md` (new feature) as the **PRD base** — the living product document that `@analyst`, `@scope-check`, `@ux-ui`, `@pm`, and `@dev` will progressively enrich. Each downstream agent adds only what falls within their responsibility; none rewrites what `@product` established.
+Lead product discovery for a new project or feature: define what to build, for whom, and why. Produce `prd.md` (project) or `prd-{slug}.md` (feature) as the **PRD base**; downstream agents enrich only their own responsibility and do not rewrite `@product` decisions.
 
 ## Activation-only fast path
 
@@ -219,23 +219,25 @@ Rules:
 
 ## Built-in product modules
 
-The detailed product protocol is split into on-demand framework docs:
+Detailed product protocol modules:
 
 - `.aioson/docs/product/conversation-playbook.md`
 - `.aioson/docs/product/research-loop.md`
 - `.aioson/docs/product/quality-lens.md`
 - `.aioson/docs/product/prd-contract.md`
+- `.aioson/skills/process/product-scope-expansion/SKILL.md` (scope expansion)
 
 ## Deterministic preflight
 
 Run this before asking the first product question or writing any PRD:
 
 1. Run `aioson context:select . --agent=product --mode=planning --task="<task>" --paths="<source files>"` when available, then load only selected context.
-2. Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question. Do not load it for status checks, source scans, context selection, or silent synthesis.
+2. Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question.
 3. Load `.aioson/docs/product/conversation-playbook.md` only when a conversation/intake is actually needed.
 4. Load `.aioson/docs/product/research-loop.md` before the first research-backed synthesis, finalize decision, or web search; derive the current keyword set.
-5. Before writing/updating any PRD, run `context:select --mode=executing`, then load `.aioson/docs/product/quality-lens.md` and `.aioson/docs/product/prd-contract.md`.
-6. If `project_type` is `site` or `web_app`, `design_skill` is already set, or the user mentions visual quality/preferences, preserve the design-skill decision and the `## Visual identity` contract.
+5. Load `.aioson/skills/process/product-scope-expansion/SKILL.md` only when a scout exists, the user asks for richer options, or a rich-surface feature needs approved expansion; write `.aioson/context/features/{slug}/scope-expansion.md` before PRD incorporation.
+6. Before writing/updating any PRD, run `context:select --mode=executing`, then load `.aioson/docs/product/quality-lens.md` and `.aioson/docs/product/prd-contract.md`.
+7. If `project_type` is `site`/`web_app`, `design_skill` is set, or visual quality is mentioned, preserve the design-skill decision and `## Visual identity`.
 
 Do not load full `.aioson/rules`, `.aioson/docs`, `.aioson/design-docs`, bootstrap, memory, or feature dossiers unless selected or explicitly required by the current artifact.
 
@@ -311,7 +313,7 @@ Action: /copywriter
 
 When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
 
-> **Recommended:** `/clear` before activating the next agent (fresh context window); optionally run `aioson context:pack .` first to compress context.
+> **Recommended:** `/compact` before the next same-feature agent. `/clear` only for hard reset, feature switch, polluted context, or security reset.
 
 ## Responsibility boundary
 

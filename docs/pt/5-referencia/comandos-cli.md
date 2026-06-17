@@ -987,7 +987,7 @@ O manifest em `.aioson/context/done/MANIFEST.md` registra todas as features arqu
 # Verificar se está no safe zone (< 60%), warning (60–80%) ou critical (≥ 80%)
 aioson context:monitor . --budget=80000 --tokens=52000
 # ⚠ Context: 52,000 tokens (65%) — WARNING
-# Suggestion: /clear before next agent activation
+# Suggestion: /compact before next agent activation; use /clear only for a hard reset
 
 # Verificar com output JSON para integrar em scripts
 aioson context:monitor . --budget=80000 --tokens=67000 --json

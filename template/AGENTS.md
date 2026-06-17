@@ -204,6 +204,19 @@ This is a first-party process skill for improving agents, skills, PRDs, plans, h
 Use when: improving AIOSON prompts/skills, reducing dead context without losing contracts, or sharpening artifacts before downstream handoff.
 What to load: `SKILL.md` first; load `references/prompt-diagnostics.md` only for multi-prompt audits or adoption planning.
 
+## Process skills: feature expansion
+
+Located at:
+- `.aioson/skills/process/briefing-expansion-scout/SKILL.md`
+- `.aioson/skills/process/product-scope-expansion/SKILL.md`
+- `.aioson/skills/process/sheldon-expansion-audit/SKILL.md`
+
+These are first-party process skills for richer feature thinking without uncontrolled MVP inflation.
+
+Agents that load them: @briefing, @briefing-refiner, @product, @sheldon
+When to load: only when the active idea/PRD has a rich surface, a prior expansion artifact exists, or the user asks for richer options.
+Shared taxonomy: `.aioson/docs/feature-expansion-taxonomy.md`
+
 ## Shared research cache: researchs/
 
 Located at: `researchs/` (project root)

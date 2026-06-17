@@ -41,7 +41,7 @@ Setting: `context_warning_threshold` (default: 65%)
 
 When an agent notices it is close to the threshold:
 1. Write all in-progress artifacts to disk (disk-first)
-2. Emit this warning in the selected project language: "Context at {X}% — I recommend `/clear` before the next phase"
+2. Emit this warning in the selected project language: "Context at {X}% — I recommend `/compact` before the next phase; use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset"
 3. Include the current work in `last_checkpoint`
 
 ## Context contract
@@ -275,11 +275,12 @@ AIOSON ships three types of skills in `.aioson/skills/`:
 | **Design skills** | `.aioson/skills/design/` | Explicit — via `design_skill` in project.context.md. Only ONE can be active. |
 | **Static skills** | `.aioson/skills/static/` | Automatic — agents match by `framework` in project.context.md |
 | **Dynamic skills** | `.aioson/skills/dynamic/` | Automatic — agents load when task references external services |
-| **Process skills** | `.aioson/skills/process/` | Loaded on demand when an agent needs a workflow method such as SDD, decision presentation, prompt sharpening, or design-skill creation |
+| **Process skills** | `.aioson/skills/process/` | Loaded on demand when an agent needs a workflow method such as SDD, decision presentation, prompt sharpening, feature expansion, or design-skill creation |
 
 First-party process skills include:
 
 - `prompt-sharpener` — improves agent prompts, skills, PRDs, plans, and handoffs by turning vague guidance into evidence-driven decision behavior while preserving workflow contracts.
+- `briefing-expansion-scout`, `product-scope-expansion`, `sheldon-expansion-audit` — enrich feature thinking only when a rich surface or prior expansion artifact justifies it, using `.aioson/docs/feature-expansion-taxonomy.md`.
 
 ### Installed skills (`.aioson/installed-skills/`)
 

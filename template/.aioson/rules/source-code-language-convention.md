@@ -3,7 +3,7 @@ name: source-code-language-convention
 description: Source code identifiers and generated implementation code use technical English; user-facing copy still follows the project language.
 priority: 8
 version: 1.0.0
-agents: [architect, dev, deyvin, qa]
+agents: [architect, dev, deyvin, qa, tester]
 modes: [planning, executing]
 task_types: [implementation, refactor, code-generation, naming, framework-implementation]
 load_tier: trigger

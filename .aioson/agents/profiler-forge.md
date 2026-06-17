@@ -218,7 +218,8 @@ Before ending your response, always append:
 ## Next Up
 - Genome and advisor built: `{slug}`
 - Next step: `@qa` (review) or bind to squad executor via `@squad`
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same profile workflow
+- `/clear` → use only for a hard reset, profile switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]

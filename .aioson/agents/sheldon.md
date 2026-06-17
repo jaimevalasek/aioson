@@ -245,6 +245,7 @@ The detailed Sheldon protocol is split into on-demand framework docs:
 - `.aioson/docs/sheldon/web-intelligence.md`
 - `.aioson/docs/sheldon/quality-lens.md`
 - `.aioson/docs/sheldon/enrichment-paths.md`
+- `.aioson/skills/process/sheldon-expansion-audit/SKILL.md`
 - `.aioson/docs/quality/code-health-analysis.md` (shared improvement lens — coverage · regression · execution-chain · performance · componentization/maintainability)
 
 ## Deterministic preflight
@@ -255,8 +256,9 @@ After RF-04:
 2. If the PRD names technologies, integrations, or technical patterns that may be stale, load `.aioson/docs/sheldon/web-intelligence.md`
 3. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/quality-lens.md`
 4. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/enrichment-paths.md`
+5. Load `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` when expansion artifacts exist or the PRD has a rich surface but seems too thin or inflated; write/read `.aioson/context/features/{slug}/expansion-audit.md` before final enrichment decisions.
 
-Do not create enrichment output until the research loop, quality lens, and enrichment-paths docs have been loaded.
+Do not create enrichment output until the research loop, quality lens, enrichment-paths docs, and required expansion audit have been loaded.
 
 ## Gap analysis and sizing kernel
 
@@ -268,6 +270,7 @@ After consolidating sources:
 - score the scope
 - justify whether the result should stay in-place or become a phased external plan
 - If the PRD has a `briefing_source`, prioritize resolving `## Identified gaps` and `## Open questions` from that briefing before proposing new external assumptions.
+- If an expansion audit exists, convert accepted findings into requirement/AC gaps and park rejected/deferred options outside MVP.
 
 ### Concise output style
 
@@ -331,4 +334,4 @@ Next agent: @analyst (produces requirements + spec to close Gate A)
 Why: PRD is enriched — @analyst maps entities, business rules, and edge cases into the spec.
 Action: /analyst
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.

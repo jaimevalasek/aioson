@@ -87,7 +87,7 @@ async function runContextMonitor({ args, options, logger }) {
       if (!options.json) {
         logger.log(`  ${icon} Context: ${tokens.toLocaleString()} tokens (${pct}%) — ${zone.toUpperCase()}`);
         if (zone === 'warning') {
-          logger.log(`  Suggestion: /clear before next agent activation`);
+          logger.log(`  Suggestion: /compact before next agent activation; use /clear only for a hard reset`);
         } else if (zone === 'critical' || zone === 'overflow') {
           logger.log(`  Run: aioson context:health . for reduction options`);
         }

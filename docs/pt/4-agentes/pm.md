@@ -117,7 +117,7 @@ aioson workflow:status .
 **Feature MEDIUM (pré-dev):**
 - **Vem de:** `@discovery-design-doc`
 - **Produz:** `implementation-plan-{slug}.md` (Gate C)
-- **Vai para:** STOP — desenvolvedor faz `/clear` e ativa `/dev`
+- **Vai para:** STOP — desenvolvedor faz `/compact` e ativa `/dev` quando continuar a mesma feature; usa `/clear` só para reset forte
 
 **Projeto MEDIUM (modo completo):**
 - **Vem de:** `@ux-ui`

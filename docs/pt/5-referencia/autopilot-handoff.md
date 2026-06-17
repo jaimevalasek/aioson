@@ -33,7 +33,7 @@ Sem essa flag (ou com `false`), o comportamento padrão é handoff manual — ca
         STOP — human entra com /dev
 ```
 
-A cadeia pré-dev **sempre para antes do primeiro `@dev`**. O desenvolvedor faz `/clear` (limpa o contexto) e inicia a implementação numa janela de contexto fresca — `@dev` é pesado e se beneficia de contexto limpo.
+A cadeia pré-dev **sempre para antes do primeiro `@dev`**. O desenvolvedor faz `/compact` quando continua a mesma feature e inicia a implementação a partir do pacote/checkpoint de contexto — `@dev` é pesado e se beneficia de um handoff operacional compacto. Use `/clear` apenas para reset forte, troca de feature, contexto poluído ou reset sensível a segurança.
 
 ### Segmento 2 — Ciclo de revisão pós-dev (hub = @qa)
 
@@ -87,7 +87,7 @@ O autopilot interrompe a cadeia e emite o handoff manual normal quando:
 3. **Cap de correções atingido** — ciclo `@qa` ↔ `@dev` limitado a 2 rounds.
 4. **Finding crítico de segurança** — keywords auth/secret/credential/session/password/token/PII detectados pelo gate de segurança do `@qa` → STOP, requer intervenção humana.
 5. **Verdict não passou** — `@scope-check` não aprovado, `@architect` Gate B bloqueado, `@discovery-design-doc` readiness bloqueado, `@pm` Gate C bloqueado, `@validator` FAIL sem caminho seguro → STOP, roteamento manual.
-6. **Orçamento de contexto** — uso ≥ `context_warning_threshold`: grava checkpoint em `last-handoff.json`, STOP, recomenda `/clear`. A próxima sessão reentra no autopilot automaticamente.
+6. **Orçamento de contexto** — uso ≥ `context_warning_threshold`: grava checkpoint em `last-handoff.json`, STOP, recomenda `/compact` para continuidade na mesma feature. A próxima sessão reentra no autopilot automaticamente. Use `/clear` apenas para reset forte, troca de feature, contexto poluído ou reset sensível a segurança.
 7. **Ambiguidade** — estado do workflow indisponível ou qualquer decisão real requer input humano → STOP.
 
 O usuário pode interromper a qualquer momento com Ctrl+C. O autopilot nunca retenta uma invocação interrompida.
@@ -130,9 +130,9 @@ Você > /analyst  (start)
 @scope-check → pre-dev check → autopilot: invocando @architect
 @architect   → Gate B PASS → autopilot: invocando @discovery-design-doc
 @discovery-design-doc → readiness ok → autopilot: invocando @pm (MEDIUM)
-@pm          → Gate C PASS → STOP — "Recomendo /clear e /dev"
+@pm          → Gate C PASS → STOP — "Recomendo /compact e /dev"
 
-Você > /clear
+Você > /compact
 Você > /dev  (implementação manual — contexto limpo)
 
 @dev → testes ok → autopilot retoma: invocando @qa

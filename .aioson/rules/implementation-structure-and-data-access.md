@@ -3,7 +3,7 @@ name: implementation-structure-and-data-access
 description: Build maintainable implementation slices with framework-first structure, small files, clear module boundaries, and data access kept out of presentation/control flow.
 priority: 8
 version: 1.0.0
-agents: [architect, dev, deyvin, qa]
+agents: [architect, dev, deyvin, qa, tester, pentester]
 modes: [planning, executing]
 task_types: [implementation-architecture, implementation, refactor, module-boundary, data-access, framework-implementation]
 load_tier: trigger

@@ -88,7 +88,7 @@ Skip silently when the dossier is absent — projects without dossier still get 
 
 ## Autopilot handoff
 
-If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and readiness is `ready` or `ready_with_warnings`, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @discovery-design-doc"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when readiness is `blocked`, the next agent is `@dev` (standard handoff + recommend `/clear`), or context ≥ `context_warning_threshold`.
+If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and readiness is `ready` or `ready_with_warnings`, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @discovery-design-doc"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when readiness is `blocked`, the next agent is `@dev` (standard handoff + recommend `/compact` for same-feature continuation), or context ≥ `context_warning_threshold`.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=discovery-design-doc --summary="Design doc <slug>: readiness=<level>, next=<agent>" 2>/dev/null || true`

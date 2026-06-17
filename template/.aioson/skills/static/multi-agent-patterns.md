@@ -28,10 +28,11 @@ When Evaluator finds issues:
 
 ### Session isolation
 
-Each role should run in a fresh context window:
-- Planner sessions: produce artifacts, then /clear
-- Generator sessions: read spec pack + implement, then /clear
-- Evaluator sessions: read code + spec + verify, then /clear
+Each role should run from a compact operational handoff:
+- Planner sessions: produce artifacts, then /compact for same-feature continuation
+- Generator sessions: read spec pack + implement, then /compact for same-feature continuation
+- Evaluator sessions: read code + spec + verify, then /compact for same-feature continuation
+- Use /clear only for a hard reset, feature switch, polluted context, or security-sensitive reset
 
 Cross-role communication happens through artifacts on disk, not conversation history.
 

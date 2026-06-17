@@ -3,7 +3,7 @@ name: security-baseline
 description: Secure by Default baseline controls for technical agents
 priority: 10
 version: 1.0.0
-agents: [analyst, architect, dev, qa]
+agents: [analyst, architect, sheldon, dev, qa, tester, pentester]
 modes: [planning, executing]
 task_types: [security, auth, hardening]
 load_tier: trigger
@@ -13,8 +13,9 @@ triggers: [security, auth, login, password, upload, secret, token, permission, o
 # Security Baseline — Secure by Default
 
 > Implements `Article VII — Zero Trust by Default` of the AIOSON constitution.
-> Loaded by `@analyst`, `@architect`, `@dev`, and `@qa`. Other agents must not
-> load this rule — product, copy, design and orchestration scopes are out of band.
+> Loaded by technical and PRD-enrichment agents when security triggers fire:
+> `@analyst`, `@architect`, `@sheldon`, `@dev`, `@qa`, `@tester`, and
+> `@pentester`. Product, copy, design and orchestration scopes are out of band.
 
 This rule defines the minimum security baseline every technical agent must
 respect. It does **not** promise absolute security. It declares concrete

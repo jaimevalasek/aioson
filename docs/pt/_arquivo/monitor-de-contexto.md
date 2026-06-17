@@ -69,7 +69,7 @@ aioson context:monitor [path] --budget=<tokens-totais> --tokens=<tokens-atuais>
 | Zona | Faixa | Ícone | Ação sugerida |
 |---|---|---|---|
 | safe | < 60% | ✓ | Continuar normalmente |
-| warning | 60–80% | ⚠ | Planejar `/clear` antes do próximo agente |
+| warning | 60–80% | ⚠ | Planejar `/compact` antes do próximo agente; usar `/clear` só para reset forte |
 | critical | ≥ 80% | ! | Rodar `context:health` e reduzir carga |
 
 **Exemplos:**
@@ -82,7 +82,7 @@ aioson context:monitor . --budget=80000 --tokens=28000
 # Sessão em warning zone
 aioson context:monitor . --budget=80000 --tokens=52000
 #   ⚠ Context: 52,000 tokens (65%) — WARNING
-#   Suggestion: /clear before next agent activation
+#   Suggestion: /compact before next agent activation; use /clear only for a hard reset
 
 # Sessão em critical zone
 aioson context:monitor . --budget=80000 --tokens=67000

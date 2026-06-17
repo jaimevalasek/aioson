@@ -331,7 +331,7 @@ Shared decisions: .aioson/context/parallel/shared-decisions.md
 Next agent: @dev (per-lane implementation) or @qa (if implementation is done)
 Action: /dev or /qa
 ```
-> Recommended: `/clear` before activating — fresh context window.
+> Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 
 ## Observability
 

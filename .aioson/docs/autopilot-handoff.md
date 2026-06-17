@@ -51,7 +51,7 @@ SMALL feature: `@analyst` → `@scope-check` → `@architect` → `@discovery-de
 
 MEDIUM feature: `@analyst` → `@architect` → `@discovery-design-doc` → `@pm` → `@scope-check` → `@dev`.
 
-The prompt-only fallback still stops before the FIRST `@dev` activation because `@dev` is a heavy phase and benefits from a fresh context window. Runtime agentic mode may cross this boundary only by starting a fresh `@dev` activation from the checkpoint/context package, not by carrying the upstream chat context forward. If the gateway cannot start that fresh activation, stop with the normal `/clear` + `/dev` recommendation.
+The prompt-only fallback still stops before the FIRST `@dev` activation because `@dev` is a heavy phase and needs a compact operational handoff. Runtime agentic mode may cross this boundary only by starting a checkpointed `@dev` activation from the context package, not by carrying raw upstream chat forward. If the gateway cannot start that activation, stop with the normal `/compact` + `/dev` recommendation for same-feature continuation. Recommend `/clear` only when the user needs a hard reset, a feature switch, polluted context, or a security-sensitive reset.
 
 ## Segment 2 — post-dev review cycle (hub = `@qa`)
 
@@ -88,11 +88,11 @@ Routing table (each row is followed only when autopilot is active and no stop co
 3. **Corrections cap reached** — review cycles are bounded by `agentic_policy.review_cycle` (default 3); when `review-cycle:advance` returns `stop_cycle_limit`, stop and escalate to the human.
 4. **Critical security finding** — the `@qa` corrections security gate (auth/secret/credential/session/password/token/PII/encryption keywords) blocks the auto-loop; stop and require human intervention.
 5. **Verdict not clean / gate or readiness blocked** — `@scope-check` not `approved`/`patched`, `@architect` Gate B blocked, `@discovery-design-doc` readiness `blocked`, `@pm` Gate C blocked, `@validator` FAIL with no safe corrections path: stop and route to the owner manually.
-6. **Context budget** — estimated usage ≥ `context_warning_threshold` (`.aioson/config.md`): write the compaction checkpoint to `.aioson/context/last-handoff.json`, stop, and recommend `/clear`. The workflow resumes from `workflow.state.json` — the next session re-enters autopilot automatically.
+6. **Context budget** — estimated usage ≥ `context_warning_threshold` (`.aioson/config.md`): write the compaction checkpoint to `.aioson/context/last-handoff.json`, stop, and recommend `/compact` for same-feature continuation. The workflow resumes from `workflow.state.json` — the next session re-enters autopilot automatically. Recommend `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 7. **Ambiguity** — workflow state unavailable AND routing ambiguous, or any real decision requires user input: stop and ask, manually.
 
 The user can interrupt at any time (Ctrl+C); autopilot never retries an interrupted invocation.
 
 ## Rationale
 
-Industry-validated design (see `researchs/auto-handoff-pipeline-2026/summary.md`): deterministic routing beats LLM routing; human gates belong where they catch mistakes — at the start of implementation (`@dev` entry: fresh context) and at the irreversible boundary (`feature:close`/publish). Every autonomous loop needs explicit exit conditions and bounds (the corrections cap, the re-entry guard); per-hop context checkpointing is the load-bearing cost mitigation.
+Industry-validated design (see `researchs/auto-handoff-pipeline-2026/summary.md`): deterministic routing beats LLM routing; human gates belong where they catch mistakes — at the start of implementation (`@dev` entry: compact operational handoff) and at the irreversible boundary (`feature:close`/publish). Every autonomous loop needs explicit exit conditions and bounds (the corrections cap, the re-entry guard); per-hop context checkpointing is the load-bearing cost mitigation.

@@ -11,7 +11,7 @@ Since agents cannot directly measure token count, use file-count proxy:
 | 1-3 | Light (< 20%) | Proceed normally |
 | 4-6 | Moderate (20-40%) | Be selective about additional reads |
 | 7-9 | Heavy (40-60%) | Stop reading, start producing |
-| 10+ | Critical (> 60%) | Finish current step, recommend /clear |
+| 10+ | Critical (> 60%) | Finish current step, recommend /compact; reserve /clear for hard reset |
 
 ## File size estimates
 

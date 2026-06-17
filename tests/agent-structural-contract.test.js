@@ -161,17 +161,17 @@ test('structural contract §3: agent:done is the last observability command', ()
 });
 
 // §4 — workflow agents that own a handoff (contract §2 handoff list) must
-// recommend `/clear` before the next agent is activated.
-test('structural contract §4: handoff agents recommend /clear', () => {
+// recommend `/compact` before the next same-feature agent activation.
+test('structural contract §4: handoff agents recommend /compact', () => {
   const HANDOFF = ['briefing.md', 'product.md', 'sheldon.md', 'analyst.md', 'architect.md', 'pm.md', 'orchestrator.md'];
   const missing = [];
 
   for (const file of HANDOFF) {
     const content = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8');
-    if (!content.includes('/clear')) {
+    if (!content.includes('/compact')) {
       missing.push(file);
     }
   }
 
-  assert.deepEqual(missing, [], `handoff agents missing /clear recommendation:\n${missing.join('\n')}`);
+  assert.deepEqual(missing, [], `handoff agents missing /compact recommendation:\n${missing.join('\n')}`);
 });

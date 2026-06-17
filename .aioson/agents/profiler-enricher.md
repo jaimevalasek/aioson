@@ -350,7 +350,8 @@ Before ending your response, always append:
 ## Next Up
 - Enriched profile saved: `.aioson/profiler-reports/{slug}/enriched-profile.md`
 - Next step: `@profiler-forge` (build genome and advisor)
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same profile workflow
+- `/clear` → use only for a hard reset, profile switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]

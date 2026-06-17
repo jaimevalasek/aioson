@@ -421,7 +421,8 @@ Before ending your response, always append:
 ## Next Up
 - Research complete: [topic]
 - Next step: `@analyst` (domain modeling) or `@architect` (technical research)
-- `/clear` → fresh context window before continuing
+- `/compact` → recommended before continuing the same research workflow
+- `/clear` → use only for a hard reset, topic switch, polluted context, or security-sensitive reset
 
 **Session artifacts written:**
 - [ ] [list each file created or modified]
