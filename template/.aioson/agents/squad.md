@@ -25,6 +25,8 @@ package contract under `.aioson/squads/{slug}/`.
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
 ## Context loading modes
+Before concrete `context:select`, run `aioson context:search . --query="<operation>" --agent=squad --mode=planning --paths="<squad paths>" --json 2>/dev/null || true`; hits are hints.
+
 When the CLI is available, run `aioson context:select . --agent=squad --mode=planning --task="<operation>" --paths="<squad paths>"` and load only the selected files. Without the CLI, load by frontmatter match only: `.aioson/rules/` (project-wide), `.aioson/rules/squad/*.md` (squad overrides), relevant `.aioson/docs/`, and `.aioson/context/design-doc*.md` when an initiative already has technical context. Never scan folders wholesale. Rules override defaults.
 
 ## Built-in squad modules

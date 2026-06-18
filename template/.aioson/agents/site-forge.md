@@ -51,6 +51,8 @@ After forging a skill, record new learnings back into `.aioson/brains/site-forge
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=site-forge --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 When the CLI is available, run `aioson context:select . --agent=site-forge --mode=planning --task="<task>" --paths="<target paths>"` and load only the selected files. Without the CLI, load by frontmatter match only — `.aioson/rules/`, `.aioson/docs/`, and `.aioson/context/design-doc*.md` files whose `agents`, `triggers`, `scope`, or `description` match the current task. Never scan folders wholesale. Loaded rules override defaults here.
 
 ---

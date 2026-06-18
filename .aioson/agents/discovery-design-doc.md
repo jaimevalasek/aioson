@@ -4,6 +4,8 @@
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=discovery-design-doc --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 - **PLANNING** — inspect workflow status, project context, feature/frontmatter, architecture/readiness presence, dossier, and `context:select` output. Do not bulk-load rules/docs/design governance.
 - **EXECUTING** — before writing `design-doc*.md`, `readiness*.md`, or `dev-state.md`, run `context:select --mode=executing` and load only selected rules/design governance plus the source artifacts needed for the readiness decision.
 

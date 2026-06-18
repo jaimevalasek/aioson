@@ -31,6 +31,8 @@ Do NOT load on activation: PRD contents, `.aioson/brains/_index.json`, `plans/`/
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=sheldon --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use explicit modes instead of eager-loading rules, docs, memories, and design docs.
 
 - **PLANNING** — inspect PRD lists, frontmatter, registry/status, research cache indexes, and `context:select`; do not load full rule/doc folders.

@@ -267,11 +267,35 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   // protocol, brownfield + design-doc loading rules). The on-demand-doc
   // pattern is still intact (kernels reference external docs rather than
   // inlining them), so the cap protects against accidental bloat, not
-  // documented scope growth. Next dev hitting 25KB should compress, not rebudget.
-  const KERNEL_BUDGET_BYTES = 25000;
+  // documented scope growth.
+  // Rebudgeted from 25000 -> 30000 on 2026-06-18 for context-search discovery
+  // prompts: intelligence gates are part of the agent contract, not bloat.
+  const KERNEL_BUDGET_BYTES = 30000;
   assert.ok(Buffer.byteLength(product, 'utf8') <= KERNEL_BUDGET_BYTES, 'product kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(sheldon, 'utf8') <= KERNEL_BUDGET_BYTES, 'sheldon kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');
+});
+
+test('agents run context search discovery before selective loading', async () => {
+  const exempt = new Set(['committer', 'neo', 'pair', 'setup', 'validator']);
+  const agentDir = path.join(ROOT, 'template/.aioson/agents');
+  const agentFiles = (await fs.readdir(agentDir)).filter((file) => file.endsWith('.md'));
+
+  for (const file of agentFiles) {
+    const agent = file.replace(/\.md$/, '');
+    if (exempt.has(agent)) continue;
+
+    const content = await read(path.join(agentDir, file));
+    assert.match(content, /aioson context:search .*--agent=/, `missing context:search discovery command: ${agent}`);
+    assert.equal(content.includes(`--agent=${agent}`), true, `context:search must identify agent: ${agent}`);
+    assert.match(content, /aioson context:search .*2>\/dev\/null \|\| true/, `context:search must be best-effort: ${agent}`);
+  }
+
+  for (const gatewayFile of ['template/AGENTS.md', 'template/CLAUDE.md']) {
+    const content = await read(path.join(ROOT, gatewayFile));
+    assert.equal(content.includes('context:search` for discovery'), true, `gateway missing context:search discovery rule: ${gatewayFile}`);
+    assert.equal(content.includes('context:select` remains the final loading gate'), true, `gateway missing context:select final gate: ${gatewayFile}`);
+  }
 });
 
 test('briefing and product prompts prefer evidence-backed intake over shallow questions', async () => {
@@ -334,7 +358,8 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
     '.aioson/docs/sheldon/quality-lens.md',
     '.aioson/docs/sheldon/enrichment-paths.md',
     '.aioson/docs/dev/stack-conventions.md',
-    '.aioson/docs/dev/execution-discipline.md'
+    '.aioson/docs/dev/execution-discipline.md',
+    '.aioson/docs/dev/simple-plan-lane.md'
   ];
 
   for (const file of managedDocs) {
@@ -352,6 +377,7 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
   const enrichmentPaths = await read(path.join(ROOT, 'template/.aioson/docs/sheldon/enrichment-paths.md'));
   const stackConventions = await read(path.join(ROOT, 'template/.aioson/docs/dev/stack-conventions.md'));
   const executionDiscipline = await read(path.join(ROOT, 'template/.aioson/docs/dev/execution-discipline.md'));
+  const simplePlanLane = await read(path.join(ROOT, 'template/.aioson/docs/dev/simple-plan-lane.md'));
 
   const checks = [
     [conversationPlaybook, '6 - Finalize'],
@@ -383,7 +409,15 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
     [executionDiscipline, 'feat(module):'],
     [executionDiscipline, 'TaskCreate'],
     [executionDiscipline, '`*update-skeleton`'],
-    [executionDiscipline, 'debugging-protocol.md']
+    [executionDiscipline, 'debugging-protocol.md'],
+    [simplePlanLane, '## Implementation Intelligence Checkpoint'],
+    [simplePlanLane, '## Context selected'],
+    [simplePlanLane, '## Implementation intelligence'],
+    [simplePlanLane, '## Useful options considered'],
+    [simplePlanLane, '`include now`'],
+    [simplePlanLane, '`defer`'],
+    [simplePlanLane, '`escalate`'],
+    [simplePlanLane, 'framework leverage']
   ];
 
   for (const [content, token] of checks) {
@@ -542,6 +576,8 @@ test('deyvin contract prioritizes memory and hard-gates oversized requests', asy
     '## Deterministic preflight',
     '.aioson/skills/process/aioson-spec-driven/SKILL.md',
     'references/deyvin.md',
+    'Implementation Intelligence Checkpoint',
+    'A simple plan without `Context selected`, `Implementation intelligence`, and `Useful options considered` is weak',
     'say what is confirmed vs inferred'
   ];
 
@@ -557,6 +593,31 @@ test('deyvin contract prioritizes memory and hard-gates oversized requests', asy
     deyvin.indexOf('## Activation-only fast path') < deyvin.indexOf('.aioson/skills/process/aioson-spec-driven/SKILL.md'),
     'activation-only fast path must appear before SDD loading guidance'
   );
+});
+
+test('simple plan lane requires implementation intelligence before coding', async () => {
+  const simplePlanDoc = await read(path.join(ROOT, 'template/.aioson/docs/dev/simple-plan-lane.md'));
+  const simplePlanRule = await read(path.join(ROOT, 'template/.aioson/rules/simple-plan-lane.md'));
+  const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
+  const deyvin = await read(path.join(ROOT, 'template/.aioson/agents/deyvin.md'));
+
+  const checks = [
+    [simplePlanDoc, '## Implementation Intelligence Checkpoint'],
+    [simplePlanDoc, '## Context selected'],
+    [simplePlanDoc, '## Implementation intelligence'],
+    [simplePlanDoc, '## Useful options considered'],
+    [simplePlanDoc, 'A valid simple plan is not just a TODO list.'],
+    [simplePlanRule, 'A simple plan is not valid as a bare TODO list.'],
+    [simplePlanRule, 'useful options considered as `include now`, `defer`, or `escalate`'],
+    [dev, 'If missing `Context selected`, `Implementation intelligence`, or `Useful options considered`, enrich first'],
+    [dev, 'selected context, existing pattern, framework leverage, structure/data boundary'],
+    [deyvin, 'complete its Implementation Intelligence Checkpoint'],
+    [deyvin, 'enrich it before coding']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing simple-plan intelligence token: ${token}`);
+  }
 });
 
 test('gateway SDD guidance is on-demand and excludes deyvin activation-only recovery', async () => {

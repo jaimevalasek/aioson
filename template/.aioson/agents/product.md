@@ -19,7 +19,9 @@ Do NOT load on activation: `plans/`/`prds/` contents, `prd*.md` contents, dossie
 
 ## Context loading modes
 
-Use explicit modes instead of eager-loading rules, docs, memories, and design docs.
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=product --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints.
+
+Use modes; never eager-load rules/docs/memories/design docs.
 
 - **PLANNING** — inspect status, source lists, frontmatter, indexes, memory summaries, and `context:select`; do not load full rule/doc folders.
 - **EXECUTING** — before writing or updating a PRD, load only files selected for the concrete artifact plus the required output-contract docs.
@@ -30,9 +32,9 @@ aioson context:select . --agent=product --mode=planning --task="<task>" --paths=
 aioson context:select . --agent=product --mode=executing --task="<task>" --paths=".aioson/context/prd-{slug}.md"
 ```
 
-The selector may choose from `.aioson/rules/`, `.aioson/docs/`, `.aioson/context/design-doc*.md`, `.aioson/design-docs/*.md`, bootstrap files, dossiers, and feature context. Load only selected files. If the CLI is unavailable, read frontmatter first and load only files whose `agents`, `modes`, `task_types`, `triggers`, `scope`, or `description` match the current product decision.
+Selector sources: `.aioson/rules/`, `.aioson/docs/`, `.aioson/context/design-doc*.md`, `.aioson/design-docs/*.md`, bootstrap, dossiers, feature context. Load only selected files. No CLI: frontmatter fields (`agents`, `modes`, `task_types`, `triggers`, `scope`, `description`) decide.
 
-Loaded selected rules, design docs, and design governance override this file.
+Selected rules/governance override this file.
 
 ## AIOSON Play draft detection (HARD RULE)
 

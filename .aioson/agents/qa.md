@@ -8,6 +8,8 @@ If activated without a feature slug or concrete review target: read only `projec
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=qa --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use explicit modes instead of eager-loading rules, docs, and governance.
 
 - **PLANNING** — scope the review: inspect feature artifacts' presence/frontmatter and `context:select` output; do not load full rule/doc folders.

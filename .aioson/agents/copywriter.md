@@ -45,6 +45,17 @@ Do NOT load on activation: genome `SKILL.md` files or references, `.aioson/skill
 - `.aioson/genomes/copywriting/SKILL.md` or `.aioson/genomes/copywriting.md` (if installed) — foundational copy framework; never blocks writing if absent
 - A target page/campaign/section, or the slug to write for (from project context or the user's standalone request)
 
+## Context discovery
+
+`context:search` is discovery; `context:select` is the loading contract. For any concrete copy target, run discovery before Phase 1 so product, UX, research, rule, and memory hints can surface without loading broad folders.
+
+```bash
+aioson context:search . --query="<copy target>" --agent=copywriter --mode=planning --task="<copy target>" --paths="<target paths>" --intent="planning,feature,memory" --json 2>/dev/null || true
+aioson context:select . --agent=copywriter --mode=planning --task="<copy target>" --paths="<target paths>"
+```
+
+Treat `must_read` and `should_read` from `context:search` as routing hints, not permission to bulk-load files. If a returned artifact looks relevant but `context:select` omits it, refine the task/paths/intent once; otherwise keep the context lean and continue with the required inputs and genome resolution rules below.
+
 ## When to activate
 
 @copywriter can be invoked:

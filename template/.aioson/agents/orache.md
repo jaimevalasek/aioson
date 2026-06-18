@@ -27,6 +27,9 @@ Load each item at the step that needs it — never all upfront:
 - `.aioson/skills/squad/SKILL.md` and matching `domains/*.md` (if present) — baseline domain knowledge to confirm, extend, or challenge
 - `.aioson/rules/squad/*.md` (if present) — squad creation constraints that override defaults
 
+## Context discovery
+Before investigation planning, run `aioson context:search . --query="<domain investigation>" --agent=orache --mode=planning --paths="researchs/{slug}/summary.md,.aioson/skills/squad" --json 2>/dev/null || true`; hits are hints. Use `context:select` or frontmatter matching before loading optional rules/docs; external search still follows the research cache protocol.
+
 ## When to activate
 
 @orache can be invoked:

@@ -34,6 +34,8 @@ Do **not** load SDD refs, `spec*.md`, dossiers, `memory-index.md`, `continuity-r
 
 After bootstrap, use two modes; never preload all layers.
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=deyvin --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 - **PLANNING** — recover status and next slice: `aioson context:select . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>"`.
 - **EXECUTING** — before code inspection/editing: `aioson context:select . --agent=deyvin --mode=executing --task="<task>" --paths="<files to touch>"`.
 
@@ -88,7 +90,7 @@ Do not "just get started" on a large request to be helpful. Narrow first or hand
 
 Concrete bug reports against agent prompts, routing copy, checkpoints, handoff wording, or workflow UX are pair-debugging tasks when the fix is prompt/contract-level and directly verifiable. Hand off only if the root cause needs new feature definition or architecture.
 
-**Simple Plan exception:** for bounded, implementation-focused, directly verifiable work with no product/UX/domain/architecture/security decision, create `.aioson/context/simple-plans/{slug}.md`, run `aioson dev:state:write . --feature={slug} --next="<first slice>" --context=simple-plan`, then implement. Load `.aioson/docs/dev/simple-plan-lane.md` first.
+**Simple Plan exception:** for bounded, implementation-focused, directly verifiable work with no product/UX/domain/architecture/security decision, load `.aioson/docs/dev/simple-plan-lane.md`, complete its Implementation Intelligence Checkpoint, create `.aioson/context/simple-plans/{slug}.md`, run `aioson dev:state:write . --feature={slug} --next="<first slice>" --context=simple-plan`, then implement. A simple plan without `Context selected`, `Implementation intelligence`, and `Useful options considered` is weak; enrich it before coding.
 
 ## Built-in deyvin modules
 
@@ -111,7 +113,7 @@ Run this after the immediate scope gate and before touching code:
 6. For SMALL/MEDIUM edits, load selected `design-doc*.md`/`readiness*.md`; if missing, hand off to `@discovery-design-doc` unless MICRO/simple-plan.
 7. For concrete continuation that needs `spec*.md`, selected feature artifacts, or gate/checkpoint decisions, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` then `references/deyvin.md`. `dev-state.md` alone is only a pointer; never expand context from it during activation-only recovery.
 8. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
-9. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan
+9. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan and complete `Context selected`, `Implementation intelligence`, and `Useful options considered`
 10. If tracked via `live:start`, `agent:prompt`, `runtime:session:*`, or user asks for visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
 11. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
 12. Do not touch code until all selected/required modules for the current mode have been loaded

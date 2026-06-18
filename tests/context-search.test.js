@@ -7,9 +7,26 @@ const path = require('node:path');
 const os = require('node:os');
 
 const { IndexManager, sanitizeFtsQuery } = require('../src/context-search');
+const { runContextSearch, resolveSearchTarget } = require('../src/commands/context-search');
+const { selectContext } = require('../src/context-selector');
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-search-'));
+}
+
+async function writeFile(dir, relPath, content) {
+  const full = path.join(dir, relPath);
+  await fs.mkdir(path.dirname(full), { recursive: true });
+  await fs.writeFile(full, content, 'utf8');
+  return full;
+}
+
+function logger() {
+  const lines = [];
+  return {
+    lines,
+    log(value) { lines.push(String(value)); }
+  };
 }
 
 test('IndexManager — opens and closes without error', async () => {
@@ -115,6 +132,322 @@ test('IndexManager — search empty query returns empty array', async () => {
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
   }
+});
+
+test('IndexManager — searchPackage indexes .aioson rules with aliases and entities', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    await writeFile(tmp, '.aioson/rules/workspace-project-table.md', [
+      '---',
+      'name: workspace-project-table',
+      'description: Workspace in user language maps to the Project table and model in code',
+      'agents: [dev, deyvin, architect]',
+      'modes: [planning, executing]',
+      'task_types: [database, implementation]',
+      'triggers: [workspace database, project table, migrations]',
+      'aliases: [workspace, project]',
+      'entities: [Project, projects, Workspace]',
+      'retrieval_intents: [database, feature, memory]',
+      'paths: [database/migrations/**, app/Models/**]',
+      'priority: 20',
+      '---',
+      '# Workspace Project Table',
+      '',
+      'When the user says workspace, inspect the Project model and projects table first.'
+    ].join('\n'));
+    await writeFile(tmp, '.aioson/docs/dev/database.md', '# Database Docs\n\nUse framework ORM boundaries.');
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      const indexed = await idx.indexDirectory(tmp, { force: true });
+      assert.ok(indexed.indexed >= 2, 'should index project .aioson files');
+
+      const result = idx.searchPackage('update workspace table in database', {
+        projectDir: tmp,
+        agent: 'dev',
+        mode: 'executing',
+        task: 'alter workspace database table',
+        paths: 'database/migrations/2026_01_01_update_projects_table.php',
+        intent: 'database,feature',
+        limit: 5
+      });
+
+      const all = [
+        ...result.package.must_read,
+        ...result.package.should_read,
+        ...result.package.maybe
+      ];
+      const rule = all.find((item) => item.relPath === '.aioson/rules/workspace-project-table.md');
+      assert.ok(rule, 'rule from .aioson/rules should be discoverable');
+      assert.equal(rule.source_type, 'rule');
+      assert.ok(result.package.must_read.some((item) => item.relPath === rule.relPath));
+      assert.match(rule.reason, /aliases:|entities:|triggers:/);
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('IndexManager — agent and mode are ranking boosts, not hard filters', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    await writeFile(tmp, '.aioson/rules/architect-kanban.md', [
+      '---',
+      'name: architect-kanban',
+      'description: Kanban board planning decisions',
+      'agents: [architect]',
+      'modes: [planning]',
+      'triggers: [kanban board]',
+      '---',
+      '# Architect Kanban',
+      '',
+      'Kanban board columns, cards, swimlanes, and workflow decisions.'
+    ].join('\n'));
+    await writeFile(tmp, '.aioson/rules/dev-kanban.md', [
+      '---',
+      'name: dev-kanban',
+      'description: Kanban board implementation rules',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [kanban board]',
+      '---',
+      '# Dev Kanban',
+      '',
+      'Kanban board columns, cards, drag and drop implementation details.'
+    ].join('\n'));
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(tmp, { force: true });
+      const result = idx.searchPackage('kanban board implementation', {
+        projectDir: tmp,
+        agent: 'dev',
+        mode: 'executing',
+        limit: 10
+      });
+
+      const paths = result.results.map((item) => item.relPath);
+      assert.ok(paths.includes('.aioson/rules/architect-kanban.md'), 'mismatched agent/mode result should remain discoverable');
+      assert.ok(paths.includes('.aioson/rules/dev-kanban.md'), 'matching agent/mode result should remain discoverable');
+      assert.equal(result.results[0].relPath, '.aioson/rules/dev-kanban.md');
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('IndexManager — searchPackage dedupes template mirrors and prefers project files', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    const rule = [
+      '---',
+      'name: laravel-data-access',
+      'description: Laravel data access belongs in framework model/service boundaries',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [Laravel query builder, controller database access]',
+      '---',
+      '# Laravel Data Access',
+      '',
+      'Do not place raw query builders in views or controller-heavy flows.'
+    ].join('\n');
+    await writeFile(tmp, '.aioson/rules/laravel-data-access.md', rule);
+    await writeFile(tmp, 'template/.aioson/rules/laravel-data-access.md', rule);
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(tmp, { force: true });
+      const result = idx.searchPackage('Laravel query builder controller database access', {
+        projectDir: tmp,
+        agent: 'dev',
+        mode: 'executing',
+        limit: 10
+      });
+
+      const paths = result.results.map((item) => item.relPath);
+      assert.ok(paths.includes('.aioson/rules/laravel-data-access.md'), 'project rule should remain');
+      assert.equal(paths.includes('template/.aioson/rules/laravel-data-access.md'), false, 'template mirror should be removed from package');
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('IndexManager — indexDirectory skips and purges nested .aioson agent files', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    await writeFile(tmp, 'template/.aioson/agents/setup.md', '# Setup Agent\n\nLaravel setup activation should not be task context.');
+    await writeFile(tmp, '.aioson/rules/laravel-language.md', [
+      '---',
+      'name: laravel-language',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [Laravel code English]',
+      '---',
+      '# Laravel Language',
+      '',
+      'Write Laravel code identifiers in English.'
+    ].join('\n'));
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      idx._db.prepare('INSERT INTO docs (rel_path, title, content) VALUES (?, ?, ?)').run(
+        'template/.aioson/agents/setup.md',
+        'Setup Agent',
+        'Laravel setup activation stale index entry'
+      );
+      idx._db.prepare(`
+        INSERT INTO docs_meta (
+          rel_path, project_dir, indexed_at, file_mtime, size, source_type,
+          description, agents, modes, task_types, triggers, aliases, entities,
+          paths, retrieval_intents, load_tier, priority
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        'template/.aioson/agents/setup.md',
+        path.resolve(tmp),
+        new Date().toISOString(),
+        '1',
+        1,
+        'file',
+        '',
+        '',
+        '',
+        '',
+        'Laravel setup',
+        '',
+        '',
+        '',
+        '',
+        'reference',
+        0
+      );
+
+      await idx.indexDirectory(tmp, { force: true });
+      const result = idx.searchPackage('Laravel setup code English', {
+        projectDir: tmp,
+        agent: 'dev',
+        mode: 'executing',
+        limit: 10
+      });
+      const paths = result.results.map((item) => item.relPath);
+      assert.equal(paths.includes('template/.aioson/agents/setup.md'), false, 'agent files must not survive purge');
+      assert.ok(paths.includes('.aioson/rules/laravel-language.md'), 'normal project rules should remain searchable');
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('context:select routes aliases, entities and retrieval_intents as final eligible signals', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    await writeFile(tmp, '.aioson/context/project.context.md', '---\nframework: Laravel\n---\n# Project');
+    await writeFile(tmp, '.aioson/context/project-pulse.md', '---\nactive_feature: (none)\n---\n# Pulse');
+    await writeFile(tmp, '.aioson/rules/workspace-project-table.md', [
+      '---',
+      'name: workspace-project-table',
+      'description: Workspace maps to Project in code',
+      'agents: [dev]',
+      'modes: [executing]',
+      'aliases: [workspace]',
+      'entities: [Project, projects]',
+      'retrieval_intents: [database]',
+      'load_tier: trigger',
+      '---',
+      '# Workspace Project Table'
+    ].join('\n'));
+
+    const selected = await selectContext(tmp, {
+      agent: 'dev',
+      mode: 'executing',
+      task: 'update workspace database behavior',
+      paths: 'app/Models/Project.php'
+    });
+
+    assert.ok(
+      selected.selected.some((item) => item.path === '.aioson/rules/workspace-project-table.md'),
+      'context:select should select eligible rules through alias/entity/intent metadata'
+    );
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('runContextSearch — auto-indexes path and returns load buckets in JSON mode', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    await writeFile(tmp, '.aioson/rules/source-code-language.md', [
+      '---',
+      'name: source-code-language',
+      'description: Always write source code identifiers and comments in English',
+      'agents: [dev, deyvin]',
+      'modes: [executing]',
+      'triggers: [source code, english, identifiers]',
+      'retrieval_intents: [implementation]',
+      '---',
+      '# Source Code Language',
+      '',
+      'Create code in English unless the project already proves a different standard.'
+    ].join('\n'));
+
+    const log = logger();
+    const result = await runContextSearch({
+      args: [tmp],
+      options: {
+        query: 'write implementation source code in English',
+        agent: 'dev',
+        mode: 'executing',
+        intent: 'implementation',
+        json: true,
+        force: true
+      },
+      logger: log
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(result.index.indexed >= 1, 'search should auto-index by default');
+    assert.ok(Array.isArray(result.package.must_read));
+    assert.ok(
+      result.results.some((item) => item.relPath === '.aioson/rules/source-code-language.md'),
+      'JSON results should include discovered rule'
+    );
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('resolveSearchTarget — supports path plus --query and positional query', () => {
+  const tmp = path.resolve(os.tmpdir());
+  assert.deepEqual(
+    resolveSearchTarget([tmp], { query: 'database rule' }),
+    { cwd: tmp, query: 'database rule' }
+  );
+
+  const positional = resolveSearchTarget(['database', 'rule'], {});
+  assert.equal(positional.query, 'database rule');
+});
+
+test('CLI registers context:index as a JSON-capable index alias', async () => {
+  const cli = await fs.readFile(path.join(__dirname, '..', 'src', 'cli.js'), 'utf8');
+  assert.ok(cli.includes("'context:index'"), 'context:index must be registered');
+  assert.ok(cli.includes("'context-index'"), 'context-index must be registered');
+  assert.match(cli, /command === 'context:index'/);
 });
 
 test('IndexManager — invalidateStale removes old entries', async () => {

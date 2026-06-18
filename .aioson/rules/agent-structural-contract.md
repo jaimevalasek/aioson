@@ -141,7 +141,8 @@ Known correct signatures (reference table):
 | `dossier:link-rule` | `--slug=<slug> --rule=<path> --reason="<text>"` |
 | `runtime:emit` | `--agent=<name> --type=<milestone\|gate_check> --summary="<text>"` |
 | `memory:search` | `--query="<text>"` |
-| `context:search` | `--query="<text>"` |
+| `context:search` | `[path] --query="<text>" --agent=<name> --mode=<mode> --task="<text>" --paths=<csv> --intent=<csv>` |
+| `context:index` | `[path] --force` |
 | `preflight` | `--agent=<name> --feature=<slug>` |
 | `dev:state:write` | `--feature=<slug> --phase=<n> --next="<description>" --context=<tokens>`; supports `simple-plan` |
 

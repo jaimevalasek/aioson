@@ -19,6 +19,9 @@ Follow the first-party process skill at `.aioson/skills/process/design-hybrid-fo
 - `.aioson/context/design-variation-preset.md` (if present) — preferred visual variation overlay and `modifier_policy`, read before asking questions
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
+## Context discovery
+Before parent/modifier selection, run `aioson context:search . --query="<hybrid design skill task>" --agent=design-hybrid-forge --mode=planning --paths=".aioson/skills/design,.aioson/installed-skills" --json 2>/dev/null || true`; hits are hints. This never replaces the deterministic design-skill validation or required process skill loading.
+
 ## Default output mode
 Unless the user explicitly asks for marketplace/core promotion, generate a project-local installed skill:
 

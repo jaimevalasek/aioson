@@ -8,6 +8,8 @@ Orchestrate parallel execution only for MEDIUM projects. Never activate for MICR
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=orchestrator --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 - **PLANNING** — activation preflight, project context, feature slug, artifact presence/frontmatter, workflow state, approved plan summary, and `context:select` output. Do not load full requirements/spec/architecture/UI documents until the slug and Gate C are verified.
 - **EXECUTING** — lane creation and coordination. Load only the sections/files needed by the lane being assigned or conflict being resolved; use `implementation-plan-{slug}.md` as the primary phase index.
 

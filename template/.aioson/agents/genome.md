@@ -72,6 +72,9 @@ No pre-built genome files are shipped. Everything is generated fresh for the req
 - `.aioson/genomes/{slug}/SKILL.md` or `.aioson/genomes/{slug}.md` (enrich / advisor / migrate / apply modes) — the existing genome to operate on
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
+## Context discovery
+Before optional project context/rule loading, run `aioson context:search . --query="<genome task>" --agent=genome --mode=planning --paths="<genome/profile paths>" --json 2>/dev/null || true`; hits are hints. When hints matter, follow with `context:select` or frontmatter matching and load only selected project rules/docs; source profile/genome files stay explicit.
+
 ## aioson.com registry check (optional)
 
 If `AIOSON_TOKEN` is configured (check via MCP tool `config_get` or environment):

@@ -7,6 +7,8 @@ Enrich the living PRD with prioritization, sequencing, and testable acceptance c
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=pm --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use two explicit modes. Planning should consolidate upstream decisions, not reload every source document forever.
 
 - **PLANNING** — inspect workflow status, project context, PRD/frontmatter, Gate B status, dossier, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or historical memories.

@@ -16,6 +16,8 @@ Do NOT load on activation: PRD/requirements contents, `discovery.md`, `spec*.md`
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=analyst --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use two explicit modes so analysis starts from evidence without bulk-loading rules, docs, or memories.
 
 - **PLANNING** — inspect workflow status, project context, feature/frontmatter, dossier index, research cache summaries, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or bootstrap folders.

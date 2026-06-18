@@ -323,6 +323,9 @@ async function collectCandidates(targetDir) {
         modes: parseListValue(fm.modes),
         taskTypes: parseListValue(fm.task_types || fm.taskTypes),
         triggers: parseListValue(fm.triggers),
+        aliases: parseListValue(fm.aliases || fm.alias),
+        entities: parseListValue(fm.entities || fm.entity),
+        retrievalIntents: parseListValue(fm.retrieval_intents || fm.intents || fm.intent),
         pathPatterns: parseListValue(fm.paths || fm.globs),
         scope: fm.scope || '',
         featureSlug: fm.feature_slug || fm.feature || inferred.featureSlug || '',
@@ -651,6 +654,24 @@ function scoreCandidate(candidate, context) {
     reasons.push(`triggers:${matchedTriggers.slice(0, 3).join(',')}`);
   }
 
+  const matchedAliases = keywordMatches(context.lookup, candidate.aliases);
+  if (matchedAliases.length > 0) {
+    score += 35;
+    reasons.push(`aliases:${matchedAliases.slice(0, 3).join(',')}`);
+  }
+
+  const matchedEntities = keywordMatches(context.lookup, candidate.entities);
+  if (matchedEntities.length > 0) {
+    score += 30;
+    reasons.push(`entities:${matchedEntities.slice(0, 3).join(',')}`);
+  }
+
+  const matchedRetrievalIntents = keywordMatches(context.lookup, candidate.retrievalIntents);
+  if (matchedRetrievalIntents.length > 0) {
+    score += 25;
+    reasons.push(`retrieval_intents:${matchedRetrievalIntents.slice(0, 3).join(',')}`);
+  }
+
   const matchedTags = keywordMatches(context.lookup, candidate.tags);
   if (matchedTags.length > 0) {
     score += 20;
@@ -675,6 +696,9 @@ function scoreCandidate(candidate, context) {
     || directPathMatch
     || matchedTaskTypes.length > 0
     || matchedTriggers.length > 0
+    || matchedAliases.length > 0
+    || matchedEntities.length > 0
+    || matchedRetrievalIntents.length > 0
     || featureRouted;
   const weakJustifiedSemanticHit = candidate.loadTier === 'justified' && semanticHit && semanticHit.terms.length < 3;
   const weakPureSemanticHit = semanticHit && !hardRoutingHit && semanticHit.terms.length < semanticMinimumTerms(candidate);

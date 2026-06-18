@@ -42,6 +42,8 @@ Load each item at the step that needs it — never all upfront:
 
 ## Context Loading Modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=scope-check --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 - **PLANNING** — inspect workflow status, selected mode, project context, feature/frontmatter, artifact presence, and `context:select` output. Do not bulk-load rules/docs/design governance.
 - **EXECUTING** — before writing or patching `scope-check*.md` or `dev-state.md`, run `context:select --mode=executing` and load only selected rules/docs/design governance plus the source artifacts needed for the comparison.
 

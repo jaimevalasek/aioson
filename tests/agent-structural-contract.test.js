@@ -45,11 +45,12 @@ function commandLines(content, command) {
     .filter((line) => line.startsWith(`aioson ${command}`));
 }
 
-// §5 — best-effort telemetry/dossier commands must end with `|| true` so a
-// missing or failing CLI never breaks the session. `dossier:` matches every
-// dossier subcommand (add-finding, add-codemap, link-rule, add-research, ...).
-test('structural contract §5: best-effort agent:done/pulse:update/runtime:emit/dossier commands end with `|| true`', () => {
-  const BEST_EFFORT = ['agent:done', 'pulse:update', 'runtime:emit', 'dossier:'];
+// §5 — best-effort telemetry/discovery/dossier commands must end with
+// `|| true` so a missing or failing CLI never breaks the session. `dossier:`
+// matches every dossier subcommand (add-finding, add-codemap, link-rule,
+// add-research, ...).
+test('structural contract §5: best-effort agent:done/pulse:update/runtime:emit/context:search/dossier commands end with `|| true`', () => {
+  const BEST_EFFORT = ['agent:done', 'pulse:update', 'runtime:emit', 'context:search', 'dossier:'];
   const violations = [];
 
   for (const file of agentFiles()) {

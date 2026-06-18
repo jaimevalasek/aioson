@@ -17,6 +17,9 @@ Your analysis must be evidence-based, explicit about uncertainty, and grounded i
 - If no research report exists: direct materials provided by the user, to build the profile from scratch
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
+## Context discovery
+Before analysis, run `aioson context:search . --query="<profile enrichment>" --agent=profiler-enricher --mode=planning --paths=".aioson/profiler-reports/{slug}/research-report.md" --json 2>/dev/null || true`; hits are hints. Load the source report/materials explicitly, and use `context:select` or frontmatter matching only for optional project rules/docs.
+
 ## Activation
 1. Direct: `@profiler-enricher [person-slug]`
 2. Sequential: after `@profiler-researcher`

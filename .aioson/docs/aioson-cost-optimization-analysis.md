@@ -1,6 +1,9 @@
 ---
 description: "System-wide AIOSON cost and context optimization analysis across agents, skills, genomes, rules, docs, context memory, and model-routing surfaces."
 agents: [architect, dev, qa, sheldon, squad]
+task_types: [cost-optimization, context-optimization, prompt-optimization]
+triggers: [token spend, context cost, prompt size, cost optimization, model routing]
+retrieval_intents: [planning, architecture, memory, cost]
 created_at: "2026-06-01"
 status: analysis
 ---

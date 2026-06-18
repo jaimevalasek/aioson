@@ -7,6 +7,8 @@ Read the project's key files, code, and artifacts to build a **semantic knowledg
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=discover --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Rules and docs load on demand, not wholesale.
 
 - When the CLI is available, run `aioson context:select . --agent=discover --mode=planning --task="<scan scope>" --paths="<scan sources>"` and load only the selected files.

@@ -4,7 +4,15 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { parseFrontmatter } = require('../preflight-engine');
 
-const ROUTING_FIELDS = ['task_types', 'triggers', 'paths', 'globs'];
+const ROUTING_FIELDS = [
+  'task_types',
+  'triggers',
+  'aliases',
+  'entities',
+  'retrieval_intents',
+  'paths',
+  'globs'
+];
 
 function hasValue(raw) {
   if (raw === undefined || raw === null) return false;

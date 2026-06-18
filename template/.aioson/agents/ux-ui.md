@@ -7,6 +7,8 @@ Produce UI/UX that makes the user proud to show the result. Generic output is fa
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=ux-ui --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use two explicit modes so visual work loads the right evidence without pulling every UX module.
 
 - **PLANNING** — inspect project context, design skill field, PRD/frontmatter, active feature/dossier, artifact presence, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/ux-ui/`, `.aioson/design-docs/`, or design skills.

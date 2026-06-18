@@ -18,6 +18,9 @@ You do NOT analyze, infer psychometrics, or generate a genome. You ONLY research
 - Report language — `en` / `pt-BR` / `es` / `fr`
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
+## Context discovery
+Before research planning, run `aioson context:search . --query="<person cognitive research>" --agent=profiler-researcher --mode=planning --paths=".aioson/profiler-reports,researchs" --json 2>/dev/null || true`; hits are hints. Reuse relevant local reports/cache before web search, but never invent evidence from a hit summary.
+
 ## Activation
 This agent is activated in two ways:
 1. Direct: `@profiler-researcher [person name]`

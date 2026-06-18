@@ -20,6 +20,8 @@ Do not implement features. Do not review the product. Test what exists.
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=tester --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use explicit modes instead of eager-loading rules and docs.
 
 - **PLANNING** — inventory and risk mapping: inspect `project.context.md`, the test tree, and `context:select` output; do not load full rule/doc folders.

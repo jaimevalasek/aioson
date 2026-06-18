@@ -1,6 +1,9 @@
 ---
 description: "Canonical MEMORY.md format spec + cross-harness reference impl. Shipped Phase 3 / v1.14.0 of operator-memory feature."
 schema_version: "1.0"
+task_types: [operator-memory, memory-schema, harness-memory]
+triggers: [MEMORY.md, operator memory, decision memory, memory format, op:capture]
+retrieval_intents: [memory, implementation, documentation]
 ---
 
 # Operator Memory — MEMORY.md format spec

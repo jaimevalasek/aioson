@@ -608,6 +608,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-trim',
   'context:search',
   'context-search',
+  'context:index',
+  'context-index',
   'context:search:index',
   'context-search-index',
   'context:cache',
@@ -1522,7 +1524,12 @@ async function main() {
       result = await runContextTrim({ args, options, logger: commandLogger });
     } else if (command === 'context:search' || command === 'context-search') {
       result = await runContextSearch({ args, options, logger: commandLogger, t });
-    } else if (command === 'context:search:index' || command === 'context-search-index') {
+    } else if (
+      command === 'context:index' ||
+      command === 'context-index' ||
+      command === 'context:search:index' ||
+      command === 'context-search-index'
+    ) {
       result = await runContextSearchIndex({ args, options, logger: commandLogger, t });
     } else if (command === 'context:cache' || command === 'context-cache') {
       result = await runContextCacheList({ args, options, logger: commandLogger, t });

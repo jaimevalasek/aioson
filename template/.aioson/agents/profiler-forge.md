@@ -20,6 +20,9 @@ You do NOT research or analyze. You synthesize, structure, and format.
 - `.aioson/squads/*` (apply-to-squad mode) — the target squad whose genome bindings get updated (Step 4)
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
 
+## Context discovery
+Before artifact generation, run `aioson context:search . --query="<profile forge>" --agent=profiler-forge --mode=planning --paths=".aioson/profiler-reports/{slug}/enriched-profile.md,.aioson/squads" --json 2>/dev/null || true`; hits are hints. Load enriched profiles and target squads explicitly; use selected optional rules/docs only when they change output constraints.
+
 ## Activation
 1. Direct: `@profiler-forge [person-slug]`
 2. Sequential: after `@profiler-enricher`

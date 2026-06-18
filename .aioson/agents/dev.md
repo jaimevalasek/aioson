@@ -4,10 +4,12 @@
 
 ## Context loading modes
 
-Use two modes and do not blur them:
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=dev --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints.
+
+Use two modes:
 
 - **PLANNING** — inspect status, frontmatter, indexes, and `aioson context:select`; do not load full rules/docs/design governance.
-- **EXECUTING** — before the first code edit, load only the files selected for the concrete task and paths.
+- **EXECUTING** — before first code edit, load only files selected for the task/paths.
 
 If `aioson` is available, select context with:
 
@@ -16,7 +18,7 @@ aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<kn
 aioson context:select . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>"
 ```
 
-If the CLI is unavailable, read YAML frontmatter only and apply the same rule: `agents`, `modes`, `task_types`, `triggers`, and `paths` decide what to load. Rules and governance override this file only after they are selected by mode/task/path.
+Without CLI, read YAML frontmatter only: `agents`, `modes`, `task_types`, `triggers`, and `paths` decide. Rules/governance override after selection.
 
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.
@@ -33,7 +35,7 @@ aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<kn
 aioson preflight:context . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
 aioson memory:status .
 ```
-Use output to orient. Do not load full `rules`, `.aioson/docs/`, or `.aioson/design-docs/` until `context:select --mode=executing` names them for the concrete edit. If CLI is unavailable, proceed to Step 1 with frontmatter-only selection.
+Use output to orient. Do not load full `rules`, `.aioson/docs/`, or `.aioson/design-docs/` until `context:select --mode=executing` names them. Without CLI, proceed to Step 1 with frontmatter-only selection.
 
 **Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
 
@@ -80,9 +82,9 @@ If you've read 5 files without writing code: stop and ask what to focus on.
 ## Feature mode detection
 
 If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate in **Simple Plan mode**:
-- Load the simple plan and `.aioson/docs/dev/simple-plan-lane.md`.
-- Do not require `prd-{slug}.md`, `spec-{slug}.md`, requirements, architecture, or implementation-plan artifacts.
-- Implement only the written scope, done criteria, expected files, and verification command.
+- Load the simple plan and `.aioson/docs/dev/simple-plan-lane.md`; skip PRD/spec/requirements/architecture/implementation-plan artifacts.
+- If missing `Context selected`, `Implementation intelligence`, or `Useful options considered`, enrich first: selected context, existing pattern, framework leverage, structure/data boundary.
+- Implement written scope, done criteria, expected files, and verification command.
 - If the work expands beyond the simple-plan lane, mark the plan `paused`, update `dev-state.md`, and hand off to the correct workflow agent.
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
@@ -288,7 +290,7 @@ Run `aioson` CLI yourself to keep the workflow moving:
 
 ## Auto-cycle return to @qa (corrections mode)
 
-Check active review cycles in order with `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|tester> --to=dev --json`. If a result has `exists: true` and matching `state.slug`, apply `state.last_plan` with that same `source`. After tests pass, update dossier/spec, run `aioson review-cycle:resolve . --feature={slug} --plan=<plan path> --source=<same> --to=dev --json 2>/dev/null || true`, then auto-invoke `Skill(aioson:agent:qa)` with `"re-verify after applying <plan path>"`. If the CLI is unavailable, fall back to `.aioson/runtime/qa-dev-cycle.json` for QA-origin cycles only.
+Check `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|tester> --to=dev --json`. For a matching cycle, apply `state.last_plan`; after tests pass, update dossier/spec, run `aioson review-cycle:resolve . --feature={slug} --plan=<plan path> --source=<same> --to=dev --json 2>/dev/null || true`, then auto-invoke `Skill(aioson:agent:qa)` for re-verification. CLI-less fallback: `.aioson/runtime/qa-dev-cycle.json` for QA-origin cycles only.
 
 **Safety net:** on activation, `.aioson/plans/{active-feature}/corrections-*.md` with `status: open|in_progress` overrides `dev-state` and must be applied first; `aioson dev:resume-data` already surfaces this as `open_corrections`.
 

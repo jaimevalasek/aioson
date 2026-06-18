@@ -28,6 +28,17 @@ Refinable means:
 - `status: draft`, or
 - `status: approved` with `prd_generated: null`.
 
+## Context discovery
+
+`context:search` is discovery; `context:select` is the loading contract. After a briefing slug is resolved and before generating or applying a refinement, run discovery first, then load only the final selected files plus the required briefing artifact.
+
+```bash
+aioson context:search . --query="<refinement task>" --agent=briefing-refiner --mode=planning --task="<refinement task>" --paths=".aioson/briefings/{slug}/briefings.md" --intent="planning,feature,memory" --json 2>/dev/null || true
+aioson context:select . --agent=briefing-refiner --mode=planning --task="<refinement task>" --paths=".aioson/briefings/{slug}/briefings.md"
+```
+
+Treat `must_read` and `should_read` from `context:search` as routing hints, not permission to bulk-load files. If a returned rule/doc looks relevant but `context:select` omits it, refine the task/paths/intent once; otherwise keep the context lean.
+
 ## Operating modes
 
 ### Generate review

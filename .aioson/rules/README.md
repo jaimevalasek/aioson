@@ -20,6 +20,9 @@ modes: [planning, executing]              # optional: restrict to a context:sele
 task_types: [payment, billing]            # routing: matched against the current task
 load_tier: trigger                        # trigger (default) | always | justified
 triggers: [money, pricing, checkout]      # routing: keywords/phrases matched against the task
+aliases: [workspace, project]             # routing: user/domain terms that may mean this rule
+entities: [Workspace, Project]            # routing: domain objects, tables, services, modules
+retrieval_intents: [database, memory]      # routing: why this file should be discovered
 paths: [src/billing/**]                   # routing: matched against the files being touched
 ---
 ```
@@ -39,6 +42,9 @@ paths: [src/billing/**]                   # routing: matched against the files b
 | `task_types` | no | Task categories matched against the `context:select` task description |
 | `load_tier` | no | `trigger` (default, loads on match), `always` (loads on every select), `justified` (higher match bar) |
 | `triggers` | no | Keywords or short verb phrases matched against the task (e.g. `creating files` matches "create a new file") |
+| `aliases` | no | Alternate user/domain terms that should recall this rule, e.g. `workspace` when the code entity is `project` |
+| `entities` | no | Domain objects, tables, services, modules, or concepts governed by the rule |
+| `retrieval_intents` | no | Discovery intent labels such as `planning`, `implementation`, `database`, `memory`, `feature`, `security`, or `testing` |
 | `paths` | no | Glob patterns matched against `--paths` (files about to be touched) |
 
 ---
@@ -55,9 +61,17 @@ paths: [src/billing/**]                   # routing: matched against the files b
 
 Agents load rules on demand through `aioson context:select`. A rule is selected when its
 metadata and semantic relevance score above the load threshold for the current task:
-`task_types`/`triggers` matches weigh most, `paths` matches add when the touched files
-overlap, `description` adds a small boost, and semantic search over the rule body can
-recover relevant rules when the task wording does not exactly match the metadata.
+`task_types`/`triggers` matches weigh most, `aliases`/`entities`/`retrieval_intents`
+help connect user language to project language, `paths` matches add when the touched
+files overlap, `description` adds a small boost, and semantic search over the rule body
+can recover relevant rules when the task wording does not exactly match the metadata.
+
+`aioson context:search` is the broad discovery layer. It indexes `.aioson/rules`,
+`.aioson/docs`, skills, context/bootstrap files, feature dossiers, plans, PRDs, and
+research summaries, then returns `must_read`, `should_read`, and `maybe` buckets. Its
+`--agent`, `--mode`, `--intent`, and `--source` flags are ranking boosts, not strict
+filters. Use `context:search` to discover candidates; use `context:select` as the final
+strict context package before loading files into an agent prompt.
 
 Semantic search is a recall aid, not a permission bypass. `agents`, `modes`,
 activation-only boundaries, and path/feature constraints still apply before a rule can

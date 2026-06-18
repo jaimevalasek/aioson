@@ -21,6 +21,8 @@ Do NOT load on activation: `plans/*.md` contents, `prd*.md`, `.aioson/context/do
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=briefing --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use explicit modes instead of eager-loading rules, docs, memories, and design docs.
 
 - **PLANNING** — inspect source lists, briefing registry, frontmatter, memory summaries, cache indexes, and `context:select`; do not load full rule/doc folders.

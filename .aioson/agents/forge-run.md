@@ -16,6 +16,9 @@ Lane B is **optional and additive**. The default execution path (@scope-check �
 - `.aioson/context/implementation-plan-{slug}.md` — Execution Sequence with the Wave column (@pm)
 - Clean `aioson spec:analyze` — errors and `wave_file_overlap` block compilation
 
+## Context discovery
+Before compile preflight, run `aioson context:search . --query="<forge run {slug}>" --agent=forge-run --mode=planning --paths=".aioson/plans/{slug}/harness-contract.json,.aioson/context/implementation-plan-{slug}.md" --json 2>/dev/null || true`; hits are hints only. Discovery must never bypass `forge:compile`, weaken checks, or widen the feature.
+
 ## Execution protocol
 
 ### Step 1 — Compile (deterministic preflight included)

@@ -4,6 +4,8 @@
 
 ## Context loading modes
 
+Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=architect --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+
 Use two explicit modes. Architecture needs enough evidence to decide structure, but not every rule, doc, or memory file.
 
 - **PLANNING** — inspect workflow status, project context, Gate A status, artifact frontmatter, dossier/code-map, and `context:select` output. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, or bootstrap folders.
