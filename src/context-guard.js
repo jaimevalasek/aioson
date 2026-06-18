@@ -1,7 +1,8 @@
 'use strict';
 
 const path = require('node:path');
-const { buildContextBrief } = require('./context-brief');
+const { buildContextBrief, extractDocConstraints } = require('./context-brief');
+const { readFileSafe } = require('./preflight-engine');
 
 // Harness-agnostic core for `context:guard`.
 //
@@ -78,23 +79,43 @@ function confidenceAllows(confidence, gate) {
   return have >= need;
 }
 
-function formatInjectionText(filePath, rules, brief, gate) {
+function dedupeStrings(items) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items || []) {
+    const text = String(item || '').trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push(text);
+  }
+  return out;
+}
+
+// Read each salient rule file and extract ITS OWN constraints — so the
+// injection is attributed per rule and never carries the generic concern-based
+// constraints the brief aggregates from the whole selection.
+async function buildRuleBlocks(targetDir, salient, gate) {
+  const blocks = [];
+  for (const rule of salient) {
+    const content = await readFileSafe(path.join(targetDir, rule.path));
+    if (!content) continue;
+    const extracted = extractDocConstraints(content);
+    const constraints = dedupeStrings(extracted.constraints).slice(0, gate.maxConstraints);
+    const forbidden = dedupeStrings(extracted.forbidden_patterns).slice(0, gate.maxForbidden);
+    if (constraints.length === 0 && forbidden.length === 0) continue;
+    blocks.push({ path: rule.path, constraints, forbidden });
+  }
+  return blocks;
+}
+
+function formatInjectionText(filePath, ruleBlocks) {
   const target = filePath ? path.basename(String(filePath)) : 'this change';
   const lines = [`[AIOSON context:guard] Project rules apply to ${target}:`];
-  lines.push(`Sources: ${rules.map((rule) => rule.path).join(', ')}`);
-
-  const constraints = (brief.constraints || []).slice(0, gate.maxConstraints);
-  if (constraints.length > 0) {
-    lines.push('Constraints:');
-    for (const constraint of constraints) lines.push(`- ${constraint}`);
+  for (const block of ruleBlocks) {
+    lines.push(`Rule ${block.path}:`);
+    for (const constraint of block.constraints) lines.push(`- ${constraint}`);
+    for (const pattern of block.forbidden) lines.push(`- (forbidden) ${pattern}`);
   }
-
-  const forbidden = (brief.forbidden_patterns || []).slice(0, gate.maxForbidden);
-  if (forbidden.length > 0) {
-    lines.push('Forbidden:');
-    for (const pattern of forbidden) lines.push(`- ${pattern}`);
-  }
-
   return lines.join('\n');
 }
 
@@ -138,11 +159,14 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   if (salient.length === 0) return emptyResponse();
   if (!confidenceAllows(brief.confidence, gate)) return emptyResponse();
 
-  const additionalContext = formatInjectionText(filePath, salient, brief, gate);
+  const ruleBlocks = await buildRuleBlocks(targetDir, salient, gate);
+  if (ruleBlocks.length === 0) return emptyResponse();
+
+  const additionalContext = formatInjectionText(filePath, ruleBlocks);
   const response = formatForTool(options.tool || 'claude', additionalContext);
   response._guard = {
     injected: true,
-    rules: salient.map((rule) => rule.path),
+    rules: ruleBlocks.map((block) => block.path),
     confidence: brief.confidence
   };
   return response;

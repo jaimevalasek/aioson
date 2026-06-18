@@ -114,6 +114,9 @@ test('context:guard injects the workspace→project rule for a matching migratio
     assert.ok(response._guard.rules.includes('.aioson/rules/db-naming.md'));
     // Discrimination: the unrelated UI rule must not leak in.
     assert.equal(response._guard.rules.includes('.aioson/rules/unrelated-ui.md'), false);
+    // Per-rule attribution: db-naming's own constraint, never the generic concern lines.
+    assert.match(injected, /Rule \.aioson\/rules\/db-naming\.md:/);
+    assert.doesNotMatch(injected, /technical English|controllers and route handlers thin/i);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

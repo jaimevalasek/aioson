@@ -238,6 +238,34 @@ function forbiddenFromBullets(bullets) {
   ));
 }
 
+const REQUIRED_CONSTRAINT_HEADINGS = [
+  /required behavior/,
+  /framework first/,
+  /componentization/,
+  /data access/,
+  /controls/,
+  /rules/,
+  /baseline/
+];
+
+const REVIEW_HEADINGS = [/review checklist/, /checklist/, /verification/];
+
+// Extract the operating constraints from a SINGLE governing document.
+// Shared by the brief (aggregate over all selected docs) and the guard
+// (per-rule attribution — the injection carries only the matched rule's own
+// constraints, not the generic concern-based ones).
+function extractDocConstraints(content) {
+  const required = extractSectionBullets(content, REQUIRED_CONSTRAINT_HEADINGS);
+  const review = extractSectionBullets(content, REVIEW_HEADINGS);
+  const directives = extractDirectiveBullets(content);
+  const base = [...required, ...directives];
+  return {
+    constraints: base,
+    forbidden_patterns: forbiddenFromBullets(base),
+    verification_hints: review
+  };
+}
+
 function constraintsFromDocuments(documents, selected) {
   const constraints = [];
   const forbidden = [];
@@ -245,21 +273,10 @@ function constraintsFromDocuments(documents, selected) {
 
   for (const item of selected) {
     if (!['rules', 'design_governance', 'docs'].includes(item.surface)) continue;
-    const content = documents.get(item.path) || '';
-    const required = extractSectionBullets(content, [
-      /required behavior/,
-      /framework first/,
-      /componentization/,
-      /data access/,
-      /controls/,
-      /rules/,
-      /baseline/
-    ]);
-    const review = extractSectionBullets(content, [/review checklist/, /checklist/, /verification/]);
-    const directives = extractDirectiveBullets(content);
-    constraints.push(...required, ...directives);
-    forbidden.push(...forbiddenFromBullets([...required, ...directives]));
-    checks.push(...review);
+    const doc = extractDocConstraints(documents.get(item.path) || '');
+    constraints.push(...doc.constraints);
+    forbidden.push(...doc.forbidden_patterns);
+    checks.push(...doc.verification_hints);
   }
 
   return {
@@ -478,5 +495,6 @@ module.exports = {
   buildContextBrief,
   inferOperation,
   inferConcerns,
-  suggestedStructure
+  suggestedStructure,
+  extractDocConstraints
 };
