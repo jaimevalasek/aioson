@@ -149,6 +149,7 @@ const { runBackupLocal } = require('./commands/backup-local-cmd');
 const { runRecoveryGenerate, runRecoveryShow } = require('./commands/recovery');
 const { runContextMonitor } = require('./commands/context-monitor');
 const { runContextSearch, runContextSearchIndex } = require('./commands/context-search');
+const { runContextGuard } = require('./commands/context-guard');
 const { runContextCacheList, runContextCacheSave, runContextCacheRestore, runContextCacheCleanup } = require('./commands/context-cache');
 const { runSandboxExec } = require('./commands/sandbox');
 const { runAgentLoad, runAgentShardIndex } = require('./commands/agent-loader');
@@ -261,6 +262,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-select',
   'context:brief',
   'context-brief',
+  'context:guard',
+  'context-guard',
   'rules:lint',
   'rules-lint',
   'context:load',
@@ -827,6 +830,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_context_pack');
   logHelpLine(t, logger, 'cli.help_context_select');
   logHelpLine(t, logger, 'cli.help_context_brief');
+  logHelpLine(t, logger, 'cli.help_context_guard');
   logHelpLine(t, logger, 'cli.help_context_load');
   logHelpLine(t, logger, 'cli.help_memory_status');
   logHelpLine(t, logger, 'cli.help_memory_summary');
@@ -1116,6 +1120,8 @@ async function main() {
       result = await runContextSelect({ args, options, logger: commandLogger, t });
     } else if (command === 'context:brief' || command === 'context-brief') {
       result = await runContextBrief({ args, options, logger: commandLogger, t });
+    } else if (command === 'context:guard' || command === 'context-guard') {
+      result = await runContextGuard({ args, options, logger: commandLogger, t });
     } else if (command === 'rules:lint' || command === 'rules-lint') {
       result = await runRulesLint({ args, options, logger: commandLogger, t });
     } else if (command === 'context:load' || command === 'context-load') {

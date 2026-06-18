@@ -32,6 +32,8 @@ module.exports = {
       'aioson context:select [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=en]',
     help_context_brief:
       'aioson context:brief [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=en]',
+    help_context_guard:
+      'aioson context:guard [path] [--tool=claude] [--agent=<agent>] [--event=<json>] [--event-file=<path>] [--json] [--locale=en]',
     help_context_load:
       'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<name> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=en]',
     help_chain_audit:

@@ -33,6 +33,8 @@ module.exports = {
       'aioson context:select [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=pt-BR]',
     help_context_brief:
       'aioson context:brief [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=pt-BR]',
+    help_context_guard:
+      'aioson context:guard [path] [--tool=claude] [--agent=<agente>] [--event=<json>] [--event-file=<caminho>] [--json] [--locale=pt-BR]',
     help_context_load:
       'aioson context:load [path] --target=<rule|brain>:<slug> --agent=<nome> [--batch="slug1,slug2"] [--feature=<slug>] [--classification=<MICRO|SMALL|MEDIUM>] [--verbose] [--json] [--locale=pt-BR]',
     help_chain_audit:
