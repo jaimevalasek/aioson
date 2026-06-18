@@ -156,6 +156,39 @@ test('context:guard ignores non-mutating tools even when the path looks relevant
   }
 });
 
+test('context:guard does not fire for a baseline rule matched only via a generic trigger', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeProject(dir);
+    // Ambient baseline rule: a generic trigger plus a broad path glob, but NO
+    // entities/aliases — it must not inject on every edit (cry-wolf guard).
+    await writeFile(dir, '.aioson/rules/code-style.md', [
+      '---',
+      'source_type: rule',
+      'description: "Code style baseline"',
+      'agents: all',
+      'modes: [executing]',
+      'triggers: [function, helper]',
+      'paths: ["src/**"]',
+      'load_tier: trigger',
+      '---',
+      '# Code style',
+      '## Required behavior',
+      '- Use clear names.'
+    ].join('\n'));
+
+    const event = {
+      tool_name: 'Write',
+      tool_input: { file_path: 'src/util/helper.js', content: 'function helper() { return 1; }' }
+    };
+    const response = await buildGuardResponse(event, dir, { tool: 'claude' });
+
+    assert.deepEqual(response, {}); // matched only via a trigger -> no injection
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:guard command emits a pristine wire payload in JSON mode', async () => {
   const dir = await makeTmpDir();
   try {

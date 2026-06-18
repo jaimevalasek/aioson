@@ -18,10 +18,13 @@ const MUTATING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 // through a foundation always-load or a pure semantic guess.
 const HARD_SIGNAL = /(?:triggers|paths|entities|aliases|task_types):/;
 
-// Salience gate: fire only when at least one rule matched a domain signal
-// (trigger/entity/alias/task_type), not merely a broad path glob like `src/**`.
-// This is the "salient event, not every turn" guard against injection fatigue.
-const DOMAIN_SIGNAL = /(?:triggers|entities|aliases|task_types):/;
+// Salience gate: a rule opts into guard injection by declaring `entities` or
+// `aliases` — the domain-specific routing signals (e.g. Workspace/Project).
+// Rules matched only via generic triggers/task_types or a broad path glob like
+// `src/**` are ambient baseline (e.g. "use English identifiers") and must NOT
+// re-inject on every edit — that is the injection-fatigue ("cry wolf") failure
+// observed when dogfooding against a real repo.
+const DOMAIN_SIGNAL = /(?:entities|aliases):/;
 
 // Tunable relevance gate.
 const GUARD_GATE = {
