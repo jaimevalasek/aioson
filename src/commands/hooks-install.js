@@ -39,13 +39,35 @@ function makeDoneCommand(agentName) {
   return `aioson agent:done "$PWD" --agent=${agentName} --summary="Session ended via ${agentName} hook" 2>/dev/null || true`;
 }
 
+function makeGuardCommand(agentName) {
+  // PreToolUse: the harness pipes the pending edit event (JSON on stdin); the
+  // guard derives a query from the artifact itself, runs context:brief, and
+  // injects salient project-rule constraints before the write lands. Advisory —
+  // always exits 0, never blocks the tool.
+  return `aioson context:guard "$PWD" --tool=claude --agent=${agentName} --json 2>/dev/null || true`;
+}
+
 // ─── Claude Code ─────────────────────────────────────────────────────────────
 
-function buildClaudeHooks(agentName) {
+// True for any hook entry AIOSON owns, so reinstall/uninstall can scrub them
+// without disturbing user-authored hooks.
+const AIOSON_HOOK_SIGNATURES = [
+  'aioson hooks:emit',
+  'aioson agent:done',
+  'aioson context:guard',
+  'aioson live:start'
+];
+
+function isAiosonHookEntry(entry) {
+  const cmd = entry?.hooks?.[0]?.command || entry?.command || '';
+  return AIOSON_HOOK_SIGNATURES.some((sig) => cmd.includes(sig));
+}
+
+function buildClaudeHooks(agentName, includeGuard = true) {
   const emitCmd = makeEmitCommand(agentName, 'claude');
   const doneCmd = makeDoneCommand(agentName);
 
-  return {
+  const hooks = {
     PostToolUse: [
       {
         matcher: 'Write|Edit|MultiEdit',
@@ -66,9 +88,20 @@ function buildClaudeHooks(agentName) {
       }
     ]
   };
+
+  if (includeGuard) {
+    hooks.PreToolUse = [
+      {
+        matcher: 'Write|Edit|MultiEdit|NotebookEdit',
+        hooks: [{ type: 'command', command: makeGuardCommand(agentName) }]
+      }
+    ];
+  }
+
+  return hooks;
 }
 
-async function installClaudeHooks(agentName, dryRun, logger) {
+async function installClaudeHooks(agentName, dryRun, logger, includeGuard = true) {
   const configPath = CONFIG_PATHS.claude;
   await fs.mkdir(path.dirname(configPath), { recursive: true });
 
@@ -77,21 +110,26 @@ async function installClaudeHooks(agentName, dryRun, logger) {
     existing = JSON.parse(await fs.readFile(configPath, 'utf8'));
   } catch { /* file doesn't exist yet */ }
 
-  const newHooks = buildClaudeHooks(agentName);
+  const newHooks = buildClaudeHooks(agentName, includeGuard);
 
   // Merge: add AIOSON hooks without removing existing ones
   const merged = { ...existing };
   if (!merged.hooks) merged.hooks = {};
+
+  // When the guard is opted out, still scrub any previously-installed guard hook
+  // so a reinstall with --no-guard actually removes it.
+  for (const event of Object.keys(merged.hooks)) {
+    if (newHooks[event]) continue;
+    merged.hooks[event] = (merged.hooks[event] || []).filter((entry) => !isAiosonHookEntry(entry));
+    if (merged.hooks[event].length === 0) delete merged.hooks[event];
+  }
 
   for (const [event, hookList] of Object.entries(newHooks)) {
     if (!merged.hooks[event]) {
       merged.hooks[event] = hookList;
     } else {
       // Remove any existing AIOSON hooks (to avoid duplicates on reinstall)
-      const filtered = merged.hooks[event].filter((entry) => {
-        const cmd = entry.hooks?.[0]?.command || '';
-        return !cmd.includes('aioson hooks:emit') && !cmd.includes('aioson agent:done');
-      });
+      const filtered = merged.hooks[event].filter((entry) => !isAiosonHookEntry(entry));
       merged.hooks[event] = [...filtered, ...hookList];
     }
   }
@@ -102,6 +140,9 @@ async function installClaudeHooks(agentName, dryRun, logger) {
   } else {
     logger.log(`  [dry-run] Would write: ${configPath}`);
     logger.log(`  Hooks to add:`);
+    if (includeGuard) {
+      logger.log(`    PreToolUse (Write|Edit|MultiEdit|NotebookEdit) → context:guard`);
+    }
     logger.log(`    PostToolUse (Write|Edit|MultiEdit|Bash|Task|TodoWrite) → hooks:emit`);
     logger.log(`    Stop → agent:done`);
   }
@@ -250,6 +291,7 @@ async function runHooksInstall({ args, options = {}, logger }) {
   const projectDir = path.resolve(process.cwd(), args[0] || '.');
   const agentName = options.agent ? String(options.agent).replace(/^@/, '') : 'dev';
   const dryRun = options['dry-run'] || options.dryRun || false;
+  const includeGuard = !(options['no-guard'] || options.noGuard);
   let tool = options.tool ? String(options.tool).trim().toLowerCase() : 'all';
 
   if (tool === 'all') {
@@ -271,7 +313,7 @@ async function runHooksInstall({ args, options = {}, logger }) {
   for (const t of tools) {
     try {
       if (t === 'claude') {
-        results.push(await installClaudeHooks(agentName, dryRun, logger));
+        results.push(await installClaudeHooks(agentName, dryRun, logger, includeGuard));
       } else if (t === 'antigravity') {
         results.push(await installAntigravityHooks(agentName, projectDir, dryRun, logger));
       } else if (t === 'codex') {
@@ -290,6 +332,9 @@ async function runHooksInstall({ args, options = {}, logger }) {
   if (!dryRun) {
     logger.log('');
     logger.log('Hooks installed. From now on:');
+    if (includeGuard && tools.includes('claude')) {
+      logger.log('  • Before each file write/edit → context:guard injects salient project-rule constraints');
+    }
     logger.log('  • Every file write/edit → logged as artifact event');
     logger.log('  • Every bash command → logged as step_done event');
     logger.log('  • Session end → logged as agent:done');
@@ -321,10 +366,7 @@ async function runHooksUninstall({ args, options = {}, logger }) {
         const existing = JSON.parse(await fs.readFile(configPath, 'utf8'));
         if (existing.hooks) {
           for (const event of Object.keys(existing.hooks)) {
-            existing.hooks[event] = (existing.hooks[event] || []).filter((entry) => {
-              const cmd = entry.hooks?.[0]?.command || entry.command || '';
-              return !cmd.includes('aioson hooks:emit') && !cmd.includes('aioson agent:done') && !cmd.includes('aioson live:start');
-            });
+            existing.hooks[event] = (existing.hooks[event] || []).filter((entry) => !isAiosonHookEntry(entry));
             if (existing.hooks[event].length === 0) delete existing.hooks[event];
           }
           if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
@@ -344,4 +386,9 @@ async function runHooksUninstall({ args, options = {}, logger }) {
   return { ok: true };
 }
 
-module.exports = { runHooksInstall, runHooksUninstall };
+module.exports = {
+  runHooksInstall,
+  runHooksUninstall,
+  buildClaudeHooks,
+  isAiosonHookEntry
+};
