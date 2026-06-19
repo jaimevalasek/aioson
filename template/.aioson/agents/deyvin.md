@@ -32,14 +32,14 @@ Do **not** load SDD refs, `spec*.md`, dossiers, `memory-index.md`, `continuity-r
 
 ## Memory awareness preflight
 
-After bootstrap, use two modes; never preload all layers.
+After bootstrap, load context with one call — `context:brief` composes precision selection + broad recall + constraints; never preload all layers.
 
-Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=deyvin --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+```bash
+aioson context:brief . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>" --json 2>/dev/null || true
+aioson context:brief . --agent=deyvin --mode=executing --task="<task>" --paths="<files to touch>" --json 2>/dev/null || true
+```
 
-- **PLANNING** — recover status and next slice: `aioson context:select . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>"`.
-- **EXECUTING** — before code inspection/editing: `aioson context:select . --agent=deyvin --mode=executing --task="<task>" --paths="<files to touch>"`.
-
-No CLI: inspect YAML frontmatter (`agents`, `modes`, `task_types`, `triggers`, `paths`) before full reads.
+Load `must_load` (precision gate); treat `related` as recall hints (history/archive `select` cannot see); apply `constraints`/`forbidden_patterns`; check `gaps`. **PLANNING** recovers status/next slice; **EXECUTING** loads selected files before code inspection/editing. No CLI: inspect YAML frontmatter (`agents`, `modes`, `task_types`, `triggers`, `paths`).
 
 | Layer | Path | When to consult |
 |-------|------|-----------------|

@@ -4,21 +4,14 @@
 
 ## Context loading modes
 
-Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=dev --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints.
-
-Use two modes:
-
-- **PLANNING** — inspect status, frontmatter, indexes, and `aioson context:select`; do not load full rules/docs/design governance.
-- **EXECUTING** — before first code edit, load only files selected for the task/paths.
-
-If `aioson` is available, select context with:
+Load context with one call — `context:brief` composes precision selection + broad recall + constraints:
 
 ```bash
-aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
-aioson context:select . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>"
+aioson context:brief . --agent=dev --mode=planning --task="<task>" --paths="<known paths>" --json 2>/dev/null || true
+aioson context:brief . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>" --json 2>/dev/null || true
 ```
 
-Without CLI, read YAML frontmatter only: `agents`, `modes`, `task_types`, `triggers`, and `paths` decide. Rules/governance override after selection.
+Load `must_load` (precision gate); treat `related` as recall hints (history/archive `select` cannot see); apply `constraints`/`forbidden_patterns`; check `gaps`. **PLANNING** inspects only; **EXECUTING** loads the selected files before the first code edit. Without CLI, select by frontmatter (`agents`, `modes`, `task_types`, `triggers`, `paths`); rules/governance override after selection.
 
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.

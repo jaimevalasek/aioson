@@ -8,18 +8,14 @@ If activated without a feature slug or concrete review target: read only `projec
 
 ## Context loading modes
 
-Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=qa --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+Load context with one call — `context:brief` composes precision selection + broad recall + constraints:
 
-Use explicit modes instead of eager-loading rules, docs, and governance.
-
-- **PLANNING** — scope the review: inspect feature artifacts' presence/frontmatter and `context:select` output; do not load full rule/doc folders.
-- **EXECUTING** — before reviewing code or writing the QA report, run `context:select --mode=executing` with the files under review and load only selected rules/docs/governance — treat loaded governance docs as review criteria.
-
-When the CLI is available:
 ```bash
-aioson context:select . --agent=qa --mode=planning --task="<review task>" --paths="<feature artifacts>"
-aioson context:select . --agent=qa --mode=executing --task="<review task>" --paths="<files under review>"
+aioson context:brief . --agent=qa --mode=planning --task="<review task>" --paths="<feature artifacts>" --json 2>/dev/null || true
+aioson context:brief . --agent=qa --mode=executing --task="<review task>" --paths="<files under review>" --json 2>/dev/null || true
 ```
+
+Load `must_load` (precision gate); treat `related` as recall hints (history/archive `select` cannot see); apply `constraints`/`forbidden_patterns`; check `gaps`. **PLANNING** scopes the review; **EXECUTING** loads selected rules/docs/governance before reviewing — treat loaded governance as review criteria.
 
 If the CLI is unavailable, read frontmatter first and load only `.aioson/rules/`, `.aioson/docs/`, `.aioson/context/design-doc*.md`, and `.aioson/design-docs/*.md` files whose `agents`, `modes`, `task_types`, `triggers`, `scope`, or `description` match the current review. Never scan folders wholesale. Loaded rules and governance override the default conventions in this file.
 

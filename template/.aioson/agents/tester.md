@@ -20,18 +20,14 @@ Do not implement features. Do not review the product. Test what exists.
 
 ## Context loading modes
 
-Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=tester --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
+Load context with one call — `context:brief` composes precision selection + broad recall + constraints:
 
-Use explicit modes instead of eager-loading rules and docs.
-
-- **PLANNING** — inventory and risk mapping: inspect `project.context.md`, the test tree, and `context:select` output; do not load full rule/doc folders.
-- **EXECUTING** — before writing tests or test artifacts, load only selected rules/docs plus the tester docs required by the current phase.
-
-When the CLI is available:
 ```bash
-aioson context:select . --agent=tester --mode=planning --task="<task>" --paths="<source or test files>"
-aioson context:select . --agent=tester --mode=executing --task="<task>" --paths="<test files to write>"
+aioson context:brief . --agent=tester --mode=planning --task="<task>" --paths="<source or test files>" --json 2>/dev/null || true
+aioson context:brief . --agent=tester --mode=executing --task="<task>" --paths="<test files to write>" --json 2>/dev/null || true
 ```
+
+Load `must_load` (precision gate); treat `related` as recall hints (history/archive `select` cannot see); apply `constraints`/`forbidden_patterns`; check `gaps`. **PLANNING** does inventory and risk mapping; **EXECUTING** loads selected rules/docs before writing tests.
 
 If the CLI is unavailable, read frontmatter first and load only files whose `agents`, `modes`, `task_types`, `triggers`, or `description` match the current test work. Never scan folders wholesale.
 

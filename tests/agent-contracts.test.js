@@ -286,9 +286,9 @@ test('agents run context search discovery before selective loading', async () =>
     if (exempt.has(agent)) continue;
 
     const content = await read(path.join(agentDir, file));
-    assert.match(content, /aioson context:search .*--agent=/, `missing context:search discovery command: ${agent}`);
-    assert.equal(content.includes(`--agent=${agent}`), true, `context:search must identify agent: ${agent}`);
-    assert.match(content, /aioson context:search .*2>\/dev\/null \|\| true/, `context:search must be best-effort: ${agent}`);
+    assert.match(content, /aioson context:(search|brief) .*--agent=/, `missing context discovery command (search or brief): ${agent}`);
+    assert.equal(content.includes(`--agent=${agent}`), true, `context discovery must identify agent: ${agent}`);
+    assert.match(content, /aioson context:(search|brief) .*2>\/dev\/null \|\| true/, `context discovery must be best-effort: ${agent}`);
   }
 
   for (const gatewayFile of ['template/AGENTS.md', 'template/CLAUDE.md']) {
