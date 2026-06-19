@@ -2,7 +2,13 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildClaudeHooks, isAiosonHookEntry } = require('../src/commands/hooks-install');
+const {
+  buildAntigravityHooks,
+  buildClaudeHooks,
+  isAiosonHookEntry,
+  normalizeHookAgentName,
+  runHooksInstall
+} = require('../src/commands/hooks-install');
 
 test('buildClaudeHooks wires a PreToolUse context:guard hook by default', () => {
   const hooks = buildClaudeHooks('dev');
@@ -12,7 +18,7 @@ test('buildClaudeHooks wires a PreToolUse context:guard hook by default', () => 
   const cmd = entry.hooks[0].command;
   assert.match(cmd, /aioson context:guard/);
   assert.match(cmd, /--tool=claude/);
-  assert.match(cmd, /--agent=dev/);
+  assert.match(cmd, /--agent='dev'/);
   assert.match(cmd, /--json/);
   assert.match(cmd, /2>\/dev\/null \|\| true/); // advisory, never blocks the tool
 });
@@ -27,7 +33,51 @@ test('buildClaudeHooks omits the guard hook when opted out', () => {
 
 test('buildClaudeHooks bakes the requested agent into the guard command', () => {
   const hooks = buildClaudeHooks('qa');
-  assert.match(hooks.PreToolUse[0].hooks[0].command, /--agent=qa/);
+  assert.match(hooks.PreToolUse[0].hooks[0].command, /--agent='qa'/);
+});
+
+test('normalizeHookAgentName accepts known agents, aliases, and kebab-case custom agents', () => {
+  assert.equal(normalizeHookAgentName('@QA'), 'qa');
+  assert.equal(normalizeHookAgentName('/dev'), 'dev');
+  assert.equal(normalizeHookAgentName('@pair'), 'deyvin');
+  assert.equal(normalizeHookAgentName('custom-agent-2'), 'custom-agent-2');
+});
+
+test('hook builders reject shell-control payloads in agent names', () => {
+  const payloads = [
+    'dev; echo AIOSON_PENTEST',
+    'dev && echo AIOSON_PENTEST',
+    'dev$(echo AIOSON_PENTEST)',
+    'dev name',
+    'dev\nname',
+    'dev"name',
+    "dev'name",
+    '`dev`'
+  ];
+
+  for (const payload of payloads) {
+    assert.throws(() => buildClaudeHooks(payload), /invalid agent name/);
+    assert.throws(() => buildAntigravityHooks(payload), /invalid agent name/);
+  }
+});
+
+test('runHooksInstall rejects invalid agent names before hook generation', async () => {
+  const logs = [];
+  const result = await runHooksInstall({
+    args: ['.'],
+    options: {
+      tool: 'claude',
+      agent: 'dev; echo AIOSON_PENTEST',
+      'dry-run': true
+    },
+    logger: { log: (line) => logs.push(line) }
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'invalid_agent_name');
+  assert.match(result.error, /invalid agent name/);
+  assert.ok(logs.some((line) => line.includes('Invalid agent name')));
+  assert.ok(logs.every((line) => !line.includes('--agent=dev; echo AIOSON_PENTEST')));
 });
 
 test('isAiosonHookEntry recognizes AIOSON-owned hooks and leaves user hooks alone', () => {
