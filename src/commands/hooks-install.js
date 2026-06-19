@@ -241,6 +241,35 @@ function mergeAntigravityHooks(existing, newHooks) {
   return merged;
 }
 
+// Scrub AIOSON entries from one Antigravity hooks file, mirroring the
+// `cmd.includes('aioson')` policy the merge uses on install.
+async function scrubAntigravityHookFile(filePath, dryRun, logger, label) {
+  let existing;
+  try {
+    existing = JSON.parse(await fs.readFile(filePath, 'utf8'));
+  } catch {
+    logger.log(`  ${label} not found — nothing to remove`);
+    return { tool: 'antigravity', path: filePath, removed: false };
+  }
+  if (existing.hooks) {
+    for (const event of Object.keys(existing.hooks)) {
+      existing.hooks[event] = (existing.hooks[event] || []).filter((entry) => {
+        const cmd = entry.command || entry.hooks?.[0]?.command || '';
+        return !cmd.includes('aioson');
+      });
+      if (existing.hooks[event].length === 0) delete existing.hooks[event];
+    }
+    if (Object.keys(existing.hooks).length === 0) delete existing.hooks;
+  }
+  if (!dryRun) {
+    await fs.writeFile(filePath, JSON.stringify(existing, null, 2), 'utf8');
+    logger.log(`  ✓ ${label} hooks removed — ${filePath}`);
+  } else {
+    logger.log(`  [dry-run] Would remove AIOSON hooks from: ${filePath}`);
+  }
+  return { tool: 'antigravity', path: filePath, removed: true };
+}
+
 // ─── Codex (OpenAI) ───────────────────────────────────────────────────────────
 
 async function installCodexHooks(agentName, dryRun, logger) {
@@ -387,12 +416,15 @@ async function runHooksUninstall({ args, options = {}, logger }) {
     logger.log(`Invalid agent name: ${err.message}`);
     return { ok: false, reason: 'invalid_agent_name', error: err.message };
   }
+  const projectDir = path.resolve(process.cwd(), args && args[0] ? args[0] : '.');
   const dryRun = options['dry-run'] || options.dryRun || false;
   const tool = options.tool ? String(options.tool).trim().toLowerCase() : 'claude';
   const tools = tool.split(',').map((t) => t.trim()).filter(Boolean);
 
   logger.log(`Hooks Uninstall — agent: @${agentName}${dryRun ? ' [dry-run]' : ''}`);
   logger.log('─'.repeat(50));
+
+  const results = [];
 
   for (const t of tools) {
     if (t === 'claude') {
@@ -412,13 +444,39 @@ async function runHooksUninstall({ args, options = {}, logger }) {
         } else {
           logger.log(`  [dry-run] Would remove AIOSON hooks from: ${configPath}`);
         }
+        results.push({ tool: 'claude', path: configPath, removed: true });
       } catch {
         logger.log(`  Claude Code settings not found — nothing to remove`);
+        results.push({ tool: 'claude', removed: false });
       }
+    } else if (t === 'antigravity') {
+      // Install writes both a global and a workspace hooks file — scrub both.
+      results.push(await scrubAntigravityHookFile(CONFIG_PATHS.antigravity, dryRun, logger, 'Antigravity global'));
+      results.push(await scrubAntigravityHookFile(
+        path.join(projectDir, CONFIG_PATHS.antigravity_workspace), dryRun, logger, 'Antigravity workspace'
+      ));
+    } else if (t === 'codex') {
+      const wrapperPath = path.join(HOME, '.codex', 'aioson-wrapper.sh');
+      try {
+        if (!dryRun) {
+          await fs.unlink(wrapperPath);
+          logger.log(`  ✓ Codex wrapper removed — ${wrapperPath}`);
+          logger.log(`  ⚠ Also remove the alias from your shell rc if you added it: alias codex='${wrapperPath}'`);
+        } else {
+          logger.log(`  [dry-run] Would remove: ${wrapperPath}`);
+        }
+        results.push({ tool: 'codex', path: wrapperPath, removed: true });
+      } catch {
+        logger.log(`  Codex wrapper not found — nothing to remove`);
+        results.push({ tool: 'codex', removed: false });
+      }
+    } else {
+      logger.log(`  ⚠ Unknown tool: ${t} — supported: claude, antigravity, codex`);
+      results.push({ tool: t, removed: false, reason: 'unsupported' });
     }
   }
 
-  return { ok: true };
+  return { ok: true, results };
 }
 
 module.exports = {
@@ -426,6 +484,7 @@ module.exports = {
   runHooksUninstall,
   buildClaudeHooks,
   buildAntigravityHooks,
+  scrubAntigravityHookFile,
   normalizeHookAgentName,
   isAiosonHookEntry
 };

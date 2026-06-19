@@ -182,6 +182,55 @@ test('context:guard ignores non-mutating tools even when the path looks relevant
   }
 });
 
+test('context:guard does not false-inject a rule via a short alias substring (P1)', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeProject(dir);
+
+    // "build" and "require" both contain "ui" as a substring. The unrelated UI
+    // rule's only short domain signal is alias `ui`; a bare substring match used
+    // to false-fire here and inject it on a plain backend file.
+    const event = {
+      tool_name: 'Write',
+      tool_input: {
+        file_path: 'src/server/auth.js',
+        content: 'const crypto = require("crypto");\nfunction build() { return crypto.randomBytes(8); }'
+      }
+    };
+    const response = await buildGuardResponse(event, dir, { tool: 'claude', agent: 'dev' });
+
+    const injectedRules = response._guard ? response._guard.rules : [];
+    assert.equal(
+      injectedRules.includes('.aioson/rules/unrelated-ui.md'),
+      false,
+      'short alias "ui" must not substring-match build/require'
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('runContextGuard emits {} (not an ok:false envelope) when the engine throws (P5)', async () => {
+  const guardMod = require('../src/context-guard');
+  const original = guardMod.buildGuardResponse;
+  guardMod.buildGuardResponse = async () => { throw new Error('boom'); };
+  // The command destructures buildGuardResponse at load time, so re-require it
+  // after stubbing to pick up the throwing version.
+  delete require.cache[require.resolve('../src/commands/context-guard')];
+  try {
+    const { runContextGuard: freshRun } = require('../src/commands/context-guard');
+    const out = logger();
+    // Pass the event inline so resolveEvent never falls through to readStdinEvent
+    // (which would block waiting for stdin to end under the test runner).
+    const event = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: 'x.js', content: 'y' } });
+    const wire = await freshRun({ args: ['.'], options: { json: true, event }, logger: out });
+    assert.deepEqual(wire, {}, 'guard failures surface as an empty injection, never {ok:false}');
+  } finally {
+    guardMod.buildGuardResponse = original;
+    delete require.cache[require.resolve('../src/commands/context-guard')];
+  }
+});
+
 test('context:guard does not fire for a baseline rule matched only via a generic trigger', async () => {
   const dir = await makeTmpDir();
   try {

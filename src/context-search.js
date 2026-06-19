@@ -41,31 +41,74 @@ async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
 
+function normalizeProjectDir(dir) {
+  const resolved = path.resolve(dir);
+  // The recall index is one global DB shared across callers. Windows paths are
+  // case-insensitive, so fold case on win32 to keep a single partition per
+  // project regardless of drive-letter/segment casing drift between callers
+  // (a lowercased drive letter, a symlink, cwd casing differing across tools).
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
 function openDb(dbPath) {
-  const db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  // Wait up to 5s for a transient lock (e.g. WAL checkpoint, AV file-lock on
-  // Windows) instead of throwing SQLITE_BUSY immediately.
-  db.pragma('busy_timeout = 5000');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_version (
-      version INTEGER NOT NULL
-    );
-  `);
-
-  ensureSearchTables(db);
-  ensureMetaSchema(db);
-
-  // Insert schema version if not present
-  const ver = db.prepare('SELECT version FROM schema_version LIMIT 1').get();
-  if (!ver) {
-    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
-  } else if (Number(ver.version) < SCHEMA_VERSION) {
-    db.prepare('UPDATE schema_version SET version = ?').run(SCHEMA_VERSION);
+  try {
+    return initDb(dbPath);
+  } catch (err) {
+    if (!isCorruptionError(err)) throw err;
+    // A truncated WAL, AV quarantine, or disk-full can leave the sqlite file
+    // unopenable (SQLITE_NOTADB/SQLITE_CORRUPT). Recreate it once instead of
+    // bricking every recall command until the user manually deletes the file.
+    discardDbFiles(dbPath);
+    return initDb(dbPath);
   }
+}
 
-  return db;
+function initDb(dbPath) {
+  let db;
+  try {
+    db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    // Wait up to 5s for a transient lock (e.g. WAL checkpoint, AV file-lock on
+    // Windows) instead of throwing SQLITE_BUSY immediately.
+    db.pragma('busy_timeout = 5000');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS schema_version (
+        version INTEGER NOT NULL
+      );
+    `);
+
+    ensureSearchTables(db);
+    ensureMetaSchema(db);
+
+    // Insert schema version if not present
+    const ver = db.prepare('SELECT version FROM schema_version LIMIT 1').get();
+    if (!ver) {
+      db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
+    } else if (Number(ver.version) < SCHEMA_VERSION) {
+      db.prepare('UPDATE schema_version SET version = ?').run(SCHEMA_VERSION);
+    }
+
+    return db;
+  } catch (err) {
+    // Release the handle before the caller unlinks the file (Windows file lock).
+    if (db) { try { db.close(); } catch { /* ignore */ } }
+    throw err;
+  }
+}
+
+function isCorruptionError(err) {
+  const code = err && err.code ? String(err.code) : '';
+  const msg = err && err.message ? String(err.message) : '';
+  return /SQLITE_NOTADB|SQLITE_CORRUPT/.test(code)
+    || /not a database|file is encrypted|malformed/i.test(msg);
+}
+
+function discardDbFiles(dbPath) {
+  const fsSync = require('node:fs');
+  for (const suffix of ['', '-wal', '-shm', '-journal']) {
+    try { fsSync.unlinkSync(`${dbPath}${suffix}`); } catch { /* best effort */ }
+  }
 }
 
 function ensureSearchTables(db) {
@@ -177,7 +220,7 @@ class IndexManager {
   async indexDirectory(dir, opts = {}) {
     const extensions = opts.extensions || ['.md', '.txt', '.json'];
     const force = Boolean(opts.force);
-    const baseDir = path.resolve(dir);
+    const baseDir = normalizeProjectDir(dir);
     let indexed = 0;
     let skipped = 0;
 
@@ -435,7 +478,7 @@ class IndexManager {
 
     if (opts.projectDir) {
       sql += ` AND docs.project_dir = ?`;
-      params.push(path.resolve(opts.projectDir));
+      params.push(normalizeProjectDir(opts.projectDir));
     }
 
     sql += ` ORDER BY rank LIMIT ?`;
@@ -903,9 +946,21 @@ function keywordMatches(lookup, values) {
 function phraseMatches(lookup, value) {
   const normalized = normalizeToken(value);
   if (!lookup || !normalized) return false;
-  if (lookup.includes(normalized)) return true;
   const parts = normalized.split(/\s+/).filter(Boolean);
+  // Short single-token signals must match whole-word, else "ui"/"api" false-fire
+  // inside "build"/"rapid" and add rank noise to recall results.
+  if (parts.length === 1 && normalized.length <= 3) {
+    return wholeWordInLookup(lookup, normalized);
+  }
+  if (lookup.includes(normalized)) return true;
   return parts.length > 1 && parts.every((part) => lookup.includes(part));
+}
+
+function wholeWordInLookup(lookup, token) {
+  if (!token) return false;
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // normalizeToken keeps only [a-z0-9/-]; treat those as word chars.
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(lookup);
 }
 
 function pathMatches(requestedPaths, patterns) {

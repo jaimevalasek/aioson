@@ -553,8 +553,16 @@ function keywordMatches(haystack, needles) {
   return needles.filter((needle) => {
     const normalizedNeedle = normalizeToken(needle);
     if (!normalizedNeedle) return false;
+    const needleTokens = normalizedNeedle.split(/\s+/).filter(Boolean);
+    // Short single-token needles (e.g. alias "ui", entity "api") must match on a
+    // word boundary. A bare substring check false-fires inside "build"/"require"/
+    // "rapid", which pollutes selection scoring and — via the entities/aliases
+    // salience gate — makes context:guard inject unrelated rules.
+    if (needleTokens.length === 1 && normalizedNeedle.length <= 3) {
+      return wordVariants(normalizedNeedle).some((variant) => haystackWords.has(variant));
+    }
     if (normalizedHaystack.includes(normalizedNeedle)) return true;
-    const words = normalizedNeedle.split(/\s+/).filter((word) => word.length >= 4);
+    const words = needleTokens.filter((word) => word.length >= 4);
     if (words.length === 0) return false;
     const hits = words.filter((word) => wordVariants(word).some((variant) => haystackWords.has(variant))).length;
     return hits >= Math.min(2, words.length);

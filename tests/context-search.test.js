@@ -717,3 +717,48 @@ test('IndexManager — indexDirectory purges deleted files from the index', asyn
     await removeTmp(tmp);
   }
 });
+
+test('recall index keys fold case on Windows so casing drift does not split partitions (P3)', async () => {
+  const tmp = await makeTmpDir();
+  const idx = new IndexManager(path.join(tmp, 'search'));
+  await idx.open();
+  try {
+    const projectDir = path.join(tmp, 'proj');
+    await writeFile(projectDir, 'doc.md', '# Telemetry\nThe telemetry gateway emits runtime events.');
+    await idx.indexDirectory(projectDir, { extensions: ['.md'] });
+
+    const sameCase = idx.searchPackage('telemetry gateway', { projectDir, limit: 5 });
+    assert.ok(sameCase.results.length >= 1, 'same-case search finds the indexed doc');
+
+    const altCase = idx.searchPackage('telemetry gateway', { projectDir: projectDir.toUpperCase(), limit: 5 });
+    if (process.platform === 'win32') {
+      assert.ok(altCase.results.length >= 1, 'win32: a differently-cased path resolves to the same partition');
+    } else {
+      assert.equal(altCase.results.length, 0, 'posix: paths are case-sensitive, so a different case misses');
+    }
+  } finally {
+    idx.close();
+    await removeTmp(tmp);
+  }
+});
+
+test('openDb recreates the index when the sqlite file is corrupted (P4)', async () => {
+  const tmp = await makeTmpDir();
+  const searchDir = path.join(tmp, 'search');
+  await fs.mkdir(searchDir, { recursive: true });
+  // A truncated WAL / AV-quarantined / disk-full file is not a valid database.
+  await fs.writeFile(path.join(searchDir, 'context-search.sqlite'), 'this is not a sqlite database', 'utf8');
+  try {
+    const idx = new IndexManager(searchDir);
+    await idx.open(); // must recover, not throw
+    const projectDir = path.join(tmp, 'proj');
+    await writeFile(projectDir, 'a.md', '# Alpha\nalpha beta gamma recovery works.');
+    const result = await idx.indexDirectory(projectDir, { extensions: ['.md'] });
+    assert.ok(result.indexed >= 1, 'indexing works after corruption recovery');
+    const pkg = idx.searchPackage('recovery', { projectDir, limit: 5 });
+    assert.ok(pkg.results.length >= 1, 'the rebuilt index is queryable');
+    idx.close();
+  } finally {
+    await removeTmp(tmp);
+  }
+});

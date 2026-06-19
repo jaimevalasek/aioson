@@ -290,3 +290,48 @@ test('context:brief command returns JSON-compatible package', async () => {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('context:brief surfaces constraints from a hard-scoped docs file even in should_load', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeLaravelProject(dir, 'guard-review');
+    await writeFile(dir, '.aioson/rules/source-code-language-convention.md', await templateRule('source-code-language-convention.md'));
+    // Same shape as the should_load coverage doc, but explicitly hard-scoped.
+    await writeFile(dir, '.aioson/docs/tester/coverage-quality.md', [
+      '---',
+      'description: "Tester deep guide for coverage quality"',
+      'constraint_scope: hard',
+      'task_types: [testing]',
+      'triggers: [tests, coverage, review]',
+      'load_tier: trigger',
+      '---',
+      '# Coverage Quality',
+      '',
+      '## Required behavior',
+      '- Add ledger-balance invariant property test.',
+      ''
+    ].join('\n'));
+
+    const result = await buildContextBrief(dir, {
+      agent: 'qa',
+      mode: 'executing',
+      task: 'review context guard behavior tests',
+      paths: 'src/context-guard.js,tests/context-guard.test.js'
+    });
+
+    // It stays a should_load file (its load tier did not change)...
+    assert.ok(
+      result.should_load.some((item) => item.path === '.aioson/docs/tester/coverage-quality.md'),
+      'hard-scoped docs file is still a should_load file'
+    );
+    // ...but the hard constraint_scope means its constraints DO surface. This pins
+    // the intended `|| item.surface === 'docs'` precedence in buildContextBrief:
+    // a binding constraint is not silenced just because it ranked into should_load.
+    assert.ok(
+      result.constraints.some((item) => /ledger-balance invariant/i.test(item)),
+      'a hard-scoped docs file contributes constraints regardless of load tier'
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

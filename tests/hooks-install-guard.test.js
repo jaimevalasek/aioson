@@ -2,13 +2,23 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const {
   buildAntigravityHooks,
   buildClaudeHooks,
   isAiosonHookEntry,
   normalizeHookAgentName,
-  runHooksInstall
+  runHooksInstall,
+  runHooksUninstall,
+  scrubAntigravityHookFile
 } = require('../src/commands/hooks-install');
+
+function captureLogger() {
+  const lines = [];
+  return { lines, log(value) { lines.push(String(value)); } };
+}
 
 test('buildClaudeHooks wires a PreToolUse context:guard hook by default', () => {
   const hooks = buildClaudeHooks('dev');
@@ -91,4 +101,60 @@ test('isAiosonHookEntry recognizes AIOSON-owned hooks and leaves user hooks alon
   assert.equal(isAiosonHookEntry(done), true);
   assert.equal(isAiosonHookEntry(userHook), false);
   assert.equal(isAiosonHookEntry({}), false);
+});
+
+test('scrubAntigravityHookFile removes only AIOSON entries and preserves user hooks (P2)', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-hooks-uninst-'));
+  const file = path.join(tmp, 'hooks.json');
+  try {
+    await fs.writeFile(file, JSON.stringify({
+      hooks: {
+        PostToolUse: [
+          { matcher: 'Write', hooks: [{ command: 'aioson hooks:emit "$PWD" --agent=dev 2>/dev/null || true' }] },
+          { matcher: 'Write', hooks: [{ command: 'my-own-tool log' }] }
+        ],
+        SessionStart: [{ type: 'command', command: 'aioson live:start "$PWD" --tool=antigravity' }]
+      }
+    }, null, 2), 'utf8');
+
+    const res = await scrubAntigravityHookFile(file, false, captureLogger(), 'test');
+    assert.equal(res.removed, true);
+
+    const after = JSON.parse(await fs.readFile(file, 'utf8'));
+    assert.equal(after.hooks.PostToolUse.length, 1, 'only the user hook survives PostToolUse');
+    assert.equal(after.hooks.PostToolUse[0].hooks[0].command, 'my-own-tool log');
+    assert.equal(after.hooks.SessionStart, undefined, 'an emptied event key is dropped');
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test('runHooksUninstall handles antigravity and codex instead of a silent no-op (P2)', async () => {
+  const out = captureLogger();
+  // dry-run keeps it from touching the real HOME while still exercising dispatch.
+  const res = await runHooksUninstall({
+    args: ['.'],
+    options: { tool: 'antigravity,codex', 'dry-run': true },
+    logger: out
+  });
+
+  assert.equal(res.ok, true);
+  const tools = res.results.map((r) => r.tool);
+  assert.ok(tools.includes('antigravity'), 'antigravity is dispatched');
+  assert.ok(tools.includes('codex'), 'codex is dispatched');
+  assert.equal(out.lines.some((line) => /Unknown tool/.test(line)), false, 'no unsupported-tool warning');
+});
+
+test('runHooksUninstall flags a genuinely unknown tool as unsupported (P2)', async () => {
+  const out = captureLogger();
+  const res = await runHooksUninstall({
+    args: ['.'],
+    options: { tool: 'sublime', 'dry-run': true },
+    logger: out
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.results[0].tool, 'sublime');
+  assert.equal(res.results[0].reason, 'unsupported');
+  assert.ok(out.lines.some((line) => /Unknown tool: sublime/.test(line)));
 });

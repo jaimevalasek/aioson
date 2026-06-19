@@ -14,10 +14,18 @@ async function runContextGuard({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const event = await resolveEvent(args, options);
 
-  const response = await buildGuardResponse(event || {}, targetDir, {
-    tool: options.tool || 'claude',
-    agent: options.agent || options.a || 'dev'
-  });
+  let response;
+  try {
+    response = await buildGuardResponse(event || {}, targetDir, {
+      tool: options.tool || 'claude',
+      agent: options.agent || options.a || 'dev'
+    });
+  } catch {
+    // The guard is advisory and runs on the PreToolUse hot path. Any internal
+    // failure must surface as an empty injection ({}), never a non-hook envelope
+    // ({"ok":false,...}) on the hook's stdout channel.
+    response = {};
+  }
 
   const guard = response && response._guard;
 
