@@ -113,6 +113,7 @@ Best-effort examples:
 - `aioson dossier:*`
 - `aioson memory:search`
 - `aioson context:search`
+- `aioson context:brief`
 - `aioson context:pack`
 
 Commands inside "Quick start" or "Prerequisites" sections are user-run examples and do not need the best-effort suffix.
@@ -142,6 +143,7 @@ Known correct signatures (reference table):
 | `runtime:emit` | `--agent=<name> --type=<milestone\|gate_check> --summary="<text>"` |
 | `memory:search` | `--query="<text>"` |
 | `context:search` | `[path] --query="<text>" --agent=<name> --mode=<mode> --task="<text>" --paths=<csv> --intent=<csv>` |
+| `context:brief` | `[path] --agent=<name> --mode=<planning\|executing> --task="<text>" --paths=<csv> [--no-recall]` |
 | `context:index` | `[path] --force` |
 | `preflight` | `--agent=<name> --feature=<slug>` |
 | `dev:state:write` | `--feature=<slug> --phase=<n> --next="<description>" --context=<tokens>`; supports `simple-plan` |

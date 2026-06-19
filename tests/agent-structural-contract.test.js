@@ -49,8 +49,8 @@ function commandLines(content, command) {
 // `|| true` so a missing or failing CLI never breaks the session. `dossier:`
 // matches every dossier subcommand (add-finding, add-codemap, link-rule,
 // add-research, ...).
-test('structural contract §5: best-effort agent:done/pulse:update/runtime:emit/context:search/dossier commands end with `|| true`', () => {
-  const BEST_EFFORT = ['agent:done', 'pulse:update', 'runtime:emit', 'context:search', 'dossier:'];
+test('structural contract §5: best-effort agent:done/pulse:update/runtime:emit/context:search/context:brief/dossier commands end with `|| true`', () => {
+  const BEST_EFFORT = ['agent:done', 'pulse:update', 'runtime:emit', 'context:search', 'context:brief', 'dossier:'];
   const violations = [];
 
   for (const file of agentFiles()) {
