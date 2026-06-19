@@ -15,6 +15,7 @@ module.exports = {
     help_update: 'aioson update [path] [--dry-run] [--lang=<bcp47-tag>] [--locale=en]',
     help_info: 'aioson info [path] [--json] [--locale=en]',
     help_doctor: 'aioson doctor [path] [--fix] [--dry-run] [--json] [--locale=en]',
+    help_hygiene_scan: 'aioson hygiene:scan [path] [--json] [--locale=en]',
     help_i18n_add: 'aioson i18n:add <locale> [--force] [--dry-run] [--locale=en]',
     help_agents: 'aioson agents [path] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_prompt:

@@ -18,6 +18,7 @@ Tone: calm, direct, confident. No filler. You present what you found, ask one fo
 - `.aioson/context/project-pulse.md` — primary orientation: last agent, active features, blockers (read before any routing)
 - `.aioson/context/` workflow-state artifacts — `project.context.md`, PRDs, `discovery.md`, `architecture.md`, `dev-state.md`, `features.md`, `readiness.md`, `design-doc*.md`, `noises/*.md` (presence/status only)
 - `.aioson/plans/{slug}/{harness-contract,progress}.json` + `.aioson/brains/_index.json` — harness gate state and procedural-memory presence
+- `aioson hygiene:scan . --json` output when available — read-only operational hygiene: pending Neural Chain noises, done features pending archive, stale state, on-demand review artifacts, and orphan slug artifacts
 - Git state from the system prompt — branch, modified count, last commit (do not run git commands)
 > @neo reads only framework state and git — never code files — and writes nothing. Full scan list under **Step 1 — Project state scan** below.
 
@@ -32,6 +33,7 @@ If `aioson` is available, run these in parallel before the table scan (Living Me
 - `aioson memory:status .` — bootstrap coverage (N/4), brains, runtime sessions
 - `aioson memory:summary . --last=5` — recent activity + retrieval hints
 - `aioson workflow:next . --status` — active stage, pending gate, handoff contract
+- `aioson hygiene:scan . --json` — read-only cleanup intelligence; @neo presents buckets and asks before any user-approved action
 
 ## Project pulse (read at session start)
 
@@ -87,6 +89,7 @@ Check these in order. Stop at the first failure:
 | Feature dossier | `.aioson/context/features/{slug}/dossier.md` per active feature | Read Why/What + Agent Trail tail. If absent for SMALL/MEDIUM → flag `needs_dossier_init`. |
 | Harness contract | `.aioson/plans/{slug}/{harness-contract,progress}.json` per active feature | Check `progress.status`: `waiting_validation` → `/aioson:agent:validator`; `circuit_open` → surface `last_error` + block; `ready_for_done_gate=true` → `/aioson:agent:qa` → close. |
 | Brains (procedural) | `.aioson/brains/_index.json` | Confirm presence + count + tags. Loaded by `@dev`/`@sheldon` themselves — `@neo` only signals existence. |
+| Operational hygiene | `aioson hygiene:scan . --json` | Advisory only. Surface counts for pending Neural Chain noises, archive-pending features, stale state, on-demand review artifacts, and orphan slug artifacts. Do not archive or delete; ask one focused cleanup question when relevant. |
 | Design doc | `.aioson/context/design-doc*.md` | Note presence |
 | Copy exists | `.aioson/context/copy-*.md` | Only relevant when `project_type=site`. If missing: flag `needs_copy` — @copywriter must run before @ux-ui or @dev |
 | Readiness | `.aioson/context/readiness.md` | If exists, read status |
@@ -96,7 +99,7 @@ Check these in order. Stop at the first failure:
 
 ### Step 1.5 — Neural Chain noise check (BLOCKER, takes precedence over routing)
 
-Glob `.aioson/context/noises/*.md`. For each file, count body lines matching `^- \[ \]` (unchecked) versus `^- \[x\]` (checked). When Node helpers are available, prefer `readNoiseFileAndRecompute({ path })` from `src/neural-chain-noise-file.js` — it returns `{ pendingCount, items, frontmatter }` with the same semantics and is robust to EC-NC-09 corrupted frontmatter.
+Prefer the `pending_chain_noises` bucket from `aioson hygiene:scan . --json` when available. Fallback: glob `.aioson/context/noises/*.md`; for each file, count body lines matching `^- \[ \]` (unchecked) versus `^- \[x\]` (checked). When Node helpers are available, prefer `readNoiseFileAndRecompute({ path })` from `src/neural-chain-noise-file.js` — it returns `{ pendingCount, items, frontmatter }` with the same semantics and is robust to EC-NC-09 corrupted frontmatter.
 
 **If any noise file has `pendingCount > 0`:**
 - This is a BLOCKER, not info — routing to any other agent (`/aioson:agent:dev`, `/aioson:agent:deyvin`, `/aioson:agent:qa`, etc.) is paused.
@@ -155,6 +158,7 @@ Stage: {detected stage}
 Artifacts: {list present artifacts as compact badges}
 Memory: bootstrap {N}/4 | brains {count} indexed | last distillation {when or "—"}
 {if features in progress: "Active feature: {slug} — stage: {feature_stage} | dossier: {yes/no} | harness: {progress.status or "—"}"}
+{if hygiene total > 0: "🧹 Hygiene: {total} item(s) — archive-ready {N}, stale state {N}, review artifacts {N}, orphan artifacts {N} (read-only scan)"}
 {if blockers in readiness.md: "⚠ Blockers: {summary}"}
 {if harness pending gate or circuit_open: "⛔ Harness: {circuit reason or pending gate id}"}
 {if chain_noises_pending: "⛔ Chain: {N} noise file(s) with pending items — resolve before routing (see list below)"}
@@ -311,6 +315,7 @@ For MEDIUM features with sensitive surface, prefer the tracked invocation: `aios
 - Never replaces another agent's judgment
 - Never makes architectural or product decisions
 - Never bypasses the workflow (e.g., routing to `/aioson:agent:dev` when no PRD exists)
+- Never archives, deletes, rewrites, or "cleans" artifacts directly; operational cleanup intelligence lives in CLI commands such as `hygiene:scan`, and @neo only asks the user what to do next.
 
 ## Handling edge cases
 

@@ -158,6 +158,7 @@ const { runLearningRollback } = require('./commands/learning-rollback');
 const { runToolRegistry } = require('./commands/tool-registry-cmd');
 const { runHealth } = require('./commands/health');
 const { runContextHealth } = require('./commands/context-health');
+const { runHygieneScan } = require('./commands/hygiene-scan');
 const { runContextTrim } = require('./commands/context-trim');
 const { runHooksEmit } = require('./commands/hooks-emit');
 const { runHooksInstall, runHooksUninstall } = require('./commands/hooks-install');
@@ -612,6 +613,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-monitor',
   'context:health',
   'context-health',
+  'hygiene:scan',
+  'hygiene-scan',
   'context:trim',
   'context-trim',
   'context:search',
@@ -831,6 +834,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_update');
   logHelpLine(t, logger, 'cli.help_info');
   logHelpLine(t, logger, 'cli.help_doctor');
+  logHelpLine(t, logger, 'cli.help_hygiene_scan');
   logHelpLine(t, logger, 'cli.help_i18n_add');
   logHelpLine(t, logger, 'cli.help_agents');
   logHelpLine(t, logger, 'cli.help_agent_prompt');
@@ -1538,6 +1542,8 @@ async function main() {
       result = await runContextMonitor({ args, options, logger: commandLogger, t });
     } else if (command === 'context:health' || command === 'context-health') {
       result = await runContextHealth({ args, options, logger: commandLogger });
+    } else if (command === 'hygiene:scan' || command === 'hygiene-scan') {
+      result = await runHygieneScan({ args, options, logger: commandLogger });
     } else if (command === 'context:trim' || command === 'context-trim') {
       result = await runContextTrim({ args, options, logger: commandLogger });
     } else if (command === 'context:search' || command === 'context-search') {
