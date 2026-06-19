@@ -270,6 +270,8 @@ Result:
 - 2–3 = SMALL
 - 4–6 = MEDIUM
 
+**Sensitive-surface floor (deterministic, not a judgment call):** if the feature touches any sensitive surface — money/payments, auth, ownership/authz boundaries, uploads, external URLs/webhooks, secrets/credentials, or sensitive storage — the floor is **SMALL**: never MICRO, whatever the score says. `aioson classify` applies this automatically and returns `floored: true` + `sensitive_surfaces` — trust its output and write the resulting class to the PRD/requirements frontmatter. Without the CLI, apply the floor yourself. The floor only raises the tier; to force it when detection misses, add `sensitive_surfaces: [..]` to the frontmatter.
+
 ## Feature discovery (feature mode only)
 
 When invoked in feature mode, skip Phases 1–3 and run this focused 2-phase process instead.

@@ -30,6 +30,10 @@
 
 **0–1 = MICRO / 2–3 = SMALL / 4–6 = MEDIUM**
 
+## Sensitive-surface floor
+
+Independent of the 0–6 score, a feature touching any sensitive surface — money/payments, auth, ownership/authz boundaries, uploads, external URLs/webhooks, secrets/credentials, or sensitive storage — has a **floor of SMALL** (never MICRO). `aioson classify` applies this deterministically and reports `floored: true` + `sensitive_surfaces`. The floor only raises the tier; an explicit `sensitive_surfaces: [..]` in the PRD frontmatter forces it when content detection misses.
+
 ## Gate behavior by classification
 
 - **MICRO**: gates are informational, never blocking. @dev may proceed without explicit approval.

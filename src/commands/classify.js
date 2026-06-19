@@ -116,6 +116,60 @@ const COMPLEXITY_SOME_PATTERNS = [
   /\b(notification|trigger|event)\b/gi
 ];
 
+// Sensitive-surface floor (Gap 3B): a feature touching any of these surfaces is
+// never MICRO. Mirrors the secure-tdd sensitive list in @dev. The floor can only
+// RAISE the tier (MICRO -> SMALL); it never lowers it. Keep patterns tight — a
+// false positive needlessly costs the SMALL chain. Tune as the project learns.
+const SENSITIVE_SURFACE_PATTERNS = [
+  { surface: 'money', re: /\b(money|stripe|paypal|braintree|square|payments?|payouts?|refunds?|subscriptions?|billing|invoices?|credit card)\b/i },
+  { surface: 'auth', re: /\b(oauth|jwt|saml|sso|auth0|firebase auth|log[- ]?in|sign[- ]?in|sign[- ]?up|passwords?|authenticat\w*|2fa|mfa)\b/i },
+  { surface: 'authz', re: /\b(authoriz\w*|access control|role[- ]based|rbac|ownership|owner[- ]only|only the owner)\b/i },
+  { surface: 'uploads', re: /\b(file uploads?|uploads?|attachments?)\b/i },
+  { surface: 'external_url', re: /\b(webhooks?|callback urls?|ssrf|user[- ]?supplied urls?)\b/i },
+  { surface: 'secrets', re: /\b(secrets?|api keys?|credentials?|private key|access tokens?)\b/i },
+  { surface: 'sensitive_storage', re: /\b(pii|personal data|ssn|sensitive (data|storage|information))\b/i }
+];
+
+function detectSensitiveSurfaces(content) {
+  const found = [];
+  for (const { surface, re } of SENSITIVE_SURFACE_PATTERNS) {
+    if (re.test(content)) found.push(surface);
+  }
+  return found;
+}
+
+// Explicit `sensitive_surfaces:` frontmatter override — additive, can only force
+// the floor when content detection misses. Supports inline (`[a, b]` / `a, b`)
+// and YAML block list forms.
+function parseSensitiveSurfacesOverride(content) {
+  const fm = String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return [];
+  const body = fm[1];
+  const items = [];
+  const inline = body.match(/^sensitive_surfaces:[ \t]*(.+)$/m);
+  if (inline) {
+    inline[1].trim().replace(/^\[|\]$/g, '').split(',').forEach((s) => {
+      const v = s.trim().replace(/^["']|["']$/g, '');
+      if (v) items.push(v);
+    });
+  }
+  const block = body.match(/^sensitive_surfaces:[ \t]*\r?\n((?:[ \t]*-[ \t]*.+\r?\n?)+)/m);
+  if (block) {
+    block[1].split(/\r?\n/).forEach((line) => {
+      const m = line.match(/^[ \t]*-[ \t]*(.+)$/);
+      if (m) {
+        const v = m[1].trim().replace(/^["']|["']$/g, '');
+        if (v) items.push(v);
+      }
+    });
+  }
+  return items;
+}
+
+function applySensitiveFloor(classification) {
+  return classification === 'MICRO' ? 'SMALL' : classification;
+}
+
 function analyzeContent(content) {
   // Count unique user types
   const userTypeSet = new Set();
@@ -185,6 +239,7 @@ async function runClassify({ args, options = {}, logger }) {
 
   let userTypeCount, integrationCount, complexityLevel;
   let sourceFile = null;
+  let content = null;
 
   if (interactive) {
     ({ userTypeCount, integrationCount, complexityLevel } = await runInteractive(logger));
@@ -199,7 +254,6 @@ async function runClassify({ args, options = {}, logger }) {
         ]
       : [path.join(dir, 'requirements.md'), path.join(dir, 'prd.md')];
 
-    let content = null;
     for (const candidate of candidates) {
       content = await readFileSafe(candidate);
       if (content) { sourceFile = path.relative(targetDir, candidate); break; }
@@ -218,7 +272,19 @@ async function runClassify({ args, options = {}, logger }) {
   const intScore = scoreIntegrations(integrationCount);
   const cxScore = scoreComplexity(complexityLevel);
   const totalScore = utScore + intScore + cxScore;
-  const classification = scoreToClassification(totalScore);
+  let classification = scoreToClassification(totalScore);
+
+  // Gap 3B — sensitive-surface floor (deterministic; raises MICRO -> SMALL only).
+  const detectedSurfaces = content ? detectSensitiveSurfaces(content) : [];
+  const declaredSurfaces = content ? parseSensitiveSurfacesOverride(content) : [];
+  const sensitiveSurfaces = [...new Set([...detectedSurfaces, ...declaredSurfaces])];
+  let floored = false;
+  if (sensitiveSurfaces.length > 0) {
+    const scored = classification;
+    classification = applySensitiveFloor(classification);
+    floored = classification !== scored;
+  }
+
   const phaseDepth = classificationToPhaseDepth(classification);
 
   const result = {
@@ -228,6 +294,8 @@ async function runClassify({ args, options = {}, logger }) {
     inputs: { user_types: userTypeCount, external_integrations: integrationCount, rule_complexity: complexityLevel },
     scores: { user_types: utScore, integrations: intScore, complexity: cxScore, total: totalScore },
     classification,
+    sensitive_surfaces: sensitiveSurfaces,
+    floored,
     phase_depth: phaseDepth
   };
 
@@ -243,6 +311,9 @@ async function runClassify({ args, options = {}, logger }) {
   logger.log(`Business rule complexity: ${complexityLevel} → +${cxScore}`);
   logger.log(BAR);
   logger.log(`Score: ${totalScore} → ${classification}`);
+  if (sensitiveSurfaces.length > 0) {
+    logger.log(`Sensitive surfaces: ${sensitiveSurfaces.join(', ')}${floored ? ' → floored to SMALL' : ''}`);
+  }
   logger.log('');
   logger.log('Phase depth:');
   for (const [phase, desc] of Object.entries(phaseDepth)) {

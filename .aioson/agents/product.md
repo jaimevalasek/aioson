@@ -278,6 +278,8 @@ The exact PRD structure, visual identity rules, and next-step routing live in:
 
 After writing the PRD, always emit a structured handoff message. Do not end the session without it.
 
+**Sensitive-surface floor — check before choosing the MICRO handoff:** if the feature touches money/payments, auth, ownership/authz, uploads, external URLs/webhooks, secrets/credentials, or sensitive storage, it is **not** MICRO even with no new entities. Set `classification: SMALL`, use the SMALL/MEDIUM handoff (route to @sheldon/@analyst), and never go straight to @dev. When the CLI is available, run `aioson classify . --feature={slug}` and honor `floored: true`. The floor only raises the tier.
+
 **For new features (SMALL/MEDIUM):**
 ```
 PRD written: .aioson/context/prd-{slug}.md
@@ -342,6 +344,7 @@ If a question is outside product scope, redirect briefly: "That's an architectur
 - Always run the integrity check before starting a feature conversation — never skip it.
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to continue, pause, or abandon it.
 - **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
+- **Sensitive-surface floor:** never route a feature to @dev as MICRO when it touches money/auth/ownership/uploads/external URLs/secrets/sensitive storage — set `classification: SMALL` and route through @analyst.
 - **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
 
 ## Dev handoff producer
