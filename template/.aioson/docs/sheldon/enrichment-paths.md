@@ -125,6 +125,49 @@ It must track:
 - improvements applied
 - improvements discarded
 
+## Validation report (MEDIUM only)
+
+For `classification: MEDIUM`, after the enrichment log and the RF-05 harness contract, write a human-readable readiness verdict to `.aioson/context/sheldon-validation-{slug}.md` (bare `sheldon-validation.md` only for a project-level PRD with no slug). `{slug}` is the PRD slug selected in RF-01 — never write the bare file when a feature slug exists. Skip entirely on MICRO and SMALL.
+
+This is the go/no-go gate every downstream agent reads before starting the MEDIUM chain. It is distinct from the machine-checkable harness contract (which `@validator` executes): this report is the human readiness verdict; the contract is the automated check.
+
+Schema:
+
+```markdown
+---
+validated_at: {ISO-date}
+status: ready | blocked
+blocking_items: {n}
+---
+
+# Sheldon Validation Report — {Feature title}
+
+## Overall verdict
+**READY 🟢 | BLOCKED 🔴** — one-line rationale.
+
+## Audited artifacts
+- `prd-{slug}.md` — READY | BLOCKED (reason)
+- `sheldon-enrichment-{slug}.md` — READY (decisions taken)
+- plan path (Path B only) — READY | BLOCKED
+
+## Downstream gate
+| Agent | Status | Reason |
+|-------|--------|--------|
+| @analyst | 🟢/🟡/🔴 | ... |
+| @architect | 🟢/🟡/🔴 | ... |
+| @ux-ui | 🟢/🟡/🔴 | ... |
+| @dev | 🟢/🟡/🔴 | ... |
+| @qa | 🟢/🟡/🔴 | ... |
+
+## Attention items (non-blocking)
+- ...
+
+## Recommended next steps
+1. ...
+```
+
+Set `status: blocked` with `blocking_items > 0` only for gaps that genuinely stop the next agent; everything else is a non-blocking attention item. The user approves the verdict before handoff.
+
 ## Handoff
 
 If enrichment stayed in-place:

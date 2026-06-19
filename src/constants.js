@@ -436,7 +436,7 @@ const AGENT_DEFINITIONS = [
     command: '@sheldon',
     path: '.aioson/agents/sheldon.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: 'enriched PRD or phased execution plan'
+    output: 'enriched PRD or phased execution plan (+ sheldon-validation-{slug}.md readiness gate on MEDIUM)'
   },
   {
     id: 'committer',

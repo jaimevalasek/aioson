@@ -52,7 +52,7 @@ O PRD produzido pelo @product é o **documento base vivo** — nenhum agente dow
 - `sheldon-enrichment-{slug}.md` (ou `sheldon-enrichment.md`) em `.aioson/context/` — log de cada rodada, decisões de gray areas, score e readiness
 
 **No Modo C (validação completa)**, gera adicionalmente:
-- `sheldon-validation.md` — relatório de auditoria com gate por agente (🟢/🟡/🔴)
+- `sheldon-validation-{slug}.md` (projeto: `sheldon-validation.md`) — relatório de auditoria com gate por agente (🟢/🟡/🔴)
 - `.aioson/plans/{slug}/checklist.md` — checklist de implementação por fase
 
 **Pesquisas web (RF-WEB)** ficam em:

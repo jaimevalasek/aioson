@@ -296,6 +296,12 @@ Goal: convert binary ACs from the enriched PRD into a machine-checkable contract
 
 Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check`), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
+## Validation report (RF-06) — MEDIUM only
+
+Run after `sheldon-enrichment-{slug}.md` and the RF-05 harness contract, only when `classification: MEDIUM`. Skip on MICRO and SMALL.
+
+Write `.aioson/context/sheldon-validation-{slug}.md` — the human-readable readiness verdict every downstream agent reads before starting the MEDIUM chain (distinct from the RF-05 harness contract that `@validator` executes). Use the same `{slug}` selected in RF-01; write the bare `sheldon-validation.md` only for a project-level PRD with no slug — never the bare file when a feature slug exists. Full schema and the per-agent gate table live in `.aioson/docs/sheldon/enrichment-paths.md` (**Validation report**). Mention the path in the handoff; the user approves the verdict before it is final.
+
 ## Retro dossier analysis (on-demand)
 
 Load this mode only when the user points you at a retrospective dossier produced by `aioson harness:retro` (`.aioson/context/retro/{slug}.md` or `window-last-{N}.md`). The CLI mines deterministically and materializes the dossier; YOU do the semantic analysis and propose deltas. The dossier is your evidence boundary.
@@ -338,4 +344,5 @@ Next agent: @analyst (produces requirements + spec to close Gate A)
 Why: PRD is enriched — @analyst maps entities, business rules, and edge cases into the spec.
 Action: /analyst
 ```
+> On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness gate) in the handoff so the downstream chain reads it before starting.
 > Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
