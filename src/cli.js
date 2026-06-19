@@ -200,6 +200,7 @@ const { runOpMigrate } = require('./commands/op-migrate');
 const { runFeatureClose } = require('./commands/feature-close');
 const { runFeatureArchive, runFeatureSweep } = require('./commands/feature-archive');
 const { runFeatureExport } = require('./commands/feature-export');
+const { runFeatureCurrent } = require('./commands/feature-current');
 const { runDossierInit, runDossierShow, runDossierAddFinding, runDossierAddCodemap, runDossierLinkRule, runDossierCompact } = require('./commands/dossier');
 const { runDossierAddResearch } = require('./commands/dossier-add-research');
 const { runDossierAudit } = require('./commands/dossier-audit');
@@ -284,6 +285,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'workflow-next',
   'workflow:status',
   'workflow-status',
+  'feature:current',
+  'feature-current',
   'harness:retro',
   'harness-retro',
   'harness:preview',
@@ -677,6 +680,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'feature-sweep',
   'feature:export',
   'feature-export',
+  'feature:current',
+  'feature-current',
   'dossier:init',
   'dossier-init',
   'dossier:show',
@@ -1615,6 +1620,8 @@ async function main() {
       result = await runFeatureSweep({ args, options, logger: commandLogger });
     } else if (command === 'feature:export' || command === 'feature-export') {
       result = await runFeatureExport({ args, options, logger: commandLogger });
+    } else if (command === 'feature:current' || command === 'feature-current') {
+      result = await runFeatureCurrent({ args, options, logger: commandLogger });
     } else if (command === 'dossier:init' || command === 'dossier-init') {
       result = await runDossierInit({ args, options, logger: commandLogger });
     } else if (command === 'dossier:show' || command === 'dossier-show') {

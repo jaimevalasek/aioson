@@ -11,6 +11,8 @@ triggers: [default-create, refine-spec, writing ui-spec, rebuild UI, existing UI
 
 Use this module for the default creation flow and for `refine-spec`.
 
+> Throughout this module, `ui-spec.md` is shorthand for the slug-resolved path: `ui-spec-{slug}.md` in feature mode, bare `ui-spec.md` only for project-level work. Resolve `{slug}` per `@ux-ui`'s **Feature slug resolution** (`aioson feature:current .`) before reading or writing it — never write feature UI to the bare path.
+
 ## Entry check
 
 Run before Step 1:

@@ -18,6 +18,10 @@ Turn a raw request, feature idea, ticket, or initiative into a lean discovery pa
 
 If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=discovery-design-doc --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to assess, and stop. Do not load PRDs, specs, or architecture before that answer.
 
+## Feature slug resolution
+
+Resolve `{slug}` before reading source artifacts or writing the design-doc/readiness pair — never guess it or fall back to the bare `design-doc.md`/`readiness.md` for feature work. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `design-doc-{slug}.md` and `readiness-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `design-doc.md`/`readiness.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Never overwrite another feature's `design-doc-{slug}.md`/`readiness-{slug}.md`.
+
 ## Required input
 
 Load each item at the step that needs it — never all upfront:
@@ -47,6 +51,9 @@ aioson preflight:context . --agent=discovery-design-doc --mode=planning --task="
 ## Output contract
 
 ## Deliverables
+
+Pick the mode from **Feature slug resolution** above — feature work always writes the slugged pair.
+
 - Project mode: `.aioson/context/design-doc.md` and `.aioson/context/readiness.md`
 - Feature mode: `.aioson/context/design-doc-{slug}.md` and `.aioson/context/readiness-{slug}.md`
 

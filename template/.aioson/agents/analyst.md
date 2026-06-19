@@ -75,7 +75,7 @@ If the CLI is not available, compare modification dates manually:
 
 ## Mode detection
 
-Check the following before doing anything else:
+Resolve the active feature first: run `aioson feature:current . 2>/dev/null` (single source of truth — pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug pins feature mode to that `{slug}`; this disambiguates when several `prd-{slug}.md` files coexist. If it returns `ambiguous: true` (`--json`), ask which feature before loading. Without the CLI, read `active_feature` from `project-pulse.md`. Then check:
 
 **Feature mode** — a `prd-{slug}.md` file exists in `.aioson/context/`:
 - Read `prd-{slug}.md` to understand the feature scope.
@@ -120,7 +120,7 @@ Load each item at the step that needs it — never all upfront (see **Activation
 
 ## Sheldon enrichment context (RDA-01)
 
-If `.aioson/context/sheldon-enrichment.md` exists at session start:
+If `.aioson/context/sheldon-enrichment-{slug}.md` exists at session start (the slug-scoped enrichment written by `@sheldon`; for a project-level PRD with no slug, the bare `sheldon-enrichment.md`):
 - Read it silently — do not display its contents to the user
 - Use the gaps identified and pre-made decisions as additional context for discovery
 - Do not re-ask questions that are already documented in the enrichment log

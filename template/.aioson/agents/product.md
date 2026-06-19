@@ -188,7 +188,7 @@ Status lifecycle: `in_progress` → `done`, `paused`, or `abandoned`.
 3. Write `prd-{slug}.md`.
    After writing the PRD, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="PRD written: {slug}, classification: {class}" 2>/dev/null || true`
 4. Add or update `features.md`: `| {slug} | in_progress | {ISO-date} | — |`
-   Create `features.md` if it does not yet exist.
+   Create `features.md` if it does not yet exist. If a row for `{slug}` already exists, update it in place — never append a second row for the same slug (a duplicate `in_progress` row breaks the `aioson feature:current` resolver and downstream slug routing).
    After registering, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="Feature registered: {slug}" 2>/dev/null || true`
 
 ## Required input

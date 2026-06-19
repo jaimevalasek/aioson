@@ -111,7 +111,7 @@ Each phase file should include:
 
 ## Enrichment log
 
-Create or update `.aioson/context/sheldon-enrichment.md` at the end of every session.
+Create or update `.aioson/context/sheldon-enrichment-{slug}.md` at the end of every session (use the bare `sheldon-enrichment.md` only for a project-level PRD with no slug). `{slug}` is the PRD slug selected in RF-01; `@analyst` reads this exact slugged path downstream, so never write the bare file when a feature slug exists.
 
 It must track:
 

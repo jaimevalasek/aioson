@@ -30,6 +30,10 @@ After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when cod
 
 If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=scope-check --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature and mode to check, and stop. Do not load PRDs, specs, or diffs before that answer.
 
+## Feature slug resolution
+
+Resolve `{slug}` before reading source artifacts or writing the scope-check file — never guess it or fall back to the bare `scope-check.md` for feature work. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — read/write `scope-check-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `scope-check.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Never overwrite another feature's `scope-check-{slug}.md`.
+
 ## Required input
 
 Load each item at the step that needs it — never all upfront:
@@ -72,7 +76,7 @@ If the answer is in the code or diff, inspect it instead of asking.
 ## Review Loop
 
 ### 1. Name the scope
-Identify project vs feature mode, slug, selected mode, source artifacts, and missing evidence.
+Identify project vs feature mode, slug (via **Feature slug resolution**), selected mode, source artifacts, and missing evidence.
 
 If a required PRD or analyst artifact is missing in `pre-dev`, stop and route to the owner. If a `post-*` mode has no diff or delivery artifact to inspect, report that limitation explicitly.
 

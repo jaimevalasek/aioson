@@ -68,7 +68,7 @@ Load each item at the step that needs it — never all upfront (see **Activation
 - `.aioson/context/prd.md` or `prd-{slug}.md`
 - `.aioson/context/features.md` (if present)
 - `.aioson/context/done/MANIFEST.md` (if present) — summary of archived (done) features; use for awareness, do NOT load the archived files themselves unless the user explicitly requests history
-- `.aioson/context/sheldon-enrichment.md` (if present — re-entrance)
+- `.aioson/context/sheldon-enrichment-{slug}.md` (if present — re-entrance; `{slug}` is the PRD slug selected in RF-01)
 
 ## Brain (procedural memory)
 
@@ -181,14 +181,16 @@ Step order is mandatory — list first, check status after selection.
 
 ## Re-entrance detection (RF-02)
 
-Check whether `.aioson/context/sheldon-enrichment.md` exists:
+The enrichment file is always slug-scoped: `.aioson/context/sheldon-enrichment-{slug}.md`, where `{slug}` is the PRD slug selected in RF-01 (for a project-level `prd.md` with no slug, use the bare `sheldon-enrichment.md`). Never write or read the bare file when a feature slug exists — `@analyst` reads the slugged path downstream.
+
+Check whether `.aioson/context/sheldon-enrichment-{slug}.md` exists:
 
 **First activation:**
 > "First enrichment session for this PRD."
 Proceed to source collection.
 
 **Re-activation:**
-- Read `sheldon-enrichment.md`
+- Read `sheldon-enrichment-{slug}.md`
 - Display summary: how many rounds, which sources were already used, which improvements were already applied
 - Ask: "Want to add more sources or review the current plan?"
 - If user wants more enrichment → proceed to source collection

@@ -87,7 +87,7 @@ Load the primary package first. Then load phase-triggered files from the plan, r
 
 - `requirements-{slug}.md` — data shape, rules, ACs, migrations, edge cases.
 - `architecture.md` — module boundaries, integrations, auth/security, shared contracts.
-- `ui-spec.md` — UI components, frontend routes, states, copy placement, visual QA.
+- `ui-spec-{slug}.md` (project mode: `ui-spec.md`) — UI components, frontend routes, states, copy placement, visual QA.
 - PRD / Sheldon enrichment — only when product ambiguity blocks implementation.
 - `discovery.md` / `spec.md` — only when project-level entity maps or conventions are needed.
 
@@ -176,7 +176,7 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/architecture.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
 - `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
 - `.aioson/context/prd-{slug}.md` — only on first session of a new feature
-- `.aioson/context/ui-spec.md` — only when implementing UI components
+- `.aioson/context/ui-spec-{slug}.md` (project mode: `ui-spec.md`) — only when implementing UI components
 
 ## Brownfield alert
 

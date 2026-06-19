@@ -43,6 +43,10 @@ Apply when `project_type=site` and the operation is `default-create` or `refine-
 
 If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=ux-ui --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to design, and stop. Do not load PRDs, discovery, or architecture before that answer.
 
+## Feature slug resolution
+
+Resolve `{slug}` before choosing any output path — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `ui-spec-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (write the bare `ui-spec.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Never overwrite another feature's `ui-spec-{slug}.md`.
+
 ## Required input
 
 Load each item at the step that needs it — never all upfront:
@@ -65,8 +69,8 @@ aioson preflight:context . --agent=ux-ui --mode=planning --task="<ux task>" --pa
 
 If `.aioson/plans/{slug}/manifest.md` exists:
 - read the manifest before design work
-- scope `ui-spec.md` to the screens of Phase 1 initially
-- document in `ui-spec.md` which screens belong to which phase
+- scope `ui-spec-{slug}.md` to the screens of Phase 1 initially
+- document in `ui-spec-{slug}.md` which screens belong to which phase
 - when designing for a specific phase, include only the components and flows relevant to that phase
 
 ## Feature dossier
@@ -95,7 +99,7 @@ For existing codebases:
 ## Gate B completion contract
 
 Before handing off from the default `@ux-ui` workflow stage:
-- Always produce `.aioson/context/ui-spec.md`.
+- Always produce the UI spec at the resolved path: `.aioson/context/ui-spec-{slug}.md` in feature mode, `.aioson/context/ui-spec.md` only for genuine project-level work.
 - If the PRD does not yet contain `## Visual identity`, create it before enriching.
 - Preserve any existing `pending-selection` note unless the design-skill choice was confirmed in this session.
 - If `.aioson/context/spec-{slug}.md` or `.aioson/context/spec.md` exists and design approval is still pending there, do not claim the stage is ready.
@@ -119,7 +123,7 @@ Load only the modules required by the current operation.
 
 | Submode | Trigger | Output |
 |---|---|---|
-| *(default)* | `@ux-ui` | `ui-spec.md` + `index.html` when `project_type=site` |
+| *(default)* | `@ux-ui` | `ui-spec-{slug}.md` (project mode: `ui-spec.md`) + `index.html` when `project_type=site` |
 | `research` | `@ux-ui research` | `ui-research.md` |
 | `audit` | `@ux-ui audit` | `ui-audit.md` |
 | `tokens` | `@ux-ui tokens` | `ui-tokens.md` |
@@ -163,16 +167,18 @@ Preflight rules:
 
 ## Output contract
 
+All paths below use the resolved feature `{slug}` (see **Feature slug resolution**); drop the `-{slug}` suffix only for genuine project-level work.
+
 **Creation mode — `project_type=site`:**
 - `index.html` in the project root
-- `.aioson/context/ui-spec.md`
+- `.aioson/context/ui-spec-{slug}.md` (project mode: `ui-spec.md`)
 - `.aioson/context/project.context.md` only if the `design_skill` selection was confirmed in this session
 
 **Creation mode — `project_type≠site`:**
-- `.aioson/context/ui-spec.md`
+- `.aioson/context/ui-spec-{slug}.md` (project mode: `ui-spec.md`)
 - `.aioson/context/project.context.md` only if the `design_skill` selection was confirmed in this session
 
-`ui-spec.md` is the canonical downstream UI artifact. `@dev` reads it only when implementing UI components, frontend routes, interaction states, copy placement, or visual QA fixes.
+`ui-spec-{slug}.md` is the canonical downstream UI artifact. `@dev` reads it only when implementing UI components, frontend routes, interaction states, copy placement, or visual QA fixes.
 
 **Submode outputs:**
 - `research` → `.aioson/context/ui-research.md`
