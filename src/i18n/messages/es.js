@@ -32,7 +32,7 @@ module.exports = {
     help_context_select:
       'aioson context:select [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<ruta[,ruta2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=es]',
     help_context_brief:
-      'aioson context:brief [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<ruta[,ruta2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=es]',
+      'aioson context:brief [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<ruta[,ruta2]>] [--feature=<slug>] [--no-semantic] [--no-recall] [--json] [--locale=es]',
     help_context_guard:
       'aioson context:guard [path] [--tool=claude] [--agent=<agente>] [--event=<json>] [--event-file=<ruta>] [--json] [--locale=es]',
     help_context_load:

@@ -186,6 +186,46 @@ test('context:brief recall surfaces historical files that select cannot see', as
   }
 });
 
+test('context:brief does not promote should_load docs into hard constraints', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeLaravelProject(dir, 'guard-review');
+    await writeFile(dir, '.aioson/rules/source-code-language-convention.md', await templateRule('source-code-language-convention.md'));
+    await writeFile(dir, '.aioson/docs/tester/coverage-quality.md', [
+      '---',
+      'description: "Tester deep guide for coverage quality"',
+      'task_types: [testing]',
+      'triggers: [tests, coverage, review]',
+      'load_tier: trigger',
+      '---',
+      '# Coverage Quality',
+      '',
+      '## Required behavior',
+      '- Add ledger-balance invariant property test.',
+      '',
+      '## Verification',
+      '- Load — separate suite, never blocks unit/integration; report against agreed SLOs.'
+    ].join('\n'));
+
+    const result = await buildContextBrief(dir, {
+      agent: 'qa',
+      mode: 'executing',
+      task: 'review context guard behavior tests',
+      paths: 'src/context-guard.js,tests/context-guard.test.js'
+    });
+
+    assert.ok(
+      result.should_load.some((item) => item.path === '.aioson/docs/tester/coverage-quality.md'),
+      'coverage doc should remain available as should_load context'
+    );
+    assert.equal(result.constraints.some((item) => /ledger-balance invariant/i.test(item)), false);
+    assert.equal(result.verification_hints.some((item) => /separate suite/i.test(item)), false);
+    assert.ok(result.constraints.some((item) => /source code identifiers/i.test(item)));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:brief command returns JSON-compatible package', async () => {
   const dir = await makeTmpDir();
   try {

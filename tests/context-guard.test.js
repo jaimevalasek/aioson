@@ -56,6 +56,29 @@ const UNRELATED_RULE = [
   ''
 ].join('\n');
 
+const AGENT_STRUCTURAL_RULE = [
+  '---',
+  'source_type: rule',
+  'description: "Structural contract every AIOSON agent must follow"',
+  'agents: all',
+  'modes: [executing]',
+  'task_types: [agent-contract, agent-authoring]',
+  'triggers: [editing agent files, agent prompt, handoff contract]',
+  'paths: ["template/.aioson/agents/**", ".aioson/agents/**"]',
+  'load_tier: trigger',
+  'guard: true',
+  'priority: 8',
+  '---',
+  '',
+  '# Agent Structural Contract',
+  '',
+  '## Required behavior',
+  '- Every agent prompt edit must preserve the language boundary, required input, and best-effort telemetry suffixes.',
+  '- Best-effort context helper commands must end with `2>/dev/null || true`.',
+  '- Do NOT continue into the next agent work.',
+  ''
+].join('\n');
+
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-context-guard-'));
 }
@@ -187,6 +210,34 @@ test('context:guard does not fire for a baseline rule matched only via a generic
     const response = await buildGuardResponse(event, dir, { tool: 'claude' });
 
     assert.deepEqual(response, {}); // matched only via a trigger -> no injection
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('context:guard injects a real-style guard opt-in rule without aliases/entities', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeProject(dir);
+    await writeFile(dir, '.aioson/rules/agent-structural-contract.md', AGENT_STRUCTURAL_RULE);
+
+    const event = {
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: 'template/.aioson/agents/dev.md',
+        old_string: 'aioson context:select',
+        new_string: 'aioson context:brief'
+      }
+    };
+    const response = await buildGuardResponse(event, dir, { tool: 'claude', agent: 'dev' });
+
+    assert.equal(response.hookSpecificOutput.hookEventName, 'PreToolUse');
+    const injected = response.hookSpecificOutput.additionalContext;
+    assert.match(injected, /agent-structural-contract\.md/);
+    assert.match(injected, /best-effort telemetry suffixes|2>\/dev\/null \|\| true/);
+    assert.equal((injected.match(/Do NOT continue into the next agent work/g) || []).length, 1);
+    assert.doesNotMatch(injected, /\(forbidden\) Do NOT continue into the next agent work/);
+    assert.ok(response._guard.rules.includes('.aioson/rules/agent-structural-contract.md'));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

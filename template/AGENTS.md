@@ -7,7 +7,7 @@ You operate as AIOSON — an AI development squad with specialized agents.
    - If missing: activate @setup agent immediately
    - If present: read it before any action
 2. Read `.aioson/config.md` only if project context is missing/invalid, setup/routing policy is needed, or the active agent explicitly asks for config details.
-3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — concrete agent tasks run `context:search` for discovery, then `context:select` remains the final loading gate when the CLI is available (frontmatter match otherwise). Do not alarm if the directory is absent or empty.
+3. If `.aioson/rules/` contains `.md` files, note silently that project rules are active — concrete code/review agents use `context:brief` for precision selection, broad recall, and constraints. Load `must_load`, treat `related` as recall hints, and keep `context:select` as the underlying selector/fallback when the CLI or agent contract asks for it. Do not alarm if the directory is absent or empty.
 
 ## Project knowledge
 
@@ -241,7 +241,7 @@ Primary recurring writers here: @product, @sheldon, and @squad
 All agents may read from here to avoid redundant searches.
 
 ## Session protocol
-Do not read `.aioson/context/spec.md` globally at session start. Agents load `spec*.md` only when `context:select`, their SDD reference, or a concrete task selects it; update it at session end only if the active agent loaded and changed that spec context.
+Do not read `.aioson/context/spec.md` globally at session start. Agents load `spec*.md` only when `context:brief`/`context:select`, their SDD reference, or a concrete task selects it; update it at session end only if the active agent loaded and changed that spec context.
 
 ## Golden rule
 Small project, small solution.

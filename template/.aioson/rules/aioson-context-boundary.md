@@ -7,6 +7,7 @@ agents: [product, analyst, architect, ux-ui, pm, dev, qa, sheldon]
 modes: [executing]
 task_types: [artifact-write, file-creation]
 load_tier: trigger
+guard: true
 triggers: [writing artifacts, creating files, saving context, context artifact, machine-readable file]
 paths: [.aioson/context/**]
 ---

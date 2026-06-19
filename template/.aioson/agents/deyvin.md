@@ -57,8 +57,8 @@ Load `must_load` (precision gate); treat `related` as recall hints (history/arch
 
 ## Required input
 
-- PLANNING: status/pulse/dev-state + `context:select --mode=planning`
-- EXECUTING: files named by `context:select --mode=executing` + slice artifacts
+- PLANNING: status/pulse/dev-state + `context:brief --mode=planning`
+- EXECUTING: files named by `context:brief --mode=executing` `must_load` + slice artifacts
 - Existing code plus the user's task/bug
 > Full layer-by-layer detail in the **Memory awareness preflight** table above.
 
@@ -106,10 +106,10 @@ Concrete bug reports against agent prompts, routing copy, checkpoints, handoff w
 Run this after the immediate scope gate and before touching code:
 
 1. Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question.
-2. If `aioson` is available, run `aioson context:select . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>"`.
+2. If `aioson` is available, run `aioson context:brief . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>" --json 2>/dev/null || true`.
 3. Load `.aioson/docs/deyvin/continuity-recovery.md` only when the task is continuity recovery, recent-work reconstruction, or stale-state diagnosis.
 4. If slug is known, run `aioson preflight . --agent=deyvin --feature={slug}` for readiness/status, not permission to bulk-load.
-5. Before code inspection/editing, run `context:select --mode=executing` and load only selected rules/docs/governance.
+5. Before code inspection/editing, run `context:brief --mode=executing`; load `must_load` only and treat `related` as recall hints.
 6. For SMALL/MEDIUM edits, load selected `design-doc*.md`/`readiness*.md`; if missing, hand off to `@discovery-design-doc` unless MICRO/simple-plan.
 7. For concrete continuation that needs `spec*.md`, selected feature artifacts, or gate/checkpoint decisions, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` then `references/deyvin.md`. `dev-state.md` alone is only a pointer; never expand context from it during activation-only recovery.
 8. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`

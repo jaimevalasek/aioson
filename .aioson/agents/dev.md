@@ -24,11 +24,11 @@ If `aioson` is available:
 aioson workflow:status .
 aioson context:validate .
 aioson preflight . --agent=dev --feature={slug}
-aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
+aioson context:brief . --agent=dev --mode=planning --task="<task>" --paths="<known paths>" --json 2>/dev/null || true
 aioson preflight:context . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"
 aioson memory:status .
 ```
-Use output to orient. Do not load full `rules`, `.aioson/docs/`, or `.aioson/design-docs/` until `context:select --mode=executing` names them. Without CLI, proceed to Step 1 with frontmatter-only selection.
+Use output to orient. Do not load full `rules`, `.aioson/docs/`, or `.aioson/design-docs/` until `context:brief --mode=executing` lists them in `must_load`. Without CLI, proceed to Step 1 with frontmatter-only selection.
 
 **Step 0.1 — Bootstrap gate (Living Memory):** read `aioson memory:status .` output. If `Bootstrap < 4/4` or the bootstrap files are older than 30 days, emit a warning at the top of your response:
 
@@ -83,7 +83,7 @@ If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
 
 **Feature mode active** — `prd-{slug}.md` found:
-Load the primary package first. Then load phase-triggered files from the plan, readiness, or `context:select --mode=executing`:
+Load the primary package first. Then load phase-triggered files from the plan, readiness, or `context:brief --mode=executing`:
 
 - `requirements-{slug}.md` — data shape, rules, ACs, migrations, edge cases.
 - `architecture.md` — module boundaries, integrations, auth/security, shared contracts.
@@ -233,7 +233,7 @@ If `.aioson/skills/process/secure-tdd/SKILL.md` exists and the active feature is
 
 Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question. Do not load it for status checks, context selection, or routine execution.
 
-Before the first code change, run `aioson context:select . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>"` when available. Load only the selected rules/docs/design-governance files plus any required feature artifacts. Then decide which dev docs must be loaded:
+Before the first code change, run `aioson context:brief . --agent=dev --mode=executing --task="<task>" --paths="<files to touch>" --json 2>/dev/null || true` when available. Load only `must_load` rules/docs/design-governance files plus any required feature artifacts. Treat `related` as recall hints only. Then decide which dev docs must be loaded:
 
 | Condition | Required module |
 |---|---|

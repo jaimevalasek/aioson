@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const { buildContextBrief, extractDocConstraints } = require('./context-brief');
-const { readFileSafe } = require('./preflight-engine');
+const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 
 // Harness-agnostic core for `context:guard`.
 //
@@ -20,11 +20,9 @@ const MUTATING_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 const HARD_SIGNAL = /(?:triggers|paths|entities|aliases|task_types):/;
 
 // Salience gate: a rule opts into guard injection by declaring `entities` or
-// `aliases` — the domain-specific routing signals (e.g. Workspace/Project).
-// Rules matched only via generic triggers/task_types or a broad path glob like
-// `src/**` are ambient baseline (e.g. "use English identifiers") and must NOT
-// re-inject on every edit — that is the injection-fatigue ("cry wolf") failure
-// observed when dogfooding against a real repo.
+// `aliases`, or by explicitly setting `guard: true` in frontmatter. The explicit
+// opt-in is for project contracts that are path/task-bound but not domain-entity
+// rules (e.g. agent prompt structure). Generic baseline rules remain silent.
 const DOMAIN_SIGNAL = /(?:entities|aliases):/;
 
 // Tunable relevance gate.
@@ -73,6 +71,15 @@ function salientRules(rules) {
   return rules.filter((item) => DOMAIN_SIGNAL.test(item.reason || ''));
 }
 
+function truthyFrontmatter(value) {
+  return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+}
+
+function ruleAllowsGuard(rule, frontmatter) {
+  const reason = rule.reason || '';
+  return DOMAIN_SIGNAL.test(reason) || (truthyFrontmatter(frontmatter.guard) && HARD_SIGNAL.test(reason));
+}
+
 function confidenceAllows(confidence, gate) {
   const have = CONFIDENCE_RANK[confidence] ?? 0;
   const need = CONFIDENCE_RANK[gate.minConfidence] ?? 1;
@@ -91,6 +98,10 @@ function dedupeStrings(items) {
   return out;
 }
 
+function normalizeRuleLine(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 // Read each salient rule file and extract ITS OWN constraints — so the
 // injection is attributed per rule and never carries the generic concern-based
 // constraints the brief aggregates from the whole selection.
@@ -99,9 +110,14 @@ async function buildRuleBlocks(targetDir, salient, gate) {
   for (const rule of salient) {
     const content = await readFileSafe(path.join(targetDir, rule.path));
     if (!content) continue;
+    const frontmatter = parseFrontmatter(content);
+    if (!ruleAllowsGuard(rule, frontmatter)) continue;
     const extracted = extractDocConstraints(content);
     const constraints = dedupeStrings(extracted.constraints).slice(0, gate.maxConstraints);
-    const forbidden = dedupeStrings(extracted.forbidden_patterns).slice(0, gate.maxForbidden);
+    const constraintSet = new Set(constraints.map(normalizeRuleLine));
+    const forbidden = dedupeStrings(extracted.forbidden_patterns)
+      .filter((item) => !constraintSet.has(normalizeRuleLine(item)))
+      .slice(0, gate.maxForbidden);
     if (constraints.length === 0 && forbidden.length === 0) continue;
     blocks.push({ path: rule.path, constraints, forbidden });
   }
@@ -155,11 +171,10 @@ async function buildGuardResponse(event, targetDir, options = {}) {
   });
 
   const ruled = matchedRules(brief);
-  const salient = salientRules(ruled);
-  if (salient.length === 0) return emptyResponse();
+  if (ruled.length === 0) return emptyResponse();
   if (!confidenceAllows(brief.confidence, gate)) return emptyResponse();
 
-  const ruleBlocks = await buildRuleBlocks(targetDir, salient, gate);
+  const ruleBlocks = await buildRuleBlocks(targetDir, ruled, gate);
   if (ruleBlocks.length === 0) return emptyResponse();
 
   const additionalContext = formatInjectionText(filePath, ruleBlocks);
@@ -178,6 +193,7 @@ module.exports = {
   extractEditedContent,
   matchedRules,
   salientRules,
+  ruleAllowsGuard,
   MUTATING_TOOLS,
   GUARD_GATE
 };

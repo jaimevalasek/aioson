@@ -6,6 +6,7 @@ version: 1.0.0
 modes: [executing]
 task_types: [artifact-write, data-format]
 load_tier: trigger
+guard: true
 triggers: [choosing format, structured data, writing yaml, writing json, producing output, data file]
 paths: [output/**, .aioson/squads/**]
 ---

@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const { selectContext } = require('./context-selector');
-const { readFileSafe } = require('./preflight-engine');
+const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { withIndex } = require('./context-search');
 
 const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
@@ -259,14 +259,23 @@ function extractDocConstraints(content) {
   };
 }
 
+function isHardConstraintDoc(item, content) {
+  if (item.surface === 'rules' || item.surface === 'design_governance') return true;
+  if (item.surface !== 'docs') return false;
+  const frontmatter = parseFrontmatter(content || '');
+  const scope = normalizeToken(frontmatter.constraint_scope || frontmatter.constraints || '');
+  return scope === 'hard' || scope === 'contract';
+}
+
 function constraintsFromDocuments(documents, selected) {
   const constraints = [];
   const forbidden = [];
   const checks = [];
 
   for (const item of selected) {
-    if (!['rules', 'design_governance', 'docs'].includes(item.surface)) continue;
-    const doc = extractDocConstraints(documents.get(item.path) || '');
+    const content = documents.get(item.path) || '';
+    if (!isHardConstraintDoc(item, content)) continue;
+    const doc = extractDocConstraints(content);
     constraints.push(...doc.constraints);
     forbidden.push(...doc.forbidden_patterns);
     checks.push(...doc.verification_hints);
@@ -479,7 +488,13 @@ async function buildContextBrief(targetDir, options = {}) {
   const stack = inferStack(selection, documents);
   const concerns = inferConcerns(selection, task);
   const { must_load: mustLoad, should_load: shouldLoad } = classifyLoads(selection, profile);
-  const extracted = constraintsFromDocuments(documents, selection.selected || []);
+  const mustLoadPaths = new Set(mustLoad.map((item) => item.path));
+  const constraintSources = (selection.selected || []).filter((item) => {
+    const hard = isHardConstraintDoc(item, documents.get(item.path) || '');
+    if (!hard) return false;
+    return mustLoadPaths.has(item.path) || item.surface === 'docs';
+  });
+  const extracted = constraintsFromDocuments(documents, constraintSources);
   const structure = suggestedStructure(concerns);
   const profileHints = profileVerificationHints(profile, concerns);
   const constraints = dedupe([...concernConstraints(concerns), ...extracted.constraints, ...structure], 18);

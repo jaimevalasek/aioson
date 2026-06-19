@@ -6,6 +6,7 @@ version: 1.0.0
 modes: [planning, executing]
 task_types: [agent-contract, agent-authoring]
 load_tier: trigger
+guard: true
 triggers: [editing agent files, creating agents, agent prompt, handoff contract, observability block, milestone order]
 paths: [.aioson/agents/**, template/.aioson/agents/**, .aioson/squads/**]
 ---

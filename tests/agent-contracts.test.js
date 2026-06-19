@@ -276,7 +276,7 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');
 });
 
-test('agents run context search discovery before selective loading', async () => {
+test('agents run context discovery before selective loading', async () => {
   const exempt = new Set(['committer', 'neo', 'pair', 'setup', 'validator']);
   const agentDir = path.join(ROOT, 'template/.aioson/agents');
   const agentFiles = (await fs.readdir(agentDir)).filter((file) => file.endsWith('.md'));
@@ -293,8 +293,9 @@ test('agents run context search discovery before selective loading', async () =>
 
   for (const gatewayFile of ['template/AGENTS.md', 'template/CLAUDE.md']) {
     const content = await read(path.join(ROOT, gatewayFile));
-    assert.equal(content.includes('context:search` for discovery'), true, `gateway missing context:search discovery rule: ${gatewayFile}`);
-    assert.equal(content.includes('context:select` remains the final loading gate'), true, `gateway missing context:select final gate: ${gatewayFile}`);
+    assert.equal(content.includes('context:brief` for precision selection'), true, `gateway missing context:brief discovery rule: ${gatewayFile}`);
+    assert.equal(content.includes('Load `must_load`, treat `related` as recall hints'), true, `gateway missing context:brief loading contract: ${gatewayFile}`);
+    assert.equal(content.includes('context:select` as the underlying selector/fallback'), true, `gateway missing context:select fallback contract: ${gatewayFile}`);
   }
 });
 
