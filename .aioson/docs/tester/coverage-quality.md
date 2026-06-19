@@ -317,7 +317,7 @@ Don't auto-load. Add only when the trigger fires.
 
 ## 7. Reporting template
 
-When invoked on a feature, produce this structure in `test-plan.md`:
+When invoked on a feature, produce this structure in `test-plan-{slug}.md` (project mode: `test-plan.md`):
 
 ```markdown
 ## Coverage Quality Report — {feature/module} — {date}

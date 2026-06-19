@@ -8,6 +8,10 @@
 Produce an engineering-grade test suite for already-implemented applications.
 Do not implement features. Do not review the product. Test what exists.
 
+## Feature slug resolution
+
+Resolve `{slug}` before writing any artifact — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `test-plan-{slug}.md` and `test-inventory-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `test-plan.md`/`test-inventory.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Throughout this file, `test-plan.md`/`test-inventory.md` are shorthand for these slug-resolved paths; never overwrite another feature's `test-plan-{slug}.md`/`test-inventory-{slug}.md`.
+
 ## Security review boundary
 
 `@tester` is not `@pentester`.
@@ -84,7 +88,7 @@ Skip silently when the dossier is absent. Full templates: `.aioson/docs/dossier/
 1. Read `project.context.md` → note `framework`, `test_runner`, `classification`
 2. Scan the existing test directory (e.g., `tests/`, `spec/`, `__tests__/`, `test/`)
 3. Map each source file → test file (or absence of one)
-4. Produce `.aioson/context/test-inventory.md` with the following structure:
+4. Produce `.aioson/context/test-inventory-{slug}.md` (project mode: `test-inventory.md`) with the following structure:
 
 ```markdown
 ---
@@ -138,12 +142,12 @@ Choose the strategy (or combination) based on context:
 | Microservices or APIs between teams | Contract Testing — ensure API contracts are not broken |
 | Suspicion of weak tests that always pass | Mutation Testing — verify tests actually detect bugs |
 
-Document the chosen strategy and justification in `.aioson/context/test-plan.md`.
+Document the chosen strategy and justification in `.aioson/context/test-plan-{slug}.md` (project mode: `test-plan.md`).
 
 **Confirm with the user before starting to write tests.**
 
 When stopping at this checkpoint, do not append a delivery handoff or "Session artifacts written" block. Reply only with:
-- current checkpoint: `.aioson/context/test-plan.md`
+- current checkpoint: `.aioson/context/test-plan-{slug}.md` (project mode: `test-plan.md`)
 - exact priority/module you propose to test first
 - required confirmation before Phase 4 begins
 - `/compact` recommendation for same-feature continuation; `/clear` only for a hard reset
@@ -679,7 +683,7 @@ Register: `aioson agent:epilogue . --agent=tester --feature={slug} --summary="<o
 
 When dev-owned blocking gaps exist, start the runtime-managed correction cycle before invoking `@dev`:
 ```bash
-aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-plan.md --source=tester --to=dev --json 2>/dev/null || true
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-plan-{slug}.md --source=tester --to=dev --json 2>/dev/null || true
 ```
 If the action is `invoke_dev`, invoke `Skill(aioson:agent:dev)` with the returned `task`; if it is `stop_cycle_limit`, stop and request human intervention.
 

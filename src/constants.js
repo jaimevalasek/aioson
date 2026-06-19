@@ -270,7 +270,7 @@ const AGENT_DEFINITIONS = [
       '.aioson/context/discovery.md',
       '.aioson/context/architecture.md'
     ],
-    output: '.aioson/context/ui-spec.md + Visual identity enrichment in prd.md or prd-{slug}.md'
+    output: '.aioson/context/ui-spec-{slug}.md (project mode: .aioson/context/ui-spec.md) + Visual identity enrichment in prd.md or prd-{slug}.md'
   },
   {
     id: 'pm',
@@ -347,7 +347,7 @@ const AGENT_DEFINITIONS = [
     command: '@tester',
     path: '.aioson/agents/tester.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/test-inventory.md + .aioson/context/test-plan.md'
+    output: '.aioson/context/test-inventory-{slug}.md + .aioson/context/test-plan-{slug}.md (project mode: bare names)'
   },
   {
     id: 'orchestrator',
