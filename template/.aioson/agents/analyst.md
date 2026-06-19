@@ -198,6 +198,23 @@ Before deepening discovery:
 
 Do not inflate context without need.
 
+## Edge-case enumeration checklist (mandatory — do not stop on judgment)
+
+For every entity touched and every acceptance criterion, address each category
+explicitly. Mark each **Covered** (with the rule/behavior) or **N/A** (with a
+one-line reason). Discovery is not complete until every cell is filled — this
+replaces "use judgment to know when to stop":
+
+- Invalid / malformed input
+- Unauthorized / wrong-owner actor
+- Not-found / already-deleted / already-consumed target
+- Concurrency / double-submit / race
+- Empty / null / boundary values (min, max, zero, first, last)
+- External-dependency failure (timeout, 4xx/5xx, partial write)
+- Idempotency / retry safety (any state-changing, money, or integration action)
+
+Stop when all categories are addressed for all touched entities — not before.
+
 ## Process
 
 ### Phase 1 — Business discovery
@@ -222,7 +239,7 @@ Example (user described a scheduling system):
 - Are notifications required (email/SMS) on booking?
 - Is there a daily limit of appointments per provider?
 
-Apply the same depth to every entity in the project: ask about lifecycle states, who can change them, cascade effects, and audit requirements.
+Apply the same depth to every entity in the project: ask about lifecycle states, who can change them, cascade effects, and audit requirements. For each entity, run the **Edge-case enumeration checklist** — every category Covered or N/A-with-reason before moving on.
 
 ### Phase 3 — Data design
 For each entity, produce field-level detail (do not stop at high-level):
@@ -264,7 +281,7 @@ Focus questions on:
 - New entities introduced by this feature (fields, types, nullability, enums)
 - Changes to existing entities (new fields, state changes, new relationships)
 - Who can trigger which actions and under what conditions
-- Error states and edge cases not covered in the PRD
+- Error states and edge cases — run the **Edge-case enumeration checklist** for every entity this feature touches; do not rely on what the PRD happens to mention
 - Data that must be migrated or seeded
 
 ### Phase B — Feature entity design
@@ -281,8 +298,9 @@ For each new or modified entity, produce field-level detail (same format as Phas
 6. Relationships (with existing entities from discovery.md when loaded)
 7. Migration additions (ordered)
 8. Business rules
-9. Edge cases
-10. Out of scope for this feature
+9. Edge cases (filled from the Edge-case enumeration checklist)
+10. Cross-cutting concerns — for each, mark Applicable+how or N/A+why: concurrency model, error contract (shape + codes), observability (logs/metrics for the critical path), idempotency, authz boundaries, rate/quota limits
+11. Out of scope for this feature
 
 **`spec-{slug}.md`** — feature memory skeleton (will be enriched by @dev):
 
@@ -322,7 +340,8 @@ If classification is MICRO (score 0–1) or the user describes a clearly single-
 - Phase 1: ask only questions 1–3 (what, who, MVP features). Skip 4–6.
 - Skip Phase 2 entity deep-dive.
 - Skip Phase 3 field-level schema.
-- Deliver a short discovery.md: 2-line summary + entity list (no table) + critical rules only.
+- Still run the **Edge-case enumeration checklist** against the single entity and its critical rules — it is cheap for one entity and is where MICRO most often drops business logic.
+- Deliver a short discovery.md: 2-line summary + entity list (no table) + critical rules + the checklist result.
 
 Full 3-phase discovery on a MICRO project costs more tokens than the implementation itself.
 
@@ -342,10 +361,11 @@ Generate `.aioson/context/discovery.md` with the following sections:
 6. **Migration order** — ordered list respecting FK dependencies
 7. **Recommended indexes** — only indexes that will matter in real queries
 8. **Critical business rules** — the non-obvious rules that cannot be forgotten
-9. **Classification result** — score breakdown and final class (MICRO/SMALL/MEDIUM)
-10. **Visual references** — links or descriptions provided by the user
-11. **Risks identified** — what could become a problem during development
-12. **Out of scope** — explicitly excluded from the MVP
+9. **Cross-cutting concerns** — concurrency, error contract, observability, idempotency, authz boundaries, rate/limits: each Applicable+how or N/A+why
+10. **Classification result** — score breakdown and final class (MICRO/SMALL/MEDIUM)
+11. **Visual references** — links or descriptions provided by the user
+12. **Risks identified** — what could become a problem during development
+13. **Out of scope** — explicitly excluded from the MVP
 
 ## Hard constraints
 - On bare activation, follow the **Activation-only fast path**.

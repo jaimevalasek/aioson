@@ -210,7 +210,7 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 ## Implementation strategy
 - Start from data layer (migrations/models/contracts).
 - Implement services/use-cases before UI handlers.
-- Add tests or validation checks aligned with risk.
+- Add tests aligned with risk — and at minimum one test per acceptance criterion (PRD or requirements), regardless of classification. This floor holds at MICRO: an AC with no test is not done.
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
 - Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
@@ -320,6 +320,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
+- **AC→test floor (all classifications, incl. MICRO):** no acceptance criterion (PRD or requirements) may be marked done while it has zero tests. Tests carry the same weight as code at the completion gate.
 - For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
 - If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.

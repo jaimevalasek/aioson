@@ -61,8 +61,9 @@ Before writing tests, check if `.aioson/context/conformance-{slug}.yaml` exists:
   ```
 
 **If no conformance contract (MICRO/SMALL):**
-- Use `requirements-{slug}.md` acceptance criteria directly
+- Use `requirements-{slug}.md` acceptance criteria directly; if there is no requirements file (MICRO), use the acceptance criteria in `prd-{slug}.md`
 - Follow the same `AC-{slug}-{N}` naming convention where available
+- **AC→test floor (all classifications):** every acceptance criterion maps to at least one test. The conformance YAML is the MEDIUM mechanism, but the floor itself is not MEDIUM-only — an AC with zero tests is a gap, not a choice.
 
 ## Required input
 
