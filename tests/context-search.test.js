@@ -14,6 +14,12 @@ async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-search-'));
 }
 
+async function removeTmp(dir) {
+  // Windows can briefly hold the SQLite file handle after close(); retry the
+  // rmdir so a transient ENOTEMPTY/EBUSY never fails an otherwise-green test.
+  await fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+}
+
 async function writeFile(dir, relPath, content) {
   const full = path.join(dir, relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
@@ -37,7 +43,7 @@ test('IndexManager — opens and closes without error', async () => {
     await idx.open();
     idx.close();
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -63,7 +69,7 @@ test('IndexManager — indexDirectory indexes markdown files', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -91,7 +97,7 @@ test('IndexManager — search returns relevant results', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -113,7 +119,7 @@ test('IndexManager — search returns empty array for no matches', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -130,7 +136,7 @@ test('IndexManager — search empty query returns empty array', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -188,7 +194,7 @@ test('IndexManager — searchPackage indexes .aioson rules with aliases and enti
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -240,7 +246,7 @@ test('IndexManager — agent and mode are ranking boosts, not hard filters', asy
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -281,7 +287,7 @@ test('IndexManager — searchPackage dedupes template mirrors and prefers projec
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -350,7 +356,7 @@ test('IndexManager — indexDirectory skips and purges nested .aioson agent file
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -385,7 +391,7 @@ test('context:select routes aliases, entities and retrieval_intents as final eli
       'context:select should select eligible rules through alias/entity/intent metadata'
     );
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -428,7 +434,7 @@ test('runContextSearch — auto-indexes path and returns load buckets in JSON mo
       'JSON results should include discovered rule'
     );
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -475,7 +481,7 @@ test('IndexManager — invalidateStale removes old entries', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -508,7 +514,7 @@ test('IndexManager — two concurrent instances (WAL mode)', async () => {
       idx2.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
 
@@ -542,6 +548,6 @@ test('IndexManager — skips already-indexed files (no force)', async () => {
       idx.close();
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true });
+    await removeTmp(tmp);
   }
 });
