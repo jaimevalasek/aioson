@@ -243,6 +243,32 @@ test('context:guard injects a real-style guard opt-in rule without aliases/entit
   }
 });
 
+test('context:guard does NOT inject a path-scoped guard rule when editing an out-of-scope file', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeProject(dir);
+    await writeFile(dir, '.aioson/rules/agent-structural-contract.md', AGENT_STRUCTURAL_RULE);
+
+    // Editing a source file OUTSIDE the rule's `.aioson/agents/**` scope. The
+    // content deliberately echoes the rule's triggers ("agent prompt",
+    // "handoff contract") so it surfaces in the brief via fuzzy keyword overlap
+    // — but a path-scoped guard rule must stay silent unless the path matches.
+    const event = {
+      tool_name: 'Edit',
+      tool_input: {
+        file_path: 'src/commands/hooks-install.js',
+        old_string: 'const agent = "dev";',
+        new_string: 'const agent = "dev"; // agent prompt handoff contract observability block'
+      }
+    };
+    const response = await buildGuardResponse(event, dir, { tool: 'claude', agent: 'dev' });
+
+    assert.deepEqual(response, {}); // out-of-scope path -> no cry-wolf injection
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:guard command emits a pristine wire payload in JSON mode', async () => {
   const dir = await makeTmpDir();
   try {

@@ -9,6 +9,19 @@ const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev', 'deyvin']);
 const REVIEW_AGENTS = new Set(['qa', 'tester']);
 
+// Recall only consumes markdown knowledge surfaces (rules, docs, features,
+// plans, prds, researchs). Indexing/returning .json/.txt is cost and noise.
+const RECALL_EXTENSIONS = ['.md'];
+
+// Framework-keyed convention skills (e.g. `laravel-conventions.md`). When the
+// project stack is known, recalling a *different* framework's convention skill
+// is cross-stack noise, so it is dropped from the advisory recall list.
+const FRAMEWORK_SKILL_TOKENS = new Set([
+  'adonis', 'angular', 'astro', 'django', 'express', 'fastapi', 'flask', 'hono',
+  'laravel', 'next', 'node', 'nuxt', 'phoenix', 'rails', 'react', 'remix',
+  'spring', 'svelte', 'symfony', 'vue'
+]);
+
 const AGENT_PROFILES = {
   dev: {
     role: 'implementation',
@@ -419,6 +432,21 @@ function recallEnabled(options) {
   return raw === true || (typeof raw === 'string' && raw.trim().toLowerCase() === 'true');
 }
 
+// A recalled framework-convention skill for a stack other than the project's is
+// cross-stack noise (e.g. surfacing `laravel-conventions.md` on a Node project).
+// Only fires when the project stack is known AND the hit is a framework-keyed
+// skill — everything else is kept.
+function isForeignStackSkill(relPath, stack) {
+  const normalizedStack = normalizeToken(stack);
+  if (!normalizedStack) return false;
+  const normalizedPath = normalizeForRecall(relPath);
+  if (!normalizedPath.includes('/skills/')) return false;
+  const base = normalizedPath.split('/').pop() || '';
+  const token = (base.match(/^([a-z0-9]+)[-_]/) || [])[1] || '';
+  if (!token || !FRAMEWORK_SKILL_TOKENS.has(token)) return false;
+  return !normalizedStack.split(/\s+/).includes(token);
+}
+
 // Broad recall over the indexed corpus (incl. archived features, plans, prds,
 // researchs) — the historical surface the live `select` walk cannot see. Kept
 // as a SEPARATE advisory section: it never feeds must_load (select stays the
@@ -427,9 +455,10 @@ function recallEnabled(options) {
 async function collectRecall(targetDir, query, selection, options) {
   if (!query) return [];
   const selectedPaths = new Set((selection.selected || []).map((item) => normalizeForRecall(item.path)));
+  const stack = options.stack || '';
   try {
     const pkg = await withIndex(async (idx) => {
-      await idx.indexDirectory(targetDir);
+      await idx.indexDirectory(targetDir, { extensions: RECALL_EXTENSIONS });
       return idx.searchPackage(query, {
         projectDir: targetDir,
         limit: 8,
@@ -444,7 +473,8 @@ async function collectRecall(targetDir, query, selection, options) {
     const related = [];
     for (const hit of hits) {
       const key = normalizeForRecall(hit.relPath);
-      if (!key || selectedPaths.has(key) || seen.has(key)) continue;
+      if (!key || !key.endsWith('.md') || selectedPaths.has(key) || seen.has(key)) continue;
+      if (isForeignStackSkill(hit.relPath, stack)) continue;
       seen.add(key);
       related.push({
         path: hit.relPath,
@@ -507,7 +537,9 @@ async function buildContextBrief(targetDir, options = {}) {
   if (selection.memory && selection.memory.length > 0) fallbackUsed.push('runtime_memory');
 
   const recallQuery = [task, paths.join(' '), options.feature || options.slug || ''].filter(Boolean).join(' ').trim();
-  const related = recallEnabled(options) ? await collectRecall(targetDir, recallQuery, selection, options) : [];
+  const related = recallEnabled(options)
+    ? await collectRecall(targetDir, recallQuery, selection, { ...options, stack })
+    : [];
   if (related.length > 0) fallbackUsed.push('broad_recall');
 
   return {

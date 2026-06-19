@@ -25,6 +25,12 @@ const HARD_SIGNAL = /(?:triggers|paths|entities|aliases|task_types):/;
 // rules (e.g. agent prompt structure). Generic baseline rules remain silent.
 const DOMAIN_SIGNAL = /(?:entities|aliases):/;
 
+// A guard rule that declares `paths` is a contract over those files. It may
+// still surface in the brief via fuzzy trigger/description keyword overlap when
+// an UNRELATED file is edited — but it must only inject when the edited path is
+// actually in scope. This `paths:` reason is the proof the file matched.
+const PATH_MATCH_SIGNAL = /\bpaths:/;
+
 // Tunable relevance gate.
 const GUARD_GATE = {
   minConfidence: 'medium', // 'low' briefs never inject
@@ -67,17 +73,22 @@ function matchedRules(brief) {
   ));
 }
 
-function salientRules(rules) {
-  return rules.filter((item) => DOMAIN_SIGNAL.test(item.reason || ''));
-}
-
 function truthyFrontmatter(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
 
+function ruleDeclaresPaths(frontmatter) {
+  return Boolean(frontmatter && (frontmatter.paths || frontmatter.globs));
+}
+
 function ruleAllowsGuard(rule, frontmatter) {
   const reason = rule.reason || '';
-  return DOMAIN_SIGNAL.test(reason) || (truthyFrontmatter(frontmatter.guard) && HARD_SIGNAL.test(reason));
+  if (DOMAIN_SIGNAL.test(reason)) return true;
+  if (!truthyFrontmatter(frontmatter.guard) || !HARD_SIGNAL.test(reason)) return false;
+  // Path-scoped guard rule: inject only when the edited file is genuinely in its
+  // declared path scope, never on fuzzy keyword spill from an unrelated file.
+  if (ruleDeclaresPaths(frontmatter) && !PATH_MATCH_SIGNAL.test(reason)) return false;
+  return true;
 }
 
 function confidenceAllows(confidence, gate) {
@@ -192,7 +203,6 @@ module.exports = {
   deriveQuery,
   extractEditedContent,
   matchedRules,
-  salientRules,
   ruleAllowsGuard,
   MUTATING_TOOLS,
   GUARD_GATE

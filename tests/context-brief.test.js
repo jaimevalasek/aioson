@@ -186,6 +186,42 @@ test('context:brief recall surfaces historical files that select cannot see', as
   }
 });
 
+test('context:brief recall drops cross-stack skills and non-markdown noise', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeLaravelProject(dir); // framework: Laravel -> known stack
+    // Same-stack convention skill — should be recalled.
+    await writeFile(dir, '.aioson/skills/static/laravel-conventions.md', [
+      '---', 'title: Laravel conventions', '---',
+      '# Laravel conventions', '', 'Eloquent query convention patterns for controllers and services.'
+    ].join('\n'));
+    // Foreign-stack convention skill matching the same terms — must be filtered.
+    await writeFile(dir, '.aioson/skills/static/rails-conventions.md', [
+      '---', 'title: Rails conventions', '---',
+      '# Rails conventions', '', 'ActiveRecord query convention patterns for controllers and services.'
+    ].join('\n'));
+    // Non-markdown file with matching terms — recall is markdown-only.
+    await writeFile(dir, 'config/query-convention.json', JSON.stringify({ note: 'eloquent query convention patterns' }));
+
+    const searchDir = path.join(dir, '.search-index');
+    const result = await buildContextBrief(dir, {
+      agent: 'dev',
+      mode: 'executing',
+      task: 'eloquent query convention patterns',
+      paths: 'app/Services/ReportService.php',
+      searchDir,
+      recall: true
+    });
+    const relatedPaths = (result.related || []).map((item) => item.path);
+
+    assert.ok(relatedPaths.some((p) => /laravel-conventions\.md/.test(p)), 'same-stack skill is recalled');
+    assert.equal(relatedPaths.some((p) => /rails-conventions\.md/.test(p)), false, 'foreign-stack skill is filtered');
+    assert.equal(relatedPaths.some((p) => /\.json$/.test(p)), false, 'non-markdown is not recalled');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:brief does not promote should_load docs into hard constraints', async () => {
   const dir = await makeTmpDir();
   try {
