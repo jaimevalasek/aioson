@@ -97,6 +97,17 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
     (c) => c && typeof c.verification === 'string' && c.verification.trim()
   );
   const skipped = criteria.length - executable.length;
+  const strict = Boolean(options.strict);
+  const binaryWithoutVerification = criteria.filter(
+    (c) => c && c.binary === true && !(typeof c.verification === 'string' && c.verification.trim())
+  );
+  const strictErrors = [];
+  if (strict && criteria.length > 0 && executable.length === 0) {
+    strictErrors.push('strict mode requires at least one executable verification criterion');
+  }
+  if (strict && binaryWithoutVerification.length > 0) {
+    strictErrors.push(`strict mode requires verification for binary criteria: ${binaryWithoutVerification.map((c) => c.id).join(', ')}`);
+  }
 
   const checks = await runCriteria({ criteria, cwd: targetDir, timeoutMs });
   const failed = checks.filter((c) => !c.ok);
@@ -111,14 +122,16 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   }
 
   const report = {
-    ok: failed.length === 0,
+    ok: failed.length === 0 && strictErrors.length === 0,
     slug,
     checked_at: new Date().toISOString(),
+    strict,
     criteria_total: criteria.length,
     executable_total: executable.length,
     passed: checks.length - failed.length,
     failed: failed.length,
     skipped_no_verification: skipped,
+    strict_errors: strictErrors,
     checks
   };
 
@@ -140,6 +153,9 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   }
 
   logger.log(t('harness.check_header', { slug }) || `Harness check — ${slug}`);
+  for (const error of strictErrors) {
+    logger.log(`  ✗ ${error}`);
+  }
   if (executable.length === 0) {
     logger.log(t('harness.check_no_executable', { total: criteria.length }) || `  No criteria with verification commands (${criteria.length} criteria total). @validator judges them all.`);
     return report;

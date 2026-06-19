@@ -144,7 +144,7 @@ function validateContract(contract) {
 
   if (contract.contract_mode !== undefined) {
     if (typeof contract.contract_mode !== 'string' || !VALID_MODES.has(contract.contract_mode.toLowerCase())) {
-      errors.push({ field: 'contract_mode', reason: 'must be one of: BALANCED, safe, builder, autopilot' });
+      errors.push({ field: 'contract_mode', reason: 'must be one of: balanced, safe, builder, autopilot' });
     }
   }
 

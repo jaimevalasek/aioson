@@ -293,6 +293,52 @@ describe('workflow engine hardening', () => {
     assert.strictEqual(check.ok, true);
   });
 
+  it('qa contract blocks Gate D when an AC has no test evidence', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'requirements-feat.md'),
+      'AC-feat-01: user-visible behavior is verified.'
+    );
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'spec-feat.md'),
+      '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'
+    );
+
+    const check = await validateHandoffContract(
+      dir,
+      { mode: 'feature', featureSlug: 'feat', classification: 'SMALL', sequence: ['qa'] },
+      'qa'
+    );
+
+    assert.strictEqual(check.ok, false);
+    assert.ok(check.missing.some((m) => m.includes('AC test audit failed')));
+  });
+
+  it('qa contract passes Gate D when QA passes and AC has test evidence', async () => {
+    const dir = await setupProject({ classification: 'SMALL' });
+    await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'requirements-feat.md'),
+      'AC-feat-01: user-visible behavior is verified.'
+    );
+    await fs.writeFile(
+      path.join(dir, 'tests', 'feat.test.js'),
+      "test('AC-feat-01 behavior', () => {});\n"
+    );
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'spec-feat.md'),
+      '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'
+    );
+
+    const check = await validateHandoffContract(
+      dir,
+      { mode: 'feature', featureSlug: 'feat', classification: 'SMALL', sequence: ['qa'] },
+      'qa'
+    );
+
+    assert.strictEqual(check.ok, true);
+  });
+
   it('qa activation auto-runs security:audit for MEDIUM feature workflow and records runtime event', async () => {
     const dir = await setupProject({ classification: 'MEDIUM' });
     await fs.writeFile(

@@ -99,6 +99,24 @@ test('harness:check: critérios sem verification = nada executável, ok=true', a
   assert.strictEqual(result.checks.length, 0);
 });
 
+test('harness:check: --strict falha quando critério binário não tem verification', async () => {
+  const tmpDir = await makeTmpDir();
+  const slug = 'strict-prose-only';
+  await writeContract(tmpDir, slug, baseContract(slug, [
+    { id: 'C1', description: 'subjetivo', assertion: 'looks good', binary: true }
+  ]));
+  const result = await runHarnessCheck({
+    args: [tmpDir],
+    options: { slug, strict: true },
+    logger: makeLogger(),
+    t: mockT
+  });
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.strict, true);
+  assert.ok(result.strict_errors.some((msg) => msg.includes('at least one executable')));
+  assert.ok(result.strict_errors.some((msg) => msg.includes('C1')));
+});
+
 test('harness:check: check que passa retorna ok=true e persiste last-check-output.json', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'passing';

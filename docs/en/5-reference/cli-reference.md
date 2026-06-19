@@ -679,17 +679,47 @@ aioson harness:check . --slug=checkout --criteria=C1,C3
 
 # Custom timeout and JSON output (exit 0 = pass)
 aioson harness:check . --slug=checkout --timeout=120000 --json
+
+# Strict mode: binary criteria without verification block the result
+aioson harness:check . --slug=checkout --strict
 ```
 
 **Options:**
 - `--slug=<feature>` — feature slug matching the harness contract. If omitted, the active contract is auto-discovered.
 - `--criteria=C1,C2` — run only the listed criteria instead of all verifiable ones.
 - `--timeout=<ms>` — per-criterion timeout override.
+- `--strict` — fail when binary criteria lack executable `verification` or no executable criterion exists.
 - `--json` — structured output; exit code propagated.
 
 **What it does:** the `verification` field is authored per criterion by `@sheldon` for every mechanically-checkable `binary: true` criterion (prefer the project test runner; deterministic; cross-platform; exit 0 = pass). `harness:check` is the standalone deterministic verification of those criteria — it never touches the circuit-breaker state (that stays exclusive to `harness:validate`/`apply-validation`). Legacy contracts without `verification` remain valid; `validateContract` only emits an advisory **warning** for `binary: true` criteria lacking it. `@validator` runs `harness:check` first and copies the exit-code verdicts verbatim into `results[].passed`, LLM-judging only the criteria without `verification`.
 
 See [Executable verification](./executable-verification.md) for the full theme.
+
+---
+
+## ac:test-audit
+
+Map declared acceptance criteria to deterministic test evidence.
+
+```bash
+aioson ac:test-audit . --feature=checkout
+aioson ac:test-audit . --feature=checkout --json
+```
+
+**What it does:** extracts `AC-*` IDs from `requirements-{slug}.md`, `prd-{slug}.md`, and `conformance-{slug}.yaml`, then checks whether each ID appears in a test file or an executable harness criterion. Gate D treats missing evidence as blocking when ACs are declared.
+
+---
+
+## sdd:benchmark
+
+Generate a deterministic SDD quality snapshot for a feature.
+
+```bash
+aioson sdd:benchmark . --feature=checkout
+aioson sdd:benchmark . --feature=checkout --strict --json
+```
+
+**What it does:** combines artifact presence, `spec:analyze`, and `ac:test-audit` into a reproducible score and writes `.aioson/context/retro/sdd-benchmark-{slug}.md`.
 
 ---
 

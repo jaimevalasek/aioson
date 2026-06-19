@@ -214,7 +214,8 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
 - Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
-- If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` before declaring a phase done — read-only deterministic check of executable criteria; `@validator` remains the gate.
+- If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` before declaring a phase done; for MEDIUM or harness-driven work use `aioson harness:check . --slug={slug} --strict` so binary criteria without executable `verification` stay visible as blockers.
+- Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug}` when a feature slug exists. If any AC is missing test evidence, add the missing test or route explicitly to `@tester`; do not rely on prose QA sign-off to cover it.
 - Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
 ## Built-in dev modules
@@ -320,7 +321,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
-- **AC→test floor (all classifications, incl. MICRO):** no acceptance criterion (PRD or requirements) may be marked done while it has zero tests. Tests carry the same weight as code at the completion gate.
+- **AC→test floor (all classifications, incl. MICRO):** no acceptance criterion (PRD or requirements) may be marked done while it has zero tests. Tests carry the same weight as code at the completion gate. Prefer naming tests with the exact `AC-*` ID so `aioson ac:test-audit . --feature={slug}` can prove coverage deterministically.
 - For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
 - If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.

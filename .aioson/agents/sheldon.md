@@ -294,13 +294,13 @@ Run after writing `sheldon-enrichment-{slug}.md` only when `classification: MEDI
 
 Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
 
-Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check`), `contract_mode`/governor selection by risk, and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
+Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check . --slug={slug} --strict`), `contract_mode`/governor selection by risk using schema-valid modes (`balanced`, `safe`, `builder`, `autopilot`), and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
 ## Validation report (RF-06) — MEDIUM only
 
 Run after `sheldon-enrichment-{slug}.md` and the RF-05 harness contract, only when `classification: MEDIUM`. Skip on MICRO and SMALL.
 
-Write `.aioson/context/sheldon-validation-{slug}.md` — the human-readable readiness verdict every downstream agent reads before starting the MEDIUM chain (distinct from the RF-05 harness contract that `@validator` executes). Use the same `{slug}` selected in RF-01; write the bare `sheldon-validation.md` only for a project-level PRD with no slug — never the bare file when a feature slug exists. Full schema and the per-agent gate table live in `.aioson/docs/sheldon/enrichment-paths.md` (**Validation report**). Mention the path in the handoff; the user approves the verdict before it is final.
+Write `.aioson/context/sheldon-validation-{slug}.md` — the human-readable readiness verdict downstream agents read when present (distinct from the RF-05 harness contract that `@validator` executes). Use the same `{slug}` selected in RF-01; write the bare `sheldon-validation.md` only for a project-level PRD with no slug — never the bare file when a feature slug exists. Full schema and the per-agent gate table live in `.aioson/docs/sheldon/enrichment-paths.md` (**Validation report**). Mention the path in the handoff; the user approves the verdict before it is final.
 
 ## Retro dossier analysis (on-demand)
 
@@ -344,5 +344,5 @@ Next agent: @analyst (produces requirements + spec to close Gate A)
 Why: PRD is enriched — @analyst maps entities, business rules, and edge cases into the spec.
 Action: /analyst
 ```
-> On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness gate) in the handoff so the downstream chain reads it before starting.
+> On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness verdict) in the handoff so downstream agents can load it when present.
 > Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.

@@ -166,6 +166,42 @@ test('spec:analyze: AC declarado sem menção no contrato gera info contract_ac_
   assert.strictEqual(unlinked[0].severity, 'info');
 });
 
+test('spec:analyze: --strict torna AC sem vínculo no contrato bloqueante', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'strict-ac-link';
+  await writeContext(dir, {
+    [`requirements-${slug}.md`]: 'AC-SAL-01.'
+  });
+  await writeContract(dir, slug, {
+    feature: slug,
+    governor: {},
+    criteria: [{ id: 'C1', description: 'paraphrased criterion', binary: true, verification: 'node -e "process.exit(0)"' }]
+  });
+  const result = await runSpecAnalyze({ args: [dir], options: { feature: slug, strict: true }, logger: makeLogger() });
+  assert.strictEqual(result.ok, false);
+  const unlinked = findingsBy(result, 'contract_ac_unlinked');
+  assert.strictEqual(unlinked.length, 1);
+  assert.strictEqual(unlinked[0].severity, 'error');
+});
+
+test('spec:analyze: --strict torna critério binário sem verification bloqueante', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'strict-coverage';
+  await writeContext(dir, {
+    [`requirements-${slug}.md`]: 'AC-SC-01.'
+  });
+  await writeContract(dir, slug, {
+    feature: slug,
+    governor: {},
+    criteria: [{ id: 'AC-SC-01', description: 'AC-SC-01', binary: true }]
+  });
+  const result = await runSpecAnalyze({ args: [dir], options: { feature: slug, strict: true }, logger: makeLogger() });
+  assert.strictEqual(result.ok, false);
+  const coverage = findingsBy(result, 'contract_coverage');
+  assert.strictEqual(coverage.length, 1);
+  assert.strictEqual(coverage[0].severity, 'error');
+});
+
 test('spec:analyze: fases na mesma wave com arquivos sobrepostos geram wave_file_overlap', async () => {
   const dir = await makeTmpDir();
   const slug = 'waves-overlap';

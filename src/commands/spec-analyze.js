@@ -30,9 +30,9 @@ const path = require('node:path');
 
 const { scanArtifacts, detectClassification } = require('../preflight-engine');
 const { validateContract } = require('../harness/contract-schema');
+const { AC_ID_RE } = require('../lib/ac-test-audit');
 
-const REQ_ID_RE = /\bREQ(?:-[A-Z0-9]+)+\b/g;
-const AC_ID_RE = /\bAC(?:-[A-Z0-9]+)+\b/g;
+const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
 
 /** Edições upstream no mesmo fluxo de geração não são drift — tolerância. */
 const STALENESS_TOLERANCE_MS = 60000;
@@ -88,6 +88,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
 
   const artifacts = await scanArtifacts(targetDir, slug);
   const classification = await detectClassification(targetDir, slug);
+  const strict = Boolean(options.strict);
   const contractInfo = readContract(targetDir, slug);
   const findings = [];
 
@@ -236,7 +237,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
       }
       for (const warn of schema.warnings) {
         findings.push({
-          severity: 'info',
+          severity: strict ? 'error' : 'info',
           check: 'contract_coverage',
           message: `${warn.field}: ${warn.reason}`,
           artifacts: ['harness-contract']
@@ -249,7 +250,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
         const mentioned = [...declaredAcs].filter((id) => contractInfo.raw.includes(id));
         if (mentioned.length === 0) {
           findings.push({
-            severity: 'info',
+            severity: strict ? 'error' : 'info',
             check: 'contract_ac_unlinked',
             message: `none of the ${declaredAcs.size} AC id(s) from requirements appear in harness-contract.json — confirm criteria[] actually derive from the enriched ACs`,
             artifacts: ['requirements', 'harness-contract']
@@ -269,6 +270,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
     ok: summary.errors === 0,
     feature: slug,
     classification: classification || 'unknown',
+    strict,
     analyzed_at: new Date().toISOString(),
     artifacts_present: present,
     contract_present: Boolean(contractInfo.exists && !contractInfo.parseError),

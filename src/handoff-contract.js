@@ -10,6 +10,7 @@
 
 const path = require('node:path');
 const { readFileSafe, fileExists } = require('./preflight-engine');
+const { auditAcceptanceCriteriaTests } = require('./lib/ac-test-audit');
 
 // Contract definitions per agent stage
 const CONTRACTS = {
@@ -383,6 +384,13 @@ async function validateHandoffContract(targetDir, state, stageName) {
     );
     if (!gateCheck.ok) {
       missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
+    }
+  }
+
+  if (stageName === 'qa' && state.featureSlug) {
+    const acAudit = await auditAcceptanceCriteriaTests(targetDir, state.featureSlug);
+    if (!acAudit.ok) {
+      missing.push(`AC test audit failed: missing tests for ${acAudit.missing.join(', ')}`);
     }
   }
 

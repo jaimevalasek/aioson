@@ -95,6 +95,31 @@ test('artifact:validate: accepts slugged design-doc and readiness for feature mo
   assert.ok(result.chain.some((c) => c.name === 'readiness-checkout.md' && c.exists));
 });
 
+test('artifact:validate: shows slugged sheldon-validation when present', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
+  await writeFile(tmpDir, '.aioson/context/sheldon-validation-checkout.md', '---\nverdict: ready\n---\n# Validation');
+  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
+  await writeFile(tmpDir, '.aioson/context/architecture.md', '# Arch');
+  await writeFile(tmpDir, '.aioson/context/design-doc-checkout.md', '# Feature Design Doc');
+  await writeFile(tmpDir, '.aioson/context/readiness-checkout.md', '# Feature Readiness');
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '---\nstatus: approved\n---\n# Plan');
+
+  const result = await runArtifactValidate({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout' },
+    logger: makeLogger()
+  });
+
+  const validation = result.chain.find((c) => c.name === 'sheldon-validation-checkout.md');
+  assert.ok(validation);
+  assert.equal(validation.exists, true);
+  assert.equal(validation.required, false);
+  assert.ok(validation.detail.includes('ready'));
+});
+
 test('artifact:validate: points missing feature readiness to discovery-design-doc', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');

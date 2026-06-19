@@ -129,7 +129,7 @@ It must track:
 
 For `classification: MEDIUM`, after the enrichment log and the RF-05 harness contract, write a human-readable readiness verdict to `.aioson/context/sheldon-validation-{slug}.md` (bare `sheldon-validation.md` only for a project-level PRD with no slug). `{slug}` is the PRD slug selected in RF-01 — never write the bare file when a feature slug exists. Skip entirely on MICRO and SMALL.
 
-This is the go/no-go gate every downstream agent reads before starting the MEDIUM chain. It is distinct from the machine-checkable harness contract (which `@validator` executes): this report is the human readiness verdict; the contract is the automated check.
+This is the go/no-go readiness verdict downstream agents read when present, and `artifact:validate` surfaces it separately from enrichment. It is distinct from the machine-checkable harness contract (which `@validator` executes): this report is the human readiness verdict; the contract is the automated check.
 
 Schema:
 

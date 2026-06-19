@@ -64,22 +64,24 @@ Authoring rules for `verification`:
 
 ### 3. Set `contract_mode`
 
-By classification and risk surface:
+By classification and risk surface, using the modes accepted by the harness schema:
 
-- **SMALL** → `ECONOMICAL` (relaxed governor)
-- **MEDIUM (default)** → `BALANCED`
-- **MEDIUM with sensitive surface** (auth, money, ownership, secrets, uploads, external URLs) → `URGENT` (tight governor)
+- **SMALL** → `safe`
+- **MEDIUM (default)** → `builder`
+- **MEDIUM with sensitive surface** (auth, money, ownership, secrets, uploads, external URLs) → `safe`
+- **Explicit user-approved long autonomous run** → `autopilot`
 
 ### 4. Set `governor` block
 
-Safe defaults for `BALANCED`:
+Safe defaults for a normal MEDIUM `builder` contract:
 
 ```json
-{ "max_steps": 50, "cost_ceiling_usd": 2.00, "error_streak_limit": 5 }
+{ "max_steps": 30, "cost_ceiling_tokens": 1000000, "error_streak_limit": 5 }
 ```
 
-- `URGENT` halves these.
-- `ECONOMICAL` doubles `error_streak_limit` only.
+- `safe` applies the tight preset for risky or bounded runs.
+- `builder` applies the normal MEDIUM preset.
+- `autopilot` applies the largest preset and requires explicit user approval.
 
 ## Authoring rules
 
@@ -96,10 +98,10 @@ Safe defaults for `BALANCED`:
 ```json
 {
   "feature": "<slug>",
-  "contract_mode": "ECONOMICAL | BALANCED | URGENT",
+  "contract_mode": "balanced | safe | builder | autopilot",
   "governor": {
     "max_steps": 50,
-    "cost_ceiling_usd": 2.00,
+    "cost_ceiling_tokens": 1000000,
     "error_streak_limit": 5
   },
   "criteria": [

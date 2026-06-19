@@ -260,6 +260,7 @@ async function scanArtifacts(targetDir, slug) {
     project_context: await check('project.context', path.join(dir, 'project.context.md')),
     prd: slug ? await check('prd', path.join(dir, `prd-${slug}.md`)) : { exists: false },
     sheldon_enrichment: slug ? await check('sheldon', path.join(dir, `sheldon-enrichment-${slug}.md`)) : { exists: false },
+    sheldon_validation: slug ? await check('sheldon-validation', path.join(dir, `sheldon-validation-${slug}.md`)) : { exists: false },
     requirements: slug ? await check('requirements', path.join(dir, `requirements-${slug}.md`)) : { exists: false },
     spec: slug ? await check('spec', path.join(dir, `spec-${slug}.md`)) : await check('spec', path.join(dir, 'spec.md')),
     architecture: await check('architecture', path.join(dir, 'architecture.md')),
@@ -481,6 +482,9 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
 
     if (shouldCarryFullFeatureContext && artifacts.prd.exists) pkg.push(artifacts.prd.path);
     if (shouldCarryFullFeatureContext && artifacts.sheldon_enrichment.exists) pkg.push(artifacts.sheldon_enrichment.path);
+    if (shouldCarryFullFeatureContext && artifacts.sheldon_validation && artifacts.sheldon_validation.exists) {
+      pkg.push(artifacts.sheldon_validation.path);
+    }
     if ((shouldCarryFullFeatureContext || ['analyst', 'architect'].includes(agent)) && artifacts.requirements.exists) {
       pkg.push(artifacts.requirements.path);
     }

@@ -19,8 +19,10 @@ const {
   parseFrontmatter,
   contextDir
 } = require('../preflight-engine');
+const { AC_ID_RE } = require('../lib/ac-test-audit');
 
 const BAR = '━'.repeat(45);
+const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
 
 function gateDisplay(gates) {
   const letters = { requirements: 'A', design: 'B', plan: 'C', execution: 'D' };
@@ -60,6 +62,9 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   const sheldonReady = artifacts.sheldon_enrichment.exists
     ? (artifacts.sheldon_enrichment.frontmatter.readiness === 'ready_for_downstream' ? 'ready_for_downstream' : 'present')
     : null;
+  const sheldonValidationReady = artifacts.sheldon_validation.exists
+    ? (artifacts.sheldon_validation.frontmatter.verdict || artifacts.sheldon_validation.frontmatter.readiness || 'present')
+    : null;
 
   // Implementation plan status
   const planStatus = artifacts.implementation_plan.exists
@@ -70,8 +75,8 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   // (REQ-SDLC-01), because feature contracts use slugged identifiers.
   let reqCount = null;
   if (artifacts.requirements.exists && artifacts.requirements.content) {
-    const reqs = artifacts.requirements.content.match(/\bREQ(?:-[A-Z0-9]+)+\b/g) || [];
-    const acs = artifacts.requirements.content.match(/\bAC(?:-[A-Z0-9]+)+\b/g) || [];
+    const reqs = artifacts.requirements.content.match(REQ_ID_RE) || [];
+    const acs = artifacts.requirements.content.match(AC_ID_RE) || [];
     reqCount = `${new Set(reqs).size} REQs, ${new Set(acs).size} ACs`;
   }
 
@@ -101,6 +106,13 @@ async function runArtifactValidate({ args, options = {}, logger }) {
       name: `sheldon-enrichment-${slug}.md`,
       exists: artifacts.sheldon_enrichment.exists,
       detail: sheldonReady ? `readiness: ${sheldonReady}` : null,
+      required: false,
+      indent: 1
+    },
+    {
+      name: `sheldon-validation-${slug}.md`,
+      exists: artifacts.sheldon_validation.exists,
+      detail: sheldonValidationReady ? `verdict: ${sheldonValidationReady}` : 'MEDIUM readiness verdict when @sheldon runs',
       required: false,
       indent: 1
     },

@@ -2,6 +2,8 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   DEFAULT_FORBIDDEN_GLOBS,
@@ -101,6 +103,21 @@ describe('harness/contract-schema — validateContract (REQ-1)', () => {
     assert.strictEqual(validateContract(legacyContract({ contract_mode: 'YOLO' })).ok, false);
     for (const mode of ['safe', 'SAFE', 'builder', 'autopilot', 'BALANCED']) {
       assert.strictEqual(validateContract(legacyContract({ contract_mode: mode })).ok, true, mode);
+    }
+  });
+
+  test('Sheldon harness docs use schema-valid governor and mode names', () => {
+    for (const rel of [
+      '.aioson/docs/sheldon/harness-contract.md',
+      'template/.aioson/docs/sheldon/harness-contract.md'
+    ]) {
+      const content = fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
+      assert.equal(content.includes('cost_ceiling_usd'), false, `${rel} must not document removed cost field`);
+      assert.equal(content.includes('ECONOMICAL'), false, `${rel} must not document removed mode ECONOMICAL`);
+      assert.equal(content.includes('URGENT'), false, `${rel} must not document removed mode URGENT`);
+      for (const mode of ['balanced', 'safe', 'builder', 'autopilot']) {
+        assert.equal(validateContract(legacyContract({ contract_mode: mode })).ok, true, mode);
+      }
     }
   });
 

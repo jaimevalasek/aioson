@@ -13,6 +13,7 @@
  */
 
 const path = require('node:path');
+const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 const {
   contextDir,
   readFileSafe,
@@ -135,6 +136,17 @@ async function checkGate(targetDir, slug, gateLetter) {
       evidence.push({ type: 'gate_field', field: 'gate_execution', value: gateD, ok: gateD === 'approved' });
       if (gateD !== 'approved') missing.push(`gate_execution: ${gateD}`);
     }
+
+    const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug);
+    evidence.push({
+      type: 'ac_test_audit',
+      ok: acAudit.ok,
+      summary: acAudit.summary,
+      missing: acAudit.missing
+    });
+    if (!acAudit.ok) {
+      missing.push(`AC test audit failed: missing tests for ${acAudit.missing.join(', ')}`);
+    }
   }
 
   const allOk = missing.length === 0;
@@ -231,13 +243,18 @@ async function runGateCheck({ args, options = {}, logger }) {
     }
   }
 
-  const qaEvidence = check.evidence.filter((e) => e.type === 'qa_signoff' || e.type === 'checkpoint' || e.type === 'gate_field');
+  const qaEvidence = check.evidence.filter((e) => e.type === 'qa_signoff' || e.type === 'checkpoint' || e.type === 'gate_field' || e.type === 'ac_test_audit');
   if (qaEvidence.length > 0) {
     for (const q of qaEvidence) {
       const icon = q.ok ? '  ✓' : '  ✗';
       if (q.type === 'qa_signoff') logger.log(`${icon} QA sign-off: ${q.exists === false ? 'missing' : `verdict ${q.verdict || 'unclear'}`}`);
       if (q.type === 'checkpoint') logger.log(`  ✓ last_checkpoint: "${q.value}"`);
       if (q.type === 'gate_field') logger.log(`${icon} gate_execution: ${q.value}`);
+      if (q.type === 'ac_test_audit') {
+        const s = q.summary || {};
+        const missing = q.missing && q.missing.length ? ` (missing: ${q.missing.join(', ')})` : '';
+        logger.log(`${icon} AC test audit: ${s.covered || 0}/${s.acs_total || 0} covered${missing}`);
+      }
     }
   }
 

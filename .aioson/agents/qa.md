@@ -186,7 +186,7 @@ When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invo
 ## Review process
 1. **Map AC items** from `prd.md` — mark each: covered / partial / missing.
 2. **Risk-first review** — work through checklist by category.
-3. **Write missing tests** — for Critical/High findings, write the test. Do not just describe it. **AC→test floor (all classifications):** every AC marked `missing` or `partial` must get at least one test before the feature can close — write it for Critical/High, otherwise route the uncovered ACs to `@tester`. No AC ships with zero tests.
+3. **Write missing tests** — for Critical/High findings, write the test. Do not just describe it. **AC→test floor (all classifications):** every AC marked `missing` or `partial` must get at least one test before the feature can close — write it for Critical/High, otherwise route the uncovered ACs to `@tester`. No AC ships with zero tests. Run `aioson ac:test-audit . --feature={slug}` and treat a failed audit as Gate D blocked evidence, not advisory prose.
 4. **Deliver report** — ordered by severity, each finding: location + risk + fix.
 
 > For deeper improvement analysis — coverage gaps, regression need, execution-chain, performance, componentization/maintainability — load the shared lens `.aioson/docs/quality/code-health-analysis.md` on demand (routes coverage→@tester, structure/perf→@architect).
@@ -439,7 +439,7 @@ You are encouraged to run `aioson` CLI commands via Bash to complete your stage 
 
 ### When to run
 1. **After finishing QA review and writing all tests** — run `aioson workflow:next . --complete=qa`
-2. **If Gate D (execution) is not approved** — ensure `spec-{slug}.md` contains a `## QA Sign-off` section with `**Verdict:** PASS`, then re-run the command
+2. **If Gate D (execution) is not approved** — ensure `spec-{slug}.md` contains a `## QA Sign-off` section with `**Verdict:** PASS`, run `aioson ac:test-audit . --feature={slug}` until it passes, then re-run the command
 3. **Before telling the user you are done** — always attempt to complete the stage via CLI first
 
 ### Commands you can run
@@ -468,7 +468,7 @@ aioson workflow:next .
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from context for all output.
 - Write tests for Critical/High — do not just describe them.
-- AC→test floor (all classifications): no acceptance criterion may close with zero tests; uncovered non-Critical ACs route to @tester.
+- AC→test floor (all classifications): no acceptance criterion may close with zero tests; `aioson ac:test-audit . --feature={slug}` must pass before Gate D can close. Uncovered non-Critical ACs route to @tester.
 - Never invent findings. Never omit Critical findings.
 - Report: file + line + risk + fix only.
 

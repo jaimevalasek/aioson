@@ -201,6 +201,39 @@ test('gate:check: Gate D PASS with QA sign-off PASS', async () => {
   assert.equal(result.result, 'PASS');
 });
 
+test('gate:check: Gate D BLOCKED when QA passes but an AC has no test evidence', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can checkout.');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md',
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n\n## QA Sign-off\n\n- **Verdict:** PASS\n');
+
+  const result = await runGateCheck({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', gate: 'D' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.result, 'BLOCKED');
+  assert.ok(result.missing.some((m) => m.includes('AC test audit failed')));
+});
+
+test('gate:check: Gate D PASS when QA passes and AC has test evidence', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can checkout.');
+  await writeFile(tmpDir, 'tests/checkout.test.js', "test('AC-checkout-01 checkout path', () => {});\n");
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md',
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n\n## QA Sign-off\n\n- **Verdict:** PASS\n');
+
+  const result = await runGateCheck({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', gate: 'D' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.result, 'PASS');
+  assert.ok(result.evidence.some((e) => e.type === 'ac_test_audit' && e.ok));
+});
+
 test('gate:check: accepts gate name alias "requirements" → A', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Reqs\n');

@@ -161,7 +161,7 @@ module.exports = {
     help_qa_report:
       'aioson qa:report [path] [--html] [--json] [--locale=pt-BR]',
     help_harness_init:
-      'aioson harness:init [path] --slug=<slug> [--mode=BALANCED|URGENT|ECONOMICAL] [--locale=pt-BR]',
+      'aioson harness:init [path] --slug=<slug> [--mode=balanced|safe|builder|autopilot] [--locale=pt-BR]',
     help_harness_validate:
       'aioson harness:validate [path] --slug=<slug> [--base=<ref>] [--no-diff] [--max-diff-bytes=<n>] [--artifact=<path>] [--locale=pt-BR]',
     help_harness_check:

@@ -1,38 +1,22 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-10T06:22:28.965Z",
-  "last_agent": "@dev",
-  "last_stage": "dev",
-  "what_was_done": "Stage @dev completed.",
-  "what_comes_next": "Next stage: @qa",
-  "next_agent": "@qa",
+  "session_ended_at": "2026-06-19T04:08:46.002Z",
+  "last_agent": "@qa",
+  "last_stage": "qa",
+  "what_was_done": "Stage @qa completed.",
+  "what_comes_next": "Workflow is complete. No pending stages.",
+  "next_agent": null,
   "open_decisions": [],
   "context_files_updated": [],
-  "workflow_mode": "feature",
-  "classification": "SMALL",
-  "feature_slug": "harness-retrospective-optimization",
+  "workflow_mode": "project",
+  "classification": "MEDIUM",
+  "feature_slug": null,
   "optional_handoffs": [
     {
       "agent": "@scope-check",
-      "mode": "post-dev",
-      "command": "aioson workflow:next . --agent=scope-check --scope-mode=post-dev --feature=harness-retrospective-optimization",
-      "reason": "Optional drift check: compare the approved plan against the implementation diff before QA when behavior, files, or scope changed unexpectedly."
-    }
-  ],
-  "decision_rationale": [
-    {
-      "agent": "unknown",
-      "decision": "telemetry-1781072046915",
-      "alternatives_considered": null,
-      "rationale": "q",
-      "confidence": "confirmed"
-    },
-    {
-      "agent": "unknown",
-      "decision": "telemetry-1781072461993",
-      "alternatives_considered": null,
-      "rationale": "q",
-      "confidence": "confirmed"
+      "mode": "post-fix",
+      "command": "aioson workflow:next . --agent=scope-check --scope-mode=post-fix",
+      "reason": "Optional post-fix check: use only when verification or security corrections changed behavior or product scope."
     }
   ]
 }

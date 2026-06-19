@@ -444,6 +444,16 @@ test('buildContextPackage: includes spec when exists', async () => {
   assert.ok(pkg.some((p) => p && p.includes('spec-checkout.md')));
 });
 
+test('buildContextPackage: includes sheldon-validation for downstream agents when present', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\n---');
+  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
+  await writeFile(tmpDir, '.aioson/context/sheldon-validation-checkout.md', '---\nverdict: ready\n---\n# Validation');
+  const artifacts = await scanArtifacts(tmpDir, 'checkout');
+  const pkg = buildContextPackage('dev', 'checkout', 'MEDIUM', artifacts, { exists: false });
+  assert.ok(pkg.some((p) => p && p.includes('sheldon-validation-checkout.md')));
+});
+
 // ── evaluateReadiness ─────────────────────────────────────────────────────────
 
 test('evaluateReadiness: BLOCKED when project_context missing', () => {

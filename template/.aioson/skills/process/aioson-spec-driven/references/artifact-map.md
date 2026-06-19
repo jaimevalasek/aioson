@@ -22,7 +22,7 @@ prd*.md
 |----------|-----------|-------------|---------|
 | `prd.md` / `prd-{slug}.md` | @product | @sheldon (via sheldon-enrichment) | all downstream |
 | `sheldon-enrichment-{slug}.md` | @sheldon | @sheldon | @sheldon (re-entry), @analyst |
-| `sheldon-validation-{slug}.md` (project: `sheldon-validation.md`) | @sheldon (MEDIUM only) | — | all agents before starting the MEDIUM chain |
+| `sheldon-validation-{slug}.md` (project: `sheldon-validation.md`) | @sheldon (MEDIUM only) | — | downstream agents when present; `artifact:validate` surfaces it separately from enrichment |
 | `discovery.md` | @analyst | — | @architect, @dev |
 | `requirements-{slug}.md` | @analyst | — | @architect, @dev, @qa |
 | `spec-{slug}.md` | @analyst (skeleton) | @dev (execution state) | @dev, @deyvin, @qa |

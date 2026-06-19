@@ -35,7 +35,7 @@ At session start, after reading `spec-{slug}.md`:
 3. If versions match: proceed normally
 
 Additionally, at session start for SMALL/MEDIUM:
-4. Check if any `AC-{slug}-{N}` from `requirements-{slug}.md` has a corresponding test file
+4. Run `aioson ac:test-audit . --feature={slug}` when a feature slug exists, or manually check that each `AC-*` from `requirements-{slug}.md` appears in a corresponding test file
 5. If coverage is < 50%:
    > "⚠ AC coverage is low ({N}/{M} ACs have tests). Consider writing missing tests before adding new behavior."
    This is informational, not blocking.
@@ -45,6 +45,6 @@ Additionally, at session start for SMALL/MEDIUM:
 - `spec-{slug}.md` must be updated at the end of every implementation session — see `maintenance-and-state.md` for format
 - Gate C from `approval-gates.md` means the implementation plan is locked — do not re-discuss pre-taken decisions
 - Treat `dev-state.md` as the primary activation package and `implementation-plan-{slug}.md` as the source for phase-triggered context loads
-- Gate D verification must happen before marking a phase complete — not just "I think it works"
+- Gate D verification must happen before marking a phase complete — not just "I think it works". The deterministic floor is `aioson ac:test-audit . --feature={slug}` plus the real test command.
 - If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
 - If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route to `@discovery-design-doc` instead of coding first
