@@ -833,6 +833,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_epilogue');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
+  logHelpLine(t, logger, 'cli.help_context_search');
   logHelpLine(t, logger, 'cli.help_context_select');
   logHelpLine(t, logger, 'cli.help_context_brief');
   logHelpLine(t, logger, 'cli.help_context_guard');

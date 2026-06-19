@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { buildContextBrief } = require('../src/context-brief');
+const { buildContextBrief, classifyLoads } = require('../src/context-brief');
 const { runContextBrief } = require('../src/commands/context-brief');
 
 async function makeTmpDir() {
@@ -334,4 +334,19 @@ test('context:brief surfaces constraints from a hard-scoped docs file even in sh
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
+});
+
+test('classifyLoads caps must_load at 14 and should_load at 10', () => {
+  const profile = { mustSurfaces: new Set(['rules']), shouldSurfaces: new Set(['docs']) };
+  const selected = [];
+  // Caller pre-sorts by score; classifyLoads preserves that order, then slices.
+  for (let i = 0; i < 20; i++) selected.push({ path: `r${i}.md`, surface: 'rules', load_tier: 'trigger', score: 100 - i });
+  for (let i = 0; i < 15; i++) selected.push({ path: `d${i}.md`, surface: 'docs', load_tier: 'trigger', score: 50 - i });
+
+  const { must_load, should_load } = classifyLoads({ selected }, profile);
+
+  assert.equal(must_load.length, 14, 'must_load is capped at 14');
+  assert.equal(should_load.length, 10, 'should_load is capped at 10');
+  assert.equal(must_load[0].path, 'r0.md', 'highest-scored mandatory rule is kept first');
+  assert.equal(must_load.some((item) => item.path === 'r14.md'), false, 'overflow rules are dropped');
 });

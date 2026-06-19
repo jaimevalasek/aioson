@@ -28,6 +28,8 @@ module.exports = {
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
+    help_context_search:
+      'aioson context:search [path] --query=<text> [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--intent=memory|feature|rules] [--limit=10] [--json] [--locale=en]',
     help_context_select:
       'aioson context:select [path] [--agent=<agent>] [--mode=planning|executing] [--task=<text>] [--paths=<path[,path2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=en]',
     help_context_brief:

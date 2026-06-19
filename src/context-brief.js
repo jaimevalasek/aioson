@@ -580,5 +580,6 @@ module.exports = {
   inferOperation,
   inferConcerns,
   suggestedStructure,
-  extractDocConstraints
+  extractDocConstraints,
+  classifyLoads
 };

@@ -762,3 +762,29 @@ test('openDb recreates the index when the sqlite file is corrupted (P4)', async 
     await removeTmp(tmp);
   }
 });
+
+test('indexDirectory default policy indexes markdown only — no .json/.txt thrash', async () => {
+  const tmp = await makeTmpDir();
+  const idx = new IndexManager(path.join(tmp, 'search'));
+  await idx.open();
+  try {
+    const projectDir = path.join(tmp, 'proj');
+    await writeFile(projectDir, 'doc.md', '# Doc\nthe telemetry gateway emits events');
+    await writeFile(projectDir, 'package-lock.json', JSON.stringify({ telemetry: 'gateway noise' }));
+    await writeFile(projectDir, 'notes.txt', 'telemetry gateway noise');
+
+    const result = await idx.indexDirectory(projectDir); // default extensions
+    assert.equal(result.indexed, 1, 'only the markdown file is indexed by default');
+
+    const pkg = idx.searchPackage('telemetry gateway', { projectDir, limit: 10 });
+    assert.ok(pkg.results.length >= 1, 'the markdown doc is recalled');
+    assert.equal(
+      pkg.results.every((r) => r.relPath.endsWith('.md')),
+      true,
+      'no .json/.txt leaks into the shared recall index'
+    );
+  } finally {
+    idx.close();
+    await removeTmp(tmp);
+  }
+});

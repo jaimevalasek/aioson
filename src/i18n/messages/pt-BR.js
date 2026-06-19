@@ -29,6 +29,8 @@ module.exports = {
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=pt-BR]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-ou-pasta>] [--max-files=8] [--json] [--locale=pt-BR]',
+    help_context_search:
+      'aioson context:search [path] --query=<texto> [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--intent=memory|feature|rules] [--limit=10] [--json] [--locale=pt-BR]',
     help_context_select:
       'aioson context:select [path] [--agent=<agente>] [--mode=planning|executing] [--task=<texto>] [--paths=<caminho[,caminho2]>] [--feature=<slug>] [--no-semantic] [--json] [--locale=pt-BR]',
     help_context_brief:

@@ -218,7 +218,11 @@ class IndexManager {
    * @returns {{ indexed: number, skipped: number }}
    */
   async indexDirectory(dir, opts = {}) {
-    const extensions = opts.extensions || ['.md', '.txt', '.json'];
+    // Recall indexes markdown only: .json/.txt (package-lock.json, fixtures) are
+    // pure noise for context recall and the only consumers (context:brief,
+    // context:search, agent-loader shards) are all markdown. A single .md policy
+    // also stops the two writers from purge-thrashing the shared global index.
+    const extensions = opts.extensions || ['.md'];
     const force = Boolean(opts.force);
     const baseDir = normalizeProjectDir(dir);
     let indexed = 0;
