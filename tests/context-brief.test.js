@@ -78,7 +78,7 @@ test('context:brief builds a Laravel implementation package with rules and verif
     assert.ok(result.constraints.some((item) => /source code identifiers/i.test(item)));
     assert.ok(result.constraints.some((item) => /controllers.*thin/i.test(item)));
     assert.ok(result.forbidden_patterns.some((item) => /raw SQL|query builders/i.test(item)));
-    assert.ok(result.suggested_structure.some((item) => /FormRequest/i.test(item)));
+    assert.ok(result.constraints.some((item) => /FormRequest/i.test(item)));
     assert.ok(result.verification_hints.some((item) => /DB::|raw SQL|query-builder/i.test(item)));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

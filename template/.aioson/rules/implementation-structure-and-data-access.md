@@ -46,4 +46,5 @@ Build code in small, maintainable units that fit the installed framework. Prefer
 - Files stay small enough to scan and test.
 - Controllers, route handlers, UI components, and views do not contain persistence details.
 - Queries live in the proper data access layer and are parameterized.
+- Scan controllers, routes, views, and components for `DB::`, raw SQL, or long query-builder chains; move them to the data access layer.
 - New folders are justified by framework convention or repeated local structure.

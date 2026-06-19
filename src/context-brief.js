@@ -57,14 +57,6 @@ const CONCERN_KEYWORDS = [
   { concern: 'ui', terms: ['ui', 'ux', 'screen', 'frontend', 'layout'] }
 ];
 
-const LARAVEL_STRUCTURE = [
-  'Use FormRequest for request validation when inputs are non-trivial.',
-  'Keep controllers thin: validate, authorize, delegate, return a response.',
-  'Use services/actions/use-cases for application workflow orchestration.',
-  'Use Eloquent scopes, query objects, repositories, or dedicated persistence methods for reusable filters.',
-  'Use API resources for response shape and policies for authorization when applicable.'
-];
-
 const PROFILE_HINTS = {
   implementation: [
     'Load must_load paths before editing code.',
@@ -286,7 +278,7 @@ function constraintsFromDocuments(documents, selected) {
   };
 }
 
-function profileVerificationHints(profile, stack, concerns) {
+function profileVerificationHints(profile, concerns) {
   const hints = [...(PROFILE_HINTS[profile.role] || PROFILE_HINTS.generic)];
 
   if (IMPLEMENTATION_AGENTS.has(profile.agent)) {
@@ -301,9 +293,6 @@ function profileVerificationHints(profile, stack, concerns) {
   if (profile.agent === 'sheldon') {
     hints.push('Convert missing downstream constraints into PRD acceptance criteria or explicit open questions.');
   }
-  if (stack === 'Laravel' && concerns.includes('data-access')) {
-    hints.push('Scan controllers/routes/views/components for DB::, raw SQL, or long query-builder chains.');
-  }
   if (concerns.includes('english-code')) {
     hints.push('Check new source identifiers are technical English while user-facing copy stays in project language.');
   }
@@ -311,7 +300,7 @@ function profileVerificationHints(profile, stack, concerns) {
   return hints;
 }
 
-function concernConstraints(stack, concerns) {
+function concernConstraints(concerns) {
   const constraints = [];
 
   if (concerns.includes('english-code')) {
@@ -335,21 +324,10 @@ function concernConstraints(stack, concerns) {
     constraints.push('Convert implementation, security, and testing ambiguity into explicit acceptance criteria or open questions.');
   }
 
-  if (stack === 'Laravel') {
-    constraints.push('For Laravel, prefer FormRequest, policies, resources, jobs, Eloquent scopes/query classes, and service/action classes where they fit.');
-  }
-
   return constraints;
 }
 
-function suggestedStructure(stack, concerns) {
-  if (stack === 'Laravel' && (
-    concerns.includes('framework-conventions')
-    || concerns.includes('data-access')
-    || concerns.includes('componentization')
-  )) {
-    return LARAVEL_STRUCTURE;
-  }
+function suggestedStructure(concerns) {
   if (concerns.includes('componentization')) {
     return [
       'Keep entrypoints thin and delegate orchestration to focused modules.',
@@ -448,9 +426,9 @@ async function buildContextBrief(targetDir, options = {}) {
   const concerns = inferConcerns(selection, task);
   const { must_load: mustLoad, should_load: shouldLoad } = classifyLoads(selection, profile);
   const extracted = constraintsFromDocuments(documents, selection.selected || []);
-  const structure = suggestedStructure(stack, concerns);
-  const profileHints = profileVerificationHints(profile, stack, concerns);
-  const constraints = dedupe([...concernConstraints(stack, concerns), ...extracted.constraints, ...structure], 18);
+  const structure = suggestedStructure(concerns);
+  const profileHints = profileVerificationHints(profile, concerns);
+  const constraints = dedupe([...concernConstraints(concerns), ...extracted.constraints, ...structure], 18);
   const forbiddenPatterns = dedupe(extracted.forbidden_patterns, 10);
   const verificationHints = dedupe([...extracted.verification_hints, ...profileHints], 14);
   const gaps = buildGaps({ selection, agent: selection.agent, mode: selection.mode, task, paths: selection.paths, mustLoad });
