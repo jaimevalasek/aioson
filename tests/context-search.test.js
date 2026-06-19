@@ -291,6 +291,125 @@ test('IndexManager — searchPackage dedupes template mirrors and prefers projec
   }
 });
 
+test('IndexManager — isolates identical relative paths across projects', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    const projectA = path.join(tmp, 'project-a');
+    const projectB = path.join(tmp, 'project-b');
+
+    await writeFile(projectA, '.aioson/rules/shared.md', [
+      '---',
+      'name: shared-alpha',
+      'description: Alpha-only context rule',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [alphaonly]',
+      '---',
+      '# Shared Alpha',
+      '',
+      'alphaonly unique project A rule'
+    ].join('\n'));
+    await writeFile(projectB, '.aioson/rules/shared.md', [
+      '---',
+      'name: shared-beta',
+      'description: Beta-only context rule',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [betaonly]',
+      '---',
+      '# Shared Beta',
+      '',
+      'betaonly unique project B rule'
+    ].join('\n'));
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(projectA, { force: true });
+      assert.ok(
+        idx.searchPackage('alphaonly', { projectDir: projectA, agent: 'dev', mode: 'executing' }).results
+          .some((item) => item.title === 'shared-alpha'),
+        'project A rule should be present after indexing project A'
+      );
+
+      await idx.indexDirectory(projectB, { force: true });
+
+      const projectAResults = idx.searchPackage('alphaonly', {
+        projectDir: projectA,
+        agent: 'dev',
+        mode: 'executing',
+        limit: 10
+      }).results;
+      const projectBResults = idx.searchPackage('betaonly', {
+        projectDir: projectB,
+        agent: 'dev',
+        mode: 'executing',
+        limit: 10
+      }).results;
+
+      assert.ok(
+        projectAResults.some((item) => item.title === 'shared-alpha'),
+        'indexing project B must not overwrite project A rel_path metadata'
+      );
+      assert.equal(
+        projectAResults.some((item) => item.title === 'shared-beta'),
+        false,
+        'project A search must not leak project B rel_path collision'
+      );
+      assert.ok(
+        projectBResults.some((item) => item.title === 'shared-beta'),
+        'project B search should still find project B rule'
+      );
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
+test('IndexManager — searchPackage path routing honors glob patterns', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    await writeFile(tmp, '.aioson/rules/src-js-glob.md', [
+      '---',
+      'name: src-js-glob',
+      'description: Source JavaScript glob routing rule',
+      'agents: [dev]',
+      'modes: [executing]',
+      'triggers: [selector glob]',
+      'paths: ["src/**/*.js"]',
+      '---',
+      '# Source JS Glob',
+      '',
+      'Use this rule for nested source JavaScript files.'
+    ].join('\n'));
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(tmp, { force: true });
+      const result = idx.searchPackage('selector glob', {
+        projectDir: tmp,
+        agent: 'dev',
+        mode: 'executing',
+        paths: 'src/lib/context/search.js',
+        limit: 10
+      });
+      const rule = result.results.find((item) => item.relPath === '.aioson/rules/src-js-glob.md');
+
+      assert.ok(rule, 'glob-scoped rule should be returned');
+      assert.match(rule.reason, /paths:src\/lib\/context\/search\.js~src\/\*\*\/\*\.js/);
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
 test('IndexManager — indexDirectory skips and purges nested .aioson agent files', async () => {
   const tmp = await makeTmpDir();
   try {
@@ -311,20 +430,21 @@ test('IndexManager — indexDirectory skips and purges nested .aioson agent file
     const idx = new IndexManager(searchDir);
     await idx.open();
     try {
-      idx._db.prepare('INSERT INTO docs (rel_path, title, content) VALUES (?, ?, ?)').run(
+      idx._db.prepare('INSERT INTO docs (project_dir, rel_path, title, content) VALUES (?, ?, ?, ?)').run(
+        path.resolve(tmp),
         'template/.aioson/agents/setup.md',
         'Setup Agent',
         'Laravel setup activation stale index entry'
       );
       idx._db.prepare(`
         INSERT INTO docs_meta (
-          rel_path, project_dir, indexed_at, file_mtime, size, source_type,
+          project_dir, rel_path, indexed_at, file_mtime, size, source_type,
           description, agents, modes, task_types, triggers, aliases, entities,
           paths, retrieval_intents, load_tier, priority
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        'template/.aioson/agents/setup.md',
         path.resolve(tmp),
+        'template/.aioson/agents/setup.md',
         new Date().toISOString(),
         '1',
         1,
@@ -544,6 +664,52 @@ test('IndexManager — skips already-indexed files (no force)', async () => {
       const second = await idx.indexDirectory(docsDir);
       assert.equal(second.indexed, 0, 'second pass skips already-indexed file');
       assert.equal(second.skipped, 1, 'second pass reports 1 skipped');
+    } finally {
+      idx.close();
+    }
+  } finally {
+    await removeTmp(tmp);
+  }
+});
+
+test('IndexManager — indexDirectory purges deleted files from the index', async () => {
+  const tmp = await makeTmpDir();
+  try {
+    const searchDir = path.join(tmp, 'search');
+    const docsDir = path.join(tmp, 'docs');
+    await fs.mkdir(docsDir);
+
+    await fs.writeFile(path.join(docsDir, 'keep.md'), '# Keep Me\n\nPersistent document about caching.', 'utf8');
+    await fs.writeFile(path.join(docsDir, 'delete.md'), '# Delete Me\n\nTemporary document about migrations.', 'utf8');
+
+    const idx = new IndexManager(searchDir);
+    await idx.open();
+    try {
+      await idx.indexDirectory(docsDir, { force: true });
+
+      let pkg = idx.searchPackage('migrations', { projectDir: docsDir, limit: 10 });
+      assert.ok(
+        pkg.results.some((r) => r.relPath.includes('delete')),
+        'delete.md should be searchable before deletion'
+      );
+
+      await fs.unlink(path.join(docsDir, 'delete.md'));
+
+      await idx.indexDirectory(docsDir);
+
+      pkg = idx.searchPackage('migrations', { projectDir: docsDir, limit: 10 });
+      assert.equal(
+        pkg.results.some((r) => r.relPath.includes('delete')),
+        false,
+        'deleted file must not survive in the index'
+      );
+      assert.ok(
+        pkg.results.some((r) => r.relPath.includes('keep')) || pkg.results.length === 0,
+        'remaining files should still be searchable or results empty'
+      );
+
+      const stats = idx.stats();
+      assert.equal(stats.totalDocs, 1, 'only the surviving file should remain in the index');
     } finally {
       idx.close();
     }

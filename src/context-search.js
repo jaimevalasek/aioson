@@ -5,10 +5,11 @@ const path = require('node:path');
 const os = require('node:os');
 const Database = require('better-sqlite3');
 const { parseFrontmatter, parseAgentList } = require('./preflight-engine');
+const { pathMatchesPattern: selectorPathMatchesPattern } = require('./context-selector');
 
 const SEARCH_DIR = path.join(os.homedir(), '.aioson', 'search');
 const DB_FILE = 'context-search.sqlite';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const MAX_STALE_MS = 24 * 60 * 60 * 1000; // 24h
 const CONTENT_LIMIT = 100_000;
 const SEARCH_RESULT_MULTIPLIER = 6;
@@ -51,23 +52,9 @@ function openDb(dbPath) {
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER NOT NULL
     );
-
-    CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(
-      rel_path,
-      title,
-      content,
-      tokenize = "unicode61 remove_diacritics 2"
-    );
-
-    CREATE TABLE IF NOT EXISTS docs_meta (
-      rel_path TEXT PRIMARY KEY,
-      project_dir TEXT NOT NULL,
-      indexed_at TEXT NOT NULL,
-      file_mtime TEXT,
-      size INTEGER DEFAULT 0
-    );
   `);
 
+  ensureSearchTables(db);
   ensureMetaSchema(db);
 
   // Insert schema version if not present
@@ -81,10 +68,57 @@ function openDb(dbPath) {
   return db;
 }
 
+function ensureSearchTables(db) {
+  const docsColumns = tableColumns(db, 'docs');
+  const metaColumns = tableColumns(db, 'docs_meta');
+  const docsNeedRebuild = docsColumns.length > 0 && !docsColumns.some((column) => column.name === 'project_dir');
+  const metaNeedRebuild = metaColumns.length > 0 && !hasCompositeProjectPathPrimaryKey(metaColumns);
+
+  if (docsNeedRebuild || metaNeedRebuild) {
+    db.exec('DROP TABLE IF EXISTS docs');
+    db.exec('DROP TABLE IF EXISTS docs_meta');
+  }
+
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(
+      project_dir UNINDEXED,
+      rel_path,
+      title,
+      content,
+      tokenize = "unicode61 remove_diacritics 2"
+    );
+
+    CREATE TABLE IF NOT EXISTS docs_meta (
+      project_dir TEXT NOT NULL,
+      rel_path TEXT NOT NULL,
+      indexed_at TEXT NOT NULL,
+      file_mtime TEXT,
+      size INTEGER DEFAULT 0,
+      PRIMARY KEY (project_dir, rel_path)
+    );
+  `);
+}
+
+function tableColumns(db, tableName) {
+  try {
+    return db.prepare(`PRAGMA table_info(${tableName})`).all();
+  } catch {
+    return [];
+  }
+}
+
+function hasCompositeProjectPathPrimaryKey(columns) {
+  const primaryKey = columns
+    .filter((column) => Number(column.pk) > 0)
+    .sort((a, b) => Number(a.pk) - Number(b.pk))
+    .map((column) => column.name);
+  return primaryKey.length === 2
+    && primaryKey[0] === 'project_dir'
+    && primaryKey[1] === 'rel_path';
+}
+
 function ensureMetaSchema(db) {
-  const existing = new Set(
-    db.prepare('PRAGMA table_info(docs_meta)').all().map((column) => column.name)
-  );
+  const existing = new Set(tableColumns(db, 'docs_meta').map((column) => column.name));
   const columns = [
     ['source_type', "source_type TEXT DEFAULT ''"],
     ['description', "description TEXT DEFAULT ''"],
@@ -149,14 +183,15 @@ class IndexManager {
 
     const files = await this._listFiles(baseDir, extensions);
     this._purgeSkippedEntries(baseDir);
+    this._purgeDeletedEntries(baseDir, new Set(files.map((file) => file.relPath)));
 
     const insertDoc = this._db.prepare(
-      'INSERT INTO docs (rel_path, title, content) VALUES (?, ?, ?)'
+      'INSERT INTO docs (project_dir, rel_path, title, content) VALUES (?, ?, ?, ?)'
     );
     const insertMeta = this._db.prepare(`
       INSERT OR REPLACE INTO docs_meta (
-        rel_path,
         project_dir,
+        rel_path,
         indexed_at,
         file_mtime,
         size,
@@ -179,7 +214,7 @@ class IndexManager {
       'SELECT indexed_at, file_mtime FROM docs_meta WHERE rel_path = ? AND project_dir = ?'
     );
     const deletePrev = this._db.prepare(
-      "DELETE FROM docs WHERE rel_path = ?"
+      'DELETE FROM docs WHERE project_dir = ? AND rel_path = ?'
     );
 
     const doIndex = this._db.transaction((fileList) => {
@@ -217,12 +252,12 @@ class IndexManager {
 
         const metadata = extractMetadata(relPath, content);
 
-        deletePrev.run(relPath);
+        deletePrev.run(baseDir, relPath);
 
-        insertDoc.run(relPath, metadata.title, metadata.searchText);
+        insertDoc.run(baseDir, relPath, metadata.title, metadata.searchText);
         insertMeta.run(
-          relPath,
           baseDir,
+          relPath,
           new Date().toISOString(),
           mtime,
           size,
@@ -255,14 +290,32 @@ class IndexManager {
     if (skipped.length === 0) return;
 
     const purge = this._db.transaction((items) => {
-      const delDoc = this._db.prepare('DELETE FROM docs WHERE rel_path = ?');
-      const delMeta = this._db.prepare('DELETE FROM docs_meta WHERE rel_path = ?');
+      const delDoc = this._db.prepare('DELETE FROM docs WHERE project_dir = ? AND rel_path = ?');
+      const delMeta = this._db.prepare('DELETE FROM docs_meta WHERE project_dir = ? AND rel_path = ?');
       for (const item of items) {
-        delDoc.run(item.rel_path);
-        delMeta.run(item.rel_path);
+        delDoc.run(projectDir, item.rel_path);
+        delMeta.run(projectDir, item.rel_path);
       }
     });
     purge(skipped);
+  }
+
+  _purgeDeletedEntries(projectDir, currentRelPaths) {
+    const rows = this._db.prepare(
+      'SELECT rel_path FROM docs_meta WHERE project_dir = ?'
+    ).all(projectDir);
+    const deleted = rows.filter((row) => !currentRelPaths.has(row.rel_path));
+    if (deleted.length === 0) return;
+
+    const purge = this._db.transaction((items) => {
+      const delDoc = this._db.prepare('DELETE FROM docs WHERE project_dir = ? AND rel_path = ?');
+      const delMeta = this._db.prepare('DELETE FROM docs_meta WHERE project_dir = ? AND rel_path = ?');
+      for (const item of items) {
+        delDoc.run(projectDir, item.rel_path);
+        delMeta.run(projectDir, item.rel_path);
+      }
+    });
+    purge(deleted);
   }
 
   /**
@@ -282,25 +335,11 @@ class IndexManager {
       projectDir
     });
 
-    // Rerank by recency
-    const metas = new Map();
-    if (rows.length > 0) {
-      const relPaths = rows.map(r => r.rel_path);
-      const placeholders = relPaths.map(() => '?').join(',');
-      const metaRows = this._db.prepare(
-        `SELECT rel_path, indexed_at, file_mtime FROM docs_meta WHERE rel_path IN (${placeholders})`
-      ).all(...relPaths);
-      for (const m of metaRows) {
-        metas.set(m.rel_path, m);
-      }
-    }
-
     const now = Date.now();
     const results = rows.map(row => {
-      const meta = metas.get(row.rel_path);
       let recencyBonus = 0;
-      if (meta && meta.file_mtime) {
-        const ageMs = now - Number(meta.file_mtime);
+      if (row.file_mtime) {
+        const ageMs = now - Number(row.file_mtime);
         const ageDays = ageMs / (1000 * 60 * 60 * 24);
         recencyBonus = Math.max(0, 1 - ageDays / 30); // fade over 30 days
       }
@@ -308,6 +347,7 @@ class IndexManager {
       const bm25 = -(row.bm25_score || 0);
       const score = bm25 + recencyBonus * 0.5;
       return {
+        projectDir: row.project_dir || '',
         relPath: row.rel_path,
         title: row.title,
         snippet: row.snippet || '',
@@ -366,6 +406,7 @@ class IndexManager {
 
     let sql = `
       SELECT
+        docs.project_dir,
         docs.rel_path,
         docs.title,
         snippet(docs, 2, '[', ']', '...', 20) AS snippet,
@@ -385,13 +426,15 @@ class IndexManager {
         docs_meta.load_tier,
         docs_meta.priority
       FROM docs
-      LEFT JOIN docs_meta ON docs.rel_path = docs_meta.rel_path
+      LEFT JOIN docs_meta
+        ON docs.project_dir = docs_meta.project_dir
+        AND docs.rel_path = docs_meta.rel_path
       WHERE docs MATCH ?
     `;
     const params = [safeQuery];
 
     if (opts.projectDir) {
-      sql += ` AND docs_meta.project_dir = ?`;
+      sql += ` AND docs.project_dir = ?`;
       params.push(path.resolve(opts.projectDir));
     }
 
@@ -413,17 +456,17 @@ class IndexManager {
   invalidateStale(maxAge = MAX_STALE_MS) {
     const cutoff = new Date(Date.now() - maxAge + 1).toISOString();
     const stale = this._db.prepare(
-      'SELECT rel_path FROM docs_meta WHERE indexed_at < ?'
+      'SELECT project_dir, rel_path FROM docs_meta WHERE indexed_at < ?'
     ).all(cutoff);
 
     if (stale.length === 0) return { removed: 0 };
 
     const doRemove = this._db.transaction((rows) => {
-      const delDoc = this._db.prepare("DELETE FROM docs WHERE rel_path = ?");
-      const delMeta = this._db.prepare('DELETE FROM docs_meta WHERE rel_path = ?');
+      const delDoc = this._db.prepare('DELETE FROM docs WHERE project_dir = ? AND rel_path = ?');
+      const delMeta = this._db.prepare('DELETE FROM docs_meta WHERE project_dir = ? AND rel_path = ?');
       for (const row of rows) {
-        delDoc.run(row.rel_path);
-        delMeta.run(row.rel_path);
+        delDoc.run(row.project_dir, row.rel_path);
+        delMeta.run(row.project_dir, row.rel_path);
       }
     });
 
@@ -719,6 +762,7 @@ function rankContextRow(row, context) {
 
   const confidence = Math.max(0.1, Math.min(0.99, score / 100));
   return {
+    projectDir: row.project_dir || '',
     relPath: row.rel_path,
     path: row.rel_path,
     title: row.title,
@@ -788,8 +832,9 @@ function dedupeRankedResults(results) {
 
 function canonicalResultKey(result) {
   const relPath = normalizeRelPath(result.relPath || result.path).toLowerCase();
-  if (relPath.startsWith('template/')) return relPath.slice('template/'.length);
-  return relPath;
+  const projectDir = normalizeRelPath(result.projectDir || result.project_dir || '').toLowerCase();
+  const pathKey = relPath.startsWith('template/') ? relPath.slice('template/'.length) : relPath;
+  return `${projectDir}\0${pathKey}`;
 }
 
 function preferResult(candidate, current) {
@@ -876,13 +921,7 @@ function pathMatches(requestedPaths, patterns) {
 }
 
 function pathPatternMatches(filePath, pattern) {
-  const file = normalizeRelPath(filePath);
-  const normalizedPattern = normalizeRelPath(pattern);
-  if (!file || !normalizedPattern) return false;
-  const cleanPattern = normalizedPattern.replace(/\*\*?\/?/g, '').replace(/\/$/, '');
-  return file === normalizedPattern
-    || file.startsWith(`${normalizedPattern}/`)
-    || (cleanPattern && (file.includes(cleanPattern) || cleanPattern.includes(file)));
+  return selectorPathMatchesPattern(filePath, pattern);
 }
 
 function listIntersection(a, b) {

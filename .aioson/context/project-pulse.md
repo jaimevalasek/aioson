@@ -1,11 +1,11 @@
 ---
-last_updated: 2026-06-10T16:24:06.763Z
+last_updated: 2026-06-19
 last_agent: qa
 last_gate: Gate D: approved
 active_feature: (none)
-active_work: ""
-blockers: "none"
-next_recommendation: "@product start the next feature"
+active_work: "context-search isolation fixed"
+blockers: none
+next_recommendation: "none; optional @pentester for adversarial review of context:guard hook surface"
 ---
 
 # Project Pulse
@@ -15,12 +15,12 @@ next_recommendation: "@product start the next feature"
 - **Last agent:** @qa
 - **Last gate:** Gate D: approved
 - **Active feature:** (none)
-- **Active work:** none
+- **Active work:** context-search isolation fixed
 - **Blockers:** none
-- **Next:** @product start the next feature
+- **Next:** none; optional @pentester for adversarial review of context:guard hook surface
 
 ## Recent Activity
 
-- 2026-06-10 @scope-check → harness-retrospective-optimization: Scope check pre-dev: approved (0 divergences, 2 mechanism extensions documented)
-- 2026-06-10 @architect → harness-retrospective-optimization: Architecture defined: Node CLI, 5 modulos novos (lib/retro sources/aggregate/render + harness/preview-artifact + harness-retro/harness-preview commands); §11 fechado (D1 harness:preview, D2 trail vence, D3 corrections_bytes); Gate B approved
 - 2026-06-10 @qa → harness-retrospective-optimization (Gate D: approved) VERDICT: PASS: SF-03 secret_handling (info) aceito;
+- 2026-06-19 @dev: Fixed context-search project isolation and glob path matching; updated rules-lint warning; npm test green
+- 2026-06-19 @qa VERDICT: PASS: QA PASS for context intelligence corrections: verified context-search project isolation, glob routing, context guard regressions, rules lint, and full npm test
