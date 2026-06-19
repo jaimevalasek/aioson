@@ -12,7 +12,8 @@ async function runContextBrief({ args, options = {}, logger }) {
     paths: options.paths || options.path || '',
     feature: options.feature || options.slug || '',
     semantic: options.semantic,
-    noSemantic: options.noSemantic || options['no-semantic']
+    noSemantic: options.noSemantic || options['no-semantic'],
+    recall: !(options['no-recall'] || options.recall === false)
   });
 
   if (options.json) return result;
@@ -46,6 +47,10 @@ async function runContextBrief({ args, options = {}, logger }) {
   if (result.gaps.length > 0) {
     logger.log('Gaps:');
     for (const gap of result.gaps) logger.log(`- ${gap.code}: ${gap.message}`);
+  }
+  if (result.related && result.related.length > 0) {
+    logger.log('Related (recall — history/archive select cannot see):');
+    for (const item of result.related) logger.log(`- ${item.path} [${item.source_type}] ${item.reason || ''}`);
   }
 
   return result;

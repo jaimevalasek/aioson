@@ -3,6 +3,7 @@
 const path = require('node:path');
 const { selectContext } = require('./context-selector');
 const { readFileSafe } = require('./preflight-engine');
+const { withIndex } = require('./context-search');
 
 const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev', 'deyvin']);
@@ -399,6 +400,59 @@ async function loadSelectedDocuments(targetDir, selected) {
   return documents;
 }
 
+function normalizeForRecall(value) {
+  const normalized = String(value || '').replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
+  return normalized.startsWith('template/') ? normalized.slice('template/'.length) : normalized;
+}
+
+function recallEnabled(options) {
+  const raw = options.recall;
+  return raw === true || (typeof raw === 'string' && raw.trim().toLowerCase() === 'true');
+}
+
+// Broad recall over the indexed corpus (incl. archived features, plans, prds,
+// researchs) — the historical surface the live `select` walk cannot see. Kept
+// as a SEPARATE advisory section: it never feeds must_load (select stays the
+// precision gate), and is deduped against what select already selected. Off by
+// default; only the agent-facing `context:brief` command opts in.
+async function collectRecall(targetDir, query, selection, options) {
+  if (!query) return [];
+  const selectedPaths = new Set((selection.selected || []).map((item) => normalizeForRecall(item.path)));
+  try {
+    const pkg = await withIndex(async (idx) => {
+      await idx.indexDirectory(targetDir);
+      return idx.searchPackage(query, {
+        projectDir: targetDir,
+        limit: 8,
+        agent: selection.agent,
+        mode: selection.mode,
+        paths: (selection.paths || []).join(',')
+      });
+    }, options.searchDir);
+
+    const hits = pkg.results || [];
+    const seen = new Set();
+    const related = [];
+    for (const hit of hits) {
+      const key = normalizeForRecall(hit.relPath);
+      if (!key || selectedPaths.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      related.push({
+        path: hit.relPath,
+        title: hit.title,
+        snippet: hit.snippet,
+        score: hit.score,
+        source_type: hit.source_type,
+        reason: hit.reason
+      });
+      if (related.length >= 6) break;
+    }
+    return related;
+  } catch {
+    return [];
+  }
+}
+
 async function buildContextBrief(targetDir, options = {}) {
   const agent = normalizeToken(options.agent || 'dev');
   const mode = options.mode || 'planning';
@@ -437,6 +491,10 @@ async function buildContextBrief(targetDir, options = {}) {
   if (selection.semantic && selection.semantic.enabled) fallbackUsed.push('semantic_search');
   if (selection.memory && selection.memory.length > 0) fallbackUsed.push('runtime_memory');
 
+  const recallQuery = [task, paths.join(' '), options.feature || options.slug || ''].filter(Boolean).join(' ').trim();
+  const related = recallEnabled(options) ? await collectRecall(targetDir, recallQuery, selection, options) : [];
+  if (related.length > 0) fallbackUsed.push('broad_recall');
+
   return {
     ok: true,
     agent: selection.agent,
@@ -461,6 +519,7 @@ async function buildContextBrief(targetDir, options = {}) {
     verification_hints: verificationHints,
     review_criteria: dedupe([...verificationHints, ...constraints], 18),
     memory: selection.memory || [],
+    related,
     selected_count: selection.selected.length,
     semantic: selection.semantic,
     confidence: confidenceFrom({ selection, mustLoad, gaps }),

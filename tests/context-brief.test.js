@@ -147,6 +147,45 @@ test('context:brief gives sheldon PRD enrichment criteria without implementation
   }
 });
 
+test('context:brief recall surfaces historical files that select cannot see', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeLaravelProject(dir, 'workspace-rename');
+    // A research note lives outside the select surfaces (researchs/), so only the
+    // broad search index can recall it.
+    await writeFile(dir, 'researchs/workspace-rename/summary.md', [
+      '---',
+      'title: Workspace rename research',
+      '---',
+      '# Workspace rename',
+      '',
+      'Past investigation: the workspace migration mapped the table to project.'
+    ].join('\n'));
+
+    const searchDir = path.join(dir, '.search-index');
+    const briefOptions = {
+      agent: 'dev',
+      mode: 'executing',
+      task: 'workspace migration table rename',
+      paths: 'database/migrations/create_workspace_table.php',
+      searchDir
+    };
+
+    const withRecall = await buildContextBrief(dir, { ...briefOptions, recall: true });
+    const relatedPaths = (withRecall.related || []).map((item) => item.path);
+    const mustPaths = withRecall.must_load.map((item) => item.path);
+
+    assert.ok(relatedPaths.some((p) => /researchs\/workspace-rename\/summary\.md/.test(p)));
+    // Recall stays a separate section — it never feeds must_load (select's gate).
+    assert.equal(mustPaths.some((p) => /researchs\//.test(p)), false);
+
+    const noRecall = await buildContextBrief(dir, briefOptions);
+    assert.deepEqual(noRecall.related, []); // off by default
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('context:brief command returns JSON-compatible package', async () => {
   const dir = await makeTmpDir();
   try {
