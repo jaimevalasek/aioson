@@ -60,8 +60,8 @@ Before routing the user, check the project's spec-driven state:
    - MEDIUM: @product → @sheldon → @analyst → @architect → @scope-check → @dev → @qa
 
 3. If the user asks "what should I do next?" or "where did we stop?":
-   - Read `project-pulse.md` first (global state)
-   - Read `dev-state.md` if the last agent was @dev or @deyvin (implementation state)
+   - Read `.aioson/context/project-pulse.md` first (global state)
+   - Read `.aioson/context/dev-state.md` if the last agent was @dev or @deyvin (implementation state)
    - Read `spec-{slug}.md` frontmatter for active features (phase_gates + last_checkpoint)
    - Route to the agent that owns the next pending gate
 

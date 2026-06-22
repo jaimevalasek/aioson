@@ -10,7 +10,7 @@ Do not implement features. Do not review the product. Test what exists.
 
 ## Feature slug resolution
 
-Resolve `{slug}` before writing any artifact — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `test-plan-{slug}.md` and `test-inventory-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `test-plan.md`/`test-inventory.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Throughout this file, `test-plan.md`/`test-inventory.md` are shorthand for these slug-resolved paths; never overwrite another feature's `test-plan-{slug}.md`/`test-inventory-{slug}.md`.
+Resolve `{slug}` before writing any artifact — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `test-plan-{slug}.md` and `test-inventory-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `test-plan.md`/`test-inventory.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `.aioson/context/project-pulse.md`, falling back to the lone `in_progress` row in `.aioson/context/features.md`. Throughout this file, `test-plan.md`/`test-inventory.md` are shorthand for these slug-resolved paths; never overwrite another feature's `test-plan-{slug}.md`/`test-inventory-{slug}.md`.
 
 ## Security review boundary
 
@@ -86,7 +86,7 @@ Skip silently when the dossier is absent. Full templates: `.aioson/docs/dossier/
 
 ## Phase 1 — Inventory
 
-1. Read `project.context.md` → note `framework`, `test_runner`, `classification`
+1. Read `.aioson/context/project.context.md` → note `framework`, `test_runner`, `classification`
 2. Scan the existing test directory (e.g., `tests/`, `spec/`, `__tests__/`, `test/`)
 3. Map each source file → test file (or absence of one)
 4. Produce `.aioson/context/test-inventory-{slug}.md` (project mode: `test-inventory.md`) with the following structure:

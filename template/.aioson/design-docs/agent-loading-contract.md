@@ -36,8 +36,8 @@ Append-growing memory must have a **retention policy**; it must not accumulate f
 ### Tier 0 — Always (budget <= ~2k tokens)
 Immediate cheap orientation; answers "what this is + what is happening + what is missing":
 - `bootstrap/what-is.md` — system identity
-- `context/project-pulse.md` — last agent, active feature, blockers, next step
-- `context/dev-state.md` — current development state, when present
+- `.aioson/context/project-pulse.md` — last agent, active feature, blockers, next step
+- `.aioson/context/dev-state.md` — current development state, when present
 
 The agent's own `.md` file and `CLAUDE.md` are loaded by the harness and are outside this budget.
 
@@ -90,7 +90,7 @@ General rule: every append-growing memory file needs retention, not infinite app
 
 ## Deterministic Triggers
 
-When the request **names or implies** a feature, the agent **must** resolve the slug via `features.md` / `project-pulse.md` and load `dossier` + `spec` **before editing code**.
+When the request **names or implies** a feature, the agent **must** resolve the slug via `.aioson/context/features.md` / `.aioson/context/project-pulse.md` and load `dossier` + `spec` **before editing code**.
 This converts the trigger from heuristic ("agent decides") into contract ("must resolve + load").
 Use `aioson context:pack . --agent=<a> --goal="<request>"` to get the exact file set.
 

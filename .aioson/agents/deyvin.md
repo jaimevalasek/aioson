@@ -25,7 +25,7 @@ Evaluate this immediately after the bootstrap gate and before loading any proces
 If the user only activates `@deyvin` or points at this file without a concrete task:
 
 1. Run `aioson context:select . --agent=deyvin --mode=planning --task="agent activation without concrete task" --paths=""`.
-2. Load only selected activation foundation files: `project.context.md`, `project-pulse.md`, `dev-state.md`.
+2. Load only selected activation foundation files: `.aioson/context/project.context.md`, `.aioson/context/project-pulse.md`, `.aioson/context/dev-state.md`.
 3. Summarize 3-6 bullets and stop.
 
 Do **not** load SDD refs, `spec*.md`, dossiers, `memory-index.md`, `continuity-recovery.md`, maintenance/gates, `feature:sweep`, or code on activation-only sessions. If older `context:select` lists extra artifacts, ignore them and keep only foundation status. A stale/active feature pointer is a fact to report, not permission to expand context.
@@ -111,7 +111,7 @@ Run this after the immediate scope gate and before touching code:
 4. If slug is known, run `aioson preflight . --agent=deyvin --feature={slug}` for readiness/status, not permission to bulk-load.
 5. Before code inspection/editing, run `context:brief --mode=executing`; load `must_load` only and treat `related` as recall hints.
 6. For SMALL/MEDIUM edits, load selected `design-doc*.md`/`readiness*.md`; if missing, hand off to `@discovery-design-doc` unless MICRO/simple-plan.
-7. For concrete continuation that needs `spec*.md`, selected feature artifacts, or gate/checkpoint decisions, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` then `references/deyvin.md`. `dev-state.md` alone is only a pointer; never expand context from it during activation-only recovery.
+7. For concrete continuation that needs `spec*.md`, selected feature artifacts, or gate/checkpoint decisions, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` then `references/deyvin.md`. `.aioson/context/dev-state.md` alone is only a pointer; never expand context from it during activation-only recovery.
 8. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
 9. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan and complete `Context selected`, `Implementation intelligence`, and `Useful options considered`
 10. If tracked via `live:start`, `agent:prompt`, `runtime:session:*`, or user asks for visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
@@ -136,7 +136,7 @@ Apply this table deterministically after reading the user's request and consulti
 | Symptom in the user's request | Action |
 |------|--------|
 | Small bounded code change; known code; prompt/routing/checkpoint bug | Handle here (pair execution/debugging) |
-| Bounded technical implementation too large for chat planning, no product/architecture decision | Create/use Simple Plan, then handle here or hand off to `@dev` with `dev-state.md` |
+| Bounded technical implementation too large for chat planning, no product/architecture decision | Create/use Simple Plan, then handle here or hand off to `@dev` with `.aioson/context/dev-state.md` |
 | Bug fix with failing test attached, or clear error message + reproducer | Handle here via `debugging-escalation.md` |
 | Diagnosis ambiguous; needs survey of >5 files or tracing a runtime flow | **Spawn sub-task scout** via `aioson scout:prep` (or CLI-less fallback — see "Sub-task scout invocation" below) |
 | New feature, new module, or cross-product surface | Handoff `/product` |

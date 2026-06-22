@@ -14,7 +14,7 @@ Evaluate this immediately after reading this file and before loading any other c
 If the user only activates `@briefing` (or points at this file) without naming a plan file, briefing slug, or concrete briefing task:
 
 1. When the CLI is available, run `aioson context:select . --agent=briefing --mode=planning --task="agent activation without concrete task" --paths=""`.
-2. Load only: `project.context.md` (for `interaction_language` and framing), the YAML frontmatter of `.aioson/briefings/config.md` (registry list), and a filename listing of `plans/` (names only — do not read file contents).
+2. Load only: `.aioson/context/project.context.md` (for `interaction_language` and framing), the YAML frontmatter of `.aioson/briefings/config.md` (registry list), and a filename listing of `plans/` (names only — do not read file contents).
 3. Present the Activation protocol menu (existing briefings, plan selection, or the conversational-mode offer) and stop.
 
 Do NOT load on activation: `plans/*.md` contents, `prd*.md`, `.aioson/context/done/MANIFEST.md`, `.aioson/rules/`, `.aioson/docs/`, design docs, bootstrap files, dossiers, `briefing-craft.md`, `web-research-cache.md`, `hardening-lane.md`, or any process skill. Each of those loads later, only at the step that needs it, after the user picks a lane.
@@ -97,7 +97,7 @@ After the user selects which plans to use:
 
 **1. Read selected plans**
 - Read each selected `plans/*.md` file fully.
-- Read `project.context.md` for project context.
+- Read `.aioson/context/project.context.md` for project context.
 - Scan `.aioson/context/` for existing PRDs (`prd*.md`) — load titles/summaries only to avoid duplicating committed work.
 - Also read `.aioson/context/done/MANIFEST.md` if present — it lists delivered (archived) features so you can dedupe against completed work without globbing the archive. Do NOT load the archived files themselves unless the user explicitly requests history.
 
@@ -138,7 +138,7 @@ aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Tra
 
 Treat every briefing conversation as a short decision loop:
 
-- Before asking, mine the evidence already in hand first: `project.context.md`, selected `plans/`, and the files chosen by `context:select` — do not open `.aioson/rules/`, docs, design docs, bootstrap memory, dossiers, or handoffs wholesale to hunt for answers.
+- Before asking, mine the evidence already in hand first: `.aioson/context/project.context.md`, selected `plans/`, and the files chosen by `context:select` — do not open `.aioson/rules/`, docs, design docs, bootstrap memory, dossiers, or handoffs wholesale to hunt for answers.
 - Prefer the `context:select --mode=planning` result over broad folder loading.
 - If the answer is in source plans, selected context, code/search artifacts, memory summaries, or fresh/cached web sources, use that evidence instead of asking.
 - Do not ask shallow questions that can be answered from those files or from existing configuration.
@@ -346,7 +346,7 @@ Skip silently when the dossier is absent.
 - **Never overwrite an existing briefing** without confirming with the user first.
 - **Slug must be confirmed** by the user before any file is written.
 - **Never recommend `@sheldon` (or any post-PRD agent) as the next step.** The only handoff from `@briefing` is `@product`. If the briefing surfaces a need for `@sheldon` / `@architect` / `@analyst` expertise, record that need inside the briefing (Risks / Open questions) as a *recommendation for `@product`'s enrichment phase*. `@product` decides when to invoke specialists after the PRD exists. See `briefing-craft.md` §1 "Mitigating weak markers" for examples.
-- Use `interaction_language` (fallback: `conversation_language`) from `project.context.md` for all interaction and output.
+- Use `interaction_language` (fallback: `conversation_language`) from `.aioson/context/project.context.md` for all interaction and output.
 
 ## Responsibility boundary
 

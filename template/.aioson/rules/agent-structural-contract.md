@@ -59,7 +59,7 @@ At session end, commands MUST appear in this exact order. Missing steps are acce
 | Agent | Milestone 1 (emit during work) | Milestone 2 (emit during work) |
 |---|---|---|
 | @briefing | Briefing draft written | Briefing approved |
-| @product | PRD written | Feature registered in features.md |
+| @product | PRD written | Feature registered in `.aioson/context/features.md` |
 | @sheldon | Sizing decided | Enrichment applied |
 | @analyst | Requirements written | Spec skeleton created |
 | @architect | Architecture decided | Gate B check |

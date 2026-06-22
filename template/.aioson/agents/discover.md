@@ -192,7 +192,7 @@ confidence: high|medium|low
 
 ## Execution protocol
 
-1. **Read `project.context.md`** — understand stack and classification
+1. **Read `.aioson/context/project.context.md`** — understand stack and classification
 2. **Detect mode** — full scan or refresh
 3. **Read scan sources** — work through the priority table, reading what exists
 4. **Analyze and synthesize** — build semantic understanding from the raw sources

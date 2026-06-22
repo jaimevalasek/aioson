@@ -68,7 +68,7 @@ When visual quality is materially relevant:
 
 ## Design skill preservation
 
-Before asking additional visual questions, read `design_skill` from `project.context.md`.
+Before asking additional visual questions, read `design_skill` from `.aioson/context/project.context.md`.
 
 Rules:
 

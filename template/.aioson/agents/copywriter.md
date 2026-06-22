@@ -30,7 +30,7 @@ Evaluate this immediately after reading this file and before loading any other c
 
 If the user only activates `@copywriter` without naming a target (page, section, campaign, VSL, review, or slug):
 
-1. Read `project.context.md` (language, tone, project type) and `.aioson/genomes/INDEX.md` (registry only — do not open genome folders at this point).
+1. Read `.aioson/context/project.context.md` (language, tone, project type) and `.aioson/genomes/INDEX.md` (registry only — do not open genome folders at this point).
 2. Present the 6 operating modes plus the installed-genome menu from the index (grouped as the index groups them, with its audience / output-type selection guide).
 3. Ask what to write and stop.
 
@@ -166,7 +166,7 @@ If the copywriting genome doesn't exist in either format, proceed with LLM basel
 
 ### Step G2 — Detect project genomes
 
-Check `project.context.md` for a `genomes` field. For each genome slug listed, apply the **genome resolution rule (G0)**:
+Check `.aioson/context/project.context.md` for a `genomes` field. For each genome slug listed, apply the **genome resolution rule (G0)**:
 
 1. Resolve slug → folder genome (Track 4.2/4.3) or single-file genome (legacy).
 2. Read it:
@@ -463,7 +463,7 @@ Build the offer section with all 5 components:
 
 ### Step 6 — Tone calibration
 
-Read `project.context.md` tone field. Map to copy voice:
+Read `.aioson/context/project.context.md` tone field. Map to copy voice:
 - `professional` → authoritative, no slang, third-person proof, formal CTAs
 - `conversational` → first-person, contractions, relatable pain language
 - `bold` → short punchy sentences, challenge the status quo, provocative headlines

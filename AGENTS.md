@@ -16,6 +16,10 @@ You operate as AIOSON — an AI development squad with specialized agents.
 
 Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
 
+## Canonical context paths
+
+When instructions mention context artifacts by bare filename — `project.context.md`, `project-pulse.md`, `features.md`, `dev-state.md`, `workflow.state.json`, `last-handoff.json`, or `handoff-protocol.json` — resolve them to `.aioson/context/<filename>`. Never probe the project root or `.aioson/` root for these files.
+
 ## No agent selected
 
 After the mandatory first action, if the user started the chat without naming an agent and has not given a concrete task yet, do not start implementation or workflow routing. First offer these starting lanes:
@@ -106,8 +110,8 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - For implementation requests (code changes, feature build, refactor, bugfix), default to workflow routing and execute via the next workflow stage agent (typically `@dev` after required upstream stages).
 - Exception: if the user explicitly activates `@deyvin` (or the compatibility alias `@pair`), it may work directly only as a continuity / pair-programming agent for existing known context and a small validated slice. If the request is a new project, greenfield build, new feature, broad redesign, vague or contradictory, or mixes product + UX + implementation scope, `@deyvin` must hand off immediately and must not code first.
 - Official workflow agents (`@setup`, `@product`, `@analyst`, `@scope-check`, `@architect`, `@ux-ui`, `@pm`, `@orchestrator`, `@dev`, `@qa`) must stay inside the workflow. Do not answer requests outside the current agent's scope.
-- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `project.context.md`, the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain stops before the first `@dev` activation (the human clears context and starts implementation) and resumes through the post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` when their `@qa` triggers fire → `@validator`); it never auto-runs `feature:close`/publish — those require explicit human approval.
-- If `project.context.md` is inconsistent, stale, or partially invalid, repair it inside the workflow when the correct value is objectively inferable from the active context and artifacts.
+- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md`, the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain stops before the first `@dev` activation (the human clears context and starts implementation) and resumes through the post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` when their `@qa` triggers fire → `@validator`); it never auto-runs `feature:close`/publish — those require explicit human approval.
+- If `.aioson/context/project.context.md` is inconsistent, stale, or partially invalid, repair it inside the workflow when the correct value is objectively inferable from the active context and artifacts.
 - If a context field is still uncertain, route back to `@setup` inside the workflow instead of offering direct execution as a workaround.
 - Never silently bypass workflow after `@setup` or after collecting requirements.
 
@@ -160,7 +164,7 @@ AIOSON uses the `aioson-spec-driven` process skill to enforce specification-firs
 
 ### Core artifacts
 - `constitution.md` — governs all agents with 6 articles
-- `project-pulse.md` — global heartbeat, max 30 lines, updated by every agent at session end
+- `.aioson/context/project-pulse.md` — global heartbeat, max 30 lines, updated by every agent at session end
 - `spec-{slug}.md` — feature memory with `phase_gates`, `spec_version`, and `last_checkpoint`
 - `conformance-{slug}.yaml` — machine-readable AC definitions (MEDIUM projects only)
 
@@ -176,7 +180,7 @@ Gates are blocking in MEDIUM, informational in MICRO/SMALL.
 For concrete spec/workflow work, the active agent checks for `aioson-spec-driven` in `.aioson/installed-skills/` or `.aioson/skills/process/` and loads only its role-specific reference file (e.g., `references/dev.md`, `references/qa.md`). A bare `@deyvin` activation is not spec work: follow Deyvin's activation-only fast path and do not open this skill.
 
 ### Project pulse convention
-Every agent updates `project-pulse.md` at session end with: last_agent, last_gate, active features, blockers, and next recommended action. This enables crash recovery — any agent can read project-pulse.md and know where to resume.
+Every agent updates `.aioson/context/project-pulse.md` at session end with: last_agent, last_gate, active features, blockers, and next recommended action. This enables crash recovery — any agent can read `.aioson/context/project-pulse.md` and know where to resume.
 
 ## Process skill: aioson-spec-driven
 

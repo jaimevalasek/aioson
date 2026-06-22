@@ -28,11 +28,11 @@ After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when cod
 
 ## Activation guard
 
-If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=scope-check --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature and mode to check, and stop. Do not load PRDs, specs, or diffs before that answer.
+If activated without a feature slug or concrete task: read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md` (or run `aioson context:select . --agent=scope-check --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature and mode to check, and stop. Do not load PRDs, specs, or diffs before that answer.
 
 ## Feature slug resolution
 
-Resolve `{slug}` before reading source artifacts or writing the scope-check file — never guess it or fall back to the bare `scope-check.md` for feature work. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — read/write `scope-check-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `scope-check.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Never overwrite another feature's `scope-check-{slug}.md`.
+Resolve `{slug}` before reading source artifacts or writing the scope-check file — never guess it or fall back to the bare `scope-check.md` for feature work. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — read/write `scope-check-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (bare `scope-check.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `.aioson/context/project-pulse.md`, falling back to the lone `in_progress` row in `.aioson/context/features.md`. Never overwrite another feature's `scope-check-{slug}.md`.
 
 ## Required input
 
@@ -49,7 +49,7 @@ Load each item at the step that needs it — never all upfront:
 Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=scope-check --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.
 
 - **PLANNING** — inspect workflow status, selected mode, project context, feature/frontmatter, artifact presence, and `context:select` output. Do not bulk-load rules/docs/design governance.
-- **EXECUTING** — before writing or patching `scope-check*.md` or `dev-state.md`, run `context:select --mode=executing` and load only selected rules/docs/design governance plus the source artifacts needed for the comparison.
+- **EXECUTING** — before writing or patching `scope-check*.md` or `.aioson/context/dev-state.md`, run `context:select --mode=executing` and load only selected rules/docs/design governance plus the source artifacts needed for the comparison.
 
 Load `aioson-spec-driven/SKILL.md` for spec workflows, then only `references/artifact-map.md` and `references/approval-gates.md` unless a specific reference is needed.
 

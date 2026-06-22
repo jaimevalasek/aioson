@@ -9,7 +9,7 @@ Evaluate this immediately after reading this file and before loading any other c
 If the user only activates `@analyst` without naming a feature, PRD, or concrete analysis task:
 
 1. When the CLI is available, run `aioson workflow:status .` and `aioson context:select . --agent=analyst --mode=planning --task="agent activation without concrete task" --paths=""`.
-2. Load only: `project.context.md` and a filename listing of `.aioson/context/prd*.md` / `requirements-*.md` (names only — no contents).
+2. Load only: `.aioson/context/project.context.md` and a filename listing of `.aioson/context/prd*.md` / `requirements-*.md` (names only — no contents).
 3. Report the current stage, ask which feature or discovery scope to analyze, and stop.
 
 Do NOT load on activation: PRD/requirements contents, `discovery.md`, `spec*.md`, dossiers, scan artifacts, bootstrap files, or skills (including `aioson-spec-driven`). Run the full tool-first preflight only after a concrete task or feature is named.
@@ -75,7 +75,7 @@ If the CLI is not available, compare modification dates manually:
 
 ## Mode detection
 
-Resolve the active feature first: run `aioson feature:current . 2>/dev/null` (single source of truth — pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug pins feature mode to that `{slug}`; this disambiguates when several `prd-{slug}.md` files coexist. If it returns `ambiguous: true` (`--json`), ask which feature before loading. Without the CLI, read `active_feature` from `project-pulse.md`. Then check:
+Resolve the active feature first: run `aioson feature:current . 2>/dev/null` (single source of truth — pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug pins feature mode to that `{slug}`; this disambiguates when several `prd-{slug}.md` files coexist. If it returns `ambiguous: true` (`--json`), ask which feature before loading. Without the CLI, read `active_feature` from `.aioson/context/project-pulse.md`. Then check:
 
 **Feature mode** — a `prd-{slug}.md` file exists in `.aioson/context/`:
 - Read `prd-{slug}.md` to understand the feature scope.
@@ -144,7 +144,7 @@ Run after Sheldon enrichment context check. Check the frontmatter of the PRD bei
 
 ## Context integrity
 
-Read `project.context.md` before starting discovery.
+Read `.aioson/context/project.context.md` before starting discovery.
 
 Rules:
 - If the file is inconsistent with the scope artifacts already present (`prd.md`, `prd-{slug}.md`, `discovery.md`, `spec.md`, `features.md`), fix the objectively inferable metadata inside the workflow before proceeding.
@@ -154,7 +154,7 @@ Rules:
 
 ## Brownfield pre-flight
 
-Check `framework_installed` in `project.context.md` before starting any phase.
+Check `framework_installed` in `.aioson/context/project.context.md` before starting any phase.
 
 **If `framework_installed=true` AND `.aioson/context/discovery.md` exists:**
 - Skip Phases 1–3 below.
@@ -379,7 +379,7 @@ Generate `.aioson/context/discovery.md` with the following sections:
 
 ## Dev handoff producer
 
-Before the final `agent:epilogue`/`agent:done` call, when the next agent in the workflow is `@dev`, produce `dev-state.md` so the next `/aioson:agent:dev` session auto-resumes on cold start instead of pinging the user for context:
+Before the final `agent:epilogue`/`agent:done` call, when the next agent in the workflow is `@dev`, produce `.aioson/context/dev-state.md` so the next `/aioson:agent:dev` session auto-resumes on cold start instead of pinging the user for context:
 
 ```bash
 aioson dev:state:write . --feature={slug} --phase=1 \
@@ -389,7 +389,7 @@ aioson dev:state:write . --feature={slug} --phase=1 \
 
 `--context` accepts canonical tokens (`prd`, `requirements`, `spec`, `architecture`, `impl-plan`, `sheldon`, `design-doc`, `readiness`, `ui-spec`, `dossier`, `simple-plan`), max 4 entries total; missing files emit a warning and are skipped. Always include the artifacts @dev will need to start the first slice — typically `spec` + `requirements` for SMALL features. Idempotent: re-running with the same args does not duplicate state.
 
-If any workflow stage remains before `@dev` (`@scope-check`, `@architect`, `@discovery-design-doc`, or `@pm`), do not guess the final implementation package here. The last pre-dev stage writes the final `dev-state.md`; `@analyst` only produces it for direct-to-dev shortcuts.
+If any workflow stage remains before `@dev` (`@scope-check`, `@architect`, `@discovery-design-doc`, or `@pm`), do not guess the final implementation package here. The last pre-dev stage writes the final `.aioson/context/dev-state.md`; `@analyst` only produces it for direct-to-dev shortcuts.
 
 **Handoff message:**
 ```

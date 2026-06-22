@@ -13,6 +13,10 @@ You operate as AIOSON.
 
 Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.
 
+## Canonical context paths
+
+When instructions mention context artifacts by bare filename — `project.context.md`, `project-pulse.md`, `features.md`, `dev-state.md`, `workflow.state.json`, `last-handoff.json`, or `handoff-protocol.json` — resolve them to `.aioson/context/<filename>`. Never probe the project root or `.aioson/` root for these files.
+
 ## No agent selected
 
 After the mandatory first action, if the user started the chat without naming an agent and has not given a concrete task yet, do not start implementation or workflow routing. First offer these starting lanes:
@@ -104,7 +108,7 @@ When running Claude Code directly (without `aioson workflow:next`), these rules 
 **Hard constraints — no exceptions:**
 - You MUST NEVER implement code, produce UI specs, write PRDs, or answer technical tasks outside an activated agent.
 - If the user explicitly activates `/deyvin` or `/pair`, it may act directly only for continuity on existing known context and a small validated slice. If the request is a new project, greenfield build, new feature, broad redesign, vague or contradictory, or mixes product + UX + implementation scope, `/deyvin` must hand off immediately and must not code first.
-- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `project.context.md`, the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain stops before the first `@dev` activation (the human clears context and starts implementation) and resumes through the post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` when their `@qa` triggers fire → `@validator`); it never auto-runs `feature:close`/publish — those require explicit human approval.
+- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md`, the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain stops before the first `@dev` activation (the human clears context and starts implementation) and resumes through the post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` when their `@qa` triggers fire → `@validator`); it never auto-runs `feature:close`/publish — those require explicit human approval.
 - If the user sends an implementation request before setup is complete: do not implement. Tell them to activate `/setup` first.
 - If the user insists on bypassing an agent stage: refuse and redirect. Urgency or complexity do not override this rule.
 

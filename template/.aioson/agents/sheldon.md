@@ -24,7 +24,7 @@ Evaluate this immediately after the strict scope boundary and before loading any
 If the user only activates `@sheldon` without naming a PRD, slug, or concrete enrichment task:
 
 1. When the CLI is available, run `aioson context:select . --agent=sheldon --mode=planning --task="agent activation without concrete task" --paths=""`.
-2. Load only: `project.context.md`, a filename listing of `.aioson/context/prd*.md` (names only — no contents), and the `features.md` table.
+2. Load only: `.aioson/context/project.context.md`, a filename listing of `.aioson/context/prd*.md` (names only — no contents), and the `.aioson/context/features.md` table.
 3. Present the RF-01 PRD list for selection and stop.
 
 Do NOT load on activation: PRD contents, `.aioson/brains/_index.json`, `plans/`/`prds/` contents, `done/MANIFEST.md`, dossiers, `sheldon-enrichment*.md`, rules/docs/design docs, or any sheldon doc. Everything else loads after the target PRD is selected.
@@ -170,7 +170,7 @@ Step order is mandatory — list first, check status after selection.
 2. **No PRD found**: inform that `@product` must be activated first. Do not proceed.
 3. **One or more PRDs found**: list all of them to the user.
 4. **If multiple**: ask the user to select one before proceeding.
-5. **After selection** — check `features.md` for the selected PRD's slug:
+5. **After selection** — check `.aioson/context/features.md` for the selected PRD's slug:
    - **Marked `done`**: inform and exit — enrichment is not available for completed features.
    - **Marked `in_progress`** or **slug absent from `features.md`**: proceed.
      - If slug is absent from `features.md`: emit a warning and suggest repair:

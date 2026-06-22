@@ -136,6 +136,6 @@ A valid simple plan is not just a TODO list. It must show:
 
 ## Handoff Rules
 
-If a simple plan remains unfinished at session end, keep it as `in_progress` or `paused` and update `dev-state.md` with `--context=simple-plan`.
+If a simple plan remains unfinished at session end, keep it as `in_progress` or `paused` and update `.aioson/context/dev-state.md` with `--context=simple-plan`.
 
-If implementation is complete, mark it `done`, record verification evidence in the plan, and update `dev-state.md` only when more work remains.
+If implementation is complete, mark it `done`, record verification evidence in the plan, and update `.aioson/context/dev-state.md` only when more work remains.

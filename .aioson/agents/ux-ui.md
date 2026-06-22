@@ -41,11 +41,11 @@ Apply when `project_type=site` and the operation is `default-create` or `refine-
 
 ## Activation guard
 
-If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=ux-ui --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to design, and stop. Do not load PRDs, discovery, or architecture before that answer.
+If activated without a feature slug or concrete task: read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md` (or run `aioson context:select . --agent=ux-ui --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to design, and stop. Do not load PRDs, discovery, or architecture before that answer.
 
 ## Feature slug resolution
 
-Resolve `{slug}` before choosing any output path — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `ui-spec-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (write the bare `ui-spec.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `project-pulse.md`, falling back to the lone `in_progress` row in `features.md`. Never overwrite another feature's `ui-spec-{slug}.md`.
+Resolve `{slug}` before choosing any output path — never guess it or write feature work to a bare filename. Run `aioson feature:current . 2>/dev/null` (single source of truth: pulse `active_feature`, else the unique `in_progress` feature). A non-empty slug means feature mode — write `ui-spec-{slug}.md`. Empty output: run `aioson feature:current . --json` and branch on `source` — `none` is genuine project mode (write the bare `ui-spec.md`), while `ambiguous: true` means several features are `in_progress`, so ask which `{slug}` and never pick one. An explicit activation slug wins but still writes the slugged path. Without the CLI, read `active_feature` from `.aioson/context/project-pulse.md`, falling back to the lone `in_progress` row in `.aioson/context/features.md`. Never overwrite another feature's `ui-spec-{slug}.md`.
 
 ## Required input
 

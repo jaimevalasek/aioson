@@ -26,7 +26,7 @@ Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruth
 
 ## Activation guard
 
-If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=pm --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to plan, and stop. Do not load PRDs, requirements, or specs before that answer.
+If activated without a feature slug or concrete task: read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md` (or run `aioson context:select . --agent=pm --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to plan, and stop. Do not load PRDs, requirements, or specs before that answer.
 
 ## Required input
 
@@ -123,7 +123,7 @@ Wave column rules (parallelism markers):
 - `aioson spec:analyze` verifies Wave consistency deterministically (same-wave phases with overlapping Primary files are flagged) — keep Primary files explicit per phase so the check has signal.
 
 Required Context Package rules:
-- Keep the primary activation package to 2-4 files: `project.context.md`, `spec-{slug}.md`, `implementation-plan-{slug}.md`, and optionally the most relevant `design-doc/readiness` artifact.
+- Keep the primary activation package to 2-4 files: `.aioson/context/project.context.md`, `.aioson/context/spec-{slug}.md`, `.aioson/context/implementation-plan-{slug}.md`, and optionally the most relevant `.aioson/context/design-doc*.md` / `.aioson/context/readiness*.md` artifact.
 - Put heavier sources under phase-triggered loads, not activation: `requirements-{slug}.md` for data/business rules, `architecture.md` for module boundaries/integrations/security, `ui-spec.md` for UI work, PRD/Sheldon enrichment only for product ambiguity.
 - Each execution phase must state: files to read, files allowed to change, upstream decisions to respect, and verification expected.
 - Never copy whole upstream documents into the plan. Reference artifact paths and sections.

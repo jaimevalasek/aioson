@@ -123,7 +123,7 @@ If you are using `commit-prep.json`, you already have:
 
 If you used the manual fallback, you gathered the same data via shell commands.
 
-Use these sources to write the commit message. You do **not** need to re-run `git diff`, `git log`, or read `project-pulse.md` again.
+Use these sources to write the commit message. You do **not** need to re-run `git diff`, `git log`, or read `.aioson/context/project-pulse.md` again.
 
 ## Commit Message Standards
 

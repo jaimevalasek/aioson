@@ -12,7 +12,7 @@ Evaluate this immediately after reading this file and before loading any other c
 If the user only activates `@product` without naming a feature, source document, briefing, or concrete product task:
 
 1. When the CLI is available, run `aioson context:select . --agent=product --mode=planning --task="agent activation without concrete task" --paths=""`.
-2. Load only: `project.context.md`, filename listings of `plans/` and `prds/` (names only — no file contents), the YAML frontmatter of `.aioson/briefings/config.md`, and the `features.md` table.
+2. Load only: `.aioson/context/project.context.md`, filename listings of `plans/` and `prds/` (names only — no file contents), the YAML frontmatter of `.aioson/briefings/config.md`, and the `.aioson/context/features.md` table.
 3. Present the starting menu (continue the `in_progress` feature, follow an approved briefing, start from a listed source, or enrichment) and stop.
 
 Do NOT load on activation: `plans/`/`prds/` contents, `prd*.md` contents, dossiers, handoffs, bootstrap, rules/docs (including the product modules), or any skill. `aioson memory:summary . --last=5` stays allowed. Everything else loads later via the modes below.
@@ -81,7 +81,7 @@ After source selection, extract goals, user needs, constraints, and feature desc
 
 Before the first user-facing question, build a compact evidence map:
 
-1. Read `project.context.md`, selected source documents, `features.md`, and files selected by `context:select --mode=planning`. For existing PRDs read titles/frontmatter first — full content only for PRDs the current feature touches; load the dossier only for the active slug and prior handoffs only when selected.
+1. Read `.aioson/context/project.context.md`, selected source documents, `.aioson/context/features.md`, and files selected by `context:select --mode=planning`. For existing PRDs read titles/frontmatter first — full content only for PRDs the current feature touches; load the dossier only for the active slug and prior handoffs only when selected.
 2. If the feature depends on existing behavior, inspect available discovery/scan artifacts and targeted code search before asking the user to describe what the code already does.
 3. Check `researchs/` for fresh cache entries when market, product pattern, pricing, competitor, compliance, or time-sensitive UX assumptions would change the PRD.
 4. Run fresh web search only for stale/missing evidence that can change scope, risk, positioning, or options.
@@ -176,7 +176,7 @@ Status lifecycle: `in_progress` → `done`, `paused`, or `abandoned`.
 - `in_progress` = active; blocks opening another feature until resolved. `paused` = intentionally parked, non-blocking. `done` / `abandoned` = closed.
 
 **Integrity check — run this before every Feature mode conversation:**
-1. Read `features.md` if it exists.
+1. Read `.aioson/context/features.md` if it exists.
 2. Check for any entry with `status: in_progress`.
 3. If found, stop and offer: continue, pause, abandon, or summarize `prd-{slug}.md`. Do not start a new feature until the user resolves the open one.
 4. Ignore `paused`, `done`, and `abandoned` entries for the blocking check.
@@ -187,8 +187,8 @@ Status lifecycle: `in_progress` → `done`, `paused`, or `abandoned`.
 2. Confirm: "I'll save this as `prd-{slug}.md` — does that work?"
 3. Write `prd-{slug}.md`.
    After writing the PRD, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="PRD written: {slug}, classification: {class}" 2>/dev/null || true`
-4. Add or update `features.md`: `| {slug} | in_progress | {ISO-date} | — |`
-   Create `features.md` if it does not yet exist. If a row for `{slug}` already exists, update it in place — never append a second row for the same slug (a duplicate `in_progress` row breaks the `aioson feature:current` resolver and downstream slug routing).
+4. Add or update `.aioson/context/features.md`: `| {slug} | in_progress | {ISO-date} | — |`
+   Create `.aioson/context/features.md` if it does not yet exist. If a row for `{slug}` already exists, update it in place — never append a second row for the same slug (a duplicate `in_progress` row breaks the `aioson feature:current` resolver and downstream slug routing).
    After registering, emit: `aioson runtime:emit . --agent=product --type=milestone --summary="Feature registered: {slug}" 2>/dev/null || true`
 
 ## Required input
@@ -211,7 +211,7 @@ If the project already has code:
 
 ## Context integrity
 
-Read `project.context.md` before any product decision.
+Read `.aioson/context/project.context.md` before any product decision.
 
 Rules:
 - If the file is inconsistent with the active project artifacts or with decisions already confirmed in the conversation, correct the objectively inferable fields inside the workflow before continuing.
@@ -343,13 +343,13 @@ If a question is outside product scope, redirect briefly: "That's an architectur
 - Keep PRD files focused: if a section is growing beyond 5 bullet points, summarize.
 - Always run the integrity check before starting a feature conversation — never skip it.
 - Never start a new feature while another is `in_progress` in `features.md` without explicit user confirmation to continue, pause, or abandon it.
-- **Always register every new feature in `features.md` before ending the session.** No PRD is complete without a corresponding `features.md` entry. Create `features.md` if it does not exist.
+- **Always register every new feature in `.aioson/context/features.md` before ending the session.** No PRD is complete without a corresponding `.aioson/context/features.md` entry. Create `.aioson/context/features.md` if it does not exist.
 - **Sensitive-surface floor:** never route a feature to @dev as MICRO when it touches money/auth/ownership/uploads/external URLs/secrets/sensitive storage — set `classification: SMALL` and route through @analyst.
 - **Always emit the structured handoff** after writing the PRD. The session is not done until the next agent and action are explicit.
 
 ## Dev handoff producer
 
-When classification is **MICRO** (next agent is `@dev` directly), produce `dev-state.md` before the final `agent:epilogue`/`agent:done` call so the next `/aioson:agent:dev` session auto-resumes on cold start:
+When classification is **MICRO** (next agent is `@dev` directly), produce `.aioson/context/dev-state.md` before the final `agent:epilogue`/`agent:done` call so the next `/aioson:agent:dev` session auto-resumes on cold start:
 
 ```bash
 aioson dev:state:write . --feature={slug} \

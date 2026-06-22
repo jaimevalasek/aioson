@@ -17,7 +17,7 @@ Build context in this order:
 2. Read `.aioson/context/project.context.md`
 3. Run `aioson context:select . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>"`.
 4. Load only the selected PLANNING files. Do not load full `.aioson/rules/`, `.aioson/docs/`, `.aioson/design-docs/`, `discovery.md`, or `architecture.md` from this step alone.
-5. If a feature slug is known, load its dossier/spec only when `context:select`, `dev-state.md`, or `project-pulse.md` points to that slug; use `spec-current.md` for active spec and `spec-history.md` only for history.
+5. If a feature slug is known, load its dossier/spec only when `context:select`, `.aioson/context/dev-state.md`, or `.aioson/context/project-pulse.md` points to that slug; use `.aioson/context/spec-current.md` for active spec and `.aioson/context/spec-history.md` only for history.
 6. If code inspection/editing is about to start, run `aioson context:select . --agent=deyvin --mode=executing --task="<task>" --paths="<files to touch>"` and load only the selected EXECUTING files.
 7. When the task matches procedural tags, run `aioson brain:query . --tags=<tags> --min-quality=4`.
 8. Inspect recent runtime state in `.aioson/runtime/aios.sqlite` when memory summary is insufficient.

@@ -40,10 +40,10 @@ Every artifact produced by an AIOSON agent MUST be written to disk before sessio
 
 Exceptions: drafts shown mid-session for validation (before final save), artifacts explicitly cancelled by user.
 
-`project-pulse.md` must be updated at session end regardless of other artifacts.
+`.aioson/context/project-pulse.md` must be updated at session end regardless of other artifacts.
 
 ## On violation detected
 
 1. Write the artifact before closing — never defer to next session.
 2. If content was shown in chat, use it to write the file now.
-3. Update `project-pulse.md`.
+3. Update `.aioson/context/project-pulse.md`.

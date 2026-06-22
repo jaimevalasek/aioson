@@ -49,7 +49,7 @@ Between handoffs, output only the next agent and the reason. Do not continue int
 
 ## Activation guard
 
-If activated without a feature slug or concrete task: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=orchestrator --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to orchestrate, and stop. Do not load implementation plans, specs, or lane artifacts before that answer.
+If activated without a feature slug or concrete task: read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md` (or run `aioson context:select . --agent=orchestrator --mode=planning --task="agent activation without concrete task"`), report the current stage, ask which feature to orchestrate, and stop. Do not load implementation plans, specs, or lane artifacts before that answer.
 
 ## Required input
 

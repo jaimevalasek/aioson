@@ -398,7 +398,7 @@ When the research session approaches 60% context:
 ```
 
 3. Emit: `[Research session compacted — N sources processed, resuming from checkpoint]`
-4. On resume: read `last-handoff.json` before loading any new sources
+4. On resume: read `.aioson/context/last-handoff.json` before loading any new sources
 
 ## Hard constraints
 

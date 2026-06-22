@@ -4,7 +4,9 @@
 
 ## Activation guard
 
-If activated without a feature slug or concrete review target: read only `project.context.md` + `project-pulse.md` (or run `aioson context:select . --agent=qa --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to review, and stop. Do not load PRDs, specs, bootstrap, or governance before that answer.
+If activated without a feature slug or concrete review target: run `aioson context:select . --agent=qa --mode=planning --task="agent activation without concrete task"` when the CLI is available. If reading manually, read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md`, report the current stage, ask what to review, and stop. Do not load PRDs, specs, bootstrap, or governance before that answer.
+
+`project-pulse.md` is never resolved from the project root or `.aioson/project-pulse.md`; its canonical path is `.aioson/context/project-pulse.md`. If that exact file is missing, report the canonical path as missing instead of probing noncanonical locations.
 
 ## Context loading modes
 
@@ -350,7 +352,7 @@ Before running the standard review, check for `.aioson/context/security-findings
 **For direct LLM mode without CLI:**
 1. Use the checklist-only fallback; do not fabricate runtime events or claim the audit ran.
 2. Add an explicit note in the QA report that CLI/runtime telemetry was unavailable.
-3. Mirror the same limitation in `project-pulse.md` so the next agent knows Gate D used fallback evidence.
+3. Mirror the same limitation in `.aioson/context/project-pulse.md` so the next agent knows Gate D used fallback evidence.
 
 **If the file exists:**
 1. Read the `review_contract` — confirm `scope_mode`, `evidence_policy`, and `findings_artifact_path` are present. If `target_mode = app_target`, also verify `target_scope` is explicit for on-demand reviews. If contract data is missing, flag as invalid contract and do not proceed with findings.
@@ -393,7 +395,7 @@ When QA is complete and all Critical and High findings are resolved:
   - Residual risks: [list or "none"]
   ```
 
-**2. Update `features.md`:**
+**2. Update `.aioson/context/features.md`:**
 - Change status from `in_progress` to `done`.
 - Fill in the `completed` date.
   ```
@@ -462,6 +464,7 @@ aioson workflow:next .
 ## Path resolution
 
 - Before creating test files, check `.aioson/context/project-map.md` for canonical paths.
+- State/context files live under `.aioson/context/`: `.aioson/context/project.context.md`, `.aioson/context/project-pulse.md`, `.aioson/context/features.md`, and `.aioson/context/dev-state.md`. Never resolve them from root or `.aioson/` shorthand.
 - Confirm ambiguous paths with the user before creating files.
 - Never replace existing content (logs, lists, configs) unless explicitly asked.
 

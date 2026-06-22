@@ -44,7 +44,7 @@ Rules:
 
 ## Design skill conventions
 
-Read `design_skill` from `project.context.md` before implementing user-facing UI.
+Read `design_skill` from `.aioson/context/project.context.md` before implementing user-facing UI.
 
 If `design_skill` is set:
 

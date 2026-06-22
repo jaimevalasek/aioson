@@ -46,7 +46,7 @@ Read `.aioson/context/dev-state.md` if it exists.
 - Start on `next_step` immediately — no exploration, no discovery pass.
 
 **dev-state.md NOT found (cold start):**
-- Read only: `project.context.md` + `features.md` (if present). Stop there.
+- Read only: `.aioson/context/project.context.md` + `.aioson/context/features.md` (if present). Stop there.
 - **Bootstrap:** read `bootstrap/how-it-works.md` + `bootstrap/current-state.md` (hot log) if present. Older shipped work is in `bootstrap/current-state-archive.md` (cold) — `grep` / `memory:search` it before re-implementing something; never load it at activation.
 - Ask what feature/task to work on.
 - Run `aioson memory:summary . --last=5`, then `aioson context:pack . --agent=dev --goal="<goal>"`.
@@ -78,7 +78,7 @@ If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate
 - Load the simple plan and `.aioson/docs/dev/simple-plan-lane.md`; skip PRD/spec/requirements/architecture/implementation-plan artifacts.
 - If missing `Context selected`, `Implementation intelligence`, or `Useful options considered`, enrich first: selected context, existing pattern, framework leverage, structure/data boundary.
 - Implement written scope, done criteria, expected files, and verification command.
-- If the work expands beyond the simple-plan lane, mark the plan `paused`, update `dev-state.md`, and hand off to the correct workflow agent.
+- If the work expands beyond the simple-plan lane, mark the plan `paused`, update `.aioson/context/dev-state.md`, and hand off to the correct workflow agent.
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
 
@@ -187,7 +187,7 @@ If `framework_installed=true` in `project.context.md`:
 
 ## Context integrity
 
-Read `project.context.md` before implementation and keep it trustworthy.
+Read `.aioson/context/project.context.md` before implementation and keep it trustworthy.
 
 Rules:
 - If the file is inconsistent with the actual scope or stack already proven by the active artifacts, repair the objectively inferable metadata inside the workflow before coding.
@@ -322,7 +322,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
 - **AC→test floor (all classifications, incl. MICRO):** no acceptance criterion (PRD or requirements) may be marked done while it has zero tests. Tests carry the same weight as code at the completion gate. Prefer naming tests with the exact `AC-*` ID so `aioson ac:test-audit . --feature={slug}` can prove coverage deterministically.
-- For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
+- For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `.aioson/context/dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
 - If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.
