@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.0] - 2026-06-22
+
+### Added
+- **Context intelligence and hygiene tooling.** Added the `context:brief` recall path, operational `context:guard` hook adapter/injection flow, guard rule attribution, and the read-only `hygiene:scan` diagnostic for stale session/context noise.
+- **Gate D proof hardening.** Added AC-to-test audit and evidence-gated Gate D expectations across SDD, QA, and agent contracts.
+
+### Changed
+- **Agent context loading now uses canonical context paths.** Gateway and agent prompts resolve `project-pulse.md`, `features.md`, `dev-state.md`, `last-handoff.json`, and `workflow.state.json` to `.aioson/context/`, preventing root or `.aioson/` misreads during activation recovery.
+- **Feature routing and recall are stricter.** Slug resolution, recall index isolation, `context:guard` salience, and selected-context loading were tightened across the spec chain.
+
+### Fixed
+- **Context intelligence safety fixes.** Hardened hook agent-name validation, tester test-plan/test-inventory scoping, Sheldon validation scoping, deleted-file recall cleanup, Windows temp-dir cleanup, and the context subsystem P1-P5 audit findings.
+- **Feature archive restore cleanup.** Retried empty archive-directory removal during restore to avoid leaving `.aioson/context/done/{slug}/` behind on transient Windows filesystem locks.
+
 ## [1.29.2] - 2026-06-13
 
 ### Fixed

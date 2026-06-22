@@ -405,7 +405,7 @@ test('sheldon.md: RF-01 lists PRDs before checking status', async () => {
 
   // Step order matters: listing PRDs must come before status check
   const listIdx = rf01.indexOf('list all');
-  const statusIdx = rf01.indexOf('check `features.md`');
+  const statusIdx = rf01.indexOf('check `.aioson/context/features.md`');
   assert.ok(listIdx !== -1 && statusIdx !== -1, 'sheldon.md must have both list and status steps');
   assert.ok(listIdx < statusIdx, 'listing PRDs (step 3) must appear before status check (step 5) in RF-01');
 });

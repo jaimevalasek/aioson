@@ -131,6 +131,19 @@ async function findArchivedFiles(archiveDir) {
   return entries.filter((e) => e.isFile()).map((e) => e.name);
 }
 
+async function removeEmptyDirBestEffort(dir) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await fs.rmdir(dir);
+      return;
+    } catch (err) {
+      if (!err || err.code === 'ENOENT' || err.code === 'ENOTEMPTY') return;
+      if (attempt === 3) return;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+}
+
 /**
  * Enumerate every artefact that belongs to a feature slug — the exact surface
  * `feature:archive` would move — but as a pure read-only discovery, for
@@ -552,11 +565,7 @@ async function runRestore({ slug, ctxDir, archiveDir, manifestPath, dryRun, json
     dossierRestored = path.relative(ctxDir, dossierSourceDir);
   }
 
-  try {
-    await fs.rmdir(archiveDir);
-  } catch {
-    // Directory not empty (manual files) — leave it alone.
-  }
+  await removeEmptyDirBestEffort(archiveDir);
 
   await updateManifest(manifestPath, { slug }, 'remove');
 

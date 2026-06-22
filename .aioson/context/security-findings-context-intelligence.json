@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "feature_slug": "context-intelligence",
+  "generated_at": "2026-06-19T01:22:11-03:00",
+  "review_contract": {
+    "review_id": "pentester-context-intelligence-20260619T012211-0300",
+    "scope_mode": "on_demand",
+    "runtime_mode": "local_static",
+    "target_mode": "framework_target",
+    "target_scope": "context:guard PreToolUse hook and context-search intelligence surface",
+    "allowed_targets": [
+      "src/context-guard.js",
+      "src/commands/context-guard.js",
+      "src/commands/hooks-install.js",
+      "src/context-search.js",
+      "tests/context-guard.test.js",
+      "tests/hooks-install-guard.test.js",
+      "tests/context-search.test.js",
+      ".aioson/context/*",
+      ".aioson/rules/*"
+    ],
+    "forbidden_targets": [
+      "external internet targets",
+      "third-party production systems",
+      "real credentials or tokens",
+      "destructive writes outside controlled local fixtures"
+    ],
+    "attack_surfaces": [
+      "TS-context-intelligence-01",
+      "TS-context-intelligence-02",
+      "TS-context-intelligence-03",
+      "TS-context-intelligence-04",
+      "TS-context-intelligence-05",
+      "TS-context-intelligence-06",
+      "TS-context-intelligence-07",
+      "TS-context-intelligence-08",
+      "TS-context-intelligence-09"
+    ],
+    "evidence_policy": "safe-proof-only",
+    "findings_artifact_path": ".aioson/context/security-findings-context-intelligence.json",
+    "tools": [
+      {
+        "name": "node",
+        "version": "v23.1.0",
+        "purpose": "unit tests and local proof-of-concept"
+      },
+      {
+        "name": "npm",
+        "version": "10.9.0",
+        "purpose": "project test runner availability"
+      },
+      {
+        "name": "ripgrep",
+        "version": "15.1.0",
+        "purpose": "static source and secret-pattern search"
+      },
+      {
+        "name": "semgrep",
+        "version": null,
+        "available": false,
+        "purpose": "SAST baseline unavailable in local PATH"
+      },
+      {
+        "name": "trivy",
+        "version": null,
+        "available": false,
+        "purpose": "SCA baseline unavailable in local PATH"
+      },
+      {
+        "name": "gitleaks",
+        "version": null,
+        "available": false,
+        "purpose": "secret scanner unavailable in local PATH; fallback used ripgrep secret-pattern scan"
+      }
+    ]
+  },
+  "threat_surfaces": [
+    {
+      "id": "TS-context-intelligence-01",
+      "surface_type": "memory_context",
+      "verification_status": "reviewed",
+      "scope": "context files, rule content, guard additionalContext payloads, and stale handoff state",
+      "evidence": [
+        "src/context-guard.js reads only salient rule files selected by hard context:brief signals.",
+        "tests/context-guard.test.js covers unrelated-rule suppression, path-scoped guard suppression, and JSON wire payload stripping."
+      ],
+      "finding_ids": []
+    },
+    {
+      "id": "TS-context-intelligence-02",
+      "surface_type": "tool_invocation",
+      "verification_status": "finding",
+      "scope": "Claude PreToolUse hook command, event-file handling, stdin JSON parsing, and shell command construction",
+      "evidence": [
+        "src/commands/hooks-install.js interpolates agentName into shell command strings without validation or quoting.",
+        "Dry-run PoC generated command: aioson context:guard \"$PWD\" --tool=claude --agent=dev; echo AIOSON_PENTEST --json 2>/dev/null || true"
+      ],
+      "finding_ids": [
+        "SF-context-intelligence-01"
+      ]
+    },
+    {
+      "id": "TS-context-intelligence-03",
+      "surface_type": "delegation_handoff",
+      "verification_status": "reviewed",
+      "scope": "last-handoff and workflow handoff state affected by the review cycle",
+      "evidence": [
+        "Workflow handoff state was produced by workflow:next and not by the hook payload.",
+        "No attacker-controlled handoff field is consumed by context:guard in the reviewed path."
+      ],
+      "finding_ids": []
+    },
+    {
+      "id": "TS-context-intelligence-04",
+      "surface_type": "protocol_contract",
+      "verification_status": "reviewed",
+      "scope": "context:guard command contract and hooks-install generated settings",
+      "evidence": [
+        "context:guard returns pristine hook JSON in --json mode and strips internal _guard observability data.",
+        "tests/hooks-install-guard.test.js covers hook presence, opt-out, and AIOSON-owned hook detection."
+      ],
+      "finding_ids": []
+    },
+    {
+      "id": "TS-context-intelligence-05",
+      "surface_type": "secret_handling",
+      "verification_status": "reviewed",
+      "scope": "context/rules/runtime artifacts and guard outputs",
+      "evidence": [
+        "Focused ripgrep secret-pattern scan over reviewed source, tests, context report, pulse, scope-check, and rules found no real credentials.",
+        "context:guard derives search query from file path/content but injects only extracted rule constraints, not edited file content."
+      ],
+      "finding_ids": []
+    },
+    {
+      "id": "TS-context-intelligence-06",
+      "surface_type": "runtime_permissions",
+      "verification_status": "reviewed",
+      "scope": "advisory hook semantics, non-blocking behavior, and agent option propagation",
+      "evidence": [
+        "The guard is intentionally advisory and always uses best-effort shell suffixes.",
+        "The same unvalidated agentName issue is tracked as SF-context-intelligence-01 because it becomes a shell command-construction vulnerability."
+      ],
+      "finding_ids": [
+        "SF-context-intelligence-01"
+      ]
+    },
+    {
+      "id": "TS-context-intelligence-07",
+      "surface_type": "auth_identity",
+      "verification_status": "finding",
+      "scope": "agent identity passed into context:guard and hook configuration",
+      "evidence": [
+        "src/commands/hooks-install.js accepts options.agent as a raw string after stripping only a leading @.",
+        "The untrusted identity string is embedded into Claude, Antigravity, and Codex hook command templates."
+      ],
+      "finding_ids": [
+        "SF-context-intelligence-01"
+      ]
+    },
+    {
+      "id": "TS-context-intelligence-08",
+      "surface_type": "installation_integrity",
+      "verification_status": "finding",
+      "scope": "hooks-install writes to Claude settings and preserves user hooks",
+      "evidence": [
+        "hooks:install --dry-run --json shows the malicious agent string persisted into generated Claude hook commands.",
+        "installClaudeHooks writes the merged hook configuration to the global Claude settings file when not in dry-run mode."
+      ],
+      "finding_ids": [
+        "SF-context-intelligence-01"
+      ]
+    },
+    {
+      "id": "TS-context-intelligence-09",
+      "surface_type": "supply_chain_integrity",
+      "verification_status": "not_applicable",
+      "skip_reason": "The reviewed patch does not touch package manifests, lockfiles, GitHub Actions, release, publish, or third-party code-fetch paths."
+    }
+  ],
+  "findings": [
+    {
+      "id": "SF-context-intelligence-01",
+      "feature_slug": "context-intelligence",
+      "surface": "tool_invocation",
+      "severity": "high",
+      "title": "hooks:install interpolates --agent into persistent shell hooks without validation",
+      "hypothesis": "A crafted agent name can break out of the intended --agent argument and inject an additional shell command into generated AIOSON hook commands.",
+      "attack_path": "Run hooks:install with a crafted local --agent value; the generated Claude/Antigravity/Codex hook command persists the injected shell metacharacters and executes them when the hook fires.",
+      "preconditions": [
+        "Attacker can influence the local hooks:install --agent argument, or convince the operator/automation to run hooks:install with a crafted agent name.",
+        "The generated hook is installed or inspected from dry-run output and then persisted by a non-dry-run install.",
+        "The target AI tool executes hook commands through a shell."
+      ],
+      "reproduction_steps": [
+        "Run: node bin/aioson.js hooks:install . --tool=claude --agent=\"dev; echo AIOSON_PENTEST\" --dry-run --json",
+        "Observe PostToolUse, Stop, and PreToolUse command strings containing '; echo AIOSON_PENTEST'.",
+        "Run: node -e \"const { buildClaudeHooks } = require('./src/commands/hooks-install'); const hooks = buildClaudeHooks('dev; echo AIOSON_PENTEST'); console.log(hooks.PreToolUse[0].hooks[0].command);\"",
+        "Observe the generated PreToolUse command: aioson context:guard \"$PWD\" --tool=claude --agent=dev; echo AIOSON_PENTEST --json 2>/dev/null || true"
+      ],
+      "evidence": [
+        "src/commands/hooks-install.js:35 builds `aioson hooks:emit \"$PWD\" --agent=${agentName} ...`.",
+        "src/commands/hooks-install.js:39 builds `aioson agent:done \"$PWD\" --agent=${agentName} --summary=\"Session ended via ${agentName} hook\" ...`.",
+        "src/commands/hooks-install.js:47 builds `aioson context:guard \"$PWD\" --tool=claude --agent=${agentName} --json ...`.",
+        "src/commands/hooks-install.js:158 builds `aioson live:start \"$PWD\" --agent=${agentName} --tool=antigravity ...`.",
+        "src/commands/hooks-install.js:237 writes `AGENT=\"${agentName}\"` into the Codex wrapper script.",
+        "src/commands/hooks-install.js:292 derives agentName from `options.agent` by only stripping a leading @.",
+        "tests/hooks-install-guard.test.js:28 currently asserts the requested agent is baked into the guard command, but does not assert validation or shell escaping.",
+        "Dry-run CLI output included `command`: `aioson context:guard \"$PWD\" --tool=claude --agent=dev; echo AIOSON_PENTEST --json 2>/dev/null || true`."
+      ],
+      "impact": "A malicious or compromised local project/workflow can turn a hook installation into persistent local command execution under the operator's account. Because hooks are written into global tool settings, the injected command may run later on ordinary Write/Edit/Stop events, outside the original installation context.",
+      "affected_artifacts": [
+        "src/commands/hooks-install.js",
+        "tests/hooks-install-guard.test.js"
+      ],
+      "suggested_fix": "Normalize and validate agent names before command generation using the same canonical agent-name contract used elsewhere in the CLI, e.g. allow only known agents or a strict kebab-case identifier `/^[a-z][a-z0-9-]*$/`. Reject invalid names in hooks:install and hooks:uninstall. Additionally shell-quote every dynamic argument used in generated command strings, and escape embedded values in the Codex wrapper script. Add regression tests for semicolon, quote, command-substitution, whitespace, and newline payloads across Claude, Antigravity, and Codex hook builders.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "status": "fixed",
+      "fixed_at": "2026-06-19T01:39:03.6824206-03:00",
+      "fixed_by": "dev",
+      "fix_summary": "hooks:install and hooks:uninstall now normalize agent names to known agent ids or strict kebab-case identifiers before hook generation, reject shell-control payloads, and shell-quote dynamic hook command arguments.",
+      "fix_artifacts": [
+        "src/commands/hooks-install.js",
+        "tests/hooks-install-guard.test.js"
+      ],
+      "validation": [
+        "node --test tests/hooks-install-guard.test.js",
+        "node --test tests/context-guard.test.js tests/hooks-install-guard.test.js",
+        "node scripts/check-js.js",
+        "node bin/aioson.js hooks:install . --tool=claude --agent=\"dev; echo AIOSON_PENTEST\" --dry-run --json",
+        "node bin/aioson.js hooks:install . --tool=claude --agent=@qa --dry-run --json",
+        "npm test"
+      ],
+      "safe_to_reproduce": true,
+      "llm_top_10_id": "LLM05"
+    }
+  ]
+}
