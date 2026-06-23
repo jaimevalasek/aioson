@@ -222,6 +222,36 @@ aioson_version: "1.8.0"
   assert.equal(await fileExists(briefingAgent), false, 'selective update must preserve legacy skip behavior for absent files');
 });
 
+test('update refreshes framework integration docs and preserves project-owned integration docs', async () => {
+  const dir = await makeTempDir();
+  await installTemplate(dir, { mode: 'install' });
+
+  const officialRel = '.aioson/docs/integrations/dashboard-app-form-publish-mapping.md';
+  const officialPath = path.join(dir, officialRel);
+  const projectOwnedPath = path.join(dir, '.aioson/docs/integrations/project-owned-connector.md');
+  const projectOwnedContent = '# Project connector\n\nKeep this local integration note.\n';
+
+  await fs.writeFile(officialPath, '# Old framework integration doc\n', 'utf8');
+  await fs.writeFile(projectOwnedPath, projectOwnedContent, 'utf8');
+
+  const { t } = createTranslator('en');
+  const result = await runUpdate({
+    args: [dir],
+    options: {},
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(await fs.readFile(officialPath, 'utf8'), await readRepoTemplate(officialRel));
+  assert.equal(await fs.readFile(projectOwnedPath, 'utf8'), projectOwnedContent);
+  assert.equal(
+    result.backedUp.some((file) => file.endsWith(officialRel)),
+    true,
+    'managed framework integration doc should be backed up before overwrite'
+  );
+});
+
 async function fileExists(p) {
   try { await fs.access(p); return true; } catch { return false; }
 }

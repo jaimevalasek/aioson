@@ -1,5 +1,5 @@
 ---
-updated_at: "2026-06-19T18:55:00-03:00"
+updated_at: "2026-06-23T03:08:06-03:00"
 generated_at: "2026-06-10T00:10:00-03:00"
 source: "Living Memory reflection — fechamento de loop-guardrails (QA re-verificacao PASS, Gate D aprovado, feature done) — @scope-check 2026-06-10"
 ---
@@ -8,6 +8,7 @@ source: "Living Memory reflection — fechamento de loop-guardrails (QA re-verif
 
 ## What the system already has
 
+- [framework-integrations-docs-update · 2026-06-23] `.aioson/docs/integrations/` is now a mixed surface for AIOSON framework integration docs plus project-owned integration notes: official files ship through `template/.aioson/docs/integrations/`, are listed in `MANAGED_FILES` for update backups, and `update` refreshes official paths while preserving extra project files in the same directory. Verification: `node --test tests/update.test.js`, `node --test tests/agent-contracts.test.js`, `node --test tests/rules-lint.test.js`, `npm run lint`.
 - [release-v1.30.0 · 2026-06-22] `chore(release): prepare v1.30.0` bumps package/context metadata to 1.30.0, documents context-intelligence and Gate D proof hardening, commits the fixed context-intelligence security findings artifact, and hardens empty archive-dir cleanup during `feature:archive --restore`.
 - [hygiene-scan-neo-orchestration · 2026-06-19] `aioson hygiene:scan . --json` is a read-only operational cleanup diagnostic that reports pending Neural Chain noises, done features pending archive, stale `dev-state.md`, on-demand review artifacts, and orphan slug artifacts with suggested actions; `@neo` now runs/surfaces that scan and asks before any cleanup decision instead of embedding archival intelligence in the prompt. Verification: `node --test tests/hygiene-scan.test.js`, `node scripts/check-js.js`, `npm test`.
 - [sdd-proof-gates · 2026-06-19] Gate D now has deterministic AC→test proof via `aioson ac:test-audit . --feature=<slug>`: declared `AC-*` IDs from PRD/requirements/conformance must appear in tests or executable harness criteria; `gate:check D` and QA handoff block missing evidence. `harness:check --strict`, `spec:analyze --strict`, schema-valid Sheldon harness docs, `sheldon-validation` artifact visibility, and `sdd:benchmark` provide reproducible SDD quality measurement.

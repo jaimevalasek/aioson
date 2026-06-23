@@ -14,6 +14,16 @@ triggers: [aioson play, draft, drafts, pnpm, manifest runtime]
 
 Aplicável quando o `cwd` da sessão é `~/.local/share/com.aioson.play/drafts/<uuid>/` (drafts) **OU** quando `manifest.json` no projeto contém um `runtime` reconhecido pelo Play (apps instalados que rodarão dentro dele).
 
+## Camada de docs de compatibilidade (carregue primeiro)
+
+Quando o alvo é o AIOSON Play — app novo, app que precisa virar compatível, ou consumo de integrações do Play — carregue antes de implementar:
+
+```text
+.aioson/docs/play/README.md
+```
+
+O README define a ordem de leitura (`agent-usage-guide.md`, `app-compatibility-guide.md`, `manifest-and-runtime.md`, `llm-data-and-bindings.md`, `auth-services-and-testing.md`, `source-map.md`). Esta rule cobre só a operação do draft (pnpm, caches, framework config); o contrato de compatibilidade — manifest, portas, `/api/aioson-play`, auth, data bindings — vive naqueles docs.
+
 ## Princípio fundador
 
 O AIOSON Play é o **ambiente de runtime** de apps criados aqui. Drafts são experimentos vivos; quando promovidos, viram apps instalados que rodam **dentro** do Play. Por isso, criar um app no Play é diferente de criar um projeto Node qualquer:

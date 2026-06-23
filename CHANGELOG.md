@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.1] - 2026-06-23
+
+### Added
+- **AIOSON Play app compatibility docs.** Added curated `.aioson/docs/play/` guidance for agents building apps that target AIOSON Play, shipped through the install/update template. It covers manifest/runtime behavior, ports, ProductBridge, `/api/aioson-play`, LLM env injection, app-owned databases, Data Bindings, auth, services, and local testing.
+- **Framework integration docs surface.** Added `.aioson/docs/integrations/dashboard-app-form-publish-mapping.md` as a framework-managed integration reference and shipped it through the install/update template.
+
+### Fixed
+- **Preservative integration docs update.** `update` now has regression coverage proving official framework integration docs are refreshed while project-owned files in `.aioson/docs/integrations/` remain untouched.
+
 ## [1.30.0] - 2026-06-22
 
 ### Added

@@ -426,6 +426,32 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
   }
 });
 
+test('AIOSON Play compatibility docs are shipped and managed', async () => {
+  const managedDocs = [
+    '.aioson/docs/play/README.md',
+    '.aioson/docs/play/agent-usage-guide.md',
+    '.aioson/docs/play/app-compatibility-guide.md',
+    '.aioson/docs/play/auth-services-and-testing.md',
+    '.aioson/docs/play/llm-data-and-bindings.md',
+    '.aioson/docs/play/manifest-and-runtime.md',
+    '.aioson/docs/play/source-map.md'
+  ];
+
+  for (const file of managedDocs) {
+    assert.equal(MANAGED_FILES.includes(file), true, `missing managed Play doc: ${file}`);
+    await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', file)));
+  }
+
+  const readme = await read(path.join(ROOT, 'template/.aioson/docs/play/README.md'));
+  const bindings = await read(path.join(ROOT, 'template/.aioson/docs/play/llm-data-and-bindings.md'));
+  const runtime = await read(path.join(ROOT, 'template/.aioson/docs/play/manifest-and-runtime.md'));
+
+  assert.equal(readme.includes('ProductBridge'), true);
+  assert.equal(bindings.includes('data_bindings'), true);
+  assert.equal(bindings.includes('DATABASE_URL'), true);
+  assert.equal(runtime.includes('/api/aioson-play'), true);
+});
+
 test('product contract enforces activation-only fast path before source and context loading', async () => {
   const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
 

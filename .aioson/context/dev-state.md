@@ -1,22 +1,22 @@
 ---
-last_updated: 2026-06-10
-active_feature: harness-retrospective-optimization
+last_updated: 2026-06-23
+active_feature: framework-integrations-docs-update
 active_phase: 1
-next_step: "DEV COMPLETO (Tema 1 + Tema 2). Próximo: @qa verificar AC-1..AC-16 contra requirements §8. Implementado: src/lib/retro/{retro-sources,retro-aggregate,retro-render}.js, src/commands/harness-retro.js + harness-preview.js, src/harness/preview-artifact.js, wiring cli.js (KNOWN+JSON_SUPPORTED+dispatch+help), i18n cli.harnessRetro.*/cli.harnessPreview.* (4 locales), adoção self-implement-loop.js (AC-13), paridade template+workspace de sheldon.md/qa.md/tester.md/aioson-context-boundary.md + project-map.md. Testes: tests/harness-retro.test.js (18) + tests/preview-artifact.test.js (9). Suíte 3131/3132 verde, 0 fail. Piloto real gerado: .aioson/context/retro/loop-guardrails.md (C-01 candidato, 1 ciclo FAIL→PASS, 6 observações)."
+next_step: "framework-integrations-docs-update concluido. Proximo: manter novos docs oficiais de integrations no template e em MANAGED_FILES."
 status: dev_complete
 ---
 
 # Dev State
 
-**Feature:** harness-retrospective-optimization
+**Feature:** framework-integrations-docs-update
 **Phase:** 1
 **Status:** dev_complete
-**Next step:** DEV COMPLETO (Tema 1 + Tema 2). Próximo: @qa verificar AC-1..AC-16 contra requirements §8. Suíte completa 3131/3132 verde, 0 fail. Piloto real em `.aioson/context/retro/loop-guardrails.md`.
+**Next step:** framework-integrations-docs-update concluido. Proximo: manter novos docs oficiais de integrations no template e em MANAGED_FILES.
 
 ## Context package
 
 1. project.context.md
-2. architecture.md
+2. simple-plans/framework-integrations-docs-update.md
 
 ## History
 
@@ -25,3 +25,5 @@ status: dev_complete
 - 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105
 - 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105
 - 2026-06-10: phase 1 — Implementar Tema 1 na ordem do architecture.md §6: retro-sources.js (fixtures vazias primeiro, AC-2) -> retro-aggregate.js (AC-5/6) -> retro-render.js (AC-4) -> harness-retro.js + cli.js + i18n + piloto loop-guardrails (AC-1, AC-7..10) -> boundary rule + sheldon.md template-first (AC-11/16). Tema 2 depois (preview-artifact, AC-12..14). Decisoes D1..D7 fechadas em architecture.md §Feature Architecture RHO-lite; nao redescobrir: execution_events sem coluna feature_slug (filtro payload_json.slug), attempts/ e devlogs vazios hoje (fixtures sinteticas), baseline suite 3104/3105
+- 2026-06-23: phase 1 — Criados 7 guias curados em `.aioson/docs/play/` para apps compativeis com AIOSON Play: entrada dos agentes, checklist de compatibilidade, manifest/runtime, LLM+DB+Data Bindings, auth/services/testing e mapa para os docs canonicos do `aioson-play`.
+- 2026-06-23: phase 1 — `framework-integrations-docs-update` concluido: `.aioson/docs/integrations/dashboard-app-form-publish-mapping.md` agora tem frontmatter, foi adicionado ao template, registrado em `MANAGED_FILES`, e `tests/update.test.js` cobre update preservativo (oficial substitui, projeto extra permanece).
