@@ -109,6 +109,7 @@ Apply enrichment:
 - Use web search only for stale/missing evidence that can change the briefing's risks, options, or open questions.
 - Load `.aioson/skills/process/aioson-spec-driven/references/hardening-lane.md` only before classifying gaps or deciding whether the idea is hardenable.
 - Load `.aioson/skills/process/briefing-expansion-scout/SKILL.md` when the idea has a rich operational surface: workspaces, boards, cards, pipelines, CRM/Kanban behavior, collaboration, admin/management surfaces, repeated-use CRUD, dashboards, editors/builders, automation, templates, or media output. For these ideas, write `.aioson/briefings/{slug}/expansion-scout.md` before the briefing is considered complete enough for product.
+- Run **Horizontal solution exploration** (see below) when the goal admits more than one viable solution shape, or whenever the idea has a rich operational surface. Write `.aioson/briefings/{slug}/solution-options.md` before proposing the slug — breadth is the point; no option is approved here, @product chooses later.
 - Identify gaps: what is missing in the plans to make a safe decision.
 - Map risks: what could go wrong with the proposed approach.
 
@@ -192,6 +193,20 @@ Schema shape:
 }
 ```
 
+### Horizontal solution exploration
+
+Default to breadth before committing to one direction. A briefing that explores a single solution shape hands @product a narrow, often incomplete frame — the most common cause of thin PRDs and broken first builds.
+
+Run this when the goal admits more than one viable solution shape, or whenever the idea has a rich operational surface (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, editors/builders, automation, admin/management surfaces, repeated-use CRUD).
+
+1. Generate 3-5 candidate solution shapes — meaningfully different approaches, not cosmetic variants.
+2. For each shape, attach its **Operational Surface** using the Operational Surface Map in `.aioson/docs/feature-expansion-taxonomy.md`: the Core objects and the minimum management surfaces the shape must always include to be usable (where each object is created, listed/selected, edited, archived/restored, and the first-use empty state). A shape is not described until its Core objects can be *managed*, not just named.
+3. Classify each shape: value, risk, effort, and completeness. Mark the recommended shape and say why.
+4. Ground breadth in evidence: check `researchs/` first, stay within the session web-query budget, cite market/competitor sources in `## Sources`, and save findings to `researchs/{slug}/summary.md` for @product and @sheldon.
+5. Write `.aioson/briefings/{slug}/solution-options.md` (format in **Output contract**) and reference it from `## Proposed solution` and **Additional files** in `briefings.md`.
+
+This stays exploratory: do not approve a shape, do not turn it into PRD scope, and do not collapse the options back into one — keep them visible so @product chooses with the trade-offs in hand.
+
 ## Mode: Conversational (no plans)
 
 When `plans/` is empty or the user wants to plan via conversation:
@@ -212,6 +227,8 @@ If the user describes a feature (settings page, dashboard, file upload), probe f
 
 **C — Proposed solution**
 > "What direction are you considering? Multiple is fine — this is not a commitment yet, just hypotheses."
+
+When the user offers (or the goal admits) more than one viable direction, or the surface is rich, run **Horizontal solution exploration** and write `solution-options.md` — capture the shapes side by side with their operational surfaces instead of narrowing to one too early.
 
 **D — Risks (Cagan's four + risk of inaction)**
 Cover four risk lenses: **Value** (will users want it?), **Usability** (can they figure it out?), **Feasibility** (can we build it?), **Viability** (legal, ethics, P&L, brand, support burden). Then capture the cost of inaction. Ask only for lenses not already answered by evidence.
@@ -317,6 +334,41 @@ briefings:
 ```
 
 **Status lifecycle:** `draft` → `approved` → `implemented`
+
+### `.aioson/briefings/{slug}/solution-options.md` (optional)
+
+Write this whenever **Horizontal solution exploration** runs. It holds the breadth so `briefings.md` stays lean and just references it. @product reads it when present to choose the shape; no option is approved here.
+
+```markdown
+---
+slug: {slug}
+created_at: {ISO-date}
+recommended: {option-id}
+---
+
+# Solution options — {Title}
+
+> Exploratory. No option is approved here; @product chooses.
+
+## Option A — {name}
+- Shape: [the approach in 1-2 lines]
+- Operational surface:
+
+| Object | Parent / owner | Required actions | Management surface | Empty / error states |
+|---|---|---|---|---|
+
+- Value / Risk / Effort / Completeness: ...
+
+## Option B — {name}
+[same structure]
+
+## Comparison
+| Option | Value | Risk | Effort | Completeness | Recommended |
+|---|---|---|---|---|---|
+
+## Recommendation
+[Which shape and why — for @product to weigh, not a commitment.]
+```
 
 ## Additional theme files (optional)
 

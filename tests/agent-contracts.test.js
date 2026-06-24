@@ -470,6 +470,22 @@ test('feature expansion prompts preserve operational surface completeness gates'
   }
 });
 
+test('briefing prompt drives horizontal solution exploration into a solution-options artifact', async () => {
+  const briefingAgent = await read(path.join(ROOT, 'template/.aioson/agents/briefing.md'));
+
+  const checks = [
+    [briefingAgent, '### Horizontal solution exploration'],
+    [briefingAgent, 'Generate 3-5 candidate solution shapes'],
+    [briefingAgent, 'attach its **Operational Surface**'],
+    [briefingAgent, '.aioson/briefings/{slug}/solution-options.md'],
+    [briefingAgent, 'A shape is not described until its Core objects can be *managed*, not just named.']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing horizontal exploration token: ${token}`);
+  }
+});
+
 test('AIOSON Play compatibility docs are shipped and managed', async () => {
   const managedDocs = [
     '.aioson/docs/play/README.md',
