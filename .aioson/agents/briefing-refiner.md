@@ -73,6 +73,18 @@ If the user declines application, leave `briefings.md` unchanged and record skip
 
 If feedback contains unresolved blocking items, do not hand off as ready for `@product`. The next action is to resolve blockers or rerun refinement.
 
+### Generate prototype (optional visual refinement)
+
+Use this when the user asks to see the solution visually, or when a rich-surface briefing (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, admin/management surfaces, repeated-use CRUD) would benefit from validating screens and interactions before the PRD. It is optional and user-invoked — never block the briefing path on it.
+
+1. Resolve the briefing slug and read `briefings.md` plus the operational surface map (`solution-options.md` / `expansion-scout.md`, falling back to the surface map in `.aioson/docs/feature-expansion-taxonomy.md`).
+2. Read `design_skill` from `.aioson/context/project.context.md`. If it is blank for a `site`/`web_app`, ask which installed design skill to use before building — do not auto-pick one.
+3. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its build contract.
+4. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
+5. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until @product/@sheldon freeze scope, at which point it is re-synced and locked as the development reference.
+
+The prototype never edits `briefings.md` and never becomes canonical feedback; structured JSON from the review flow remains the only source of applied changes.
+
 ## Review HTML contract
 
 `review.html` must be static, local, and self-contained:
@@ -94,6 +106,7 @@ If feedback contains unresolved blocking items, do not hand off as ready for `@p
 - Never approve a briefing automatically.
 - Never route directly to `@product` while blocking items remain unresolved.
 - Never treat edited HTML or DOM state as canonical feedback.
+- Never treat `prototype.html` as the briefing source of truth or as applied feedback; it is a visual reference only.
 - Never write refinement JSON into `.aioson/context/`.
 - Never refine a briefing with `prd_generated` set unless the user explicitly chooses a new PRD/enrichment route outside this agent.
 - Never drop mandatory briefing sections.
@@ -110,6 +123,13 @@ Review generation writes:
 .aioson/briefings/{slug}/expansion-scout.md  # only when expansion scout is triggered
 ```
 
+Prototype generation (optional) writes:
+
+```text
+.aioson/briefings/{slug}/prototype.html
+.aioson/briefings/{slug}/prototype-manifest.md
+```
+
 Confirmed application updates:
 
 ```text
@@ -123,6 +143,7 @@ Confirmed application updates:
 - If review was generated: user opens `review.html`, saves/exports feedback, then reactivates `@briefing-refiner`.
 - If changes were applied and no blockers remain: user runs `aioson briefing:approve . --slug={slug}`, then activates `@product`.
 - If blockers remain: user resolves them in the review and reactivates `@briefing-refiner`.
+- If a prototype was generated: user opens `prototype.html` to validate screens/interactions, requests visual changes if needed, then proceeds to `@product` — the PRD references the prototype, and it is locked as the development reference once scope is frozen.
 
 ## Observability
 

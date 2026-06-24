@@ -486,6 +486,30 @@ test('briefing prompt drives horizontal solution exploration into a solution-opt
   }
 });
 
+test('prototype-forge skill and briefing-refiner prototype mode are shipped and managed', async () => {
+  const skillFile = '.aioson/skills/process/prototype-forge/SKILL.md';
+  assert.equal(MANAGED_FILES.includes(skillFile), true, 'prototype-forge must be a managed file');
+  await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', skillFile)));
+
+  const skill = await read(path.join(ROOT, 'template', skillFile));
+  const refiner = await read(path.join(ROOT, 'template/.aioson/agents/briefing-refiner.md'));
+
+  const checks = [
+    [skill, 'name: prototype-forge'],
+    [skill, '## Division of labor (do not blur)'],
+    [skill, '**Navigational completeness**'],
+    [skill, '**Real client-side CRUD**'],
+    [skill, 'prototype-manifest.md'],
+    [refiner, '### Generate prototype (optional visual refinement)'],
+    [refiner, '.aioson/skills/process/prototype-forge/SKILL.md'],
+    [refiner, '.aioson/briefings/{slug}/prototype.html']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing prototype token: ${token}`);
+  }
+});
+
 test('AIOSON Play compatibility docs are shipped and managed', async () => {
   const managedDocs = [
     '.aioson/docs/play/README.md',

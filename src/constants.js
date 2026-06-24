@@ -81,6 +81,7 @@ const MANAGED_FILES = [
   '.aioson/skills/process/briefing-expansion-scout/SKILL.md',
   '.aioson/skills/process/product-scope-expansion/SKILL.md',
   '.aioson/skills/process/sheldon-expansion-audit/SKILL.md',
+  '.aioson/skills/process/prototype-forge/SKILL.md',
   '.aioson/skills/static/laravel-conventions.md',
   '.aioson/skills/static/tall-stack-patterns.md',
   '.aioson/skills/static/jetstream-setup.md',
