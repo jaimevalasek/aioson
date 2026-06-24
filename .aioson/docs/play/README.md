@@ -60,6 +60,7 @@ AIOSON can build any kind of app. Apply this Play compatibility layer only when 
 - Data Bindings and Global Connectors via `app-config.yaml`
 - MCPI/API/MCP connector execution through the Play registry
 - Local operator auth via `aioson-auth` and `@aioson/auth-sdk`
+- App-owned RBAC catalog via `manifest.json` `auth.permissions[]`
 - Cloud owner/trial auth via `AIOSON_COM_TOKEN`
 - Play Services via `service.json` and `requires_services`
 - Dev-link and local smoke testing
@@ -69,4 +70,5 @@ AIOSON can build any kind of app. Apply this Play compatibility layer only when 
 - Do not copy the whole Play integration directory into app projects.
 - Do not make apps depend on source-repo-only files from `aioson-play`.
 - Do not invent Play env vars, port ranges, manifest fields, or connector APIs.
+- Do not infer app permissions by scanning source code; Play apps declare the catalog in `manifest.json` `auth.permissions[]`.
 - Do not treat `llm-chain.json` or `aioson-models.json` in the app cwd as the primary credential contract for installed apps.

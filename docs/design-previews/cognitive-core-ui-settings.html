@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cognitive Core UI - Settings Control Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cognitive-core-ui-preview.css" />
+</head>
+<body>
+  <div class="cc-page">
+    <div class="cc-shell">
+      <header class="cc-topbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">N</span>
+          <span class="brand-copy">
+            <span class="brand-name">Nexus Core</span>
+            <span class="brand-sub cc-mono">Operational controls</span>
+          </span>
+        </a>
+
+        <nav class="top-nav" aria-label="Primary">
+          <a class="nav-pill" href="cognitive-core-ui.html">Overview</a>
+          <a class="nav-pill" href="cognitive-core-ui-list-detail.html">Incidents</a>
+          <a class="nav-pill" href="cognitive-core-ui-kanban.html">Kanban</a>
+          <a class="nav-pill active" href="#">Controls</a>
+          <a class="nav-pill" href="cognitive-core-ui-auth.html">Access</a>
+        </nav>
+
+        <div class="top-actions">
+          <span class="status-chip"><span class="status-light"></span> POLICY SYNCED</span>
+          <button class="primary-button" type="button">Save changes</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <div class="workspace-stack">
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow">Control center</div>
+              <h1>Settings and policy surfaces</h1>
+              <p>Forms, toggles, and audit rows aligned to the same compact command-system language.</p>
+            </div>
+            <button class="ghost-button" type="button">Discard draft</button>
+          </section>
+
+          <section class="settings-shell">
+            <aside class="settings-nav" aria-label="Settings navigation">
+              <div class="rail-group">
+                <div class="rail-title cc-mono">Settings</div>
+                <a class="rail-link active" href="#"><span class="rail-glyph"></span> Routing policy</a>
+                <a class="rail-link" href="#"><span class="rail-glyph"></span> Model budget</a>
+                <a class="rail-link" href="#"><span class="rail-glyph"></span> Human gates</a>
+                <a class="rail-link" href="#"><span class="rail-glyph"></span> Audit export</a>
+              </div>
+            </aside>
+
+            <article class="settings-workspace">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Routing policy</h2>
+                  <p class="panel-subtitle">Guardrails for production model selection and escalation.</p>
+                </div>
+                <span class="tag cyan">Draft saved</span>
+              </div>
+
+              <div class="panel-body">
+                <div class="settings-list">
+                  <div class="settings-row">
+                    <div>
+                      <div class="row-title">Require human approval for model escalation</div>
+                      <div class="row-meta">Blocks automatic movement from standard to premium model lanes.</div>
+                    </div>
+                    <span class="toggle" aria-hidden="true"></span>
+                  </div>
+
+                  <div class="settings-row">
+                    <div>
+                      <div class="row-title">Allow fallback provider during outage</div>
+                      <div class="row-meta">Fallback can activate only when primary provider fails health checks.</div>
+                    </div>
+                    <span class="toggle" aria-hidden="true"></span>
+                  </div>
+
+                  <div class="settings-row">
+                    <div>
+                      <div class="row-title">Auto-close low risk eval advisories</div>
+                      <div class="row-meta">Advisories close after two consecutive successful eval windows.</div>
+                    </div>
+                    <span class="toggle off" aria-hidden="true"></span>
+                  </div>
+                </div>
+
+                <div style="height:16px"></div>
+
+                <div class="content-grid">
+                  <section class="inset-panel" style="padding:16px">
+                    <div class="eyebrow">Budget ceilings</div>
+                    <div style="height:12px"></div>
+                    <label class="field">
+                      <span class="field-label">Daily model spend</span>
+                      <input class="input" value="$8,500" />
+                    </label>
+                    <div style="height:12px"></div>
+                    <label class="field">
+                      <span class="field-label">Fallback ceiling</span>
+                      <input class="input" value="$1,200" />
+                    </label>
+                  </section>
+
+                  <section class="inset-panel" style="padding:16px">
+                    <div class="eyebrow">Audit trail</div>
+                    <div style="height:12px"></div>
+                    <div class="timeline">
+                      <div class="timeline-item">
+                        <span class="timeline-pin"></span>
+                        <div>
+                          <div class="timeline-title">Fallback policy edited</div>
+                          <div class="timeline-time">14:21 by ops-admin</div>
+                        </div>
+                      </div>
+                      <div class="timeline-item">
+                        <span class="timeline-pin" style="background:var(--cc-green)"></span>
+                        <div>
+                          <div class="timeline-title">Budget ceiling approved</div>
+                          <div class="timeline-time">13:58 by finance-guard</div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

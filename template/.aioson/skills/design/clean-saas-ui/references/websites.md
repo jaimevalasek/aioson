@@ -39,7 +39,7 @@ Marketing and landing page patterns for B2B SaaS products. Clean, professional, 
 
 **Specs:**
 - Layout: 50/50 or 55/45 text/visual split — left-aligned text
-- Headline: `text-4xl` (desktop) / `text-3xl` (mobile), `font-bold`, `tracking-tight`
+- Headline: `text-4xl` (desktop) / `text-3xl` (mobile), `font-bold`, `tracking-normal`
 - Subtitle: `text-lg text-secondary max-w-md`
 - Primary CTA: `control-lg` button, accent
 - Secondary CTA: ghost button or text link
@@ -77,7 +77,7 @@ Marketing and landing page patterns for B2B SaaS products. Clean, professional, 
 **Specs:**
 - All centered, `max-w-3xl` container
 - Announcement badge: `bg-accent-dim text-accent text-sm px-3 py-1 rounded-full font-medium`
-- Headline: `text-5xl font-bold tracking-tight` — up to 2 lines
+- Headline: `text-5xl font-bold tracking-normal` — up to 2 lines
 - Subtitle: `text-xl text-secondary max-w-xl`
 - Avatar cluster: 4 overlapping avatars + "X+ teams" text
 - Background: `bg-base` — optionally with subtle radial gradient to `bg-void` at bottom

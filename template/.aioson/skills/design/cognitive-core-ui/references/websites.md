@@ -145,7 +145,7 @@ If the user does not specify, use **dark with a light option toggle** for tech/S
 ### Hero section (required elements)
 
 1. **Mono label** above heading — category / tagline in monospace uppercase, used sparingly
-2. **Display heading** — `text-5xl`, `weight-bold` or `weight-black` only when the hero truly needs extra emphasis, `tracking-tight`, `line-height: 1.1`
+2. **Display heading** — `text-5xl`, `weight-bold` or `weight-black` only when the hero truly needs extra emphasis, `tracking-normal`, `line-height: 1.1`
 3. **Subtitle** — 1–2 sentences, `text-lg`, `text-secondary`
 4. **Two CTAs** — primary (solid accent) + secondary (outline or ghost)
 5. **Optional**: hero visual (screenshot, illustration, or abstract mesh)
@@ -155,7 +155,7 @@ Hero rule:
 
 ```css
 .hero {
-  min-height: 90vh; display: flex; align-items: center; justify-content: center;
+  min-height: min(760px, 90svh); display: flex; align-items: center; justify-content: center;
   padding: var(--space-24) var(--space-6) var(--space-20);
   text-align: center;
   background: var(--bg-base);
@@ -164,15 +164,16 @@ Hero rule:
 .hero-content { max-width: 760px; position: relative; z-index: 1; }
 .hero-mono-label {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--accent); letter-spacing: var(--tracking-widest);
+  color: var(--accent); letter-spacing: 0;
   text-transform: uppercase; margin-bottom: var(--space-4);
   display: inline-flex; align-items: center; gap: var(--space-2);
 }
 .hero-heading {
   font-family: var(--font-display); font-size: var(--text-5xl);
   font-weight: var(--weight-bold); color: var(--text-heading);
-  letter-spacing: var(--tracking-tight); line-height: 1.05;
+  letter-spacing: 0; line-height: 1.05;
   margin-bottom: var(--space-5);
+  overflow-wrap: anywhere;
 }
 .hero-subtitle {
   font-size: var(--text-lg); color: var(--text-secondary);
@@ -199,13 +200,14 @@ Hero rule:
 .section-header { text-align: center; margin-bottom: var(--space-10); }
 .section-mono-label {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--accent); letter-spacing: var(--tracking-widest);
+  color: var(--accent); letter-spacing: 0;
   text-transform: uppercase; margin-bottom: var(--space-3);
 }
 .section-heading {
   font-family: var(--font-display); font-size: var(--text-3xl);
   font-weight: var(--weight-bold); color: var(--text-heading);
-  letter-spacing: var(--tracking-tight); line-height: var(--leading-tight);
+  letter-spacing: 0; line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
 }
 ```
 
@@ -216,7 +218,7 @@ Use Info Cards (from `components.md`) in a 3-column grid:
 ```css
 .features-grid {
   display: grid; gap: var(--space-5);
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
 }
 @media (max-width: 900px) { .features-grid { grid-template-columns: 1fr; } }
 ```
@@ -229,8 +231,12 @@ Row of 4 stat cards. Use light background (`bg-surface`) for the stat numbers se
 
 ```css
 .stats-section { background: var(--bg-surface); }
-.stats-row { display: flex; gap: var(--space-5); flex-wrap: wrap; justify-content: center; }
-.stats-row .stat-card { flex: 1; min-width: 180px; text-align: center; }
+.stats-row {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.stats-row .stat-card { text-align: center; }
 ```
 
 Stat card center-aligned variant:
@@ -241,7 +247,7 @@ Stat card center-aligned variant:
 ### Social proof / Testimonials
 
 ```css
-.testimonials-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
+.testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: var(--space-5); }
 @media (max-width: 768px) { .testimonials-grid { grid-template-columns: 1fr; } }
 ```
 
@@ -258,7 +264,7 @@ Testimonial card:
 }
 .testimonial-author {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--text-muted); letter-spacing: var(--tracking-wider); text-transform: uppercase;
+  color: var(--text-muted); letter-spacing: 0; text-transform: uppercase;
 }
 ```
 
@@ -333,13 +339,13 @@ Two columns: [Left: contact info cards] [Right: form card]
   padding: var(--space-10) var(--space-6) var(--space-6);
 }
 .footer-grid {
-  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(140px, 1fr));
   gap: var(--space-8); margin-bottom: var(--space-8);
 }
 .footer-brand { /* brand column */ }
 .footer-col-label {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--text-muted); letter-spacing: var(--tracking-widest);
+  color: var(--text-muted); letter-spacing: 0;
   text-transform: uppercase; margin-bottom: var(--space-4);
 }
 .footer-link {
@@ -350,7 +356,7 @@ Two columns: [Left: contact info cards] [Right: form card]
 .footer-link:hover { color: var(--accent); }
 .footer-bottom {
   border-top: 1px solid var(--border-subtle); padding-top: var(--space-4);
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap;
   font-size: var(--text-sm); color: var(--text-muted);
 }
 @media (max-width: 768px) {
@@ -367,7 +373,7 @@ Primary CTA button:
 .btn-primary {
   background: var(--accent); color: var(--accent-contrast);
   font-family: var(--font-body); font-size: var(--text-sm);
-  font-weight: var(--weight-semibold); letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-semibold); letter-spacing: 0;
   text-transform: none; padding: var(--space-3) var(--space-6);
   min-height: var(--control-md);
   border-radius: var(--radius-md); border: none; cursor: pointer;
@@ -391,7 +397,7 @@ Secondary button:
   background: transparent; color: var(--text-primary);
   border: 1px solid var(--border-medium);
   font-family: var(--font-body); font-size: var(--text-sm);
-  font-weight: var(--weight-semibold); letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-semibold); letter-spacing: 0;
   text-transform: none; padding: var(--space-3) var(--space-6);
   min-height: var(--control-md);
   border-radius: var(--radius-md); cursor: pointer;

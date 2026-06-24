@@ -1,6 +1,7 @@
 ---
 name: glassmorphism-ui
-description: Glassmorphism UI is a design system for modern, layered interfaces that use frosted glass effects, subtle transparency, and light gradients to create depth and elegance. Use it when `design_skill: glassmorphism-ui` is set in project.context.md OR when the user explicitly asks for "glassmorphism", "glass UI", "frosted glass", "blur cards", "translucent", "Apple-like", "iOS-style", "modern fintech", "floating cards", "layered depth", "aurora gradients", or similar. Ideal for fintech apps, crypto dashboards, modern mobile apps, music/media apps, portfolio sites, and any product where visual sophistication and perceived depth matter. Supports apps, dashboards, and marketing sites — light by default with an elegant dark variant. Do NOT use this skill unless explicitly selected.
+description: >-
+  Glassmorphism UI is a design system for modern, layered interfaces that use frosted glass effects, subtle transparency, and light gradients to create depth and elegance. Use it when `design_skill: glassmorphism-ui` is set in project.context.md OR when the user explicitly asks for "glassmorphism", "glass UI", "frosted glass", "blur cards", "translucent", "Apple-like", "iOS-style", "modern fintech", "floating cards", "layered depth", "aurora gradients", or similar. Ideal for fintech apps, crypto dashboards, modern mobile apps, music/media apps, portfolio sites, and any product where visual sophistication and perceived depth matter. Supports apps, dashboards, and marketing sites — light by default with an elegant dark variant. Do NOT use this skill unless explicitly selected.
 ---
 
 # Glassmorphism UI
@@ -148,6 +149,28 @@ Glass only works over a gradient background. Never place glass cards over a soli
 - Limit glass nesting to 3 levels max. Each `backdrop-filter` creates a composite layer.
 - Adapt code examples to the active stack. Reference snippets are design specifications, not copy-paste code.
 - Accessibility, responsiveness, and production semantics are the agent's responsibility (not this skill).
+
+## Execution quality gates
+
+These gates override any reference file when they conflict.
+
+Before implementation:
+- Load the relevant references from the loading guide; do not build from this SKILL.md alone.
+- Decide the surface type (app, dashboard, landing page, marketing site, tool, game) and one domain-specific signature move before writing layout code.
+- Establish the token layer first: fonts, colors, spacing, radius, shadow/depth, motion, breakpoints, and component states. Do not scatter raw colors, one-off shadows, arbitrary font sizes, or ad hoc radii.
+- Use intentional font delivery. Prefer local/framework font APIs when available; if a named font cannot be loaded, define a credible fallback stack and preserve the intended contrast.
+- For websites and landing pages, use visual assets that reveal the product, place, person, object, UI state, or domain. Do not ship a hero made only of gradients, icons, and cards.
+- For landing-page heroes, make the brand, product, place, person, or literal offer visible in the first viewport; include a real or generated bitmap/product visual when inspection matters.
+- Use icons from the project's icon library or lucide when available. Do not use text pills where a standard icon button/control is expected.
+- Build responsive constraints with grid minmax, aspect-ratio, fixed control heights, and overflow rules so text, controls, tables, cards, and media cannot overlap or resize unpredictably.
+- Use discrete text tokens and stable line-height. Do not use viewport-width font scaling or negative letter-spacing.
+- Do not put cards inside cards. If a reference says nested card, use an unframed row, divider, inset section, or modal unless an existing component contract explicitly requires that hierarchy.
+- Use motion as product feedback: hover, focus, active, loading, reveal, navigation, and state transitions. Always include a prefers-reduced-motion fallback.
+
+Before delivery:
+- Inspect the result at mobile and desktop widths. If a browser is available, use screenshots; otherwise perform static CSS/DOM review.
+- Fix overlap, clipped text, illegible contrast, missing states, unsupported font loading, missing assets, raw palette drift, and generic template composition before presenting.
+- Do not add isolated blurred-circle background decorations. If a reference suggests that pattern, reinterpret it as a subtle full-bleed ambient field or remove it.
 
 ## Intent before visuals
 

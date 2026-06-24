@@ -57,11 +57,11 @@ Background: aurora gradient (mesh of 3-4 desaturated colors)
   gradient: radial-gradient or conic-gradient mesh — violet, blue, pink, teal tones
   Optional: animated color shift (hue rotation 0→20deg, 8s ease-in-out infinite alternate)
 
-Decorative orbs (optional, enhance the aurora):
-  3-4 gradient blobs, position: absolute, z-index: 0
-  Size: 200-400px, border-radius: 50%
-  filter: blur(80px) — extreme blur to look like soft ambient light
-  opacity: 0.35-0.50
+Ambient field layer (optional, enhance the aurora):
+  1-2 full-bleed gradient washes, position: absolute, z-index: 0
+  inset: -20% -10%, no border-radius
+  filter: blur(56px) — broad diffusion, not a visible shape
+  opacity: 0.22-0.35
   Colors: use accent, accent-secondary, and a pink/teal complementary
 
 Content (z-index: 1, centered):

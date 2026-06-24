@@ -81,9 +81,9 @@ Choose **one primary mode** per screen. You may borrow a small amount from a sec
 - **For**: product launches, fintech marketing, modern SaaS marketing, crypto projects
 - **Feel**: futuristic, elegant, immersive, aspirational
 - **Composition**: hero with aurora gradient background (mesh of 2-3 pastel colors), floating glass feature cards, social proof in glass strip
-- **Visual cues**: aurora mesh gradient background (color-shifting blobs), glass hero card, floating product screenshots in glass frame, decorative gradient orbs
+- **Visual cues**: aurora mesh gradient background (color-shifting atmospheric field), glass hero card, floating product screenshots in glass frame, broad ambient light layers
 - **Signature ideas**: animated aurora background with slow color shift; glass pricing cards with luminous highlight on featured; glass navigation becoming more opaque on scroll
-- **Blur level**: `blur-lg` (24px) for hero card, `blur-md` (16px) for feature cards, `blur-xl` (40px) for background blobs
+- **Blur level**: `blur-lg` (24px) for hero card, `blur-md` (16px) for feature cards, `blur-xl` (40px) for background atmosphere
 
 ### 4. Media Player
 - **For**: music apps, video platforms, podcast players, streaming dashboards
@@ -119,7 +119,7 @@ These details are immediately available for any glass composition. Pick at least
 | Inner glow on hover | Featured cards, stat cards |
 | Glass bottom sheet | Mobile overlays, drawers |
 | Aurora gradient background | Marketing heroes, login pages |
-| Gradient orbs (decorative blobs) | Landing pages, auth pages |
+| Ambient gradient field | Landing pages, auth pages |
 | Glass nav becoming more opaque on scroll | All website navigation |
 
 ---
@@ -154,6 +154,6 @@ These are the diverging choices — the things that make mode 1 impossible to co
 | Blur intensity | 16-24px | 8-16px | 16-40px | 24-40px | 8-12px |
 | Card radius | radius-xl (16px) | radius-2xl+ (20px+) | radius-2xl (20px) | radius-2xl (20px) | radius-xl (16px) |
 | Background | Lavender aurora | Clean gradient | Color-shifting aurora | Album art (blurred) | Near-solid subtle gradient |
-| Signature element | Gradient stat numbers | Glass bottom sheet | Animated aurora orbs | Color-responsive background | Disappearing toolbar |
-| Motion | Card glow on hover | Swipe gestures | Parallax orbs | Color transition on track change | Breathing opacity |
+| Signature element | Gradient stat numbers | Glass bottom sheet | Animated aurora field | Color-responsive background | Disappearing toolbar |
+| Motion | Card glow on hover | Swipe gestures | Slow field drift | Color transition on track change | Breathing opacity |
 | Density | Medium | Low (mobile) | Low (marketing) | Low (immersive) | Very low |

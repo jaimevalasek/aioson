@@ -10,7 +10,7 @@ Requires `design-tokens.md` + `components.md`.
 
 1. **Aurora gradient spans the full page** — `background-attachment: fixed`, no section resets the background.
 2. **Glass nav becomes more opaque on scroll** — starts at `glass-blur-md`, opacity increases as user scrolls.
-3. **Aurora orbs as decorative atmosphere** — large blurred gradient circles anchored to sections. They must be blurred (60px+), never sharp.
+3. **Aurora field as environmental atmosphere** — page-level radial and linear gradient layers anchored to sections. Keep it broad, subtle, and never shaped like isolated circles.
 4. **Mono labels on section eyebrows** — every section starts with a mono uppercase label before the section heading.
 5. **One gradient CTA per page** — the primary call-to-action button uses the full `--accent-gradient`. Do not overuse it.
 6. **Section contrast through glass density** — vary glass opacity between sections to create visual rhythm. Not every section at the same blur level.
@@ -68,9 +68,9 @@ For product launches, platform marketing. Avoids the generic centered hero.
 │  LEFT (text side, 55%):          RIGHT (visual side, 45%):     │
 │  [MONO: PLATFORM · V2.0 LAUNCH]  [Glass product card / UI      │
 │  [Heading text-5xl tight]         screenshot in glass frame,   │
-│  [Subheading text-xl muted]       floating over aurora orb]    │
+│  [Subheading text-xl muted]       floating over ambient aurora field]    │
 │  [CTA Row: [Gradient Button] [Ghost Button]]                   │
-│  [Social proof: 4,200+ teams]    [Teal glow orb behind frame]  │
+│  [Social proof: 4,200+ teams]    [Teal ambient glow behind frame]  │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -132,16 +132,15 @@ For product launches, platform marketing. Avoids the generic centered hero.
   border-radius: inherit;
 }
 
-/* Aurora orb behind product frame */
-.hero-orb {
+/* Ambient aurora field behind product frame */
+.hero-ambient-field {
   position: absolute;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,200,232,0.20), rgba(124,58,237,0.15), transparent 70%);
-  filter: blur(60px);
-  right: 5%;
-  top: 30%;
+  inset: -12% -8% -10% 42%;
+  background:
+    radial-gradient(ellipse at 70% 35%, rgba(0,200,232,0.18), transparent 58%),
+    linear-gradient(135deg, rgba(124,58,237,0.16), transparent 62%);
+  filter: blur(36px);
+  opacity: 0.75;
   pointer-events: none;
 }
 ```
@@ -154,7 +153,7 @@ For manifesto pages, product teasers, atmospheric launches.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  [Teal aurora orb — top center, large]                         │
+│  [Teal aurora field — top center, full-width]                         │
 │                                                                 │
 │                   [MONO: BUILT FOR SCALE]                      │
 │              [Heading — text-5xl, 2–3 lines, center]           │
@@ -165,7 +164,7 @@ For manifesto pages, product teasers, atmospheric launches.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Use this variant only when the product visual is not available or the focus is the manifesto text. The aurora orb creates the depth.
+Use this variant only when the product visual is not available or the focus is the manifesto text. The aurora field creates the depth.
 
 ---
 
@@ -382,6 +381,6 @@ Minimal. Glass strip at the bottom of the aurora background.
 - **Do NOT** reset the background in each section — the aurora gradient must flow continuously top to bottom.
 - **Do NOT** use a centered hero with generic "Modern Platform" headline as the only opening move. Use split layout, offset frame, or atmospheric centered with real copy.
 - **Do NOT** repeat the same glass card layout in every section. Vary: glass strip, glass split, proof rail, centered manifesto.
-- **Do NOT** add neon glows or bright aurora orbs with saturation >70%. The orbs are atmospheric, not decorative neon.
+- **Do NOT** add neon glows or saturated circular aurora shapes. The field is atmospheric, not decorative neon.
 - **Do NOT** use glass pricing cards without the featured-card distinction. The featured card must feel more elevated than the others.
 - **Do NOT** put a plain solid white footer on an aurora background page.

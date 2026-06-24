@@ -30,7 +30,7 @@ All token overrides for dark theme go inside `[data-theme="dark"] { ... }`.
 
 **Both display and body are sans-serif (Inter).** The differentiator is weight and tracking, not font family.
 
-- Headings: `font-weight: 600–700`, `letter-spacing: -0.02em`
+- Headings: `font-weight: 600–700`, `letter-spacing: 0`
 - Body: `font-weight: 400`, `letter-spacing: normal`
 - Mono: used ONLY for code, IDs, technical metadata — never for paragraphs or navigation
 

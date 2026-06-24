@@ -87,7 +87,7 @@ bg-base or bg-void
 
 [sticker badge: "[OPEN BETA]" rotated]   ← optional
 
-h1: text-4xl to text-5xl, font-display, weight-extrabold, tracking-tight, max-width 720px
+h1: text-4xl to text-5xl, font-display, weight-extrabold, tracking-normal, max-width 720px
 
 p: text-lg, max-width 560px, color text-secondary, margin-top space-6
 
@@ -106,7 +106,7 @@ p: text-lg, max-width 560px, color text-secondary, margin-top space-6
 
 .hero-statement h1 {
   font-family: var(--font-display);
-  font-size: clamp(var(--text-3xl), 6vw, var(--text-5xl));
+  font-size: var(--text-5xl);
   font-weight: var(--weight-extrabold);
   color: var(--text-heading);
   letter-spacing: var(--tracking-tight);

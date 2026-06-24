@@ -363,8 +363,12 @@
       gap: 8px;
     }
 
+    .card-links.multi {
+      flex-wrap: wrap;
+    }
+
     .card-link {
-      flex: 1;
+      flex: 1 1 130px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -448,6 +452,50 @@
       border: 1px solid rgba(0,200,232,0.25);
       color: #00C8E8;
     }
+
+    @media (max-width: 760px) {
+      .header {
+        height: auto;
+        min-height: 64px;
+        padding: 14px 20px;
+        align-items: flex-start;
+        gap: 8px;
+        flex-direction: column;
+      }
+
+      .header-badge {
+        max-width: 100%;
+        white-space: normal;
+        line-height: 1.45;
+      }
+
+      .hero {
+        padding: 64px 20px 52px;
+      }
+
+      .hero h1 {
+        font-size: clamp(42px, 13vw, 56px);
+      }
+
+      .hero-meta {
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .gallery {
+        padding: 0 20px 72px;
+        grid-template-columns: 1fr;
+      }
+
+      .card-header,
+      .card-links {
+        gap: 10px;
+      }
+
+      .card-header {
+        flex-wrap: wrap;
+      }
+    }
   </style>
 </head>
 <body>
@@ -466,7 +514,7 @@
     <p>Each skill is a complete visual system — colors, typography, components, and patterns. Pick one and your app gets a coherent, intentional identity from the start.</p>
     <div class="hero-meta">
       <span><span class="dot"></span> 9 design skills</span>
-      <span><span class="dot" style="background:#E07A5F"></span> App + landing page previews</span>
+      <span><span class="dot" style="background:#E07A5F"></span> 22 visual previews</span>
       <span><span class="dot" style="background:#FF4D2A"></span> Stack-agnostic</span>
     </div>
   </section>
@@ -603,16 +651,20 @@
           <span class="card-name accent-cognitive">Cognitive Core UI</span>
           <span class="card-tag">Dark default</span>
         </div>
-        <p class="card-description">Military-grade dashboard meets refined SaaS. Teal/cyan accent with glow, 3 depth levels, monospace metadata rails, large numeric stat readouts. Mission control feel.</p>
+        <p class="card-description">Dense command surfaces for AI operations. The refreshed examples stress-test responsive shells, list/detail workflows, Kanban boards, auth, controls, and product landing pages.</p>
         <div class="card-meta">
           <span class="meta-pill">Command centers</span>
           <span class="meta-pill">Analytics</span>
           <span class="meta-pill">Dev tools</span>
           <span class="meta-pill">AI platforms</span>
         </div>
-        <div class="card-links">
-          <a class="card-link" href="cognitive-core-ui.html" target="_blank"><span>App preview</span><span>→</span></a>
-          <a class="card-link" href="cognitive-core-ui-website.html" target="_blank"><span>Landing page</span><span>→</span></a>
+        <div class="card-links multi">
+          <a class="card-link" href="cognitive-core-ui.html" target="_blank"><span>Cockpit</span><span>→</span></a>
+          <a class="card-link" href="cognitive-core-ui-website.html" target="_blank"><span>Website</span><span>→</span></a>
+          <a class="card-link" href="cognitive-core-ui-list-detail.html" target="_blank"><span>List/detail</span><span>→</span></a>
+          <a class="card-link" href="cognitive-core-ui-kanban.html" target="_blank"><span>Kanban</span><span>→</span></a>
+          <a class="card-link" href="cognitive-core-ui-settings.html" target="_blank"><span>Controls</span><span>→</span></a>
+          <a class="card-link" href="cognitive-core-ui-auth.html" target="_blank"><span>Auth</span><span>→</span></a>
         </div>
       </div>
     </div>
@@ -692,7 +744,7 @@
   </div>
 
   <footer class="footer">
-    <p>AIOSON Design Skills · 9 visual systems · 1 hybrid · Each skill is a complete, standalone package</p>
+    <p>AIOSON Design Skills · 9 visual systems · 1 hybrid · 22 preview pages · Each skill is a complete, standalone package</p>
   </footer>
 
 </body>

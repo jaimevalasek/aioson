@@ -300,8 +300,8 @@ Aurora background in full focus. Single centered glass card.
 ┌─────────────────────────────────────────────────────────────────┐
 │  AURORA GRADIENT (full viewport, fixed)                         │
 │                                                                 │
-│            [Decorative aurora orb — top-right, blurred]         │
-│            [Decorative aurora orb — bottom-left, blurred]       │
+│            [Ambient aurora field — top-right wash]         │
+│            [Ambient aurora field — bottom-left wash]       │
 │                                                                 │
 │  ┌─────────────────────────────────┐                            │
 │  │  GLASS AUTH CARD (max 400px)    │                            │
@@ -326,6 +326,9 @@ Aurora background in full focus. Single centered glass card.
   align-items: center;
   justify-content: center;
   padding: var(--space-6);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
 }
 
 .auth-card {
@@ -337,6 +340,7 @@ Aurora background in full focus. Single centered glass card.
   border-radius: var(--radius-2xl);
   padding: var(--space-8) var(--space-8);
   position: relative;
+  z-index: 1;
 }
 
 .auth-card::before {
@@ -348,25 +352,24 @@ Aurora background in full focus. Single centered glass card.
   pointer-events: none;
 }
 
-/* Decorative aurora orbs */
-.aurora-orb {
+/* Ambient aurora field layers */
+.auth-page::before,
+.auth-page::after {
+  content: "";
   position: fixed;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.25;
+  inset: -20%;
   pointer-events: none;
+  z-index: 0;
 }
 
-.aurora-orb-1 {
-  width: 500px; height: 500px;
-  top: -150px; right: -100px;
-  background: radial-gradient(circle, rgba(0,200,232,0.5), rgba(124,58,237,0.3));
+.auth-page::before {
+  background: radial-gradient(ellipse at 82% 12%, rgba(0,200,232,0.22), transparent 54%);
+  filter: blur(42px);
 }
 
-.aurora-orb-2 {
-  width: 400px; height: 400px;
-  bottom: -100px; left: -80px;
-  background: radial-gradient(circle, rgba(124,58,237,0.5), rgba(0,200,232,0.2));
+.auth-page::after {
+  background: radial-gradient(ellipse at 12% 88%, rgba(124,58,237,0.20), transparent 56%);
+  filter: blur(48px);
 }
 ```
 

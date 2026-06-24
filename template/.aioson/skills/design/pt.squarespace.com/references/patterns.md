@@ -52,7 +52,7 @@
 ## Hero Pattern
 
 ### Layout
-- **Container:** 100vw × 100vh or min-height
+- **Container:** width: 100%; min-height: 100vh with overflow guarded
 - **Background:** solid dark (`--bg-inverse: rgb(0,0,0)`)
 - **Content:** centered flex column, max-width container
 

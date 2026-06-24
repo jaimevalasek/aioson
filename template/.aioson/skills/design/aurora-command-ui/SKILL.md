@@ -1,6 +1,7 @@
 ---
 name: aurora-command-ui
-description: Aurora Command UI is a hybrid design system fusing command-center structure with dark glass surfaces over a mandatory aurora gradient substrate. Use it when `design_skill: aurora-command-ui` is set in project.context.md OR when the user explicitly asks for "aurora command", "dark glass dashboard", "glass command center", "aurora dark UI", "teal violet glass", "dark frosted panels", "aurora infra dashboard", or similar. Ideal for SOC platforms, AI tools, security dashboards, dev platforms, CRM with presence, and any product where operational authority and visual depth must coexist. Dark by default with a light aurora option. Do NOT use this skill unless explicitly selected.
+description: >-
+  Aurora Command UI is a hybrid design system fusing command-center structure with dark glass surfaces over a mandatory aurora gradient substrate. Use it when `design_skill: aurora-command-ui` is set in project.context.md OR when the user explicitly asks for "aurora command", "dark glass dashboard", "glass command center", "aurora dark UI", "teal violet glass", "dark frosted panels", "aurora infra dashboard", or similar. Ideal for SOC platforms, AI tools, security dashboards, dev platforms, CRM with presence, and any product where operational authority and visual depth must coexist. Dark by default with a light aurora option. Do NOT use this skill unless explicitly selected.
 ---
 
 # Aurora Command UI
@@ -124,7 +125,7 @@ background-attachment: fixed;
 - Glow shadow: `0 0 30px rgba(0,200,232,0.12), 0 8px 24px rgba(0,0,0,0.40)`
 
 ### Typography
-- Headings: `Inter`, weight 700, `letter-spacing: -0.02em`
+- Headings: `Inter`, weight 700, `letter-spacing: 0`
 - Body: `Inter`, weight 400, `line-height: 1.6`
 - Mono rails: `JetBrains Mono`, weight 600, uppercase, `letter-spacing: 0.12em`, `font-size: 0.675rem`
 - Stats: `Inter`, weight 700, `font-size: var(--text-4xl)`, gradient text on hero metric
@@ -170,6 +171,28 @@ background-attachment: fixed;
 - Never combine this package with `cognitive-core-ui`, `glassmorphism-ui`, `interface-design`, or any other design skill.
 - Adapt code examples to the active stack. Reference snippets are design specifications, not copy-paste code.
 - Accessibility, responsiveness, and production semantics are the agent's responsibility (not this skill).
+
+## Execution quality gates
+
+These gates override any reference file when they conflict.
+
+Before implementation:
+- Load the relevant references from the loading guide; do not build from this SKILL.md alone.
+- Decide the surface type (app, dashboard, landing page, marketing site, tool, game) and one domain-specific signature move before writing layout code.
+- Establish the token layer first: fonts, colors, spacing, radius, shadow/depth, motion, breakpoints, and component states. Do not scatter raw colors, one-off shadows, arbitrary font sizes, or ad hoc radii.
+- Use intentional font delivery. Prefer local/framework font APIs when available; if a named font cannot be loaded, define a credible fallback stack and preserve the intended contrast.
+- For websites and landing pages, use visual assets that reveal the product, place, person, object, UI state, or domain. Do not ship a hero made only of gradients, icons, and cards.
+- For landing-page heroes, make the brand, product, place, person, or literal offer visible in the first viewport; include a real or generated bitmap/product visual when inspection matters.
+- Use icons from the project's icon library or lucide when available. Do not use text pills where a standard icon button/control is expected.
+- Build responsive constraints with grid minmax, aspect-ratio, fixed control heights, and overflow rules so text, controls, tables, cards, and media cannot overlap or resize unpredictably.
+- Use discrete text tokens and stable line-height. Do not use viewport-width font scaling or negative letter-spacing.
+- Do not put cards inside cards. If a reference says nested card, use an unframed row, divider, inset section, or modal unless an existing component contract explicitly requires that hierarchy.
+- Use motion as product feedback: hover, focus, active, loading, reveal, navigation, and state transitions. Always include a prefers-reduced-motion fallback.
+
+Before delivery:
+- Inspect the result at mobile and desktop widths. If a browser is available, use screenshots; otherwise perform static CSS/DOM review.
+- Fix overlap, clipped text, illegible contrast, missing states, unsupported font loading, missing assets, raw palette drift, and generic template composition before presenting.
+- Do not add isolated blurred-circle background decorations. If a reference suggests that pattern, reinterpret it as a subtle full-bleed ambient field or remove it.
 
 ## Intent before visuals
 

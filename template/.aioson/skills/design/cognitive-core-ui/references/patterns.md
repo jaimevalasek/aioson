@@ -20,7 +20,7 @@ The base layout for any admin/overview interface.
 ├───────────┬────────────────────────────────────────────┤
 │ SIDEBAR   │  CONTENT                                   │
 │ 200px     │  ┌─ Section Header ──────────────────┐    │
-│ tree nav  │  │ Card Grid (auto-fill, 260px min)  │    │
+│ tree nav  │  │ Card Grid (auto-fit, minmax)      │    │
 │           │  └───────────────────────────────────┘    │
 │           │  ┌─ Section Header ──────────────────┐    │
 │           │  │ Card Grid                         │    │
@@ -30,18 +30,53 @@ The base layout for any admin/overview interface.
 
 **CSS skeleton:**
 ```css
-.shell { min-height: 100vh; background: var(--bg-base); font-family: var(--font-body); }
-.stats-row { display: flex; gap: var(--space-3); padding: var(--space-5) var(--space-5) 0; flex-wrap: wrap; }
-.main-layout { display: flex; min-height: calc(100vh - 230px); }
-.sidebar { width: 200px; flex-shrink: 0; border-right: 1px solid var(--border-subtle); padding: var(--space-4); transition: var(--transition-theme); }
-.content { flex: 1; padding: var(--space-4) var(--space-5); overflow-y: auto; }
-.card-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.shell {
+  min-height: 100svh;
+  background: var(--bg-base);
+  font-family: var(--font-body);
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.stats-row {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+}
+.main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  min-height: 0;
+}
+.sidebar {
+  min-width: 0;
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--space-4);
+  overflow: auto;
+  transition: var(--transition-theme);
+}
+.content {
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-4) var(--space-5);
+  overflow: auto;
+}
+.card-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
 .section { margin-bottom: var(--space-8); }
 ```
 
 **Variant — with feature panels (2-col below stats):**
 ```css
-.feature-row { display: grid; grid-template-columns: 1fr 280px; gap: var(--space-4); padding: var(--space-4) var(--space-5); }
+.feature-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(min(100%, 240px), 280px);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
 ```
 
 ---
@@ -81,6 +116,10 @@ For viewing a single entity (person, product, contact, project).
   background: var(--bg-base);
   border-bottom: 1px solid var(--border-subtle);
   transition: var(--transition-theme);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
 }
 .profile-avatar {
   width: 96px; height: 96px;
@@ -91,18 +130,24 @@ For viewing a single entity (person, product, contact, project).
 .profile-name {
   font-family: var(--font-display); font-weight: var(--weight-bold);
   font-size: var(--text-3xl); color: var(--text-heading);
-  letter-spacing: var(--tracking-tight); line-height: var(--leading-tight);
+  letter-spacing: 0; line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
 }
 .profile-role {
   color: var(--accent); font-style: italic; font-size: var(--text-base);
 }
 .profile-tagline {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--text-muted); letter-spacing: var(--tracking-wider);
+  color: var(--text-muted); letter-spacing: 0;
   text-transform: uppercase;
 }
-.profile-stats { display: flex; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
-.profile-badges { display: flex; gap: var(--space-2); align-items: center; }
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.profile-badges { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 ```
 
 **Featured quote block (inside tab content):**
@@ -120,7 +165,7 @@ For viewing a single entity (person, product, contact, project).
 }
 .quote-attribution {
   font-family: var(--font-mono); font-size: var(--text-xs);
-  color: var(--text-muted); letter-spacing: var(--tracking-wider);
+  color: var(--text-muted); letter-spacing: 0;
   text-transform: uppercase; margin-top: var(--space-3);
 }
 ```
@@ -138,7 +183,7 @@ Apply the **Compact Density** scale from `design-tokens.md` throughout. Settings
 │ SIDEBAR   │  SETTINGS TITLE (text-2xl, no description) │
 │           │                                            │
 │ General   │  ┌─ Entity grid ──────────────────────┐   │
-│ Security  │  │ [Card 280px] [Card 280px] [Card]    │   │ ← 3-col auto-fill
+│ Security  │  │ [Card 280px] [Card 280px] [Card]    │   │ ← auto-fit grid
 │ Billing   │  │  name + ID + status badges          │   │
 │ Team      │  │  [Ativar btn] [Editar btn]          │   │
 │ API       │  └─────────────────────────────────────┘   │
@@ -159,7 +204,7 @@ Apply the **Compact Density** scale from `design-tokens.md` throughout. Settings
 **Page heading:** `text-2xl` max — no verbose description subtitle on the page header.
 
 **Entity cards (projects, providers, squads):**
-- Grid: `grid-cols-[repeat(auto-fill,minmax(280px,1fr))]`, `gap: var(--space-3)`
+- Grid: `grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr))`, `gap: var(--space-3)`
 - Card: `rounded-[18px] p-3`
 - Name: `text-sm font-semibold truncate`
 - ID: `font-mono text-[0.58rem] truncate`
@@ -222,15 +267,20 @@ Never use accordion/RevealPanel inside entity cards
 
 ```css
 .auth-shell {
-  min-height: 100vh; background: var(--bg-void);
+  min-height: 100svh; background: var(--bg-void);
   display: flex; align-items: center; justify-content: center;
-  position: relative;
+  position: relative; isolation: isolate; overflow: hidden;
+  padding: var(--space-6);
 }
-.auth-glow {
-  position: absolute;
-  width: 600px; height: 600px; border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+.auth-shell::before {
+  content: "";
+  position: absolute; inset: -20%;
+  background:
+    radial-gradient(ellipse at 50% 35%, var(--accent-glow), transparent 56%),
+    linear-gradient(135deg, rgba(34, 211, 238, 0.08), transparent 58%);
+  filter: blur(36px);
   pointer-events: none;
+  z-index: 0;
 }
 .auth-card {
   background: var(--bg-surface); border: 1px solid var(--border-subtle);
@@ -249,7 +299,7 @@ Never use accordion/RevealPanel inside entity cards
 ├────────────────────────────────────────────────────────┤
 │  TAB BAR + Filter badges                               │
 ├──────────────────────┬─────────────────────────────────┤
-│  LIST 340px          │  DETAIL PANEL (flex: 1)         │
+│  LIST minmax(280px,340px) │ DETAIL PANEL minmax(0,1fr) │
 │  ┌──────────────┐    │  Profile Header (compact)       │
 │  │ Item (active)│◄───│  border-left: 3px accent        │
 │  ├──────────────┤    │  Stat Cards row                 │
@@ -261,11 +311,12 @@ Never use accordion/RevealPanel inside entity cards
 ```
 
 ```css
-.list-panel { width: 340px; flex-shrink: 0; border-right: 1px solid var(--border-subtle); overflow-y: auto; }
+.list-detail-shell { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); min-height: 0; }
+.list-panel { min-width: 0; border-right: 1px solid var(--border-subtle); overflow: auto; }
 .list-item { padding: var(--space-4); border-bottom: 1px solid var(--border-subtle); cursor: pointer; transition: var(--transition-theme); }
 .list-item:hover { background: var(--bg-elevated); }
 .list-item.active { background: var(--bg-elevated); border-left: 3px solid var(--accent); }
-.detail-panel { flex: 1; overflow-y: auto; }
+.detail-panel { min-width: 0; min-height: 0; overflow: auto; }
 ```
 
 ---
@@ -274,16 +325,31 @@ Never use accordion/RevealPanel inside entity cards
 
 ```css
 @media (max-width: 768px) {
-  .main-layout { flex-direction: column; }
-  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+  .shell { grid-template-rows: auto auto auto auto; }
+  .main-layout { grid-template-columns: 1fr; }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding-block: var(--space-3);
+  }
   .card-grid { grid-template-columns: 1fr; }
-  .stats-row { flex-direction: column; }
-  .list-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+  .feature-row { grid-template-columns: 1fr; }
+  .profile-header { grid-template-columns: 1fr; }
+  .list-detail-shell { grid-template-columns: 1fr; }
+  .list-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    max-height: 320px;
+  }
 }
 @media (min-width: 768px) and (max-width: 1024px) {
-  .card-grid { grid-template-columns: repeat(2, 1fr); }
+  .main-layout { grid-template-columns: minmax(0, 180px) minmax(0, 1fr); }
+  .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 1024px) {
-  .card-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .card-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 }
 ```

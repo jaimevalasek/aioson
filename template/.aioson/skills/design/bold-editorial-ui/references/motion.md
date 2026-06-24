@@ -341,7 +341,7 @@ Use for: case study images, hero product shots, portfolio images. The image slid
 
 ### Parallax Depth
 ```javascript
-// Apply subtle parallax to background elements (decorative only — product frames, blobs)
+// Apply subtle parallax to background elements (decorative only — product frames, oversized typographic masks)
 window.addEventListener('scroll', () => {
   const scrolled = window.scrollY;
   document.querySelectorAll('[data-parallax]').forEach(el => {

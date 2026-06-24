@@ -60,7 +60,7 @@ System fallbacks (no external fonts):
 ### Letter spacing
 
 ```css
---tracking-tight:  -0.03em;   /* large headings */
+--tracking-tight:  0;   /* large headings */
 --tracking-normal:  0em;
 --tracking-wide:    0.05em;   /* mono labels, uppercase badges */
 --tracking-wider:   0.1em;    /* uppercase section titles */

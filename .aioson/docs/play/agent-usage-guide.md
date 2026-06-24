@@ -26,6 +26,7 @@ Load this folder when the user mentions:
 - `manifest.json` for Play apps
 - `app-config.yaml`
 - `requires_services`
+- `auth.permissions`
 - `/api/aioson-play`
 
 Do not load it for generic web apps unless the user connects the app to Play.
@@ -61,7 +62,7 @@ For a Play-targeted app, answer these before creating files:
 
 4. Does the app need users/operators?
    - Owner/trial/billing: use `AIOSON_COM_TOKEN` and backend proxy routes.
-   - Local operators/RBAC: use `aioson-auth` as Play Service and `@aioson/auth-sdk`.
+   - Local operators/RBAC: use `aioson-auth` as Play Service, declare `manifest.json` `auth.permissions[]`, and use `@aioson/auth-sdk`.
    - No auth: do not add login just because it is a Play app.
 
 ## Source priority
@@ -81,6 +82,8 @@ Use this priority order:
 - Do not put provider API keys in `llm-chain.json`, `tools.json`, manifest, app docs, or frontend code.
 - Do not make browser code call `https://aioson.com` directly with a token.
 - Do not treat `aioson-auth` and `aioson.com` auth as the same system.
+- Do not create app permissions only in the Auth dashboard. For Play apps, the app declares the permission catalog in `manifest.json` `auth.permissions[]`; the dashboard assigns those permissions to roles.
+- Do not ask Auth or Play to scan source code for policies/permissions.
 - Do not add `@tauri-apps/api` to Play Services. Services are standalone background processes.
 - Do not assume SSO operator token injection is implemented unless the canonical Play docs and code confirm it.
 
@@ -94,6 +97,8 @@ For implementation, produce or verify:
 - `/api/aioson-play` when `has_api: true`
 - Lazy LLM client initialization when the app uses LLM providers
 - Degraded state when required bindings are absent
+- `manifest.json` `auth.permissions[]` when the app uses `aioson-auth`
+- Frontend/backend permission gates implemented with `@aioson/auth-sdk`
 - Local smoke steps through dev-link or standalone `PORT=...` run
 
 For QA, verify:
@@ -103,4 +108,5 @@ For QA, verify:
 - No secret in frontend or package artifact
 - Data bindings use alias names that match `app-config.yaml`
 - Auth path uses the right system: `aioson-auth` for operators, `aioson.com` for owner/trial
+- Apps using `aioson-auth` declare permissions in `manifest.json`, and those declared permissions match implemented route/API gates.
 - `manifest.compatibility` exists for publishable apps

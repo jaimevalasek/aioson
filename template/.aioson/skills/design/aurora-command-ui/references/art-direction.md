@@ -148,12 +148,12 @@ Choose **one primary mode** per screen. You may borrow small traits from a secon
 **Visual cues:**
 - `--glass-blur-lg` (24px) for hero card and featured glass elements
 - More whitespace between sections than dashboards — `var(--space-20)` to `var(--space-24)`
-- Aurora gradient orbs (decorative blobs, absolute positioned, extreme blur) behind the hero
+- Full-bleed aurora field behind the hero, implemented as page-level radial and linear layers rather than isolated blurred circles
 - Glass nav that becomes more opaque on scroll
 - One gradient CTA button — primary, large, confident
 
 **Signature ideas:**
-- Aurora orbs visible behind the glass hero card (4 blobs, deep navy → teal → violet)
+- Full-bleed aurora field visible behind the glass hero card (deep navy, teal, violet blended across the viewport)
 - Gradient text only on the power words in the hero headline
 - Glass proof strip (full-width glass bar with social proof metrics)
 - Product theater frame in a glass card with slight rotation
@@ -243,7 +243,7 @@ These are immediately available for any Aurora Command composition. Pick at leas
 | Status tape above main panel | Ops/monitoring dashboards |
 | Compact alert chip row | Incident feeds, urgency signals |
 | DNA/trait panel with progress rows | Profile pages, entity detail |
-| Aurora orbs behind hero | Landing pages, auth pages |
+| Full-bleed aurora field behind hero | Landing pages, auth pages |
 | Live pulse on active metric | Real-time dashboards, monitoring |
 | Glass nav deepening on scroll | All website navigation |
 
@@ -279,7 +279,7 @@ Hide the product name. Does the page still feel like it belongs to a specific op
 | Opening move | Alert/signal cluster | Hero trend chart | Aurora hero + glass card | Work surface dominates | Profile header card |
 | Mono usage | Dense — all metadata rails | Data labels + stats | Hero overline + sections | Context rails | Section headers |
 | Density | High (compact) | High (data-rich) | Low (marketing) | Medium-high (workspace) | Medium |
-| Signature element | Status tape / live signals | Gradient stat numbers | Aurora orbs + glass hero | Token budget / pipeline steps | DNA trait panel |
+| Signature element | Status tape / live signals | Gradient stat numbers | Aurora field + glass hero | Token budget / pipeline steps | DNA trait panel |
 
 ---
 

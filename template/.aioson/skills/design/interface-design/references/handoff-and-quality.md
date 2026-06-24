@@ -20,6 +20,26 @@ If you cannot name five — you defaulted somewhere.
 Do your CSS variable names sound like they belong to THIS product?
 Generic: `--color-primary`. Specific: `--slot-available`, `--urgency-amber`.
 
+### Asset test
+Does the first viewport show a real product, place, person, object, UI state, generated bitmap, photo, or video when the surface is a website or landing page?
+If not, the page is probably decoration plus copy, not a visual experience.
+
+### Responsive fit test
+Do all labels, buttons, counters, cards, tables, media, and headings fit at mobile and desktop widths without overlap, clipping, or layout shift?
+If not, add explicit constraints: grid `minmax()`, `aspect-ratio`, fixed control heights, line wrapping, overflow rules, and stable media dimensions.
+
+### Font delivery test
+Are the named fonts actually loaded through the stack's supported mechanism?
+If not, declare a credible fallback stack and preserve the intended contrast with weight, scale, and line-height instead of pretending the unavailable font exists.
+
+### Motion test
+Does motion communicate feedback, state, navigation, or reveal?
+If not, remove it. If yes, include a `prefers-reduced-motion` fallback.
+
+### Browser inspection test
+If a runnable UI exists, inspect it in a browser at one mobile and one desktop viewport before delivery.
+Screenshots beat imagination: fix blank renders, overflow, text collision, illegible contrast, missing assets, and awkward crop/framing before handoff.
+
 ---
 
 ## Self-critique before delivery
@@ -27,7 +47,7 @@ Generic: `--color-primary`. Specific: `--slot-available`, `--urgency-amber`.
 Walk through each section before handing off:
 
 1. **Composition** — Does the layout have rhythm? Are proportions intentional? Is there one clear focal point?
-2. **Craft** — Is every spacing value on-grid? Does typography use weight + tracking + size (not size alone)? Do surfaces whisper hierarchy without thick borders or dramatic shadows?
+2. **Craft** — Is every spacing value on-grid? Does typography use weight + line-height + size (not size alone)? Do surfaces carry hierarchy without thick borders or dramatic shadows?
 3. **Content** — Does the spec tell one coherent story? Could a real person at a real company act on this?
 4. **Structure** — Are there any hacks? Negative-margin workarounds? Arbitrary pixel values? Fix them.
 
@@ -69,3 +89,4 @@ This file is the continuity layer between screens, agents, and future sessions.
 2. Repeated elements must share spacing, radius, and depth logic.
 3. Typography hierarchy must be legible without decorative tricks.
 4. The screen must communicate purpose before style.
+5. The delivered UI must survive real viewport inspection: no overlap, clipped text, missing states, broken font loading, unsupported assets, or default-template composition.

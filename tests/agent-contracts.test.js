@@ -918,30 +918,17 @@ test('profiler agents ship canonical prompts with interaction-language guidance'
 });
 
 test('packaged design skills are shipped and managed', async () => {
-  const managedPaths = [
-    '.aioson/skills/design/cognitive-core-ui/SKILL.md',
-    '.aioson/skills/design/cognitive-core-ui/references/design-tokens.md',
-    '.aioson/skills/design/cognitive-core-ui/references/components.md',
-    '.aioson/skills/design/cognitive-core-ui/references/patterns.md',
-    '.aioson/skills/design/cognitive-core-ui/references/motion.md',
-    '.aioson/skills/design/cognitive-core-ui/references/dashboards.md',
-    '.aioson/skills/design/cognitive-core-ui/references/websites.md',
-    '.aioson/skills/design/premium-command-center-ui/SKILL.md',
-    '.aioson/skills/design/premium-command-center-ui/references/visual-system.md',
-    '.aioson/skills/design/premium-command-center-ui/references/patterns.md',
-    '.aioson/skills/design/premium-command-center-ui/references/operations.md',
-    '.aioson/skills/design/premium-command-center-ui/references/validation.md',
-    '.aioson/skills/design/interface-design/SKILL.md',
-    '.aioson/skills/design/interface-design/references/intent-and-domain.md',
-    '.aioson/skills/design/interface-design/references/design-directions.md',
-    '.aioson/skills/design/interface-design/references/tokens-and-depth.md',
-    '.aioson/skills/design/interface-design/references/components-and-states.md',
-    '.aioson/skills/design/interface-design/references/handoff-and-quality.md'
-  ];
+  const templateRoot = path.join(ROOT, 'template');
+  const designSkillFiles = await collectFiles(path.join(templateRoot, '.aioson/skills/design'));
+  const managedPaths = designSkillFiles
+    .map((file) => path.relative(templateRoot, file).split(path.sep).join('/'))
+    .sort();
+
+  assert.equal(managedPaths.length > 0, true);
 
   for (const file of managedPaths) {
     assert.equal(MANAGED_FILES.includes(file), true, `missing managed file: ${file}`);
-    await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', file)));
+    await assert.doesNotReject(() => fs.access(path.join(templateRoot, file)));
   }
 });
 

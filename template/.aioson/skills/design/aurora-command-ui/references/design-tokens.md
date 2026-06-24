@@ -60,7 +60,7 @@ Include this full block in every Aurora Command project.
   --weight-black:    800;
 
   /* Letter Spacing */
-  --tracking-tight:   -0.025em;
+  --tracking-tight:   0;
   --tracking-normal:  0;
   --tracking-wide:    0.04em;
   --tracking-wider:   0.08em;
@@ -164,7 +164,7 @@ Include this full block in every Aurora Command project.
   --glass-blur-sm: blur(8px);    /* working surfaces, dense data panels */
   --glass-blur-md: blur(16px);   /* standard glass cards */
   --glass-blur-lg: blur(24px);   /* sidebar, top bar, elevated modals */
-  --glass-blur-xl: blur(40px);   /* decorative orbs, extreme blur elements */
+  --glass-blur-xl: blur(40px);   /* ambient field diffusion, media backdrops */
 
   /* ── Accents ── */
   --accent-primary:      #00C8E8;   /* teal-electric — operational, active states */

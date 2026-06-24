@@ -1,6 +1,7 @@
 ---
 name: cognitive-core-ui
-description: Cognitive Core UI is the visual identity system for premium, command-center-style interfaces inspired by the Synthetic Minds platform. Use it when `design_skill: cognitive-core-ui` is set in project.context.md OR when the user explicitly asks for "cognitive core", "synthetic minds layout", "cognitive core style", "that dark layout", "dark dashboard command center", or similar. Supports dashboards, admin panels, detail/profile pages, landing pages, and websites — all with dark (default) and light themes via a single toggle. Do NOT use this skill unless explicitly selected.
+description: >-
+  Cognitive Core UI is the visual identity system for premium, command-center-style interfaces inspired by the Synthetic Minds platform. Use it when `design_skill: cognitive-core-ui` is set in project.context.md OR when the user explicitly asks for "cognitive core", "synthetic minds layout", "cognitive core style", "that dark layout", "dark dashboard command center", or similar. Supports dashboards, admin panels, detail/profile pages, landing pages, and websites — all with dark (default) and light themes via a single toggle. Do NOT use this skill unless explicitly selected.
 ---
 
 # Cognitive Core UI
@@ -84,7 +85,7 @@ If the user does not specify: default to **dark with a theme toggle** in the top
 - Background void: `#060910`
 - Background base: `#0B0F15` (main app background)
 - Surface: `#111827` (cards)
-- Elevated: `#1A2332` (hover, nested)
+- Elevated: `#1A2332` (hover, inset sections)
 - Primary accent: `#22D3EE` (teal/cyan) — active tabs, badges, glow, borders
 - Text heading: `#F9FAFB`
 - Text primary: `#E5E7EB`
@@ -100,9 +101,9 @@ If the user does not specify: default to **dark with a theme toggle** in the top
 - Text primary: `#334155`
 
 ### Typography
-- Headings: `Inter`, usually `weight-bold (700)` or `weight-black (800)` only for hero/page title emphasis, `letter-spacing: -0.02em`
+- Headings: `Inter`, usually `weight-bold (700)` or `weight-black (800)` only for hero/page title emphasis, `letter-spacing: 0`
 - Body: `Inter`, `weight-normal (400)`, `line-height: 1.6`
-- Labels (supporting only): `JetBrains Mono`, `weight-semibold`, `uppercase`, `letter-spacing: 0.12em`, `font-size: 0.675rem`
+- Labels (supporting only): `JetBrains Mono`, `weight-semibold`, `uppercase`, `letter-spacing: 0`, `font-size: 0.675rem`
 - Stats: `Inter`, `weight-bold (700)`, `font-size: 2.75rem`
 
 ### Layout structure (dashboards)
@@ -117,7 +118,7 @@ If the user does not specify: default to **dark with a theme toggle** in the top
 ├───────────┬──────────────────────────────────────────────┤
 │ SIDEBAR   │  CONTENT                                      │
 │ 200px     │  SECTION HEADER (mono label + icon)           │
-│ tree nav  │  CARD GRID (2-4 col, auto-fill)               │
+│ tree nav  │  CARD GRID (auto-fit, minmax constrained)      │
 │           │  SECTION HEADER                               │
 │           │  CARD GRID                                    │
 └───────────┴──────────────────────────────────────────────┘
@@ -142,6 +143,41 @@ If the user does not specify: default to **dark with a theme toggle** in the top
 - Reuse the project's component library if one exists — map Cognitive Core tokens onto it instead of rebuilding primitives.
 - Adapt code examples to the active stack. Reference snippets are design specifications, not copy-paste code.
 - Accessibility, responsiveness, and production semantics are the agent's responsibility (not this skill).
+
+## Execution quality gates
+
+These gates override any reference file when they conflict.
+
+Before implementation:
+- Load the relevant references from the loading guide; do not build from this SKILL.md alone.
+- Decide the surface type (app, dashboard, landing page, marketing site, tool, game) and one domain-specific signature move before writing layout code.
+- Establish the token layer first: fonts, colors, spacing, radius, shadow/depth, motion, breakpoints, and component states. Do not scatter raw colors, one-off shadows, arbitrary font sizes, or ad hoc radii.
+- Use intentional font delivery. Prefer local/framework font APIs when available; if a named font cannot be loaded, define a credible fallback stack and preserve the intended contrast.
+- For websites and landing pages, use visual assets that reveal the product, place, person, object, UI state, or domain. Do not ship a hero made only of gradients, icons, and cards.
+- For landing-page heroes, make the brand, product, place, person, or literal offer visible in the first viewport; include a real or generated bitmap/product visual when inspection matters.
+- Use icons from the project's icon library or lucide when available. Do not use text pills where a standard icon button/control is expected.
+- Build responsive constraints with grid minmax, aspect-ratio, fixed control heights, and overflow rules so text, controls, tables, cards, and media cannot overlap or resize unpredictably.
+- Use discrete text tokens and stable line-height. Do not use viewport-width font scaling or negative letter-spacing.
+- Do not put cards inside cards. If a reference says nested card, use an unframed row, divider, inset section, or modal unless an existing component contract explicitly requires that hierarchy.
+- Use motion as product feedback: hover, focus, active, loading, reveal, navigation, and state transitions. Always include a prefers-reduced-motion fallback.
+
+Before delivery:
+- Inspect the result at mobile and desktop widths. If a browser is available, use screenshots; otherwise perform static CSS/DOM review.
+- Fix overlap, clipped text, illegible contrast, missing states, unsupported font loading, missing assets, raw palette drift, and generic template composition before presenting.
+- Do not add isolated blurred-circle background decorations. If a reference suggests that pattern, reinterpret it as a subtle full-bleed ambient field or remove it.
+
+## Cognitive Core app stability gates
+
+For apps, dashboards, admin panels, profile pages, and split views, these rules are blocking:
+
+- Build page shells with CSS grid areas or explicit app regions (`topbar`, `tabs`, `sidebar`, `content`, `rail`). Do not compose the shell from loose flex columns that depend on magic viewport subtraction.
+- Every scrollable region must have `min-width: 0` and `min-height: 0` on its grid/flex parent chain. Missing either is a layout bug.
+- Sidebars are desktop regions, not mobile full-page stacks. On small screens, collapse sidebar/navigation into horizontal tabs, a drawer, or a compact filter rail.
+- Use `grid-template-columns: minmax(0, ...)` for app regions and `repeat(auto-fit, minmax(min(100%, Npx), 1fr))` for card grids.
+- Stat rows must be responsive grids, not `flex-wrap` rows that produce uneven orphan cards.
+- Keep all letter spacing at `0`. Cognitive Core gets its character from mono labels, rhythm, borders, and hierarchy, not expanded tracking that clips text.
+- Prefer inset rows, dividers, tables, and disclosure bodies over cards inside cards.
+- Auth screens and hero backgrounds may use full-bleed ambient fields, never isolated circular glow elements behind content.
 
 ## Intent before visuals
 

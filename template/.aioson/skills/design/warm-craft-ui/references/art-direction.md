@@ -147,7 +147,7 @@ Visual cues:
 - softer accent palette (muted terracotta, sage green, warm amber)
 - more rounded everything (pill buttons, oval badges, circular avatars)
 - gentle background gradients that shift with progress
-- decorative organic shapes (circles, blobs) in background — always subtle
+- subtle paper-grain washes, torn-edge dividers, or botanical linework in the background
 
 Signature ideas:
 - step indicator as garden path (dots connected by a curved line)

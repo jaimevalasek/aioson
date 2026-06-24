@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cognitive Core UI - Secure Access Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cognitive-core-ui-preview.css" />
+</head>
+<body>
+  <div class="cc-page">
+    <main class="auth-shell">
+      <section class="auth-visual">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">N</span>
+          <span class="brand-copy">
+            <span class="brand-name">Nexus Core</span>
+            <span class="brand-sub cc-mono">Secure operator access</span>
+          </span>
+        </a>
+
+        <div>
+          <div class="eyebrow">Access control</div>
+          <h1 class="auth-title">Enter the command plane.</h1>
+          <p class="auth-copy">A focused auth surface with real product context, not a blank login box floating on a decorative background.</p>
+        </div>
+
+        <section class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Pre-login posture</h2>
+              <p class="panel-subtitle">Tenant health visible before handoff.</p>
+            </div>
+            <span class="tag green">Ready</span>
+          </div>
+          <div class="panel-body">
+            <div class="metric-grid">
+              <div class="metric-panel">
+                <div class="metric-label">Region</div>
+                <div class="metric-value">US-E</div>
+                <div class="metric-note">Primary zone active</div>
+              </div>
+              <div class="metric-panel">
+                <div class="metric-label">Policy</div>
+                <div class="metric-value">MFA</div>
+                <div class="metric-note">Hardware key preferred</div>
+              </div>
+              <div class="metric-panel">
+                <div class="metric-label">SLA</div>
+                <div class="metric-value">99.99%</div>
+                <div class="metric-note">Last 30 days</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="auth-panel" aria-label="Sign in">
+        <div class="eyebrow">Operator sign in</div>
+        <h2 class="panel-title" style="font-size:1.55rem;margin-top:10px">Authenticate</h2>
+        <p class="muted-copy">Use your workspace identity to continue to the production cockpit.</p>
+
+        <form class="auth-form">
+          <label class="field">
+            <span class="field-label">Workspace</span>
+            <input class="input" type="text" value="nexus-command" />
+          </label>
+          <label class="field">
+            <span class="field-label">Email</span>
+            <input class="input" type="email" value="operator@nexus.example" />
+          </label>
+          <label class="field">
+            <span class="field-label">Passcode</span>
+            <input class="input" type="password" value="00000000" />
+          </label>
+          <button class="primary-button" type="button" style="width:100%;min-height:44px">Continue</button>
+          <button class="ghost-button" type="button" style="width:100%;min-height:44px">Use hardware key</button>
+        </form>
+
+        <div style="height:18px"></div>
+
+        <div class="inset-panel" style="padding:14px">
+          <div class="row-top">
+            <span class="row-title">Session policy</span>
+            <span class="tag cyan">Strict</span>
+          </div>
+          <p class="row-meta">This preview keeps form controls dense, legible, and responsive across mobile widths.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

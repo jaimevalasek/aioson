@@ -3,461 +3,279 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cognitive Core UI — AIOSON Design Skill</title>
+  <title>Cognitive Core UI - Runtime Command Preview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --void: #0B0F15;
-      --surface: #111827;
-      --elevated: #1A2332;
-      --border: rgba(255,255,255,0.06);
-      --border-strong: rgba(255,255,255,0.12);
-      --accent: #22D3EE;
-      --accent-dim: rgba(34,211,238,0.15);
-      --accent-bg: rgba(34,211,238,0.08);
-      --text-heading: #F9FAFB;
-      --text-body: #E5E7EB;
-      --text-secondary: #9CA3AF;
-      --text-muted: #6B7280;
-      --green: #10B981;
-      --red: #F87171;
-      --amber: #FBBF24;
-      --purple: #A78BFA;
-      --sidebar-width: 200px;
-      --topbar-height: 52px;
-    }
-
-    html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--void); color: var(--text-body); font-size: 14px; line-height: 1.5; }
-
-    /* AIOSON badge */
-    .aioson-badge {
-      position: fixed; top: 10px; right: 10px; z-index: 9999;
-      background: var(--accent); color: #0B0F15;
-      font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
-      letter-spacing: 0.06em; padding: 4px 10px; border-radius: 9999px;
-      box-shadow: 0 0 14px rgba(34,211,238,0.4);
-      pointer-events: none;
-    }
-
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .mono-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.675rem; font-weight: 500;
-      letter-spacing: 0.12em; text-transform: uppercase;
-    }
-
-    /* Layout */
-    .shell { display: flex; height: 100vh; overflow: hidden; flex-direction: column; }
-
-    /* Top bar */
-    .topbar {
-      height: var(--topbar-height); flex-shrink: 0;
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; align-items: center;
-      padding: 0 20px; gap: 0; position: relative; z-index: 10;
-    }
-    .topbar-logo {
-      width: var(--sidebar-width); flex-shrink: 0;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .logo-mark {
-      width: 28px; height: 28px; border-radius: 6px;
-      background: var(--accent); display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .logo-mark svg { width: 14px; height: 14px; }
-    .logo-text { font-size: 14px; font-weight: 700; color: var(--text-heading); letter-spacing: -0.02em; }
-    .logo-sub { font-size: 9.5px; color: var(--accent); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
-
-    /* Tab nav center */
-    .tab-nav { flex: 1; display: flex; align-items: stretch; justify-content: center; gap: 0; height: 100%; }
-    .tab {
-      display: flex; align-items: center; padding: 0 20px;
-      font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
-      border-bottom: 3px solid transparent; cursor: pointer;
-      transition: color 0.15s; letter-spacing: 0.01em;
-      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    .tab:hover { color: var(--text-body); }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
-
-    /* Top bar actions */
-    .topbar-actions {
-      width: 200px; display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-    }
-    .status-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
-    .status-text { font-size: 11.5px; color: var(--text-secondary); }
-    .btn-topbar {
-      height: 30px; padding: 0 12px; border-radius: 6px;
-      border: 1px solid var(--border-strong);
-      background: var(--elevated); color: var(--text-body);
-      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-      cursor: pointer; display: flex; align-items: center; gap: 6px;
-    }
-
-    /* Body row */
-    .body-row { flex: 1; display: flex; min-height: 0; }
-
-    /* Sidebar */
-    .sidebar {
-      width: var(--sidebar-width); flex-shrink: 0;
-      background: var(--surface); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow-y: auto; padding: 16px 0;
-    }
-    .tree-section { margin-bottom: 20px; }
-    .tree-section-label {
-      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
-      font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--text-muted); padding: 0 16px; margin-bottom: 6px;
-    }
-    .tree-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0 16px; height: 32px; cursor: pointer;
-      font-size: 12.5px; color: var(--text-secondary);
-      border-left: 3px solid transparent;
-      transition: background 0.1s, color 0.1s;
-    }
-    .tree-item:hover { background: var(--elevated); color: var(--text-body); }
-    .tree-item.active {
-      border-left-color: var(--accent);
-      background: var(--elevated); color: var(--accent); font-weight: 500;
-    }
-    .tree-icon { width: 14px; height: 14px; border-radius: 3px; background: currentColor; opacity: 0.4; flex-shrink: 0; }
-    .tree-item.active .tree-icon { opacity: 0.8; }
-    .tree-badge {
-      margin-left: auto; background: var(--accent-bg); border: 1px solid rgba(34,211,238,0.2);
-      color: var(--accent); border-radius: 9999px; height: 16px; padding: 0 6px;
-      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500;
-      display: flex; align-items: center;
-    }
-    .tree-item-child {
-      padding-left: 36px; height: 28px; font-size: 12px; color: var(--text-muted);
-    }
-    .tree-item-child:hover { background: rgba(255,255,255,0.02); color: var(--text-secondary); }
-    .tree-item-child.active { color: var(--accent); background: none; border-left: none; }
-
-    /* Main content */
-    .content { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-
-    /* Section header */
-    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-    .section-line { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(34,211,238,0.3) 0%, rgba(34,211,238,0) 100%); }
-    .section-label-text { font-family: 'JetBrains Mono', monospace; font-size: 0.675rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-
-    /* Stat cards */
-    .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
-    .stat-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px;
-      transition: border-color 0.2s;
-    }
-    .stat-card:hover { border-color: var(--border-strong); }
-    .stat-card-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
-    .stat-card-value { font-size: 30px; font-weight: 800; color: var(--text-heading); letter-spacing: -0.03em; line-height: 1; }
-    .stat-card-value span { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
-    .stat-card-sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 8px; display: flex; align-items: center; gap: 5px; }
-    .dot-green { width: 6px; height: 6px; border-radius: 9999px; background: var(--green); box-shadow: 0 0 5px var(--green); flex-shrink: 0; }
-    .dot-amber { width: 6px; height: 6px; border-radius: 9999px; background: var(--amber); flex-shrink: 0; }
-
-    /* Table card */
-    .table-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; overflow: hidden;
-    }
-    .table-card-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; border-bottom: 1px solid var(--border);
-    }
-    .table-card-title { font-size: 13.5px; font-weight: 600; color: var(--text-heading); letter-spacing: -0.01em; }
-    .btn-small {
-      height: 28px; padding: 0 12px; border-radius: 6px;
-      border: 1px solid rgba(34,211,238,0.25); background: var(--accent-bg);
-      color: var(--accent); font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600;
-      cursor: pointer; display: flex; align-items: center; gap: 5px;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    thead th {
-      padding: 9px 20px; text-align: left;
-      font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 500;
-      letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
-      background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border);
-    }
-    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--elevated); }
-    tbody td { padding: 12px 20px; vertical-align: middle; }
-    .agent-id { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-muted); }
-    .agent-name { font-size: 13px; font-weight: 600; color: var(--text-heading); }
-    .agent-type { font-size: 11.5px; color: var(--text-secondary); }
-    .badge-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      height: 22px; padding: 0 9px; border-radius: 9999px; font-size: 11px; font-weight: 600;
-    }
-    .badge-teal {
-      background: var(--accent-bg); border: 1px solid rgba(34,211,238,0.25);
-      color: var(--accent); box-shadow: 0 0 10px rgba(34,211,238,0.1);
-    }
-    .badge-green { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: var(--green); }
-    .badge-amber { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); color: var(--amber); }
-    .badge-red { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
-    .badge-purple { background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.25); color: var(--purple); }
-    .progress-wrap { display: flex; align-items: center; gap: 8px; }
-    .progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 9999px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 9999px; }
-    .progress-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary); width: 32px; text-align: right; }
-    .latency-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
-    .latency-good { color: var(--green); }
-    .latency-warn { color: var(--amber); }
-    .latency-bad { color: var(--red); }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cognitive-core-ui-preview.css" />
 </head>
 <body>
+  <div class="cc-page">
+    <div class="cc-shell">
+      <header class="cc-topbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">N</span>
+          <span class="brand-copy">
+            <span class="brand-name">Nexus Core</span>
+            <span class="brand-sub cc-mono">Runtime command layer</span>
+          </span>
+        </a>
 
-<div class="aioson-badge">AIOSON Design Skill</div>
+        <nav class="top-nav" aria-label="Primary">
+          <a class="nav-pill active" href="#">Overview</a>
+          <a class="nav-pill" href="cognitive-core-ui-list-detail.html">Incidents</a>
+          <a class="nav-pill" href="cognitive-core-ui-kanban.html">Kanban</a>
+          <a class="nav-pill" href="cognitive-core-ui-settings.html">Controls</a>
+          <a class="nav-pill" href="cognitive-core-ui-auth.html">Access</a>
+        </nav>
 
-<div class="shell">
+        <div class="top-actions">
+          <span class="status-chip"><span class="status-light"></span> LIVE 14:32:08</span>
+          <button class="action-button" type="button">Deploy</button>
+        </div>
+      </header>
 
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="topbar-logo">
-      <div class="logo-mark">
-        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="7" cy="7" r="5.5" stroke="#0B0F15" stroke-width="1.5"/>
-          <circle cx="7" cy="7" r="2" fill="#0B0F15"/>
-        </svg>
-      </div>
-      <div>
-        <div class="logo-text">AIOSON</div>
-        <div class="logo-sub">OPS CORE</div>
+      <div class="cc-layout">
+        <aside class="side-rail" aria-label="Workspace navigation">
+          <section class="rail-group">
+            <div class="rail-title cc-mono">Command</div>
+            <a class="rail-link active" href="#"><span class="rail-glyph"></span> Mission view</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Agent fabric</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Routing mesh</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Model budget</a>
+          </section>
+          <section class="rail-group">
+            <div class="rail-title cc-mono">Signals</div>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Throughput</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Incidents</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Eval drift</a>
+          </section>
+          <section class="rail-group">
+            <div class="rail-title cc-mono">Zones</div>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Production</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Staging</a>
+            <a class="rail-link" href="#"><span class="rail-glyph"></span> Research</a>
+          </section>
+        </aside>
+
+        <main class="workspace">
+          <div class="workspace-stack">
+            <section class="page-heading">
+              <div>
+                <div class="eyebrow">System overview</div>
+                <h1>Runtime intelligence cockpit</h1>
+                <p>Dense operational state without fixed-width traps, nested cards, or fragile table layouts.</p>
+              </div>
+              <button class="ghost-button" type="button">Export snapshot</button>
+            </section>
+
+            <section class="metric-grid" aria-label="Runtime metrics">
+              <article class="metric-panel accent">
+                <div class="metric-label">Active agents</div>
+                <div class="metric-value">42</div>
+                <div class="metric-note">All production lanes healthy</div>
+              </article>
+              <article class="metric-panel">
+                <div class="metric-label">P95 latency</div>
+                <div class="metric-value">118ms</div>
+                <div class="metric-note">24ms below budget</div>
+              </article>
+              <article class="metric-panel">
+                <div class="metric-label">Resolution</div>
+                <div class="metric-value">98.6%</div>
+                <div class="metric-note">Intent match last hour</div>
+              </article>
+              <article class="metric-panel">
+                <div class="metric-label">Spend guard</div>
+                <div class="metric-value">$12.4k</div>
+                <div class="metric-note">62% of weekly ceiling</div>
+              </article>
+            </section>
+
+            <section class="content-grid">
+              <article class="content-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Operations throughput</h2>
+                    <p class="panel-subtitle">Live request volume, fallback routing, and delayed queues.</p>
+                  </div>
+                  <span class="tag cyan">24h window</span>
+                </div>
+                <div class="panel-body">
+                  <div class="signal-chart inset-panel">
+                    <div class="chart-bars" aria-hidden="true">
+                      <div class="bar" style="height:42%;--delay:0ms"></div>
+                      <div class="bar" style="height:58%;--delay:80ms"></div>
+                      <div class="bar secondary" style="height:36%;--delay:160ms"></div>
+                      <div class="bar" style="height:72%;--delay:240ms"></div>
+                      <div class="bar" style="height:61%;--delay:320ms"></div>
+                      <div class="bar secondary" style="height:45%;--delay:400ms"></div>
+                      <div class="bar" style="height:82%;--delay:480ms"></div>
+                      <div class="bar" style="height:66%;--delay:560ms"></div>
+                      <div class="bar secondary" style="height:52%;--delay:640ms"></div>
+                      <div class="bar" style="height:88%;--delay:720ms"></div>
+                      <div class="bar" style="height:74%;--delay:800ms"></div>
+                      <div class="bar secondary" style="height:48%;--delay:880ms"></div>
+                      <div class="bar" style="height:92%;--delay:960ms"></div>
+                      <div class="bar" style="height:70%;--delay:1040ms"></div>
+                      <div class="bar secondary" style="height:57%;--delay:1120ms"></div>
+                      <div class="bar" style="height:79%;--delay:1200ms"></div>
+                    </div>
+                    <div class="chart-legend">
+                      <span class="legend-item"><span class="legend-dot"></span> Processed</span>
+                      <span class="legend-item"><span class="legend-dot violet"></span> Fallback routed</span>
+                      <span class="legend-item">Peak 18:00 UTC</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="content-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Priority queue</h2>
+                    <p class="panel-subtitle">Workloads that need intervention or budget review.</p>
+                  </div>
+                  <span class="tag amber">4 active</span>
+                </div>
+                <div class="panel-body">
+                  <div class="queue-list">
+                    <div class="queue-row">
+                      <div class="row-top">
+                        <span class="row-title">Cost spike in research lane</span>
+                        <span class="tag amber">Review</span>
+                      </div>
+                      <div class="row-meta">Genome classifier running 19% above plan</div>
+                      <div class="progress"><div class="progress-fill" style="width:78%"></div></div>
+                    </div>
+                    <div class="queue-row">
+                      <div class="row-top">
+                        <span class="row-title">Eval drift in support prompts</span>
+                        <span class="tag red">Hot</span>
+                      </div>
+                      <div class="row-meta">Three regressions detected after template update</div>
+                      <div class="progress"><div class="progress-fill" style="width:64%;background:linear-gradient(90deg,var(--cc-red),var(--cc-amber))"></div></div>
+                    </div>
+                    <div class="queue-row">
+                      <div class="row-top">
+                        <span class="row-title">Agent fabric rollout</span>
+                        <span class="tag green">Stable</span>
+                      </div>
+                      <div class="row-meta">29 of 32 nodes migrated</div>
+                      <div class="progress"><div class="progress-fill" style="width:91%"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="content-panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Production agents</h2>
+                  <p class="panel-subtitle">Responsive data rows instead of a brittle fixed-width table.</p>
+                </div>
+                <span class="tag green">Healthy</span>
+              </div>
+              <div class="panel-body">
+                <div class="data-table" role="table" aria-label="Production agents">
+                  <div class="table-row table-head" role="row">
+                    <span>Agent</span>
+                    <span>Status</span>
+                    <span>Latency</span>
+                    <span>Load</span>
+                  </div>
+                  <div class="table-row" role="row">
+                    <div class="cell-primary">
+                      <div class="cell-title">Orchestrator Prime</div>
+                      <div class="cell-sub">AGT-0041 - coordination layer</div>
+                    </div>
+                    <span class="tag cyan">Running</span>
+                    <span class="mini-code">89ms</span>
+                    <div class="progress"><div class="progress-fill" style="width:76%"></div></div>
+                  </div>
+                  <div class="table-row" role="row">
+                    <div class="cell-primary">
+                      <div class="cell-title">Analyst Core</div>
+                      <div class="cell-sub">AGT-0039 - signal processing</div>
+                    </div>
+                    <span class="tag green">Active</span>
+                    <span class="mini-code">114ms</span>
+                    <div class="progress"><div class="progress-fill" style="width:53%"></div></div>
+                  </div>
+                  <div class="table-row" role="row">
+                    <div class="cell-primary">
+                      <div class="cell-title">Dev Squad Alpha</div>
+                      <div class="cell-sub">AGT-0044 - generation lane</div>
+                    </div>
+                    <span class="tag amber">Degraded</span>
+                    <span class="mini-code">287ms</span>
+                    <div class="progress"><div class="progress-fill" style="width:91%;background:linear-gradient(90deg,var(--cc-amber),var(--cc-red))"></div></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <aside class="right-rail" aria-label="Live activity">
+          <section class="rail-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Live trace</h2>
+                <p class="panel-subtitle">Last coordination events.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="timeline">
+                <div class="timeline-item">
+                  <span class="timeline-pin"></span>
+                  <div>
+                    <div class="timeline-title">Workflow routed to QA verifier</div>
+                    <div class="timeline-time">14:31:42 UTC</div>
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <span class="timeline-pin" style="background:var(--cc-amber);box-shadow:0 0 12px rgba(245,196,81,.44)"></span>
+                  <div>
+                    <div class="timeline-title">Cost guard raised advisory</div>
+                    <div class="timeline-time">14:29:18 UTC</div>
+                  </div>
+                </div>
+                <div class="timeline-item">
+                  <span class="timeline-pin" style="background:var(--cc-green);box-shadow:0 0 12px rgba(61,216,159,.44)"></span>
+                  <div>
+                    <div class="timeline-title">Deployment gate passed</div>
+                    <div class="timeline-time">14:26:03 UTC</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rail-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">SLA posture</h2>
+                <p class="panel-subtitle">Budget, latency, and reliability.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="queue-list">
+                <div class="queue-row">
+                  <div class="row-top"><span class="row-title">Latency budget</span><span class="tag green">82%</span></div>
+                  <div class="progress"><div class="progress-fill" style="width:82%"></div></div>
+                </div>
+                <div class="queue-row">
+                  <div class="row-top"><span class="row-title">Fallback budget</span><span class="tag amber">68%</span></div>
+                  <div class="progress"><div class="progress-fill" style="width:68%;background:linear-gradient(90deg,var(--cc-amber),var(--cc-accent))"></div></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
-
-    <nav class="tab-nav">
-      <div class="tab active">Overview</div>
-      <div class="tab">Agents</div>
-      <div class="tab">Sessions</div>
-      <div class="tab">Analytics</div>
-    </nav>
-
-    <div class="topbar-actions">
-      <div class="status-dot"></div>
-      <span class="status-text">Live</span>
-      <button class="btn-topbar">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 3.5v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        Alerts
-      </button>
-    </div>
-  </header>
-
-  <!-- Body row -->
-  <div class="body-row">
-
-    <!-- Sidebar tree -->
-    <aside class="sidebar">
-      <div class="tree-section">
-        <div class="tree-section-label">System</div>
-        <div class="tree-item active">
-          <div class="tree-icon"></div>
-          Overview
-          <div class="tree-badge">24</div>
-        </div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Agents
-        </div>
-        <div class="tree-item-child active">↳ Production</div>
-        <div class="tree-item-child">↳ Staging</div>
-        <div class="tree-item-child">↳ Experimental</div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Sessions
-        </div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Pipelines
-        </div>
-      </div>
-      <div class="tree-section">
-        <div class="tree-section-label">Monitor</div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Metrics
-        </div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Logs
-        </div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Alerts
-          <div class="tree-badge" style="background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.25);color:#F87171;">3</div>
-        </div>
-      </div>
-      <div class="tree-section">
-        <div class="tree-section-label">Config</div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Settings
-        </div>
-        <div class="tree-item">
-          <div class="tree-icon"></div>
-          Access
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main content -->
-    <main class="content">
-
-      <!-- Stat cards section -->
-      <div>
-        <div class="section-header">
-          <span class="section-label-text">System Status</span>
-          <div class="section-line"></div>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);">UTC 14:32:07</span>
-        </div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-card-label">Active Agents</div>
-            <div class="stat-card-value">24</div>
-            <div class="stat-card-sub"><div class="dot-green"></div>All healthy</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Sessions Today</div>
-            <div class="stat-card-value">1,847</div>
-            <div class="stat-card-sub" style="color:var(--accent)">↑ 12% vs yesterday</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Avg Latency</div>
-            <div class="stat-card-value">142<span>ms</span></div>
-            <div class="stat-card-sub"><div class="dot-green"></div>Within SLA</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Success Rate</div>
-            <div class="stat-card-value">98.3<span>%</span></div>
-            <div class="stat-card-sub"><div class="dot-amber"></div>0.4% degraded</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agent performance table -->
-      <div>
-        <div class="section-header">
-          <span class="section-label-text">Agent Performance</span>
-          <div class="section-line"></div>
-        </div>
-        <div class="table-card">
-          <div class="table-card-header">
-            <div class="table-card-title">Active Agents — Production</div>
-            <button class="btn-small">
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              Deploy
-            </button>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Agent ID</th>
-                <th>Name / Role</th>
-                <th>Status</th>
-                <th>Latency</th>
-                <th style="width:200px">Load</th>
-                <th>Sessions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span class="agent-id">AGT-0041</span></td>
-                <td>
-                  <div class="agent-name">Orchestrator Prime</div>
-                  <div class="agent-type">Coordination Layer</div>
-                </td>
-                <td><span class="badge-chip badge-teal">Running</span></td>
-                <td><span class="latency-val latency-good">89ms</span></td>
-                <td>
-                  <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:76%;background:var(--accent)"></div></div>
-                    <span class="progress-pct">76%</span>
-                  </div>
-                </td>
-                <td><span class="agent-id">342</span></td>
-              </tr>
-              <tr>
-                <td><span class="agent-id">AGT-0039</span></td>
-                <td>
-                  <div class="agent-name">Analyst Core</div>
-                  <div class="agent-type">Data Processing</div>
-                </td>
-                <td><span class="badge-chip badge-green">Active</span></td>
-                <td><span class="latency-val latency-good">114ms</span></td>
-                <td>
-                  <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:53%;background:var(--green)"></div></div>
-                    <span class="progress-pct">53%</span>
-                  </div>
-                </td>
-                <td><span class="agent-id">218</span></td>
-              </tr>
-              <tr>
-                <td><span class="agent-id">AGT-0044</span></td>
-                <td>
-                  <div class="agent-name">Dev Squad Alpha</div>
-                  <div class="agent-type">Code Generation</div>
-                </td>
-                <td><span class="badge-chip badge-amber">Degraded</span></td>
-                <td><span class="latency-val latency-warn">287ms</span></td>
-                <td>
-                  <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:91%;background:var(--amber)"></div></div>
-                    <span class="progress-pct">91%</span>
-                  </div>
-                </td>
-                <td><span class="agent-id">504</span></td>
-              </tr>
-              <tr>
-                <td><span class="agent-id">AGT-0037</span></td>
-                <td>
-                  <div class="agent-name">QA Verifier</div>
-                  <div class="agent-type">Test Execution</div>
-                </td>
-                <td><span class="badge-chip badge-green">Active</span></td>
-                <td><span class="latency-val latency-good">73ms</span></td>
-                <td>
-                  <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:38%;background:var(--green)"></div></div>
-                    <span class="progress-pct">38%</span>
-                  </div>
-                </td>
-                <td><span class="agent-id">189</span></td>
-              </tr>
-              <tr>
-                <td><span class="agent-id">AGT-0051</span></td>
-                <td>
-                  <div class="agent-name">Genome Classifier</div>
-                  <div class="agent-type">Pattern Recognition</div>
-                </td>
-                <td><span class="badge-chip badge-purple">Standby</span></td>
-                <td><span class="latency-val" style="color:var(--text-muted)">—</span></td>
-                <td>
-                  <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:8%;background:var(--purple)"></div></div>
-                    <span class="progress-pct">8%</span>
-                  </div>
-                </td>
-                <td><span class="agent-id">12</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </main>
   </div>
-</div>
-
 </body>
 </html>

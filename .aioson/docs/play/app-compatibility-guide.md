@@ -42,6 +42,7 @@ If the app has a UI, the Play webview must be able to load the UI from the proce
 - Use `http://localhost:5180` or `VITE_AIOSON_PLAY_URL` for ProductBridge calls.
 - Use `GET /api/registry` when discovering other apps or services dynamically.
 - Use `requires_services` for Play Service dependencies.
+- If the app uses `aioson-auth`, declare the permission catalog in `manifest.json` `auth.permissions[]` and implement matching gates in the app with `@aioson/auth-sdk`.
 - Keep app-local operational DB separate from Play Global Connectors.
 - Fail clearly or degrade gracefully when optional Play integrations are absent.
 
@@ -53,6 +54,8 @@ If the app has a UI, the Play webview must be able to load the UI from the proce
 - Do not create a UI inside the app for creating global Database Connections or Data Connectors. Those live in Play Settings.
 - Do not put LLM provider secrets in files shipped with the app.
 - Do not call cloud APIs from browser code with `AIOSON_COM_TOKEN`.
+- Do not rely on Auth/Play scanning source code to discover permissions.
+- Do not create app permissions only in the Auth dashboard for manifest-driven Play apps.
 
 ## Implementation sequence
 
@@ -61,7 +64,7 @@ If the app has a UI, the Play webview must be able to load the UI from the proce
 3. Make every server listen on Play-injected env ports.
 4. Add `GET /api/aioson-play` if the app exposes API capabilities.
 5. Add `app-config.yaml` for operational DB defaults and/or `data_bindings`.
-6. Add Play auth only if the app needs it.
+6. Add Play auth only if the app needs it; include `requires_services: ["aioson-auth"]`, `auth.permissions[]`, and SDK gates.
 7. Add local smoke tests and dev-link run instructions.
 
 ## Ready-for-Play checklist
@@ -77,6 +80,8 @@ If the app has a UI, the Play webview must be able to load the UI from the proce
 - [ ] App handles missing bindings with degraded UI or a clear blocking state.
 - [ ] LLM clients are lazy-initialized and read credentials from app config or injected env vars.
 - [ ] Auth uses the correct path: `aioson-auth` for operators/RBAC, `aioson.com` for owner/trial/billing.
+- [ ] Apps using `aioson-auth` declare `manifest.json` `auth.permissions[]`.
+- [ ] Declared permissions match frontend/backend gates implemented by the app.
 - [ ] Publishable apps declare `manifest.compatibility`.
 - [ ] Dev-link smoke was run inside Play or the app was manually started with a test `PORT`.
 

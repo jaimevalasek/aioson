@@ -65,7 +65,7 @@
   --leading-relaxed: 1.75;
 
   /* Letter spacing */
-  --tracking-tight: -0.02em;
+  --tracking-tight: 0;
   --tracking-normal: 0;
   --tracking-wide: 0.05em;
 

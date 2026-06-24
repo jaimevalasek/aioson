@@ -88,7 +88,7 @@ Active CRM contacts                         (secondary action) (primary action)
 
 - Container: `px-6 py-5 border-b border-default`
 - Breadcrumbs: `text-sm text-secondary` with `/` separator, active item `text-primary`
-- Title: `text-2xl font-bold text-heading tracking-tight`
+- Title: `text-2xl font-bold text-heading tracking-normal`
 - Subtitle: `text-sm text-secondary mt-0.5`
 - Actions: right-aligned, `gap-2`, secondary button + primary button
 
@@ -107,7 +107,7 @@ Active CRM contacts                         (secondary action) (primary action)
 
 - Container: `bg-surface border border-default rounded-lg p-4 shadow-xs`
 - Label: `text-sm text-secondary font-medium`
-- Number: `text-3xl font-bold text-heading tracking-tight mt-1`
+- Number: `text-3xl font-bold text-heading tracking-normal mt-1`
 - Trend: `text-sm font-medium` — green for positive, red for negative, inline with icon `↑`/`↓`
 - Sparkline: `height: 32px`, accent color, no axes, no labels
 - Overflow menu: `control-xs` icon button, top-right

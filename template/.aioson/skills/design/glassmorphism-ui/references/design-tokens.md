@@ -129,7 +129,7 @@ These tokens define the glass effect system. They are the core differentiator.
 --glass-blur-sm: blur(8px);    /* subtle — zen mode, mobile (performance) */
 --glass-blur-md: blur(16px);   /* standard — most cards and containers */
 --glass-blur-lg: blur(24px);   /* strong — sidebars, modals, nav bars */
---glass-blur-xl: blur(40px);   /* extreme — media player, decorative blobs */
+--glass-blur-xl: blur(40px);   /* extreme — media player, ambient diffusion */
 
 /* Glass surfaces — light theme */
 --glass-bg:           rgba(255, 255, 255, 0.60);

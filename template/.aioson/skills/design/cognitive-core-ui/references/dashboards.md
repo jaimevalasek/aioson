@@ -13,6 +13,17 @@ These presets help choose a fitting operational composition instead of defaultin
 3. Mix small traits from another preset only when the primary composition is already clear.
 4. Choose one opening composition from the library below before placing a stat row.
 
+## Layout implementation rules
+
+Use these rules for every dashboard preset:
+
+- Implement the shell as CSS grid with named regions when possible. Minimum: `topbar`, `status`, `main`, and optional `sidebar` / `rail`.
+- Main dashboard regions must use `minmax(0, 1fr)` and every scrollable panel must have `min-width: 0; min-height: 0`.
+- Rails are constraints, not fixed layout promises: use `minmax(220px, 260px)` or `minmax(280px, 360px)` inside a grid, then collapse them below tablet width.
+- Stat cards use `repeat(auto-fit, minmax(min(100%, 160px), 1fr))`.
+- Long tables, feeds, paths, IDs, and names must have an explicit overflow strategy before styling begins.
+- Above the fold, one surface owns attention. Supporting rails must not visually compete with it.
+
 ---
 
 ## Opening Composition Library
@@ -126,9 +137,9 @@ TOP BAR: Logo + product name + compact status badge + account/actions
 STATS ROW: 3-4 high-signal cards only
 SUBNAV: Dashboard | Products | Movements (or equivalent)
 MAIN GRID:
-  LEFT RAIL (220-260px): monitoring blocks, quick filters, credential/mode card
-  CENTER (flex: 1): stock radar / urgent items / operational summary
-  RIGHT RAIL (320-380px): recent movements / alerts / short activity feed
+  LEFT RAIL (minmax(220px, 260px)): monitoring blocks, quick filters, credential/mode section
+  CENTER (minmax(0, 1fr)): stock radar / urgent items / operational summary
+  RIGHT RAIL (minmax(280px, 360px)): recent movements / alerts / short activity feed
 ```
 
 **Why it works:**
@@ -143,6 +154,7 @@ MAIN GRID:
 - Prefer operational labels: `Baixo estoque`, `Zerados`, `Saude do estoque`, `Movimentacao recente`.
 - Keep the focal block calm. Do not turn it into a second dashboard shell inside the dashboard.
 - For tables: treat each row as an intentional operational lane — aligned numbers, consistent padding, enough breathing room around status chips.
+- Implementation default: `grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(280px, 360px)`. Below 1100px, move the right rail below the center. Below 760px, collapse both rails into tabs/drawers.
 
 ---
 
@@ -167,6 +179,7 @@ MAIN GRID:
 - Use only when the product genuinely needs command-center semantics.
 - DNA panels, mode panels, and labeled capability cards are optional, not default.
 - Do not use for inventory just because the product is dark and premium.
+- Implementation default: `grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr)` for the primary/support row, with lower panels in `auto-fit` grids.
 
 ---
 
@@ -190,6 +203,7 @@ MAIN:
 **Guardrail:**
 - Let charts and tables do the work.
 - Do not overload with decorative status cards.
+- Implementation default: chart and ranked list use `grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr)`, then collapse to one column below 900px.
 
 ---
 
@@ -211,6 +225,7 @@ MAIN GRID:
 
 **Guardrail:**
 - Alerts must be scannable first. Status color must carry meaning, not atmosphere.
+- Implementation default: alert feed gets `minmax(0, 1fr)` and the context rail gets `minmax(260px, 320px)`. Never let the rail set the page width.
 
 ---
 
@@ -225,10 +240,12 @@ MAIN GRID:
 TOP BAR
 TAB BAR (with filter badges)
 LIST-DETAIL SPLIT:
-  Entity list (340px, scrollable)
-  Active profile/detail view (flex: 1)
+  Entity list (minmax(280px, 340px), scrollable)
+  Active profile/detail view (minmax(0, 1fr))
     → Profile Header (compact) + Stat Cards + Tab sub-nav + Content
 ```
+
+Below 760px, the entity list becomes a capped-height selection panel above the detail view or a drawer. Do not stack a full infinite list above the detail page.
 
 ---
 

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cognitive Core UI - Kanban Board Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cognitive-core-ui-preview.css" />
+</head>
+<body>
+  <div class="cc-page">
+    <div class="cc-shell">
+      <header class="cc-topbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">N</span>
+          <span class="brand-copy">
+            <span class="brand-name">Nexus Core</span>
+            <span class="brand-sub cc-mono">Kanban command board</span>
+          </span>
+        </a>
+
+        <nav class="top-nav" aria-label="Primary">
+          <a class="nav-pill" href="cognitive-core-ui.html">Overview</a>
+          <a class="nav-pill" href="cognitive-core-ui-list-detail.html">Incidents</a>
+          <a class="nav-pill active" href="#">Kanban</a>
+          <a class="nav-pill" href="cognitive-core-ui-settings.html">Controls</a>
+          <a class="nav-pill" href="cognitive-core-ui-auth.html">Access</a>
+        </nav>
+
+        <div class="top-actions">
+          <span class="status-chip"><span class="status-light"></span> FLOW LIVE</span>
+          <button class="primary-button" type="button">New card</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <div class="workspace-stack">
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow">Delivery board</div>
+              <h1>Kanban for agent workflows</h1>
+              <p>Operational task flow with compact cards, visible risk, owners, and throughput signals.</p>
+            </div>
+            <button class="ghost-button" type="button">Board settings</button>
+          </section>
+
+          <section class="kanban-summary" aria-label="Kanban flow metrics">
+            <article class="metric-panel accent">
+              <div class="metric-label">Cycle time</div>
+              <div class="metric-value">2.8d</div>
+              <div class="metric-note">Down 14% this sprint</div>
+            </article>
+            <article class="metric-panel">
+              <div class="metric-label">Cards in flight</div>
+              <div class="metric-value">18</div>
+              <div class="metric-note">WIP limit is 22</div>
+            </article>
+            <article class="metric-panel">
+              <div class="metric-label">Blocked work</div>
+              <div class="metric-value">03</div>
+              <div class="metric-note">Needs owner response</div>
+            </article>
+            <article class="metric-panel">
+              <div class="metric-label">Release confidence</div>
+              <div class="metric-value">91%</div>
+              <div class="metric-note">Gate B and C passed</div>
+            </article>
+          </section>
+
+          <section class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Command board</h2>
+                <p class="panel-subtitle">A responsive Kanban surface for product, QA, and agent execution lanes.</p>
+              </div>
+              <div class="kanban-toolbar">
+                <span class="tag cyan">Sprint 24.06</span>
+                <span class="tag green">Auto-synced</span>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="kanban-board">
+                <section class="kanban-column" aria-label="Backlog">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title">Backlog</span>
+                    <span class="tag kanban-column-count">05</span>
+                  </div>
+                  <div class="kanban-stack">
+                    <article class="kanban-card featured">
+                      <div class="row-top">
+                        <span class="tag cyan">Design</span>
+                        <span class="mini-code">DS-104</span>
+                      </div>
+                      <div class="kanban-card-title">Document board empty, loading, and overflow states</div>
+                      <div class="row-meta">Acceptance criteria drafted by UX agent.</div>
+                      <div class="kanban-card-meta">
+                        <span>8 points</span>
+                        <span class="avatar-group" aria-label="Assigned operators"><span class="avatar">UX</span><span class="avatar">PM</span></span>
+                      </div>
+                    </article>
+
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag violet">Research</span>
+                        <span class="mini-code">AI-229</span>
+                      </div>
+                      <div class="kanban-card-title">Compare fallback routing policies for premium models</div>
+                      <div class="row-meta">Needs cost analysis before grooming.</div>
+                      <div class="kanban-card-meta">
+                        <span>5 points</span>
+                        <span class="avatar-group"><span class="avatar">AN</span></span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="kanban-column" aria-label="In progress">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title">In progress</span>
+                    <span class="tag kanban-column-count cyan">07</span>
+                  </div>
+                  <div class="kanban-stack">
+                    <article class="kanban-card featured">
+                      <div class="row-top">
+                        <span class="tag cyan">Build</span>
+                        <span class="mini-code">UI-312</span>
+                      </div>
+                      <div class="kanban-card-title">Ship Cognitive Core Kanban preview with responsive lanes</div>
+                      <div class="row-meta">Desktop/mobile screenshots required before close.</div>
+                      <div class="progress"><div class="progress-fill" style="width:72%"></div></div>
+                      <div class="kanban-card-meta">
+                        <span>Due today</span>
+                        <span class="avatar-group"><span class="avatar">DV</span><span class="avatar">QA</span></span>
+                      </div>
+                    </article>
+
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag amber">Risk</span>
+                        <span class="mini-code">OPS-118</span>
+                      </div>
+                      <div class="kanban-card-title">Tighten WIP alerts for blocked review lanes</div>
+                      <div class="row-meta">Waiting on runtime threshold decision.</div>
+                      <div class="progress"><div class="progress-fill" style="width:48%;background:linear-gradient(90deg,var(--cc-amber),var(--cc-accent))"></div></div>
+                      <div class="kanban-card-meta">
+                        <span>Blocked 4h</span>
+                        <span class="avatar-group"><span class="avatar">OP</span></span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="kanban-column" aria-label="Review">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title">Review</span>
+                    <span class="tag kanban-column-count amber">04</span>
+                  </div>
+                  <div class="kanban-stack">
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag green">QA</span>
+                        <span class="mini-code">QA-087</span>
+                      </div>
+                      <div class="kanban-card-title">Validate no horizontal overflow across preview gallery</div>
+                      <div class="row-meta">Automated check passing, visual review pending.</div>
+                      <div class="kanban-card-meta">
+                        <span>2 checks</span>
+                        <span class="avatar-group"><span class="avatar">QA</span><span class="avatar">CD</span></span>
+                      </div>
+                    </article>
+
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag red">P1</span>
+                        <span class="mini-code">INC-2407</span>
+                      </div>
+                      <div class="kanban-card-title">Resolve eval drift after support prompt sync</div>
+                      <div class="row-meta">Rollback plan approved by release captain.</div>
+                      <div class="kanban-card-meta">
+                        <span>Hotfix lane</span>
+                        <span class="avatar-group"><span class="avatar">RL</span></span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="kanban-column" aria-label="Done">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title">Done</span>
+                    <span class="tag kanban-column-count green">12</span>
+                  </div>
+                  <div class="kanban-stack">
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag green">Shipped</span>
+                        <span class="mini-code">UX-071</span>
+                      </div>
+                      <div class="kanban-card-title">Replace brittle tables with responsive data rows</div>
+                      <div class="row-meta">Merged after screenshot review.</div>
+                      <div class="kanban-card-meta">
+                        <span>Closed 10:42</span>
+                        <span class="avatar-group"><span class="avatar">FE</span></span>
+                      </div>
+                    </article>
+
+                    <article class="kanban-card">
+                      <div class="row-top">
+                        <span class="tag green">Shipped</span>
+                        <span class="mini-code">WEB-062</span>
+                      </div>
+                      <div class="kanban-card-title">Rebuild landing hero around actual product surface</div>
+                      <div class="row-meta">Next section visible on desktop and mobile.</div>
+                      <div class="kanban-card-meta">
+                        <span>Closed 09:18</span>
+                        <span class="avatar-group"><span class="avatar">UX</span></span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

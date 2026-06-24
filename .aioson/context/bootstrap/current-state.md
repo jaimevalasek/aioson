@@ -83,3 +83,5 @@ If a future agent resumes this topic, the safest next implementation slice is:
 After that:
 
 - evaluate whether parallel lanes need worktree-backed isolation instead of shared-workspace coordination
+- 2026-06-24: design-skills-quality completed; design skills are valid, synced with template, covered by managed files, and hardened with execution quality gates. Next useful check is QA/sample-generation visual comparison.
+- 2026-06-24: cognitive-core-ui received a targeted hardening pass after broken app output; use grid shells, auto-fit/minmax, min-width/min-height zero scroll regions, zero tracking, and no isolated glow circles as the new expected pattern.

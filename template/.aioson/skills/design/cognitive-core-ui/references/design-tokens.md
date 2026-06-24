@@ -60,11 +60,11 @@ Include this full block in every project.
   --weight-black:    800;
 
   /* Letter Spacing */
-  --tracking-tight:   -0.025em;
+  --tracking-tight:   0;
   --tracking-normal:  0;
-  --tracking-wide:    0.04em;
-  --tracking-wider:   0.08em;
-  --tracking-widest:  0.12em;
+  --tracking-wide:    0;
+  --tracking-wider:   0;
+  --tracking-widest:  0;
 
   /* Line Height */
   --leading-none:    1;
@@ -319,7 +319,7 @@ body { font-family: var(--font-body); } /* body can't inherit from .shell */
 font-family: var(--font-mono);
 font-size: var(--text-xs);
 font-weight: var(--weight-semibold);
-letter-spacing: var(--tracking-widest);
+letter-spacing: 0;
 text-transform: uppercase;
 color: var(--text-secondary);
 ```
@@ -332,7 +332,7 @@ Use for: section headers, stat labels, nav labels, badge text, timestamps, IDs.
 ```css
 font-family: var(--font-display);
 font-weight: var(--weight-bold);
-letter-spacing: var(--tracking-tight);
+letter-spacing: 0;
 line-height: var(--leading-tight);
 color: var(--text-heading);
 ```
@@ -371,7 +371,7 @@ border: none;
 font-family: var(--font-body);
 font-size: var(--text-sm);
 font-weight: var(--weight-semibold);
-letter-spacing: var(--tracking-wide);
+letter-spacing: 0;
 ```
 
 Use mono only for short command-like labels. Default buttons should stay in the body family for better readability.
@@ -422,7 +422,7 @@ Use these values whenever building settings pages, admin panels, config screens,
 | Level | Use | Padding | Border Radius |
 |---|---|---|---|
 | L1 — page card | top-level section card | `var(--space-4)` (16px) | `22px` |
-| L2 — nested card | card inside a card | `var(--space-3)` (12px) | `18px` |
+| L2 — inset section | section inside a page card | `var(--space-3)` (12px) | `18px` |
 | L3 — inset block | info block, disclosure body | `10px` | `14px` |
 
 Between L1 cards: `gap: var(--space-3)` — not `--space-4` or `--space-6`.
@@ -430,7 +430,7 @@ Between L1 cards: `gap: var(--space-3)` — not `--space-4` or `--space-6`.
 ### Card heading inside a panel
 
 ```
-Eyebrow  : text-[0.68rem] uppercase tracking-[0.28em] color: var(--text-muted)
+Eyebrow  : text-[0.68rem] uppercase tracking-normal color: var(--text-muted)
 Title    : text-base (15px) font-semibold  ← never text-xl or text-2xl inside a card
 Meta     : font-mono text-[0.62rem] color: var(--text-muted) truncate  ← path, ID, single-line
 ```
@@ -471,7 +471,7 @@ Never use `px-3 py-1 text-xs` for inline status chips — that scale is for navi
 Never full-width stack same-type entities. Use:
 
 ```css
-grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 /* or explicit: sm:grid-cols-2 lg:grid-cols-3 */
 gap: var(--space-3);
 ```
@@ -522,3 +522,4 @@ Never keep secondary tools always visible — they crowd the primary content.
 7. Fix token scope and cascade bugs before redesigning colors or layout.
 8. In admin/operational UI, apply the **Compact Density** scale — never carry consumer/marketing spacing into dense panels.
 9. Validate contrast and hover/focus parity before considering a screen finished.
+10. Validate layout mechanics before polishing: shell regions need `minmax(0, ...)`, scroll panes need `min-height: 0`, and cards/media/controls need stable dimensions.

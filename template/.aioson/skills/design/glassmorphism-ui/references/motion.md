@@ -131,11 +131,11 @@ Slides in from a direction and materializes — for drawers, panels, and side sh
 
 Use for: sidebar opening (slide-right), bottom sheet (slide-up on mobile), toast notifications (slide-up from bottom-right).
 
-### 5. Orb Pulse
-Background decorative gradient orbs appear softly — for landing pages and auth pages.
+### 5. Ambient Field Reveal
+Background ambient gradient washes appear softly for landing pages and auth pages.
 
 ```css
-@keyframes orb-pulse {
+@keyframes ambient-field-reveal {
   from {
     opacity: 0;
     transform: scale(0.8);
@@ -145,12 +145,12 @@ Background decorative gradient orbs appear softly — for landing pages and auth
     transform: scale(1);
   }
 }
-.orb {
-  animation: orb-pulse 800ms ease-out forwards;
+.ambient-field-layer {
+  animation: ambient-field-reveal 800ms ease-out forwards;
 }
 ```
 
-Use for: decorative gradient blobs on landing pages, auth backgrounds. These should be slow and atmospheric.
+Use for: ambient gradient washes on landing pages and auth backgrounds. These should be slow and atmospheric.
 
 ---
 
@@ -289,15 +289,15 @@ When animating multiple cards into view simultaneously:
 
 ## Scroll Animations (websites only)
 
-### Parallax Orbs
-Background gradient orbs move at a slower rate than the scroll:
+### Ambient Field Drift
+Ambient gradient field layers move at a slower rate than the scroll:
 ```css
 /* Applied via JS with requestAnimationFrame */
-.orb {
+.ambient-field-layer {
   transform: translateY(calc(var(--scroll-y) * 0.3px));
 }
 ```
-Multiplier: 0.3-0.5 (orbs move at 30-50% of scroll speed).
+Multiplier: 0.3-0.5 for subtle field drift.
 
 ### Section Reveal
 Glass cards and sections fade up as they enter the viewport:
@@ -350,6 +350,6 @@ Specific overrides for glass:
 - No animated shimmer on skeletons — use static `glass-bg`
 - No `glow-pulse` — use static `shadow-glow`
 - No `aurora-shift` — use static gradient
-- No parallax orbs — orbs stay fixed
+- No ambient-field parallax — background layers stay fixed
 - Glass effects (blur, opacity, borders) remain — they are static visual properties, not animations
 - Hover states: instant transitions (no 200ms transitions — snap immediately)

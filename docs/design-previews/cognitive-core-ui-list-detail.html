@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cognitive Core UI - Incident List Detail Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="cognitive-core-ui-preview.css" />
+</head>
+<body>
+  <div class="cc-page">
+    <div class="cc-shell">
+      <header class="cc-topbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">N</span>
+          <span class="brand-copy">
+            <span class="brand-name">Nexus Core</span>
+            <span class="brand-sub cc-mono">Incident command</span>
+          </span>
+        </a>
+
+        <nav class="top-nav" aria-label="Primary">
+          <a class="nav-pill" href="cognitive-core-ui.html">Overview</a>
+          <a class="nav-pill active" href="#">Incidents</a>
+          <a class="nav-pill" href="cognitive-core-ui-kanban.html">Kanban</a>
+          <a class="nav-pill" href="cognitive-core-ui-settings.html">Controls</a>
+          <a class="nav-pill" href="cognitive-core-ui-auth.html">Access</a>
+        </nav>
+
+        <div class="top-actions">
+          <span class="status-chip"><span class="status-light"></span> RESPONSE 03</span>
+          <button class="action-button" type="button">Assign</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <div class="workspace-stack">
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow">Incident queue</div>
+              <h1>List and detail layout</h1>
+              <p>A high-density operational pattern that collapses cleanly without horizontal scrolling.</p>
+            </div>
+            <button class="ghost-button" type="button">Filter queue</button>
+          </section>
+
+          <section class="list-detail-shell">
+            <aside class="list-pane">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Open incidents</h2>
+                  <p class="panel-subtitle">Sorted by operational risk.</p>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="queue-list">
+                  <article class="queue-row">
+                    <div class="row-top">
+                      <span class="row-title">Eval drift after prompt sync</span>
+                      <span class="tag red">P1</span>
+                    </div>
+                    <div class="row-meta">Support lane - 19 min open</div>
+                  </article>
+                  <article class="queue-row">
+                    <div class="row-top">
+                      <span class="row-title">Fallback provider saturation</span>
+                      <span class="tag amber">P2</span>
+                    </div>
+                    <div class="row-meta">Routing mesh - 42 min open</div>
+                  </article>
+                  <article class="queue-row">
+                    <div class="row-top">
+                      <span class="row-title">Staging deploy gate paused</span>
+                      <span class="tag violet">P3</span>
+                    </div>
+                    <div class="row-meta">Release lane - waiting on QA</div>
+                  </article>
+                  <article class="queue-row">
+                    <div class="row-top">
+                      <span class="row-title">Budget forecast advisory</span>
+                      <span class="tag cyan">P4</span>
+                    </div>
+                    <div class="row-meta">Finance guard - next review 15:00</div>
+                  </article>
+                </div>
+              </div>
+            </aside>
+
+            <article class="detail-pane">
+              <div class="detail-hero">
+                <div>
+                  <div class="eyebrow">INC-2407</div>
+                  <h2 class="panel-title" style="font-size:1.45rem">Eval drift after prompt sync</h2>
+                  <p class="panel-subtitle">Regression detected in support intent resolution after a template update reached production.</p>
+                </div>
+                <span class="tag red">P1 active</span>
+              </div>
+
+              <div class="panel-body">
+                <div class="metric-grid">
+                  <div class="metric-panel">
+                    <div class="metric-label">Confidence drop</div>
+                    <div class="metric-value">-4.8%</div>
+                    <div class="metric-note">Against seven-day baseline</div>
+                  </div>
+                  <div class="metric-panel">
+                    <div class="metric-label">Affected flows</div>
+                    <div class="metric-value">12</div>
+                    <div class="metric-note">Mostly billing triage</div>
+                  </div>
+                  <div class="metric-panel">
+                    <div class="metric-label">Rollback ETA</div>
+                    <div class="metric-value">08m</div>
+                    <div class="metric-note">Gate can auto-close</div>
+                  </div>
+                </div>
+
+                <div style="height:16px"></div>
+
+                <div class="trace-map">
+                  <div class="trace-row">
+                    <span class="trace-step">1</span>
+                    <div>
+                      <div class="cell-title">Template sync released</div>
+                      <div class="cell-sub">Prompt bundle v31 moved to production support lane.</div>
+                    </div>
+                    <span class="mini-code">14:02</span>
+                  </div>
+                  <div class="trace-row">
+                    <span class="trace-step">2</span>
+                    <div>
+                      <div class="cell-title">Eval canary failed</div>
+                      <div class="cell-sub">Billing cancellation intents dropped below threshold.</div>
+                    </div>
+                    <span class="mini-code">14:09</span>
+                  </div>
+                  <div class="trace-row">
+                    <span class="trace-step">3</span>
+                    <div>
+                      <div class="cell-title">Rollback prepared</div>
+                      <div class="cell-sub">Previous prompt bundle is staged for controlled reactivation.</div>
+                    </div>
+                    <span class="mini-code">14:18</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <aside class="right-rail">
+              <section class="rail-panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">Response team</h2>
+                    <p class="panel-subtitle">Current owners and next action.</p>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="queue-list">
+                    <div class="queue-row"><div class="row-top"><span class="row-title">QA verifier</span><span class="tag green">Online</span></div><div class="row-meta">Running regression suite</div></div>
+                    <div class="queue-row"><div class="row-top"><span class="row-title">Prompt owner</span><span class="tag cyan">Ack</span></div><div class="row-meta">Preparing diff summary</div></div>
+                    <div class="queue-row"><div class="row-top"><span class="row-title">Release captain</span><span class="tag amber">Wait</span></div><div class="row-meta">Holding deploy lane</div></div>
+                  </div>
+                </div>
+              </section>
+            </aside>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

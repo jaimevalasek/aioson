@@ -58,7 +58,7 @@ Include this full block in every project.
   --weight-bold:     700;
 
   /* Letter Spacing */
-  --tracking-tight:  -0.02em;
+  --tracking-tight:  0;
   --tracking-normal: 0;
   --tracking-wide:   0.02em;
   --tracking-wider:  0.05em;

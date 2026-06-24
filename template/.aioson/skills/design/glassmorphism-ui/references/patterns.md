@@ -117,7 +117,7 @@ Content layout (two-column):
 
 ```
 Layout: full-viewport gradient background
-  Optional: 2-3 decorative gradient orbs (200-400px, absolute positioned, blur-xl, opacity 0.4)
+  Optional: full-bleed ambient gradient wash (absolute positioned, blur-lg, opacity 0.22)
 
 Centered glass card (hero variant):
   max-width: 420px
@@ -136,7 +136,7 @@ Centered glass card (hero variant):
     Footer link: "Don't have an account? Sign up"
 ```
 
-Orb placement example: top-right violet orb (300px), bottom-left blue orb (250px), centered faint pink orb (400px). All with extreme blur to look like soft light.
+Ambient placement example: violet wash from the top-right, blue wash from the bottom-left, and a faint pink center highlight. Keep all layers broad enough to read as atmosphere, not shapes.
 
 ### 6. Onboarding (multi-step)
 

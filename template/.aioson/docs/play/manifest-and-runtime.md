@@ -209,6 +209,29 @@ When an app requires a Play Service:
 
 Play uses this to show onboarding requirements, check service install/runtime state, and block or degrade app launch when the required service is missing.
 
+For apps that use `aioson-auth`, declare the RBAC catalog in the same manifest:
+
+```json
+{
+  "requires_services": ["aioson-auth"],
+  "auth": {
+    "version": 1,
+    "permissions": [
+      "orders:read",
+      { "name": "orders:create", "label": "Criar pedidos" }
+    ],
+    "policies": [
+      { "id": "page:orders", "kind": "route", "path": "/orders", "requires": ["orders:read"] }
+    ]
+  }
+}
+```
+
+`auth.permissions[]` is the source of truth for the permission catalog shown by
+`aioson-auth`. The app still implements the actual route/API gates with the SDK;
+the Auth dashboard assigns the declared permissions to global roles. Play/Auth do
+not scan app source code to infer permissions.
+
 ## Publish compatibility
 
 Publishable apps should declare compatibility:

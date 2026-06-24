@@ -100,17 +100,17 @@ A very slow, barely perceptible oscillation in the aurora gradient. Creates the 
   100% { transform: translate(0, 0) scale(1); }
 }
 
-/* Apply to decorative aurora orbs only */
-.aurora-orb {
+/* Apply only to ambient background field layers */
+.aurora-field-layer {
   animation: aurora-drift 20s ease-in-out infinite;
 }
 
-.aurora-orb-2 {
+.aurora-field-layer-alt {
   animation: aurora-drift 26s ease-in-out infinite reverse;
 }
 ```
 
-**Rule**: aurora-pulse/drift applies **only** to decorative orbs and background elements. Never animate the page background directly — it causes repaint on every frame.
+**Rule**: aurora-pulse/drift applies only to ambient background field layers. Never animate the page background directly — it causes repaint on every frame.
 
 ---
 
@@ -344,7 +344,7 @@ All animations must be disabled or simplified for users with `prefers-reduced-mo
     filter: none;
   }
 
-  .aurora-orb {
+  .aurora-field-layer {
     animation: none;
   }
 
@@ -360,6 +360,6 @@ All animations must be disabled or simplified for users with `prefers-reduced-mo
 
 1. **Limit simultaneous blur elements** — more than 8-10 `backdrop-filter` composites on screen simultaneously can drop frame rate on lower-end hardware. Use `blur-sm` for cards in grids, `blur-md` for sidebars and top bars.
 2. **Use `will-change: transform`** sparingly — only on elements that animate frequently (live dots, feed items).
-3. **Aurora orbs must use `filter: blur()`**, not `backdrop-filter`. They are decorative, not interactive.
+3. **Ambient field layers use background gradients and opacity**, not `backdrop-filter`. They are environmental, not interactive.
 4. **Do not animate `backdrop-filter` blur intensity** — only animate opacity, transform, and box-shadow on glass elements. Animating blur level is expensive.
 5. **Frame rate target**: 60fps on modern hardware. Test on an actual mobile device if the product targets mobile users.

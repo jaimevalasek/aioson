@@ -450,7 +450,7 @@ border-radius: var(--radius-2xl)
 shadow: var(--shadow-xl)
 padding: var(--space-8)
 max-width: 480px
-width: 90vw
+width: min(100%, 42rem)
 
 backdrop:
   background: rgba(45, 40, 35, 0.40)

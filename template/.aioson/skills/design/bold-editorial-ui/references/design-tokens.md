@@ -57,8 +57,8 @@ All CSS custom properties for the Bold Editorial system. Apply these to the root
   --leading-loose:   2;      /* text-sm, text-xs in tables */
 
   /* Letter spacing */
-  --tracking-tighter: -0.04em;  /* display headings at large sizes */
-  --tracking-tight:   -0.02em;  /* section headlines */
+  --tracking-tighter: 0;  /* display headings at large sizes */
+  --tracking-tight:   0;  /* section headlines */
   --tracking-normal:   0;
   --tracking-wide:     0.05em;  /* subheadings, labels */
   --tracking-wider:    0.08em;  /* mono labels, uppercase */

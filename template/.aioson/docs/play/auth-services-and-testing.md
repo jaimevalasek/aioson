@@ -57,9 +57,21 @@ For operator login and RBAC, depend on `aioson-auth`:
 
 ```json
 {
-  "requires_services": ["aioson-auth"]
+  "requires_services": ["aioson-auth"],
+  "auth": {
+    "version": 1,
+    "permissions": ["orders:read", "orders:create"],
+    "policies": [
+      { "id": "page:orders", "kind": "route", "path": "/orders", "requires": ["orders:read"] }
+    ]
+  }
 }
 ```
+
+`auth.permissions[]` is the app-owned permission catalog. Play syncs it through
+the owner-only app inventory; `aioson-auth` registers it on the existing binding
+so the admin can assign permissions to global roles. Do not rely on Auth scanning
+app source code.
 
 Use `@aioson/auth-sdk` as the client layer when available. Avoid handwritten calls to auth endpoints unless the SDK cannot cover the specific case.
 
@@ -83,6 +95,7 @@ Legacy `?token=` may still work in older paths, but new app code should prefer B
 Current implemented auth expectations from the Play docs:
 
 - JWT can include `binding_id` and `permissions`.
+- App permissions are declared in `manifest.json` `auth.permissions[]` and implemented by the app with SDK gates.
 - `/me/permissions` exists in `aioson-auth`.
 - `@aioson/auth-sdk` MVP exists.
 - Operator SSO token injection from Play keyring is planned in docs, not safe to rely on unless the local code confirms it.
@@ -199,6 +212,8 @@ curl http://localhost:3001/health
 ## QA checklist
 
 - [ ] `requires_services` matches actual service use.
+- [ ] Apps using `aioson-auth` declare `auth.permissions[]` in `manifest.json`.
+- [ ] Frontend and backend gates use `@aioson/auth-sdk` or a Bearer-compatible server check for those permissions.
 - [ ] Missing service does not produce a confusing crash.
 - [ ] `AIOSON_COM_TOKEN` is never exposed to frontend code.
 - [ ] Operator auth uses SDK or Bearer-compatible client.

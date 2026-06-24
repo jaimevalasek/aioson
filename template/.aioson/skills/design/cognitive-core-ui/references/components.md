@@ -18,8 +18,8 @@ Code examples use JSX inline style notation as **design specifications** — rea
 - Background: `var(--bg-void)`, `position: sticky`, `top: 0`, `z-index: var(--z-sticky)`
 - Border-bottom: `1px solid var(--border-subtle)`
 - Logo: `36px` square, `background: var(--accent-dim)`, `border: 1px solid var(--accent)`, `border-radius: var(--radius-md)`, icon in `var(--accent)`
-- Brand name: `font-family: var(--font-mono)`, `--weight-bold`, `--text-base`, `--text-heading`, `letter-spacing: var(--tracking-wide)`
-- Subtitle: mono, `--text-xs`, `--text-muted`, uppercase, `--tracking-widest`
+- Brand name: `font-family: var(--font-mono)`, `--weight-bold`, `--text-base`, `--text-heading`, `letter-spacing: 0`
+- Subtitle: mono, `--text-xs`, `--text-muted`, uppercase, `letter-spacing: 0`
 - Nav links: `--text-base`. Active: `var(--text-accent)`. Inactive: `var(--text-secondary)`
 - Theme toggle: `36px` button, `var(--bg-surface)`, `1px solid var(--border-subtle)` — only include when the product supports theme switching
 
@@ -33,10 +33,10 @@ Large numeric readout with mono label. Used in stat rows at the top of pages.
 <div style={{
   background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
   borderRadius: 'var(--radius-lg)', padding: 'var(--space-4) var(--space-5)',
-  minWidth: 140, flex: 1, ...TT,
+  width: '100%', minWidth: 0, ...TT,
 }}>
   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
-    letterSpacing: 'var(--tracking-widest)', textTransform: 'uppercase', fontWeight: 600,
+    letterSpacing: 0, textTransform: 'uppercase', fontWeight: 600,
     marginBottom: 'var(--space-1)' }}>LABEL</div>
   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
     <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-4xl)', fontWeight: 700,
@@ -55,7 +55,7 @@ Accent variant: replace stat number `color` with `var(--semantic-green)`, `var(-
 
 ## 3. Card (base)
 
-The fundamental container. Everything lives in cards.
+The fundamental top-level container. Use cards for repeated items and primary sections; use inset rows, dividers, tables, and disclosure bodies inside cards.
 
 ```jsx
 const cardStyle = {
@@ -105,23 +105,23 @@ Entity header with avatar, name, role, badges, and stat cards.
 ```
 
 - Avatar: `96px`, `border-radius: var(--radius-lg)`, `border: 2px solid var(--border-subtle)`
-- Name: `--text-3xl`, `--weight-bold` by default, `--weight-black` only for a deliberately dramatic hero/profile treatment, `--tracking-tight`, `--text-heading`
+- Name: `--text-3xl`, `--weight-bold` by default, `--weight-black` only for a deliberately dramatic hero/profile treatment, `letter-spacing: 0`, `--text-heading`
 - Role: `color: var(--text-accent)`, `font-style: italic`, `--text-lg`
-- Tagline: mono, `--text-xs`, `--text-muted`, `--tracking-widest`, uppercase
-- ID: mono, `--text-xs`, muted, absolute positioned below avatar
+- Tagline: mono, `--text-xs`, `--text-muted`, `letter-spacing: 0`, uppercase
+- ID: mono, `--text-xs`, muted, placed in the metadata column or under the name; never absolutely positioned below the avatar
 - Stat cards: same as component 2, `min-width: 130px`
 
 ---
 
 ## 6. Badge / Chip
 
-Three variants — all use mono font, uppercase, `letter-spacing: var(--tracking-wider)`, `font-size: var(--text-xs)`.
+Three variants — all use mono font, uppercase, `letter-spacing: 0`, `font-size: var(--text-xs)`.
 
 **Accent badge** (active states, primary tags):
 ```jsx
 { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)',
   fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', fontWeight: 600,
-  letterSpacing: 'var(--tracking-wider)', textTransform: 'uppercase',
+  letterSpacing: 0, textTransform: 'uppercase',
   padding: '2px 10px', borderRadius: 'var(--radius-sm)' }
 ```
 
@@ -168,7 +168,7 @@ Hover (non-active): `background: var(--bg-elevated)`, `border-radius: var(--radi
 
 ```
 ┌──────────────────┐
-│ SECTION LABEL    │ ← mono, xs, muted, uppercase, tracking-widest
+│ SECTION LABEL    │ ← mono, xs, muted, uppercase, tracking-normal
 │  ⊞ Item Active   │ ← bg-elevated, border-left: 3px solid var(--accent), text-heading
 │  📊 Item         │ ← text-secondary, transparent bg
 │  💬 Item         │
@@ -229,7 +229,7 @@ Centered panel with radial glow — for "operating mode", featured status, or a 
 ```
 
 - Border: `1px solid var(--border-accent)`, `border-radius: var(--radius-xl)`
-- Background: `var(--bg-surface)` with `radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 70%)`
+- Background: `var(--bg-surface)` with `radial-gradient(ellipse at 50% 0%, var(--accent-glow), transparent 70%)`
 - Icon: `56px`, circular, `background: var(--accent-dim)`, `border: 1px solid var(--accent)`, `color: var(--accent)`
 
 ---
@@ -252,7 +252,7 @@ Combined panel with labeled progress metrics and a tag group. The "personality" 
 
 Each metric row: `display: flex; align-items: center; gap: var(--space-3)`.
 Label: `min-width: 80px; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted)`.
-Bar: `flex: 1` (use Progress Bar component).
+Bar: fills the remaining row width with `min-width: 0` on the metric row (use Progress Bar component).
 Value: mono, `--text-sm`, `--text-secondary`, `min-width: 40px; text-align: right`.
 Tags: flex-wrap, `gap: var(--space-2)` (use Badge/Chip component).
 
@@ -282,7 +282,7 @@ thead th {
   padding: 0 16px 8px;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-widest);
+  letter-spacing: 0;
   text-transform: uppercase;
   color: var(--text-muted);
   text-align: left;
@@ -342,14 +342,14 @@ tbody tr:hover td {
 // Focus: borderColor → var(--border-accent-strong), boxShadow → 0 0 0 3px var(--accent-glow)
 ```
 
-**Label:** mono label style (xs, muted, uppercase, tracking-widest). Place above input with `margin-bottom: var(--space-1)`.
+**Label:** mono label style (xs, muted, uppercase, tracking-normal). Place above input with `margin-bottom: var(--space-1)`.
 
 **Button primary:**
 ```jsx
 { background: 'var(--accent)', color: 'var(--text-inverse)', border: 'none',
   borderRadius: 'var(--radius-md)', padding: 'var(--space-2) var(--space-5)',
   fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 600,
-  letterSpacing: 'var(--tracking-wider)', textTransform: 'uppercase', cursor: 'pointer',
+  letterSpacing: 0, textTransform: 'uppercase', cursor: 'pointer',
   transition: 'background 150ms ease' }
 // Hover: background → var(--accent-hover)
 ```
@@ -405,3 +405,13 @@ tbody tr:hover td {
 ```
 
 Hover: `borderColor → var(--border-accent)`, `color → var(--accent)`.
+
+---
+
+## Component layout integrity
+
+- Any component that can contain long names, IDs, file paths, emails, or generated labels must include `min-width: 0` on the text column and either `overflow-wrap: anywhere` or `text-overflow: ellipsis`.
+- Icon buttons use fixed square dimensions (`--control-sm` or `--control-md`) so labels and hover states cannot resize the toolbar.
+- Repeated cards live in responsive grids. Do not manually place 3-4 cards in a fixed row unless a media query or `auto-fit` grid is present.
+- When a component example uses inline style notation, translate numeric widths to CSS constraints (`minmax`, `min()`, `max-width`) before building production CSS.
+- Do not put a `.card` inside another `.card`. Use `.inset-section`, table rows, `<details>`, or a modal body.

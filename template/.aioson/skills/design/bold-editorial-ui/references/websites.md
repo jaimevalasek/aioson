@@ -340,7 +340,7 @@ BOTTOM BAR
 
 ## Anti-Patterns — Never Do This
 
-1. **Generic dark landing page**: gradient mesh background, centered headline, abstract 3D blob in the background. The visual signature of AI-generated zero-personality marketing.
+1. **Generic dark landing page**: gradient mesh background, centered headline, abstract 3D shape in the background. The visual signature of AI-generated zero-personality marketing.
 2. **Gradient mesh backgrounds**: `#8B5CF6` → `#EC4899` → `#EF4444` in an mesh. This is explicitly NOT Bold Editorial.
 3. **Purple or blue as accent**: this system is red-orange. Blue and purple belong to Glassmorphism and Clean SaaS.
 4. **Rounded pill buttons everywhere**: hero buttons use `radius-md` (6px). Only secondary badges are pills. Pill-everything belongs to Warm Craft.
