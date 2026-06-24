@@ -48,14 +48,20 @@ prototype cannot be complete.
 1. **Single self-contained file** — one `prototype.html`, inline CSS + JS, no build, no external
    services, opens in a browser. (Mirrors `review.html`.)
 2. **Seeded realistic mock state** — plausible data for every Core object (e.g. 2-3 workspaces, a few
-   boards, several cards), never lorem ipsum. Enough to look real *and* to toggle the empty state.
+   boards, several cards), never lorem ipsum. Enough to look real *and* to toggle the empty state. When
+   the product is authenticated, seed the logged-in app chrome too: a working account/user menu
+   (profile, settings, switch account, sign out) and any always-present chrome (search, notifications)
+   the product implies — a bare avatar with no menu is incomplete.
 3. **Navigational completeness** — every Core object in the surface map gets a reachable screen via
    in-file routing (hash routes/tabs): a list/index surface, a detail surface, and its management
    surface (page, panel, modal, drawer, or settings screen). A surface-map object with no reachable
    screen is a **blocking gap**, not a backlog item.
 4. **Real client-side CRUD** — create/edit/delete/archive/restore mutate in-memory state and re-render.
    "Add card"-class actions must actually add and persist for the session. Use modals/drawers/toasts
-   for feedback. A button that does nothing is a failure.
+   for feedback. A button that does nothing is a failure. Never use native `alert()`/`confirm()`/
+   `prompt()` — every create/edit/delete and every confirmation is an in-system modal, drawer, or
+   inline form styled by the `design_skill` (a destructive confirm is a styled dialog, not `confirm()`).
+   Native browser dialogs break visual fidelity and leave @dev with no spec for that surface.
 5. **State matrix** — empty, loading, error, populated, and permission-denied are each renderable and
    toggleable, not only the happy path.
 6. **Visual fidelity** — all look-and-feel comes from the `design_skill`; honor its quality and
@@ -78,6 +84,8 @@ Write to `.aioson/briefings/{slug}/`:
 - Every Core object is reachable **and** manageable (create/list/edit/archive/restore, or an explicit defer).
 - Every Core action named in the surface map works against mock state and re-renders.
 - Empty and error states are visible, not implied.
+- No action falls back to a native browser dialog; every create/edit/delete/confirm is an in-system surface.
+- When the product is authenticated, the account/user menu is present and functional, not a dead avatar.
 - The visual is faithful to the `design_skill`, not generic.
 - If any Core object cannot be managed in the prototype, report it as a blocking gap — never hand back a
   prototype that looks complete but cannot manage its own objects.

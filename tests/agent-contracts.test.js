@@ -499,6 +499,8 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
     [skill, '## Division of labor (do not blur)'],
     [skill, '**Navigational completeness**'],
     [skill, '**Real client-side CRUD**'],
+    [skill, 'Never use native `alert()`'],
+    [skill, 'account/user menu'],
     [skill, 'prototype-manifest.md'],
     [refiner, '### Generate prototype (optional visual refinement)'],
     [refiner, '.aioson/skills/process/prototype-forge/SKILL.md'],
