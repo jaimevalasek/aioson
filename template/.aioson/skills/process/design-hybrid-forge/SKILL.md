@@ -1,6 +1,6 @@
 ---
 name: design-hybrid-forge
-description: Process skill that creates project-local hybrid design skills by fusing exactly two primary AIOSON design skills, with optional limited modifiers. When activated, guides you through pair selection, identity synthesis, crossover spec, skill generation, preview creation, metadata, and optional promotion.
+description: Process skill that creates project-local hybrid design skills by fusing exactly two primary design parents — each a local AIOSON design skill or an external DESIGN.md source (refero.design md-example or similar) — with optional limited modifiers. When activated, guides you through pair selection, identity synthesis, crossover spec, skill generation, preview creation, metadata, and optional promotion.
 activation: |
   You are now running the design-hybrid-forge process. Begin by asking the user for the names of the two primary AIOSON design skills they want to combine, then ask whether they want optional modifiers. Use up to two modifiers by default, or up to three only when the active variation preset or the user explicitly enables advanced mode. Follow the phases described in this skill.
 ---
@@ -88,8 +88,8 @@ Each phase must complete before the next begins. Do not skip phase 2 and 3 — t
 ## Input contract
 
 ```
-primary_a: {skill-name}            # e.g. "cognitive-core-ui"
-primary_b: {skill-name}            # e.g. "glassmorphism-ui"
+primary_a: {skill-name}            # local AIOSON skill (e.g. "cognitive-core-ui") OR external:{DESIGN.md} (e.g. "external:linear")
+primary_b: {skill-name}            # local AIOSON skill (e.g. "glassmorphism-ui") OR an external DESIGN.md source (refero.design md-example / similar)
 modifiers: {optional 0..2}         # e.g. ["bold-editorial-ui"] or ["threejs-spatial"]
                                   # threejs-spatial is a special modifier: it layers WebGL/Three.js
                                   # on any primary pair, adding particle/3D scene as visual substrate
@@ -130,6 +130,7 @@ The hybrid must satisfy ALL of the following:
 | `references/output-contract.md` | Running phases 4 and 5 (file generation) |
 | `references/naming-registry.md` | Naming the hybrid and checking for conflicts |
 | `references/quality-gates.md` | Validating the hybrid before shipping (distribution / promotion gates) |
+| `references/external-source-ingestion.md` | Ingesting an external DESIGN.md (refero.design md-example or similar) as a parent or modifier |
 
 ## Non-negotiable rules
 
@@ -145,3 +146,4 @@ The hybrid must satisfy ALL of the following:
 10. Project-local generation goes to `.aioson/installed-skills/` by default. Promotion to core is a separate, explicit step.
 11. `design-hybrid:options` creates a temporary preset in `.aioson/context/design-variation-preset.md`; after successful generation, archive or remove the active preset and preserve the history snapshot.
 12. **`threejs-spatial` modifier rules:** It is NOT a primary parent. It layers WebGL/Three.js as a visual enhancement on the chosen primary pair. It does not own substrate (CSS gradient is still the base), does not own structure (HTML layout is CSS), and does not own tokens. Accent colors from primary parents MUST flow through Three.js parameters. Three.js CDN (no npm install) is the only supported delivery mode.
+13. **External DESIGN.md sources:** A primary parent or modifier may be an external DESIGN.md (refero.design md-example or similar). Normalize it to parent DNA via `references/external-source-ingestion.md`, record its provenance under `sources[]` in `.skill-meta.json`, and keep the anti-clone rule — the hybrid is a new identity: never reproduce the source's brand, logo, trademark, or exact palette 1:1, and never name the hybrid after the source.

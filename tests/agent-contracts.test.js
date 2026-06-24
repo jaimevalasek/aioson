@@ -541,6 +541,29 @@ test('prototype contract propagates the prototype across the agent chain', async
   }
 });
 
+test('design-hybrid-forge ingests external DESIGN.md sources with provenance and anti-clone', async () => {
+  const ref = 'template/.aioson/skills/process/design-hybrid-forge/references/external-source-ingestion.md';
+  await assert.doesNotReject(() => fs.access(path.join(ROOT, ref)));
+
+  const ingestion = await read(path.join(ROOT, ref));
+  const skill = await read(path.join(ROOT, 'template/.aioson/skills/process/design-hybrid-forge/SKILL.md'));
+  const agent = await read(path.join(ROOT, 'template/.aioson/agents/design-hybrid-forge.md'));
+
+  const checks = [
+    [ingestion, 'refero.design'],
+    [ingestion, 'DESIGN.md'],
+    [ingestion, '## Provenance (mandatory)'],
+    [ingestion, '## Anti-clone (hard)'],
+    [skill, 'external-source-ingestion.md'],
+    [agent, 'external-source-ingestion.md'],
+    [agent, 'Anti-clone:']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing external-source token: ${token}`);
+  }
+});
+
 test('AIOSON Play compatibility docs are shipped and managed', async () => {
   const managedDocs = [
     '.aioson/docs/play/README.md',

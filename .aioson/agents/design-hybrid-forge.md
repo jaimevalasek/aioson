@@ -13,8 +13,9 @@ Follow the first-party process skill at `.aioson/skills/process/design-hybrid-fo
 
 ## Required input
 
-- Exactly 2 primary design skills to fuse (and 0–2 optional modifier skills) — chosen by the user in Step 1 Intake
-- `.aioson/skills/design/` and `.aioson/installed-skills/` — the available design skills to pick parents/modifiers from
+- Exactly 2 primary design parents to fuse (and 0–2 optional modifiers) — chosen by the user in Step 1 Intake. Each parent or modifier may be a local AIOSON design skill OR an external DESIGN.md source (a refero.design md-example or similar portable design spec)
+- `.aioson/skills/design/` and `.aioson/installed-skills/` — the available local design skills to pick parents/modifiers from
+- `.aioson/skills/process/design-hybrid-forge/references/external-source-ingestion.md` — load before ingesting any external DESIGN.md source
 - `.aioson/skills/process/design-hybrid-forge/SKILL.md` — the first-party process skill this agent follows
 - `.aioson/context/design-variation-preset.md` (if present) — preferred visual variation overlay and `modifier_policy`, read before asking questions
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
@@ -43,8 +44,8 @@ Do not write into `.aioson/skills/design/` or the AIOSON core gallery unless the
 1. If `.aioson/context/design-variation-preset.md` exists, read it before asking questions. Treat it as the preferred visual variation overlay and honor its `modifier_policy` when present.
 2. List available design skills from `.aioson/skills/design/` and `.aioson/installed-skills/`.
 3. Ask for:
-   - 2 primary design skills
-   - optional 0–2 modifier skills by default, or 0–3 in advanced mode when allowed by the preset or explicitly approved by the user
+   - 2 primary design parents — each either a local AIOSON design skill or an external DESIGN.md source (refero.design md-example or similar)
+   - optional 0–2 modifiers by default, or 0–3 in advanced mode when allowed by the preset or explicitly approved by the user
    - optional variation overlay if no preset file exists yet
    - optional name suggestion
    - optional target domain
@@ -56,6 +57,7 @@ Do not write into `.aioson/skills/design/` or the AIOSON core gallery unless the
    - primary parents are not from the same family
    - modifier skills do not duplicate a primary parent
 6. Load `references/pair-compatibility.md`.
+7. If any parent or modifier is an external DESIGN.md source, load `references/external-source-ingestion.md` now: ingest and normalize each external source into parent DNA, validate eligibility (a source missing substrate + tokens can only be a modifier), and capture its provenance (name, URL, retrieval date) for `.skill-meta.json`. External sources are references, not templates — the hybrid stays a new identity, never a clone.
 
 ## Step 2 — Identity synthesis
 Load `references/crossover-protocol.md` and complete Phase 2 with the user:
@@ -95,7 +97,7 @@ The package must include:
 - `previews/{hybrid-name}-website.html`
 - `.skill-meta.json`
 
-The metadata file must record author and model/provider information when the user or runtime makes it available.
+The metadata file must record author and model/provider information when the user or runtime makes it available, plus a `sources[]` array naming each parent/modifier's `type` (`local`/`external`); for external DESIGN.md sources also record `url`, `retrieved_at`, and `license: "unspecified — reference only"` (refero.design and similar publish these as references, not licensed templates).
 If a variation overlay was selected, persist it in `.skill-meta.json` and reflect it in the generated previews and final SKILL.md.
 After the hybrid skill is successfully generated, archive the active preset by moving or removing `.aioson/context/design-variation-preset.md`. Keep the history copy under `.aioson/context/history/design-variation-presets/`.
 
@@ -114,6 +116,8 @@ Only if the user explicitly asks to promote the hybrid:
 - At most 2 modifiers are allowed by default.
 - Up to 3 modifiers are allowed only in advanced mode, and still cannot own substrate or structure.
 - Modifiers never own substrate or structure.
+- A primary parent or modifier may be an external DESIGN.md source (refero.design md-example or similar), but it must be normalized to parent DNA via `references/external-source-ingestion.md` before use, and its provenance must be recorded in `.skill-meta.json`.
+- Anti-clone: the hybrid is always a new identity. Never reproduce an external source's brand name, logo, trademarked assets, or its exact palette/wordmark 1:1, and never name the hybrid after the source.
 - The output must be a single selectable design skill, not multiple concurrently active design skills.
 - Default destination is `.aioson/installed-skills/{hybrid-name}/`.
 - Do not write into `.aioson/skills/design/` or marketplace/core files unless the user explicitly asks for promotion.
