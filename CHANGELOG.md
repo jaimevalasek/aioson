@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.30.2] - 2026-06-24
+
+### Changed
+- **Hardened packaged design skills.** Strengthened design skill quality gates, managed-file coverage, and Cognitive Core layout guidance to reduce brittle or low-quality UI output.
+- **Refreshed Cognitive Core previews.** Rebuilt the design preview examples with a shared responsive CSS system and added cockpit, website, list/detail, settings, auth, and Kanban examples.
+
+### Docs
+- **Updated Play permission guidance.** Clarified manifest-driven `auth.permissions[]` guidance across the AIOSON Play docs and shipped template copies.
+
 ## [1.30.1] - 2026-06-23
 
 ### Added

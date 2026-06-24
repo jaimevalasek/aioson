@@ -15,7 +15,7 @@ contract_framework: ""
 wallet_provider: ""
 indexer: ""
 rpc_provider: ""
-aioson_version: "1.30.1"
+aioson_version: "1.30.2"
 generated_at: "2026-04-10T14:35:29.863Z"
 ---
 
