@@ -199,6 +199,8 @@ Default to breadth before committing to one direction. A briefing that explores 
 
 Run this when the goal admits more than one viable solution shape, or whenever the idea has a rich operational surface (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, editors/builders, automation, admin/management surfaces, repeated-use CRUD).
 
+**Exception — single fixed solution.** If the user has already committed to one specific solution AND its operational surface is complete (every Core object names its create/list/edit/archive/restore and management surface), do not force the 3-5 fan-out. Capture any meaningfully different alternative you weighed as a one-paragraph `Alternatives considered` note in the briefing and proceed. Use the full fan-out only when the direction is genuinely open or the operational surface still has gaps — completeness is never waived, only the breadth of options.
+
 1. Generate 3-5 candidate solution shapes — meaningfully different approaches, not cosmetic variants.
 2. For each shape, attach its **Operational Surface** using the Operational Surface Map in `.aioson/docs/feature-expansion-taxonomy.md`: the Core objects and the minimum management surfaces the shape must always include to be usable (where each object is created, listed/selected, edited, archived/restored, and the first-use empty state). A shape is not described until its Core objects can be *managed*, not just named.
 3. Classify each shape: value, risk, effort, and completeness. Mark the recommended shape and say why.

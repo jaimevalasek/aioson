@@ -478,7 +478,8 @@ test('briefing prompt drives horizontal solution exploration into a solution-opt
     [briefingAgent, 'Generate 3-5 candidate solution shapes'],
     [briefingAgent, 'attach its **Operational Surface**'],
     [briefingAgent, '.aioson/briefings/{slug}/solution-options.md'],
-    [briefingAgent, 'A shape is not described until its Core objects can be *managed*, not just named.']
+    [briefingAgent, 'A shape is not described until its Core objects can be *managed*, not just named.'],
+    [briefingAgent, 'Exception — single fixed solution']
   ];
 
   for (const [content, token] of checks) {
@@ -504,7 +505,8 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
     [skill, 'prototype-manifest.md'],
     [refiner, '### Generate prototype (optional visual refinement)'],
     [refiner, '.aioson/skills/process/prototype-forge/SKILL.md'],
-    [refiner, '.aioson/briefings/{slug}/prototype.html']
+    [refiner, '.aioson/briefings/{slug}/prototype.html'],
+    [refiner, 'Rich-surface recommendation']
   ];
 
   for (const [content, token] of checks) {

@@ -144,6 +144,7 @@ Confirmed application updates:
 - If changes were applied and no blockers remain: user runs `aioson briefing:approve . --slug={slug}`, then activates `@product`.
 - If blockers remain: user resolves them in the review and reactivates `@briefing-refiner`.
 - If a prototype was generated: user opens `prototype.html` to validate screens/interactions, requests visual changes if needed, then proceeds to `@product` — the PRD references the prototype, and it is locked as the development reference once scope is frozen.
+- **Rich-surface recommendation (non-blocking):** if the briefing has a rich operational surface (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, admin/management, repeated-use CRUD) and no prototype exists yet, recommend running `@briefing-refiner` prototype mode before `@product` — it surfaces missing management screens and broken interactions before the PRD. Recommend only; never block the route to `@product`.
 
 ## Observability
 
