@@ -426,6 +426,50 @@ test('product, sheldon, and dev on-demand docs are managed and preserve critical
   }
 });
 
+test('feature expansion prompts preserve operational surface completeness gates', async () => {
+  const managedFiles = [
+    '.aioson/docs/feature-expansion-taxonomy.md',
+    '.aioson/skills/process/briefing-expansion-scout/SKILL.md',
+    '.aioson/skills/process/product-scope-expansion/SKILL.md',
+    '.aioson/skills/process/sheldon-expansion-audit/SKILL.md'
+  ];
+
+  for (const file of managedFiles) {
+    assert.equal(MANAGED_FILES.includes(file), true, `missing managed expansion file: ${file}`);
+    await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', file)));
+  }
+
+  const taxonomy = await read(path.join(ROOT, 'template/.aioson/docs/feature-expansion-taxonomy.md'));
+  const briefingSkill = await read(path.join(ROOT, 'template/.aioson/skills/process/briefing-expansion-scout/SKILL.md'));
+  const productSkill = await read(path.join(ROOT, 'template/.aioson/skills/process/product-scope-expansion/SKILL.md'));
+  const sheldonSkill = await read(path.join(ROOT, 'template/.aioson/skills/process/sheldon-expansion-audit/SKILL.md'));
+  const briefingAgent = await read(path.join(ROOT, 'template/.aioson/agents/briefing.md'));
+  const productAgent = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+  const sheldonAgent = await read(path.join(ROOT, 'template/.aioson/agents/sheldon.md'));
+
+  const checks = [
+    [taxonomy, '## Operational Surface Map'],
+    [taxonomy, 'A named Core object is not real scope'],
+    [taxonomy, 'Workspace or account home'],
+    [briefingSkill, '## Operational Surface Scout'],
+    [briefingSkill, 'workspace/board/card systems'],
+    [briefingSkill, 'A Core object without add/edit/list/archive behavior is a blocking gap'],
+    [productSkill, '## Operational Completeness Gate'],
+    [productSkill, 'Do not route to implementation while a Core object'],
+    [productSkill, 'Core operational surfaces must appear in `## MVP scope`'],
+    [sheldonSkill, '## Operational Surface Audit'],
+    [sheldonSkill, 'missing workspace management, board/pipeline CRUD, primary item creation/editing'],
+    [briefingAgent, 'rich operational surface: workspaces, boards, cards'],
+    [productAgent, 'force an operational surface check'],
+    [productAgent, 'Do not route to implementation while a Core action'],
+    [sheldonAgent, 'audit operational surface completeness for every Core object']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing operational surface token: ${token}`);
+  }
+});
+
 test('AIOSON Play compatibility docs are shipped and managed', async () => {
   const managedDocs = [
     '.aioson/docs/play/README.md',

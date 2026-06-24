@@ -108,6 +108,7 @@ Apply enrichment:
 - Check `researchs/` before web search. Load `.aioson/skills/static/web-research-cache.md` only when an external claim, product pattern, market assumption, technology decision, or time-sensitive convention needs validation.
 - Use web search only for stale/missing evidence that can change the briefing's risks, options, or open questions.
 - Load `.aioson/skills/process/aioson-spec-driven/references/hardening-lane.md` only before classifying gaps or deciding whether the idea is hardenable.
+- Load `.aioson/skills/process/briefing-expansion-scout/SKILL.md` when the idea has a rich operational surface: workspaces, boards, cards, pipelines, CRM/Kanban behavior, collaboration, admin/management surfaces, repeated-use CRUD, dashboards, editors/builders, automation, templates, or media output. For these ideas, write `.aioson/briefings/{slug}/expansion-scout.md` before the briefing is considered complete enough for product.
 - Identify gaps: what is missing in the plans to make a safe decision.
 - Map risks: what could go wrong with the proposed approach.
 
@@ -230,9 +231,11 @@ After the 5 topics, sweep all unresolved items. Each numbered question must be t
 
 **Quality gate before writing:** if more than 3 open questions remain unclassified or vague, do another conversation pass instead of writing the briefing — it's not ready.
 
+If the idea has a rich operational surface and no expansion scout / operational surface map was produced, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md` now and write the scout first. Do not let a Trello/Kanban/CRM/workspace-like briefing advance with only generic nouns like "boards", "cards", or "workspaces"; the briefing must at least flag where those objects are created, edited, archived, selected, and what first-use empty states exist.
+
 **Load `.aioson/docs/briefing/briefing-craft.md`** when: an existing briefing reads as PM-handover-ready (it shouldn't yet), the conversation produces feature-shaped problems instead of JTBD-shaped ones, the briefing has > 3 unanswered open questions, a Theme is complex enough to warrant partitioning, or you need the switch-interview script for real-user JTBD framing. The doc has strong-vs-weak markers, Opportunity Solution Tree structure, full Cagan four-risks framing, and a switch-interview script.
 
-**Load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`** when the user asks whether an idea is worth pursuing, the briefing is too thin for team discussion, or the idea has a rich surface (workflow, collaboration, editor/builder, generator, dashboard, automation, templates, media output). Write `.aioson/briefings/{slug}/expansion-scout.md`; keep it exploratory and do not turn it into PRD scope.
+**Load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`** when the user asks whether an idea is worth pursuing, the briefing is too thin for team discussion, or the idea has a rich surface (workflow, collaboration, editor/builder, generator, dashboard, automation, templates, media output, workspaces, boards, cards, pipelines, operational CRUD, admin/management surfaces, Trello/CRM/Kanban behavior). Write `.aioson/briefings/{slug}/expansion-scout.md`; keep it exploratory and do not turn it into PRD scope.
 
 ## Mode: Continue / modify existing briefing
 

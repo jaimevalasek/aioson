@@ -237,7 +237,7 @@ Run this before asking the first product question or writing any PRD:
 2. Load `.aioson/skills/process/decision-presentation/SKILL.md` only before a real user-facing decision question.
 3. Load `.aioson/docs/product/conversation-playbook.md` only when a conversation/intake is actually needed.
 4. Load `.aioson/docs/product/research-loop.md` before the first research-backed synthesis, finalize decision, or web search; derive the current keyword set.
-5. Load `.aioson/skills/process/product-scope-expansion/SKILL.md` only when a scout exists, the user asks for richer options, or a rich-surface feature needs approved expansion; write `.aioson/context/features/{slug}/scope-expansion.md` before PRD incorporation.
+5. Load `.aioson/skills/process/product-scope-expansion/SKILL.md` when a scout exists, the user asks for richer options, a rich-surface feature needs approved expansion, or the feature implies workspaces, boards, cards, pipelines, CRM/Kanban behavior, collaboration, admin/management surfaces, repeated-use CRUD, dashboards, editors/builders, automation, templates, or media output; write `.aioson/context/features/{slug}/scope-expansion.md` before PRD incorporation.
 6. Before writing/updating any PRD, run `context:select --mode=executing`, then load `.aioson/docs/product/quality-lens.md` and `.aioson/docs/product/prd-contract.md`.
 7. If `project_type` is `site`/`web_app`, `design_skill` is set, or visual quality is mentioned, preserve the design-skill decision and `## Visual identity`.
 
@@ -251,7 +251,7 @@ The essential product conversation rules are:
 2. Cadence by `profile` (from `project.context.md`): `creator` (or absent/auto) → 1 decision per turn via `AskUserQuestion` with a localized recommendation marker on the first option and a localized pause option always available; `developer` → up to 5 numbered decisions per batch; `team` → up to 5 per batch + emit executive summary at `agent:epilogue`/`agent:done`
 3. End every batch with: `6 - Finalize — write the PRD now with what we have.`
 4. Reflect understanding before opening a new topic
-5. Surface edge cases, ownership, empty states, dependencies, and failure modes proactively — before "Finalize", every acceptance criterion must state its failure/empty behavior, not only the happy path. Defer full per-entity enumeration to @analyst, but do not write an AC whose error path is undefined.
+5. Surface edge cases, ownership, empty states, dependencies, and failure modes proactively — before "Finalize", every acceptance criterion must state its failure/empty behavior, not only the happy path. Defer full per-entity enumeration to @analyst, but do not write an AC whose error path is undefined. For every named Core product object, force an operational surface check: where the user creates it, lists/selects it, edits it, deletes/archives it, restores it if applicable, and what management page/modal/panel owns that behavior.
 6. Narrow scope when the user is expanding too broadly
 7. No filler openers
 8. Ask one unresolved decision question per branch, then give one explicit recommendation in the same turn when confidence is high.
@@ -268,6 +268,8 @@ The essential product conversation rules are:
 
 Creation / enrichment mode writes `.aioson/context/prd.md`.
 Feature mode writes `.aioson/context/prd-{slug}.md`.
+
+Before writing, rich-surface PRDs must have their Core operational surfaces incorporated from `product-scope-expansion`: the relevant objects and management surfaces belong in `## MVP scope`, `## User flows`, `## Out of scope`, or `## Open questions`. Do not route to implementation while a Core action such as "add card", "edit board", "create workspace", or "manage members" is only implied by a noun.
 
 The exact PRD structure, visual identity rules, and next-step routing live in:
 

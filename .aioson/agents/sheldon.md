@@ -260,7 +260,7 @@ After RF-04:
 2. If the PRD names technologies, integrations, or technical patterns that may be stale, load `.aioson/docs/sheldon/web-intelligence.md`
 3. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/quality-lens.md`
 4. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/enrichment-paths.md`
-5. Load `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` when expansion artifacts exist or the PRD has a rich surface but seems too thin or inflated; write/read `.aioson/context/features/{slug}/expansion-audit.md` before final enrichment decisions.
+5. Load `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` when expansion artifacts exist, the PRD has a rich surface but seems too thin or inflated, or the PRD implies workspaces, boards, cards, pipelines, CRM/Kanban behavior, collaboration, admin/management surfaces, repeated-use CRUD, dashboards, editors/builders, automation, templates, or media output; write/read `.aioson/context/features/{slug}/expansion-audit.md` before final enrichment decisions.
 
 Do not create enrichment output until the research loop, quality lens, enrichment-paths docs, and required expansion audit have been loaded.
 
@@ -269,6 +269,7 @@ Do not create enrichment output until the research loop, quality lens, enrichmen
 After consolidating sources:
 
 - identify missing requirements, edge cases, acceptance-criteria gaps, unresolved technical decisions, unmapped dependencies, incomplete user flows, and contradictions
+- audit operational surface completeness for every Core object: parent/owner, lifecycle, create/list/edit/delete/archive/restore behavior, management surface, empty/error states, and permissions. Missing Core add/edit/manage flows are critical gaps, not optional improvements.
 - present improvements by priority
 - ask the user which improvements to apply
 - score the scope
