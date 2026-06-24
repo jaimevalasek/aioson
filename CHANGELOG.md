@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.33.0] - 2026-06-24
+
+### Changed
+- **Scope-aware solution fan-out in `@briefing`.** Horizontal exploration no longer forces 3–5 options when the user has already committed to one specific solution and its operational surface is complete; it records any weighed alternative as a short "Alternatives considered" note instead. Operational completeness is never waived — only the breadth of options when the direction is already fixed.
+- **Non-blocking prototype recommendation in `@briefing-refiner`.** For a rich-surface briefing with no prototype yet, the handoff now recommends running prototype mode before `@product` (it surfaces missing management screens and broken interactions early). Recommendation only — it never blocks the route to `@product`.
+
 ## [1.32.0] - 2026-06-24
 
 ### Added
