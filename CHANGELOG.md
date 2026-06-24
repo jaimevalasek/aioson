@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.32.0] - 2026-06-24
+
+### Added
+- **External DESIGN.md sources in `@design-hybrid-forge`.** A hybrid's primary parent or modifier can now be an external DESIGN.md source (a refero.design md-example or a similar portable design spec extracted from a real site), not only a local AIOSON design skill. The agent normalizes the source into the same parent DNA the crossover protocol expects, records `sources[]` provenance in `.skill-meta.json`, and enforces an anti-clone rule — the hybrid stays a new identity (no brand/logo/trademark or 1:1 palette reproduction, never named after the source). The "exactly 2 primary parents" model is unchanged.
+
 ## [1.31.0] - 2026-06-24
 
 ### Added
