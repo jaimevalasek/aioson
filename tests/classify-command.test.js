@@ -231,3 +231,47 @@ test('classify: floor never lowers an already-MEDIUM classification', async () =
   assert.equal(result.classification, 'MEDIUM');
   assert.equal(result.floored, false);
 });
+
+// ── Operational-surface floor ───────────────────────────────────────────────────
+
+test('classify: floors MICRO to SMALL for a Trello-like operational surface', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-kanban.md',
+    '# Mini board\nAs a user, I want a Kanban board with cards I can move between lists.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'kanban' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.operational_surfaces.includes('kanban'));
+});
+
+test('classify: frontmatter operational_surfaces override forces the floor', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-ops.md',
+    '---\noperational_surfaces: [workspace]\n---\n# Simple list\nAs a user, I want to view items.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'ops' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.operational_surfaces.includes('workspace'));
+});
+
+test('classify: plain MICRO has empty operational_surfaces and stays MICRO', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-plain.md',
+    '# View profile\nAs a user, I want to see my profile.\nNo external services required.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'plain' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'MICRO');
+  assert.equal(result.floored, false);
+  assert.deepEqual(result.operational_surfaces, []);
+});

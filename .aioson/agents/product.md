@@ -282,7 +282,7 @@ The exact PRD structure, visual identity rules, and next-step routing live in:
 
 After writing the PRD, always emit a structured handoff message. Do not end the session without it.
 
-**Sensitive-surface floor — check before choosing the MICRO handoff:** if the feature touches money/payments, auth, ownership/authz, uploads, external URLs/webhooks, secrets/credentials, or sensitive storage, it is **not** MICRO even with no new entities. Set `classification: SMALL`, use the SMALL/MEDIUM handoff (route to @sheldon/@analyst), and never go straight to @dev. When the CLI is available, run `aioson classify . --feature={slug}` and honor `floored: true`. The floor only raises the tier.
+**Sensitive-surface floor — check before choosing the MICRO handoff:** if the feature touches money/payments, auth, ownership/authz, uploads, external URLs/webhooks, secrets/credentials, or sensitive storage, it is **not** MICRO even with no new entities. Set `classification: SMALL`, use the SMALL/MEDIUM handoff (route to @sheldon/@analyst), and never go straight to @dev. Rich operational surfaces (workspaces, boards/cards, Kanban/CRM pipelines, CRUD/admin management) also floor to at least SMALL for the same reason — they need management screens, so they must not take the MICRO shortcut that skips @analyst/@architect/the prototype. When the CLI is available, run `aioson classify . --feature={slug}` and honor `floored: true` (reported under `sensitive_surfaces` and/or `operational_surfaces`). The floor only raises the tier.
 
 **For new features (SMALL/MEDIUM):**
 ```

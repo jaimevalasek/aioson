@@ -138,22 +138,41 @@ function detectSensitiveSurfaces(content) {
   return found;
 }
 
+// Operational-surface floor: a rich operational surface (workspaces, boards +
+// cards, Kanban/CRM pipelines, explicit CRUD/admin management) is never MICRO —
+// it needs management screens, so it must get at least the SMALL chain so
+// @analyst/@architect/the prototype are not skipped. Patterns are kept tight to
+// avoid flooring genuinely simple features. Bare "dashboard" is intentionally
+// NOT a signal (too common); only admin/management dashboards count.
+function detectRichSurfaces(content) {
+  const c = String(content || '');
+  const found = [];
+  if (/\b(kanban|trello|scrum board|task board)\b/i.test(c)) found.push('kanban');
+  if (/\bworkspaces?\b/i.test(c)) found.push('workspace');
+  if (/\bboards?\b/i.test(c) && /\bcards?\b/i.test(c)) found.push('board_cards');
+  if (/\b(crm|sales pipeline|deals? pipeline|leads? pipeline)\b/i.test(c)) found.push('crm_pipeline');
+  if (/\bcrud\b/i.test(c)
+    || /\badmin (panel|dashboard|area|console)\b/i.test(c)
+    || /\bmanagement (screen|page|panel|dashboard|interface|surface)\b/i.test(c)) found.push('crud_admin');
+  return [...new Set(found)];
+}
+
 // Explicit `sensitive_surfaces:` frontmatter override — additive, can only force
 // the floor when content detection misses. Supports inline (`[a, b]` / `a, b`)
 // and YAML block list forms.
-function parseSensitiveSurfacesOverride(content) {
+function parseSurfacesOverride(content, key) {
   const fm = String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!fm) return [];
   const body = fm[1];
   const items = [];
-  const inline = body.match(/^sensitive_surfaces:[ \t]*(.+)$/m);
+  const inline = body.match(new RegExp(`^${key}:[ \\t]*(.+)$`, 'm'));
   if (inline) {
     inline[1].trim().replace(/^\[|\]$/g, '').split(',').forEach((s) => {
       const v = s.trim().replace(/^["']|["']$/g, '');
       if (v) items.push(v);
     });
   }
-  const block = body.match(/^sensitive_surfaces:[ \t]*\r?\n((?:[ \t]*-[ \t]*.+\r?\n?)+)/m);
+  const block = body.match(new RegExp(`^${key}:[ \\t]*\\r?\\n((?:[ \\t]*-[ \\t]*.+\\r?\\n?)+)`, 'm'));
   if (block) {
     block[1].split(/\r?\n/).forEach((line) => {
       const m = line.match(/^[ \t]*-[ \t]*(.+)$/);
@@ -276,13 +295,25 @@ async function runClassify({ args, options = {}, logger }) {
 
   // Gap 3B — sensitive-surface floor (deterministic; raises MICRO -> SMALL only).
   const detectedSurfaces = content ? detectSensitiveSurfaces(content) : [];
-  const declaredSurfaces = content ? parseSensitiveSurfacesOverride(content) : [];
+  const declaredSurfaces = content ? parseSurfacesOverride(content, 'sensitive_surfaces') : [];
   const sensitiveSurfaces = [...new Set([...detectedSurfaces, ...declaredSurfaces])];
   let floored = false;
   if (sensitiveSurfaces.length > 0) {
     const scored = classification;
     classification = applySensitiveFloor(classification);
     floored = classification !== scored;
+  }
+
+  // Operational-surface floor (deterministic; raises MICRO -> SMALL only). A rich
+  // operational surface needs management screens, so a Trello/Kanban/CRM/workspace
+  // feature can't take the MICRO shortcut that skips @analyst/@architect/prototype.
+  const detectedOps = content ? detectRichSurfaces(content) : [];
+  const declaredOps = content ? parseSurfacesOverride(content, 'operational_surfaces') : [];
+  const operationalSurfaces = [...new Set([...detectedOps, ...declaredOps])];
+  if (operationalSurfaces.length > 0) {
+    const scored = classification;
+    classification = applySensitiveFloor(classification);
+    floored = floored || classification !== scored;
   }
 
   const phaseDepth = classificationToPhaseDepth(classification);
@@ -295,6 +326,7 @@ async function runClassify({ args, options = {}, logger }) {
     scores: { user_types: utScore, integrations: intScore, complexity: cxScore, total: totalScore },
     classification,
     sensitive_surfaces: sensitiveSurfaces,
+    operational_surfaces: operationalSurfaces,
     floored,
     phase_depth: phaseDepth
   };
@@ -313,6 +345,9 @@ async function runClassify({ args, options = {}, logger }) {
   logger.log(`Score: ${totalScore} → ${classification}`);
   if (sensitiveSurfaces.length > 0) {
     logger.log(`Sensitive surfaces: ${sensitiveSurfaces.join(', ')}${floored ? ' → floored to SMALL' : ''}`);
+  }
+  if (operationalSurfaces.length > 0) {
+    logger.log(`Operational surfaces: ${operationalSurfaces.join(', ')}${floored ? ' → floored to at least SMALL' : ''}`);
   }
   logger.log('');
   logger.log('Phase depth:');
