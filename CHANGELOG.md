@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.31.0] - 2026-06-24
+
+### Added
+- **Clickable prototype stage.** New `prototype-forge` process skill and an optional `@briefing-refiner` "Generate prototype" mode produce a self-contained, clickable HTML app-shell (`prototype.html` + manifest) that materializes a rich-surface feature's screens, navigation, and CRUD interactions before the PRD — delegating visuals to the selected design skill while owning structure, behavior, and state. No native dialogs; authenticated app chrome is seeded.
+- **Horizontal solution exploration in `@briefing`.** For goals with more than one viable shape, `@briefing` explores 3–5 solution shapes, maps each one's operational surface, and writes an optional `solution-options.md` so `@product` chooses with the trade-offs in hand.
+- **Prototype propagated as a contract.** New `prototype-contract.md` defines how the prototype flows through the chain: `@product` writes a `## Prototype reference` in the PRD, `@dev` reproduces its screens/interactions, `@ux-ui` treats it as the authoritative realization, and `@analyst` derives acceptance criteria so `@validator` honors it via the binary contract (respecting its context sandbox).
+- **Operational-surface classification floor.** `aioson classify` now floors rich operational surfaces (workspaces, boards/cards, Kanban/CRM pipelines, CRUD/admin management) to at least SMALL, so a Trello-like feature can't take the MICRO shortcut that skips `@analyst`/`@architect`/the prototype.
+
+### Changed
+- **Operational Surface Map across planning agents.** `feature-expansion-taxonomy.md` and the briefing/product/sheldon expansion skills now require every Core object to have create/list/edit/archive/restore behavior and a management surface, so rich-surface features (Trello/Kanban/CRM/workspace-like) can't pass with bare nouns.
+
 ## [1.30.2] - 2026-06-24
 
 ### Changed
