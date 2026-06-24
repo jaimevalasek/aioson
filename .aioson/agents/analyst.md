@@ -292,6 +292,9 @@ For each new or modified entity, produce field-level detail (same format as Phas
 ### Output contract — feature mode
 
 **`requirements-{slug}.md`** — implementation spec for the feature:
+
+> When `prd-{slug}.md` has a `## Prototype reference`, load `.aioson/docs/prototype-contract.md` and turn the prototype's Core screens and interactions into explicit acceptance criteria (e.g. "add card persists and re-renders", "board has a management surface"). This is how the prototype reaches @validator — as binary criteria, not a file it reads.
+
 1. Feature summary (1–2 lines from prd-{slug}.md)
 2. Requirement IDs (`REQ-{slug}-01...`) with source references
 3. Acceptance criteria IDs (`AC-{slug}-01...`) mapped to requirement IDs

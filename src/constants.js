@@ -46,6 +46,7 @@ const MANAGED_FILES = [
   '.aioson/docs/squad/session-operations.md',
   '.aioson/docs/squad/genome-bindings.md',
   '.aioson/docs/feature-expansion-taxonomy.md',
+  '.aioson/docs/prototype-contract.md',
   '.aioson/docs/product/conversation-playbook.md',
   '.aioson/docs/product/research-loop.md',
   '.aioson/docs/product/quality-lens.md',

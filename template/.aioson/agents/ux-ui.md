@@ -53,6 +53,7 @@ Load each item at the step that needs it — never all upfront:
 
 - `.aioson/context/project.context.md`
 - `.aioson/context/prd.md` or `prd-{slug}.md` when present
+- `.aioson/briefings/{slug}/prototype.html` when the PRD has a `## Prototype reference` — the authoritative screen/interaction/visual realization; load `.aioson/docs/prototype-contract.md` and refine on top of it, never contradict it
 - `.aioson/context/discovery.md` when selected because current flows/entities affect UI
 - `.aioson/context/architecture.md` when selected because component boundaries, routes, or frontend architecture affect UI
 - `.aioson/context/spec-{slug}.md` (feature mode, if present)

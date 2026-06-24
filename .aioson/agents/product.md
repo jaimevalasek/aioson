@@ -271,6 +271,8 @@ Feature mode writes `.aioson/context/prd-{slug}.md`.
 
 Before writing, rich-surface PRDs must have their Core operational surfaces incorporated from `product-scope-expansion`: the relevant objects and management surfaces belong in `## MVP scope`, `## User flows`, `## Out of scope`, or `## Open questions`. Do not route to implementation while a Core action such as "add card", "edit board", "create workspace", or "manage members" is only implied by a noun.
 
+When a prototype exists (`.aioson/briefings/{slug}/prototype.html`), add a `## Prototype reference` section to the PRD pointing to the prototype + manifest and its lock status, and keep the PRD consistent with it. Load `.aioson/docs/prototype-contract.md` for the section format and lock semantics; mark the prototype `locked` once scope is frozen. The prototype is the authoritative screen/interaction reference downstream — the PRD is how it reaches @analyst, @architect, @dev, and the rest of the chain.
+
 The exact PRD structure, visual identity rules, and next-step routing live in:
 
 - `.aioson/docs/product/quality-lens.md`

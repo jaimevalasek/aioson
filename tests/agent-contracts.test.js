@@ -512,6 +512,35 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
   }
 });
 
+test('prototype contract propagates the prototype across the agent chain', async () => {
+  const doc = '.aioson/docs/prototype-contract.md';
+  assert.equal(MANAGED_FILES.includes(doc), true, 'prototype-contract must be a managed file');
+  await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', doc)));
+
+  const contract = await read(path.join(ROOT, 'template', doc));
+  const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+  const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
+  const ux = await read(path.join(ROOT, 'template/.aioson/agents/ux-ui.md'));
+  const analyst = await read(path.join(ROOT, 'template/.aioson/agents/analyst.md'));
+
+  const checks = [
+    [contract, 'name: prototype-contract'],
+    [contract, '## Prototype reference'],
+    [contract, 'does **not** read the prototype directly'],
+    [contract, 'locked-at'],
+    [product, '## Prototype reference'],
+    [product, '.aioson/docs/prototype-contract.md'],
+    [dev, '.aioson/briefings/{slug}/prototype.html'],
+    [dev, '.aioson/docs/prototype-contract.md'],
+    [ux, '.aioson/docs/prototype-contract.md'],
+    [analyst, '.aioson/docs/prototype-contract.md']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing prototype-contract token: ${token}`);
+  }
+});
+
 test('AIOSON Play compatibility docs are shipped and managed', async () => {
   const managedDocs = [
     '.aioson/docs/play/README.md',
