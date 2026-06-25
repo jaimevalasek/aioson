@@ -357,6 +357,10 @@ test('build-prompt includes bounded evidence and excludes unrelated feature doss
     command.required === true &&
     command.source.includes('ledger')
   )));
+  assert.ok(result.verification_commands.some((command) => (
+    command.command === `aioson prototype:check . --feature=${SLUG} --strict` &&
+    command.source === 'prototype_contract'
+  )));
   assert.doesNotMatch(prompt, /other-feature\/dossier/);
 });
 
@@ -530,6 +534,34 @@ test('run-tool turns malformed auditor output into durable INCONCLUSIVE report',
   assert.match(latest, /INCONCLUSIVE/);
   assert.match(latest, /Machine Report/);
   assert.match(await readFile(dir, result.raw_report_path), /not a verification report/);
+});
+
+test('run-tool failed runner keeps stderr out of latest consolidated report', async () => {
+  const dir = await makeTmpDir();
+  await setupRunnerProject(dir);
+  const spawnImpl = fakeSpawn(({ args, child }) => {
+    if (args.includes('--version')) {
+      closeFakeChild(child, { stdout: 'opencode 1.0.0\n' });
+      return;
+    }
+    closeFakeChild(child, {
+      stderr: 'SECRET-STDERR-SHOULD-NOT-LEAK',
+      code: 1
+    });
+  });
+
+  const result = await run(dir, { tool: 'opencode', policy: 'strict' }, { spawnImpl });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'runner_failed');
+  assert.equal(result.verdict, 'INCONCLUSIVE');
+  assert.match(result.stderr_path, /opencode-configured-default-stderr\.txt$/);
+
+  const latest = await readFile(dir, result.report_path);
+  assert.match(latest, /Runner stderr was stored separately/);
+  assert.doesNotMatch(latest, /SECRET-STDERR-SHOULD-NOT-LEAK/);
+  const stderr = await readFile(dir, result.stderr_path);
+  assert.match(stderr, /SECRET-STDERR-SHOULD-NOT-LEAK/);
 });
 
 test('run-tool timeout returns INCONCLUSIVE and keeps runner output bounded', async () => {
@@ -753,7 +785,7 @@ test('run-tool telemetry stores runner summary but not raw auditor output paths 
   assert.doesNotMatch(JSON.stringify(payload), /All required claims confirm/);
 });
 
-test('policy routes scope drift to product and stale test coverage to qa', async () => {
+test('policy routes scope drift to product/sheldon and stale test coverage to qa', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, 'scope-report.md', reportMarkdown(machineReport({
     verdict: 'NEEDS_SCOPE_DECISION',
@@ -774,6 +806,24 @@ test('policy routes scope drift to product and stale test coverage to qa', async
   const scope = await run(dir, { 'check-report': 'scope-report.md', policy: 'strict' });
   assert.equal(scope.verdict, 'NEEDS_SCOPE_DECISION');
   assert.equal(scope.recommended_route, 'product');
+
+  await writeFile(dir, 'sheldon-report.md', reportMarkdown(machineReport({
+    verdict: 'NEEDS_SCOPE_DECISION',
+    findings: [
+      {
+        id: 'FIND-SHELDON',
+        kind: 'scope_constraint',
+        status: 'DOES_NOT_CONFIRM',
+        severity: 'blocking',
+        owner: 'sheldon',
+        evidence: 'Approved scope needs Sheldon enrichment decision.'
+      }
+    ],
+    blocking_findings_count: 1
+  })));
+  const sheldon = await run(dir, { 'check-report': 'sheldon-report.md', policy: 'strict' });
+  assert.equal(sheldon.verdict, 'NEEDS_SCOPE_DECISION');
+  assert.equal(sheldon.recommended_route, 'sheldon');
 
   await writeFile(dir, 'qa-report.md', reportMarkdown(machineReport({
     verdict: 'NEEDS_QA_RECHECK',

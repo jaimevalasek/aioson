@@ -25,6 +25,7 @@
 
 const path = require('node:path');
 const { readFileSafe, contextDir } = require('../preflight-engine');
+const { resolveInsideRoot } = require('../verification/path-policy');
 
 const BAR = '━'.repeat(30);
 
@@ -60,6 +61,7 @@ function extractInteractions(manifest) {
 async function runPrototypeCheck({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.feature ? String(options.feature) : null;
+  const strict = Boolean(options.strict || String(options.policy || '').toLowerCase() === 'strict');
   const dir = contextDir(targetDir);
 
   const prdFile = slug ? `prd-${slug}.md` : 'prd.md';
@@ -102,16 +104,24 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
 
   const checks = { prototype_exists: false, manifest_exists: false, requirements_exists: false };
 
-  const protoAbs = protoRel ? path.resolve(targetDir, protoRel) : null;
-  const protoContent = protoAbs ? await readFileSafe(protoAbs) : null;
+  const protoSafe = protoRel ? resolveInsideRoot(targetDir, protoRel) : { ok: false, reason: 'missing_path' };
+  if (!protoSafe.ok) {
+    return emit({ ok: false, status: 'fail', reason: protoSafe.reason, field: 'prototype', feature_slug: slug, checks,
+      message: `\`## Prototype reference\` prototype path is invalid: ${protoRel || '(unspecified)'}.` });
+  }
+  const protoContent = await readFileSafe(protoSafe.path);
   checks.prototype_exists = protoContent !== null;
   if (!checks.prototype_exists) {
     return emit({ ok: false, status: 'fail', reason: 'dangling_prototype', feature_slug: slug, checks,
       message: `\`## Prototype reference\` points to ${protoRel || '(unspecified)'}, but that file is missing.` });
   }
 
-  const manifestAbs = manifestRel ? path.resolve(targetDir, manifestRel) : null;
-  const manifest = manifestAbs ? await readFileSafe(manifestAbs) : null;
+  const manifestSafe = manifestRel ? resolveInsideRoot(targetDir, manifestRel) : { ok: false, reason: 'missing_path' };
+  if (!manifestSafe.ok) {
+    return emit({ ok: false, status: 'fail', reason: manifestSafe.reason, field: 'manifest', feature_slug: slug, checks,
+      message: `\`## Prototype reference\` manifest path is invalid: ${manifestRel || '(unspecified)'}.` });
+  }
+  const manifest = await readFileSafe(manifestSafe.path);
   checks.manifest_exists = manifest !== null;
   if (!checks.manifest_exists) {
     return emit({ ok: false, status: 'fail', reason: 'missing_manifest', feature_slug: slug, checks,
@@ -142,7 +152,7 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
   }
 
   if (uncovered.length > 0) {
-    return emit({ ok: true, status: 'warn', reason: 'partial_ac_coverage', feature_slug: slug, checks, interactions: interactionsResult,
+    return emit({ ok: !strict, status: strict ? 'fail' : 'warn', reason: 'partial_ac_coverage', feature_slug: slug, checks, interactions: interactionsResult,
       message: 'Some prototype Core interactions have no matching acceptance criterion. Add an AC per interaction (or defer it explicitly in the PRD).' });
   }
 

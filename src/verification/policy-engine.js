@@ -3,7 +3,8 @@
 const { normalizePolicy } = require('./result');
 
 function ownerRoute(owner) {
-  if (owner === 'product' || owner === 'sheldon' || owner === 'scope-check') return 'product';
+  if (owner === 'product' || owner === 'scope-check') return 'product';
+  if (owner === 'sheldon') return 'sheldon';
   if (owner === 'qa' || owner === 'tester') return 'qa';
   if (owner === 'pentester') return 'pentester';
   return owner || 'dev';

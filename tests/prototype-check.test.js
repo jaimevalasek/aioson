@@ -29,8 +29,8 @@ const SLUG = 'kanban';
 const PRD_WITH_REF = `# Kanban\n\n## Prototype reference\n- prototype: .aioson/briefings/${SLUG}/prototype.html\n- manifest: .aioson/briefings/${SLUG}/prototype-manifest.md\n- status: draft\n\n## MVP scope\nStuff.\n`;
 const MANIFEST = `# Prototype manifest\n\n## Core interactions\n- \`add card\` — adds a card to a list\n- \`create board\` — creates a board\n- \`archive workspace\` — archives a workspace\n`;
 
-async function run(dir) {
-  return runPrototypeCheck({ args: [dir], options: { json: true, feature: SLUG }, logger: makeLogger() });
+async function run(dir, options = {}) {
+  return runPrototypeCheck({ args: [dir], options: { json: true, feature: SLUG, ...options }, logger: makeLogger() });
 }
 
 test('prototype:check — skipped when no PRD', async () => {
@@ -70,6 +70,53 @@ test('prototype:check — fail on dangling prototype reference', async () => {
   assert.equal(r.ok, false);
   assert.equal(r.status, 'fail');
   assert.equal(r.reason, 'dangling_prototype');
+});
+
+test('prototype:check — rejects prototype path outside project root', async () => {
+  const dir = await makeTmpDir();
+  const outsidePrototype = path.join(os.tmpdir(), `aioson-outside-proto-${Date.now()}.html`);
+  await fs.writeFile(outsidePrototype, '<html></html>', 'utf8');
+  try {
+    await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, `# Kanban
+
+## Prototype reference
+- prototype: ${outsidePrototype}
+- manifest: .aioson/briefings/${SLUG}/prototype-manifest.md
+- status: draft
+`);
+    const r = await run(dir);
+    assert.equal(r.ok, false);
+    assert.equal(r.status, 'fail');
+    assert.equal(r.reason, 'path_outside_root');
+    assert.equal(r.field, 'prototype');
+  } finally {
+    await fs.rm(outsidePrototype, { force: true });
+  }
+});
+
+test('prototype:check — rejects manifest path outside project root without reading it', async () => {
+  const dir = await makeTmpDir();
+  const outsideManifest = path.join(os.tmpdir(), `aioson-outside-manifest-${Date.now()}.md`);
+  await fs.writeFile(outsideManifest, '# Manifest\n\n## Core interactions\n- `outside secret token` — should not be read\n', 'utf8');
+  try {
+    await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, `# Kanban
+
+## Prototype reference
+- prototype: .aioson/briefings/${SLUG}/prototype.html
+- manifest: ${outsideManifest}
+- status: draft
+`);
+    await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
+    await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`, '# Requirements\nAC-01: nothing.\n');
+    const r = await run(dir);
+    assert.equal(r.ok, false);
+    assert.equal(r.status, 'fail');
+    assert.equal(r.reason, 'path_outside_root');
+    assert.equal(r.field, 'manifest');
+    assert.doesNotMatch(JSON.stringify(r), /outside secret token/);
+  } finally {
+    await fs.rm(outsideManifest, { force: true });
+  }
 });
 
 test('prototype:check — fail when manifest missing', async () => {
@@ -115,6 +162,20 @@ test('prototype:check — warn on partial coverage and lists the gap', async () 
   const r = await run(dir);
   assert.equal(r.ok, true);
   assert.equal(r.status, 'warn');
+  assert.deepEqual(r.interactions.uncovered, ['archive workspace']);
+});
+
+test('prototype:check — strict fails on partial coverage', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
+  await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
+  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
+    '# Requirements\nAC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.\n');
+  const r = await run(dir, { strict: true });
+  assert.equal(r.ok, false);
+  assert.equal(r.status, 'fail');
+  assert.equal(r.reason, 'partial_ac_coverage');
   assert.deepEqual(r.interactions.uncovered, ['archive workspace']);
 });
 

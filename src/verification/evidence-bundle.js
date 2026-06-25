@@ -64,7 +64,7 @@ function evidencePathsFromLedger(ledger) {
   return [...new Set(paths)];
 }
 
-async function knownChecks(rootDir, slug, ledger) {
+async function knownChecks(rootDir, slug, ledger, policy = 'standard') {
   const checks = [];
   const addCheck = (candidate) => {
     if (!candidate || !candidate.command) return;
@@ -87,7 +87,8 @@ async function knownChecks(rootDir, slug, ledger) {
     addCheck({ command: 'node scripts/check-js.js', source: 'scripts/check-js.js', required: false });
   }
   if (await fileExists(rootDir, `.aioson/context/prd-${slug}.md`)) {
-    addCheck({ command: `aioson prototype:check . --feature=${slug}`, source: 'prototype_contract', required: false });
+    const strictFlag = policy === 'strict' ? ' --strict' : '';
+    addCheck({ command: `aioson prototype:check . --feature=${slug}${strictFlag}`, source: 'prototype_contract', required: false });
   }
   if (await fileExists(rootDir, `.aioson/plans/${slug}/harness-contract.json`)) {
     addCheck({ command: `aioson harness:check . --slug=${slug}`, source: 'harness_contract', required: false });
@@ -205,7 +206,7 @@ async function buildEvidenceBundle(rootDir, slug, ledger, sourceArtifacts, polic
     ? runGit(rootDir, ['log', '--oneline', '-n', '5', '--', ...touchedPaths])
     : { ok: true, output: '' };
 
-  const verificationCommands = redactJson(await knownChecks(rootDir, slug, ledger), redactionCounter);
+  const verificationCommands = redactJson(await knownChecks(rootDir, slug, ledger, policy), redactionCounter);
   const sanitizedLedgerClaims = redactJson(ledger && Array.isArray(ledger.claims) ? ledger.claims : [], redactionCounter);
   const sanitizedKnownGaps = redactJson(ledger && Array.isArray(ledger.known_gaps) ? ledger.known_gaps : [], redactionCounter);
   const summaries = await artifactSummaries(rootDir, sourceArtifacts || [], redactionCounter);

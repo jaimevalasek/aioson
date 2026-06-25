@@ -164,15 +164,18 @@ async function buildPromptForRunner({ rootDir, slug, policy, options }) {
   };
 }
 
-async function writeSystemRunnerReport({ rootDir, slug, policy, stem, runner, reason, summary }) {
+async function writeSystemRunnerReport({ rootDir, slug, policy, stem, runner, reason, summary, stderrPath = null }) {
   const command = runner && runner.command ? runner.command : 'auditor runner';
+  const evidence = stderrPath
+    ? `Runner stderr was stored separately at ${stderrPath}; raw stderr is intentionally omitted from the latest verification report.`
+    : summary;
   const markdown = systemInconclusiveReport({
     slug,
     policy,
     summary,
     command,
     status: reason,
-    evidence: runner && runner.stderr ? runner.stderr.slice(0, 1000) : summary
+    evidence
   });
   const runReport = await writeVerificationRunFile(rootDir, slug, stem, 'system-report.md', markdown);
   const latest = await promoteLatestReport(rootDir, slug, markdown);
@@ -287,7 +290,8 @@ async function runToolAudit({ rootDir, slug, policy, options, spawnImpl }) {
         stem,
         runner,
         reason,
-        summary: `Auditor runner did not complete successfully: ${runner.status}.`
+        summary: `Auditor runner did not complete successfully: ${runner.status}.`,
+        stderrPath: stderrFile ? stderrFile.relative_path : null
       }))
     };
   }
@@ -304,7 +308,8 @@ async function runToolAudit({ rootDir, slug, policy, options, spawnImpl }) {
         stem,
         runner,
         reason: 'invalid_runner_report',
-        summary: `Auditor output did not match the verification report contract: ${parsed.reason}.`
+        summary: `Auditor output did not match the verification report contract: ${parsed.reason}.`,
+        stderrPath: stderrFile ? stderrFile.relative_path : null
       }))
     };
   }
