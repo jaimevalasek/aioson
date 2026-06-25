@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.33.1] - 2026-06-24
+
+### Fixed
+- **Hardened adversarial verification gates.** `prototype:check` now rejects prototype and manifest references that resolve outside the project root before reading them, strict evidence bundles run prototype checks with `--strict`, partial prototype acceptance-criterion coverage can fail strict audits, Sheldon-owned scope findings route back to `@sheldon`, and failed external auditor stderr is kept in a separate artifact instead of being copied into the consolidated verification report.
+
 ## [1.33.0] - 2026-06-24
 
 ### Changed
