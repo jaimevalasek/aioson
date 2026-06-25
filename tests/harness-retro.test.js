@@ -64,6 +64,61 @@ function finding(over = {}) {
   };
 }
 
+function verificationReportFixture({ slug = 'feat', severity = 'blocking', status = 'DOES_NOT_CONFIRM' } = {}) {
+  const report = {
+    schema_version: 'verification-report/v1',
+    feature_slug: slug,
+    policy: 'strict',
+    verdict: severity === 'blocking' ? 'NEEDS_DEV_FIX' : 'NEEDS_QA_RECHECK',
+    summary: 'Implementation verification found a structured issue.',
+    commands_run: [
+      { command: 'npm test', status: 'passed', evidence: '3370 passed' }
+    ],
+    findings: [
+      {
+        id: 'FIND-001',
+        claim_id: 'CLAIM-001',
+        kind: severity === 'blocking' ? 'required_behavior' : 'test_coverage',
+        status,
+        severity,
+        owner: severity === 'blocking' ? 'dev' : 'qa',
+        file: 'src/cards.js',
+        line: 42,
+        evidence: 'DO NOT LEAK RAW AUDITOR OUTPUT OR SECRET=abc123',
+        recommended_route: severity === 'blocking' ? 'dev' : 'qa'
+      }
+    ],
+    recommended_route: severity === 'blocking' ? 'dev' : 'qa',
+    blocking_findings_count: severity === 'blocking' ? 1 : 0
+  };
+  return `# Verification Report - ${slug}
+
+## Verdict
+${report.verdict}
+
+## Commands Run
+npm test.
+
+## Findings
+See machine block.
+
+## Before And Now
+Before missing, now checked.
+
+## Residual Risk
+Structured report only.
+
+## Recommended Route
+${report.recommended_route}
+
+## Machine Report
+
+\`\`\`json
+${JSON.stringify(report, null, 2)}
+\`\`\`
+`;
+}
+
 // --- AC-2: fontes vazias -----------------------------------------------------
 
 test('AC-2: feature sem trilha → contagens 0, sem findings, dossiê com 4 seções', async () => {
@@ -138,6 +193,72 @@ test('finding-ID igual em features diferentes nunca agrupa (edge 5)', () => {
   const { candidates, observations } = aggregate(sources);
   assert.equal(candidates.length, 0, 'chaves distintas por slug → cada uma 1 ocorrência');
   assert.equal(observations.length, 2);
+});
+
+test('verification reports: blocking finding feeds retro candidates without exposing raw auditor output', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-retro-verification-'));
+  writeFile(root, '.aioson/context/features/feat/verification-runs/20260624T010203Z-manual-report.md',
+    verificationReportFixture({ slug: 'feat', severity: 'blocking' }));
+  writeFile(root, '.aioson/context/features/feat/verification-runs/20260624T010203Z-opencode-raw.md',
+    'RAW AUDITOR OUTPUT FIND-RAW SECRET=abc123');
+  writeFile(root, '.aioson/context/features/feat/verification-runs/20260624T010203Z-prompt.md',
+    'Clean auditor prompt that should not be mined as a report.');
+
+  const sources = collectSources(root, ['feat']);
+  assert.equal(sources.counts.verification_reports, 1);
+  assert.equal(sources.findings.length, 1);
+  assert.equal(sources.findings[0].source_type, 'verification_report');
+  assert.equal(sources.findings[0].severity, 'high');
+  assert.equal(sources.findings[0].file_ref, 'src/cards.js:42');
+  assert.ok(sources.minedPaths.some((p) => p.endsWith('20260624T010203Z-manual-report.md')));
+  assert.ok(!sources.minedPaths.some((p) => p.endsWith('-raw.md')));
+  assert.ok(!sources.minedPaths.some((p) => p.endsWith('-prompt.md')));
+
+  const { candidates, observations } = aggregate(sources);
+  assert.equal(candidates.length, 1);
+  assert.equal(observations.length, 0);
+  assert.equal(candidates[0].key, 'feat::FIND-001');
+  assert.ok(candidates[0].reasons.includes('severity'));
+
+  const md = renderDossier({
+    mode: 'feature', slug: 'feat', featuresMined: ['feat'], counts: sources.counts,
+    candidates, observations, minedPaths: sources.minedPaths, warnings: sources.warnings,
+    dossierRelPath: '.aioson/context/retro/feat.md', generatedAt: '2026-06-24T00:00:00.000Z'
+  });
+  assert.match(md, /verification_reports: 1/);
+  assert.match(md, /20260624T010203Z-manual-report\.md/);
+  assert.doesNotMatch(md, /RAW AUDITOR OUTPUT/);
+  assert.doesNotMatch(md, /SECRET=abc123/);
+  assert.doesNotMatch(md, /DO NOT LEAK RAW AUDITOR OUTPUT/);
+});
+
+test('verification reports: single warning finding remains an observation', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-retro-verification-warning-'));
+  writeFile(root, '.aioson/context/features/feat/verification-report.md',
+    verificationReportFixture({ slug: 'feat', severity: 'warning', status: 'NOT_VERIFIED' }));
+
+  const sources = collectSources(root, ['feat']);
+  assert.equal(sources.counts.verification_reports, 1);
+  assert.equal(sources.findings[0].severity, 'medium');
+
+  const { candidates, observations } = aggregate(sources);
+  assert.equal(candidates.length, 0);
+  assert.equal(observations.length, 1);
+  assert.equal(observations[0].key, 'feat::FIND-001');
+});
+
+test('verification reports: confirming findings are not retro failure signals', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aioson-retro-verification-confirm-'));
+  writeFile(root, '.aioson/context/features/feat/verification-report.md',
+    verificationReportFixture({ slug: 'feat', severity: 'info', status: 'CONFIRMS' }));
+
+  const sources = collectSources(root, ['feat']);
+  assert.equal(sources.counts.verification_reports, 1);
+  assert.equal(sources.findings.length, 0);
+
+  const { candidates, observations } = aggregate(sources);
+  assert.equal(candidates.length, 0);
+  assert.equal(observations.length, 0);
 });
 
 // --- ≥2 ciclos FAIL→PASS → candidato sintético (critério c) ------------------

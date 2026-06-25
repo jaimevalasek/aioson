@@ -16,6 +16,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { readVerificationReports } = require('./verification-reports');
 
 const FINDING_ID_RE = /\b([A-Z]{1,2}-\d{1,2})\b/;
 const TRAIL_ENTRY_RE = /^\*\*([^*]+)\*\*\s*\|\s*@?([\w.-]+)\s*\|\s*_([^_]+)_\s*$/;
@@ -450,6 +451,11 @@ function resolveLocations(targetDir, ctxDir, slug) {
     path.join(doneRoot, 'features', slug, 'dossier.md'),
     path.join(doneRoot, 'dossier.md')
   ];
+  const featureDirs = [
+    path.join(ctxDir, 'features', slug),
+    path.join(doneRoot, 'features', slug),
+    doneRoot
+  ].filter(dirExists);
   // SF-02: lstat (não statSync) para NÃO seguir symlink — consistente com os
   // demais readers, que pulam symlinks via Dirent.isFile(). Um dossier.md que
   // seja um symlink apontando para fora do workspace é ignorado, não seguido.
@@ -457,7 +463,7 @@ function resolveLocations(targetDir, ctxDir, slug) {
     try { return fs.lstatSync(p).isFile(); } catch { return false; }
   });
 
-  return { qaDirs, planDirs, dossierFiles, doneRoot };
+  return { qaDirs, planDirs, dossierFiles, doneRoot, featureDirs };
 }
 
 /**
@@ -481,8 +487,9 @@ function collectFeatureSources(targetDir, slug) {
   const attempts = readAttempts({ rootDir, slug, locations });
   const sigs = readFailureSignatures({ rootDir, slug, locations });
   const devlogs = readDevlogs({ rootDir, targetDir, slug });
+  const verification = readVerificationReports({ rootDir, slug, locations, makeFinding, relPath });
 
-  for (const r of [qa, corr, trail, events, attempts, sigs, devlogs]) {
+  for (const r of [qa, corr, trail, events, attempts, sigs, devlogs, verification]) {
     findings.push(...r.findings);
     warnings.push(...r.warnings);
   }
@@ -495,7 +502,8 @@ function collectFeatureSources(targetDir, slug) {
     execution_events: events.count,
     attempts: attempts.count,
     failure_signatures: sigs.count,
-    devlogs: devlogs.count
+    devlogs: devlogs.count,
+    verification_reports: verification.count
   };
 
   const cost = {
@@ -511,6 +519,7 @@ function collectFeatureSources(targetDir, slug) {
   for (const d of locations.qaDirs) minedPaths.push(relPath(rootDir, d));
   for (const d of locations.planDirs) minedPaths.push(relPath(rootDir, d));
   for (const f of locations.dossierFiles) minedPaths.push(relPath(rootDir, f));
+  for (const f of verification.files) minedPaths.push(relPath(rootDir, f));
   minedPaths.sort();
 
   return { slug, findings, cycles, counts, cost, minedPaths, warnings };
@@ -526,7 +535,16 @@ function collectSources(targetDir, slugs) {
   const cycles = [];
   const warnings = [];
   const minedPaths = [];
-  const counts = { qa_reports: 0, corrections: 0, dossier_trail: 0, execution_events: 0, attempts: 0, failure_signatures: 0, devlogs: 0 };
+  const counts = {
+    qa_reports: 0,
+    verification_reports: 0,
+    corrections: 0,
+    dossier_trail: 0,
+    execution_events: 0,
+    attempts: 0,
+    failure_signatures: 0,
+    devlogs: 0
+  };
   const cost = { execution_events: 0, corrections: 0, fail_pass_cycles: 0, corrections_bytes: 0, token_count_available: false, token_total: null };
   const costByFeature = {};
 

@@ -1,0 +1,35 @@
+{
+  "schema_version": "implementation-ledger/v1",
+  "feature_slug": "kanban",
+  "source_artifacts": [
+    {
+      "type": "prd",
+      "path": ".aioson/context/prd-kanban.md",
+      "role": "product_authority"
+    }
+  ],
+  "claims": [
+    {
+      "id": "CLAIM-001",
+      "kind": "required_behavior",
+      "summary": "Add card persists and re-renders in the active list.",
+      "owner": "developer",
+      "status": "implemented",
+      "evidence": [
+        {
+          "type": "file",
+          "path": "src/cards.js",
+          "lines": "1-20"
+        }
+      ]
+    }
+  ],
+  "known_gaps": [],
+  "verification_commands": [
+    {
+      "command": "npm test",
+      "required": true,
+      "last_status": "passed"
+    }
+  ]
+}

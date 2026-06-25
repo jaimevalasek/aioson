@@ -9,7 +9,16 @@
  * fixo (pt-BR, conforme §3.1); `--locale` afeta só as mensagens de stdout.
  */
 
-const SOURCE_ORDER = ['qa_reports', 'corrections', 'dossier_trail', 'execution_events', 'attempts', 'failure_signatures', 'devlogs'];
+const SOURCE_ORDER = [
+  'qa_reports',
+  'verification_reports',
+  'corrections',
+  'dossier_trail',
+  'execution_events',
+  'attempts',
+  'failure_signatures',
+  'devlogs'
+];
 
 // Defesa em profundidade (SF-01): o dossiê vira contexto do @sheldon. Texto livre
 // minerado (títulos) é apresentado como DADO inline, nunca como estrutura Markdown

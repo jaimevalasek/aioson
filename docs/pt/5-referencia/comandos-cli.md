@@ -1877,7 +1877,7 @@ aioson harness:retro . --last=5
 aioson harness:retro . --feature=checkout --json
 ```
 
-Saída em `.aioson/context/retro/checkout.md`. Fontes mineradas: QA reports, planos de correção, trilha FAIL→PASS do dossier, eventos de execução, tentativas, assinaturas de falha e devlogs. Operação de leitura — arquivos-fonte nunca são alterados.
+Saída em `.aioson/context/retro/checkout.md`. Fontes mineradas: QA reports, reports de verificação de implementação (apenas findings não confirmatórios do `Machine Report`), planos de correção, trilha FAIL→PASS do dossier, eventos de execução, tentativas, assinaturas de falha e devlogs. Raw auditor output, stderr, prompts e texto de evidence não são minerados. Operação de leitura — arquivos-fonte nunca são alterados.
 
 ```bash
 # Exibir prévia de um artefato com truncação segura

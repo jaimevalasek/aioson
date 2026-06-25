@@ -116,24 +116,36 @@ const COMPLEXITY_SOME_PATTERNS = [
   /\b(notification|trigger|event)\b/gi
 ];
 
+// Fold diacritics so the surface detectors match a localized PRD the same way in
+// any supported language: "cartões"->"cartoes", "gestão"->"gestao",
+// "autenticação"->"autenticacao". Patterns below stay ASCII and run against the
+// folded text, so EN and pt-BR phrasings of the same surface are detected
+// identically. The detector recognizes the surface from the words present in the
+// text — it does NOT depend on the configured interaction_language.
+function foldDiacritics(content) {
+  return String(content || '').normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
 // Sensitive-surface floor (Gap 3B): a feature touching any of these surfaces is
 // never MICRO. Mirrors the secure-tdd sensitive list in @dev. The floor can only
 // RAISE the tier (MICRO -> SMALL); it never lowers it. Keep patterns tight — a
-// false positive needlessly costs the SMALL chain. Tune as the project learns.
+// false positive needlessly costs the SMALL chain. Patterns are bilingual
+// (EN + pt-BR) and matched against diacritic-folded text. Tune as the project learns.
 const SENSITIVE_SURFACE_PATTERNS = [
-  { surface: 'money', re: /\b(money|stripe|paypal|braintree|square|payments?|payouts?|refunds?|subscriptions?|billing|invoices?|credit card)\b/i },
-  { surface: 'auth', re: /\b(oauth|jwt|saml|sso|auth0|firebase auth|log[- ]?in|sign[- ]?in|sign[- ]?up|passwords?|authenticat\w*|2fa|mfa)\b/i },
-  { surface: 'authz', re: /\b(authoriz\w*|access control|role[- ]based|rbac|ownership|owner[- ]only|only the owner)\b/i },
-  { surface: 'uploads', re: /\b(file uploads?|uploads?|attachments?)\b/i },
-  { surface: 'external_url', re: /\b(webhooks?|callback urls?|ssrf|user[- ]?supplied urls?)\b/i },
-  { surface: 'secrets', re: /\b(secrets?|api keys?|credentials?|private key|access tokens?)\b/i },
-  { surface: 'sensitive_storage', re: /\b(pii|personal data|ssn|sensitive (data|storage|information))\b/i }
+  { surface: 'money', re: /\b(money|stripe|paypal|braintree|square|payments?|payouts?|refunds?|subscriptions?|billing|invoices?|credit card|pagamentos?|pagar|cobran[cç]as?|faturas?|assinaturas?|reembolsos?|cartao de credito|boleto|pix)\b/i },
+  { surface: 'auth', re: /\b(oauth|jwt|saml|sso|auth0|firebase auth|log[- ]?in|sign[- ]?in|sign[- ]?up|passwords?|authenticat\w*|2fa|mfa|autentica\w*|senhas?|cadastr(o|os|ar))\b/i },
+  { surface: 'authz', re: /\b(authoriz\w*|access control|role[- ]based|rbac|ownership|owner[- ]only|only the owner|autoriza(cao|r)|controle de acesso|apenas o dono|somente o dono)\b/i },
+  { surface: 'uploads', re: /\b(file uploads?|uploads?|attachments?|anexos?|envio de arquivos?|upload de arquivos?)\b/i },
+  { surface: 'external_url', re: /\b(webhooks?|callback urls?|ssrf|user[- ]?supplied urls?|url de retorno|urls? fornecidas?)\b/i },
+  { surface: 'secrets', re: /\b(secrets?|api keys?|credentials?|private key|access tokens?|segredos?|chaves? de api|credenciais|chave privada|tokens? de acesso)\b/i },
+  { surface: 'sensitive_storage', re: /\b(pii|personal data|ssn|sensitive (data|storage|information)|dados (pessoais|sensiveis)|cpf|informac\w* sensivel)\b/i }
 ];
 
 function detectSensitiveSurfaces(content) {
+  const c = foldDiacritics(content);
   const found = [];
   for (const { surface, re } of SENSITIVE_SURFACE_PATTERNS) {
-    if (re.test(content)) found.push(surface);
+    if (re.test(c)) found.push(surface);
   }
   return found;
 }
@@ -141,19 +153,24 @@ function detectSensitiveSurfaces(content) {
 // Operational-surface floor: a rich operational surface (workspaces, boards +
 // cards, Kanban/CRM pipelines, explicit CRUD/admin management) is never MICRO —
 // it needs management screens, so it must get at least the SMALL chain so
-// @analyst/@architect/the prototype are not skipped. Patterns are kept tight to
-// avoid flooring genuinely simple features. Bare "dashboard" is intentionally
-// NOT a signal (too common); only admin/management dashboards count.
+// @analyst/@architect/the prototype are not skipped. Patterns are bilingual
+// (EN + pt-BR), matched against diacritic-folded text, and kept tight to avoid
+// flooring genuinely simple features. Bare "dashboard"/"quadro" is intentionally
+// NOT a signal (too common); only admin/management surfaces and board+card pairs count.
 function detectRichSurfaces(content) {
-  const c = String(content || '');
+  const c = foldDiacritics(content);
   const found = [];
-  if (/\b(kanban|trello|scrum board|task board)\b/i.test(c)) found.push('kanban');
-  if (/\bworkspaces?\b/i.test(c)) found.push('workspace');
-  if (/\bboards?\b/i.test(c) && /\bcards?\b/i.test(c)) found.push('board_cards');
-  if (/\b(crm|sales pipeline|deals? pipeline|leads? pipeline)\b/i.test(c)) found.push('crm_pipeline');
+  if (/\b(kanban|trello|scrum board|task board|quadro kanban|quadro de tarefas)\b/i.test(c)) found.push('kanban');
+  if (/\bworkspaces?\b/i.test(c) || /\bespacos? de trabalho\b/i.test(c)) found.push('workspace');
+  if ((/\bboards?\b/i.test(c) && /\bcards?\b/i.test(c))
+    || (/\bquadros?\b/i.test(c) && /\bcart(ao|oes)\b/i.test(c))) found.push('board_cards');
+  if (/\b(crm|sales pipeline|deals? pipeline|leads? pipeline|funil de vendas|pipeline de (vendas|negocios|leads))\b/i.test(c)) found.push('crm_pipeline');
   if (/\bcrud\b/i.test(c)
     || /\badmin (panel|dashboard|area|console)\b/i.test(c)
-    || /\bmanagement (screen|page|panel|dashboard|interface|surface)\b/i.test(c)) found.push('crud_admin');
+    || /\bmanagement (screen|page|panel|dashboard|interface|surface)\b/i.test(c)
+    || /\barea administrativa\b/i.test(c)
+    || /\bpainel (de )?admin(istracao)?\b/i.test(c)
+    || /\b(painel|tela|pagina|area|console) de (administracao|gestao|gerenciamento)\b/i.test(c)) found.push('crud_admin');
   return [...new Set(found)];
 }
 
@@ -318,6 +335,12 @@ async function runClassify({ args, options = {}, logger }) {
 
   const phaseDepth = classificationToPhaseDepth(classification);
 
+  // A rich operational surface is exactly the case a clickable prototype is meant
+  // to de-risk (management screens + interactions before the PRD). Emit the
+  // recommendation from the deterministic tool so it does not rely on agent prose
+  // alone — @product/@briefing-refiner key off this flag.
+  const recommendPrototype = operationalSurfaces.length > 0;
+
   const result = {
     ok: true,
     feature_slug: slug,
@@ -328,6 +351,7 @@ async function runClassify({ args, options = {}, logger }) {
     sensitive_surfaces: sensitiveSurfaces,
     operational_surfaces: operationalSurfaces,
     floored,
+    recommend_prototype: recommendPrototype,
     phase_depth: phaseDepth
   };
 
@@ -348,6 +372,9 @@ async function runClassify({ args, options = {}, logger }) {
   }
   if (operationalSurfaces.length > 0) {
     logger.log(`Operational surfaces: ${operationalSurfaces.join(', ')}${floored ? ' → floored to at least SMALL' : ''}`);
+  }
+  if (recommendPrototype) {
+    logger.log('Recommendation: generate a clickable prototype in @briefing-refiner before @product (surfaces management screens + interactions early).');
   }
   logger.log('');
   logger.log('Phase depth:');

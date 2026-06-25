@@ -503,10 +503,13 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
     [skill, 'Never use native `alert()`'],
     [skill, 'account/user menu'],
     [skill, 'prototype-manifest.md'],
+    [skill, '## Core interactions'],
+    [skill, 'aioson prototype:check'],
     [refiner, '### Generate prototype (optional visual refinement)'],
     [refiner, '.aioson/skills/process/prototype-forge/SKILL.md'],
     [refiner, '.aioson/briefings/{slug}/prototype.html'],
-    [refiner, 'Rich-surface recommendation']
+    [refiner, 'Rich-surface recommendation'],
+    [refiner, 'recommend_prototype: true']
   ];
 
   for (const [content, token] of checks) {
@@ -530,8 +533,11 @@ test('prototype contract propagates the prototype across the agent chain', async
     [contract, '## Prototype reference'],
     [contract, 'does **not** read the prototype directly'],
     [contract, 'locked-at'],
+    [contract, 'aioson prototype:check'],
+    [analyst, 'aioson prototype:check'],
     [product, '## Prototype reference'],
     [product, '.aioson/docs/prototype-contract.md'],
+    [product, 'recommend_prototype: true'],
     [dev, '.aioson/briefings/{slug}/prototype.html'],
     [dev, '.aioson/docs/prototype-contract.md'],
     [ux, '.aioson/docs/prototype-contract.md'],
@@ -784,6 +790,35 @@ test('simple plan lane requires implementation intelligence before coding', asyn
 
   for (const [content, token] of checks) {
     assert.equal(content.includes(token), true, `missing simple-plan intelligence token: ${token}`);
+  }
+});
+
+test('implementation verification loop is wired into dev, deyvin, scope-check, and qa prompts', async () => {
+  const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
+  const deyvin = await read(path.join(ROOT, 'template/.aioson/agents/deyvin.md'));
+  const scopeCheck = await read(path.join(ROOT, 'template/.aioson/agents/scope-check.md'));
+  const qa = await read(path.join(ROOT, 'template/.aioson/agents/qa.md'));
+
+  const checks = [
+    [dev, '## Implementation verification ledger'],
+    [dev, 'aioson verify:implementation . --feature={slug} --prepare-ledger --json'],
+    [dev, 'ready_for_prompt:false'],
+    [dev, 'NEEDS_DEV_FIX` blocks dev handoff'],
+    [dev, 'External auditors are opt-in only'],
+    [deyvin, '.aioson/context/features/{slug}/implementation-ledger.md'],
+    [deyvin, 'aioson verify:implementation --prepare-ledger/--check-ledger'],
+    [scopeCheck, '## Implementation verification reports'],
+    [scopeCheck, 'Implementation verification briefing'],
+    [scopeCheck, 'Do not run `--tool` from `@scope-check`'],
+    [scopeCheck, 'verification-runs/*-report.md'],
+    [scopeCheck, 'NEEDS_SCOPE_DECISION`: route to `@product` or `@sheldon`'],
+    [qa, '## Implementation verification evidence'],
+    [qa, 'aioson verify:implementation . --feature={slug} --check-report=<path> --policy=strict --json'],
+    [qa, 'Absence of a report is not itself a failure']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing implementation verification token: ${token}`);
   }
 });
 

@@ -55,11 +55,12 @@ Usado principalmente na interface de feedback do `self:loop` quando um critério
 
 ## Fontes mineradas
 
-O `harness:retro` lê sete fontes por feature:
+O `harness:retro` lê oito fontes por feature:
 
 | Fonte | O que captura |
 |---|---|
 | Relatórios QA | Falhas e severidades de `@qa` |
+| Reports de verificação de implementação | Findings não confirmatórios do `Machine Report` (`DOES_NOT_CONFIRM`, `PARTIAL`, `NOT_VERIFIED`); não minera raw output, stderr, prompts nem texto de evidence |
 | Planos de correção | Correções aplicadas por ciclo |
 | Trilha do dossier | Ciclos FAIL→PASS do Agent Trail |
 | `execution_events` | Eventos de telemetria do loop |

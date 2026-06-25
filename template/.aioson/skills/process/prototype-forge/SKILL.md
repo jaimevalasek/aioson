@@ -75,9 +75,10 @@ Write to `.aioson/briefings/{slug}/`:
 
 - `prototype.html` — the clickable app-shell.
 - `prototype-manifest.md` — the screen inventory (one row per Core object: screens + management
-  surface), the Core interactions demonstrated (e.g. "add card", "create board", "archive workspace"),
-  the `design_skill` used, an explicit "mock only — refresh resets, no backend" note, and lock status
-  (`draft` / `locked-at: {ref}`).
+  surface); a `## Core interactions` section listing every demonstrated interaction as a backtick token,
+  one per line (e.g. `` - `add card` — adds a card to a list ``), so `aioson prototype:check` can verify each
+  one is later echoed by an acceptance criterion; the `design_skill` used, an explicit
+  "mock only — refresh resets, no backend" note, and lock status (`draft` / `locked-at: {ref}`).
 
 ## Completeness gate (before handing back)
 

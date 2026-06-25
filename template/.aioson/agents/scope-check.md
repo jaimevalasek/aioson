@@ -73,6 +73,20 @@ Find the highest-authority source for each claim:
 
 If the answer is in the code or diff, inspect it instead of asking.
 
+## Implementation verification reports
+
+In `post-dev`, `post-fix`, or `final` mode, treat `.aioson/context/features/{slug}/implementation-ledger.md` and verification reports as delivery evidence, not as proof. If `.aioson/context/features/{slug}/verification-report.md` or a relevant `verification-runs/*-report.md` exists, run `aioson verify:implementation . --feature={slug} --check-report=<path> --policy=strict --json` before issuing your verdict.
+
+When `workflow:next` injects an `Implementation verification briefing`, consume its policy verdict and route as the already-validated machine surface for the latest local report. Do not run `--tool` from `@scope-check`; external runner execution remains opt-in and belongs to explicit dev/operator authorization. A briefing `PASS` still requires normal diff and scope comparison before approval.
+
+- `PASS`: continue your normal scope comparison; a PASS does not replace diff review.
+- `NEEDS_DEV_FIX`: route to `@dev` with the finding `file:line`.
+- `NEEDS_SCOPE_DECISION`: route to `@product` or `@sheldon`; do not patch scope locally.
+- `NEEDS_QA_RECHECK`: route to `@qa`.
+- `INCONCLUSIVE`: name the missing evidence and block only if the implementation relied on that report or the trigger policy made verification strict.
+
+If the ledger exists but no report exists and the dev handoff claims high-risk/rich-surface completion, request a prompt/report package from `@dev` instead of approving by summary.
+
 ## Review Loop
 
 ### 1. Name the scope

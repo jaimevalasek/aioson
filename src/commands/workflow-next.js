@@ -23,6 +23,15 @@ const { runSecurityAudit } = require('./security-audit');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
+const { parseVerificationReport } = require('../verification/report-parser');
+const { applyPolicy } = require('../verification/policy-engine');
+const { normalizePolicy } = require('../verification/result');
+const {
+  validateFeatureSlug,
+  featureContextDir,
+  verificationRunsDir,
+  relativeFromRoot
+} = require('../verification/path-policy');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
@@ -112,6 +121,18 @@ function getScopeCheckModeOption(options = {}) {
     options['check-mode'] ||
     options.mode
   );
+}
+
+function resolveVerificationPolicy(options = {}, state = {}) {
+  const explicit = options.verificationPolicy ||
+    options['verification-policy'] ||
+    options.verification_policy ||
+    options.policy;
+  if (explicit) return normalizePolicy(explicit) || 'standard';
+  // No explicit policy: MEDIUM features default to strict so the auto-injected
+  // scope-check verification briefing matches the strict `--check-report` the
+  // @dev / @scope-check prompts run. Smaller tiers stay advisory (standard).
+  return String(state.classification || '').toUpperCase() === 'MEDIUM' ? 'strict' : 'standard';
 }
 
 function chooseActiveFeature(features, preferredSlug = null) {
@@ -1032,6 +1053,8 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
       'readiness.md',
       'ui-spec.md',
       slug ? `implementation-plan-${slug}.md` : 'implementation-plan.md',
+      slug ? `features/${slug}/implementation-ledger.md` : null,
+      slug ? `features/${slug}/verification-report.md` : null,
       'dev-state.md',
       'last-handoff.json',
       'project-pulse.md'
@@ -1139,6 +1162,146 @@ function buildScopeCheckActivationContext(state, mode) {
   return lines.join('\n');
 }
 
+function routeLabel(route) {
+  return route ? `@${normalizeAgentName(route)}` : '@qa';
+}
+
+function workflowGuidanceForVerification(verdict, route, normalReturnTo) {
+  if (verdict === 'PASS') {
+    return `PASS: keep normal workflow ownership (${routeLabel(normalReturnTo || route)}), then continue diff/scope review.`;
+  }
+  if (verdict === 'NEEDS_DEV_FIX') {
+    return 'NEEDS_DEV_FIX: do not approve clean post-dev scope; route concrete file:line findings to @dev.';
+  }
+  if (verdict === 'NEEDS_SCOPE_DECISION') {
+    return `NEEDS_SCOPE_DECISION: route to ${routeLabel(route)}; do not patch product scope locally.`;
+  }
+  if (verdict === 'NEEDS_QA_RECHECK') {
+    return 'NEEDS_QA_RECHECK: route to @qa after scope alignment is clear.';
+  }
+  if (verdict === 'NEEDS_SECURITY_REVIEW') {
+    return 'NEEDS_SECURITY_REVIEW: preserve the security review owner and route to @pentester.';
+  }
+  return `INCONCLUSIVE: route to the owner of missing evidence (${routeLabel(route)}) when strict verification applies.`;
+}
+
+async function findImplementationVerificationReport(targetDir, slug) {
+  const slugResult = validateFeatureSlug(slug);
+  if (!slugResult.ok) return null;
+
+  const latestPath = path.join(featureContextDir(targetDir, slug), 'verification-report.md');
+  if (await exists(latestPath)) {
+    return {
+      absolutePath: latestPath,
+      relativePath: relativeFromRoot(targetDir, latestPath),
+      source: 'latest'
+    };
+  }
+
+  const runsDir = verificationRunsDir(targetDir, slug);
+  let entries = [];
+  try {
+    entries = await fs.readdir(runsDir);
+  } catch {
+    return null;
+  }
+  const reportName = entries
+    .filter((entry) => /-report\.md$/i.test(entry))
+    .sort()
+    .pop();
+  if (!reportName) return null;
+
+  const reportPath = path.join(runsDir, reportName);
+  return {
+    absolutePath: reportPath,
+    relativePath: relativeFromRoot(targetDir, reportPath),
+    source: 'verification-runs'
+  };
+}
+
+async function buildImplementationVerificationBriefing(targetDir, state, scopeCheckMode, policy) {
+  const mode = inferScopeCheckMode(state, scopeCheckMode);
+  if (
+    state.mode !== 'feature' ||
+    !state.featureSlug ||
+    !['post-dev', 'post-fix', 'final'].includes(mode)
+  ) {
+    return null;
+  }
+
+  const slug = state.featureSlug;
+  const latestPath = `.aioson/context/features/${slug}/verification-report.md`;
+  const reportRef = await findImplementationVerificationReport(targetDir, slug);
+  const lines = [
+    '## Implementation verification briefing',
+    `Policy: ${policy}`,
+    `Expected latest report: ${latestPath}`,
+    'Workflow note: this briefing only validates local report artifacts; it never runs `--tool` or any external auditor.'
+  ];
+
+  if (!reportRef) {
+    lines.push('Report status: missing');
+    if (state.classification === 'MICRO') {
+      lines.push('MICRO: missing report is not a workflow blocker by default; record residual risk only when the dev handoff relied on verification.');
+    } else if (state.classification === 'MEDIUM' && policy === 'strict') {
+      lines.push('Strict MEDIUM guidance: do not issue final clean scope approval until @dev produces a valid report or documents an explicit N/A rationale.');
+    } else {
+      lines.push('Guidance: absence is advisory unless the feature policy or dev handoff made verification strict.');
+    }
+    return {
+      status: 'missing',
+      mode,
+      policy,
+      report_path: null,
+      verdict: 'INCONCLUSIVE',
+      recommended_route: state.classification === 'MICRO' ? state.next || 'qa' : 'dev',
+      briefing: lines.join('\n')
+    };
+  }
+
+  lines.push(`Report path: ${reportRef.relativePath}`);
+  lines.push(`Validate command: aioson verify:implementation . --feature=${slug} --check-report=${reportRef.relativePath} --policy=${policy} --json`);
+
+  const parsed = await parseVerificationReport(targetDir, slug, reportRef.relativePath, policy);
+  if (!parsed.ok) {
+    lines.push(`Report status: invalid (${parsed.reason})`);
+    lines.push('Guidance: treat this as INCONCLUSIVE local evidence; do not treat auditor prose as PASS.');
+    return {
+      status: 'invalid',
+      mode,
+      policy,
+      report_path: reportRef.relativePath,
+      verdict: 'INCONCLUSIVE',
+      recommended_route: 'qa',
+      reason: parsed.reason,
+      briefing: lines.join('\n')
+    };
+  }
+
+  const policyResult = applyPolicy(parsed.report, policy);
+  lines.push('Report status: schema-valid');
+  lines.push(`Report verdict: ${parsed.report.verdict}`);
+  lines.push(`Policy verdict: ${policyResult.verdict}`);
+  lines.push(`Policy route: ${routeLabel(policyResult.recommended_route)}`);
+  lines.push(`Blocking findings: ${policyResult.blocking_findings_count || 0}`);
+  lines.push(`Guidance: ${workflowGuidanceForVerification(policyResult.verdict, policyResult.recommended_route, state.next)}`);
+  lines.push('Scope-check still must inspect the diff and approved plan; a PASS report is not final approval.');
+
+  return {
+    status: 'valid',
+    mode,
+    policy,
+    report_path: reportRef.relativePath,
+    report_source: reportRef.source,
+    verdict: policyResult.verdict,
+    auditor_verdict: parsed.report.verdict,
+    recommended_route: policyResult.recommended_route,
+    blocking_findings_count: policyResult.blocking_findings_count || 0,
+    reason: policyResult.reason,
+    briefing: lines.join('\n')
+  };
+}
+
 function buildStageActivationContext(state, stageName, dependencies, scopeCheckMode = null) {
   if (stageName === 'scope-check') {
     return buildScopeCheckActivationContext(state, scopeCheckMode);
@@ -1155,7 +1318,16 @@ function buildStageActivationContext(state, stageName, dependencies, scopeCheckM
   ].join('\n');
 }
 
-async function activateStage(targetDir, state, locale, tool, explicitAgent = null, requestedMode = null, scopeCheckMode = null) {
+async function activateStage(
+  targetDir,
+  state,
+  locale,
+  tool,
+  explicitAgent = null,
+  requestedMode = null,
+  scopeCheckMode = null,
+  verificationPolicy = 'standard'
+) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
   if (!stageName) {
     return {
@@ -1270,6 +1442,13 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
 
   const instructionPath = await resolveExistingInstructionPath(targetDir, agent, locale);
   const dependencies = await resolveStageDependencies(targetDir, state, stageName, agent);
+  const verificationBriefing = stageName === 'scope-check'
+    ? await buildImplementationVerificationBriefing(targetDir, state, scopeCheckMode, verificationPolicy)
+    : null;
+  const activationContext = [
+    buildStageActivationContext(state, stageName, dependencies, scopeCheckMode),
+    verificationBriefing && verificationBriefing.briefing
+  ].filter(Boolean).join('\n\n');
   let prompt = buildAgentPrompt(agent, tool, {
     instructionPath,
     targetDir,
@@ -1278,7 +1457,7 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
     capabilitySummary: buildAgentCapabilitySummary(agentManifest, tool),
     dependsOn: dependencies,
     autoHandoff,
-    activationContext: buildStageActivationContext(state, stageName, dependencies, scopeCheckMode)
+    activationContext
   });
 
   if (testBriefing) {
@@ -1316,7 +1495,20 @@ async function activateStage(targetDir, state, locale, tool, explicitAgent = nul
     agent: stageName,
     instructionPath,
     prompt,
-    effectiveMode
+    effectiveMode,
+    verification: verificationBriefing
+      ? {
+          status: verificationBriefing.status,
+          mode: verificationBriefing.mode,
+          policy: verificationBriefing.policy,
+          report_path: verificationBriefing.report_path,
+          verdict: verificationBriefing.verdict,
+          auditor_verdict: verificationBriefing.auditor_verdict || null,
+          recommended_route: verificationBriefing.recommended_route,
+          blocking_findings_count: verificationBriefing.blocking_findings_count || 0,
+          reason: verificationBriefing.reason || null
+        }
+      : null
   };
 }
 
@@ -1425,7 +1617,16 @@ async function runWorkflowNext({ args, options, logger, t }) {
         if (retryCount < require('../self-healing').MAX_RETRIES) {
           await require('../self-healing').incrementRetryCount(targetDir, failedStage, err.message.substring(0, 200));
           // Build healing activation
-          const baseActivation = await activateStage(targetDir, state, locale, tool, failedStage, options.mode || null);
+          const baseActivation = await activateStage(
+            targetDir,
+            state,
+            locale,
+            tool,
+            failedStage,
+            options.mode || null,
+            null,
+            resolveVerificationPolicy(options, state)
+          );
           const healingPrompt = buildHealingPrompt(
             baseActivation.prompt || '',
             failedStage,
@@ -1552,7 +1753,17 @@ async function runWorkflowNext({ args, options, logger, t }) {
   const activationAgent = normalizeAgentName(requestedAgent || state.current || state.next);
   const scopeCheckMode = activationAgent === 'scope-check' ? getScopeCheckModeOption(options) : null;
   const requestedAutonomyMode = scopeCheckMode && activationAgent === 'scope-check' ? null : options.mode || null;
-  const activation = await activateStage(targetDir, state, locale, tool, requestedAgent, requestedAutonomyMode, scopeCheckMode);
+  const verificationPolicy = resolveVerificationPolicy(options, state);
+  const activation = await activateStage(
+    targetDir,
+    state,
+    locale,
+    tool,
+    requestedAgent,
+    requestedAutonomyMode,
+    scopeCheckMode,
+    verificationPolicy
+  );
   state = activation.state;
 
   // ── Living Memory: if a reflect manifest is pending (created above by the
@@ -1590,7 +1801,8 @@ async function runWorkflowNext({ args, options, logger, t }) {
     completed: state.completed,
     skipped: state.skipped,
     sequence: state.sequence,
-    autonomyMode: activation.effectiveMode || null
+    autonomyMode: activation.effectiveMode || null,
+    verification: activation.verification || null
   };
   await appendWorkflowEvent(targetDir, eventPayload);
   const runtime = await syncWorkflowRuntime(targetDir, {
@@ -1645,6 +1857,7 @@ async function runWorkflowNext({ args, options, logger, t }) {
     runtime,
     agent: activation.agent,
     effectiveMode: activation.effectiveMode || null,
+    verification: activation.verification || null,
     instructionPath: activation.instructionPath,
     prompt: activation.prompt
   };

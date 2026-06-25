@@ -1,0 +1,17 @@
+{
+  "schema_version": "verification-report/v1",
+  "feature_slug": "kanban",
+  "policy": "strict",
+  "verdict": "PASS",
+  "summary": "All required claims confirm.",
+  "commands_run": [
+    {
+      "command": "npm test",
+      "status": "passed",
+      "evidence": "passed"
+    }
+  ],
+  "findings": [],
+  "recommended_route": "qa",
+  "blocking_findings_count": 0
+}

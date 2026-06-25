@@ -192,6 +192,7 @@ Keep scouts capped at 3 per parent session and 20 files per scope. If more is ne
 - Load `.aioson/context/design-doc*.md` and `.aioson/context/readiness*.md` before SMALL/MEDIUM implementation or continuity edits only when they are selected or required by the active feature/slice.
 - Apply selected `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - If a touched file may exceed 500 lines, alert with 2-3 split options. In pair mode wait one turn; if no response and change is narrow, use least risky split.
+- For non-trivial feature work, keep `.aioson/context/features/{slug}/implementation-ledger.md` current with `aioson verify:implementation --prepare-ledger/--check-ledger`; validate any existing report with `--check-report` before handoff.
 - Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.
 - Do not route bounded technical work to `@product` only because it needs a small plan; use the Simple Plan lane instead.
 - When the immediate scope gate triggers, do not code first. Output only the handoff and the reason.

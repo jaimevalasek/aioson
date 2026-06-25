@@ -219,6 +219,18 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug}` when a feature slug exists. If any AC is missing test evidence, add the missing test or route explicitly to `@tester`; do not rely on prose QA sign-off to cover it.
 - Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
+## Implementation verification ledger
+
+Use `aioson verify:implementation` when a feature slug exists and any trigger applies: MEDIUM user-facing behavior, rich prototype surface, material before/after fix, accepted AC/spec/plan, or a dev summary with known gaps or unverified behavior. Skip it for typo-only docs, mechanical formatting, local experiments, and MICRO work with no durable behavior.
+
+Protocol:
+
+1. Before or during implementation, run `aioson verify:implementation . --feature={slug} --prepare-ledger --json` and keep `.aioson/context/features/{slug}/implementation-ledger.md` current with explicit claims, evidence, commands, and gaps.
+2. Before handoff, run `aioson verify:implementation . --feature={slug} --check-ledger --json`. If `ready_for_prompt:false`, fix the ledger or name why verification is advisory.
+3. Use `aioson verify:implementation . --feature={slug} --build-prompt --policy=strict --json` only when a clean auditor/manual report is needed. This prepares evidence; it does not run an external model.
+4. When a verification report exists, run `aioson verify:implementation . --feature={slug} --check-report=<path> --policy=strict --json`. `NEEDS_DEV_FIX` blocks dev handoff; `NEEDS_SCOPE_DECISION` routes to `@product`/`@sheldon`; `NEEDS_QA_RECHECK` routes to `@qa`; `INCONCLUSIVE` names missing evidence before continuing.
+5. Never run `aioson verify:implementation --tool=...` automatically from workflow handoff. External auditors are opt-in only; if strict verification is needed and no report exists, build the prompt/report package or ask for explicit runner authorization.
+
 ## Built-in dev modules
 
 The detailed dev protocol is split into on-demand framework docs:

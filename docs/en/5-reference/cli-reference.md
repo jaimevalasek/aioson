@@ -820,7 +820,7 @@ aioson harness:retro . --feature=checkout --json
 
 **Exit codes:** 0 = success (including empty dossier); 1 = unexpected I/O error; 12 = input error (invalid slug, conflicting flags, feature not found).
 
-**Sources mined:** QA reports, correction plans, dossier FAIL→PASS cycles, execution events, attempt artifacts, failure signatures, devlogs.
+**Sources mined:** QA reports, implementation verification reports (non-confirming `Machine Report` findings only), correction plans, dossier FAIL→PASS cycles, execution events, attempt artifacts, failure signatures, devlogs. Raw auditor output, stderr, prompt packages, and finding evidence text are not mined.
 
 ---
 

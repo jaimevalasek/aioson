@@ -185,6 +185,15 @@ Both `@tester` and `@pentester` are official AIOSON agents. Surface them explici
 
 When AIOSON CLI is available and feature mode is MEDIUM, prefer the tracked invocation `aioson agent:invoke pentester . --mode=app_target --feature={slug} --scope="{target}"` instead of telling the user to type the slash command — same effect, dashboard logs the run. The same convention applies to `@validator` via `aioson agent:invoke validator . --feature={slug}`.
 
+## Implementation verification evidence
+
+If `.aioson/context/features/{slug}/implementation-ledger.md` exists, include its claims/gaps in the QA evidence map. If `.aioson/context/features/{slug}/verification-report.md` or a relevant `verification-runs/*-report.md` exists, validate it with `aioson verify:implementation . --feature={slug} --check-report=<path> --policy=strict --json` before Gate D.
+
+- `NEEDS_DEV_FIX`, `NEEDS_SECURITY_REVIEW`, or `INCONCLUSIVE` with missing required evidence blocks Gate D until routed and resolved.
+- `NEEDS_SCOPE_DECISION` routes to `@product`/`@sheldon`; QA must not silently accept scope drift.
+- `NEEDS_QA_RECHECK` means rerun the named checks before PASS.
+- Absence of a report is not itself a failure unless the dev handoff or feature policy made verification strict; record it as residual risk when relevant.
+
 ## Review process
 1. **Map AC items** from `prd.md` — mark each: covered / partial / missing.
 2. **Risk-first review** — work through checklist by category.

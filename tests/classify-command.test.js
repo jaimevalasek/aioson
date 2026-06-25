@@ -275,3 +275,82 @@ test('classify: plain MICRO has empty operational_surfaces and stays MICRO', asy
   assert.equal(result.floored, false);
   assert.deepEqual(result.operational_surfaces, []);
 });
+
+// ── Localized (pt-BR) surface detection ───────────────────────────────────────
+// The detectors fold diacritics and carry bilingual patterns, so a localized PRD
+// floors the same way as its English equivalent. A brand-free, accented pt-BR
+// Trello clone must NOT slip through as MICRO.
+
+test('classify: pt-BR Trello clone with no brand word floors to SMALL', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-quadro.md',
+    '# Organizador\nQuero um quadro com cartões que movo entre colunas e listas, dentro de espaços de trabalho compartilhados.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'quadro' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.operational_surfaces.includes('board_cards'));
+  assert.ok(result.operational_surfaces.includes('workspace'));
+  assert.equal(result.recommend_prototype, true);
+});
+
+test('classify: pt-BR "funil de vendas" floors as crm_pipeline', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-funil.md',
+    '# Vendas\nPreciso de um funil de vendas com etapas e gestão de leads.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'funil' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.operational_surfaces.includes('crm_pipeline'));
+});
+
+test('classify: pt-BR "página de gerenciamento" floors as crud_admin', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-admin.md',
+    '# Equipe\nUma página de gerenciamento para a equipe administrar os registros.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'admin' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.operational_surfaces.includes('crud_admin'));
+});
+
+test('classify: pt-BR sensitive surface (pagamento/pix) floors to SMALL', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-pix.md',
+    '# Cobrança\nO usuário faz o pagamento via pix e recebe a fatura por email.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'pix' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'SMALL');
+  assert.equal(result.floored, true);
+  assert.ok(result.sensitive_surfaces.includes('money'));
+});
+
+test('classify: pt-BR plain feature stays MICRO (no false floor)', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-perfil.md',
+    '# Perfil\nComo usuário, quero ver o meu perfil e o meu nome na tela.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'perfil' },
+    logger: makeLogger()
+  });
+  assert.equal(result.classification, 'MICRO');
+  assert.equal(result.floored, false);
+  assert.deepEqual(result.operational_surfaces, []);
+  assert.deepEqual(result.sensitive_surfaces, []);
+  assert.equal(result.recommend_prototype, false);
+});

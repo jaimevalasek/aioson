@@ -185,6 +185,8 @@ const { runRunnerPlan } = require('./commands/runner-plan');
 const { runRunnerDaemon } = require('./commands/runner-daemon');
 const { runPreflight } = require('./commands/preflight');
 const { runClassify } = require('./commands/classify');
+const { runPrototypeCheck } = require('./commands/prototype-check');
+const { runVerifyImplementation } = require('./commands/verify-implementation');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
@@ -292,6 +294,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'feature-current',
   'harness:retro',
   'harness-retro',
+  'harness:retro-promote',
+  'harness-retro-promote',
   'harness:preview',
   'harness-preview',
   'agent:next',
@@ -435,6 +439,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'harness-check',
   'harness:retro',
   'harness-retro',
+  'harness:retro-promote',
+  'harness-retro-promote',
   'harness:preview',
   'harness-preview',
   'brief-gen',
@@ -650,6 +656,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   '-v',
   'preflight',
   'classify',
+  'prototype:check',
+  'prototype-check',
+  'verify:implementation',
+  'verify-implementation',
   'sizing',
   'detect:test-runner',
   'detect-test-runner',
@@ -1349,6 +1359,9 @@ async function main() {
     } else if (command === 'harness:retro' || command === 'harness-retro') {
       const { runHarnessRetro } = require('./commands/harness-retro');
       result = await runHarnessRetro({ args, options, logger: commandLogger, t });
+    } else if (command === 'harness:retro-promote' || command === 'harness-retro-promote') {
+      const { runHarnessRetroPromote } = require('./commands/harness-retro-promote');
+      result = await runHarnessRetroPromote({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:preview' || command === 'harness-preview') {
       const { runHarnessPreview } = require('./commands/harness-preview');
       result = await runHarnessPreview({ args, options, logger: commandLogger, t });
@@ -1588,6 +1601,10 @@ async function main() {
       result = await runPreflight({ args, options, logger: commandLogger });
     } else if (command === 'classify') {
       result = await runClassify({ args, options, logger: commandLogger });
+    } else if (command === 'prototype:check' || command === 'prototype-check') {
+      result = await runPrototypeCheck({ args, options, logger: commandLogger });
+    } else if (command === 'verify:implementation' || command === 'verify-implementation') {
+      result = await runVerifyImplementation({ args, options, logger: commandLogger });
     } else if (command === 'sizing') {
       result = await runSizing({ args, options, logger: commandLogger });
     } else if (command === 'detect:test-runner' || command === 'detect-test-runner') {

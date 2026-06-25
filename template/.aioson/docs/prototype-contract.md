@@ -47,6 +47,10 @@ the approved PRD wins and the prototype is updated to match.
 
 - **@product** — write the `## Prototype reference` section; keep the PRD consistent with the prototype; mark
   it `locked` at scope freeze.
+- **@sheldon** — when enriching a PRD that carries a `## Prototype reference`, keep the enrichment and any
+  phased plan consistent with the prototype's screens and Core interactions; do not silently enrich away a
+  demonstrated interaction. Co-own the `draft → locked` scope freeze with `@product`; if enrichment must
+  change a prototyped behavior, record it as an explicit scope decision in the PRD, not a silent drop.
 - **@ux-ui** — the prototype is the concrete realization of the design direction. Use it as the authoritative
   screen/interaction/visual reference; the `ui-spec` must not contradict it. Refine visual detail on top of
   it, never around it.
@@ -66,3 +70,12 @@ the approved PRD wins and the prototype is updated to match.
 
 A feature with a prototype is not "ready for done" until every Core screen and interaction the prototype
 demonstrates is either built and verified, or explicitly deferred in the PRD's `## Out of scope`.
+
+## Deterministic guard
+
+Run `aioson prototype:check . --feature={slug}` once `@analyst` has written `requirements-{slug}.md`. It is the
+deterministic backstop for this otherwise prose-only contract and fails on: a dangling `## Prototype reference`
+(prototype or manifest file missing), a missing requirements bridge, or Core interactions listed in the manifest
+that no acceptance criterion echoes (`fail` = none covered, `warn` = some uncovered). It matches interaction
+names as folded substrings, so the AC must echo the manifest's interaction name (EN or pt-BR). The check never
+reads the prototype's behavior — only that the contract's structural links exist end to end.

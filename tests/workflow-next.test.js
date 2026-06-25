@@ -70,6 +70,59 @@ async function writeActiveFeature(dir, slug, classification = 'MEDIUM') {
   );
 }
 
+function verificationReportMarkdown(report) {
+  return [
+    `# Implementation Verification Report - ${report.feature_slug}`,
+    '',
+    '## Verdict',
+    report.verdict,
+    '',
+    '## Commands Run',
+    '- See Machine Report.',
+    '',
+    '## Findings',
+    '- See Machine Report.',
+    '',
+    '## Before And Now',
+    '- See Machine Report.',
+    '',
+    '## Residual Risk',
+    '- See Machine Report.',
+    '',
+    '## Recommended Route',
+    `@${report.recommended_route || 'qa'}`,
+    '',
+    '## Machine Report',
+    '',
+    '```json',
+    JSON.stringify(report, null, 2),
+    '```',
+    ''
+  ].join('\n');
+}
+
+async function writeVerificationReport(dir, slug, overrides = {}) {
+  const report = {
+    schema_version: 'verification-report/v1',
+    feature_slug: slug,
+    policy: 'strict',
+    verdict: 'PASS',
+    summary: 'All required claims confirm.',
+    commands_run: [
+      { command: 'npm test', status: 'passed', evidence: 'passed' }
+    ],
+    findings: [],
+    recommended_route: 'qa',
+    blocking_findings_count: 0,
+    ...overrides
+  };
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/features/${slug}/verification-report.md`),
+    verificationReportMarkdown(report)
+  );
+  return report;
+}
+
 test('workflow:next infers project progress from existing artifacts', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
@@ -752,6 +805,175 @@ test('workflow:next can invoke optional post-dev scope-check detour', async () =
   assert.equal(result.detour.returnTo, 'qa');
   assert.match(result.prompt, /Scope-check mode: post-dev/);
   assert.match(result.prompt, /actual implementation diff/);
+});
+
+test('workflow:next injects validated PASS verification briefing into post-dev scope-check without changing normal security route', async () => {
+  const dir = await makeTempDir();
+  const slug = 'billing-dashboard';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    classification: 'MEDIUM',
+    sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa'],
+    current: 'pentester',
+    next: 'pentester',
+    completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev']
+  });
+  await writeVerificationReport(dir, slug, {
+    recommended_route: 'pentester'
+  });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev', 'verification-policy': 'strict' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.agent, 'scope-check');
+  assert.equal(result.detour.returnTo, 'pentester');
+  assert.equal(result.verification.status, 'valid');
+  assert.equal(result.verification.verdict, 'PASS');
+  assert.equal(result.verification.recommended_route, 'pentester');
+  assert.match(result.prompt, /## Implementation verification briefing/);
+  assert.match(result.prompt, /Report status: schema-valid/);
+  assert.match(result.prompt, /Policy route: @pentester/);
+  assert.match(result.prompt, /never runs `--tool`/);
+  assert.doesNotMatch(result.prompt, / --tool=/);
+});
+
+test('workflow:next surfaces blocking verification route to scope-check prompt without auto-running a tool', async () => {
+  const dir = await makeTempDir();
+  const slug = 'kanban-board';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    classification: 'MEDIUM',
+    sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa'],
+    current: 'pentester',
+    next: 'pentester',
+    completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev']
+  });
+  await writeVerificationReport(dir, slug, {
+    verdict: 'NEEDS_DEV_FIX',
+    findings: [
+      {
+        id: 'FIND-001',
+        claim_id: 'CLAIM-001',
+        kind: 'required_behavior',
+        status: 'DOES_NOT_CONFIRM',
+        severity: 'blocking',
+        owner: 'dev',
+        file: 'src/app.js',
+        line: 42,
+        evidence: 'Add card does not persist.',
+        recommended_route: 'dev'
+      }
+    ],
+    recommended_route: 'dev',
+    blocking_findings_count: 1
+  });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev', 'verification-policy': 'strict' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.verification.status, 'valid');
+  assert.equal(result.verification.verdict, 'NEEDS_DEV_FIX');
+  assert.equal(result.verification.recommended_route, 'dev');
+  assert.match(result.prompt, /Policy verdict: NEEDS_DEV_FIX/);
+  assert.match(result.prompt, /Policy route: @dev/);
+  assert.match(result.prompt, /do not approve clean post-dev scope/);
+  assert.doesNotMatch(result.prompt, / --tool=/);
+});
+
+test('workflow:next treats missing implementation report as non-blocking by default for MICRO scope-check', async () => {
+  const dir = await makeTempDir();
+  const slug = 'copy-fix';
+  await writeActiveFeature(dir, slug, 'MICRO');
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    classification: 'MICRO',
+    sequence: ['product', 'dev', 'qa'],
+    current: 'qa',
+    next: 'qa',
+    completed: ['product', 'dev']
+  });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.verification.status, 'missing');
+  assert.equal(result.verification.policy, 'standard');
+  assert.match(result.prompt, /Report status: missing/);
+  assert.match(result.prompt, /MICRO: missing report is not a workflow blocker by default/);
+  assert.doesNotMatch(result.prompt, /Strict MEDIUM guidance/);
+});
+
+test('workflow:next warns MEDIUM strict post-dev scope-check when implementation report is missing', async () => {
+  const dir = await makeTempDir();
+  const slug = 'workspace-admin';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    classification: 'MEDIUM',
+    sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa'],
+    current: 'pentester',
+    next: 'pentester',
+    completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev']
+  });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev', 'verification-policy': 'strict' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.verification.status, 'missing');
+  assert.equal(result.verification.verdict, 'INCONCLUSIVE');
+  assert.equal(result.verification.recommended_route, 'dev');
+  assert.match(result.prompt, /Strict MEDIUM guidance/);
+  assert.match(result.prompt, /produces a valid report or documents an explicit N\/A rationale/);
+  assert.doesNotMatch(result.prompt, / --tool=/);
+});
+
+test('workflow:next defaults MEDIUM post-dev scope-check verification to strict without an explicit policy', async () => {
+  const dir = await makeTempDir();
+  const slug = 'reporting-admin';
+  await writeActiveFeature(dir, slug, 'MEDIUM');
+  await writeFeatureWorkflowState(dir, {
+    featureSlug: slug,
+    classification: 'MEDIUM',
+    sequence: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa'],
+    current: 'pentester',
+    next: 'pentester',
+    completed: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev']
+  });
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', agent: 'scope-check', 'scope-mode': 'post-dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.verification.status, 'missing');
+  assert.equal(result.verification.policy, 'strict');
+  assert.match(result.prompt, /Policy: strict/);
+  assert.match(result.prompt, /Strict MEDIUM guidance/);
 });
 
 test('workflow:next routes SMALL project through discovery-design-doc after scope-check and architect', async () => {

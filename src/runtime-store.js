@@ -1572,8 +1572,12 @@ function startRun(db, options) {
     eventType: String(options.eventType || 'start'),
     phase: options.phase || 'run',
     status,
+    toolName: options.toolName,
     message: String(options.message || options.title || 'Agent started'),
     payload: options.payload,
+    verdict: options.verdict,
+    tokenCount: options.tokenCount,
+    progressPct: options.progressPct,
     createdAt: now
   });
 
