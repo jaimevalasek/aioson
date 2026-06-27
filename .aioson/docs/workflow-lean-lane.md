@@ -63,6 +63,11 @@ A ready-to-copy preset lives at `.aioson/docs/presets/workflow.config.lean.json`
 `allowDetours: true` keeps `@validator` (harness contract present) and `@tester`/`@pentester` (fired by `@qa`'s
 triggers) available as detours — they are not in the static sequence in either lane.
 
+Autopilot (`auto_handoff: true`) drives only the **post-dev** cycle (`@dev → @qa → …`) in the lean lane:
+`@product`/`@sheldon` always hand off manually (upstream-agent policy), so there is nothing to auto-chain before
+`@dev`. This matches the full chain, whose autopilot segment also begins only after the manual upstream handoff —
+so the lean lane loses no automation it was ever supposed to have.
+
 Running the agents by hand (slash commands) is equivalent: activate `@product → @sheldon → @dev → @qa` and skip
 analyst/architect/discovery-design-doc/pm. No config file is needed for the manual path.
 
@@ -101,5 +106,17 @@ then hands off to `@dev`.
 
 - No change to `src/` routing constants — the built-in defaults stay the full chain, so the framework test suite
   is untouched. The lean lane is a project-level config + agent capability, not a core rewrite.
-- No change to the gates: Gate D / `@qa` Runtime smoke gate / `@validator` contract-integrity precheck apply
-  identically in both lanes.
+- The runtime safety gates are unchanged: `@qa`'s Runtime smoke gate, the §2c `RG-*` criteria, and
+  `@validator`'s contract-integrity precheck apply identically in both lanes.
+
+## What the lean lane DOES change about the gates
+
+Removing `@analyst`/`@pm` removes the agents that produced `spec-{slug}.md` and approved the process gates
+A (requirements), B (design) and C (plan). Those gates still fire under `aioson workflow:next` — `@dev`'s
+completion checks **Gate C** against `spec-{slug}.md`, and `@qa`'s checks **Gate D** against the same file — so
+the lean lane would dead-end at `@dev` if nothing produced them. In the lean lane **`@sheldon` owns that**: its
+RF-LEAN pass writes `spec-{slug}.md` with `gate_requirements`/`gate_design`/`gate_plan: approved` (the hops it
+collapsed, after the user confirms its spec-authority output). Gate D / execution stays with `@qa`, which writes
+the `## QA sign-off` PASS into the same file after the Runtime smoke gate. If you run the lane by hand (slash
+commands, untracked), the gate frontmatter is informational — but writing it keeps the manual and tracked paths
+identical.

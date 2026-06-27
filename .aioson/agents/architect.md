@@ -157,6 +157,12 @@ preflight (which requires the design-doc + readiness pair) is satisfied:
 Then hand off to `@dev` (not `@discovery-design-doc`). Keep the artifacts proportional to classification — the
 merge removes a hop, it does not license heavier documents.
 
+> Note: at `@architect` completion the tracked workflow only gates `architecture.md` + Gate B structurally — the
+> design-doc + readiness you produce in merged mode are enforced by `@dev`'s SMALL/MEDIUM preflight (it halts at
+> activation if either is absent), not by a separate handoff contract. Produce both, or `@dev` stops. (The
+> full-merged preset keeps `@analyst`, so `spec-{slug}.md` and Gate C are satisfied normally — unlike the lean
+> lane, where `@sheldon` must write the spec itself.)
+
 ## Autopilot handoff
 
 If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and Gate B passed, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @architect"`. No user prompt — Ctrl+C interrupts. Emit the manual handoff instead when Gate B is blocked, the next agent is `@dev`, or context ≥ `context_warning_threshold`.

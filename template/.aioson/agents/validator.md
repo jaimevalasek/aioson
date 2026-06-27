@@ -70,6 +70,14 @@ that class of failure — it checks the **contract's shape**, never the product'
 4. If the feature is **not** a runtime feature, or the runtime gate is present and non-duplicated, continue to
    Step 1 normally.
 
+> **Deterministic backstop.** `aioson harness:check . --slug={slug} --json` already enforces the detectable
+> subset of this precheck: its `integrity` block returns `missing_runtime_gate` / `duplicate_verification` and
+> sets `ok: false` whenever it can locate the runtime surface (prototype-manifest or a migration step). Read it
+> and copy a deterministic integrity failure straight into your verdict. Your judgment is still required for the
+> two things the CLI cannot prove: a Play `has_api` runtime whose `manifest.json` is not framework-locatable,
+> and whether an `RG-smoke` criterion *actually* drives the Core happy-path rather than being a unit test
+> wearing the `RG-` id.
+
 ### Step 1 — Load
 Locate `harness-contract.json` for the current feature. Identify criteria with `binary: true`.
 

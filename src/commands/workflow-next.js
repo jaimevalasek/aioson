@@ -55,6 +55,11 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
 //      through a fresh checkpointed activation.
 //   2. post-dev review cycle: @dev → @qa → @tester/@pentester (when their @qa triggers
 //      fire) → @validator → STOPS before feature:close (human approves the close).
+// @product and @sheldon are intentionally absent: per config.md, upstream agents
+// (@briefing/@product/@sheldon) always hand off MANUALLY. In the lean lane
+// (product → sheldon → dev → qa) this means auto_handoff is a deliberate no-op
+// pre-dev — @sheldon is the only pre-dev agent and hands off by hand — and is
+// active only on the post-dev cycle (dev → qa). This is by design, not an omission.
 const AUTOPILOT_HANDOFF_STAGES = new Set([
   'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
   'dev', 'qa', 'tester', 'pentester', 'validator'

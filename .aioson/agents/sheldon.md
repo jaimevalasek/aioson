@@ -305,9 +305,9 @@ The exact sizing thresholds, writing rules, file schemas, enrichment log contrac
 
 - `.aioson/docs/sheldon/enrichment-paths.md`
 
-## Harness contract generation (RF-05) — MEDIUM only
+## Harness contract generation (RF-05) — MEDIUM, or any runtime feature
 
-Run after writing `sheldon-enrichment-{slug}.md` only when `classification: MEDIUM`. Skip on MICRO; on SMALL produce `progress.json` only.
+Run after writing `sheldon-enrichment-{slug}.md`. Always on `classification: MEDIUM`. On SMALL/MICRO produce `progress.json` only — **unless the feature is a runtime feature** (`has_api`/DB/prototype), in which case also produce `harness-contract.json` with the §2c `RG-*` criteria so the runtime gate is enforceable at any size (`aioson harness:check` fails a runtime contract with no `RG-*`).
 
 Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
 
@@ -340,6 +340,13 @@ docs/skills; do not invent new ceremony.
    edge cases, data shape, migrations) and the binary acceptance criteria. When a prototype exists, every Core
    interaction in `prototype-manifest.md` becomes at least one AC; run `aioson prototype:check . --feature={slug}`
    as the structural backstop.
+1b. **Spec + collapsed gates** (was `@analyst`/`@pm`) — write `spec-{slug}.md`: the canonical spec downstream
+   agents and the **workflow gates** read. `workflow:next --complete=dev` checks Gate C against it and
+   `--complete=qa` checks Gate D — **without it the lean lane dead-ends at `@dev`.** As single spec authority,
+   after the user confirms your output, set the collapsed-hop gates approved in frontmatter so the workflow can
+   advance: `gate_requirements: approved`, `gate_design: approved`, `gate_plan: approved`. Leave **Gate D to
+   `@qa`** (it writes `## QA sign-off` PASS into the same file). Reference requirements/design-doc/plan by name;
+   don't duplicate them.
 2. **Architecture decisions** (was `@architect`) — fold module/folder structure, model relationships, migration
    order, integration points, and auth/security boundaries into `design-doc-{slug}.md`. Keep it proportional to
    classification — never apply MEDIUM patterns to a SMALL feature.
@@ -410,11 +417,12 @@ Action: /analyst
 
 **Lean lane** (after RF-LEAN — you produced requirements/design-doc/readiness/plan/harness-contract yourself):
 ```
-Spec authority complete: requirements / design-doc / readiness / implementation-plan / harness-contract written.
+Spec authority complete: spec / requirements / design-doc / readiness / implementation-plan / harness-contract written.
+Gates A/B/C marked approved in spec-{slug}.md (collapsed hops, user-confirmed); Gate D left for @qa.
 Sizing: {score}
 PRD updated: .aioson/context/prd-{slug}.md
 Next agent: @dev (implements from the plan; design skill applies)
-Why: the full bridge (ACs, design, plan, §2c runtime-gated contract) is ready — no analyst/architect/ddd/pm hop needed.
+Why: the full bridge (spec + ACs, design, plan, §2c runtime-gated contract) is ready — no analyst/architect/ddd/pm hop needed.
 Action: /dev
 ```
 > On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness verdict) in the handoff so downstream agents can load it when present.

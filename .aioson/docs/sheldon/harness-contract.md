@@ -15,9 +15,14 @@ Run **after** writing `sheldon-enrichment-{slug}.md`, gated by `project.context.
 
 | Classification | Action |
 |---|---|
-| MICRO | Skip entirely. No contract, no progress.json. |
-| SMALL | Produce `progress.json` only (no `harness-contract.json`). |
+| MICRO | Skip entirely — **unless it is a runtime feature** (`has_api`/DB/prototype): then produce a minimal `harness-contract.json` (just the §2c `RG-*` criteria) + `progress.json`. |
+| SMALL | Produce `progress.json` only — **plus `harness-contract.json` with the §2c `RG-*` criteria when it is a runtime feature**, so `harness:check` can enforce the runtime gate. |
 | MEDIUM | Produce both `harness-contract.json` and `progress.json`. |
+
+A **runtime feature** (`has_api` / DB / migrations / `## Prototype reference`) therefore carries the `RG-*`
+runtime gate at **every** classification — `aioson harness:check` deterministically fails a runtime contract
+that has no `RG-*` (see §2c *CLI backstop*). This closes the hole where a MICRO/SMALL feature with a real backend
+used to close with only prose gates. Non-runtime MICRO/SMALL keep the lightweight path (no contract).
 
 ## Steps
 
@@ -100,6 +105,16 @@ reason in the enrichment log):
 - These criteria are first-class binary criteria: `aioson harness:check` runs them like any other, and their
   exit code is the verdict. If the project lacks a smoke/boot harness, that harness is itself part of `@dev`'s
   scope — do not downgrade `RG-smoke` to a unit test to make it "self-contained".
+
+> **CLI backstop (deterministic).** `aioson harness:check . --slug={slug}` enforces the first two hard rules
+> itself, not only through `@validator`. When it detects a runtime surface it can locate deterministically — a
+> `.aioson/briefings/{slug}/prototype-manifest.md`, or a migration/Prisma path in `progress.completed_steps` —
+> a contract with **no** `RG-*` criterion fails with `integrity.errors[].code = missing_runtime_gate`, and two
+> binary criteria sharing one `verification` command fail with `duplicate_verification`; both flip the check's
+> `ok` to `false`. The Play `manifest.json` `has_api` trigger lives in the target app and is **not** locatable
+> from the framework — for that case the `@validator` Step 0 precheck (below) remains the enforcer, and
+> `RG-smoke` actually exercising Core (vs. a unit test wearing the id) is always a `@validator` judgment. Treat
+> a green `harness:check` as necessary, not sufficient.
 
 ### 3. Set `contract_mode`
 
