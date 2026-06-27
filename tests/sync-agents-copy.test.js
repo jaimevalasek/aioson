@@ -61,3 +61,54 @@ test('syncAgentsCopy mirrors template/ into root, honoring excludes', async () =
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test('syncAgentsCopy refreshes an existing AIOSON-managed gateway block instead of clobbering it', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-gw-'));
+  try {
+    const tpl = path.join(root, 'template');
+    await fs.mkdir(tpl, { recursive: true });
+    await fs.writeFile(path.join(tpl, 'AGENTS.md'), '# AIOSON\nNEW template body line\n');
+    const existing = [
+      '# My project notes (keep me)',
+      '',
+      '<!-- AIOSON:BEGIN -->',
+      '> Managed by AIOSON — edits inside this block will be overwritten on `aioson update`. Put project-specific rules above or below this block.',
+      '',
+      '# AIOSON',
+      'OLD template body line',
+      '<!-- AIOSON:END -->',
+      '',
+      '# My footer notes (keep me too)',
+      ''
+    ].join('\n');
+    await fs.writeFile(path.join(root, 'AGENTS.md'), existing);
+
+    await syncAgentsCopy(root);
+
+    const after = await fs.readFile(path.join(root, 'AGENTS.md'), 'utf8');
+    assert.ok(after.includes('<!-- AIOSON:BEGIN -->'), 'BEGIN marker preserved');
+    assert.ok(after.includes('<!-- AIOSON:END -->'), 'END marker preserved');
+    assert.ok(after.includes('# My project notes (keep me)'), 'content above block preserved');
+    assert.ok(after.includes('# My footer notes (keep me too)'), 'content below block preserved');
+    assert.ok(after.includes('NEW template body line'), 'block body refreshed from template');
+    assert.ok(!after.includes('OLD template body line'), 'stale block body replaced');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('syncAgentsCopy plain-copies a gateway file that has no managed block (raw, no block added)', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-gw-'));
+  try {
+    const tpl = path.join(root, 'template');
+    await fs.mkdir(tpl, { recursive: true });
+    await fs.writeFile(path.join(tpl, 'CLAUDE.md'), '# AIOSON\nraw body\n');
+    await fs.writeFile(path.join(root, 'CLAUDE.md'), '# AIOSON\nold raw\n'); // no managed block
+    await syncAgentsCopy(root);
+    const after = await fs.readFile(path.join(root, 'CLAUDE.md'), 'utf8');
+    assert.equal(after, '# AIOSON\nraw body\n', 'raw gateway file mirrored verbatim — no block injected');
+    assert.ok(!after.includes('AIOSON:BEGIN'), 'no managed block added to a previously-unmanaged file');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

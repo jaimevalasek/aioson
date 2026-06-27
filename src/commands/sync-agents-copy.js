@@ -13,9 +13,22 @@
 // evolving state, so a template sync must never overwrite it with the template
 // seeds. External project installs (`aioson update`) are a separate code path and
 // still receive the seeds.
+//
+// Gateway-pointer files (CLAUDE.md / AGENTS.md / OPENCODE.md) carry an AIOSON
+// managed block (<!-- AIOSON:BEGIN --> … <!-- AIOSON:END -->) when a project was
+// installed/updated. A blind copy of the raw template body STRIPS that block (and
+// any project content around it). So when the destination already has a managed
+// block, we refresh it in place via mergeGatewayPointer (same path the installer
+// uses) instead of clobbering it. When the destination has no block we keep the
+// plain copy — that leaves the framework repo's own raw CLAUDE.md untouched.
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {
+  isGatewayPointerPath,
+  findBlockRange,
+  mergeGatewayPointer
+} = require('../gateway-pointer-merge');
 
 const EXCLUDE_BASENAMES = new Set([
   'config.md',
@@ -39,6 +52,25 @@ function isExcluded(relPath) {
   return false;
 }
 
+// Refresh an AIOSON-managed block in place when the destination already has one;
+// otherwise fall back to a plain copy. Keeps markers + any project-authored
+// content around the block intact (the blind copy would have stripped them).
+async function copyGatewayPointer(srcChild, destChild) {
+  await fs.mkdir(path.dirname(destChild), { recursive: true });
+  let hasBlock = false;
+  try {
+    const existing = await fs.readFile(destChild, 'utf8');
+    hasBlock = findBlockRange(existing) !== null;
+  } catch {
+    hasBlock = false; // destination missing/unreadable → plain copy
+  }
+  if (hasBlock) {
+    await mergeGatewayPointer({ templatePath: srcChild, targetPath: destChild });
+  } else {
+    await fs.copyFile(srcChild, destChild);
+  }
+}
+
 async function copyTree(srcRoot, destRoot, relPath = '') {
   const entries = await fs.readdir(path.join(srcRoot, relPath), { withFileTypes: true });
   let copied = 0;
@@ -51,8 +83,12 @@ async function copyTree(srcRoot, destRoot, relPath = '') {
       await fs.mkdir(destChild, { recursive: true });
       copied += await copyTree(srcRoot, destRoot, childRel);
     } else if (entry.isFile()) {
-      await fs.mkdir(path.dirname(destChild), { recursive: true });
-      await fs.copyFile(srcChild, destChild);
+      if (isGatewayPointerPath(childRel)) {
+        await copyGatewayPointer(srcChild, destChild);
+      } else {
+        await fs.mkdir(path.dirname(destChild), { recursive: true });
+        await fs.copyFile(srcChild, destChild);
+      }
       copied += 1;
     }
   }
