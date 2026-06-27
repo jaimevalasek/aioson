@@ -262,6 +262,24 @@ function spawnExecutable(binaryPath) {
   return process.platform === 'win32' ? `"${binaryPath}"` : binaryPath;
 }
 
+function isWindowsPidAlive(pid) {
+  // process.kill(pid, 0) is not authoritative on Windows: it throws EPERM both
+  // for "process exists but no access" AND (commonly) for PIDs that are already
+  // gone. Probe the real process table so a dead PID reconciles instead of
+  // looking 'unknown' forever (which blocks live:start with "session already
+  // active"). Returns true/false when known, null when the probe itself failed.
+  try {
+    const out = require('node:child_process').execFileSync(
+      'tasklist',
+      ['/FI', `PID eq ${pid}`, '/NH', '/FO', 'CSV'],
+      { encoding: 'utf8', windowsHide: true, timeout: 3000 }
+    );
+    return out.includes(`"${pid}"`);
+  } catch {
+    return null;
+  }
+}
+
 function detectProcessState(pid) {
   if (!pid) return 'not_tracked';
   try {
@@ -270,6 +288,12 @@ function detectProcessState(pid) {
   } catch (error) {
     if (error && error.code === 'ESRCH') {
       return 'dead';
+    }
+    if (process.platform === 'win32') {
+      const alive = isWindowsPidAlive(Number(pid));
+      if (alive === true) return 'alive';
+      if (alive === false) return 'dead';
+      // probe inconclusive → fall through to 'unknown'
     }
     return 'unknown';
   }
