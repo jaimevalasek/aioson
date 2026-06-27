@@ -34,6 +34,8 @@ Do NOT load the entire `references/` folder. Load only the file matching your cu
 - **SMALL**: Specify + Requirements + scope check + selective Design + Plan. @sheldon recommended before downstream.
 - **MEDIUM**: Full pack — all phases, all artifacts, @sheldon validation before @analyst, final scope check before @dev, implementation plan required.
 
+**Lean lane (opt-in, any size):** `@product → @sheldon → @dev → @qa`, where `@sheldon` runs **Lean lane mode (RF-LEAN)** and produces the requirements/ACs, design-doc + readiness, implementation plan, and §2c runtime-gated harness contract in one pass — replacing the analyst/architect/discovery-design-doc/pm hops. Opt in via `.aioson/context/workflow.config.json`; see `.aioson/docs/workflow-lean-lane.md`. The runtime smoke gate is mandatory in both lanes.
+
 ## References available
 
 Load the file that matches your current context — do not load all at once:

@@ -11,6 +11,8 @@
 - SMALL: `@setup -> @product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa`
 - MEDIUM: `@setup -> @product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa`
 
+**Lean lane (opt-in):** collapse the spec hops into `@sheldon` as the single spec authority — `@product -> @sheldon -> @dev -> @qa` (with a `@validator` detour when a harness contract exists). Drop the lean preset into `.aioson/context/workflow.config.json`; full guide in `.aioson/docs/workflow-lean-lane.md`. The **runtime smoke gate** (build + migrate + boot + Core happy-path on the real stack, `harness-contract.md` §2c) is mandatory in **both** lanes — neither closes a runtime feature without running the real app.
+
 Optional alignment checkpoints:
 - After `@dev`: `@scope-check --scope-mode=post-dev` when the implementation changed planned behavior, touched unexpected files, or skipped approved scope.
 - After `@qa`, `@tester`, or `@pentester` corrections: `@scope-check --scope-mode=post-fix` when fixes changed behavior or product scope.

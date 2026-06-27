@@ -531,7 +531,8 @@ test('prototype contract propagates the prototype across the agent chain', async
   const checks = [
     [contract, 'name: prototype-contract'],
     [contract, '## Prototype reference'],
-    [contract, 'does **not** read the prototype directly'],
+    [contract, 'behavior to judge the product'],
+    [contract, 'Runtime smoke gate'],
     [contract, 'locked-at'],
     [contract, 'aioson prototype:check'],
     [analyst, 'aioson prototype:check'],

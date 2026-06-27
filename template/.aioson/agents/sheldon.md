@@ -48,6 +48,10 @@ The selector may choose from `.aioson/rules/`, `.aioson/docs/`, `.aioson/context
 
 ## Position in the workflow
 
+There are two lanes. Which one is active is set by the workflow sequence (`.aioson/context/workflow.config.json`)
+or by which agents the operator activates by hand.
+
+**Full chain** (default — large/sensitive features):
 ```
 @product → PRD generated
               ↓
@@ -57,6 +61,18 @@ The selector may choose from `.aioson/rules/`, `.aioson/docs/`, `.aioson/context
               ↓
    @analyst → @scope-check → @architect → @ux-ui → @dev → @qa
 ```
+
+**Lean lane** (opt-in — `product → sheldon → dev → qa`; see `.aioson/docs/workflow-lean-lane.md`):
+```
+@product → PRD generated
+              ↓
+          @sheldon ← SINGLE spec authority: enrich + ACs + design + plan + harness-contract
+              ↓
+   @dev → @qa (→ @validator detour when a harness-contract exists)
+```
+In the lean lane there is no separate `@analyst`/`@architect`/`@discovery-design-doc`/`@pm` — `@sheldon`
+produces what they would have, in one pass (see **Lean lane mode (RF-LEAN)** below). Use the lean lane for
+most features; reserve the full chain for genuinely large or sensitive scope.
 
 **Rule**: `@sheldon` can only be activated on PRDs not yet implemented. After the target PRD is selected, only `features.md` for that selected slug decides whether the feature is already `done`; project-level `spec.md` never blocks enrichment.
 
@@ -297,11 +313,56 @@ Goal: convert binary ACs from the enriched PRD into a machine-checkable contract
 
 Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check . --slug={slug} --strict`), `contract_mode`/governor selection by risk using schema-valid modes (`balanced`, `safe`, `builder`, `autopilot`), and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
+> **Runtime gate (§2c) is mandatory for runtime features.** If the feature has `has_api: true` / a DB / a Prisma
+> schema / a `## Prototype reference`, the contract MUST include the `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke`
+> criteria from `harness-contract.md` §2c — not only `pnpm test` unit commands. A unit-only contract on a runtime
+> feature is invalid and `@validator` rejects it at its contract-integrity precheck. This is the safeguard that
+> stops a green-but-broken build (migrations never applied, UI never wired, process never booted).
+
 ## Validation report (RF-06) — MEDIUM only
 
 Run after `sheldon-enrichment-{slug}.md` and the RF-05 harness contract, only when `classification: MEDIUM`. Skip on MICRO and SMALL.
 
 Write `.aioson/context/sheldon-validation-{slug}.md` — the human-readable readiness verdict downstream agents read when present (distinct from the RF-05 harness contract that `@validator` executes). Use the same `{slug}` selected in RF-01; write the bare `sheldon-validation.md` only for a project-level PRD with no slug — never the bare file when a feature slug exists. Full schema and the per-agent gate table live in `.aioson/docs/sheldon/enrichment-paths.md` (**Validation report**). Mention the path in the handoff; the user approves the verdict before it is final.
+
+## Lean lane mode (RF-LEAN) — single spec authority
+
+Activate this mode when the active workflow is the **lean lane** (`product → sheldon → dev → qa`) — i.e. the
+`workflow.config.json` sequence routes `@sheldon` directly to `@dev` with no `@analyst`/`@architect`/
+`@discovery-design-doc`/`@pm` between them (see `.aioson/docs/workflow-lean-lane.md`). In this mode you are the
+**single spec authority**: after enrichment you also produce the bridge artifacts `@dev` requires, consolidating
+what analyst/architect/discovery-design-doc/pm would have produced — in one pass, scaled to classification.
+
+Run after RF-04 enrichment and the prototype-consistency check, in this order. Reuse the existing sheldon
+docs/skills; do not invent new ceremony.
+
+1. **Requirements + acceptance criteria** (was `@analyst`) — write `requirements-{slug}.md` (business rules,
+   edge cases, data shape, migrations) and the binary acceptance criteria. When a prototype exists, every Core
+   interaction in `prototype-manifest.md` becomes at least one AC; run `aioson prototype:check . --feature={slug}`
+   as the structural backstop.
+2. **Architecture decisions** (was `@architect`) — fold module/folder structure, model relationships, migration
+   order, integration points, and auth/security boundaries into `design-doc-{slug}.md`. Keep it proportional to
+   classification — never apply MEDIUM patterns to a SMALL feature.
+3. **Design-doc + readiness** (was `@discovery-design-doc`) — write `design-doc-{slug}.md` and
+   `readiness-{slug}.md` with: readiness verdict (`ready`/`ready_with_warnings`/`blocked`), exact implementation
+   paths (create/modify/reuse/retire), reuse + componentization notes, and blockers. This pair is what `@dev`'s
+   SMALL/MEDIUM preflight checks for — do not skip it, or `@dev` stops at activation.
+4. **Implementation plan** (was `@pm`) — write `implementation-plan-{slug}.md` (or a phased
+   `.aioson/plans/{slug}/` manifest on MEDIUM) with phase criteria, context triggers, and per-phase verification
+   commands. Those commands MUST include the §2c runtime gate for a runtime feature.
+5. **Harness contract** (RF-05) — produce `harness-contract.json` + `progress.json` with the §2c runtime-gate
+   criteria. In the lean lane this is required whenever the feature is a runtime feature, not only on MEDIUM.
+6. **Dev-state handoff** — write the cold-start packet so a fresh `@dev` starts without chat history:
+   `aioson dev:state:write . --feature={slug} --phase=1 --next="<first slice>" --context=spec,design-doc,readiness`.
+
+**Prototype consistency (mandatory in lean mode):** you own the whole bridge from prototype to contract, so a
+demonstrated Core interaction must never be enriched away silently — carry each one to an AC and to an `RG-smoke`
+expectation, or record an explicit scope decision in the PRD `## Out of scope`. See `.aioson/docs/prototype-contract.md`.
+
+**Scope discipline:** producing these artifacts does not license scope inflation — keep them proportional to the
+sizing score. The lean lane removes hops; it does not turn `@sheldon` into five heavy documents for a SMALL
+feature. On SMALL the design-doc/readiness/plan can be short; on MICRO prefer the standard `product → dev` lane and
+skip RF-LEAN entirely.
 
 ## Retro dossier analysis (on-demand)
 
@@ -335,8 +396,9 @@ If the dossier is empty (no candidates and no observations), say so and stop —
 
 ## Handoff
 
-After enrichment is complete and `agent:done` is registered, present the next step:
+After enrichment is complete and `agent:done` is registered, present the next step. Pick the handoff by lane.
 
+**Full chain** (default):
 ```
 Enrichment complete: .aioson/context/sheldon-enrichment-{slug}.md
 Sizing: {score} → Path {A (in-place) | B (phased plan)}
@@ -344,6 +406,16 @@ PRD updated: .aioson/context/prd-{slug}.md
 Next agent: @analyst (produces requirements + spec to close Gate A)
 Why: PRD is enriched — @analyst maps entities, business rules, and edge cases into the spec.
 Action: /analyst
+```
+
+**Lean lane** (after RF-LEAN — you produced requirements/design-doc/readiness/plan/harness-contract yourself):
+```
+Spec authority complete: requirements / design-doc / readiness / implementation-plan / harness-contract written.
+Sizing: {score}
+PRD updated: .aioson/context/prd-{slug}.md
+Next agent: @dev (implements from the plan; design skill applies)
+Why: the full bridge (ACs, design, plan, §2c runtime-gated contract) is ready — no analyst/architect/ddd/pm hop needed.
+Action: /dev
 ```
 > On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness verdict) in the handoff so downstream agents can load it when present.
 > Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.

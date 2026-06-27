@@ -97,6 +97,10 @@ The process depth scales with project classification:
 - **SMALL** (2-3): standard — @product → @analyst → @scope-check(pre-dev) → @architect → @discovery-design-doc → @dev, with optional @scope-check(post-dev) before @qa when implementation drift is likely
 - **MEDIUM** (4-6): full — all agents, all gates, all artifacts
 
+**Lean lane (opt-in):** collapse the spec hops into @sheldon as the single spec authority — @product → @sheldon → @dev → @qa (@validator detour when a harness contract exists). Opt in via `.aioson/context/workflow.config.json`; see `.aioson/docs/workflow-lean-lane.md`.
+
+**Runtime smoke gate (all lanes):** a feature with a backend, a database, or a clickable prototype does not close until its build + migrations (applied to a real DB) + boot + Core happy-path run on the **real stack** — not just unit tests. Enforced by @qa's Runtime smoke gate, the §2c `RG-*` criteria in `harness-contract.json`, and @validator's contract-integrity precheck. Passing unit tests + `tsc` is the floor, not "done".
+
 Classification is determined by @analyst during discovery. See `aioson-spec-driven` skill for details.
 
 ## Workflow enforcement
