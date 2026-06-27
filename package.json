@@ -42,7 +42,7 @@
     "test:genome-2.0:block-a": "node scripts/smoke/genome-2.0-smoke.js && npm run test:genome && npm test && npm run lint",
     "test:genome-2.0:rollout": "node scripts/testing/genome-2.0-rollout.js",
     "lint": "node scripts/check-js.js",
-    "sync:agents": "node src/commands/sync-agents-preflight.js && rsync -av --progress --exclude='config.md' --exclude='runtime/' --exclude='backups/' --exclude='mcp/servers.local.json' template/ ./",
+    "sync:agents": "node src/commands/sync-agents-preflight.js && node src/commands/sync-agents-copy.js",
     "ci": "npm run lint && npm test"
   },
   "dependencies": {
