@@ -1072,12 +1072,13 @@ async function main() {
   const silentLogger = createSilentLogger();
 
   if (command === '--version' || command === '-v' || command === 'version' || options.version) {
-    const { getCliVersionSync } = require('./version');
+    const { getCliVersionSync, getGitBuildInfoSync, getCliVersionLabelSync } = require('./version');
     const version = getCliVersionSync();
+    const git = getGitBuildInfoSync();
     if (jsonMode) {
-      writeJson({ ok: true, version });
+      writeJson({ ok: true, version, git_sha: git ? git.sha : null, git_date: git ? git.date : null });
     } else {
-      logger.log(`aioson ${version}`);
+      logger.log(`aioson ${getCliVersionLabelSync()}`);
     }
     return;
   }

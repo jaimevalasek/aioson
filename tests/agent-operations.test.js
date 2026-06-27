@@ -57,6 +57,43 @@ test('agent:epilogue updates pulse and registers agent completion', async () => 
   assert.match(pulse, /Requirements mapped/);
 });
 
+test('agent:prompt sheldon injects the RF-LEAN directive when workflow.config routes sheldon -> dev', async () => {
+  const dir = await makeTempDir();
+  const { runAgentPrompt } = require('../src/commands/agents');
+  await writeFile(dir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# Project\n');
+  await writeFile(
+    dir,
+    '.aioson/context/workflow.config.json',
+    JSON.stringify({ version: 1, feature: { SMALL: ['product', 'sheldon', 'dev', 'qa'] } })
+  );
+
+  const res = await runAgentPrompt({
+    args: ['sheldon', dir],
+    options: { headless: true, feature: 'demo' },
+    logger: makeLogger(),
+    t: () => undefined
+  });
+
+  assert.ok(res.prompt.includes('Active lane: LEAN'), 'lean directive must be injected');
+  assert.ok(res.prompt.includes('RF-LEAN'));
+  assert.ok(res.prompt.includes('spec-demo.md'));
+});
+
+test('agent:prompt sheldon does NOT inject the lean directive in the full chain (no config)', async () => {
+  const dir = await makeTempDir();
+  const { runAgentPrompt } = require('../src/commands/agents');
+  await writeFile(dir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# Project\n');
+
+  const res = await runAgentPrompt({
+    args: ['sheldon', dir],
+    options: { headless: true, feature: 'demo' },
+    logger: makeLogger(),
+    t: () => undefined
+  });
+
+  assert.ok(!res.prompt.includes('Active lane: LEAN'), 'full chain must not inject the lean directive');
+});
+
 test('agent:epilogue emits an advisory contract:integrity step for a runtime dev completion without a contract', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('en');

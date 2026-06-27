@@ -3,7 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { MANAGED_FILES } = require('./constants');
-const { getCliVersion } = require('./version');
+const { getCliVersion, getGitBuildInfoSync } = require('./version');
 const { exists, ensureDir, copyFileWithDir, nowStamp, toRelativeSafe } = require('./utils');
 const { ensureProjectRuntime } = require('./execution-gateway');
 const { shouldIncludeForProfile } = require('./install-profile');
@@ -238,10 +238,17 @@ async function writeInstallMetadata(targetDir, action, frameworkDetection, insta
   }
 
   const version = await getCliVersion();
+  // Stamp the exact framework commit when installing/updating from a git checkout
+  // (e.g. an `npm link`ed dev framework). With a plain npm install this is null —
+  // template_version alone identifies it. Lets a project record precisely which
+  // commit it was last updated from.
+  const gitInfo = getGitBuildInfoSync();
   const data = {
     ...existing,
     managed_by: 'aioson',
     template_version: version,
+    template_git_sha: gitInfo ? gitInfo.sha : null,
+    template_git_date: gitInfo ? gitInfo.date : null,
     last_action: action,
     last_action_at: new Date().toISOString(),
     framework_detected: frameworkDetection || existing.framework_detected || null,

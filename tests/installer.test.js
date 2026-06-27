@@ -100,6 +100,13 @@ test('installTemplate writes Forge metadata and gitignore entry', async () => {
 
   assert.equal(installMeta.managed_by, 'aioson');
   assert.equal(typeof installMeta.template_version, 'string');
+  // git build stamp: the framework repo is a git checkout, so install/update
+  // records the exact commit it copied from (null on a plain npm install).
+  assert.ok('template_git_sha' in installMeta, 'install.json must carry template_git_sha');
+  assert.ok(
+    installMeta.template_git_sha === null || /^[0-9a-f]{7,}$/.test(installMeta.template_git_sha),
+    `template_git_sha should be a short sha or null, got ${installMeta.template_git_sha}`
+  );
   assert.equal(gitignore.includes('aioson-models.json'), true);
   assert.equal(gitignore.includes('!AGENTS.md'), true);
   assert.equal(gitignore.includes('!.claude/**'), true);
