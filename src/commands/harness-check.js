@@ -23,6 +23,19 @@ const { validateContract, resolveContract } = require('../harness/contract-schem
 const { runCriteria, DEFAULT_CHECK_TIMEOUT_MS } = require('../harness/criteria-runner');
 const { emitGuardEvent } = require('../harness/guard-events');
 const { findActiveContract } = require('../harness/active-contract');
+const { checkContractIntegrity } = require('../harness/contract-integrity');
+const { detectRuntimeFeature } = require('../harness/detect-runtime-feature');
+
+function readCompletedSteps(planDir) {
+  try {
+    const progressPath = path.join(planDir, 'progress.json');
+    if (!fs.existsSync(progressPath)) return [];
+    const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+    return Array.isArray(progress.completed_steps) ? progress.completed_steps : [];
+  } catch {
+    return [];
+  }
+}
 
 function resolveSlug(targetDir, options) {
   const explicit = String(options.slug || '').trim();
@@ -75,6 +88,24 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
 
   const resolved = resolveContract(contract);
 
+  // ── Contract-integrity precheck (§2c, deterministic core of @validator Step 0) ──
+  // A runtime feature whose contract has no RG-* criterion, or that pads binary
+  // criteria with duplicate verification commands, cannot prove the app runs.
+  // Detection only fires on signals the framework locates reliably (prototype
+  // manifest, migration steps); the Play has_api trigger stays with @validator.
+  const runtime = detectRuntimeFeature(targetDir, slug, {
+    completedSteps: readCompletedSteps(planDir)
+  });
+  const integrity = checkContractIntegrity(contract, { isRuntimeFeature: runtime.isRuntimeFeature });
+  for (const err of integrity.errors) {
+    await emitGuardEvent(targetDir, {
+      eventType: 'contract_integrity_failed',
+      agent: 'harness-check',
+      message: `${err.code}: ${err.message}`,
+      payload: { slug, code: err.code, signals: runtime.signals }
+    });
+  }
+
   let criteria = resolved.criteria;
   if (options.criteria) {
     const wanted = new Set(
@@ -122,7 +153,7 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   }
 
   const report = {
-    ok: failed.length === 0 && strictErrors.length === 0,
+    ok: failed.length === 0 && strictErrors.length === 0 && integrity.ok,
     slug,
     checked_at: new Date().toISOString(),
     strict,
@@ -132,6 +163,13 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
     failed: failed.length,
     skipped_no_verification: skipped,
     strict_errors: strictErrors,
+    integrity: {
+      ok: integrity.ok,
+      is_runtime_feature: runtime.isRuntimeFeature,
+      runtime_signals: runtime.signals,
+      errors: integrity.errors,
+      warnings: integrity.warnings
+    },
     checks
   };
 
@@ -153,6 +191,12 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   }
 
   logger.log(t('harness.check_header', { slug }) || `Harness check — ${slug}`);
+  for (const err of integrity.errors) {
+    logger.log(`  ✗ contract-integrity (${err.code}): ${err.message}`);
+  }
+  for (const warn of integrity.warnings) {
+    logger.log(`  ⚠ contract-integrity (${warn.code}): ${warn.message}`);
+  }
   for (const error of strictErrors) {
     logger.log(`  ✗ ${error}`);
   }
