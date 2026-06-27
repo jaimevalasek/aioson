@@ -83,6 +83,22 @@ Before marking any task or feature done:
 3. confirm exit code `0`
 4. only then mark done
 
+### Runtime sub-gate (runtime features — has_api / DB / prototype)
+
+A passing unit suite is not "done" for a feature that ships a backend, a database, or a clickable prototype.
+Unit tests mock the DB/auth/network; they prove the parts in isolation, not the whole running app. Before
+declaring such a feature done, you must have **run the real stack at least once**:
+
+1. **build** the app (`pnpm build` / `npm run build` / `tsc -p .`) — the whole thing, not a subset
+2. **apply** the migrations to a real/ephemeral DB (`prisma migrate reset --force` / `migrate deploy`) — a
+   `.sql` file on disk is not an applied migration
+3. **boot** server + client; confirm a health probe (`/api/health`) returns 200
+4. **drive** the prototype's Core happy-path (create/list/switch/edit/archive of the primary objects) end to
+   end on the running stack
+
+If no smoke/boot harness exists, building one is part of the slice — do not substitute a unit test. This is
+the same evidence `@qa`'s Runtime smoke gate and the §2c `RG-*` contract criteria require.
+
 Update `skeleton-system.md` whenever files are created, deleted, or materially changed.
 
 ## `*update-skeleton`

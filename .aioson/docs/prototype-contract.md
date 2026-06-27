@@ -62,14 +62,28 @@ the approved PRD wins and the prototype is updated to match.
 - **@dev** — the prototype is the development source for UI and interactions. Reproduce its screens and Core
   interactions against the real stack. Never ship a Core action the prototype demonstrates (e.g. "add card",
   "create board", "manage members") while the build lacks it.
+- **@qa** — for a feature with a prototype, the Core interactions are verified through the **Runtime smoke
+  gate**: build + migrate-apply + boot + Core happy-path on the running stack, with the aios-qa browser report
+  (`aioson qa:run`/`qa:scan`) required, not optional. Source inspection ("the API call appears in the source")
+  is **not** parity evidence.
 - **@validator** — verifies prototype-derived acceptance criteria as part of the normal binary contract in
-  `harness-contract.json`. It does **not** read the prototype directly (its context sandbox forbids
-  PRDs/artifacts); the criteria authored by `@analyst` are what it checks.
+  `harness-contract.json`. It does **not** read the prototype's behavior to judge the product; but at its
+  **Contract-integrity precheck** it reads `prototype-manifest.md` solely to confirm the contract carries the
+  §2c runtime-gate criteria (`RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke`) for the Core interactions. A runtime
+  feature whose contract has no `RG-*` criteria is rejected (`ready_for_done_gate: false`) before scoring.
 
 ## Completeness
 
 A feature with a prototype is not "ready for done" until every Core screen and interaction the prototype
-demonstrates is either built and verified, or explicitly deferred in the PRD's `## Out of scope`.
+demonstrates is either **built and verified on the running stack**, or explicitly deferred in the PRD's
+`## Out of scope`.
+
+**Parity is proven by running, not by reading.** A Core interaction counts as built only when it works end to
+end against the real backend/DB — never when a source-string assertion shows the API call *appears* in the
+code, and never when a structural "parity" unit test passes. The prototype is mock-only; the implementation
+must reproduce its behavior on a booted, migrated stack. This is enforced by `@qa`'s **Runtime smoke gate** and
+the `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke` criteria in `harness-contract.json` (see
+`harness-contract.md` §2c).
 
 ## Deterministic guard
 
@@ -78,4 +92,7 @@ deterministic backstop for this otherwise prose-only contract and fails on: a da
 (prototype or manifest file missing), a missing requirements bridge, or Core interactions listed in the manifest
 that no acceptance criterion echoes (`fail` = none covered, `warn` = some uncovered). It matches interaction
 names as folded substrings, so the AC must echo the manifest's interaction name (EN or pt-BR). The check never
-reads the prototype's behavior — only that the contract's structural links exist end to end.
+reads the prototype's behavior — only that the contract's structural links exist end to end. It is a
+*structural* backstop, **not** runtime proof: an AC that merely echoes an interaction name still has to be
+verified on the running stack by `@qa`'s Runtime smoke gate. Passing `prototype:check` never means a Core
+interaction actually works.

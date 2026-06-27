@@ -57,10 +57,49 @@ Authoring rules for `verification`:
 
 - **Prefer the project's own test runner** (`node --test tests/x.test.js`, `npm test -- --grep "..."`, `pytest tests/test_x.py`). A criterion backed by a real test is the gold standard.
 - **One-liner assertions** when no test exists yet: `node -e "const m = require('./src/x'); process.exit(typeof m.parseX === 'function' ? 0 : 1)"`.
-- **Deterministic only**: no network calls, no wall-clock dependence, no interactive prompts.
+- **Deterministic only**: no network calls, no wall-clock dependence, no interactive prompts. *(Exception: the runtime-gate criteria in §2c — `build`/`migrate`/`boot`/`smoke` — MAY provision an ephemeral DB and boot the app. That setup is the point, not a violation.)*
 - **Cross-platform**: single commands or npm scripts — avoid shell chaining (`&&`, `||`) and POSIX-only utilities (`grep`, `test -f`) on Windows-first projects; use `node -e` for file/shape assertions instead.
-- **Self-contained**: the command must pass/fail on a clean checkout after install — no hidden setup steps.
+- **Self-contained**: the command must pass/fail on a clean checkout after install — no hidden setup steps. *(Runtime-gate criteria may require `db:up`/`migrate reset` as their declared first step; declare it inside the `verification`, never as a hidden prerequisite.)*
 - A `binary: true` criterion **without** `verification` remains valid (judged by `@validator`, as before), but the contract schema emits a coverage warning — treat each one as debt and justify it in the enrichment log.
+
+### 2c. Runtime gate criteria — MANDATORY for runtime features
+
+A contract whose criteria are all unit/component test commands (e.g. `pnpm test -- <file>`) proves the
+**tests** pass, not that the **app** runs. Tests mock the database, the auth SDK and the network; a feature
+can be 100% green on unit tests while its migrations never applied, its UI was never wired to the API, and
+the process never booted. To close that gap, any feature that ships a runtime surface MUST carry criteria that
+exercise the **real, running stack** — not only mocks.
+
+A feature is a **runtime feature** when ANY of these holds:
+
+- `manifest.json` has `has_api: true`, declares a server/process, or a Play runtime; or
+- the feature creates or changes a database / Prisma schema / migrations; or
+- the feature carries a `## Prototype reference` (a clickable prototype whose Core interactions must work).
+
+For a runtime feature, add these criteria (use the project's OWN commands; drop a row only with a written
+reason in the enrichment log):
+
+| id | what it proves | example `verification` (adapt to the project) |
+|----|----------------|-----------------------------------------------|
+| `RG-build` | the app compiles for real, not a mocked subset | `pnpm build` · `npm run build` · `tsc -p .` |
+| `RG-migrate` | migrations **apply** to a fresh DB — not just exist as files | `prisma migrate reset --force` (or `migrate deploy`) against an ephemeral/throwaway DB |
+| `RG-boot` | server + client start without crashing | start the process and probe health, e.g. `node scripts/smoke-boot.mjs` hitting `/api/health` → 200 |
+| `RG-smoke` | the prototype's Core happy-path works on the running stack | `aioson qa:run` / `aioson qa:scan`, or an e2e/integration run that drives the **real** endpoints/UI end-to-end |
+
+**Hard rules:**
+
+- A runtime-feature contract containing **zero** of {`RG-build`, `RG-migrate`, `RG-boot`, `RG-smoke`} is
+  **invalid** — treat it as a coverage *error*, not a warning, and do not declare the contract final.
+  `@validator` rejects such a contract at its Contract-integrity precheck.
+- **No duplicate verification.** Two `binary: true` criteria must never carry the **same** `verification`
+  command. Each criterion maps to a distinct check. (Padding 11 criteria out of 6 commands is exactly how a
+  hollow contract scores "11/11".) `RG-migrate` and `RG-boot` are separate criteria with separate commands.
+- `RG-smoke` must drive at least the prototype-manifest's **Core** interactions for the feature
+  (create / list / switch / edit / archive of the primary objects), end to end — never a mocked unit of one
+  of them, and never a static source-string assertion that an API call *appears* in the code.
+- These criteria are first-class binary criteria: `aioson harness:check` runs them like any other, and their
+  exit code is the verdict. If the project lacks a smoke/boot harness, that harness is itself part of `@dev`'s
+  scope — do not downgrade `RG-smoke` to a unit test to make it "self-contained".
 
 ### 3. Set `contract_mode`
 
@@ -138,3 +177,4 @@ Safe defaults for a normal MEDIUM `builder` contract:
 - **No verifiable ACs in PRD** — go back to enrichment with `@product` and add concrete assertions before generating a contract.
 - **All ACs are advisory** — flag to user; the harness adds no value. Skip contract generation, document the decision in `sheldon-enrichment-{slug}.md`.
 - **`harness:init` CLI missing** — write stubs manually, but record in handoff that CLI was unavailable so `@dev` can install it.
+- **All criteria are unit tests on a runtime feature** — the contract proves the tests pass, not that the app runs. This is the failure that ships a green-but-broken build (migrations never applied, UI never wired, process never booted). Add the §2c runtime-gate criteria before declaring the contract final; a runtime-feature contract without them is invalid.

@@ -36,6 +36,7 @@ To preserve impartiality and avoid continuity hallucinations, you operate in a *
    - `.aioson/plans/{slug}/progress.json` (current state)
    - Files explicitly listed in `progress.json.completed_steps`
    - Output of diagnostic tools (linters, test runners, compilers)
+   - `manifest.json` and `.aioson/briefings/{slug}/prototype-manifest.md` — **only** for the Step 0 contract-integrity precheck (to read the runtime surface and the Core interaction list). Not for judging the product, the design, or whether a feature "should" exist — strictly to confirm the contract is well-formed for the feature's surface.
 2. **NEVER read:**
    - Conversation history from other agents (`@dev`, `@analyst`, `@architect`)
    - PRDs, requirements, or architecture docs (your focus is the binary contract, not product vision)
@@ -46,6 +47,28 @@ To preserve impartiality and avoid continuity hallucinations, you operate in a *
    - If a criterion fails, provide the exact technical reason (e.g., "File X not found" or "Syntax error on line Y").
 
 ## Execution protocol (RF-VAL)
+
+### Step 0 — Contract-integrity precheck (runtime features)
+
+Before scoring anything, confirm the contract is **capable** of proving the app works. A contract you cannot
+fail through is worthless: a feature can pass every unit test while its migrations never applied, its UI was
+never wired, and the process never booted. This precheck is the one thing that lets a blind executor catch
+that class of failure — it checks the **contract's shape**, never the product's merit.
+
+1. Determine whether the feature is a **runtime feature**: read `manifest.json` — `has_api: true`, a declared
+   server/process, or a Play runtime ⇒ yes. A Prisma schema / migrations folder in `completed_steps` ⇒ yes. A
+   `## Prototype reference` (a `prototype-manifest.md` with Core interactions) ⇒ yes.
+2. If it **is** a runtime feature, the contract MUST contain at least the runtime-gate criteria from
+   `harness-contract.md` §2c — `RG-build`, `RG-migrate`, `RG-boot`, `RG-smoke` (or equivalents whose
+   `verification` actually builds, applies migrations to a real DB, boots the process, and drives the Core
+   happy-path end to end). Also reject the contract if **two binary criteria share an identical `verification`
+   command** (padding) or if every criterion is a unit/component test (`*.test.*` only).
+3. **If the contract is missing the runtime gate (or is padded), STOP.** Do not score the unit criteria green.
+   Emit the verdict with `overall_score: 0`, `ready_for_done_gate: false`, and a `results` entry:
+   `{ "id": "contract-integrity", "passed": false, "reason": "Runtime feature but harness-contract has no RG-build/RG-migrate/RG-boot/RG-smoke (or contains duplicate/all-unit verification). The app's build, migrations, boot and Core happy-path are unverified. Route back to @sheldon to add §2c runtime-gate criteria, then re-run @dev." }`.
+   This is not a product judgment — it is a statement that the contract cannot prove the feature runs.
+4. If the feature is **not** a runtime feature, or the runtime gate is present and non-duplicated, continue to
+   Step 1 normally.
 
 ### Step 1 — Load
 Locate `harness-contract.json` for the current feature. Identify criteria with `binary: true`.
@@ -117,7 +140,8 @@ At session end, register: `aioson agent:epilogue . --agent=validator --feature=<
 ## Autopilot handoff (post-dev cycle)
 
 When `auto_handoff: true` is set in `project.context.md`, after the verdict and `agent:epilogue`/`agent:done` (`.aioson/docs/autopilot-handoff.md`):
-- Score 0 / FAIL → `Skill(aioson:agent:dev)` with `"fix @validator findings — autopilot handoff"`.
+- **Contract-integrity fail (Step 0)** → `Skill(aioson:agent:sheldon)` with `"add §2c runtime-gate criteria to harness-contract — @validator contract-integrity fail"`. The contract is the problem, not the code; do not route to `@dev` yet.
+- Score 0 / FAIL (a real criterion failed) → `Skill(aioson:agent:dev)` with `"fix @validator findings — autopilot handoff"`.
 - Score 1 / PASS → **STOP**. The feature is verification-clean; recommend the human run `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
 
 Emit `Autopilot: @validator → invoking @<next> (Ctrl+C to interrupt)` before invoking. If `auto_handoff` is absent or `false`, hand off manually.

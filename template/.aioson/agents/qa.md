@@ -194,6 +194,39 @@ If `.aioson/context/features/{slug}/implementation-ledger.md` exists, include it
 - `NEEDS_QA_RECHECK` means rerun the named checks before PASS.
 - Absence of a report is not itself a failure unless the dev handoff or feature policy made verification strict; record it as residual risk when relevant.
 
+## Runtime smoke gate (MANDATORY for runtime features)
+
+A feature with a backend, a database, or a clickable prototype is **not** verifiable from unit tests + source
+inspection alone. Unit tests mock the DB, the auth SDK and the network; `tsc` proves types, not behavior;
+`ac:test-audit` proves a test *exists*, not that the app *runs*. The flow-deck failure mode — 90/90 tests
+green, `tsc` clean, validator score 1, yet migrations never applied and the UI never wired to the API — is
+exactly what this gate exists to catch. **Never issue PASS for a runtime feature without running the real stack.**
+
+A feature is a **runtime feature** when `manifest.json` has `has_api: true` / a server / a Play runtime, OR it
+creates/changes a database / Prisma schema / migrations, OR it carries a `## Prototype reference`.
+
+For a runtime feature, before any PASS verdict you MUST have first-hand evidence of all four — run them, or
+require the `@dev` handoff to include their output; never infer them from the presence of files or tests:
+
+1. **Build** — `pnpm build` / `npm run build` / `tsc -p .` succeeds for the whole app, not a subset.
+2. **Migrate** — migrations **apply** to a real/ephemeral DB (`prisma migrate reset --force` / `migrate deploy`),
+   not merely exist as `.sql` files. "Migration file present" is **not** "migrations ran".
+3. **Boot** — server + client start without crashing; a health probe (`/api/health`) returns 200.
+4. **Core happy-path** — the prototype-manifest's Core interactions (create/list/switch/edit/archive of the
+   primary objects) work **end to end on the running stack**, via `aioson qa:run` / `aioson qa:scan`.
+
+**Evidence rules (hard):**
+
+- For a runtime feature the **aios-qa browser report is REQUIRED, not optional** (`aioson qa:run` /
+  `aioson qa:scan`). A runtime feature with no `aios-qa-report.md` is Gate D **blocked**, not "skip silently".
+- **Source inspection is not parity evidence.** Confirming that `flowDeckApi.listWorkspaces()` *appears* in the
+  source, or that a structural "parity" unit test passes, does **not** satisfy a Core interaction — only the
+  interaction working on the running stack does. Reject "verified against the implemented source" as the
+  evidence for a prototype Core action.
+- If you cannot run the stack (no DB, missing binding, CLI crash), do **not** PASS by falling back to unit
+  tests. Record Gate D as **blocked on runtime evidence**, name exactly what was missing, and route to `@dev`
+  to supply a smoke/boot harness — never claim the app works on mocked evidence.
+
 ## Review process
 1. **Map AC items** from `prd.md` — mark each: covered / partial / missing.
 2. **Risk-first review** — work through checklist by category.
@@ -226,6 +259,8 @@ If `.aioson/context/features/{slug}/implementation-ledger.md` exists, include it
 ### Data integrity
 - [ ] DB constraints match application rules
 - [ ] Migrations safe for existing data
+- [ ] **Migrations actually APPLIED to a real/ephemeral DB (not just present as files)** — runtime feature
+- [ ] **App builds, boots, and serves the prototype's Core happy-path end to end** — runtime feature (see Runtime smoke gate)
 - [ ] Multi-step writes wrapped in transactions
 
 ### Performance
@@ -385,7 +420,9 @@ Apply these rules when merging:
 2. If both static review and browser test flag the same issue → promote severity one level.
 3. Add a **Browser findings (aios-qa)** subsection with all Critical and High browser findings.
 4. Add `[browser-validated]` tag to ACs that passed in the live browser.
-5. If `aios-qa-report.md` does not exist → skip silently.
+5. If `aios-qa-report.md` does not exist:
+   - **Runtime feature** (has_api / DB / prototype) → Gate D is **blocked** (see Runtime smoke gate). Generate the report before PASS; do not skip.
+   - Otherwise → skip silently.
 
 > To generate: `aioson qa:run` (scenarios) or `aioson qa:scan` (autonomous crawl)
 

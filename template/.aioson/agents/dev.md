@@ -216,6 +216,7 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
 - Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
 - If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` before declaring a phase done; for MEDIUM or harness-driven work use `aioson harness:check . --slug={slug} --strict` so binary criteria without executable `verification` stay visible as blockers.
+- **Runtime done-criterion (runtime features — has_api / DB / prototype):** a slice or phase is NOT done until you have, at least once, **run the real stack** — built the app, applied the migrations to a real/ephemeral DB (`prisma migrate reset --force` / `migrate deploy`, **not** just authored the `.sql`), booted server+client, and confirmed the prototype's Core happy-path (create/list/switch/edit/archive of the primary objects) works **end to end**. `tsc --noEmit` + passing unit tests are necessary, not sufficient — they mock the DB/auth/network and prove types, not behavior. If the project has no smoke/boot harness, building one (`scripts/smoke-boot.*`, an e2e spec, or wiring `aioson qa:run`) is part of this slice. These are exactly the §2c `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke` criteria in `harness-contract.json` — make them pass for real, never by downgrading them to a unit test.
 - Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug}` when a feature slug exists. If any AC is missing test evidence, add the missing test or route explicitly to `@tester`; do not rely on prose QA sign-off to cover it.
 - Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
@@ -282,6 +283,7 @@ These rules apply even if no extra dev doc was loaded:
   - TypeScript: `npx tsc --noEmit`
   - Rust: `cargo check`
   - Node.js tests: `npm test` (or the specific test script)
+- **The type checker and unit tests are the floor, not the ceiling.** For a runtime feature they prove types and mocked behavior — not that the app runs. Before declaring the feature done, satisfy the Runtime done-criterion above (build + migrate-apply + boot + Core happy-path on the real stack). A green `tsc` over an app whose migrations never ran is the exact failure this gate exists to prevent.
 - **Fix compilation/test errors immediately** before moving to the next file. Do not batch fixes at the end.
 - If the motor reports `[Technical Gate BLOCKED]`, do not finish @dev. Fix the error and re-run the verification.
 - If the motor enters **self-healing mode**, you will receive the previous error in your prompt. Treat it as your top priority and apply the minimal fix.
