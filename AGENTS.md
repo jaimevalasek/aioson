@@ -255,4 +255,3 @@ Small project, small solution.
  Golden rule
 Small project, small solution.
 <!-- AIOSON:END -->
-

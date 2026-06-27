@@ -31,6 +31,12 @@ function buildBlock(templateContent) {
   return `${MARKER_BEGIN}\n${BLOCK_NOTICE}\n\n${body}${MARKER_END}\n`;
 }
 
+function trimBlankLinesAfterBlock(content, rangeEnd) {
+  let end = rangeEnd;
+  while (content[end] === '\n' || content[end] === '\r') end += 1;
+  return end;
+}
+
 function findBlockRange(content) {
   const start = content.indexOf(MARKER_BEGIN);
   if (start === -1) return null;
@@ -71,7 +77,7 @@ async function mergeGatewayPointer({ templatePath, targetPath, backupRoot, targe
   let action;
   if (range) {
     const before = stripLegacyUnmanagedGateway(existing.slice(0, range.start));
-    const after = existing.slice(range.end);
+    const after = existing.slice(trimBlankLinesAfterBlock(existing, range.end));
     const cleanBefore = before.length === 0 || before.endsWith('\n') ? before : `${before}\n`;
     next = `${cleanBefore}${block}${after}`;
     action = 'block_updated';

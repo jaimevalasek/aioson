@@ -57,6 +57,50 @@ test('agent:epilogue updates pulse and registers agent completion', async () => 
   assert.match(pulse, /Requirements mapped/);
 });
 
+test('agent:epilogue emits an advisory contract:integrity step for a runtime dev completion without a contract', async () => {
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  const slug = 'runtime-untracked';
+  // Runtime signal the framework can locate (prototype manifest), no contract.
+  await writeFile(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, '# Core interactions\n');
+
+  const result = await runAgentEpilogue({
+    args: [dir],
+    options: {
+      json: true,
+      agent: 'dev',
+      feature: slug,
+      summary: 'Implemented the slice',
+      'no-dossier': true
+    },
+    logger: makeLogger(),
+    t
+  });
+
+  const advisory = result.steps.find((step) => step.name === 'contract:integrity');
+  assert.ok(advisory, 'expected a contract:integrity advisory step');
+  assert.equal(advisory.ok, false);
+  assert.match(String(advisory.reason), /missing_runtime_contract/);
+  // Advisory must never be promoted to a blocking error.
+  assert.ok(!result.errors.some((e) => e.step === 'contract:integrity'));
+});
+
+test('agent:epilogue does not emit a contract:integrity step for a non dev/qa agent', async () => {
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  const slug = 'runtime-analyst';
+  await writeFile(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, '# Core interactions\n');
+
+  const result = await runAgentEpilogue({
+    args: [dir],
+    options: { json: true, agent: 'analyst', feature: slug, summary: 'Mapped', 'no-dossier': true },
+    logger: makeLogger(),
+    t
+  });
+
+  assert.ok(!result.steps.some((step) => step.name === 'contract:integrity'));
+});
+
 test('agent:epilogue human output surfaces workflow auto-advance outcome', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('en');

@@ -419,6 +419,39 @@ test('feature:close (T5): with contract and ready_for_done_gate=true, PASS proce
     'must record harness gate as PASSED in updates');
 });
 
+test('feature:close blocks detectable runtime feature when harness contract is missing', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/spec-runtime-no-contract.md', '---\nversion: 1\n---\n# Spec\n');
+  await writeFile(tmpDir, '.aioson/briefings/runtime-no-contract/prototype-manifest.md', '# Core interactions\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'runtime-no-contract', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'harness_contract_gate_blocked');
+  assert.ok(result.errors.some((err) => err.code === 'missing_runtime_contract'));
+});
+
+test('feature:close blocks runtime contract without RG-* even when progress says ready', async () => {
+  const tmpDir = await makeTmpDir();
+  await setupHarnessFeature(tmpDir, 'runtime-no-rg', { ready_for_done_gate: true });
+  await writeFile(tmpDir, '.aioson/context/spec-runtime-no-rg.md', '---\nversion: 1\n---\n# Spec\n');
+  await writeFile(tmpDir, '.aioson/briefings/runtime-no-rg/prototype-manifest.md', '# Core interactions\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'runtime-no-rg', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'harness_contract_gate_blocked');
+  assert.match(result.error, /missing_runtime_gate/);
+});
+
 test('feature:close (T5): with contract and ready_for_done_gate=false, PASS is BLOCKED', async () => {
   const tmpDir = await makeTmpDir();
   await setupHarnessFeature(tmpDir, 'gate-block', {

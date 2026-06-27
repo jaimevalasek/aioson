@@ -27,6 +27,10 @@ const { parseVerificationReport } = require('../verification/report-parser');
 const { applyPolicy } = require('../verification/policy-engine');
 const { normalizePolicy } = require('../verification/result');
 const {
+  evaluateContractIntegrityGate,
+  formatContractIntegrityGateError
+} = require('../harness/contract-integrity-gate');
+const {
   validateFeatureSlug,
   featureContextDir,
   verificationRunsDir,
@@ -775,6 +779,17 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
 
   // ── Harness Done Gate ───────────────────────────────────────────────────
   if (state.mode === 'feature' && state.featureSlug) {
+    if (normalizedStage === 'dev' || normalizedStage === 'qa') {
+      const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
+        runChecks: true
+      });
+      if (!integrityGate.ok) {
+        const errMsg = formatContractIntegrityGateError(integrityGate, normalizedStage);
+        await logError(targetDir, normalizedStage, errMsg, 'harness-contract');
+        throw new Error(errMsg);
+      }
+    }
+
     const contractPath = path.join(targetDir, '.aioson', 'plans', state.featureSlug, 'harness-contract.json');
     const progressPath = path.join(targetDir, '.aioson', 'plans', state.featureSlug, 'progress.json');
     
@@ -1613,7 +1628,8 @@ async function runWorkflowNext({ args, options, logger, t }) {
       const autoHeal = Boolean(options['auto-heal'] || options.autoHeal);
       const isHealabled = autoHeal && (
         err.message.includes('[Technical Gate BLOCKED]') ||
-        err.message.includes('[Handoff Contract BLOCKED]')
+        err.message.includes('[Handoff Contract BLOCKED]') ||
+        err.message.includes('[Harness Contract Gate BLOCKED]')
       );
       if (isHealabled) {
         const failedStage = normalizeAgentName(options.complete === true ? state.current || state.next : options.complete);

@@ -26,6 +26,10 @@ const { runDistillation, readFeatureClassification } = require('../learning-loop
 const { openRuntimeDb } = require('../runtime-store');
 const { runNotify } = require('./notify');
 const { splitCurrentState, buildArchiveContent, parseActiveSlugs } = require('../current-state-trim');
+const {
+  evaluateContractIntegrityGate,
+  formatContractIntegrityGateError
+} = require('../harness/contract-integrity-gate');
 
 // P0 agent-loading-contract: a feature closing is the natural cadence to roll
 // aged-out current-state.md entries into the cold archive. Conservative window
@@ -323,15 +327,37 @@ async function runFeatureClose({ args, options = {}, logger }) {
 
   // 0a. Harness Done Gate (AC-HD-11 refined)
   // Only enforced on PASS — FAIL means QA already rejected and we want the
-  // closure to record that. Without `harness-contract.json` for the feature,
-  // behavior is unchanged (zero impact on MICRO/SMALL or any feature that
-  // never opted into the harness).
+  // closure to record that. Runtime features the CLI can detect (prototype or
+  // migration/Prisma evidence) must have a valid contract even on MICRO/SMALL;
+  // non-runtime features without a contract keep the historical lightweight path.
   if (verdict === 'PASS') {
     const planDir = path.join(targetDir, '.aioson', 'plans', slug);
     const contractPath = path.join(planDir, 'harness-contract.json');
     const progressPath = path.join(planDir, 'progress.json');
     const contractContent = await readFileSafe(contractPath);
     const progressContent = await readFileSafe(progressPath);
+    const force = options.force === true;
+
+    const integrityGate = await evaluateContractIntegrityGate(targetDir, slug, {
+      runChecks: Boolean(contractContent)
+    });
+    if (!integrityGate.ok) {
+      if (!force) {
+        const errMsg = formatContractIntegrityGateError(integrityGate);
+        if (options.json) {
+          return {
+            ok: false,
+            reason: 'harness_contract_gate_blocked',
+            feature: slug,
+            error: errMsg,
+            errors: integrityGate.errors
+          };
+        }
+        logger.log(errMsg);
+        return { ok: false, reason: 'harness_contract_gate_blocked' };
+      }
+      updates.push('harness contract gate: BYPASSED via --force');
+    }
 
     // REQ-13 (loop-guardrails): tema `publish` é gate de COMANDO — intercepta
     // o feature:close quando o contrato ativo o exige e não há gate publish
@@ -374,7 +400,6 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
 
     if (contractContent && progressContent) {
-      const force = options.force === true;
       let progress = null;
       try {
         progress = JSON.parse(progressContent);

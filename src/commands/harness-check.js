@@ -24,14 +24,18 @@ const { runCriteria, DEFAULT_CHECK_TIMEOUT_MS } = require('../harness/criteria-r
 const { emitGuardEvent } = require('../harness/guard-events');
 const { findActiveContract } = require('../harness/active-contract');
 const { checkContractIntegrity } = require('../harness/contract-integrity');
-const { detectRuntimeFeature } = require('../harness/detect-runtime-feature');
+const { detectRuntimeFeature, gitChangedFiles } = require('../harness/detect-runtime-feature');
 
-function readCompletedSteps(planDir) {
+function readProgressSignals(planDir) {
+  // Same progress fields the contract-integrity gate consults, so standalone
+  // `harness:check` detects the identical migration surface (completed_steps +
+  // changed_files + touched_files) the workflow finalize / feature:close gate does.
   try {
     const progressPath = path.join(planDir, 'progress.json');
     if (!fs.existsSync(progressPath)) return [];
     const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
-    return Array.isArray(progress.completed_steps) ? progress.completed_steps : [];
+    return [progress.completed_steps, progress.changed_files, progress.touched_files]
+      .flatMap((value) => (Array.isArray(value) ? value : []));
   } catch {
     return [];
   }
@@ -94,7 +98,8 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   // Detection only fires on signals the framework locates reliably (prototype
   // manifest, migration steps); the Play has_api trigger stays with @validator.
   const runtime = detectRuntimeFeature(targetDir, slug, {
-    completedSteps: readCompletedSteps(planDir)
+    completedSteps: readProgressSignals(planDir),
+    changedFiles: gitChangedFiles(targetDir)
   });
   const integrity = checkContractIntegrity(contract, { isRuntimeFeature: runtime.isRuntimeFeature });
   for (const err of integrity.errors) {

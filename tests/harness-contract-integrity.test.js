@@ -12,8 +12,17 @@ const {
   hasRuntimeGate,
   isRuntimeGateCriterion
 } = require('../src/harness/contract-integrity');
-const { detectRuntimeFeature, looksLikeMigration } = require('../src/harness/detect-runtime-feature');
+const { detectRuntimeFeature, looksLikeMigration, gitChangedFiles } = require('../src/harness/detect-runtime-feature');
 const { runHarnessCheck } = require('../src/commands/harness-check');
+const { evaluateContractIntegrityGate } = require('../src/harness/contract-integrity-gate');
+const { finalizeCurrentStage, buildDefaultWorkflowConfig } = require('../src/commands/workflow-next');
+const { execFileSync } = require('node:child_process');
+
+function gitInit(dir) {
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['config', 'user.email', 'audit@test.local'], { cwd: dir });
+  execFileSync('git', ['config', 'user.name', 'audit'], { cwd: dir });
+}
 
 function makeLogger() {
   const lines = [];
@@ -100,6 +109,9 @@ test('looksLikeMigration recognises migration/prisma paths only', () => {
   assert.ok(looksLikeMigration('prisma/migrations/001_init/migration.sql'));
   assert.ok(looksLikeMigration('db/migrations/2026_add_table.sql'));
   assert.ok(looksLikeMigration('schema.prisma'));
+  assert.ok(!looksLikeMigration('src/migrate-users.ts'));
+  assert.ok(!looksLikeMigration('lib/prismaClient.ts'));
+  assert.ok(!looksLikeMigration('docs/migration-guide.md'));
   assert.ok(!looksLikeMigration('src/services/user.ts'));
   assert.ok(!looksLikeMigration('tests/user.test.ts'));
 });
@@ -203,4 +215,81 @@ test('harness:check: non-runtime contract is unaffected by the integrity gate', 
   assert.equal(result.ok, true);
   assert.equal(result.integrity.is_runtime_feature, false);
   assert.equal(result.integrity.ok, true);
+});
+
+test('workflow finalize blocks dev when runtime contract-integrity fails even if progress says ready', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-hc-workflow-'));
+  const slug = 'runtime-bypass';
+  await writePlan(tmp, slug, {
+    feature: slug,
+    governor: {},
+    criteria: [{ id: 'C1', description: 'unit', binary: true, verification: 'node -e "process.exit(0)"' }]
+  }, {
+    prototype: true,
+    progress: { feature: slug, status: 'in_progress', completed_steps: [], ready_for_done_gate: true, circuit_state: 'CLOSED' }
+  });
+  await fs.mkdir(path.join(tmp, '.aioson', 'context'), { recursive: true });
+  await fs.writeFile(path.join(tmp, '.aioson', 'context', `prd-${slug}.md`), '---\nclassification: MICRO\n---\n# PRD\n', 'utf8');
+  await fs.writeFile(path.join(tmp, '.aioson', 'context', 'project-pulse.md'), 'pulse', 'utf8');
+  await fs.writeFile(path.join(tmp, '.aioson', 'context', 'dev-state.md'), 'state', 'utf8');
+
+  const state = {
+    mode: 'feature',
+    featureSlug: slug,
+    classification: 'MICRO',
+    sequence: ['dev', 'qa'],
+    completed: [],
+    skipped: [],
+    current: 'dev',
+    next: 'dev'
+  };
+
+  await assert.rejects(
+    () => finalizeCurrentStage(tmp, buildDefaultWorkflowConfig(), state, 'dev'),
+    /Harness Contract Gate BLOCKED[\s\S]*missing_runtime_gate/
+  );
+});
+
+// ───────────────────────── git-parity runtime detection ─────────────────────────
+
+test('gitChangedFiles: [] in a non-git dir, lists untracked files in a git repo', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-git-changed-'));
+  assert.deepEqual(gitChangedFiles(tmp), []); // not a git repo → degrade silently
+  gitInit(tmp);
+  await fs.writeFile(path.join(tmp, 'note.txt'), 'x', 'utf8');
+  const changed = gitChangedFiles(tmp);
+  assert.ok(changed.includes('note.txt'));
+});
+
+test('harness:check: a migration path in the git working tree flags runtime (standalone parity with the gate)', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-hc-gitparity-'));
+  gitInit(tmp);
+  const slug = 'billing-git';
+  // Contract has no RG-* and no prototype/progress signal — only git evidence.
+  await writePlan(tmp, slug, {
+    feature: slug,
+    governor: {},
+    criteria: [{ id: 'C1', description: 'unit', binary: true, verification: 'node -e "process.exit(0)"' }]
+  });
+  await fs.mkdir(path.join(tmp, 'prisma', 'migrations', '001'), { recursive: true });
+  await fs.writeFile(path.join(tmp, 'prisma', 'migrations', '001', 'migration.sql'), 'SELECT 1;', 'utf8');
+
+  const result = await runHarnessCheck({ args: [tmp], options: { slug, json: true }, logger: makeLogger(), t: mockT });
+  assert.equal(result.integrity.is_runtime_feature, true);
+  assert.ok(result.integrity.runtime_signals.includes('migrations'));
+  assert.equal(result.ok, false);
+  assert.ok(result.integrity.errors.some((e) => e.code === 'missing_runtime_gate'));
+});
+
+test('evaluateContractIntegrityGate: missing runtime contract error is actionable (suggests harness:init)', async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-gate-msg-'));
+  const slug = 'no-contract';
+  await fs.mkdir(path.join(tmp, '.aioson', 'briefings', slug), { recursive: true });
+  await fs.writeFile(path.join(tmp, '.aioson', 'briefings', slug, 'prototype-manifest.md'), '# Core\n', 'utf8');
+
+  const result = await evaluateContractIntegrityGate(tmp, slug, { runChecks: false });
+  assert.equal(result.ok, false);
+  const err = result.errors.find((e) => e.code === 'missing_runtime_contract');
+  assert.ok(err, 'expected missing_runtime_contract');
+  assert.match(err.message, /harness:init/);
 });

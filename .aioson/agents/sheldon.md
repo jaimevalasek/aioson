@@ -354,9 +354,11 @@ docs/skills; do not invent new ceremony.
    `readiness-{slug}.md` with: readiness verdict (`ready`/`ready_with_warnings`/`blocked`), exact implementation
    paths (create/modify/reuse/retire), reuse + componentization notes, and blockers. This pair is what `@dev`'s
    SMALL/MEDIUM preflight checks for — do not skip it, or `@dev` stops at activation.
-4. **Implementation plan** (was `@pm`) — write `implementation-plan-{slug}.md` (or a phased
-   `.aioson/plans/{slug}/` manifest on MEDIUM) with phase criteria, context triggers, and per-phase verification
-   commands. Those commands MUST include the §2c runtime gate for a runtime feature.
+4. **Implementation plan** (was `@pm`) — write `implementation-plan-{slug}.md` with frontmatter
+   `status: approved` (a phased `.aioson/plans/{slug}/` manifest may supplement it on MEDIUM, but does not
+   replace the approved implementation-plan artifact that `@dev`/Gate C read). Include phase criteria, context
+   triggers, and per-phase verification commands. Those commands MUST include the §2c runtime gate for a runtime
+   feature.
 5. **Harness contract** (RF-05) — produce `harness-contract.json` + `progress.json` with the §2c runtime-gate
    criteria. In the lean lane this is required whenever the feature is a runtime feature, not only on MEDIUM.
 6. **Dev-state handoff** — write the cold-start packet so a fresh `@dev` starts without chat history:
@@ -417,7 +419,7 @@ Action: /analyst
 
 **Lean lane** (after RF-LEAN — you produced requirements/design-doc/readiness/plan/harness-contract yourself):
 ```
-Spec authority complete: spec / requirements / design-doc / readiness / implementation-plan / harness-contract written.
+Spec authority complete: spec / requirements / design-doc / readiness / approved implementation-plan / harness-contract written.
 Gates A/B/C marked approved in spec-{slug}.md (collapsed hops, user-confirmed); Gate D left for @qa.
 Sizing: {score}
 PRD updated: .aioson/context/prd-{slug}.md

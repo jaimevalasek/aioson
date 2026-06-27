@@ -33,8 +33,9 @@ and the §2c runtime-gated harness contract). `@dev` implements from that plan u
 | You want velocity and one spec authority | Sensitive surface (money, multi-tenant ownership, regulated data) that wants independent architecture + scope-check + adversarial review as distinct gates |
 | The team trusts `@sheldon` to own the bridge | You want the readiness/scope-check checkpoints to be separate agents |
 
-The **runtime smoke gate is mandatory in both lanes** — neither lane lets a runtime feature close without
-build + migrate + boot + Core happy-path on the real stack.
+The **runtime smoke gate is mandatory in both lanes** for every runtime surface the framework can prove from
+local artifacts. The CLI blocks detectable runtime features (prototype manifest or migration/Prisma evidence)
+without a valid `RG-*` contract; `@validator` still owns the target-app-only `has_api` judgment.
 
 ## How to opt in
 
@@ -106,8 +107,8 @@ then hands off to `@dev`.
 
 - No change to `src/` routing constants — the built-in defaults stay the full chain, so the framework test suite
   is untouched. The lean lane is a project-level config + agent capability, not a core rewrite.
-- The runtime safety gates are unchanged: `@qa`'s Runtime smoke gate, the §2c `RG-*` criteria, and
-  `@validator`'s contract-integrity precheck apply identically in both lanes.
+- The runtime safety gates are unchanged: `@qa`'s Runtime smoke gate, the §2c `RG-*` criteria, the CLI
+  contract-integrity backstop, and `@validator`'s target-app judgment apply identically in both lanes.
 
 ## What the lean lane DOES change about the gates
 
@@ -115,8 +116,9 @@ Removing `@analyst`/`@pm` removes the agents that produced `spec-{slug}.md` and 
 A (requirements), B (design) and C (plan). Those gates still fire under `aioson workflow:next` — `@dev`'s
 completion checks **Gate C** against `spec-{slug}.md`, and `@qa`'s checks **Gate D** against the same file — so
 the lean lane would dead-end at `@dev` if nothing produced them. In the lean lane **`@sheldon` owns that**: its
-RF-LEAN pass writes `spec-{slug}.md` with `gate_requirements`/`gate_design`/`gate_plan: approved` (the hops it
-collapsed, after the user confirms its spec-authority output). Gate D / execution stays with `@qa`, which writes
-the `## QA sign-off` PASS into the same file after the Runtime smoke gate. If you run the lane by hand (slash
+RF-LEAN pass writes `spec-{slug}.md` with `gate_requirements`/`gate_design`/`gate_plan: approved` and an
+`implementation-plan-{slug}.md` with `status: approved` (the hops it collapsed, after the user confirms its
+spec-authority output). Gate D / execution stays with `@qa`, which writes the `## QA sign-off` PASS into the same
+file after the Runtime smoke gate. If you run the lane by hand (slash
 commands, untracked), the gate frontmatter is informational — but writing it keeps the manual and tracked paths
 identical.

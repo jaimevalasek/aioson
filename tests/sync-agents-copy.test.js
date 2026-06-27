@@ -97,6 +97,36 @@ test('syncAgentsCopy refreshes an existing AIOSON-managed gateway block instead 
   }
 });
 
+test('syncAgentsCopy is idempotent for managed gateway trailing blank lines', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-gw-'));
+  try {
+    const tpl = path.join(root, 'template');
+    await fs.mkdir(tpl, { recursive: true });
+    await fs.writeFile(path.join(tpl, 'OPENCODE.md'), '# AIOSON\nstable body\n');
+    const existing = [
+      '<!-- AIOSON:BEGIN -->',
+      '> Managed by AIOSON — edits inside this block will be overwritten on `aioson update`. Put project-specific rules above or below this block.',
+      '',
+      '# AIOSON',
+      'old body',
+      '<!-- AIOSON:END -->',
+      '',
+      ''
+    ].join('\n');
+    await fs.writeFile(path.join(root, 'OPENCODE.md'), existing);
+
+    await syncAgentsCopy(root);
+    const first = await fs.readFile(path.join(root, 'OPENCODE.md'), 'utf8');
+    await syncAgentsCopy(root);
+    const second = await fs.readFile(path.join(root, 'OPENCODE.md'), 'utf8');
+
+    assert.equal(second, first);
+    assert.ok(!second.endsWith('\n\n'), 'managed gateway should not accumulate blank lines at EOF');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
 test('syncAgentsCopy plain-copies a gateway file that has no managed block (raw, no block added)', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sync-gw-'));
   try {

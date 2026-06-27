@@ -11,6 +11,7 @@
 const path = require('node:path');
 const { readFileSafe, fileExists } = require('./preflight-engine');
 const { auditAcceptanceCriteriaTests } = require('./lib/ac-test-audit');
+const { evaluateContractIntegrityGate } = require('./harness/contract-integrity-gate');
 
 // Contract definitions per agent stage
 const CONTRACTS = {
@@ -28,6 +29,26 @@ const CONTRACTS = {
     },
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
+  },
+  sheldon: {
+    artifacts: (targetDir, state) => {
+      if (state.mode !== 'feature' || !state.featureSlug) {
+        return ['.aioson/context/sheldon-enrichment.md'];
+      }
+      const slug = state.featureSlug;
+      const base = [`.aioson/context/sheldon-enrichment-${slug}.md`];
+      if (!isLeanSheldonState(state)) return base;
+      return [
+        ...base,
+        `.aioson/context/requirements-${slug}.md`,
+        `.aioson/context/spec-${slug}.md`,
+        `.aioson/context/design-doc-${slug}.md`,
+        `.aioson/context/readiness-${slug}.md`,
+        `.aioson/context/implementation-plan-${slug}.md`
+      ];
+    },
+    gates: [],
+    contextUpdates: []
   },
   analyst: {
     artifacts: (targetDir, state) => {
@@ -122,6 +143,19 @@ const CONTRACTS = {
     contextUpdates: []
   }
 };
+
+function normalizeAgentName(input) {
+  return String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, '');
+}
+
+function isLeanSheldonState(state) {
+  const sequence = Array.isArray(state?.sequence) ? state.sequence.map(normalizeAgentName) : [];
+  const sheldonIndex = sequence.indexOf('sheldon');
+  return sheldonIndex !== -1 && sequence[sheldonIndex + 1] === 'dev';
+}
 
 async function readSecurityFindings(findingsPath) {
   try {
@@ -384,6 +418,37 @@ async function validateHandoffContract(targetDir, state, stageName) {
     );
     if (!gateCheck.ok) {
       missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
+    }
+  }
+
+  if (stageName === 'sheldon' && state.featureSlug && isLeanSheldonState(state)) {
+    for (const gateLetter of ['A', 'B', 'C']) {
+      const gateCheck = await checkGateApproval(
+        targetDir,
+        gateLetter,
+        state.featureSlug,
+        classification,
+        projectClassification
+      );
+      if (!gateCheck.ok) {
+        missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
+      }
+    }
+
+    const planPath = path.join(targetDir, '.aioson', 'context', `implementation-plan-${state.featureSlug}.md`);
+    const planContent = await readFileSafe(planPath);
+    const planStatus = planContent ? parseFrontmatterValue(planContent, 'status') : null;
+    if (String(planStatus || '').toLowerCase() !== 'approved') {
+      missing.push(`implementation-plan-${state.featureSlug}.md status is ${planStatus || 'missing'} — @sheldon must approve the collapsed Gate C plan`);
+    }
+
+    const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
+      runChecks: false
+    });
+    if (!integrityGate.ok) {
+      missing.push(...integrityGate.errors.map((err) =>
+        `harness contract integrity failed (${err.code}): ${err.message}`
+      ));
     }
   }
 

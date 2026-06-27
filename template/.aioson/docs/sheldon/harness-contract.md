@@ -20,9 +20,10 @@ Run **after** writing `sheldon-enrichment-{slug}.md`, gated by `project.context.
 | MEDIUM | Produce both `harness-contract.json` and `progress.json`. |
 
 A **runtime feature** (`has_api` / DB / migrations / `## Prototype reference`) therefore carries the `RG-*`
-runtime gate at **every** classification — `aioson harness:check` deterministically fails a runtime contract
-that has no `RG-*` (see §2c *CLI backstop*). This closes the hole where a MICRO/SMALL feature with a real backend
-used to close with only prose gates. Non-runtime MICRO/SMALL keep the lightweight path (no contract).
+runtime gate at **every** classification. The CLI deterministically blocks the subset it can locate on disk
+(prototype manifests and migration/Prisma paths from progress/git evidence) when the runtime contract is missing
+or has no `RG-*`; the Play `has_api` case still requires the `@validator` Step 0 judgment because that flag lives
+inside the target app. Non-runtime MICRO/SMALL keep the lightweight path (no contract).
 
 ## Steps
 
@@ -107,14 +108,18 @@ reason in the enrichment log):
   scope — do not downgrade `RG-smoke` to a unit test to make it "self-contained".
 
 > **CLI backstop (deterministic).** `aioson harness:check . --slug={slug}` enforces the first two hard rules
-> itself, not only through `@validator`. When it detects a runtime surface it can locate deterministically — a
-> `.aioson/briefings/{slug}/prototype-manifest.md`, or a migration/Prisma path in `progress.completed_steps` —
-> a contract with **no** `RG-*` criterion fails with `integrity.errors[].code = missing_runtime_gate`, and two
-> binary criteria sharing one `verification` command fail with `duplicate_verification`; both flip the check's
-> `ok` to `false`. The Play `manifest.json` `has_api` trigger lives in the target app and is **not** locatable
-> from the framework — for that case the `@validator` Step 0 precheck (below) remains the enforcer, and
-> `RG-smoke` actually exercising Core (vs. a unit test wearing the id) is always a `@validator` judgment. Treat
-> a green `harness:check` as necessary, not sufficient.
+> itself, not only through `@validator`, and `workflow:next --complete=dev|qa` / `feature:close --verdict=PASS`
+> call the same integrity gate before advancing. When the CLI detects a runtime surface it can locate
+> deterministically — a `.aioson/briefings/{slug}/prototype-manifest.md`, or a migration/Prisma path in
+> `progress.completed_steps`, `progress.changed_files`, or the git changed-file set — a missing contract is
+> blocked, a contract with **no** `RG-*` criterion fails with `missing_runtime_gate`, and two binary criteria
+> sharing one `verification` command fail with `duplicate_verification`; both flip the check's `ok` to `false`.
+> The Play `manifest.json` `has_api` trigger lives in the target app and is **not** locatable from the framework
+> in all projects — for that case the `@validator` Step 0 precheck remains the enforcer, and `RG-smoke` actually
+> exercising Core (vs. a unit test wearing the id) is always a `@validator` judgment. In an **untracked** session
+> (plain slash activation, no `workflow:next`), `aioson agent:epilogue --agent=dev|qa` surfaces the same check as a
+> non-blocking **advisory** `contract:integrity` step — a signal in the dashboard trail, not a gate; only the
+> tracked `workflow:next` / `feature:close` paths block. Treat a green `harness:check` as necessary, not sufficient.
 
 ### 3. Set `contract_mode`
 

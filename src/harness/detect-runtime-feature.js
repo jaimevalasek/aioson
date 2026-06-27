@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 /**
  * Deterministically detect whether a feature ships a runtime surface, using
@@ -24,12 +25,45 @@ const MIGRATION_HINTS = [
   /(?:^|[\\/])migrations?(?:[\\/]|$)/i,
   /(?:^|[\\/])prisma(?:[\\/]|$)/i,
   /\.prisma$/i,
-  /(?:^|[\\/])migrate[^\\/]*$/i
+  /(?:^|[\\/])migrate(?:[\\/]|$)/i
 ];
 
 function looksLikeMigration(step) {
   const value = String(step || '');
   return MIGRATION_HINTS.some((re) => re.test(value));
+}
+
+/**
+ * The set of paths git considers changed in the working tree: unstaged,
+ * staged, and untracked-but-not-ignored. Read-only and best-effort — a
+ * non-git project (or any git failure) yields `[]`, so callers degrade to
+ * prototype/progress-based detection. Lives here (not only in the gate) so
+ * the standalone `aioson harness:check` detects the same migration surface
+ * the workflow finalize / feature:close gate does.
+ */
+function gitChangedFiles(targetDir) {
+  const files = new Set();
+  const commands = [
+    ['diff', '--name-only'],
+    ['diff', '--name-only', '--cached'],
+    ['ls-files', '--others', '--exclude-standard']
+  ];
+  for (const args of commands) {
+    try {
+      const output = execFileSync('git', args, {
+        cwd: targetDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore']
+      });
+      for (const line of output.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (trimmed) files.add(trimmed);
+      }
+    } catch {
+      // Non-git projects still get prototype/progress based detection.
+    }
+  }
+  return [...files];
 }
 
 function detectRuntimeFeature(targetDir, slug, options = {}) {
@@ -47,9 +81,10 @@ function detectRuntimeFeature(targetDir, slug, options = {}) {
   }
 
   const completedSteps = Array.isArray(options.completedSteps) ? options.completedSteps : [];
-  if (completedSteps.some(looksLikeMigration)) signals.push('migrations');
+  const changedFiles = Array.isArray(options.changedFiles) ? options.changedFiles : [];
+  if ([...completedSteps, ...changedFiles].some(looksLikeMigration)) signals.push('migrations');
 
   return { isRuntimeFeature: signals.length > 0, signals };
 }
 
-module.exports = { detectRuntimeFeature, looksLikeMigration };
+module.exports = { detectRuntimeFeature, looksLikeMigration, gitChangedFiles };

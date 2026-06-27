@@ -157,6 +157,29 @@ async function runAgentEpilogue({ args, options = {}, logger, t }) {
     errors.push({ step: 'agent:done', reason: doneResult.reason || doneResult.error || 'agent_done_failed', result: doneResult });
   }
 
+  // Advisory contract-integrity signal for untracked (prompt-only) dev/qa
+  // completions. The tracked `workflow:next --complete` / `feature:close` paths
+  // enforce this as a HARD gate; a direct Claude Code session never calls them,
+  // so we surface the same signal here without blocking the best-effort
+  // epilogue (never added to `errors`, so it cannot flip `ok`).
+  if ((agent === 'dev' || agent === 'qa') && feature) {
+    let advisory = null;
+    try {
+      const { evaluateContractIntegrityGate } = require('../harness/contract-integrity-gate');
+      advisory = await evaluateContractIntegrityGate(targetDir, feature, { runChecks: false });
+    } catch {
+      advisory = null;
+    }
+    if (advisory && advisory.ok === false) {
+      pushStep(steps, 'contract:integrity', {
+        ok: false,
+        reason: `${advisory.errors.map((e) => e.code).join(', ')} — advisory only; the tracked workflow blocks on this. Run: aioson harness:check . --slug=${feature} --json`
+      });
+    } else if (advisory) {
+      pushStep(steps, 'contract:integrity', { ok: true });
+    }
+  }
+
   const ok = doneResult.ok && (strict ? errors.length === 0 : !errors.some((error) => error.step === 'agent:done'));
   const result = {
     ok,
