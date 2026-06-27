@@ -8,16 +8,23 @@ const path = require('node:path');
 
 const { isExcluded, syncAgentsCopy } = require('../src/commands/sync-agents-copy');
 
-test('isExcluded matches the legacy rsync excludes (config.md, runtime/, backups/, mcp/servers.local.json)', () => {
-  // excluded
+test('isExcluded matches rsync excludes + live project-state files', () => {
+  // rsync-parity excludes
   assert.equal(isExcluded(path.join('.aioson', 'config.md')), true);
   assert.equal(isExcluded(path.join('.aioson', 'runtime')), true);
   assert.equal(isExcluded(path.join('.aioson', 'runtime', 'state.json')), true);
   assert.equal(isExcluded(path.join('.aioson', 'backups', 'x', 'y.md')), true);
   assert.equal(isExcluded(path.join('.aioson', 'mcp', 'servers.local.json')), true);
-  // NOT excluded
+  // live project-state — owned by the workspace, never clobbered by template seeds
+  assert.equal(isExcluded(path.join('.aioson', 'context', 'project-pulse.md')), true);
+  assert.equal(isExcluded(path.join('.aioson', 'context', 'project-map.md')), true);
+  assert.equal(isExcluded(path.join('.aioson', 'config', 'learning-loop.json')), true);
+  assert.equal(isExcluded(path.join('.aioson', 'git-guard.json')), true);
+  // NOT excluded (must still sync)
   assert.equal(isExcluded(path.join('.aioson', 'agents', 'dev.md')), false);
   assert.equal(isExcluded('CLAUDE.md'), false);
+  assert.equal(isExcluded('AGENTS.md'), false);
+  assert.equal(isExcluded(path.join('.aioson', 'context', 'features.md')), false);
   assert.equal(isExcluded(path.join('.aioson', 'mcp', 'servers.json')), false);
   assert.equal(isExcluded(path.join('.aioson', 'docs', 'config.md.bak')), false);
 });

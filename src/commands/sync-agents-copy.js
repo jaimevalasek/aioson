@@ -7,11 +7,24 @@
 //   --exclude='config.md' --exclude='runtime/' --exclude='backups/' --exclude='mcp/servers.local.json'
 // rsync matched those names at any depth; we replicate that (basename / dir
 // segment / path suffix).
+//
+// We also exclude the live project-state files (project-pulse.md, project-map.md,
+// learning-loop.json, git-guard.json): the dogfooding workspace owns its own
+// evolving state, so a template sync must never overwrite it with the template
+// seeds. External project installs (`aioson update`) are a separate code path and
+// still receive the seeds.
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const EXCLUDE_BASENAMES = new Set(['config.md']);
+const EXCLUDE_BASENAMES = new Set([
+  'config.md',
+  // live project-state — owned by the workspace, never clobbered by template seeds
+  'project-pulse.md',
+  'project-map.md',
+  'learning-loop.json',
+  'git-guard.json'
+]);
 const EXCLUDE_DIR_NAMES = new Set(['runtime', 'backups']);
 const EXCLUDE_SUFFIXES = [path.join('mcp', 'servers.local.json')];
 
