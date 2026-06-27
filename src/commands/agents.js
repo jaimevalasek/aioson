@@ -66,6 +66,20 @@ function buildScopeCheckActivationContext(options = {}) {
   return lines.join('\n');
 }
 
+function buildTesterActivationContext(options = {}) {
+  // Lets `agent:prompt tester --feature=<slug>` pin the slug into the prompt.
+  // Without it, @tester resolves the slug via `feature:current`, which returns
+  // none once a feature is closed — so a standalone post-close test pass would
+  // wrongly fall back to project mode. An explicit slug keeps it feature-scoped.
+  const featureSlug = String(options.feature || options.slug || '').trim();
+  if (!featureSlug) return '';
+  return [
+    `Feature slug: ${featureSlug}.`,
+    `This is a standalone test pass over the already-implemented feature "${featureSlug}"; write test-plan-${featureSlug}.md and test-inventory-${featureSlug}.md.`,
+    'The feature may already be closed — do NOT fall back to project mode or pick a different slug.'
+  ].join('\n');
+}
+
 function normalizePentesterTargetMode(input) {
   const mode = String(input || '').trim().toLowerCase();
   if (!mode) return null;
@@ -212,6 +226,8 @@ async function runAgentPrompt({ args, options, logger, t }) {
       activationContext = buildPentesterActivationContext(options, t);
     } else if (promptAgent.id === 'scope-check') {
       activationContext = buildScopeCheckActivationContext(options);
+    } else if (promptAgent.id === 'tester') {
+      activationContext = buildTesterActivationContext(options);
     }
     const autonomyProtocol = await readAutonomyProtocol(targetDir);
     const manifest = await readAgentManifest(targetDir, promptAgent.id);

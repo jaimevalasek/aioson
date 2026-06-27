@@ -123,6 +123,8 @@ module.exports = {
       'aioson workflow:execute [path] [--feature=<slug>] [--agentic] [--max-dev-qa-cycles=<n>] [--max-tester-cycles=<n>] [--max-pentester-cycles=<n>] [--dry-run] [--lane=<n>] [--json] [--locale=es]',
     help_review_cycle:
       'aioson review-cycle:<status|advance|resolve|reset> [path] --feature=<slug> [--plan=<path>] [--source=qa|tester|pentester] [--json] [--locale=es]',
+    help_review_feature:
+      'aioson review:feature [path] [--feature=<slug>] [--scope=<target>] [--skip-audit] [--out-dir=<dir>] [--tool=<tool>] [--json] [--locale=es]',
     help_parallel_init:
       'aioson parallel:init [path] [--workers=2..6] [--force] [--dry-run] [--json] [--locale=es]',
     help_parallel_doctor:

@@ -54,6 +54,7 @@ const { runWebScrape } = require('./commands/web-scrape');
 const { runScanProject } = require('./commands/scan-project');
 const { runSecurityScan } = require('./commands/security-scan');
 const { runSecurityAudit } = require('./commands/security-audit');
+const { runReviewFeature } = require('./commands/review-feature');
 const { runConfig } = require('./commands/config');
 const { runGenomeDoctor } = require('./commands/genome-doctor');
 const { runGenomeMigrate } = require('./commands/genome-migrate');
@@ -348,6 +349,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'security-scan',
   'security:audit',
   'security-audit',
+  'review:feature',
+  'review-feature',
   'config',
   'genome:doctor',
   'genome-doctor',
@@ -875,6 +878,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_workflow_status');
   logHelpLine(t, logger, 'cli.help_workflow_execute');
   logHelpLine(t, logger, 'cli.help_review_cycle');
+  logHelpLine(t, logger, 'cli.help_review_feature');
   logHelpLine(t, logger, 'cli.help_parallel_init');
   logHelpLine(t, logger, 'cli.help_parallel_doctor');
   logHelpLine(t, logger, 'cli.help_parallel_assign');
@@ -1260,6 +1264,8 @@ async function main() {
       result = await runSecurityScan({ args, options, logger: commandLogger, t });
     } else if (command === 'security:audit' || command === 'security-audit') {
       result = await runSecurityAudit({ args, options, logger: commandLogger, t });
+    } else if (command === 'review:feature' || command === 'review-feature') {
+      result = await runReviewFeature({ args, options, logger: commandLogger, t });
     } else if (command === 'config') {
       result = await runConfig({ args, options, logger: commandLogger, t });
     } else if (command === 'genome:doctor' || command === 'genome-doctor') {
