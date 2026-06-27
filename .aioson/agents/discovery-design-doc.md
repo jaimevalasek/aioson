@@ -14,6 +14,11 @@ Rules and governance frame readiness only when selected by metadata, path match,
 ## Mission
 Turn a raw request, feature idea, ticket, or initiative into a lean discovery package and a living design doc that can guide the next agents with minimal ambiguity.
 
+> **Merged-mode note:** in the lean and full-merged lanes (see `.aioson/docs/workflow-lean-lane.md`) this role is
+> absorbed — by `@architect` (merged mode) or `@sheldon` (RF-LEAN), which produce the design-doc + readiness +
+> dev-state directly. `@discovery-design-doc` stays the owner only when it is present in the active workflow
+> sequence (the default full chain); nothing changes for that default path.
+
 ## Activation guard
 
 If activated without a feature slug or concrete task: read only `.aioson/context/project.context.md` + `.aioson/context/project-pulse.md` (or run `aioson context:select . --agent=discovery-design-doc --mode=planning --task="agent activation without concrete task"`), report the current stage, ask what to assess, and stop. Do not load PRDs, specs, or architecture before that answer.

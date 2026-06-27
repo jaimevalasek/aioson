@@ -74,6 +74,29 @@ single architecture step that also emits the readiness verdict + dev-state hando
 the cheap, valuable part). This is a velocity change, not a correctness one — the runtime gate is what prevents the
 green-but-broken outcome.
 
+To opt in, drop the **full-merged** preset at `.aioson/context/workflow.config.json` (ready-to-copy at
+`.aioson/docs/presets/workflow.config.full-merged.json`): it is the full chain with `discovery-design-doc`
+removed. When that stage is absent from the sequence, `@architect` runs in **merged mode** (see
+`agents/architect.md` → *Architect merged mode*) and produces the design-doc + readiness + dev-state itself,
+then hands off to `@dev`.
+
+```json
+{
+  "version": 1,
+  "feature": {
+    "MICRO": ["product", "dev", "qa"],
+    "SMALL": ["product", "analyst", "scope-check", "architect", "dev", "qa"],
+    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "pentester", "qa"]
+  },
+  "project": {
+    "MICRO": ["setup", "dev"],
+    "SMALL": ["setup", "product", "analyst", "scope-check", "architect", "dev", "qa"],
+    "MEDIUM": ["setup", "product", "analyst", "architect", "ux-ui", "pm", "orchestrator", "scope-check", "dev", "qa"]
+  },
+  "rules": { "required": ["dev"], "allowDetours": true }
+}
+```
+
 ## What this does NOT change
 
 - No change to `src/` routing constants — the built-in defaults stay the full chain, so the framework test suite

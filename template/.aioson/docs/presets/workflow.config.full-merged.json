@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "_about": "Full chain with @discovery-design-doc merged into @architect. Copy to .aioson/context/workflow.config.json. When discovery-design-doc is absent from the sequence, @architect runs in merged mode and produces design-doc + readiness + dev-state itself. See .aioson/docs/workflow-lean-lane.md and agents/architect.md (Architect merged mode). Runtime smoke gate stays mandatory.",
+  "feature": {
+    "MICRO": ["product", "dev", "qa"],
+    "SMALL": ["product", "analyst", "scope-check", "architect", "dev", "qa"],
+    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "pentester", "qa"]
+  },
+  "project": {
+    "MICRO": ["setup", "dev"],
+    "SMALL": ["setup", "product", "analyst", "scope-check", "architect", "dev", "qa"],
+    "MEDIUM": ["setup", "product", "analyst", "architect", "ux-ui", "pm", "orchestrator", "scope-check", "dev", "qa"]
+  },
+  "rules": { "required": ["dev"], "allowDetours": true }
+}

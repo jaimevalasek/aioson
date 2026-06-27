@@ -131,10 +131,31 @@ aioson gate:approve . --feature={slug} --gate=B 2>/dev/null || true
 ```
 Architecture defined: .aioson/context/architecture.md
 Gate B: {approved|blocked}
-Next agent: from the workflow state machine (usually @discovery-design-doc, then @pm on MEDIUM features, then @scope-check before @dev)
+Next agent: from the workflow state machine (usually @discovery-design-doc, then @pm on MEDIUM features, then @scope-check before @dev). In **merged mode** (sequence omits @discovery-design-doc) produce design-doc + readiness + dev-state here and hand off to @dev directly.
 Action: aioson workflow:next . --complete=architect --tool=<tool>
 ```
 > Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
+
+## Architect merged mode (absorbs @discovery-design-doc)
+
+Activate this mode when the workflow routes `@architect` **directly to `@dev`** with no `@discovery-design-doc`
+between them — i.e. the active sequence (`.aioson/context/workflow.config.json`) omits `discovery-design-doc`
+(the "full-merged" preset in `.aioson/docs/workflow-lean-lane.md`). In the default full chain, leave this OFF —
+`@discovery-design-doc` runs as its own stage and owns these artifacts; producing them here would collide.
+
+In merged mode you additionally produce what `@discovery-design-doc` would have, so `@dev`'s SMALL/MEDIUM
+preflight (which requires the design-doc + readiness pair) is satisfied:
+
+1. **Design-doc** — `.aioson/context/design-doc-{slug}.md` (project mode: `design-doc.md`): scope/approach
+   decisions, exact implementation paths (create/modify/reuse/retire), and componentization/split notes.
+2. **Readiness** — `.aioson/context/readiness-{slug}.md` (project mode: `readiness.md`): the readiness verdict
+   (`ready`/`ready_with_warnings`/`blocked`), exact downstream agent, artifacts consumed, blockers, assumptions.
+   **Keep this gate** — it is the cheap, valuable checkpoint; do not drop it just because the agent merged.
+3. **Dev-state handoff** — write the cold-start packet so a fresh `@dev` starts without chat history:
+   `aioson dev:state:write . --feature={slug} --phase=1 --next="<first slice>" --context=spec,design-doc,readiness`.
+
+Then hand off to `@dev` (not `@discovery-design-doc`). Keep the artifacts proportional to classification — the
+merge removes a hop, it does not license heavier documents.
 
 ## Autopilot handoff
 
