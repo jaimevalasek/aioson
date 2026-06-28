@@ -1,3 +1,10 @@
+---
+description: "Verification sub-agent config (verification.json) — which verifiers run, when, and on which host/model; native vs external dispatch."
+agents: [dev, qa, validator]
+task_types: [verification, configuration]
+triggers: [verification config, verification.json, sub-agent verification, native vs external, cross-vendor auditor]
+---
+
 # Verification sub-agent config — `.aioson/config/verification.json`
 
 Controls **which** verification sub-agents run, **when**, and on **which model** — resolved per host harness. Consumed by the `@dev` phase-loop (per-phase checks) and the post-dev review cycle (end-of-feature gate). Auto-generated on `aioson init`/`update` and hand-editable: your values survive updates (additive merge), only `version` is framework-owned.

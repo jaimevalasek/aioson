@@ -111,7 +111,7 @@ test('workflow:execute: dry-run --agentic returns runtime policy and resumable c
   assert.match(result.resume_command, /--max-pentester-cycles='5'/);
 });
 
-test('workflow:execute: dry-run SMALL has product, analyst, scope-check, dev, qa steps', async () => {
+test('workflow:execute: dry-run SMALL is the lean lane (product, sheldon, dev, qa)', async () => {
   const tmpDir = await makeTmpDir();
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -120,10 +120,11 @@ test('workflow:execute: dry-run SMALL has product, analyst, scope-check, dev, qa
   });
   const agents = result.steps.map((s) => s.agent);
   assert.ok(agents.includes('product'));
-  assert.ok(agents.includes('analyst'));
-  assert.ok(agents.includes('scope-check'));
+  assert.ok(agents.includes('sheldon'));
   assert.ok(agents.includes('dev'));
   assert.ok(agents.includes('qa'));
+  assert.ok(!agents.includes('analyst'), 'lean SMALL drops analyst');
+  assert.ok(!agents.includes('scope-check'), 'lean SMALL drops scope-check');
 });
 
 test('workflow:execute: dry-run MICRO follows the official feature sequence', async () => {

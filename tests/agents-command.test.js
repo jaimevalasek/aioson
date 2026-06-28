@@ -165,18 +165,18 @@ test('agent:prompt enforces workflow and routes to the active stage', async () =
 
   assert.equal(result.ok, true);
   assert.equal(result.requestedAgent, 'dev');
-  assert.equal(result.agent, 'analyst');
+  assert.equal(result.agent, 'sheldon');
   assert.equal(result.routed, true);
   assert.equal(Boolean(result.runtime), true);
 
   const runtime = await openRuntimeDb(dir, { mustExist: true });
   try {
-    const stageRun = runtime.db.prepare("SELECT agent_name, source, workflow_stage, status FROM agent_runs WHERE agent_name = '@analyst' ORDER BY updated_at DESC LIMIT 1").get();
+    const stageRun = runtime.db.prepare("SELECT agent_name, source, workflow_stage, status FROM agent_runs WHERE agent_name = '@sheldon' ORDER BY updated_at DESC LIMIT 1").get();
     const routedEvent = runtime.db.prepare("SELECT event_type, message FROM execution_events WHERE source = 'workflow' ORDER BY created_at DESC, id DESC LIMIT 1").get();
 
-    assert.equal(stageRun.agent_name, '@analyst');
+    assert.equal(stageRun.agent_name, '@sheldon');
     assert.equal(stageRun.source, 'workflow');
-    assert.equal(stageRun.workflow_stage, 'analyst');
+    assert.equal(stageRun.workflow_stage, 'sheldon');
     assert.equal(stageRun.status, 'running');
     assert.equal(routedEvent.event_type, 'routed');
     assert.match(routedEvent.message, /direct request for @dev/i);

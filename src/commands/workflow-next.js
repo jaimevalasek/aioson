@@ -44,7 +44,11 @@ const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 
 const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MICRO: ['product', 'dev', 'qa'],
-  SMALL: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+  // SMALL defaults to the lean lane: @sheldon is the single spec authority
+  // (requirements + spec + design-doc + readiness + plan + harness-contract in
+  // one pass), replacing analyst/scope-check/architect/discovery-design-doc.
+  // Those agents remain available as opt-in detours (allowDetours: true).
+  SMALL: ['product', 'sheldon', 'dev', 'qa'],
   // MEDIUM routes through @pm after discovery-design-doc (mirrors the
   // project-mode position): Gate C requires implementation-plan-{slug}.md and
   // @pm is its canonical owner (AC-SDLC-15/16) — without the stage, the
@@ -87,7 +91,7 @@ function buildDefaultWorkflowConfig() {
     version: 1,
     project: {
       MICRO: ['setup', 'dev'],
-      SMALL: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
       MEDIUM: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'scope-check', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,

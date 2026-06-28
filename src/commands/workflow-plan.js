@@ -5,7 +5,7 @@ const { validateProjectContextFile } = require('../context');
 
 const WORKFLOW_BY_CLASSIFICATION = {
   MICRO: ['setup', 'dev'],
-  SMALL: ['setup', 'product', 'analyst', 'scope-check', 'architect', 'dev', 'qa'],
+  SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
   MEDIUM: ['setup', 'product', 'analyst', 'architect', 'ux-ui', 'pm', 'orchestrator', 'scope-check', 'dev', 'qa']
 };
 

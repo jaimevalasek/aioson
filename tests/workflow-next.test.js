@@ -138,12 +138,12 @@ test('workflow:next infers project progress from existing artifacts', async () =
 
   assert.equal(result.ok, true);
   assert.equal(result.mode, 'project');
-  assert.equal(result.agent, 'analyst');
+  assert.equal(result.agent, 'sheldon');
   assert.deepEqual(result.completed, ['setup', 'product']);
-  assert.equal(result.current, 'analyst');
+  assert.equal(result.current, 'sheldon');
 });
 
-test('workflow:next infers active feature and routes to analyst after product', async () => {
+test('workflow:next infers active feature and routes to sheldon after product', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
   await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
@@ -163,7 +163,7 @@ test('workflow:next infers active feature and routes to analyst after product', 
 
   assert.equal(result.mode, 'feature');
   assert.equal(result.featureSlug, 'compact-layout');
-  assert.equal(result.agent, 'analyst');
+  assert.equal(result.agent, 'sheldon');
   assert.deepEqual(result.completed, ['product']);
 });
 
@@ -701,7 +701,7 @@ test('workflow:next supports detours and returns to the saved stage', async () =
   assert.deepEqual(detour.detour, {
     active: true,
     agent: 'ux-ui',
-    returnTo: 'analyst'
+    returnTo: 'sheldon'
   });
 
   await writeFileEnsured(path.join(dir, '.aioson/context/ui-spec.md'), '# UI Spec\n');
@@ -714,7 +714,7 @@ test('workflow:next supports detours and returns to the saved stage', async () =
   });
 
   assert.equal(resumed.completedStage, 'ux-ui');
-  assert.equal(resumed.agent, 'analyst');
+  assert.equal(resumed.agent, 'sheldon');
   assert.equal(resumed.detour, null);
 });
 
@@ -732,7 +732,7 @@ test('workflow:next allows skip until dev but not past dev', async () => {
   });
 
   assert.equal(skipped.agent, 'dev');
-  assert.deepEqual(skipped.skipped, ['analyst', 'scope-check', 'architect', 'discovery-design-doc']);
+  assert.deepEqual(skipped.skipped, ['sheldon']);
 
   await assert.rejects(
     () =>
@@ -746,12 +746,10 @@ test('workflow:next allows skip until dev but not past dev', async () => {
   );
 });
 
-test('workflow:next routes SMALL project through scope-check after analyst', async () => {
+test('workflow:next routes SMALL project through sheldon after product (lean lane)', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
   await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
 
   const { t } = createTranslator('en');
   const result = await runWorkflowNext({
@@ -761,9 +759,9 @@ test('workflow:next routes SMALL project through scope-check after analyst', asy
     t
   });
 
-  assert.equal(result.agent, 'scope-check');
-  assert.deepEqual(result.completed, ['setup', 'product', 'analyst']);
-  assert.match(result.prompt, /scope-check\.md/);
+  assert.equal(result.agent, 'sheldon');
+  assert.deepEqual(result.completed, ['setup', 'product']);
+  assert.match(result.prompt, /sheldon\.md/);
 });
 
 test('workflow:next can invoke optional post-dev scope-check detour', async () => {
@@ -976,26 +974,11 @@ test('workflow:next defaults MEDIUM post-dev scope-check verification to strict 
   assert.match(result.prompt, /Strict MEDIUM guidance/);
 });
 
-test('workflow:next routes SMALL project through discovery-design-doc after scope-check and architect', async () => {
-  const dir = await makeTempDir();
-  await writeProjectContext(dir, 'SMALL');
-  await writeFileEnsured(path.join(dir, '.aioson/context/prd.md'), '# PRD\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/discovery.md'), '# Discovery\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/scope-check.md'), '# Scope Check\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
-
-  const { t } = createTranslator('en');
-  const result = await runWorkflowNext({
-    args: [dir],
-    options: { tool: 'codex' },
-    logger: createQuietLogger(),
-    t
-  });
-
-  assert.equal(result.agent, 'discovery-design-doc');
-  assert.deepEqual(result.completed, ['setup', 'product', 'analyst', 'scope-check', 'architect']);
-  assert.match(result.prompt, /design-doc\.md/);
-});
+// (removed) SMALL no longer routes through @discovery-design-doc in the mainline —
+// SMALL defaults to the lean lane (@sheldon as single spec authority). The
+// discovery-design-doc / scope-check / architect agents stay available as opt-in
+// detours; detour routing + completion is covered by workflow-engine-hardening
+// and the explicit-state scope-check tests above.
 
 test('workflow:next blocks discovery-design-doc completion until design-doc and readiness exist', async () => {
   const dir = await makeTempDir();
@@ -1053,9 +1036,9 @@ test('workflow:next appends workflow events for dashboard visibility', async () 
   const event = JSON.parse(lines[0]);
   assert.equal(event.kind, 'workflow');
   assert.equal(event.eventType, 'start');
-  assert.equal(event.current, 'analyst');
-  assert.equal(event.next, 'analyst');
-  assert.match(event.message, /Stage @analyst is active|Workflow initialized at @analyst/);
+  assert.equal(event.current, 'sheldon');
+  assert.equal(event.next, 'sheldon');
+  assert.match(event.message, /Stage @sheldon is active|Workflow initialized at @sheldon/);
 });
 
 test('workflow:next syncs workflow task, runs, and canonical events into runtime sqlite', async () => {
@@ -1077,7 +1060,7 @@ test('workflow:next syncs workflow task, runs, and canonical events into runtime
   try {
     const task = runtime.db.prepare('SELECT task_key, session_key, status FROM tasks ORDER BY updated_at DESC LIMIT 1').get();
     const workflowRun = runtime.db.prepare("SELECT agent_name, agent_kind, source, workflow_id FROM agent_runs WHERE agent_name = '@workflow' ORDER BY updated_at DESC LIMIT 1").get();
-    const stageRun = runtime.db.prepare("SELECT agent_name, agent_kind, source, workflow_stage, parent_run_key, status FROM agent_runs WHERE agent_name = '@analyst' ORDER BY updated_at DESC LIMIT 1").get();
+    const stageRun = runtime.db.prepare("SELECT agent_name, agent_kind, source, workflow_stage, parent_run_key, status FROM agent_runs WHERE agent_name = '@sheldon' ORDER BY updated_at DESC LIMIT 1").get();
     const events = runtime.db.prepare('SELECT event_type, phase, source, workflow_stage FROM execution_events ORDER BY created_at DESC, id DESC LIMIT 10').all();
 
     assert.equal(task.session_key, 'workflow:project:project:default');
@@ -1087,11 +1070,11 @@ test('workflow:next syncs workflow task, runs, and canonical events into runtime
     assert.equal(workflowRun.workflow_id, 'workflow:project:project:default');
     assert.equal(stageRun.agent_kind, 'official');
     assert.equal(stageRun.source, 'workflow');
-    assert.equal(stageRun.workflow_stage, 'analyst');
+    assert.equal(stageRun.workflow_stage, 'sheldon');
     assert.equal(stageRun.status, 'running');
     assert.equal(typeof stageRun.parent_run_key, 'string');
     assert.equal(events.some((event) => event.source === 'workflow'), true);
-    assert.equal(events.some((event) => event.workflow_stage === 'analyst'), true);
+    assert.equal(events.some((event) => event.workflow_stage === 'sheldon'), true);
   } finally {
     runtime.db.close();
   }

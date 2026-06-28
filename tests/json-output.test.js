@@ -223,8 +223,8 @@ test('workflow:next --json returns structured payload without human logs', async
   assert.equal(cli.stderr.trim(), '');
   const parsed = JSON.parse(cli.stdout);
   assert.equal(parsed.ok, true);
-  assert.equal(parsed.agent, 'analyst');
-  assert.equal(parsed.current, 'analyst');
+  assert.equal(parsed.agent, 'sheldon');
+  assert.equal(parsed.current, 'sheldon');
   assert.equal(parsed.statePath, '.aioson/context/workflow.state.json');
 });
 
@@ -243,7 +243,7 @@ test('workflow:next --status --json returns structured workflow insights', async
   assert.equal(cli.stderr.trim(), '');
   const parsed = JSON.parse(cli.stdout);
   assert.equal(parsed.ok, true);
-  assert.equal(parsed.activeStage, 'analyst');
+  assert.equal(parsed.activeStage, 'sheldon');
   assert.equal(parsed.tool, 'codex');
   assert.equal(typeof parsed.suggestion.reason, 'string');
 });
@@ -720,7 +720,7 @@ test('workflow:plan --json returns workflow payload', async () => {
   assert.equal(parsed.ok, true);
   assert.equal(parsed.classification, 'SMALL');
   assert.equal(Array.isArray(parsed.commands), true);
-  assert.equal(parsed.commands.includes('@architect'), true);
+  assert.equal(parsed.commands.includes('@sheldon'), true);
 });
 
 test('parallel:init --json returns structured parallel workspace payload', async () => {

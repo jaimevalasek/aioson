@@ -1,3 +1,10 @@
+---
+description: "Dev phase loop — auto-continue across phases, per-phase verification sub-agents, and compaction between phases."
+agents: [dev, deyvin]
+task_types: [implementation, verification]
+triggers: [phase loop, auto-continue phases, per-phase verification, compact between phases]
+---
+
 # Dev phase loop — auto-continue, per-phase verification, compaction
 
 On-demand detail for @dev's `## Phase loop` kernel section. Applies when a phased plan drives the work (`implementation-plan-{slug}.md` or a Sheldon `.aioson/plans/{slug}/manifest.md`).
