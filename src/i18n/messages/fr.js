@@ -157,6 +157,8 @@ module.exports = {
       'aioson harness:retro [path] --feature=<slug> | --last=<N> [--json] [--locale=fr]',
     help_harness_preview:
       'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=fr]',
+    help_verification_plan:
+      'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=fr]',
     harnessRetro: {
       need_target: 'harness:retro requiert --feature=<slug> ou --last=<N>.',
       invalid_slug: 'Slug invalide : {slug} (doit correspondre à ^[a-z0-9][a-z0-9-]*$).',

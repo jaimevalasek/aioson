@@ -142,11 +142,13 @@ Also check `.aioson/plans/{slug}/manifest.md` before any implementation:
 
 **Stale plan detection:** if `aioson plan:stale . --feature={slug}` says `STALE`, regenerate. Otherwise warn when plan inputs are newer than the plan.
 
+## Phase loop (auto-continue)
+
+@dev runs a phased plan as a loop and **auto-continues by default — no "continue?" between phases** (`phase_loop.auto_continue`). After each phase's `harness:check`, run `aioson verification:plan . --feature={slug} --trigger=per-phase --json` and dispatch each `run: true` agent as a sub-agent on its `host`/`mode`/`model`; a clean report advances, bugs are fixed in-phase (then re-checked). Compact between phases. The full runtime smoke runs once at end-of-feature, never per phase. Full protocol: `.aioson/docs/dev/phase-loop.md`.
+
 ## Context size detection
 
-At the end of each phase: run `aioson preflight:context . --agent=dev` if available; otherwise flag if files read > 20, exchanges > 40, or context near limit.
-
-If flagged, recommend a new chat and offer a handoff with slug, completed phase, next phase, manifest path, required context files, and session decisions.
+Between-phase compaction is handled by the phase loop. For a single long phase, run `aioson preflight:context . --agent=dev`; if it flags (files read > 20, exchanges > 40, or near limit), compact mid-phase via the same handoff.
 
 ## Feature dossier
 
@@ -239,6 +241,7 @@ The detailed dev protocol is split into on-demand framework docs:
 - `.aioson/docs/dev/stack-conventions.md`
 - `.aioson/docs/dev/execution-discipline.md`
 - `.aioson/docs/dev/simple-plan-lane.md`
+- `.aioson/docs/dev/phase-loop.md`
 
 ## Security process skill loading
 

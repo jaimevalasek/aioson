@@ -17,6 +17,7 @@ const {
   resolveAgentReportPath,
   getCrossCheck,
   getBudget,
+  getPhaseLoop,
   shouldRunForTrigger
 } = require('../src/verification-policy');
 
@@ -157,4 +158,19 @@ test('cross_check is normalized only for validator and reports resolve {slug}', 
   assert.equal(agentHasTrigger(config, 'validator', 'per-phase'), false);
   assert.equal(getBudget(config).max_subagents_per_phase, 1);
   assert.equal(getAgentConfig(config, 'nope'), null);
+});
+
+test('phase_loop normalizes overrides and fills gaps from defaults', async () => {
+  const dir = await makeTmpDir();
+  await writeConfig(dir, { phase_loop: { auto_continue: false, max_fix_retries_per_phase: -5 } });
+  const config = await readVerificationConfig(dir);
+
+  // explicit boolean honored
+  assert.equal(config.phase_loop.auto_continue, false);
+  // invalid retries fall back to the default (2)
+  assert.equal(config.phase_loop.max_fix_retries_per_phase, 2);
+  // unset field filled from default
+  assert.equal(config.phase_loop.compact_between_phases, true);
+  // getter mirrors the normalized block
+  assert.deepEqual(getPhaseLoop(config), config.phase_loop);
 });

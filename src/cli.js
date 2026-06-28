@@ -188,6 +188,7 @@ const { runPreflight } = require('./commands/preflight');
 const { runClassify } = require('./commands/classify');
 const { runPrototypeCheck } = require('./commands/prototype-check');
 const { runVerifyImplementation } = require('./commands/verify-implementation');
+const { runVerificationPlan } = require('./commands/verification-plan');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
@@ -663,6 +664,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'prototype-check',
   'verify:implementation',
   'verify-implementation',
+  'verification:plan',
+  'verification-plan',
   'sizing',
   'detect:test-runner',
   'detect-test-runner',
@@ -895,6 +898,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_harness_check');
   logHelpLine(t, logger, 'cli.help_harness_retro');
   logHelpLine(t, logger, 'cli.help_harness_preview');
+  logHelpLine(t, logger, 'cli.help_verification_plan');
   logHelpLine(t, logger, 'cli.help_web_map');
   logHelpLine(t, logger, 'cli.help_web_scrape');
   logHelpLine(t, logger, 'cli.help_scan_project');
@@ -1608,6 +1612,8 @@ async function main() {
       result = await runPreflight({ args, options, logger: commandLogger });
     } else if (command === 'classify') {
       result = await runClassify({ args, options, logger: commandLogger });
+    } else if (command === 'verification:plan' || command === 'verification-plan') {
+      result = await runVerificationPlan({ args, options, logger: commandLogger });
     } else if (command === 'prototype:check' || command === 'prototype-check') {
       result = await runPrototypeCheck({ args, options, logger: commandLogger });
     } else if (command === 'verify:implementation' || command === 'verify-implementation') {

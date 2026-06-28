@@ -87,6 +87,11 @@ function buildDefaultVerificationConfig() {
       max_subagents_per_phase: 1,
       skip_on_micro: true,
       full_smoke: 'end-of-feature-only'
+    },
+    phase_loop: {
+      auto_continue: true,
+      compact_between_phases: true,
+      max_fix_retries_per_phase: 2
     }
   };
 }
@@ -177,6 +182,20 @@ function normalizeBudget(parsed) {
   };
 }
 
+function normalizePhaseLoop(parsed) {
+  const def = buildDefaultVerificationConfig().phase_loop;
+  const raw = parsed && typeof parsed === 'object' ? parsed : {};
+  return {
+    auto_continue: typeof raw.auto_continue === 'boolean' ? raw.auto_continue : def.auto_continue,
+    compact_between_phases: typeof raw.compact_between_phases === 'boolean'
+      ? raw.compact_between_phases
+      : def.compact_between_phases,
+    max_fix_retries_per_phase: Number.isInteger(raw.max_fix_retries_per_phase) && raw.max_fix_retries_per_phase >= 0
+      ? raw.max_fix_retries_per_phase
+      : def.max_fix_retries_per_phase
+  };
+}
+
 function normalizeVerificationConfig(parsed) {
   const def = buildDefaultVerificationConfig();
   const raw = parsed && typeof parsed === 'object' ? parsed : {};
@@ -192,7 +211,8 @@ function normalizeVerificationConfig(parsed) {
     version: typeof raw.version === 'string' ? raw.version : def.version,
     host: normalizeHostSetting(raw.host),
     agents,
-    budget: normalizeBudget(raw.budget)
+    budget: normalizeBudget(raw.budget),
+    phase_loop: normalizePhaseLoop(raw.phase_loop)
   };
 }
 
@@ -305,6 +325,12 @@ function getBudget(config) {
   return normalizeBudget(config && config.budget);
 }
 
+// Phase-loop behavior: whether @dev auto-continues across phases, compacts
+// between them, and how many in-phase fix retries are allowed before stopping.
+function getPhaseLoop(config) {
+  return normalizePhaseLoop(config && config.phase_loop);
+}
+
 // Composed decision: should `agentId` run for `context.trigger` right now?
 // Combines trigger membership + enabled resolution + the skip-on-micro budget
 // guard (per-phase verification is suppressed on MICRO to save tokens).
@@ -339,5 +365,6 @@ module.exports = {
   resolveAgentReportPath,
   getCrossCheck,
   getBudget,
+  getPhaseLoop,
   shouldRunForTrigger
 };
