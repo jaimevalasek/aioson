@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.35.0] - 2026-06-28
+
+The **lean-harness redesign**: fewer default agent hops, with quality held by deterministic gates and configurable verification sub-agents rather than by agent count. SMALL and MEDIUM now each route through a single spec authority; `@analyst` / `@architect` / `@pm` / `@discovery-design-doc` / `@scope-check` / `@ux-ui` become opt-in detours (none deleted).
+
+### Changed
+- **SMALL is the lean lane by default.** The default SMALL chain is now `@product → @sheldon → @dev → @qa` (was `@product → @analyst → @scope-check → @architect → @discovery-design-doc → @dev → @qa`), with `@sheldon` as the single spec authority. Supersedes 1.34.0's *opt-in* lean lane. Updated in both routing sources (`workflow-next.js` + `workflow-plan.js`). (`aea0894`)
+- **MEDIUM is the `@orchestrator` maestro.** The default MEDIUM chain is now `@product → @orchestrator → @dev → @pentester → @qa` (project: `@setup → @product → @orchestrator → @dev → @qa`). `@orchestrator` is repurposed from a paper-protocol parallel-lane coordinator into the MEDIUM single spec authority — it **fans out** to `@analyst` / `@architect` / `@pm` (+ `@ux-ui` when UI-heavy) sub-agents, then consolidates / verifies / redoes their output into one gated spec package (requirements + spec [Gates A/B/C approved] + design-doc + readiness + implementation-plan + harness-contract) and hands to `@dev` — the horizontal counterpart to `@sheldon`'s vertical lean lane. (`d03e1ec`)
+- **Spec hops demoted to opt-in detours** (none deleted): `@discovery-design-doc`, `@scope-check`, `@ux-ui` (3b) and `@analyst`, `@architect`, `@pm` (4a). `@architect` runs in **merged mode** by default (also producing design-doc + readiness + dev-state) when the active sequence omits `@discovery-design-doc`; `@scope-check`'s deterministic drift check (`spec:analyze`) is now enforced at the `@dev` / `@qa` done gate (`finalizeCurrentStage`), blocking on real drift (readiness-blocked / invalid harness contract) without false-blocking artifact-light features. (`6db76f9`)
+
+### Added
+- **Per-agent, per-host verification config.** `.aioson/config/verification.json` (auto-generated, hand-editable) declares which verification sub-agents (`qa` / `tester` / `pentester` / `validator`) run, when (`per-phase` / `end-of-feature` / `sensitive-surface`), and on which model — keyed by host harness with `native` (in-harness sub-agent on a Claude tier or the host's own model) vs `external` (cross-vendor auditor) dispatch, plus a token budget. `src/verification-policy.js` is the reader; degrades to safe defaults on a missing/malformed file. (`dc4bd42`)
+- **`aioson verification:plan` + `@dev` phase loop.** The new deterministic command resolves, for a slug + trigger + host, which verifiers run and on which model. `@dev` now runs a phased plan as a loop that **auto-continues by default** (no human "continue?" between phases), compacts between phases (`dev:state:write` → `/compact` or fresh context → `dev:resume-data`), and runs the per-phase verification whose report replaces the human checkpoint. Per-phase checks are light and suppressed on MICRO; the full runtime smoke runs once at end-of-feature. Full protocol in `.aioson/docs/dev/phase-loop.md`. (`4c6ac66`)
+- **Single-spec-authority handoff gate + `@sheldon` PRD-enrichment step.** `handoff-contract.js` now enforces the collapsed done-gate (Gates A/B/C + approved implementation-plan + contract integrity) for **both** the lean `@sheldon` lane and the maestro `@orchestrator` lane; the orchestrator's expected artifacts become the gated spec package in maestro mode. The MEDIUM maestro can optionally harden the PRD via `@sheldon`'s enrichment first (opt-in pre-step or a fan-out stream — never a mandatory hop). (`d03e1ec`, `da0c1dd`)
+
+### Docs
+- Swept the framework documentation to the new default chains — `CLAUDE.md`, `config.md`, `autopilot-handoff.md`, `workflow-lean-lane.md` (premise flipped: lean is the SMALL default, "full-merged" is the opt-in heavier chain), the `aioson-spec-driven` skill + references, `prd-contract.md`, `LAYERS.md`, and `pm.md`. (`75104d5`, `8e7b0e1`)
+
+## [1.34.0] - 2026-06-27
+
+### Added
+- **Mandatory runtime smoke gate.** A feature with a backend, a database, or a clickable prototype no longer closes on green unit tests + `tsc` alone. The §2c `RG-build` / `RG-migrate` / `RG-boot` / `RG-smoke` criteria must run on the real stack. `@qa`'s Runtime smoke gate, `@validator`'s Step-0 precheck, and the `harness-contract` schema enforce it.
+- **Deterministic contract-integrity gate.** New `src/harness/contract-integrity.js` + `contract-integrity-gate.js` flag a runtime feature whose contract is missing / has no `RG-*` / pads binary criteria with duplicate verification commands. It is wired as a real gate into `workflow:next --complete=dev|qa` and `feature:close --verdict=PASS` (hard-blocks, independent of `ready_for_done_gate`), and as a non-blocking advisory `contract:integrity` step in `agent:epilogue` for untracked sessions. Runtime detection uses prototype-manifest, migration/Prisma paths in `progress.*`, and the git working tree; the same detection backs standalone `aioson harness:check`.
+- **Opt-in lean lane + full-merged preset.** Drop `.aioson/docs/presets/workflow.config.lean.json` into `.aioson/context/workflow.config.json` to route `@product → @sheldon → @dev → @qa`, with `@sheldon` as single spec authority (RF-LEAN) producing requirements/spec/design-doc/readiness/implementation-plan/harness-contract in one pass. The `full-merged` preset instead folds `@discovery-design-doc` into `@architect`. Built-in `src/` routing defaults are unchanged (full chain stays the default).
+- **Deterministic lean detection for `@sheldon`.** `agent:prompt sheldon` reads `workflow.config.json` and injects the RF-LEAN directive when the lean lane is active, so a directly-activated `@sheldon` no longer falls back to enrichment mode and hands to `@analyst`.
+- **`aioson review:feature`.** One-shot review pass for an already-implemented feature: resolves the slug, runs the deterministic `security:audit`, and prepares the `@pentester` + `@tester` activation prompts (`--scope`, `--skip-audit`, `--out-dir`, `--json`). `agent:prompt tester --feature=<slug>` now pins the slug so a standalone post-close test pass stays feature-scoped.
+- **Git-build traceability.** `aioson --version` reports `1.34.0 (<sha>, <date>)` from a git checkout (JSON adds `git_sha`/`git_date`); `install`/`update` stamp `template_git_sha`/`template_git_date` into each project's `.aioson/install.json`. Lets a linked dev framework report exactly which commit is installed without a per-commit version bump.
+
+### Fixed
+- **Lean Gate-C dead-end.** The lean lane stalled at `@dev` because no agent produced `spec-{slug}.md`. `@sheldon`'s handoff contract now structurally requires the lean bridge artifacts (spec + approved gates A/B/C + approved implementation-plan + a valid runtime contract).
+- **Runtime-gate coverage at all sizes.** A runtime feature now requires the `RG-*` contract at every classification (was MEDIUM-only), closing the hole where a MICRO/SMALL backend feature closed with prose-only gates.
+- **Cross-platform `sync:agents`.** Replaced the `rsync` step (silently a no-op on Windows) with a Node copy, excluded live project-state from the sync, and preserved the `<!-- AIOSON:BEGIN/END -->` managed block in gateway files (CLAUDE.md / AGENTS.md / OPENCODE.md) instead of stripping it.
+- **Windows `live:start` false "session already active".** `live` now reconciles a dead PID via a `tasklist` probe instead of leaving it `unknown` when `process.kill(pid, 0)` throws `EPERM`.
+
 ## [1.33.1] - 2026-06-24
 
 ### Fixed

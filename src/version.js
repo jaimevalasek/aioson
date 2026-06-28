@@ -83,7 +83,7 @@ function getGitBuildInfoSync() {
 
 /**
  * Display label: the semver, plus `(sha, date)` when running from a git checkout.
- * e.g. "1.33.1 (0e40dd4, 2026-06-27)" linked, or "1.33.1" from an npm install.
+ * e.g. "1.35.0 (<sha>, <date>)" linked, or "1.35.0" from an npm install.
  */
 function getCliVersionLabelSync() {
   const version = getCliVersionSync();
