@@ -20,6 +20,13 @@ separate stages.
 ### Fan-out → consolidate
 
 1. **Decompose the PRD** into spec work-streams. Read `prd-{slug}.md` (+ briefing/prototype when present).
+1b. **Optional — harden the PRD first (`@sheldon` enrichment).** When the PRD is thin, ambiguous, or
+   technically risky (unfamiliar stack, security/perf/scaling unknowns, or it needs research), run `@sheldon`'s
+   enrichment (RF-01..RF-04: deep technical analysis, web intelligence, gap analysis, sizing) BEFORE
+   decomposing — either as an opt-in pre-step (`product → sheldon → orchestrator → dev`) or as one of the
+   fan-out streams below (the "deep technical analysis" stream that feeds the others). `@sheldon` hardens the
+   *input* PRD; you still own the consolidated spec package. Skip it for a well-specified PRD — this brings the
+   SMALL lean lane's enrichment into the MEDIUM maestro **without** re-adding a mandatory hop.
 2. **Spawn focused sub-agents** — one self-contained, stateless brief each (see the Worker statelessness
    contract below), in dependency order (data → structure → plan). Use the host's sub-agent mechanism
    (Claude Code: the Task tool; otherwise a fresh session per brief). Each returns its artifact:
