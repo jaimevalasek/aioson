@@ -138,10 +138,12 @@ Action: aioson workflow:next . --complete=architect --tool=<tool>
 
 ## Architect merged mode (absorbs @discovery-design-doc)
 
-Activate this mode when the workflow routes `@architect` **directly to `@dev`** with no `@discovery-design-doc`
-between them — i.e. the active sequence (`.aioson/context/workflow.config.json`) omits `discovery-design-doc`
-(the "full-merged" preset in `.aioson/docs/workflow-lean-lane.md`). In the default full chain, leave this OFF —
-`@discovery-design-doc` runs as its own stage and owns these artifacts; producing them here would collide.
+Activate this mode whenever the active sequence omits `@discovery-design-doc` — which is now the **default for
+MEDIUM** (ddd was demoted to an opt-in detour), as well as the lean lane and the "full-merged" preset. In that
+case `@discovery-design-doc` does not run as its own stage, so produce design-doc + readiness + dev-state here so
+`@dev`'s SMALL/MEDIUM preflight is satisfied. Leave this OFF only when the active sequence explicitly includes
+`@discovery-design-doc` (an opt-in detour / older config) — then ddd owns these artifacts and producing them here
+would collide.
 
 In merged mode you additionally produce what `@discovery-design-doc` would have, so `@dev`'s SMALL/MEDIUM
 preflight (which requires the design-doc + readiness pair) is satisfied:

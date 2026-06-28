@@ -56,10 +56,8 @@ test('buildWorkflowPlan maps classifications to agent sequence', () => {
     '@product',
     '@analyst',
     '@architect',
-    '@ux-ui',
     '@pm',
     '@orchestrator',
-    '@scope-check',
     '@dev',
     '@qa'
   ]);

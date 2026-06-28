@@ -685,10 +685,10 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
     if (!artifacts.spec.exists) blockers.push('spec file missing');
     if (classification && classification !== 'MICRO') {
       if (!designDoc.exists) {
-        blockers.push('design-doc.md missing — @discovery-design-doc must run before implementation');
+        blockers.push('design-doc.md missing — @architect (merged mode) or @sheldon must produce it before implementation');
       }
       if (!readiness.exists) {
-        blockers.push('readiness.md missing — @discovery-design-doc must run before implementation');
+        blockers.push('readiness.md missing — @architect (merged mode) or @sheldon must produce it before implementation');
       }
     }
     if (classification === 'MEDIUM') {

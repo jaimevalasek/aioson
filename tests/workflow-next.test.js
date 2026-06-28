@@ -316,7 +316,7 @@ test('workflow:next infers scope-check (after discovery-design-doc) in a MEDIUM 
   assert.equal(loaded.state.next, 'dev');
 });
 
-test('workflow:next MEDIUM feature: fresh state sequences pm before scope-check and infers it from the implementation plan', async () => {
+test('workflow:next MEDIUM feature: fresh state sequences pm after architect and infers it from the implementation plan', async () => {
   const dir = await makeTempDir();
   const slug = 'official-dashboard-reform';
   await writeActiveFeature(dir, slug, 'MEDIUM');
@@ -336,11 +336,11 @@ test('workflow:next MEDIUM feature: fresh state sequences pm before scope-check 
 
   assert.deepEqual(
     loaded.state.sequence,
-    ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa']
+    ['product', 'analyst', 'architect', 'pm', 'dev', 'pentester', 'qa']
   );
   assert.deepEqual(
     loaded.state.completed,
-    ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check']
+    ['product', 'analyst', 'architect', 'pm']
   );
   assert.equal(loaded.state.next, 'dev');
 });
@@ -361,7 +361,7 @@ test('workflow:next MEDIUM feature: inference stops at pm while the implementati
 
   const loaded = await loadOrCreateState(dir);
 
-  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'architect', 'discovery-design-doc']);
+  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'architect']);
   assert.equal(loaded.state.next, 'pm');
 });
 

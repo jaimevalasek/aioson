@@ -30,6 +30,7 @@ const {
   evaluateContractIntegrityGate,
   formatContractIntegrityGateError
 } = require('../harness/contract-integrity-gate');
+const { runSpecAnalyze } = require('./spec-analyze');
 const {
   validateFeatureSlug,
   featureContextDir,
@@ -49,11 +50,13 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   // one pass), replacing analyst/scope-check/architect/discovery-design-doc.
   // Those agents remain available as opt-in detours (allowDetours: true).
   SMALL: ['product', 'sheldon', 'dev', 'qa'],
-  // MEDIUM routes through @pm after discovery-design-doc (mirrors the
-  // project-mode position): Gate C requires implementation-plan-{slug}.md and
-  // @pm is its canonical owner (AC-SDLC-15/16) — without the stage, the
-  // sequence dead-ends at @dev preflight with no agent to produce the plan.
-  MEDIUM: ['product', 'analyst', 'architect', 'discovery-design-doc', 'pm', 'scope-check', 'dev', 'pentester', 'qa']
+  // MEDIUM keeps the multi-agent spec chain (analyst → architect → pm) but drops
+  // the dedicated @discovery-design-doc and @scope-check hops: @architect runs in
+  // merged mode (produces design-doc + readiness + dev-state, absorbing ddd) and
+  // the scope drift check is enforced deterministically at the dev/qa done gate
+  // (see finalizeCurrentStage). @pm stays — Gate C needs implementation-plan-{slug}.md.
+  // ddd / scope-check remain opt-in detours (allowDetours: true).
+  MEDIUM: ['product', 'analyst', 'architect', 'pm', 'dev', 'pentester', 'qa']
 };
 
 // Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
@@ -92,7 +95,7 @@ function buildDefaultWorkflowConfig() {
     project: {
       MICRO: ['setup', 'dev'],
       SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
-      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator', 'scope-check', 'dev', 'qa']
+      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'pm', 'orchestrator', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,
     rules: {
@@ -791,6 +794,33 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
         const errMsg = formatContractIntegrityGateError(integrityGate, normalizedStage);
         await logError(targetDir, normalizedStage, errMsg, 'harness-contract');
         throw new Error(errMsg);
+      }
+
+      // ── Scope drift gate (absorbs @scope-check's deterministic spec:analyze) ──
+      // scope-check is no longer a default stage; preserve its drift check so a
+      // dev/qa completion still blocks on real drift — a design-doc/readiness that
+      // declares `readiness: blocked`, or a malformed/invalid harness-contract.json.
+      // Non-strict spec:analyze only raises error-severity findings for those
+      // genuine problems (never for merely-absent artifacts), so this never
+      // false-blocks an artifact-light feature. Defensive: never crashes the run.
+      try {
+        const drift = await runSpecAnalyze({
+          args: [targetDir],
+          options: { feature: state.featureSlug },
+          logger: { log() {}, error() {} }
+        });
+        if (drift && Array.isArray(drift.findings) && drift.summary && drift.summary.errors > 0) {
+          const errs = drift.findings
+            .filter((f) => f.severity === 'error')
+            .map((f) => `  - ${f.check}: ${f.message}`)
+            .join('\n');
+          const driftMsg = `[Scope Drift Gate] @${normalizedStage} blocked — spec:analyze found ${drift.summary.errors} drift error(s):\n${errs}\nResolve the drift (or run @scope-check) before completing this stage.`;
+          await logError(targetDir, normalizedStage, driftMsg, 'scope-drift');
+          throw new Error(driftMsg);
+        }
+      } catch (driftErr) {
+        if (driftErr && driftErr.message && driftErr.message.includes('[Scope Drift Gate]')) throw driftErr;
+        // spec:analyze unavailable or non-analyzable — non-blocking
       }
     }
 
