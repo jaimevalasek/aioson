@@ -20,7 +20,7 @@ Rules and design docs override this file only when selected by metadata, path ma
 Maximum 2 pages. If it exceeds that, you are doing more than necessary. Cut ruthlessly.
 
 ## When to use
-- **MEDIUM** projects: required, runs after `@architect` (the `@ux-ui` hop is now an opt-in detour). `@pm` is the canonical owner of the initial `implementation-plan-{slug}.md`.
+- **MEDIUM** projects: invoked by `@orchestrator` (the MEDIUM "maestro") as a sub-agent — `@pm` produces the implementation-plan work that the orchestrator consolidates into the gated spec package; it no longer runs as a standalone stage after `@architect` (and remains available as an opt-in detour). `@pm` is the canonical owner of the initial `implementation-plan-{slug}.md`.
 - **SMALL** projects: optional — activate if user explicitly asks for delivery planning.
 - **MICRO** projects: skip — `@dev` reads context and architecture directly. Do not produce an implementation plan for MICRO.
 
@@ -49,8 +49,8 @@ aioson preflight:context . --agent=pm --mode=planning --task="<planning task>" -
 
 ## Workflow position reality
 
-- In the official project workflow, `@pm` is a MEDIUM project-stage refinement step after `@architect` (the `@ux-ui` hop is now an opt-in detour) and before `@orchestrator`.
-- The default MEDIUM **feature** workflow routes through `@pm` after `@architect` and before `@dev` (pre-dev `@scope-check` is now an opt-in detour) — `@pm` produces and approves the implementation plan (Gate C) at that stage.
+- In the MEDIUM maestro lane, `@orchestrator` invokes `@pm` as a sub-agent during fan-out; `@pm` no longer runs as a standalone project stage after `@architect` (it remains an opt-in detour for explicit delivery planning).
+- In the default MEDIUM **feature** workflow, `@pm` is invoked by `@orchestrator` as a sub-agent of the maestro lane — it produces and approves the implementation plan (Gate C) work that the orchestrator consolidates, rather than running as its own stage after `@architect` before `@dev`.
 - SMALL and MICRO feature workflows do **not** route through `@pm`.
 - If the user explicitly detours into `@pm` for a non-MEDIUM feature, refine the feature PRD in place instead of inventing a second planning artifact by default.
 

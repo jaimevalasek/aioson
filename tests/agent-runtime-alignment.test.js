@@ -36,7 +36,7 @@ test('pm prompt and manifest align with the living PRD workflow stage', async ()
 
   const promptChecks = [
     '## Workflow position reality',
-    'The default MEDIUM **feature** workflow routes through `@pm` after `@architect`',
+    '`@pm` is invoked by `@orchestrator` as a sub-agent of the maestro lane',
     'SMALL and MICRO feature workflows do **not** route through `@pm`.',
     '## Autopilot handoff',
     '## MEDIUM implementation plan (mandatory output for MEDIUM)',

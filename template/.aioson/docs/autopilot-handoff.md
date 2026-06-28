@@ -1,14 +1,14 @@
 ---
-description: "Autopilot handoff protocol: automatic agent chaining across the feature workflow — the analyst→dev pre-dev chain and the post-dev review cycle (dev→qa→tester/pentester→validator) — with deterministic routing and explicit stop conditions. The chain never auto-runs feature:close/publish."
+description: "Autopilot handoff protocol: automatic agent chaining across the feature workflow — the opt-in pre-dev detour chain and the post-dev review cycle (dev→qa→tester/pentester→validator) — with deterministic routing and explicit stop conditions. The chain never auto-runs feature:close/publish."
 task_types: [handoff, autopilot]
 triggers: [auto handoff, autopilot, next agent]
 ---
 
-# Autopilot handoff (analyst → dev → review cycle)
+# Autopilot handoff (pre-dev detours → dev → review cycle)
 
 Opt-in protocol that removes manual handoff confirmations in the deterministic segments of the feature workflow. Two segments:
 
-1. **Pre-dev chain (`@analyst` → `@dev`):** `@analyst`, `@architect`, and `@pm` (MEDIUM only); `@scope-check` and `@discovery-design-doc` chain too only when an opt-in detour adds them to the active sequence. Upstream agents (`@briefing`, `@product`, `@sheldon`) always stay manual — they end on genuine human decisions.
+1. **Pre-dev chain (opt-in detours → `@dev`):** by default the MEDIUM lane routes `@product → @orchestrator → @dev` and the SMALL lean lane routes `@product → @sheldon → @dev`, so there is no pre-dev auto-chain — `@orchestrator` (maestro) and `@sheldon` (lean) own the spec solo and hand off manually. `@analyst`, `@architect`, `@pm`, `@scope-check`, and `@discovery-design-doc` chain automatically only when an opt-in detour adds them to the active sequence. Upstream agents (`@briefing`, `@product`, `@sheldon`, `@orchestrator`) always stay manual — they end on genuine human decisions.
 2. **Post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` → `@validator`):** once a human starts `@dev`, the implementation and review agents chain automatically until the feature is ready to close. `@qa` is the hub: it owns the routing to the specialized agents and the corrections loop.
 
 ## Activation
@@ -45,11 +45,11 @@ When autopilot is active and no stop condition applies:
 3. If no runtime gateway is available, emit a one-line transition notice: `Autopilot: @<current> done → invoking @<next> (Ctrl+C to interrupt)`.
 4. Invoke `Skill(aioson:agent:<next>)` with the task `"continue feature {slug} — autopilot handoff from @<current>"`. No user prompt — Ctrl+C interrupts.
 
-## Segment 1 — pre-dev chain (`@analyst` → `@dev`)
+## Segment 1 — pre-dev chain (opt-in detours → `@dev`)
 
 SMALL feature (lean default): `@product` → `@sheldon` → `@dev` — `@product`/`@sheldon` hand off manually, so there is no pre-dev auto-chain; autopilot resumes in the post-dev review cycle (Segment 2). The full-merged SMALL detour auto-chains `@analyst` → `@architect` → `@dev` when opted in (with `@scope-check`/`@discovery-design-doc` only if the sequence adds them).
 
-MEDIUM feature: `@analyst` → `@architect` → `@pm` → `@dev` (`@discovery-design-doc` and `@scope-check` chain only when an opt-in detour adds them to the sequence).
+MEDIUM feature (maestro default): `@product` → `@orchestrator` → `@dev` — `@product`/`@orchestrator` hand off manually too, so there is likewise no pre-dev auto-chain (the `@orchestrator` maestro fans out to `@analyst`/`@architect`/`@pm` as sub-agents, not as workflow stages). `@analyst` → `@architect` → `@pm` → `@dev` auto-chains only when an opt-in full-chain detour adds those stages to the sequence (`@discovery-design-doc` and `@scope-check` chain only if the sequence adds them).
 
 The prompt-only fallback still stops before the FIRST `@dev` activation because `@dev` is a heavy phase and needs a compact operational handoff. Runtime agentic mode may cross this boundary only by starting a checkpointed `@dev` activation from the context package, not by carrying raw upstream chat forward. If the gateway cannot start that activation, stop with the normal `/compact` + `/dev` recommendation for same-feature continuation. Recommend `/clear` only when the user needs a hard reset, a feature switch, polluted context, or a security-sensitive reset.
 
@@ -87,7 +87,7 @@ Routing table (each row is followed only when autopilot is active and no stop co
 2. **First `@dev` entry without runtime gateway** — prompt-only clients stop here (Segment 1). Runtime agentic mode may continue only through a fresh checkpointed `@dev` activation.
 3. **Corrections cap reached** — review cycles are bounded by `agentic_policy.review_cycle` (default 3); when `review-cycle:advance` returns `stop_cycle_limit`, stop and escalate to the human.
 4. **Critical security finding** — the `@qa` corrections security gate (auth/secret/credential/session/password/token/PII/encryption keywords) blocks the auto-loop; stop and require human intervention.
-5. **Verdict not clean / gate or readiness blocked** — `@architect` Gate B or merged-mode readiness `blocked`, `@pm` Gate C blocked, `@validator` FAIL with no safe corrections path (and, when present as detours, `@scope-check` not `approved`/`patched` or `@discovery-design-doc` readiness `blocked`): stop and route to the owner manually.
+5. **Verdict not clean / gate or readiness blocked** — the `@orchestrator` maestro spec package not gate-approved (Gates A/B/C) or its readiness `blocked`, `@validator` FAIL with no safe corrections path (and, when present as detours, `@architect` Gate B / merged-mode readiness `blocked`, `@pm` Gate C blocked, `@scope-check` not `approved`/`patched`, or `@discovery-design-doc` readiness `blocked`): stop and route to the owner manually.
 6. **Context budget** — estimated usage ≥ `context_warning_threshold` (`.aioson/config.md`): write the compaction checkpoint to `.aioson/context/last-handoff.json`, stop, and recommend `/compact` for same-feature continuation. The workflow resumes from `.aioson/context/workflow.state.json` — the next session re-enters autopilot automatically. Recommend `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.
 7. **Ambiguity** — workflow state unavailable AND routing ambiguous, or any real decision requires user input: stop and ask, manually.
 

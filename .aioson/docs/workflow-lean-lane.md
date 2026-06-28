@@ -9,9 +9,10 @@ triggers: [lean lane, workflow.config.json, fewer agents, menos é mais, lean pi
 
 # Workflow Lean Lane (SMALL default; opt-in for MEDIUM)
 
-SMALL features now run the **lean chain by default**, and MEDIUM runs a leaner chain than before
-(`@architect` in merged mode, with `@scope-check`, `@discovery-design-doc`, and `@ux-ui` demoted to
-opt-in detours). The older heavy chain (`product → analyst → scope-check → architect →
+SMALL features now run the **lean chain by default**, and MEDIUM runs the **`@orchestrator` maestro lane**
+(`@product → @orchestrator → @dev → @pentester → @qa`), where `@orchestrator` fans out to
+`@analyst`/`@architect`/`@pm` (+ `@ux-ui` when UI-heavy) as sub-agents and consolidates one gated spec
+package, with `@scope-check`, `@discovery-design-doc`, and `@ux-ui` available as opt-in detours. The older heavy chain (`product → analyst → scope-check → architect →
 discovery-design-doc → pm → dev → qa`) is no longer a built-in default, but its spec hops can be opted
 back in. The bottleneck was never "too few design documents", it was the absence of a gate that runs the
 real app (now fixed: see `.aioson/docs/sheldon/harness-contract.md` §2c and `@qa`'s Runtime smoke gate).
@@ -69,7 +70,7 @@ triggers) available as detours — they are not in the static sequence in either
 
 Autopilot (`auto_handoff: true`) drives only the **post-dev** cycle (`@dev → @qa → …`) in the lean lane:
 `@product`/`@sheldon` always hand off manually (upstream-agent policy), so there is nothing to auto-chain before
-`@dev`. This matches the full chain, whose autopilot segment also begins only after the manual upstream handoff —
+`@dev`. This matches the MEDIUM maestro lane, whose `@product`/`@orchestrator` pre-dev handoffs are also manual —
 so the lean lane loses no automation it was ever supposed to have.
 
 Running the agents by hand (slash commands) is equivalent: activate `@product → @sheldon → @dev → @qa` and skip
@@ -77,13 +78,13 @@ analyst/architect/discovery-design-doc/pm. No config file is needed for the manu
 
 ## Full-merged chain (heavier, opt-in)
 
-The lean/leaner defaults are enough for most work. When a project genuinely wants the heavier multi-agent
+The lean/maestro defaults are enough for most work. When a project genuinely wants the heavier multi-agent
 chain back — independent `@analyst`, `@architect`, and `@pm` as distinct gates — drop the **full-merged**
 preset at `.aioson/context/workflow.config.json` (ready-to-copy at
 `.aioson/docs/presets/workflow.config.full-merged.json`): it is that chain with `discovery-design-doc`
-removed. Whenever the active sequence omits `@discovery-design-doc` — the default everywhere now —
-`@architect` runs in **merged mode** (see `agents/architect.md` → *Architect merged mode*) and produces the
-design-doc + readiness + dev-state itself, then hands off to `@dev`. Merging `@architect` +
+removed. On this full-merged detour, when the active sequence routes `@architect` → `@dev` while omitting
+`@discovery-design-doc`, `@architect` runs in **merged mode** (see `agents/architect.md` → *Architect merged
+mode*) and produces the design-doc + readiness + dev-state itself, then hands off to `@dev`. Merging `@architect` +
 `@discovery-design-doc` keeps the readiness gate (the cheap, valuable part) while dropping the redundant
 second file-level-plan hop; it is a velocity change, not a correctness one — the runtime gate is what
 prevents the green-but-broken outcome.
@@ -109,7 +110,7 @@ prevents the green-but-broken outcome.
 
 - The override mechanism is unchanged — `readWorkflowConfig` still merges `workflow.config.json` over the
   built-in defaults (per-classification arrays replace the defaults). Only the built-in default *shape* changed
-  (SMALL ships lean, MEDIUM ships leaner with `@architect` merged); the lean lane stays a project-level config +
+  (SMALL ships lean, MEDIUM ships the `@orchestrator` maestro lane); the lean lane stays a project-level config +
   agent capability, not a different engine.
 - The runtime safety gates are unchanged: `@qa`'s Runtime smoke gate, the §2c `RG-*` criteria, the CLI
   contract-integrity backstop, and `@validator`'s target-app judgment apply identically in both lanes.

@@ -8,7 +8,7 @@
 
 - `maintenance-and-state.md` — use to write and update `spec-{slug}.md` correctly: `phase_gates`, `last_checkpoint`, `pending_review`, and `Key decisions` format
 - `approval-gates.md` — Gate C (plan approval) must be checked before executing a significant batch; Gate D (execution verification) defines done criteria for each phase
-- For SMALL/MEDIUM work, confirm `.aioson/context/design-doc*.md` and `.aioson/context/readiness*.md` exist before implementation starts — produced by `@architect` (merged mode) on MEDIUM, by `@sheldon` on the SMALL lean lane, or by `@discovery-design-doc` when that detour is in the sequence. Load them only when `dev-state.md`, readiness, the plan, or touched paths require their details.
+- For SMALL/MEDIUM work, confirm `.aioson/context/design-doc*.md` and `.aioson/context/readiness*.md` exist before implementation starts — produced by `@orchestrator` (maestro mode) on MEDIUM, by `@sheldon` on the SMALL lean lane, or by `@architect` (merged mode) / `@discovery-design-doc` when those detours are in the sequence. Load them only when `dev-state.md`, readiness, the plan, or touched paths require their details.
 
 ### Load when starting a new feature with classification context
 
@@ -47,4 +47,4 @@ Additionally, at session start for SMALL/MEDIUM:
 - Treat `dev-state.md` as the primary activation package and `implementation-plan-{slug}.md` as the source for phase-triggered context loads
 - Gate D verification must happen before marking a phase complete — not just "I think it works". The deterministic floor is `aioson ac:test-audit . --feature={slug}` plus the real test command.
 - If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
-- If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route back to their producer instead of coding first — `@architect` (merged mode) on MEDIUM, `@sheldon` on the SMALL lean lane, or `@discovery-design-doc` when that detour is active
+- If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route back to their producer instead of coding first — `@orchestrator` (maestro mode) on MEDIUM, `@sheldon` on the SMALL lean lane, or `@architect` (merged mode) / `@discovery-design-doc` when those detours are active

@@ -99,7 +99,7 @@ After the PRD is produced:
 |---|---|
 | MICRO | `@dev` |
 | SMALL | `@sheldon` (lean default) |
-| MEDIUM | `@analyst` then `@architect` → `@pm` → `@orchestrator` |
+| MEDIUM | `@orchestrator` (maestro spec authority) |
 
 ### New feature (`prd-{slug}.md`)
 
@@ -107,6 +107,6 @@ After the PRD is produced:
 |---|---|
 | MICRO | `@dev` |
 | SMALL | `@sheldon` (lean default) |
-| MEDIUM | `@analyst` → `@architect` → `@pm` → `@dev` → `@pentester` → `@qa` |
+| MEDIUM | `@orchestrator` (maestro) → `@dev` → `@pentester` → `@qa` |
 
 Assess feature complexity from the conversation and state the next agent explicitly.
