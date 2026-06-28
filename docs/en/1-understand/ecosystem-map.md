@@ -27,11 +27,18 @@
         ┌──────────────────────────────────────┐
         │         DEVELOPMENT CORE             │
         │                                      │
-        │  Product → Sheldon → Analyst →       │
-        │  Architect → UX-UI → PM →            │
-        │  Orchestrator → Dev → QA →           │
-        │  Validator → Tester → Pentester      │
+        │  MICRO:  Product → Dev → QA          │
+        │  SMALL:  Product → Sheldon → Dev     │
+        │          → QA                        │
+        │  MEDIUM: Product → Orchestrator      │
+        │          → Dev → Pentester → QA      │
         │                                      │
+        │  Spec sub-agents (opt-in/fan-out):   │
+        │  Analyst · Architect · PM · UX-UI    │
+        │  Scope-Check · Discovery-Design-Doc  │
+        │                                      │
+        │  Post-dev (on demand):               │
+        │  Validator · Tester · Pentester      │
         └──────────────────────────────────────┘
                       │
                       ▼
@@ -68,28 +75,28 @@
 
 ### 2. Development core (official workflow)
 
-The default order depends on the classification:
+The default lane depends on the classification:
 
-**MICRO:** `@setup → @product (optional) → @dev`
-**SMALL:** `@setup → @product → @sheldon (optional) → @analyst → @scope-check → @architect → @dev → @qa`
-**MEDIUM:** `@setup → @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa`
+**MICRO:** `@setup → @product → @dev → @qa`
+**SMALL (lean — default):** `@setup → @product → @sheldon → @dev → @qa`
+**MEDIUM (maestro):** `@setup → @product → @orchestrator → @dev → @pentester → @qa`
 
-> **Why does `@sheldon` appear so early?** It is the **PRD quality guardian** — it runs *between* `@product` and `@analyst` to detect gaps, validate technical assumptions with web research, and decide between enriching the PRD in-place or creating a phased plan in `.aioson/plans/{slug}/`. Can be invoked N times on the same PRD. Skipping this step on serious features is expensive later.
+> **The spec authority changes by size.** For SMALL, `@sheldon` is the **single spec authority** — in one pass it produces requirements + spec (Gates A/B/C approved) + design-doc + readiness + implementation-plan + harness-contract. For MEDIUM, `@orchestrator` is the **maestro** — it fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, then consolidates and gates the full spec package. Agents like `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are **opt-in detours** or **fan-out sub-agents** — none deleted, none invoked by default in the new lanes.
 
 | Agent | What it does | Main output |
 |---|---|---|
 | **`@product`** | Defines vision, scope, feature PRD | `prd.md`, `spec.md` |
-| **`@sheldon`** | PRD quality guardian — gap analysis, web research, sizing, decides in-place vs phased plan | `sheldon-enrichment-{slug}.md` or `.aioson/plans/{slug}/` |
-| **`@analyst`** | Discovers domain, entities, flows in the codebase | `architecture.md`, ER diagrams |
-| **`@architect`** | Technical decisions: structure, libs, integrations | `architecture.md` (decisions) |
-| **`@ux-ui`** | Design system and component specs (MEDIUM) | `design-doc.md`, `discovery.md` |
-| **`@pm`** | Backlog, user stories, ACs (MEDIUM) | `tasks.md`, user stories |
-| **`@orchestrator`** | Coordinates parallel lanes (MEDIUM) | `parallel/`, execution plan |
-| **`@dev`** | Implements the feature | Code + `dev-state.md` |
-| **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 2) | `test-plan.md`, `qa-report-*.md` |
-| **`@validator`** | Technically validates against `harness-contract.json` in a context sandbox | `.aioson/plans/{slug}/last-validator-output.json` (consumed by `harness:apply-validation`, updates `progress.json`) |
-| **`@tester`** | Systematic test engineering (legacy/brownfield) | `test-inventory.md`, coverage tier |
-| **`@pentester`** | Adversarial security review (OWASP, LLM Top 10) | `security-findings-*.json` |
+| **`@sheldon`** | **SMALL single spec authority** — one pass: requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract. Also a PRD-hardening / enrichment capability usable in any lane. | `requirements-{slug}.md`, `design-doc-{slug}.md`, `readiness-{slug}.md`, `implementation-plan.md`, `harness-contract.json` |
+| **`@analyst`** | Domain discovery — entities, flows, brownfield mapping. **Opt-in detour / fan-out sub-agent** (invoked by `@orchestrator` in MEDIUM) | `architecture.md`, ER diagrams |
+| **`@architect`** | Technical decisions: structure, libs, integrations. **Opt-in detour / fan-out sub-agent**; runs in **merged mode** (also produces design-doc + readiness) when `@discovery-design-doc` is omitted | `architecture.md` (decisions) |
+| **`@ux-ui`** | UI/UX spec — **opt-in detour** for UI-heavy specs; `@dev` applies design skills directly | `design-doc.md`, `discovery.md` |
+| **`@pm`** | Backlog, user stories, implementation plan (Gate C). **Opt-in detour / fan-out sub-agent** (MEDIUM) | `tasks.md`, user stories |
+| **`@orchestrator`** | **MEDIUM maestro / single spec authority** — fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package. Secondary: coordinate parallel `@dev` lanes post-spec. | `parallel/`, execution plan, consolidated spec package |
+| **`@dev`** | Implements the feature — runs phases as a **loop**: auto-continues between phases, compacts context between phases, per-phase verification (light sub-agent). Full Runtime smoke runs once at end-of-feature. | Code + `dev-state.md` |
+| **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 2). Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). | `test-plan.md`, `qa-report-*.md` |
+| **`@validator`** | Technically validates against `harness-contract.json` in a **fresh isolated context** (detour when a harness contract exists) | `.aioson/plans/{slug}/last-validator-output.json` |
+| **`@tester`** | Systematic test engineering (legacy/brownfield) — triggered by `@qa` when conditions fire | `test-inventory.md`, coverage tier |
+| **`@pentester`** | Adversarial security review (OWASP, LLM Top 10). Inline in MEDIUM; opt-in in SMALL. | `security-findings-*.json` |
 
 ### 3. Continuity and delivery
 
@@ -112,7 +119,7 @@ The default order depends on the classification:
 | **`@design-hybrid-forge`** | Combines two design skills into a hybrid |
 | **`@orache`** | Domain investigation and strategic research |
 | **`@copywriter`** | Conversion copy for landing pages, emails |
-| **`@discovery-design-doc`** | Discovery + design doc combined (joint mode) |
+| **`@discovery-design-doc`** | Discovery + design doc combined — opt-in; absorbed by `@architect` merged mode, `@sheldon`, or `@orchestrator` by default |
 
 ---
 
@@ -207,16 +214,25 @@ You > @product
 @product > Let's start a feature. What's it called? What's the problem?
 You > "checkout-stripe", complete order with card payment.
 @product > [...several questions...] Spec created at context/features/checkout-stripe/spec.md.
-@product > Next: @analyst to map the domain.
+@product > Next: @sheldon to close the spec and produce the implementation package.
 
 ─── Session 2 (next day) ───
 You > @neo
-@neo > You stopped at @product. Next: @analyst.
-You > @analyst
-@analyst > [reads spec.md, examines codebase] Mapped: Order, Customer, Payment, OrderItem.
-@analyst > Decision recorded in architecture.md. Next: @architect.
+@neo > You stopped at @product. Next: @sheldon (single spec authority for SMALL).
+You > @sheldon
+@sheldon > Reading spec.md + codebase... Detected 2 gaps: no idempotency policy on Stripe webhook,
+           no AC for payment failure retry. Researching Stripe docs...
+@sheldon > Spec package ready: requirements, design-doc, readiness (Gate B), implementation-plan (2 phases),
+           harness-contract.json. Gates A/B/C: approved. Next: @dev.
 
-─── and so on until @qa ───
+─── Session 3 ───
+You > @dev
+@dev > Reading implementation-plan.md. 2 phases.
+       Phase 1/2: Stripe integration + webhook... harness:check OK. Compacting...
+       Phase 2/2: UI checkout flow... harness:check OK. dev-state.md updated. Next: @qa.
+
+You > @qa
+@qa > 12 ACs. Tests written. 12/12 OK. Runtime smoke: PASS. Feature ready.
 ```
 
 ---

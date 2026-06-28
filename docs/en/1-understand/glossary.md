@@ -72,9 +72,9 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 **Definition:** the size of the project, calculated from 3 factors (user types, external integrations, business rules). Determines how much ceremony the workflow applies.
 
 **How it works:**
-- 0–1 points → **MICRO** (`@setup → @product → @dev`)
-- 2–3 points → **SMALL** (`@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`)
-- 4–6 points → **MEDIUM** (full workflow, all gates, all artifacts)
+- 0–1 points → **MICRO** (`@setup → @product → @dev → @qa`)
+- 2–3 points → **SMALL** lean default (`@setup → @product → @sheldon → @dev → @qa`) — `@sheldon` is the single spec authority
+- 4–6 points → **MEDIUM** maestro (`@setup → @product → @orchestrator → @dev → @pentester → @qa`) — `@orchestrator` fans out `@analyst`/`@architect`/`@pm` as sub-agents
 
 **Where it appears:** `classification:` in the `project.context.md` frontmatter.
 
@@ -197,7 +197,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 ## Pipeline / Workflow
 
-**Definition:** the ordered sequence of agents that AIOSON applies to a feature, based on the classification.
+**Definition:** the ordered sequence of agents that AIOSON applies to a feature, based on the classification. Three default lanes exist: MICRO (`@product → @dev → @qa`), SMALL lean (`@product → @sheldon → @dev → @qa`), and MEDIUM maestro (`@product → @orchestrator → @dev → @pentester → @qa`). Spec agents like `@analyst`, `@architect`, `@pm`, and `@ux-ui` are opt-in detours or fan-out sub-agents — not default hops.
 
 **Central command:** `aioson workflow:next .` — shows which agent is next.
 

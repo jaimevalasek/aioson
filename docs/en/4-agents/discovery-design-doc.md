@@ -14,9 +14,9 @@
 `@discovery-design-doc` has two valid uses:
 
 - **Exploratory mode:** when a request is still vague, such as a ticket, feature idea, or meeting note. It normalizes the problem, identifies ambiguities, and recommends the next agent.
-- **Pre-dev workflow mode:** when a SMALL/MEDIUM project has already passed through `@analyst` and `@architect`. In this case, it consolidates PRD, requirements, spec, and architecture into a living `design-doc` and a `readiness` note with a concrete technical plan for `@dev`.
+- **Explicit pre-dev opt-in:** when you want a standalone design doc + readiness package between the spec phase and `@dev`. In the default SMALL lean and MEDIUM maestro lanes, this role is absorbed by `@sheldon` (SMALL) or `@architect` in merged mode / `@orchestrator` (MEDIUM) — invoke `@discovery-design-doc` explicitly only when you need it as a separate step.
 
-So it can be either a shortcut before the full cycle **or** a safety stage between architecture and implementation. In the current workflow, the second use is expected for SMALL/MEDIUM.
+**Note (v1.35.0):** this agent is **not in the default hop sequence** for either SMALL or MEDIUM. It is an opt-in detour.
 
 ---
 
@@ -43,25 +43,37 @@ So it can be either a shortcut before the full cycle **or** a safety stage betwe
 
 ## Where it fits in the workflow
 
-Manual exploratory flow:
+**Manual exploratory flow** (unchanged):
 
 ```text
 @setup -> @discovery-design-doc -> recommended next agent
 ```
 
-Current SMALL flow:
+**Default SMALL lean flow** — this agent is absorbed by `@sheldon`:
 
 ```text
-@product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa
+@product -> @sheldon -> @dev -> @qa
 ```
 
-Current MEDIUM flow:
+**Opt-in SMALL detour** (explicit invocation after @sheldon or between @analyst and @dev):
 
 ```text
-@product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa
+@product -> @sheldon -> [@analyst] -> @discovery-design-doc -> @dev -> @qa
 ```
 
-Its role in the middle of a feature is not to replace `@analyst` or `@architect`. It turns those artifacts into an executable implementation package.
+**Default MEDIUM maestro flow** — this agent is absorbed by `@orchestrator` (via `@architect` sub-agent in merged mode):
+
+```text
+@product -> @orchestrator -> @dev -> @pentester -> @qa
+```
+
+**Opt-in MEDIUM detour** (explicit invocation after @orchestrator):
+
+```text
+@product -> @orchestrator -> @discovery-design-doc -> @dev -> @pentester -> @qa
+```
+
+When invoked, its role is not to replace `@analyst` or `@architect` — it turns those artifacts into an executable implementation package.
 
 ---
 

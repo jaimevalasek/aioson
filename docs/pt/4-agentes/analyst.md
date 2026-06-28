@@ -20,18 +20,22 @@ Em projetos com `@discover` já rodado, o `@analyst` usa o cache semântico em v
 
 ## Quando invocar
 
-- Logo após `@product`, em fluxos SMALL e MEDIUM.
-- Quando uma nova feature toca entidades existentes e você quer garantir que não há conflito.
+- **No MEDIUM:** `@orchestrator` o dispara automaticamente como sub-agente no fan-out de spec — você não precisa invocar manualmente.
+- **Detour explícito:** quando uma nova feature toca entidades existentes e você quer mapeamento de domínio independente antes de qualquer implementação.
 - Quando alguém novo entra no projeto e precisa entender o domínio rapidamente.
 - Quando a spec mudou e você quer sincronizar o mapeamento de domínio.
+- Para classificação de complexidade (`aioson classify`) — `@analyst` produz o score MICRO/SMALL/MEDIUM.
+
+> **SMALL:** na lane lean padrão (`@product → @sheldon → @dev → @qa`), `@analyst` não é um hop padrão — o `@sheldon` cobre o mapeamento de domínio sozinho. Invoque `@analyst` explicitamente apenas se precisar de discovery de domínio mais aprofundado como detour.
 
 ---
 
 ## Quando NÃO invocar
 
 - Projeto MICRO sem novas entidades → o `@dev` lê o contexto direto.
+- Projeto SMALL em lane padrão → `@sheldon` já cobre o domínio; `@analyst` só se necessário como detour.
 - Você quer rever decisões técnicas (não de domínio) → invoke `@architect`.
-- A feature não toca modelo de dados e não tem fluxos novos → pule direto para `@architect`.
+- A feature não toca modelo de dados e não tem fluxos novos → pule direto para o próximo passo.
 
 ---
 
@@ -99,8 +103,8 @@ aioson workflow:status .
 
 ## Handoff típico
 
-- **Vem de:** `@product`
-- **Vai para:** `@architect`
+- **Vem de:** `@orchestrator` (como sub-agente no MEDIUM) ou invocação explícita como detour
+- **Vai para:** `@architect` (quando usado como detour); o resultado consolida para `@orchestrator` quando em sub-agente
 
 ---
 

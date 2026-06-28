@@ -10,7 +10,7 @@
 
 Você quer construir um SaaS: usuários se cadastram, escolhem um plano pago (Stripe), e acessam um painel com as funcionalidades. Tem também um admin para gerenciar usuários e assinaturas.
 
-Isso é um projeto **MEDIUM** (3 tipos de usuário: visitante, subscriber, admin — e integrações externas: Stripe, email). O AIOSON aplica o workflow completo, incluindo `@orchestrator` para coordenar lanes paralelas, o que permite que backend e frontend se desenvolvam em paralelo após o alinhamento de arquitetura.
+Isso é um projeto **MEDIUM** (3 tipos de usuário: visitante, subscriber, admin — e integrações externas: Stripe, email). O AIOSON aplica a **maestro lane**: `@orchestrator` atua como autoridade única de spec (faz fan-out para `@analyst`, `@architect`, `@pm` e `@ux-ui` como sub-agentes, consolida o pacote de spec) e depois pode coordenar lanes paralelas de implementação.
 
 Se você nunca viu o AIOSON em ação, comece pela receita [Primeiro projeto do zero](../2-comecar/primeiro-projeto.md) antes desta.
 
@@ -75,141 +75,54 @@ Você > [lista detalhada de ACs]
            Próximo: @sheldon para revisão antes de implementar, ou @analyst.
 ```
 
-> **Quando usar `@sheldon` aqui:** se o PRD tiver decisões difíceis (ex: billing por uso vs. por assento, multi-tenant vs. single-tenant), o `@sheldon` detecta lacunas e enriquece antes do `@analyst`. Para fluxos claros, pode pular.
+> **`@sheldon` opcional aqui:** se o PRD tiver decisões difíceis (billing por uso vs. por assento, multi-tenant vs. single-tenant), rode `@sheldon` para detectar lacunas e endurecer o PRD **antes** de `@orchestrator`. Para fluxos claros, `@orchestrator` pode ir direto.
 
 ---
 
-## Passo 3 — `@analyst` mapeia o domínio
+## Passo 3 — `@orchestrator` produz o pacote de spec
 
-```
-Você > @analyst
-
-@analyst > Entidades identificadas:
-           - User { id, email, plan, trial_ends_at, stripe_customer_id }
-           - Monitor { id, user_id, url, interval_min, active }
-           - Check { id, monitor_id, status, latency_ms, checked_at }
-           - Incident { id, monitor_id, started_at, resolved_at }
-           - Subscription { id, user_id, stripe_subscription_id, plan, status }
-
-@analyst > Fluxos críticos:
-           1. Signup → trial → plano Pro (webhook Stripe)
-           2. Check engine (cron) → Incident → notificação email
-           3. Admin: listar users, suspender, ver histórico
-
-@analyst > Domain map em architecture.md. Próximo: @architect.
-```
-
----
-
-## Passo 4 — `@architect` decide a estrutura técnica
-
-```
-Você > @architect
-
-@architect > Decisões:
-             - Monorepo: Next.js app (app router) + worker separado para checks
-             - DB: PostgreSQL via Prisma (Supabase recomendado para hospedagem fácil)
-             - Auth: NextAuth v5 com provider email magic-link
-             - Billing: Stripe Checkout + webhooks em /api/webhooks/stripe
-             - Email: SendGrid via Resend SDK (mais simples na DX)
-             - Worker: BullMQ + Redis para fila de checks
-             - Feature flags: middleware Next.js verificando plan no session
-
-@architect > Decisões em architecture.md. Próximo: @ux-ui.
-```
-
----
-
-## Passo 5 — `@ux-ui` especifica o sistema visual
-
-```
-Você > @ux-ui
-
-@ux-ui > Projeto: SaaS de monitoring. Design skill: Aurora Command UI (dark, técnico).
-          Mapeando telas necessárias:
-          - /login, /signup, /onboarding (escolha de plano)
-          - /dashboard (lista de monitores + status)
-          - /monitors/new, /monitors/[id] (detalhes + histórico)
-          - /billing (plano atual, upgrade, portal Stripe)
-          - /admin (tabela de users com filtros)
-
-@ux-ui > Especificando componentes: StatusBadge, MonitorCard, IncidentTimeline,
-          UptimeChart, PlanSelector, BillingPortalButton, AdminTable.
-          design-doc-mvp.md criado.
-```
-
----
-
-## Passo 6 — `@pm` cria o backlog e user stories
-
-```
-Você > @pm
-
-@pm > Lendo PRD + spec + design-doc...
-       Quebrando em user stories:
-
-       Epic 1: Autenticação
-       US-01: Como visitante, quero criar conta com email para acessar o produto
-       US-02: Como usuário, quero entrar com magic link para não precisar de senha
-
-       Epic 2: Monitores
-       US-03: Como subscriber Free, quero adicionar até 3 monitores de URL
-       US-04: Como subscriber Pro, quero adicionar até 20 monitores
-
-       Epic 3: Billing
-       US-05: Como usuário Free, quero fazer upgrade para Pro via Stripe Checkout
-       US-06: Como sistema, quero processar webhooks Stripe para atualizar plano
-
-       [...mais stories...]
-
-@pm > tasks.md com 18 user stories, prioridade e estimativa. Próximo: @orchestrator.
-```
-
----
-
-## Passo 7 — `@orchestrator` divide em lanes paralelas
+Em v1.35.0, `@orchestrator` é o **maestro de spec** do MEDIUM: você não precisa invocar `@analyst`, `@architect`, `@ux-ui` e `@pm` manualmente — o `@orchestrator` os dispara como sub-agentes no fan-out, consolida os artefatos e entrega o pacote de spec completo (Gates A/B/C).
 
 ```
 Você > @orchestrator
 
-@orchestrator > Lendo implementação-plan, design-doc, tasks...
-                Projeto MEDIUM confirmado. Vou criar 3 lanes:
-
-                LANE 1 — Auth + DB schema
-                  Responsável: @dev (sessão A)
-                  Escopo: schema Prisma, NextAuth config, /login, /signup
-
-                LANE 2 — Core de monitores + worker
-                  Responsável: @dev (sessão B)
-                  Escopo: CRUD de monitors, BullMQ worker, cron checks, incidents
-
-                LANE 3 — Billing + Admin
-                  Responsável: @dev (sessão C)
-                  Escopo: Stripe Checkout, webhooks, /billing, /admin
-
+@orchestrator > Classificação MEDIUM confirmada. Lendo prd.md...
+                
+                Fan-out de spec:
+                ├── @analyst   → mapeamento de entidades e domínio
+                ├── @architect → decisões técnicas (monorepo, auth, billing, worker)
+                ├── @ux-ui     → design Aurora Command UI, telas e componentes
+                └── @pm        → 18 user stories, 3 epics, estimativas
+                
+                [sub-agentes executados]
+                
+                Consolidando e verificando consistência...
+                ⚠ US-06 sem AC verificável em webhook → retrabalhando
+                Gates A/B/C aprovados.
+                
+                Pacote de spec:
+                  requirements-mvp.md · architecture.md
+                  design-doc-mvp.md · tasks.md
+                  implementation-plan-mvp.md
+                
+                Lanes de implementação criadas:
+                  LANE 1 — Auth + DB schema
+                  LANE 2 — Core de monitores + worker
+                  LANE 3 — Billing + Admin
+                
                 Gate C: lanes 1+2 devem ter testes unitários passando antes do merge.
-
-@orchestrator > aioson parallel:init . executado.
+                
+                aioson parallel:init . executado.
                 Workspace em .aioson/context/parallel/.
-                Execute cada lane em uma sessão separada do cliente AI.
+                
+                Próximo: @dev (pode trabalhar lanes em sessões separadas).
 ```
 
-```
-Diagrama de dependências:
-┌───────────────┐    ┌───────────────────────┐    ┌────────────────┐
-│  LANE 1       │    │  LANE 2               │    │  LANE 3        │
-│  Auth + DB    │───▶│  Monitors + Worker    │    │  Billing +     │
-│               │    │  (depende do schema)  │    │  Admin         │
-└───────────────┘    └───────────────────────┘    └────────────────┘
-         │                      │                          │
-         └──────────────────────┴──────────────────────────┘
-                                │
-                         aioson parallel:merge
-```
+> **Os passos individuais de @analyst, @architect, @ux-ui e @pm** ainda acontecem — agora como sub-agentes coordenados pelo `@orchestrator`. Se você quiser inspecionar o que cada sub-agente produziu, leia os artefatos em `.aioson/context/` após o `@orchestrator` finalizar.
 
 ---
 
-## Passo 8 — Executar as lanes (em sessões separadas)
+## Passo 4 — `@dev` implementa (por lane, em sessões separadas)
 
 Abra três terminais ou sessões do cliente AI. Em cada um:
 
@@ -245,7 +158,7 @@ Você > @dev
 
 ---
 
-## Passo 9 — Merge e QA final
+## Passo 5 — Merge e QA final
 
 ```bash
 # De volta à sessão principal

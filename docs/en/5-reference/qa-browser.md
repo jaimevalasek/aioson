@@ -258,8 +258,8 @@ This means running `aioson qa:run` before `@qa` gives you a richer, more complet
 Two terminals, running in parallel:
 
 ```bash
-# Terminal 1 — aioson agents
-/aioson:agent:setup → @product → @analyst → @architect → @dev
+# Terminal 1 — aioson agents (SMALL lean example)
+/aioson:agent:setup → @product → @sheldon → @dev
 
 # Terminal 2 — browser QA (while app is running)
 aioson qa:init --url=http://localhost:3000

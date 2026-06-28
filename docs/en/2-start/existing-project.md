@@ -100,8 +100,8 @@ You > Yes — discount policy by customer tier, commission rules
 @setup > project.context.md created with MEDIUM classification.
 @setup > Since you already have running code, I recommend:
         - Run @discover to build the semantic cache
-        - Then @analyst to map the existing domain
-        - Only then start the next feature via @product
+        - Then @analyst to map the existing domain (initial brownfield scan)
+        - Only then start features via @product → @orchestrator (MEDIUM maestro)
 ```
 
 ---
@@ -154,10 +154,10 @@ You > "order-cancellation" — allow canceling an order within 1 hour
 @product > Acceptance criteria?
 You > [...]
 
-@product > Spec saved. Next: @analyst.
+@product > Spec saved. Next: @orchestrator (MEDIUM maestro — will fan out @analyst, @architect, @pm).
 ```
 
-From there the flow is the same as in [first-project.md](./first-project.md).
+From there, the MEDIUM maestro flow applies: `@product → @orchestrator → @dev → @pentester → @qa`. `@orchestrator` fans out `@analyst`, `@architect`, and `@pm` as sub-agents (the domain knowledge from Step 5 feeds into them), consolidates the gated spec package, and hands to `@dev`. See [Full feature with @sheldon — MEDIUM variant](../3-recipes/full-feature-with-sheldon.md#medium-maestro-variant) for the full walkthrough.
 
 ---
 

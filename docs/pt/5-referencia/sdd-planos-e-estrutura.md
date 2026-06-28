@@ -84,12 +84,14 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 |---|---|---|
 | `project.context.md` | `@setup` | todos os agentes (sempre) |
 | `project-pulse.md` | qualquer agente (ao fechar sessão) | todos os agentes (ao iniciar sessão) |
-| `prd.md` | `@product` (projeto novo) | `@sheldon`, `@analyst`, `@ux-ui`, `@pm`, `@dev` |
+| `prd.md` | `@product` (projeto novo) | `@sheldon`, `@orchestrator`, `@dev` |
 | `prd-{slug}.md` | `@product` (feature) | idem |
-| `sheldon-enrichment.md` | `@sheldon` | `@sheldon` (re-entrada), `@analyst` |
-| `architecture.md` | `@analyst` + `@architect` | `@ux-ui`, `@pm`, `@dev`, `@qa` |
-| `design-doc.md` | `@ux-ui` | `@pm`, `@dev` |
-| `tasks.md` | `@pm` | `@orchestrator`, `@dev` |
+| `sheldon-enrichment.md` | `@sheldon` | `@sheldon` (re-entrada) |
+| `requirements-{slug}.md` | `@sheldon` (SMALL) ou `@analyst` via `@orchestrator` (MEDIUM) | `@dev`, `@qa` |
+| `architecture.md` | `@sheldon` (SMALL) ou `@architect` via `@orchestrator` (MEDIUM) | `@dev`, `@qa` |
+| `implementation-plan-{slug}.md` | `@sheldon` (SMALL) ou `@pm` via `@orchestrator` (MEDIUM) | `@dev` |
+| `design-doc.md` | `@ux-ui` via `@orchestrator` (MEDIUM, UI-heavy) ou detour | `@dev` |
+| `tasks.md` | `@pm` via `@orchestrator` (MEDIUM) | `@orchestrator`, `@dev` |
 | `features.md` | qualquer agente | todos (status por slug) |
 
 ### Artefatos de execução
@@ -105,7 +107,7 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 
 ### `parallel/` — lanes do `@orchestrator`
 
-O `@orchestrator` cria esta subpasta quando detecta trabalho paralelizável:
+No MEDIUM, o `@orchestrator` atua como **maestro de spec**: produz o pacote de spec consolidado (via fan-out de sub-agentes) e pode criar esta subpasta quando a implementação tem frentes genuinamente paralelizáveis:
 
 ```
 .aioson/context/parallel/
@@ -292,21 +294,31 @@ O `aioson pulse:update` atualiza este arquivo via script (sem precisar de LLM). 
 plans/ → prd.md → [dev implementa] → qa-report.md
 ```
 
-### SMALL
+### SMALL (lean lane — padrão v1.35.0)
 
 ```
-plans/ → prd.md → sheldon-enrichment.md → architecture.md
-       → dev-state.md → test-plan.md → qa-report.md
+plans/ → prd.md
+       → @sheldon: sheldon-enrichment.md + requirements-{slug}.md
+                   + architecture.md + implementation-plan-{slug}.md
+                   + harness-contract.json   ← pacote de spec (Gates A/B/C)
+       → @dev: dev-state.md (por fase, com verificação por fase)
+       → @qa: test-plan.md → qa-report.md
 ```
 
-### MEDIUM (completo)
+### MEDIUM (maestro lane — v1.35.0)
 
 ```
-plans/ → prd.md → sheldon-enrichment.md → .aioson/plans/{slug}/
-       → architecture.md → design-doc.md → tasks.md
-       → parallel/ → dev-state.md (por lane)
-       → test-plan.md → qa-report.md → test-inventory.md
-       → security-findings.json → last-handoff.json
+plans/ → prd.md
+       → @orchestrator fan-out:
+           @analyst  → requirements-{slug}.md
+           @architect → architecture.md
+           @pm        → implementation-plan-{slug}.md
+           @ux-ui     → design-doc-{slug}.md  (quando UI-heavy)
+         consolidação → parallel/harness-contract.json  ← Gates A/B/C
+       → @dev: dev-state.md (por fase) + parallel/lane-*.md
+       → @pentester: security-findings-{slug}.json
+       → @qa: test-plan.md → qa-report.md → test-inventory.md
+       → @validator: last-handoff.json
 ```
 
 ---

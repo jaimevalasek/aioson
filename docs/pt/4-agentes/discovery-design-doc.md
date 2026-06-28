@@ -43,25 +43,27 @@ Ou seja: ele pode ser um atalho antes do ciclo completo **ou** uma etapa de segu
 
 ## Onde entra no workflow
 
-Fluxo exploratório manual:
+**Fluxo exploratório manual (qualquer tamanho):**
 
 ```
 @setup -> @discovery-design-doc -> próximo agente recomendado
 ```
 
-Fluxo SMALL atual:
+**Detour opt-in no SMALL** (quando você quer consolidar artefatos de spec antes do `@dev`):
 
 ```
-@product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa
+@product -> @sheldon -> @discovery-design-doc (opt-in) -> @dev -> @qa
 ```
 
-Fluxo MEDIUM atual:
+**Sub-agente ou detour no MEDIUM** (absorvido pelo `@architect` em merged mode, ou invocável como detour entre `@orchestrator` e `@dev`):
 
 ```
-@product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa
+@product -> @orchestrator -> @discovery-design-doc (opt-in) -> @dev -> @pentester -> @qa
 ```
 
-O papel dele no meio da feature não é substituir `@analyst` nem `@architect`. Ele transforma esses artefatos em um pacote executável para implementação.
+> **Nota (v1.35.0):** nas lanes padrão, `@discovery-design-doc` não é um hop obrigatório. No SMALL, `@sheldon` já produz design-doc e readiness. No MEDIUM, `@architect` em modo merged também os produz. `@discovery-design-doc` continua disponível como detour quando você quer consolidação explícita pré-dev ou quando o request chegou vago e precisa de normalização antes de entrar no workflow.
+
+O papel dele no meio da feature não é substituir `@sheldon` nem `@orchestrator`. Ele transforma artefatos existentes em um pacote executável para implementação, ou normaliza um request vago antes de chamar o próximo agente.
 
 ---
 

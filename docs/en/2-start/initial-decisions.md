@@ -28,12 +28,12 @@ The sum of three factors (each worth 0, 1, or 2 points):
 
 ### What changes at each level
 
-#### MICRO — `@setup → @product (optional) → @dev`
+#### MICRO — `@setup → @product → @dev → @qa`
 
 - For: scripts, automations, prototypes, simple personal apps.
-- No `@analyst` or `@architect`. You talk directly to `@dev`.
+- No formal spec phase — no `@sheldon` or `@orchestrator`. Lightweight.
 - `@product` is optional — you can pass the spec directly in chat if you prefer.
-- No `@qa` in the standard flow (you can invoke it manually).
+- No per-phase verification; `@dev` phase checks are suppressed to save tokens.
 
 **Typical examples:**
 - Python script that processes CSV
@@ -41,11 +41,12 @@ The sum of three factors (each worth 0, 1, or 2 points):
 - Static portfolio page
 - Mini API with 3 endpoints
 
-#### SMALL — `@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`
+#### SMALL — `@setup → @product → @sheldon → @dev → @qa` (lean default)
 
 - For: most real apps.
-- Full discovery+development+QA cycle.
-- No `@ux-ui`, `@pm`, or `@orchestrator` in the standard flow (you can invoke them individually).
+- `@sheldon` is the **single spec authority**: in one pass it produces requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract, then hands directly to `@dev`.
+- `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check` are opt-in detours — not in the default hop sequence.
+- `@dev` runs a phase loop: auto-continues between phases, per-phase verification, context compaction.
 
 **Typical examples:**
 - SaaS app for a single persona
@@ -53,12 +54,12 @@ The sum of three factors (each worth 0, 1, or 2 points):
 - Simple online store
 - Blog with admin panel
 
-#### MEDIUM — full workflow
+#### MEDIUM — `@setup → @product → @orchestrator → @dev → @pentester → @qa` (maestro lane)
 
 - For: products with multiple user types, several integrations, complex rules.
-- Adds `@ux-ui`, `@pm`, `@orchestrator`.
+- `@orchestrator` is the **single spec authority**: fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package, then hands to `@dev`.
+- `@pentester` runs inline (not opt-in) before `@qa`.
 - Quality gates applied at each handoff.
-- Parallel lanes possible (`@orchestrator` coordinates).
 - More aggressive context threshold (55% — warns early).
 
 **Typical examples:**

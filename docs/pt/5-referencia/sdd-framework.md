@@ -54,31 +54,68 @@ Fases do SDD:
 Specify → Research → Requirements → Design → Tasks → Execute → State
 ```
 
+## As 3 lanes padrão (v1.35.0)
+
+O SDD não escala pelo número de agentes — escala pelas **lanes**: cada classificação tem uma lane com uma autoridade única de spec.
+
+| Lane | Classificação | Cadeia padrão |
+|---|---|---|
+| **MICRO** | 0–1 pts | `@product → @dev → @qa` |
+| **SMALL — lean (padrão)** | 2–3 pts | `@product → @sheldon → @dev → @qa` |
+| **MEDIUM — maestro** | 4–6 pts | `@product → @orchestrator → @dev → @pentester → @qa` |
+
+**Autoridade única de spec:**
+- **SMALL:** `@sheldon` (vertical / solo) — produz requirements + decisões técnicas + design-doc + readiness + implementation-plan + harness-contract em uma passada.
+- **MEDIUM:** `@orchestrator` (horizontal / fan-out) — dispara `@analyst` + `@architect` + `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos, e entrega o pacote de spec com Gates A/B/C aprovados.
+
+> `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check` e `@ux-ui` **não são hops padrão** — são detours opt-in ou sub-agentes do fan-out do `@orchestrator`. Nenhum foi removido; apenas deixaram de ser obrigatórios no caminho padrão.
+
 ## Profundidade por classificação
 
-A beleza do SDD é que ele se contrai para projetos pequenos:
-
-| Fase | MICRO | SMALL | MEDIUM |
+| Fase | MICRO | SMALL (lean) | MEDIUM (maestro) |
 |---|---|---|---|
-| Specify (PRD lite) | obrigatória | obrigatória | obrigatória |
-| Research (@sheldon) | opcional | recomendada | obrigatória |
-| Requirements (@analyst) | pulada | obrigatória | obrigatória |
-| Design (@architect, @ux-ui) | pulada | seletiva | obrigatória |
-| Tasks/Plan | opcional | recomendada | obrigatória |
-| Execute (@dev) | direto | após gates | após gates |
+| Specify (PRD) | obrigatória | obrigatória | obrigatória |
+| Spec authority | — | `@sheldon` (solo) | `@orchestrator` (fan-out) |
+| Requirements | pulada | dentro do `@sheldon` | sub-agente `@analyst` via `@orchestrator` |
+| Design técnico | pulado | dentro do `@sheldon` | sub-agente `@architect` via `@orchestrator` |
+| UI/UX | pulada | detour opt-in | sub-agente `@ux-ui` via `@orchestrator` (UI-heavy) |
+| Plan/Tasks | opcional | dentro do `@sheldon` | sub-agente `@pm` via `@orchestrator` |
+| Execute (`@dev`) | direto | após Gates A/B/C | após Gates A/B/C |
+| Pentester | opt-in | opt-in | **inline** (entre `@dev` e `@qa`) |
 | QA/Validation | opcional | obrigatória | audit-blocking |
 
-Para MICRO: você vai de spec lite direto ao @dev. Nenhuma cerimônia.
-Para MEDIUM: cada fase tem gate de aprovação antes do próximo agente.
+Para MICRO: spec lite direto ao `@dev`. Nenhuma cerimônia.
+Para MEDIUM: cada dimensão de spec é coberta por um sub-agente especializado coordenado pelo `@orchestrator`.
 
 ## Gates de aprovação
 
-Em SMALL e MEDIUM, antes do handoff entre fases, um gate é verificado. Exemplo: antes do `@dev` começar, deve existir:
-- `spec-<slug>.md` com ACs verificáveis
-- `architecture.md` com decisões técnicas documentadas
-- (MEDIUM) `implementation-plan-<slug>.md` com fases de execução
+Em SMALL e MEDIUM, gates determinísticos controlam o avanço entre fases. Os 4 gates principais:
 
-O gate não bloqueia automaticamente em projetos SMALL — é consultivo. Em MEDIUM, Gate D (pré-ship) bloqueia em findings High/Critical de segurança.
+| Gate | O que verifica | Quem produz / verifica |
+|---|---|---|
+| **Runtime smoke** | Build + migrations (em DB real) + boot + Core happy-path no stack real. Uma feature com backend/DB não fecha sem passar. `tsc` + testes unitários é o piso, não o "done". | `@qa` (Gate D) |
+| **Contract-integrity** | Bloqueia quando o harness-contract está ausente, sem critérios `RG-*`, ou com verificações duplicadas. Roda deterministicamente no gate de conclusão do `@dev`/`@qa`. | `aioson harness:check` |
+| **Scope-drift** | `spec:analyze` roda no gate done do `@dev`/`@qa`; bloqueia em drift real (readiness bloqueado, contrato inválido). `@scope-check` também disponível como detour explícito. | `aioson spec:analyze` / `@scope-check` |
+| **Single-spec-authority handoff** | Quando `@sheldon` (SMALL) ou `@orchestrator` (MEDIUM) passa para `@dev`, os Gates A/B/C + plano de implementação aprovado + integridade de contrato são verificados. | `@sheldon` / `@orchestrator` |
+
+Gates A/B/C = spec completa verificável (A: requisitos, B: decisões técnicas, C: plano faseado + harness-contract).
+Gate D = pré-ship: Runtime smoke + nenhum finding HIGH/CRITICAL de segurança.
+
+## Sub-agentes de verificação (configuráveis, token-aware)
+
+`.aioson/config/verification.json` (auto-gerado, editável manualmente) declara quais verificadores (`qa` / `tester` / `pentester` / `validator`) rodam, **quando** (`per-phase` / `end-of-feature` / `sensitive-surface`), e em **qual modelo** — indexado por host harness.
+
+| Modo de dispatch | Descrição |
+|---|---|
+| **`native`** | Sub-agente in-harness num modelo do mesmo host (Claude Code → tier Claude como sonnet/opus; codex/opencode → seu modelo configurado). |
+| **`external`** | Dispara uma CLI de fornecedor diferente como auditor read-only (segunda opinião cross-vendor). Use para rodar GPT ou outro modelo como auditor externo — você não pode rodar um modelo GPT como sub-agente *nativo* do Claude Code. |
+
+Budget de tokens: verificações por fase são leves (um sub-agente barato), o smoke completo roda uma vez ao fim da feature, e verificação por fase é suprimida no MICRO.
+
+```bash
+# Resolver o plano de verificação para um slug/trigger/host
+aioson verification:plan . --slug=checkout-stripe --trigger=per-phase
+```
 
 ## The 80% Rule e SDD Automation Scripts
 

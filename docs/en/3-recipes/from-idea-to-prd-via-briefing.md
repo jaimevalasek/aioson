@@ -27,7 +27,10 @@ aioson briefing:approve
        ↓
    @product   →  prd.md (or prd-{slug}.md)
        ↓
- (optional) @sheldon  →  enrichment + phased plan
+ SMALL: @sheldon  →  single spec authority (full spec package: requirements + design-doc +
+                       readiness + implementation-plan + harness-contract) → @dev → @qa
+ MICRO: skip @sheldon  →  @dev → @qa
+MEDIUM: @orchestrator  →  maestro (fans out @analyst/@architect/@pm) → @dev → @pentester → @qa
 ```
 
 ---
@@ -118,7 +121,7 @@ You > push-notifications
             Out of scope: email notifications (briefing flagged for phase 2).
 
             PRD created: .aioson/context/prd-push-notifications.md
-            Next: @sheldon (recommended — there is 1 open technical risk in the briefing).
+            Next: @sheldon — single spec authority for SMALL (closes gaps, produces full spec package).
 ```
 
 ---

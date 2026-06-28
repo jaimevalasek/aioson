@@ -20,9 +20,9 @@ Imagine you want to build a house.
 
 - **Briefing** listens to your raw idea (the "napkin sketch") and hands back a structured briefing — with risks and open questions — *before* it becomes a project.
 - **Product** understands what you want to build and why — and writes the PRD.
-- **Sheldon** reviews the PRD like a senior architect who has seen everything: points out gaps, researches what's outdated, reads your actual code, and decides whether to enrich the PRD or create a phased plan. Can review multiple times.
-- **Analyst** discovers what already exists in the codebase and what's missing.
-- **Architect** designs the structure.
+- **Sheldon** is the spec authority for SMALL projects: in one pass it closes the PRD, writes the requirements, designs the technical structure, produces the implementation plan, and authors the harness contract. In larger (MEDIUM) projects it hardens the PRD before the full maestro phase.
+- **Analyst** discovers what already exists in the codebase and what's missing (opt-in detour, or fan-out sub-agent in MEDIUM).
+- **Architect** designs the structure (opt-in detour, or fan-out sub-agent in MEDIUM).
 - **UX-UI** designs how the end user will live there.
 - **Dev** builds.
 - **Deyvin** is the site foreman who picks up the job when you return from a trip: reads what's confirmed, flags what's inferred, and proceeds one small step at a time without you having to re-explain anything.
@@ -85,7 +85,7 @@ Agents are *prompts*, not plugins. They live in `.md` files and your AI client r
 - **You want to explore an idea freely** in 5 minutes. AIOSON asks for setup first.
 - **You won't open the project again.** The value is precisely in repeated sessions.
 
-For these cases, AIOSON itself has a lightweight path — the **MICRO** classification (`@setup → @product → @dev`). But if even that doesn't fit, don't force it.
+For these cases, AIOSON itself has a lightweight path — the **MICRO** classification (`@setup → @product → @dev → @qa`). But if even that doesn't fit, don't force it.
 
 ## Next step
 

@@ -10,7 +10,7 @@
 
 ## The idea in one paragraph
 
-AIOSON already has two strong foundations: the **`harness-contract.json`** (binary success criteria per feature) and the **SDD artifact chain** (PRD → spec → plan → conformance). The executable-verification theme builds on both to make verification **deterministic** (run a command, read an exit code) and to make specs **compilable** (turn a ready spec into an auditable workflow). Everything is **additive**: the default lane — `@scope-check` → `@dev` → `@qa` → `@validator` — is **unchanged**. The new pieces tighten the verification surface without rerouting existing flows.
+AIOSON already has two strong foundations: the **`harness-contract.json`** (binary success criteria per feature) and the **SDD artifact chain** (PRD → spec → plan → conformance). The executable-verification theme builds on both to make verification **deterministic** (run a command, read an exit code) and to make specs **compilable** (turn a ready spec into an auditable workflow). Everything is **additive**: the default SMALL lean lane (`@sheldon → @dev → @qa`) and MEDIUM maestro lane (`@orchestrator → @dev → @pentester → @qa`) are **unchanged** in structure. The new pieces tighten the verification surface — `@scope-check`'s `spec:analyze` now runs **automatically at the `@dev`/`@qa` done gate** (scope-drift gate) in addition to being available as an explicit detour. `@validator` remains a detour when a harness contract exists.
 
 The theme ships in five phases.
 
@@ -97,7 +97,7 @@ It runs five deterministic checks:
 4. **Harness-contract sanity** — schema errors = error; executable-coverage = info.
 5. **AC→contract linkage** = info.
 
-An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. `@scope-check` runs `spec:analyze` in preflight: **errors are blockers, warnings are pre-computed drift evidence**.
+An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. `spec:analyze` runs **automatically at the `@dev`/`@qa` done gate** (scope-drift gate) — errors block completion, warnings are pre-computed drift evidence. `@scope-check` also runs it in preflight when invoked as an explicit detour.
 
 See [`spec:analyze`](./cli-reference.md#specanalyze) in the CLI reference.
 
@@ -143,15 +143,18 @@ See [`forge:compile`](./cli-reference.md#forgecompile) in the CLI reference and 
 ## How the phases fit together
 
 ```text
-@sheldon authors verification ──► harness:check (deterministic, exit 0 = pass)   [Phase 1]
+@sheldon (SMALL) / @orchestrator (MEDIUM) authors verification
+                          ──► harness:check (deterministic, exit 0 = pass)         [Phase 1]
                                         │
-@scope-check runs spec:analyze ◄────────┤  (errors block, warnings = drift)       [Phase 3]
+spec:analyze runs automatically ◄───────┤  at @dev/@qa done gate (scope-drift)    [Phase 3]
+  (also: @scope-check preflight)        │  (errors block, warnings = drift evidence)
 @pm fills the Wave column ──────────────┤  (parallelizable, file-disjoint)        [Phase 4]
                                         │
-default lane:  @dev ► @qa ► harness:validate (review payload)                      [Phase 2]
-                              └► @validator in a FRESH, ISOLATED context
+SMALL lane:   @sheldon ► @dev ► @qa ► harness:validate (review payload)            [Phase 2]
+MEDIUM lane:  @orchestrator ► @dev ► @pentester ► @qa ► harness:validate
+                              └► @validator in a FRESH, ISOLATED context (detour)
                                         │
-Lane B (opt-in):  @forge-run ► forge:compile ► run the compiled workflow          [Phase 5]
+Lane B (opt-in):  @forge-run ► forge:compile ► run the compiled workflow           [Phase 5]
 ```
 
 The default lane and Lane B consume the **same** contract, plan, and `spec:analyze` results — Lane B just compiles them into one executable script.

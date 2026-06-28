@@ -57,8 +57,9 @@ Lane B only compiles when every prerequisite is present — otherwise the hard p
 Lane B is an opt-in branch off the standard MEDIUM flow, taken after the spec and plan are ready:
 
 ```text
-@product -> @analyst -> @architect -> @sheldon (authors verification) ->
-@pm (Wave column) -> @scope-check (spec:analyze clean) -> @forge-run (Lane B)
+@product -> @orchestrator (fans out @analyst/@architect/@pm; @pm fills Wave column;
+             @orchestrator or @sheldon authors harness-contract verification fields) ->
+spec:analyze clean (scope-drift gate) -> @forge-run (Lane B)
 ```
 
 It never replaces the default lane — it compiles the same artifacts into a single executable workflow. (`@pm`, `@sheldon`, and `@validator` cards are tracked in the [agents index](./README.md); PT is canonical until each is translated.)

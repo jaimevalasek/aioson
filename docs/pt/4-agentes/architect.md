@@ -20,16 +20,20 @@ Ele também contribui no `dossier` da feature, registrando os arquivos-chave no 
 
 ## Quando invocar
 
-- Após `@analyst`, em fluxos SMALL e MEDIUM.
-- Quando a feature envolve decisões de integração com APIs externas ou novos módulos.
+- **No MEDIUM:** `@orchestrator` o dispara automaticamente como sub-agente no fan-out de spec — você não precisa invocar manualmente.
+- **Detour explícito:** quando a feature envolve decisões de integração com APIs externas ou novos módulos e você quer decisões técnicas separadas da análise de domínio.
 - Quando você quer garantir consistência com o padrão de pastas do projeto antes de implementar.
-- Quando há um plano Sheldon (`@sheldon` foi invocado antes) — `@architect` lê o plano por fases.
+
+> **SMALL:** na lane lean padrão (`@product → @sheldon → @dev → @qa`), `@architect` não é um hop padrão — o `@sheldon` cobre as decisões técnicas sozinho. Invoque `@architect` explicitamente apenas como detour se precisar de estrutura técnica mais detalhada.
+
+> **Modo merged:** quando `@architect` é invocado sem `@discovery-design-doc` no fluxo, ele entra em **modo merged** — além das decisões técnicas padrão, produz também o design-doc e o readiness, absorvendo o papel que seria do `@discovery-design-doc`.
 
 ---
 
 ## Quando NÃO invocar
 
 - Feature MICRO sem decisões novas → `@dev` infere do contexto existente.
+- Projeto SMALL em lane padrão → `@sheldon` já cobre as decisões técnicas; `@architect` só se necessário como detour.
 - Você só quer adicionar um campo a uma entidade existente → `@dev` lida sozinho.
 - Você quer revisar a arquitetura geral do projeto (não de uma feature) → use `@sheldon`.
 
@@ -101,8 +105,8 @@ aioson dossier:add-codemap . --slug=checkout-stripe \
 
 ## Handoff típico
 
-- **Vem de:** `@analyst`
-- **Vai para:** `@ux-ui` (MEDIUM) ou `@dev` (SMALL/MICRO)
+- **Vem de:** `@orchestrator` (como sub-agente no MEDIUM) ou `@analyst` (quando usado como detour)
+- **Vai para:** `@ux-ui` (detour MEDIUM com UI pesada) ou resultado consolida para `@orchestrator` quando em sub-agente
 
 ---
 

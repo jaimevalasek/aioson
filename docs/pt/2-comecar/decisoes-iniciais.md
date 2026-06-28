@@ -28,12 +28,12 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 
 ### O que muda em cada uma
 
-#### MICRO — `@setup → @product (opcional) → @dev`
+#### MICRO — `@setup → @product → @dev → @qa`
 
 - Para: scripts, automações, protótipos, apps pessoais simples.
-- Não há `@analyst` nem `@architect`. Você fala direto com `@dev`.
+- Não há fase de spec formal. Você fala direto com `@dev`.
 - `@product` é opcional — você pode passar a spec direto no chat se quiser.
-- Sem `@qa` no fluxo padrão (você pode invocar manualmente).
+- `@qa` é opcional no MICRO; verificação por fase do `@dev` é suprimida para economizar tokens.
 
 **Exemplos típicos:**
 - Script Python que processa CSV
@@ -41,11 +41,11 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 - Página estática de portfólio
 - Mini-API de 3 endpoints
 
-#### SMALL — `@setup → @product → @analyst → @scope-check → @architect → @dev → @qa`
+#### SMALL — lean lane (padrão) — `@setup → @product → @sheldon → @dev → @qa`
 
 - Para: a maioria dos apps reais.
-- Tem o ciclo completo de discovery+desenvolvimento+QA.
-- Sem `@ux-ui`, `@pm` ou `@orchestrator` no fluxo padrão (você pode invocar pontualmente).
+- `@sheldon` é a **autoridade única de spec**: em uma passada, produz requirements, decisões técnicas, plano de implementação e contrato de harness — com Gates A/B/C aprovados — antes de passar para `@dev`.
+- `@analyst`, `@architect`, `@scope-check` e outros agentes de spec são **detours opt-in**, não hops padrão.
 
 **Exemplos típicos:**
 - App SaaS para um único persona
@@ -53,12 +53,12 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 - Loja online simples
 - Blog com painel admin
 
-#### MEDIUM — workflow completo
+#### MEDIUM — maestro lane — `@setup → @product → @orchestrator → @dev → @pentester → @qa`
 
 - Para: produtos com múltiplos tipos de usuário, várias integrações, regras complexas.
-- Adiciona `@ux-ui`, `@pm`, `@orchestrator`.
-- Gates de qualidade aplicados em cada handoff.
-- Lanes paralelas possíveis (`@orchestrator` coordena).
+- `@orchestrator` é o **maestro de spec**: faz fan-out para `@analyst`, `@architect`, `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos, e entrega o pacote de spec com Gates A/B/C aprovados.
+- `@pentester` é **inline** na lane (entre `@dev` e `@qa`), não apenas opt-in.
+- Lanes paralelas possíveis (`@orchestrator` também coordena a execução paralela pós-spec).
 - Threshold de contexto mais agressivo (55% — alerta cedo).
 
 **Exemplos típicos:**

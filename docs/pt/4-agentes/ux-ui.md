@@ -16,11 +16,14 @@ Quando o dev implementa a UI sem especificação, ele toma decisões de design n
 
 Ele é guiado pelo design skill do projeto — se `clean-saas-ui` estiver configurado, ele usa apenas esse sistema. Se nenhum skill estiver definido, ele para e pergunta antes de avançar.
 
+> **Posição no fluxo (v1.35.0):** no MEDIUM, `@ux-ui` é disparado como **sub-agente de fan-out** pelo `@orchestrator` quando a feature tem UI pesada — você não precisa invocá-lo manualmente. No SMALL e no MICRO, `@dev` aplica o design skill diretamente; `@ux-ui` fica como detour opt-in quando você quer especificação de UI detalhada antes da implementação.
+
 ---
 
 ## Quando invocar
 
-- Projetos MEDIUM com UI, após `@architect`.
+- **No MEDIUM com UI pesada:** `@orchestrator` o dispara como sub-agente automaticamente — você não precisa invocar manualmente.
+- **Detour explícito (qualquer tamanho):** quando você quer especificação de componentes e tokens antes do `@dev`, em vez de deixar o `@dev` inferir do design skill.
 - Quando você quer redesenhar uma tela existente de forma estruturada.
 - Quando quer documentar o design system de um projeto que já tem UI mas sem spec.
 - Quando a auditoria de UI/UX é necessária (modo `audit`).
@@ -29,7 +32,7 @@ Ele é guiado pelo design skill do projeto — se `clean-saas-ui` estiver config
 
 ## Quando NÃO invocar
 
-- Projeto MICRO ou SMALL sem UI complexa → `@dev` pode usar o design skill direto.
+- Projeto MICRO ou SMALL em lane padrão → `@dev` aplica o design skill direto; `@ux-ui` só se quiser spec detalhada como detour.
 - A feature é backend puro (API, script) → não há UI para especificar.
 - Você quer clonar o design de um site existente → use `@site-forge`.
 
@@ -98,8 +101,8 @@ ls .aioson/skills/design/
 
 ## Handoff típico
 
-- **Vem de:** `@architect`
-- **Vai para:** `@pm` (MEDIUM)
+- **Vem de:** `@orchestrator` (como sub-agente no MEDIUM) ou invocação explícita como detour
+- **Vai para:** resultado consolida para `@orchestrator` quando em sub-agente; ou `@dev` quando usado como detour direto
 
 ---
 

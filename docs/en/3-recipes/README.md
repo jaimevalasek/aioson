@@ -8,7 +8,7 @@ These three trails show **how features reach development** in AIOSON. You almost
 
 | Trail | When to use | Key agents |
 |---|---|---|
-| **[Full feature with @sheldon](./full-feature-with-sheldon.md)** | You have a PRD in mind and want the complete canonical trail (most used) | @product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa |
+| **[Full feature with @sheldon](./full-feature-with-sheldon.md)** | SMALL lean (default) or MEDIUM maestro — the canonical feature trail | SMALL: `@product → @sheldon → @dev → @qa`; MEDIUM: `@product → @orchestrator → @dev → @pentester → @qa` |
 | [From idea to PRD via @briefing](./from-idea-to-prd-via-briefing.md) | Your idea is still vague, several loose notes | @briefing → @product |
 | [External plans for @product](./external-plans-for-product.md) *(coming soon)* | You already planned in another chat (ChatGPT, Claude.io Web) | @product (reads `/plans/`) |
 
@@ -17,7 +17,7 @@ These three trails show **how features reach development** in AIOSON. You almost
 | Recipe | Scenario | Main agents |
 |---|---|---|
 | [Landing page](./landing-page.md) *(coming soon)* | Create a presentation page with copy and design | @product, @copywriter, @ux-ui, @dev, @qa |
-| [SaaS app from scratch](./saas-app-from-scratch.md) *(coming soon)* | Full SaaS: auth, Stripe billing, admin | Full MEDIUM workflow + @orchestrator |
+| [SaaS app from scratch](./saas-app-from-scratch.md) *(coming soon)* | Full SaaS: auth, Stripe billing, admin | `@product → @orchestrator → @dev → @pentester → @qa` (MEDIUM maestro) |
 | [Integration in large codebase](./integration-in-large-codebase.md) *(coming soon)* | Install AIOSON on a 10k–100k line legacy project | @discover, @analyst |
 | [Large refactor](./large-refactor.md) *(coming soon)* | Rewrite a critical module without breaking anything | @sheldon, @tester, @dev, @qa |
 | [Security audit](./security-audit.md) *(coming soon)* | Review vulnerabilities before production | @pentester |

@@ -55,7 +55,7 @@ The file has standardized sections:
 slug: checkout-stripe
 status: in_progress
 classification: SMALL
-agents_trail: [@product, @analyst, @architect, @dev]
+agents_trail: [@product, @sheldon, @dev]
 last_agent: @dev
 last_updated: 2026-05-06T14:32:00Z
 
@@ -196,7 +196,7 @@ npx @jaimevalasek/aioson dossier:show --slug=checkout-stripe
 ```
 FEATURE: checkout-stripe
 Status: in_progress
-Agents: @product, @analyst, @architect, @dev, @deyvin
+Agents: @product, @sheldon, @dev, @deyvin
 Progress: 4/5 steps done (80%)
 Files: 5 (3 created, 2 pending)
 Research: 1 (stripe webhooks)

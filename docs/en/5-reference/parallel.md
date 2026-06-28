@@ -1,5 +1,7 @@
 # Parallel Orchestration Guide
 
+> **v1.35.0 context:** In the MEDIUM maestro lane, `@orchestrator` is the **single spec authority** — it fans out `@analyst`/`@architect`/`@pm` as sub-agents, consolidates the gated spec package, and produces the parallel lane files that the commands below manage. The lane files (`agent-N.status.md`, `shared-decisions.md`) are part of the spec package handed to `@dev`.
+
 Use `parallel:init` to bootstrap the parallel context files used by `@orchestrator`.
 
 ## Command

@@ -276,7 +276,7 @@ Daqui a três meses, alguém (você ou outra IA) pode abrir esse projeto e enten
 
 ## E quando eu quiser uma feature nova?
 
-Volte para o passo 4. `@product` cria nova feature → `@analyst` → `@architect` → `@dev` → `@qa`. O `@setup` não precisa rodar de novo (já tem o contexto).
+Volte para o passo 4. A lane depende do tamanho da feature: **SMALL** → `@product → @sheldon → @dev → @qa`; **MEDIUM** → `@product → @orchestrator → @dev → @pentester → @qa`. O `@setup` não precisa rodar de novo (já tem o contexto).
 
 Se você se perder no meio, lembre:
 

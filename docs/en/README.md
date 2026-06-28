@@ -23,7 +23,7 @@ This is the entry door to the English documentation. It is not an alphabetical i
 ### I want a recipe ready for my case
 
 **Canonical trails — how features reach the dev:**
-1. **[Full feature with @sheldon](./3-recipes/full-feature-with-sheldon.md)** — the main trail: `@product → @sheldon → @analyst → @architect → @ux-ui → @pm → @orchestrator → @scope-check → @dev → @qa` (with optional gates from `@tester` and `@pentester`)
+1. **[Full feature with @sheldon](./3-recipes/full-feature-with-sheldon.md)** — SMALL lean default: `@product → @sheldon → @dev → @qa`; MEDIUM maestro: `@product → @orchestrator → @dev → @pentester → @qa`
 2. [From idea to PRD via @briefing](./3-recipes/from-idea-to-prd-via-briefing.md) — when the idea is still vague
 3. [Continuity between sessions](./3-recipes/continuity-between-sessions.md) — feature dossier, dev-resume, drift detection
 

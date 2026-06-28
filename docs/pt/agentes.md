@@ -972,22 +972,20 @@ Extraia o design de https://exemplo.com como uma skill
 ```
 Duração típica: minutos a horas. Sem análise, sem arquitetura formal.
 
-### SMALL
+### SMALL — lean lane (padrão v1.35.0)
 ```
-@setup → @product → [@sheldon] → @analyst → @architect → @dev → @qa → [@tester]
+@setup → @product → @sheldon → @dev → @qa → [@tester]
 ```
-Duração típica: horas a dias. Análise leve, estrutura clara.
+Duração típica: horas a dias. `@sheldon` é a autoridade única de spec: produz requirements + decisões técnicas + plano faseado + harness-contract (Gates A/B/C) em uma passada. `@analyst`, `@architect`, `@scope-check` são detours opt-in.
 
-### MEDIUM
+### MEDIUM — maestro lane (v1.35.0)
 ```
-@setup → @product → [@sheldon] → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @pentester → @qa → [@tester]
+@setup → @product → [@sheldon] → @orchestrator → @dev → @pentester → @qa → [@tester]
 ```
-Duração típica: dias a semanas. Análise completa, paralelismo, backlog formal, revisao adversarial obrigatoria.
+Duração típica: dias a semanas. `@orchestrator` é o maestro de spec: faz fan-out para `@analyst` + `@architect` + `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos. `@pentester` é inline (entre `@dev` e `@qa`).
 
-> O `@pentester` entra obrigatoriamente em projetos MEDIUM entre `@dev` e `@qa`. Em projetos sensiveis ou com requisitos de seguranca, ative-o tambem em SMALL.
-
-`[@sheldon]` — opcional, recomendado antes de iniciar a cadeia de execução para validar o PRD.
-`[@tester]` — opcional, recomendado quando a cobertura de testes for insuficiente após `@dev`.
+> `[@sheldon]` — opcional no MEDIUM como pré-etapa antes do `@orchestrator` para endurecer o PRD.
+> `[@tester]` — opcional, recomendado quando a cobertura de testes for insuficiente após `@dev`.
 
 ---
 

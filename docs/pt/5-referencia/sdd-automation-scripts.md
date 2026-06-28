@@ -62,9 +62,9 @@ Detecta a classificação da feature (MICRO / SMALL / MEDIUM) automaticamente a 
 | Integrações externas | nenhuma | 1 | 2+ |
 | Regras de negócio | simples | moderadas | complexas |
 
-- **0–1:** MICRO — só `@dev`, sem fases
-- **2–3:** SMALL — `@product → @analyst → @dev → @qa`
-- **4–6:** MEDIUM — adiciona `@architect`, paralelismo, conformance
+- **0–1:** MICRO — `@product → @dev → @qa`, sem fase de spec formal
+- **2–3:** SMALL (lean) — `@product → @sheldon → @dev → @qa`
+- **4–6:** MEDIUM (maestro) — `@product → @orchestrator → @dev → @pentester → @qa`
 
 **Flags:**
 
@@ -395,9 +395,9 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 
 | Tier | Passos |
 |---|---|
-| MICRO | `@dev` |
-| SMALL | `@product → @analyst → @dev → @qa` |
-| MEDIUM | `@product → @analyst → @architect → gate:check C → @dev (por fase) → @qa` |
+| MICRO | `@product → @dev → @qa` |
+| SMALL | `@product → @sheldon → @dev → @qa` |
+| MEDIUM | `@product → @orchestrator → @dev → @pentester → @qa` |
 
 **Flags:**
 

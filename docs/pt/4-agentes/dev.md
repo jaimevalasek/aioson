@@ -10,9 +10,19 @@
 
 ## Para que serve
 
-Você passou por `@product`, `@analyst`, `@architect` e, nos fluxos SMALL/MEDIUM atuais, por `@scope-check` antes de abrir implementação. A spec existe, as decisões técnicas estão em disco. Agora é hora de escrever código — mas de forma que o próximo agente (`@qa`, `@validator`) consiga verificar o que foi feito sem perguntar "o que você implementou?".
+Você passou pela autoridade única de spec (`@sheldon` no SMALL ou `@orchestrator` no MEDIUM) — a spec existe, as decisões técnicas estão em disco, o plano de implementação está faseado e o contrato de harness está aprovado. Agora é hora de escrever código — mas de forma que o próximo agente (`@qa`, `@validator`) consiga verificar o que foi feito sem perguntar "o que você implementou?".
 
-`@dev` lê os artefatos, implementa, e grava um `dev-state.md` com o resumo do que foi feito, quais arquivos foram tocados, e qual é o próximo passo. Isso é o que permite continuar de onde parou em outra sessão, sem depender do histórico de chat.
+`@dev` lê os artefatos, implementa fase por fase, e grava um `dev-state.md` com o resumo do que foi feito, quais arquivos foram tocados, e qual é o próximo passo. Isso é o que permite continuar de onde parou em outra sessão, sem depender do histórico de chat.
+
+**Loop de fases:** `@dev` executa o plano faseado como um loop automático:
+1. Implementa a fase atual.
+2. Roda `aioson harness:check` (gate por fase).
+3. Executa **verificação por fase** (sub-agente leve, ex.: `qa` num modelo barato) — o relatório substitui o "continue?".
+4. Corrige os pontos encontrados dentro da mesma fase.
+5. **Compacta o contexto** antes de avançar.
+6. Passa para a próxima fase sem precisar de aprovação manual.
+
+O **Runtime smoke completo** (build + migrations em DB real + boot + happy-path) roda **uma vez ao fim da feature** — não por fase. Verificação por fase é suprimida no MICRO para economizar tokens.
 
 **Regra dura de contexto:** ele carrega no máximo 5 arquivos antes de escrever a primeira linha de código. Se precisar de mais, para e pergunta o que priorizar. Isso evita "contexto inchado" que leva a decisões confusas.
 
@@ -20,7 +30,8 @@ Você passou por `@product`, `@analyst`, `@architect` e, nos fluxos SMALL/MEDIUM
 
 ## Quando invocar
 
-- Após `@scope-check` (SMALL/MEDIUM) ou `@product` (MICRO).
+- Após `@sheldon` (SMALL — lane lean padrão) ou `@orchestrator` (MEDIUM — lane maestro).
+- Após `@product` (MICRO — sem fase de spec).
 - Para retomar uma feature interrompida — `@dev` lê `dev-state.md` e sabe onde parou.
 - Para correções apontadas pelo `@qa` (ciclo autônomo, até 2 iterações).
 
@@ -91,7 +102,8 @@ Depende do modo:
 | Modo | O que carrega (máx. 5 arquivos) |
 |---|---|
 | MICRO | `project.context.md` + `prd-{slug}.md` |
-| SMALL/MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` |
+| SMALL | `project.context.md` + pacote de spec do `@sheldon` (`requirements-{slug}.md` + `implementation-plan-{slug}.md`) |
+| MEDIUM | `project.context.md` + pacote de spec do `@orchestrator` (`implementation-plan-{slug}.md` + `harness-contract.json`) |
 | Retomada | Apenas o `context_package` do `dev-state.md` |
 
 **Nunca carrega** arquivos de outros agentes (`.aioson/agents/`), specs de outras features, ou mais de 5 arquivos antes do primeiro código.
@@ -124,8 +136,8 @@ aioson memory:summary . --last=5
 
 ## Handoff típico
 
-- **Vem de:** `@scope-check` (SMALL/MEDIUM) ou `@product` (MICRO)
-- **Vai para:** `@qa`
+- **Vem de:** `@sheldon` (SMALL) · `@orchestrator` (MEDIUM) · `@product` (MICRO)
+- **Vai para:** `@pentester` (MEDIUM, inline) → `@qa`; ou direto `@qa` (SMALL/MICRO)
 
 ---
 

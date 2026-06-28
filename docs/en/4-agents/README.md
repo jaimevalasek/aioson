@@ -6,28 +6,40 @@ Cards are being translated progressively. Until a card is available here, the PT
 
 ---
 
+## Default lanes (v1.35.0)
+
+| Classification | Default lane |
+|---|---|
+| **MICRO** | `@product → @dev → @qa` |
+| **SMALL** (lean — default) | `@product → @sheldon → @dev → @qa` |
+| **MEDIUM** (maestro) | `@product → @orchestrator → @dev → @pentester → @qa` |
+
+`@sheldon` (SMALL) and `@orchestrator` (MEDIUM) are the **single spec authorities** for their respective sizes. Agents like `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are **opt-in detours** or **fan-out sub-agents** — none deleted, none in the default hop sequence.
+
+---
+
 ## The 29 agents (plus @pair alias)
 
-### Workflow core (pipeline order)
+### Workflow core
 
 | Agent | Role |
 |---|---|
 | `@setup` | Project onboarding — detect stack, classify MICRO/SMALL/MEDIUM, write `project.context.md` |
 | `@briefing` | Pre-PRD framing — turn `plans/` sketches into structured briefings with gap analysis |
 | `@product` | PRD — vision, problem, users, scope, acceptance criteria |
-| `@sheldon` | PRD quality guardian — gap detection, web research, sizing, in-place enrichment or phased plan |
-| `@analyst` | Domain discovery — entities, flows, brownfield mapping |
-| `@scope-check` | Alignment gate before implementation — validates intent vs plan and catches scope drift |
-| `@architect` | Technical decisions — structure, libraries, integration boundaries |
-| `@ux-ui` | Design system and UI component specs (MEDIUM) |
-| `@pm` | Backlog and user stories (MEDIUM) |
-| `@orchestrator` | Parallel lane coordination (MEDIUM) |
-| `@dev` | Feature implementation — any stack |
-| `@qa` | Risk-first review, test generation, autonomous fix/test loop |
-| `@validator` | Binary contract verification against `harness-contract.json` |
+| `@sheldon` | **SMALL single spec authority** (RF-LEAN): one pass produces requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract. Also a PRD-hardening / enrichment capability usable in any lane. |
+| `@analyst` | Domain discovery — entities, flows, brownfield mapping. **Opt-in detour / fan-out sub-agent** (invoked by `@orchestrator` in MEDIUM) |
+| `@scope-check` | Scope-drift gate — `spec:analyze` runs **automatically** at the `@dev`/`@qa` done gate; also available as an explicit detour |
+| `@architect` | Technical decisions — structure, libraries, integration boundaries. **Opt-in detour / fan-out sub-agent**; runs in **merged mode** (also produces design-doc + readiness + dev-state) when `@discovery-design-doc` is omitted |
+| `@ux-ui` | UI/UX spec — **opt-in detour** for UI-heavy specs; `@dev` applies design skills directly by default |
+| `@pm` | Backlog, user stories, implementation plan (Gate C). **Opt-in detour / fan-out sub-agent** (MEDIUM) |
+| `@orchestrator` | **MEDIUM maestro / single spec authority** — fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package. Secondary: coordinate parallel `@dev` lanes post-spec. |
+| `@dev` | Feature implementation — any stack. Runs the plan as a **phase loop**: auto-continues between phases, per-phase verification (light sub-agent), context compaction between phases. Full Runtime smoke runs once at end-of-feature. |
+| `@qa` | Risk-first review, test generation, autonomous fix/test loop (cap 2). Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). |
+| `@validator` | Binary contract verification against `harness-contract.json` in a **fresh isolated context** (detour when a harness contract exists) |
 | [`@forge-run`](./forge-run.md) | Lane B (opt-in) — compile a MEDIUM feature's specs into an executable workflow and run it (`forge:compile`) |
-| `@tester` | Systematic test engineering — legacy and coverage gaps |
-| `@pentester` | Adversarial security review — OWASP Top 10, LLM Top 10, supply chain |
+| `@tester` | Systematic test engineering — legacy and coverage gaps. Triggered by `@qa` when conditions fire. |
+| `@pentester` | Adversarial security review — OWASP Top 10, LLM Top 10, supply chain. Inline in MEDIUM; opt-in in SMALL. |
 
 ### Continuity & delivery
 
@@ -51,10 +63,12 @@ Cards are being translated progressively. Until a card is available here, the PT
 | `@design-hybrid-forge` | Combine two design skills into a hybrid |
 | `@orache` | Domain investigation and strategic research |
 | `@copywriter` | Conversion copy — landing pages, VSL scripts |
-| [`@discovery-design-doc`](./discovery-design-doc.md) | Discovery, readiness, and design doc package |
+| [`@discovery-design-doc`](./discovery-design-doc.md) | Discovery, readiness, and design doc package — opt-in; absorbed by `@architect` merged mode, `@sheldon`, or `@orchestrator` by default |
 
 ---
 
 For the executable-verification theme that `@forge-run`, `@validator`, `@scope-check`, `@sheldon`, and `@pm` participate in, see [Executable verification](../5-reference/executable-verification.md).
+
+For the full lane walkthrough and opt-in detour guide, see [Full feature with @sheldon](../3-recipes/full-feature-with-sheldon.md).
 
 Full PT cards with dialogue examples, disk outputs, and handoff maps: [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md)

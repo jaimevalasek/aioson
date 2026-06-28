@@ -19,19 +19,27 @@ Sua regra interna de ouro: máximo 2 páginas. Se o output excede isso, ele est�
 
 ## Dois contextos de ativação
 
-### 1. Feature workflow MEDIUM (pré-dev — v1.22.0+)
+### 1. Feature workflow MEDIUM — sub-agente do `@orchestrator` (v1.35.0)
 
-No workflow de feature MEDIUM, `@pm` aparece logo antes do `@dev` — após `@discovery-design-doc` e antes do `@scope-check` pré-dev. Aqui sua responsabilidade é produzir o `implementation-plan-{slug}.md` (Gate C) que o `@dev` precisa para começar.
+No workflow MEDIUM padrão (maestro lane), `@pm` é disparado pelo `@orchestrator` como parte do fan-out de spec. O `@orchestrator` consolida e verifica o plano produzido pelo `@pm` antes de passar para `@dev`.
 
 ```
-@analyst → @scope-check → @architect → @discovery-design-doc → @pm → STOP → /dev
+@orchestrator fan-out: @analyst + @architect + @pm + @ux-ui → consolida → @dev
 ```
 
-O Gate C só é aprovado com o plano pronto. Se o `@pm` for pulado em features MEDIUM, o `gate:check --gate=C` vai bloquear o `@dev`.
+O Gate C (plano de implementação aprovado) é verificado pelo `@orchestrator` antes do handoff.
 
-### 2. Projeto MEDIUM (modo tradicional)
+### 2. Detour opt-in (qualquer tamanho)
 
-Para o projeto completo (configuração inicial), `@pm` entra após `@ux-ui` e antes de `@orchestrator` — priorizando e sequenciando as histórias do backlog.
+Quando você quer criar o backlog e plano de implementação manualmente, sem passar pelo `@orchestrator`, pode invocar `@pm` diretamente após a fase de spec. Útil quando o `@sheldon` (SMALL) produziu o plano mas você quer expandir as user stories.
+
+### 3. Fluxo legado (escape hatch full-merged)
+
+Para quem prefere gerenciar cada sub-agente manualmente no MEDIUM:
+
+```
+@analyst → @architect → @discovery-design-doc → @pm → @orchestrator (lanes only) → @dev
+```
 
 ---
 

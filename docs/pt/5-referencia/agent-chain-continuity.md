@@ -70,11 +70,17 @@ feature inicia (via workflow:next ou manualmente)
 dossier:init criado → dossier.json
         │
         ▼
-@product → spec.md
+@product → prd.md
         │
         ▼
-@dev implementa → dev-state.md (atualizado a cada ponto)
-        │          handoff-protocol.json (escrito no handoff)
+autoridade de spec:
+  SMALL → @sheldon (pacote de spec completo em uma passada)
+  MEDIUM → @orchestrator (fan-out: @analyst + @architect + @pm + @ux-ui → consolida)
+        │
+        ▼  Gates A/B/C aprovados
+@dev implementa por fases → dev-state.md (atualizado a cada fase)
+        │    ↕ verificação por fase (sub-agente leve, auto-continue)
+        │                       handoff-protocol.json (escrito no handoff)
         │
         ▼
 [sessão nova / agente novo]
@@ -84,10 +90,13 @@ dossier:init criado → dossier.json
         └─ next agent lê artifact_uris do handoff-protocol
         │
         ▼
-@qa → testa → devolve para @dev se houver falhas (ciclo autônomo, cap 2)
+@pentester (MEDIUM, inline) → findings → @dev corrige → @pentester re-varre
         │
         ▼
-@validator → gate final → feature:close
+@qa → runtime smoke gate + ACs → devolve para @dev se houver falhas (ciclo autônomo, cap 2)
+        │
+        ▼
+@validator → verifica contra harness-contract em contexto isolado → gate final → feature:close
         │
         ▼
 dossier arquivado em .aioson/context/done/

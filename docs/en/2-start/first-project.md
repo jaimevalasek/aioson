@@ -142,47 +142,37 @@ You'll see a structured spec with scope, ACs, and out-of-scope items.
 
 ---
 
-## Step 5 — `@analyst` maps the domain
+## Step 5 — `@sheldon` closes the spec (single spec authority for SMALL)
 
 ```
-You > @analyst
+You > @sheldon
 
-@analyst > Reading spec... domain: personal tasks.
-@analyst > Entities:
-        - Task { id, text, completed, created_at }
-@analyst > No other entities in scope.
-@analyst > Domain map saved to context/architecture.md.
-@analyst > Next: @architect.
-```
+@sheldon > Reading spec.md... stack: Node + Express + SQLite.
+@sheldon > No external gaps detected (simple scope). Producing spec package:
+        ✓ design-doc-task-list.md (structure: src/{routes,db,server}.js)
+        ✓ readiness-task-list.md (Gate B: ready)
+        ✓ implementation-plan.md (1 phase — scope is tight)
+        ✓ harness-contract.json (4 RG-smoke criteria matching the ACs)
 
----
-
-## Step 6 — `@architect` decides the structure
-
-```
-You > @architect
-
-@architect > Stack confirmed: Node + Express + SQLite.
-@architect > Decisions:
-        - Structure: src/{routes,db,server}.js
+@sheldon > Notes:
         - Persistence: better-sqlite3 (synchronous SQLite, simple)
-        - Validation: small, manual (no extra libs — Article VI)
-        - No heavy test framework: use node:test (built-in)
-@architect > Decisions recorded in architecture.md.
-@architect > Next: @dev.
+        - Validation: manual (no extra libs — Article VI)
+        - Test framework: node:test (built-in, no dependency)
+@sheldon > Gates A/B/C: approved. Next: @dev.
 ```
 
-> **Note Article VI ("Simplicity Over Ceremony"):** `@architect` avoided pulling in unnecessary libraries.
+> **Note Article VI ("Simplicity Over Ceremony"):** `@sheldon` flagged no unnecessary libraries. On a simple project like this it produces a lean package; on a complex feature it would do web research and multi-phase planning.
 
 ---
 
-## Step 7 — `@dev` implements
+## Step 6 — `@dev` implements
 
 ```
 You > @dev
 
-@dev > [reads spec, architecture, project.context]
-@dev > I'll create:
+@dev > [reads implementation-plan.md, spec, project.context]
+@dev > Phase 1/1: full implementation (tight scope).
+@dev > Creating:
         package.json
         src/db.js          (init schema)
         src/routes.js      (POST /tasks, PATCH /tasks/:id, GET /tasks)
@@ -190,8 +180,7 @@ You > @dev
         tests/tasks.test.js (placeholder — @qa covers)
 
 @dev > [implements]
-@dev > Implementation OK. Running smoke:
-        $ node src/server.js → listening on 3000 ✓
+@dev > aioson harness:check → 4/4 criteria pass.
 @dev > dev-state.md updated.
 @dev > Next: @qa.
 ```
@@ -208,7 +197,7 @@ cat .aioson/context/dev-state.md
 
 ---
 
-## Step 8 — `@qa` tests
+## Step 7 — `@qa` tests
 
 ```
 You > @qa
@@ -233,7 +222,7 @@ You > @qa
 
 ---
 
-## Step 9 — Clean commit with `@committer`
+## Step 8 — Clean commit with `@committer`
 
 ```
 You > @committer
@@ -260,14 +249,19 @@ You > [Enter to accept]
 
 ```
 .aioson/context/
-├── project.context.md         ← project view (step 3)
-├── architecture.md            ← decisions (steps 5+6)
-├── dev-state.md               ← what @dev did (step 7)
-├── test-plan.md               ← @qa's plan (step 8)
-├── qa-report-test-coverage.md ← QA report
+├── project.context.md           ← project view (step 3)
+├── design-doc-task-list.md      ← @sheldon spec (step 5)
+├── readiness-task-list.md       ← @sheldon Gate B (step 5)
+├── implementation-plan.md       ← @sheldon (step 5)
+├── dev-state.md                 ← what @dev did (step 6)
+├── test-plan.md                 ← @qa's plan (step 7)
+├── qa-report-test-coverage.md   ← QA report
 └── features/
     └── task-list/
-        └── spec.md            ← original spec (step 4)
+        └── spec.md              ← original spec (step 4)
+
+.aioson/plans/task-list/
+└── harness-contract.json        ← @sheldon success contract
 ```
 
 Three months from now, someone (you or another AI) can open this project and understand **everything** just by reading these files. No chat history needed.
@@ -276,7 +270,7 @@ Three months from now, someone (you or another AI) can open this project and und
 
 ## What if I want a new feature?
 
-Go back to step 4. `@product` creates a new feature → `@analyst` → `@architect` → `@dev` → `@qa`. `@setup` doesn't need to run again (context is already there).
+Go back to step 4. `@product` creates a new feature → `@sheldon` (closes the spec) → `@dev` → `@qa`. `@setup` doesn't need to run again (context is already there).
 
 If you get lost in the middle:
 

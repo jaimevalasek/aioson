@@ -1,35 +1,67 @@
-# @orchestrator — Coordene lanes paralelas em projetos MEDIUM
+# @orchestrator — Maestro de spec para projetos MEDIUM
 
-> **Para quem é:** quem trabalha em projetos MEDIUM e precisa dividir a implementação em frentes paralelas.
-> **Tempo de leitura:** 4 min.
+> **Para quem é:** quem trabalha em projetos MEDIUM e precisa de uma autoridade única de spec que coordene a fase de descoberta e planejamento.
+> **Tempo de leitura:** 5 min.
 > **O que você vai sair sabendo:**
-> - O que é uma "lane" e quando paralelizar faz sentido
-> - Comandos CLI do sistema de lanes
+> - Por que `@orchestrator` é o maestro do MEDIUM (não apenas coordenador de execução)
+> - Como funciona o fan-out para sub-agentes e a consolidação do pacote de spec
+> - Quando (e como) usar lanes paralelas pós-spec
 
 ---
 
 ## Para que serve
 
-Em projetos MEDIUM, a implementação pode ser grande o suficiente para ter partes independentes — backend de autenticação e frontend de listagem, por exemplo — que podem acontecer em paralelo sem conflito. Tentar fazer isso manualmente sem coordenação é receita para conflitos de merge e arquivos sobrescritos.
+Em projetos MEDIUM, a especificação envolve múltiplas dimensões — domínio, arquitetura, UX, backlog — que precisam ser coordenadas e verificadas antes que o `@dev` comece. Tentar gerenciar cada agente de spec manualmente, em sequência, é lento e sujeito a drift entre artefatos.
 
-`@orchestrator` divide o trabalho em **lanes** (faixas de execução): cada lane tem seu escopo, seus arquivos permitidos, e seu estado independente. Ele garante que as lanes não escrevam nos mesmos arquivos e coordena o merge no final.
+`@orchestrator` assume o papel de **maestro de spec**: ele dispara `@analyst`, `@architect` e `@pm` (e `@ux-ui` quando a feature tem UI pesada) como **sub-agentes em fan-out**, depois **consolida, verifica e retrabaha** os artefatos deles num único pacote de spec validado — com Gates A/B/C aprovados — e só então passa o bastão para o `@dev`.
 
-**Regra dura:** `@orchestrator` só ativa em projetos MEDIUM. Para MICRO e SMALL, execução sequencial é o suficiente.
+**Regra dura:** `@orchestrator` só ativa em projetos MEDIUM. Para MICRO e SMALL, o `@sheldon` cobre a spec sozinho.
+
+> SMALL = `@sheldon` (vertical, solo). MEDIUM = `@orchestrator` (horizontal, fan-out). Mesma ideia — uma autoridade única de spec — formas diferentes.
+
+---
+
+## O papel duplo do `@orchestrator`
+
+### 1. Maestro de spec (papel principal no MEDIUM)
+
+Sequência padrão da lane MEDIUM:
+
+```
+@product → @orchestrator → @dev → @pentester → @qa
+```
+
+O `@orchestrator`:
+1. Lê o PRD e confirma classificação MEDIUM.
+2. (Opcional) Dispara `@sheldon` como pré-etapa para endurecer o PRD antes do fan-out.
+3. Fan-out: dispara `@analyst` + `@architect` + `@pm` como sub-agentes (+ `@ux-ui` se UI-heavy).
+4. Consolida os artefatos recebidos.
+5. Verifica consistência entre eles (detecta drift, gaps, conflitos).
+6. Retrabaha as inconsistências detectadas.
+7. Produz o pacote de spec consolidado (Gates A/B/C + plano de implementação faseado + harness-contract).
+8. Passa para `@dev`.
+
+### 2. Coordenador de lanes paralelas (papel secundário, pós-spec)
+
+Quando a implementação de uma feature MEDIUM tem frentes genuinamente independentes — backend, UI, migrations — o `@orchestrator` pode dividir o trabalho em **lanes** após o pacote de spec estar consolidado:
+
+- Cada lane tem escopo próprio, arquivos permitidos e estado independente.
+- `@dev` implementa uma lane por sessão.
+- `aioson parallel:merge` faz o merge determinístico no final.
 
 ---
 
 ## Quando invocar
 
-- Projetos MEDIUM, após `@pm`, quando há implementação paralelizável.
-- Quando você tem múltiplos devs (humanos ou IAs) trabalhando na mesma feature.
-- Quando uma feature tem frentes claramente independentes (ex: API + UI + migrations).
+- Projetos MEDIUM, após `@product` (pacote de spec ainda não existe).
+- Quando você quer que a fase de spec rode de forma coordenada, com verificação cruzada entre sub-agentes, sem gerenciar cada um manualmente.
 
 ---
 
 ## Quando NÃO invocar
 
-- Projeto MICRO ou SMALL → ele mesmo recusa e te avisa.
-- A feature tem dependências lineares fortes → implemente sequencialmente com `@dev`.
+- Projeto MICRO ou SMALL → `@sheldon` cobre sozinho; `@orchestrator` recusa e avisa.
+- Feature com pacote de spec já consolidado e você só quer dividir a implementação em lanes → use `aioson parallel:init` diretamente.
 
 ---
 
@@ -38,26 +70,43 @@ Em projetos MEDIUM, a implementação pode ser grande o suficiente para ter part
 ```
 Você > @orchestrator
 
-@orchestrator > Verificando classificação... MEDIUM. OK.
-                Lendo architecture.md, tasks.md, ui-spec.md...
+@orchestrator > Verificando classificação... MEDIUM. Confirmado.
+                Lendo prd-mvp.md...
                 
-                Dividindo em 3 lanes:
-                Lane 1 — backend
-                  Escopo: src/models/payment.js, src/services/payment-service.js, src/routes/checkout.js
-                Lane 2 — frontend
-                  Escopo: src/views/checkout/, src/components/PaymentForm/
-                Lane 3 — migrations
-                  Escopo: db/migrations/add-payment-table.sql
+                Iniciando fan-out de spec:
+                ├── @analyst   → mapeamento de domínio e entidades
+                ├── @architect → estrutura técnica, libs, integração
+                └── @pm        → backlog, user stories, plano de implementação
                 
-                Guard configurado: lanes não podem escrever fora do próprio escopo.
+                (+ @ux-ui — feature tem UI pesada, adicionando ao fan-out)
                 
-                $ aioson parallel:init .          ✓
-                $ aioson parallel:assign .        ✓
-                Workspace pronto em .aioson/context/parallel/
+                [sub-agentes executados]
                 
-                Quando terminar cada lane, rode:
-                  aioson parallel:status .
-                  aioson parallel:merge . --apply
+                Consolidando artefatos...
+                Verificando consistência:
+                ✓ Entidades do @analyst alinhadas com as decisões do @architect
+                ⚠ @pm criou US-07 (notificação SMS) sem AC verificável — retrabalhando
+                ✓ @ux-ui spec alinhada com componentes declarados em architecture.md
+                
+                Gates A/B/C aprovados.
+                Pacote de spec consolidado:
+                  .aioson/context/requirements-mvp.md
+                  .aioson/context/architecture.md
+                  .aioson/context/design-doc-mvp.md
+                  .aioson/context/implementation-plan-mvp.md
+                  .aioson/context/parallel/harness-contract.json
+                
+                Próximo: @dev.
+```
+
+---
+
+## `@sheldon` como pré-etapa (opcional)
+
+Se o PRD tiver gaps ou decisões técnicas difíceis, rode `@sheldon` antes de `@orchestrator` para endurecer o PRD. Também é possível configurar `@orchestrator` para disparar `@sheldon` como um stream do fan-out.
+
+```
+@product → @sheldon (endurecimento de PRD) → @orchestrator → @dev → @pentester → @qa
 ```
 
 ---
@@ -66,37 +115,33 @@ Você > @orchestrator
 
 | Arquivo/Diretório | Conteúdo |
 |---|---|
-| `.aioson/context/parallel/lane-1.md` | Escopo e estado da lane 1 |
-| `.aioson/context/parallel/lane-2.md` | Escopo e estado da lane 2 |
-| `.aioson/context/parallel/lane-N.md` | ... |
+| `.aioson/context/requirements-{slug}.md` | Domínio consolidado (de @analyst) |
+| `.aioson/context/architecture.md` | Decisões técnicas (de @architect) |
+| `.aioson/context/design-doc-{slug}.md` | Spec de UI/UX (de @ux-ui, quando UI-heavy) |
+| `.aioson/context/implementation-plan-{slug}.md` | Plano faseado (de @pm) |
+| `.aioson/context/parallel/harness-contract.json` | Contrato de sucesso (Gates A/B/C) |
+| `.aioson/context/parallel/lane-*.md` | Lanes de execução (quando paralelização é usada) |
 
 ---
 
 ## Como ele lê seu projeto
 
 - `.aioson/context/project.context.md` — confirma `classification: MEDIUM`
-- `.aioson/context/discovery.md`, `architecture.md`, `prd.md`, `ui-spec.md`
-- `.aioson/context/implementation-plan-{slug}.md` — se existir
-- `.aioson/context/parallel/` — ao retomar sessão
+- `.aioson/context/prd-{slug}.md` — entrada para o fan-out de spec
+- `.aioson/context/parallel/` — ao retomar sessão com lanes já criadas
 
 ---
 
 ## Comandos CLI relacionados
 
 ```bash
-# Inicializar workspace de lanes
-aioson parallel:init .
-
-# Distribuir escopos
-aioson parallel:assign .
-
 # Ver progresso de cada lane
 aioson parallel:status .
 
 # Validar que uma lane está autorizada a escrever num arquivo
 aioson parallel:guard . --lane=1 --paths=src/models/payment.js
 
-# Merge final (só quando todas as lanes estão prontas)
+# Merge final (quando todas as lanes estão prontas)
 aioson parallel:merge . --apply
 
 # Corrigir workspace quebrado
@@ -107,12 +152,13 @@ aioson parallel:doctor . --fix
 
 ## Handoff típico
 
-- **Vem de:** `@pm`
-- **Vai para:** `@dev` (em cada lane)
+- **Vem de:** `@product`
+- **Vai para:** `@dev`
 
 ---
 
 ## Próximo passo
 
-- [Ficha do @dev](./dev.md) — executa dentro de cada lane
-- [Decisões iniciais: MEDIUM](../2-comecar/decisoes-iniciais.md#medium--workflow-completo)
+- [Ficha do @dev](./dev.md) — executa o plano produzido pelo orchestrator
+- [Ficha do @sheldon](./sheldon.md) — autoridade de spec para SMALL; pré-etapa opcional no MEDIUM
+- [Decisões iniciais: MEDIUM](../2-comecar/decisoes-iniciais.md#medium--maestro-lane)
