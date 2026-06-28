@@ -7,9 +7,9 @@
 | Phase | MICRO (0–1) | SMALL (2–3) | MEDIUM (4–6) |
 |-------|-------------|-------------|--------------|
 | Specify (PRD) | 1 conversation, lite template | Full PRD conversation | Full PRD + `## Specify depth` section |
-| Research (@sheldon) | Skip unless links/external sources provided | Recommended — run before @analyst | Required — run Modo C (full validation) |
-| Requirements (@analyst) | Skip — go @product → @dev | Required — `requirements-{slug}.md` | Required — with requirement IDs + ACs |
-| Design (@architect) | Skip unless auth or external integration | Selective — only if new architecture pattern | Required — full `architecture.md` |
+| Research (@sheldon) | Skip unless links/external sources provided | Required — `@sheldon` is the single spec authority (lean default) | Required — run Modo C (full validation) |
+| Requirements (@analyst) | Skip — go @product → @dev | From `@sheldon` in the lean default; `@analyst` only on the full-chain detour | Required — with requirement IDs + ACs |
+| Design (@architect) | Skip unless auth or external integration | From `@sheldon` in the lean default; `@architect` only on the full-chain detour | Required — full `architecture.md` |
 | Plan (implementation-plan) | Optional — suggest only if @dev asks | Recommended | Required — with gate approval + verification criteria |
 | Execute (@dev) | Direct from PRD | From requirements + spec | From approved plan only |
 | State (@dev, @deyvin) | Minimal `spec.md` note | `spec-{slug}.md` with phase_gates | Full spec pack — phase_gates + checkpoints + maintenance notes |

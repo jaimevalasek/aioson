@@ -7,12 +7,14 @@ load_tier: trigger
 triggers: [lean lane, workflow.config.json, fewer agents, menos é mais, lean pipeline]
 ---
 
-# Workflow Lean Lane (opt-in)
+# Workflow Lean Lane (SMALL default; opt-in for MEDIUM)
 
-The default spec-driven chain (`product → analyst → scope-check → architect → discovery-design-doc → pm →
-dev → qa`) is thorough but heavy. For most features the spec hops can be collapsed without losing rigor —
-the bottleneck was never "too few design documents", it was the absence of a gate that runs the real app
-(now fixed: see `.aioson/docs/sheldon/harness-contract.md` §2c and `@qa`'s Runtime smoke gate).
+SMALL features now run the **lean chain by default**, and MEDIUM runs a leaner chain than before
+(`@architect` in merged mode, with `@scope-check`, `@discovery-design-doc`, and `@ux-ui` demoted to
+opt-in detours). The older heavy chain (`product → analyst → scope-check → architect →
+discovery-design-doc → pm → dev → qa`) is no longer a built-in default, but its spec hops can be opted
+back in. The bottleneck was never "too few design documents", it was the absence of a gate that runs the
+real app (now fixed: see `.aioson/docs/sheldon/harness-contract.md` §2c and `@qa`'s Runtime smoke gate).
 
 The **lean lane** removes the intermediate hops and makes `@sheldon` the single spec authority:
 
@@ -27,7 +29,7 @@ and the §2c runtime-gated harness contract). `@dev` implements from that plan u
 
 ## When to use which lane
 
-| Use the **lean lane** when… | Keep the **full chain** when… |
+| Use the **lean lane** when… | Opt into the **full chain** when… |
 |---|---|
 | Most features — bounded scope, a single product surface, a clear prototype | Genuinely large or multi-domain scope |
 | You want velocity and one spec authority | Sensitive surface (money, multi-tenant ownership, regulated data) that wants independent architecture + scope-check + adversarial review as distinct gates |
@@ -39,7 +41,8 @@ without a valid `RG-*` contract; `@validator` still owns the target-app-only `ha
 
 ## How to opt in
 
-Drop this file at `.aioson/context/workflow.config.json` (the CLI's `readWorkflowConfig` merges it over the
+SMALL already ships lean — no config needed. Use this preset to extend the lean shape to MEDIUM (or to pin it
+explicitly). Drop this file at `.aioson/context/workflow.config.json` (the CLI's `readWorkflowConfig` merges it over the
 built-in defaults — per-classification arrays replace the defaults). Then run `aioson workflow:next .` as usual.
 
 A ready-to-copy preset lives at `.aioson/docs/presets/workflow.config.lean.json`:
@@ -72,19 +75,18 @@ so the lean lane loses no automation it was ever supposed to have.
 Running the agents by hand (slash commands) is equivalent: activate `@product → @sheldon → @dev → @qa` and skip
 analyst/architect/discovery-design-doc/pm. No config file is needed for the manual path.
 
-## Slimming the full chain too (optional)
+## Full-merged chain (heavier, opt-in)
 
-If you keep the full chain but want it lighter, the most redundant adjacent pair is `@architect` +
-`@discovery-design-doc` — both translate the design into a concrete file-level plan. They can be merged into a
-single architecture step that also emits the readiness verdict + dev-state handoff (keep the readiness gate; it is
-the cheap, valuable part). This is a velocity change, not a correctness one — the runtime gate is what prevents the
-green-but-broken outcome.
-
-To opt in, drop the **full-merged** preset at `.aioson/context/workflow.config.json` (ready-to-copy at
-`.aioson/docs/presets/workflow.config.full-merged.json`): it is the full chain with `discovery-design-doc`
-removed. When that stage is absent from the sequence, `@architect` runs in **merged mode** (see
-`agents/architect.md` → *Architect merged mode*) and produces the design-doc + readiness + dev-state itself,
-then hands off to `@dev`.
+The lean/leaner defaults are enough for most work. When a project genuinely wants the heavier multi-agent
+chain back — independent `@analyst`, `@architect`, and `@pm` as distinct gates — drop the **full-merged**
+preset at `.aioson/context/workflow.config.json` (ready-to-copy at
+`.aioson/docs/presets/workflow.config.full-merged.json`): it is that chain with `discovery-design-doc`
+removed. Whenever the active sequence omits `@discovery-design-doc` — the default everywhere now —
+`@architect` runs in **merged mode** (see `agents/architect.md` → *Architect merged mode*) and produces the
+design-doc + readiness + dev-state itself, then hands off to `@dev`. Merging `@architect` +
+`@discovery-design-doc` keeps the readiness gate (the cheap, valuable part) while dropping the redundant
+second file-level-plan hop; it is a velocity change, not a correctness one — the runtime gate is what
+prevents the green-but-broken outcome.
 
 ```json
 {
@@ -105,8 +107,10 @@ then hands off to `@dev`.
 
 ## What this does NOT change
 
-- No change to `src/` routing constants — the built-in defaults stay the full chain, so the framework test suite
-  is untouched. The lean lane is a project-level config + agent capability, not a core rewrite.
+- The override mechanism is unchanged — `readWorkflowConfig` still merges `workflow.config.json` over the
+  built-in defaults (per-classification arrays replace the defaults). Only the built-in default *shape* changed
+  (SMALL ships lean, MEDIUM ships leaner with `@architect` merged); the lean lane stays a project-level config +
+  agent capability, not a different engine.
 - The runtime safety gates are unchanged: `@qa`'s Runtime smoke gate, the §2c `RG-*` criteria, the CLI
   contract-integrity backstop, and `@validator`'s target-app judgment apply identically in both lanes.
 

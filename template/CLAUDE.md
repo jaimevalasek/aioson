@@ -94,10 +94,10 @@ AIOSON follows a Spec-Driven Development (SDD) methodology. Key governance files
 
 The process depth scales with project classification:
 - **MICRO** (0-1): lightweight — @product → @dev
-- **SMALL** (2-3): standard — @product → @analyst → @scope-check(pre-dev) → @architect → @discovery-design-doc → @dev, with optional @scope-check(post-dev) before @qa when implementation drift is likely
-- **MEDIUM** (4-6): full — all agents, all gates, all artifacts
+- **SMALL** (2-3): lean by default — @product → @sheldon → @dev → @qa (@sheldon is the single spec authority)
+- **MEDIUM** (4-6): full chain — feature: @product → @analyst → @architect → @pm → @dev → @pentester → @qa; project: @setup → @product → @analyst → @architect → @pm → @orchestrator → @dev → @qa. @architect runs in merged mode (it also produces design-doc + readiness + dev-state) by default; @discovery-design-doc, @scope-check, and @ux-ui are opt-in detours, not default hops.
 
-**Lean lane (opt-in):** collapse the spec hops into @sheldon as the single spec authority — @product → @sheldon → @dev → @qa (@validator detour when a harness contract exists). Opt in via `.aioson/context/workflow.config.json`; see `.aioson/docs/workflow-lean-lane.md`.
+**Lean lane (default for SMALL):** collapse the spec hops into @sheldon as the single spec authority — @product → @sheldon → @dev → @qa (@validator detour when a harness contract exists). Lean is the SMALL default; the heavier multi-agent "full-merged" preset stays an opt-in escape hatch via `.aioson/context/workflow.config.json`. See `.aioson/docs/workflow-lean-lane.md`.
 
 **Runtime smoke gate (all lanes):** a feature with a backend, a database, or a clickable prototype does not close until its build + migrations (applied to a real DB) + boot + Core happy-path run on the **real stack** — not just unit tests. Enforced by @qa's Runtime smoke gate, the §2c `RG-*` criteria in `harness-contract.json`, and @validator's contract-integrity precheck. Passing unit tests + `tsc` is the floor, not "done".
 

@@ -22,7 +22,7 @@ Do NOT load the entire `references/` folder. Load only the file matching your cu
 | Specify | `prd*.md` | @product | lite | full | full |
 | Research/Discuss | `sheldon-enrichment*.md` | @sheldon | optional | recommended | required |
 | Requirements | `requirements-{slug}.md` | @analyst | skip | required | required |
-| Alignment Check | `scope-check*.md` | @scope-check | skip | early | final before dev |
+| Alignment Check | `scope-check*.md` | @scope-check (detour) | skip | opt-in detour | opt-in detour |
 | Design | `architecture.md`, `design-doc*.md` | @architect | skip | selective | required |
 | Tasks/Plan | `implementation-plan*.md` | @dev | optional | recommended | required |
 | Execute | code, commits, spec updates | @dev, @deyvin | — | — | — |
@@ -31,10 +31,10 @@ Do NOT load the entire `references/` folder. Load only the file matching your cu
 ## Phase depth by classification
 
 - **MICRO**: Specify (lite) + Execute. Skip Requirements, Design, Plan unless complexity warrants it.
-- **SMALL**: Specify + Requirements + scope check + selective Design + Plan. @sheldon recommended before downstream.
-- **MEDIUM**: Full pack — all phases, all artifacts, @sheldon validation before @analyst, final scope check before @dev, implementation plan required.
+- **SMALL**: lean by default — Specify (`@product`) + `@sheldon` as the single spec authority (requirements + ACs, design-doc + readiness, plan, and harness contract in one pass) → `@dev` → `@qa`. The heavier multi-agent chain (`@analyst` + selective Design + `@scope-check` detour) is an opt-in escape hatch.
+- **MEDIUM**: Full pack — `@product → @analyst → @architect → @pm → @dev → @pentester → @qa` (feature). `@architect` runs in merged mode (design-doc + readiness + dev-state) by default; `@discovery-design-doc`, `@scope-check`, and `@ux-ui` are opt-in detours. The deterministic drift check (`spec:analyze`) runs at the `@dev`/`@qa` done gate, not as a separate scope-check hop. Implementation plan required.
 
-**Lean lane (opt-in, any size):** `@product → @sheldon → @dev → @qa`, where `@sheldon` runs **Lean lane mode (RF-LEAN)** and produces the requirements/ACs, design-doc + readiness, implementation plan, and §2c runtime-gated harness contract in one pass — replacing the analyst/architect/discovery-design-doc/pm hops. Opt in via `.aioson/context/workflow.config.json`; see `.aioson/docs/workflow-lean-lane.md`. The runtime smoke gate is mandatory in both lanes.
+**Lean lane (SMALL default; opt-in for MEDIUM):** `@product → @sheldon → @dev → @qa`, where `@sheldon` runs **Lean lane mode (RF-LEAN)** and produces the requirements/ACs, design-doc + readiness, implementation plan, and §2c runtime-gated harness contract in one pass — replacing the analyst/architect/discovery-design-doc/pm hops. SMALL runs this by default; MEDIUM opts in via `.aioson/context/workflow.config.json`. See `.aioson/docs/workflow-lean-lane.md`. The runtime smoke gate is mandatory in both lanes.
 
 ## References available
 

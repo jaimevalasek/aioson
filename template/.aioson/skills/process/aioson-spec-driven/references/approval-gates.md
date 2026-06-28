@@ -5,7 +5,7 @@
 
 ## Gate A — Requirements approval
 
-**Before leaving @product / @analyst → @scope-check, @architect, or @dev**
+**Before leaving @product / @analyst → @architect or @dev (`@scope-check` only when its opt-in detour is in the sequence)**
 
 Required for the gate to pass:
 - [ ] Objectives are clear and unambiguous

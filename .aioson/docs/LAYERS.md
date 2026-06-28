@@ -56,8 +56,8 @@ See `docs/README.md` for format and naming conventions.
 ## Layer 4 — `.aioson/context/design-doc*.md`
 
 **What it is:** living decision document for the current feature or project scope.
-**Who writes it:** @discovery-design-doc.
-**Who updates it:** @dev at feature close, @discovery-design-doc when resuming.
+**Who writes it:** @architect (merged mode) on MEDIUM and @sheldon on the SMALL lean lane by default; @discovery-design-doc when that opt-in detour is in the sequence.
+**Who updates it:** @dev at feature close; the design-doc producer (@architect merged / @sheldon / @discovery-design-doc detour) when resuming.
 **When to use:** automatically — one per feature (`design-doc-{slug}.md`) or one project-wide (`design-doc.md`).
 **Cadence:** updated at the end of each feature implementation session. Decisions are append-only — never deleted.
 

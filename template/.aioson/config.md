@@ -8,10 +8,12 @@
 
 ## Project sizes
 - MICRO: `@setup -> @product (optional) -> @dev`
-- SMALL: `@setup -> @product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> @qa`
-- MEDIUM: `@setup -> @product -> @analyst -> @architect -> @discovery-design-doc -> @ux-ui -> @pm -> @orchestrator -> @scope-check(pre-dev) -> @dev -> @qa`
+- SMALL: `@setup -> @product -> @sheldon -> @dev -> @qa` (lean by default — `@sheldon` is the single spec authority)
+- MEDIUM: `@setup -> @product -> @analyst -> @architect -> @pm -> @orchestrator -> @dev -> @qa` (project); a MEDIUM **feature** runs `@product -> @analyst -> @architect -> @pm -> @dev -> @pentester -> @qa`
 
-**Lean lane (opt-in):** collapse the spec hops into `@sheldon` as the single spec authority — `@product -> @sheldon -> @dev -> @qa` (with a `@validator` detour when a harness contract exists). Drop the lean preset into `.aioson/context/workflow.config.json`; full guide in `.aioson/docs/workflow-lean-lane.md`. The **runtime smoke gate** (build + migrate + boot + Core happy-path on the real stack, `harness-contract.md` §2c) is mandatory in **both** lanes — neither closes a runtime feature without running the real app.
+> `@discovery-design-doc`, `@scope-check(pre-dev)`, and `@ux-ui` are no longer default-chain hops — they remain available as opt-in detours. `@architect` runs in **merged mode** (design-doc + readiness + dev-state) when the sequence omits `@discovery-design-doc`. The deterministic drift check (`spec:analyze`) now runs at the `@dev`/`@qa` done gate (`finalizeCurrentStage`), not as a separate agent hop.
+
+**Lean lane (SMALL default; opt-in for MEDIUM):** `@sheldon` is the single spec authority — `@product -> @sheldon -> @dev -> @qa` (with a `@validator` detour when a harness contract exists). SMALL runs this by default; MEDIUM stays the full multi-agent chain unless you drop the lean preset into `.aioson/context/workflow.config.json`. Full guide in `.aioson/docs/workflow-lean-lane.md`. The **runtime smoke gate** (build + migrate + boot + Core happy-path on the real stack, `harness-contract.md` §2c) is mandatory in **both** lanes — neither closes a runtime feature without running the real app.
 
 Optional alignment checkpoints:
 - After `@dev`: `@scope-check --scope-mode=post-dev` when the implementation changed planned behavior, touched unexpected files, or skipped approved scope.
@@ -65,7 +67,7 @@ Optional testing fields:
 - `test_runner` (for example `pest`, `jest`, `vitest`, `pytest`, `rspec`, `foundry`)
 
 Optional workflow fields:
-- `auto_handoff` (boolean, default `false`) — when `true`, the feature-workflow agents from `@analyst` up to the `@dev` handoff (including `@pm` on MEDIUM features) chain automatically via skill auto-invocation instead of stopping for manual activation. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`. Upstream agents (`@briefing`, `@product`, `@sheldon`) always hand off manually.
+- `auto_handoff` (boolean, default `false`) — when `true`, the deterministic pre-dev feature-workflow agents (`@analyst`, `@architect`, and `@pm` on MEDIUM features) chain automatically via skill auto-invocation up to the `@dev` handoff instead of stopping for manual activation. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`. Upstream agents (`@briefing`, `@product`, `@sheldon`) always hand off manually — so the SMALL lean default has no pre-dev hops to auto-chain. `@discovery-design-doc`, `@scope-check`, and `@ux-ui` auto-chain only as opt-in detours when present in the active sequence.
 
 Allowed `project_type` values:
 - `web_app`
@@ -231,7 +233,7 @@ Default governance files:
 
 ### Design docs (`.aioson/context/design-doc.md`)
 
-Living decision documents that bridge discovery and implementation. Produced by `@discovery-design-doc`.
+Living decision documents that bridge discovery and implementation. Produced by `@architect` (merged mode) on MEDIUM and `@sheldon` on the SMALL lean lane by default; by `@discovery-design-doc` when that opt-in detour is in the sequence.
 
 ```markdown
 ---
@@ -245,7 +247,7 @@ agents: [dev, architect]   # empty [] = all agents load it
 
 | | PRD (`prd.md`) | Code governance (`.aioson/design-docs/`) | Design doc (`design-doc.md`) |
 |---|---|---|---|
-| **Produced by** | `@product` | Installer + project team | `@discovery-design-doc` |
+| **Produced by** | `@product` | Installer + project team | `@architect` merged / `@sheldon` lean (`@discovery-design-doc` detour) |
 | **Focus** | What and why — vision, users, problem, features | Structural code quality rules | How — technical flows, decisions, risks, slices |
 | **Audience** | All agents | Agents doing structural planning or implementation | Technical agents (dev, architect, qa) |
 | **Lifecycle** | Written once, enhanced by @pm | Stable, edited when conventions change | Living document, updated as decisions are made |

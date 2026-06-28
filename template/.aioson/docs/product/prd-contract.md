@@ -98,15 +98,15 @@ After the PRD is produced:
 | classification | Next step |
 |---|---|
 | MICRO | `@dev` |
-| SMALL | `@analyst` |
-| MEDIUM | `@analyst` then `@architect` → `@ux-ui` → `@pm` → `@orchestrator` |
+| SMALL | `@sheldon` (lean default) |
+| MEDIUM | `@analyst` then `@architect` → `@pm` → `@orchestrator` |
 
 ### New feature (`prd-{slug}.md`)
 
 | feature complexity | Next step |
 |---|---|
 | MICRO | `@dev` |
-| SMALL | `@analyst` |
-| MEDIUM | `@analyst` → `@architect` → `@scope-check` → `@dev` → `@qa` |
+| SMALL | `@sheldon` (lean default) |
+| MEDIUM | `@analyst` → `@architect` → `@pm` → `@dev` → `@pentester` → `@qa` |
 
 Assess feature complexity from the conversation and state the next agent explicitly.
