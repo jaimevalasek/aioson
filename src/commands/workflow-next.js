@@ -50,13 +50,15 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   // one pass), replacing analyst/scope-check/architect/discovery-design-doc.
   // Those agents remain available as opt-in detours (allowDetours: true).
   SMALL: ['product', 'sheldon', 'dev', 'qa'],
-  // MEDIUM keeps the multi-agent spec chain (analyst → architect → pm) but drops
-  // the dedicated @discovery-design-doc and @scope-check hops: @architect runs in
-  // merged mode (produces design-doc + readiness + dev-state, absorbing ddd) and
-  // the scope drift check is enforced deterministically at the dev/qa done gate
-  // (see finalizeCurrentStage). @pm stays — Gate C needs implementation-plan-{slug}.md.
-  // ddd / scope-check remain opt-in detours (allowDetours: true).
-  MEDIUM: ['product', 'analyst', 'architect', 'pm', 'dev', 'pentester', 'qa']
+  // MEDIUM collapses the spec phase into @orchestrator — the maestro that fans out
+  // to @analyst + @architect + @pm (+ @ux-ui when UI-heavy) as sub-agents, then
+  // consolidates/verifies/redoes their output into the gated spec package
+  // (requirements + spec[A/B/C approved] + design-doc + readiness + implementation-
+  // plan + harness-contract) and hands to @dev. SMALL = @sheldon solo (vertical),
+  // MEDIUM = @orchestrator fan-out (horizontal). The scope drift check is enforced at
+  // the dev/qa done gate (finalizeCurrentStage). @pentester stays as the post-dev
+  // security stage. analyst/architect/pm/ddd/scope-check/ux-ui remain opt-in detours.
+  MEDIUM: ['product', 'orchestrator', 'dev', 'pentester', 'qa']
 };
 
 // Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
@@ -89,13 +91,21 @@ function normalizeClassification(value, fallback = 'MICRO') {
   return fallback;
 }
 
+// MEDIUM maestro lane: @orchestrator routes straight to @dev (it is the single
+// spec authority that fans out to analyst/architect/pm sub-agents and consolidates).
+function isMaestroOrchestratorState(state) {
+  const sequence = Array.isArray(state && state.sequence) ? state.sequence.map(normalizeAgentName) : [];
+  const idx = sequence.indexOf('orchestrator');
+  return idx !== -1 && sequence[idx + 1] === 'dev';
+}
+
 function buildDefaultWorkflowConfig() {
   return {
     version: 1,
     project: {
       MICRO: ['setup', 'dev'],
       SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
-      MEDIUM: ['setup', 'product', 'analyst', 'architect', 'pm', 'orchestrator', 'dev', 'qa']
+      MEDIUM: ['setup', 'product', 'orchestrator', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,
     rules: {
@@ -367,6 +377,19 @@ async function validateStageArtifacts(targetDir, state, stage) {
   }
 
   if (stage === 'orchestrator') {
+    // Maestro lane (MEDIUM, orchestrator → dev): the orchestrator is the single
+    // spec authority — "done" once the gated spec package exists (mirrors how the
+    // per-hop stages were inferred). Otherwise it is the parallel-impl coordinator
+    // and owns the lane workspace.
+    if (state.mode === 'feature' && slug && isMaestroOrchestratorState(state)) {
+      const designDoc = [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')];
+      const readiness = [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')];
+      return (await exists(path.join(base, `requirements-${slug}.md`)))
+        && (await exists(path.join(base, `spec-${slug}.md`)))
+        && (await exists(path.join(base, `implementation-plan-${slug}.md`)))
+        && (await anyExists(designDoc))
+        && (await anyExists(readiness));
+    }
     return await exists(path.join(base, 'parallel'));
   }
 

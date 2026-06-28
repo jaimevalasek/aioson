@@ -316,14 +316,14 @@ test('workflow:next infers scope-check (after discovery-design-doc) in a MEDIUM 
   assert.equal(loaded.state.next, 'dev');
 });
 
-test('workflow:next MEDIUM feature: fresh state sequences pm after architect and infers it from the implementation plan', async () => {
+test('workflow:next MEDIUM feature: fresh state collapses the spec phase into orchestrator and infers it from the spec package', async () => {
   const dir = await makeTempDir();
   const slug = 'official-dashboard-reform';
   await writeActiveFeature(dir, slug, 'MEDIUM');
   await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
   await writeFileEnsured(
     path.join(dir, `.aioson/context/spec-${slug}.md`),
-    '---\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
   );
   await writeFileEnsured(path.join(dir, '.aioson/context/architecture.md'), '# Architecture\n');
   await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design Doc\n');
@@ -336,16 +336,16 @@ test('workflow:next MEDIUM feature: fresh state sequences pm after architect and
 
   assert.deepEqual(
     loaded.state.sequence,
-    ['product', 'analyst', 'architect', 'pm', 'dev', 'pentester', 'qa']
+    ['product', 'orchestrator', 'dev', 'pentester', 'qa']
   );
   assert.deepEqual(
     loaded.state.completed,
-    ['product', 'analyst', 'architect', 'pm']
+    ['product', 'orchestrator']
   );
   assert.equal(loaded.state.next, 'dev');
 });
 
-test('workflow:next MEDIUM feature: inference stops at pm while the implementation plan is missing', async () => {
+test('workflow:next MEDIUM feature: inference stops at orchestrator while the implementation plan is missing', async () => {
   const dir = await makeTempDir();
   const slug = 'official-dashboard-reform';
   await writeActiveFeature(dir, slug, 'MEDIUM');
@@ -361,8 +361,8 @@ test('workflow:next MEDIUM feature: inference stops at pm while the implementati
 
   const loaded = await loadOrCreateState(dir);
 
-  assert.deepEqual(loaded.state.completed, ['product', 'analyst', 'architect']);
-  assert.equal(loaded.state.next, 'pm');
+  assert.deepEqual(loaded.state.completed, ['product']);
+  assert.equal(loaded.state.next, 'orchestrator');
 });
 
 test('workflow:next does not infer mainline progress while a detour is active', async () => {

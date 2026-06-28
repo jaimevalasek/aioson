@@ -108,7 +108,22 @@ const CONTRACTS = {
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   orchestrator: {
-    artifacts: ['.aioson/context/parallel'],
+    artifacts: (targetDir, state) => {
+      // Maestro lane (MEDIUM, orchestrator → dev): the orchestrator produces the
+      // gated spec package via fan-out, so expect those artifacts. Otherwise it is
+      // the parallel-implementation coordinator and owns the lane workspace.
+      if (state && state.mode === 'feature' && state.featureSlug && isMaestroOrchestratorState(state)) {
+        const slug = state.featureSlug;
+        return [
+          `.aioson/context/requirements-${slug}.md`,
+          `.aioson/context/spec-${slug}.md`,
+          `.aioson/context/design-doc-${slug}.md`,
+          `.aioson/context/readiness-${slug}.md`,
+          `.aioson/context/implementation-plan-${slug}.md`
+        ];
+      }
+      return ['.aioson/context/parallel'];
+    },
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
@@ -155,6 +170,14 @@ function isLeanSheldonState(state) {
   const sequence = Array.isArray(state?.sequence) ? state.sequence.map(normalizeAgentName) : [];
   const sheldonIndex = sequence.indexOf('sheldon');
   return sheldonIndex !== -1 && sequence[sheldonIndex + 1] === 'dev';
+}
+
+// MEDIUM maestro lane: @orchestrator routes straight to @dev (it is the single
+// spec authority that fans out to analyst/architect/pm sub-agents and consolidates).
+function isMaestroOrchestratorState(state) {
+  const sequence = Array.isArray(state?.sequence) ? state.sequence.map(normalizeAgentName) : [];
+  const idx = sequence.indexOf('orchestrator');
+  return idx !== -1 && sequence[idx + 1] === 'dev';
 }
 
 async function readSecurityFindings(findingsPath) {
@@ -421,7 +444,14 @@ async function validateHandoffContract(targetDir, state, stageName) {
     }
   }
 
-  if (stageName === 'sheldon' && state.featureSlug && isLeanSheldonState(state)) {
+  // Single-spec-authority lanes that route straight to @dev — lean @sheldon (SMALL)
+  // and maestro @orchestrator (MEDIUM) — collapse Gates A/B/C + the plan into one
+  // hop, so re-check them here instead of at the (absent) per-hop stages.
+  const isSingleSpecAuthorityToDev = Boolean(state.featureSlug) && (
+    (stageName === 'sheldon' && isLeanSheldonState(state)) ||
+    (stageName === 'orchestrator' && isMaestroOrchestratorState(state))
+  );
+  if (isSingleSpecAuthorityToDev) {
     for (const gateLetter of ['A', 'B', 'C']) {
       const gateCheck = await checkGateApproval(
         targetDir,
@@ -439,7 +469,7 @@ async function validateHandoffContract(targetDir, state, stageName) {
     const planContent = await readFileSafe(planPath);
     const planStatus = planContent ? parseFrontmatterValue(planContent, 'status') : null;
     if (String(planStatus || '').toLowerCase() !== 'approved') {
-      missing.push(`implementation-plan-${state.featureSlug}.md status is ${planStatus || 'missing'} — @sheldon must approve the collapsed Gate C plan`);
+      missing.push(`implementation-plan-${state.featureSlug}.md status is ${planStatus || 'missing'} — @${stageName} must approve the collapsed Gate C plan`);
     }
 
     const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {

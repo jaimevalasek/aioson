@@ -54,9 +54,6 @@ test('buildWorkflowPlan maps classifications to agent sequence', () => {
   assert.deepEqual(medium.commands, [
     '@setup',
     '@product',
-    '@analyst',
-    '@architect',
-    '@pm',
     '@orchestrator',
     '@dev',
     '@qa'
