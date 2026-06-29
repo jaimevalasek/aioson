@@ -87,7 +87,11 @@ const KNOWN_GOVERNOR_FIELDS = new Set([
 ]);
 const KNOWN_HUMAN_GATE_FIELDS = new Set(['required_for', 'themes']);
 const KNOWN_THEME_FIELDS = new Set(['name', 'paths']);
-const KNOWN_CRITERIA_FIELDS = new Set(['id', 'description', 'assertion', 'binary', 'verification']);
+const KNOWN_CRITERIA_FIELDS = new Set([
+  'id', 'description', 'assertion', 'binary', 'verification',
+  // SG-* static criteria (build-independent): proven by reading files, not running a command.
+  'must_match', 'must_not_match', 'files'
+]);
 
 const VALID_MODES = new Set(['balanced', 'safe', 'builder', 'autopilot']);
 
@@ -250,9 +254,50 @@ function validateContract(contract) {
         if (criterion.binary !== undefined && typeof criterion.binary !== 'boolean') {
           errors.push({ field: `criteria[${i}].binary`, reason: 'must be a boolean' });
         }
+
+        // SG-* static criteria — must_match / must_not_match are arrays of
+        // non-empty pattern strings; files[] is the (non-empty) set they read.
+        for (const patField of ['must_match', 'must_not_match']) {
+          if (criterion[patField] === undefined) continue;
+          if (!Array.isArray(criterion[patField])) {
+            errors.push({ field: `criteria[${i}].${patField}`, reason: 'must be an array of non-empty pattern strings' });
+            continue;
+          }
+          criterion[patField].forEach((pat, j) => {
+            if (typeof pat !== 'string' || !pat.trim()) {
+              errors.push({ field: `criteria[${i}].${patField}[${j}]`, reason: 'must be a non-empty string' });
+            }
+          });
+        }
+        if (criterion.files !== undefined) {
+          if (!Array.isArray(criterion.files)) {
+            errors.push({ field: `criteria[${i}].files`, reason: 'must be an array of file paths' });
+          } else {
+            criterion.files.forEach((fp, j) => {
+              if (typeof fp !== 'string' || !fp.trim()) {
+                errors.push({ field: `criteria[${i}].files[${j}]`, reason: 'must be a non-empty file path' });
+              }
+            });
+          }
+        }
+        const isStatic =
+          (Array.isArray(criterion.must_match) && criterion.must_match.length > 0) ||
+          (Array.isArray(criterion.must_not_match) && criterion.must_not_match.length > 0);
+        if (isStatic) {
+          // A static criterion needs files[] to read.
+          if (!Array.isArray(criterion.files) || criterion.files.length === 0) {
+            errors.push({ field: `criteria[${i}].files`, reason: 'a static criterion (must_match / must_not_match) requires a non-empty files[] to read' });
+          }
+          // A criterion is either runtime (verification) or static (patterns), not both.
+          if (criterion.verification !== undefined) {
+            errors.push({ field: `criteria[${i}].verification`, reason: 'a criterion is either runtime (verification) or static (must_match / must_not_match), not both — split into two criteria' });
+          }
+        }
+
         // Cobertura executável: critério binário sem verification continua
-        // válido (julgado pelo @validator), mas é dívida de verificação.
-        if (criterion.binary === true && criterion.verification === undefined) {
+        // válido (julgado pelo @validator), mas é dívida de verificação. Um
+        // critério SG-* estático já é checável deterministicamente — não é dívida.
+        if (criterion.binary === true && criterion.verification === undefined && !isStatic) {
           warnings.push({
             field: `criteria[${i}].verification`,
             reason: `binary criterion "${criterion.id}" has no executable verification command — @validator will LLM-judge it`

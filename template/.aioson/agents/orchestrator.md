@@ -55,7 +55,10 @@ separate stages.
 6. **Readiness** — write `readiness-{slug}.md` (verdict `ready`/`ready_with_warnings`/`blocked`, exact paths,
    reuse/componentization notes, blockers). This + the design-doc are what `@dev`'s MEDIUM preflight checks.
 7. **Harness contract** — produce `harness-contract.json` + `progress.json` with the §2c `RG-*` runtime-gate
-   criteria whenever the feature is a runtime feature.
+   criteria whenever the feature is a runtime feature. For ACs with a concrete greppable signature (a symbol
+   that must be called/exported, an anti-pattern that must be absent), also add build-free `SG-*` static
+   criteria (`files` + `must_match`/`must_not_match`) — they gate `@dev`-done cheaply at every stage, before
+   the app even builds. See `.aioson/docs/sheldon/harness-contract.md` §2d.
 8. **Dev-state handoff** — `aioson dev:state:write . --feature={slug} --phase=1 --next="<first slice>" --context=spec,design-doc,readiness`, then hand to `@dev`.
 
 **Prototype consistency (mandatory):** a demonstrated Core interaction must reach an AC and an `RG-smoke`

@@ -121,6 +121,61 @@ reason in the enrichment log):
 > non-blocking **advisory** `contract:integrity` step — a signal in the dashboard trail, not a gate; only the
 > tracked `workflow:next` / `feature:close` paths block. Treat a green `harness:check` as necessary, not sufficient.
 
+### 2d. Static gate criteria (SG-*) — build-independent proof
+
+`RG-*` criteria run a command (a build, a migrated DB, a booted app). They are
+the truth, but they are **expensive** — `aioson harness:check` runs them once, at
+the last gate (`@qa`, else `@dev`). They also cannot run until the app builds.
+
+An **SG-* (static gate)** criterion proves a claim by **reading the changed
+files** instead of running them: a required pattern is present (the code was
+actually written / wired) and a forbidden pattern is absent (no placeholder,
+stub or anti-pattern snuck in). It is pure `fs + RegExp + parse` — no shell, no
+build — so it costs milliseconds and the contract-integrity gate evaluates it at
+**every** stage (`@dev`-done and `@qa`-done), even when the runtime checks are
+deferred. That makes it the cheap layer that catches "claimed done but stubbed
+it / left a placeholder / never wired `requireAuth`" the instant it happens,
+on any model, cross-platform.
+
+Add an SG-* criterion when an AC has a concrete, greppable signature — a symbol
+that must be called, an export that must exist, an env var that must be read, an
+anti-pattern that must not appear — that you want proven without booting the app:
+
+```json
+{
+  "id": "SG-auth-wired",
+  "description": "auth middleware is wired into the protected router",
+  "assertion": "requireAuth is applied in src/routes/private.ts",
+  "binary": true,
+  "files": ["src/routes/private.ts"],
+  "must_match": ["requireAuth\\(", "export const privateRouter"],
+  "must_not_match": ["TODO", "as any", "not implemented"]
+}
+```
+
+Semantics:
+
+- `must_match` — **OR across files**: each pattern must appear in **≥ 1** of `files[]`.
+- `must_not_match` — **absent in all**: no pattern may appear in **any** of `files[]`.
+- Each `files[]` entry is also **parse-checked** (`JSON.parse` for `.json`,
+  `node --check` for `.js/.mjs/.cjs`) to catch a truncated/corrupted write; a
+  declared file that does not exist fails the criterion.
+- An invalid regex degrades to a literal-substring test — a typo never crashes the gate.
+
+**Rules:**
+
+- Use the `SG-` id prefix (mirrors `RG-` / `SEC-`).
+- A criterion is **either** runtime (`verification` command) **or** static
+  (`must_match`/`must_not_match`), **never both** — split into two criteria.
+- A static criterion **requires** a non-empty `files[]` to read.
+- SG-* does **not** replace `RG-*`: a static `must_match` proving an API *call
+  appears in source* is not proof the endpoint *runs*. Keep the `RG-smoke`
+  runtime gate; SG-* is the cheap, early, build-independent complement.
+
+For a **project-wide** sweep of the same anti-patterns (not tied to one AC), run
+`aioson audit:code . --json` — the categorized static scan (`TODO` /
+`ANTI_PATTERN` / `DEAD_CODE` / `DUPLICATION`) `@qa` consumes one category at a time.
+
 ### 3. Set `contract_mode`
 
 By classification and risk surface, using the modes accepted by the harness schema:
@@ -170,12 +225,24 @@ Safe defaults for a normal MEDIUM `builder` contract:
       "assertion": "...",
       "binary": true,
       "verification": "node --test tests/foo.test.js"
+    },
+    {
+      "id": "SG-1",
+      "description": "...",
+      "assertion": "...",
+      "binary": true,
+      "files": ["src/x/y.ts"],
+      "must_match": ["export function parseX"],
+      "must_not_match": ["as any", "TODO"]
     }
   ]
 }
 ```
 
-`verification` is optional per criterion (legacy contracts remain valid), executed via `aioson harness:check` with exit code 0 = pass.
+A criterion is **runtime** (carries `verification`, executed via `aioson
+harness:check` with exit code 0 = pass) **or** **static** (carries `files[]` +
+`must_match`/`must_not_match`, evaluated build-free — see §2d). Both are
+optional per criterion; a criterion with neither stays an `@validator` judgment.
 
 ### `progress.json`
 

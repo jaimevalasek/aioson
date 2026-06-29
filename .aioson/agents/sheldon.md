@@ -311,7 +311,7 @@ Run after writing `sheldon-enrichment-{slug}.md`. Always on `classification: MED
 
 Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
 
-Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check . --slug={slug} --strict`), `contract_mode`/governor selection by risk using schema-valid modes (`balanced`, `safe`, `builder`, `autopilot`), and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
+Load `.aioson/docs/sheldon/harness-contract.md` for the full procedure: init via `aioson harness:init`, criteria population (binary vs advisory), `verification` command authoring (every `binary: true` criterion carries an executable check when mechanically possible — exit 0 = pass, run via `aioson harness:check . --slug={slug} --strict`), build-free `SG-*` static criteria (§2d), `contract_mode`/governor selection by risk using schema-valid modes (`balanced`, `safe`, `builder`, `autopilot`), and canonical schemas. Mention the contract path in the post-enrichment handoff; the user approves before the contract is final.
 
 > **Runtime gate (§2c) is mandatory for runtime features.** If the feature has `has_api: true` / a DB / a Prisma
 > schema / a `## Prototype reference`, the contract MUST include the `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke`

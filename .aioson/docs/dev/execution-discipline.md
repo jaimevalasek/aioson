@@ -83,6 +83,31 @@ Before marking any task or feature done:
 3. confirm exit code `0`
 4. only then mark done
 
+### Exit-code honesty (never auto-deceive)
+
+A gate's verdict is its exit code, not your impression of it:
+
+- **Exit 127 = command not found.** That is a FAILURE, not a pass — a missing
+  tool/dependency. Stop and report; never read "no error output" as "no errors".
+- **Exit 0 with empty output** on a command that should produce output (a
+  typecheck over N files, a test run) means the command did **not** run. Verify
+  it actually executed (e.g. the output file exists and is non-empty) before
+  trusting it.
+- **Exit 124 = timeout.** The command hung — investigate, do not blind-retry.
+- When you cite a gate as evidence ("typecheck clean", "smoke passed"), paste the
+  exact command, the exit code, and the last lines of output. "exit 0" without
+  the command is not evidence.
+
+### Static gate (`SG-*`) — proof per acceptance criterion
+
+`aioson harness:check . --slug={slug}` also evaluates the contract's build-free
+**`SG-*`** static criteria (`must_match` / `must_not_match` + parse-check) on
+every run — they gate `@dev`-done even before the app builds. When you self-review
+an AC backed by an `SG-*` criterion, the evidence **is** the pattern hit: cite the
+`file:line` where `must_match` matched. A failing `SG-*` (a missing pattern, a
+forbidden `TODO`/`as any`, a truncated file) blocks done exactly like a failing
+test — fix the code, never relax the pattern.
+
 ### Runtime sub-gate (runtime features — has_api / DB / prototype)
 
 A passing unit suite is not "done" for a feature that ships a backend, a database, or a clickable prototype.

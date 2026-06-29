@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const { validateContract } = require('./contract-schema');
 const { checkContractIntegrity } = require('./contract-integrity');
+const { evaluateStaticCriteria } = require('./static-criteria');
 const { detectRuntimeFeature, gitChangedFiles } = require('./detect-runtime-feature');
 const { runHarnessCheck } = require('../commands/harness-check');
 
@@ -99,6 +100,8 @@ async function evaluateContractIntegrityGate(targetDir, slug, options = {}) {
   let checkReport = null;
 
   if (options.runChecks) {
+    // The full path runs the expensive runtime (RG-*) commands AND re-evaluates
+    // the cheap static (SG-*) criteria as part of its report — so it owns both.
     checkReport = await runHarnessCheck({
       args: [targetDir],
       options: {
@@ -114,6 +117,23 @@ async function evaluateContractIntegrityGate(targetDir, slug, options = {}) {
         code: 'harness_check_failed',
         message: `aioson harness:check failed for ${slug}; see .aioson/plans/${slug}/last-check-output.json`
       });
+    }
+  } else {
+    // SG-* static criteria are build-independent (pure fs + RegExp + parse) — they
+    // gate at EVERY stage, even when the expensive runtime checks are deferred to
+    // the last gate (A5). Evaluate them directly here so a stubbed/placeholder
+    // implementation cannot pass @dev-done just because the build smoke runs later.
+    const staticResult = evaluateStaticCriteria({
+      criteria: Array.isArray(contractRead.value.criteria) ? contractRead.value.criteria : [],
+      cwd: targetDir
+    });
+    for (const check of staticResult.checks) {
+      if (!check.ok) {
+        errors.push({
+          code: 'static_criteria_failed',
+          message: `${check.id}: ${check.detail}`
+        });
+      }
     }
   }
 

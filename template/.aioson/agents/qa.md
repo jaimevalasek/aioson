@@ -409,6 +409,30 @@ Before running the standard review, check for `.aioson/context/security-findings
 4. Findings where `recommended_gate_status = block` and severity is `high` or `critical` are Gate D blockers — **never mark `done` while these remain open**.
 5. Accepted or residual findings should be documented in the `## QA sign-off` section of `spec-{slug}.md`.
 
+## Code-quality audit (`audit:code`)
+
+`security:audit` owns the SECURITY surface (secrets, sensitive logs, controls).
+For the **non-security** code-quality categories, run the deterministic,
+build-free scan — it needs no working build, so it runs on any checkout:
+
+```bash
+aioson audit:code . --json          # full tree; add --changed to scope to the diff
+aioson audit:code . --category=ANTI_PATTERN   # one category at a time
+```
+
+It reports four categories (one category per pass): `ANTI_PATTERN` (eval / `new Function` / innerHTML /
+`dangerouslySetInnerHTML` / `z.coerce.boolean` / stray `console.log` / `: any`),
+`TODO` (residual TODO/FIXME/placeholder/not-implemented), `DEAD_CODE` (unused
+named imports), `DUPLICATION` (a literal repeated 3+× across 2+ files).
+
+- **`HIGH` findings are Gate D blockers** — treat them like a Critical/High QA
+  finding; never mark `done` while a HIGH remains open. `MED`/`LOW` are advisory.
+- **Exit-code honesty:** "audit did not run" (exit 127 / missing CLI / empty
+  output) is **not** "audit clean". If it cannot run, note the fallback in the QA
+  report and `project-pulse.md`, exactly as for `security:audit`.
+- The report persists to `.aioson/context/audit-code.json` so you (and the next
+  agent) can consume it category by category without re-scanning.
+
 **If the file does not exist:** skip silently.
 
 ## aios-qa browser report integration

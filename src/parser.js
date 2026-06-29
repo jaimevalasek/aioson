@@ -38,6 +38,9 @@ function parseArgv(argv) {
         'flatten', 'no-index',
         // harness:validate — pure boolean; `--no-diff .` must not swallow the path.
         'no-diff',
+        // audit:code / harness:check — pure booleans; `--changed .` / `--strict .`
+        // must not swallow the trailing path positional.
+        'changed', 'strict',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`
         // followed by `--tool=claude` would swallow the next token as its value.

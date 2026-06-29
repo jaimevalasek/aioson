@@ -21,6 +21,7 @@ const path = require('node:path');
 
 const { validateContract, resolveContract } = require('../harness/contract-schema');
 const { runCriteria, DEFAULT_CHECK_TIMEOUT_MS } = require('../harness/criteria-runner');
+const { evaluateStaticCriteria, isStaticCriterion } = require('../harness/static-criteria');
 const { emitGuardEvent } = require('../harness/guard-events');
 const { findActiveContract } = require('../harness/active-contract');
 const { checkContractIntegrity } = require('../harness/contract-integrity');
@@ -132,14 +133,18 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   const executable = criteria.filter(
     (c) => c && typeof c.verification === 'string' && c.verification.trim()
   );
-  const skipped = criteria.length - executable.length;
+  // Static (SG-*) criteria are deterministically checkable too — they are NOT
+  // "skipped / @validator-judged", so exclude them from that count and from the
+  // strict-mode verification-debt checks below.
+  const staticCriteria = criteria.filter((c) => isStaticCriterion(c));
+  const skipped = criteria.length - executable.length - staticCriteria.length;
   const strict = Boolean(options.strict);
   const binaryWithoutVerification = criteria.filter(
-    (c) => c && c.binary === true && !(typeof c.verification === 'string' && c.verification.trim())
+    (c) => c && c.binary === true && !(typeof c.verification === 'string' && c.verification.trim()) && !isStaticCriterion(c)
   );
   const strictErrors = [];
-  if (strict && criteria.length > 0 && executable.length === 0) {
-    strictErrors.push('strict mode requires at least one executable verification criterion');
+  if (strict && criteria.length > 0 && executable.length === 0 && staticCriteria.length === 0) {
+    strictErrors.push('strict mode requires at least one executable or static (SG-*) verification criterion');
   }
   if (strict && binaryWithoutVerification.length > 0) {
     strictErrors.push(`strict mode requires verification for binary criteria: ${binaryWithoutVerification.map((c) => c.id).join(', ')}`);
@@ -147,6 +152,11 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
 
   const checks = await runCriteria({ criteria, cwd: targetDir, timeoutMs });
   const failed = checks.filter((c) => !c.ok);
+
+  // SG-* static criteria — build-independent (fs + RegExp + parse), evaluated on
+  // every run (cheap). They gate the report just like executable criteria.
+  const staticResult = evaluateStaticCriteria({ criteria, cwd: targetDir });
+  const staticFailed = staticResult.checks.filter((c) => !c.ok);
 
   for (const check of failed) {
     await emitGuardEvent(targetDir, {
@@ -156,9 +166,17 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
       payload: { slug, criterion_id: check.id, exit_code: check.exitCode, signature: check.signature }
     });
   }
+  for (const check of staticFailed) {
+    await emitGuardEvent(targetDir, {
+      eventType: 'criteria_check_failed',
+      agent: 'harness-check',
+      message: `${check.id}: ${check.detail}`,
+      payload: { slug, criterion_id: check.id, kind: 'static' }
+    });
+  }
 
   const report = {
-    ok: failed.length === 0 && strictErrors.length === 0 && integrity.ok,
+    ok: failed.length === 0 && staticFailed.length === 0 && strictErrors.length === 0 && integrity.ok,
     slug,
     checked_at: new Date().toISOString(),
     strict,
@@ -167,6 +185,9 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
     passed: checks.length - failed.length,
     failed: failed.length,
     skipped_no_verification: skipped,
+    static_total: staticResult.total,
+    static_passed: staticResult.total - staticFailed.length,
+    static_failed: staticFailed.length,
     strict_errors: strictErrors,
     integrity: {
       ok: integrity.ok,
@@ -175,7 +196,8 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
       errors: integrity.errors,
       warnings: integrity.warnings
     },
-    checks
+    checks,
+    static_checks: staticResult.checks
   };
 
   try {
@@ -205,8 +227,18 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
   for (const error of strictErrors) {
     logger.log(`  ✗ ${error}`);
   }
+  // SG-* static criteria render on every run — they are build-independent.
+  for (const check of staticResult.checks) {
+    const mark = check.ok ? '✓' : '✗';
+    const extra = check.ok ? ` [${check.files.join(', ')}]` : ` — ${check.detail}`;
+    logger.log(`  ${mark} ${check.id} (static)${extra}`);
+  }
   if (executable.length === 0) {
-    logger.log(t('harness.check_no_executable', { total: criteria.length }) || `  No criteria with verification commands (${criteria.length} criteria total). @validator judges them all.`);
+    if (staticResult.total > 0) {
+      logger.log(`  Static: ${report.static_passed}/${staticResult.total} SG-* passed${skipped > 0 ? ` (${skipped} without verification — judged by @validator)` : ''}.`);
+    } else {
+      logger.log(t('harness.check_no_executable', { total: criteria.length }) || `  No criteria with verification commands (${criteria.length} criteria total). @validator judges them all.`);
+    }
     return report;
   }
   for (const check of checks) {
@@ -218,6 +250,9 @@ async function runHarnessCheck({ args, options = {}, logger, t }) {
     t('harness.check_summary', { passed: report.passed, executable: executable.length, skipped }) ||
     `  Checks: ${report.passed}/${executable.length} passed (${skipped} without verification — judged by @validator)`
   );
+  if (staticResult.total > 0) {
+    logger.log(`  Static: ${report.static_passed}/${staticResult.total} SG-* passed.`);
+  }
   return report;
 }
 

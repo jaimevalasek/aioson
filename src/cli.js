@@ -350,6 +350,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'security-scan',
   'security:audit',
   'security-audit',
+  'audit:code',
+  'audit-code',
   'review:feature',
   'review-feature',
   'config',
@@ -1269,6 +1271,9 @@ async function main() {
       result = await runSecurityScan({ args, options, logger: commandLogger, t });
     } else if (command === 'security:audit' || command === 'security-audit') {
       result = await runSecurityAudit({ args, options, logger: commandLogger, t });
+    } else if (command === 'audit:code' || command === 'audit-code') {
+      const { runAuditCode } = require('./commands/audit-code');
+      result = await runAuditCode({ args, options, logger: commandLogger, t });
     } else if (command === 'review:feature' || command === 'review-feature') {
       result = await runReviewFeature({ args, options, logger: commandLogger, t });
     } else if (command === 'config') {
