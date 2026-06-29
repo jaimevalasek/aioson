@@ -138,6 +138,68 @@ test('agent:epilogue does not emit a contract:integrity step for a non dev/qa ag
   assert.ok(!result.steps.some((step) => step.name === 'contract:integrity'));
 });
 
+test('agent:epilogue emits an advisory audit:code step for a dev completion with a HIGH anti-pattern in the diff', async () => {
+  const { execFileSync } = require('node:child_process');
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['config', 'user.email', 'a@b.c'], { cwd: dir });
+  execFileSync('git', ['config', 'user.name', 'a'], { cwd: dir });
+  // Untracked changed file carrying a HIGH anti-pattern (eval) — picked up by --changed.
+  await writeFile(dir, 'src/bad.ts', 'export const r = eval("1+1");\n');
+
+  const result = await runAgentEpilogue({
+    args: [dir],
+    options: { json: true, agent: 'dev', feature: 'feat-x', summary: 'did the slice', 'no-dossier': true },
+    logger: makeLogger(),
+    t
+  });
+
+  const audit = result.steps.find((step) => step.name === 'audit:code');
+  assert.ok(audit, 'expected an audit:code advisory step');
+  assert.equal(audit.ok, false);
+  assert.match(String(audit.reason), /HIGH/);
+  // Advisory only — never a blocking error, never flips ok.
+  assert.ok(!result.errors.some((e) => e.step === 'audit:code'));
+});
+
+test('agent:epilogue: a clean diff never yields a failing audit:code advisory', async () => {
+  const { execFileSync } = require('node:child_process');
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['config', 'user.email', 'a@b.c'], { cwd: dir });
+  execFileSync('git', ['config', 'user.name', 'a'], { cwd: dir });
+  await writeFile(dir, 'src/clean.ts', 'export const add = (a: number, b: number): number => a + b;\n');
+
+  const result = await runAgentEpilogue({
+    args: [dir],
+    options: { json: true, agent: 'dev', feature: 'feat-y', summary: 'clean slice', 'no-dossier': true },
+    logger: makeLogger(),
+    t
+  });
+  const audit = result.steps.find((step) => step.name === 'audit:code');
+  assert.ok(!audit || audit.ok === true, 'a clean diff must not produce a failing audit:code advisory');
+});
+
+test('agent:epilogue does not emit an audit:code step for a non dev/qa agent', async () => {
+  const { execFileSync } = require('node:child_process');
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  execFileSync('git', ['config', 'user.email', 'a@b.c'], { cwd: dir });
+  execFileSync('git', ['config', 'user.name', 'a'], { cwd: dir });
+  await writeFile(dir, 'src/bad.ts', 'export const r = eval("1+1");\n');
+
+  const result = await runAgentEpilogue({
+    args: [dir],
+    options: { json: true, agent: 'pm', feature: 'feat-z', summary: 'planned', 'no-dossier': true },
+    logger: makeLogger(),
+    t
+  });
+  assert.ok(!result.steps.some((step) => step.name === 'audit:code'));
+});
+
 test('agent:epilogue human output surfaces workflow auto-advance outcome', async () => {
   const dir = await makeTempDir();
   const { t } = createTranslator('en');

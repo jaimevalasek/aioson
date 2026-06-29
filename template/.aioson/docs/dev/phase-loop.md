@@ -16,7 +16,7 @@ On-demand detail for @dev's `## Phase loop` kernel section. Applies when a phase
 After finishing each phase:
 
 1. **Close the phase.** Mark it `done` in the manifest (`pending → in_progress → done`, never skip ahead) and update `spec-{slug}.md` checkpoints.
-2. **Per-phase gate.** If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` (add `--strict` for MEDIUM / harness-driven work).
+2. **Per-phase gate.** If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` (add `--strict` for MEDIUM / harness-driven work) — this also evaluates the build-free `SG-*` static criteria, so a stubbed/placeholder slice fails here before the build even runs. Then run `aioson audit:code . --changed --json` for a fast, build-free code-quality scan of this phase's diff (anti-patterns / TODOs / dead code / duplication): a HIGH finding is fix-before-advancing, MED/LOW advisory.
 3. **Per-phase verification.** Run:
    ```bash
    aioson verification:plan . --feature={slug} --trigger=per-phase --json

@@ -180,6 +180,39 @@ async function runAgentEpilogue({ args, options = {}, logger, t }) {
     }
   }
 
+  // Advisory code-quality signal (audit:code) over the CHANGED files for dev/qa
+  // completions — the non-security categories (anti-patterns, TODOs, dead code,
+  // duplication). Scoped to the diff so it is about the work just done; advisory
+  // only (never added to `errors`, so it cannot flip `ok`). This is what makes the
+  // scan auto-fire in the flow instead of relying on the agent to remember to run
+  // it; @qa still treats a HIGH as a Gate-D blocker.
+  if (agent === 'dev' || agent === 'qa') {
+    let codeAudit = null;
+    try {
+      const { runAuditCode } = require('./audit-code');
+      codeAudit = await runAuditCode({
+        args: [targetDir],
+        options: { changed: true, json: true, suppressExitCode: true },
+        logger: silentLogger
+      });
+    } catch {
+      codeAudit = null;
+    }
+    if (codeAudit && codeAudit.by_severity && codeAudit.scanned_files > 0) {
+      const high = codeAudit.by_severity.HIGH || 0;
+      const med = codeAudit.by_severity.MED || 0;
+      if (high > 0) {
+        const cats = Object.keys(codeAudit.by_category || {}).join(', ');
+        pushStep(steps, 'audit:code', {
+          ok: false,
+          reason: `${high} HIGH${med ? ` / ${med} MED` : ''} in changed files (${cats}) — advisory; @qa treats HIGH as a Gate-D blocker. See .aioson/context/audit-code.json`
+        });
+      } else {
+        pushStep(steps, 'audit:code', { ok: true, reason: med ? `${med} MED advisory` : null });
+      }
+    }
+  }
+
   const ok = doneResult.ok && (strict ? errors.length === 0 : !errors.some((error) => error.step === 'agent:done'));
   const result = {
     ok,
