@@ -18,6 +18,7 @@ const {
   getCrossCheck,
   getBudget,
   getPhaseLoop,
+  getAuditCodePolicy,
   shouldRunForTrigger
 } = require('../src/verification-policy');
 
@@ -173,4 +174,22 @@ test('phase_loop normalizes overrides and fills gaps from defaults', async () =>
   assert.equal(config.phase_loop.compact_between_phases, true);
   // getter mirrors the normalized block
   assert.deepEqual(getPhaseLoop(config), config.phase_loop);
+});
+
+test('getAuditCodePolicy: defaults to advisory/changed and normalizes valid + invalid values', () => {
+  // default (no config) — advisory, changed
+  assert.deepEqual(getAuditCodePolicy(null), { tracked_gate: 'advisory', scope: 'changed' });
+  assert.deepEqual(getAuditCodePolicy(buildDefaultVerificationConfig()), { tracked_gate: 'advisory', scope: 'changed' });
+  // valid overrides honored (case-insensitive)
+  assert.deepEqual(getAuditCodePolicy({ audit_code: { tracked_gate: 'BLOCK', scope: 'full' } }), { tracked_gate: 'block', scope: 'full' });
+  assert.equal(getAuditCodePolicy({ audit_code: { tracked_gate: 'off' } }).tracked_gate, 'off');
+  // invalid values fall back to defaults
+  assert.deepEqual(getAuditCodePolicy({ audit_code: { tracked_gate: 'nonsense', scope: 'galaxy' } }), { tracked_gate: 'advisory', scope: 'changed' });
+});
+
+test('audit_code round-trips through writeConfig/readVerificationConfig', async () => {
+  const dir = await makeTmpDir();
+  await writeConfig(dir, { audit_code: { tracked_gate: 'block', scope: 'full' } });
+  const config = await readVerificationConfig(dir);
+  assert.deepEqual(config.audit_code, { tracked_gate: 'block', scope: 'full' });
 });

@@ -50,6 +50,23 @@ So the config never asks "run codex inside claude". Each host row just names the
 
 The whole point is **leve por fase / completo no fim**: a per-phase check confirms the slice cheaply; the expensive build+migrate+boot+happy-path smoke runs once, at the end.
 
+## Code-quality gate (`audit_code`)
+
+Controls the deterministic, build-free `aioson audit:code` scan wired into the **tracked** `workflow:next` `@dev`/`@qa` done-gate (the non-security categories: anti-patterns / TODOs / dead code / duplication; security stays with `security:audit`).
+
+```jsonc
+"audit_code": {
+  "tracked_gate": "advisory",  // "block" | "advisory" | "off"
+  "scope": "changed"           // "changed" (git diff, fast) | "full" (whole tree)
+}
+```
+
+- **`advisory`** (default) — the scan runs, persists `.aioson/context/audit-code.json`, emits a guard event on a HIGH finding, and rides a summary on the workflow result, but **never blocks** the stage. `audit:code` is a heuristic opinion, not the feature's declared contract, so it does not gate by default (and existing flows keep advancing).
+- **`block`** — a HIGH finding in scope is a **hard gate**: `@dev`/`@qa` cannot complete until it is fixed (or the policy relaxed). Use this when you want the tracked workflow to enforce code health like a runtime gate.
+- **`off`** — skip the step entirely.
+
+This is deterministic (no LLM judgment) and runs at every tracked `@dev`/`@qa` completion. `@qa` separately treats a HIGH as a Gate-D blocker in its review, and the same scan auto-fires as an advisory in `aioson agent:epilogue` for untracked sessions.
+
 ## Examples
 
 Pin qa to the cheapest Claude tier per phase:

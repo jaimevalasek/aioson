@@ -92,6 +92,16 @@ function buildDefaultVerificationConfig() {
       auto_continue: true,
       compact_between_phases: true,
       max_fix_retries_per_phase: 2
+    },
+    // Deterministic build-free code-quality scan (`aioson audit:code`) wired into
+    // the tracked workflow:next dev/qa done-gate. `tracked_gate`: 'advisory'
+    // records + emits but never blocks (default — audit:code is a heuristic
+    // opinion, not the feature's declared contract); 'block' makes a HIGH finding
+    // in scope a hard gate; 'off' skips. `scope`: 'changed' = the git diff (fast),
+    // 'full' = the whole tree.
+    audit_code: {
+      tracked_gate: 'advisory',
+      scope: 'changed'
     }
   };
 }
@@ -196,6 +206,17 @@ function normalizePhaseLoop(parsed) {
   };
 }
 
+function normalizeAuditCode(parsed) {
+  const def = buildDefaultVerificationConfig().audit_code;
+  const raw = parsed && typeof parsed === 'object' ? parsed : {};
+  const gate = String(raw.tracked_gate || '').trim().toLowerCase();
+  const scope = String(raw.scope || '').trim().toLowerCase();
+  return {
+    tracked_gate: ['block', 'advisory', 'off'].includes(gate) ? gate : def.tracked_gate,
+    scope: ['changed', 'full'].includes(scope) ? scope : def.scope
+  };
+}
+
 function normalizeVerificationConfig(parsed) {
   const def = buildDefaultVerificationConfig();
   const raw = parsed && typeof parsed === 'object' ? parsed : {};
@@ -212,7 +233,8 @@ function normalizeVerificationConfig(parsed) {
     host: normalizeHostSetting(raw.host),
     agents,
     budget: normalizeBudget(raw.budget),
-    phase_loop: normalizePhaseLoop(raw.phase_loop)
+    phase_loop: normalizePhaseLoop(raw.phase_loop),
+    audit_code: normalizeAuditCode(raw.audit_code)
   };
 }
 
@@ -331,6 +353,11 @@ function getPhaseLoop(config) {
   return normalizePhaseLoop(config && config.phase_loop);
 }
 
+// audit:code tracked-gate policy: 'block' | 'advisory' | 'off' + 'changed' | 'full'.
+function getAuditCodePolicy(config) {
+  return normalizeAuditCode(config && config.audit_code);
+}
+
 // Composed decision: should `agentId` run for `context.trigger` right now?
 // Combines trigger membership + enabled resolution + the skip-on-micro budget
 // guard (per-phase verification is suppressed on MICRO to save tokens).
@@ -366,5 +393,6 @@ module.exports = {
   getCrossCheck,
   getBudget,
   getPhaseLoop,
+  getAuditCodePolicy,
   shouldRunForTrigger
 };

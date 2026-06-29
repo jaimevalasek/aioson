@@ -806,6 +806,7 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
   if (!normalizedStage) {
     throw new Error('No stage is active to complete.');
   }
+  let auditCodeSummary = null;
 
   // ── Harness Done Gate ───────────────────────────────────────────────────
   if (state.mode === 'feature' && state.featureSlug) {
@@ -844,6 +845,52 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
       } catch (driftErr) {
         if (driftErr && driftErr.message && driftErr.message.includes('[Scope Drift Gate]')) throw driftErr;
         // spec:analyze unavailable or non-analyzable — non-blocking
+      }
+
+      // ── Code-quality gate (deterministic audit:code) ───────────────────────
+      // Build-free scan of the changed files for the non-security categories
+      // (anti-patterns / TODOs / dead code / duplication). Unlike the integrity
+      // and drift gates above — which enforce the feature's DECLARED contract /
+      // spec — audit:code is a heuristic opinion, so it defaults to ADVISORY: the
+      // report is persisted (.aioson/context/audit-code.json), a guard event is
+      // emitted, and a summary rides the finalize result, but the stage is NOT
+      // blocked. Set verification.json `audit_code.tracked_gate: "block"` to make a
+      // HIGH finding in scope a hard gate, or "off" to skip. Defensive: only a
+      // deliberate block-mode throw escapes; any other error is swallowed.
+      try {
+        const { readVerificationConfig, getAuditCodePolicy } = require('../verification-policy');
+        const auditPolicy = getAuditCodePolicy(await readVerificationConfig(targetDir));
+        if (auditPolicy.tracked_gate !== 'off') {
+          const { runAuditCode } = require('./audit-code');
+          const codeAudit = await runAuditCode({
+            args: [targetDir],
+            options: { changed: auditPolicy.scope !== 'full', json: true, suppressExitCode: true },
+            logger: { log() {}, error() {} }
+          });
+          const high = codeAudit && codeAudit.by_severity ? (codeAudit.by_severity.HIGH || 0) : 0;
+          const med = codeAudit && codeAudit.by_severity ? (codeAudit.by_severity.MED || 0) : 0;
+          const categories = Object.keys((codeAudit && codeAudit.by_category) || {});
+          auditCodeSummary = { gate: auditPolicy.tracked_gate, scope: auditPolicy.scope, high, med, categories };
+          if (high > 0 && auditPolicy.tracked_gate === 'block') {
+            const msg = `[Code-Quality Gate] @${normalizedStage} blocked — audit:code found ${high} HIGH finding(s) in the ${auditPolicy.scope} files (${categories.join(', ')}). Fix them, or relax verification.json audit_code.tracked_gate to "advisory"/"off". See .aioson/context/audit-code.json`;
+            await logError(targetDir, normalizedStage, msg, 'audit-code');
+            throw new Error(msg);
+          }
+          if (high > 0) {
+            try {
+              const { emitGuardEvent } = require('../harness/guard-events');
+              await emitGuardEvent(targetDir, {
+                eventType: 'audit_code_findings',
+                agent: normalizedStage,
+                message: `${high} HIGH / ${med} MED in ${auditPolicy.scope} files (${categories.join(', ')}) — advisory`,
+                payload: { slug: state.featureSlug, high, med, scope: auditPolicy.scope }
+              });
+            } catch { /* telemetry best-effort */ }
+          }
+        }
+      } catch (auditErr) {
+        if (auditErr && auditErr.message && auditErr.message.includes('[Code-Quality Gate]')) throw auditErr;
+        // audit:code unavailable / non-git — non-blocking
       }
     }
 
@@ -946,7 +993,11 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
     detour: null
   });
 
-  return { state: nextState, completedStage: normalizedStage };
+  return {
+    state: nextState,
+    completedStage: normalizedStage,
+    ...(auditCodeSummary ? { auditCode: auditCodeSummary } : {})
+  };
 }
 
 /**
