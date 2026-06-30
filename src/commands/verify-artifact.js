@@ -142,12 +142,25 @@ const RULESETS = {
         must_not_match: []
       }
     ]
+  }),
+
+  // copywriter — an advisory placeholder/template scan over the saved copy doc
+  // (the rich resonance checks stay in the agent's Phase-5 checklist; this just
+  // makes "no placeholder/Lorem/TODO/unfilled token" deterministic).
+  copy: (ctx) => ({
+    label: 'copywriter copy document',
+    criteria: [{
+      id: 'copy',
+      files: [`.aioson/context/copy-${ctx.slug}.md`],
+      must_match: [],
+      must_not_match: [...PLACEHOLDER_PATTERNS, ...TEMPLATE_TOKENS]
+    }]
   })
 };
 
 // Kinds whose target file path is keyed by --slug; without it we cannot resolve
 // the artifact, so fail with a clear usage error instead of a `null/` path.
-const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill']);
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy']);
 
 // Kinds whose artifact has a date-stamped / caller-known path — resolved via
 // --file=<path> rather than derived from a slug.
@@ -249,6 +262,27 @@ function runSiteBuild(siteDir, timeout = 600000, command = ['npm', 'run', 'build
   return { ok: false, detail: `build failed (exit ${res.status}): ${tail || 'see build output'}` };
 }
 
+// ─── kind=commit-message (advisory subject-quality heuristics) ────────────────
+
+/** Conservative, low-false-positive commit-subject checks. Returns issue list. */
+function evaluateCommitMessage(message) {
+  const issues = [];
+  const subject = (String(message || '').replace(/^\s+/, '').split('\n')[0] || '').trim();
+  if (!subject) {
+    issues.push('empty commit subject');
+    return issues;
+  }
+  if (subject.length > 72) issues.push(`subject is ${subject.length} chars — keep it <= 72 (ideally <= 50)`);
+  if (/[.]$/.test(subject)) issues.push('subject ends with a period — drop it');
+  if (/^(wip|stuff|misc|various|things|update|updates|changes|tweaks?|minor)$/i.test(subject)) {
+    issues.push(`subject is a single vague word: "${subject}"`);
+  }
+  if (/^(fix|update|change|tweak|adjust)\s+(it|this|that|stuff|things?|bugs?|code|tests?)$/i.test(subject)) {
+    issues.push(`subject is vague: "${subject}" — say what changed and why`);
+  }
+  return issues;
+}
+
 const ADAPTERS = {
   // setup — project.context.md is the root artifact every session reads first.
   'project-context': async (ctx) => {
@@ -319,6 +353,27 @@ const ADAPTERS = {
       warnings.push('npm run build skipped: static checks already failed');
     }
     return { ok: issues.length === 0, issues, warnings, checks: [{ id: 'site', ok: issues.length === 0, detail: issues.join('; ') || null }] };
+  },
+
+  // committer — advisory subject-quality audit. Reads --file if given, else the
+  // HEAD commit message (post-commit, so the agent can amend before push).
+  'commit-message': async (ctx) => {
+    let message = null;
+    if (ctx.file) {
+      try {
+        message = fs.readFileSync(path.resolve(ctx.targetDir, ctx.file), 'utf8');
+      } catch {
+        return { ok: false, issues: [`cannot read commit message file: ${ctx.file}`], warnings: [], checks: [] };
+      }
+    } else {
+      const res = spawnSync('git', ['log', '-1', '--pretty=%B'], { cwd: ctx.targetDir, encoding: 'utf8' });
+      if (res.status !== 0) {
+        return { ok: false, issues: ['could not read HEAD commit message (no git repo or no commits)'], warnings: [], checks: [] };
+      }
+      message = res.stdout;
+    }
+    const found = evaluateCommitMessage(message);
+    return { ok: found.length === 0, issues: found, warnings: [], checks: [{ id: 'commit-message', ok: found.length === 0, detail: found.join('; ') || null }] };
   }
 };
 
@@ -451,5 +506,6 @@ module.exports = {
   PLACEHOLDER_PATTERNS,
   staticSiteChecks,
   scanSiteForLeaks,
-  runSiteBuild
+  runSiteBuild,
+  evaluateCommitMessage
 };

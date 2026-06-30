@@ -17,7 +17,8 @@ const {
   availableKinds,
   staticSiteChecks,
   scanSiteForLeaks,
-  runSiteBuild
+  runSiteBuild,
+  evaluateCommitMessage
 } = require('../src/commands/verify-artifact');
 const { parseArgv } = require('../src/parser');
 
@@ -270,6 +271,74 @@ test('availableKinds lists adapters and rulesets', () => {
   assert.ok(ks.includes('bootstrap'));
   assert.ok(ks.includes('research-report'));
   assert.ok(ks.includes('enriched-profile'));
+  assert.ok(ks.includes('copy'));
+  assert.ok(ks.includes('commit-message'));
+});
+
+// ───────────────────────── copy (advisory placeholder scan) ─────────────────────────
+
+const COPY_OK = '---\nslug: launch\n---\n# Headline that earns attention\n\n## Act 1\nReal persuasive copy that says something specific.\n';
+
+test('kind=copy: clean copy passes; placeholder/Lorem copy fails', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/context/copy-launch.md', COPY_OK);
+  const ok = await runKind(dir, 'copy', 'launch');
+  assert.equal(ok.ok, true, JSON.stringify(ok.issues));
+
+  await write(dir, '.aioson/context/copy-launch.md', `${COPY_OK}\nTODO: write the offer\nLorem ipsum dolor sit amet\n`);
+  const bad = await runKind(dir, 'copy', 'launch');
+  assert.equal(bad.ok, false);
+});
+
+test('kind=copy --advisory: reports issues without blocking (exit stays 0)', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/context/copy-launch.md', '# H\nLorem ipsum dolor\n');
+  const prev = process.exitCode;
+  process.exitCode = 0;
+  const r = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'copy', slug: 'launch', advisory: true, json: true },
+    logger: makeLogger()
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.blocking, false);
+  assert.equal(process.exitCode, 0);
+  process.exitCode = prev;
+});
+
+// ───────────────────────── commit-message (advisory subject heuristics) ─────────────────────────
+
+test('evaluateCommitMessage: a clean Conventional Commits subject has no issues', () => {
+  assert.deepEqual(evaluateCommitMessage('feat(api): add a token refresh endpoint\n\nbody here'), []);
+  assert.deepEqual(evaluateCommitMessage('fix(auth): handle a null session token'), []);
+  assert.deepEqual(evaluateCommitMessage('fix the flaky pagination test'), []);
+});
+
+test('evaluateCommitMessage: empty / vague / trailing-period / too-long subjects are flagged', () => {
+  assert.ok(evaluateCommitMessage('').some((i) => /empty/.test(i)));
+  assert.ok(evaluateCommitMessage('update').some((i) => /vague/.test(i)));
+  assert.ok(evaluateCommitMessage('fix bug').some((i) => /vague/.test(i)));
+  assert.ok(evaluateCommitMessage('Add the feature.').some((i) => /period/.test(i)));
+  assert.ok(evaluateCommitMessage('x'.repeat(80)).some((i) => /72|chars/.test(i)));
+});
+
+test('kind=commit-message: reads a draft via --file (clean passes, vague fails)', async () => {
+  const dir = await tmp();
+  await write(dir, 'good.txt', 'feat(x): add a real, specific subject line\n');
+  const ok = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'commit-message', file: 'good.txt', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(ok.ok, true, JSON.stringify(ok.issues));
+
+  await write(dir, 'bad.txt', 'stuff\n');
+  const bad = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'commit-message', file: 'bad.txt', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(bad.ok, false);
 });
 
 // ───────────────────────── genome adapter (positive / structural) ─────────────────────────

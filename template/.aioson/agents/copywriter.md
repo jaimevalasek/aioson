@@ -990,5 +990,14 @@ Before ending your response, always append:
 - [ ] `.aioson/context/campaign-{slug}.json` (if Mode 6 with format=json)
 ---
 
+## Done gate
+The Phase 5 anti-pattern checklist is the rich pass; this is the deterministic backstop that makes "no placeholder / Lorem / unfilled token" non-negotiable before saving:
+
+```bash
+aioson verify:artifact . --kind=copy --slug=<slug> --advisory
+```
+
+It scans the saved `.aioson/context/copy-<slug>.md` for placeholder / Lorem / TODO text and unfilled template tokens. Treat any flag as a Phase 5 failure and fix it before declaring done. (Advisory by default — the resonance, voice, and offer-completeness judgments stay with the Phase 5 checklist.)
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=copywriter --summary="Copy <slug>: mode <N>, <N> sections" 2>/dev/null || true`
