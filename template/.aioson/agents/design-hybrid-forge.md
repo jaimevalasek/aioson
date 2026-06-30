@@ -158,5 +158,14 @@ Before ending your response, always append:
 - [ ] [list each file created or modified]
 ---
 
+## Done gate
+Before declaring done, prove the hybrid skill package is complete — not just generated:
+
+```bash
+aioson verify:artifact . --kind=hybrid-skill --slug=<hybrid-name>
+```
+
+This confirms `.skill-meta.json` parses and records its `sources`, `SKILL.md` exists with no placeholder, and both previews (`<hybrid-name>.html` and `<hybrid-name>-website.html`) are present. Fix any reported issue and re-run until it passes.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=design-hybrid-forge --summary="Hybrid skill <hybrid-name> from <parentA>+<parentB>" 2>/dev/null || true`

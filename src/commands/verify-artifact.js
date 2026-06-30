@@ -109,12 +109,48 @@ const RULESETS = {
       must_match: ['## Executive Summary', '## Psychometric Profile', '## Operational Method', '## Trait Interactions'],
       must_not_match: [...PLACEHOLDER_PATTERNS, ...TEMPLATE_TOKENS]
     }]
+  }),
+
+  // orache — the investigation report is date-stamped, so it's resolved via
+  // --file. It must carry the 7-dimension skeleton, an impact analysis, and
+  // source attribution, with no unfilled template token.
+  'orache-report': (ctx) => ({
+    label: 'orache investigation report',
+    criteria: [{
+      id: 'orache-report',
+      files: [ctx.file || `squad-searches/${ctx.slug || 'MISSING'}/investigation.md`],
+      must_match: ['## D1', '## D4', '## D7', '## Impact Analysis', '\\*\\*Source:\\*\\*'],
+      must_not_match: [...PLACEHOLDER_PATTERNS, '\\{where discovered\\}']
+    }]
+  }),
+
+  // design-hybrid-forge — the hybrid skill package: a parseable .skill-meta.json
+  // recording its sources, a real SKILL.md, and both required previews.
+  'hybrid-skill': (ctx) => ({
+    label: 'hybrid design skill package',
+    criteria: [
+      { id: 'hybrid:meta', files: [`.aioson/installed-skills/${ctx.slug}/.skill-meta.json`], must_match: ['sources'], must_not_match: [] },
+      { id: 'hybrid:skill', files: [`.aioson/installed-skills/${ctx.slug}/SKILL.md`], must_match: [], must_not_match: PLACEHOLDER_PATTERNS },
+      {
+        id: 'hybrid:previews',
+        files: [
+          `.aioson/installed-skills/${ctx.slug}/previews/${ctx.slug}.html`,
+          `.aioson/installed-skills/${ctx.slug}/previews/${ctx.slug}-website.html`
+        ],
+        must_match: [],
+        must_not_match: []
+      }
+    ]
   })
 };
 
 // Kinds whose target file path is keyed by --slug; without it we cannot resolve
 // the artifact, so fail with a clear usage error instead of a `null/` path.
-const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile']);
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill']);
+
+// Kinds whose artifact has a date-stamped / caller-known path — resolved via
+// --file=<path> rather than derived from a slug.
+const REQUIRES_FILE = new Set(['orache-report']);
 
 // ─── adapters to existing validators ────────────────────────────────────────
 //
@@ -202,6 +238,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args?.[0] || '.');
   const kind = options.kind ? String(options.kind).trim() : '';
   const slug = options.slug ? String(options.slug).trim() : null;
+  const file = options.file ? String(options.file).trim() : null;
   const advisory = Boolean(options.advisory);
   const strict = Boolean(options.strict);
   const suppressExitCode = Boolean(options.suppressExitCode);
@@ -227,7 +264,19 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
     return { ok: false, kind };
   }
 
-  const result = await evaluateKind(kind, { slug, targetDir }, logger);
+  if (REQUIRES_FILE.has(kind) && !file) {
+    const msg = `verify:artifact kind=${kind} requires --file=<path>`;
+    const blocking = !advisory;
+    if (options.json) {
+      setExitCode(blocking ? 1 : 0);
+      return { generator: GENERATOR, kind, slug, root: targetDir, mode: advisory ? 'advisory' : 'blocking', ok: false, blocking, issues: [msg], warnings: [], checks: [], error: 'missing_file' };
+    }
+    logger.error(msg);
+    setExitCode(blocking ? 1 : 0);
+    return { ok: false, kind };
+  }
+
+  const result = await evaluateKind(kind, { slug, targetDir, file }, logger);
 
   if (result === null) {
     const msg = `verify:artifact: unknown kind "${kind}". Available: ${availableKinds().join(', ')}`;

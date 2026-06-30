@@ -431,5 +431,14 @@ Before ending your response, always append:
 - [ ] [list each file created or modified]
 ---
 
+## Done gate
+Before declaring done, prove the investigation report is complete — not just saved:
+
+```bash
+aioson verify:artifact . --kind=orache-report --file=squad-searches/<slug>/investigation-<YYYYMMDD>.md
+```
+
+If it flags a missing dimension (D1–D7), a missing Impact Analysis, an absent `**Source:**` attribution, or an unfilled `{where discovered}` token, fix the report and re-run until it passes.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=orache --summary="Investigation <topic>: <N> dimensions" 2>/dev/null || true`

@@ -388,3 +388,98 @@ test('kind=enriched-profile: a missing Operational Method section fails', async 
   const report = await runKind(dir, 'enriched-profile', 'jane');
   assert.equal(report.ok, false);
 });
+
+// ───────────────────────── orache-report ruleset (--file) ─────────────────────────
+
+const ORACHE_OK = [
+  '# Investigation: Demo domain',
+  '',
+  '## D1: Domain Frameworks',
+  '- a real framework',
+  '- **Source:** a real, cited place',
+  '',
+  '## D2: Anti-patterns',
+  '- ap',
+  '## D3: Quality Benchmarks',
+  '- qb',
+  '## D4: Reference Voices',
+  '- rv',
+  '## D5: Domain Vocabulary',
+  '- dv',
+  '## D6: Competitive Landscape',
+  '- cl',
+  '## D7: Structural Patterns',
+  '- sp',
+  '',
+  '## Impact Analysis',
+  '- a real executor impact',
+  ''
+].join('\n');
+
+const ORACHE_FILE = 'squad-searches/demo/investigation-20260101.md';
+
+test('kind=orache-report: a complete 7-dimension report passes (via --file)', async () => {
+  const dir = await tmp();
+  await write(dir, ORACHE_FILE, ORACHE_OK);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'orache-report', file: ORACHE_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=orache-report: missing --file is a clean usage failure', async () => {
+  const dir = await tmp();
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'orache-report', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.error, 'missing_file');
+  assert.ok(report.issues.some((i) => /--file/.test(i)));
+});
+
+test('kind=orache-report: a missing dimension fails', async () => {
+  const dir = await tmp();
+  await write(dir, ORACHE_FILE, ORACHE_OK.replace('## D7: Structural Patterns', '## Something Else'));
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'orache-report', file: ORACHE_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+});
+
+// ───────────────────────── hybrid-skill ruleset ─────────────────────────
+
+async function scaffoldHybrid(dir, slug, { badJson = false, omitPreview = false } = {}) {
+  const base = `.aioson/installed-skills/${slug}`;
+  await write(dir, `${base}/.skill-meta.json`, badJson ? '{ not json ' : JSON.stringify({ sources: [{ type: 'local' }], author: 'x' }));
+  await write(dir, `${base}/SKILL.md`, '# Hybrid skill\nreal art direction and tokens\n');
+  await write(dir, `${base}/previews/${slug}.html`, '<html><body>preview</body></html>');
+  if (!omitPreview) await write(dir, `${base}/previews/${slug}-website.html`, '<html><body>website</body></html>');
+}
+
+test('kind=hybrid-skill: a complete package passes', async () => {
+  const dir = await tmp();
+  await scaffoldHybrid(dir, 'neo-brutalist');
+  const report = await runKind(dir, 'hybrid-skill', 'neo-brutalist');
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=hybrid-skill: an invalid .skill-meta.json fails (parse-check)', async () => {
+  const dir = await tmp();
+  await scaffoldHybrid(dir, 'neo-brutalist', { badJson: true });
+  const report = await runKind(dir, 'hybrid-skill', 'neo-brutalist');
+  assert.equal(report.ok, false);
+});
+
+test('kind=hybrid-skill: a missing required preview fails', async () => {
+  const dir = await tmp();
+  await scaffoldHybrid(dir, 'neo-brutalist', { omitPreview: true });
+  const report = await runKind(dir, 'hybrid-skill', 'neo-brutalist');
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((i) => /website\.html/.test(i)), JSON.stringify(report.issues));
+});

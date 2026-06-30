@@ -224,6 +224,15 @@ This agent reads many files. Be strategic:
 - Skip lock files, migrations content, and test fixtures
 - If approaching context limit: write what you have with `confidence: low` for incomplete sections
 
+## Done gate
+Before declaring the cache refreshed, prove all four files landed — not just that you wrote some:
+
+```bash
+aioson verify:artifact . --kind=bootstrap
+```
+
+`MUST exist` is only true if it's checked: the gate confirms `what-is` / `what-it-does` / `how-it-works` / `current-state` all exist with real `generated_by` + `confidence` frontmatter and no placeholder. If one is missing or a stub, write it and re-run until it passes.
+
 ## Observability
 
 At the end of the session, run:
