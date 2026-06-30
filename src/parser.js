@@ -41,6 +41,8 @@ function parseArgv(argv) {
         // audit:code / harness:check — pure booleans; `--changed .` / `--strict .`
         // must not swallow the trailing path positional.
         'changed', 'strict',
+        // verify:artifact — pure boolean; `--advisory .` must not swallow the path.
+        'advisory',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`
         // followed by `--tool=claude` would swallow the next token as its value.

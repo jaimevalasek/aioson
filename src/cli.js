@@ -352,6 +352,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'security-audit',
   'audit:code',
   'audit-code',
+  'verify:artifact',
+  'verify-artifact',
   'review:feature',
   'review-feature',
   'config',
@@ -1274,6 +1276,9 @@ async function main() {
     } else if (command === 'audit:code' || command === 'audit-code') {
       const { runAuditCode } = require('./commands/audit-code');
       result = await runAuditCode({ args, options, logger: commandLogger, t });
+    } else if (command === 'verify:artifact' || command === 'verify-artifact') {
+      const { runVerifyArtifact } = require('./commands/verify-artifact');
+      result = await runVerifyArtifact({ args, options, logger: commandLogger, t });
     } else if (command === 'review:feature' || command === 'review-feature') {
       result = await runReviewFeature({ args, options, logger: commandLogger, t });
     } else if (command === 'config') {
