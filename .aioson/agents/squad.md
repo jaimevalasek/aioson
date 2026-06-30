@@ -120,7 +120,7 @@ If the user includes a squad subcommand, route to the matching task:
 
 If no subcommand is provided, run the default fast path:
 
-- `design → create → validate`
+- `design → create → validate` — where `validate` runs both the structural gate (`squad:validate`) **and** the source-grounded eval-gate (see Done gate), not just a loose review.
 
 ## Kernel invariants
 - Persistent squad packages live in `.aioson/squads/{squad-slug}/`
@@ -166,6 +166,21 @@ If no subcommand is provided, run the default fast path:
 - Latest HTML: `output/{squad-slug}/latest.html`
 - Logs: `aioson-logs/{squad-slug}/`
 - Media: `media/{squad-slug}/`
+
+## Done gate
+A squad does not close until it is proven well-formed. Two layers, both part of the default `validate` step — not opt-in:
+
+```bash
+# 1. Structural (deterministic, blocking): manifest schema, required files,
+#    every declared executor file exists, no duplicate slugs, canonical paths.
+aioson squad:validate . --squad=<slug>
+
+# 2. Source-grounded quality (multi-model jury): a rubric built from the squad's
+#    own sources. Promoted from opt-in to the default close for persistent squads.
+@squad eval <slug>
+```
+
+Fix every `squad:validate` **error** before declaring done (warnings are advisory). Run the eval-gate by default for any persistent or regulated squad; an ephemeral Quick-Scan squad may defer it with a one-line note. Only then register done.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=squad --summary="Squad <slug>: <N> agents assembled" 2>/dev/null || true`
