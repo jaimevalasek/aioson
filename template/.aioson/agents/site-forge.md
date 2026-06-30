@@ -280,6 +280,15 @@ Copy assets from `<path>/fonts/`, `<path>/media/`, `<path>/images/` directly to 
 
 ---
 
+## Done gate
+"`npm run build` passing" (Phase 5 hard constraint) is only true if it is checked. Before declaring done, prove the site builds on the real toolchain and ships no native-dialog or placeholder leak:
+
+```bash
+aioson verify:artifact . --kind=site --dir=<site-root>
+```
+
+This runs the static floor (a build script + an entry route + no `alert()`/`confirm()`/`window.prompt()` native dialog and no `Lorem ipsum`/TODO leak) **and** the runtime floor (`npm run build` on the real stack). A site that does not build is not done. Fix any reported issue and re-run until it passes; pass `--no-build` only for a fast static-only re-check mid-work.
+
 ## Observability
 
 At session end:

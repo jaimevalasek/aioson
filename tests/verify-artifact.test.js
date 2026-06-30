@@ -14,7 +14,10 @@ const path = require('node:path');
 const {
   runVerifyArtifact,
   evaluateRuleset,
-  availableKinds
+  availableKinds,
+  staticSiteChecks,
+  scanSiteForLeaks,
+  runSiteBuild
 } = require('../src/commands/verify-artifact');
 const { parseArgv } = require('../src/parser');
 
@@ -482,4 +485,108 @@ test('kind=hybrid-skill: a missing required preview fails', async () => {
   const report = await runKind(dir, 'hybrid-skill', 'neo-brutalist');
   assert.equal(report.ok, false);
   assert.ok(report.issues.some((i) => /website\.html/.test(i)), JSON.stringify(report.issues));
+});
+
+// ───────────────────────── kind=site (static floor + runtime build) ─────────────────────────
+
+async function scaffoldSite(dir, { build = 'node -e "process.exit(0)"', entry = true, leak = false } = {}) {
+  await write(dir, 'package.json', JSON.stringify({ name: 'site-test', version: '1.0.0', private: true, scripts: { build } }));
+  if (entry) await write(dir, 'app/page.tsx', 'export default function Page() { return <main>Hi</main>; }\n');
+  await write(dir, 'components/Widget.tsx', leak ? 'export function ask() { alert("hi"); }\n' : 'export function ask() { return null; }\n');
+}
+
+test('staticSiteChecks: a clean site (build script + entry route, no leaks) has no issues', async () => {
+  const dir = await tmp();
+  await scaffoldSite(dir);
+  const { issues } = staticSiteChecks(dir);
+  assert.deepEqual(issues, [], JSON.stringify(issues));
+});
+
+test('staticSiteChecks: a missing build script and missing entry route are both flagged', async () => {
+  const dir = await tmp();
+  await write(dir, 'package.json', JSON.stringify({ name: 'x', version: '1.0.0' }));
+  const { issues } = staticSiteChecks(dir);
+  assert.ok(issues.some((i) => /build.*script/i.test(i)));
+  assert.ok(issues.some((i) => /entry route/i.test(i)));
+});
+
+test('scanSiteForLeaks: flags a native alert() but not a commented one', async () => {
+  const dir = await tmp();
+  await write(dir, 'app/page.tsx', 'export default function P() { alert("x"); return null; }\n');
+  await write(dir, 'app/ok.tsx', '// alert("just a comment")\nexport const ok = 1;\n');
+  const hits = scanSiteForLeaks(dir);
+  assert.ok(hits.some((h) => /page\.tsx.*alert/i.test(h)), JSON.stringify(hits));
+  assert.ok(!hits.some((h) => /ok\.tsx/.test(h)), 'a commented alert must not be flagged');
+});
+
+test('kind=site --no-build: a clean static site passes (build skipped, warned)', async () => {
+  const dir = await tmp();
+  await scaffoldSite(dir);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'site', 'no-build': true, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+  assert.ok(report.warnings.some((w) => /skipped/i.test(w)));
+});
+
+test('kind=site --no-build: a native-dialog leak fails even with the build skipped', async () => {
+  const dir = await tmp();
+  await scaffoldSite(dir, { leak: true });
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'site', 'no-build': true, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((i) => /alert/i.test(i)));
+});
+
+// The build step is exercised with a fast native command (node) rather than a
+// real `npm run build`, so the suite stays quick and never starves concurrent
+// time-sensitive tests — the spawn/exit-code logic is identical either way.
+
+test('runSiteBuild: a passing build command returns ok', async () => {
+  const dir = await tmp();
+  const r = runSiteBuild(dir, 30000, ['node', '--version']);
+  assert.equal(r.ok, true, r.detail || '');
+});
+
+test('runSiteBuild: a failing build command returns not-ok with the exit detail', async () => {
+  const dir = await tmp();
+  const r = runSiteBuild(dir, 30000, ['node', '--bad-flag-zzz']);
+  assert.equal(r.ok, false);
+  assert.match(r.detail, /build failed|exit|start/i);
+});
+
+test('kind=site (full): a passing build step passes the gate on a buildable site', async () => {
+  const dir = await tmp();
+  await scaffoldSite(dir);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'site', buildCommand: ['node', '--version'], json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=site (full): a failing build step fails the gate', async () => {
+  const dir = await tmp();
+  await scaffoldSite(dir);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'site', buildCommand: ['node', '--bad-flag-zzz'], json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((i) => /build/i.test(i)), JSON.stringify(report.issues));
+});
+
+test('parser: verify:artifact --kind=site --dir + --no-build keeps the path positional', () => {
+  const r = parseArgv(['node', 'aioson', 'verify:artifact', '--kind=site', '--dir=web', '--no-build', '.']);
+  assert.equal(r.options.kind, 'site');
+  assert.equal(r.options.dir, 'web');
+  assert.equal(r.options['no-build'], true);
+  assert.deepEqual(r.args, ['.'], 'the "." path must remain a positional, not be swallowed by --no-build');
 });

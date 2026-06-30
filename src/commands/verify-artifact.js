@@ -26,6 +26,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
 
 const { evaluateStaticCriterion } = require('../harness/static-criteria');
 
@@ -160,6 +161,94 @@ function quietLogger() {
   return { log() {}, error() {}, warn() {} };
 }
 
+// ─── kind=site (runtime build gate for a generated Next.js site) ──────────────
+
+const SITE_IGNORE = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'out', 'coverage', '.turbo', '.vercel', '.aioson']);
+const SITE_SCAN_EXTS = new Set(['.tsx', '.jsx', '.ts', '.js', '.mjs', '.html', '.vue', '.svelte']);
+const SITE_ENTRY_CANDIDATES = ['app/page.tsx', 'app/page.jsx', 'src/app/page.tsx', 'src/app/page.jsx', 'pages/index.tsx', 'pages/index.jsx', 'pages/index.js'];
+const SITE_LEAKS = [
+  { re: /\balert\s*\(/, msg: 'native alert() dialog — use in-app UI chrome' },
+  { re: /\bconfirm\s*\(/, msg: 'native confirm() dialog — use in-app UI chrome' },
+  { re: /\bwindow\.prompt\s*\(/, msg: 'native window.prompt() dialog — use in-app UI chrome' },
+  { re: /Lorem ipsum/i, msg: 'Lorem ipsum placeholder copy' },
+  { re: /\bTODO\b|\bFIXME\b/, msg: 'TODO/FIXME left in shipped code' }
+];
+
+function walkSiteFiles(root, max = 800) {
+  const out = [];
+  const stack = [root];
+  while (stack.length && out.length < max) {
+    const dir = stack.pop();
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (!SITE_IGNORE.has(e.name)) stack.push(full);
+      } else if (e.isFile() && SITE_SCAN_EXTS.has(path.extname(e.name).toLowerCase())) {
+        out.push(full);
+      }
+    }
+  }
+  return out;
+}
+
+/** Scan a generated site for native-dialog and placeholder leaks (build-free). */
+function scanSiteForLeaks(siteDir, maxHits = 20) {
+  const hits = [];
+  for (const abs of walkSiteFiles(siteDir)) {
+    let content;
+    try { content = fs.readFileSync(abs, 'utf8'); } catch { continue; }
+    const rel = path.relative(siteDir, abs).split(path.sep).join('/');
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const stripped = lines[i].trim();
+      if (stripped.startsWith('//') || stripped.startsWith('*') || stripped.startsWith('/*')) continue;
+      for (const leak of SITE_LEAKS) {
+        if (leak.re.test(lines[i])) { hits.push(`${rel}:${i + 1} — ${leak.msg}`); break; }
+      }
+      if (hits.length >= maxHits) return hits;
+    }
+  }
+  return hits;
+}
+
+/** Build-free static floor for a site: build script, entry route, no leaks. */
+function staticSiteChecks(siteDir) {
+  const issues = [];
+  const warnings = [];
+
+  let pkg = null;
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(siteDir, 'package.json'), 'utf8'));
+  } catch {
+    issues.push('no readable package.json at the site root');
+  }
+  if (pkg && !(pkg.scripts && pkg.scripts.build)) issues.push('package.json has no "build" script');
+
+  if (!SITE_ENTRY_CANDIDATES.some((rel) => fs.existsSync(path.join(siteDir, rel)))) {
+    issues.push('no entry route found (app/page.* or pages/index.*)');
+  }
+
+  for (const leak of scanSiteForLeaks(siteDir)) issues.push(leak);
+  return { issues, warnings };
+}
+
+/**
+ * The RG-* runtime floor: the site must actually build on the real toolchain.
+ * `command` defaults to `npm run build`; it is overridable so a caller (or a
+ * test) can drive the same spawn/exit logic without the npm layer.
+ */
+function runSiteBuild(siteDir, timeout = 600000, command = ['npm', 'run', 'build']) {
+  const [cmd, ...rest] = command;
+  const res = spawnSync(cmd, rest, { cwd: siteDir, encoding: 'utf8', shell: true, timeout });
+  if (res.error) return { ok: false, detail: `build could not start: ${res.error.message}` };
+  if (res.status === 0) return { ok: true, detail: null };
+  const tail = String(res.stderr || res.stdout || '')
+    .split('\n').map((l) => l.trim()).filter(Boolean).slice(-4).join(' | ');
+  return { ok: false, detail: `build failed (exit ${res.status}): ${tail || 'see build output'}` };
+}
+
 const ADAPTERS = {
   // setup — project.context.md is the root artifact every session reads first.
   'project-context': async (ctx) => {
@@ -212,6 +301,24 @@ const ADAPTERS = {
       warnings: (res.warnings || []).slice(),
       checks: [{ id: `genome:${ctx.slug}`, ok: Boolean(res.ok), detail: res.ok ? null : (res.issues || []).join('; ') }]
     };
+  },
+
+  // site-forge — a generated Next.js site is not done until it BUILDS on the
+  // real toolchain (the RG-* runtime floor), on top of a static floor: a build
+  // script, an entry route, and no native-dialog / placeholder leak. --no-build
+  // runs the static floor only; --dir points at the site root (default: cwd).
+  site: async (ctx) => {
+    const siteDir = ctx.dir ? path.resolve(ctx.targetDir, ctx.dir) : ctx.targetDir;
+    const { issues, warnings } = staticSiteChecks(siteDir);
+    if (ctx.noBuild) {
+      warnings.push('npm run build skipped (--no-build): static checks only — not a full runtime gate');
+    } else if (issues.length === 0) {
+      const b = runSiteBuild(siteDir, ctx.buildTimeout, ctx.buildCommand);
+      if (!b.ok) issues.push(b.detail);
+    } else {
+      warnings.push('npm run build skipped: static checks already failed');
+    }
+    return { ok: issues.length === 0, issues, warnings, checks: [{ id: 'site', ok: issues.length === 0, detail: issues.join('; ') || null }] };
   }
 };
 
@@ -239,6 +346,10 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
   const kind = options.kind ? String(options.kind).trim() : '';
   const slug = options.slug ? String(options.slug).trim() : null;
   const file = options.file ? String(options.file).trim() : null;
+  const dir = options.dir ? String(options.dir).trim() : null;
+  const noBuild = Boolean(options['no-build'] || options.noBuild);
+  const buildTimeout = options['build-timeout'] ? Number(options['build-timeout']) : undefined;
+  const buildCommand = Array.isArray(options.buildCommand) ? options.buildCommand : undefined;
   const advisory = Boolean(options.advisory);
   const strict = Boolean(options.strict);
   const suppressExitCode = Boolean(options.suppressExitCode);
@@ -276,7 +387,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
     return { ok: false, kind };
   }
 
-  const result = await evaluateKind(kind, { slug, targetDir, file }, logger);
+  const result = await evaluateKind(kind, { slug, targetDir, file, dir, noBuild, buildTimeout, buildCommand }, logger);
 
   if (result === null) {
     const msg = `verify:artifact: unknown kind "${kind}". Available: ${availableKinds().join(', ')}`;
@@ -337,5 +448,8 @@ module.exports = {
   availableKinds,
   RULESETS,
   ADAPTERS,
-  PLACEHOLDER_PATTERNS
+  PLACEHOLDER_PATTERNS,
+  staticSiteChecks,
+  scanSiteForLeaks,
+  runSiteBuild
 };
