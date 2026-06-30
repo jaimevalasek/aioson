@@ -194,13 +194,15 @@ If user says "none", "not now", or skips, leave all fields blank.
 
 Before writing `project.context.md` for `site` or `web_app`, inspect `.aioson/skills/design/`.
 
+**Recommended route — interface-design + reference images.** Offer this first: register `design_skill: "interface-design"` (the craft engine) and tell the user the concrete look comes from their own **reference images**, extracted once into an `identity.md` (per-briefing `.aioson/briefings/{slug}/identity.md`, or project-wide `.aioson/context/identity.md` — see `.aioson/docs/reference-identity.md`). This avoids every project inheriting a fixed preset's identical look. The fixed presets stay an explicit alternative, and you still require explicit confirmation — never auto-select.
+
 - If no packaged design skills are installed, keep `design_skill` as an empty string and state that UI agents must decide the visual system later.
 - If exactly one design skill is installed, do not auto-select it. Ask for explicit confirmation before registering it.
 - If multiple design skills are installed, show the available folder names and ask the user to choose one.
 - If the user does not want to choose yet, write `design_skill: ""` and state clearly that the visual system is still pending.
 
 Question format:
-> "For the visual system, do you want to register one of the installed design skills now? Available: [skill list]. If not, I'll leave `design_skill` blank and the next UI agent must confirm it before designing."
+> "For the visual system, I recommend `interface-design` driven by your own reference images (extracted into `identity.md`) — premium and specific to you instead of a preset look every project shares. Or I can register one of the installed presets: [skill list]. Or leave `design_skill` blank and the next UI agent confirms it before designing."
 
 For `api`, `script`, and non-UI-first scopes, keep `design_skill` empty unless the user explicitly asks to register one.
 

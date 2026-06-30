@@ -19,6 +19,8 @@ If `.interface-design/system.md` exists, treat it as the visual source of truth:
 - Respect it unless the user explicitly wants a redesign.
 - Update it when you introduce a reusable pattern, token rule, or layout decision.
 
+If an `identity.md` exists (`.aioson/briefings/{slug}/identity.md`, else `.aioson/context/identity.md`), treat it as the visual source of truth too — it is the **extracted-from-references** form of `system.md`, distilled once from the user's own reference images (see `.aioson/docs/reference-identity.md`). Load its token sections and `## Component structure notes` before choosing a direction, and **apply** them rather than re-deriving a generic one. It is an input you apply, not a separate design system.
+
 If the file does not exist and the task covers more than one screen or component family, create it with:
 - Product context and UI intent
 - Chosen design direction and anti-goals

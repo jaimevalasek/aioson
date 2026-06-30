@@ -39,6 +39,12 @@ not in the design skill's.
    `.aioson/docs/feature-expansion-taxonomy.md`.
 2. `.aioson/briefings/{slug}/briefings.md` for problem, users, and the chosen direction.
 3. `design_skill` from `.aioson/context/project.context.md`; load that skill before any layout.
+4. When `design_skill: interface-design`, resolve an `identity.md` — `.aioson/briefings/{slug}/identity.md`,
+   else `.aioson/context/identity.md`. If one exists it is the visual source of truth the engine **applies**:
+   tokens come from its `## Palette` / `## Typography` / `## Spacing & layout` / `## Radius & depth` /
+   `## Motion` sections, and its `## Component structure notes` augment the surface map (input 1) with
+   per-component regions, anatomy, and states. `identity.md` overlays the one engine — it is **not** a
+   second visual system. If none exists, `interface-design` runs intent-first.
 
 If no operational surface map exists, build one first — it is the screen inventory, and without it the
 prototype cannot be complete.

@@ -273,6 +273,7 @@ test('availableKinds lists adapters and rulesets', () => {
   assert.ok(ks.includes('enriched-profile'));
   assert.ok(ks.includes('copy'));
   assert.ok(ks.includes('commit-message'));
+  assert.ok(ks.includes('identity'));
 });
 
 // ───────────────────────── copy (advisory placeholder scan) ─────────────────────────
@@ -519,6 +520,122 @@ test('kind=orache-report: a missing dimension fails', async () => {
   const report = await runVerifyArtifact({
     args: [dir],
     options: { kind: 'orache-report', file: ORACHE_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+});
+
+// ───────────────────────── identity ruleset (--file) ─────────────────────────
+
+const IDENTITY_OK = [
+  '---',
+  'kind: identity',
+  'scope: briefing',
+  'slug: kanban-board',
+  'source: references',
+  'generated_by: reference-identity-extract',
+  'generated_at: 2026-06-30',
+  'confidence: high',
+  'theme: light-dark',
+  'base_unit: 4px',
+  '---',
+  '',
+  '## Design pillars',
+  '- Sharp operational density — borders over shadows',
+  '- Calm authority — one disciplined accent',
+  '',
+  '## Palette',
+  '- foreground/primary: #0F172A',
+  '- background/base: #FFFFFF',
+  '- border/default: rgba(15,23,42,0.10)',
+  '- brand/primary: #1E4C41',
+  '',
+  '## Typography',
+  '- display: "Public Sans", system-ui, sans-serif',
+  '- body: "Public Sans", system-ui, sans-serif',
+  '',
+  '## Spacing & layout',
+  '- base: 4px — scale: 4, 8, 12, 16, 24, 32',
+  '- breakpoints: mobile 390 / tablet 768 / desktop 1440',
+  '',
+  '## Radius & depth',
+  '- radius ladder: sharp 6 / medium 10 / large 14',
+  '- depth strategy: borders-only',
+  '',
+  '## Motion',
+  '- posture: 140ms ease-out; entrances fade and rise 8px',
+  '- reduced-motion: honored',
+  '',
+  '## Signature moves',
+  '- Column WIP-limit ring fills as cards approach the limit',
+  '',
+  '## Anti-goals',
+  '- Replace the default blue button with the brand accent',
+  '',
+  '## Component structure notes',
+  '',
+  '### Board',
+  '- regions: column header, scrollable card list, footer add-row',
+  '- states: empty, loading, error, populated, permission-denied',
+  '',
+  '## Provenance',
+  '- identity references: 3 images; structure references: 1 board screenshot',
+  ''
+].join('\n');
+
+const IDENTITY_FILE = '.aioson/briefings/kanban-board/identity.md';
+
+test('kind=identity: a complete identity record passes (via --file)', async () => {
+  const dir = await tmp();
+  await write(dir, IDENTITY_FILE, IDENTITY_OK);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'identity', file: IDENTITY_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=identity: missing --file is a clean usage failure', async () => {
+  const dir = await tmp();
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'identity', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.error, 'missing_file');
+  assert.ok(report.issues.some((i) => /--file/.test(i)));
+});
+
+test('kind=identity: a missing anti-sameness anchor (signature moves) fails', async () => {
+  const dir = await tmp();
+  await write(dir, IDENTITY_FILE, IDENTITY_OK.replace('## Signature moves', '## Something Else'));
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'identity', file: IDENTITY_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+});
+
+test('kind=identity: a placeholder (TODO) fails', async () => {
+  const dir = await tmp();
+  await write(dir, IDENTITY_FILE, IDENTITY_OK.replace('- depth strategy: borders-only', '- depth strategy: TODO'));
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'identity', file: IDENTITY_FILE, json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+});
+
+test('kind=identity: an unfilled hex token (#RRGGBB) fails', async () => {
+  const dir = await tmp();
+  await write(dir, IDENTITY_FILE, IDENTITY_OK.replace('#0F172A', '#RRGGBB'));
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'identity', file: IDENTITY_FILE, json: true, suppressExitCode: true },
     logger: makeLogger()
   });
   assert.equal(report.ok, false);

@@ -155,6 +155,25 @@ const RULESETS = {
       must_match: [],
       must_not_match: [...PLACEHOLDER_PATTERNS, ...TEMPLATE_TOKENS]
     }]
+  }),
+
+  // reference-identity-extract — identity.md is the extracted token + per-component
+  // structure system-of-record. Its path varies by scope (briefing vs brand) so it is
+  // resolved via --file. It must carry the token skeleton plus the two anti-sameness
+  // anchors (pillars + signature moves) and the component-structure section, with no
+  // placeholder or unfilled hex/token left behind.
+  identity: (ctx) => ({
+    label: 'reference identity system',
+    criteria: [{
+      id: 'identity',
+      files: [ctx.file || `.aioson/briefings/${ctx.slug || 'MISSING'}/identity.md`],
+      must_match: [
+        'generated_by',
+        '## Design pillars', '## Palette', '## Typography', '## Spacing',
+        '## Radius', '## Motion', '## Signature moves', '## Component structure notes'
+      ],
+      must_not_match: [...PLACEHOLDER_PATTERNS, '#RRGGBB', '#XXXXXX', '\\{hex\\}', '\\{token\\}']
+    }]
   })
 };
 
@@ -164,7 +183,7 @@ const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 
 
 // Kinds whose artifact has a date-stamped / caller-known path — resolved via
 // --file=<path> rather than derived from a slug.
-const REQUIRES_FILE = new Set(['orache-report']);
+const REQUIRES_FILE = new Set(['orache-report', 'identity']);
 
 // ─── adapters to existing validators ────────────────────────────────────────
 //

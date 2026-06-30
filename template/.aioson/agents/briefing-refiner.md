@@ -78,7 +78,9 @@ If feedback contains unresolved blocking items, do not hand off as ready for `@p
 Use this when the user asks to see the solution visually, or when a rich-surface briefing (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, admin/management surfaces, repeated-use CRUD) would benefit from validating screens and interactions before the PRD. It is optional and user-invoked — never block the briefing path on it.
 
 1. Resolve the briefing slug and read `briefings.md` plus the operational surface map (`solution-options.md` / `expansion-scout.md`, falling back to the surface map in `.aioson/docs/feature-expansion-taxonomy.md`).
-2. Read `design_skill` from `.aioson/context/project.context.md`. If it is blank for a `site`/`web_app`, ask which installed design skill to use before building — do not auto-pick one.
+2. Resolve the visual route from `design_skill` in `.aioson/context/project.context.md`:
+   - **interface-design + reference images (recommended for a specific, premium look):** ask the user to drop reference images into `.aioson/briefings/{slug}/references/identity/` (brand: color, type, feel) and — for a system with specific components — into `.aioson/briefings/{slug}/references/structure/` (a board, a table, a screen). Then load `.aioson/skills/process/reference-identity-extract/SKILL.md`, extract them once into `.aioson/briefings/{slug}/identity.md`, and self-gate: `aioson verify:artifact . --kind=identity --file=.aioson/briefings/{slug}/identity.md --advisory 2>/dev/null || true`. The prototype's look comes from `identity.md`; its `## Component structure notes` feed the surface map. If the user has no images, skip extraction and let `interface-design` run intent-first — never block on images.
+   - **a fixed preset:** if `design_skill` names an installed preset, use it. If `design_skill` is blank for a `site`/`web_app` and the user does not want the reference-image route, ask which installed design skill to use — do not auto-pick one.
 3. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its build contract.
 4. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
 5. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until @product/@sheldon freeze scope, at which point it is re-synced and locked as the development reference.
@@ -126,6 +128,7 @@ Review generation writes:
 Prototype generation (optional) writes:
 
 ```text
+.aioson/briefings/{slug}/identity.md          # only when reference images were extracted
 .aioson/briefings/{slug}/prototype.html
 .aioson/briefings/{slug}/prototype-manifest.md
 ```
