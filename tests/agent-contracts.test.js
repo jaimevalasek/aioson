@@ -844,6 +844,32 @@ test('gateway SDD guidance is on-demand and excludes deyvin activation-only reco
   }
 });
 
+test('gateway memory + workflow-enforcement contracts stay in sync across harnesses', async () => {
+  const claudeGateway = await read(path.join(ROOT, 'template/CLAUDE.md'));
+  const agentsGateway = await read(path.join(ROOT, 'template/AGENTS.md'));
+
+  // Cross-harness continuity contract: a task paused in one harness (e.g. Claude
+  // Code) and resumed in another (e.g. Codex) must load the SAME operator memory
+  // and obey the SAME workflow-enforcement boundary. These invariants must appear
+  // in BOTH gateways verbatim, or the two onboarding files silently drift and a
+  // handoff stops feeling routine. Harness-specific wording (slash vs @,
+  // --tool=claude vs --tool=<tool>) is intentionally NOT asserted.
+  const sharedInvariants = [
+    'AIOSON_OPERATOR_MEMORY=false',
+    '~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md',
+    'conflicts with a loaded decision, the project rule wins',
+    'set: skip silently',
+    'aioson op:capture --signal=',
+    'the CLI controls all routing, state, and event emission',
+    'for tracked workflow sessions'
+  ];
+
+  for (const token of sharedInvariants) {
+    assert.equal(claudeGateway.includes(token), true, `CLAUDE.md missing shared cross-harness invariant: ${token}`);
+    assert.equal(agentsGateway.includes(token), true, `AGENTS.md missing shared cross-harness invariant: ${token}`);
+  }
+});
+
 test('deyvin on-demand docs are managed and preserve continuity, runtime, and debugging safeguards', async () => {
   const managedDocs = [
     '.aioson/docs/deyvin/continuity-recovery.md',
