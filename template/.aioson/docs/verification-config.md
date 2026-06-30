@@ -67,6 +67,8 @@ Controls the deterministic, build-free `aioson audit:code` scan wired into the *
 
 This is deterministic (no LLM judgment) and runs at every tracked `@dev`/`@qa` completion. `@qa` separately treats a HIGH as a Gate-D blocker in its review, and the same scan auto-fires as an advisory in `aioson agent:epilogue` for untracked sessions.
 
+> **Periphery analog:** for the **non-code** artifacts the specialized agents produce (project context, genomes, profiler reports, the discovery cache, hybrid skills, generated sites, copy, commit subjects), the same build-free philosophy is applied by `aioson verify:artifact` — see **`verify-artifact-gates.md`**.
+
 ## Examples
 
 Pin qa to the cheapest Claude tier per phase:
