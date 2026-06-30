@@ -360,5 +360,14 @@ Before ending your response, always append:
 - [ ] [list each file created or modified]
 ---
 
+## Done gate
+Before declaring done, prove the enriched profile is complete — not just written:
+
+```bash
+aioson verify:artifact . --kind=enriched-profile --slug=<slug>
+```
+
+If it flags a missing Executive Summary / Psychometric Profile / Operational Method / Trait Interactions section, or an unfilled template token, fix `.aioson/profiler-reports/<slug>/enriched-profile.md` and re-run until it passes. A profile without a real Operational Method simulates opinions, not work.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=profiler-enricher --summary="Enriched <slug>: confidence <level>" 2>/dev/null || true`

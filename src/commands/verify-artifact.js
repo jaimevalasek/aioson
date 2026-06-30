@@ -66,6 +66,12 @@ const PLACEHOLDER_PATTERNS = ['\\bTODO\\b', '\\bFIXME\\b', '\\bTBD\\b', 'Lorem i
 
 const BOOTSTRAP_DIR = '.aioson/context/bootstrap';
 const BOOTSTRAP_FILES = ['what-is.md', 'what-it-does.md', 'how-it-works.md', 'current-state.md'];
+const PROFILER_DIR = '.aioson/profiler-reports';
+
+// Unfilled template tokens left in a produced artifact (a tell that the agent
+// emitted the skeleton without filling it). Targeted, not a blanket `[...]`
+// match, to avoid flagging legitimate `[1]`-style citations.
+const TEMPLATE_TOKENS = ['\\[Full Name\\]', '\\[count\\]', '\\[low/medium/high'];
 
 const RULESETS = {
   // discover — the 4-file cold-start cache must all exist with real frontmatter.
@@ -77,8 +83,38 @@ const RULESETS = {
       must_match: ['generated_by', 'confidence'],
       must_not_match: PLACEHOLDER_PATTERNS
     }))
+  }),
+
+  // profiler-researcher — the research report must carry its frontmatter and the
+  // load-bearing skeleton (inventory + extracted material + gaps), with no
+  // unfilled template token.
+  'research-report': (ctx) => ({
+    label: 'profiler research report',
+    criteria: [{
+      id: 'research-report',
+      files: [`${PROFILER_DIR}/${ctx.slug}/research-report.md`],
+      must_match: ['sources_found', '## Source Inventory', '## Extracted Material by Category', '## Gaps and Next Research Moves'],
+      must_not_match: [...PLACEHOLDER_PATTERNS, ...TEMPLATE_TOKENS]
+    }]
+  }),
+
+  // profiler-enricher — the enriched profile must carry the executive summary,
+  // psychometric profile, the operational method (the part that makes a genome
+  // *work* rather than simulate opinions), and the trait-interaction analysis.
+  'enriched-profile': (ctx) => ({
+    label: 'profiler enriched profile',
+    criteria: [{
+      id: 'enriched-profile',
+      files: [`${PROFILER_DIR}/${ctx.slug}/enriched-profile.md`],
+      must_match: ['## Executive Summary', '## Psychometric Profile', '## Operational Method', '## Trait Interactions'],
+      must_not_match: [...PLACEHOLDER_PATTERNS, ...TEMPLATE_TOKENS]
+    }]
   })
 };
+
+// Kinds whose target file path is keyed by --slug; without it we cannot resolve
+// the artifact, so fail with a clear usage error instead of a `null/` path.
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile']);
 
 // ─── adapters to existing validators ────────────────────────────────────────
 //
@@ -177,6 +213,18 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
     logger.error(msg);
     setExitCode(1);
     return { ok: false, kind: null };
+  }
+
+  if (REQUIRES_SLUG.has(kind) && !slug) {
+    const msg = `verify:artifact kind=${kind} requires --slug=<slug>`;
+    const blocking = !advisory;
+    if (options.json) {
+      setExitCode(blocking ? 1 : 0);
+      return { generator: GENERATOR, kind, slug: null, root: targetDir, mode: advisory ? 'advisory' : 'blocking', ok: false, blocking, issues: [msg], warnings: [], checks: [], error: 'missing_slug' };
+    }
+    logger.error(msg);
+    setExitCode(blocking ? 1 : 0);
+    return { ok: false, kind };
   }
 
   const result = await evaluateKind(kind, { slug, targetDir }, logger);

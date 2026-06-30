@@ -228,5 +228,14 @@ Before ending your response, always append:
 - [ ] [list each file created or modified]
 ---
 
+## Done gate
+Before declaring done, prove the forged genome is well-formed — not just written:
+
+```bash
+aioson verify:artifact . --kind=genome --slug=<person-slug>-<domain-slug>
+```
+
+This runs the genome doctor: SKILL.md present, `manifest.json` / `.meta.json` parse, every declared reference file exists, and (Track 4.2/4.3) the advisor-ready and quality-report invariants hold. Fix any reported issue and re-run until it passes.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=profiler-forge --summary="Forged genome+advisor <slug>" 2>/dev/null || true`

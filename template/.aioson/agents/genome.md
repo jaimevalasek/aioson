@@ -1916,5 +1916,14 @@ Before ending your response, always append:
 - [ ] [list each file created or modified]
 ---
 
+## Done gate
+Before declaring done, prove the genome is well-formed — not just written:
+
+```bash
+aioson verify:artifact . --kind=genome --slug=<slug>
+```
+
+This runs the genome doctor (SKILL.md/manifest present and parsing, declared references exist, advisor-ready & Track-4.3 quality invariants). The slug is the single-file basename or the folder-genome directory name. Fix any reported issue and re-run until it passes.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=genome --summary="Genome <slug>: <N> patterns" 2>/dev/null || true`

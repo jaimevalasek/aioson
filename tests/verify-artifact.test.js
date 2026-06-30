@@ -265,4 +265,126 @@ test('availableKinds lists adapters and rulesets', () => {
   assert.ok(ks.includes('project-context'));
   assert.ok(ks.includes('genome'));
   assert.ok(ks.includes('bootstrap'));
+  assert.ok(ks.includes('research-report'));
+  assert.ok(ks.includes('enriched-profile'));
+});
+
+// ───────────────────────── genome adapter (positive / structural) ─────────────────────────
+
+async function runKind(dir, kind, slug) {
+  const options = { kind, json: true, suppressExitCode: true };
+  if (slug) options.slug = slug;
+  return runVerifyArtifact({ args: [dir], options, logger: makeLogger() });
+}
+
+test('kind=genome: a minimal valid folder genome (SKILL.md + manifest) passes', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/genomes/jane-coach/SKILL.md', '# Jane (coach) genome\n');
+  await write(dir, '.aioson/genomes/jane-coach/manifest.json', JSON.stringify({ track: '3.0', references: [] }));
+  const report = await runKind(dir, 'genome', 'jane-coach');
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=genome: a folder missing manifest.json fails the gate', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/genomes/jane-coach/SKILL.md', '# Jane (coach) genome\n');
+  const report = await runKind(dir, 'genome', 'jane-coach');
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.some((i) => /manifest/i.test(i)), JSON.stringify(report.issues));
+});
+
+// ───────────────────────── research-report ruleset ─────────────────────────
+
+const RESEARCH_OK = [
+  '---',
+  'person: Jane Doe',
+  'sources_found: 12',
+  'hexaco_h_signals: high',
+  '---',
+  '# Research Report: Jane Doe',
+  '',
+  '## Summary',
+  'A real summary of the findings.',
+  '',
+  '## Source Inventory',
+  '### High-Value Sources',
+  '- a real, cited source',
+  '',
+  '## Extracted Material by Category',
+  '### FRAMEWORKS',
+  '- a real extracted framework',
+  '',
+  '## Gaps and Next Research Moves',
+  '- a real, specific gap',
+  ''
+].join('\n');
+
+test('kind=research-report: a complete report passes', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/profiler-reports/jane/research-report.md', RESEARCH_OK);
+  const report = await runKind(dir, 'research-report', 'jane');
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=research-report: an unfilled [Full Name] template token fails', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/profiler-reports/jane/research-report.md', RESEARCH_OK.replace('# Research Report: Jane Doe', '# Research Report: [Full Name]'));
+  const report = await runKind(dir, 'research-report', 'jane');
+  assert.equal(report.ok, false);
+});
+
+test('kind=research-report: a missing required section fails', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/profiler-reports/jane/research-report.md', RESEARCH_OK.replace('## Gaps and Next Research Moves', '## Something Else'));
+  const report = await runKind(dir, 'research-report', 'jane');
+  assert.equal(report.ok, false);
+});
+
+test('kind=research-report: missing --slug is a clean usage failure', async () => {
+  const dir = await tmp();
+  const report = await runKind(dir, 'research-report', null);
+  assert.equal(report.ok, false);
+  assert.equal(report.error, 'missing_slug');
+  assert.ok(report.issues.some((i) => /--slug/.test(i)));
+});
+
+// ───────────────────────── enriched-profile ruleset ─────────────────────────
+
+const ENRICHED_OK = [
+  '---',
+  'confidence: high',
+  '---',
+  '# Enriched Profile: Jane Doe',
+  '',
+  '## Executive Summary',
+  'real',
+  '',
+  '## Evidence Base',
+  'real',
+  '',
+  '## Psychometric Profile',
+  '### DISC',
+  'real',
+  '',
+  '## Operational Method',
+  '### Procedure',
+  '1. a real, executable step',
+  '',
+  '## Trait Interactions (MPD)',
+  'real',
+  ''
+].join('\n');
+
+test('kind=enriched-profile: a complete profile passes', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/profiler-reports/jane/enriched-profile.md', ENRICHED_OK);
+  const report = await runKind(dir, 'enriched-profile', 'jane');
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=enriched-profile: a missing Operational Method section fails', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/profiler-reports/jane/enriched-profile.md', ENRICHED_OK.replace('## Operational Method', '## Something'));
+  const report = await runKind(dir, 'enriched-profile', 'jane');
+  assert.equal(report.ok, false);
 });
