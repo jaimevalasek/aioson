@@ -55,6 +55,9 @@ aioson-models.json
 .aioson/mcp/servers.local.json
 .aioson/profiler-reports/*
 !.aioson/profiler-reports/.gitkeep
+# generated gate reports (runtime artifacts — audit:code / verify:artifact)
+.aioson/context/audit-code.json
+.aioson/context/verify-artifact-*.json
 .claude/settings.local.json
 *:Zone.Identifier
 integrations/*
