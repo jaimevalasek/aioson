@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.36.0] - 2026-06-30
+
+**Reference-image-driven visual identity.** A project's UI no longer has to inherit a fixed design preset's identical look (the generic, "made-by-AI" sameness). The user provides reference images — a brand/identity set and an optional component/structure set — which are extracted **once** into a text `identity.md` that the `interface-design` engine applies. The build reads the text, never the images, so it ports to a vision-less harness, is user-editable, and is gateable. Purely **additive** — the fixed presets stay as raw material for `@design-hybrid-forge` / `@site-forge`; the new path is the recommended default alongside them.
+
+### Added
+- **`reference-identity-extract` process skill.** One vision pass reads the identity + structure images and emits `identity.md` (palette / type / spacing / depth / motion / signature moves + per-component structure notes); the image-less fallback defers to `interface-design`'s intent-first Phase 0. Lives under `skills/process/` (always installed), not `skills/design/` (profile-gated at install). (`d0e21c3`)
+- **`verify:artifact --kind=identity`** — a build-free gate (resolved via `--file`) proving the token skeleton, both anti-sameness anchors (pillars + signature moves), and the component-structure section are present, with no placeholder / unfilled hex. `availableKinds()` self-registers it; two new paths appended to `MANAGED_FILES` for `aioson update` backup-safety (no preset enumeration touched). (`d0e21c3`)
+- **`docs/reference-identity.md`** documents the flow, the two scopes (per-briefing `.aioson/briefings/{slug}/identity.md` and project brand `.aioson/context/identity.md`), the gate, and the no-vision / cross-harness fallback. (`d0e21c3`)
+
+### Changed
+- **`@briefing-refiner` prototype mode** gains the reference-image intake: the user drops images into `references/{identity,structure}/`, the agent extracts `identity.md` and self-gates; no images → `interface-design` runs intent-first (never blocks). **`@setup` Step 5** offers "interface-design + reference images" as the recommended visual route (still explicit-confirm, no auto-select). (`d0e21c3`)
+- **`@ux-ui` Step 0** frames `identity.md` as the INPUT that parameterizes the single `interface-design` engine — not a second skill, so ONE SKILL ONLY is preserved. `prototype-forge` consumes it as the engine overlay; `interface-design`'s continuity note reuses it as the extracted-from-references form of `system.md`. (`d0e21c3`)
+
+Suite green (3549 pass / 0 fail); +14 tests (5 `identity` ruleset, 9 wiring/parity).
+
 ## [1.35.0] - 2026-06-28
 
 The **lean-harness redesign**: fewer default agent hops, with quality held by deterministic gates and configurable verification sub-agents rather than by agent count. SMALL and MEDIUM now each route through a single spec authority; `@analyst` / `@architect` / `@pm` / `@discovery-design-doc` / `@scope-check` / `@ux-ui` become opt-in detours (none deleted).
