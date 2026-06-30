@@ -162,6 +162,44 @@ test('kind=project-context: missing file fails with a /setup hint', async () => 
   assert.ok(report.issues.some((i) => /not found|setup/i.test(i)), JSON.stringify(report.issues));
 });
 
+const VALID_CONTEXT = [
+  '---',
+  'project_name: demo',
+  'project_type: web_app',
+  'profile: developer',
+  'framework: Next.js',
+  'framework_installed: true',
+  'classification: SMALL',
+  'conversation_language: en',
+  'aioson_version: 1.35.0',
+  '---',
+  '# Demo project',
+  ''
+].join('\n');
+
+test('kind=project-context: a complete, valid context passes', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/context/project.context.md', VALID_CONTEXT);
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'project-context', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, true, JSON.stringify(report.issues));
+});
+
+test('kind=project-context: an invalid enum value (classification) fails the gate', async () => {
+  const dir = await tmp();
+  await write(dir, '.aioson/context/project.context.md', VALID_CONTEXT.replace('classification: SMALL', 'classification: HUGE'));
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'project-context', json: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.ok, false);
+  assert.ok(report.issues.length > 0);
+});
+
 // ───────────────────────── genome adapter guards ─────────────────────────
 
 test('kind=genome: missing --slug is a clear, actionable failure', async () => {

@@ -431,5 +431,14 @@ Example closing message:
 > or
 > "Setup complete. Next step: activate **@analyst** to map out the requirements."
 
+## Done gate
+Before declaring setup complete, prove the artifact is well-formed — don't rely on having "filled in the fields":
+
+```bash
+aioson verify:artifact . --kind=project-context
+```
+
+`project.context.md` is the root artifact every session reads first (the mandatory first action), so a malformed one — a missing required field, an invalid `classification` / `project_type` / `profile` enum, or unparseable frontmatter — silently breaks every downstream agent. If the gate reports issues, fix `.aioson/context/project.context.md` and re-run until it passes. Only then finalize.
+
 ## Observability
 At session end, register: `aioson agent:done . --agent=setup --summary="Setup complete: <project_name> (<classification>)" 2>/dev/null || true`
