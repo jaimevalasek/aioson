@@ -1171,6 +1171,12 @@ async function runRuntimeLog({ args, options = {}, logger, t }) {
  *
  * Intended to be called ONCE at the very end of an agent session, after delivering the main artifact.
  */
+function logVerifyArtifactLine(logger, va) {
+  if (!va) return;
+  const marker = va.skipped ? 'hint' : va.ok ? 'ok' : 'advisory';
+  logger.log(`agent:done — verify:artifact (${va.kind}): ${marker}${va.reason ? ` — ${va.reason}` : ''}`);
+}
+
 async function runAgentDone({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
   const agentName = String(options.agent || '').trim();
@@ -1186,6 +1192,13 @@ async function runAgentDone({ args, options = {}, logger, t }) {
   const artifactPaths = options.artifacts
     ? String(options.artifacts).split(',').map((p) => p.trim()).filter(Boolean)
     : [];
+
+  // Build-free artifact done-gate (advisory): for the peripheral agents that
+  // produce a non-code artifact, prove it is complete/well-formed at the same
+  // session-end call they always make, instead of relying on each agent to run
+  // its `## Done gate` line. Resolved once here; surfaced on every return path.
+  const { verifyAgentArtifact } = require('../artifact-kinds');
+  const verifyArtifact = await verifyAgentArtifact({ targetDir, agent: normalizedAgent, options });
 
   const { db, dbPath, runtimeDir } = await openRuntimeDb(targetDir);
 
@@ -1252,7 +1265,8 @@ async function runAgentDone({ args, options = {}, logger, t }) {
         });
       } catch { /* ignore — never blocks agent_done */ }
 
-      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance };
+      if (!options.json) logVerifyArtifactLine(logger, verifyArtifact);
+      return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'live_event', runKey: session.runKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact };
     }
 
     // No active session — create a standalone task+run and immediately complete it.
@@ -1325,7 +1339,8 @@ async function runAgentDone({ args, options = {}, logger, t }) {
       });
     } catch { /* ignore — never blocks agent_done */ }
 
-    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance };
+    if (!options.json) logVerifyArtifactLine(logger, verifyArtifact);
+    return { ok: true, targetDir, dbPath, agent: normalizedAgent, mode: 'standalone', runKey, taskKey, auto_advance: autoAdvance, verify_artifact: verifyArtifact };
   } finally {
     db.close();
   }

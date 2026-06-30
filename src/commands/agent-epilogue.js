@@ -157,6 +157,15 @@ async function runAgentEpilogue({ args, options = {}, logger, t }) {
     errors.push({ step: 'agent:done', reason: doneResult.reason || doneResult.error || 'agent_done_failed', result: doneResult });
   }
 
+  // Surface the advisory artifact done-gate that agent:done resolved for this
+  // agent (peripheral artifact-producing agents only; null otherwise). Advisory:
+  // a skipped/failed check is shown but never added to `errors`, so it cannot
+  // flip `ok`.
+  if (doneResult && doneResult.verify_artifact) {
+    const va = doneResult.verify_artifact;
+    pushStep(steps, 'verify:artifact', { ok: va.skipped ? true : va.ok, skipped: va.skipped, reason: va.reason });
+  }
+
   // Advisory contract-integrity signal for untracked (prompt-only) dev/qa
   // completions. The tracked `workflow:next --complete` / `feature:close` paths
   // enforce this as a HARD gate; a direct Claude Code session never calls them,

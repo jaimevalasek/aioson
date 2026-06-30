@@ -53,6 +53,27 @@ done-gate line, not a bespoke implementation.
 - `--no-build` (kind=`site`) runs the static floor only — a fast mid-work
   re-check that skips the `npm run build` runtime floor.
 
+## Auto-fire at `agent:done`
+
+These gates do not depend on each agent remembering to run its `## Done gate`
+line. `aioson agent:done` resolves the calling agent to its artifact kind
+(`src/artifact-kinds.js`) and runs the matching `verify:artifact --advisory`
+itself — so the check fires at the one call every agent already makes at session
+end (and rides on `agent:epilogue`, which wraps `agent:done`):
+
+- **Self-resolving kinds** (`setup`→`project-context`, `discover`→`bootstrap`,
+  `committer`→`commit-message`) run with no extra input — fully deterministic,
+  no markdown dependency.
+- **Locator-keyed kinds** run when the agent threads its locator into that same
+  call (`--slug` / `--file` / `--dir`, which the agent's Observability line now
+  carries); without it, `agent:done` surfaces a one-line hint naming the exact
+  command, so the gate is visible rather than silently skipped.
+
+Always advisory at this layer: a failed or skipped check is surfaced but never
+flips the session-end result. The explicit per-agent `## Done gate` stays as the
+agent-facing "check and FIX" step; this is the deterministic engine net beneath
+it — the periphery analog of how `audit:code` auto-fires in `agent:epilogue`.
+
 ## `@squad` is gated separately
 
 A squad ships through its own `aioson squad:validate` (structural: manifest

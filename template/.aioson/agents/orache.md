@@ -441,4 +441,4 @@ aioson verify:artifact . --kind=orache-report --file=squad-searches/<slug>/inves
 If it flags a missing dimension (D1–D7), a missing Impact Analysis, an absent `**Source:**` attribution, or an unfilled `{where discovered}` token, fix the report and re-run until it passes.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=orache --summary="Investigation <topic>: <N> dimensions" 2>/dev/null || true`
+At session end, register: `aioson agent:done . --agent=orache --summary="Investigation <topic>: <N> dimensions" --file=<report-path> 2>/dev/null || true` (the `--file` points at the date-stamped report so the engine re-runs the orache-report done-gate as an advisory net)

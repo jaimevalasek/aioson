@@ -303,4 +303,4 @@ aioson verify:artifact . --kind=research-report --slug=<person-slug>
 If it flags a missing section (Source Inventory / Extracted Material by Category / Gaps and Next Research Moves), an empty `sources_found`, or an unfilled `[Full Name]` / `[count]` template token, fix `.aioson/profiler-reports/<person-slug>/research-report.md` and re-run until it passes.
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=profiler-researcher --summary="Research <slug>: <N> sources" 2>/dev/null || true`
+At session end, register: `aioson agent:done . --agent=profiler-researcher --summary="Research <slug>: <N> sources" --slug=<slug> 2>/dev/null || true` (the `--slug` makes the engine re-run the research-report done-gate as an advisory net)

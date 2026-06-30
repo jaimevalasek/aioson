@@ -1000,4 +1000,4 @@ aioson verify:artifact . --kind=copy --slug=<slug> --advisory
 It scans the saved `.aioson/context/copy-<slug>.md` for placeholder / Lorem / TODO text and unfilled template tokens. Treat any flag as a Phase 5 failure and fix it before declaring done. (Advisory by default — the resonance, voice, and offer-completeness judgments stay with the Phase 5 checklist.)
 
 ## Observability
-At session end, register: `aioson agent:done . --agent=copywriter --summary="Copy <slug>: mode <N>, <N> sections" 2>/dev/null || true`
+At session end, register: `aioson agent:done . --agent=copywriter --summary="Copy <slug>: mode <N>, <N> sections" --slug=<slug> 2>/dev/null || true` (the `--slug` makes the engine re-run the copy done-gate as an advisory net)
