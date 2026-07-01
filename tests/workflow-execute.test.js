@@ -831,3 +831,181 @@ test('workflow:execute: Gate C blocked qa step names @pm or @dev as responsible'
     `Gate C blocker must include --gate=C, got: ${blockerMsg}`
   );
 });
+
+test('workflow:execute --seed: infers the finished lean sheldon stage — next is dev, not sheldon', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| checkout | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nclassification: SMALL\n---\n# prd\n');
+  // @sheldon finished: spec exists with the collapsed Gates A/B/C approved.
+  await writeFile(
+    tmpDir,
+    '.aioson/context/spec-checkout.md',
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# spec\n'
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  // A seed run AFTER the spec stage finished must not point the scheme backwards.
+  assert.deepEqual(state.completed, ['product', 'sheldon']);
+  assert.equal(state.next, 'dev');
+  assert.equal(result.next_stage, 'dev');
+});
+
+test('workflow:execute --seed: infers the finished maestro orchestrator stage — next is dev', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| billing | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-billing.md', '---\nclassification: MEDIUM\n---\n# prd\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/spec-billing.md',
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# spec\n'
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'billing', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.deepEqual(state.completed, ['product', 'orchestrator']);
+  assert.equal(state.next, 'dev');
+});
+
+test('workflow:execute --seed: discards a stale workflow.state.json from a no-longer-active feature and reseeds', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| flow-deck | qa_failed | 2026-06-20 | |\n| profile-page | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-profile-page.md', '# prd\n');
+  // Stale pointer: the FAIL-closed/abandoned feature still holds the state file.
+  await writeFile(
+    tmpDir,
+    '.aioson/context/workflow.state.json',
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'SMALL',
+      sequence: ['product', 'sheldon', 'dev', 'qa'],
+      current: null,
+      next: 'qa',
+      completed: ['product', 'sheldon', 'dev'],
+      skipped: [],
+      featureSlug: 'flow-deck',
+      detour: null,
+      updatedAt: new Date().toISOString()
+    })
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'profile-page', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  // The old behavior hard-failed with different_active_feature — silently
+  // disarming autopilot for the user who explicitly picked it.
+  assert.equal(result.ok, true);
+  assert.equal(result.seeded, true);
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(state.featureSlug, 'profile-page');
+  const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
+  assert.equal(scheme.agentic_policy.enabled, true);
+  assert.equal(scheme.feature, 'profile-page');
+});
+
+test('workflow:execute --seed: still refuses when a DIFFERENT feature is genuinely active', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| flow-deck | in_progress | 2026-06-20 | |\n'
+  );
+  await writeFile(
+    tmpDir,
+    '.aioson/context/workflow.state.json',
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'SMALL',
+      sequence: ['product', 'sheldon', 'dev', 'qa'],
+      current: 'dev',
+      next: 'dev',
+      completed: ['product', 'sheldon'],
+      skipped: [],
+      featureSlug: 'flow-deck',
+      detour: null,
+      updatedAt: new Date().toISOString()
+    })
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'profile-page', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'different_active_feature');
+  assert.equal(result.active_feature, 'flow-deck');
+});
+
+test('workflow:execute --seed: resume_command records --seed and history never leaks across features', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| alpha | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-alpha.md', '# prd\n');
+
+  const first = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'alpha', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+  assert.equal(first.ok, true);
+  // A seed run must resume as a seed run, not as the CLI-advancing --agentic runner.
+  assert.match(first.resume_command, /--seed/);
+  assert.doesNotMatch(first.resume_command, /--agentic/);
+
+  // Feature switch: alpha done, beta active. The new scheme must start with a
+  // FRESH history — no checkpoints inherited from alpha.
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| alpha | done | 2026-07-01 | 2026-07-01 |\n| beta | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-beta.md', '# prd\n');
+  const second = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'beta', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+  assert.equal(second.ok, true);
+  const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
+  assert.equal(scheme.feature, 'beta');
+  assert.ok(scheme.history.length <= 1, `history must reset on feature change, got ${scheme.history.length}`);
+});

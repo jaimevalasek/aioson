@@ -414,12 +414,12 @@ Action: /dev or /qa
 
 ## Autopilot handoff (auto_handoff)
 
-When `auto_handoff: true` is set in `project.context.md` (or the seeded scheme with `agentic_policy.enabled` is present), do not stop at the `@orchestrator → @dev` handoff — seed the scheme and cross into implementation per `.aioson/docs/autopilot-handoff.md`:
+When `auto_handoff: true` is set in `project.context.md` (or the seeded scheme with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present), do not stop at the `@orchestrator → @dev` handoff — seed the scheme and cross into implementation per `.aioson/docs/autopilot-handoff.md`:
 
 1. Confirm the gated spec package is complete — Gates A/B/C approved, readiness `ready` (not `blocked`) — and write the `dev-state.md` cold-start packet. A blocked gate/readiness or an open scope decision is a manual stop.
 2. Seed the run's agentic contract (idempotent — a no-op if `@product` already seeded it):
-   `aioson workflow:execute . --feature={slug} --seed --tool=claude 2>/dev/null || true`
-3. Advance the state machine and register closing duties: `aioson workflow:next . --complete=orchestrator --tool=claude 2>/dev/null || true` then `agent:epilogue`/`agent:done`.
+   `aioson workflow:execute . --feature={slug} --seed --tool=claude` — check the result; a `different_active_feature` failure means another feature still holds `workflow.state.json`: surface it and stop with the manual handoff.
+3. Advance the state machine: `aioson workflow:next . --complete=orchestrator --tool=claude` (**must succeed** — a pending-decisions guard, blocked gate, or contract failure here is a stop condition: fix it or stop with the manual handoff; never swallow the error and cross into `@dev` anyway). Then register closing duties (`agent:epilogue`/`agent:done`).
 4. Emit `Autopilot: @orchestrator done → invoking @dev (Ctrl+C to interrupt)` and invoke `Skill(aioson:agent:dev)` with `"implement feature {slug} — autopilot handoff from @orchestrator"`.
 
 If `auto_handoff` is absent/`false` and no scheme exists, present the manual **Maestro lane** handoff above.

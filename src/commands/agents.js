@@ -12,7 +12,8 @@ const {
 const { normalizeInteractionLanguage } = require('../locales');
 const { validateProjectContextFile, getInteractionLanguage } = require('../context');
 const { exists } = require('../utils');
-const { loadOrCreateState, runWorkflowNext } = require('./workflow-next');
+const { AUTOPILOT_HANDOFF_STAGES, loadOrCreateState, runWorkflowNext } = require('./workflow-next');
+const { resolveAutopilotSignal } = require('../autopilot-signal');
 const {
   bootstrapDirectAgentPrompt,
   classifyDirectAgentRuntime
@@ -278,12 +279,27 @@ async function runAgentPrompt({ args, options, logger, t }) {
       manifest,
       requestedMode: promptAgent.id === 'scope-check' && getScopeCheckModeOption(options) ? null : options.mode || null
     });
+    // Direct handoffs carry the autopilot exception too — without it the
+    // injected scope boundary instructs a manual stop and overrides the agent
+    // .md's autopilot section even when the flag/scheme says to chain.
+    let autoHandoff = false;
+    if (AUTOPILOT_HANDOFF_STAGES.has(promptAgent.id)) {
+      try {
+        const signal = await resolveAutopilotSignal(targetDir, {
+          slug: options.feature ? String(options.feature).trim() : null
+        });
+        autoHandoff = signal.enabled;
+      } catch {
+        autoHandoff = false;
+      }
+    }
     prompt = buildAgentPrompt(promptAgent, tool, {
       instructionPath,
       interactionLanguage: locale,
       autonomyMode: effectiveMode,
       capabilitySummary: buildAgentCapabilitySummary(manifest, tool),
-      activationContext
+      activationContext,
+      autoHandoff
     });
     const runtimeClass = classifyDirectAgentRuntime(promptAgent.id);
     const handoffLabel = runtimeClass.source === 'squad_session'

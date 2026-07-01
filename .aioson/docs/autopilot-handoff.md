@@ -17,7 +17,7 @@ Both segments stop only at the human close/publish gate (`feature:close`) and at
 
 Autopilot is active when BOTH of the first two hold, gated by the third:
 
-1. Either `project.context.md` frontmatter has `auto_handoff: true`, OR `.aioson/context/workflow-execute.json` exists with `agentic_policy.enabled: true` (the seeded scheme). Absent both, the run mode is not yet chosen: **`@product` asks it on screen at feature kickoff** (Autopilot / Step by step / Always autopilot — see product.md "Run mode"). Picking Autopilot seeds the scheme (activating this segment); "Always autopilot" also writes `auto_handoff: true`; Step by step leaves both unset = manual handoffs. Only `@product` asks — downstream agents read the flag/scheme and never re-prompt.
+1. Either `project.context.md` frontmatter has `auto_handoff: true`, OR `.aioson/context/workflow-execute.json` exists with `agentic_policy.enabled: true` **and `feature` matching the current slug** (the seeded scheme — a scheme left by a different/closed feature does NOT count, for any agent in the chain). Absent both, the run mode is not yet chosen: **`@product` asks it on screen at feature kickoff** (Autopilot / Step by step / Always autopilot — see product.md "Run mode"). Picking Autopilot seeds the scheme (activating this segment); "Always autopilot" also writes `auto_handoff: true`; Step by step leaves both unset = manual handoffs. Only `@product` asks — downstream agents read the flag/scheme and never re-prompt.
 2. A feature workflow is active (feature slug known).
 3. The current agent's own gate/verdict passed AND no genuine human decision is open (see stop conditions).
 
@@ -29,7 +29,9 @@ The first spec agent to finish under autopilot seeds the run's contract — this
 aioson workflow:execute . --feature={slug} --seed --tool=<tool>
 ```
 
-`--seed` writes `.aioson/context/workflow-execute.json` (with `agentic_policy.enabled: true` — review-loop caps, `feature_close: human_gate`, and the stop conditions) plus `.aioson/context/workflow.state.json`. It is **seed-only**: it records the policy the interactive agents follow but does NOT drive stage transitions itself (the agents do, via `Skill(aioson:agent:<next>)` + `aioson workflow:next . --complete=<agent>`). Re-seeding the same slug is idempotent. Once the scheme exists with `agentic_policy.enabled`, autopilot is on for the whole feature even if `auto_handoff` was never written to frontmatter.
+`--seed` writes `.aioson/context/workflow-execute.json` (with `agentic_policy.enabled: true` — review-loop caps, `feature_close: human_gate`, and the stop conditions) plus `.aioson/context/workflow.state.json`. It is **seed-only**: it records the policy the interactive agents follow but does NOT drive stage transitions itself (the agents do, via `Skill(aioson:agent:<next>)` + `aioson workflow:next . --complete=<agent>`). Re-seeding the same slug is idempotent, and a stale `workflow.state.json` left by a feature that is no longer active in `features.md` is discarded and reseeded. Once the scheme exists with `agentic_policy.enabled`, autopilot is on for the whole feature even if `auto_handoff` was never written to frontmatter.
+
+**Seed failure is a stop condition.** The seeding agent must check the command result: a `different_active_feature` failure means another feature is genuinely active in `workflow.state.json` — surface it to the user (close/pause it, or `aioson feature:sweep .`) and stop with the manual handoff. Never continue the chain as if autopilot were armed when the seed failed.
 
 The headless/tracked runner `aioson workflow:execute . --feature={slug} --tool=<tool> --agentic` (without `--seed`) is the same contract but also advances checkpoints from the CLI — use it for non-interactive runs. Prompt-level `Skill(...)` chaining is how interactive Claude Code / codex sessions consume the scheme.
 
@@ -53,7 +55,7 @@ When autopilot is active and no stop condition applies:
 
 ## Segment 1 — spec → dev chain
 
-SMALL feature (lean default): `@product` → `@sheldon` → `@dev`. Under autopilot: `@product`, once the PRD is settled, seeds the scheme and invokes `@sheldon`; `@sheldon`, once sizing/enrichment is confirmed and its lean-lane artifacts + `dev-state.md` are written, invokes `@dev`. The full-merged SMALL detour auto-chains `@analyst` → `@architect` → `@dev` when opted in (with `@scope-check`/`@discovery-design-doc` only if the sequence adds them).
+SMALL feature (lean default): `@product` → `@sheldon` → `@dev`. Under autopilot: `@product`, once the PRD is settled, seeds the scheme and invokes `@sheldon`; `@sheldon`, once sizing/enrichment is confirmed and its lean-lane artifacts + `dev-state.md` are written, completes its own stage (`aioson workflow:next . --complete=sheldon`) and invokes `@dev`. The full-merged SMALL detour auto-chains `@analyst` → `@architect` → `@dev` when opted in (with `@scope-check`/`@discovery-design-doc` only if the sequence adds them).
 
 MEDIUM feature (maestro default): `@product` → `@orchestrator` → `@dev`. Under autopilot: `@product` seeds + invokes `@orchestrator`; `@orchestrator`, once its gated spec package (Gates A/B/C approved, readiness ready) + `dev-state.md` are written, invokes `@dev`. The maestro fans out to `@analyst`/`@architect`/`@pm` as sub-agents, not as workflow stages; those chain as stages only under an opt-in full-chain detour.
 

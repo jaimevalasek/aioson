@@ -1396,3 +1396,79 @@ test('workflow:next blocks architect in project mode when spec.md explicitly kee
     /gate B not approved/
   );
 });
+
+test('workflow:next --complete=dev never walks backwards into an unresolved lean sheldon stage', async () => {
+  const dir = await makeTempDir();
+  const slug = 'lean-checkout';
+  await writeActiveFeature(dir, slug, 'SMALL');
+  // Lean-lane reality: sheldon chained via prompt (Skill) without ever running
+  // --complete=sheldon. Gate C is approved in the spec it wrote.
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
+  );
+  await writeFileEnsured(path.join(dir, '.aioson/context/project-pulse.md'), '# Pulse\n');
+  await writeFileEnsured(path.join(dir, '.aioson/context/dev-state.md'), '---\nfeature: lean-checkout\n---\n# Dev state\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'feature',
+      classification: 'SMALL',
+      sequence: ['product', 'sheldon', 'dev', 'qa'],
+      current: null,
+      next: 'sheldon',
+      completed: ['product'],
+      skipped: [],
+      featureSlug: slug,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', complete: 'dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.completedStage, 'dev');
+  // The regression: activation used to go BACKWARDS to @sheldon here.
+  assert.equal(result.agent, 'qa');
+
+  const state = JSON.parse(await fs.readFile(path.join(dir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.ok(state.completed.includes('dev'));
+  assert.ok(state.skipped.includes('sheldon'), 'unresolved earlier sheldon must be reconciled to skipped at finalize time');
+  assert.notEqual(state.current, 'sheldon');
+  assert.notEqual(state.next, 'sheldon');
+});
+
+test('workflow:next infers a finished lean sheldon stage from its collapsed spec package', async () => {
+  const dir = await makeTempDir();
+  const slug = 'lean-invoices';
+  await writeActiveFeature(dir, slug, 'SMALL');
+  // Full lean spec package on disk + Gates A/B/C approved -> sheldon inferable.
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/spec-${slug}.md`),
+    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
+  );
+  await writeFileEnsured(path.join(dir, `.aioson/context/sheldon-enrichment-${slug}.md`), '# Enrichment\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/requirements-${slug}.md`), '# Requirements\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design doc\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
+  await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  // Fresh state (no workflow.state.json): inference must resolve product AND
+  // sheldon as completed, activating @dev — not re-activating the spec agent.
+  assert.equal(result.agent, 'dev');
+}); 

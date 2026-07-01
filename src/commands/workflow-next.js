@@ -16,6 +16,7 @@ const { logError, buildHealingPrompt } = require('../self-healing');
 const { validateHandoffProtocol } = require('../handoff-validator');
 const { readAutonomyProtocol, resolveEffectiveMode } = require('../autonomy-policy');
 const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-manifests');
+const { resolveAutopilotSignal } = require('../autopilot-signal');
 const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
@@ -61,19 +62,18 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   MEDIUM: ['product', 'orchestrator', 'dev', 'pentester', 'qa']
 };
 
-// Stages eligible for autopilot handoff (auto_handoff: true in project.context.md).
-// Two segments — see .aioson/docs/autopilot-handoff.md:
-//   1. analyst -> dev: deterministic pre-dev chain. Prompt-only clients stop
-//      before the first @dev entry; workflow:execute --agentic may resume it
-//      through a fresh checkpointed activation.
-//   2. post-dev review cycle: @dev → @qa → @tester/@pentester (when their @qa triggers
-//      fire) → @validator → STOPS before feature:close (human approves the close).
-// @product and @sheldon are intentionally absent: per config.md, upstream agents
-// (@briefing/@product/@sheldon) always hand off MANUALLY. In the lean lane
-// (product → sheldon → dev → qa) this means auto_handoff is a deliberate no-op
-// pre-dev — @sheldon is the only pre-dev agent and hands off by hand — and is
-// active only on the post-dev cycle (dev → qa). This is by design, not an omission.
+// Stages eligible for autopilot handoff — the FULL feature chain (see
+// .aioson/docs/autopilot-handoff.md). Activation = auto_handoff: true in
+// project.context.md OR the seeded scheme (resolveAutopilotSignal). Two segments:
+//   1. spec → dev chain: @product seeds the agentic scheme and invokes the spec
+//      authority (@sheldon lean / @orchestrator maestro), which crosses into
+//      @dev via the dev-state.md cold-start packet once its own gates/decisions
+//      are settled. Detour agents (analyst/architect/pm/...) chain only when an
+//      opt-in detour adds them to the active sequence.
+//   2. post-dev review cycle: @dev → @qa → @tester/@pentester (when their @qa
+//      triggers fire) → @validator → STOPS before feature:close (human gate).
 const AUTOPILOT_HANDOFF_STAGES = new Set([
+  'product', 'sheldon', 'orchestrator',
   'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
   'dev', 'qa', 'tester', 'pentester', 'validator'
 ]);
@@ -96,6 +96,14 @@ function normalizeClassification(value, fallback = 'MICRO') {
 function isMaestroOrchestratorState(state) {
   const sequence = Array.isArray(state && state.sequence) ? state.sequence.map(normalizeAgentName) : [];
   const idx = sequence.indexOf('orchestrator');
+  return idx !== -1 && sequence[idx + 1] === 'dev';
+}
+
+// Lean lane (SMALL, sheldon → dev): @sheldon is the single spec authority.
+// Mirrors isLeanSheldonState in handoff-contract.js.
+function isLeanSheldonState(state) {
+  const sequence = Array.isArray(state && state.sequence) ? state.sequence.map(normalizeAgentName) : [];
+  const idx = sequence.indexOf('sheldon');
   return idx !== -1 && sequence[idx + 1] === 'dev';
 }
 
@@ -376,6 +384,29 @@ async function validateStageArtifacts(targetDir, state, stage) {
     return true;
   }
 
+  if (stage === 'sheldon') {
+    // Lean lane (SMALL, sheldon → dev): @sheldon is the single spec authority —
+    // "done" once the collapsed spec package exists (mirrors the orchestrator
+    // maestro branch below; the handoff contract re-checks Gates A/B/C). Without
+    // this branch nothing ever marks the sheldon stage resolved, and a later
+    // `--complete=dev` computes `next: sheldon` — the state machine walking
+    // BACKWARDS into the spec agent after implementation.
+    if (state.mode === 'feature' && slug && isLeanSheldonState(state)) {
+      const designDoc = [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')];
+      const readiness = [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')];
+      return (await exists(path.join(base, `sheldon-enrichment-${slug}.md`)))
+        && (await exists(path.join(base, `requirements-${slug}.md`)))
+        && (await exists(path.join(base, `spec-${slug}.md`)))
+        && (await exists(path.join(base, `implementation-plan-${slug}.md`)))
+        && (await anyExists(designDoc))
+        && (await anyExists(readiness));
+    }
+    if (state.mode === 'feature' && slug) {
+      return await exists(path.join(base, `sheldon-enrichment-${slug}.md`));
+    }
+    return await exists(path.join(base, 'sheldon-enrichment.md'));
+  }
+
   if (stage === 'orchestrator') {
     // Maestro lane (MEDIUM, orchestrator → dev): the orchestrator is the single
     // spec authority — "done" once the gated spec package exists (mirrors how the
@@ -519,7 +550,10 @@ function isInferableStage(stage) {
   // could never infer scope-check as completed during stale-state recovery.
   // pm is inferable from implementation-plan-{slug}.md for the same reason:
   // it sits before scope-check in the MEDIUM feature sequence.
-  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'orchestrator'].includes(
+  // sheldon (lean lane) and orchestrator (maestro lane) are the single spec
+  // authorities — both inferable from their collapsed spec package so stale-state
+  // recovery and mid-lane seeding never re-activate a finished spec stage.
+  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'sheldon', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }
@@ -993,8 +1027,15 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
     detour: null
   });
 
+  // Reconcile eagerly: completing a later stage must never leave `next` pointing
+  // at an earlier unresolved stage (e.g. lean-lane sheldon that only chained via
+  // prompt). Without this, `--complete=dev` re-activated the spec agent and the
+  // reconcile only healed on the NEXT load — after the backwards activation had
+  // already been printed and persisted.
+  const reconciled = reconcileWorkflowState(nextState);
+
   return {
-    state: nextState,
+    state: reconciled.changed ? reconciled.state : nextState,
     completedStage: normalizedStage,
     ...(auditCodeSummary ? { auditCode: auditCodeSummary } : {})
   };
@@ -1560,9 +1601,12 @@ async function activateStage(
     state.mode === 'feature' &&
     (state.classification === 'SMALL' || state.classification === 'MEDIUM')
   ) {
+    // Frontmatter flag OR the seeded scheme (slug-scoped) — the per-feature
+    // "Autopilot" choice only seeds workflow-execute.json and never writes
+    // auto_handoff, so reading the frontmatter alone silently disabled it.
     try {
-      const projectContext = await validateProjectContextFile(targetDir);
-      autoHandoff = Boolean(projectContext && projectContext.data && projectContext.data.auto_handoff === true);
+      const signal = await resolveAutopilotSignal(targetDir, { slug: state.featureSlug });
+      autoHandoff = signal.enabled;
     } catch {
       autoHandoff = false;
     }

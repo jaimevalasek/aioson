@@ -479,7 +479,7 @@ When QA is complete and all Critical and High findings are resolved:
 
 ## Autopilot handoff (post-dev hub)
 
-When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present), you are the hub of the post-dev review cycle (`.aioson/docs/autopilot-handoff.md`). After your verdict and closing duties, route automatically instead of stopping — the four agents (`@dev`/`@qa`/`@tester`/`@pentester`) are always chained, but `@tester`/`@pentester` only run when their trigger fires:
+When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count), you are the hub of the post-dev review cycle (`.aioson/docs/autopilot-handoff.md`). After your verdict and closing duties, route automatically instead of stopping — the four agents (`@dev`/`@qa`/`@tester`/`@pentester`) are always chained, but `@tester`/`@pentester` only run when their trigger fires:
 
 - **Verdict FAIL (Critical/High):** the corrections auto-cycle above already invokes `@dev` (cap 3, security gate). That path takes precedence — do not also route here.
 - **Verdict PASS — evaluate in order; auto-invoke the FIRST that applies and is not already done clean this cycle:**

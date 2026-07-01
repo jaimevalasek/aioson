@@ -27,6 +27,7 @@ const { readHandoff, readHandoffProtocol } = require('../session-handoff');
 const {
   STATE_RELATIVE_PATH,
   buildDefaultWorkflowConfig,
+  detectWorkflowMode,
   readWorkflowConfig,
   runWorkflowNext
 } = require('./workflow-next');
@@ -233,6 +234,18 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
       inferred = Boolean(artifacts.requirements && artifacts.requirements.exists && gates.requirements === 'approved');
     } else if (normalized === 'architect') {
       inferred = Boolean(artifacts.architecture && artifacts.architecture.exists && gates.design === 'approved');
+    } else if (normalized === 'sheldon' || normalized === 'orchestrator') {
+      // Single spec authorities (lean @sheldon / maestro @orchestrator) collapse
+      // Gates A/B/C into one hop — done once the spec package exists with the
+      // collapsed gates approved. Without this, a seed run AFTER the spec stage
+      // finished reported `next: sheldon|orchestrator` and pointed the whole
+      // agentic scheme backwards.
+      inferred = Boolean(
+        artifacts.spec && artifacts.spec.exists &&
+        gates.requirements === 'approved' &&
+        gates.design === 'approved' &&
+        gates.plan === 'approved'
+      );
     } else if (normalized === 'pm') {
       inferred = Boolean(artifacts.implementation_plan && artifacts.implementation_plan.exists && gates.plan === 'approved');
     } else if (normalized === 'qa') {
@@ -248,9 +261,17 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
   return completed;
 }
 
-async function seedFeatureWorkflowState(targetDir, slug, classification, startFrom) {
+/**
+ * Reads the persisted workflow state for a seed/preview of `slug`, applying the
+ * SAME staleness guard as loadOrCreateState: a state whose feature is no longer
+ * the features.md-active feature is stale and gets discarded (the loader would
+ * throw it away one command later anyway — hard-failing the seed on it just
+ * silently disarmed autopilot). The refusal survives only for a genuinely
+ * active different feature.
+ */
+async function resolveExistingFeatureState(targetDir, slug) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
-  const existing = await readJsonIfExists(statePath);
+  let existing = await readJsonIfExists(statePath);
   const focusStage = getFocusStage(existing);
 
   if (
@@ -260,13 +281,40 @@ async function seedFeatureWorkflowState(targetDir, slug, classification, startFr
     existing.featureSlug !== slug &&
     focusStage
   ) {
-    return {
-      ok: false,
-      reason: 'different_active_feature',
-      active_feature: existing.featureSlug,
-      active_stage: focusStage
-    };
+    let modeInfo = null;
+    try {
+      modeInfo = await detectWorkflowMode(targetDir);
+    } catch {
+      modeInfo = null;
+    }
+    const existingIsActive = Boolean(
+      modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === existing.featureSlug
+    );
+    const requestedIsActive = Boolean(
+      modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === slug
+    );
+    if (!existingIsActive || requestedIsActive) {
+      existing = null; // stale pointer — reseed for the requested feature
+    } else {
+      return {
+        existing: null,
+        refusal: {
+          ok: false,
+          reason: 'different_active_feature',
+          active_feature: existing.featureSlug,
+          active_stage: focusStage
+        }
+      };
+    }
   }
+
+  return { existing, refusal: null };
+}
+
+async function seedFeatureWorkflowState(targetDir, slug, classification, startFrom) {
+  const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
+  const { existing, refusal } = await resolveExistingFeatureState(targetDir, slug);
+  if (refusal) return refusal;
 
   if (existing && existing.mode === 'feature' && existing.featureSlug === slug) {
     return {
@@ -316,23 +364,8 @@ async function seedFeatureWorkflowState(targetDir, slug, classification, startFr
 }
 
 async function previewFeatureWorkflowState(targetDir, slug, classification, startFrom) {
-  const existing = await readJsonIfExists(path.join(targetDir, STATE_RELATIVE_PATH));
-  const focusStage = getFocusStage(existing);
-
-  if (
-    existing &&
-    existing.mode === 'feature' &&
-    existing.featureSlug &&
-    existing.featureSlug !== slug &&
-    focusStage
-  ) {
-    return {
-      ok: false,
-      reason: 'different_active_feature',
-      active_feature: existing.featureSlug,
-      active_stage: focusStage
-    };
-  }
+  const { existing, refusal } = await resolveExistingFeatureState(targetDir, slug);
+  if (refusal) return refusal;
 
   if (existing && existing.mode === 'feature' && existing.featureSlug === slug) {
     return {
@@ -543,7 +576,11 @@ function buildCheckpointPayload(activation, handoff, handoffProtocol) {
 async function writeExecutionCheckpoint(targetDir, payload) {
   const execPath = path.join(targetDir, EXECUTION_STATE_RELATIVE_PATH);
   const existing = await readJsonIfExists(execPath);
-  const history = Array.isArray(existing && existing.history) ? [...existing.history] : [];
+  // History is per-feature: never carry a previous feature's checkpoints into
+  // a new feature's scheme.
+  const history = existing && existing.feature === payload.feature && Array.isArray(existing.history)
+    ? [...existing.history]
+    : [];
   if (payload.checkpoint) {
     history.push({
       at: new Date().toISOString(),
@@ -797,7 +834,9 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     `--tool=${quoteCliArg(tool)}`,
     ...(requestedMode ? [`--mode=${quoteCliArg(requestedMode)}`] : []),
     ...(maxCheckpoints !== 1 ? [`--max-checkpoints=${quoteCliArg(maxCheckpoints)}`] : []),
-    ...(agenticPolicy ? ['--agentic'] : []),
+    // A seed run must resume as a seed run — `--agentic` (the CLI-advancing
+    // runner) is the opposite of the seed-only contract.
+    ...(seedOnly ? ['--seed'] : agenticPolicy ? ['--agentic'] : []),
     ...(agenticPolicy && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-dev-qa-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_dev_qa_cycles)}`]
       : []),

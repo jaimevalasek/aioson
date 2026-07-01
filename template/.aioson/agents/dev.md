@@ -308,7 +308,7 @@ Check `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|test
 
 ## Autopilot handoff (post-dev cycle)
 
-When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
+When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
 
 1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
 2. Finish closing duties (spec/dossier/dev-state updates, `agent:epilogue`).
