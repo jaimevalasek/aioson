@@ -24,6 +24,22 @@ const {
 const BAR = '─'.repeat(60);
 const CLASSIFICATIONS = ['MICRO', 'SMALL', 'MEDIUM'];
 
+// A loud, deterministic instruction the phase loop echoes back to @dev at every
+// phase boundary. On a per-phase trigger with auto_continue it is the fresh
+// tool-result that stops the agent from ending its turn to "report" after a
+// phase — the exact failure the phase loop exists to prevent. It never tells the
+// agent to /compact: context is shed transparently by the host's auto-compact,
+// without ending the turn.
+function buildContinuationDirective(trigger, phaseLoop) {
+  if (trigger === 'end-of-feature') {
+    return 'END-OF-FEATURE — last phase: run the full runtime smoke (build + migrate + boot + Core happy-path), then hand off through the post-dev review cycle. Do not close/publish — that is the human gate.';
+  }
+  if (phaseLoop && phaseLoop.auto_continue) {
+    return 'CONTINUE-NOW — a clean report is a checkpoint, not a stop. Go DIRECTLY into the next phase in this same turn: do not stop, do not ask "continue?", do not summarize-and-end, and never self-issue /compact (the host auto-compacts transparently). Halt only on a failing gate/verification after retries or a genuine hard stop.';
+  }
+  return 'PAUSE — auto_continue is off: after this phase report, stop and wait for confirmation before the next phase.';
+}
+
 async function readFileSafe(filePath) {
   try {
     return await fs.readFile(filePath, 'utf8');
@@ -92,6 +108,7 @@ async function runVerificationPlan({ args, options = {}, logger }) {
     phase_loop: getPhaseLoop(config),
     budget: getBudget(config)
   };
+  result.continuation_directive = buildContinuationDirective(trigger, result.phase_loop);
 
   if (options.json) return result;
 
@@ -108,6 +125,7 @@ async function runVerificationPlan({ args, options = {}, logger }) {
   logger.log(BAR);
   const pl = result.phase_loop;
   logger.log(`Phase loop: auto_continue=${pl.auto_continue}  compact_between_phases=${pl.compact_between_phases}  max_fix_retries=${pl.max_fix_retries_per_phase}`);
+  logger.log(`▶ ${result.continuation_directive}`);
   logger.log('');
 
   return result;

@@ -144,7 +144,7 @@ Also check `.aioson/plans/{slug}/manifest.md` before any implementation:
 
 ## Phase loop (auto-continue)
 
-@dev runs a phased plan as a loop and **auto-continues by default — no "continue?" between phases** (`phase_loop.auto_continue`). After each phase's `harness:check`, run `aioson verification:plan . --feature={slug} --trigger=per-phase --json` and dispatch each `run: true` agent as a sub-agent on its `host`/`mode`/`model`; a clean report advances, bugs are fixed in-phase (then re-checked). Compact between phases. The full runtime smoke runs once at end-of-feature, never per phase. Full protocol: `.aioson/docs/dev/phase-loop.md`.
+@dev runs a phased plan as **one continuous drive to the end of the feature, not one phase per turn.** Auto-continue is imperative (`phase_loop.auto_continue`): when a phase's gate is clean, go straight into the next phase — never stop to ask "continue?", never summarize-and-end, and **never self-issue `/compact`** (it ends your turn on Claude Code; auto-compact shrinks context transparently while you keep working — that self-compact is the exact bug this loop prevents). Per phase: `harness:check`, then `aioson verification:plan . --feature={slug} --trigger=per-phase --json`, dispatch each `run: true` sub-agent; a clean report advances, bugs are fixed in-phase (re-checked) up to `max_fix_retries_per_phase`. `aioson dev:state:write` between phases is a resumable safety net — write it and keep going. Full runtime smoke runs once at end-of-feature. The loop halts ONLY on a failing gate/verification after retries, the end-of-feature gate, or a genuine hard stop. Full protocol: `.aioson/docs/dev/phase-loop.md`.
 
 ## Context size detection
 
@@ -308,7 +308,7 @@ Check `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|test
 
 ## Autopilot handoff (post-dev cycle)
 
-When `auto_handoff: true` is set in `project.context.md` and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
+When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
 
 1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
 2. Finish closing duties (spec/dossier/dev-state updates, `agent:epilogue`).

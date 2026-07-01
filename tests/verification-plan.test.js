@@ -112,6 +112,46 @@ test('phase_loop is surfaced in the plan', async () => {
   });
 });
 
+test('per-phase with auto_continue emits a CONTINUE-NOW directive (no /compact)', async () => {
+  const dir = await makeTmpDir();
+  const result = await runVerificationPlan({
+    args: [dir],
+    options: { trigger: 'per-phase', classification: 'SMALL', json: true },
+    logger: noopLogger
+  });
+  assert.match(result.continuation_directive, /CONTINUE-NOW/);
+  // The directive must explicitly forbid self-compaction — self-issuing /compact
+  // ends the turn on Claude Code, which is the phase-loop stop bug.
+  assert.match(result.continuation_directive, /never self-issue \/compact/i);
+});
+
+test('end-of-feature emits an END-OF-FEATURE directive', async () => {
+  const dir = await makeTmpDir();
+  const result = await runVerificationPlan({
+    args: [dir],
+    options: { trigger: 'end-of-feature', classification: 'MEDIUM', json: true },
+    logger: noopLogger
+  });
+  assert.match(result.continuation_directive, /END-OF-FEATURE/);
+});
+
+test('auto_continue=false yields a PAUSE directive', async () => {
+  const dir = await makeTmpDir();
+  await fs.mkdir(path.join(dir, '.aioson', 'config'), { recursive: true });
+  await fs.writeFile(
+    path.join(dir, '.aioson', 'config', 'verification.json'),
+    JSON.stringify({ version: '1.0', phase_loop: { auto_continue: false } }),
+    'utf8'
+  );
+  const result = await runVerificationPlan({
+    args: [dir],
+    options: { trigger: 'per-phase', classification: 'SMALL', json: true },
+    logger: noopLogger
+  });
+  assert.equal(result.phase_loop.auto_continue, false);
+  assert.match(result.continuation_directive, /PAUSE/);
+});
+
 test('pretty (non-json) output renders without throwing', async () => {
   const dir = await makeTmpDir();
   const lines = [];
@@ -123,4 +163,5 @@ test('pretty (non-json) output renders without throwing', async () => {
   assert.equal(result.ok, true);
   assert.ok(lines.some((l) => l.includes('Verification plan')));
   assert.ok(lines.some((l) => l.includes('Phase loop')));
+  assert.ok(lines.some((l) => l.includes('▶ ')));
 });
