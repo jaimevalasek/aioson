@@ -414,7 +414,7 @@ Action: /dev or /qa
 
 ## Autopilot handoff (auto_handoff)
 
-When `auto_handoff: true` is set in `project.context.md` (or the seeded scheme with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present), do not stop at the `@orchestrator → @dev` handoff — seed the scheme and cross into implementation per `.aioson/docs/autopilot-handoff.md`:
+When `auto_handoff: true` is set in `project.context.md` (or the seeded scheme with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present; `agentic_policy.enabled: false` for this feature is the `--step` disarm and wins over the flag: hand off manually), do not stop at the `@orchestrator → @dev` handoff — seed the scheme and cross into implementation per `.aioson/docs/autopilot-handoff.md`:
 
 1. Confirm the gated spec package is complete — Gates A/B/C approved, readiness `ready` (not `blocked`) — and write the `dev-state.md` cold-start packet. A blocked gate/readiness or an open scope decision is a manual stop.
 2. Seed the run's agentic contract (idempotent — a no-op if `@product` already seeded it):

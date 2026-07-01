@@ -275,7 +275,10 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   // @dev's phase loop carries the "one continuous drive, never self-/compact"
   // imperative. Concise pointers (detail lives in autopilot-handoff.md /
   // dev/phase-loop.md); this is contract, not bloat.
-  const KERNEL_BUDGET_BYTES = 31000;
+  // Rebudgeted 31000 -> 32000 on 2026-07-01 (same day) for the inline run-mode
+  // tokens (--auto/--step in @product/@dev activation args) + the per-feature
+  // disarm clause in the autopilot triggers. Contract, not bloat.
+  const KERNEL_BUDGET_BYTES = 32000;
   assert.ok(Buffer.byteLength(product, 'utf8') <= KERNEL_BUDGET_BYTES, 'product kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(sheldon, 'utf8') <= KERNEL_BUDGET_BYTES, 'sheldon kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');
@@ -290,6 +293,18 @@ test('product.md offers the run-mode choice on screen at kickoff (no hidden-flag
   assert.match(product, /Always autopilot in this project/);
   // Autopilot seeds the agentic scheme.
   assert.match(product, /workflow:execute \. --feature=\{slug\} --seed/);
+  // Inline run-mode tokens skip the question entirely (highest precedence).
+  assert.match(product, /standalone `--auto`/);
+  assert.match(product, /--seed --step/);
+});
+
+test('dev.md carries the run-mode token (late autopilot entry/override)', async () => {
+  const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
+  assert.match(dev, /Run-mode token/);
+  assert.match(dev, /standalone `--auto`/);
+  // --step disarms via the seeded scheme and beats the project flag.
+  assert.match(dev, /--seed --step/);
+  assert.match(dev, /wins over `auto_handoff: true`/);
 });
 
 test('agents run context discovery before selective loading', async () => {

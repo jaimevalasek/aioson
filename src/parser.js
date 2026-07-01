@@ -30,9 +30,9 @@ function parseArgv(argv) {
         'help', 'version', 'no-launch', 'attach', 'tmux',
         'allow-warnings', 'install-hook', 'uninstall-hook', 'remove-hook',
         'agent-safe', 'agentic',
-        // workflow:execute — pure booleans; `--seed .` must not swallow the
-        // path positional as its value.
-        'seed', 'seed-only',
+        // workflow:execute — pure booleans; `--seed .` / `--step .` must not
+        // swallow the path positional as their value.
+        'seed', 'seed-only', 'step',
         'selective',
         'status', 'suggest', 'apply',
         'runtime-only', 'template-only', 'inception', 'locales',

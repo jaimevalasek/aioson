@@ -120,6 +120,17 @@ function isAgenticRequested(options = {}) {
 }
 
 function buildAgenticPolicy(options = {}, classification = 'SMALL') {
+  // --seed --step: the per-feature "step by step" choice. Writes an explicitly
+  // DISARMED scheme — resolveAutopilotSignal and the agent triggers treat it as
+  // the feature-level override that wins over a project-wide auto_handoff: true.
+  if (options.step) {
+    return {
+      enabled: false,
+      mode: 'step_by_step',
+      source: 'workflow:execute --step'
+    };
+  }
+
   const enabled = isAgenticRequested(options);
   if (!enabled) return null;
 
@@ -743,7 +754,9 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
   const tool = options.tool ? String(options.tool).trim() : 'claude';
   const requestedMode = options.mode ? String(options.mode).trim() : null;
   const dryRun = Boolean(options['dry-run'] || options.dry);
-  const seedOnly = Boolean(options.seed || options['seed-only']);
+  // --step (disarm) is by definition record-only: it writes the disarmed scheme
+  // and never drives stage transitions, with or without an explicit --seed.
+  const seedOnly = Boolean(options.seed || options['seed-only'] || options.step);
   const startFrom = options['start-from'] ? String(options['start-from']).trim() : null;
   const skipOptional = Boolean(options['skip-optional']);
   const parsedMaxCheckpoints = Number.parseInt(String(options['max-checkpoints'] || '1'), 10);
@@ -835,15 +848,17 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     ...(requestedMode ? [`--mode=${quoteCliArg(requestedMode)}`] : []),
     ...(maxCheckpoints !== 1 ? [`--max-checkpoints=${quoteCliArg(maxCheckpoints)}`] : []),
     // A seed run must resume as a seed run — `--agentic` (the CLI-advancing
-    // runner) is the opposite of the seed-only contract.
-    ...(seedOnly ? ['--seed'] : agenticPolicy ? ['--agentic'] : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    // runner) is the opposite of the seed-only contract. A disarm run keeps
+    // its --step so replaying it never re-arms the scheme.
+    ...(seedOnly ? ['--seed'] : agenticPolicy && agenticPolicy.enabled ? ['--agentic'] : []),
+    ...(options.step ? ['--step'] : []),
+    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-dev-qa-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_dev_qa_cycles)}`]
       : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle.max_tester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_tester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-tester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_tester_correction_cycles)}`]
       : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle.max_pentester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_pentester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-pentester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_pentester_correction_cycles)}`]
       : [])
   ].join(' ');

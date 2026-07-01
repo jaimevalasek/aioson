@@ -308,7 +308,9 @@ Check `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|test
 
 ## Autopilot handoff (post-dev cycle)
 
-When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
+**Run-mode token (activation args, highest precedence):** a standalone `--auto` in your activation arguments arms autopilot from here on even with no flag/scheme — run `aioson workflow:execute . --feature={slug} --seed --tool=claude`, then follow this section. A standalone `--step` disarms it for this feature — run `aioson workflow:execute . --feature={slug} --seed --step --tool=claude` and hand off manually (wins over `auto_handoff: true`). Strip the token from the task text.
+
+When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count; a scheme for this feature with `agentic_policy.enabled: false` is the `--step` disarm and wins over the flag: hand off manually) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
 
 1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
 2. Finish closing duties (spec/dossier/dev-state updates, `agent:epilogue`).

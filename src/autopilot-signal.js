@@ -4,7 +4,10 @@
  * Autopilot activation signal — the single source of truth for "is autopilot
  * on?" outside the agent markdown files.
  *
- * Contract (docs/autopilot-handoff.md "Activation"):
+ * Contract (docs/autopilot-handoff.md "Activation"), highest precedence first:
+ *   - A scheme for the CURRENT feature with `agentic_policy.enabled: false`
+ *     (the `--step` disarm) → OFF, even over `auto_handoff: true` — an explicit
+ *     per-feature choice always wins over the project default.
  *   - `auto_handoff: true` in project.context.md frontmatter → ON (project default).
  *   - `auto_handoff: false` → OFF, even if a seeded scheme is lying around
  *     (step-by-step is the standing choice; a leftover scheme must not override it).
@@ -41,15 +44,25 @@ async function resolveAutopilotSignal(targetDir, { slug = null, projectContext =
     flag = null;
   }
 
+  const scheme = await readSeededScheme(targetDir);
+  const slugMatches = Boolean(
+    scheme && (!slug || !scheme.feature || String(scheme.feature) === String(slug))
+  );
+
+  // Explicit per-feature disarm (--step) beats the project-wide flag.
+  if (
+    scheme && scheme.agentic_policy && scheme.agentic_policy.enabled === false &&
+    slugMatches
+  ) {
+    return { enabled: false, source: 'scheme_disarmed' };
+  }
+
   if (flag === true) return { enabled: true, source: 'frontmatter' };
   if (flag === false) return { enabled: false, source: 'frontmatter_off' };
 
-  const scheme = await readSeededScheme(targetDir);
   const schemeEnabled = Boolean(scheme && scheme.agentic_policy && scheme.agentic_policy.enabled === true);
   if (!schemeEnabled) return { enabled: false, source: null };
-  if (slug && scheme.feature && String(scheme.feature) !== String(slug)) {
-    return { enabled: false, source: 'scheme_other_feature' };
-  }
+  if (!slugMatches) return { enabled: false, source: 'scheme_other_feature' };
   return { enabled: true, source: 'seeded_scheme' };
 }
 

@@ -1009,3 +1009,53 @@ test('workflow:execute --seed: resume_command records --seed and history never l
   assert.equal(scheme.feature, 'beta');
   assert.ok(scheme.history.length <= 1, `history must reset on feature change, got ${scheme.history.length}`);
 });
+
+test('workflow:execute --seed --step: writes an explicitly DISARMED scheme (per-feature step-by-step)', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\nauto_handoff: true\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| manual-run | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-manual-run.md', '# prd\n');
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'manual-run', seed: true, step: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.seeded, true);
+  assert.ok(result.agentic_policy, 'disarm still writes an explicit policy object');
+  assert.equal(result.agentic_policy.enabled, false);
+  assert.equal(result.agentic_policy.mode, 'step_by_step');
+  const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
+  assert.equal(scheme.agentic_policy.enabled, false);
+  // Replaying the resume command must keep the disarm, never re-arm.
+  assert.match(result.resume_command, /--step/);
+  assert.doesNotMatch(result.resume_command, /--agentic/);
+});
+
+test('workflow:execute --step alone is record-only (never drives stage transitions)', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| manual-two | in_progress | 2026-07-01 | |\n'
+  );
+  await writeFile(tmpDir, '.aioson/context/prd-manual-two.md', '# prd\n');
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'manual-two', step: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.seeded, true, '--step implies seed-only');
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(state.current, null, 'no stage activation happened');
+});

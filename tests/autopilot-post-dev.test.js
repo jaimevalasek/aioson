@@ -118,3 +118,29 @@ test('resolveAutopilotSignal cobre flag, scheme semeado e escopo por slug', asyn
   const d5 = await mk();
   assert.equal((await resolveAutopilotSignal(d5, {})).enabled, false);
 });
+
+// --step (desarme por-feature) vence o auto_handoff: true do projeto.
+test('resolveAutopilotSignal: scheme desarmado para o slug atual vence o flag do projeto', async () => {
+  const fsp = require('node:fs/promises');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { resolveAutopilotSignal } = require('../src/autopilot-signal');
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'aioson-ap-disarm-'));
+  const w = async (rel, content) => {
+    const f = path.join(dir, rel);
+    await fsp.mkdir(path.dirname(f), { recursive: true });
+    await fsp.writeFile(f, content, 'utf8');
+  };
+  await w('.aioson/context/project.context.md', '---\nauto_handoff: true\n---\n# ctx\n');
+  await w('.aioson/context/workflow-execute.json', JSON.stringify({ feature: 'cart', agentic_policy: { enabled: false, mode: 'step_by_step' } }));
+
+  // Slug bate -> desarme vence o flag (escolha por-feature > default do projeto).
+  const disarmed = await resolveAutopilotSignal(dir, { slug: 'cart' });
+  assert.equal(disarmed.enabled, false);
+  assert.equal(disarmed.source, 'scheme_disarmed');
+
+  // Slug diferente -> o desarme de OUTRA feature nao afeta; o flag do projeto vale.
+  const other = await resolveAutopilotSignal(dir, { slug: 'billing' });
+  assert.equal(other.enabled, true);
+  assert.equal(other.source, 'frontmatter');
+});
