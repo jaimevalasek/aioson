@@ -165,3 +165,18 @@ test('pretty (non-json) output renders without throwing', async () => {
   assert.ok(lines.some((l) => l.includes('Phase loop')));
   assert.ok(lines.some((l) => l.includes('▶ ')));
 });
+
+test('invalid --trigger fails loudly instead of silently coercing to per-phase', async () => {
+  const dir = await makeTmpDir();
+  const result = await runVerificationPlan({
+    args: [dir],
+    options: { feature: 'demo', trigger: 'end_of_feature', classification: 'SMALL', json: true },
+    logger: noopLogger
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'invalid_trigger');
+  assert.equal(result.trigger, 'end_of_feature');
+  assert.ok(Array.isArray(result.valid_triggers) && result.valid_triggers.includes('per-phase'));
+  // The old coercion emitted an imperative CONTINUE-NOW directive here.
+  assert.equal(result.continuation_directive, undefined);
+});

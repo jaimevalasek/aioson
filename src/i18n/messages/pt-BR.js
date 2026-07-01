@@ -379,6 +379,7 @@ module.exports = {
   update: {
     not_installed: 'Nenhuma instalacao do AIOSON encontrada em {targetDir}.',
     done_at: 'Atualizacao concluida em: {targetDir}',
+    template_version: 'Versao do template aplicada: {version}',
     files_updated: 'Arquivos atualizados: {count}',
     backups_created: 'Backups criados: {count}',
     profile_renamed: 'i Perfil `beginner` renomeado para `creator` em project.context.md para descrever melhor o usuario. Comportamento inalterado. Edite o arquivo para mudar para `developer` se preferir.',

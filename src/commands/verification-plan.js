@@ -68,7 +68,16 @@ async function runVerificationPlan({ args, options = {}, logger }) {
   const slug = (options.feature || options.slug || '').toString().trim() || null;
 
   const triggerRaw = (options.trigger || 'per-phase').toString().trim().toLowerCase();
-  const trigger = TRIGGERS.includes(triggerRaw) ? triggerRaw : 'per-phase';
+  // An unknown trigger must fail loudly. Silently coercing it to per-phase used
+  // to emit an imperative CONTINUE-NOW directive on what was actually a typo'd
+  // end-of-feature call — steering @dev into a phase that does not exist.
+  if (!TRIGGERS.includes(triggerRaw)) {
+    const failure = { ok: false, reason: 'invalid_trigger', trigger: triggerRaw, valid_triggers: [...TRIGGERS] };
+    if (options.json) return failure;
+    logger.error(`Invalid --trigger=${triggerRaw}. Valid triggers: ${TRIGGERS.join(', ')}.`);
+    return failure;
+  }
+  const trigger = triggerRaw;
 
   const config = await readVerificationConfig(targetDir);
   const host = resolveHost(config, options.host);

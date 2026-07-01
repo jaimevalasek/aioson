@@ -5,6 +5,7 @@ const { detectFramework } = require('../detector');
 const { updateInstallation } = require('../updater');
 const { validateProjectContextFile, getInteractionLanguage } = require('../context');
 const { applyAgentLocale } = require('../locales');
+const { getCliVersionLabelSync } = require('../version');
 
 async function runUpdate({ args, options, logger, t }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
@@ -40,6 +41,9 @@ async function runUpdate({ args, options, logger, t }) {
   }
 
   logger.log(t('update.done_at', { targetDir }));
+  // Surface WHICH template landed — stale-template updates used to be silent
+  // (the copy comes from the installed CLI's own bundle, not from npm latest).
+  logger.log(t('update.template_version', { version: getCliVersionLabelSync() }));
   logger.log(t('update.files_updated', { count: result.copied.length }));
   logger.log(t('update.backups_created', { count: result.backedUp.length }));
   if (result.migrations && result.migrations.profileRename && result.migrations.profileRename.changed) {

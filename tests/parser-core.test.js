@@ -109,3 +109,12 @@ describe('parser.js — parseArgv', () => {
     );
   });
 });
+
+it('parseArgv: --seed and --seed-only are boolean-only and never swallow the path positional', () => {
+  const parsed = parseArgv(['node', 'aioson', 'workflow:execute', '--feature=x', '--seed', '.']);
+  assert.equal(parsed.options.seed, true);
+  assert.deepEqual(parsed.args, ['.']);
+  const parsedOnly = parseArgv(['node', 'aioson', 'workflow:execute', '--seed-only', '.', '--tool=claude']);
+  assert.equal(parsedOnly.options['seed-only'], true);
+  assert.deepEqual(parsedOnly.args, ['.']);
+});

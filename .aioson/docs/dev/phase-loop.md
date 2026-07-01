@@ -21,7 +21,7 @@ After finishing each phase:
    ```bash
    aioson verification:plan . --feature={slug} --trigger=per-phase --json
    ```
-   For every agent with `run: true`, dispatch it as a sub-agent on the returned `host` / `mode` / `model`, scoped to this phase's changed files:
+   For every agent with `run: true`, dispatch it as a sub-agent on the plan's top-level `host` plus that agent's `mode` / `model`, scoped to this phase's changed files:
    - `mode: native` → an in-harness sub-agent. On Claude Code use the Task tool with that `model` tier (e.g. `sonnet-4.6`); on codex/opencode use their own configured model. The sub-agent writes its `report` file (e.g. `qa-report-{slug}.md`) and returns it to @dev.
    - `mode: external` → only the explicitly configured cross-vendor auditor (`cross_check`); never spawn one otherwise.
    Read the report: **PASS** → continue. **Bugs** → fix them within this phase, re-run `harness:check`, and re-dispatch — up to `phase_loop.max_fix_retries_per_phase` times, then stop and surface the failure instead of advancing.
