@@ -16,6 +16,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { contextDir, readFileSafe, parseFrontmatter } = require('../preflight-engine');
 const { runFeatureArchive } = require('./feature-archive');
+const { runStateReset } = require('./state-save');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
@@ -302,6 +303,72 @@ async function archiveScoutsForFeature(targetDir, slug) {
   return result;
 }
 
+// retireDevStateForClosedFeature — clear the @dev cold-start pointer when it
+// still points at the feature being closed. @dev reads dev-state.md DIRECTLY on
+// cold start (its session-start protocol "starts on next_step immediately"),
+// bypassing the dev:resume-data guard that already checks features.md status —
+// so a stale pointer to a done feature would make a future @dev session try to
+// "resume" work that is already closed (e.g. next_step: aioson feature:close).
+// Only retires when active_feature matches this slug; a pointer to a DIFFERENT
+// active feature is left untouched. Archived (not blind-deleted) for audit via
+// the existing state:reset --archive path. Idempotent and best-effort.
+async function retireDevStateForClosedFeature(targetDir, ctxDir, slug) {
+  const statePath = path.join(ctxDir, 'dev-state.md');
+  const content = await readFileSafe(statePath);
+  if (!content) return { retired: false, reason: 'no_dev_state' };
+  const fm = parseFrontmatter(content);
+  const active = String(fm.active_feature || '').trim();
+  if (active !== slug) {
+    return { retired: false, reason: 'points_to_other', active_feature: active || null };
+  }
+  const reset = await runStateReset({
+    args: [targetDir],
+    options: { archive: true, json: true },
+    logger: { log() {} }
+  });
+  return {
+    retired: Boolean(reset && reset.removed),
+    archived: reset && reset.archived ? reset.archived : null
+  };
+}
+
+// retireWorkflowStateForClosedFeature — clear the per-feature workflow runtime
+// state when it still references the feature being closed. Both files live in
+// .aioson/context/, are not slug-named, and are excluded from feature:archive —
+// so without this they linger and break the NEXT feature:
+//   - workflow.state.json: seedFeatureWorkflowState refuses to seed a new slug
+//     while a stale feature state is present ("different_active_feature").
+//   - workflow-execute.json: its enabled agentic_policy is the autopilot signal
+//     downstream agents read — a stale one would auto-run the next feature.
+// Only clears when the file references THIS slug (feature mode); a project-mode
+// state or a pointer to another feature is left untouched. Best-effort.
+async function retireWorkflowStateForClosedFeature(ctxDir, slug) {
+  const retired = [];
+  const statePath = path.join(ctxDir, 'workflow.state.json');
+  const stateRaw = await readFileSafe(statePath);
+  if (stateRaw) {
+    try {
+      const st = JSON.parse(stateRaw);
+      if (st && st.mode === 'feature' && st.featureSlug === slug) {
+        await fs.unlink(statePath);
+        retired.push('workflow.state.json');
+      }
+    } catch { /* malformed — leave it for manual inspection */ }
+  }
+  const execPath = path.join(ctxDir, 'workflow-execute.json');
+  const execRaw = await readFileSafe(execPath);
+  if (execRaw) {
+    try {
+      const ex = JSON.parse(execRaw);
+      if (ex && ex.feature === slug) {
+        await fs.unlink(execPath);
+        retired.push('workflow-execute.json');
+      }
+    } catch { /* malformed — leave it */ }
+  }
+  return retired;
+}
+
 async function runFeatureClose({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.feature ? String(options.feature) : null;
@@ -469,6 +536,32 @@ async function runFeatureClose({ args, options = {}, logger }) {
     updates.push(`features.md: ${slug} → ${verdict === 'PASS' ? 'done' : 'qa_failed'} (${today})`);
   } else {
     updates.push('features.md: not found (skipped)');
+  }
+
+  // 2.5. Retire the @dev cold-start pointer if it still points at this feature.
+  // On PASS the feature is done; a lingering dev-state.md would make a future
+  // @dev cold-start try to resume it (it reads the file directly). FAIL leaves
+  // it — @dev keeps working the qa_failed feature. Never touches a pointer to a
+  // different active feature. Best-effort; never blocks the close.
+  if (verdict === 'PASS') {
+    try {
+      const ds = await retireDevStateForClosedFeature(targetDir, dir, slug);
+      if (ds.retired) {
+        updates.push(`dev-state.md: retired closed-feature pointer${ds.archived ? ` (archived to ${ds.archived})` : ''}`);
+      } else if (ds.reason === 'points_to_other') {
+        updates.push(`dev-state.md: left intact (points at ${ds.active_feature}, not ${slug})`);
+      }
+    } catch (err) {
+      updates.push(`dev-state.md: retire hook error (${(err && err.message) || err})`);
+    }
+    try {
+      const wf = await retireWorkflowStateForClosedFeature(dir, slug);
+      if (wf.length > 0) {
+        updates.push(`workflow state: retired ${wf.join(', ')} (closed-feature runtime state)`);
+      }
+    } catch (err) {
+      updates.push(`workflow state: retire hook error (${(err && err.message) || err})`);
+    }
   }
 
   // 3. Update project-pulse.md

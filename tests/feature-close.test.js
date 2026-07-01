@@ -545,3 +545,101 @@ test('feature:close (T5): corrupted progress.json fails safe (warns and proceeds
   assert.ok(result.updates.some((u) => u.includes('progress.json parse error')),
     'must record the parse error in updates');
 });
+
+const DEV_STATE = (slug) =>
+  `---\nlast_updated: 2026-07-01\nactive_feature: ${slug}\nactive_phase: 5\n` +
+  `next_step: "aioson feature:close"\nstatus: in_progress\n---\n\n# Dev State\n\n**Feature:** ${slug}\n`;
+
+test('feature:close: PASS retires dev-state.md when it points at the closed feature', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/dev-state.md', DEV_STATE('checkout'));
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  // The stale cold-start pointer must be gone so a future @dev cold-starts clean.
+  await assert.rejects(fs.access(path.join(tmpDir, '.aioson/context/dev-state.md')));
+  assert.ok(result.updates.some((u) => u.includes('dev-state.md: retired')),
+    'must record the dev-state retirement');
+  // Archived for audit under runtime/devstate-history/.
+  const histDir = path.join(tmpDir, '.aioson/runtime/devstate-history');
+  const hist = await fs.readdir(histDir);
+  assert.ok(hist.length >= 1, 'retired dev-state should be archived');
+});
+
+test('feature:close: PASS leaves dev-state.md intact when it points at a DIFFERENT active feature', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/dev-state.md', DEV_STATE('other-feature'));
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  // Another feature's in-progress pointer must survive.
+  const content = await fs.readFile(path.join(tmpDir, '.aioson/context/dev-state.md'), 'utf8');
+  assert.ok(content.includes('active_feature: other-feature'));
+  assert.ok(result.updates.some((u) => u.includes('left intact')));
+});
+
+test('feature:close: FAIL keeps dev-state.md (the feature is still being worked)', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/dev-state.md', DEV_STATE('checkout'));
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'FAIL', notes: 'blocker' },
+    logger: makeLogger()
+  });
+
+  // FAIL means QA rejected — @dev resumes to fix, so the pointer stays.
+  const content = await fs.readFile(path.join(tmpDir, '.aioson/context/dev-state.md'), 'utf8');
+  assert.ok(content.includes('active_feature: checkout'));
+});
+
+test('feature:close: PASS retires workflow.state.json + workflow-execute.json for the closed feature', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json',
+    JSON.stringify({ version: 1, mode: 'feature', featureSlug: 'checkout', next: 'qa' }));
+  await writeFile(tmpDir, '.aioson/context/workflow-execute.json',
+    JSON.stringify({ version: 1, feature: 'checkout', agentic_policy: { enabled: true } }));
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  // Both stale runtime-state files must be gone so the NEXT feature seeds cleanly
+  // and downstream agents don't autopilot on a closed feature's scheme.
+  await assert.rejects(fs.access(path.join(tmpDir, '.aioson/context/workflow.state.json')));
+  await assert.rejects(fs.access(path.join(tmpDir, '.aioson/context/workflow-execute.json')));
+  assert.ok(result.updates.some((u) => u.includes('workflow state: retired')));
+});
+
+test('feature:close: PASS leaves workflow state for a DIFFERENT feature untouched', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json',
+    JSON.stringify({ version: 1, mode: 'feature', featureSlug: 'other-feature', next: 'dev' }));
+  await writeFile(tmpDir, '.aioson/context/workflow-execute.json',
+    JSON.stringify({ version: 1, feature: 'other-feature', agentic_policy: { enabled: true } }));
+
+  await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'checkout', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  // Another feature's active workflow must survive.
+  const st = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(st.featureSlug, 'other-feature');
+  const ex = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow-execute.json'), 'utf8'));
+  assert.equal(ex.feature, 'other-feature');
+});
