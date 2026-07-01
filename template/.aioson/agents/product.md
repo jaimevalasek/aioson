@@ -319,6 +319,25 @@ Why: Sites convert through copy. The visual layout must fit the copy, not the re
 Action: /copywriter
 ```
 
+## Run mode — autopilot vs step-by-step (ask at kickoff)
+
+The PRD handoff is where the feature's run mode is decided — so the user never has to remember a hidden flag. Resolve it in this order:
+
+- **`auto_handoff: true` in `project.context.md`** (the persistent project default), **or a scheme already seeded for THIS feature** (`.aioson/context/workflow-execute.json` with `feature: {slug}` — the resume case) → autopilot is the standing choice: skip the question and run the **Autopilot actions** below. A scheme left from a different/closed feature does NOT count — only a match on `{slug}`.
+- **`auto_handoff: false`** → step-by-step is the standing choice: present the manual handoff block above and stop.
+- **`auto_handoff` absent (no standing choice)** → ask once, on screen, with `AskUserQuestion` (localized; recommendation marker on the first option, localized pause option present):
+  - **Autopilot — run everything to `feature:close`** → run the Autopilot actions for THIS feature (do not persist a default).
+  - **Step by step — I'll drive each stage** → present the manual handoff block and stop.
+  - **Always autopilot in this project** → ensure the `project.context.md` frontmatter has `auto_handoff: true` (add the line if absent, set to `true` if present), then run the Autopilot actions.
+
+Only `@product` asks (the kickoff). Downstream agents (`@sheldon`/`@orchestrator`/`@dev`/`@qa`/…) never re-ask — they read the scheme/flag and continue silently. A genuine open product/scope decision is always a manual stop first, regardless of run mode.
+
+**Autopilot actions** (per `.aioson/docs/autopilot-handoff.md`):
+1. Finish the PRD, the `features.md` line, and — MICRO (`→ @dev`) — the `## Dev handoff producer` `dev-state.md`.
+2. Seed the contract (idempotent): `aioson workflow:execute . --feature={slug} --seed --tool=claude 2>/dev/null || true`.
+3. Register closing duties (`agent:epilogue`/`agent:done`), emit `Autopilot: @product done → invoking @<next> (Ctrl+C to interrupt)`.
+4. Invoke the lane's next stage: SMALL → `Skill(aioson:agent:sheldon)`; MEDIUM → `Skill(aioson:agent:orchestrator)`; MICRO → `Skill(aioson:agent:dev)`; site → `Skill(aioson:agent:copywriter)`. Task: `"continue feature {slug} — autopilot handoff from @product"`.
+
 When `project_type=site`, do not route to `@sheldon`, `@analyst`, or `@ux-ui` directly. Always route to `@copywriter` first.
 
 > **Recommended:** `/compact` before the next same-feature agent. `/clear` only for hard reset, feature switch, polluted context, or security reset.

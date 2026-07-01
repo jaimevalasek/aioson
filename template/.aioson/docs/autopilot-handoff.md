@@ -4,28 +4,34 @@ task_types: [handoff, autopilot]
 triggers: [auto handoff, autopilot, next agent]
 ---
 
-# Autopilot handoff (pre-dev detours → dev → review cycle)
+# Autopilot handoff (feature start → dev → review cycle)
 
-Opt-in protocol that removes manual handoff confirmations in the deterministic segments of the feature workflow. Two segments:
+Opt-in protocol that removes the **mechanical** handoff confirmations across the whole feature workflow — the "type /sheldon", "type /dev", "run phase 2", "run qa" stops. Genuine human decisions (product scope, sizing/enrichment) still happen interactively inside their agents; autopilot only removes the mechanical "run the next thing" step once an agent's own work is settled. Two segments:
 
-1. **Pre-dev chain (opt-in detours → `@dev`):** by default the MEDIUM lane routes `@product → @orchestrator → @dev` and the SMALL lean lane routes `@product → @sheldon → @dev`, so there is no pre-dev auto-chain — `@orchestrator` (maestro) and `@sheldon` (lean) own the spec solo and hand off manually. `@analyst`, `@architect`, `@pm`, `@scope-check`, and `@discovery-design-doc` chain automatically only when an opt-in detour adds them to the active sequence. Upstream agents (`@briefing`, `@product`, `@sheldon`, `@orchestrator`) always stay manual — they end on genuine human decisions.
-2. **Post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` → `@validator`):** once a human starts `@dev`, the implementation and review agents chain automatically until the feature is ready to close. `@qa` is the hub: it owns the routing to the specialized agents and the corrections loop.
+1. **Spec → dev chain (`@product → @sheldon`/`@orchestrator` → `@dev`):** when autopilot is on, each spec agent — once its own decisions are resolved (no open `AskUserQuestion`, the gates it owns approved) — seeds the agentic scheme and auto-invokes the next stage instead of stopping. It crosses the pre-dev boundary via the `dev-state.md` cold-start packet, not by carrying raw upstream chat forward. `@analyst`, `@architect`, `@pm`, `@scope-check`, and `@discovery-design-doc` chain automatically only when an opt-in detour adds them to the active sequence.
+2. **Post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` → `@validator`):** the implementation and review agents chain automatically until the feature is ready to close. `@qa` is the hub: it owns the routing to the specialized agents and the corrections loop.
+
+Both segments stop only at the human close/publish gate (`feature:close`) and at the hard stop conditions below. Historically Segment 1 stayed manual (upstream agents end on human decisions); autopilot now crosses it too, but only mechanically — a real product/sizing decision still pauses for the human before any auto-invoke.
 
 ## Activation
 
-Autopilot is active only when ALL are true:
+Autopilot is active when BOTH of the first two hold, gated by the third:
 
-1. `project.context.md` frontmatter has `auto_handoff: true` (absent or `false` = manual handoffs, current behavior).
-2. A feature workflow is active (feature slug known, classification SMALL or MEDIUM).
-3. The current agent's own gate/verdict passed (see stop conditions).
+1. Either `project.context.md` frontmatter has `auto_handoff: true`, OR `.aioson/context/workflow-execute.json` exists with `agentic_policy.enabled: true` (the seeded scheme). Absent both, the run mode is not yet chosen: **`@product` asks it on screen at feature kickoff** (Autopilot / Step by step / Always autopilot — see product.md "Run mode"). Picking Autopilot seeds the scheme (activating this segment); "Always autopilot" also writes `auto_handoff: true`; Step by step leaves both unset = manual handoffs. Only `@product` asks — downstream agents read the flag/scheme and never re-prompt.
+2. A feature workflow is active (feature slug known).
+3. The current agent's own gate/verdict passed AND no genuine human decision is open (see stop conditions).
 
-Preferred runtime entrypoint:
+## Seeding the agentic scheme
+
+The first spec agent to finish under autopilot seeds the run's contract — this is the "scheme" the whole chain follows, and it is what makes a feature built the normal way (`@product → @sheldon`/`@orchestrator` → …) run to `feature:close` without the user launching anything:
 
 ```bash
-aioson workflow:execute . --feature={slug} --tool=<tool> --agentic
+aioson workflow:execute . --feature={slug} --seed --tool=<tool>
 ```
 
-`workflow:execute --agentic` is the central orchestration contract. It writes `.aioson/context/workflow-execute.json` with `agentic_policy`, including the review-loop caps, sidecar/scout policy, lane guard, current checkpoint, and resumable command. Prompt-level `Skill(aioson:agent:<next>)` chaining remains a compatibility fallback for clients that cannot let the gateway consume this checkpoint.
+`--seed` writes `.aioson/context/workflow-execute.json` (with `agentic_policy.enabled: true` — review-loop caps, `feature_close: human_gate`, and the stop conditions) plus `.aioson/context/workflow.state.json`. It is **seed-only**: it records the policy the interactive agents follow but does NOT drive stage transitions itself (the agents do, via `Skill(aioson:agent:<next>)` + `aioson workflow:next . --complete=<agent>`). Re-seeding the same slug is idempotent. Once the scheme exists with `agentic_policy.enabled`, autopilot is on for the whole feature even if `auto_handoff` was never written to frontmatter.
+
+The headless/tracked runner `aioson workflow:execute . --feature={slug} --tool=<tool> --agentic` (without `--seed`) is the same contract but also advances checkpoints from the CLI — use it for non-interactive runs. Prompt-level `Skill(...)` chaining is how interactive Claude Code / codex sessions consume the scheme.
 
 ## Routing — deterministic, never LLM-chosen
 
@@ -45,13 +51,13 @@ When autopilot is active and no stop condition applies:
 3. If no runtime gateway is available, emit a one-line transition notice: `Autopilot: @<current> done → invoking @<next> (Ctrl+C to interrupt)`.
 4. Invoke `Skill(aioson:agent:<next>)` with the task `"continue feature {slug} — autopilot handoff from @<current>"`. No user prompt — Ctrl+C interrupts.
 
-## Segment 1 — pre-dev chain (opt-in detours → `@dev`)
+## Segment 1 — spec → dev chain
 
-SMALL feature (lean default): `@product` → `@sheldon` → `@dev` — `@product`/`@sheldon` hand off manually, so there is no pre-dev auto-chain; autopilot resumes in the post-dev review cycle (Segment 2). The full-merged SMALL detour auto-chains `@analyst` → `@architect` → `@dev` when opted in (with `@scope-check`/`@discovery-design-doc` only if the sequence adds them).
+SMALL feature (lean default): `@product` → `@sheldon` → `@dev`. Under autopilot: `@product`, once the PRD is settled, seeds the scheme and invokes `@sheldon`; `@sheldon`, once sizing/enrichment is confirmed and its lean-lane artifacts + `dev-state.md` are written, invokes `@dev`. The full-merged SMALL detour auto-chains `@analyst` → `@architect` → `@dev` when opted in (with `@scope-check`/`@discovery-design-doc` only if the sequence adds them).
 
-MEDIUM feature (maestro default): `@product` → `@orchestrator` → `@dev` — `@product`/`@orchestrator` hand off manually too, so there is likewise no pre-dev auto-chain (the `@orchestrator` maestro fans out to `@analyst`/`@architect`/`@pm` as sub-agents, not as workflow stages). `@analyst` → `@architect` → `@pm` → `@dev` auto-chains only when an opt-in full-chain detour adds those stages to the sequence (`@discovery-design-doc` and `@scope-check` chain only if the sequence adds them).
+MEDIUM feature (maestro default): `@product` → `@orchestrator` → `@dev`. Under autopilot: `@product` seeds + invokes `@orchestrator`; `@orchestrator`, once its gated spec package (Gates A/B/C approved, readiness ready) + `dev-state.md` are written, invokes `@dev`. The maestro fans out to `@analyst`/`@architect`/`@pm` as sub-agents, not as workflow stages; those chain as stages only under an opt-in full-chain detour.
 
-The prompt-only fallback still stops before the FIRST `@dev` activation because `@dev` is a heavy phase and needs a compact operational handoff. Runtime agentic mode may cross this boundary only by starting a checkpointed `@dev` activation from the context package, not by carrying raw upstream chat forward. If the gateway cannot start that activation, stop with the normal `/compact` + `/dev` recommendation for same-feature continuation. Recommend `/clear` only when the user needs a hard reset, a feature switch, polluted context, or a security-sensitive reset.
+Crossing into `@dev` goes through the `dev-state.md` cold-start packet the spec agent writes — `@dev`'s session-start protocol loads only that minimal package, so `@dev` does not inherit the heavy upstream chat; transparent auto-compact trims the rest. That is why the crossing is safe without a manual `/compact`. The spec agent still stops with the normal manual `/dev` recommendation if it has an open product/scope/sizing decision or a gate it owns is not approved. Recommend `/clear` only when the user needs a hard reset, a feature switch, polluted context, or a security-sensitive reset.
 
 ## Segment 2 — post-dev review cycle (hub = `@qa`)
 
@@ -84,7 +90,7 @@ Routing table (each row is followed only when autopilot is active and no stop co
 ## Stop conditions — break the chain and emit the normal manual handoff
 
 1. **`feature:close` / publish** — ALWAYS the human gate. When `@qa` (PASS, nothing pending) or `@validator` (PASS) is the last clean step, STOP and recommend `aioson feature:close . --feature={slug}`. Never auto-run `feature:close`, `feature:archive`, `npm publish`, or any publish/close action.
-2. **First `@dev` entry without runtime gateway** — prompt-only clients stop here (Segment 1). Runtime agentic mode may continue only through a fresh checkpointed `@dev` activation.
+2. **Genuine human decision open** — a spec agent with an unresolved product/scope/sizing question (an open `AskUserQuestion`, or a gate it owns not yet approved) finishes that decision with the human before any auto-invoke, and stops with the normal manual handoff. Autopilot removes mechanical stops, never real decisions. (This replaces the old "always stop before the first `@dev`" rule: the crossing is now automatic once the spec agent's own decisions are settled and `dev-state.md` is written.)
 3. **Corrections cap reached** — review cycles are bounded by `agentic_policy.review_cycle` (default 3); when `review-cycle:advance` returns `stop_cycle_limit`, stop and escalate to the human.
 4. **Critical security finding** — the `@qa` corrections security gate (auth/secret/credential/session/password/token/PII/encryption keywords) blocks the auto-loop; stop and require human intervention.
 5. **Verdict not clean / gate or readiness blocked** — the `@orchestrator` maestro spec package not gate-approved (Gates A/B/C) or its readiness `blocked`, `@validator` FAIL with no safe corrections path (and, when present as detours, `@architect` Gate B / merged-mode readiness `blocked`, `@pm` Gate C blocked, `@scope-check` not `approved`/`patched`, or `@discovery-design-doc` readiness `blocked`): stop and route to the owner manually.

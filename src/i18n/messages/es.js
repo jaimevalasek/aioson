@@ -365,7 +365,7 @@ module.exports = {
     features_dir_present: 'Directorio de features presente (.aioson/context/features/)',
     features_dir_present_hint: 'Cree .aioson/context/features/ para hospedar dossiers por feature (doctor --fix lo crea).',
     auto_handoff_declared: 'Flag de autopilot handoff declarada (auto_handoff en project.context.md)',
-    auto_handoff_declared_hint: 'El protocolo autopilot-handoff esta instalado pero auto_handoff no esta definido en el frontmatter de project.context.md — el autopilot queda inactivo. Defina auto_handoff: true para activarlo, o auto_handoff: false para silenciar este aviso.',
+    auto_handoff_declared_hint: 'El protocolo autopilot-handoff esta instalado y auto_handoff no esta definido — @product pregunta el modo en pantalla al inicio de cada feature (Autopilot / Paso a paso / Siempre). Defina auto_handoff: true para siempre autopilot y omitir la pregunta, o false para siempre paso a paso.',
     claude_commands_present: 'Slash commands de Claude presentes ({missing} ausentes de {required})',
     claude_commands_present_hint: 'Ausentes: {paths}. Ejecute `aioson doctor . --fix` para restaurarlos.',
     version_drift: 'Version del CLI coincide con project.context.md (contexto: {context}, CLI: {cli})',

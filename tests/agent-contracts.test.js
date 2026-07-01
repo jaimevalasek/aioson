@@ -270,10 +270,26 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   // documented scope growth.
   // Rebudgeted from 25000 -> 30000 on 2026-06-18 for context-search discovery
   // prompts: intelligence gates are part of the agent contract, not bloat.
-  const KERNEL_BUDGET_BYTES = 30000;
+  // Rebudgeted 30000 -> 31000 on 2026-07-01 for full-feature autopilot wiring:
+  // @product/@sheldon seed the agentic scheme + auto-invoke the next stage, and
+  // @dev's phase loop carries the "one continuous drive, never self-/compact"
+  // imperative. Concise pointers (detail lives in autopilot-handoff.md /
+  // dev/phase-loop.md); this is contract, not bloat.
+  const KERNEL_BUDGET_BYTES = 31000;
   assert.ok(Buffer.byteLength(product, 'utf8') <= KERNEL_BUDGET_BYTES, 'product kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(sheldon, 'utf8') <= KERNEL_BUDGET_BYTES, 'sheldon kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');
+});
+
+test('product.md offers the run-mode choice on screen at kickoff (no hidden-flag reliance)', async () => {
+  const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+  // The run mode is chosen via an on-screen question at kickoff, not by a flag the user must remember.
+  assert.match(product, /Run mode/i);
+  assert.match(product, /AskUserQuestion/);
+  // The three choices incl. the "remember" escape hatch.
+  assert.match(product, /Always autopilot in this project/);
+  // Autopilot seeds the agentic scheme.
+  assert.match(product, /workflow:execute \. --feature=\{slug\} --seed/);
 });
 
 test('agents run context discovery before selective loading', async () => {

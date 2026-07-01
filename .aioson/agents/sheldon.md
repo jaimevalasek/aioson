@@ -428,4 +428,8 @@ Why: the full bridge (spec + ACs, design, plan, §2c runtime-gated contract) is 
 Action: /dev
 ```
 > On MEDIUM, also point to `.aioson/context/sheldon-validation-{slug}.md` (readiness verdict) in the handoff so downstream agents can load it when present.
+
+## Autopilot handoff (auto_handoff)
+
+When `auto_handoff: true` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled`) is present, do not stop at `@sheldon → @dev` — follow `.aioson/docs/autopilot-handoff.md`: after the lean-lane artifacts + the `dev-state.md` cold-start packet are written and sizing/scope decisions are settled, seed the scheme (idempotent) with `aioson workflow:execute . --feature={slug} --seed --tool=claude 2>/dev/null || true`, then invoke `Skill(aioson:agent:dev)` with `"implement feature {slug} — autopilot handoff from @sheldon"`. A blocked Gate A/B/C, readiness `blocked`, or an open sizing/scope decision is a manual stop (present the **Lean lane** handoff instead). Absent both signals, hand off manually.
 > Recommended: `/compact` before activating the next same-feature agent. Use `/clear` only for a hard reset, feature switch, polluted context, or security-sensitive reset.

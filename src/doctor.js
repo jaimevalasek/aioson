@@ -228,8 +228,10 @@ async function runDoctor(targetDir) {
   }
 
   // Autopilot handoff: protocol doc installed but flag never declared in the
-  // context frontmatter — autopilot stays silently inactive (absent = manual
-  // handoffs). An explicit true/false is a deliberate choice and passes.
+  // context frontmatter. Absent is no longer "silently manual" — @product asks
+  // the run mode on screen at each feature kickoff. Declaring an explicit
+  // true/false sets a project default (skip the kickoff question) and passes;
+  // the advisory just surfaces that a default can be set.
   const autopilotDocExists = await exists(path.join(targetDir, '.aioson/docs/autopilot-handoff.md'));
   if (autopilotDocExists && contextValidation.exists && contextValidation.data) {
     const autoHandoffDeclared = Object.prototype.hasOwnProperty.call(contextValidation.data, 'auto_handoff');
