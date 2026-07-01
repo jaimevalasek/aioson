@@ -17,9 +17,10 @@ test('deyvin.md — workspace + template byte-identical (sheldon-001 q=5)', () =
   assert.ok(ws.equals(tp), 'workspace and template must be byte-identical');
 });
 
-test('deyvin.md — kernel size ≤ 15360 bytes (deyvin-density AC-06 budget)', () => {
+test('deyvin.md — kernel size ≤ 15872 bytes (deyvin-density AC-06 budget)', () => {
+  // 15360 -> 15872 on 2026-07-01: --help token pointer (see deyvin-density.test.js).
   const size = fs.statSync(WORKSPACE).size;
-  assert.ok(size <= 15360, `kernel ${size}B exceeds 15360B budget`);
+  assert.ok(size <= 15872, `kernel ${size}B exceeds 15872B budget`);
 });
 
 test('deyvin.md — rubric line no longer says "deferred to deyvin-subtask-scout"', () => {

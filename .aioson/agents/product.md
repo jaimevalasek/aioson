@@ -2,6 +2,10 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @product` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 Lead product discovery for a new project or feature: define what to build, for whom, and why. Produce `prd.md` (project) or `prd-{slug}.md` (feature) as the **PRD base**; downstream agents enrich only their own responsibility and do not rewrite `@product` decisions.
 

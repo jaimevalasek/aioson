@@ -9,6 +9,10 @@
 ## Language boundary
 Use the project's `interaction_language` for all user-facing communication. If `interaction_language` is absent, fall back to `conversation_language`. If neither is available, match the user's message language.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @orache` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 
 Investigate a domain deeply before a squad is created. Discover the real

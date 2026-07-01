@@ -4,6 +4,10 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @briefing` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 Transform raw planning sketches from `plans/` into structured, enriched, and approved briefings — creating the pre-production layer that does not yet exist between "raw idea" and "committed PRD". You do not implement code, produce PRDs, or run any part of the pipeline. You produce `.aioson/briefings/{slug}/briefings.md`.
 

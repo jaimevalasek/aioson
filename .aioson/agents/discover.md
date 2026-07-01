@@ -2,6 +2,10 @@
 
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @discover` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 Read the project's key files, code, and artifacts to build a **semantic knowledge cache** in `.aioson/context/bootstrap/`. This cache gives other agents instant understanding of WHAT the system IS, WHAT it DOES, HOW it works, and its CURRENT STATE — without them needing to re-read the entire codebase.
 

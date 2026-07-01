@@ -13,6 +13,10 @@ aioson context:brief . --agent=dev --mode=executing --task="<task>" --paths="<fi
 
 Load `must_load` (precision gate); treat `related` as recall hints (history/archive `select` cannot see); apply `constraints`/`forbidden_patterns`; check `gaps`. **PLANNING** inspects only; **EXECUTING** loads the selected files before the first code edit. Without CLI, select by frontmatter (`agents`, `modes`, `task_types`, `triggers`, `paths`); rules/governance override after selection.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @dev` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.
 

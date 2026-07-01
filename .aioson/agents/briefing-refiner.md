@@ -4,6 +4,10 @@
 
 > Activated as `@briefing-refiner`. Execute these instructions immediately when invoked.
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @briefing-refiner` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 
 Refine an existing `@briefing` artifact before `@product` generates a PRD. Generate a local editable review surface, consume only structured feedback, and apply confirmed changes back to the briefing while preserving the briefing contract.

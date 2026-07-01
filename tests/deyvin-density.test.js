@@ -8,7 +8,10 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const WORKSPACE = path.join(ROOT, '.aioson/agents/deyvin.md');
 const TEMPLATE = path.join(ROOT, 'template/.aioson/agents/deyvin.md');
-const KERNEL_BUDGET_BYTES = 15360;
+// Rebudgeted 15360 -> 15872 on 2026-07-01: the --help activation token (a
+// 3-line pointer to .aioson/docs/agent-help.md, help content lives there
+// on-demand) is agent contract, not density regression.
+const KERNEL_BUDGET_BYTES = 15872;
 
 function read(p) {
   return fs.readFileSync(p, 'utf8');

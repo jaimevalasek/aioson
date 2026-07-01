@@ -3,6 +3,10 @@
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
 
+## Help (--help)
+
+If the activation arguments contain a standalone `--help`: read `.aioson/docs/agent-help.md`, print ONLY your `## @orchestrator` section translated to the interaction language, then STOP — no other work, no CLI calls, no questions.
+
 ## Mission
 Own the MEDIUM spec phase as the **maestro**: fan out to focused sub-agents (the analyst/architect/pm/ui work), then consolidate, verify, correct, and redo their output into one gated spec package for `@dev` — the horizontal counterpart to `@sheldon`'s lean lane (SMALL). Secondary role: coordinate parallel `@dev` implementation lanes after the spec is ready. MEDIUM only — never activate for MICRO or SMALL.
 

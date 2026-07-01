@@ -1179,3 +1179,19 @@ test('agent definitions expose PRD dependencies for the living PRD flow', () => 
   assert.equal(String(ux.output).includes('Visual identity enrichment'), true);
   assert.equal(String(pm.output).includes('acceptance criteria'), true);
 });
+
+test('the 13 most-used agents carry the --help token and agent-help.md covers them all', async () => {
+  const HELP_AGENTS = [
+    'product', 'briefing', 'briefing-refiner', 'dev', 'deyvin', 'discover',
+    'neo', 'orache', 'orchestrator', 'tester', 'pentester', 'qa', 'sheldon'
+  ];
+  const helpDoc = await read(path.join(ROOT, 'template/.aioson/docs/agent-help.md'));
+  for (const id of HELP_AGENTS) {
+    const agent = await read(path.join(ROOT, `template/.aioson/agents/${id}.md`));
+    assert.match(agent, /## Help \(--help\)/, `${id}.md must carry the Help token section`);
+    assert.ok(agent.includes(`\`## @${id}\``), `${id}.md must point at its own agent-help.md section`);
+    assert.ok(helpDoc.includes(`## @${id}`), `agent-help.md must have the @${id} section`);
+  }
+  // The help print is a hard stop — no work after it.
+  assert.match(helpDoc, /prints ONLY its own section|print ONLY your/i);
+});
