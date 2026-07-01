@@ -93,7 +93,7 @@ The default lane depends on the classification:
 | **`@pm`** | Backlog, user stories, implementation plan (Gate C). **Opt-in detour / fan-out sub-agent** (MEDIUM) | `tasks.md`, user stories |
 | **`@orchestrator`** | **MEDIUM maestro / single spec authority** — fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package. Secondary: coordinate parallel `@dev` lanes post-spec. | `parallel/`, execution plan, consolidated spec package |
 | **`@dev`** | Implements the feature — runs phases as a **loop**: auto-continues between phases, compacts context between phases, per-phase verification (light sub-agent). Full Runtime smoke runs once at end-of-feature. | Code + `dev-state.md` |
-| **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 2). Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). | `test-plan.md`, `qa-report-*.md` |
+| **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 3), hub of the post-dev autopilot review cycle. Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). | `test-plan.md`, `qa-report-*.md` |
 | **`@validator`** | Technically validates against `harness-contract.json` in a **fresh isolated context** (detour when a harness contract exists) | `.aioson/plans/{slug}/last-validator-output.json` |
 | **`@tester`** | Systematic test engineering (legacy/brownfield) — triggered by `@qa` when conditions fire | `test-inventory.md`, coverage tier |
 | **`@pentester`** | Adversarial security review (OWASP, LLM Top 10). Inline in MEDIUM; opt-in in SMALL. | `security-findings-*.json` |

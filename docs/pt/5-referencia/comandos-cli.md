@@ -375,7 +375,7 @@ aioson update .
 aioson doctor . --fix
 ```
 
-Use depois de atualizar a versão do pacote. O `update` mexe só nos arquivos gerenciados e o `doctor --fix` recoloca o que estiver faltando.
+Use depois de atualizar a versão do pacote. O `update` mexe só nos arquivos gerenciados e o `doctor --fix` recoloca o que estiver faltando. Ao terminar, `update` imprime `Template version applied: <versão>` (e `(<sha>, <data>)` quando a instalação vem de um checkout git, como um `npm link` de dogfooding) — assim dá para conferir exatamente qual template chegou.
 
 ### 4. Ver e ajustar configurações globais
 
@@ -1742,7 +1742,16 @@ aioson workflow:execute . \
   --feature=checkout \
   --tool=claude \
   --start-from=dev
+
+# Semear o esquema agêntico do full-feature autopilot sem avançar estágio
+# (é isso que @product/@sheldon/@orchestrator rodam ao terminar sob autopilot)
+aioson workflow:execute . --feature=checkout --seed --tool=claude
+
+# Semear já desarmado — equivalente ao token inline /product --step
+aioson workflow:execute . --feature=checkout --seed --step --tool=claude
 ```
+
+Um `workflow.state.json` deixado por uma feature já fechada/abandonada é descartado e re-semeado automaticamente — só uma feature *diferente e genuinamente ativa* (`in_progress` em `features.md`) gera o refuso `different_active_feature`. Nesse caso, feche/pause a feature ativa ou rode `aioson feature:sweep .` para limpar o estado obsoleto. Veja [Autopilot Handoff](./autopilot-handoff.md) para a cadeia completa, os tokens `--auto`/`--step` e as condições de parada.
 
 ### 52. Enfileirar fases do plano no runner
 

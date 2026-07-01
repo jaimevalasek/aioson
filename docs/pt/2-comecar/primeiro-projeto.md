@@ -229,7 +229,7 @@ Você > @qa
 @qa > test-plan.md e qa-report.md gravados. Feature pronta.
 ```
 
-> **A novidade:** o ciclo *autônomo QA→Dev* (cap 2) deixa o @qa pedir correções pequenas sem você ter que reativar manualmente. Foi adicionado em Mai/2026.
+> **A novidade:** o ciclo *autônomo QA→Dev* (cap 3, `agentic_policy.review_cycle`) deixa o @qa pedir correções pequenas sem você ter que reativar manualmente. Sob autopilot, esse mesmo ciclo pode encadear até `@tester`/`@pentester`/`@validator` e a recomendação de `feature:close` sem parar — veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
 
 ---
 

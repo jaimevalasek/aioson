@@ -56,8 +56,10 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 Quando o projeto ja existe e voce roda `scan:project`, o handoff correto agora e:
 
 ```text
-scan:project -> @analyst -> @scope-check -> @architect -> @dev
+scan:project -> @analyst -> @scope-check -> @dev (ou @architect quando o full-merged opt-in do SMALL estiver ativo)
 ```
+
+> Desde a lane lean (v1.35.0), `@analyst`/`@architect` nao sao mais hops obrigatorios do fluxo padrao apos o scan. A classificacao decide a lane: SMALL segue `@sheldon` como autoridade unica de spec (`@product -> @sheldon -> @dev`), MEDIUM segue o maestro `@orchestrator` (que dispara `@analyst`/`@architect`/`@pm` como sub-agentes do fan-out). Um `@analyst` isolado logo apos o scan continua valido como detour opt-in para mapear o dominio existente antes de abrir a primeira feature.
 
 Regras do fluxo:
 - os artefatos locais do scan (`scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`) servem como mapas brutos do codigo

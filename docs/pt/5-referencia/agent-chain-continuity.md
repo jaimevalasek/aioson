@@ -93,7 +93,7 @@ autoridade de spec:
 @pentester (MEDIUM, inline) → findings → @dev corrige → @pentester re-varre
         │
         ▼
-@qa → runtime smoke gate + ACs → devolve para @dev se houver falhas (ciclo autônomo, cap 2)
+@qa → runtime smoke gate + ACs → devolve para @dev se houver falhas (ciclo autônomo, cap 3)
         │
         ▼
 @validator → verifica contra harness-contract em contexto isolado → gate final → feature:close

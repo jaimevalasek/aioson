@@ -94,6 +94,12 @@ Você > @orache nutrição esportiva para atletas amadores
 
 ---
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/orache --help`) imprime um resumo rápido — o que faz, quando usar, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
+---
+
 ## Handoff típico
 
 - **Vem de:** `@squad` (redirect automático) ou pedido direto do usuário

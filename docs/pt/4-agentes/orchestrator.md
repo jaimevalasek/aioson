@@ -111,6 +111,18 @@ Se o PRD tiver gaps ou decisões técnicas difíceis, rode `@sheldon` antes de `
 
 ---
 
+## Autopilot: travessia automática para `@dev`
+
+Sob autopilot (`auto_handoff: true`, esquema já semeado para a feature, ou token `--auto` recebido do `@product`), `@orchestrator` não para no handoff manual: uma vez com o pacote de spec com gates aprovados (Gates A/B/C, readiness pronta) + `dev-state.md` gravados, ele invoca `@dev` diretamente. O fan-out para `@analyst`/`@architect`/`@pm` acontece como sub-agentes internos — eles não viram estágios do workflow, exceto sob um detour opt-in full-chain. Um gate bloqueado ou readiness `blocked` continua sendo parada manual normal. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+
+---
+
+## Opção `--help`
+
+Uma ativação com `--help` (`/orchestrator --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
+---
+
 ## Saídas em disco
 
 | Arquivo/Diretório | Conteúdo |

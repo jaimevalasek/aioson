@@ -73,6 +73,8 @@ aioson update --lang=pt-BR
 
 **What it updates:** all files in the `MANAGED_FILES` list that match your install profile (agents, config, gateway files, skills). Does not touch `project.context.md`, `discovery.md`, `architecture.md`, or other context files you created.
 
+**Output:** on completion, prints `Template version applied: <version>` (and `(<sha>, <date>)` when the install is a git checkout — e.g. an `npm link`ed dogfood setup) so you can tell exactly which template landed.
+
 ---
 
 ## info
@@ -345,6 +347,10 @@ aioson workflow:next ./my-project --skip=dev
 - `workflow:next` is the canonical command
 - `agent:next` is an alias for compatibility
 - `workflow.config.json` and `workflow.state.json` live under `.aioson/context/`, so normal framework updates preserve them
+
+### workflow:execute --seed (full-feature autopilot)
+
+`aioson workflow:execute . --feature=<slug> --seed --tool=<tool>` seeds the agentic scheme (`.aioson/context/workflow-execute.json` with `agentic_policy.enabled: true`) without advancing a stage — this is what a spec agent (`@product`/`@sheldon`/`@orchestrator`) runs on its own once it finishes, to arm the full-feature autopilot chain described in [Autopilot handoff](./autopilot-handoff.md). Add `--step` to seed it already disarmed (equivalent to the inline `--step` token). A stale `workflow.state.json` left by a closed/abandoned feature is discarded and reseeded automatically; a genuinely different active feature returns `different_active_feature` — close/pause it, or run `aioson feature:sweep .` to discard stale state explicitly.
 
 ---
 

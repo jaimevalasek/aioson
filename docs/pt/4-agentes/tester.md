@@ -92,6 +92,12 @@ Você > Sim
 
 ---
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/tester --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
+---
+
 ## Handoff típico
 
 - **Vem de:** `@qa` (que identificou gaps) ou você diretamente

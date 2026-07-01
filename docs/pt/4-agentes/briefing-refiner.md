@@ -110,6 +110,10 @@ O diferencial deste agente. O `review.html` é **estático, local e self-contain
 - Nunca descarta seções obrigatórias do briefing.
 - Em V1, não há comando CLI dedicado de refinement — tudo passa pelo agente.
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/briefing-refiner --help`) imprime um resumo rápido — o que faz, quando usar, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
 ## Handoff típico
 
 - **Vem de:** [`@briefing`](./briefing.md) (briefing gerado) ou de você, retomando uma revisão.

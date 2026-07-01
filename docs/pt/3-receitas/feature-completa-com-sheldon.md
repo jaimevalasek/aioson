@@ -24,6 +24,8 @@
 
 `@orchestrator` é o maestro de spec: faz fan-out para `@analyst` + `@architect` + `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida os artefatos, e entrega o pacote de spec aprovado para `@dev`. `@pentester` é inline (entre `@dev` e `@qa`).
 
+> **Passo a passo ou autopilot?** Esta receita mostra o fluxo **manual** — você invoca cada agente. Mas construir a feature do jeito normal (`@product` → `@sheldon`/`@orchestrator` → `@dev` → `@qa`) também pode rodar **sozinho** até a recomendação de `feature:close`: `@product` pergunta o modo de execução uma vez no handoff do PRD (ou você já decide na hora com `/product --auto`/`/product --step`), e cada agente invoca o próximo automaticamente. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md) para a cadeia completa, os tokens inline e as condições de parada. Os passos abaixo continuam valendo — é o que cada agente faz por trás, autopilot ligado ou não.
+
 ---
 
 ## SMALL lean — passo a passo
@@ -267,7 +269,7 @@ Você > @pentester
 | **MEDIUM, você quer gerenciar a spec manualmente** | `@product → @analyst → @architect → @ux-ui → @pm → @orchestrator (lanes only) → @dev → @pentester → @qa` — o "escape hatch" full-merged. |
 | **Sessão caiu no meio do `@dev`** | `@deyvin` retoma. Ver [Continuidade entre sessões](./continuidade-entre-sessoes.md). |
 | **`@sheldon` reclama que PRD está vago** | Volte ao `@product` e refine. `@sheldon` não inventa o que não está claro. |
-| **Ciclo `@qa ↔ @dev` estourou cap 2** | Há defeito de design. Volte ao `@sheldon` (SMALL) ou `@orchestrator` (MEDIUM) antes de mais código. |
+| **Ciclo `@qa ↔ @dev` estourou cap 3** | Há defeito de design. Volte ao `@sheldon` (SMALL) ou `@orchestrator` (MEDIUM) antes de mais código. |
 | **`@pentester` HIGH não baixa** | Não force. Documente como risco aceito ou adie a feature. |
 
 ---

@@ -15,6 +15,7 @@ This layer currently holds the original EN feature guides. Additional reference 
 | [cli-reference.md](./cli-reference.md) | Full reference for every CLI command |
 | [json-schemas.md](./json-schemas.md) | `--json` output contracts for all commands |
 | [executable-verification.md](./executable-verification.md) | The executable-verification theme: `verification` + `harness:check`, fresh-context validator, `spec:analyze`, Wave markers, Lane B (`forge:compile` + `@forge-run`) |
+| [autopilot-handoff.md](./autopilot-handoff.md) | Full-feature autopilot: `@product` → `@sheldon`/`@orchestrator` → `@dev` → `@qa` (hub) → `@tester`/`@pentester`/`@validator` up to the `feature:close` recommendation; inline `--auto`/`--step` tokens, `--help` on the 13 most-used agents |
 
 ---
 

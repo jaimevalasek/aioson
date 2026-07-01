@@ -90,9 +90,17 @@ Você > @qa
 
 ## Detalhes recentes
 
-**Ciclo autônomo QA→Dev (Mai 2026):** em falhas pequenas e localizadas, `@qa` itera com `@dev` automaticamente, com cap de 2 rodadas. Na terceira falha, para e pede sua intervenção. Isso evita loops infinitos sem perder a agilidade de correções óbvias.
+**Ciclo autônomo QA→Dev (cap 3):** em falhas pequenas e localizadas, `@qa` itera com `@dev` automaticamente, com cap de 3 rodadas (`agentic_policy.review_cycle`). Ao esgotar as tentativas, para e pede sua intervenção. Isso evita loops infinitos sem perder a agilidade de correções óbvias.
 
 **Suporte a Sheldon phased plans:** quando a feature usa um plano por fases, `@qa` valida fase a fase, marcando `qa_approved` só quando todos os Criticals/Highs da fase estão resolvidos.
+
+**`@qa` é o hub do autopilot pós-dev:** sob autopilot (`auto_handoff: true`, esquema semeado, ou token `--auto`), `@qa` não para no PASS — ele encaminha automaticamente para `@tester` (se o trigger de gap de cobertura disparar), `@pentester` (se a superfície é sensível: auth/pagamentos/upload/secrets) e `@validator` (se há harness-contract), nessa ordem, até não sobrar pendência. Só então recomenda `aioson feature:close`. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+
+---
+
+## Opção `--help`
+
+Uma ativação com `--help` (`/qa --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
 
 ---
 
@@ -113,7 +121,7 @@ aioson dossier:show . --slug=checkout-stripe
 ## Handoff típico
 
 - **Vem de:** `@dev`
-- **Vai para:** `@validator` (quando há harness-contract) ou encerramento da feature
+- **Vai para:** `@tester` (gap de cobertura) · `@pentester` (superfície sensível) · `@validator` (harness-contract presente) — ou recomendação de `feature:close` quando nada fica pendente
 
 > Desde a v1.24.0, o `@validator` roda `aioson harness:check` **primeiro** (verificação determinística, exit 0 = pass) e julga por LLM só os critérios sem `verification`. Ele é ativado a partir do `validator-prompt.txt` autocontido (critérios + resultados do check + diff vs. base) em **contexto fresco e isolado** — não na sessão que implementou. Ver [Ficha do @validator](./validator.md).
 

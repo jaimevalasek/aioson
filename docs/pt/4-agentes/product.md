@@ -65,6 +65,24 @@ Você > Não salvar cartões. Um cartão por pedido. Fora de escopo: parcelament
 
 ---
 
+## Modo de execução: autopilot ou passo a passo
+
+No handoff do PRD, `@product` decide como a feature vai rodar daqui em diante:
+
+- **Token inline (maior precedência, nunca pergunta):** `/product --auto <tarefa>` arma o autopilot para toda a feature; `/product --step <tarefa>` desarma para esta feature (grava a escolha mesmo em projeto "sempre autopilot"). O token é removido do texto da tarefa.
+- **Sem token, com escolha já registrada** (`auto_handoff: true`/`false` no `project.context.md`, ou um esquema já semeado para esta feature): `@product` segue a escolha em silêncio.
+- **Sem token e sem escolha registrada:** `@product` pergunta uma vez, na tela, ao fechar o PRD — *Autopilot (só esta feature)* / *Passo a passo* / *Sempre autopilot neste projeto* (grava `auto_handoff: true`).
+
+Escolhendo autopilot, `@product` semeia o esquema agêntico (`aioson workflow:execute . --feature={slug} --seed`) e invoca automaticamente o próximo agente — `@sheldon` (SMALL), `@orchestrator` (MEDIUM) ou `@dev` (MICRO) — que por sua vez encadeia sozinho até a recomendação de `aioson feature:close`. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md) para a cadeia completa e as condições de parada.
+
+---
+
+## Opção `--help`
+
+Uma ativação com `--help` (`/product --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
+---
+
 ## Saídas em disco
 
 | Arquivo | Quando cria |
@@ -101,7 +119,7 @@ aioson context:validate .
 ## Handoff típico
 
 - **Vem de:** `@setup` (projeto novo) ou você mesmo (nova feature)
-- **Vai para:** `@analyst` (SMALL/MEDIUM) ou `@dev` (MICRO sem novas entidades)
+- **Vai para:** `@sheldon` (SMALL — lane lean) · `@orchestrator` (MEDIUM — lane maestro) · `@dev` (MICRO)
 
 ---
 

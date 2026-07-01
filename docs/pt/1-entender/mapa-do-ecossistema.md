@@ -88,7 +88,7 @@ A ordem padrão depende da classificação (v1.35.0):
 | **`@pm`** | Backlog, user stories, plano de implementação. **MEDIUM:** sub-agente do `@orchestrator`. **Qualquer tamanho:** detour opt-in. | `tasks.md`, `implementation-plan-{slug}.md` |
 | **`@orchestrator`** | **MEDIUM:** maestro de spec (faz fan-out para @analyst/@architect/@pm/@ux-ui, consolida e verifica, entrega pacote de spec com Gates A/B/C). Também coordena lanes paralelas de implementação pós-spec. | `parallel/`, `implementation-plan-{slug}.md`, `harness-contract.json` |
 | **`@dev`** | Implementa a feature | Código + `dev-state.md` |
-| **`@qa`** | Escreve testes, valida ACs, ciclo autônomo de correção (cap 2) | `test-plan.md`, `qa-report-*.md` |
+| **`@qa`** | Escreve testes, valida ACs, ciclo autônomo de correção (cap 3), hub do autopilot pós-dev (roteia para `@tester`/`@pentester`/`@validator`) | `test-plan.md`, `qa-report-*.md` |
 | **`@validator`** | Valida tecnicamente contra `harness-contract.json` em sandbox de contexto | `.aioson/plans/{slug}/last-validator-output.json` (consumido por `harness:apply-validation`, atualiza `progress.json`) |
 | **`@tester`** | Engenharia sistemática de testes (legacy/brownfield) | `test-inventory.md`, coverage tier |
 | **`@pentester`** | Revisão adversarial de segurança (OWASP, LLM Top 10) | `security-findings-*.json` |

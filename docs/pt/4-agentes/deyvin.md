@@ -83,6 +83,10 @@ cat .aioson/context/dev-state.md
 npx @jaimevalasek/aioson live:start . --tool=claude --agent=deyvin --no-launch
 ```
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/deyvin --help`, ou `/pair --help`) imprime um resumo rápido — o que faz, quando usar, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
 ## Handoff típico
 
 - **Vem de:** `@dev` (quando uma sessão fica incompleta) ou `@neo` (quando detecta `in_progress`).

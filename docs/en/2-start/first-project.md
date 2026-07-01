@@ -218,7 +218,7 @@ You > @qa
 @qa > test-plan.md and qa-report.md saved. Feature ready.
 ```
 
-> **What's new:** the *autonomous QA→Dev cycle* (cap 2) lets `@qa` request small fixes without you having to manually reactivate it. Added in May/2026.
+> **What's new:** the *autonomous QA→Dev cycle* (cap 3, `agentic_policy.review_cycle`) lets `@qa` request small fixes without you having to manually reactivate it. Under autopilot, this same cycle can chain all the way to `@tester`/`@pentester`/`@validator` and the `feature:close` recommendation without stopping — see [Autopilot handoff](../5-reference/autopilot-handoff.md).
 
 ---
 

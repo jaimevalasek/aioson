@@ -19,6 +19,8 @@
 
 **Why order matters:** each agent reads the artifacts left by the previous one. Skipping the spec authority means `@dev` improvises — improvisation on big decisions becomes rework.
 
+> **Step by step or autopilot?** This recipe walks the **manual** path — you invoke each agent yourself. But building the feature the normal way (`@product` → `@sheldon`/`@orchestrator` → `@dev` → `@qa`) can also run **on its own** up to the `feature:close` recommendation: `@product` asks the run mode once at the PRD handoff (or you decide up front with `/product --auto`/`/product --step`), and each agent auto-invokes the next. See [Autopilot handoff](../5-reference/autopilot-handoff.md) for the full chain, the inline tokens, and the stop conditions. The steps below still describe what each agent does under the hood, autopilot on or off.
+
 ---
 
 ## Scenario
@@ -305,7 +307,7 @@ Six months from now, anyone (or any AI) reads these files and understands **ever
 |---|---|
 | `@sheldon` complains the PRD is vague | Go back to `@product` and refine. `@sheldon` does not invent what is not clear. |
 | `@dev` phase loop stalls mid-phase | `@deyvin` picks up via `dev-state.md`. See [Continuity between sessions](./continuity-between-sessions.md). |
-| `@qa ↔ @dev` loop hit cap 2 | There is a design defect. Return to `@sheldon` or `@product` before writing more code. |
+| `@qa ↔ @dev` loop hit cap 3 | There is a design defect. Return to `@sheldon` or `@product` before writing more code. |
 | `@pentester` HIGH finding won't clear | Don't force it. Document as accepted risk or defer the feature. |
 | `@orchestrator` creates only 1 lane | Your feature is probably SMALL in disguise. Use the `@sheldon` trail instead. |
 | Session dropped mid-`@dev` | `@deyvin` picks up. See [Continuity between sessions](./continuity-between-sessions.md). |

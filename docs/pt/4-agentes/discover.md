@@ -99,6 +99,10 @@ ls .aioson/context/bootstrap/
 cat .aioson/context/bootstrap/entities.md
 ```
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/discover --help`) imprime um resumo rápido — o que faz, quando usar, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
 ## Handoff típico
 
 - **Vem de:** `@setup` (primeira vez) ou qualquer ponto quando o cache está stale.

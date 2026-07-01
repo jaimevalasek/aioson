@@ -77,6 +77,10 @@ npx @jaimevalasek/aioson workflow:next .
 npx @jaimevalasek/aioson memory:summary . --last=5
 ```
 
+## Opção `--help`
+
+Uma ativação com `--help` (`/neo --help`) imprime um resumo rápido — o que faz, quando usar, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
 ## Handoff típico
 
 - **Vem de:** qualquer ponto — @neo é válido em qualquer momento.

@@ -112,9 +112,25 @@ Depende do modo:
 
 ## Detalhes recentes
 
-**Ciclo autônomo QA→Dev (cap 2, Mai 2026):** quando o `@qa` encontra falhas pequenas (testes falhando, AC não atendido), ele pode enviar correções diretamente ao `@dev` sem você precisar reativar manualmente. O ciclo se repete no máximo 2 vezes. Na terceira falha, ele sobe para você decidir.
+**Ciclo autônomo QA→Dev (cap 3):** quando o `@qa` encontra falhas pequenas (testes falhando, AC não atendido), ele pode enviar correções diretamente ao `@dev` sem você precisar reativar manualmente. O ciclo se repete no máximo 3 vezes (`agentic_policy.review_cycle`, configurável). Ao esgotar as tentativas, ele sobe para você decidir.
 
 **dev-resume helper:** se o `dev-state.md` existe mas está inconsistente com o código (drift detection), o `@dev` detecta a divergência e te avisa antes de continuar.
+
+---
+
+## Modo de execução: autopilot
+
+- `/dev --auto`: arma o autopilot a partir daqui mesmo sem flag/esquema prévio — a implementação e o ciclo de revisão pós-dev (`@qa` → `@tester`/`@pentester` quando o trigger dispara → `@validator`) rodam sozinhos até a recomendação de `feature:close`.
+- `/dev --step`: desarma o autopilot **só para esta feature** — para no handoff `@dev → @qa` mesmo em projeto com `auto_handoff: true`. Uma escolha por feature sempre vence a flag do projeto.
+- Sem token: segue o esquema/flag já ativo, se houver.
+
+Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md) para a cadeia completa e as condições de parada.
+
+---
+
+## Opção `--help`
+
+Uma ativação com `--help` (`/dev --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
 
 ---
 

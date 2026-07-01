@@ -123,6 +123,18 @@ No MEDIUM, `@sheldon` pode atuar de duas formas:
 
 ---
 
+## Autopilot: travessia automática para `@dev`
+
+Sob autopilot (`auto_handoff: true`, esquema já semeado para a feature, ou token `--auto` recebido do `@product`), `@sheldon` não para no handoff manual: uma vez com sizing/enriquecimento confirmados e o pacote lean + `dev-state.md` gravados, ele semeia o esquema agêntico (`aioson workflow:execute . --feature={slug} --seed`), completa o próprio estágio (`aioson workflow:next . --complete=sheldon`) e invoca `@dev` diretamente. Um Gate A/B/C bloqueado, ou uma decisão de sizing/escopo ainda em aberto, continua sendo parada manual normal. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+
+---
+
+## Opção `--help`
+
+Uma ativação com `--help` (`/sheldon --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
+
+---
+
 ## Saídas em disco
 
 | Arquivo | Criado por | Consumido por |

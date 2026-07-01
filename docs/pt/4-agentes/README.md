@@ -4,6 +4,8 @@
 > Cada agente tem sua ficha — clique no nome para detalhes.
 > `@pair` é alias de `@deyvin` e não possui ficha separada.
 
+> **As colunas "Quando invocar" abaixo descrevem a capacidade de cada agente, não a ordem obrigatória do fluxo padrão.** Desde a lane lean/maestro (v1.35.0), o fluxo padrão é `@product → @sheldon → @dev → @qa` (SMALL) ou `@product → @orchestrator → @dev → @pentester → @qa` (MEDIUM) — `@analyst`, `@architect`, `@ux-ui` e `@pm` são detours opt-in ou sub-agentes do fan-out do `@orchestrator`, não hops obrigatórios. Construir a feature assim também pode rodar sozinho até a recomendação de `feature:close` — veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+
 ---
 
 ## Núcleo de desenvolvimento (neste diretório)
@@ -11,14 +13,15 @@
 | Agente | Para que serve | Quando invocar | Saída principal |
 |---|---|---|---|
 | [@product](./product.md) | Define visão, PRD e escopo da feature | Início de projeto ou nova feature | `prd.md`, `spec.md` |
-| [@analyst](./analyst.md) | Descobre domínio, entidades, fluxos | Após `@product`, antes de `@architect` | `architecture.md` (domínio) |
-| [@scope-check](./scope-check.md) | Confronta intenção, plano e artefatos antes do código | Antes de `@dev` e após fixes relevantes | `scope-check.md` |
-| [@architect](./architect.md) | Decide stack, estrutura, integração técnica | Após `@analyst` | `architecture.md` (técnico) |
-| [@ux-ui](./ux-ui.md) | Design system e specs de componentes | MEDIUM, após `@architect` | `design-doc.md`, `discovery.md` |
-| [@pm](./pm.md) | Backlog, user stories, ACs detalhados | MEDIUM, após `@ux-ui` | `tasks.md` |
-| [@orchestrator](./orchestrator.md) | Coordena lanes paralelas de implementação | MEDIUM, após `@pm` | `.aioson/context/parallel/` |
-| [@dev](./dev.md) | Implementa a feature | Após planning completo | código + `dev-state.md` |
-| [@qa](./qa.md) | Testa, valida ACs, ciclo autônomo com `@dev` | Após `@dev` | `test-plan.md`, `qa-report-*.md` |
+| [@analyst](./analyst.md) | Descobre domínio, entidades, fluxos | Detour opt-in / sub-agente do `@orchestrator` (MEDIUM) | `architecture.md` (domínio) |
+| [@scope-check](./scope-check.md) | Confronta intenção, plano e artefatos antes do código | `spec:analyze` roda automático no gate `@dev`/`@qa`; detour explícito também disponível | `scope-check.md` |
+| [@architect](./architect.md) | Decide stack, estrutura, integração técnica | Detour opt-in / sub-agente do `@orchestrator` (MEDIUM) | `architecture.md` (técnico) |
+| [@ux-ui](./ux-ui.md) | Design system e specs de componentes | Detour opt-in para specs UI-heavy | `design-doc.md`, `discovery.md` |
+| [@pm](./pm.md) | Backlog, user stories, ACs detalhados | Sub-agente do `@orchestrator` (MEDIUM) ou detour opt-in | `tasks.md` |
+| [@sheldon](./sheldon.md) | **Autoridade única de spec (SMALL)** — requirements + decisões técnicas + plano faseado + harness-contract numa passada | Após `@product`, padrão do SMALL | `requirements-*.md`, `implementation-plan-*.md`, `harness-contract.json` |
+| [@orchestrator](./orchestrator.md) | **Maestro de spec (MEDIUM)** — fan-out para `@analyst`/`@architect`/`@pm` (+`@ux-ui`), consolida o pacote de spec com Gates A/B/C; secundário: coordena lanes paralelas pós-spec | Após `@product`, padrão do MEDIUM | `.aioson/context/parallel/`, pacote de spec consolidado |
+| [@dev](./dev.md) | Implementa a feature | Após o pacote de spec (`@sheldon`/`@orchestrator`) ou direto após `@product` (MICRO) | código + `dev-state.md` |
+| [@qa](./qa.md) | Testa, valida ACs, ciclo autônomo com `@dev` (cap 3), hub do autopilot pós-dev | Após `@dev` | `test-plan.md`, `qa-report-*.md` |
 | [@validator](./validator.md) | Gate final: valida contrato binário de sucesso | Após `@qa`, antes de fechar feature | veredicto em `last-handoff.json` |
 | [@forge-run](./forge-run.md) | Lane B opt-in: compila e roda o workflow de verificação executável de uma feature MEDIUM | MEDIUM com contrato `verification` + plano com Wave | `forge-run.workflow.js` |
 | [@tester](./tester.md) | Engenharia de testes para apps já existentes | Legacy/brownfield ou lacunas graves | `test-inventory.md` |
@@ -36,7 +39,6 @@
 | [@briefing-refiner](./briefing-refiner.md) | Revisa e refina um briefing existente via superfície HTML local | Após `@briefing`, antes de `@product` | `review.html`, `refinement-report.md` |
 | [@deyvin](./deyvin.md) | Pair-programming e continuidade de sessão | Retomar feature interrompida | continuação do trabalho |
 | [@pair](./deyvin.md) | Alias de `@deyvin` | — | — |
-| [@sheldon](./sheldon.md) | Análise técnica profunda, revisão de arquitetura | Decisões grandes, código legado | relatório de revisão |
 | [@committer](./committer.md) | Gera mensagem de commit profissional | Após implementar, antes de commitar | mensagem de commit |
 | [@discover](./discover.md) | Constrói cache semântico do projeto | Onboarding em codebase grande | `.aioson/context/bootstrap/` |
 
