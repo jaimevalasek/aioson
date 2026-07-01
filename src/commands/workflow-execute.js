@@ -110,7 +110,11 @@ function isAgenticRequested(options = {}) {
     options.agentic ||
     options['agentic-run'] ||
     options.autopilot === 'agentic' ||
-    options.autopilot === 'runtime'
+    options.autopilot === 'runtime' ||
+    // Seeding the scheme IS turning on autopilot — the whole point of --seed is to
+    // persist an enabled agentic_policy the interactive agents then follow.
+    options.seed ||
+    options['seed-only']
   );
 }
 
@@ -702,6 +706,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
   const tool = options.tool ? String(options.tool).trim() : 'claude';
   const requestedMode = options.mode ? String(options.mode).trim() : null;
   const dryRun = Boolean(options['dry-run'] || options.dry);
+  const seedOnly = Boolean(options.seed || options['seed-only']);
   const startFrom = options['start-from'] ? String(options['start-from']).trim() : null;
   const skipOptional = Boolean(options['skip-optional']);
   const parsedMaxCheckpoints = Number.parseInt(String(options['max-checkpoints'] || '1'), 10);
@@ -850,6 +855,65 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     for (const line of formatAgenticPolicyLines(agenticPolicy)) {
       logger.log(line);
     }
+    logger.log('');
+    return result;
+  }
+
+  // --seed: persist the workflow.state.json + workflow-execute.json (with an
+  // enabled agentic_policy) and STOP. Unlike a full run, it does not drive stage
+  // transitions from the CLI — in an interactive Claude Code session the agents
+  // themselves follow the scheme. This is what the spec->dev handoff calls so a
+  // feature built the normal way carries the autopilot contract without the user
+  // running anything. Idempotent: re-seeding the same slug reuses existing state.
+  if (seedOnly) {
+    const handoff = await readHandoff(targetDir);
+    const handoffProtocol = await readHandoffProtocol(targetDir);
+    const nextStage = seeded.state ? (seeded.state.current || seeded.state.next || null) : null;
+    const executionState = await writeExecutionCheckpoint(targetDir, {
+      feature: slug,
+      classification,
+      tool,
+      requestedMode,
+      resumed: seeded.resumed,
+      status: nextStage ? 'active' : 'completed',
+      checkpoint: buildCheckpointPayload(null, handoff, handoffProtocol),
+      statusSnapshot,
+      suggestion: statusSnapshot && statusSnapshot.suggestion ? statusSnapshot.suggestion : null,
+      resumeCommand,
+      agenticPolicy
+    });
+
+    const result = {
+      ok: true,
+      feature: slug,
+      classification,
+      tool,
+      requested_mode: requestedMode,
+      seeded: true,
+      resumed: seeded.resumed,
+      state_path: seeded.statePath,
+      execution_state_path: EXECUTION_STATE_RELATIVE_PATH,
+      next_stage: nextStage,
+      checkpoint: executionState.checkpoint,
+      execution_state: executionState,
+      status_snapshot: statusSnapshot,
+      suggestion: statusSnapshot && statusSnapshot.suggestion ? statusSnapshot.suggestion : null,
+      resume_command: resumeCommand,
+      agentic_policy: agenticPolicy,
+      parallel_guard: parallelGuard
+    };
+
+    if (options.json) return result;
+
+    logger.log('');
+    logger.log(`Agentic workflow scheme seeded → ${EXECUTION_STATE_RELATIVE_PATH}`);
+    logger.log(`Feature: ${slug} (${classification})   Next stage: @${nextStage || 'none'}`);
+    logger.log(
+      `Autopilot: ${agenticPolicy && agenticPolicy.enabled
+        ? 'enabled — interactive agents run the chain to feature:close (human gate)'
+        : 'disabled'}`
+    );
+    for (const line of formatAgenticPolicyLines(agenticPolicy)) logger.log(line);
     logger.log('');
     return result;
   }

@@ -62,6 +62,57 @@ test('workflow:execute: dry-run returns plan without executing', async () => {
   assert.ok(result.suggestion);
 });
 
+test('workflow:execute --seed: writes the scheme with an enabled agentic_policy and does NOT advance stages', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/prd-cart.md', '---\nclassification: MEDIUM\n---\n# prd\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| cart | in_progress | 2026-07-01 | |\n'
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'cart', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.seeded, true);
+  // The scheme records an ENABLED agentic policy — the signal interactive agents follow.
+  assert.ok(result.agentic_policy);
+  assert.equal(result.agentic_policy.enabled, true);
+  assert.equal(result.agentic_policy.review_cycle.feature_close, 'human_gate');
+  // Seed persists BOTH state files.
+  const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
+  assert.equal(scheme.agentic_policy.enabled, true);
+  const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(state.mode, 'feature');
+  // Seed must NOT drive a stage transition — current stays null (no activation happened).
+  assert.equal(state.current, null);
+  // ...but the sequence + next reflect the feature lane with product inferred done.
+  assert.ok(state.sequence.includes('dev'));
+  assert.deepEqual(state.completed, ['product']);
+});
+
+test('workflow:execute --seed: is idempotent (re-seeding the same slug resumes, does not error)', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/prd-login.md', '---\nclassification: SMALL\n---\n# prd\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| login | in_progress | 2026-07-01 | |\n'
+  );
+  const opts = { json: true, feature: 'login', seed: true };
+  const first = await runWorkflowExecute({ args: [tmpDir], options: opts, logger: makeLogger() });
+  const second = await runWorkflowExecute({ args: [tmpDir], options: opts, logger: makeLogger() });
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.equal(second.resumed, true);
+});
+
 test('workflow:execute: buildAgenticPolicy encodes bounded review loops and sidecars', () => {
   const policy = buildAgenticPolicy({
     agentic: true,
