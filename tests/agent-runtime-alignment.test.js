@@ -17,7 +17,8 @@ test('ux-ui prompt documents the runtime-backed Gate B completion path', async (
 
   const checks = [
     '## Step 0 — Design skill gate',
-    'stop and ask the user which installed design skill to use.',
+    'stop and offer both routes (mirror @setup)',
+    'reference-identity-extract',
     '## Gate B completion contract',
     '.aioson/context/spec.md',
     'If the PRD does not yet contain `## Visual identity`',

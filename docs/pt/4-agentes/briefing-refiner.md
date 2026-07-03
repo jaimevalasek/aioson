@@ -1,16 +1,17 @@
 # @briefing-refiner — Revisa e refina um briefing antes do PRD
 
 > **Para quem é:** quem já tem um briefing gerado pelo `@briefing` e quer revisá-lo, anotar e refinar antes de comprometer um PRD.
-> **Tempo de leitura:** 4 min.
+> **Tempo de leitura:** 5 min.
 > **O que você vai sair sabendo:**
 > - O que o `@briefing-refiner` faz e onde ele entra no fluxo.
-> - Como funciona a superfície de revisão local em HTML e por que o feedback é estruturado (JSON), não o DOM.
+> - Como funciona o loop de refinamento em rodadas (auditoria → revisão no navegador → aplicação).
+> - Como a superfície `review.html` salva de verdade (autosave local + 3 rotas de retorno do JSON).
 
 ## Para que serve
 
 Entre o briefing gerado e o PRD há uma etapa que costuma ser pulada: **revisar o briefing com olhar crítico**. Ambiguidades, redundâncias, decisões faltando, riscos vagos e gaps de impacto de implementação passam direto para o `@product` e viram dívida no PRD.
 
-O `@briefing-refiner` preenche essa etapa. Ele audita um briefing existente, gera uma **superfície de revisão local** (`review.html`) onde você edita cada seção, marca status e deixa notas, e depois aplica de volta ao briefing **apenas o feedback estruturado que você confirmar** — preservando o contrato do briefing (todas as seções obrigatórias).
+O `@briefing-refiner` preenche essa etapa em um **loop de rodadas**: ele audita o briefing e registra **achados estruturados** (findings com categoria, severidade e se bloqueiam o PRD); o CLI renderiza a superfície de revisão determinística (`aioson briefing:review`); você decide cada achado e edita cada seção no navegador; o feedback estruturado volta e é aplicado (`aioson briefing:apply-feedback`) — e o ciclo se repete até nada bloquear o PRD.
 
 É o complemento do [`@briefing`](./briefing.md): um gera, o outro refina.
 
@@ -18,7 +19,8 @@ O `@briefing-refiner` preenche essa etapa. Ele audita um briefing existente, ger
 
 - Você já tem um briefing em `.aioson/briefings/{slug}/briefings.md` e quer revisá-lo antes do PRD.
 - O briefing está `draft`, ou `approved` mas ainda **sem PRD gerado** (`prd_generated: null`).
-- Quer registrar comentários, pedir mudanças por seção ou marcar bloqueios antes de seguir para `@product`.
+- Quer registrar comentários, decidir achados, pedir mudanças por seção ou marcar bloqueios antes de seguir para `@product`.
+- Quer **ver a solução** antes do PRD (modo prototype) e, opcionalmente, definir a identidade visual a partir das suas imagens de referência.
 
 ## Quando NÃO invocar
 
@@ -26,71 +28,89 @@ O `@briefing-refiner` preenche essa etapa. Ele audita um briefing existente, ger
 - O briefing já gerou PRD (`prd_generated` preenchido) — refinar exigiria uma rota nova de PRD/enrichment, fora deste agente.
 - A ideia mudou tanto que vale regerar do zero — volte ao `@briefing`.
 
-## Dois modos de operação
+## O loop de refinamento
+
+```
+auditoria (agente) → review.html (CLI) → você decide no navegador
+       ↑                                            ↓
+regenera a revisão  ←  aplica feedback confirmado (CLI)
+(enquanto houver bloqueios ou mudanças de texto)
+```
+
+Cada rodada tem número (`round`) e arquiva o feedback consumido (`refinement-feedback.applied-round{N}.json`), então "existe `refinement-feedback.json`" = "há feedback pendente" — um sinal determinístico.
 
 ### 1. Gerar revisão
 
-Quando ainda não há feedback pendente. O agente audita o briefing e escreve a superfície de revisão:
+O agente audita o briefing e escreve os achados em `refinement-findings.json`; o CLI valida e renderiza:
 
 ```
 Você > @briefing-refiner
 
 @briefing-refiner > Briefing refinável encontrado: marketplace-v1 (draft).
 
-                    Auditando seções... ambiguidades: 3, redundâncias: 1,
-                    gaps de implementação: 2, riscos vagos: 1.
+                    Auditando... 10 achados (3 ambiguidades, 2 gaps,
+                    1 bloqueante: modelo de comissão indefinido).
 
-                    Gerei a revisão:
-                    - .aioson/briefings/marketplace-v1/review.html
-                    - .aioson/briefings/marketplace-v1/refinement-feedback.json
-                    - .aioson/briefings/marketplace-v1/refinement-report.md
+                    aioson briefing:review . --slug=marketplace-v1  ✓ (rodada 1)
 
-                    Abra o review.html, edite as seções, marque status/notas,
-                    salve/exporte o refinement-feedback.json e me reative.
+                    Abra .aioson/briefings/marketplace-v1/review.html
+                    NUM NAVEGADOR DE VERDADE (duplo clique) — previews de
+                    editor são sandboxed e bloqueiam salvar/baixar.
 ```
 
 ### 2. Aplicar feedback pendente
 
-Quando existe um `refinement-feedback.json` com mudanças não aplicadas. O agente valida, resume o que vai mudar e **pede confirmação explícita** antes de tocar o briefing:
+O CLI valida (schema, slug, hash da fonte) e faz um **dry-run** com o resumo; o agente pede confirmação explícita antes de tocar o briefing:
 
 ```
-Você > @briefing-refiner
+@briefing-refiner > Feedback pendente em marketplace-v1 (rodada 1):
+                    - 4 seções com mudança, 1 bloqueada
+                    - achados: 6 aceitos, 2 rejeitados, 1 adiado, 1 pendente (bloqueante)
 
-@briefing-refiner > Feedback pendente em marketplace-v1:
-                    - 4 seções com mudança aceita
-                    - 2 comentários não resolvidos
-                    - 1 item bloqueante (modelo de comissão)
-
-                    Aplico as 4 mudanças confirmadas? (o item bloqueante
-                    impede o handoff para @product até ser resolvido)
+                    Aplico as mudanças confirmadas? O achado bloqueante
+                    pendente mantém o bloqueio do PRD.
 Você > Sim.
 
-@briefing-refiner > Aplicado. Como o briefing estava `approved` sem PRD,
-                    voltei para `draft`. Relatório: refinement-report.md.
+@briefing-refiner > aioson briefing:apply-feedback --confirm  ✓
+                    Aplicado; briefing voltou de approved para draft.
+                    Bloqueio restante → regenerando a revisão (rodada 2)...
 ```
 
-Se você recusar, o `briefings.md` fica intacto e as mudanças puladas são registradas no relatório.
+Se você recusar, o `briefings.md` fica intacto e as mudanças puladas são registradas no relatório. Quando não sobra bloqueio: `aioson briefing:approve . --slug={slug}` → `@product`.
 
 ## A superfície de revisão (review.html)
 
-O diferencial deste agente. O `review.html` é **estático, local e self-contained**:
+Renderizada pelo CLI (`aioson briefing:review`) — estática, local, self-contained e no seu idioma:
 
-- sem servidor, sem scripts ou serviços externos;
-- seções editáveis em texto puro, com layout denso de revisão;
-- controles de status por seção: `unchanged`, `accepted`, `change_requested`, `remove_requested`, `blocked`;
-- notas/comentários por seção e um resumo do que será feito, do que é incerto e do que bloqueia o PRD;
-- filtros por ambiguidade, redundância, gap, risco, decisão pendente e sugestão de escopo;
-- **exportar/baixar/copiar o JSON sempre disponível** (a File System Access API é só um plus opcional, após ação explícita).
+- seções editáveis em texto puro + status por seção (`unchanged`, `accepted`, `change_requested`, `remove_requested`, `blocked`) e notas;
+- **achados da auditoria por seção**, cada um com decisão própria (`pending`/`accepted`/`rejected`/`deferred`) e nota — com filtros funcionais por categoria;
+- painel com o que mudou, o que bloqueia o PRD e quantos achados seguem pendentes;
+- **autosave local**: cada edição é salva no navegador (localStorage) e restaurada ao reabrir — fechar a aba não perde nada;
+- **3 rotas para devolver o JSON**: *Salvar no arquivo* (File System Access, com fallback automático para download quando o contexto é sandboxed), *Baixar JSON* (e mover por cima do `refinement-feedback.json`), ou *Copiar JSON e colar no chat* — a rota de menor atrito.
 
-> **Por que JSON e não o HTML editado?** O agente nunca trata o DOM/HTML editado como feedback canônico — só o `refinement-feedback.json` estruturado. Isso evita aplicar mudanças inferidas e mantém o processo auditável.
+> **Por que JSON e não o HTML editado?** O agente nunca trata o DOM/HTML editado como feedback canônico — só o `refinement-feedback.json` estruturado (schema v1.1, validado por hash da fonte). Isso evita aplicar mudanças inferidas e mantém o processo auditável.
+
+> **Importante:** abra o `review.html` num navegador de verdade (duplo clique). Previews embutidos de editor rodam em sandbox e bloqueiam o file picker e downloads.
+
+## Modo prototype e identidade visual (opcional)
+
+Para briefings com superfície rica (workspaces, boards, CRM/Kanban, dashboards, CRUD de uso repetido), o agente recomenda — sem bloquear — gerar um protótipo clicável antes do PRD. É nesse momento (ou já na revisão, via achado não-bloqueante) que a **identidade visual** entra:
+
+- você solta imagens de referência em `references/identity/` (marca: cor, tipografia, clima) e `references/structure/` (um board, uma tabela, uma tela);
+- a skill `reference-identity-extract` lê as imagens **uma única vez** e escreve `identity.md` (tokens + notas de estrutura por componente);
+- o motor `interface-design` **aplica** o `identity.md` em tudo que vier depois (protótipo e build) — sem imagens, ele roda intent-first.
+
+O protótipo é mock-only e nunca vira feedback canônico.
 
 ## Saídas em disco
 
 | Arquivo | O que contém |
 |---|---|
-| `.aioson/briefings/{slug}/review.html` | Superfície de revisão local e editável |
-| `.aioson/briefings/{slug}/refinement-feedback.json` | Feedback estruturado (a única fonte que o agente aplica) |
-| `.aioson/briefings/{slug}/refinement-report.md` | Relatório do que foi aplicado, pulado ou bloqueado |
+| `.aioson/briefings/{slug}/refinement-findings.json` | Achados da auditoria do agente (entrada do CLI) |
+| `.aioson/briefings/{slug}/review.html` | Superfície de revisão renderizada pelo CLI |
+| `.aioson/briefings/{slug}/refinement-feedback.json` | Feedback estruturado v1.1 (a única fonte que é aplicada) |
+| `.aioson/briefings/{slug}/refinement-report.md` | Relatório da rodada: aplicado, pulado, bloqueado, achados |
+| `.aioson/briefings/{slug}/refinement-*.applied-round{N}.json` | Arquivo morto por rodada (feedback e findings consumidos) |
 | `.aioson/briefings/{slug}/briefings.md` | Atualizado **apenas** após confirmação |
 | `.aioson/briefings/config.md` | Índice/registro de briefings atualizado |
 
@@ -105,10 +125,10 @@ O diferencial deste agente. O `review.html` é **estático, local e self-contain
 
 - Nunca cria ou edita `prd*.md`.
 - Nunca aprova um briefing automaticamente.
-- Nunca roteia para `@product` enquanto houver itens bloqueantes.
+- Nunca roteia para `@product` enquanto houver itens bloqueantes (inclusive achado bloqueante pendente).
 - Nunca trata HTML/DOM editado como feedback canônico — só o JSON estruturado.
+- Nunca escreve `review.html` à mão nem aplica feedback manualmente enquanto os comandos CLI existirem — o done-gate (`verify:artifact --kind=review`) rejeita superfícies feitas à mão.
 - Nunca descarta seções obrigatórias do briefing.
-- Em V1, não há comando CLI dedicado de refinement — tudo passa pelo agente.
 
 ## Opção `--help`
 
@@ -117,7 +137,7 @@ Uma ativação com `--help` (`/briefing-refiner --help`) imprime um resumo rápi
 ## Handoff típico
 
 - **Vem de:** [`@briefing`](./briefing.md) (briefing gerado) ou de você, retomando uma revisão.
-- **Vai para:** depois de aplicar as mudanças e sem bloqueios → `aioson briefing:approve . --slug={slug}` → [`@product`](./product.md). Se sobrar bloqueio, você resolve no review e reativa o `@briefing-refiner`.
+- **Vai para:** depois de aplicar as mudanças e sem bloqueios → `aioson briefing:approve . --slug={slug}` → [`@product`](./product.md); para superfícies ricas, o modo prototype antes. Se sobrar bloqueio, a próxima rodada do loop resolve — nunca edição manual.
 
 ## Próximo passo
 

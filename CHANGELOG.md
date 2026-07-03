@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+**CLI-owned briefing refinement loop.** `@briefing-refiner`'s review surface is no longer hand-written by the model each run (the source of schema drift, per-round token cost, and the field bug where `showSaveFilePicker` dead-ended in sandboxed editor previews with no fallback). The agent now owns only the audit; the CLI owns the surface, the schema, and the application — and the whole flow is an explicit iterate-until-clean loop.
+
+### Added
+- **`aioson briefing:review`** — parses `briefings.md`, strictly validates the agent's audit findings (`refinement-findings.json`: category/severity/blocking/recommendation per section), and renders the localized `review.html` + canonical `refinement-feedback.json` (schema **v1.1**: `findings[]` + `round`) + `refinement-report.md`. Refuses to clobber user-exported pending feedback (`--force` to override); the round counter survives applies via the per-round archives. (`43661a7`)
+- **`aioson briefing:apply-feedback`** — dry-run validation + summary without `--confirm` (the agent presents it and asks), real apply with it: structured-JSON-only edits, mandatory sections preserved, `approved` → `draft` revert, consumed feedback/findings archived as `*.applied-round{N}.json`. A **pending blocking finding** forces `resolve_blockers` even when `blocking_items` is empty. `--declined` records skipped changes without touching the briefing. (`43661a7`)
+- **`review.html` v2** — audit findings rendered per section with their own decision (`pending`/`accepted`/`rejected`/`deferred`) and working category filters; **localStorage autosave + draft restore** (closing the tab loses nothing); File System Access saves with a persistent handle and **degrades to download on SecurityError** (the sandboxed-preview bug) — download/copy fallbacks always present; en/pt localized surface. (`43661a7`)
+- **`verify:artifact --kind=review`** + `briefing-refiner` in `AGENT_ARTIFACT_KIND` — the done-gate auto-fires at `agent:done --slug=...` and rejects hand-rolled surfaces (missing marker / fallbacks / external resources / invalid feedback JSON); staleness after an apply is advisory. (`43661a7`)
+
+### Changed
+- **`@briefing-refiner`** rewritten around the CLI: explicit refinement-loop contract (generate → collect → dry-run + confirm apply → regenerate while blockers or material text changes remain → exit to `briefing:approve`/`@product` or prototype mode); handoff names the three feedback-return routes (direct save / download+replace / **paste JSON in the chat**) and instructs opening `review.html` in a real browser — editor previews are sandboxed; a non-blocking finding nudges the reference-image identity route for rich surfaces with no `identity.md`; the V1 "no dedicated refinement CLI" constraint is retired. (`ad22cda`)
+- **`identity.md` reaches every consumer of the `interface-design` engine** — the engine's SKILL now resolves it first (briefing scope → project brand → intent-first) so any consumer inherits the step; `@dev` reads it as a feature-mode UI input next to the prototype reference (a lean-lane feature without prototype/ux-ui no longer ships generic visuals over an existing brand); `@ux-ui`'s blank-`design_skill` stop offers the reference-image route alongside presets, mirroring `@setup`. (`35891f9`)
+
 ## [1.36.0] - 2026-06-30
 
 **Reference-image-driven visual identity.** A project's UI no longer has to inherit a fixed design preset's identical look (the generic, "made-by-AI" sameness). The user provides reference images — a brand/identity set and an optional component/structure set — which are extracted **once** into a text `identity.md` that the `interface-design` engine applies. The build reads the text, never the images, so it ports to a vision-less harness, is user-editable, and is gateable. Purely **additive** — the fixed presets stay as raw material for `@design-hybrid-forge` / `@site-forge`; the new path is the recommended default alongside them.

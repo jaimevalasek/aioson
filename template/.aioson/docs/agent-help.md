@@ -28,12 +28,12 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @briefing-refiner
 
-- **What:** interactive review/annotation of an existing briefing before PRD generation.
-- **When:** a briefing exists but needs corrections, scope trims, or confirmations.
+- **What:** iterative review of an existing briefing before PRD generation — the agent audits (findings), the CLI renders `review.html` (`aioson briefing:review`), you decide in the browser, structured feedback is applied back (`aioson briefing:apply-feedback`), and the loop repeats until nothing blocks the PRD.
+- **When:** a briefing exists but needs corrections, scope trims, or decisions; optionally a clickable prototype (and a reference-image visual identity) before @product.
 - **Options:** none — it locates the briefing by slug or asks which one.
 - **Typical:** `/briefing-refiner refine loyalty-program`.
-- **Produces:** the updated briefing (contract preserved) from your structured feedback.
-- **Next:** `@product`.
+- **Produces:** review rounds (`review.html` + feedback JSON + report, archived per round) and the updated briefing (contract preserved); optionally `identity.md` + `prototype.html`.
+- **Next:** `@product` (after `aioson briefing:approve`), or prototype mode first for rich surfaces.
 
 ## @dev
 

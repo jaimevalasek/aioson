@@ -180,7 +180,7 @@ test('living PRD flow preserves visual identity and design-skill gating', async 
     [pm, '## Acceptance criteria'],
     [pm, 'Never remove or condense `Visual identity`.'],
     [ux, '## Step 0 — Design skill gate'],
-    [ux, 'stop and ask the user which installed design skill to use.'],
+    [ux, 'stop and offer both routes (mirror @setup)'],
     [ux, 'pending-selection'],
     [ux, 'If the PRD does not yet contain `## Visual identity`']
   ];
