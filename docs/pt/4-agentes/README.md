@@ -1,6 +1,6 @@
 # Guia de Agentes AIOSON
 
-> Índice com 30 agentes e 1 alias, com situação de uso e saída esperada.
+> Índice com 31 agentes e 1 alias, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
 > `@pair` é alias de `@deyvin` e não possui ficha separada.
 
@@ -36,7 +36,7 @@
 | [@setup](./setup.md) | Onboarding: detecta stack, classifica projeto | Sempre primeiro num projeto novo | `project.context.md` |
 | [@neo](./neo.md) | Roteador: diz qual agente é o próximo | Quando você está perdido | Orientação verbal |
 | [@briefing](./briefing.md) | Transforma anotações soltas em briefing pré-PRD | Antes de `@product`, quando ideia ainda vaga | `briefing.md` |
-| [@briefing-refiner](./briefing-refiner.md) | Revisa e refina um briefing existente via superfície HTML local | Após `@briefing`, antes de `@product` | `review.html`, `refinement-report.md` |
+| [@briefing-refiner](./briefing-refiner.md) | Loop de refino de briefing: audita em achados estruturados, o CLI renderiza a revisão (`briefing:review`) e aplica o feedback confirmado (`briefing:apply-feedback`) | Após `@briefing`, antes de `@product` | `refinement-findings.json`, `review.html` (CLI), `refinement-feedback.json`, `refinement-report.md` |
 | [@deyvin](./deyvin.md) | Pair-programming e continuidade de sessão | Retomar feature interrompida | continuação do trabalho |
 | [@pair](./deyvin.md) | Alias de `@deyvin` | — | — |
 | [@committer](./committer.md) | Gera mensagem de commit profissional | Após implementar, antes de commitar | mensagem de commit |

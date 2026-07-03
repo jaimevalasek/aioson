@@ -158,6 +158,8 @@ Skills de design disponíveis:
 - `interface-design` — Design de interfaces (dashboards, apps, ferramentas)
 - `premium-command-center-ui` — UI premium para command centers
 
+A skill `interface-design` é um **motor**: antes de desenhar, ela resolve um `identity.md` — primeiro `.aioson/briefings/{slug}/identity.md`, depois `.aioson/context/identity.md` — e aplica essa identidade em tudo que produz; sem `identity.md`, roda intent-first. O `identity.md` é extraído **uma única vez** das suas imagens de referência pela skill de processo `reference-identity-extract`, e todo consumidor do motor (`@dev`, `@ux-ui`, protótipos) herda essa resolução. Ele é *input* do motor — não um segundo design skill.
+
 ## Skills de processo
 
 Skills de processo ensinam os agentes **como as fases do AIOSON se conectam** — não o que implementar, mas como sequenciar, quando aprofundar e como fazer handoff limpo entre agentes.

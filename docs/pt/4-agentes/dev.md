@@ -108,6 +108,8 @@ Depende do modo:
 
 **Nunca carrega** arquivos de outros agentes (`.aioson/agents/`), specs de outras features, ou mais de 5 arquivos antes do primeiro código.
 
+**Inputs de UI (modo feature):** quando o PRD tem `## Prototype reference`, o `@dev` reproduz as telas e interações do `prototype.html`; e quando `design_skill: interface-design` e existe um `identity.md` (`.aioson/briefings/{slug}/identity.md`, senão `.aioson/context/identity.md`), ele o lê como input visual ao lado da referência de protótipo — é a identidade extraída das suas imagens de referência, e o `@dev` não entrega visual genérico enquanto ela existir.
+
 ---
 
 ## Detalhes recentes

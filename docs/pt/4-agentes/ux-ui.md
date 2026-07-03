@@ -14,7 +14,7 @@ Quando o dev implementa a UI sem especificação, ele toma decisões de design n
 
 `@ux-ui` existe para separar "o que a interface faz" (responsabilidade dele) de "como o código implementa" (responsabilidade do `@dev`). Ele produz uma especificação de componentes, tokens e fluxos que o `@dev` segue como contrato.
 
-Ele é guiado pelo design skill do projeto — se `clean-saas-ui` estiver configurado, ele usa apenas esse sistema. Se nenhum skill estiver definido, ele para e pergunta antes de avançar.
+Ele é guiado pelo design skill do projeto — se `clean-saas-ui` estiver configurado, ele usa apenas esse sistema. Se nenhum skill estiver definido, ele para e oferece as **duas rotas** (espelhando o `@setup`): `interface-design` guiado pelas **suas imagens de referência** — extraídas uma única vez em `identity.md` pela skill `reference-identity-extract` — ou um **preset instalado** da lista. Nunca escolhe sozinho.
 
 > **Posição no fluxo (v1.35.0):** no MEDIUM, `@ux-ui` é disparado como **sub-agente de fan-out** pelo `@orchestrator` quando a feature tem UI pesada — você não precisa invocá-lo manualmente. No SMALL e no MICRO, `@dev` aplica o design skill diretamente; `@ux-ui` fica como detour opt-in quando você quer especificação de UI detalhada antes da implementação.
 
@@ -81,6 +81,7 @@ Você > @ux-ui
 
 - `.aioson/context/project.context.md` — detecta `design_skill`
 - `.aioson/skills/design/{design_skill}/SKILL.md` — **único** sistema visual carregado
+- `.aioson/briefings/{slug}/identity.md` (senão `.aioson/context/identity.md`) — quando `design_skill: interface-design`: identidade visual extraída das suas imagens de referência, **input** que o motor aplica (não é um segundo skill)
 - `.aioson/context/prd-{slug}.md`, `discovery.md`, `architecture.md`
 - `.aioson/context/spec-{slug}.md` (feature mode)
 - `.aioson/rules/` — regras com `agents: ux-ui`

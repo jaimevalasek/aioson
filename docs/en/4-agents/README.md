@@ -1,6 +1,6 @@
 # Agent cards — AIOSON (EN)
 
-This layer will hold one card per AIOSON agent (29 total), translated from [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md).
+This layer will hold one card per AIOSON agent (31 total), translated from [`docs/pt/4-agentes/`](../../pt/4-agentes/README.md).
 
 Cards are being translated progressively. Until a card is available here, the PT version is the canonical reference — it follows the same format and covers the same agents.
 
@@ -20,7 +20,7 @@ Building a feature the normal way through this lane can now run the whole chain 
 
 ---
 
-## The 29 agents (plus @pair alias)
+## The 31 agents (plus @pair alias)
 
 ### Workflow core
 
@@ -28,6 +28,7 @@ Building a feature the normal way through this lane can now run the whole chain 
 |---|---|
 | `@setup` | Project onboarding — detect stack, classify MICRO/SMALL/MEDIUM, write `project.context.md` |
 | `@briefing` | Pre-PRD framing — turn `plans/` sketches into structured briefings with gap analysis |
+| [`@briefing-refiner`](./briefing-refiner.md) | Briefing refinement loop — audits the briefing into structured findings, the CLI renders the localized `review.html` surface (`briefing:review`), confirmed feedback is applied via `briefing:apply-feedback`, rounds repeat until nothing blocks the PRD |
 | `@product` | PRD — vision, problem, users, scope, acceptance criteria |
 | `@sheldon` | **SMALL single spec authority** (RF-LEAN): one pass produces requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract. Also a PRD-hardening / enrichment capability usable in any lane. |
 | `@analyst` | Domain discovery — entities, flows, brownfield mapping. **Opt-in detour / fan-out sub-agent** (invoked by `@orchestrator` in MEDIUM) |

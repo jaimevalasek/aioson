@@ -134,7 +134,9 @@ npx @jaimevalasek/aioson squad:scaffold . --slug=compliance --name="Compliance" 
 
 ## Choosing a Design System
 
-Available in the wizard:
+> **Recommended route: `interface-design` + your own reference images.** Instead of inheriting a fixed preset's identical look, you provide reference images (identity/brand and, optionally, component structure); the `reference-identity-extract` skill converts them **once** into a text `identity.md` that the `interface-design` engine applies to everything downstream (prototype and build). `@setup` offers this route first — always with explicit confirmation, never auto-selected. The presets below remain available as an alternative.
+
+Presets available in the wizard:
 
 | Skill | Style | Use cases |
 |---|---|---|
@@ -147,7 +149,7 @@ Available in the wizard:
 | **Neo Brutalist UI** | Black outlines, strong colors, no shadow | Bold brands |
 
 **Skipping** is a valid option. You can:
-- Choose later with `@ux-ui`
+- Choose later with `@ux-ui` — it offers the same two routes (reference images or preset)
 - Clone a real site's design with `@site-forge`
 - Create a hybrid with `@design-hybrid-forge` (e.g., clean-saas + neo-brutalist)
 

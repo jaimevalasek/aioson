@@ -133,7 +133,9 @@ npx @jaimevalasek/aioson squad:scaffold compliance
 
 ## Escolhendo o Design System
 
-Disponíveis no wizard:
+> **Rota recomendada: `interface-design` + suas imagens de referência.** Em vez de herdar o visual idêntico de um preset fixo, você fornece imagens de referência (identidade/marca e, opcionalmente, estrutura de componentes); a skill `reference-identity-extract` as converte **uma única vez** num `identity.md` de texto que o motor `interface-design` aplica em tudo que vier depois (protótipo e build). O `@setup` oferece essa rota primeiro — sempre com confirmação explícita, nunca auto-seleção. Os presets abaixo continuam disponíveis como alternativa.
+
+Presets disponíveis no wizard:
 
 | Skill | Estilo | Casos |
 |---|---|---|
@@ -146,7 +148,7 @@ Disponíveis no wizard:
 | **Neo Brutalist UI** | Contornos pretos, cores fortes, sem sombra | Marcas marcantes |
 
 **Pular** é uma opção legítima. Você pode:
-- Escolher depois com `@ux-ui`
+- Escolher depois com `@ux-ui` — ele oferece as mesmas duas rotas (imagens de referência ou preset)
 - Clonar o design de um site real com `@site-forge`
 - Criar um híbrido com `@design-hybrid-forge` (ex: clean-saas + neo-brutalist)
 

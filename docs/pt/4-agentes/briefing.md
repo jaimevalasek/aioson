@@ -79,7 +79,7 @@ Uma ativação com `--help` (`/briefing --help`) imprime um resumo rápido — o
 ## Handoff típico
 
 - **Vem de:** você, com anotações em `plans/` ou uma ideia conversacional.
-- **Vai para:** `@product` (que usa o briefing como contexto enriquecido no PRD).
+- **Vai para:** [`@briefing-refiner`](./briefing-refiner.md) (opcional — loop de revisão e refino do briefing antes do PRD) ou, após `aioson briefing:approve`, `@product` (que usa o briefing como contexto enriquecido no PRD).
 
 ## Modo conversacional
 
@@ -97,5 +97,6 @@ Você > Sim.
 ## Próximo passo
 
 - Entender o fluxo completo → [Mapa do ecossistema](../1-entender/mapa-do-ecossistema.md)
+- Revisar e refinar o briefing antes do PRD → [@briefing-refiner](./briefing-refiner.md)
 - Após o briefing aprovado → [@product](./product.md) *(ficha em construção)*
 - Termos como "gap" e "PRD" → [Glossário](../1-entender/glossario.md)

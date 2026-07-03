@@ -50,7 +50,9 @@ Você > Stripe e S3 (2)
 Você > Não
 
 @setup > Score: 1 + 1 + 0 = 2 → SMALL.
-         Design system?
+         Sistema visual? Recomendo interface-design guiado pelas suas
+         imagens de referência (extraídas uma única vez em identity.md).
+         Ou um preset instalado:
          [clean-saas-ui · aurora-command-ui · cognitive-core-ui · (outros) · Pular]
 Você > clean-saas-ui
 

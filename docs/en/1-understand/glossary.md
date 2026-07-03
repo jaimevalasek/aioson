@@ -129,7 +129,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 **Ready-made examples:** Clean SaaS UI, Aurora Command UI, Cognitive Core UI, Bold Editorial UI, Warm Craft UI, Glassmorphism UI, Neo Brutalist UI.
 
-**Where to choose:** during `aioson init`, in the wizard.
+**Where to choose:** during `aioson init`, in the wizard, or later with `@setup`/`@ux-ui`. The recommended route is the `interface-design` engine driven by your own **reference images**, extracted once into an `identity.md` the engine applies; the presets remain an explicit alternative.
 
 ---
 
