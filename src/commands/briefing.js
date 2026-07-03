@@ -367,7 +367,7 @@ async function runBriefingReview({ args, options = {}, logger }) {
   try {
     const entries = await fsp.readdir(resolveBriefingPath(projectDir, slug));
     for (const entry of entries) {
-      const match = entry.match(/^refinement-feedback\.applied-round(\d+)/);
+      const match = entry.match(/^refinement-feedback\.(?:applied|declined)-round(\d+)/);
       if (match) lastRound = Math.max(lastRound, Number(match[1]));
     }
   } catch { /* directory listing is best-effort */ }
@@ -461,10 +461,26 @@ async function runBriefingApplyFeedback({ args, options = {}, logger }) {
   const feedback = feedbackRead.value;
 
   if (options.declined) {
-    const result = await applyDeclinedFeedback(projectDir, slug, feedback, { allowStale });
+    const result = await applyDeclinedFeedback(projectDir, slug, feedback, { allowStale: true });
     if (!result.ok) {
       for (const err of (result.validation && result.validation.errors) || []) logger.error(`feedback: ${err}`);
       return { ...result, slug, mode: 'declined' };
+    }
+    // Archive the declined feedback so "file present = pending" stays true and
+    // the next briefing:review does not dead-end on pending_feedback. Findings
+    // are NOT archived: the briefing text is unchanged, so they stay valid.
+    const canonicalPath = resolveBriefingPath(projectDir, slug, 'refinement-feedback.json');
+    if (feedbackPath === canonicalPath) {
+      const round = feedback.round || 1;
+      let archiveName = `refinement-feedback.declined-round${round}.json`;
+      try {
+        await fsp.access(resolveBriefingPath(projectDir, slug, archiveName));
+        archiveName = `refinement-feedback.declined-round${round}-${Date.now()}.json`;
+      } catch { /* target free */ }
+      try {
+        await fsp.rename(canonicalPath, resolveBriefingPath(projectDir, slug, archiveName));
+        result.archived = `.aioson/briefings/${slug}/${archiveName}`;
+      } catch { /* archive is best-effort */ }
     }
     logger.log(`✓ Feedback declined for "${slug}" — briefings.md unchanged, ${result.skippedChanges.length} change(s) recorded as skipped.`);
     return { ...result, slug, mode: 'declined' };

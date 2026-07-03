@@ -623,6 +623,45 @@ test('briefing:apply-feedback treats a pending blocking finding as a blocker', a
   assert.equal(registry.briefings.find((b) => b.slug === 'idea-one').refinement_status, 'blocked');
 });
 
+test('briefing:apply-feedback --declined archives the feedback so the loop never dead-ends', async () => {
+  const dir = await makeProject();
+  const logger = { log() {}, error() {} };
+  await fs.writeFile(
+    path.join(dir, '.aioson/briefings/idea-one/refinement-findings.json'),
+    JSON.stringify(FINDINGS),
+    'utf8'
+  );
+  await runBriefingReview({ args: [dir], options: { slug: 'idea-one' }, logger });
+
+  const feedbackPath = path.join(dir, '.aioson/briefings/idea-one/refinement-feedback.json');
+  const feedback = JSON.parse(await fs.readFile(feedbackPath, 'utf8'));
+  feedback.export_method = 'download';
+  feedback.sections.find((section) => section.id === 'problem').status = 'change_requested';
+  await fs.writeFile(feedbackPath, JSON.stringify(feedback, null, 2), 'utf8');
+
+  const declined = await runBriefingApplyFeedback({ args: [dir], options: { slug: 'idea-one', declined: true }, logger });
+  assert.equal(declined.ok, true);
+  assert.equal(declined.archived, '.aioson/briefings/idea-one/refinement-feedback.declined-round1.json');
+  await assert.rejects(fs.access(feedbackPath));
+  // findings survive a decline — the briefing text did not change
+  await fs.access(path.join(dir, '.aioson/briefings/idea-one/refinement-findings.json'));
+
+  // regenerating does NOT dead-end on pending_feedback, and the declined round
+  // still counts toward the round counter
+  const regen = await runBriefingReview({ args: [dir], options: { slug: 'idea-one' }, logger });
+  assert.equal(regen.ok, true);
+  assert.equal(regen.round, 2);
+
+  // declining stale feedback (briefing edited after export) must also work:
+  // decline writes nothing, so the hash guard does not apply
+  const staleFeedback = JSON.parse(await fs.readFile(feedbackPath, 'utf8'));
+  staleFeedback.export_method = 'copy-paste';
+  await fs.writeFile(feedbackPath, JSON.stringify(staleFeedback, null, 2), 'utf8');
+  await fs.appendFile(path.join(dir, '.aioson/briefings/idea-one/briefings.md'), '\nedited later\n');
+  const staleDecline = await runBriefingApplyFeedback({ args: [dir], options: { slug: 'idea-one', declined: true }, logger });
+  assert.equal(staleDecline.ok, true);
+});
+
 test('verify:artifact kind=review proves the canonical surface and rejects a hand-rolled one', async () => {
   const dir = await makeProject();
   const logger = { log() {}, error() {} };

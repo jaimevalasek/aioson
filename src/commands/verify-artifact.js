@@ -401,7 +401,11 @@ const ADAPTERS = {
       }
       if (!/id="download"/.test(html)) issues.push('review.html has no download fallback button (id="download")');
       if (!/id="copy"/.test(html)) issues.push('review.html has no copy-JSON fallback button (id="copy")');
-      if (/<script[^>]+\bsrc=|<link[^>]+href=["']https?:|\bsrc=["']https?:|url\(\s*["']?https?:/i.test(html)) {
+      // User content is HTML-escaped by the generator (quotes become &quot;),
+      // so a real external reference can only be generator-emitted markup —
+      // match those forms only, or briefing text quoting HTML/CSS would
+      // false-positive the gate.
+      if (/<script[^>]+\bsrc=|<link[^>]+href=["']https?:|\bsrc=["']https?:/i.test(html)) {
         issues.push('review.html references external resources — it must be fully self-contained');
       }
       const hashMatch = html.match(/source_hash=([0-9a-f]{64})/);

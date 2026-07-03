@@ -110,7 +110,7 @@ O protótipo é mock-only e nunca vira feedback canônico.
 | `.aioson/briefings/{slug}/review.html` | Superfície de revisão renderizada pelo CLI |
 | `.aioson/briefings/{slug}/refinement-feedback.json` | Feedback estruturado v1.1 (a única fonte que é aplicada) |
 | `.aioson/briefings/{slug}/refinement-report.md` | Relatório da rodada: aplicado, pulado, bloqueado, achados |
-| `.aioson/briefings/{slug}/refinement-*.applied-round{N}.json` | Arquivo morto por rodada (feedback e findings consumidos) |
+| `.aioson/briefings/{slug}/refinement-*.{applied,declined}-round{N}.json` | Arquivo morto por rodada (feedback aplicado ou recusado, e findings consumidos) |
 | `.aioson/briefings/{slug}/briefings.md` | Atualizado **apenas** após confirmação |
 | `.aioson/briefings/config.md` | Índice/registro de briefings atualizado |
 

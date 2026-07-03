@@ -37,6 +37,18 @@ describe('parser.js — parseArgv', () => {
     assert.equal(result.options.feature, 'checkout');
   });
 
+  it('parses briefing:apply-feedback booleans without swallowing the path positional', () => {
+    const result = parseArgv(['node', 'aioson', 'briefing:apply-feedback', '--confirm', '.', '--slug=idea']);
+    assert.equal(result.options.confirm, true);
+    assert.deepEqual(result.args, ['.']);
+    assert.equal(result.options.slug, 'idea');
+
+    const declined = parseArgv(['node', 'aioson', 'briefing:apply-feedback', '--declined', '.', '--allow-stale', '.']);
+    assert.equal(declined.options.declined, true);
+    assert.equal(declined.options['allow-stale'], true);
+    assert.deepEqual(declined.args, ['.', '.']);
+  });
+
   it('parses short flags', () => {
     const result = parseArgv(['node', 'aioson', 'setup', '.', '-f', '-h', '-j', '-v']);
     assert.equal(result.options.force, true);

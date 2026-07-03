@@ -39,7 +39,10 @@ function summarizeSkippedChanges(feedback) {
   return [...sectionChanges, ...decisionChanges];
 }
 
-async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = false } = {}) {
+// Declining never writes to briefings.md, so a stale source hash is irrelevant
+// to safety — validating it would only dead-end the user whose briefing moved
+// on. Hence allowStale defaults to TRUE here (and only here).
+async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = true } = {}) {
   const briefingPath = resolveBriefingPath(projectDir, slug, 'briefings.md');
   const currentMarkdown = await fs.readFile(briefingPath, 'utf8');
   const currentSourceHash = hashText(currentMarkdown);

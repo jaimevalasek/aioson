@@ -47,6 +47,9 @@ function parseArgv(argv) {
         // verify:artifact — pure booleans; `--advisory .` / `--no-build .` must
         // not swallow the path positional.
         'advisory', 'no-build',
+        // briefing:apply-feedback — pure booleans; `--confirm .` / `--declined .`
+        // / `--allow-stale .` must not swallow the path positional.
+        'confirm', 'declined', 'allow-stale',
         // `--resume` alone means "resume last"; `--resume=<id>` carries a value
         // and is handled by the `=` branch above. Without this entry, `--resume`
         // followed by `--tool=claude` would swallow the next token as its value.

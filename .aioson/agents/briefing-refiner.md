@@ -101,7 +101,7 @@ Use this when `.aioson/briefings/{slug}/refinement-feedback.json` exists (file p
    ```bash
    aioson briefing:apply-feedback . --slug={slug} --declined --json
    ```
-   `briefings.md` stays unchanged; skipped changes are recorded in `refinement-report.md`.
+   `briefings.md` stays unchanged; skipped changes are recorded in `refinement-report.md`, and the declined feedback is archived (`refinement-feedback.declined-round{N}.json`) so the next round regenerates cleanly. Findings are kept — the briefing text did not change.
 6. Continue **The refinement loop** at step 4. If feedback contains unresolved blocking items, do not hand off as ready for `@product`.
 
 ### Generate prototype (optional visual refinement)
@@ -170,8 +170,9 @@ Confirmed application updates:
 ```text
 .aioson/briefings/{slug}/briefings.md
 .aioson/briefings/{slug}/refinement-report.md
-.aioson/briefings/{slug}/refinement-feedback.applied-round{N}.json   # archived by the CLI
-.aioson/briefings/{slug}/refinement-findings.applied-round{N}.json   # archived by the CLI
+.aioson/briefings/{slug}/refinement-feedback.applied-round{N}.json   # archived by the CLI on apply
+.aioson/briefings/{slug}/refinement-findings.applied-round{N}.json   # archived by the CLI on apply
+.aioson/briefings/{slug}/refinement-feedback.declined-round{N}.json  # archived by the CLI on decline
 .aioson/briefings/config.md
 ```
 
