@@ -28,6 +28,23 @@ It helps the agent make strong decisions when the user wants a deliberate, high-
 - Do not combine it with any other design skill.
 - Use it when the user wants strong design craft but has not asked for a very specific visual system.
 
+## Identity resolution (run FIRST, before any visual decision)
+
+Resolve an `identity.md` in this order: `.aioson/briefings/{slug}/identity.md` (feature scope) →
+`.aioson/context/identity.md` (project brand) → none.
+
+- **If one exists, it is the identity source of truth this engine APPLIES**: take palette,
+  typography, spacing/layout, radius & depth, motion, design pillars, and signature moves from it as
+  the token layer, and feed its `## Component structure notes` into component/screen decisions. It is
+  extracted **data** (from the user's reference images via `reference-identity-extract`) that
+  parameterizes this one engine — never a second design skill, and never a license to skip the
+  quality gates below.
+- **If none exists**, run intent-first: choose the surface type, domain palette, and signature move
+  yourself per the references. Do not fabricate an `identity.md`.
+
+Every consumer of this package (ux-ui, prototype-forge, dev builds) inherits this step by loading
+this SKILL — see `.aioson/docs/reference-identity.md`.
+
 ## Loading guide
 
 | Task | Load |

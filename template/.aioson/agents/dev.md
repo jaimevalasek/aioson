@@ -93,6 +93,7 @@ Load the primary package first. Then load phase-triggered files from the plan, r
 - `architecture.md` — module boundaries, integrations, auth/security, shared contracts.
 - `ui-spec-{slug}.md` (project mode: `ui-spec.md`) — UI components, frontend routes, states, copy placement, visual QA.
 - `.aioson/briefings/{slug}/prototype.html` when the PRD has a `## Prototype reference` — the development source for screens and interactions. Load `.aioson/docs/prototype-contract.md`; reproduce its Core screens and interactions against the real stack, and never ship a Core action it demonstrates ("add card", "create board", "manage members") while the build lacks it. It is mock-only — copy the behavior, not the mock persistence.
+- `identity.md` when building UI and `design_skill: interface-design` — resolve `.aioson/briefings/{slug}/identity.md`, else `.aioson/context/identity.md`. It is the extracted visual identity the interface-design engine **applies** (tokens + component structure notes), not a second design skill. Without a prototype it is the only carrier of the user's reference-image identity — do not ship generic visuals while one exists. See `.aioson/docs/reference-identity.md`.
 - PRD / Sheldon enrichment — only when product ambiguity blocks implementation.
 - `discovery.md` / `spec.md` — only when project-level entity maps or conventions are needed.
 
