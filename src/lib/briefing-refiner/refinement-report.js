@@ -7,6 +7,15 @@ function list(items, formatter) {
 
 function buildRefinementReport(data) {
   const nextAction = data.next_action || 'rerun_review';
+  const findings = Array.isArray(data.findings) ? data.findings : [];
+  const findingsBlock = findings.length > 0
+    ? [
+        '## Findings',
+        '',
+        list(findings, (finding) => `${finding.id} [${finding.category}/${finding.severity}${finding.blocking ? '/blocking' : ''}] (${finding.status}) ${finding.section_id}: ${finding.text}`),
+        ''
+      ]
+    : [];
   return [
     `# Refinement Report — ${data.briefing_slug}`,
     '',
@@ -15,8 +24,10 @@ function buildRefinementReport(data) {
     `- Source hash: ${data.source_hash || '-'}`,
     `- Applied hash: ${data.applied_hash || '-'}`,
     `- Status: ${data.status || 'review_generated'}`,
+    `- Round: ${data.round || 1}`,
     `- Next action: ${nextAction}`,
     '',
+    ...findingsBlock,
     '## Applied Changes',
     '',
     list(data.applied_changes, (change) => `${change.section_id || change.title}: ${change.summary || 'updated'}`),

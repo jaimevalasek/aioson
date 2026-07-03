@@ -179,7 +179,7 @@ const RULESETS = {
 
 // Kinds whose target file path is keyed by --slug; without it we cannot resolve
 // the artifact, so fail with a clear usage error instead of a `null/` path.
-const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy']);
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy', 'review']);
 
 // Kinds whose artifact has a date-stamped / caller-known path — resolved via
 // --file=<path> rather than derived from a slug.
@@ -372,6 +372,65 @@ const ADAPTERS = {
       warnings.push('npm run build skipped: static checks already failed');
     }
     return { ok: issues.length === 0, issues, warnings, checks: [{ id: 'site', ok: issues.length === 0, detail: issues.join('; ') || null }] };
+  },
+
+  // briefing-refiner — the review surface must be the deterministic, fully
+  // self-contained artifact `aioson briefing:review` renders: export fallbacks
+  // present, no external resources, an embedded source_hash, and a feedback
+  // JSON that passes the canonical schema. Staleness (briefings.md changed
+  // after generation, e.g. right after an apply) is a warning, not a failure.
+  review: async (ctx) => {
+    if (!ctx.slug) {
+      return { ok: false, issues: ['kind=review requires --slug=<briefing-slug>'], warnings: [], checks: [] };
+    }
+    const { hashText } = require('../lib/briefing-refiner/briefing-sections');
+    const { validateFeedback } = require('../lib/briefing-refiner/feedback-schema');
+    const briefingDir = path.resolve(ctx.targetDir, '.aioson', 'briefings', ctx.slug);
+    const issues = [];
+    const warnings = [];
+
+    let html = null;
+    try {
+      html = fs.readFileSync(path.join(briefingDir, 'review.html'), 'utf8');
+    } catch {
+      issues.push(`review.html not found for briefing "${ctx.slug}" — run: aioson briefing:review . --slug=${ctx.slug}`);
+    }
+    if (html) {
+      if (!html.includes('aioson:review')) {
+        issues.push('review.html lacks the aioson:review marker (hand-rolled surface) — regenerate with `aioson briefing:review`');
+      }
+      if (!/id="download"/.test(html)) issues.push('review.html has no download fallback button (id="download")');
+      if (!/id="copy"/.test(html)) issues.push('review.html has no copy-JSON fallback button (id="copy")');
+      if (/<script[^>]+\bsrc=|<link[^>]+href=["']https?:|\bsrc=["']https?:|url\(\s*["']?https?:/i.test(html)) {
+        issues.push('review.html references external resources — it must be fully self-contained');
+      }
+      const hashMatch = html.match(/source_hash=([0-9a-f]{64})/);
+      if (!hashMatch) {
+        issues.push('review.html has no embedded source_hash');
+      } else {
+        try {
+          const currentHash = hashText(fs.readFileSync(path.join(briefingDir, 'briefings.md'), 'utf8'));
+          if (hashMatch[1] !== currentHash) {
+            warnings.push('review.html is stale: source_hash differs from the current briefings.md — regenerate the review for the next round');
+          }
+        } catch {
+          issues.push('briefings.md not found next to review.html');
+        }
+      }
+    }
+
+    try {
+      const feedback = JSON.parse(fs.readFileSync(path.join(briefingDir, 'refinement-feedback.json'), 'utf8'));
+      const res = validateFeedback(feedback, { slug: ctx.slug, allowStale: true });
+      if (!res.ok) {
+        for (const err of res.errors) issues.push(`refinement-feedback.json: ${err}`);
+      }
+    } catch {
+      // Absent right after an apply (it gets archived) — only a warning.
+      warnings.push('refinement-feedback.json missing or unreadable — expected right after review generation');
+    }
+
+    return { ok: issues.length === 0, issues, warnings, checks: [{ id: `review:${ctx.slug}`, ok: issues.length === 0, detail: issues.join('; ') || null }] };
   },
 
   // committer — advisory subject-quality audit. Reads --file if given, else the

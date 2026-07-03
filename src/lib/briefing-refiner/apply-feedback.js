@@ -57,10 +57,12 @@ async function applyDeclinedFeedback(projectDir, slug, feedback, { allowStale = 
     source_hash: feedback.source_hash,
     applied_hash: currentSourceHash,
     status: 'declined',
+    round: feedback.round || 1,
     applied_changes: [],
     skipped_changes: skippedChanges,
     unresolved_comments: unresolvedComments,
     blocking_items: feedback.blocking_items || [],
+    findings: feedback.findings || [],
     next_action: 'rerun_review'
   });
 
@@ -104,15 +106,22 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
   if (returnedToDraft) {
     returnApprovedBriefingToDraft(registry, slug);
   }
+  // A blocking finding the user left pending blocks the PRD the same way an
+  // explicit blocking item does — even if the export step never mirrored it
+  // into blocking_items (hand-written feedback).
+  const pendingBlockingFindings = (feedback.findings || []).filter(
+    (finding) => finding.blocking && finding.status === 'pending'
+  );
+  const hasBlockers = (feedback.blocking_items || []).length > 0 || pendingBlockingFindings.length > 0;
   markRefinementState(registry, slug, {
-    refinement_status: feedback.blocking_items.length > 0 ? 'blocked' : 'applied',
+    refinement_status: hasBlockers ? 'blocked' : 'applied',
     review_html: `.aioson/briefings/${slug}/review.html`,
     refinement_report: `.aioson/briefings/${slug}/refinement-report.md`
   });
   await writeBriefingRegistry(projectDir, registry);
 
   const unresolvedComments = (feedback.comments || []).filter((comment) => !comment.resolved);
-  const nextAction = feedback.blocking_items.length > 0 ? 'resolve_blockers' : 'approve_briefing';
+  const nextAction = hasBlockers ? 'resolve_blockers' : 'approve_briefing';
   const report = buildRefinementReport({
     briefing_slug: slug,
     source_briefing_path: `.aioson/briefings/${slug}/briefings.md`,
@@ -120,15 +129,17 @@ async function applyConfirmedFeedback(projectDir, slug, feedback, { confirmed = 
     source_hash: feedback.source_hash,
     applied_hash: appliedHash,
     status: 'applied',
+    round: feedback.round || 1,
     applied_changes: appliedChanges,
     skipped_changes: [],
     unresolved_comments: unresolvedComments,
     blocking_items: feedback.blocking_items || [],
+    findings: feedback.findings || [],
     next_action: nextAction
   });
   await fs.writeFile(resolveBriefingPath(projectDir, slug, 'refinement-report.md'), report, 'utf8');
 
-  return { ok: true, appliedChanges, nextAction, appliedHash, returnedToDraft };
+  return { ok: true, appliedChanges, nextAction, appliedHash, returnedToDraft, pendingBlockingFindings: pendingBlockingFindings.length };
 }
 
 module.exports = { applyConfirmedFeedback, applyDeclinedFeedback };

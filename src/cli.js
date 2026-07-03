@@ -237,7 +237,7 @@ const { runGenomePublish, runGenomeInstallStore, runGenomeInstall, runGenomeList
 const { runSkillPublish, runSkillInstallStore, runSkillListRemote } = require('./commands/store-skill');
 const { runSquadPublish, runSquadInstall, runSquadGrant, runSquadList } = require('./commands/store-squad');
 const { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall } = require('./commands/store-system');
-const { runBriefingApprove, runBriefingUnapprove } = require('./commands/briefing');
+const { runBriefingApprove, runBriefingUnapprove, runBriefingReview, runBriefingApplyFeedback } = require('./commands/briefing');
 const { runCompressAgents } = require('./commands/compress-agents');
 
 const JSON_SUPPORTED_COMMANDS = new Set([
@@ -354,6 +354,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'audit-code',
   'verify:artifact',
   'verify-artifact',
+  'briefing:review',
+  'briefing-review',
+  'briefing:apply-feedback',
+  'briefing-apply-feedback',
   'review:feature',
   'review-feature',
   'config',
@@ -1770,6 +1774,10 @@ async function main() {
       result = await runBriefingApprove({ args, options, logger: commandLogger });
     } else if (command === 'briefing:unapprove' || command === 'briefing-unapprove') {
       result = await runBriefingUnapprove({ args, options, logger: commandLogger });
+    } else if (command === 'briefing:review' || command === 'briefing-review') {
+      result = await runBriefingReview({ args, options, logger: commandLogger });
+    } else if (command === 'briefing:apply-feedback' || command === 'briefing-apply-feedback') {
+      result = await runBriefingApplyFeedback({ args, options, logger: commandLogger });
     } else {
       const message = t('cli.unknown_command', { command });
       if (jsonMode) {
