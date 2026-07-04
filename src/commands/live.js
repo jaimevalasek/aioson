@@ -235,14 +235,30 @@ async function resolveExecutablePath(command) {
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-  const extensions = process.platform === 'win32'
-    ? Array.from(new Set([...String(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';').map((entry) => entry.toLowerCase())]))
-    : [''];
+  // No Windows NUNCA testamos o arquivo sem extensão: o npm instala um shim
+  // extensionless (script sh) ao lado do .cmd, e ele não é executável via
+  // CreateProcess — spawná-lo dá ENOENT mesmo com o arquivo existindo.
+  // filter(Boolean) descarta segmentos vazios de um PATHEXT malformado
+  // (";.COM;..."), que viravam candidato sem extensão.
+  let extensions;
+  if (process.platform === 'win32') {
+    extensions = Array.from(new Set(
+      String(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM')
+        .split(';')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean)
+    ));
+    if (extensions.length === 0) {
+      extensions = ['.exe', '.cmd', '.bat', '.com'];
+    }
+  } else {
+    extensions = [''];
+  }
 
   for (const dir of pathEntries) {
     for (const ext of extensions) {
-      const candidate = process.platform === 'win32' && ext && !binary.toLowerCase().endsWith(ext)
-        ? path.join(dir, `${binary}${ext}`)
+      const candidate = process.platform === 'win32'
+        ? (binary.toLowerCase().endsWith(ext) ? path.join(dir, binary) : path.join(dir, `${binary}${ext}`))
         : path.join(dir, binary);
       if (await exists(candidate)) {
         return candidate;
@@ -673,10 +689,30 @@ function createLiveEventRecord(context, options = {}) {
   };
 }
 
+// Latch de spawn: entre o spawn() e o await de waitForChild existem awaits
+// (writeLiveState etc.). Se o spawn falhar nessa janela, o 'error' emitia sem
+// listener e DERRUBAVA o node ("Unhandled 'error' event"). Guardamos o
+// desfecho no próprio child pra waitForChild resolver/rejeitar mesmo quando o
+// evento já passou.
+function trackChild(child) {
+  child.aiosonSpawnError = null;
+  child.aiosonExit = null;
+  child.on('error', (err) => {
+    if (!child.aiosonSpawnError) child.aiosonSpawnError = err;
+  });
+  child.on('close', (code, signal) => {
+    child.aiosonExit = { code: Number(code || 0), signal: signal || null };
+  });
+  return child;
+}
+
 function waitForChild(child) {
   return new Promise((resolve, reject) => {
+    if (child.aiosonSpawnError) return reject(child.aiosonSpawnError);
+    if (child.aiosonExit) return resolve(child.aiosonExit);
     child.once('error', reject);
     child.once('close', (code, signal) => {
+      if (child.aiosonSpawnError) return reject(child.aiosonSpawnError);
       resolve({ code: Number(code || 0), signal: signal || null });
     });
   });
@@ -1319,12 +1355,12 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+            attachChild = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
               cwd: targetDir,
               env: process.env,
               stdio: 'inherit',
               shell: process.platform === 'win32'
-            });
+            }));
             state.child_pid = attachChild.pid || null;
             if (existing.task?.task_key) {
               const taskMeta = parseTaskMeta(existing.task);
@@ -1428,12 +1464,12 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+          child = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
             cwd: targetDir,
             env: process.env,
             stdio: 'inherit',
             shell: process.platform === 'win32'
-          });
+          }));
           taskMeta.child_pid = child.pid || null;
           updateTask(db, {
             taskKey,
@@ -1441,12 +1477,12 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+        child = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
           cwd: targetDir,
           env: process.env,
           stdio: 'inherit',
           shell: process.platform === 'win32'
-        });
+        }));
         taskMeta.child_pid = child.pid || null;
         updateTask(db, {
           taskKey,
