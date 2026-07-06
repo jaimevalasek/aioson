@@ -46,6 +46,8 @@ const LABELS = {
     btn_download: 'Download JSON',
     btn_copy: 'Copy JSON',
     btn_save: 'Save to file',
+    btn_copy_path: 'Copy path',
+    target_hint: 'Save target:',
     toolbar_hint: 'Save writes structured feedback only. HTML edits are not canonical until exported.',
     hint_title: 'How to use',
     hint_body: [
@@ -65,6 +67,7 @@ const LABELS = {
     downloaded: 'Downloaded refinement-feedback.json — move it over the existing file in the briefing folder.',
     copied: 'JSON copied — paste it in the chat or into refinement-feedback.json.',
     saved: 'Saved refinement-feedback.json.',
+    path_copied: 'Path copied — paste it into the save dialog’s "File name" field to jump straight to the folder.',
     no_fsa: 'Direct save unavailable in this browser; downloaded JSON instead.',
     sandbox_fallback: 'Direct save blocked here (sandboxed preview) — downloaded JSON instead. Open this file in a real browser for direct save.'
   },
@@ -89,6 +92,8 @@ const LABELS = {
     btn_download: 'Baixar JSON',
     btn_copy: 'Copiar JSON',
     btn_save: 'Salvar no arquivo',
+    btn_copy_path: 'Copiar caminho',
+    target_hint: 'Destino:',
     toolbar_hint: 'Salvar grava apenas o feedback estruturado. Edições no HTML não são canônicas até exportar.',
     hint_title: 'Como usar',
     hint_body: [
@@ -108,6 +113,7 @@ const LABELS = {
     downloaded: 'refinement-feedback.json baixado — mova por cima do arquivo existente na pasta do briefing.',
     copied: 'JSON copiado — cole no chat ou dentro de refinement-feedback.json.',
     saved: 'refinement-feedback.json salvo.',
+    path_copied: 'Caminho copiado — cole no campo "Nome do arquivo" da janela de salvar para ir direto à pasta.',
     no_fsa: 'Salvamento direto indisponível neste navegador; o JSON foi baixado.',
     sandbox_fallback: 'Salvamento direto bloqueado aqui (preview sandboxed) — o JSON foi baixado. Abra este arquivo num navegador de verdade para salvar direto.'
   }
@@ -148,6 +154,7 @@ function buildReviewHtml(data) {
   const sections = feedback.sections || [];
   const findings = feedback.findings || [];
   const feedbackPath = `.aioson/briefings/${feedback.briefing_slug}/refinement-feedback.json`;
+  const feedbackAbsPath = data.feedbackAbsPath || '';
 
   const findingsBySection = new Map();
   const orphanFindings = [];
@@ -212,6 +219,7 @@ function buildReviewHtml(data) {
     downloaded: labels.downloaded,
     copied: labels.copied,
     saved: labels.saved,
+    path_copied: labels.path_copied,
     no_fsa: labels.no_fsa,
     sandbox_fallback: labels.sandbox_fallback
   };
@@ -239,6 +247,9 @@ function buildReviewHtml(data) {
     nav a:hover { border-left-color: var(--accent); background: #eaf3f6; }
     .toolbar, nav, aside, .section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
     .toolbar { padding: 10px; margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .toolbar .target { flex-basis: 100%; display: flex; gap: 8px; align-items: center; min-width: 0; }
+    .toolbar .target code { font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; overflow-x: auto; white-space: nowrap; }
+    .toolbar .target button { min-height: 26px; padding: 2px 8px; font-size: 12px; flex-shrink: 0; }
     button, select, input.f-note { border: 1px solid var(--line); background: #fff; border-radius: 4px; padding: 5px 8px; color: var(--ink); font: inherit; }
     button, select { min-height: 32px; }
     button { cursor: pointer; }
@@ -298,7 +309,8 @@ function buildReviewHtml(data) {
         <button type="button" class="primary" id="download">${escapeHtml(labels.btn_download)}</button>
         <button type="button" id="copy">${escapeHtml(labels.btn_copy)}</button>
         <button type="button" id="save">${escapeHtml(labels.btn_save)}</button>
-        <span class="meta">${escapeHtml(labels.toolbar_hint)}</span>
+        <span class="meta">${escapeHtml(labels.toolbar_hint)}</span>${feedbackAbsPath ? `
+        <div class="target"><span class="meta">${escapeHtml(labels.target_hint)}</span> <code id="target-path">${escapeHtml(feedbackAbsPath)}</code> <button type="button" id="copy-path">${escapeHtml(labels.btn_copy_path)}</button></div>` : ''}
       </div>
       ${sectionMarkup}
       ${orphanMarkup}
@@ -455,7 +467,9 @@ function buildReviewHtml(data) {
       }
       try {
         if (!fileHandle) {
-          fileHandle = await window.showSaveFilePicker({ suggestedName: 'refinement-feedback.json', types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
+          // id: Chromium remembers the last-used directory per picker id, so after the
+          // first save the dialog reopens in the briefing folder on later rounds.
+          fileHandle = await window.showSaveFilePicker({ id: 'aioson-refinement-feedback', suggestedName: 'refinement-feedback.json', types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
         }
         const writable = await fileHandle.createWritable();
         await writable.write(jsonText('file-system-access'));
@@ -477,6 +491,13 @@ function buildReviewHtml(data) {
     document.getElementById('download').addEventListener('click', download);
     document.getElementById('copy').addEventListener('click', () => copyJson().catch(() => download()));
     document.getElementById('save').addEventListener('click', saveDirect);
+    const copyPathBtn = document.getElementById('copy-path');
+    if (copyPathBtn) copyPathBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(document.getElementById('target-path').textContent);
+        statusEl.textContent = L.path_copied;
+      } catch (error) { /* clipboard unavailable (sandboxed preview) — path stays visible for manual copy */ }
+    });
     document.getElementById('discard-draft').addEventListener('click', () => {
       try { localStorage.removeItem(LS_KEY); } catch (error) { /* ignore */ }
       location.reload();
@@ -503,7 +524,7 @@ async function writeReviewArtifacts(projectDir, { slug, sourceMarkdown, sections
   const briefingDir = resolveBriefingPath(projectDir, slug);
   const sourcePath = `.aioson/briefings/${slug}/briefings.md`;
   const feedback = buildInitialFeedback({ slug, sourcePath, sourceHash, sections, findings, round });
-  const html = buildReviewHtml({ feedback, sourceMarkdown, locale });
+  const html = buildReviewHtml({ feedback, sourceMarkdown, locale, feedbackAbsPath: path.join(briefingDir, 'refinement-feedback.json') });
   const report = buildRefinementReport({
     briefing_slug: slug,
     source_briefing_path: sourcePath,

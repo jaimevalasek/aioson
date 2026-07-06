@@ -86,23 +86,24 @@ Do NOT hand-write `review.html` when the CLI is available — the gate rejects h
 Use this when `.aioson/briefings/{slug}/refinement-feedback.json` exists (file present = not yet applied).
 
 1. If the user pasted the exported JSON in the chat, write it verbatim to `.aioson/briefings/{slug}/refinement-feedback.json` first.
-2. Dry-run — validation + summary, never writes:
+2. **Incorporate answers into section text.** Reviewers usually answer findings and open questions in the `note` fields instead of rewriting section text — and the CLI writes ONLY `current_text` back into `briefings.md`; notes alone never reach the briefing. Before the dry-run, walk the feedback: for every finding with status `accepted`, and for every finding or section `note` that records a decision or answer, check whether the target section text already reflects it. Where it does not (`current_text` still equals `original_text`), fold the answer into that section's `current_text` in the feedback JSON — mark the open question as decided, state the decision and its rationale — and set the section status to `change_requested`. Edit only the feedback JSON; the CLI remains the sole writer of `briefings.md`. If a note is ambiguous, ask the user instead of guessing.
+3. Dry-run — validation + summary, never writes:
    ```bash
    aioson briefing:apply-feedback . --slug={slug} --json
    ```
-   Present the summary (changed sections, blocked sections, finding decisions, pending blocking findings) in the interaction language. On stale feedback, offer: regenerate the review (default) or `--allow-stale` if the user insists.
-3. Ask for explicit confirmation before touching `briefings.md`.
-4. If confirmed:
+   Present the summary (changed sections, blocked sections, finding decisions, pending blocking findings) in the interaction language, listing every incorporation made in step 2 so the user sees exactly what will land in the briefing. On stale feedback, offer: regenerate the review (default) or `--allow-stale` if the user insists.
+4. Ask for explicit confirmation before touching `briefings.md`.
+5. If confirmed:
    ```bash
    aioson briefing:apply-feedback . --slug={slug} --confirm --json
    ```
    The CLI applies only structured JSON (never the HTML DOM), preserves mandatory sections, reverts `approved` → `draft` when applicable, archives the consumed feedback/findings for the round, and records `next_action`.
-5. If declined:
+6. If declined:
    ```bash
    aioson briefing:apply-feedback . --slug={slug} --declined --json
    ```
    `briefings.md` stays unchanged; skipped changes are recorded in `refinement-report.md`, and the declined feedback is archived (`refinement-feedback.declined-round{N}.json`) so the next round regenerates cleanly. Findings are kept — the briefing text did not change.
-6. Continue **The refinement loop** at step 4. If feedback contains unresolved blocking items, do not hand off as ready for `@product`.
+7. Continue **The refinement loop** at step 4. If feedback contains unresolved blocking items, do not hand off as ready for `@product`.
 
 ### Generate prototype (optional visual refinement)
 
@@ -180,7 +181,7 @@ Confirmed application updates:
 
 - **After generating a review**, tell the user (in the interaction language):
   1. Open `review.html` in a **real browser** (double-click the file). Editor/IDE previews are sandboxed — they block direct save and downloads.
-  2. Edits autosave locally in the browser; closing the tab loses nothing.
+  2. Edits autosave locally in the browser; closing the tab loses nothing. Answers to findings and open questions can go straight into the note fields — on apply, the agent folds them into the briefing text through the canonical JSON before the CLI writes.
   3. Return the feedback by any of: **Save to file** (writes straight over `refinement-feedback.json`), **Download JSON** (then move it over `refinement-feedback.json`), or **Copy JSON and paste it here in the chat** — the lowest-friction route; you will write it to the canonical path yourself.
   4. Reactivate `@briefing-refiner` to apply.
 - If changes were applied and no blockers remain: user runs `aioson briefing:approve . --slug={slug}`, then activates `@product`.
