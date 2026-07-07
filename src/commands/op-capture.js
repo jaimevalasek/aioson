@@ -23,13 +23,26 @@ const path = require('node:path');
 const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree, recordIdentityActivity, openIndexDb, getStorageRoot } = require('../operator-memory/storage');
 const { deriveSlug, fingerprintProposal } = require('../operator-memory/slug');
-const { captureSignal, readProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
-const { promoteProposal } = require('../operator-memory/decision');
+const { captureSignal, readProposal, deleteProposal, VALID_SIGNAL_TYPES } = require('../operator-memory/proposal');
+const { promoteProposal, readDecision, reinforceDecision } = require('../operator-memory/decision');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 const CONFIRMATIONS_JSONL = '.aioson/runtime/session-confirmations.jsonl';
 
 const PROMOTION_THRESHOLD = 2;
+
+/**
+ * Detections required before a signal promotes to a decision, by signal type.
+ *
+ * `confirmation` needs 2x — the user accepting the same non-obvious approach twice
+ * is what turns it into a signal. `authorization` / `exclusion` / `correction` are
+ * single explicit standing decisions ("pode sempre X", "nunca X", "pare de X"), so
+ * they promote on first detection. Mirrors the taxonomy in
+ * agents/_shared/memory-capture-directive.md.
+ */
+function promotionThresholdFor(signalType) {
+  return signalType === 'confirmation' ? PROMOTION_THRESHOLD : 1;
+}
 
 function existsCheckFactory(identity) {
   return (slug) => {
@@ -130,7 +143,23 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
 
   const count = result.proposal.detected_count;
 
-  if (count >= PROMOTION_THRESHOLD) {
+  // Idempotent re-detection: a signal already promoted to a decision is reinforced,
+  // not re-promoted — re-promotion would duplicate the FTS row and reset promoted_at.
+  const existingDecision = readDecision(resolved.identity, slug);
+  if (existingDecision) {
+    let reinforced = null;
+    try { reinforced = reinforceDecision(resolved.identity, slug); } catch { /* best-effort */ }
+    // captureSignal re-created a stray proposal (the decision had none) — drop it.
+    try { deleteProposal(resolved.identity, slug); } catch { /* best-effort */ }
+    const auditLine = `✔ Memory reforçada: '${proposal}'. aioson op:forget ${slug} p/ desfazer.`;
+    if (options.json) {
+      return { ok: true, promoted: false, reinforced: true, slug, identity: resolved.identity, reinforcement_count: reinforced ? reinforced.reinforcement_count : undefined };
+    }
+    if (logger) logger.log(auditLine);
+    return { ok: true, promoted: false, reinforced: true, slug };
+  }
+
+  if (count >= promotionThresholdFor(signal)) {
     // Promote to decision
     let decision;
     try {
@@ -166,6 +195,7 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
 
 module.exports = {
   runOpCapture,
+  promotionThresholdFor,
   PROMOTION_THRESHOLD,
   CONFIRMATIONS_JSONL
 };

@@ -207,7 +207,7 @@ test('AC-P2-04 runOpCapture: first detection silent (no audit line)', async () =
   const logger = silentLogger();
   const result = await runOpCapture({
     args: [],
-    options: { signal: 'authorization', quote: 'q1', proposal: `unique-first-${Date.now()}`, 'source-agent': 'dev' },
+    options: { signal: 'confirmation', quote: 'q1', proposal: `unique-first-${Date.now()}`, 'source-agent': 'dev' },
     logger
   });
   assert.equal(result.ok, true);
@@ -218,10 +218,10 @@ test('AC-P2-04 runOpCapture: first detection silent (no audit line)', async () =
 test('AC-P2-04 runOpCapture: second detection promotes + emits 1-liner audit', async () => {
   const proposalText = `unique-promote-${Date.now()}`;
   const logger1 = silentLogger();
-  await runOpCapture({ args: [], options: { signal: 'authorization', quote: 'q1', proposal: proposalText, 'source-agent': 'dev' }, logger: logger1 });
+  await runOpCapture({ args: [], options: { signal: 'confirmation', quote: 'q1', proposal: proposalText, 'source-agent': 'dev' }, logger: logger1 });
 
   const logger2 = silentLogger();
-  const result = await runOpCapture({ args: [], options: { signal: 'authorization', quote: 'q2', proposal: proposalText, 'source-agent': 'dev' }, logger: logger2 });
+  const result = await runOpCapture({ args: [], options: { signal: 'confirmation', quote: 'q2', proposal: proposalText, 'source-agent': 'dev' }, logger: logger2 });
 
   assert.equal(result.ok, true);
   assert.equal(result.promoted, true);
@@ -233,7 +233,7 @@ test('AC-P2-04 runOpCapture --json returns structured result', async () => {
   const proposalText = `json-test-${Date.now()}`;
   const result = await runOpCapture({
     args: [],
-    options: { signal: 'authorization', quote: 'q', proposal: proposalText, json: true },
+    options: { signal: 'confirmation', quote: 'q', proposal: proposalText, json: true },
     logger: silentLogger()
   });
   assert.equal(result.ok, true);
@@ -248,8 +248,8 @@ test('AC-P2-04 runOpCapture missing --signal returns ok=false', async () => {
 
 test('AC-P2-05 runOpPromote: works on existing proposal (skip threshold)', async () => {
   const proposalText = `manual-promote-${Date.now()}`;
-  await runOpCapture({ args: [], options: { signal: 'authorization', quote: 'q', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
-  // After 1 capture: proposal exists with detected_count=1. Manual promote skips threshold.
+  await runOpCapture({ args: [], options: { signal: 'confirmation', quote: 'q', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  // Confirmation stays a proposal on 1st detection (detected_count=1). Manual promote skips threshold.
   const slug = require('../src/operator-memory/slug').deriveSlug(proposalText);
   const result = await runOpPromote({ args: [slug], options: {}, logger: silentLogger() });
   assert.equal(result.ok, true);
@@ -287,4 +287,61 @@ test('AC-P2-12 capture pipeline does not crash when storage path is fresh (cold 
   // captureSignal directly to alt identity (CLI would use AIOSON_OPERATOR_ID env)
   const result = captureSignal({ identity: altId, slug: 'first', signal_type: 'authorization', quote: 'q', proposal: 'cold-start-test', source_agent: 'dev' });
   assert.equal(result.isNew, true);
+});
+
+test('threshold: authorization/exclusion/correction promote on FIRST detection (1x)', async () => {
+  for (const sig of ['authorization', 'exclusion', 'correction']) {
+    const proposalText = `firstshot-${sig}-${Date.now()}`;
+    const logger = silentLogger();
+    const result = await runOpCapture({
+      args: [], options: { signal: sig, quote: 'q', proposal: proposalText, 'source-agent': 'dev' }, logger
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.promoted, true, `${sig} should promote on first detection`);
+    const slug = deriveSlug(proposalText);
+    assert.ok(readDecision(TEST_IDENTITY, slug), `${sig} decision should exist`);
+    assert.equal(readProposal(TEST_IDENTITY, slug), null, `${sig} proposal should be consumed`);
+    assert.ok(logger.lines.some((l) => l.includes('✔ Memory:')), `${sig} should emit promote audit`);
+  }
+});
+
+test('threshold: confirmation still requires 2x (1st stays a proposal, 2nd promotes)', async () => {
+  const proposalText = `conf2x-${Date.now()}`;
+  const r1 = await runOpCapture({ args: [], options: { signal: 'confirmation', quote: 'q1', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(r1.promoted, false, 'confirmation 1st detection does not promote');
+  const slug = deriveSlug(proposalText);
+  assert.ok(readProposal(TEST_IDENTITY, slug), 'confirmation 1st detection stays a proposal');
+  const r2 = await runOpCapture({ args: [], options: { signal: 'confirmation', quote: 'q2', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(r2.promoted, true, 'confirmation promotes on 2nd detection');
+});
+
+test('idempotency: re-detecting a promoted decision reinforces (single FTS row, bumps count)', async () => {
+  const proposalText = `reinforce-redetect-${Date.now()}`;
+  await runOpCapture({ args: [], options: { signal: 'correction', quote: 'q1', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  const slug = deriveSlug(proposalText);
+
+  const r2 = await runOpCapture({ args: [], options: { signal: 'correction', quote: 'q2', proposal: proposalText, 'source-agent': 'dev' }, logger: silentLogger() });
+  assert.equal(r2.promoted, false, 're-detection does not re-promote');
+  assert.equal(r2.reinforced, true, 're-detection reinforces');
+  assert.equal(readProposal(TEST_IDENTITY, slug), null, 'no stray proposal left behind');
+
+  const dec = readDecision(TEST_IDENTITY, slug);
+  assert.ok(dec, 'decision still exists after reinforce');
+  assert.equal(Number(dec.reinforcement_count), 1, 'reinforcement_count bumped to 1');
+
+  const db = openIndexDb();
+  try {
+    const row = db.prepare('SELECT COUNT(*) AS n FROM decisions_fts WHERE identity = ? AND slug = ?').get(TEST_IDENTITY, slug);
+    assert.equal(row.n, 1, 'exactly one FTS row (no duplication)');
+  } finally {
+    db.close();
+  }
+});
+
+test('promotionThresholdFor: confirmation=2, other signals=1', () => {
+  const { promotionThresholdFor } = require('../src/commands/op-capture');
+  assert.equal(promotionThresholdFor('confirmation'), 2);
+  assert.equal(promotionThresholdFor('authorization'), 1);
+  assert.equal(promotionThresholdFor('exclusion'), 1);
+  assert.equal(promotionThresholdFor('correction'), 1);
 });

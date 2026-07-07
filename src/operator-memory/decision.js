@@ -227,6 +227,46 @@ function promoteProposal({ identity, proposal: proposalData }) {
 }
 
 /**
+ * Reinforce an existing decision in place: bump reinforcement_count and refresh
+ * last_reinforced (PMD-11). Used when a signal already promoted is re-detected —
+ * strengthens the memory instead of re-promoting (which would duplicate the FTS
+ * row and reset promoted_at).
+ *
+ * Surgical frontmatter edit — preserves title, body and trigger quotes byte-for-byte
+ * (unlike a full re-serialize, which cannot recover the title from the merged body).
+ * Returns { slug, last_reinforced, previous, reinforcement_count } or null if absent.
+ */
+function reinforceDecision(identity, slug) {
+  const filePath = decisionPath(identity, slug);
+  if (!fs.existsSync(filePath)) return null;
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  const parsed = parseDecisionFile(content);
+  const previous = (parsed && parsed.last_reinforced) || null;
+  const nextCount = Number((parsed && parsed.reinforcement_count) || 0) + 1;
+  const now = new Date().toISOString();
+
+  // Replace only the first (frontmatter) occurrence of each field; `.` never
+  // spans newlines, so the body is untouched.
+  const updated = content
+    .replace(/^(reinforcement_count:[ \t]*).*$/m, `$1${nextCount}`)
+    .replace(/^(last_reinforced:[ \t]*).*$/m, `$1${now}`);
+
+  const tmpPath = `${filePath}.tmp`;
+  fs.writeFileSync(tmpPath, updated, 'utf8');
+  fs.renameSync(tmpPath, filePath);
+
+  // Post-write: regenerate MEMORY.md index (best-effort — it surfaces the
+  // reinforced date). FTS body/category are unchanged, so no FTS write needed.
+  try {
+    const { regenerateIndex } = require('./index-md');
+    regenerateIndex(identity);
+  } catch { /* index regen failure is non-fatal */ }
+
+  return { slug, last_reinforced: now, previous, reinforcement_count: nextCount };
+}
+
+/**
  * Soft-delete a decision or proposal to history/.
  * Returns { mode: 'decision'|'proposal'|'noop', archivedPath: string|null }.
  */
@@ -267,6 +307,7 @@ function forgetEntry(identity, slug) {
 
 module.exports = {
   promoteProposal,
+  reinforceDecision,
   forgetEntry,
   readDecision,
   decisionPath,

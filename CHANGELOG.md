@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Operator-memory promotion threshold is now per signal type.** `authorization`, `exclusion`, and `correction` are single explicit standing decisions and promote to a decision on **first** detection; `confirmation` still needs **2×** (it must repeat to distinguish a pattern from a one-off acceptance). Previously all four required 2× (`op-capture.js`), so a firmly-stated one-shot correction/authorization never persisted unless the agent emitted `op:capture` twice. Aligns the storage engine with the signal taxonomy already documented in `agents/_shared/memory-capture-directive.md`. New `promotionThresholdFor(signalType)` helper.
+
+### Fixed
+- **Re-detecting an already-promoted decision no longer duplicates its FTS row or resets `promoted_at`.** `op:capture` now reinforces in place — bumps `reinforcement_count` + refreshes `last_reinforced` (PMD-11) via the new `decision.reinforceDecision` primitive — instead of re-running promotion when a decision for the slug already exists (the stray proposal from re-detection is dropped). This latent double-insert also affected the old uniform-2× flow on the 3rd+ detection of the same signal.
+
 ## [1.37.0] - 2026-07-06
 
 **Full-feature autopilot + CLI-owned briefing refinement.** Two independent arcs land together. A feature built the normal way (`@product` → `@sheldon`/`@orchestrator` → `@dev`) can now run unattended through `@qa`/`@tester`/`@pentester`/`@validator` to `feature:close` — stopping only at genuine human decisions; `@product` asks the run mode once at kickoff (no hidden flag), settable inline (`--auto`/`--step`) or disarmed per feature. Separately, `@briefing-refiner`'s review surface stops being hand-written every round: the CLI now owns the schema, the render, and the apply, closing an explicit iterate-until-clean loop.
