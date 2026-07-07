@@ -5,11 +5,9 @@
  * Phase 5 (v1.16.0). User-driven action when decay prompt fires.
  */
 
-const fs = require('node:fs');
 const { resolveIdentity } = require('../operator-memory/identity');
 const { ensureStorageTree } = require('../operator-memory/storage');
-const { readDecision, decisionPath, serializeDecision } = require('../operator-memory/decision');
-const { regenerateIndex } = require('../operator-memory/index-md');
+const { reinforceDecision } = require('../operator-memory/decision');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
 
 async function runOpReinforce({ args = [], options = {}, logger }) {
@@ -31,30 +29,20 @@ async function runOpReinforce({ args = [], options = {}, logger }) {
 
   const resolved = resolveIdentity();
   ensureStorageTree(resolved.identity);
-  const decision = readDecision(resolved.identity, slug);
-  if (!decision) {
+
+  // Surgical in-place reinforce: bumps reinforcement_count + refreshes
+  // last_reinforced and regenerates the index, preserving title/body/trigger-quotes
+  // byte-for-byte. (The old re-serialize path double-wrapped them, because the merged
+  // body from readDecision already contained the "# title" and "## Trigger quotes".)
+  const reinforced = reinforceDecision(resolved.identity, slug);
+  if (!reinforced) {
     const err = `op:reinforce — decision '${slug}' not found for identity ${resolved.identity}.`;
     if (options.json) return { ok: false, error: err };
     if (logger && logger.error) logger.error(err);
     return { ok: false, exitCode: 1, error: err };
   }
 
-  const now = new Date().toISOString();
-  const previous = decision.last_reinforced;
-  const updated = {
-    ...decision,
-    slug,
-    last_reinforced: now,
-    reinforcement_count: Number(decision.reinforcement_count || 0) + 1
-  };
-  // serialize keeps quotes + body + frontmatter intact
-  const out = serializeDecision({ ...updated, body: decision.body, title: decision.body?.split('\n')[0]?.replace(/^# /, '') || slug });
-  const filePath = decisionPath(resolved.identity, slug);
-  const tmp = `${filePath}.tmp`;
-  fs.writeFileSync(tmp, out, 'utf8');
-  fs.renameSync(tmp, filePath);
-
-  try { regenerateIndex(resolved.identity); } catch { /* non-fatal */ }
+  const { last_reinforced: now, previous, reinforcement_count } = reinforced;
 
   await emitDossierEvent(targetDir, {
     agent: 'op-reinforce',
@@ -64,7 +52,7 @@ async function runOpReinforce({ args = [], options = {}, logger }) {
   });
 
   if (options.json) {
-    return { ok: true, slug, last_reinforced: now, previous, reinforcement_count: updated.reinforcement_count };
+    return { ok: true, slug, last_reinforced: now, previous, reinforcement_count };
   }
   if (logger) logger.log(`op:reinforce — '${slug}' last_reinforced refreshed to ${now}.`);
   return { ok: true, slug };

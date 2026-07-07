@@ -166,6 +166,34 @@ test('AC-P5-04 runOpReinforce on unknown slug returns ok=false', async () => {
   assert.equal(result.ok, false);
 });
 
+test('op:reinforce does not duplicate title or trigger-quotes (double-title regression)', async () => {
+  const altId = 'p5-reinforce-no-dup';
+  ensureStorageTree(altId);
+  const prev = process.env.AIOSON_OPERATOR_ID;
+  process.env.AIOSON_OPERATOR_ID = altId;
+  try {
+    const slug = 'no-double-title';
+    const cap = captureSignal({ identity: altId, slug, signal_type: 'authorization', quote: 'a verbatim quote', proposal: 'commit autonomo apos approval', source_agent: 'dev' });
+    promoteProposal({ identity: altId, proposal: cap.proposal });
+
+    const fp = decisionPath(altId, slug);
+    const before = fs.readFileSync(fp, 'utf8');
+    assert.equal((before.match(/^# /gm) || []).length, 1, 'seed should have exactly one H1 title');
+    assert.equal((before.match(/^## Trigger quotes$/gm) || []).length, 1, 'seed should have one trigger-quotes section');
+
+    const result = await runOpReinforce({ args: [slug], options: { json: true }, logger: silentLogger() });
+    assert.equal(result.ok, true);
+    assert.equal(Number(result.reinforcement_count), 1);
+
+    const after = fs.readFileSync(fp, 'utf8');
+    assert.equal((after.match(/^# /gm) || []).length, 1, 'title must still appear exactly once after reinforce');
+    assert.equal((after.match(/^## Trigger quotes$/gm) || []).length, 1, 'trigger-quotes section must not be duplicated');
+    assert.ok(after.includes('commit autonomo apos approval'), 'body preserved');
+  } finally {
+    process.env.AIOSON_OPERATOR_ID = prev;
+  }
+});
+
 // ─── op:migrate ──────────────────────────────────────────────────────────────
 
 test('AC-P5-05 runOpMigrate consumes user-profile.md, creates decisions, marks deprecated', async () => {
