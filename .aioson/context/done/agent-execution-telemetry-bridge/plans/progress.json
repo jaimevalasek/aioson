@@ -1,0 +1,17 @@
+{
+  "slug": "agent-execution-telemetry-bridge",
+  "status": "in_progress",
+  "completed": [],
+  "pending": [
+    "SG-01",
+    "SG-02",
+    "RG-01",
+    "RG-02",
+    "RG-03"
+  ],
+  "updated_at": "2026-07-10T00:00:00.000Z",
+  "last_updated": "2026-07-10T22:14:40.804Z",
+  "consecutive_errors": 0,
+  "iterations": null,
+  "ready_for_done_gate": true
+}

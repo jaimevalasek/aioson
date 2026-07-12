@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { runVerificationPlan } = require('../src/commands/verification-plan');
+const { defaults } = require('../src/agent-execution/manifest');
 
 const noopLogger = { log() {} };
 
@@ -84,6 +85,25 @@ test('--host pins the dispatch host and its native model', async () => {
   });
   assert.equal(result.host, 'codex');
   assert.equal(byAgent(result, 'qa').model, 'configured-default'); // codex delegates to its own model
+});
+
+test('AC-AEMR-14 manifest planning surfaces requested/resolved model, strategy and separate effort', async () => {
+  const dir = await makeTmpDir();
+  const ctx = path.join(dir, '.aioson', 'context');
+  await fs.mkdir(ctx, { recursive: true });
+  const manifest = defaults('demo', 'codex');
+  manifest.agents.qa.model = 'GPT 5.6 Terra';
+  manifest.agents.qa.reasoning_effort = 'high';
+  await fs.writeFile(path.join(ctx, 'agent-execution-demo.json'), JSON.stringify(manifest));
+  const catalogLoader = async () => ({ available: true, source: 'fixture', fetched_at: '2026-07-11', models: [{ slug: 'gpt-5.6-terra', display_name: 'GPT-5.6-Terra', supported_efforts: ['high'] }] });
+  const result = await runVerificationPlan({ args: [dir], options: { feature: 'demo', trigger: 'per-phase', classification: 'SMALL', json: true }, logger: noopLogger, catalogLoader });
+  const qa = byAgent(result, 'qa');
+  assert.equal(qa.model, 'gpt-5.6-terra');
+  assert.equal(qa.model_requested, 'GPT 5.6 Terra');
+  assert.equal(qa.model_resolved, 'gpt-5.6-terra');
+  assert.equal(qa.model_resolution_strategy, 'normalized_name');
+  assert.equal(qa.reasoning_effort, 'high');
+  assert.equal(qa.execution.reasoning_effort, 'high');
 });
 
 test('classification auto-detects from project.context.md when not passed', async () => {

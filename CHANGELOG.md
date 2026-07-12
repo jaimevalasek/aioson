@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.37.1] - 2026-07-11
+
+### Added
+- Intelligent, bounded resolution of human-readable and approximate Codex model names.
+- Separate reasoning-effort propagation and model-resolution metadata across execution, reports, telemetry, and verification.
+
 ### Changed
 - **Operator-memory promotion threshold is now per signal type.** `authorization`, `exclusion`, and `correction` are single explicit standing decisions and promote to a decision on **first** detection; `confirmation` still needs **2×** (it must repeat to distinguish a pattern from a one-off acceptance). Previously all four required 2× (`op-capture.js`), so a firmly-stated one-shot correction/authorization never persisted unless the agent emitted `op:capture` twice. Aligns the storage engine with the signal taxonomy already documented in `agents/_shared/memory-capture-directive.md`. New `promotionThresholdFor(signalType)` helper.
 

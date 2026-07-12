@@ -5,13 +5,7 @@
   "sequence": [
     "setup",
     "product",
-    "analyst",
-    "architect",
-    "discovery-design-doc",
-    "ux-ui",
-    "pm",
     "orchestrator",
-    "scope-check",
     "dev",
     "qa"
   ],
@@ -20,18 +14,13 @@
   "completed": [
     "setup",
     "product",
-    "analyst",
-    "architect",
-    "discovery-design-doc",
-    "ux-ui",
-    "pm",
     "orchestrator",
-    "scope-check",
-    "dev",
     "qa"
   ],
-  "skipped": [],
+  "skipped": [
+    "dev"
+  ],
   "featureSlug": null,
   "detour": null,
-  "updatedAt": "2026-06-19T04:08:45.828Z"
+  "updatedAt": "2026-07-11T22:05:32.931Z"
 }

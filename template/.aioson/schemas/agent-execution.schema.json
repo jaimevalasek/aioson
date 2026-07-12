@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aioson.dev/schemas/agent-execution-v1.json",
+  "title": "AIOSON Agent Execution Manifest",
+  "type": "object",
+  "required": ["version", "feature", "host", "agents", "capacity_policy", "cycle_limits", "reporting"],
+  "properties": {
+    "version": { "const": 1 },
+    "feature": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "host": { "enum": ["claude", "codex", "opencode"] },
+    "agents": {
+      "type": "object",
+      "required": ["dev", "qa", "tester", "pentester", "validator"],
+      "additionalProperties": false,
+      "properties": {
+        "dev": { "$ref": "#/$defs/agent" }, "qa": { "$ref": "#/$defs/agent" }, "tester": { "$ref": "#/$defs/agent" }, "pentester": { "$ref": "#/$defs/agent" }, "validator": { "$ref": "#/$defs/agent" }
+      }
+    }
+  },
+  "$defs": {
+    "agent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "host", "mode", "model", "writable_roots", "fallbacks", "report"],
+      "properties": { "enabled": {"type":"boolean"}, "host":{"enum":["claude","codex","opencode"]}, "mode":{"enum":["fresh-session","subagent","external","current-session"]}, "model":{"type":"string","minLength":1,"maxLength":200}, "reasoning_effort":{"enum":["low","medium","high","xhigh","max","ultra"]}, "writable_roots":{"type":"array","items":{"type":"string","minLength":1}}, "fallbacks":{"type":"array"}, "report":{"type":"string"} }
+    }
+  },
+  "additionalProperties": false
+}

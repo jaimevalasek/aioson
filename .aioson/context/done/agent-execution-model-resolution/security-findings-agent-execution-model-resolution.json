@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "feature_slug": "agent-execution-model-resolution",
+  "generated_at": "2026-07-11T21:59:30-03:00",
+  "review_contract": {
+    "review_id": "pentester-agent-execution-model-resolution-20260711T215500",
+    "scope_mode": "phase_review",
+    "runtime_mode": "fixture_based",
+    "target_mode": "framework_target",
+    "target_scope": "Codex model catalog resolution, argv construction, dispatch fallback, reports and telemetry",
+    "allowed_targets": [
+      "src/agent-execution/**",
+      "src/commands/agent-execution.js",
+      "src/commands/verification-plan.js",
+      "src/runtime-store.js",
+      "tests/agent-execution-*.test.js",
+      "tests/verification-plan.test.js"
+    ],
+    "forbidden_targets": [
+      "external URLs",
+      "production systems",
+      "real credentials",
+      "destructive filesystem actions"
+    ],
+    "attack_surfaces": [
+      "memory_context",
+      "tool_invocation",
+      "delegation_handoff",
+      "protocol_contract",
+      "secret_handling",
+      "runtime_permissions"
+    ],
+    "evidence_policy": "safe-proof-only",
+    "findings_artifact_path": ".aioson/context/security-findings-agent-execution-model-resolution.json",
+    "tools": {
+      "node_test": "available",
+      "aioson_audit_code": "available",
+      "semgrep": "not_installed",
+      "trivy": "not_installed",
+      "gitleaks": "not_installed"
+    }
+  },
+  "threat_surfaces": [
+    {
+      "id": "TS-agent-execution-model-resolution-01",
+      "surface": "memory_context",
+      "verification_status": "not_applicable",
+      "skip_reason": "The feature does not ingest model output or third-party prose into parent-agent memory; the generated execution contract carries only sanitized resolution metadata."
+    },
+    {
+      "id": "TS-agent-execution-model-resolution-02",
+      "surface": "tool_invocation",
+      "verification_status": "passed",
+      "evidence": [
+        "Codex adapter keeps shell:false and model/effort in separate argv entries.",
+        "Model slugs from catalog are allowlisted by SAFE_MODEL_ID.",
+        "Model input is capped at 200 characters in schema and resolver; catalog cardinality is capped at 1000 before matching."
+      ]
+    },
+    {
+      "id": "TS-agent-execution-model-resolution-03",
+      "surface": "delegation_handoff",
+      "verification_status": "passed",
+      "evidence": [
+        "Attempt metadata is frozen in state and reports bind run_id, attempt_id, requested/resolved model, strategy and effort."
+      ]
+    },
+    {
+      "id": "TS-agent-execution-model-resolution-04",
+      "surface": "protocol_contract",
+      "verification_status": "passed",
+      "evidence": [
+        "Manifest schema rejects unknown/secret fields; ambiguous or unsupported resolution blocks before adapter build/spawn.",
+        "Harness AC-AEMR-14 includes report, CLI, telemetry and verification-plan probes."
+      ]
+    },
+    {
+      "id": "TS-agent-execution-model-resolution-05",
+      "surface": "secret_handling",
+      "verification_status": "passed",
+      "evidence": [
+        "Catalog loader returns only sanitized slug/display/effort fields and never returns its filesystem path.",
+        "Telemetry bridge recursively redacts and bounds event payloads; raw catalog and prompts are not persisted."
+      ]
+    },
+    {
+      "id": "TS-agent-execution-model-resolution-06",
+      "surface": "runtime_permissions",
+      "verification_status": "passed",
+      "evidence": [
+        "Resolution never authorizes a provider/host switch; capacity fallback remains explicit and cross-host fallback is opt-in."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "SF-agent-execution-model-resolution-01",
+      "feature_slug": "agent-execution-model-resolution",
+      "surface": "tool_invocation",
+      "severity": "medium",
+      "title": "Unbounded model name and catalog cardinality can exhaust resolver resources before spawn",
+      "hypothesis": "A very long manifest model value or a high-cardinality local cache drives tokenization and a Damerau-Levenshtein matrix for every eligible model without an input/cardinality cap.",
+      "preconditions": [
+        "Attacker or faulty local process can modify the feature execution manifest or Codex models cache.",
+        "AIOSON validate/show/dispatch processes the crafted value."
+      ],
+      "reproduction_steps": [
+        "Set an agent model to a very long non-matching string or supply a bounded-size cache with thousands of unique safe slugs.",
+        "Run agent:execution:validate or dispatch.",
+        "Observe work scales with requested length times candidate count before any process is spawned."
+      ],
+      "evidence": [
+        "src/agent-execution/schema.js validates only non-empty model strings and has no maximum length.",
+        "src/agent-execution/model-catalog.js bounds bytes but does not bound parsed models[].length.",
+        "src/agent-execution/model-resolver.js allocates a distance matrix per eligible candidate."
+      ],
+      "impact": "Local CLI denial of service through excessive CPU or heap pressure during validation/dispatch.",
+      "affected_artifacts": [
+        "src/agent-execution/schema.js",
+        "src/agent-execution/model-catalog.js",
+        "src/agent-execution/model-resolver.js"
+      ],
+      "suggested_fix": "Cap model input length in schema and resolver, cap/reject catalog cardinality before sanitization/matching, and add negative tests for both limits.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "llm_top_10_id": "LLM05",
+      "fix_evidence": [
+        "src/agent-execution/schema.js enforces MAX_MODEL_NAME_LENGTH on primary and fallback entries.",
+        "src/agent-execution/model-resolver.js rejects oversized input before tokenization/distance allocation.",
+        "src/agent-execution/model-catalog.js rejects catalog_too_many_models before sanitize/matching.",
+        "Harness 12/12 and focused security-bound tests pass on 2026-07-11."
+      ],
+      "verified_by": "qa",
+      "verified_at": "2026-07-11T21:59:30-03:00"
+    }
+  ]
+}

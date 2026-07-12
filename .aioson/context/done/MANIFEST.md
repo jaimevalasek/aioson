@@ -5,6 +5,9 @@
 
 | slug | completed | files | summary |
 |------|-----------|-------|---------|
+| agent-execution-model-resolution | 2026-07-11 | 11 | Tornar a seleção de modelo dos subagentes tolerante a nomes humanos e pequenos desvios de ID, sem perder a previsibilidade, a segurança e a auditabilidade do Ag |
+| agent-execution-dispatcher | 2026-07-10 | 13 | Transformar o plano de uma feature em um pipeline executável e portátil, no qual cada agente usa o host, o modelo e o modo escolhidos pelo usuário sem depender |
+| agent-execution-telemetry-bridge | 2026-07-10 | 13 | Tornar cada execução externa do dispatcher observável em tempo real e recuperável pelo runtime do AIOSON, para que Play, dashboards e clientes compatíveis mostr |
 | harness-retrospective-optimization | 2026-06-10 | 5 | Fechar o loop de melhoria do harness AIOSON: a trilha de falhas que o framework já coleta deixa de ser write-only e passa a gerar propostas de correção do própr |
 | quality-governance-baseline-and-new-regression-gate | 2026-06-02 | 7 | Give AIOSON agents deterministic quality evidence after code changes, starting with a narrow baseline plus new-regression gate that improves maintainability wit |
 | cost-context-optimization | 2026-06-01 | 5 | Reduzir custo de tokens e ruído de contexto no AIOSON sem enfraquecer a qualidade dos agentes, começando por medições confiáveis e estado de feature correto. |

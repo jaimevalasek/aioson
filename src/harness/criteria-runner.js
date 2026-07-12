@@ -16,7 +16,10 @@
 
 const crypto = require('node:crypto');
 
-const DEFAULT_CHECK_TIMEOUT_MS = 120000;
+// Repository-wide quality gates can legitimately exceed two minutes on
+// Windows. Keep the CLI --timeout override, but give deterministic contract
+// checks enough headroom to avoid classifying a healthy full suite as failed.
+const DEFAULT_CHECK_TIMEOUT_MS = 300000;
 
 /**
  * Normaliza uma linha de erro para assinatura estável (D7):

@@ -1,0 +1,14 @@
+{
+  "feature": "agent-execution-dispatcher",
+  "contract_mode": "builder",
+  "governor": { "max_steps": 80, "error_streak_limit": 5, "cost_ceiling_tokens": null },
+  "criteria": [
+    { "id": "SG-01", "description": "AC-AED-01/06: core dispatcher modules and adapters exist", "assertion": "manifest, schema, dispatcher, reports and three adapters parse", "binary": true, "verification": "node --test tests/agent-execution-manifest.test.js tests/agent-execution-adapters.test.js" },
+    { "id": "SG-02", "description": "AC-AED-12/13: fallback is explicit and process spawning is safe", "assertion": "security and capacity policies pass", "binary": true, "verification": "node --test tests/agent-execution-security.test.js tests/agent-execution-capacity.test.js" },
+    { "id": "RG-01", "description": "AC-AED-02/03/18: invalid manifest blocks before dev with actionable CLI output", "assertion": "CLI contract tests pass", "binary": true, "verification": "node --test tests/agent-execution-cli.test.js" },
+    { "id": "RG-02", "description": "AC-AED-07/08/09/16: cross-host simulated pipeline produces valid awaited reports", "assertion": "dispatcher integration passes", "binary": true, "verification": "node --test tests/agent-execution-dispatcher.test.js" },
+    { "id": "RG-03", "description": "AC-AED-05/10/11/12: resume and bounded capacity policy are idempotent", "assertion": "resume integration passes", "binary": true, "verification": "node --test tests/agent-execution-resume.test.js" },
+    { "id": "RG-04", "description": "AC-AED-04/14/15: legacy workflow and verification compatibility", "assertion": "legacy integration suites pass", "binary": true, "verification": "node --test tests/verification-plan.test.js tests/verification-policy.test.js tests/workflow-execute.test.js" },
+    { "id": "RG-05", "description": "AC-AED-17: full repository quality gate", "assertion": "all tests pass", "binary": true, "verification": "npm test" }
+  ]
+}

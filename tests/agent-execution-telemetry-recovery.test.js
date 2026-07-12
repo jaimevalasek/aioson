@@ -1,0 +1,3 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs/promises');const os=require('node:os');const path=require('node:path');const {openRuntimeDb,createExecutionRun,attachExecutionProcess,reconcileExecutionRun}=require('../src/runtime-store');
+test('AC-06 recovery pauses only a fingerprint-verified detached process',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'rec-'));const {db}=await openRuntimeDb(dir);const c={feature:'f',agent:'dev',dispatcher_run_id:'r',attempt_id:'a',host:'codex',model:'m'};createExecutionRun(db,c);attachExecutionProcess(db,c,{pid:42,fingerprint:'fp'});assert.equal(reconcileExecutionRun(db,c,()=>({alive:true,fingerprint:'fp'})).reason,'detached_process');db.close()});

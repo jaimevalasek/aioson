@@ -1,0 +1,22 @@
+{
+  "phase": 1,
+  "validation_at": "2026-07-10T19:14:27.3945482-03:00",
+  "results": [
+    { "id": "AC-01", "passed": true, "reason": null },
+    { "id": "AC-02", "passed": true, "reason": null },
+    { "id": "AC-03", "passed": true, "reason": null },
+    { "id": "AC-04", "passed": true, "reason": null },
+    { "id": "AC-05", "passed": true, "reason": null },
+    { "id": "AC-06", "passed": true, "reason": null },
+    { "id": "AC-07", "passed": true, "reason": null },
+    { "id": "AC-08", "passed": true, "reason": null },
+    { "id": "AC-09", "passed": true, "reason": null },
+    { "id": "AC-10", "passed": true, "reason": null },
+    { "id": "AC-11", "passed": true, "reason": null },
+    { "id": "AC-12", "passed": true, "reason": null },
+    { "id": "RG-smoke", "passed": true, "reason": null },
+    { "id": "RG-build", "passed": true, "reason": null }
+  ],
+  "overall_score": 1,
+  "ready_for_done_gate": true
+}

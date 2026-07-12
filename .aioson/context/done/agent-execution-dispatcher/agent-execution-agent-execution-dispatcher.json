@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "feature": "agent-execution-dispatcher",
+  "host": "codex",
+  "generated_at": "2026-07-10T19:16:55.979Z",
+  "agents": {
+    "dev": {
+      "enabled": true,
+      "host": "codex",
+        "mode": "external",
+      "model": "configured-default",
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-dispatcher/{run_id}/dev.json"
+    },
+    "qa": {
+      "enabled": true,
+      "host": "codex",
+        "mode": "external",
+      "model": "configured-default",
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-dispatcher/{run_id}/qa.json"
+    },
+    "tester": {
+      "enabled": true,
+      "host": "codex",
+        "mode": "external",
+      "model": "configured-default",
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-dispatcher/{run_id}/tester.json"
+    },
+    "pentester": {
+      "enabled": true,
+      "host": "codex",
+        "mode": "external",
+      "model": "configured-default",
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-dispatcher/{run_id}/pentester.json"
+    },
+    "validator": {
+      "enabled": true,
+      "host": "codex",
+        "mode": "external",
+      "model": "configured-default",
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-dispatcher/{run_id}/validator.json"
+    }
+  },
+  "capacity_policy": {
+    "strategy": "pause",
+    "max_attempts": 1,
+    "backoff_ms": 0
+  },
+  "cycle_limits": {
+    "dev_qa": 3,
+    "tester": 3,
+    "pentester": 3
+  },
+  "reporting": {
+    "format": "json",
+    "markdown": true
+  }
+}

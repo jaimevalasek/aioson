@@ -1,0 +1,1 @@
+'use strict';const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');test('AC-10 dispatcher telemetry uses internal API without shell commands',()=>{const s=fs.readFileSync('src/agent-execution/dispatcher.js','utf8');assert.match(s,/createTelemetryBridge/);assert.doesNotMatch(s,/runtime:emit|live:start|execSync|spawnSync/)});

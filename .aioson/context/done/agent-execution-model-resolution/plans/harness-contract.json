@@ -1,0 +1,122 @@
+{
+  "feature": "agent-execution-model-resolution",
+  "contract_mode": "safe",
+  "governor": {
+    "max_steps": 25,
+    "error_streak_limit": 4,
+    "cost_ceiling_tokens": 700000,
+    "max_runtime_minutes": 90,
+    "max_changed_files": 30,
+    "max_diff_lines": 3500
+  },
+  "allowed_files": [
+    "src/agent-execution/**",
+    "src/commands/agent-execution.js",
+    "src/commands/verification-plan.js",
+    "src/runtime-store.js",
+    "src/cli.js",
+    "tests/**",
+    "template/.aioson/schemas/agent-execution.schema.json",
+    ".aioson/schemas/agent-execution.schema.json",
+    "template/.aioson/docs/autopilot-handoff.md",
+    ".aioson/docs/autopilot-handoff.md",
+    "template/.aioson/docs/dev/phase-loop.md",
+    ".aioson/docs/dev/phase-loop.md",
+    ".aioson/context/**",
+    ".aioson/plans/agent-execution-model-resolution/**",
+    "researchs/codex-model-resolution-2026/**",
+    "plans/source-manifest.md"
+  ],
+  "forbidden_files": [
+    ".env*",
+    "**/*.pem",
+    "**/*.key",
+    "secrets/**"
+  ],
+  "criteria": [
+    {
+      "id": "AC-AEMR-01-02",
+      "description": "Schema e merge preservam manifestos legados e validam reasoning_effort",
+      "assertion": "AC-AEMR-01 e AC-AEMR-02 passam",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-manifest.test.js"
+    },
+    {
+      "id": "AC-AEMR-03-06",
+      "description": "Resolver cobre exact, normalized, alias, fuzzy e ambiguidade segura",
+      "assertion": "AC-AEMR-03 a AC-AEMR-06 passam",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-model-resolver.test.js"
+    },
+    {
+      "id": "AC-AEMR-07-08",
+      "description": "Catálogo ausente ou hostil falha/degrada sem spawn nem vazamento",
+      "assertion": "AC-AEMR-07 e AC-AEMR-08 passam",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-model-catalog.test.js"
+    },
+    {
+      "id": "AC-AEMR-09-12",
+      "description": "Codex recebe modelo/esforço separados e hosts sem capability bloqueiam",
+      "assertion": "AC-AEMR-09 a AC-AEMR-12 passam",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-adapters.test.js"
+    },
+    {
+      "id": "AC-AEMR-13",
+      "description": "Fallback autorizado resolve e valida cada candidato",
+      "assertion": "AC-AEMR-13 passa sem ampliar capacity_policy",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-capacity.test.js"
+    },
+    {
+      "id": "AC-AEMR-14",
+      "description": "State, report e telemetria preservam requested/resolved/effort de forma sanitizada",
+      "assertion": "AC-AEMR-14 passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-reports.test.js tests/agent-execution-cli.test.js tests/agent-execution-telemetry-store.test.js tests/agent-execution-telemetry-bridge.test.js tests/verification-plan.test.js"
+    },
+    {
+      "id": "AC-AEMR-15",
+      "description": "Resume congela a resolução da attempt e preserva digest guard",
+      "assertion": "AC-AEMR-15 passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-resume.test.js"
+    },
+    {
+      "id": "AC-AEMR-16",
+      "description": "Schemas e documentação template/workspace permanecem em paridade",
+      "assertion": "AC-AEMR-16 passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-cli.test.js"
+    },
+    {
+      "id": "AC-AEMR-17",
+      "description": "Entradas não viram shell e o manifesto não controla path de catálogo",
+      "assertion": "AC-AEMR-17 passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-security.test.js"
+    },
+    {
+      "id": "AC-AEMR-18",
+      "description": "Suíte Agent Execution passa offline com fixtures temporárias",
+      "assertion": "AC-AEMR-18 passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-model-catalog.test.js tests/agent-execution-model-resolver.test.js tests/agent-execution-manifest.test.js tests/agent-execution-adapters.test.js tests/agent-execution-dispatcher.test.js tests/agent-execution-capacity.test.js tests/agent-execution-security.test.js tests/agent-execution-resume.test.js"
+    },
+    {
+      "id": "RG-smoke",
+      "description": "Dispatcher externo simulado resolve modelo, executa sem shell e aceita report vinculado",
+      "assertion": "Smoke E2E offline do dispatcher passa",
+      "binary": true,
+      "verification": "node --test tests/agent-execution-dispatcher.test.js"
+    },
+    {
+      "id": "RG-build",
+      "description": "Lint/build estático do CLI permanece verde; a suíte completa é evidência independente no ledger",
+      "assertion": "npm run lint passa",
+      "binary": true,
+      "verification": "npm run lint"
+    }
+  ]
+}

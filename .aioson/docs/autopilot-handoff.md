@@ -37,6 +37,12 @@ aioson workflow:execute . --feature={slug} --seed --tool=<tool>
 
 The headless/tracked runner `aioson workflow:execute . --feature={slug} --tool=<tool> --agentic` (without `--seed`) is the same contract but also advances checkpoints from the CLI — use it for non-interactive runs. Prompt-level `Skill(...)` chaining is how interactive Claude Code / codex sessions consume the scheme.
 
+Execution selection lives in `.aioson/context/agent-execution-{slug}.json`. Validate it before code with `aioson agent:execution:validate`; use `agent:execution:dispatch|resume` for execution. Generated manifests default to `external`: the installed Claude/Codex/OpenCode CLI runs headlessly in a fresh process and writes a bound report. Native subagent/fresh-session modes require an explicit bridge capability; prompt-level chaining is not evidence. The core cannot force a client to open a visible interactive chat window.
+
+Codex entries may use a canonical slug or a human form such as `"model": "GPT 5.6 Terra"`, plus an optional `"reasoning_effort": "high"`. Validation resolves the current local Codex model catalog in conservative tiers: exact slug, normalized display name, unique alias, then a uniquely safe fuzzy match. Version numbers must remain identical, and ambiguous matches pause before process spawn. The manifest remains unchanged; state, reports, CLI output, and telemetry keep `model_requested`, `model_resolved`, and `model_resolution_strategy` separately. When the catalog is unavailable, only `configured-default` and literal model IDs are accepted as unverified fallbacks. Explicit reasoning effort is never silently downgraded or moved to another provider.
+
+Cross-repository writes are opt-in per agent through `writable_roots`. Every path must exist, be a directory, contain no traversal, and is canonicalized before dispatch and recorded in state/report. Codex maps roots to repeated `exec --add-dir <absolute>` argv; Claude maps to `--add-dir`. OpenCode currently has no verified additional-writable-root flag, so a non-empty list returns `host_capability_missing` rather than widening access silently.
+
 ## Routing — deterministic, never LLM-chosen
 
 The next agent comes from the workflow state machine and on-disk evidence, not from model judgment:

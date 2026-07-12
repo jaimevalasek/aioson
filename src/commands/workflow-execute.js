@@ -9,6 +9,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { initManifest, loadManifest } = require('../agent-execution/manifest');
 const {
   detectClassification,
   scanArtifacts,
@@ -792,6 +793,17 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     ? await runLaneGuardPreflight(targetDir, laneIndex)
     : null;
 
+  let agentExecution = await loadManifest(targetDir, slug);
+  if (!dryRun && !agentExecution.exists) {
+    await initManifest(targetDir, slug, tool);
+    agentExecution = await loadManifest(targetDir, slug);
+  }
+  if (agentExecution.exists && !agentExecution.ok) {
+    const failure = { ok: false, reason: 'agent_execution_manifest_invalid', errors: agentExecution.errors, manifest_path: agentExecution.path };
+    if (!options.json) logger.error(`Invalid agent execution manifest: ${agentExecution.path}`);
+    return failure;
+  }
+
   if (parallelGuard && !parallelGuard.ok && !parallelGuard.skipped) {
     if (parallelGuard.reason === 'lane_not_found') {
       const failure = { ok: false, reason: 'parallel_lane_not_found', lane: laneIndex };
@@ -883,6 +895,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       suggestion: statusSnapshot && statusSnapshot.suggestion ? statusSnapshot.suggestion : null,
       resume_command: resumeCommand,
       agentic_policy: agenticPolicy,
+      agent_execution: agentExecution.exists ? { path: agentExecution.path, digest: agentExecution.digest } : { source: 'legacy' },
       parallel_guard: parallelGuard
     };
 
@@ -954,6 +967,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       suggestion: statusSnapshot && statusSnapshot.suggestion ? statusSnapshot.suggestion : null,
       resume_command: resumeCommand,
       agentic_policy: agenticPolicy,
+      agent_execution: { path: agentExecution.path, digest: agentExecution.digest },
       parallel_guard: parallelGuard
     };
 

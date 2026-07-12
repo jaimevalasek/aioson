@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "slug": "agent-execution-telemetry-bridge",
+  "generated_at": "2026-07-10T21:52:02.521Z",
+  "generator": "aioson security:audit@1.0.0",
+  "review_contract": {
+    "scope_mode": "feature",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-agent-execution-telemetry-bridge.json"
+  },
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": [
+    {
+      "finding_id": "security-audit-SEC-SBD-03-4bdd26",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-03",
+      "severity": "medium",
+      "status": "open",
+      "scope": "agent-execution-telemetry-bridge:attack-surface-map",
+      "affected_artifacts": [
+        "C:\\dev\\aioson\\.aioson\\context\\requirements-agent-execution-telemetry-bridge.md"
+      ],
+      "preconditions": [
+        "requirements artifact present"
+      ],
+      "reproduction_steps": [
+        "Search requirements for \"Attack Surface Map\" section"
+      ],
+      "evidence": [
+        "No Attack Surface Map section found in requirements."
+      ],
+      "impact": "Without an Attack Surface Map, ownership/IDOR coverage cannot be verified.",
+      "suggested_fix": "Add an Attack Surface Map section to requirements (analyst).",
+      "recommended_owner": "analyst",
+      "recommended_gate_status": "review",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "finding_id": "security-audit-SEC-SBD-07-a8bdfc",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-07",
+      "severity": "high",
+      "status": "open",
+      "scope": "agent-execution-telemetry-bridge:storage:SEC-SBD-07",
+      "affected_artifacts": [
+        "C:\\dev\\aioson\\.aioson\\context\\spec-agent-execution-telemetry-bridge.md"
+      ],
+      "preconditions": [
+        "Surface \"storage\" present in requirements"
+      ],
+      "reproduction_steps": [
+        "Search spec-agent-execution-telemetry-bridge.md for SEC-SBD-07 evidence or N/A rationale"
+      ],
+      "evidence": [
+        "Surface \"storage\" present but no SEC-SBD-07 evidence or N/A rationale found in spec."
+      ],
+      "impact": "Control SEC-SBD-07 is required for surface \"storage\" but its evidence is missing.",
+      "suggested_fix": "Add evidence (or explicit N/A rationale) for SEC-SBD-07 in spec-agent-execution-telemetry-bridge.md.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "status": "fixed",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "id": "SF-agent-execution-telemetry-bridge-06",
+      "feature_slug": "agent-execution-telemetry-bridge",
+      "surface": "runtime_permissions",
+      "severity": "medium",
+      "title": "Retention is neither invoked automatically nor applied to nonterminal abandoned runs",
+      "hypothesis": "Repeated queued, running, correcting or paused runs retain events indefinitely and bypass the intended retention control.",
+      "preconditions": [
+        "Executions are repeatedly paused, abandoned or crash before a terminal state",
+        "No external maintenance invokes pruneExecutionTelemetry"
+      ],
+      "reproduction_steps": [
+        "Insert an old paused run with events",
+        "Call pruneExecutionTelemetry with retentionDays=1",
+        "Observe the paused run remains",
+        "Search callers and observe no production invocation of pruneExecutionTelemetry"
+      ],
+      "evidence": [
+        "src/runtime-store.js pruneExecutionTelemetry() deletes only passed, failed and cancelled runs",
+        "No production caller of pruneExecutionTelemetry is present in the reviewed diff"
+      ],
+      "impact": "An attacker-controlled or malfunctioning pipeline can cause unbounded SQLite growth over many runs even when per-run output limits work.",
+      "affected_artifacts": [
+        "src/runtime-store.js",
+        "src/commands/agent-execution.js",
+        "tests/agent-execution-telemetry-store.test.js"
+      ],
+      "suggested_fix": "Invoke bounded pruning on open/dispatch or via a documented maintenance command; expire stale nonterminal runs after reconciling them to an abandoned terminal state; add total database/run-count quotas and indexes/tests for pruning batches.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true
+    }
+  ]
+}

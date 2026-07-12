@@ -340,6 +340,7 @@ Only `@product` asks (the kickoff). Downstream agents (`@sheldon`/`@orchestrator
 **Autopilot actions** (per `.aioson/docs/autopilot-handoff.md`):
 1. Finish the PRD, the `features.md` line, and — MICRO (`→ @dev`) — the `## Dev handoff producer` `dev-state.md`.
 2. Seed the contract (idempotent): `aioson workflow:execute . --feature={slug} --seed --tool=claude`. **Check the result.** A `different_active_feature` failure means another feature still holds `workflow.state.json`: surface it (close/pause it or `aioson feature:sweep .`) and stop with the manual handoff — a failed seed never arms the chain.
+   The seed creates `agent-execution-{slug}.json`; mention editable defaults. Aliases are not model IDs.
 3. Register closing duties (`agent:epilogue`/`agent:done`), emit `Autopilot: @product done → invoking @<next> (Ctrl+C to interrupt)`.
 4. Invoke the lane's next stage: SMALL → `Skill(aioson:agent:sheldon)`; MEDIUM → `Skill(aioson:agent:orchestrator)`; MICRO → `Skill(aioson:agent:dev)`; site → `Skill(aioson:agent:copywriter)`. Task: `"continue feature {slug} — autopilot handoff from @product"`.
 

@@ -1,0 +1,157 @@
+{
+  "ok": true,
+  "slug": "agent-execution-model-resolution",
+  "checked_at": "2026-07-11T23:05:09.313Z",
+  "strict": false,
+  "criteria_total": 12,
+  "executable_total": 12,
+  "passed": 12,
+  "failed": 0,
+  "skipped_no_verification": 0,
+  "static_total": 0,
+  "static_passed": 0,
+  "static_failed": 0,
+  "strict_errors": [],
+  "integrity": {
+    "ok": true,
+    "is_runtime_feature": false,
+    "runtime_signals": [],
+    "errors": [],
+    "warnings": []
+  },
+  "checks": [
+    {
+      "id": "AC-AEMR-01-02",
+      "command": "node --test tests/agent-execution-manifest.test.js",
+      "exitCode": 0,
+      "durationMs": 217,
+      "stdout": "✔ manifest defaults contain five executable external agents (4.2124ms)\n✔ validation reports actionable JSON paths (0.9105ms)\n✔ security: model names and fallback names are length bounded before resolution (0.3199ms)\n✔ additive initialization preserves operator model (15.8154ms)\n✔ merge additive adds defaults without replacing choices (0.2274ms)\n✔ reasoning effort is optional, validated and preserved by additive init (4.0476ms)\n✔ missing manifest reports legacy compatibility instead of invalid config (0.891ms)\nℹ tests 7\nℹ suites 0\nℹ pass 7\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 120.9376\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-03-06",
+      "command": "node --test tests/agent-execution-model-resolver.test.js",
+      "exitCode": 0,
+      "durationMs": 210,
+      "stdout": "✔ AC-AEMR-03 exact canonical slug remains unchanged (1.0991ms)\n✔ AC-AEMR-04 display form normalizes to the canonical slug (0.318ms)\n✔ AC-AEMR-05 unique alias resolves and duplicate alias blocks with sorted candidates (0.9104ms)\n✔ AC-AEMR-06 conservative typo resolves but generic, numeric drift and ties block (12.4178ms)\n✔ AC-AEMR-07 no catalog match fails before execution (0.367ms)\n✔ AC-AEMR-08 unavailable catalog preserves literal ids but rejects display forms (0.1985ms)\n✔ AC-AEMR-11 reasoning effort never downgrades when the resolved model rejects it (0.3177ms)\n✔ security: oversized names fail before fuzzy distance allocation (0.1369ms)\nℹ tests 8\nℹ suites 0\nℹ pass 8\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 109.9753\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-07-08",
+      "command": "node --test tests/agent-execution-model-catalog.test.js",
+      "exitCode": 0,
+      "durationMs": 202,
+      "stdout": "✔ AC-AEMR-03 Codex catalog exposes sanitized models and efforts (10.125ms)\n✔ AC-AEMR-08 missing, invalid and incompatible caches fail closed (7.7739ms)\n✔ AC-AEMR-08 oversized cache is rejected before parsing (1.7677ms)\n✔ security: excessive catalog cardinality is rejected before matching (1.3432ms)\n✔ AC-AEMR-17 manifest data cannot choose a catalog path (1.1349ms)\n✔ hosts without a verified catalog capability stay unsupported (0.1392ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 113.4182\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-09-12",
+      "command": "node --test tests/agent-execution-adapters.test.js",
+      "exitCode": 0,
+      "durationMs": 242,
+      "stdout": "✔ AC-AED-06 AC-AED-16 claude pauses unavailable native capability (4.9471ms)\n✔ AC-AED-06 AC-AED-16 codex pauses unavailable native capability (1.1199ms)\n✔ AC-AED-06 AC-AED-16 opencode pauses unavailable native capability (0.5658ms)\n✔ external adapter uses argv and shell false (1.5191ms)\n✔ AC-AEMR-09 Codex keeps model and reasoning effort in separate argv entries (0.1787ms)\n✔ AC-AEMR-17 hostile model text remains one argv value and never becomes a command (0.1637ms)\n✔ AC-AEMR-10 configured default omits model but applies explicit effort (0.1886ms)\n✔ AC-AEMR-12 hosts without verified effort capability fail explicitly (0.1233ms)\n✔ Codex sends frontmatter and large prompts through stdin (0.3463ms)\n✔ Codex and Claude pass writable roots with spaces as separate argv (0.4156ms)\n✔ OpenCode blocks additional writable roots without a verified flag (0.1805ms)\n✔ caller capability claims cannot enable native Codex subagents (0.1067ms)\n✔ external process timeout is reported distinctly (67.322ms)\nℹ tests 13\nℹ suites 0\nℹ pass 13\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 163.6087\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-13",
+      "command": "node --test tests/agent-execution-capacity.test.js",
+      "exitCode": 0,
+      "durationMs": 240,
+      "stdout": "✔ capacity is classified and defaults pause without fallback (2.4107ms)\n✔ capacity fallback uses only explicit ordered pairs and blocks cross-host by default (0.3156ms)\n✔ effective capacity execution follows explicit fallback order and records resolution (26.4126ms)\n✔ capacity retry preserves candidate, applies backoff and stops at the configured limit (5.4847ms)\n✔ capacity pause never retries or falls back (2.3059ms)\n✔ capacity execution rejects an adapter host absent from the registry (0.2455ms)\n✔ AC-AEMR-13 fallback model is resolved and effort-validated before execution (0.7041ms)\nℹ tests 7\nℹ suites 0\nℹ pass 7\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 156.6325\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-14",
+      "command": "node --test tests/agent-execution-reports.test.js tests/agent-execution-cli.test.js tests/agent-execution-telemetry-store.test.js tests/agent-execution-telemetry-bridge.test.js tests/verification-plan.test.js",
+      "exitCode": 0,
+      "durationMs": 773,
+      "stdout": "✔ CLI init validate show and blocked native dispatch are stable (153.5671ms)\n✔ AC-AEMR-14 validate and show expose requested, resolved, strategy and effort (4.296ms)\n✔ AC-AEMR-16 distributed schema and execution docs stay in workspace parity (3.7314ms)\n✔ report rejects stubs and invalid verdicts (1.4712ms)\n✔ report path cannot escape report root (1.3108ms)\n✔ spoofed or replayed PASS cannot match a registered attempt (1.0515ms)\n✔ AC-AEMR-14 explicit reasoning effort is bound to the registered attempt (0.3916ms)\n✔ AC-AEMR-14 requested model and resolution strategy are required and bound (0.4373ms)\n✔ AC-04 AC-05 stream is redacted, ordered and bounded (102.8781ms)\n✔ AC-11 redactor removes credential forms (0.3228ms)\n✔ HIGH: secret split across chunks and long secret never persists (68.7338ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (82.948ms)\n✔ AC-AEMR-14 bridge preserves resolution metadata without catalog payloads (68.837ms)\n✔ AC-01 AC-02 creates idempotent correlated run and attaches process (98.7104ms)\n✔ AC-03 state transitions are monotonic and idempotent (64.7925ms)\n✔ AC-08 report requires strong binding (63.5602ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (80.0383ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (56.8723ms)\n✔ MEDIUM: bounded retention removes stale paused runs (52.2846ms)\n✔ AC-AEMR-14 telemetry stores sanitized model resolution metadata in additive columns (51.2721ms)\n✔ per-phase on SMALL runs only qa, native on a cheap Claude tier (15.1574ms)\n✔ per-phase on MICRO skips qa (skip_on_micro budget) (0.8359ms)\n✔ end-of-feature on MEDIUM + sensitive runs qa, tester, pentester, validator (0.9827ms)\n✔ end-of-feature MEDIUM without a sensitive surface does not run pentester (0.6322ms)\n✔ --host pins the dispatch host and its native model (1.1605ms)\n✔ AC-AEMR-14 manifest planning surfaces requested/resolved model, strategy and separate effort (9.0365ms)\n✔ classification auto-detects from project.context.md when not passed (2.6157ms)\n✔ phase_loop is surfaced in the plan (1.2805ms)\n✔ per-phase with auto_continue emits a CONTINUE-NOW directive (no /compact) (0.9484ms)\n✔ end-of-feature emits an END-OF-FEATURE directive (0.7477ms)\n✔ auto_continue=false yields a PAUSE directive (5.3976ms)\n✔ pretty (non-json) output renders without throwing (2.1279ms)\n✔ invalid --trigger fails loudly instead of silently coercing to per-phase (0.5193ms)\nℹ tests 33\nℹ suites 0\nℹ pass 33\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 686.6725\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-15",
+      "command": "node --test tests/agent-execution-resume.test.js",
+      "exitCode": 0,
+      "durationMs": 420,
+      "stdout": "✔ resume blocks when active manifest digest changes (103.6577ms)\n✔ AC-AEMR-15 a recorded attempt keeps its frozen model resolution across resume (106.555ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 325.0794\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-16",
+      "command": "node --test tests/agent-execution-cli.test.js",
+      "exitCode": 0,
+      "durationMs": 333,
+      "stdout": "✔ CLI init validate show and blocked native dispatch are stable (114.9602ms)\n✔ AC-AEMR-14 validate and show expose requested, resolved, strategy and effort (5.3267ms)\n✔ AC-AEMR-16 distributed schema and execution docs stay in workspace parity (1.656ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 238.6878\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-17",
+      "command": "node --test tests/agent-execution-security.test.js",
+      "exitCode": 0,
+      "durationMs": 192,
+      "stdout": "✔ manifest has no command strings or secrets and fallback is opt-in (4.1477ms)\n✔ runtime schema rejects unknown and nested secret fields (0.7909ms)\n✔ adapter errors redact common credential forms (0.2138ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 105.7293\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-AEMR-18",
+      "command": "node --test tests/agent-execution-model-catalog.test.js tests/agent-execution-model-resolver.test.js tests/agent-execution-manifest.test.js tests/agent-execution-adapters.test.js tests/agent-execution-dispatcher.test.js tests/agent-execution-capacity.test.js tests/agent-execution-security.test.js tests/agent-execution-resume.test.js",
+      "exitCode": 0,
+      "durationMs": 910,
+      "stdout": "✔ AC-AED-06 AC-AED-16 claude pauses unavailable native capability (4.5095ms)\n✔ AC-AED-06 AC-AED-16 codex pauses unavailable native capability (1.7244ms)\n✔ AC-AED-06 AC-AED-16 opencode pauses unavailable native capability (1.7773ms)\n✔ external adapter uses argv and shell false (3.3267ms)\n✔ AC-AEMR-09 Codex keeps model and reasoning effort in separate argv entries (0.3567ms)\n✔ AC-AEMR-17 hostile model text remains one argv value and never becomes a command (0.2758ms)\n✔ AC-AEMR-10 configured default omits model but applies explicit effort (0.2991ms)\n✔ AC-AEMR-12 hosts without verified effort capability fail explicitly (0.1781ms)\n✔ Codex sends frontmatter and large prompts through stdin (0.3955ms)\n✔ Codex and Claude pass writable roots with spaces as separate argv (0.4612ms)\n✔ OpenCode blocks additional writable roots without a verified flag (0.1885ms)\n✔ caller capability claims cannot enable native Codex subagents (0.1137ms)\n✔ external process timeout is reported distinctly (90.583ms)\n✔ capacity is classified and defaults pause without fallback (5.7124ms)\n✔ capacity fallback uses only explicit ordered pairs and blocks cross-host by default (0.9182ms)\n✔ effective capacity execution follows explicit fallback order and records resolution (31.7164ms)\n✔ capacity retry preserves candidate, applies backoff and stops at the configured limit (7.2258ms)\n✔ capacity pause never retries or falls back (3.3369ms)\n✔ capacity execution rejects an adapter host absent from the registry (0.8352ms)\n✔ AC-AEMR-13 fallback model is resolved and effort-validated before execution (2.1364ms)\n✔ E2E external executable spawns, waits and accepts only bound report (200.0062ms)\n✔ missing report pauses rather than fabricating PASS (79.0228ms)\n✔ concurrent dispatch is serialized by an exclusive lease (4.3424ms)\n✔ prompt path outside workspace is rejected before process spawn (4.6966ms)\n✔ explicit writable roots are canonicalized and recorded in report/state (143.4936ms)\n✔ missing and traversal writable roots block before spawn (6.6635ms)\n✔ AC-AEMR-04 AC-AEMR-09 dispatch resolves a human model name before adapter execution (129.9916ms)\n✔ AC-AEMR-07 ambiguous model blocks before adapter build or execute (8.1507ms)\n✔ manifest defaults contain five executable external agents (6.383ms)\n✔ validation reports actionable JSON paths (2.3778ms)\n✔ security: model names and fallback names are length bounded before resolution (0.9119ms)\n✔ additive initialization preserves operator model (30.8955ms)\n✔ merge additive adds defaults without replacing choices (0.3065ms)\n✔ reasoning effort is optional, validated and preserved by additive init (7.2875ms)\n✔ missing manifest reports legacy compatibility instead of invalid config (3.6257ms)\n✔ AC-AEMR-03 Codex catalog exposes sanitized models and efforts (22.7531ms)\n✔ AC-AEMR-08 missing, invalid and incompatible caches fail closed (12.3383ms)\n✔ AC-AEMR-08 oversized cache is rejected before parsing (4.5372ms)\n✔ security: excessive catalog cardinality is rejected before matching (5.3235ms)\n✔ AC-AEMR-17 manifest data cannot choose a catalog path (2.7292ms)\n✔ hosts without a verified catalog capability stay unsupported (0.2556ms)\n✔ AC-AEMR-03 exact canonical slug remains unchanged (1.4816ms)\n✔ AC-AEMR-04 display form normalizes to the canonical slug (0.5781ms)\n✔ AC-AEMR-05 unique alias resolves and duplicate alias blocks with sorted candidates (1.6273ms)\n✔ AC-AEMR-06 conservative typo resolves but generic, numeric drift and ties block (16.8211ms)\n✔ AC-AEMR-07 no catalog match fails before execution (0.8176ms)\n✔ AC-AEMR-08 unavailable catalog preserves literal ids but rejects display forms (0.5781ms)\n✔ AC-AEMR-11 reasoning effort never downgrades when the resolved model rejects it (0.9779ms)\n✔ security: oversized names fail before fuzzy distance allocation (0.5348ms)\n✔ resume blocks when active manifest digest changes (102.6554ms)\n✔ AC-AEMR-15 a recorded attempt keeps its frozen model resolution across resume (101.5639ms)\n✔ manifest has no command strings or secrets and fallback is opt-in (2.7622ms)\n✔ runtime schema rejects unknown and nested secret fields (1.7049ms)\n✔ adapter errors redact common credential forms (0.8218ms)\nℹ tests 54\nℹ suites 0\nℹ pass 54\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 818.6272\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-smoke",
+      "command": "node --test tests/agent-execution-dispatcher.test.js",
+      "exitCode": 0,
+      "durationMs": 714,
+      "stdout": "✔ E2E external executable spawns, waits and accepts only bound report (167.1178ms)\n✔ missing report pauses rather than fabricating PASS (69.4029ms)\n✔ concurrent dispatch is serialized by an exclusive lease (4.337ms)\n✔ prompt path outside workspace is rejected before process spawn (4.9559ms)\n✔ explicit writable roots are canonicalized and recorded in report/state (133.7702ms)\n✔ missing and traversal writable roots block before spawn (11.0436ms)\n✔ AC-AEMR-04 AC-AEMR-09 dispatch resolves a human model name before adapter execution (120.3293ms)\n✔ AC-AEMR-07 ambiguous model blocks before adapter build or execute (7.7407ms)\nℹ tests 8\nℹ suites 0\nℹ pass 8\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 629.6282\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-build",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "durationMs": 28161,
+      "stdout": "\n> @jaimevalasek/aioson@1.37.0 lint\n> node scripts/check-js.js\n\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    }
+  ],
+  "static_checks": []
+}

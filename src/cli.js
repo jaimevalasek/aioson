@@ -189,6 +189,7 @@ const { runClassify } = require('./commands/classify');
 const { runPrototypeCheck } = require('./commands/prototype-check');
 const { runVerifyImplementation } = require('./commands/verify-implementation');
 const { runVerificationPlan } = require('./commands/verification-plan');
+const { runAgentExecution } = require('./commands/agent-execution');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
@@ -674,6 +675,20 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'verify-implementation',
   'verification:plan',
   'verification-plan',
+  'agent:execution:init',
+  'agent-execution-init',
+  'agent:execution:validate',
+  'agent-execution-validate',
+  'agent:execution:show',
+  'agent-execution-show',
+  'agent:execution:dispatch',
+  'agent-execution-dispatch',
+  'agent:execution:resume',
+  'agent-execution-resume',
+  'agent:execution:status',
+  'agent-execution-status',
+  'agent:execution:events',
+  'agent-execution-events',
   'sizing',
   'detect:test-runner',
   'detect-test-runner',
@@ -1628,6 +1643,9 @@ async function main() {
       result = await runClassify({ args, options, logger: commandLogger });
     } else if (command === 'verification:plan' || command === 'verification-plan') {
       result = await runVerificationPlan({ args, options, logger: commandLogger });
+    } else if (command.startsWith('agent:execution:') || command.startsWith('agent-execution-')) {
+      const sub = command.replace(/^agent:execution:|^agent-execution-/, '');
+      result = await runAgentExecution({ args, options: { ...options, sub }, logger: commandLogger });
     } else if (command === 'prototype:check' || command === 'prototype-check') {
       result = await runPrototypeCheck({ args, options, logger: commandLogger });
     } else if (command === 'verify:implementation' || command === 'verify-implementation') {

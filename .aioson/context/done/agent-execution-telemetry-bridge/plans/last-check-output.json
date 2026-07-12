@@ -1,0 +1,179 @@
+{
+  "ok": true,
+  "slug": "agent-execution-telemetry-bridge",
+  "checked_at": "2026-07-10T22:38:59.746Z",
+  "strict": false,
+  "criteria_total": 14,
+  "executable_total": 14,
+  "passed": 14,
+  "failed": 0,
+  "skipped_no_verification": 0,
+  "static_total": 0,
+  "static_passed": 0,
+  "static_failed": 0,
+  "strict_errors": [],
+  "integrity": {
+    "ok": true,
+    "is_runtime_feature": false,
+    "runtime_signals": [],
+    "errors": [],
+    "warnings": []
+  },
+  "checks": [
+    {
+      "id": "AC-01",
+      "command": "node --test tests/agent-execution-telemetry-store.test.js",
+      "exitCode": 0,
+      "durationMs": 495,
+      "stdout": "✔ AC-01 AC-02 creates idempotent correlated run and attaches process (67.3507ms)\n✔ AC-03 state transitions are monotonic and idempotent (53.1143ms)\n✔ AC-08 report requires strong binding (53.931ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (58.083ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (49.2098ms)\n✔ MEDIUM: bounded retention removes stale paused runs (54.0221ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 423.7633\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-02",
+      "command": "node --test tests/agent-execution-telemetry-correlation.test.js",
+      "exitCode": 0,
+      "durationMs": 498,
+      "stdout": "✔ AC-01 AC-02 creates idempotent correlated run and attaches process (63.1481ms)\n✔ AC-03 state transitions are monotonic and idempotent (54.7644ms)\n✔ AC-08 report requires strong binding (57.7936ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (46.4173ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (52.0891ms)\n✔ MEDIUM: bounded retention removes stale paused runs (59.1532ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 426.4226\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-03",
+      "command": "node --test tests/agent-execution-telemetry-state.test.js",
+      "exitCode": 0,
+      "durationMs": 478,
+      "stdout": "✔ AC-01 AC-02 creates idempotent correlated run and attaches process (65.0736ms)\n✔ AC-03 state transitions are monotonic and idempotent (48.1357ms)\n✔ AC-08 report requires strong binding (49.1852ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (60.4311ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (47.1786ms)\n✔ MEDIUM: bounded retention removes stale paused runs (51.3768ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 406.4207\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-04",
+      "command": "node --test tests/agent-execution-telemetry-stream.test.js",
+      "exitCode": 0,
+      "durationMs": 332,
+      "stdout": "✔ AC-04 AC-05 stream is redacted, ordered and bounded (67.1724ms)\n✔ AC-11 redactor removes credential forms (0.27ms)\n✔ HIGH: secret split across chunks and long secret never persists (52.4566ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (54.3771ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 262.3028\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-05",
+      "command": "node --test tests/agent-execution-telemetry-bounds.test.js",
+      "exitCode": 0,
+      "durationMs": 341,
+      "stdout": "✔ AC-04 AC-05 stream is redacted, ordered and bounded (65.2831ms)\n✔ AC-11 redactor removes credential forms (0.2905ms)\n✔ HIGH: secret split across chunks and long secret never persists (59.3116ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (55.202ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 270.186\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-06",
+      "command": "node --test tests/agent-execution-telemetry-recovery.test.js",
+      "exitCode": 0,
+      "durationMs": 220,
+      "stdout": "✔ AC-06 recovery pauses only a fingerprint-verified detached process (62.9923ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 148.7506\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-07",
+      "command": "node --test tests/agent-execution-telemetry-capacity.test.js",
+      "exitCode": 0,
+      "durationMs": 168,
+      "stdout": "✔ capacity is classified and defaults pause without fallback (2.0062ms)\n✔ capacity fallback uses only explicit ordered pairs and blocks cross-host by default (0.3548ms)\n✔ effective capacity execution follows explicit fallback order and records resolution (0.5231ms)\n✔ capacity retry preserves candidate, applies backoff and stops at the configured limit (0.2697ms)\n✔ capacity pause never retries or falls back (0.1999ms)\n✔ capacity execution rejects an adapter host absent from the registry (0.1376ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 97.8696\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-08",
+      "command": "node --test tests/agent-execution-telemetry-report.test.js",
+      "exitCode": 0,
+      "durationMs": 475,
+      "stdout": "✔ AC-01 AC-02 creates idempotent correlated run and attaches process (63.11ms)\n✔ AC-03 state transitions are monotonic and idempotent (58.0291ms)\n✔ AC-08 report requires strong binding (49.8843ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (46.2646ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (52.9689ms)\n✔ MEDIUM: bounded retention removes stale paused runs (46.3382ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 401.2312\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-09",
+      "command": "node --test tests/agent-execution-telemetry-cli.test.js",
+      "exitCode": 0,
+      "durationMs": 180,
+      "stdout": "✔ AC-09 telemetry CLI exposes stable status schema (15.7366ms)\n✔ MEDIUM: events rejects telemetry run owned by another feature (6.448ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 112.9411\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-10",
+      "command": "node --test tests/agent-execution-telemetry-no-shell.test.js",
+      "exitCode": 0,
+      "durationMs": 142,
+      "stdout": "✔ AC-10 dispatcher telemetry uses internal API without shell commands (0.9754ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 74.205\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-11",
+      "command": "node --test tests/agent-execution-telemetry-failure.test.js",
+      "exitCode": 0,
+      "durationMs": 594,
+      "stdout": "✔ AC-04 AC-05 stream is redacted, ordered and bounded (325.9034ms)\n✔ AC-11 redactor removes credential forms (0.2825ms)\n✔ HIGH: secret split across chunks and long secret never persists (54.2583ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (54.4831ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 523.4061\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-12",
+      "command": "node --test tests/agent-execution-telemetry-verification.test.js",
+      "exitCode": 0,
+      "durationMs": 142,
+      "stdout": "✔ report rejects stubs and invalid verdicts (0.9268ms)\n✔ report path cannot escape report root (0.3996ms)\n✔ spoofed or replayed PASS cannot match a registered attempt (0.2305ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 76.3109\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-smoke",
+      "command": "node --test tests/agent-execution-telemetry-smoke.test.js",
+      "exitCode": 0,
+      "durationMs": 511,
+      "stdout": "✔ E2E external executable spawns, waits and accepts only bound report (140.7237ms)\n✔ missing report pauses rather than fabricating PASS (62.6394ms)\n✔ concurrent dispatch is serialized by an exclusive lease (4.4179ms)\n✔ prompt path outside workspace is rejected before process spawn (5.2249ms)\n✔ explicit writable roots are canonicalized and recorded in report/state (120.7188ms)\n✔ missing and traversal writable roots block before spawn (5.2113ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 436.9445\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-build",
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 119249,
+      "stdout": "\n> @jaimevalasek/aioson@1.37.0 test\n> node --test\n\n✔ src\\commands\\test-agents.js (396.7587ms)\n✔ src\\test-briefing.js (345.6496ms)\n✔ extractAcIds supports slugged and numeric AC ids (1.5704ms)\n✔ ac:test-audit requires --feature (21.4629ms)\n✔ ac:test-audit passes when no AC ids exist (8.1282ms)\n✔ ac:test-audit covers AC ids referenced by test files (8.7893ms)\n✔ ac:test-audit covers AC ids referenced by executable harness criteria (8.0076ms)\n✔ ac:test-audit does not let a longer AC id cover a shorter prefix id (substring collision) (20.2152ms)\n✔ ac:test-audit blocks when an AC has no test evidence (11.8284ms)\n✔ ac:test-audit --json emits report (18.7694ms)\n✔ AC-ALL-601: 5 simulated feature closures produce zero ok=false curation checks (inception self-test) (6254.1888ms)\n✔ AC-ALL-603: checkLearningLoopTemplateParity returns 0 issues against the live template/ (2.4338ms)\n✔ AC-ALL-603: parity helper reports missing config + autonomy + placeholders when the template is incomplete (11.7963ms)\n✔ AC-ALL-605: src/doctor.js wires the 3 curation check functions (0.7058ms)\n✔ AC-ALL-605: src/commands/feature-close.js wires the distillation hook + reads classification pre-archive (0.4849ms)\n✔ AC-ALL-605: src/runtime-store.js exports appendContextLoadEvent + wires learning-loop migration (0.9629ms)\n✔ AC-ALL-605: all Phase 1-5 source modules exist on disk (1.1285ms)\n✔ AC-ALL-605: template/.aioson/agents/ chain agents are byte-identical with .aioson/agents/ for active-learning-loop scope (29.0562ms)\n▶ agent-audit.js — scoped modes\n  ✔ scans only runtime surfaces with --runtime-only (50.9422ms)\n  ✔ scans only template surfaces with --template-only (12.133ms)\n  ✔ defaults to inception-compatible scan and includes mode metadata (15.5213ms)\n  ✔ rejects conflicting scoped modes (11.6966ms)\n✔ agent-audit.js — scoped modes (92.6727ms)\n▶ Phase 3.1 — feature:close dossier guarantee\n  ✔ synthesizes dossier from existing PRD when missing on close (531.0384ms)\n  ✔ writes minimal-fallback dossier when no source artifacts exist (EBOOTSTRAPEMPTY) (639.0899ms)\n  ✔ is idempotent — does not overwrite existing dossier (610.2802ms)\n  ✔ runs the guarantee on FAIL verdict (verdict-agnostic) (116.0976ms)\n✔ Phase 3.1 — feature:close dossier guarantee (1899.0722ms)\n▶ Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)\n  ✔ auto-inits dossier for SMALL/MEDIUM features when activating a stage (176.1607ms)\n  ✔ skips MICRO features (auto-init opt-in only via dossier:init manual) (10.5636ms)\n  ✔ is idempotent — does not overwrite existing dossier (10.\n\n[... 11711 bytes omitted (criteria:RG-build) ...]\n\n94.3377ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (91.8075ms)\n✔ AC-10 dispatcher telemetry uses internal API without shell commands (1.4138ms)\n✔ AC-06 recovery pauses only a fingerprint-verified detached process (329.7339ms)\n✔ AC-01 AC-02 creates idempotent correlated run and attaches process (312.5833ms)\n✔ AC-03 state transitions are monotonic and idempotent (111.3083ms)\n✔ AC-08 report requires strong binding (100.7587ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (121.3543ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (109.749ms)\n✔ MEDIUM: bounded retention removes stale paused runs (167.3495ms)\n✔ E2E external executable spawns, waits and accepts only bound report (492.4147ms)\n✔ missing report pauses rather than fabricating PASS (154.7403ms)\n✔ concurrent dispatch is serialized by an exclusive lease (10.1314ms)\n✔ prompt path outside workspace is rejected before process spawn (20.724ms)\n✔ explicit writable roots are canonicalized and recorded in report/state (1301.4975ms)\n✔ missing and traversal writable roots block before spawn (25.8767ms)\n✔ AC-01 AC-02 creates idempotent correlated run and attaches process (188.3872ms)\n✔ AC-03 state transitions are monotonic and idempotent (111.0822ms)\n✔ AC-08 report requires strong binding (113.733ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (115.5375ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (99.7689ms)\n✔ MEDIUM: bounded retention removes stale paused runs (175.1807ms)\n✔ AC-01 AC-02 creates idempotent correlated run and attaches process (200.4592ms)\n✔ AC-03 state transitions are monotonic and idempotent (96.3646ms)\n✔ AC-08 report requires strong binding (109.7524ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (150.7034ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (204.3527ms)\n✔ MEDIUM: bounded retention removes stale paused runs (1152.0618ms)\n✔ AC-04 AC-05 stream is redacted, ordered and bounded (234.8503ms)\n✔ AC-11 redactor removes credential forms (0.6199ms)\n✔ HIGH: secret split across chunks and long secret never persists (131.3529ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (159.3895ms)\n✔ report rejects stubs and invalid verdicts (1.0345ms)\n✔ report path cannot escape report root (1.0726ms)\n✔ spoofed or replayed PASS cannot match a registered attempt (0.7537ms)\n✔ generateSkillMd produces SKILL.md with valid frontmatter (4.183ms)\n✔ generateSkillMd extracts tools from agent body (0.8029ms)\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    }
+  ],
+  "static_checks": []
+}

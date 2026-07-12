@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "session_ended_at": "2026-06-19T04:08:46.002Z",
+  "session_ended_at": "2026-07-11T22:05:33.149Z",
   "last_agent": "@qa",
   "last_stage": "qa",
   "what_was_done": "Stage @qa completed.",
@@ -17,6 +17,43 @@
       "mode": "post-fix",
       "command": "aioson workflow:next . --agent=scope-check --scope-mode=post-fix",
       "reason": "Optional post-fix check: use only when verification or security corrections changed behavior or product scope."
+    }
+  ],
+  "decision_rationale": [
+    {
+      "agent": "unknown",
+      "decision": "json-test-1783807362992",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "dev",
+      "decision": "manual-promote-1783807363040",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "unknown",
+      "decision": "telemetry-1783807363127",
+      "alternatives_considered": null,
+      "rationale": "q",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "dev",
+      "decision": "conf2x-1783807363433",
+      "alternatives_considered": null,
+      "rationale": "q1",
+      "confidence": "confirmed"
+    },
+    {
+      "agent": "dev",
+      "decision": "conf2x-1783807363433",
+      "alternatives_considered": null,
+      "rationale": "q2",
+      "confidence": "confirmed"
     }
   ]
 }

@@ -1,0 +1,15 @@
+{
+  "phase": 6,
+  "validation_at": "2026-07-10T20:12:00.000Z",
+  "results": [
+    { "id": "SG-01", "passed": true, "reason": null },
+    { "id": "SG-02", "passed": true, "reason": null },
+    { "id": "RG-01", "passed": true, "reason": null },
+    { "id": "RG-02", "passed": true, "reason": null },
+    { "id": "RG-03", "passed": true, "reason": null },
+    { "id": "RG-04", "passed": true, "reason": null },
+    { "id": "RG-05", "passed": true, "reason": null }
+  ],
+  "overall_score": 1,
+  "ready_for_done_gate": true
+}

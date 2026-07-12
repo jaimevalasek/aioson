@@ -1,0 +1,32 @@
+feature: agent-execution-dispatcher
+version: 1
+classification: MEDIUM
+gates:
+  A: approved
+  B: approved
+  C: approved
+requirements:
+  - id: REQ-AED-01
+    acceptance: [AC-AED-01]
+  - id: REQ-AED-02
+    acceptance: [AC-AED-02, AC-AED-03]
+  - id: REQ-AED-03
+    acceptance: [AC-AED-02]
+  - id: REQ-AED-04
+    acceptance: [AC-AED-04, AC-AED-05, AC-AED-14, AC-AED-15]
+  - id: REQ-AED-05
+    acceptance: [AC-AED-07]
+  - id: REQ-AED-06
+    acceptance: [AC-AED-06, AC-AED-16]
+  - id: REQ-AED-07
+    acceptance: [AC-AED-08, AC-AED-09]
+  - id: REQ-AED-08
+    acceptance: [AC-AED-10, AC-AED-11]
+  - id: REQ-AED-09
+    acceptance: [AC-AED-12, AC-AED-13]
+  - id: REQ-AED-10
+    acceptance: [AC-AED-17]
+  - id: REQ-AED-11
+    acceptance: [AC-AED-14, AC-AED-15]
+  - id: REQ-AED-12
+    acceptance: [AC-AED-18]

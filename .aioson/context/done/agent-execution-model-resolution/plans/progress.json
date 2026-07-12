@@ -1,0 +1,34 @@
+{
+  "feature": "agent-execution-model-resolution",
+  "phase": 4,
+  "status": "completed",
+  "completed_steps": [
+    "phase-1-contract-catalog-resolver",
+    "phase-2-adapter-dispatcher-fallback",
+    "phase-3-cli-telemetry-distribution",
+    "phase-4-hardening-gates"
+  ],
+  "last_error": null,
+  "session_count": 1,
+  "last_updated": "2026-07-11T22:01:05.272Z",
+  "circuit_state": "CLOSED",
+  "iterations": 4,
+  "consecutive_errors": 0,
+  "ready_for_done_gate": true,
+  "validation_at": "2026-07-11T22:01:05.272Z",
+  "results": [
+    { "id": "AC-AEMR-01-02", "passed": true, "reason": null },
+    { "id": "AC-AEMR-03-06", "passed": true, "reason": null },
+    { "id": "AC-AEMR-07-08", "passed": true, "reason": null },
+    { "id": "AC-AEMR-09-12", "passed": true, "reason": null },
+    { "id": "AC-AEMR-13", "passed": true, "reason": null },
+    { "id": "AC-AEMR-14", "passed": true, "reason": null },
+    { "id": "AC-AEMR-15", "passed": true, "reason": null },
+    { "id": "AC-AEMR-16", "passed": true, "reason": null },
+    { "id": "AC-AEMR-17", "passed": true, "reason": null },
+    { "id": "AC-AEMR-18", "passed": true, "reason": null },
+    { "id": "RG-smoke", "passed": true, "reason": null },
+    { "id": "RG-build", "passed": true, "reason": null }
+  ],
+  "overall_score": 1
+}

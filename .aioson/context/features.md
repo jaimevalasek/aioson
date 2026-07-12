@@ -30,3 +30,7 @@
 | briefing-refiner | done | 2026-06-08 | 2026-06-08 |
 | loop-guardrails | done | 2026-06-09 | 2026-06-09 |
 | harness-retrospective-optimization | done | 2026-06-10 | 2026-06-10 |
+| agent-execution-dispatcher | done | 2026-07-10 | 2026-07-10 |
+| agent-execution-telemetry-bridge | done | 2026-07-10 | 2026-07-10 |
+| agent-execution-model-resolution | done | 2026-07-11 | 2026-07-11 |
+| agent-execution-model-resolution | done | 2026-07-11 | 2026-07-11 |

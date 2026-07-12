@@ -1,29 +1,26 @@
 ---
-last_updated: 2026-07-06
-last_agent: dev
-last_gate: full-feature autopilot + CLI-owned briefing refinement shipped (v1.37.0)
-active_feature: briefing-refiner-cli-loop
-active_work: "Shipped v1.37.0: two arcs. (1) Full-feature autopilot — workflow:execute --seed, @product asks run mode at kickoff (no hidden flag), inline --auto/--step tokens, --help on 13 agents, chain-integrity fixes (sheldon backwards-activation, tracked-session signal, seed staleness, slug-scoped triggers), feature:close runtime-pointer retirement, dev phase-loop no-self-stop. (2) @briefing-refiner CLI loop — briefing:review/briefing:apply-feedback, review.html v2 (autosave, copy-path, persistent save-picker id), schema v1.1, verify:artifact kind=review, declined-feedback archive fix, boolean-flag hardening. Plus a Windows executable-resolver + spawn-latch fix. Suite green (3587 pass / 0 fail / 1 skip)."
-blockers: "none. npm publish v1.37.0 is manual (maintainer); tag v1.37.0 pushed."
-next_recommendation: "Publish v1.37.0 to npm, then aioson update in consumer projects (aioson-play, aioson-com)."
+last_updated: 2026-07-11T23:05:09.332Z
+last_agent: qa
+last_gate: Gate D: approved
+active_feature: (none)
+active_work: ""
+blockers: "none"
+next_recommendation: "@product start the next feature"
 ---
 
 # Project Pulse
 
 ## Status
 
-- **Last work:** two independent arcs shipped together. Full-feature autopilot lets a normally-built feature run unattended to `feature:close`, asking the run mode once at kickoff; `@briefing-refiner`'s review surface moved from hand-written-per-round HTML to a CLI-owned, schema-validated loop.
-- **What landed:** `workflow:execute --seed`, inline `--auto`/`--step` tokens, `--help` on 13 agents, autopilot chain-integrity fixes, `feature:close` runtime-pointer retirement, `@dev` phase-loop no-self-stop; `aioson briefing:review`/`briefing:apply-feedback`, `review.html` v2 (autosave, copy-path, persistent save-picker), schema v1.1, `verify:artifact --kind=review`, declined-feedback archive fix; Windows executable-resolver fix.
-- **Release:** v1.37.0 (package.json + package-lock + CHANGELOG; tag `v1.37.0` pushed; npm publish manual).
-- **Validation:** full suite green (3587 pass / 0 fail / 1 skipped).
-- **Next:** publish v1.37.0 to npm → `aioson update` in consumers.
+- **Last agent:** @qa
+- **Last gate:** Gate D: approved
+- **Active feature:** (none)
+- **Active work:** none
+- **Blockers:** none
+- **Next:** @product start the next feature
 
 ## Recent Activity
 
-- 2026-07-06 full-feature autopilot + CLI-owned briefing refinement -> SHIPPED v1.37.0. Autopilot: `workflow:execute --seed` seeds the agentic scheme without advancing; `@product`/`@sheldon`/`@orchestrator` seed and cross the pre-`@dev` gate; `@product` asks run mode at kickoff (Autopilot/Step by step/Always autopilot); inline `--auto`/`--step` tokens; `--help` on 13 agents; chain-integrity audit fixed backwards sheldon re-activation, tracked-session signal blindness, seed staleness, slug-scoped triggers; `feature:close` retires per-feature runtime pointers; `@dev` phase-loop no longer self-issues `/compact` (was ending the turn after one phase). Briefing refiner: `briefing:review`/`briefing:apply-feedback` CLI owns the schema/render/apply; `review.html` v2 (localStorage autosave, File System Access with SecurityError fallback, copy-path affordance, persistent save-picker id); schema v1.1 (`findings[]` + `round`); `verify:artifact --kind=review` done-gate; declined-feedback archive fix closes the apply loop; boolean-only argv flags (`--seed`/`--confirm`/`--declined`/`--allow-stale`/`--step`) stop swallowing path positionals. Plus: Windows executable resolver never tests the extensionless candidate (npm shim ENOENT) + clean spawn-failure latch. 18 commits since v1.36.0 (`3a0fd34`..`25dcb60`) + release. Suite green (3587 pass / 0 fail / 1 skip).
-- 2026-06-30 reference-image-driven visual identity -> SHIPPED v1.36.0 (feature `d0e21c3` + release). User reference images → extracted ONCE into a text `identity.md` (palette/type/spacing/depth/motion/signature + per-component structure notes) the `interface-design` engine applies; build reads text not images (ports to vision-less harness, editable, gateable). Additive — fixed presets kept (raw material for `@design-hybrid-forge`/`@site-forge`). New `reference-identity-extract` skill (under `process/`, not profile-gated `design/`); `verify:artifact --kind=identity` (`--file`, self-registers in `availableKinds`); `@briefing-refiner` intake + `@setup` recommended route + `@ux-ui` 6a + `prototype-forge` overlay + `interface-design` continuity note. Suite green (3549 pass / 0 fail), +14 tests. Note: aioson-play consumes the PUBLISHED `@jaimevalasek/aioson` (not npm-linked) — the feature reaches it via publish → package update → `aioson update`.
-- 2026-06-28 lean-harness redesign -> SHIPPED v1.35.0 (8 feature/docs commits `dc4bd42`..`da0c1dd` + release `b3e1ab2`). SMALL default = lean lane (`@sheldon` single spec authority); MEDIUM default = `@orchestrator` maestro (fans out `@analyst`/`@architect`/`@pm` sub-agents → consolidates the gated spec package). Added `.aioson/config/verification.json` (per-agent/per-host verifier config) + `aioson verification:plan` + `@dev` phase-loop (auto-continue + compaction). Scope-drift check (`spec:analyze`) wired into the dev/qa done gate; single-spec-authority handoff gate covers both `@sheldon` (lean) and `@orchestrator` (maestro). `@analyst`/`@architect`/`@pm`/`@discovery-design-doc`/`@scope-check`/`@ux-ui` demoted to opt-in detours (none deleted). Full suite green at each commit; maestro dogfooded end-to-end. Cross-project docs sweep (aioson / aioson-com / aioson-play) underway.
-- 2026-06-27 @scope-check -> latest-implementation-efficiency-audit: Audited post-v1.33.1 commits for lean/full-merged lane, runtime contract-integrity gates, sync portability, live PID reconciliation, feature close gating, and workflow delivery. Validation passed: focused tests 98/98, lint PASS, full `npm test` 3417/3418 with 1 skipped, context validate PASS, workflow complete. Findings saved to `.aioson/context/forensics/aioson-efficiency-audit-2026-06-27.md`.
-- 2026-06-24 @committer -> adversarial-verification-loop: Created `fix(verification): harden audit gates` for path-contained prototype references, strict prototype AC coverage failures, Sheldon scope routing, and stderr-safe runner reports; prepared v1.33.1 release metadata.
-- 2026-06-24 @dev -> adversarial-verification-loop: Added `aioson verify:implementation` deterministic pilot with ledger preparation/checking, prompt package generation, report schema parsing, policy routing, CLI dispatch, README entry, and focused tests.
-- 2026-06-24 @dev -> design-skills-quality: Hardened packaged design skills (valid frontmatter, shared execution quality gates, ambient-field corrections, managed-file coverage, contract tests) and Cognitive Core layout guidance.
+- 2026-07-11 @validator → agent-execution-model-resolution: Validated agent-execution-model-resolution phase 4: score=1, ready_for_done=true
+- 2026-07-11 @validator → agent-execution-model-resolution: Validator PASS: 12/12 harness, 18/18 ACs, security finding fixed, full suite 3735 pass/1 skip
+- 2026-07-11 @qa → agent-execution-model-resolution (Gate D: approved) VERDICT: PASS

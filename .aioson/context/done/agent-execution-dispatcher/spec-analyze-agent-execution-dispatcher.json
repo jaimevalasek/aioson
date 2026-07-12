@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "feature": "agent-execution-dispatcher",
+  "classification": "MEDIUM",
+  "strict": false,
+  "analyzed_at": "2026-07-10T19:59:45.606Z",
+  "artifacts_present": [
+    "project_context",
+    "prd",
+    "requirements",
+    "spec",
+    "architecture",
+    "design_doc",
+    "readiness",
+    "implementation_plan",
+    "conformance",
+    "dev_state",
+    "features"
+  ],
+  "contract_present": true,
+  "findings": [
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after design-doc was produced — design-doc may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "design_doc"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after implementation-plan was produced — implementation-plan may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "implementation_plan"
+      ]
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 2,
+    "info": 0
+  }
+}

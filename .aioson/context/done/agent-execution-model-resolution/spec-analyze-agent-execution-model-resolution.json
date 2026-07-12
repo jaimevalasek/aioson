@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "feature": "agent-execution-model-resolution",
+  "classification": "SMALL",
+  "strict": false,
+  "analyzed_at": "2026-07-11T21:43:46.998Z",
+  "artifacts_present": [
+    "project_context",
+    "prd",
+    "sheldon_enrichment",
+    "requirements",
+    "spec",
+    "architecture",
+    "design_doc",
+    "readiness",
+    "implementation_plan",
+    "dev_state",
+    "features"
+  ],
+  "contract_present": true,
+  "findings": [
+    {
+      "severity": "warning",
+      "check": "orphan_reference",
+      "message": "12 REQ/AC id(s) referenced downstream but not declared in requirements-agent-execution-model-resolution.md: REQ-01, REQ-03, REQ-07, REQ-09, AC-01, AC-03, AC-09, AC-14, AC-AEMR-01-02, AC-AEMR-03-06… (drift or cross-feature reference)",
+      "artifacts": [
+        "spec",
+        "harness-contract"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after design-doc was produced — design-doc may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "design_doc"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after implementation-plan was produced — implementation-plan may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "implementation_plan"
+      ]
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 3,
+    "info": 0
+  }
+}

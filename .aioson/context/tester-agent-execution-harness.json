@@ -1,0 +1,102 @@
+{
+  "ok": true,
+  "slug": "agent-execution-dispatcher",
+  "checked_at": "2026-07-10T20:05:33.983Z",
+  "strict": false,
+  "criteria_total": 7,
+  "executable_total": 7,
+  "passed": 7,
+  "failed": 0,
+  "skipped_no_verification": 0,
+  "static_total": 0,
+  "static_passed": 0,
+  "static_failed": 0,
+  "strict_errors": [],
+  "integrity": {
+    "ok": true,
+    "is_runtime_feature": false,
+    "runtime_signals": [],
+    "errors": [],
+    "warnings": []
+  },
+  "checks": [
+    {
+      "id": "SG-01",
+      "command": "node --test tests/agent-execution-manifest.test.js tests/agent-execution-adapters.test.js",
+      "exitCode": 0,
+      "durationMs": 237,
+      "stdout": "✔ AC-AED-06 AC-AED-16 claude pauses unavailable native capability (4.6277ms)\n✔ AC-AED-06 AC-AED-16 codex pauses unavailable native capability (0.733ms)\n✔ AC-AED-06 AC-AED-16 opencode pauses unavailable native capability (0.5899ms)\n✔ external adapter uses argv and shell false (0.317ms)\n✔ caller capability claims cannot enable native Codex subagents (0.1591ms)\n✔ manifest defaults contain five configured-default agents (2.9894ms)\n✔ validation reports actionable JSON paths (0.9833ms)\n✔ additive initialization preserves operator model (17.0425ms)\n✔ merge additive adds defaults without replacing choices (0.3534ms)\n✔ missing manifest reports legacy compatibility instead of invalid config (2.6261ms)\nℹ tests 10\nℹ suites 0\nℹ pass 10\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 148.8416\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "SG-02",
+      "command": "node --test tests/agent-execution-security.test.js tests/agent-execution-capacity.test.js",
+      "exitCode": 0,
+      "durationMs": 243,
+      "stdout": "✔ capacity is classified and defaults pause without fallback (2.3339ms)\n✔ capacity fallback uses only explicit ordered pairs and blocks cross-host by default (0.3846ms)\n✔ effective capacity execution follows explicit fallback order and records resolution (0.5145ms)\n✔ capacity retry preserves candidate, applies backoff and stops at the configured limit (0.322ms)\n✔ capacity pause never retries or falls back (0.2287ms)\n✔ capacity execution rejects an adapter host absent from the registry (0.1573ms)\n✔ manifest has no command strings or secrets and fallback is opt-in (4.6767ms)\n✔ runtime schema rejects unknown and nested secret fields (1.2698ms)\n✔ adapter errors redact common credential forms (0.2599ms)\nℹ tests 9\nℹ suites 0\nℹ pass 9\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 137.6825\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-01",
+      "command": "node --test tests/agent-execution-cli.test.js",
+      "exitCode": 0,
+      "durationMs": 220,
+      "stdout": "✔ CLI init validate show and blocked dispatch are stable (20.667ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 127.7361\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-02",
+      "command": "node --test tests/agent-execution-dispatcher.test.js",
+      "exitCode": 0,
+      "durationMs": 251,
+      "stdout": "✔ dispatcher persists requested resolution and waits for report (21.8979ms)\n✔ concurrent dispatch is serialized by an exclusive lease (4.9726ms)\n✔ prompt path outside workspace is rejected before adapter dispatch (6.6185ms)\n✔ missing and invalid manifests pause without creating execution state (6.766ms)\n✔ an expired lease is reclaimed and completed agents resume idempotently (11.7397ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 152.6717\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-03",
+      "command": "node --test tests/agent-execution-resume.test.js",
+      "exitCode": 0,
+      "durationMs": 216,
+      "stdout": "✔ resume blocks when active manifest digest changes (23.1057ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 122.0098\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-04",
+      "command": "node --test tests/verification-plan.test.js tests/verification-policy.test.js tests/workflow-execute.test.js",
+      "exitCode": 0,
+      "durationMs": 4957,
+      "stdout": "✔ per-phase on SMALL runs only qa, native on a cheap Claude tier (16.7791ms)\n✔ per-phase on MICRO skips qa (skip_on_micro budget) (1.8977ms)\n✔ end-of-feature on MEDIUM + sensitive runs qa, tester, pentester, validator (3.2296ms)\n✔ end-of-feature MEDIUM without a sensitive surface does not run pentester (2.1712ms)\n✔ --host pins the dispatch host and its native model (1.371ms)\n✔ classification auto-detects from project.context.md when not passed (4.7757ms)\n✔ phase_loop is surfaced in the plan (2.5586ms)\n✔ per-phase with auto_continue emits a CONTINUE-NOW directive (no /compact) (4.8981ms)\n✔ end-of-feature emits an END-OF-FEATURE directive (2.8626ms)\n✔ auto_continue=false yields a PAUSE directive (4.1956ms)\n✔ pretty (non-json) output renders without throwing (2.1871ms)\n✔ invalid --trigger fails loudly instead of silently coercing to per-phase (1.129ms)\n✔ verification config defaults when the file is missing (15.1037ms)\n✔ the shipped default config equals buildDefaultVerificationConfig (round-trip) (10.7365ms)\n✔ resolveHost precedence: explicit > config.host > env > default (0.4456ms)\n✔ getAgentDispatch resolves the right native model per host (0.3651ms)\n✔ resolveAgentEnabled resolves 'auto' from run context (0.2186ms)\n✔ shouldRunForTrigger combines trigger + enabled + skip-on-micro budget (0.2935ms)\n✔ user overrides are preserved and missing fields filled from defaults (6.027ms)\n✔ malformed JSON degrades to defaults instead of throwing (6.5147ms)\n✔ cross_check is normalized only for validator and reports resolve {slug} (0.9896ms)\n✔ phase_loop normalizes overrides and fills gaps from defaults (3.8012ms)\n✔ getAuditCodePolicy: defaults to advisory/changed and normalizes valid + invalid values (0.5794ms)\n✔ audit_code round-trips through writeConfig/readVerificationConfig (5.8439ms)\n✔ workflow:execute: requires --feature (19.4459ms)\n✔ workflow:execute: dry-run returns plan without executing (14.8302ms)\n✔ workflow:execute --seed: writes the scheme with an enabled agentic_policy and does NOT advance stages (399.5281ms)\n✔ workflow:execute --seed: is idempotent (re-seeding the same slug resumes, does not error) (644.1356ms)\n✔ workflow:execute: buildAgenticPolicy encodes bounded review loops and sidecars (0.2623ms)\n✔ workflow:execute: dry-run --agentic returns runtime policy and resumable command (4.9111ms)\n✔ workflow:execute: dry-run SMALL is the lean lane (product, sheldon, dev, qa) (6.6069ms)\n✔ workflow:execute: dry-run MICRO follows the official feature sequence (6.324ms)\n✔ workflow:execute: dry-run skips product when prd a\n\n[... 109 bytes omitted (criteria:RG-04) ...]\n\nflow:execute: explicit --classification overrides project context during dry-run (9.936ms)\n✔ workflow:execute: dry-run does not create workflow state or execution checkpoint (4.4335ms)\n✔ workflow:execute: resume command quotes user-controlled arguments (6.3837ms)\n✔ workflow:execute: dry-run human output mentions plan (7.7572ms)\n✔ workflow:execute: start-from skips earlier steps (6.2696ms)\n✔ workflow:execute: blocks explicit headless mode when tool policy requires tty (2.3294ms)\n✔ workflow:execute: dry-run predicts blockers for an active stage with missing contract items (9.8635ms)\n✔ workflow:execute: resumes an existing feature workflow and writes a checkpoint file (673.3309ms)\n✔ workflow:execute: advances multiple checkpoints when --max-checkpoints is provided (631.5517ms)\n✔ workflow:execute: completes cleanly when the workflow has no pending stage (16.8048ms)\n✔ workflow:execute: refuses to override a different active feature workflow (7.4914ms)\n✔ workflow:execute: --lane skips guard when no parallel workspace exists (7.2851ms)\n✔ workflow:execute: --lane returns ok=false when lane not found in parallel workspace (5.9523ms)\n✔ workflow:execute: --lane reports ok=true when lane has write paths with no conflicts (10.5141ms)\n✔ workflow:execute: --lane warns when lane write paths conflict with another lane (13.6459ms)\n✔ workflow:execute: parallel_guard is null when no --lane is provided (11.4263ms)\n✔ workflow:execute: blocked step message includes gate:approve command (Gate A → architect custom sequence) (12.5398ms)\n✔ workflow:execute: blocked step message includes feature slug in gate:approve command (9.0471ms)\n✔ workflow:execute: Gate C blocked qa step names @pm or @dev as responsible (171.6239ms)\n✔ workflow:execute --seed: infers the finished lean sheldon stage — next is dev, not sheldon (21.0842ms)\n✔ workflow:execute --seed: infers the finished maestro orchestrator stage — next is dev (19.3694ms)\n✔ workflow:execute --seed: discards a stale workflow.state.json from a no-longer-active feature and reseeds (328.165ms)\n✔ workflow:execute --seed: still refuses when a DIFFERENT feature is genuinely active (6.1369ms)\n✔ workflow:execute --seed: resume_command records --seed and history never leaks across features (632.8905ms)\n✔ workflow:execute --seed --step: writes an explicitly DISARMED scheme (per-feature step-by-step) (413.2929ms)\n✔ workflow:execute --step alone is record-only (never drives stage transitions) (316.1033ms)\nℹ tests 60\nℹ suites 0\nℹ pass 60\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4863.3104\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-05",
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 139113,
+      "stdout": "\n> @jaimevalasek/aioson@1.37.0 test\n> node --test\n\n✔ src\\commands\\test-agents.js (819.4715ms)\n✔ src\\test-briefing.js (724.2218ms)\n✔ extractAcIds supports slugged and numeric AC ids (3.5777ms)\n✔ ac:test-audit requires --feature (39.7349ms)\n✔ ac:test-audit passes when no AC ids exist (18.7522ms)\n✔ ac:test-audit covers AC ids referenced by test files (17.3749ms)\n✔ ac:test-audit covers AC ids referenced by executable harness criteria (20.8204ms)\n✔ ac:test-audit does not let a longer AC id cover a shorter prefix id (substring collision) (46.7589ms)\n✔ ac:test-audit blocks when an AC has no test evidence (17.6998ms)\n✔ ac:test-audit --json emits report (16.2131ms)\n✔ AC-ALL-601: 5 simulated feature closures produce zero ok=false curation checks (inception self-test) (6967.0729ms)\n✔ AC-ALL-603: checkLearningLoopTemplateParity returns 0 issues against the live template/ (5.931ms)\n✔ AC-ALL-603: parity helper reports missing config + autonomy + placeholders when the template is incomplete (74.8363ms)\n✔ AC-ALL-605: src/doctor.js wires the 3 curation check functions (1.3725ms)\n✔ AC-ALL-605: src/commands/feature-close.js wires the distillation hook + reads classification pre-archive (1.1675ms)\n✔ AC-ALL-605: src/runtime-store.js exports appendContextLoadEvent + wires learning-loop migration (1.2902ms)\n✔ AC-ALL-605: all Phase 1-5 source modules exist on disk (1.4047ms)\n✔ AC-ALL-605: template/.aioson/agents/ chain agents are byte-identical with .aioson/agents/ for active-learning-loop scope (33.762ms)\n▶ agent-audit.js — scoped modes\n  ✔ scans only runtime surfaces with --runtime-only (90.5319ms)\n  ✔ scans only template surfaces with --template-only (64.4439ms)\n  ✔ defaults to inception-compatible scan and includes mode metadata (44.5614ms)\n  ✔ rejects conflicting scoped modes (45.9729ms)\n✔ agent-audit.js — scoped modes (252.3525ms)\n▶ Phase 3.1 — feature:close dossier guarantee\n  ✔ synthesizes dossier from existing PRD when missing on close (771.8182ms)\n  ✔ writes minimal-fallback dossier when no source artifacts exist (EBOOTSTRAPEMPTY) (756.1988ms)\n  ✔ is idempotent — does not overwrite existing dossier (652.0286ms)\n  ✔ runs the guarantee on FAIL verdict (verdict-agnostic) (130.9421ms)\n✔ Phase 3.1 — feature:close dossier guarantee (2314.4282ms)\n▶ Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)\n  ✔ auto-inits dossier for SMALL/MEDIUM features when activating a stage (159.2489ms)\n  ✔ skips MICRO features (auto-init opt-in only via dossier:init manual) (14.1709ms)\n  ✔ is idempotent — does not overwrite existing dossier (\n\n[... 9027 bytes omitted (criteria:RG-05) ...]\n\nroduces SKILL.md with valid frontmatter (5.6185ms)\n✔ generateSkillMd extracts tools from agent body (0.6298ms)\n✔ generateSkillMd adds activation patterns (0.3925ms)\n✔ generateSkillMd adds keyword activations for known agent types (2.8611ms)\n✔ generateSkillMd strips AIOSON Runtime boundary sections (0.5623ms)\n✔ generateSkillMd preserves core agent content (0.3785ms)\n✔ generateSkillMd uses custom version when provided (0.2517ms)\n✔ generateSkillMd capitalizes agent name in skill name (0.1912ms)\n✔ generateSkillMd handles agent content without frontmatter (0.4804ms)\n✔ runAgentExportSkill creates SKILL.md in output directory (98.5208ms)\n✔ runAgentExportSkill creates scripts/ directory (20.5203ms)\n✔ runAgentExportSkill defaults output to .claude/skills/aioson-{agent}/ (33.2479ms)\n✔ runAgentExportSkill uses custom output directory (13.3192ms)\n✔ runAgentExportSkill returns error when --agent is missing (1.5862ms)\n✔ runAgentExportSkill returns error for non-existent agent (2.5287ms)\n✔ runAgentExportSkill json option returns result object (23.3989ms)\n✔ runAgentExportSkill SKILL.md has valid frontmatter (20.5893ms)\n✔ shardMarkdown — splits by H2 headings (2.7881ms)\n✔ shardMarkdown — splits by H3 headings as well (0.6332ms)\n✔ shardMarkdown — preamble before first heading is captured (0.7547ms)\n✔ shardMarkdown — assigns unique ids per shard (0.3689ms)\n✔ shardMarkdown — estimates tokens per shard (0.4045ms)\n✔ AgentLoader — opens and closes without error (249.0285ms)\n✔ AgentLoader — indexAgentFile indexes shards (96.5617ms)\n✔ AgentLoader — loadRelevantShards returns shards within token budget (75.9522ms)\n✔ AgentLoader — loadRelevantShards returns empty for unknown agent (56.7391ms)\n✔ AgentLoader — indexAgentsDir indexes multiple agent files (86.4681ms)\n✔ AgentLoader.buildContext — merges shard content with separators (1.0417ms)\n✔ AgentLoader — stats returns index information (95.9865ms)\n✔ workspace @dev prompt stays in sync with the canonical template prompt (6.1762ms)\n✔ workspace @setup prompt stays in sync with the canonical template prompt (1.1559ms)\n✔ readAgentManifest loads the dev manifest from the workspace (146.082ms)\n✔ agent manifest helpers expose declared capabilities and tool support (2.6902ms)\n✔ resolveAgentCapabilities returns empty array when manifest has no capabilities array (14.9396ms)\n✔ readAgentManifest returns null for unknown agent without crashing (0.5351ms)\n✔ scope-check manifest exposes validated check_modes (3.7722ms)\n✔ sanitizeManifest filters out unknown check_modes so the field cannot drift (6.5728ms)\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    }
+  ],
+  "static_checks": []
+}

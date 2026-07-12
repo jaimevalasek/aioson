@@ -8,6 +8,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { loadManifest, resolveAgentExecution } = require('../agent-execution/manifest');
 const {
   readVerificationConfig,
   resolveHost,
@@ -63,7 +64,7 @@ async function detectClassification(targetDir, slug) {
   return null;
 }
 
-async function runVerificationPlan({ args, options = {}, logger }) {
+async function runVerificationPlan({ args, options = {}, logger, catalogLoader }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = (options.feature || options.slug || '').toString().trim() || null;
 
@@ -81,6 +82,10 @@ async function runVerificationPlan({ args, options = {}, logger }) {
 
   const config = await readVerificationConfig(targetDir);
   const host = resolveHost(config, options.host);
+  const executionManifest = slug ? await loadManifest(targetDir, slug) : { exists: false, legacy: true, ok: true };
+  if (executionManifest.exists && !executionManifest.ok) {
+    return { ok: false, reason: 'agent_execution_manifest_invalid', errors: executionManifest.errors, manifest_path: executionManifest.path };
+  }
 
   let classification = (options.classification || '').toString().trim().toUpperCase();
   if (!CLASSIFICATIONS.includes(classification)) {
@@ -92,12 +97,23 @@ async function runVerificationPlan({ args, options = {}, logger }) {
   const agents = [];
   for (const agentId of VERIFICATION_AGENTS) {
     const dispatch = getAgentDispatch(config, agentId, host);
+    const execution = executionManifest.exists ? await resolveAgentExecution(executionManifest.manifest, agentId, {}, { catalogLoader }) : null;
+    if (execution && !execution.ok) {
+      return { ok: false, reason: 'model_resolution_failed', agent: agentId, resolution: execution };
+    }
     const entry = {
       agent: agentId,
       run: shouldRunForTrigger(config, agentId, context),
-      mode: dispatch ? dispatch.mode : 'native',
-      model: dispatch ? dispatch.model : 'configured-default',
-      report: resolveAgentReportPath(config, agentId, slug || '{slug}')
+      host: execution ? execution.host : (dispatch ? dispatch.host : host),
+      mode: execution ? execution.mode : (dispatch ? dispatch.mode : 'native'),
+      model: execution ? execution.model : (dispatch ? dispatch.model : 'configured-default'),
+      model_requested: execution ? execution.model_requested : (dispatch ? dispatch.model : 'configured-default'),
+      model_resolved: execution ? execution.model_resolved : (dispatch ? dispatch.model : 'configured-default'),
+      model_resolution_strategy: execution ? execution.model_resolution_strategy : 'legacy',
+      reasoning_effort: execution ? (execution.reasoning_effort || null) : null,
+      report: execution ? execution.report.replace('{run_id}', '{run_id}') : resolveAgentReportPath(config, agentId, slug || '{slug}'),
+      execution_source: execution ? 'manifest' : 'legacy',
+      execution: execution || undefined
     };
     if (agentId === 'validator') {
       const cc = getCrossCheck(config, agentId);
@@ -117,6 +133,7 @@ async function runVerificationPlan({ args, options = {}, logger }) {
     phase_loop: getPhaseLoop(config),
     budget: getBudget(config)
   };
+  result.agent_execution = executionManifest.exists ? { source: 'manifest', path: executionManifest.path, digest: executionManifest.digest } : { source: 'legacy' };
   result.continuation_directive = buildContinuationDirective(trigger, result.phase_loop);
 
   if (options.json) return result;

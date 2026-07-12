@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "feature": "agent-execution-telemetry-bridge",
+  "host": "codex",
+  "generated_at": "2026-07-10T21:36:04.972Z",
+  "agents": {
+    "dev": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-telemetry-bridge/{run_id}/dev.json"
+    },
+    "qa": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-telemetry-bridge/{run_id}/qa.json"
+    },
+    "tester": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-telemetry-bridge/{run_id}/tester.json"
+    },
+    "pentester": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-telemetry-bridge/{run_id}/pentester.json"
+    },
+    "validator": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/agent-execution-telemetry-bridge/{run_id}/validator.json"
+    }
+  },
+  "capacity_policy": {
+    "strategy": "pause",
+    "max_attempts": 1,
+    "backoff_ms": 0
+  },
+  "cycle_limits": {
+    "dev_qa": 3,
+    "tester": 3,
+    "pentester": 3
+  },
+  "reporting": {
+    "format": "json",
+    "markdown": true
+  }
+}

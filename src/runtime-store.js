@@ -201,6 +201,50 @@ async function openRuntimeDb(targetDir, options = {}) {
       FOREIGN KEY (run_key) REFERENCES agent_runs(run_key) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS agent_execution_runs (
+      telemetry_run_id TEXT PRIMARY KEY,
+      dispatcher_run_id TEXT NOT NULL,
+      attempt_id TEXT NOT NULL,
+      feature TEXT NOT NULL,
+      agent TEXT NOT NULL,
+      host TEXT NOT NULL,
+      model TEXT NOT NULL,
+      model_requested TEXT,
+      model_resolved TEXT,
+      reasoning_effort TEXT,
+      model_resolution_strategy TEXT,
+      catalog_source TEXT,
+      state TEXT NOT NULL DEFAULT 'queued',
+      pid INTEGER,
+      process_fingerprint TEXT,
+      report_path TEXT,
+      report_digest TEXT,
+      reason TEXT,
+      truncated_bytes INTEGER NOT NULL DEFAULT 0,
+      dropped_events INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      finished_at TEXT,
+      UNIQUE(feature, agent, dispatcher_run_id, attempt_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_execution_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      telemetry_run_id TEXT NOT NULL,
+      sequence_no INTEGER NOT NULL,
+      schema_version INTEGER NOT NULL DEFAULT 1,
+      event_type TEXT NOT NULL,
+      stream TEXT,
+      safe_summary TEXT NOT NULL DEFAULT '',
+      payload_json TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      UNIQUE(telemetry_run_id, sequence_no),
+      FOREIGN KEY (telemetry_run_id) REFERENCES agent_execution_runs(telemetry_run_id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_execution_events_cursor ON agent_execution_events(telemetry_run_id, sequence_no);
+    CREATE INDEX IF NOT EXISTS idx_agent_execution_runs_feature_updated ON agent_execution_runs(feature, updated_at DESC);
+
     CREATE TABLE IF NOT EXISTS artifacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_key TEXT,
@@ -651,6 +695,12 @@ function normalizeTaskStatus(value, fallback) {
 }
 
 function ensureLegacyColumns(db) {
+  const executionRunColumns = db.prepare('PRAGMA table_info(agent_execution_runs)').all();
+  const executionRunColumnNames = new Set(executionRunColumns.map((column) => column.name));
+  for (const column of ['model_requested', 'model_resolved', 'reasoning_effort', 'model_resolution_strategy', 'catalog_source']) {
+    if (!executionRunColumnNames.has(column)) db.exec(`ALTER TABLE agent_execution_runs ADD COLUMN ${column} TEXT`);
+  }
+
   const taskColumns = db.prepare('PRAGMA table_info(tasks)').all();
   const taskColumnNames = new Set(taskColumns.map((column) => column.name));
 
@@ -2623,6 +2673,112 @@ function listEvolutionLog(db, limit = 20) {
   return db.prepare('SELECT * FROM evolution_log ORDER BY applied_at DESC LIMIT ?').all(limit);
 }
 
+const EXECUTION_TERMINAL_STATES = new Set(['passed', 'failed', 'cancelled']);
+const EXECUTION_TRANSITIONS = {
+  queued: new Set(['running', 'waiting_report', 'paused', 'failed', 'cancelled']),
+  running: new Set(['waiting_report', 'paused', 'failed', 'cancelled']),
+  waiting_report: new Set(['passed', 'failed', 'correcting', 'paused']),
+  correcting: new Set(['running', 'paused', 'failed', 'cancelled']),
+  paused: new Set(['running', 'cancelled'])
+};
+
+function executionCorrelation(input) {
+  return {
+    feature: String(input.feature), agent: String(input.agent),
+    dispatcherRunId: String(input.dispatcher_run_id || input.run_id),
+    attemptId: String(input.attempt_id)
+  };
+}
+
+function findExecutionRun(db, input) {
+  const c = executionCorrelation(input);
+  return db.prepare(`SELECT * FROM agent_execution_runs WHERE feature=? AND agent=? AND dispatcher_run_id=? AND attempt_id=?`)
+    .get(c.feature, c.agent, c.dispatcherRunId, c.attemptId) || null;
+}
+
+function createExecutionRun(db, input) {
+  const c = executionCorrelation(input); const now = nowIso();
+  const id = input.telemetry_run_id || `aex-${slugify(c.feature)}-${require('node:crypto').randomUUID()}`;
+  const modelResolved = String(input.model_resolved || input.model);
+  const modelRequested = String(input.model_requested || input.model || '');
+  db.prepare(`INSERT OR IGNORE INTO agent_execution_runs
+    (telemetry_run_id,dispatcher_run_id,attempt_id,feature,agent,host,model,model_requested,model_resolved,reasoning_effort,model_resolution_strategy,catalog_source,state,created_at,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,c.dispatcherRunId,c.attemptId,c.feature,c.agent,String(input.host),modelResolved,modelRequested,modelResolved,input.reasoning_effort?String(input.reasoning_effort):null,input.model_resolution_strategy?String(input.model_resolution_strategy):null,input.catalog_source?String(input.catalog_source):null,'queued',now,now);
+  const run = findExecutionRun(db,input);
+  appendExecutionEvent(db,run.telemetry_run_id,{type:'run_created',safe_summary:'Execution queued'});
+  return run;
+}
+
+function appendExecutionEvent(db, runOrCorrelation, event) {
+  const run = typeof runOrCorrelation === 'string'
+    ? db.prepare('SELECT * FROM agent_execution_runs WHERE telemetry_run_id=?').get(runOrCorrelation)
+    : findExecutionRun(db,runOrCorrelation);
+  if (!run) throw new Error('execution_run_not_found');
+  const allowed = new Set(['run_created','process_started','state_changed','output','retry','fallback','timeout','report_attached','output_truncated','recovered','diagnostic']);
+  if (!allowed.has(event.type)) throw new Error('execution_event_type_invalid');
+  const sanitize=(value,depth=0)=>{if(depth>4)return'[TRUNCATED]';if(typeof value==='string')return value.replace(/(authorization\s*[:=]\s*(?:bearer\s+)?|api[_-]?key\s*[:=]\s*|token\s*[:=]\s*|password\s*[:=]\s*)[^\s,;]+/gi,'$1[REDACTED]').slice(0,2000);if(Array.isArray(value))return value.slice(0,25).map(v=>sanitize(v,depth+1));if(value&&typeof value==='object'){const out={};for(const key of Object.keys(value).slice(0,25))out[String(key).slice(0,100)]=sanitize(value[key],depth+1);return out}return value};
+  const safeSummary=sanitize(String(event.safe_summary||''));const safePayload=event.payload?sanitize(event.payload):null;
+  const tx=db.transaction(()=>{const seq=db.prepare('SELECT COALESCE(MAX(sequence_no),0)+1 n FROM agent_execution_events WHERE telemetry_run_id=?').get(run.telemetry_run_id).n;
+    db.prepare(`INSERT INTO agent_execution_events(telemetry_run_id,sequence_no,event_type,stream,safe_summary,payload_json,bytes,created_at) VALUES(?,?,?,?,?,?,?,?)`)
+      .run(run.telemetry_run_id,seq,event.type,event.stream||null,safeSummary,safePayload?JSON.stringify(safePayload).slice(0,16384):null,Math.min(Math.max(Number(event.bytes||0),0),16384),nowIso());return seq;});
+  return tx();
+}
+
+function attachExecutionProcess(db, correlation, process) {
+  const run=findExecutionRun(db,correlation); if(!run)throw new Error('execution_run_not_found');
+  if(run.pid && run.pid!==process.pid)throw new Error('execution_process_conflict');
+  db.prepare('UPDATE agent_execution_runs SET pid=?,process_fingerprint=?,state=?,updated_at=? WHERE telemetry_run_id=?')
+    .run(Number(process.pid),String(process.fingerprint||''),'running',nowIso(),run.telemetry_run_id);
+  appendExecutionEvent(db,run.telemetry_run_id,{type:'process_started',safe_summary:`Process ${process.pid} started`});
+  return db.prepare('SELECT * FROM agent_execution_runs WHERE telemetry_run_id=?').get(run.telemetry_run_id);
+}
+
+function transitionExecutionRun(db, correlation, next, reason=null) {
+  const run=findExecutionRun(db,correlation); if(!run)throw new Error('execution_run_not_found');
+  if(run.state===next)return run;if(EXECUTION_TERMINAL_STATES.has(run.state)||!EXECUTION_TRANSITIONS[run.state]?.has(next))throw new Error('execution_state_transition_invalid');
+  const safeReason=String(reason||'').replace(/(token|password|api[_-]?key)\s*[:=]\s*\S+/gi,'$1=[REDACTED]').slice(0,500)||null;
+  const now=nowIso();db.prepare('UPDATE agent_execution_runs SET state=?,reason=?,updated_at=?,finished_at=? WHERE telemetry_run_id=? AND state=?')
+    .run(next,safeReason,now,EXECUTION_TERMINAL_STATES.has(next)?now:null,run.telemetry_run_id,run.state);
+  appendExecutionEvent(db,run.telemetry_run_id,{type:'state_changed',safe_summary:`${run.state} -> ${next}`,payload:{state:next,reason}});
+  return db.prepare('SELECT * FROM agent_execution_runs WHERE telemetry_run_id=?').get(run.telemetry_run_id);
+}
+
+function attachExecutionReport(db, correlation, report) {
+  const run=findExecutionRun(db,correlation);if(!run)throw new Error('execution_run_not_found');
+  if(report.attempt_id!==run.attempt_id||report.run_id!==run.dispatcher_run_id)throw new Error('execution_report_binding_invalid');
+  db.prepare('UPDATE agent_execution_runs SET report_path=?,report_digest=?,updated_at=? WHERE telemetry_run_id=?')
+    .run(String(report.path||''),String(report.digest||''),nowIso(),run.telemetry_run_id);
+  appendExecutionEvent(db,run.telemetry_run_id,{type:'report_attached',safe_summary:'Bound report attached'});return findExecutionRun(db,correlation);
+}
+
+function getExecutionSnapshot(db, filters={}) {
+  const where=[],args=[];for(const [column,key] of [['feature','feature'],['agent','agent'],['state','state']])if(filters[key]){where.push(`${column}=?`);args.push(String(filters[key]));}
+  const limit=Math.min(Math.max(Number(filters.limit)||50,1),200);
+  return db.prepare(`SELECT * FROM agent_execution_runs ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY updated_at DESC LIMIT ?`).all(...args,limit);
+}
+
+function listExecutionEvents(db, runId, options={}) {
+  const after=Math.max(Number(options.after)||0,0),limit=Math.min(Math.max(Number(options.limit)||100,1),500);
+  const rows=db.prepare('SELECT * FROM agent_execution_events WHERE telemetry_run_id=? AND sequence_no>? ORDER BY sequence_no LIMIT ?').all(runId,after,limit+1);
+  const hasMore=rows.length>limit,events=hasMore?rows.slice(0,limit):rows;
+  return {events,next_cursor:events.at(-1)?.sequence_no||after,has_more:hasMore};
+}
+
+function reconcileExecutionRun(db, correlation, probe=()=>false) {
+  const run=findExecutionRun(db,correlation);if(!run)throw new Error('execution_run_not_found');
+  if(EXECUTION_TERMINAL_STATES.has(run.state)||run.state==='paused')return run;
+  if(!run.pid)return transitionExecutionRun(db,correlation,'paused','spawn_identity_missing');
+  const observed=probe({pid:run.pid,fingerprint:run.process_fingerprint,created_at:run.created_at});
+  const alive=observed===true?false:Boolean(observed?.alive&&observed?.fingerprint&&observed.fingerprint===run.process_fingerprint);
+  if(alive)return transitionExecutionRun(db,correlation,'paused','detached_process');
+  return transitionExecutionRun(db,correlation,'paused','process_not_alive');
+}
+
+function pruneExecutionTelemetry(db, options={}) {
+  const days=Math.max(Number(options.retentionDays)||14,1),cutoff=new Date(Date.now()-days*86400000).toISOString(),batch=Math.min(Math.max(Number(options.batch)||100,1),1000);
+  return db.prepare(`DELETE FROM agent_execution_runs WHERE telemetry_run_id IN (SELECT telemetry_run_id FROM agent_execution_runs WHERE updated_at < ? AND state IN ('passed','failed','cancelled','paused') ORDER BY updated_at LIMIT ?)` ).run(cutoff,batch).changes;
+}
+
 module.exports = {
   resolveRuntimePaths,
   runtimeStoreExists,
@@ -2726,4 +2882,7 @@ module.exports = {
   // Evolution Log CRUD
   insertEvolutionLog,
   listEvolutionLog
+  ,createExecutionRun, findExecutionRun, attachExecutionProcess, transitionExecutionRun,
+  appendExecutionEvent, attachExecutionReport, getExecutionSnapshot, listExecutionEvents,
+  reconcileExecutionRun, pruneExecutionTelemetry
 };

@@ -1,0 +1,22 @@
+{
+  "feature": "agent-execution-telemetry-bridge",
+  "contract_mode": "builder",
+  "governor": {"max_steps": 30, "error_streak_limit": 5, "max_runtime_minutes": 120, "max_changed_files": 25, "max_diff_lines": 3000},
+  "allowed_files": ["src/agent-execution/**", "src/runtime-store.js", "src/commands/agent-execution.js", "src/cli.js", "src/i18n/**", "tests/**", "template/**", ".aioson/context/**", ".aioson/plans/agent-execution-telemetry-bridge/**"],
+  "criteria": [
+    {"id":"AC-01","description":"Run existe antes do spawn e recebe PID depois","assertion":"Teste de integração comprova ordem pré-spawn","binary":true,"verification":"node --test tests/agent-execution-telemetry-store.test.js"},
+    {"id":"AC-02","description":"Correlação impede contaminação entre attempts","assertion":"Attempts antigas/concorrentes são rejeitadas","binary":true,"verification":"node --test tests/agent-execution-telemetry-correlation.test.js"},
+    {"id":"AC-03","description":"Estados são monotônicos e idempotentes","assertion":"Transições inválidas falham","binary":true,"verification":"node --test tests/agent-execution-telemetry-state.test.js"},
+    {"id":"AC-04","description":"Streams incrementais são ordenados e redigidos","assertion":"Segredos fragmentados não persistem","binary":true,"verification":"node --test tests/agent-execution-telemetry-stream.test.js"},
+    {"id":"AC-05","description":"Backpressure e bounds são aplicados","assertion":"Memória e SQLite permanecem limitados","binary":true,"verification":"node --test tests/agent-execution-telemetry-bounds.test.js"},
+    {"id":"AC-06","description":"Crash recovery não duplica execução","assertion":"Cenários antes/depois do spawn reconciliam","binary":true,"verification":"node --test tests/agent-execution-telemetry-recovery.test.js"},
+    {"id":"AC-07","description":"Retry fallback timeout e correcting são correlacionados","assertion":"Histórico permanece no ciclo correto","binary":true,"verification":"node --test tests/agent-execution-telemetry-capacity.test.js"},
+    {"id":"AC-08","description":"Relatório incompatível pausa","assertion":"Vínculo forte é obrigatório","binary":true,"verification":"node --test tests/agent-execution-telemetry-report.test.js"},
+    {"id":"AC-09","description":"Leitura suporta cursor limites e truncamento","assertion":"API JSON é estável e compatível","binary":true,"verification":"node --test tests/agent-execution-telemetry-cli.test.js"},
+    {"id":"AC-10","description":"Nenhuma telemetria por shell","assertion":"Dispatcher usa API interna","binary":true,"verification":"node --test tests/agent-execution-telemetry-no-shell.test.js"},
+    {"id":"AC-11","description":"Falha SQLite não vaza conteúdo bruto","assertion":"Falha degrada com diagnóstico seguro","binary":true,"verification":"node --test tests/agent-execution-telemetry-failure.test.js"},
+    {"id":"AC-12","description":"Dev aguarda verificadores obrigatórios atuais","assertion":"Attempt velha não aprova ciclo","binary":true,"verification":"node --test tests/agent-execution-telemetry-verification.test.js"},
+    {"id":"RG-smoke","description":"Ciclo externo completo publica atividade e relatório","assertion":"Smoke real do dispatcher passa","binary":true,"verification":"node --test tests/agent-execution-telemetry-smoke.test.js"},
+    {"id":"RG-build","description":"Suíte completa sem regressão","assertion":"npm test passa","binary":true,"verification":"npm test"}
+  ]
+}

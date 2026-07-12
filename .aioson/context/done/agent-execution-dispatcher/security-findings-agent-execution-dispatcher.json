@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "slug": "agent-execution-dispatcher",
+  "generated_at": "2026-07-10T19:51:41.747Z",
+  "generator": "aioson security:audit@1.0.0",
+  "review_contract": {
+    "scope_mode": "feature",
+    "evidence_policy": "high_critical_require_reproduction",
+    "findings_artifact_path": ".aioson/context/security-findings-agent-execution-dispatcher.json"
+  },
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 1,
+    "low": 0,
+    "inconclusive": 0
+  },
+  "findings": [
+    {
+      "finding_id": "security-audit-SEC-SBD-03-246ac9",
+      "source": "security-audit",
+      "control_id": "SEC-SBD-03",
+      "severity": "medium",
+      "status": "open",
+      "scope": "agent-execution-dispatcher:attack-surface-map",
+      "affected_artifacts": [
+        "C:\\dev\\aioson\\.aioson\\context\\requirements-agent-execution-dispatcher.md"
+      ],
+      "preconditions": [
+        "requirements artifact present"
+      ],
+      "reproduction_steps": [
+        "Search requirements for \"Attack Surface Map\" section"
+      ],
+      "evidence": [
+        "No Attack Surface Map section found in requirements."
+      ],
+      "impact": "Without an Attack Surface Map, ownership/IDOR coverage cannot be verified.",
+      "suggested_fix": "Add an Attack Surface Map section to requirements (analyst).",
+      "recommended_owner": "analyst",
+      "recommended_gate_status": "review",
+      "safe_to_reproduce": true,
+      "detected_by": "aioson security:audit@1.0.0"
+    },
+    {
+      "id": "SF-agent-execution-dispatcher-06",
+      "feature_slug": "agent-execution-dispatcher",
+      "surface": "protocol_contract",
+      "severity": "medium",
+      "title": "Política de capacity/fallback está validada superficialmente, mas não é aplicada pelo dispatcher",
+      "hypothesis": "O manifesto declara retry/wait/fallback e limites, porém dispatch somente constrói execução e pausa por capability; não há autorização por host/modelo, contador, backoff ou bloqueio de fallback cross-vendor.",
+      "preconditions": [
+        "O adapter retorna capacity ou um fallback é necessário",
+        "O operador confia no manifesto como limite de autorização"
+      ],
+      "reproduction_steps": [
+        "Configurar capacity_policy.strategy=fallback e fallbacks no agente",
+        "Executar dispatch com adapter que falha por capacity",
+        "Observar que não existe state transition ou enforcement de lista/ordem/autorização no dispatcher atual"
+      ],
+      "evidence": [
+        "src/agent-execution/schema.js valida apenas o enum strategy",
+        "src/agent-execution/dispatcher.js não chama adapter.execute nem interpreta capacity_policy/fallbacks",
+        "src/agent-execution/adapters/base.js normaliza capacity, mas o dispatcher não consome o resultado"
+      ],
+      "impact": "A política prometida não constitui uma barreira efetiva; integrações futuras podem trocar modelo/host fora da autorização ou pausar de forma inconsistente.",
+      "affected_artifacts": [
+        "src/agent-execution/schema.js",
+        "src/agent-execution/dispatcher.js",
+        "src/agent-execution/adapters/base.js",
+        "tests/agent-execution-capacity.test.js"
+      ],
+      "suggested_fix": "Implementar state machine de capacity antes de considerar Gate D: lista tipada de fallbacks com host/model, autorização cross-vendor explícita, tentativas/backoff/teto persistidos e invariantes que rejeitem qualquer resolved pair não listado.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true
+    }
+  ]
+}

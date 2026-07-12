@@ -21,9 +21,8 @@ After finishing each phase:
    ```bash
    aioson verification:plan . --feature={slug} --trigger=per-phase --json
    ```
-   For every agent with `run: true`, dispatch it as a sub-agent on the plan's top-level `host` plus that agent's `mode` / `model`, scoped to this phase's changed files:
-   - `mode: native` → an in-harness sub-agent. On Claude Code use the Task tool with that `model` tier (e.g. `sonnet-4.6`); on codex/opencode use their own configured model. The sub-agent writes its `report` file (e.g. `qa-report-{slug}.md`) and returns it to @dev.
-   - `mode: external` → only the explicitly configured cross-vendor auditor (`cross_check`); never spawn one otherwise.
+   For every agent with `run: true`, use `aioson agent:execution:dispatch . --feature={slug} --agent={agent} --json`. The resolved manifest is authoritative for host/model/mode. Validate model aliases before dispatch and preserve the distinct requested/resolved model, resolution strategy, and optional reasoning effort in state and reports; ambiguity or an unsupported effort is a real pause before spawn. A `unsupported_capability` or `manifest_invalid` result is also a real pause: never imitate a sub-agent or fresh session in prose. Only `external` execution backed by an installed CLI, or a native capability explicitly exposed by the current harness, may run.
+   - `mode: external` → the portable default: an installed host CLI runs headlessly in a fresh process, waits for exit, and must write the bound JSON report. This creates an isolated headless context, not a new interactive chat window.
    Read the report: **PASS** → continue. **Bugs** → fix them within this phase, re-run `harness:check`, and re-dispatch — up to `phase_loop.max_fix_retries_per_phase` times, then stop and surface the failure instead of advancing.
 4. **Checkpoint, then keep going — do NOT end the turn.** Write the cold-start packet as a crash/interrupt safety net:
    ```bash

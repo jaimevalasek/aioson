@@ -1,0 +1,15 @@
+'use strict';
+const { spawn } = require('node:child_process');
+const { capabilities, requiredCapability } = require('../capabilities');
+const { resolveExecutable } = require('../executable-resolver');
+function redact(text) { return String(text||'').replace(/(authorization\s*[:=]\s*(?:bearer\s+)?|api[_-]?key\s*[:=]\s*|token\s*[:=]\s*|password\s*[:=]\s*)[^\s,;]+/gi,'$1[REDACTED]'); }
+function normalizeError(error) { const text=String(error?.message||error||'').toLowerCase(); if(/unexpected argument|invalid (?:argument|option)|unknown option/.test(text))return'invalid_arguments';if(/capacity|overloaded|rate limit/.test(text)) return 'capacity'; if(/model.*invalid|unknown model/.test(text)) return 'invalid_model'; if(/unauthorized|authentication failed|not authenticated|forbidden/.test(text)) return 'auth'; if(/timeout|timed out/.test(text)) return 'timeout'; return 'crash'; }
+function createAdapter(host, buildArgs) {
+  return {
+    host,
+    probe() { return capabilities(host); },
+    build(input) { const cap=this.probe(); const required=requiredCapability(input.mode); if(required && !cap[required]) return {ok:false,reason:'unsupported_capability',capability:required,host};if(input.reasoning_effort&&!cap.reasoning_effort)return{ok:false,reason:'unsupported_reasoning_effort',capability:'reasoning_effort',host};if(input.writable_roots?.length&&!cap.additional_workspaces)return{ok:false,reason:'host_capability_missing',capability:'additional_workspaces',host};const command=buildArgs(input);const args=Array.isArray(command)?command:command.args;return {ok:true,executable:cap.executable,args,stdin:Boolean(command.stdin),options:{cwd:input.cwd,shell:false,stdio:'pipe'}}; },
+    async execute(input) { const built=this.build(input); if(!built.ok) return built;let resolved;try{resolved=await resolveExecutable(built.executable,input.resolverOptions)}catch(error){return{ok:false,reason:'executable_not_found',error:redact(error.message)}}return new Promise(resolve=>{ const child=spawn(resolved.executable,[...resolved.prefixArgs,...built.args],built.options); input.onSpawn?.(child.pid,new Date().toISOString());let stderr='';let timedOut=false;let settled=false;child.stdout.on('data',d=>input.onStdout?.(d));child.stderr.on('data',d=>{input.onStderr?.(d);stderr+=d;if(stderr.length>4000)stderr=stderr.slice(-4000)});if(built.stdin)child.stdin.end(String(input.prompt_text||''));else child.stdin.end();const finish=result=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);child.stdout.destroy();child.stderr.destroy();input.onExit?.(result);resolve(result)};const timer=input.timeout?setTimeout(()=>{timedOut=true;child.kill()},input.timeout):null;child.on('error',e=>finish({ok:false,reason:normalizeError(e),error:redact(e.message)}));child.on('exit',code=>finish(code===0&&!timedOut?{ok:true,code,resolver_source:resolved.source}:{ok:false,code,reason:timedOut?'timeout':normalizeError(stderr),error:redact(stderr).slice(0,1000),resolver_source:resolved.source})); }); }
+  };
+}
+module.exports={createAdapter,normalizeError,redact};
