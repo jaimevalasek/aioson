@@ -249,10 +249,10 @@ function buildMarkdownReport(files, projectDir) {
     '',
     '## Summary',
     `Total agent files scanned : ${files.length}`,
-    `Total estimated tokens    : ~${totalTokens.toLocaleString()}`,
+    `Inventory estimated tokens: ~${totalTokens.toLocaleString()}`,
     `Over hard limit           : ${overHard.length}`,
     `Over target               : ${overTarget.length}`,
-    `Potential savings (on-demand split): ~${totalSavings.toLocaleString()} tokens/session`,
+    `Potential savings across inventory (on-demand split): ~${totalSavings.toLocaleString()} tokens`,
     ''
   ];
 
@@ -296,6 +296,40 @@ function buildMarkdownReport(files, projectDir) {
   }
 
   return lines.join('\n');
+}
+
+function summarizeFiles(files) {
+  const overHard = files.filter((file) => file.status === 'over_hard');
+  const overTarget = files.filter((file) => file.status === 'over_target');
+  const withinTarget = files.filter((file) => file.status === 'ok');
+  const totalTokens = files.reduce((sum, file) => sum + file.tokens, 0);
+  const potentialSavingsTokens = files.reduce((sum, file) => sum + file.savings_tokens, 0);
+
+  return {
+    files: files.length,
+    over_hard: overHard.length,
+    over_target: overTarget.length,
+    within_target: withinTarget.length,
+    total_tokens: totalTokens,
+    potential_savings_tokens: potentialSavingsTokens
+  };
+}
+
+function summarizeActivationRisk(files) {
+  const agentFiles = files.filter((file) => file.category !== 'auto_loaded');
+  const entrypoints = files.filter((file) => file.category === 'auto_loaded');
+  const largestAgent = [...agentFiles].sort((a, b) => b.tokens - a.tokens)[0] || null;
+  const largestEntrypoint = [...entrypoints].sort((a, b) => b.tokens - a.tokens)[0] || null;
+
+  return {
+    largest_agent_file: largestAgent ? largestAgent.file : null,
+    largest_agent_tokens: largestAgent ? largestAgent.tokens : 0,
+    largest_entrypoint_file: largestEntrypoint ? largestEntrypoint.file : null,
+    largest_entrypoint_tokens: largestEntrypoint ? largestEntrypoint.tokens : 0,
+    worst_case_activation_tokens:
+      (largestAgent ? largestAgent.tokens : 0) +
+      (largestEntrypoint ? largestEntrypoint.tokens : 0)
+  };
 }
 
 // ─── Main command ─────────────────────────────────────────────────────────────
@@ -345,22 +379,37 @@ async function runAgentAudit({ args, options = {}, logger }) {
   // Sort by size descending
   files.sort((a, b) => b.chars - a.chars);
 
-  if (options.json) return { ok: true, mode, roots, files };
+  const summary = summarizeFiles(files);
+  const activation_risk = summarizeActivationRisk(files);
+  const withinBudget = summary.over_hard === 0;
+
+  if (options.json) {
+    return {
+      ok: true,
+      within_budget: withinBudget,
+      mode,
+      roots,
+      summary,
+      activation_risk,
+      files
+    };
+  }
 
   // ── Console report ─────────────────────────────────────────────────────────
   const overHard = files.filter((f) => f.status === 'over_hard');
   const overTarget = files.filter((f) => f.status === 'over_target');
-  const totalTokens = files.reduce((s, f) => s + f.tokens, 0);
-  const totalSavings = files.reduce((s, f) => s + f.savings_tokens, 0);
 
   logger.log('Agent Audit');
   logger.log('─'.repeat(70));
   logger.log(`Mode           : ${mode}`);
   logger.log(`Roots          : ${roots.join(', ')}`);
-  logger.log(`Files scanned  : ${files.length}`);
-  logger.log(`Total tokens   : ~${totalTokens.toLocaleString()} per session`);
-  logger.log(`Over hard limit: ${overHard.length}   Over target: ${overTarget.length}`);
-  logger.log(`Potential save : ~${totalSavings.toLocaleString()} tokens/session (on-demand split)`);
+  logger.log(`Files scanned  : ${summary.files}`);
+  logger.log(`Inventory tokens: ~${summary.total_tokens.toLocaleString()} across scanned files`);
+  logger.log(`Largest agent   : ${activation_risk.largest_agent_file || 'n/a'} (~${activation_risk.largest_agent_tokens.toLocaleString()} tok)`);
+  logger.log(`Activation upper: ~${activation_risk.worst_case_activation_tokens.toLocaleString()} tok (largest agent + largest entrypoint)`);
+  logger.log(`Over hard limit: ${summary.over_hard}   Over target: ${summary.over_target}`);
+  logger.log(`Budget status  : ${withinBudget ? 'within hard limits' : 'attention required'}`);
+  logger.log(`Potential save : ~${summary.potential_savings_tokens.toLocaleString()} tokens across inventory (on-demand split)`);
   logger.log('');
 
   // File table
@@ -411,10 +460,11 @@ async function runAgentAudit({ args, options = {}, logger }) {
   }
 
   if (overHard.length > 0) {
-    logger.log('✗ Files over hard limit (will be truncated in auto-loaded contexts):');
+    logger.log('✗ Files over the configured hard budget:');
     for (const f of overHard) {
       logger.log(`  ${f.file} — ${formatKb(f.chars)} (target: ${formatKb(f.target_chars)}, hard: ${formatKb(f.hard_chars)})`);
     }
+    logger.log('  Auto-loaded entrypoints may be truncated by their harness; manually loaded agent prompts are reported here as context-cost risks.');
     logger.log('');
   }
 
@@ -433,13 +483,11 @@ async function runAgentAudit({ args, options = {}, logger }) {
 
   return {
     ok: true,
+    within_budget: withinBudget,
     mode,
     roots,
-    files: files.length,
-    over_hard: overHard.length,
-    over_target: overTarget.length,
-    total_tokens: totalTokens,
-    potential_savings_tokens: totalSavings
+    activation_risk,
+    ...summary
   };
 }
 

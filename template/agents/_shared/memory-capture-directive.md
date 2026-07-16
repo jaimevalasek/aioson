@@ -100,7 +100,7 @@ Suppress capture in these cases — they create noise that drowns real signal:
 2. **Negotiations / questions** — "será que dá pra commitar autonomo?" (asking, not deciding).
 3. **Routine agreements** — "ok", "sim", "vai" without specific scope (no signal).
 4. **Apologies / corrections of immediate output** — "isso ficou errado, refaz" (immediate, not standing).
-5. **Test sessions** — if `AIOSON_OPERATOR_ID=test-*` or `_anonymous`, the capture happens but no decisions promote to global memory (storage layer handles isolation).
+5. **Unresolved identity** — under `_anonymous`, capture may retain proposal evidence but never promotes a standing decision. Test identities such as `AIOSON_OPERATOR_ID=test-*` remain isolated in their own explicit storage bucket.
 6. **Conflict with project rules** — if a decision would conflict with `.aioson/rules/*.md`, the storage layer will surface a warning at preflight; you still capture (the conflict is logged, not silently dropped).
 
 ## Capture is best-effort
@@ -111,5 +111,5 @@ The storage layer (Phase 2 v1.13.0 onwards) handles:
 
 - Deterministic slug derivation (same paraphrase → same slug)
 - Idempotent capture (re-detection updates `last_detected`, increments `detected_count`)
-- 2x threshold promotion (proposal → decision atomic transition)
+- Signal-specific atomic promotion: authorization, exclusion, and correction on detection 1; confirmation on detection 2
 - Silent operation on first detection; 1-line audit on promotion

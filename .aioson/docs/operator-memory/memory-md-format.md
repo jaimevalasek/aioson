@@ -90,10 +90,10 @@ deprecated_by: <slug> | null          # reverse pointer when superseded
 
 ## Loading directive — how agents consume MEMORY.md
 
-Agents read MEMORY.md ONLY when `process.env.AIOSON_OPERATOR_MEMORY === 'true'`. Per AIOSON's universal loading directive in `CLAUDE.md` / `AGENTS.md` (template), the pseudocode is:
+In v1.15.0+, agents read MEMORY.md by default. Set `process.env.AIOSON_OPERATOR_MEMORY === 'false'` to opt out. Per AIOSON's universal loading directive in `CLAUDE.md` / `AGENTS.md` (template), the pseudocode is:
 
 ```
-if AIOSON_OPERATOR_MEMORY = "true":
+if AIOSON_OPERATOR_MEMORY != "false":
   identity = sha256(git config user.email)[0..16]
   memory = read("~/.aioson/operators/" + identity + "/MEMORY.md")
   if memory:
@@ -132,7 +132,7 @@ Example Bash reference (POSIX):
 ```bash
 #!/bin/bash
 # operator-memory-load.sh — minimal reference loader
-if [ "$AIOSON_OPERATOR_MEMORY" = "true" ]; then
+if [ "${AIOSON_OPERATOR_MEMORY:-true}" != "false" ]; then
   EMAIL=$(git config --get user.email 2>/dev/null)
   if [ -n "$EMAIL" ]; then
     HASH=$(echo -n "$EMAIL" | sha256sum | cut -c1-16)

@@ -173,6 +173,7 @@ test('git:guard detects high-risk secret tokens in staged content', async () => 
 test('git:guard allowPaths suppresses path-based findings but not content secret detection', async () => {
   const dir = await makeRepo();
   try {
+    const realisticToken = ['sk', 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6'].join('-');
     await writeFile(
       dir,
       '.aioson/git-guard.json',
@@ -187,7 +188,7 @@ test('git:guard allowPaths suppresses path-based findings but not content secret
     await writeFile(
       dir,
       'fixtures/local/dev.env',
-      'OPENAI_API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456\n'
+      `OPENAI_API_KEY=${realisticToken}\n`
     );
     git(dir, ['add', '--', '.aioson/git-guard.json', 'fixtures/local/dev.env']);
 
@@ -272,6 +273,7 @@ test('git:guard still warns on literal-string secret assignments', async () => {
     await writeFile(
       dir,
       'src/leaked.js',
+      // aioson-secret: fixture
       "const API_TOKEN = 'abcd1234efgh5678';\n"
     );
     git(dir, ['add', '--', 'src/leaked.js']);
@@ -283,6 +285,343 @@ test('git:guard still warns on literal-string secret assignments', async () => {
     });
 
     assert.equal(result.warnings.some((item) => item.id === 'generic_secret_assignment'), true);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard ignores natural-language i18n values whose keys mention token', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'src/i18n/messages/en.js',
+      // aioson-secret: fixture
+      'module.exports = { login_no_token: "No token provided. Please sign in again." };\n'
+    );
+    git(dir, ['add', '--', 'src/i18n/messages/en.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings, null, 2));
+    assert.equal(result.warnings.some((item) => item.id === 'generic_secret_assignment'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard does not treat whitespace as safe for runtime password assignments', async () => {
+  const dir = await makeRepo();
+  try {
+    // aioson-secret: fixture
+    await writeFile(dir, 'src/config.js', "const PASSWORD = 'correct horse battery staple';\n");
+    git(dir, ['add', '--', 'src/config.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard suppresses explicitly fake generic credentials in test fixtures', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(dir, 'tests/auth.test.js', "const FAKE_API_TOKEN = 'test-secret-abc123';\n");
+    git(dir, ['add', '--', 'tests/auth.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.ok(result.suppressed.some((item) => item.id === 'generic_secret_assignment'));
+    assert.equal(result.summary.suppressedCount > 0, true);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard recognizes obviously synthetic provider literals in test fixtures', async () => {
+  const dir = await makeRepo();
+  try {
+    const syntheticToken = ['sk', 'abcdefghijklmnopqrstuvwxyz123456'].join('-');
+    await writeFile(dir, 'fixtures/redactor.js', `const token = '${syntheticToken}';\n`);
+    git(dir, ['add', '--', 'fixtures/redactor.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.ok(result.suppressed.some((item) => item.id === 'openai_secret'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard ignores template interpolation used to build detector fixtures', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'tests/writer.test.js',
+      "const snippet = `const API_TOKEN = '${realisticToken}'`;\n"
+    );
+    git(dir, ['add', '--', 'tests/writer.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard recognizes explicit custom keys as synthetic in test fixtures', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(dir, 'tests/config.test.js', "const config = { api_key: 'sk-custom' };\n");
+    git(dir, ['add', '--', 'tests/config.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.ok(result.suppressed.some((item) => item.id === 'generic_secret_assignment'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard suppresses synthetic provider tokens only with fixture evidence', async () => {
+  const dir = await makeRepo();
+  try {
+    const syntheticToken = ['ghp', 'fakefakefakefakefakefakefakefake'].join('_');
+    await writeFile(
+      dir,
+      'tests/github.fixture.js',
+      `const FAKE_GITHUB_TOKEN = '${syntheticToken}';\n`
+    );
+    git(dir, ['add', '--', 'tests/github.fixture.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.ok(result.suppressed.some((item) => item.id === 'github_token'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard still blocks realistic provider secrets placed in tests', async () => {
+  const dir = await makeRepo();
+  try {
+    const realisticToken = ['ghp', 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6'].join('_');
+    await writeFile(dir, 'tests/unsafe.test.js', `const token = '${realisticToken}';\n`);
+    git(dir, ['add', '--', 'tests/unsafe.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((item) => item.id === 'github_token'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard does not trust fixture identifiers without synthetic value evidence', async () => {
+  const dir = await makeRepo();
+  try {
+    const realisticGenericSecret = ['A1b2C3d4', 'E5f6G7h8'].join('');
+    await writeFile(
+      dir,
+      'tests/unsafe-generic.test.js',
+      `const FAKE_API_TOKEN = '${realisticGenericSecret}';\n`
+    );
+    git(dir, ['add', '--', 'tests/unsafe-generic.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard fixture sentinel is effective only inside test or fixture paths', async () => {
+  const fixtureDir = await makeRepo();
+  const runtimeDir = await makeRepo();
+  const realisticToken = ['ghp', 'Q7w8E9r0T1y2U3i4O5p6A7s8D9f0G1h2'].join('_');
+  const content = `// aioson-secret: fixture\nconst TOKEN = '${realisticToken}';\n`;
+  try {
+    await writeFile(fixtureDir, 'fixtures/provider.js', content);
+    git(fixtureDir, ['add', '--', 'fixtures/provider.js']);
+    const fixtureResult = await runGitGuard({
+      args: [fixtureDir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+    assert.equal(fixtureResult.ok, true, JSON.stringify(fixtureResult.errors, null, 2));
+    assert.ok(fixtureResult.suppressed.some((item) => item.id === 'github_token'));
+
+    process.exitCode = 0;
+    await writeFile(runtimeDir, 'src/provider.js', content);
+    git(runtimeDir, ['add', '--', 'src/provider.js']);
+    const runtimeResult = await runGitGuard({
+      args: [runtimeDir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+    assert.equal(runtimeResult.ok, false);
+    assert.ok(runtimeResult.errors.some((item) => item.id === 'github_token'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+    await fs.rm(runtimeDir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard contentAllowRules suppresses only the named detector rule', async () => {
+  const dir = await makeRepo();
+  try {
+    const realisticToken = ['ghp', 'Z1x2C3v4B5n6M7a8S9d0F1g2H3j4K5l6'].join('_');
+    await writeFile(
+      dir,
+      '.aioson/git-guard.json',
+      `${JSON.stringify({
+        version: 1,
+        allowPaths: [],
+        contentAllowPaths: [],
+        contentAllowRules: [{
+          path: 'src/provider.js',
+          rules: ['github_token'],
+          reason: 'intentional detector fixture'
+        }],
+        blockPaths: [],
+        allowExtensions: [],
+        blockExtensions: []
+      }, null, 2)}\n`
+    );
+    await writeFile(dir, 'src/provider.js', `const API_TOKEN = '${realisticToken}';\n`);
+    git(dir, ['add', '--', '.aioson/git-guard.json', 'src/provider.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.errors.some((item) => item.id === 'github_token'), false);
+    assert.ok(result.suppressed.some((item) => item.id === 'github_token'));
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
+    assert.equal(result.ok, false, 'the unrelated generic warning must remain blocking');
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('SF-aioson-01: git:guard ignores unstaged contentAllowRules while scanning staged source', async () => {
+  const dir = await makeRepo();
+  try {
+    const realisticToken = ['ghp', 'H1j2K3l4M5n6P7q8R9s0T1u2V3w4X5y6'].join('_');
+    await writeFile(
+      dir,
+      '.aioson/git-guard.json',
+      `${JSON.stringify({
+        version: 1,
+        contentAllowRules: [{
+          path: 'src/provider.js',
+          rules: ['github_token'],
+          reason: 'must be staged with the source change'
+        }]
+      }, null, 2)}\n`
+    );
+    await writeFile(dir, 'src/provider.js', `const API_TOKEN = '${realisticToken}';\n`);
+    git(dir, ['add', '--', 'src/provider.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.policy.source, 'index');
+    assert.equal(result.policy.loaded, false);
+    assert.ok(result.errors.some((item) => item.id === 'github_token'));
+    assert.equal(result.suppressed.some((item) => item.id === 'github_token'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard rejects malformed contentAllowRules configuration', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      '.aioson/git-guard.json',
+      `${JSON.stringify({ version: 1, contentAllowRules: [{ path: 'src/index.js', rules: [], reason: 'bad' }] })}\n`
+    );
+    await writeFile(dir, 'src/index.js', 'module.exports = true;\n');
+    git(dir, ['add', '--', '.aioson/git-guard.json', 'src/index.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'git_guard_failed');
+    assert.match(result.message, /contentAllowRules/);
   } finally {
     process.exitCode = 0;
     await fs.rm(dir, { recursive: true, force: true });

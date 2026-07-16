@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Intelligence"
+  short_description: "Evidence-first review for safer agent handoffs"
+  default_prompt: "Use $review-intelligence to challenge this artifact with evidence before handoff."

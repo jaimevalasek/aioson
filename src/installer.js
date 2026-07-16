@@ -125,6 +125,7 @@ async function ensureProjectGitignorePolicy(targetDir) {
 const GIT_GUARD_SCHEMA_ARRAY_FIELDS = [
   'allowPaths',
   'contentAllowPaths',
+  'contentAllowRules',
   'blockPaths',
   'allowExtensions',
   'blockExtensions'

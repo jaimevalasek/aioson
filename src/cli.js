@@ -55,6 +55,7 @@ const { runScanProject } = require('./commands/scan-project');
 const { runSecurityScan } = require('./commands/security-scan');
 const { runSecurityAudit } = require('./commands/security-audit');
 const { runReviewFeature } = require('./commands/review-feature');
+const { runReviewPrepare, runReviewCheck, runReviewStatus } = require('./commands/review-intelligence');
 const { runConfig } = require('./commands/config');
 const { runGenomeDoctor } = require('./commands/genome-doctor');
 const { runGenomeMigrate } = require('./commands/genome-migrate');
@@ -293,14 +294,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'workflow-next',
   'workflow:status',
   'workflow-status',
-  'feature:current',
-  'feature-current',
-  'harness:retro',
-  'harness-retro',
-  'harness:retro-promote',
-  'harness-retro-promote',
-  'harness:preview',
-  'harness-preview',
+  'workflow:heal',
+  'workflow-heal',
+  'workflow:harden',
+  'workflow-harden',
   'agent:next',
   'agent-next',
   'parallel:init',
@@ -361,6 +358,12 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'briefing-apply-feedback',
   'review:feature',
   'review-feature',
+  'review:prepare',
+  'review-prepare',
+  'review:check',
+  'review-check',
+  'review:status',
+  'review-status',
   'config',
   'genome:doctor',
   'genome-doctor',
@@ -395,6 +398,7 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'squad:mcp',
   'squad-mcp',
   'squad:mcp:call',
+  'squad-mcp-call',
   'squad:roi',
   'squad-roi',
   'squad:score',
@@ -536,6 +540,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'runtime-status',
   'runtime:log',
   'runtime-log',
+  'runtime:prune',
+  'runtime-prune',
   'agent:done',
   'agent-done',
   'agent:recover',
@@ -560,11 +566,15 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'live-close',
   'live:list',
   'live-list',
+  'tool:capabilities',
+  'tool-capabilities',
   'scaffold:complete',
   'scaffold-complete',
   'deliver',
   'output-strategy:export',
+  'output-strategy-export',
   'output-strategy:import',
+  'output-strategy-import',
   'cloud:import:squad',
   'cloud-import-squad',
   'cloud:import:genome',
@@ -581,6 +591,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'hooks-uninstall',
   'session:guard',
   'session-guard',
+  'devlog:sync',
+  'devlog-sync',
   'devlog:process',
   'devlog-process',
   'devlog:watch',
@@ -612,6 +624,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'scout:commit',
   'scout-commit',
   'notify',
+  'backup:local',
+  'backup-local',
   'runtime:backup',
   'runtime-backup',
   'runtime:restore',
@@ -821,11 +835,26 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'system:list',
   'system-list',
   'system:install',
-  'system-install'
+  'system-install',
+  'briefing:approve',
+  'briefing-approve',
+  'briefing:unapprove',
+  'briefing-unapprove'
 ]);
 
 const AGENT_HELP_COMMANDS = new Set([
   'agent:prompt', 'agent-prompt', 'agent:invoke', 'agent-invoke', 'agent:help', 'agent-help'
+]);
+
+const DEDICATED_HELP_COMMANDS = new Set([
+  'op:identity', 'op-identity',
+  'op:capture', 'op-capture',
+  'op:promote', 'op-promote',
+  'op:forget', 'op-forget',
+  'op:list', 'op-list',
+  'op:show', 'op-show',
+  'op:reinforce', 'op-reinforce',
+  'op:migrate', 'op-migrate'
 ]);
 
 const LEGACY_DASHBOARD_COMMANDS = new Set([
@@ -864,6 +893,13 @@ function logHelpLine(t, logger, key) {
   logger.log(t('cli.help_item_line', { text: t(key) }));
 }
 
+function getCommandHelpUsage(command, t) {
+  const suffix = String(command || '').replace(/[:\-]/g, '_');
+  const key = `cli.help_${suffix}`;
+  const usage = t(key);
+  return usage === key ? null : usage;
+}
+
 function printHelp(t, logger) {
   logger.log(t('cli.title_line', { title: t('cli.title') }));
   logger.log(t('cli.usage'));
@@ -880,6 +916,10 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_agent_help');
   logHelpLine(t, logger, 'cli.help_agent_invoke');
   logHelpLine(t, logger, 'cli.help_agent_epilogue');
+  logHelpLine(t, logger, 'cli.help_briefing_approve');
+  logHelpLine(t, logger, 'cli.help_briefing_unapprove');
+  logHelpLine(t, logger, 'cli.help_briefing_review');
+  logHelpLine(t, logger, 'cli.help_briefing_apply_feedback');
   logHelpLine(t, logger, 'cli.help_context_validate');
   logHelpLine(t, logger, 'cli.help_context_pack');
   logHelpLine(t, logger, 'cli.help_context_search');
@@ -905,6 +945,9 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_workflow_execute');
   logHelpLine(t, logger, 'cli.help_review_cycle');
   logHelpLine(t, logger, 'cli.help_review_feature');
+  logHelpLine(t, logger, 'cli.help_review_prepare');
+  logHelpLine(t, logger, 'cli.help_review_check');
+  logHelpLine(t, logger, 'cli.help_review_status');
   logHelpLine(t, logger, 'cli.help_parallel_init');
   logHelpLine(t, logger, 'cli.help_parallel_doctor');
   logHelpLine(t, logger, 'cli.help_parallel_assign');
@@ -1098,7 +1141,12 @@ async function main() {
   const logger = createLogger();
   const silentLogger = createSilentLogger();
 
-  if (command === '--version' || command === '-v' || command === 'version' || options.version) {
+  if (
+    command === '--version' ||
+    command === '-v' ||
+    command === 'version' ||
+    options.version === true
+  ) {
     const { getCliVersionSync, getGitBuildInfoSync, getCliVersionLabelSync } = require('./version');
     const version = getCliVersionSync();
     const git = getGitBuildInfoSync();
@@ -1119,8 +1167,23 @@ async function main() {
     return;
   }
 
-  if (command === 'help' || options.help || command === '--help' || command === '-h') {
+  if (
+    command === 'help' ||
+    command === '--help' ||
+    command === '-h'
+  ) {
     printHelp(t, logger);
+    return;
+  }
+
+  if (options.help && !DEDICATED_HELP_COMMANDS.has(command)) {
+    const usage = getCommandHelpUsage(command, t);
+    if (usage) {
+      if (jsonMode) writeJson({ ok: true, command, usage });
+      else logger.log(usage);
+    } else {
+      printHelp(t, logger);
+    }
     return;
   }
 
@@ -1298,6 +1361,15 @@ async function main() {
     } else if (command === 'verify:artifact' || command === 'verify-artifact') {
       const { runVerifyArtifact } = require('./commands/verify-artifact');
       result = await runVerifyArtifact({ args, options, logger: commandLogger, t });
+    } else if (command === 'review:prepare' || command === 'review-prepare') {
+      result = await runReviewPrepare({ args, options, logger: commandLogger });
+      if (!jsonMode) process.exitCode = result.exitCode;
+    } else if (command === 'review:check' || command === 'review-check') {
+      result = await runReviewCheck({ args, options, logger: commandLogger });
+      if (!jsonMode) process.exitCode = result.exitCode;
+    } else if (command === 'review:status' || command === 'review-status') {
+      result = await runReviewStatus({ args, options, logger: commandLogger });
+      if (!jsonMode) process.exitCode = result.exitCode;
     } else if (command === 'review:feature' || command === 'review-feature') {
       result = await runReviewFeature({ args, options, logger: commandLogger, t });
     } else if (command === 'config') {
@@ -1334,7 +1406,7 @@ async function main() {
     } else if (command === 'squad:daemon' || command === 'squad-daemon') {
       const sub = options.sub || 'status';
       result = await runSquadDaemon({ args, options: { ...options, sub }, logger: commandLogger, t });
-    } else if (command === 'squad:mcp:call') {
+    } else if (command === 'squad:mcp:call' || command === 'squad-mcp-call') {
       result = await runSquadMcp({ args, options: { ...options, sub: 'call' }, logger: commandLogger, t });
     } else if (command === 'squad:mcp' || command === 'squad-mcp') {
       const sub = options.sub || 'status';
@@ -1507,9 +1579,9 @@ async function main() {
       result = await runScaffoldComplete({ args, options, logger: commandLogger, t });
     } else if (command === 'deliver') {
       result = await runDeliver({ args, options, logger: commandLogger, t });
-    } else if (command === 'output-strategy:export') {
+    } else if (command === 'output-strategy:export' || command === 'output-strategy-export') {
       result = await runOutputStrategyExport({ args, options, logger: commandLogger, t });
-    } else if (command === 'output-strategy:import') {
+    } else if (command === 'output-strategy:import' || command === 'output-strategy-import') {
       result = await runOutputStrategyImport({ args, options, logger: commandLogger, t });
     } else if (command === 'devlog:sync' || command === 'devlog-sync') {
       result = await runDevlogSync({ args, options, logger: commandLogger, t });
@@ -1817,11 +1889,15 @@ async function main() {
 
     if (jsonMode && commandSupportsJson(command)) {
       writeJson(result || { ok: true });
-      if (result && typeof result.exitCode === 'number') {
-        process.exitCode = result.exitCode;
-      } else if (result && Object.prototype.hasOwnProperty.call(result, 'ok') && !result.ok) {
-        process.exitCode = 1;
-      }
+    }
+
+    // A failed command must fail the process in both human and JSON modes.
+    // Previously this propagation only ran for registered JSON commands,
+    // making validation errors such as `workflow:heal` exit successfully.
+    if (result && typeof result.exitCode === 'number') {
+      process.exitCode = result.exitCode;
+    } else if (result && Object.prototype.hasOwnProperty.call(result, 'ok') && !result.ok) {
+      process.exitCode = 1;
     }
   } catch (error) {
     if (jsonMode) {

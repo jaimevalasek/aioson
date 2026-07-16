@@ -258,13 +258,23 @@ function buildSuggestion({
     };
   }
 
+  if (contractCheck && Array.isArray(contractCheck.warnings) && contractCheck.warnings.length > 0) {
+    return {
+      action: 'continue_stage',
+      agent: focusStage,
+      command: `aioson workflow:next . --agent=${focusStage} --tool=${safeTool}`,
+      reason: `@${focusStage} passed hard gates, but completion evidence is still incomplete.`,
+      details: [...contractCheck.warnings]
+    };
+  }
+
   const autoHealFlag = focusStage === 'dev' || focusStage === 'qa' ? ' --auto-heal' : '';
   return {
     action: 'complete_stage',
     agent: focusStage,
     command: `aioson workflow:next . --complete=${focusStage}${autoHealFlag} --tool=${safeTool}`,
     reason: `@${focusStage} appears ready for the next handoff.`,
-    details: contractCheck && Array.isArray(contractCheck.warnings) ? [...contractCheck.warnings] : []
+    details: []
   };
 }
 

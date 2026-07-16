@@ -171,6 +171,66 @@ describe('context.js — validateContextData', () => {
     assert.ok(issues.some((i) => i.id === 'context:conversation_language:format'));
     assert.ok(issues.some((i) => i.id === 'context:interaction_language:format'));
   });
+
+  it('accepts the primary interaction language without requiring the legacy alias', () => {
+    const data = {
+      project_name: 'test',
+      project_type: 'script',
+      profile: 'developer',
+      framework: 'Node.js',
+      framework_installed: true,
+      classification: 'MICRO',
+      interaction_language: 'pt-BR',
+      aioson_version: '1.0'
+    };
+
+    assert.deepEqual(validateContextData(data), []);
+  });
+
+  it('keeps conversation_language as a valid legacy fallback', () => {
+    const data = {
+      project_name: 'test',
+      project_type: 'script',
+      profile: 'developer',
+      framework: 'Node.js',
+      framework_installed: true,
+      classification: 'MICRO',
+      conversation_language: 'pt-BR',
+      aioson_version: '1.0'
+    };
+
+    assert.deepEqual(validateContextData(data), []);
+  });
+
+  it('requires at least one interaction-language field', () => {
+    const issues = validateContextData({
+      project_name: 'test',
+      project_type: 'script',
+      profile: 'developer',
+      framework: 'Node.js',
+      framework_installed: true,
+      classification: 'MICRO',
+      aioson_version: '1.0'
+    });
+
+    assert.ok(issues.some((issue) => issue.id === 'context:missing:interaction_language'));
+  });
+
+  it('rejects drift between primary and legacy language fields', () => {
+    const issues = validateContextData({
+      project_name: 'test',
+      project_type: 'script',
+      profile: 'developer',
+      framework: 'Node.js',
+      framework_installed: true,
+      classification: 'MICRO',
+      interaction_language: 'fr',
+      conversation_language: 'pt-BR',
+      aioson_version: '1.0'
+    });
+
+    assert.ok(issues.some((issue) => issue.id === 'context:language:mismatch'));
+  });
 });
 
 describe('context.js — Language utilities', () => {

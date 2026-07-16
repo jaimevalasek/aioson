@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "aef2ec73-f8d7-4953-8e10-98c2442f86a6",
+  "manifest_path": ".aioson\\context\\agent-execution-review-intelligence.json",
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "status": "verification_planned",
+  "reason": null,
+  "attempts": [
+    {
+      "feature": "review-intelligence",
+      "run_id": "8e1926e2-bc5e-46b1-8b1d-e4095d30eed2",
+      "attempt_id": "90f6e764-c6a5-4187-b5b1-961a71008dd0",
+      "agent": "qa",
+      "host": "claude",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "18c52096affe37c4498802dd84258cfcf97948bcfb86103473d8d1b8950178ca",
+      "writable_roots": [],
+      "status": "blocked",
+      "telemetry_run_id": "aex-review-intelligence-0b05adc5-38ca-405f-832d-19327c090065",
+      "reason": "invalid_arguments",
+      "report": ".aioson/context/reports/review-intelligence/8e1926e2-bc5e-46b1-8b1d-e4095d30eed2/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "claude",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": "invalid_arguments"
+        }
+      ],
+      "host_resolved": "claude"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "8e1926e2-bc5e-46b1-8b1d-e4095d30eed2",
+      "attempt_id": "9535fd44-4bd2-4816-a488-ab167cf59219",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "blocked",
+      "telemetry_run_id": "aex-review-intelligence-7518c0c0-9d46-4478-99a3-3285781c79aa",
+      "reason": "crash",
+      "report": ".aioson/context/reports/review-intelligence/8e1926e2-bc5e-46b1-8b1d-e4095d30eed2/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": "crash"
+        }
+      ],
+      "host_resolved": "codex"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "8e1926e2-bc5e-46b1-8b1d-e4095d30eed2",
+      "attempt_id": "94706aa0-e282-4e07-8cc6-72595eb9b36c",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "completed",
+      "telemetry_run_id": "aex-review-intelligence-27338a44-a149-4067-94ef-6f52c04bb87d",
+      "reason": null,
+      "report": ".aioson/context/reports/review-intelligence/8e1926e2-bc5e-46b1-8b1d-e4095d30eed2/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": null
+        }
+      ],
+      "host_resolved": "codex",
+      "verdict": "PASS"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "3b80288e-12aa-4fd5-a9e1-7dbfabde12c4",
+      "attempt_id": "918ca99e-b60c-4777-91ae-23ba730d4727",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "blocked",
+      "telemetry_run_id": "aex-review-intelligence-d21c5a3c-ba21-4cbd-bb0a-10f4523633dd",
+      "reason": "timeout",
+      "report": ".aioson/context/reports/review-intelligence/3b80288e-12aa-4fd5-a9e1-7dbfabde12c4/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": "timeout"
+        }
+      ],
+      "host_resolved": "codex"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "d4d8b0bb-55d8-4de4-b360-8ebf7f04f65e",
+      "attempt_id": "e9486a5c-f696-4276-b33c-717951dc14c9",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "completed",
+      "telemetry_run_id": "aex-review-intelligence-1ad3a0aa-be81-40c5-ad69-444e1a213300",
+      "reason": null,
+      "report": ".aioson/context/reports/review-intelligence/d4d8b0bb-55d8-4de4-b360-8ebf7f04f65e/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": null
+        }
+      ],
+      "host_resolved": "codex",
+      "verdict": "PASS"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "4a592e9a-267b-4c8a-b10c-123740a5fb2f",
+      "attempt_id": "ebad7c17-a43a-4299-a502-964c019c2cf6",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "completed",
+      "telemetry_run_id": "aex-review-intelligence-c5935bb9-0883-4984-97ea-27b104453f8e",
+      "reason": null,
+      "report": ".aioson/context/reports/review-intelligence/4a592e9a-267b-4c8a-b10c-123740a5fb2f/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": null
+        }
+      ],
+      "host_resolved": "codex",
+      "verdict": "PASS"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "aef2ec73-f8d7-4953-8e10-98c2442f86a6",
+      "attempt_id": "8f0f8eb1-c460-4fd8-9f29-1d5f4740a046",
+      "agent": "qa",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "completed",
+      "telemetry_run_id": "aex-review-intelligence-46998d5e-58c5-49ad-88e7-feb3344a7af1",
+      "reason": null,
+      "report": ".aioson/context/reports/review-intelligence/aef2ec73-f8d7-4953-8e10-98c2442f86a6/qa.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": null
+        }
+      ],
+      "host_resolved": "codex",
+      "verdict": "PASS"
+    },
+    {
+      "feature": "review-intelligence",
+      "run_id": "aef2ec73-f8d7-4953-8e10-98c2442f86a6",
+      "attempt_id": "a1e34731-ff9a-4a5b-856a-3f06b89aa34b",
+      "agent": "validator",
+      "host": "codex",
+      "model_requested": "configured-default",
+      "model_resolved": "configured-default",
+      "model_resolution_strategy": "configured_default",
+      "reasoning_effort": null,
+      "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+      "writable_roots": [],
+      "status": "completed",
+      "telemetry_run_id": "aex-review-intelligence-6e929b00-a432-4d01-9b25-7a2d378982e1",
+      "reason": null,
+      "report": ".aioson/context/reports/review-intelligence/aef2ec73-f8d7-4953-8e10-98c2442f86a6/validator.json",
+      "execution_history": [
+        {
+          "attempt": 1,
+          "host": "codex",
+          "model_requested": "configured-default",
+          "model": "configured-default",
+          "model_resolution_strategy": "configured_default",
+          "reasoning_effort": null,
+          "reason": null
+        }
+      ],
+      "host_resolved": "codex",
+      "verdict": "PASS"
+    }
+  ],
+  "completed_agents": [
+    "qa",
+    "validator"
+  ],
+  "updated_at": "2026-07-15T21:27:27.732Z"
+}

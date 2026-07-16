@@ -23,6 +23,9 @@ const crypto = require('node:crypto');
 
 const TARGET_TYPES = new Set(['rule', 'learning', 'brain']);
 const ACTOR_VALUES = new Set(['human', 'auto']);
+const SAFE_TARGET_SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
+const MAX_TARGET_SEGMENT_LENGTH = 160;
+const MAX_TARGET_SLUG_LENGTH = 500;
 
 function nowIso() {
   return new Date().toISOString();
@@ -50,6 +53,35 @@ function normalizeKind(kind) {
   if (lower === 'learning' || lower === 'learnings') return 'learning';
   if (lower === 'brain' || lower === 'brains') return 'brain';
   return null;
+}
+
+function validateTargetSlug(kind, slug) {
+  const text = typeof slug === 'string' ? slug.trim() : '';
+  if (!TARGET_TYPES.has(kind) || !text || text.length > MAX_TARGET_SLUG_LENGTH) {
+    return { ok: false, reason: 'invalid_target_id' };
+  }
+  if (text !== slug || text.includes('\\') || path.isAbsolute(text)) {
+    return { ok: false, reason: 'invalid_target_id' };
+  }
+
+  const parts = kind === 'brain' ? text.split('/') : [text];
+  if (kind !== 'brain' && text.includes('/')) {
+    return { ok: false, reason: 'invalid_target_id' };
+  }
+  if (
+    parts.length === 0 ||
+    parts.some((part) => (
+      !part ||
+      part === '.' ||
+      part === '..' ||
+      part.length > MAX_TARGET_SEGMENT_LENGTH ||
+      !SAFE_TARGET_SEGMENT.test(part)
+    ))
+  ) {
+    return { ok: false, reason: 'invalid_target_id' };
+  }
+
+  return { ok: true, slug: text };
 }
 
 function archivedRootFor(targetDir, kind) {
@@ -316,7 +348,8 @@ function archiveTarget(db, options) {
   if (!TARGET_TYPES.has(kind)) {
     return { ok: false, reason: 'invalid_target_type', value: kind };
   }
-  if (!slug) return { ok: false, reason: 'invalid_target_id' };
+  const slugValidation = validateTargetSlug(kind, slug);
+  if (!slugValidation.ok) return slugValidation;
 
   // 1. Locate live target
   const resolved = resolveActiveTarget(targetDir, kind, slug);
@@ -457,7 +490,8 @@ function restoreTarget(db, options) {
   const dryRun = Boolean(options.dryRun);
 
   if (!TARGET_TYPES.has(kind)) return { ok: false, reason: 'invalid_target_type', value: kind };
-  if (!slug) return { ok: false, reason: 'invalid_target_id' };
+  const slugValidation = validateTargetSlug(kind, slug);
+  if (!slugValidation.ok) return slugValidation;
 
   let archivedFile = null;
   let learningRow = null;
@@ -577,6 +611,7 @@ function restoreTarget(db, options) {
 
 module.exports = {
   TARGET_TYPES,
+  validateTargetSlug,
   parseTargetId,
   normalizeKind,
   archivedFolderForDate,

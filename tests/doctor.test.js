@@ -56,7 +56,7 @@ test('doctor fails when context exists but misses required frontmatter fields', 
 
   const report = await runDoctor(dir);
   assert.equal(report.ok, false);
-  assert.equal(report.checks.some((c) => c.id === 'context:missing:conversation_language'), true);
+  assert.equal(report.checks.some((c) => c.id === 'context:missing:interaction_language'), true);
 });
 
 test('doctor --fix restores missing required files safely', async () => {

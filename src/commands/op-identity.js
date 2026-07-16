@@ -39,6 +39,18 @@ function parseSubcommand(args) {
 
 async function runOpIdentity({ args = [], options = {}, logger }) {
   const targetDir = process.cwd();
+
+  if (options.help === true || args.includes('--help') || args.includes('-h')) {
+    const help = [
+      'op:identity [show] — resolve the active operator-memory identity.',
+      'op:identity set <id> — initialize an override for this process only.',
+      'Use AIOSON_OPERATOR_ID=<id> in the shell to persist an override.'
+    ].join('\n');
+    if (options.json) return { ok: true, help: true, command: 'op:identity' };
+    if (logger) logger.log(help);
+    return { ok: true, help: true };
+  }
+
   const { sub, setValue } = parseSubcommand(args);
 
   if (sub !== 'show' && sub !== 'set') {

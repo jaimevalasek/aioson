@@ -38,7 +38,7 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 
 ### Quero a referência técnica de um agente ou comando
 - **[Fichas dos 29 agentes (30 entradas com 1 alias)](./4-agentes/README.md)** — uma ficha por agente, com diálogo típico, saídas em disco e handoff
-- **[Referência técnica completa](./5-referencia/README.md)** — 32 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
+- **[Referência técnica completa](./5-referencia/README.md)** — 34 docs organizados em 5 categorias (novos 2026, artefatos, CLI/config, agentes/squads, skills/design)
 - [Guia de agentes (legado)](./agentes.md) — visão tabular alternativa
 
 #### Destaques de `5-referencia/` (features 2026 sem doc PT antes)
@@ -51,6 +51,8 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 - **[Memória Viva](./living-memory/README.md)** — bootstrap auto-atualizado + autonomy contract (3 tiers) + `notify` (ℹ/⚠/⛔) + 5 checks novos no doctor
 - **[Active Learning Loop](./active-learning-loop/README.md)** — destilação automática no `feature:close` + busca BM25 em learnings + archive/restore com `evolution_log` + 3 novos checks de curadoria no doctor
 - **[Deyvin Sub-Task Scout](./deyvin-subtask-scout/README.md)** — primitiva de diagnóstico estruturado do `@deyvin`: `scout:prep/validate/commit`, contexto isolado, caps configuráveis, archivamento por feature
+- **[Execução de subagentes](./5-referencia/agent-execution.md)** — manifesto por feature, aliases de modelo, `reasoning_effort`, fallback e telemetria auditável
+- **[Memória do operador](./5-referencia/operator-memory.md)** — decisões por identidade, promoção por tipo de sinal e reforço idempotente
 
 ### Arquivo histórico
 [`_arquivo/`](./_arquivo/) — versões anteriores das docs, preservadas com nota de redirect para o novo equivalente. Nenhum conteúdo foi perdido.
@@ -100,10 +102,10 @@ Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legado
 
 **Fase A (entender + começar)** — concluída · 8 docs em `1-entender/` e `2-comecar/`.
 **Fase B (receitas práticas + ficha por agente)** — concluída · 11 receitas em `3-receitas/` + 29 fichas em `4-agentes/`.
-**Fase C (referência técnica completa)** — concluída · 32 docs em `5-referencia/`, com 6 totalmente novos cobrindo features 2026 antes não documentadas em PT.
+**Fase C (referência técnica completa)** — concluída · 34 docs em `5-referencia/`, incluindo execução de subagentes, memória do operador e Review Intelligence atualizadas para a versão 1.37.2.
 **Fase D (trilhas de workflow)** — concluída · 3 trilhas canônicas de feature: briefing→PRD, plans externos, e trilha completa com @sheldon.
 
-**Métricas finais:** 81 docs, ~92.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
+**Métricas finais:** 85 docs, ~96.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
 
 Próximos passos do projeto de docs (fora desta entrega):
 - Replicar a estrutura em `docs/en/` (atualmente legacy)

@@ -282,6 +282,10 @@ The exact PRD structure, visual identity rules, and next-step routing live in:
 - `.aioson/docs/product/quality-lens.md`
 - `.aioson/docs/product/prd-contract.md`
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after writing `prd-{slug}.md` and before handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/framing.md` when available. Run `aioson review:prepare . --agent=product --feature={slug} --artifact=.aioson/context/prd-{slug}.md --json`; complete at most two passes from its template, write `draft_path`, then run `aioson review:check . --agent=product --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs existing product decisions, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve classification/run-mode/handoff; missing review infrastructure is non-gating.
+
 ## Handoff
 
 After writing the PRD, always emit a structured handoff message. Do not end the session without it.

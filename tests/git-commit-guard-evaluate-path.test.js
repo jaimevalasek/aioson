@@ -73,6 +73,13 @@ test('evaluatePathRules: blocks chat-sessions (new session_artifact entry)', () 
   assert.deepEqual(blockedIds(evaluatePathRules('chat-sessions/abc.json')), ['session_artifact']);
 });
 
+test('evaluatePathRules: scopes media/output blocking to AIOSON runtime artifacts', () => {
+  assert.deepEqual(blockedIds(evaluatePathRules('media/assets/logo.png')), []);
+  assert.deepEqual(blockedIds(evaluatePathRules('output/renderer.js')), []);
+  assert.deepEqual(blockedIds(evaluatePathRules('.aioson/media/capture.png')), ['session_artifact']);
+  assert.deepEqual(blockedIds(evaluatePathRules('.aioson/output/session.json')), ['session_artifact']);
+});
+
 test('evaluatePathRules: existing rules still fire (dist, .next, aioson-logs)', () => {
   assert.deepEqual(blockedIds(evaluatePathRules('dist/main.js')), ['build_output']);
   assert.deepEqual(blockedIds(evaluatePathRules('.next/server/foo.js')), ['build_output']);

@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "8e1926e2-bc5e-46b1-8b1d-e4095d30eed2",
+  "attempt_id": "94706aa0-e282-4e07-8cc6-72595eb9b36c",
+  "agent": "qa",
+  "host": "codex",
+  "model_requested": "configured-default",
+  "model_resolved": "configured-default",
+  "model_resolution_strategy": "configured_default",
+  "reasoning_effort": null,
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "writable_roots": [],
+  "started_at": "2026-07-15T19:55:52.485Z",
+  "finished_at": "2026-07-15T20:01:48.680Z",
+  "verdict": "PASS",
+  "findings": [],
+  "evidence": [
+    {
+      "check": "approved_profile_matrix",
+      "status": "PASS",
+      "details": "All eight agents match the approved profile, default review mode, and ordered default artifact matrix, including the scope-check fallback.",
+      "locations": [
+        ".aioson/context/requirements-review-intelligence.md:30",
+        "src/review-intelligence/profiles.js:16",
+        "tests/review-intelligence.test.js:135"
+      ]
+    },
+    {
+      "check": "packet_report_validation",
+      "status": "PASS",
+      "details": "Recursive private-output and aggregate-score keys, unknown fields at root and nested levels, array bounds, and incoherent pass/blocked/decision_required states are rejected.",
+      "locations": [
+        "src/review-intelligence/contracts.js:30",
+        "src/review-intelligence/contracts.js:60",
+        "src/review-intelligence/contracts.js:243",
+        "src/review-intelligence/contracts.js:279",
+        "tests/review-intelligence.test.js:164"
+      ]
+    },
+    {
+      "check": "secure_read_containment",
+      "status": "PASS",
+      "details": "Lexical validation rejects traversal, NUL, and external absolute paths before file access; realpath containment rejects an escaping symlink/junction before content is opened.",
+      "locations": [
+        "src/review-intelligence/storage.js:50",
+        "src/review-intelligence/storage.js:59",
+        "src/review-intelligence/storage.js:90",
+        "tests/review-intelligence.test.js:259",
+        "tests/review-intelligence.test.js:275"
+      ]
+    },
+    {
+      "check": "raw_hash_and_immutable_publication",
+      "status": "PASS",
+      "details": "SHA-256 consumes raw Buffer chunks, and canonical publication uses create-if-absent semantics so identical content is a no-op and different content cannot overwrite the target.",
+      "locations": [
+        "src/review-intelligence/storage.js:128",
+        "src/review-intelligence/storage.js:286",
+        "tests/review-intelligence.test.js:259",
+        "tests/review-intelligence.test.js:297"
+      ]
+    },
+    {
+      "check": "rename_failure_cleanup",
+      "status": "PASS",
+      "details": "The simulated rename failure returns atomic_write_failed and leaves neither a canonical file nor a temporary or ready artifact.",
+      "locations": [
+        "src/review-intelligence/storage.js:300",
+        "src/review-intelligence/storage.js:324",
+        "tests/review-intelligence.test.js:317"
+      ]
+    },
+    {
+      "command": "node --test tests/review-intelligence.test.js",
+      "status": "PASS",
+      "exit_code": 0,
+      "details": "10 tests passed; 0 failed; 0 skipped."
+    },
+    {
+      "command": "node scripts/check-js.js",
+      "status": "PASS",
+      "exit_code": 0,
+      "details": "JavaScript checker completed successfully."
+    }
+  ]
+}

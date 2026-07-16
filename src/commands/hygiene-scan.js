@@ -8,6 +8,8 @@ const { runFeatureArchive, runFeatureSweep } = require('./feature-archive');
 
 const REVIEW_PREFIXES = new Set(['qa-report', 'security-findings']);
 const GLOBAL_REVIEW_SLUGS = new Set(['project', 'test-coverage']);
+const HYGIENE_RETENTION_FILE = 'hygiene-retention.md';
+const RETAINABLE_REVIEW_STATUSES = new Set(['pass', 'pass_with_note', 'pass_with_warnings', 'approved']);
 const COMPLETE_DEV_STATUSES = new Set([
   'complete',
   'completed',
@@ -91,6 +93,18 @@ async function readArchivedSlugs(ctxDir) {
     if (slug !== 'slug') slugs.add(slug);
   }
   return slugs;
+}
+
+async function readRetainedArtifactPaths(ctxDir) {
+  const content = await readFileSafe(path.join(ctxDir, HYGIENE_RETENTION_FILE));
+  const retained = new Set();
+  if (!content) return retained;
+
+  for (const line of content.split(/\r?\n/)) {
+    const match = line.match(/^\|\s*(\.aioson\/context\/[^|]+?)\s*\|/);
+    if (match) retained.add(match[1].trim());
+  }
+  return retained;
 }
 
 function classifyArtifactName(fileName) {
@@ -292,10 +306,15 @@ async function scanReviewArtifacts(ctxDir, artifact, featureRegistry) {
     path: relPath,
     slug: artifact.slug,
     kind: artifact.kind,
-    status: String(fm.verdict || 'unknown').toLowerCase(),
+    status: String(fm.verdict || fm.status || 'unknown').toLowerCase(),
     reason: 'review artifact is not attached to a registered feature',
     suggested_action: 'ask the user whether to keep as active evidence or archive as historical context'
   };
+}
+
+function canRetainReviewArtifact(review) {
+  if (review.kind === 'security_findings') return review.status === 'resolved';
+  return RETAINABLE_REVIEW_STATUSES.has(review.status);
 }
 
 function classifyOrphanArtifact(artifact, featureRegistry, archivedSlugs, pendingArchiveSlugs) {
@@ -326,7 +345,7 @@ function classifyOrphanArtifact(artifact, featureRegistry, archivedSlugs, pendin
   return null;
 }
 
-async function scanRootArtifacts(ctxDir, featureRegistry, archivedSlugs, pendingArchiveSlugs) {
+async function scanRootArtifacts(ctxDir, featureRegistry, archivedSlugs, pendingArchiveSlugs, retainedPaths) {
   const entries = await fs.readdir(ctxDir, { withFileTypes: true }).catch(() => []);
   const reviewArtifacts = [];
   const orphanSlugArtifacts = [];
@@ -339,12 +358,14 @@ async function scanRootArtifacts(ctxDir, featureRegistry, archivedSlugs, pending
     // eslint-disable-next-line no-await-in-loop
     const review = await scanReviewArtifacts(ctxDir, artifact, featureRegistry);
     if (review) {
-      reviewArtifacts.push(review);
+      if (!retainedPaths.has(review.path) || !canRetainReviewArtifact(review)) {
+        reviewArtifacts.push(review);
+      }
       continue;
     }
 
     const orphan = classifyOrphanArtifact(artifact, featureRegistry, archivedSlugs, pendingArchiveSlugs);
-    if (orphan) orphanSlugArtifacts.push(orphan);
+    if (orphan && !retainedPaths.has(orphan.path)) orphanSlugArtifacts.push(orphan);
   }
 
   return { reviewArtifacts, orphanSlugArtifacts };
@@ -377,15 +398,13 @@ async function runHygieneScan({ args = [], options = {}, logger }) {
 
   const featureRegistry = await readFeatureRegistry(ctxDir);
   const archivedSlugs = await readArchivedSlugs(ctxDir);
+  const retainedPaths = await readRetainedArtifactPaths(ctxDir);
   const doneFeaturesPendingArchive = await scanDoneFeaturesPendingArchive(targetDir);
   const pendingArchiveSlugs = new Set(doneFeaturesPendingArchive.map((item) => item.slug));
   const staleStateFiles = await scanStaleDevState(ctxDir, featureRegistry);
   const pendingChainNoises = await scanPendingChainNoises(ctxDir);
   const { reviewArtifacts, orphanSlugArtifacts } = await scanRootArtifacts(
-    ctxDir,
-    featureRegistry,
-    archivedSlugs,
-    pendingArchiveSlugs
+    ctxDir, featureRegistry, archivedSlugs, pendingArchiveSlugs, retainedPaths
   );
 
   const buckets = {

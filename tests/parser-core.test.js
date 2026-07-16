@@ -2,7 +2,8 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseArgv } = require('../src/parser');
+const { BOOLEAN_FLAGS, parseArgv } = require('../src/parser');
+const englishMessages = require('../src/i18n/messages/en');
 
 describe('parser.js — parseArgv', () => {
   it('parses command and positional args', () => {
@@ -27,6 +28,31 @@ describe('parser.js — parseArgv', () => {
     const result = parseArgv(['node', 'aioson', 'workflow:next', '.', '--json', '--agent', 'dev']);
     assert.equal(result.options.json, true);
     assert.equal(result.options.agent, 'dev');
+  });
+
+  it('keeps every documented bare long flag boolean-only', () => {
+    const documentedBareFlags = new Set();
+
+    for (const [key, line] of Object.entries(englishMessages.cli)) {
+      if (!key.startsWith('help_') || typeof line !== 'string') continue;
+
+      for (const match of line.matchAll(/--([a-z0-9-]+)(?![a-z0-9-])/gi)) {
+        const suffix = line.slice(match.index + match[0].length);
+        if (suffix.startsWith('=')) continue;
+        documentedBareFlags.add(match[1]);
+      }
+    }
+
+    const missing = [...documentedBareFlags]
+      .filter((flag) => !BOOLEAN_FLAGS.has(flag))
+      .sort();
+    assert.deepEqual(missing, []);
+
+    for (const flag of documentedBareFlags) {
+      const result = parseArgv(['node', 'aioson', 'example', `--${flag}`, 'target-dir']);
+      assert.equal(result.options[flag], true, `--${flag} should be boolean`);
+      assert.deepEqual(result.args, ['target-dir'], `--${flag} swallowed the positional path`);
+    }
   });
 
   it('parses --agentic as a boolean-only flag', () => {

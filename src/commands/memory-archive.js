@@ -23,6 +23,7 @@ const { runNotify } = require('./notify');
 const {
   parseTargetId,
   normalizeKind,
+  validateTargetSlug,
   archiveTarget,
   TARGET_TYPES
 } = require('../learning-loop-archive');
@@ -79,7 +80,7 @@ async function runMemoryArchive({ args, options = {}, logger, t }) {
     log(msg);
     return { ok: false, reason: 'invalid_id' };
   }
-  if (!parsed.slug) {
+  if (!parsed.slug || !validateTargetSlug(kind, parsed.slug).ok) {
     const msg = tFn(t, 'cli.memory_archive.invalid_id', { value: rawId })
       || `memory:archive invalid --id value: "${rawId}". Missing slug after ":".`;
     if (wantJson) return { ok: false, reason: 'invalid_id', value: rawId };

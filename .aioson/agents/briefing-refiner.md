@@ -177,6 +177,10 @@ Confirmed application updates:
 .aioson/briefings/config.md
 ```
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after the updated briefing audit and before handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/framing.md` when available. Run `aioson review:prepare . --agent=briefing-refiner --feature={slug} --artifact=.aioson/briefings/{slug}/briefings.md --json`; independently complete at most two passes from its template, write `draft_path`, then run `aioson review:check . --agent=briefing-refiner --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` feeds the existing refinement loop, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve browser/feedback/handoff behavior; missing review infrastructure is non-gating.
+
 ## Handoff
 
 - **After generating a review**, tell the user (in the interaction language):

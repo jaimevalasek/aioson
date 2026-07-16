@@ -1,0 +1,73 @@
+{
+  "packet_id": "sha256:d56abab806170ce3c1702d03d0b913dd59f054d188878b633851ef6c964a6e0f",
+  "schema_version": "review-packet/v1",
+  "feature_slug": "review-intelligence",
+  "agent": "qa",
+  "profile": "delivery-assurance",
+  "review_mode": "independent_review",
+  "artifact": {
+    "path": ".aioson/context/qa-report-review-intelligence.md",
+    "sha256": "516ce27726799fce9c5df68f37c08075519ef9c14c64cfb35ed80b32c174c91a",
+    "bytes": 4021
+  },
+  "authorities": [
+    {
+      "kind": "prd",
+      "path": ".aioson/context/prd-review-intelligence.md",
+      "sha256": "c4addbd4e277a7fa883562b51b6e8bda856e9b165c0621d4cb88d509e7816e4f",
+      "bytes": 9370
+    },
+    {
+      "kind": "requirements",
+      "path": ".aioson/context/requirements-review-intelligence.md",
+      "sha256": "593989bc2b8650e6628cae96779dcf2624429674d92ff01c68a4ad11f527f646",
+      "bytes": 17363
+    },
+    {
+      "kind": "spec",
+      "path": ".aioson/context/spec-review-intelligence.md",
+      "sha256": "0df309891f6ad37ea0d8cddef381960bd3a9d259622be2cc5ba2efd53988bed3",
+      "bytes": 8520
+    },
+    {
+      "kind": "design-doc",
+      "path": ".aioson/context/design-doc-review-intelligence.md",
+      "sha256": "70424125eee1fc3d4e30be6bbefde8463ff793049dedc1e3c10c60238947ad52",
+      "bytes": 14507
+    },
+    {
+      "kind": "implementation-plan",
+      "path": ".aioson/context/implementation-plan-review-intelligence.md",
+      "sha256": "46130d8d8cdc1c2d4579c347271764b4d48fec20513c5c090f5c5194fb6ad192",
+      "bytes": 10046
+    },
+    {
+      "kind": "security-findings",
+      "path": ".aioson/context/security-findings-review-intelligence.json",
+      "sha256": "7251baf51708b4149474558aef3504ac29c11b5cec7cbd7827955680b4da1a0a",
+      "bytes": 6295
+    },
+    {
+      "kind": "harness",
+      "path": ".aioson/plans/review-intelligence/harness-contract.json",
+      "sha256": "de2277dfaf93feaf65fb5433f033f0d78a54e052da81a68070db7940c0bc662d",
+      "bytes": 5089
+    },
+    {
+      "kind": "dossier",
+      "path": ".aioson/context/features/review-intelligence/dossier.md",
+      "sha256": "4d998b41cac12aefd72ee4ad4a7ee98d31bb483a0c89445c0c11925a2e8a92c2",
+      "bytes": 8599
+    }
+  ],
+  "reference_path": ".aioson/skills/process/review-intelligence/references/delivery-assurance.md",
+  "challenge_lenses": [
+    "specification-fidelity",
+    "acceptance-coverage",
+    "code-health",
+    "runtime-truth",
+    "residual-risk"
+  ],
+  "max_passes": 2,
+  "prepared_at": "2026-07-15T22:32:27.165Z"
+}

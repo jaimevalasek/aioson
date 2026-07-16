@@ -18,6 +18,7 @@ const { runNotify } = require('./notify');
 const {
   parseTargetId,
   normalizeKind,
+  validateTargetSlug,
   restoreTarget,
   TARGET_TYPES
 } = require('../learning-loop-archive');
@@ -60,7 +61,12 @@ async function runMemoryRestore({ args, options = {}, logger, t }) {
 
   const parsed = parseTargetId(rawId);
   const kind = normalizeKind(parsed.kind);
-  if (!kind || !TARGET_TYPES.has(kind) || !parsed.slug) {
+  if (
+    !kind ||
+    !TARGET_TYPES.has(kind) ||
+    !parsed.slug ||
+    !validateTargetSlug(kind, parsed.slug).ok
+  ) {
     const msg = tFn(t, 'cli.memory_restore.invalid_id', { value: rawId })
       || `memory:restore invalid --id value: "${rawId}". Expected rule|learning|brain:<slug>.`;
     if (wantJson) return { ok: false, reason: 'invalid_id', value: rawId };

@@ -119,3 +119,109 @@ test('commit:prepare parses non-ASCII paths without git C-quoting', async () => 
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('commit:prepare rejects unknown execution modes', async () => {
+  const result = await runCommitPrepare({
+    args: ['.'],
+    options: { json: true, mode: 'unsafe' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'invalid_mode');
+  assert.equal(result.ready, false);
+  process.exitCode = 0;
+});
+
+test('SF-aioson-02: commit:prepare rejects non-headless modes for agent-safe callers', async () => {
+  const dir = await makeRepo();
+  try {
+    // aioson-secret: fixture
+    await writeFile(dir, 'src/config.js', "const API_TOKEN = 'abcd1234efgh5678';\n");
+    git(dir, ['add', '--', 'src/config.js']);
+
+    for (const mode of ['trusted', 'guarded']) {
+      const result = await runCommitPrepare({
+        args: [dir],
+        options: { json: true, 'agent-safe': true, 'staged-only': true, mode },
+        logger: makeLogger()
+      });
+
+      assert.equal(result.ok, false);
+      assert.equal(result.error, 'agent_safe_requires_headless');
+      assert.equal(result.mode, mode);
+      assert.equal(result.requiredMode, 'headless');
+      assert.equal(result.ready, false);
+    }
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('commit:prepare headless blocks warnings while trusted mode records and accepts them', async () => {
+  const dir = await makeRepo();
+  try {
+    // aioson-secret: fixture
+    await writeFile(dir, 'src/config.js', "const API_TOKEN = 'abcd1234efgh5678';\n");
+    git(dir, ['add', '--', 'src/config.js']);
+
+    const headless = await runCommitPrepare({
+      args: [dir],
+      options: { json: true, 'agent-safe': true, 'staged-only': true, mode: 'headless' },
+      logger: makeLogger()
+    });
+    assert.equal(headless.ok, false);
+    assert.equal(headless.error, 'guard_failed');
+    assert.ok(headless.guard.warnings.some((item) => item.id === 'generic_secret_assignment'));
+
+    process.exitCode = 0;
+    const trusted = await runCommitPrepare({
+      args: [dir],
+      options: { json: true, 'staged-only': true, mode: 'trusted' },
+      logger: makeLogger()
+    });
+    assert.equal(trusted.ok, true);
+    assert.equal(trusted.guardMode, 'trusted');
+
+    const prep = JSON.parse(
+      await fs.readFile(path.join(dir, '.aioson', 'context', 'commit-prep.json'), 'utf8')
+    );
+    assert.equal(prep.guardMode, 'trusted');
+    assert.ok(prep.guard.warnings.some((item) => item.id === 'generic_secret_assignment'));
+
+    process.exitCode = 0;
+    const strictRetry = await runCommitPrepare({
+      args: [dir],
+      options: { json: true, 'agent-safe': true, 'staged-only': true, mode: 'headless' },
+      logger: makeLogger()
+    });
+    assert.equal(strictRetry.ok, false, 'trusted prep must not be reused in headless mode');
+    assert.equal(strictRetry.error, 'guard_failed');
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('commit:prepare trusted mode still blocks high-confidence secret errors', async () => {
+  const dir = await makeRepo();
+  try {
+    const realisticToken = ['ghp', 'L1k2J3h4G5f6D7s8A9p0O1i2U3y4T5r6'].join('_');
+    await writeFile(dir, 'src/provider.js', `const token = '${realisticToken}';\n`);
+    git(dir, ['add', '--', 'src/provider.js']);
+
+    const result = await runCommitPrepare({
+      args: [dir],
+      options: { json: true, 'staged-only': true, mode: 'trusted' },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.error, 'guard_failed');
+    assert.ok(result.guard.errors.some((item) => item.id === 'github_token'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

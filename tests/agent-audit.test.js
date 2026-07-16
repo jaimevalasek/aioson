@@ -37,7 +37,22 @@ describe('agent-audit.js — scoped modes', () => {
     });
 
     assert.equal(result.ok, true);
+    assert.equal(result.within_budget, true);
     assert.equal(result.mode, 'runtime');
+    assert.deepEqual(result.summary, {
+      files: 2,
+      over_hard: 0,
+      over_target: 0,
+      within_target: 2,
+      total_tokens: 10,
+      potential_savings_tokens: 0
+    });
+    assert.equal(result.activation_risk.largest_agent_file, '.aioson/agents/dev.md');
+    assert.equal(result.activation_risk.largest_entrypoint_file, 'AGENTS.md');
+    assert.equal(
+      result.activation_risk.worst_case_activation_tokens,
+      result.activation_risk.largest_agent_tokens + result.activation_risk.largest_entrypoint_tokens
+    );
     assert.ok(result.roots.includes('.aioson/agents'));
     assert.ok(!result.roots.includes('template/.aioson/agents'));
     assert.ok(result.files.some((file) => file.file === '.aioson/agents/dev.md'));
@@ -83,5 +98,23 @@ describe('agent-audit.js — scoped modes', () => {
 
     assert.equal(result.ok, false);
     assert.equal(result.reason, 'conflicting_modes');
+  });
+
+  it('separates command success from hard-budget health in JSON output', async () => {
+    await writeFileEnsured(
+      path.join(tmpDir, '.aioson', 'agents', 'qa.md'),
+      `# Runtime QA\n${'x'.repeat(17000)}\n`
+    );
+
+    const result = await runAgentAudit({
+      args: [tmpDir],
+      options: { json: true, 'runtime-only': true },
+      logger: mockLogger
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.within_budget, false);
+    assert.equal(result.summary.over_hard, 1);
+    assert.equal(result.files.find((file) => file.slug === 'qa').status, 'over_hard');
   });
 });

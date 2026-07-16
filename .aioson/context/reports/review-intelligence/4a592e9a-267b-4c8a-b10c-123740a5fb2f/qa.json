@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "4a592e9a-267b-4c8a-b10c-123740a5fb2f",
+  "attempt_id": "ebad7c17-a43a-4299-a502-964c019c2cf6",
+  "agent": "qa",
+  "host": "codex",
+  "model_requested": "configured-default",
+  "model_resolved": "configured-default",
+  "model_resolution_strategy": "configured_default",
+  "reasoning_effort": null,
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "writable_roots": [],
+  "started_at": "2026-07-15T20:50:05.000Z",
+  "finished_at": "2026-07-15T20:57:20.000Z",
+  "verdict": "PASS",
+  "findings": [],
+  "evidence": [
+    {
+      "type": "command",
+      "command": "python C:\\Users\\jaime\\.codex\\skills\\.system\\skill-creator\\scripts\\quick_validate.py template/.aioson/skills/process/review-intelligence",
+      "exit_code": 0,
+      "result": "Skill is valid."
+    },
+    {
+      "type": "command",
+      "command": "node --test tests/review-intelligence-skill.test.js tests/agent-contracts.test.js tests/sync-agents-copy.test.js tests/sync-agents-preflight.test.js tests/sync-agents-preflight-semantic.test.js tests/update.test.js tests/skill-audit.test.js",
+      "exit_code": 0,
+      "result": "89 passed, 0 failed."
+    },
+    {
+      "type": "command",
+      "command": "node scripts/check-js.js",
+      "exit_code": 0,
+      "result": "JavaScript checks passed."
+    },
+    {
+      "type": "command",
+      "command": "node bin/aioson.js skill:audit . --json",
+      "exit_code": 0,
+      "result": "Audit returned ok=true; template and workspace SKILL.md plus all four review-intelligence references have status ok."
+    },
+    {
+      "type": "inspection",
+      "paths": [
+        "template/.aioson/skills/process/review-intelligence/",
+        "template/.aioson/schemas/review-intelligence.schema.json",
+        ".aioson/skills/process/review-intelligence/",
+        ".aioson/schemas/review-intelligence.schema.json"
+      ],
+      "result": "The bounded two-pass, evidence-first, future-state, owner-routing, proportionate-research, private-reasoning prohibition, four-profile progressive-disclosure, Draft 2020-12 schema, closed-object, bounds, findings/evidence, and five-axis delivery-assurance contracts match the approved requirements. All seven template/workspace artifact pairs are byte-identical."
+    },
+    {
+      "type": "inspection",
+      "paths": [
+        "src/constants.js:83",
+        "src/constants.js:206",
+        "template/AGENTS.md:212",
+        "AGENTS.md:215"
+      ],
+      "result": "All six skill files and the schema are uniquely registered in MANAGED_FILES; root guidance additions are identical and preserve the existing workflow. The scoped constants diff changes only MANAGED_FILES."
+    },
+    {
+      "type": "inspection",
+      "paths": [
+        "template/.aioson/agents/briefing.md:400",
+        "template/.aioson/agents/briefing-refiner.md:180",
+        "template/.aioson/agents/product.md:285",
+        "template/.aioson/agents/sheldon.md:393",
+        "template/.aioson/agents/analyst.md:375",
+        "template/.aioson/agents/architect.md:115",
+        "template/.aioson/agents/scope-check.md:181",
+        "template/.aioson/agents/qa.md:459"
+      ],
+      "result": "Each hook uses the approved agent/profile and mode, follows activation/mission and precedes the existing gate or handoff, handles exits 0/1/2 without suppressing exit 2, and provides a bounded non-gating fallback. Template/workspace agent copies are byte-identical and existing language, output, observability, approval, gate, and handoff contracts remain present."
+    },
+    {
+      "type": "inspection",
+      "paths": [
+        "tests/agent-contracts.test.js:279",
+        "template/.aioson/agents/product.md",
+        "template/.aioson/agents/sheldon.md"
+      ],
+      "result": "The documented kernel budget is 33000 bytes. Product is 32779 bytes with a 780-byte hook; Sheldon is 32173 bytes with an 819-byte hook. Detailed procedure remains in the on-demand skill and references."
+    }
+  ]
+}

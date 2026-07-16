@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { collectStagedSecretFindings } = require('./security/staged-secret-detector');
 
 const DEFAULT_CONFIG_REL_PATH = '.aioson/git-guard.json';
 const MANAGED_HOOK_MARKER = '# aioson-git-guard-hook';
@@ -11,6 +12,8 @@ const DEFAULT_POLICY = Object.freeze({
   version: 1,
   description: '',
   allowPaths: [],
+  contentAllowPaths: [],
+  contentAllowRules: [],
   blockPaths: [],
   allowExtensions: [],
   blockExtensions: []
@@ -45,7 +48,8 @@ const BLOCKED_PATH_RULES = [
   {
     id: 'session_artifact',
     reason: 'runtime/session artifact should not be committed',
-    test: (relPath) => /(^|\/)(aioson-logs|output|media|chat-sessions)(\/|$)/i.test(relPath)
+    test: (relPath) => /(^|\/)(aioson-logs|chat-sessions)(\/|$)/i.test(relPath)
+      || /(^|\/)\.aioson\/(?:runtime|output|media)(\/|$)/i.test(relPath)
   },
   {
     id: 'aioson_backup',
@@ -101,63 +105,6 @@ const WARNING_PATH_RULES = [
   }
 ];
 
-const CONTENT_RULES = [
-  {
-    id: 'private_key_block',
-    severity: 'error',
-    reason: 'private key material detected',
-    pattern: /-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----/m
-  },
-  {
-    id: 'aws_access_key',
-    severity: 'error',
-    reason: 'AWS access key detected',
-    pattern: /\bAKIA[0-9A-Z]{16}\b/
-  },
-  {
-    id: 'github_token',
-    severity: 'error',
-    reason: 'GitHub token detected',
-    pattern: /\b(?:github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghu_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|ghr_[A-Za-z0-9]{20,})\b/
-  },
-  {
-    id: 'slack_token',
-    severity: 'error',
-    reason: 'Slack token detected',
-    pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/
-  },
-  {
-    id: 'google_api_key',
-    severity: 'error',
-    reason: 'Google API key detected',
-    pattern: /\bAIza[0-9A-Za-z\-_]{35}\b/
-  },
-  {
-    id: 'stripe_secret',
-    severity: 'error',
-    reason: 'Stripe secret key detected',
-    pattern: /\bsk_(?:live|test)_[0-9A-Za-z]{16,}\b/
-  },
-  {
-    id: 'openai_secret',
-    severity: 'error',
-    reason: 'OpenAI-style secret detected',
-    pattern: /\bsk-[A-Za-z0-9]{20,}\b/
-  },
-  {
-    id: 'npm_token',
-    severity: 'error',
-    reason: 'npm token detected',
-    pattern: /\bnpm_[A-Za-z0-9]{20,}\b/
-  }
-];
-
-// Detects literal secret assignments. Quotes are required so that function
-// calls (e.g. `const token = requireToken(config)`) are not flagged: only the
-// value inside the matched quote pair counts toward the 8-char minimum.
-const GENERIC_SECRET_ASSIGNMENT = /\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\b\s*[:=]\s*(['"`])([^'"`\n\r]{8,})\2/gi;
-const PLACEHOLDER_VALUE = /^(?:example|sample|placeholder|dummy|changeme|change-me|replace[-_]?me|your[_-]?value|your[_-]?token|test|local|localhost|xxx+)$/i;
-
 function runGit(gitRoot, args, options = {}) {
   return execFileSync('git', args, {
     cwd: gitRoot,
@@ -195,11 +142,6 @@ function readStagedBlob(gitRoot, relPath) {
     encoding: 'buffer',
     maxBuffer: 16 * 1024 * 1024
   });
-}
-
-function findLineFromIndex(text, index) {
-  if (index == null || index < 0) return null;
-  return text.slice(0, index).split('\n').length;
 }
 
 function isBinaryBuffer(buffer) {
@@ -316,6 +258,39 @@ function validateStringArray(data, key) {
   });
 }
 
+function validateContentAllowRules(data) {
+  if (data.contentAllowRules == null) return [];
+  if (!Array.isArray(data.contentAllowRules)) {
+    throw new Error('Invalid git guard config: "contentAllowRules" must be an array');
+  }
+
+  return data.contentAllowRules.map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error(`Invalid git guard config: "contentAllowRules[${index}]" must be an object`);
+    }
+    if (typeof entry.path !== 'string' || entry.path.trim().length === 0) {
+      throw new Error(`Invalid git guard config: "contentAllowRules[${index}].path" must be a non-empty string`);
+    }
+    if (!Array.isArray(entry.rules) || entry.rules.length === 0) {
+      throw new Error(`Invalid git guard config: "contentAllowRules[${index}].rules" must be a non-empty array of strings`);
+    }
+    const rules = entry.rules.map((rule, ruleIndex) => {
+      if (typeof rule !== 'string' || rule.trim().length === 0) {
+        throw new Error(`Invalid git guard config: "contentAllowRules[${index}].rules[${ruleIndex}]" must be a non-empty string`);
+      }
+      return rule.trim();
+    });
+    if (typeof entry.reason !== 'string' || entry.reason.trim().length === 0) {
+      throw new Error(`Invalid git guard config: "contentAllowRules[${index}].reason" must be a non-empty string`);
+    }
+    return {
+      path: normalizeRelPath(entry.path).replace(/^\/+/, ''),
+      rules: [...new Set(rules)],
+      reason: entry.reason.trim()
+    };
+  });
+}
+
 function resolveGuardConfigPath(projectDir, candidatePath = null) {
   if (!candidatePath) return path.join(projectDir, DEFAULT_CONFIG_REL_PATH);
   return path.isAbsolute(candidatePath)
@@ -331,15 +306,20 @@ async function loadGuardConfig(projectDir, options = {}) {
     raw = await fs.readFile(configPath, 'utf8');
   } catch (error) {
     if (error && error.code === 'ENOENT') {
-      return {
-        path: configPath,
-        loaded: false,
-        config: { ...DEFAULT_POLICY }
-      };
+      return defaultGuardConfigState(configPath, 'working_tree');
     }
     throw error;
   }
 
+  return {
+    path: configPath,
+    loaded: true,
+    source: 'working_tree',
+    config: parseGuardConfig(raw, configPath)
+  };
+}
+
+function parseGuardConfig(raw, configPath) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -361,17 +341,55 @@ async function loadGuardConfig(projectDir, options = {}) {
   }
 
   return {
+    version,
+    description: parsed.description || '',
+    allowPaths: validateStringArray(parsed, 'allowPaths'),
+    contentAllowPaths: validateStringArray(parsed, 'contentAllowPaths'),
+    contentAllowRules: validateContentAllowRules(parsed),
+    blockPaths: validateStringArray(parsed, 'blockPaths'),
+    allowExtensions: validateStringArray(parsed, 'allowExtensions'),
+    blockExtensions: validateStringArray(parsed, 'blockExtensions')
+  };
+}
+
+function resolveConfigIndexPath(gitRoot, configPath) {
+  const relativePath = path.relative(gitRoot, configPath);
+  if (
+    relativePath === ''
+    || relativePath === '..'
+    || relativePath.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relativePath)
+  ) {
+    throw new Error('Git guard config must be inside the Git worktree.');
+  }
+  return normalizeRelPath(relativePath);
+}
+
+function defaultGuardConfigState(configPath, source) {
+  return {
+    path: configPath,
+    loaded: false,
+    source,
+    config: { ...DEFAULT_POLICY }
+  };
+}
+
+async function loadStagedGuardConfig(gitRoot, options = {}) {
+  const configPath = resolveGuardConfigPath(gitRoot, options.configPath || options.config);
+  const indexPath = resolveConfigIndexPath(gitRoot, configPath);
+
+  let raw;
+  try {
+    raw = readStagedBlob(gitRoot, indexPath).toString('utf8');
+  } catch {
+    return defaultGuardConfigState(configPath, 'index');
+  }
+
+  return {
     path: configPath,
     loaded: true,
-    config: {
-      version,
-      description: parsed.description || '',
-      allowPaths: validateStringArray(parsed, 'allowPaths'),
-      contentAllowPaths: validateStringArray(parsed, 'contentAllowPaths'),
-      blockPaths: validateStringArray(parsed, 'blockPaths'),
-      allowExtensions: validateStringArray(parsed, 'allowExtensions'),
-      blockExtensions: validateStringArray(parsed, 'blockExtensions')
-    }
+    source: 'index',
+    config: parseGuardConfig(raw, configPath)
   };
 }
 
@@ -381,6 +399,21 @@ function isAllowlistedPath(relPath, policy) {
 
 function isContentAllowlistedPath(relPath, policy) {
   return matchesAnyPattern(relPath, policy.contentAllowPaths || []);
+}
+
+function findContentRuleAllowance(relPath, finding, policy) {
+  return (policy.contentAllowRules || []).find((entry) => (
+    globToRegExp(entry.path).test(relPath) && entry.rules.includes(finding.id)
+  )) || null;
+}
+
+function suppressFinding(finding, suppressionReason) {
+  return {
+    ...finding,
+    severity: 'notice',
+    disposition: 'suppressed',
+    suppressionReason
+  };
 }
 
 function collectPathFindings(relPath, rules, severity) {
@@ -427,44 +460,6 @@ function collectConfiguredPathFindings(relPath, policy) {
   return findings;
 }
 
-function collectContentFindings(relPath, text) {
-  const findings = [];
-
-  for (const rule of CONTENT_RULES) {
-    const match = text.match(rule.pattern);
-    if (!match || match.index == null) continue;
-    findings.push({
-      type: 'content',
-      severity: rule.severity,
-      id: rule.id,
-      path: relPath,
-      reason: rule.reason,
-      line: findLineFromIndex(text, match.index)
-    });
-  }
-
-  let genericMatch;
-  GENERIC_SECRET_ASSIGNMENT.lastIndex = 0;
-  while ((genericMatch = GENERIC_SECRET_ASSIGNMENT.exec(text)) !== null) {
-    const variableName = String(genericMatch[1] || '');
-    const value = String(genericMatch[3] || '');
-    const lowered = value.toLowerCase();
-    if (PLACEHOLDER_VALUE.test(value)) continue;
-    if (/(example|sample|dummy|placeholder|changeme|localhost|local[_-]?dev)/i.test(lowered)) continue;
-    if (/(public|publishable)/i.test(variableName)) continue;
-    findings.push({
-      type: 'content',
-      severity: 'warning',
-      id: 'generic_secret_assignment',
-      path: relPath,
-      reason: `possible secret assignment detected for ${variableName}`,
-      line: findLineFromIndex(text, genericMatch.index)
-    });
-  }
-
-  return findings;
-}
-
 function buildSuggestedCommands(findings) {
   const paths = [...new Set(findings.map((item) => item.path).filter(Boolean))];
   if (paths.length === 0) return [];
@@ -475,9 +470,12 @@ function summarizePolicy(policyState) {
   return {
     path: policyState.path,
     loaded: policyState.loaded,
+    source: policyState.source,
     version: policyState.config.version,
     allowPathsCount: policyState.config.allowPaths.length,
     blockPathsCount: policyState.config.blockPaths.length,
+    contentAllowPathsCount: policyState.config.contentAllowPaths.length,
+    contentAllowRulesCount: policyState.config.contentAllowRules.length,
     allowExtensionsCount: policyState.config.allowExtensions.length,
     blockExtensionsCount: policyState.config.blockExtensions.length
   };
@@ -485,10 +483,13 @@ function summarizePolicy(policyState) {
 
 async function inspectStagedChanges(projectDir, options = {}) {
   const gitRoot = resolveGitRoot(projectDir);
-  const policyState = await loadGuardConfig(gitRoot, options);
+  // Scan and policy must come from the same Git index snapshot. A permissive
+  // working-tree config cannot authorize a secret in a staged source file.
+  const policyState = await loadStagedGuardConfig(gitRoot, options);
   const stagedFiles = listStagedFiles(gitRoot);
   const allowWarnings = Boolean(options.allowWarnings);
   const findings = [];
+  const suppressed = [];
   const files = [];
 
   for (const relPath of stagedFiles) {
@@ -498,6 +499,7 @@ async function inspectStagedChanges(projectDir, options = {}) {
       ...(allowlisted ? [] : collectPathFindings(relPath, WARNING_PATH_RULES, 'warning')),
       ...collectConfiguredPathFindings(relPath, policyState.config)
     ];
+    const fileSuppressed = [];
 
     let size = 0;
     let binary = false;
@@ -505,9 +507,31 @@ async function inspectStagedChanges(projectDir, options = {}) {
       const buffer = readStagedBlob(gitRoot, relPath);
       size = buffer.length;
       binary = isBinaryBuffer(buffer);
-      if (!binary && !isContentAllowlistedPath(relPath, policyState.config)) {
-        const text = buffer.toString('utf8');
-        fileFindings.push(...collectContentFindings(relPath, text));
+      if (!binary) {
+        if (isContentAllowlistedPath(relPath, policyState.config)) {
+          fileSuppressed.push({
+            type: 'content',
+            severity: 'notice',
+            confidence: 'policy',
+            id: 'legacy_content_allow_path',
+            path: relPath,
+            reason: 'content scanning bypassed by legacy contentAllowPaths policy',
+            line: null,
+            disposition: 'suppressed',
+            suppressionReason: 'legacy whole-file content allowlist'
+          });
+        } else {
+          const detected = collectStagedSecretFindings(relPath, buffer.toString('utf8'));
+          fileSuppressed.push(...detected.suppressed);
+          for (const finding of detected.findings) {
+            const allowance = findContentRuleAllowance(relPath, finding, policyState.config);
+            if (allowance) {
+              fileSuppressed.push(suppressFinding(finding, `project policy: ${allowance.reason}`));
+            } else {
+              fileFindings.push(finding);
+            }
+          }
+        }
       }
     } catch (error) {
       fileFindings.push({
@@ -521,12 +545,14 @@ async function inspectStagedChanges(projectDir, options = {}) {
     }
 
     findings.push(...fileFindings);
+    suppressed.push(...fileSuppressed);
     files.push({
       path: relPath,
       size,
       binary,
       allowlisted,
-      findings: fileFindings
+      findings: fileFindings,
+      suppressed: fileSuppressed
     });
   }
 
@@ -543,11 +569,13 @@ async function inspectStagedChanges(projectDir, options = {}) {
     files,
     errors,
     warnings,
+    suppressed,
     suggestedCommands: buildSuggestedCommands([...errors, ...warnings]),
     summary: {
       stagedCount: stagedFiles.length,
       errorCount: errors.length,
-      warningCount: warnings.length
+      warningCount: warnings.length,
+      suppressedCount: suppressed.length
     }
   };
 }
@@ -735,6 +763,7 @@ module.exports = {
   resolveGitPath,
   resolveGuardConfigPath,
   loadGuardConfig,
+  loadStagedGuardConfig,
   listStagedFiles,
   readStagedBlob,
   normalizeRelPath,

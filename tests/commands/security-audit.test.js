@@ -225,6 +225,42 @@ describe('security:audit', () => {
     assert.equal(r.summary.high, 0);
   });
 
+  it('preserves manual pentest findings while refreshing security-audit findings', async () => {
+    root = await makeProject();
+    await writeArtifacts(root, 'mixed-findings', { classification: 'MEDIUM', surfaces: [] });
+    const artifactPath = path.join(root, '.aioson', 'context', 'security-findings-mixed-findings.json');
+    await fs.writeFile(artifactPath, JSON.stringify({
+      schema_version: '1.0.0',
+      findings: [{
+        id: 'SF-manual-001',
+        source: 'pentester',
+        severity: 'high',
+        status: 'open',
+        title: 'Manual finding must remain independently owned.'
+      }, {
+        finding_id: 'security-audit-SEC-SBD-03-prior',
+        source: 'security-audit',
+        control_id: 'SEC-SBD-03',
+        severity: 'medium',
+        status: 'open',
+        scope: 'mixed-findings:prior'
+      }]
+    }, null, 2));
+
+    const r = await runSecurityAudit({
+      args: [root],
+      options: { slug: 'mixed-findings', json: true, now: '2026-04-28T00:00:00.000Z' },
+      logger: silentLogger()
+    });
+
+    assert.equal(r.exitCode, EXIT_CODES.BLOCKING);
+    const written = JSON.parse(await fs.readFile(artifactPath, 'utf8'));
+    const manual = written.findings.find((finding) => finding.id === 'SF-manual-001');
+    const priorAudit = written.findings.find((finding) => finding.finding_id === 'security-audit-SEC-SBD-03-prior');
+    assert.equal(manual.status, 'open');
+    assert.equal(priorAudit.status, 'fixed');
+  });
+
   it('emits security_audit_completed runtime event with audit metadata', async () => {
     root = await makeProject();
     await writeArtifacts(root, 'login', {

@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "aef2ec73-f8d7-4953-8e10-98c2442f86a6",
+  "attempt_id": "8f0f8eb1-c460-4fd8-9f29-1d5f4740a046",
+  "agent": "qa",
+  "host": "codex",
+  "model_requested": "configured-default",
+  "model_resolved": "configured-default",
+  "model_resolution_strategy": "configured_default",
+  "reasoning_effort": null,
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "writable_roots": [],
+  "started_at": "2026-07-15T21:12:00.000Z",
+  "finished_at": "2026-07-15T21:19:45.000Z",
+  "verdict": "PASS",
+  "findings": [],
+  "evidence": [
+    {
+      "id": "targeted-tests",
+      "status": "PASS",
+      "command": "node --test tests/review-intelligence.test.js tests/review-intelligence-cli.test.js tests/review-intelligence-skill.test.js tests/i18n-cli.test.js tests/agent-contracts.test.js",
+      "detail": "Exit 0; 75 tests passed, 0 failed."
+    },
+    {
+      "id": "javascript-check",
+      "status": "PASS",
+      "command": "node scripts/check-js.js",
+      "detail": "Exit 0."
+    },
+    {
+      "id": "bilingual-cli-documentation",
+      "status": "PASS",
+      "artifacts": [
+        "docs/en/5-reference/cli-reference.md:945",
+        "docs/pt/5-referencia/comandos-cli.md:57"
+      ],
+      "detail": "Both references document all three signatures, exits 0/1/2, empty non-gating status, immutable packet/report publication, compatible bounded manual fallback, and explicitly state that the commands do not run models, tests, web research, workflow transitions, or gates."
+    },
+    {
+      "id": "strict-spec-and-artifact-integrity",
+      "status": "PASS",
+      "commands": [
+        "node bin/aioson.js spec:analyze . --feature=review-intelligence --strict --json",
+        "node bin/aioson.js artifact:validate . --feature=review-intelligence --json"
+      ],
+      "detail": "Both exited 0; strict analysis reported 0 findings and artifact integrity was VALID with no required artifact missing."
+    },
+    {
+      "id": "acceptance-conformance",
+      "status": "PASS",
+      "command": "node bin/aioson.js ac:test-audit . --feature=review-intelligence --json",
+      "artifacts": [
+        ".aioson/context/conformance-review-intelligence.yaml",
+        ".aioson/plans/review-intelligence/harness-contract.json"
+      ],
+      "detail": "Exit 0; 24/24 ACs covered. Independent mapping found AC-RI-001 through AC-RI-024 in both conformance and executable harness evidence; all 10 harness criteria are binary and have verification commands."
+    },
+    {
+      "id": "persisted-full-regression-harness",
+      "status": "PASS",
+      "artifact": ".aioson/plans/review-intelligence/last-check-output.json",
+      "detail": "Parsed JSON is schema-consistent with the current harness contract: strict=true, integrity.ok=true, no integrity warnings/errors, no strict errors, 10 executable criteria, 10 passed, 0 failed. Every persisted command matches its criterion and exited 0 without timeout; AC-RI-024 records npm test exit 0 and RG-build records npm run lint exit 0. The full npm test was not rerun."
+    },
+    {
+      "id": "implementation-ledger",
+      "status": "PASS",
+      "command": "node bin/aioson.js verify:implementation . --feature=review-intelligence --check-ledger --policy=strict --json",
+      "artifact": ".aioson/context/features/review-intelligence/implementation-ledger.md",
+      "detail": "Exit 0 with no missing sections or evidence. The ledger records implementation and regression completeness while explicitly retaining Gate D as pending for the official post-dev QA/validator chain; the feature does not self-approve Gate D."
+    },
+    {
+      "id": "code-audit-posture",
+      "status": "PASS",
+      "command": "node bin/aioson.js audit:code . --changed --json",
+      "detail": "Exit 0; 0 HIGH, 6 MED lexical matches, and 131 LOW duplication advisories. The four locale occurrences of placeholder and two TODO list test strings are descriptive text, not unfinished code. No LOW literal duplication produced a concrete defect in the scoped evidence."
+    },
+    {
+      "id": "diff-check",
+      "status": "PASS",
+      "command": "git diff --check",
+      "detail": "Exit 0; no whitespace error."
+    }
+  ]
+}

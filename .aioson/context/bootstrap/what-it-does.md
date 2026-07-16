@@ -1,6 +1,6 @@
 ---
 generated_by: product
-generated_at: "2026-06-01T15:12:13-03:00"
+generated_at: "2026-07-16T01:35:00-03:00"
 confidence: high
 ---
 
@@ -14,7 +14,10 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 - Stores project and feature artifacts in `.aioson/context/`.
 - Supports SDD flows with PRDs, requirements, specs, architecture, implementation plans and QA reports.
 - Provides deterministic CLI helpers such as `preflight`, `gate:check`, `artifact:validate`, `workflow:next`, `workflow:execute`, `pulse:update`, `agent:done`, `verify:gate` and runtime/live session commands.
-- Maintains runtime telemetry in `.aioson/runtime/aios.sqlite`.
+- Exposes the complete briefing lifecycle in localized CLI help: `briefing:approve`, `briefing:unapprove`, `briefing:review`, and `briefing:apply-feedback`.
+- Adds bounded review intelligence to eight solution-shaping and assurance agents through role-specific evidence-first lenses, immutable review packets/reports, and additive `review:prepare`, `review:check`, and `review:status` CLI commands.
+- Makes commit preparation context-aware and self-stageable: `git:guard` distinguishes localization copy, non-literal interpolation and independently synthetic fixtures from real credentials; fixture-like names alone do not bypass scanning, realistic secrets remain blocking even under `tests/`, scoped path + detector-rule exceptions remain auditable, and `commit-prep.json` records `guarded`, `headless`, or explicitly trusted warning decisions.
+- Maintains runtime telemetry in .aioson/runtime/aios.sqlite.
 - Supports project memory layers including bootstrap context, project pulse, devlogs, research cache and brains.
 - Keeps `bootstrap/*.md` automatically in sync with project changes through the **Living Memory** pipeline: a deterministic heuristic (`src/memory-reflect-engine.js`) classifies git diffs after `agent:done` / `workflow:next --complete`, the CLI writes a manifest under `.aioson/runtime/reflect-prompt.json`, the in-harness agent reflects the targets, and `memory:reflect-commit` validates and persists.
 - Enforces a 3-tier autonomy contract via `.aioson/config/autonomy-protocol.json` v1.1 — tier1 silent (read/telemetry), tier2 notified (memory writes), tier3 blocking (irreversible). `permissions-generator` materializes native allow-lists for Claude Code, Codex, Gemini, and OpenCode at install/update; tier3 is hard-rejected even when listed.
@@ -28,7 +31,9 @@ AIOSON is a Node.js CLI framework for spec-driven development with specialized a
 
 ## Current improvement focus
 
-Active (in_progress) since 2026-07-11: `agent-execution-model-resolution` (SMALL) separates per-agent reasoning effort from model IDs and adds conservative, auditable resolution of human or approximate model names against a verified host catalog, starting with Codex. Ambiguous matches block before spawn; no effort downgrade, family/provider swap, or active-run manifest rewrite is allowed. PRD: `.aioson/context/prd-agent-execution-model-resolution.md`.
+Recently closed (2026-07-16): `review-intelligence` (MEDIUM) adds a shared evidence-first challenge loop, role-specific review lenses, bounded self-review, explicit owner routing, immutable review packets/reports, and additive `review:prepare`/`review:check`/`review:status` CLI automation. The security-remediation cycle hardened prompt-injection boundaries and report/storage integrity; Gate D passed with harness 10/10, 24/24 ACs and full regression at 3,767 pass / 0 fail / 1 skip. Archived artifacts: `.aioson/context/done/review-intelligence/`.
+
+Recently closed (2026-07-11): `agent-execution-model-resolution` (SMALL) separates per-agent reasoning effort from model IDs and adds conservative, auditable Codex model resolution. Ambiguous matches block before spawn; no effort downgrade, family/provider swap, or active-run manifest rewrite is allowed. Archived artifacts: `.aioson/context/done/agent-execution-model-resolution/`.
 
 Active (in_progress) since 2026-06-10: `harness-retrospective-optimization` (SMALL) — fecha o loop de melhoria do harness sobre a trilha de falhas já coletada (RHO-lite). Must-have: `aioson harness:retro . --feature={slug}` minera deterministicamente a trilha (execution_events, attempts/, QA sign-offs, corrections, devlogs) e materializa um dossiê retrospectivo em `.aioson/context/retro/{slug}.md` com critério anti-opinião (≥2 ocorrências ou 1 High); @sheldon analisa sob demanda; propostas aceitas aterrissam nos canais existentes (`.aioson/learnings/`, `.aioson/rules/`). Should-have: helper `previewArtifact` (preview + ponteiro para outputs grandes) em @qa/@tester test logs e self:loop attempts. Out of scope: RHO completo, auto-aplicação, agente novo, trigger automático, store novo. PRD: `.aioson/context/prd-harness-retrospective-optimization.md` (briefing_source: harness-retrospective-optimization; fundamentação: researchs/harness-engineering-rho-2026).
 

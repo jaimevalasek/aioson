@@ -397,6 +397,10 @@ aioson dossier:add-finding . --slug={slug} --agent=briefing --section="Agent Tra
 
 Skip silently when the dossier is absent.
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after writing `briefings.md` and before approval handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/framing.md` when available. Run `aioson review:prepare . --agent=briefing --feature={slug} --artifact=.aioson/briefings/{slug}/briefings.md --json`; complete at most two passes from its template, write `draft_path`, then run `aioson review:check . --agent=briefing --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs the existing flow, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve approval/status behavior; missing review infrastructure is non-gating.
+
 ## Rules
 
 - **Never modify `plans/`** — they are read-only. Plans belong to the user.

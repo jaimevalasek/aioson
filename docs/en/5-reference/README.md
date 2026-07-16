@@ -16,6 +16,7 @@ This layer currently holds the original EN feature guides. Additional reference 
 | [json-schemas.md](./json-schemas.md) | `--json` output contracts for all commands |
 | [executable-verification.md](./executable-verification.md) | The executable-verification theme: `verification` + `harness:check`, fresh-context validator, `spec:analyze`, Wave markers, Lane B (`forge:compile` + `@forge-run`) |
 | [autopilot-handoff.md](./autopilot-handoff.md) | Full-feature autopilot: `@product` → `@sheldon`/`@orchestrator` → `@dev` → `@qa` (hub) → `@tester`/`@pentester`/`@validator` up to the `feature:close` recommendation; inline `--auto`/`--step` tokens, `--help` on the 13 most-used agents |
+| [agent-execution.md](./agent-execution.md) | Feature-scoped sub-agent manifests, safe model resolution, `reasoning_effort`, fallback, bound reports, and telemetry |
 
 ---
 
@@ -27,6 +28,7 @@ This layer currently holds the original EN feature guides. Additional reference 
 | [parallel.md](./parallel.md) | Parallel orchestration: `parallel:init`, `parallel:assign`, lanes, merge |
 | [qa-browser.md](./qa-browser.md) | Browser QA with Playwright: `qa:run`, `qa:scan`, personas |
 | [squad-dashboard.md](./squad-dashboard.md) | Real-time squad monitoring panel |
+| [operator-memory.md](./operator-memory.md) | Identity-scoped operator decisions, signal promotion, idempotent reinforcement, and CLI operations |
 
 ---
 

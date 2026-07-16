@@ -17,7 +17,7 @@ const { execFileSync } = require('node:child_process');
 const readline = require('node:readline');
 const { runGitGuard } = require('./git-guard');
 const { promptPicker } = require('../lib/terminal-picker');
-const { evaluatePathRules, loadGuardConfig, resolveGuardConfigPath } = require('../lib/git-commit-guard');
+const { evaluatePathRules, loadGuardConfig } = require('../lib/git-commit-guard');
 
 function runGit(gitRoot, args, options = {}) {
   return execFileSync('git', args, {
@@ -174,20 +174,22 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
     ...(guardResult.warnings || []).map((f) => ({ ...f, severity: 'warning' }))
   ];
 
-  if (findings.length === 0) return true;
+  if (findings.length === 0) return { ok: true, allowWarnings: false };
 
   const guardPath = path.join(gitRoot, '.aioson', 'git-guard.json');
   let guardConfig = {};
   try {
     guardConfig = JSON.parse(fs.readFileSync(guardPath, 'utf8'));
   } catch {
-    guardConfig = { version: 1, allowPaths: [], contentAllowPaths: [], blockPaths: [], allowExtensions: [], blockExtensions: [] };
+    guardConfig = { version: 1, allowPaths: [], contentAllowPaths: [], contentAllowRules: [], blockPaths: [], allowExtensions: [], blockExtensions: [] };
   }
   if (!Array.isArray(guardConfig.contentAllowPaths)) guardConfig.contentAllowPaths = [];
+  if (!Array.isArray(guardConfig.contentAllowRules)) guardConfig.contentAllowRules = [];
   if (!Array.isArray(guardConfig.blockPaths)) guardConfig.blockPaths = [];
 
   const toUnstage = [];
   let guardConfigChanged = false;
+  let allowWarnings = false;
 
   for (const finding of findings) {
     const label = finding.severity === 'error' ? '[ERRO]' : '[AVISO]';
@@ -199,8 +201,8 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
     const actions = [];
 
     if (isContent) {
-      menuItems.push('Marcar como confiável (adicionar a contentAllowPaths — falso positivo)');
-      actions.push('content_allow');
+      menuItems.push(`Confirmar falso positivo somente para a regra ${finding.id} neste caminho`);
+      actions.push('content_rule_allow');
     }
     menuItems.push('Bloquear permanentemente (adicionar a blockPaths)');
     actions.push('block');
@@ -214,16 +216,28 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
     const choice = await promptMenu(menuItems, 'O que fazer com este arquivo?');
     if (choice === -1) {
       logger.log('Entrada inválida — mantendo bloqueio.');
-      return false;
+      return { ok: false, allowWarnings: false };
     }
 
     const action = actions[choice - 1];
 
-    if (action === 'content_allow') {
-      if (!guardConfig.contentAllowPaths.includes(finding.path)) {
-        guardConfig.contentAllowPaths.push(finding.path);
+    if (action === 'content_rule_allow') {
+      let scopedRule = guardConfig.contentAllowRules.find((entry) => entry
+        && entry.path === finding.path
+        && typeof entry.reason === 'string'
+        && Array.isArray(entry.rules));
+      if (!scopedRule) {
+        scopedRule = {
+          path: finding.path,
+          rules: [],
+          reason: 'confirmed false positive via commit:prepare'
+        };
+        guardConfig.contentAllowRules.push(scopedRule);
+      }
+      if (!scopedRule.rules.includes(finding.id)) {
+        scopedRule.rules.push(finding.id);
         guardConfigChanged = true;
-        logger.log(`  ✔ Adicionado a contentAllowPaths: ${finding.path}`);
+        logger.log(`  ✔ Exceção restrita adicionada: ${finding.path} [${finding.id}]`);
       }
     } else if (action === 'block') {
       const pattern = finding.path;
@@ -236,6 +250,7 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
       toUnstage.push(finding.path);
       logger.log(`  ✔ Marcado para remover do stage: ${finding.path}`);
     } else if (action === 'ignore') {
+      allowWarnings = true;
       logger.log(`  ✔ Aviso ignorado: ${finding.path}`);
     }
   }
@@ -246,7 +261,7 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
       logger.log('\n✔ git-guard.json atualizado.');
     } catch (err) {
       logger.error(`Não foi possível salvar git-guard.json: ${err.message}`);
-      return false;
+      return { ok: false, allowWarnings: false };
     }
   }
 
@@ -256,11 +271,11 @@ async function resolveGuardFindings(gitRoot, guardResult, logger) {
       logger.log(`✔ Removidos do stage: ${toUnstage.join(', ')}`);
     } catch (err) {
       logger.error(`Falha ao remover do stage: ${err.message}`);
-      return false;
+      return { ok: false, allowWarnings: false };
     }
   }
 
-  return true;
+  return { ok: true, allowWarnings };
 }
 
 function findLatestRelevantPlan(gitRoot) {
@@ -316,7 +331,37 @@ async function runCommitPrepare({ args, options, logger }) {
   const stagedOnly = Boolean(options['staged-only'] || options.stagedOnly);
   const agentSafe = Boolean(options['agent-safe'] || options.agentSafe);
   const requestedMode = String(options.mode || '').trim().toLowerCase();
-  const headlessMode = requestedMode === 'headless' || agentSafe;
+  const validModes = new Set(['', 'guarded', 'trusted', 'headless']);
+  if (!validModes.has(requestedMode)) {
+    const failure = {
+      ok: false,
+      error: 'invalid_mode',
+      message: 'Invalid commit preparation mode. Use guarded, trusted, or headless.',
+      mode: requestedMode,
+      ready: false
+    };
+    if (jsonMode) return failure;
+    logger.error(failure.message);
+    process.exitCode = 1;
+    return failure;
+  }
+  if (agentSafe && requestedMode && requestedMode !== 'headless') {
+    const failure = {
+      ok: false,
+      error: 'agent_safe_requires_headless',
+      message: 'Agent-safe commit preparation requires headless mode.',
+      mode: requestedMode,
+      requiredMode: 'headless',
+      ready: false
+    };
+    if (jsonMode) return failure;
+    logger.error(failure.message);
+    process.exitCode = 1;
+    return failure;
+  }
+  const guardMode = agentSafe ? 'headless' : (requestedMode || 'guarded');
+  const allowGuardWarnings = guardMode === 'trusted';
+  const headlessMode = guardMode === 'headless';
   const nonInteractive = jsonMode || Boolean(options['non-interactive'] || options.nonInteractive) || agentSafe;
   const hasTty = Boolean(process.stdin && process.stdin.isTTY && process.stdout && process.stdout.isTTY);
   const interactiveSelectionAllowed = !nonInteractive && hasTty && !headlessMode;
@@ -352,7 +397,12 @@ async function runCommitPrepare({ args, options, logger }) {
   const prepStagedSet = new Set(Array.isArray(existingPrep?.stagedFiles) ? existingPrep.stagedFiles : []);
   const stagedFilesChanged = currentStagedSet.size !== prepStagedSet.size || [...currentStagedSet].some((f) => !prepStagedSet.has(f));
 
-  const shouldReuse = existingPrep && existingPrep.ready && !isPrepStale(existingPrep) && !wasPrepCommitted(existingPrep) && !stagedFilesChanged;
+  const shouldReuse = existingPrep
+    && existingPrep.ready
+    && existingPrep.guardMode === guardMode
+    && !isPrepStale(existingPrep)
+    && !wasPrepCommitted(existingPrep)
+    && !stagedFilesChanged;
 
   if (shouldReuse && stagedOnly) {
     if (!jsonMode) {
@@ -365,6 +415,7 @@ async function runCommitPrepare({ args, options, logger }) {
       reused: true,
       stagedCount: Array.isArray(existingPrep.stagedFiles) ? existingPrep.stagedFiles.length : 0,
       guardOk: Boolean(existingPrep.guard && existingPrep.guard.ok),
+      guardMode,
       ready: true
     };
   }
@@ -481,7 +532,7 @@ async function runCommitPrepare({ args, options, logger }) {
   // Run git guard
   let guardResult = await runGitGuard({
     args: [projectDir],
-    options: { json: true },
+    options: { json: true, allowWarnings: allowGuardWarnings },
     logger: { log: () => {}, error: () => {} }
   });
 
@@ -514,8 +565,8 @@ async function runCommitPrepare({ args, options, logger }) {
 
     // Interactive resolution
     logger.log('\n⚠ git:guard encontrou problemas. Você pode resolver cada um agora:');
-    const resolved = await resolveGuardFindings(gitRoot, guardResult, logger);
-    if (!resolved) {
+    const resolution = await resolveGuardFindings(gitRoot, guardResult, logger);
+    if (!resolution.ok) {
       process.exitCode = 1;
       return { ok: false, error: 'guard_resolution_cancelled', message: 'Resolução cancelada pelo usuário.', gitRoot, stagedFiles, ready: false };
     }
@@ -523,7 +574,7 @@ async function runCommitPrepare({ args, options, logger }) {
     // Re-run guard after resolution
     guardResult = await runGitGuard({
       args: [projectDir],
-      options: { json: true },
+      options: { json: true, allowWarnings: allowGuardWarnings || resolution.allowWarnings },
       logger: { log: () => {}, error: () => {} }
     });
 
@@ -534,6 +585,7 @@ async function runCommitPrepare({ args, options, logger }) {
       process.exitCode = 1;
       return { ok: false, error: 'guard_failed', message: 'guard ainda bloqueado após resolução', gitRoot, guard: guardResult, stagedFiles, ready: false };
     }
+    process.exitCode = 0;
   }
 
   // Re-read staged files — resolution may have unstaged some
@@ -573,6 +625,7 @@ async function runCommitPrepare({ args, options, logger }) {
   const prep = {
     generatedAt: new Date().toISOString(),
     gitRoot,
+    guardMode,
     preparationMode: agentSafe ? 'agent_safe' : stagedOnly ? 'staged_only' : interactiveSelectionAllowed ? 'interactive' : 'non_interactive',
     status: {
       staged,
@@ -606,6 +659,7 @@ async function runCommitPrepare({ args, options, logger }) {
     prepPath,
     stagedCount: finalStagedFiles.length,
     guardOk: true,
+    guardMode,
     ready: true
   };
 }

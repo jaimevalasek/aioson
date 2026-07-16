@@ -21,6 +21,23 @@ function applyParams(template, params = {}) {
   });
 }
 
+function canonicalLocaleTag(locale) {
+  return String(locale || 'en')
+    .split('-')
+    .map((part, index) => {
+      if (index === 0) return part.toLowerCase();
+      if (part.length === 2 || /^\d{3}$/.test(part)) return part.toUpperCase();
+      if (part.length === 4) return `${part[0].toUpperCase()}${part.slice(1).toLowerCase()}`;
+      return part;
+    })
+    .join('-');
+}
+
+function localizeFallbackTemplate(template, locale) {
+  if (typeof template !== 'string' || locale === 'en') return template;
+  return template.replace(/--locale=en\b/g, `--locale=${canonicalLocaleTag(locale)}`);
+}
+
 function loadMessages() {
   const messages = {};
 
@@ -85,7 +102,9 @@ function createTranslator(locale) {
     if (fromLocale !== undefined) return applyParams(fromLocale, params);
 
     const fallback = getByPath(messages.en || {}, key);
-    if (fallback !== undefined) return applyParams(fallback, params);
+    if (fallback !== undefined) {
+      return applyParams(localizeFallbackTemplate(fallback, resolvedLocale), params);
+    }
 
     return key;
   }
@@ -97,6 +116,7 @@ function createTranslator(locale) {
 }
 
 module.exports = {
+  canonicalLocaleTag,
   createTranslator,
   normalizeLocale,
   loadMessages

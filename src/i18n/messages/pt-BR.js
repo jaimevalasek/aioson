@@ -27,6 +27,14 @@ module.exports = {
       'aioson agent:invoke <agent> [path] [--tool=codex|claude|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=pt-BR]',
     help_agent_epilogue:
       'aioson agent:epilogue [path] --agent=<agente> --summary=<texto> [--feature=<slug>] [--approve-gate=A|B|C|D] [--json] [--locale=pt-BR]',
+    help_briefing_approve:
+      'aioson briefing:approve [caminho] [--slug=<slug>] [--locale=pt-BR]',
+    help_briefing_unapprove:
+      'aioson briefing:unapprove [caminho] [--slug=<slug>] [--locale=pt-BR]',
+    help_briefing_review:
+      'aioson briefing:review [caminho] [--slug=<slug>] [--findings=<caminho>] [--force] [--json] [--locale=pt-BR]',
+    help_briefing_apply_feedback:
+      'aioson briefing:apply-feedback [caminho] [--slug=<slug>] [--feedback=<caminho>] [--confirm|--declined] [--allow-stale] [--json] [--locale=pt-BR]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=pt-BR]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agente>] [--goal=<texto>] [--module=<modulo-ou-pasta>] [--max-files=8] [--json] [--locale=pt-BR]',
@@ -112,8 +120,8 @@ module.exports = {
       'aioson setup:context [path] [--defaults] [--project-type=web_app|api|site|script|dapp|desktop_app] [--framework=<name>] [--backend=<name>] [--frontend=<name>] [--database=<name>] [--auth=<name>] [--uiux=<name>] [--language=<bcp47-tag>] [--web3-enabled=true|false] [--locale=pt-BR]',
     help_locale_apply:
       'aioson locale:apply [path] [--lang=<bcp47-tag>] [--dry-run] [--locale=pt-BR]',
-    help_locale_diff: 'aioson locale:diff [agent] [--lang=<bcp47-tag>] [--json] [--locale=en]',
-    help_test_agents: 'aioson test:agents [--json] [--locale=en]',
+    help_locale_diff: 'aioson locale:diff [agent] [--lang=<bcp47-tag>] [--json] [--locale=pt-BR]',
+    help_test_agents: 'aioson test:agents [caminho] [--json] [--locale=pt-BR]',
     help_test_smoke:
       'aioson test:smoke [workspace-path] [--lang=<bcp47-tag>] [--web3=ethereum|solana|cardano] [--profile=standard|mixed|parallel] [--keep] [--json] [--locale=pt-BR]',
     help_test_package:
@@ -137,6 +145,12 @@ module.exports = {
       'aioson review-cycle:<status|advance|resolve|reset> [path] --feature=<slug> [--plan=<path>] [--source=qa|tester|pentester] [--json] [--locale=pt-BR]',
     help_review_feature:
       'aioson review:feature [path] [--feature=<slug>] [--scope=<target>] [--skip-audit] [--out-dir=<dir>] [--tool=<tool>] [--json] [--locale=pt-BR]',
+    help_review_prepare:
+      'aioson review:prepare [caminho] --agent=<agente> --feature=<slug> [--artifact=<caminho>] [--json] [--locale=pt-BR]',
+    help_review_check:
+      'aioson review:check [caminho] --agent=<agente> --feature=<slug> --report=<caminho> [--json] [--locale=pt-BR]',
+    help_review_status:
+      'aioson review:status [caminho] --feature=<slug> [--json] [--locale=pt-BR]',
     help_parallel_init:
       'aioson parallel:init [path] [--workers=2..6] [--force] [--dry-run] [--json] [--locale=pt-BR]',
     help_parallel_doctor:
@@ -432,6 +446,10 @@ module.exports = {
     context_conversation_language_format:
       '`conversation_language` nao e uma tag BCP-47 valida',
     context_conversation_language_format_hint: 'Use valores como en, en-US, pt-BR.',
+    context_language_mismatch:
+      '`interaction_language` ({interaction}) difere de `conversation_language` ({conversation})',
+    context_language_mismatch_hint:
+      'Mantenha os dois campos sincronizados ou remova o alias legado `conversation_language`.',
     node_version: 'Node.js >= 18 (atual: {version})',
     gateway_claude_pointer: 'Gateway do CLAUDE referencia arquivos compartilhados do AIOSON',
     gateway_claude_pointer_hint:
@@ -672,7 +690,12 @@ module.exports = {
     dry_run_applied: '[dry-run] Idioma de interacao seria sincronizado: {locale}',
     copied_count: 'Arquivos copiados: {count}',
     missing_count: 'Arquivos de locale ausentes: {count}',
-    copy_line: '  Arquivo: {source} -> {target}'
+    copy_line: '  Arquivo: {source} -> {target}',
+    context_updated: 'Campos de idioma do project.context.md sincronizados: {locale}',
+    context_would_update: '[dry-run] Campos de idioma do project.context.md seriam sincronizados: {locale}',
+    context_unchanged: 'Campos de idioma do project.context.md ja estavam sincronizados: {locale}',
+    context_missing: 'project.context.md nao encontrado; a preferencia de idioma nao foi persistida.',
+    context_invalid: 'project.context.md tem frontmatter invalido; a preferencia de idioma nao foi alterada.'
   },
   smoke: {
     start: 'Executando smoke test em: {projectDir}',

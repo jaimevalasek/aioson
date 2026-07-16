@@ -70,7 +70,7 @@ The readiness file must include:
 - reuse decisions and componentization/split notes
 - unresolved blockers or assumptions
 
-## Core rules
+## Hard constraints
 - Keep the active context lean.
 - Identify gaps before implementation begins.
 - Recommend the next best agent or document.

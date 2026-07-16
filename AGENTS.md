@@ -36,10 +36,12 @@ Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`.
 
 When enabled (default):
 
-1. Read `~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md` if it exists.
-2. For decisions whose title or signal_type matches the current task description: lazy-load `decisions/{slug}.md` from the same identity directory.
-3. Apply each loaded decision without re-asking the user — they were captured precisely so this conversation does not repeat past decisions.
-4. If a project rule in `.aioson/rules/` conflicts with a loaded decision, the project rule wins. Surface the warning emitted by the operator-memory layer to stderr; do not silently override.
+1. Resolve the identity with `aioson op:identity --json` and use its `storage_root`; this honors `AIOSON_OPERATOR_ID` before the git-email hash. If the CLI is unavailable, fall back to `~/.aioson/operators/{sha256(git-email)[0..16]}/MEMORY.md` and treat its parent as the identity directory.
+2. If identity resolution reports `anonymous-fallback`, skip memory loading and surface its warning once to stderr; never load a shared anonymous bucket as standing operator decisions.
+3. Read `MEMORY.md` from the resolved identity directory if it exists.
+4. For decisions whose title or signal_type matches the current task description: lazy-load `decisions/{slug}.md` from the same identity directory.
+5. Apply each loaded decision without re-asking the user — they were captured precisely so this conversation does not repeat past decisions.
+6. If a project rule in `.aioson/rules/` conflicts with a loaded decision, the project rule wins. Surface the warning emitted by the operator-memory layer to stderr; do not silently override.
 
 If `AIOSON_OPERATOR_MEMORY=false` is set: skip silently. Backward compatible.
 
@@ -51,7 +53,7 @@ While conversing, watch for the 4 standing-decision signals defined in `template
 aioson op:capture --signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<self>
 ```
 
-Capture is best-effort — do not crash, retry, or surface failures to the user. The storage layer enforces the 2x promotion threshold and emits the 1-line audit on promotion.
+Capture is best-effort — do not crash, retry, or surface failures to the user. Authorization, exclusion, and correction promote immediately; confirmation promotes on its second detection. The storage layer emits the 1-line audit on promotion.
 
 ## How to invoke agents
 
@@ -210,6 +212,17 @@ This is a first-party process skill for improving agents, skills, PRDs, plans, h
 
 Use when: improving AIOSON prompts/skills, reducing dead context without losing contracts, or sharpening artifacts before downstream handoff.
 What to load: `SKILL.md` first; load `references/prompt-diagnostics.md` only for multi-prompt audits or adoption planning.
+
+## Process skill: review-intelligence
+
+Located at: `.aioson/skills/process/review-intelligence/SKILL.md`
+
+This is a first-party process skill for bounded, evidence-first challenge of feature artifacts before their existing gate or handoff. It adds role-aware self-review or independent review without creating a new workflow gate.
+
+Agents that load it: @briefing, @briefing-refiner, @product, @sheldon, @analyst, @architect, @scope-check, @qa
+When to load: only after a concrete feature slug and artifact exist, before the agent's existing gate/handoff.
+What to load: `SKILL.md` first, then exactly one matching reference: `framing.md`, `specification.md`, `architecture.md`, or `delivery-assurance.md`.
+Compatibility: if the skill or review CLI is unavailable, run the same review manually for at most two passes and preserve the previous workflow behavior.
 
 ## Process skills: feature expansion
 

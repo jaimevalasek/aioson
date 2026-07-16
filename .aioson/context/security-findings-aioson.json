@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "feature_slug": "aioson",
+  "generated_at": "2026-07-16T02:26:00-03:00",
+  "review_contract": {
+    "review_id": "pentester-aioson-2026-07-16-contextual-commit-guard",
+    "scope_mode": "on_demand",
+    "runtime_mode": "local_static",
+    "target_mode": "framework_target",
+    "target_scope": "contextual commit guard, staged-secret detector, commit:prepare, and installer policy preservation",
+    "allowed_targets": [
+      "src/lib/security/staged-secret-detector.js",
+      "src/lib/git-commit-guard.js",
+      "src/commands/git-guard.js",
+      "src/commands/commit-prepare.js",
+      "src/installer.js",
+      "tests/git-guard.test.js",
+      "tests/commit-prepare.test.js",
+      "tests/installer.test.js",
+      ".aioson/git-guard.json",
+      "template/.aioson/git-guard.json",
+      ".aioson/context/qa-report.md"
+    ],
+    "forbidden_targets": [
+      "internet URLs",
+      "external production systems",
+      "third-party credentials",
+      "destructive actions outside controlled fixtures"
+    ],
+    "attack_surfaces": [
+      "TS-aioson-01:memory_context",
+      "TS-aioson-02:tool_invocation",
+      "TS-aioson-03:delegation_handoff",
+      "TS-aioson-04:protocol_contract",
+      "TS-aioson-05:secret_handling",
+      "TS-aioson-06:runtime_permissions",
+      "TS-aioson-07:auth_identity",
+      "TS-aioson-08:installation_integrity",
+      "TS-aioson-09:supply_chain_integrity"
+    ],
+    "evidence_policy": "safe-proof-only",
+    "findings_artifact_path": ".aioson/context/security-findings-aioson.json",
+    "tools": [
+      "manual local source review",
+      "node:test adversarial probes",
+      "aioson git:guard",
+      "local SAST and secret-scanner availability checks (Semgrep, Trivy, Gitleaks, and TruffleHog unavailable in this environment)",
+      "local staged-policy drift probe",
+      "local agent-safe trusted-mode probe"
+    ]
+  },
+  "threat_surfaces": [
+    {
+      "id": "TS-aioson-01",
+      "surface_type": "memory_context",
+      "verification_status": "not_applicable",
+      "skip_reason": "The reviewed slice parses staged source text for deterministic secret patterns; it does not load third-party instructions into an LLM context."
+    },
+    {
+      "id": "TS-aioson-02",
+      "surface_type": "tool_invocation",
+      "verification_status": "reviewed",
+      "notes": "Git invocations use argument arrays, but the guard loads policy from the working tree rather than the index; see SF-aioson-01."
+    },
+    {
+      "id": "TS-aioson-03",
+      "surface_type": "delegation_handoff",
+      "verification_status": "not_applicable",
+      "skip_reason": "No handoff or agent-capability path is changed by the contextual commit-guard correction."
+    },
+    {
+      "id": "TS-aioson-04",
+      "surface_type": "protocol_contract",
+      "verification_status": "not_applicable",
+      "skip_reason": "The correction does not alter workflow, gate, or conformance-contract validation."
+    },
+    {
+      "id": "TS-aioson-05",
+      "surface_type": "secret_handling",
+      "verification_status": "reviewed",
+      "notes": "A local unstaged contentAllowRules policy suppresses a staged provider-token finding; see SF-aioson-01."
+    },
+    {
+      "id": "TS-aioson-06",
+      "surface_type": "runtime_permissions",
+      "verification_status": "reviewed",
+      "notes": "agent-safe accepts an explicit trusted mode and thereby permits warning-class secret findings; see SF-aioson-02."
+    },
+    {
+      "id": "TS-aioson-07",
+      "surface_type": "auth_identity",
+      "verification_status": "not_applicable",
+      "skip_reason": "The reviewed CLI flow has no user identity, ownership, or approval impersonation boundary."
+    },
+    {
+      "id": "TS-aioson-08",
+      "surface_type": "installation_integrity",
+      "verification_status": "reviewed",
+      "notes": "The installer preserves the contentAllowRules schema, but commit-time policy provenance must be bound to the Git index to prevent drift."
+    },
+    {
+      "id": "TS-aioson-09",
+      "surface_type": "supply_chain_integrity",
+      "verification_status": "not_applicable",
+      "skip_reason": "No dependency manifest, lockfile, CI workflow, release path, or third-party fetch logic is in this correction scope."
+    }
+  ],
+  "findings": [
+    {
+      "id": "SF-aioson-01",
+      "source": "pentester",
+      "feature_slug": "aioson",
+      "surface": "secret_handling",
+      "severity": "high",
+      "title": "git:guard trusts an unstaged policy that can suppress a staged real-token finding",
+      "hypothesis": "The guard scans staged blobs but reads .aioson/git-guard.json from the working tree, so a local untracked or unstaged contentAllowRules entry can authorize a token that is committed without the corresponding auditable exception.",
+      "attack_path": "A local actor creates or edits .aioson/git-guard.json with a scoped allow rule, leaves that file unstaged, stages a provider-token source file, and runs git:guard or the managed pre-commit hook.",
+      "preconditions": [
+        "A Git worktree contains .aioson/git-guard.json with a contentAllowRules entry.",
+        "The policy file is untracked or has unstaged changes.",
+        "A source file containing a provider-token pattern is staged."
+      ],
+      "reproduction_steps": [
+        "Create an isolated local Git repository and write .aioson/git-guard.json with contentAllowRules for src/provider.js and github_token.",
+        "Do not stage the policy file.",
+        "Stage only src/provider.js containing a synthetic ghp_ token that matches the detector.",
+        "Run aioson git:guard . --json; it returns ok=true and reports github_token as suppressed.",
+        "Inspect git diff --cached --name-only; it contains src/provider.js only, so the committed tree lacks the exception that authorized the token."
+      ],
+      "evidence": [
+        "src/lib/git-commit-guard.js:301-306 reads the policy via fs.readFile(configPath), while inspectStagedChanges at :443 onwards reads source content from the index.",
+        "Local controlled probe: guard ok=true, suppressed=[github_token], staged=[src/provider.js], with .aioson/git-guard.json intentionally unstaged.",
+        "The actual repository guard is clean only because its current staged contents do not exercise this drift path: 0 errors, 0 warnings, 40 suppressions.",
+        "Fixed by loading the policy from the Git index in inspectStagedChanges, so an unstaged or untracked allow rule cannot authorize staged content.",
+        "Regression: tests/git-guard.test.js SF-aioson-01 stages a provider token while the allow rule remains unstaged and asserts github_token blocks."
+      ],
+      "impact": "A warning or error that is intentionally suppressed by project policy can be committed as a secret-bearing source change without committing the policy and its audit reason. The resulting commit contains the token but not the exception that made the guard pass, defeating the provenance and secret-scan guarantees of the control.",
+      "affected_artifacts": [
+        "src/lib/git-commit-guard.js",
+        "src/commands/git-guard.js",
+        ".aioson/git-guard.json"
+      ],
+      "suggested_fix": "Resolve the guard policy from the index when .aioson/git-guard.json is staged, and fail closed when the working-tree policy differs from the index while it would affect staged findings. At minimum, reject an unstaged/untracked policy file that contains allowPaths, contentAllowPaths, or contentAllowRules during a guarded scan. Add a regression that stages only a real-token file while leaving a permissive policy unstaged and asserts the guard blocks.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "block",
+      "status": "fixed",
+      "safe_to_reproduce": true
+    },
+    {
+      "id": "SF-aioson-02",
+      "source": "pentester",
+      "feature_slug": "aioson",
+      "surface": "runtime_permissions",
+      "severity": "medium",
+      "title": "agent-safe can be relaxed to trusted mode and accept secret warnings",
+      "hypothesis": "commit:prepare lets an explicit --mode=trusted override the strict headless default even when --agent-safe is present, so automation can mark a warning-class credential assignment ready for commit preparation.",
+      "attack_path": "An agent or wrapper invokes commit:prepare with --agent-safe --staged-only --mode=trusted against a staged generic credential assignment.",
+      "preconditions": [
+        "A staged source file contains a warning-class generic secret assignment.",
+        "The caller can choose commit:prepare flags."
+      ],
+      "reproduction_steps": [
+        "Create an isolated local Git repository and stage src/config.js with a generic credential-variable assignment (use the token variable name and synthetic value described in the affected test fixture).",
+        "Verify strict git:guard returns ok=false with generic_secret_assignment.",
+        "Run commit:prepare with json, agent-safe, staged-only, and mode=trusted.",
+        "Observe ok=true, guardMode=trusted, ready=true, and generic_secret_assignment recorded as an accepted warning in commit-prep.json."
+      ],
+      "evidence": [
+        "src/commands/commit-prepare.js:348 selects requestedMode before the agentSafe headless default; :349 consequently sets allowGuardWarnings for trusted mode while :350 still marks the invocation headless.",
+        "Local controlled probe: strict guard blocked generic_secret_assignment; the same staged file succeeded through --agent-safe --mode=trusted and persisted the warning in commit-prep.json.",
+        "tests/commit-prepare.test.js covers agent-safe headless and non-agent trusted flows, but has no regression forbidding their combination.",
+        "Fixed by rejecting every explicit agent-safe mode except headless before repository or guard processing begins.",
+        "Regression: tests/commit-prepare.test.js SF-aioson-02 verifies agent-safe rejects both trusted and guarded with agent_safe_requires_headless."
+      ],
+      "impact": "The documented agent-safe boundary is relaxable by an execution flag. Although high-confidence provider-token errors remain blocked and the committer prompt normally chooses headless mode, an automated caller can turn a generic credential warning into a ready preparation result without the explicit user authorization required for trusted mode.",
+      "affected_artifacts": [
+        "src/commands/commit-prepare.js",
+        "tests/commit-prepare.test.js",
+        ".aioson/agents/committer.md",
+        "template/.aioson/agents/committer.md"
+      ],
+      "suggested_fix": "Make agent-safe force guardMode=headless and reject --mode=trusted (and any incompatible override) with a deterministic error such as agent_safe_requires_headless. Add a regression covering --agent-safe --staged-only --mode=trusted with a generic_secret_assignment warning.",
+      "recommended_owner": "dev",
+      "recommended_gate_status": "review",
+      "status": "fixed",
+      "safe_to_reproduce": true
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "phase": 4,
+  "validation_at": "2026-07-15T21:25:27.9678049Z",
+  "results": [
+    {
+      "id": "RI-C01",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C02",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C03",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C04",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C05",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C06",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RI-C07",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "AC-RI-024",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RG-smoke",
+      "passed": true,
+      "reason": null
+    },
+    {
+      "id": "RG-build",
+      "passed": true,
+      "reason": null
+    }
+  ],
+  "overall_score": 1,
+  "ready_for_done_gate": true
+}

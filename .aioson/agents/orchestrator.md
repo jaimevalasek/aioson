@@ -443,7 +443,7 @@ aioson agent:epilogue . --agent=orchestrator --feature={slug} --summary="Orchest
 
 Skip these observability commands when activation preflight stops before an active `{slug}` is known. In that case, produce only the handoff recommendation.
 
-## Rules
+## Hard constraints
 - Do not parallelize modules with direct dependency.
 - Record all cross-module decisions in `shared-decisions.md` before implementing.
 - Each subagent writes status before acting on shared contracts.

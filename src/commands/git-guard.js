@@ -179,6 +179,7 @@ async function runGitGuard({ args, options = {}, logger }) {
     files: result.files,
     errors: result.errors,
     warnings: result.warnings,
+    suppressed: result.suppressed,
     suggestedCommands: result.suggestedCommands,
     summary: result.summary
   };
@@ -191,6 +192,9 @@ async function runGitGuard({ args, options = {}, logger }) {
   logger.log(`Commit guard — ${result.gitRoot}`);
   logger.log(`Staged files: ${result.summary.stagedCount}`);
   logger.log(`Policy: ${result.policy.loaded ? result.policy.path : 'default built-in policy (no project config found)'}`);
+  if (result.summary.suppressedCount > 0) {
+    logger.log(`Contextual suppressions: ${result.summary.suppressedCount} (available in --json output)`);
+  }
 
   if (result.summary.stagedCount === 0) {
     logger.error('No staged files found. Stage explicit files before committing.');
@@ -199,6 +203,12 @@ async function runGitGuard({ args, options = {}, logger }) {
 
   if (result.ok) {
     logger.log('Commit guard passed.');
+    if (result.warnings.length > 0) {
+      logger.log('Warnings accepted by explicit trusted/allow-warnings mode:');
+      for (const finding of result.warnings) {
+        logger.log(formatFinding('  [WARN] ', finding));
+      }
+    }
     return output;
   }
 

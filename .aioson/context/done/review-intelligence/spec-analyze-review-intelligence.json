@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "feature": "review-intelligence",
+  "classification": "MEDIUM",
+  "strict": true,
+  "analyzed_at": "2026-07-15T22:39:25.159Z",
+  "artifacts_present": [
+    "project_context",
+    "prd",
+    "requirements",
+    "spec",
+    "architecture",
+    "design_doc",
+    "readiness",
+    "implementation_plan",
+    "conformance",
+    "dev_state",
+    "features"
+  ],
+  "contract_present": true,
+  "findings": [
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "requirements was modified after design-doc was produced — design-doc may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "requirements",
+        "design_doc"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "requirements was modified after implementation-plan was produced — implementation-plan may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "requirements",
+        "implementation_plan"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after design-doc was produced — design-doc may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "design_doc"
+      ]
+    },
+    {
+      "severity": "warning",
+      "check": "stale_downstream",
+      "message": "spec was modified after implementation-plan was produced — implementation-plan may be stale (re-run its owner agent or confirm the change is editorial)",
+      "artifacts": [
+        "spec",
+        "implementation_plan"
+      ]
+    }
+  ],
+  "summary": {
+    "errors": 0,
+    "warnings": 4,
+    "info": 0
+  }
+}

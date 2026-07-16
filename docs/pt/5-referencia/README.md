@@ -22,6 +22,8 @@
 | [../living-memory/README.md](../living-memory/README.md) | Memória Viva: bootstrap auto-atualizado, autonomy contract 3 tiers, notify (ℹ/⚠/⛔), doctor checks |
 | [../active-learning-loop/README.md](../active-learning-loop/README.md) | Active Learning Loop: destilação automática no `feature:close`, busca BM25 em learnings, archive/restore com `evolution_log`, 3 checks de curadoria no doctor |
 | [../deyvin-subtask-scout/README.md](../deyvin-subtask-scout/README.md) | Deyvin Sub-Task Scout: primitiva de diagnóstico estruturado, `scout:prep/validate/commit`, caps configuráveis, archivamento por feature |
+| [agent-execution.md](./agent-execution.md) | Execução de subagentes: manifesto, resolução segura de modelos, `reasoning_effort`, fallback, relatórios e telemetria |
+| [operator-memory.md](./operator-memory.md) | Memória do operador: identidade, captura, promoção por tipo de sinal e reforço idempotente |
 
 ---
 

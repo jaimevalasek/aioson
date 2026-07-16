@@ -1,5 +1,5 @@
 # Module Memory: src
-_Generated from .aioson/context/scan-src.md — 2026-06-16T16:57:26Z_
+_Generated from .aioson/context/scan-src.md — 2026-07-16T03:57:19Z_
 
 ## Read this when
 - you are working inside `src/`

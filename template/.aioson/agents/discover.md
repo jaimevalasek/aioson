@@ -203,7 +203,7 @@ confidence: high|medium|low
 5. **Write bootstrap files** — generate all 4 files with frontmatter
 6. **Report** — tell the user what was discovered and any gaps or concerns
 
-## Writing guidelines
+## Hard constraints
 
 - **Semantic, not structural** — describe meaning, not just file locations
 - **Concise** — each file should be 1-2KB max; agents read these frequently

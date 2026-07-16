@@ -1,0 +1,45 @@
+feature: review-intelligence
+classification: MEDIUM
+spec_version: 2
+requirements:
+  - id: REQ-RI-001
+    acceptance: [AC-RI-001, AC-RI-002]
+  - id: REQ-RI-002
+    acceptance: [AC-RI-002, AC-RI-015]
+  - id: REQ-RI-003
+    acceptance: [AC-RI-003, AC-RI-008, AC-RI-014]
+  - id: REQ-RI-004
+    acceptance: [AC-RI-001, AC-RI-003, AC-RI-023]
+  - id: REQ-RI-005
+    acceptance: [AC-RI-002, AC-RI-022, AC-RI-023]
+  - id: REQ-RI-006
+    acceptance: [AC-RI-004, AC-RI-005]
+  - id: REQ-RI-007
+    acceptance: [AC-RI-004, AC-RI-006]
+  - id: REQ-RI-008
+    acceptance: [AC-RI-007, AC-RI-008, AC-RI-009]
+  - id: REQ-RI-009
+    acceptance: [AC-RI-014, AC-RI-016]
+  - id: REQ-RI-010
+    acceptance: [AC-RI-007, AC-RI-009, AC-RI-010, AC-RI-011]
+  - id: REQ-RI-011
+    acceptance: [AC-RI-014, AC-RI-015]
+  - id: REQ-RI-012
+    acceptance: [AC-RI-010, AC-RI-016, AC-RI-017]
+  - id: REQ-RI-013
+    acceptance: [AC-RI-006, AC-RI-007, AC-RI-013, AC-RI-018]
+  - id: REQ-RI-014
+    acceptance: [AC-RI-011, AC-RI-012, AC-RI-018]
+  - id: REQ-RI-015
+    acceptance: [AC-RI-008, AC-RI-017, AC-RI-021]
+  - id: REQ-RI-016
+    acceptance: [AC-RI-001, AC-RI-020]
+  - id: REQ-RI-017
+    acceptance: [AC-RI-009, AC-RI-019]
+  - id: REQ-RI-018
+    acceptance: [AC-RI-020, AC-RI-021, AC-RI-024]
+gates:
+  A: approved
+  B: approved
+  C: approved
+  D: approved

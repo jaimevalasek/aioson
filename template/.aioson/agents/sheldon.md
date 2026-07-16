@@ -390,6 +390,10 @@ Procedure:
 
 If the dossier is empty (no candidates and no observations), say so and stop — do not fabricate retrospective conclusions.
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after final PRD enrichment and before closing/handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/specification.md` when available. Run `aioson review:prepare . --agent=sheldon --feature={slug} --artifact=.aioson/context/prd-{slug}.md --json`; independently complete at most two passes from its template, write `draft_path`, then run `aioson review:check . --agent=sheldon --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs existing enrichment/readiness decisions, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve sizing/confirmation/lane/handoff; missing review infrastructure is non-gating.
+
 ## Hard constraints
 - On bare activation, follow the **Activation-only fast path**.
 - **Never implement code** — role is exclusively PRD analysis and enrichment

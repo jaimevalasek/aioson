@@ -11,10 +11,10 @@
  *   2. Resolve identity (Phase 1)
  *   3. deriveSlug(--proposal) — deterministic kebab + truncate
  *   4. Check proposals/{slug}.md:
- *      - absent: write proposal with detected_count=1, exit 0 silent
+ *      - absent: write proposal with detected_count=1
  *      - present: detected_count++
- *        - count >= 2: promoteProposal (atomic) + stdout audit line
- *        - count < 2: update proposal, exit 0 silent
+ *        - authorization/exclusion/correction: promote on detection 1
+ *        - confirmation: promote on detection 2
  *   5. Telemetry op_capture before file write
  */
 
@@ -60,7 +60,7 @@ async function runOpCapture({ args = [], options = {}, logger }) {
 Usage:
   aioson op:capture --signal=<type> --quote=<verbatim> --proposal=<paraphrase> --source-agent=<agent>
 Signal types: ${VALID_SIGNAL_TYPES.join(', ')}
-First detection writes to proposals/{slug}.md. Second detection promotes to decisions/{slug}.md atomically.`;
+Authorization, exclusion, and correction promote immediately. Confirmation promotes on its second detection.`;
     if (options.json) return { ok: true, help: true };
     if (logger) logger.log(msg);
     return { ok: true };
@@ -142,6 +142,24 @@ First detection writes to proposals/{slug}.md. Second detection promotes to deci
   }
 
   const count = result.proposal.detected_count;
+
+  // `_anonymous` is a diagnostic fallback, not a stable operator identity.
+  // Keep captured evidence in its proposal queue, but never turn it into a
+  // standing decision that another anonymous session could load.
+  if (resolved.source === 'anonymous-fallback') {
+    if (options.json) {
+      return {
+        ok: true,
+        promoted: false,
+        slug,
+        detected_count: count,
+        identity: resolved.identity,
+        reason: 'identity_unresolved',
+        warning: resolved.warning
+      };
+    }
+    return { ok: true, promoted: false, slug, detected_count: count, reason: 'identity_unresolved' };
+  }
 
   // Idempotent re-detection: a signal already promoted to a decision is reinforced,
   // not re-promoted — re-promotion would duplicate the FTS row and reset promoted_at.

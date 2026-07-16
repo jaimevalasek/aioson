@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aioson.dev/schemas/review-intelligence.schema.json",
+  "title": "AIOSON Review Intelligence",
+  "description": "Structural contract for immutable review packets and evidence-backed review reports.",
+  "oneOf": [
+    { "$ref": "#/$defs/packet" },
+    { "$ref": "#/$defs/report" }
+  ],
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "agent": {
+      "type": "string",
+      "enum": [
+        "briefing",
+        "briefing-refiner",
+        "product",
+        "sheldon",
+        "analyst",
+        "architect",
+        "scope-check",
+        "qa"
+      ]
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["framing", "specification", "architecture", "delivery-assurance"]
+    },
+    "review_mode": {
+      "type": "string",
+      "enum": ["self_review", "independent_review"]
+    },
+    "canonical_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?![A-Za-z]:/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\\\u0000]+$"
+    },
+    "safe_text": {
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        { "not": { "pattern": "[\\u200B\\u200C\\u200D\\u2060\\uFEFF\\u202A-\\u202E\\u2066-\\u2069]" } },
+        { "not": { "pattern": "<!--[\\s\\S]*?-->" } }
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "packet_id": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "bound_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": { "$ref": "#/$defs/canonical_path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 5242880 }
+      }
+    },
+    "report_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/canonical_path" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "bytes"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "path": { "$ref": "#/$defs/canonical_path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 5242880 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["artifact", "code", "test", "research-cache", "runtime", "command", "decision"]
+        },
+        "path": { "$ref": "#/$defs/canonical_path" },
+        "detail": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 2000 }] },
+        "command": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 1000 }] },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "not_run", "unverified", "recorded"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "command" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["command", "status", "detail"] },
+          "else": {
+            "anyOf": [
+              { "required": ["path"] },
+              { "required": ["detail"] }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "research-cache" } },
+            "required": ["type", "path"]
+          },
+          "then": {
+            "properties": {
+              "path": { "pattern": "^researchs/[^/]+/summary\\.md$" }
+            }
+          }
+        }
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "lens",
+        "status",
+        "severity",
+        "description",
+        "evidence",
+        "impact",
+        "recommendation",
+        "alternatives",
+        "confidence",
+        "owner",
+        "residual_risk"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "lens": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "resolved", "decision_required", "deferred"]
+        },
+        "severity": { "type": "string", "enum": ["info", "warning", "blocking"] },
+        "description": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "impact": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] },
+        "recommendation": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] },
+        "alternatives": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 1000 }] }
+        },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "owner": { "$ref": "#/$defs/slug" },
+        "residual_risk": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] }
+      }
+    },
+    "assurance_axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence", "residual_risk"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pass", "fail", "unverified", "not_applicable"]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/evidence" }
+        },
+        "residual_risk": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "pass" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "items": {
+                  "not": {
+                    "properties": {
+                      "status": { "enum": ["failed", "not_run", "unverified"] }
+                    },
+                    "required": ["status"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "assurance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "specification_fidelity",
+        "acceptance_coverage",
+        "code_health",
+        "runtime_truth",
+        "residual_risk"
+      ],
+      "properties": {
+        "specification_fidelity": { "$ref": "#/$defs/assurance_axis" },
+        "acceptance_coverage": { "$ref": "#/$defs/assurance_axis" },
+        "code_health": { "$ref": "#/$defs/assurance_axis" },
+        "runtime_truth": { "$ref": "#/$defs/assurance_axis" },
+        "residual_risk": { "$ref": "#/$defs/assurance_axis" }
+      }
+    },
+    "packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "packet_id",
+        "feature_slug",
+        "agent",
+        "profile",
+        "review_mode",
+        "artifact",
+        "authorities",
+        "reference_path",
+        "challenge_lenses",
+        "max_passes",
+        "prepared_at"
+      ],
+      "properties": {
+        "schema_version": { "const": "review-packet/v1" },
+        "packet_id": { "$ref": "#/$defs/packet_id" },
+        "feature_slug": { "$ref": "#/$defs/slug" },
+        "agent": { "$ref": "#/$defs/agent" },
+        "profile": { "$ref": "#/$defs/profile" },
+        "review_mode": { "$ref": "#/$defs/review_mode" },
+        "artifact": { "$ref": "#/$defs/bound_artifact" },
+        "authorities": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/authority" }
+        },
+        "reference_path": { "$ref": "#/$defs/canonical_path" },
+        "challenge_lenses": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "max_passes": { "const": 2 },
+        "prepared_at": { "type": "string", "format": "date-time", "maxLength": 64 }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "packet_id",
+        "feature_slug",
+        "agent",
+        "profile",
+        "review_mode",
+        "artifact",
+        "passes_completed",
+        "review_status",
+        "summary",
+        "findings",
+        "completed_at"
+      ],
+      "properties": {
+        "schema_version": { "const": "review-report/v1" },
+        "packet_id": { "$ref": "#/$defs/packet_id" },
+        "feature_slug": { "$ref": "#/$defs/slug" },
+        "agent": { "$ref": "#/$defs/agent" },
+        "profile": { "$ref": "#/$defs/profile" },
+        "review_mode": { "$ref": "#/$defs/review_mode" },
+        "artifact": { "$ref": "#/$defs/report_artifact" },
+        "passes_completed": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "review_status": {
+          "type": "string",
+          "enum": ["pass", "blocked", "decision_required", "unverified"]
+        },
+        "summary": { "allOf": [{ "$ref": "#/$defs/safe_text" }, { "maxLength": 4000 }] },
+        "findings": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/finding" }
+        },
+        "assurance": { "$ref": "#/$defs/assurance" },
+        "completed_at": { "type": "string", "format": "date-time", "maxLength": 64 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "profile": { "const": "delivery-assurance" } },
+            "required": ["profile"]
+          },
+          "then": { "required": ["assurance"] },
+          "else": { "not": { "required": ["assurance"] } }
+        }
+      ]
+    }
+  }
+}

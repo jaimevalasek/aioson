@@ -1,0 +1,130 @@
+{
+  "schema_version": "review-report/v1",
+  "packet_id": "sha256:d56abab806170ce3c1702d03d0b913dd59f054d188878b633851ef6c964a6e0f",
+  "feature_slug": "review-intelligence",
+  "agent": "qa",
+  "profile": "delivery-assurance",
+  "review_mode": "independent_review",
+  "artifact": {
+    "path": ".aioson/context/qa-report-review-intelligence.md",
+    "sha256": "516ce27726799fce9c5df68f37c08075519ef9c14c64cfb35ed80b32c174c91a"
+  },
+  "passes_completed": 2,
+  "review_status": "pass",
+  "summary": "Two independent evidence passes found no unresolved delivery finding. The additive review feature satisfies the approved scope, bounded acceptance evidence, secure storage contract, and regression safeguards.",
+  "findings": [],
+  "completed_at": "2026-07-15T22:33:00.000Z",
+  "assurance": {
+    "specification_fidelity": {
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "artifact",
+          "path": ".aioson/context/spec-review-intelligence.md",
+          "detail": "Approved scope, decisions, exclusions, and Gate D evidence align with the QA report.",
+          "status": "passed"
+        },
+        {
+          "type": "artifact",
+          "path": ".aioson/context/requirements-review-intelligence.md",
+          "detail": "Requirements define the same 24 acceptance criteria covered by the implementation and tests.",
+          "status": "passed"
+        }
+      ],
+      "residual_risk": "Four chronological document warnings remain visible after security remediation; QA found no behavioral divergence."
+    },
+    "acceptance_coverage": {
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "command",
+          "path": ".aioson/plans/review-intelligence/last-check-output.json",
+          "command": "node bin/aioson.js harness:check . --slug=review-intelligence --strict --json",
+          "detail": "Strict harness recorded 10 of 10 executable criteria passing.",
+          "status": "passed"
+        },
+        {
+          "type": "test",
+          "path": "tests/review-intelligence.test.js",
+          "detail": "Focused storage, contract, semantic-state, and status coverage is present.",
+          "status": "passed"
+        },
+        {
+          "type": "test",
+          "path": "tests/review-intelligence-cli.test.js",
+          "detail": "CLI prepare, check, status, JSON, stale, and timestamp behavior is covered.",
+          "status": "passed"
+        }
+      ],
+      "residual_risk": "No acceptance criterion is missing test evidence."
+    },
+    "code_health": {
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/review-intelligence/contracts.js",
+          "detail": "Schema and semantic validation reject unsafe, incoherent, hidden-carrier, and private-output reports.",
+          "status": "passed"
+        },
+        {
+          "type": "code",
+          "path": "src/review-intelligence/storage.js",
+          "detail": "Path containment, limits, immutable publication, and post-open revalidation are implemented.",
+          "status": "passed"
+        },
+        {
+          "type": "command",
+          "path": ".aioson/context/audit-code.json",
+          "command": "node bin/aioson.js audit:code . --changed --json",
+          "detail": "Changed-code audit recorded zero HIGH findings; remaining lexical and duplication notices are advisory.",
+          "status": "passed"
+        }
+      ],
+      "residual_risk": "Portable filesystem races are mitigated with identity revalidation rather than directory-descriptor APIs."
+    },
+    "runtime_truth": {
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "command",
+          "path": ".aioson/plans/review-intelligence/last-check-output.json",
+          "command": "node bin/aioson.js harness:check . --slug=review-intelligence --strict --json",
+          "detail": "The latest strict harness contains green focused checks, full regression, and lint results.",
+          "status": "passed"
+        },
+        {
+          "type": "artifact",
+          "path": ".aioson/context/security-findings-review-intelligence.json",
+          "detail": "Security audit is valid and reports no open finding.",
+          "status": "passed"
+        },
+        {
+          "type": "test",
+          "path": "tests/commands/security-audit.test.js",
+          "detail": "Security-audit persistence preserves manual pentest findings while refreshing automated ones.",
+          "status": "passed"
+        }
+      ],
+      "residual_risk": "No runtime smoke applies because this feature changes a Node CLI and local artifacts only."
+    },
+    "residual_risk": {
+      "status": "pass",
+      "evidence": [
+        {
+          "type": "artifact",
+          "path": ".aioson/context/qa-report-review-intelligence.md",
+          "detail": "QA report records residual filesystem and document-chronology limits with no unresolved blocker.",
+          "status": "passed"
+        },
+        {
+          "type": "artifact",
+          "path": ".aioson/context/features/review-intelligence/implementation-ledger.md",
+          "detail": "Implementation ledger has no blocking known gap after independent QA approval.",
+          "status": "passed"
+        }
+      ],
+      "residual_risk": "Residual limits are documented, bounded, and non-blocking; feature closure remains a human decision."
+    }
+  }
+}

@@ -456,6 +456,10 @@ Apply these rules when merging:
 
 ---
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after writing `qa-report-{slug}.md` and before Gate D/closure, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/delivery-assurance.md` when available. Run `aioson review:prepare . --agent=qa --feature={slug} --artifact=.aioson/context/qa-report-{slug}.md --json`; independently evaluate all five axes for at most two passes, write `draft_path`, then run `aioson review:check . --agent=qa --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs QA/Gate D, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve tests/Gate D/corrections/handoff; missing review infrastructure is non-gating and never evidence of PASS.
+
 ## Feature closure (feature mode only)
 
 When QA is complete and all Critical and High findings are resolved:

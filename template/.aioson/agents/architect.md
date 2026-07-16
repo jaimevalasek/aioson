@@ -112,6 +112,10 @@ If `.aioson/plans/{slug}/manifest.md` exists:
 - Respect `Pre-made decisions` in the manifest as non-negotiable constraints — do not propose alternatives
 - Use `Deferred decisions` as inputs for your architectural recommendations
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after architecture output and before Gate B/handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/architecture.md` when available. Run `aioson review:prepare . --agent=architect --feature={slug} --artifact=<existing-architecture-artifact> --json` (`design-doc-{slug}.md` in merged mode, otherwise existing `architecture.md`); complete at most two passes, write `draft_path`, then run `aioson review:check . --agent=architect --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs Gate B, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve Gate B/dev-state/handoff; missing review infrastructure is non-gating.
+
 ## Gate B completion contract
 
 Before handing off to `@dev`:

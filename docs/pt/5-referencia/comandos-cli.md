@@ -54,6 +54,55 @@
 | `test:package` | Testa o pacote instalado a partir de uma origem local | Quando vai validar release ou empacotamento |
 | `scan:project` | Faz varredura brownfield, gera índice local e produz contexto inicial | Quando o projeto já existe e falta documentação |
 
+### Inteligência de review
+
+Os três comandos aditivos vinculam o review de um agente aos bytes exatos do artefato da feature e às autoridades atuais. Eles tornam a revisão em duas passagens auditável; não executam modelo, testes, pesquisa web, transição de workflow ou gate.
+
+```bash
+aioson review:prepare [path] --agent=<agente> --feature=<slug> [--artifact=<caminho>] [--json]
+aioson review:check   [path] --agent=<agente> --feature=<slug> --report=<caminho> [--json]
+aioson review:status  [path] --feature=<slug> [--json]
+```
+
+`review:prepare` escolhe o perfil aprovado do agente, calcula os hashes do artefato e das autoridades conhecidas, publica um `review-packet/v1` imutável e devolve `draft_path`, template do relatório e próximo comando exato. Sem `--artifact`, somente o default declarado do agente é aceito; ausência ou ambiguidade falha sem criar packet. Repetir o prepare sem mudança de bytes devolve o mesmo ID/path.
+
+Depois de no máximo duas passagens baseadas em evidência, o agente escreve o report candidato. `review:check` valida schema, contenção de paths, limites, bindings, hashes atuais, evidências e coerência dos estados antes de promover o report de forma imutável. Reports válidos que pedem ação são preservados; reports malformados, incompatíveis, inseguros ou stale nunca são promovidos.
+
+`review:status` mostra o resultado current mais recente por agente. Storage vazio é propositalmente não bloqueante. Delivery assurance expõe separadamente fidelidade à spec, cobertura dos critérios, saúde do código, verdade de runtime e risco residual — sem score agregado.
+
+| Exit | Significado |
+|---|---|
+| `0` | Operação concluída e review current em `pass`; status vazio também retorna `0` |
+| `1` | Report current válido foi persistido com `blocked`, `decision_required` ou `unverified` |
+| `2` | Invocação/report inválido, path inseguro, binding ausente, limite excedido ou artefato/autoridade stale |
+
+Exit `1` é evidência acionável, não erro de schema. Exit `2` não deve ser ignorado: corrija o report ou execute prepare novamente após mudança no artefato/autoridade. O review informa o contrato de aprovação ou QA já existente, mas nunca altera automaticamente `phase_gates`, workflow ou handoff. Em instalações antigas sem a skill ou os comandos, os agentes participantes aplicam manualmente a mesma revisão bounded e preservam o comportamento anterior.
+
+### Execução de subagentes
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `agent:execution:init` | Cria o manifesto de execução por feature | Antes de despachar subagentes com modelo/capability explícitos |
+| `agent:execution:validate` | Valida manifesto, catálogo e modelos contra o runtime atual | Antes do primeiro dispatch e no CI |
+| `agent:execution:show` | Mostra agentes, modelos solicitados/resolvidos e estratégia de matching | Para auditar a seleção antes do spawn |
+| `agent:execution:dispatch` | Executa um agente e grava tentativa, relatório e telemetria | Para rodar `qa`, `tester`, `pentester` ou `validator` isoladamente |
+| `agent:execution:resume` | Retoma uma tentativa pausada | Depois de corrigir capability, modelo ou relatório |
+| `agent:execution:status` / `events` | Consulta tentativas e eventos sanitizados | Para investigar uma execução em CI ou local |
+
+O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `gpt-5.6-tera` ou o slug correto convergem para o catálogo local quando há candidato único. Ambiguidades falham fechado.
+
+### Memória do operador
+
+| Comando | O que faz | Quando usar |
+|---|---|---|
+| `op:identity show` / `set <id>` | Inspeciona ou define a identidade local do operador | Em CI, máquinas compartilhadas ou após trocar o e-mail Git |
+| `op:capture` | Registra um sinal e promove uma decisão conforme o tipo | Quando uma preferência explícita deve sobreviver às sessões |
+| `op:list` / `op:show` | Lista ou exibe decisões/proposals | Para conferir o que será carregado pelo agente |
+| `op:reinforce <slug>` | Atualiza `last_reinforced` sem reescrever o corpo | Quando uma decisão arquivada continua válida |
+| `op:forget <slug>` | Move decisão ou proposal para `history/` | Para retirar uma preferência da memória ativa |
+
+`authorization`, `exclusion` e `correction` promovem na primeira detecção; `confirmation` exige duas. Redetecção de decisão já promovida reforça a mesma entrada, sem duplicar o índice FTS.
+
 ### Orquestração paralela
 
 | Comando | O que faz | Quando usar |
@@ -1790,7 +1839,15 @@ Cria arquivos em `.aioson/rules/` para aprendizados `process` e `quality` com fr
 ```bash
 # Preparar commit do estado atual (staged)
 aioson commit:prepare .
+
+# Automação sem prompts; warnings continuam bloqueando
+aioson commit:prepare . --agent-safe --staged-only --mode=headless
+
+# Prosseguir com warnings que o usuário já revisou; erros continuam bloqueando
+aioson commit:prepare . --staged-only --mode=trusted
 ```
+
+Modos aceitos: `guarded` (padrão), `headless` e `trusted`. O modo fica registrado em `commit-prep.json`, e um preparo menos estrito não é reutilizado por um modo mais estrito. Com `--agent-safe`, somente `--mode=headless` é permitido; `guarded` e `trusted` são rejeitados antes de qualquer preparo.
 
 Saída esperada:
 
@@ -1840,6 +1897,9 @@ aioson git:guard . --install-hook
 Regras do guard:
 - Bloqueia stage vazio
 - Bloqueia arquivos em `node_modules/`, `dist/`, `.next/`, `*.db`, secrets
+- Distingue texto natural de credenciais compactas e reconhece fixtures sintéticas explícitas sem deixar de escanear `tests/`
+- Suporta exceção restrita por caminho + regra em `contentAllowRules`; `contentAllowPaths` é legado e desativa o scan do arquivo inteiro
+- Ao inspecionar o stage, lê `.aioson/git-guard.json` do Git index: política unstaged ou untracked não autoriza conteúdo staged
 - Pode instalar hook em `.git/hooks/pre-commit`
 
 ---

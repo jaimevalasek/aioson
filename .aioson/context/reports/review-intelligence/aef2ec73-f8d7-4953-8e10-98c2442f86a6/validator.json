@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "aef2ec73-f8d7-4953-8e10-98c2442f86a6",
+  "attempt_id": "a1e34731-ff9a-4a5b-856a-3f06b89aa34b",
+  "agent": "validator",
+  "host": "codex",
+  "model_requested": "configured-default",
+  "model_resolved": "configured-default",
+  "model_resolution_strategy": "configured_default",
+  "reasoning_effort": null,
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "writable_roots": [],
+  "started_at": "2026-07-15T21:25:16.4767860Z",
+  "finished_at": "2026-07-15T21:25:27.9678049Z",
+  "verdict": "PASS",
+  "findings": [],
+  "evidence": [
+    {
+      "type": "contract",
+      "path": ".aioson/plans/review-intelligence/harness-contract.json",
+      "summary": "10 binary criteria with 10 executable verification commands"
+    },
+    {
+      "type": "progress",
+      "path": ".aioson/plans/review-intelligence/progress.json",
+      "summary": "Phase 4 is waiting_validation with no recorded error"
+    },
+    {
+      "type": "diagnostic",
+      "path": ".aioson/plans/review-intelligence/last-check-output.json",
+      "summary": "Integrity passed; 10 of 10 deterministic checks passed; 0 criteria lacked verification"
+    },
+    {
+      "type": "validator_verdict",
+      "path": ".aioson/plans/review-intelligence/last-validator-output.json",
+      "summary": "overall_score=1 and ready_for_done_gate=true"
+    }
+  ]
+}

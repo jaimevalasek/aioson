@@ -279,6 +279,7 @@ test('ensureGitGuardBaseline is idempotent when baseline and full schema already
     version: 1,
     allowPaths: [],
     contentAllowPaths: [],
+    contentAllowRules: [],
     blockPaths: [...GIT_GUARD_BASELINE_BLOCK_PATHS, 'done/**'],
     allowExtensions: [],
     blockExtensions: []
@@ -306,6 +307,7 @@ test('ensureGitGuardBaseline initializes missing schema array fields without rem
   const result = JSON.parse(await fs.readFile(guardPath, 'utf8'));
   assert.deepEqual(result.allowPaths, [], 'allowPaths must be initialized as []');
   assert.deepEqual(result.contentAllowPaths, [], 'contentAllowPaths must be initialized as []');
+  assert.deepEqual(result.contentAllowRules, [], 'contentAllowRules must be initialized as []');
   assert.deepEqual(result.allowExtensions, [], 'allowExtensions must be initialized as []');
   assert.deepEqual(result.blockExtensions, [], 'blockExtensions must be initialized as []');
   assert.ok(result.blockPaths.includes('custom/**'), 'existing blockPaths entries must be preserved');

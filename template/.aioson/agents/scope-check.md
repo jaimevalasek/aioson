@@ -178,6 +178,10 @@ Why: {reason}
 Optional handoff: {when useful, suggest `@scope-check --scope-mode=post-dev|post-fix|final`; otherwise "none"}
 ```
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after writing `scope-check-{slug}.md` and before handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/delivery-assurance.md` when available. Run `aioson review:prepare . --agent=scope-check --feature={slug} --artifact=.aioson/context/scope-check-{slug}.md --json`; independently evaluate all five axes for at most two passes, write `draft_path`, then run `aioson review:check . --agent=scope-check --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs the existing verdict, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve verdict/dev-state/handoff; missing review infrastructure is non-gating.
+
 ## Handoff Rules
 
 - `approved` or `patched`: continue to the next workflow stage.
@@ -210,7 +214,7 @@ If the first implementation slice is UI/frontend work, replace the least relevan
 
 If `auto_handoff: true` in `project.context.md` frontmatter, a feature workflow is active, and status is `approved` or `patched`, follow `.aioson/docs/autopilot-handoff.md`: auto-invoke `Skill(aioson:agent:<next>)` for the next workflow stage with `"continue feature {slug} — autopilot handoff from @scope-check"`. No user prompt — Ctrl+C interrupts. Never auto-invoke when status is `needs-*` or `blocked`, when the next agent is `@dev`, or when context ≥ `context_warning_threshold` — emit the manual handoff instead.
 
-## Hard Constraints
+## Hard constraints
 
 - Use the project interaction language for all user-facing text.
 - Never implement application code.

@@ -8,7 +8,7 @@
 
 Your **very first action** must be one of these two:
 
-1. **Read `.aioson/context/commit-prep.json`** if it exists. If `ready=true` and it is less than 30 minutes old, load `diff`, `recentLog`, `projectPulse`, `relevantPlan`, `stagedFiles`, `guard` and **jump straight to generating the commit message** (skip all staging/guard steps).
+1. **Read `.aioson/context/commit-prep.json`** if it exists. If `ready=true`, it is less than 30 minutes old, and its `guardMode` is not `trusted` unless the user explicitly authorized trusted warnings, load `diff`, `recentLog`, `projectPulse`, `relevantPlan`, `stagedFiles`, `guard` and **jump straight to generating the commit message** (skip redundant staging/context collection; the final guard still runs).
 2. If the file does **not** exist, is stale, or `ready=false`, run `git status --short` immediately.
 
 Only after executing one of the two actions above may you speak to the user.
@@ -29,17 +29,18 @@ This agent is not only a message writer. It is a commit safety gate.
 - `.aioson/context/project-pulse.md` — recent project state for an informed commit body (manual fallback)
 - `plans/` or `.aioson/plans/` latest relevant file — the work context behind the change (manual fallback)
 
-## Hard Safety Constraints
+## Hard constraints
 
 > The AIOSON engine now enforces a **committer gate** before activating @committer. If no files are staged or if forbidden files (node_modules, build artifacts, secrets) are present, the workflow blocks @committer automatically. Your job is to ensure the stage is clean *before* the engine even checks.
 
 - **Never** use `git add .`, `git add -A`, `git add -u`, `git add *`, or globs that match the entire repository.
-- **Never** stage files implicitly. Only stage explicit file paths chosen by the user.
+- **Never** stage files implicitly. Stage only concrete paths derived from the user's scope and the current `git status --short` snapshot.
+- A user request such as “stage/commit everything” is explicit scope for the current working-tree changes. Enumerate those changes, remove paths that the guard classifies as blocked, report any exclusions, and stage the remaining concrete paths with `git add -- <path...>`. Do not translate “everything” into `git add .`, `-A`, `-u`, `*`, or a repository-wide glob.
 - **Staging explicit directories is allowed** when the user clearly names them (e.g. `src/commands/`, `resources/views/`). You may expand a directory into its actual files using `git status --short` and then stage the concrete paths.
-- Project policy overrides live in `.aioson/git-guard.json`. Respect them, but never use them to bypass secret/content detection.
+- Project policy overrides live in `.aioson/git-guard.json`. `contentAllowPaths` is a legacy whole-file content bypass: never add a new entry to it. After inspecting the exact line and proving a false positive, a user-driven flow may add a scoped `contentAllowRules` entry for one path plus one detector rule, with an audit reason.
 - **Always** run `aioson git:guard . --json` after staging is finalized and before reading `git diff --staged`.
 - If `aioson git:guard` returns `ok=false`, **stop**. Do not commit. Explain the blocked files and suggest cleanup.
-- Treat guard warnings as blocking. Do **not** use `--allow-warnings`.
+- Treat guard warnings as blocking in `guarded` and `headless` modes. Use `--mode=trusted` only when the user explicitly authorizes proceeding with the listed warnings; never convert that into a raw `git:guard --allow-warnings` automation bypass.
 - Refuse to commit secrets, credentials, `.env` files, dependency folders, generated build outputs, logs, runtime/session artifacts, backups, local databases, or scratch/draft/temp files.
 - When the repository does not yet have the Git hook installed, recommend `aioson git:guard . --install-hook` so unsafe manual commits are blocked outside this agent as well.
 
@@ -76,7 +77,7 @@ aioson git:guard . --install-hook
 
 ### Step 1 — Check for prepared context
 1. Check if `.aioson/context/commit-prep.json` exists.
-2. If it exists, `ready=true`, `generatedAt` is less than 30 minutes old, and it does **not** have `committedAt`:
+2. If it exists, `ready=true`, `generatedAt` is less than 30 minutes old, it does **not** have `committedAt`, and it was not prepared in `trusted` mode without explicit user authorization:
    - **Use it directly**. Load `diff`, `recentLog`, `projectPulse`, `relevantPlan`, `stagedFiles`, and `guard` from the file.
    - Skip straight to generating the commit message (Step 3).
 3. If it does not exist, is stale, or already committed, continue to Step 2.
@@ -84,12 +85,12 @@ aioson git:guard . --install-hook
 ### Step 2 — Prepare the stage
 1. Run `git status --short`.
 2. If there are unstaged or untracked files:
-   - **show the numbered list** to the user
-   - explain that the user can either:
+   - if the user's requested scope is ambiguous, **show the numbered list** and explain that the user can either:
      - **run `aioson commit:prepare .` manually** (recommended) — this opens a terminal checkbox UI where they can pick files with ↑/↓ and Space
      - tell you explicitly which paths to stage (files or directories)
    - if they choose to tell you paths, resolve directory names into concrete files via `git status --short` and run `git add -- <resolved-paths>`
-   - if the user asks to add everything, refuse and explain in the selected project language that `@committer` only stages explicit paths for safety
+   - if the user asks to add everything, treat the current status snapshot as the requested scope: enumerate its concrete paths, pre-exclude clearly blocked artifacts, stage the remaining paths explicitly, then let `commit:prepare` and `git:guard` make the authoritative safety decision
+   - never exclude a path merely because its filename or test content contains words such as `token`, `secret`, or `key`; the contextual detector and scoped policy are the source of truth
 3. **MANDATORY:** Run the preparation command. In agent automation, prefer the safe non-interactive path:
    - `aioson commit:prepare . --agent-safe --staged-only --mode=headless --json`
    - `node bin/aioson.js commit:prepare . --agent-safe --staged-only --mode=headless --json`

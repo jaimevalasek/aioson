@@ -108,11 +108,15 @@ test('committer contract enforces guarded explicit staging', async () => {
 
   const requiredSnippets = [
     'Never** use `git add .`',
-    'Only stage explicit file paths chosen by the user.',
+    'Stage only concrete paths derived from the user\'s scope',
+    '“stage/commit everything” is explicit scope',
     'aioson git:guard . --json',
     '.aioson/git-guard.json',
+    '`contentAllowPaths` is a legacy whole-file content bypass',
+    'scoped `contentAllowRules` entry',
     'aioson git:guard . --install-hook',
-    'Treat guard warnings as blocking.',
+    'Treat guard warnings as blocking in `guarded` and `headless` modes.',
+    'Use `--mode=trusted` only when the user explicitly authorizes',
     'This agent is not only a message writer. It is a commit safety gate.'
   ];
 
@@ -278,7 +282,11 @@ test('product, sheldon, and dev kernels use deterministic on-demand docs and sta
   // Rebudgeted 31000 -> 32000 on 2026-07-01 (same day) for the inline run-mode
   // tokens (--auto/--step in @product/@dev activation args) + the per-feature
   // disarm clause in the autopilot triggers. Contract, not bloat.
-  const KERNEL_BUDGET_BYTES = 32000;
+  // Rebudgeted 32000 -> 33000 on 2026-07-15 for the bounded
+  // review-intelligence checkpoint in @product/@sheldon. The hook stays a
+  // compact pointer (780/819 bytes); all review procedure lives in the
+  // on-demand skill/reference, preserving progressive disclosure.
+  const KERNEL_BUDGET_BYTES = 33000;
   assert.ok(Buffer.byteLength(product, 'utf8') <= KERNEL_BUDGET_BYTES, 'product kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(sheldon, 'utf8') <= KERNEL_BUDGET_BYTES, 'sheldon kernel should stay within the generalist target');
   assert.ok(Buffer.byteLength(dev, 'utf8') <= KERNEL_BUDGET_BYTES, 'dev kernel should stay within the generalist target');

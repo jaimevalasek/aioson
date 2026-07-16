@@ -1,0 +1,128 @@
+{
+  "feature": "review-intelligence",
+  "contract_mode": "builder",
+  "governor": {
+    "max_steps": 30,
+    "error_streak_limit": 5,
+    "cost_ceiling_tokens": 1000000,
+    "max_runtime_minutes": 120,
+    "max_changed_files": 55,
+    "max_diff_lines": 6000
+  },
+  "allowed_files": [
+    "src/review-intelligence/**",
+    "src/commands/review-intelligence.js",
+    "src/cli.js",
+    "src/constants.js",
+    "src/i18n/messages/*.js",
+    "template/AGENTS.md",
+    "AGENTS.md",
+    "template/.aioson/skills/process/review-intelligence/**",
+    ".aioson/skills/process/review-intelligence/**",
+    "template/.aioson/schemas/review-intelligence.schema.json",
+    ".aioson/schemas/review-intelligence.schema.json",
+    "template/.aioson/agents/briefing.md",
+    "template/.aioson/agents/briefing-refiner.md",
+    "template/.aioson/agents/product.md",
+    "template/.aioson/agents/sheldon.md",
+    "template/.aioson/agents/analyst.md",
+    "template/.aioson/agents/architect.md",
+    "template/.aioson/agents/scope-check.md",
+    "template/.aioson/agents/qa.md",
+    ".aioson/agents/briefing.md",
+    ".aioson/agents/briefing-refiner.md",
+    ".aioson/agents/product.md",
+    ".aioson/agents/sheldon.md",
+    ".aioson/agents/analyst.md",
+    ".aioson/agents/architect.md",
+    ".aioson/agents/scope-check.md",
+    ".aioson/agents/qa.md",
+    "tests/review-intelligence*.test.js",
+    "tests/i18n-cli.test.js",
+    "tests/agent-contracts.test.js",
+    "docs/en/5-reference/cli-reference.md",
+    "docs/pt/5-referencia/comandos-cli.md",
+    ".aioson/context/**",
+    ".aioson/plans/review-intelligence/**",
+    "researchs/mattpocock-grill-me-with-docs-2026/**"
+  ],
+  "forbidden_files": [
+    ".env*",
+    "**/*.pem",
+    "**/*.key",
+    "secrets/**",
+    "package-lock.json"
+  ],
+  "criteria": [
+    {
+      "id": "RI-C01",
+      "description": "AC-RI-001, AC-RI-002 e AC-RI-003: skill, perfis, limite, ownership e modos corretos",
+      "assertion": "Contratos da skill e dos oito hooks passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"skill|profile|hook\" tests/review-intelligence-skill.test.js"
+    },
+    {
+      "id": "RI-C02",
+      "description": "AC-RI-004, AC-RI-005 e AC-RI-006: prepare explícito/default/idempotente e content-addressed",
+      "assertion": "Cenários de prepare passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"prepare\" tests/review-intelligence.test.js"
+    },
+    {
+      "id": "RI-C03",
+      "description": "AC-RI-007, AC-RI-008, AC-RI-009 e AC-RI-010: promoção, estados, mismatch e staleness",
+      "assertion": "Cenários de check, atomicidade e stale passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"check|stale|atomic\" tests/review-intelligence.test.js"
+    },
+    {
+      "id": "RI-C04",
+      "description": "AC-RI-011, AC-RI-012, AC-RI-013, AC-RI-014 e AC-RI-015: contenção, bounds, falha segura, coerência e raciocínio privado proibido",
+      "assertion": "Cenários security/schema/reasoning passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"security|schema|reasoning\" tests/review-intelligence.test.js"
+    },
+    {
+      "id": "RI-C05",
+      "description": "AC-RI-016, AC-RI-017 e AC-RI-018: assurance sem score, status vazio/agregado e paths canônicos",
+      "assertion": "Cenários de status/assurance passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"status|assurance\" tests/review-intelligence.test.js"
+    },
+    {
+      "id": "RI-C06",
+      "description": "AC-RI-019, AC-RI-020 e AC-RI-021: help/JSON, distribuição/paridade e fallback compatível",
+      "assertion": "i18n, contratos de agentes e distribuição passam",
+      "binary": true,
+      "verification": "node --test tests/i18n-cli.test.js tests/agent-contracts.test.js tests/review-intelligence-skill.test.js"
+    },
+    {
+      "id": "RI-C07",
+      "description": "AC-RI-022 e AC-RI-023: pesquisa proporcional e cenários future-state com gaps semeados",
+      "assertion": "Cenários de pesquisa/fallback/future-state passam",
+      "binary": true,
+      "verification": "node --test --test-name-pattern=\"scenario|research|fallback\" tests/review-intelligence-skill.test.js tests/review-intelligence.test.js"
+    },
+    {
+      "id": "AC-RI-024",
+      "description": "AC-RI-024: suite integral preserva todas as funcionalidades atuais",
+      "assertion": "npm test passa sem regressão",
+      "binary": true,
+      "verification": "npm test"
+    },
+    {
+      "id": "RG-smoke",
+      "description": "Fluxo CLI real prepare → check → status funciona em workspace temporário",
+      "assertion": "Teste E2E do Review Intelligence passa",
+      "binary": true,
+      "verification": "node --test tests/review-intelligence.test.js"
+    },
+    {
+      "id": "RG-build",
+      "description": "Sintaxe/lint do CLI e dos módulos novos permanece verde",
+      "assertion": "npm run lint passa",
+      "binary": true,
+      "verification": "npm run lint"
+    }
+  ]
+}

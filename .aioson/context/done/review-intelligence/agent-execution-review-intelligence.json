@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "host": "codex",
+  "generated_at": "2026-07-15T19:43:45.664Z",
+  "agents": {
+    "dev": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/review-intelligence/{run_id}/dev.json"
+    },
+    "qa": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/review-intelligence/{run_id}/qa.json"
+    },
+    "tester": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/review-intelligence/{run_id}/tester.json"
+    },
+    "pentester": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/review-intelligence/{run_id}/pentester.json"
+    },
+    "validator": {
+      "enabled": true,
+      "host": "codex",
+      "mode": "external",
+      "model": "configured-default",
+      "writable_roots": [],
+      "fallbacks": [],
+      "report": ".aioson/context/reports/review-intelligence/{run_id}/validator.json"
+    }
+  },
+  "capacity_policy": {
+    "strategy": "pause",
+    "max_attempts": 1,
+    "backoff_ms": 0
+  },
+  "cycle_limits": {
+    "dev_qa": 3,
+    "tester": 3,
+    "pentester": 3
+  },
+  "reporting": {
+    "format": "json",
+    "markdown": true
+  }
+}

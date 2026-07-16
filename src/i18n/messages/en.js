@@ -26,6 +26,14 @@ module.exports = {
       'aioson agent:invoke <agent> [path] [--tool=codex|claude|opencode] [--mode=framework_target|app_target] [--feature=<slug>] [--scope=<area>] [--lang=<bcp47-tag>] [--locale=en]',
     help_agent_epilogue:
       'aioson agent:epilogue [path] --agent=<agent> --summary=<text> [--feature=<slug>] [--approve-gate=A|B|C|D] [--json] [--locale=en]',
+    help_briefing_approve:
+      'aioson briefing:approve [path] [--slug=<slug>] [--locale=en]',
+    help_briefing_unapprove:
+      'aioson briefing:unapprove [path] [--slug=<slug>] [--locale=en]',
+    help_briefing_review:
+      'aioson briefing:review [path] [--slug=<slug>] [--findings=<path>] [--force] [--json] [--locale=en]',
+    help_briefing_apply_feedback:
+      'aioson briefing:apply-feedback [path] [--slug=<slug>] [--feedback=<path>] [--confirm|--declined] [--allow-stale] [--json] [--locale=en]',
     help_context_validate: 'aioson context:validate [path] [--json] [--locale=en]',
     help_context_pack:
       'aioson context:pack [path] [--agent=<agent>] [--goal=<text>] [--module=<module-or-folder>] [--max-files=8] [--json] [--locale=en]',
@@ -111,7 +119,7 @@ module.exports = {
       'aioson setup:context [path] [--defaults] [--project-type=web_app|api|site|script|dapp|desktop_app] [--framework=<name>] [--backend=<name>] [--frontend=<name>] [--database=<name>] [--auth=<name>] [--uiux=<name>] [--language=<bcp47-tag>] [--web3-enabled=true|false] [--locale=en]',
     help_locale_apply: 'aioson locale:apply [path] [--lang=<bcp47-tag>] [--dry-run] [--locale=en]',
     help_locale_diff: 'aioson locale:diff [agent] [--lang=<bcp47-tag>] [--json] [--locale=en]',
-    help_test_agents: 'aioson test:agents [--json] [--locale=en]',
+    help_test_agents: 'aioson test:agents [path] [--json] [--locale=en]',
     help_test_smoke:
       'aioson test:smoke [workspace-path] [--lang=<bcp47-tag>] [--web3=ethereum|solana|cardano] [--profile=standard|mixed|parallel] [--keep] [--json] [--locale=en]',
     help_test_package:
@@ -135,6 +143,12 @@ module.exports = {
       'aioson review-cycle:<status|advance|resolve|reset> [path] --feature=<slug> [--plan=<path>] [--source=qa|tester|pentester] [--json] [--locale=en]',
     help_review_feature:
       'aioson review:feature [path] [--feature=<slug>] [--scope=<target>] [--skip-audit] [--out-dir=<dir>] [--tool=<tool>] [--json] [--locale=en]',
+    help_review_prepare:
+      'aioson review:prepare [path] --agent=<agent> --feature=<slug> [--artifact=<path>] [--json] [--locale=en]',
+    help_review_check:
+      'aioson review:check [path] --agent=<agent> --feature=<slug> --report=<path> [--json] [--locale=en]',
+    help_review_status:
+      'aioson review:status [path] --feature=<slug> [--json] [--locale=en]',
     help_parallel_init:
       'aioson parallel:init [path] [--workers=2..6] [--force] [--dry-run] [--json] [--locale=en]',
     help_parallel_doctor:
@@ -459,6 +473,8 @@ module.exports = {
     context_interaction_language_format_hint: 'Use values like en, en-US, pt-BR.',
     context_conversation_language_format: '`conversation_language` is not a valid BCP-47 tag',
     context_conversation_language_format_hint: 'Use values like en, en-US, pt-BR.',
+    context_language_mismatch: '`interaction_language` ({interaction}) differs from `conversation_language` ({conversation})',
+    context_language_mismatch_hint: 'Keep both fields synchronized, or remove the legacy `conversation_language` alias.',
     node_version: 'Node.js >= 18 (current: {version})',
     gateway_claude_pointer: 'CLAUDE gateway references shared AIOSON files',
     gateway_claude_pointer_hint:
@@ -701,7 +717,12 @@ module.exports = {
     dry_run_applied: '[dry-run] Interaction language would be synchronized: {locale}',
     copied_count: 'Files copied: {count}',
     missing_count: 'Missing locale files: {count}',
-    copy_line: '  File: {source} -> {target}'
+    copy_line: '  File: {source} -> {target}',
+    context_updated: 'project.context.md language fields synchronized: {locale}',
+    context_would_update: '[dry-run] project.context.md language fields would be synchronized: {locale}',
+    context_unchanged: 'project.context.md language fields already synchronized: {locale}',
+    context_missing: 'project.context.md not found; language preference was not persisted.',
+    context_invalid: 'project.context.md has invalid frontmatter; language preference was not changed.'
   },
   smoke: {
     start: 'Running smoke test in: {projectDir}',

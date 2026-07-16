@@ -121,6 +121,41 @@ test('workflow:status --suggest recommends completion when the handoff contract 
   assert.deepEqual(result.pendingGates, []);
 });
 
+test('workflow:status does not recommend completion while context evidence is missing', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  await writeFileEnsured(path.join(dir, '.aioson/context/project-pulse.md'), '# Pulse\n');
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify({
+      version: 1,
+      mode: 'project',
+      classification: 'SMALL',
+      sequence: ['product', 'analyst', 'architect', 'dev', 'qa'],
+      current: 'dev',
+      next: 'qa',
+      completed: ['product', 'analyst', 'architect'],
+      skipped: [],
+      featureSlug: null,
+      detour: null,
+      updatedAt: new Date().toISOString()
+    }, null, 2)
+  );
+
+  const result = await runWorkflowStatus({
+    args: [dir],
+    options: { tool: 'codex', suggest: true },
+    logger: createQuietLogger(),
+    t: (key) => key
+  });
+
+  assert.equal(result.contractCheck.ok, true, 'recommended context files remain soft contract warnings');
+  assert.equal(result.suggestion.action, 'continue_stage');
+  assert.equal(result.suggestion.agent, 'dev');
+  assert.match(result.suggestion.reason, /completion evidence is still incomplete/);
+  assert.ok(result.suggestion.details.some((item) => item.includes('dev-state.md')));
+});
+
 test('workflow:status reports feature-scoped design-doc and readiness artifacts', async () => {
   const dir = await makeTempDir();
   await seedFeatureWorkflow(dir, { gatePlanApproved: true });

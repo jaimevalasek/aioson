@@ -23,7 +23,7 @@ A mensagem de commit é sempre em inglês (padrão técnico universal). A comuni
 ## Quando NÃO invocar
 
 - Você ainda não terminou a implementação — commite só quando a fatia está pronta.
-- Quer fazer `git add .` de tudo sem revisar — o @committer vai bloquear isso.
+- Quer incluir arquivos que o guard classificou como secretos ou artefatos locais sem revisar a exclusão.
 
 ## Diálogo típico
 
@@ -73,6 +73,8 @@ Você > [Enter]
 4. `.aioson/git-guard.json` — política de arquivos bloqueados do projeto.
 5. `.aioson/context/project-pulse.md` e plano relevante — para enriquecer a mensagem com contexto.
 
+Se você disser “adicione/commite tudo”, o agente usa a lista atual do `git status` como escopo explícito, remove somente os paths realmente bloqueados e executa `git add --` com a lista concreta. Ele nunca converte esse pedido em `git add .` ou `git add -A`, e não rejeita um teste apenas por conter palavras como `token` ou `key`.
+
 ## Comandos CLI relacionados
 
 ```bash
@@ -82,12 +84,17 @@ npx @jaimevalasek/aioson commit:prepare .
 # Preparar em modo headless (automação/agent)
 npx @jaimevalasek/aioson commit:prepare . --agent-safe --staged-only --mode=headless
 
+# Aceitar warnings já revisados, sem liberar erros de secrets
+npx @jaimevalasek/aioson commit:prepare . --staged-only --mode=trusted
+
 # Verificar arquivos staged
 npx @jaimevalasek/aioson git:guard . --json
 
 # Instalar pre-commit hook (bloqueia commits manuais inseguros)
 npx @jaimevalasek/aioson git:guard . --install-hook
 ```
+
+Os modos `guarded` e `headless` tratam warnings como bloqueio. `trusted` aceita apenas warnings e os registra em `commit-prep.json`; erros de alta confiança continuam bloqueando. Um preparo `trusted` não é reutilizado automaticamente por uma execução posterior em `headless`.
 
 ## Handoff típico
 

@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "feature": "review-intelligence",
+  "run_id": "d4d8b0bb-55d8-4de4-b360-8ebf7f04f65e",
+  "attempt_id": "e9486a5c-f696-4276-b33c-717951dc14c9",
+  "agent": "qa",
+  "host": "codex",
+  "model_requested": "configured-default",
+  "model_resolved": "configured-default",
+  "model_resolution_strategy": "configured_default",
+  "reasoning_effort": null,
+  "manifest_digest": "e5a71456d383222f550949a4b2cfe8a04134ee10f56efdf65b214d98fade409f",
+  "writable_roots": [],
+  "started_at": "2026-07-15T17:27:00.8330125-03:00",
+  "finished_at": "2026-07-15T17:32:00.8330125-03:00",
+  "verdict": "PASS",
+  "findings": [],
+  "evidence": [
+    {
+      "type": "command",
+      "command": "node --test tests/review-intelligence.test.js tests/review-intelligence-cli.test.js tests/i18n-cli.test.js",
+      "exit_code": 0,
+      "result": "26 tests passed; 0 failed"
+    },
+    {
+      "type": "command",
+      "command": "node --test tests/briefing-cli.test.js tests/briefing-refiner.test.js tests/verify-implementation.test.js tests/artifact-validate.test.js",
+      "exit_code": 0,
+      "result": "67 tests passed; 0 failed"
+    },
+    {
+      "type": "command",
+      "command": "node scripts/check-js.js",
+      "exit_code": 0,
+      "result": "JavaScript checks passed"
+    },
+    {
+      "type": "inspection",
+      "location": "src/review-intelligence/engine.js:226",
+      "result": "prepare, check, and status implement deterministic bindings, artifact/authority staleness, immutable content-addressed promotion, current-report selection, separate assurance axes, and exit codes 0/1/2; invalid or stale candidates reach no canonical write, while valid action-required reports are promoted"
+    },
+    {
+      "type": "inspection",
+      "location": "src/commands/review-intelligence.js:26",
+      "result": "the three additive runners preserve engine exit codes and return stable exit-2 failure objects"
+    },
+    {
+      "type": "inspection",
+      "location": "src/cli.js:58",
+      "result": "Phase 2 integration is limited to one import, six JSON command/alias entries, three help lines, and three dispatch branches; generic JSON emission remains a single document and legacy dispatch behavior is unchanged"
+    },
+    {
+      "type": "inspection",
+      "location": "src/i18n/messages/{en,pt-BR,es,fr}.js",
+      "result": "all four locales expose the three canonical review command signatures with --json"
+    },
+    {
+      "type": "inspection",
+      "location": "tests/review-intelligence-cli.test.js:108",
+      "result": "scoped scenarios cover idempotent prepare, current/stale status, promotion and non-promotion, action states, empty non-gating status, aliases, one-document JSON, and process exit codes"
+    },
+    {
+      "type": "inspection",
+      "location": ".aioson/context/implementation-plan-review-intelligence.md:74",
+      "result": "implementation conforms to the approved Phase 2 requirements, design, and done criteria"
+    },
+    {
+      "type": "probe",
+      "command": "node bin/aioson.js review:prepare C:\\tmp\\review-intelligence-root-does-not-exist-7f3d2b --agent=architect --feature=review-intelligence --json",
+      "exit_code": 2,
+      "result": "invalid root returned one parseable JSON document with reason project_root_missing"
+    }
+  ]
+}

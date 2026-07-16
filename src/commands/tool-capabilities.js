@@ -28,8 +28,10 @@ async function runToolCapabilities({ args: _args, options = {}, logger, t: _t })
   }
 
   if (options.json) {
-    logger.log(JSON.stringify(payload, null, 2));
-    return { ok: true, payload };
+    // The CLI owns JSON serialization. Return the historical bare payload so
+    // external clients keep the same top-level `tools` / `schema_version`
+    // contract without duplicate or mixed output.
+    return payload;
   }
 
   // Human-readable fallback

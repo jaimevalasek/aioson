@@ -1,14 +1,12 @@
 {
   "version": 1,
-  "description": "Project-specific overrides for aioson git:guard. allowPaths suppress both path-based and content-based checks for listed paths.",
+  "description": "Project-specific overrides for aioson git:guard. allowPaths affects path rules only; contentAllowPaths is a legacy whole-file bypass; prefer scoped contentAllowRules with an audit reason.",
   "allowPaths": [],
   "contentAllowPaths": [
-    "src/i18n/**",
     "src/parser.js",
     "src/lib/git-commit-guard.js",
     "src/commands/context-health.js",
     "src/commands/context-trim.js",
-    "tests/**",
     "src/commands/live.js",
     ".aioson/plans/secure-by-default/corrections-2026-04-28.md",
     ".aioson/context/security-findings-project.json",
@@ -21,6 +19,7 @@
     "template/.aioson/skills/static/static-html-patterns.md",
     "src/context-search.js"
   ],
+  "contentAllowRules": [],
   "blockPaths": [
     "done/**",
     "references/**",

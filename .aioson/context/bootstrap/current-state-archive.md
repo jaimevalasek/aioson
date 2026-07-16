@@ -1,6 +1,6 @@
 ---
 generated_by: memory-trim
-updated_at: "2026-07-11"
+updated_at: "2026-07-16"
 ---
 
 # Current State — Archive
@@ -9,6 +9,9 @@ updated_at: "2026-07-11"
 > Searchable (`memory:search` / grep); never loaded at agent activation. Append-only — never deleted.
 
 ## Archived capabilities
+
+- [feat-cli-add-feature-export-workflow · 2026-06-08] `feat(cli): add feature export workflow` adds `feature:export` plus its docs, template dossier, and regression coverage, and broadens workflow inference/commit prep/runtime helpers around the new export path.
+- [feature-export · 2026-06-08] `aioson feature:export . --feature={slug}` copies all of a feature's artefacts (root `*-{slug}.*`, dossier/plans/briefings dirs, and `done/{slug}`) into a clean `--out` dir non-destructively, with `--flatten`, `--no-index`, `--dry-run`, `--json`; reuses `feature-archive.js`'s slug-collision-safe enumeration via the new exported `collectFeatureArtifacts` helper. Turns AIOSON output into a portable deliverable.
 
 - [briefing-refiner · 2026-06-08] feat(briefing): add briefing refiner workflow.
 - [briefing-refiner · 2026-06-08] Briefing-refiner file operations are path-traversal hardened: `src/lib/briefing-refiner/briefing-paths.js` (`assertSafeSlug` + `resolveBriefingPath`) validates the slug and asserts containment before any read/write, plus duplicate-section and registry-injection guards — fixes @pentester SF-01..SF-06 (SF-05 deferred to @qa).

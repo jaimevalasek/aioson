@@ -1,14 +1,19 @@
 ---
-updated_at: "2026-06-24T18:58:58-03:00"
-generated_at: "2026-07-11T21:50:00-03:00"
-source: "Living Memory reflection — fechamento de loop-guardrails (QA re-verificacao PASS, Gate D aprovado, feature done) — @scope-check 2026-06-10"
+updated_at: "2026-07-16T01:35:00-03:00"
+generated_at: "2026-07-16T01:35:00-03:00"
+source: "Living Memory reflection — contextual commit guard QA recheck — @qa 2026-07-16"
 ---
 
 # Current State
 
 ## What the system already has
 
+- [hygiene-remediation · 2026-07-16] Operational hygiene now has an explicit Markdown retention registry for historical project evidence, while `hygiene:scan` remains actionable-only. Two done features were archived with the canonical command, 208 verified Neural Chain impact items were closed through the native lifecycle, and commit-guard docs now cover indexed policy provenance plus headless-only agent-safe execution. Verification: 23 focused tests, lint, full suite 3,816 pass / 0 fail / 1 skip, hygiene scan clean.
 
+- [contextual-commit-guard · 2026-07-16] `git:guard` now classifies staged secrets with path and fixture evidence: localization sentences and explicitly synthetic test credentials are auditable suppressions, while realistic provider tokens and runtime passphrases remain blocking. `contentAllowRules` replaces new whole-file bypasses with path + detector-rule exceptions; `commit:prepare` implements guarded/headless/trusted warning semantics without allowing high-confidence errors; ordinary project `media/` and `output/` paths are no longer mistaken for AIOSON session artifacts. Verification: focused 112/112, lint pass, full suite 3,779 pass / 0 fail / 1 skip, workflow technical gate PASS.
+- [contextual-commit-guard · 2026-07-16] QA correction hardened self-hosting fixture detection: obvious synthetic values pass only in test/fixture paths, a fixture-looking identifier such as `FAKE_*` is never sufficient by itself, realistic provider tokens and random generic values remain blocking, template interpolation is treated as non-literal, and deliberate detector fixtures use auditable sentinels. A temporary-index proof stages the detector with its complete 17-file correction set at 0 errors/0 warnings while preserving the user's real index; focused 124/124, lint pass, full suite 3,812 pass / 0 fail / 1 skip.
+- [review-intelligence · 2026-07-16] Eight solution-shaping and assurance agents now use a bounded, role-aware review skill with evidence-first self-questioning, future-state gap checks, owner-routed recommendations, immutable review packets/reports, and additive `review:prepare`/`review:check`/`review:status` CLI commands. The security-remediation cycle hardened prompt-injection boundaries and report/storage integrity; Gate D passed with harness 10/10, 24/24 ACs, full suite 3,767 pass / 0 fail / 1 skip, and four independent phase reviews. The feature is closed and archived under `.aioson/context/done/review-intelligence/`.
+- [briefing-cli-discoverability · 2026-07-15] The global CLI help now exposes the complete briefing lifecycle (`briefing:approve`, `briefing:unapprove`, `briefing:review`, and `briefing:apply-feedback`) in en, pt-BR, es, and fr; regression coverage checks the localized inventory and executes `briefing:approve` through the real binary against a temporary registry. Verification: focused 35/35, lint pass, full suite 3737 pass/1 skip.
 - [agent-execution-model-resolution · 2026-07-11] Agent Execution now resolves Codex model identifiers through exact slug, normalized display name, unique alias and conservative version-safe fuzzy matching; per-agent reasoning_effort remains separate, requested/resolved/strategy are audited across state/report/telemetry, and ambiguity blocks before spawn. Verification: 18/18 ACs, harness 12/12, full suite 3730 pass/1 skip.
 - [operator-memory · 2026-07-11] `op:capture` now promotes explicit authorization/exclusion/correction signals on first detection while confirmations remain 2x; re-detecting an existing decision reinforces it idempotently without duplicate FTS rows, titles, or trigger quotes. Verification: operator-memory capture/decay regression tests.
 - [adversarial-verification-loop · 2026-06-24] `fix(verification): harden audit gates` keeps prototype/manifest references inside the project root before reading, makes strict verification fail partial prototype AC coverage, routes Sheldon-owned scope findings to `@sheldon`, and keeps failed runner stderr out of consolidated reports.
@@ -32,8 +37,6 @@ source: "Living Memory reflection — fechamento de loop-guardrails (QA re-verif
 - [workflow-autopilot-handoff · 2026-06-09] Autopilot handoff (opt-in `auto_handoff: true` in project.context.md frontmatter): feature-workflow agents @analyst → @scope-check/@architect/@discovery-design-doc auto-invoke the next agent's skill (deterministic routing from workflow state) instead of stopping for manual activation, breaking the chain at the @dev handoff or on any stop condition (verdict not clean, gate/readiness blocked, context ≥ threshold). Protocol: `.aioson/docs/autopilot-handoff.md`; carve-outs in CLAUDE.md/AGENTS.md hard constraints; `buildAgentPrompt` autoHandoff option wired from workflow-next. Research: researchs/auto-handoff-pipeline-2026.
 - [ci-timeout-fix · 2026-06-09] `executeInSandbox` starts POSIX subprocesses in their own process group and kills the group on timeout, preventing shell grandchildren from surviving sandbox timeouts and pinning GitHub Actions until the 6h job cap.
 - [release · 2026-06-08] chore(release): prepare v1.21.8
-- [feat-cli-add-feature-export-workflow · 2026-06-08] `feat(cli): add feature export workflow` adds `feature:export` plus its docs, template dossier, and regression coverage, and broadens workflow inference/commit prep/runtime helpers around the new export path.
-- [feature-export · 2026-06-08] `aioson feature:export . --feature={slug}` copies all of a feature's artefacts (root `*-{slug}.*`, dossier/plans/briefings dirs, and `done/{slug}`) into a clean `--out` dir non-destructively, with `--flatten`, `--no-index`, `--dry-run`, `--json`; reuses `feature-archive.js`'s slug-collision-safe enumeration via the new exported `collectFeatureArtifacts` helper. Turns AIOSON output into a portable deliverable.
 
 ## What the system does not have yet
 

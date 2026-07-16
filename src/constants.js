@@ -80,6 +80,12 @@ const MANAGED_FILES = [
   '.aioson/skills/process/prompt-sharpener/SKILL.md',
   '.aioson/skills/process/prompt-sharpener/references/prompt-diagnostics.md',
   '.aioson/skills/process/prompt-sharpener/agents/openai.yaml',
+  '.aioson/skills/process/review-intelligence/SKILL.md',
+  '.aioson/skills/process/review-intelligence/agents/openai.yaml',
+  '.aioson/skills/process/review-intelligence/references/framing.md',
+  '.aioson/skills/process/review-intelligence/references/specification.md',
+  '.aioson/skills/process/review-intelligence/references/architecture.md',
+  '.aioson/skills/process/review-intelligence/references/delivery-assurance.md',
   '.aioson/skills/process/briefing-expansion-scout/SKILL.md',
   '.aioson/skills/process/product-scope-expansion/SKILL.md',
   '.aioson/skills/process/sheldon-expansion-audit/SKILL.md',
@@ -197,6 +203,7 @@ const MANAGED_FILES = [
   '.aioson/schemas/squad-blueprint.schema.json',
   '.aioson/schemas/readiness.schema.json',
   '.aioson/schemas/content-blueprint.schema.json',
+  '.aioson/schemas/review-intelligence.schema.json',
   '.aioson/schemas/genome.schema.json',
   '.aioson/schemas/genome-meta.schema.json',
   '.aioson/tasks/squad-design.md',
@@ -237,7 +244,6 @@ const CONTEXT_REQUIRED_FIELDS = [
   'framework',
   'framework_installed',
   'classification',
-  'conversation_language',
   'aioson_version'
 ];
 

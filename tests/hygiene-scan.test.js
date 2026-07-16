@@ -197,6 +197,77 @@ test('hygiene:scan reports non-review slug artifacts with no features.md owner',
   }
 });
 
+test('hygiene:scan excludes explicitly retained historical artifacts', async () => {
+  const dir = await makeProject();
+  try {
+    await write(dir, '.aioson/context/features.md', '| slug | status | started | completed |\n');
+    await write(dir, '.aioson/context/hygiene-retention.md', [
+      '# Hygiene Retention',
+      '',
+      '| path | disposition | reason | reviewed |',
+      '|------|-------------|--------|----------|',
+      '| .aioson/context/qa-report-context-intelligence.md | retained | Historical project QA evidence | 2026-07-16 |',
+      '| .aioson/context/test-plan-workflow-execute-dry-run-classification.md | retained | Historical simple-plan evidence | 2026-07-16 |',
+      ''
+    ].join('\n'));
+    await write(dir, '.aioson/context/qa-report-context-intelligence.md', [
+      '---',
+      'verdict: PASS',
+      '---',
+      '',
+      '# QA Report',
+      ''
+    ].join('\n'));
+    await write(dir, '.aioson/context/test-plan-workflow-execute-dry-run-classification.md', '# Test Plan\n');
+
+    const result = await runHygieneScan({
+      args: [dir],
+      options: { json: true },
+      logger: silentLogger()
+    });
+
+    assert.equal(result.buckets.on_demand_review_artifacts.length, 0);
+    assert.equal(result.buckets.orphan_slug_artifacts.length, 0);
+  } finally {
+    await fs.rm(dir, RM);
+  }
+});
+
+test('hygiene:scan never hides an open blocking security finding through retention', async () => {
+  const dir = await makeProject();
+  try {
+    await write(dir, '.aioson/context/features.md', '| slug | status | started | completed |\n');
+    await write(dir, '.aioson/context/hygiene-retention.md', [
+      '# Hygiene Retention',
+      '',
+      '| path | disposition | reason | reviewed |',
+      '|------|-------------|--------|----------|',
+      '| .aioson/context/security-findings-critical-history.json | retained | Must not hide an open finding | 2026-07-16 |',
+      ''
+    ].join('\n'));
+    await write(dir, '.aioson/context/security-findings-critical-history.json', JSON.stringify({
+      findings: [{
+        id: 'SF-CRITICAL-01',
+        severity: 'high',
+        recommended_gate_status: 'block',
+        status: 'open'
+      }]
+    }, null, 2));
+
+    const result = await runHygieneScan({
+      args: [dir],
+      options: { json: true },
+      logger: silentLogger()
+    });
+
+    assert.equal(result.buckets.on_demand_review_artifacts.length, 1);
+    assert.equal(result.buckets.on_demand_review_artifacts[0].status, 'blocking');
+    assert.deepEqual(result.buckets.on_demand_review_artifacts[0].blockers, ['SF-CRITICAL-01']);
+  } finally {
+    await fs.rm(dir, RM);
+  }
+});
+
 test('hygiene:scan marks malformed security findings as invalid, not resolved', async () => {
   const dir = await makeProject();
   try {

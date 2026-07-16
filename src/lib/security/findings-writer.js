@@ -49,8 +49,18 @@ function gateStatusFromSeverity(severity) {
   return 'note';
 }
 
+function findingKey(finding) {
+  if (typeof finding.finding_id === 'string' && finding.finding_id) return `finding_id:${finding.finding_id}`;
+  if (typeof finding.id === 'string' && finding.id) return `id:${finding.id}`;
+  return `legacy:${buildFindingId({
+    source: finding.source || 'unknown',
+    control_id: finding.control_id || 'finding',
+    scope: finding.scope || finding.title || ''
+  })}`;
+}
+
 function sortFindings(findings) {
-  return [...findings].sort((a, b) => a.finding_id.localeCompare(b.finding_id));
+  return [...findings].sort((a, b) => findingKey(a).localeCompare(findingKey(b)));
 }
 
 function summarize(findings) {
@@ -85,28 +95,35 @@ async function readArtifact(artifactPath) {
   }
 }
 
-function mergeFindings(existing, incoming) {
+function mergeFindings(existing, incoming, { source } = {}) {
   const byId = new Map();
   for (const f of existing) {
-    byId.set(f.finding_id, f);
+    byId.set(findingKey(f), f);
   }
   const seenIncoming = new Set();
+  const refreshedSources = new Set([...incoming.map((f) => f.source), source].filter(Boolean));
   for (const f of incoming) {
-    seenIncoming.add(f.finding_id);
-    const prior = byId.get(f.finding_id);
+    const key = findingKey(f);
+    seenIncoming.add(key);
+    const prior = byId.get(key);
     if (
       prior &&
       PRESERVED_STATUSES_ON_REDETECT.has(prior.status) &&
       (f.status === 'open' || f.status === 'needs_validation')
     ) {
-      byId.set(f.finding_id, { ...f, status: prior.status });
+      byId.set(key, { ...f, status: prior.status });
       continue;
     }
-    byId.set(f.finding_id, { ...f });
+    byId.set(key, { ...f });
   }
   for (const f of existing) {
-    if (!seenIncoming.has(f.finding_id) && (f.status === 'open' || f.status === 'needs_validation')) {
-      byId.set(f.finding_id, { ...f, status: 'fixed' });
+    const key = findingKey(f);
+    if (
+      !seenIncoming.has(key) &&
+      refreshedSources.has(f.source) &&
+      (f.status === 'open' || f.status === 'needs_validation')
+    ) {
+      byId.set(key, { ...f, status: 'fixed' });
     }
   }
   return sortFindings([...byId.values()]);
@@ -126,7 +143,7 @@ async function writeFindings({
 
   const existing = await readArtifact(artifactPath);
   const previous = existing && Array.isArray(existing.findings) ? existing.findings : [];
-  const merged = mergeFindings(previous, normalized);
+  const merged = mergeFindings(previous, normalized, { source });
 
   if (merged.length > MAX_FINDINGS) {
     return {
@@ -166,6 +183,7 @@ module.exports = {
   buildFindingId,
   hash6,
   gateStatusFromSeverity,
+  findingKey,
   normalizeFinding,
   summarize,
   sortFindings,

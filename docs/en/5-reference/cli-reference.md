@@ -901,3 +901,74 @@ aioson forge:compile . --feature=checkout --json
 
 See [@forge-run](../4-agents/forge-run.md) and [Executable verification](./executable-verification.md).
 
+---
+
+## agent:execution
+
+Feature-scoped sub-agent execution with a manifest, safe model resolution, bound reports, and resumable telemetry.
+
+```bash
+aioson agent:execution:init . --feature=checkout --host=codex
+aioson agent:execution:validate . --feature=checkout --json
+aioson agent:execution:show . --feature=checkout --json
+aioson agent:execution:dispatch . --feature=checkout --agent=qa
+aioson agent:execution:resume . --feature=checkout
+aioson agent:execution:status . --feature=checkout --json
+aioson agent:execution:events . --feature=checkout --run=<run_id> --json
+```
+
+The same resolver is used by `verification:plan`. Human-readable values such as `GPT 5.6 Terra` and short typos resolve to a local Codex slug only when the match is unique and numeric tokens agree. Ambiguous models, incompatible `reasoning_effort`, invalid catalogs, and unsafe paths fail closed.
+
+See [Agent execution and model resolution](./agent-execution.md).
+
+---
+
+## Operator memory commands
+
+Identity-scoped decision memory is optional and local to `~/.aioson/operators/`.
+
+```bash
+aioson op:identity show --json
+aioson op:capture --signal=authorization --quote="..." --proposal="..." --source-agent=dev
+aioson op:list --include-archived
+aioson op:show <slug> --json
+aioson op:reinforce <slug> --json
+aioson op:forget <slug>
+```
+
+`authorization`, `exclusion`, and `correction` promote on the first detection; `confirmation` requires two. Re-detection of an existing decision reinforces it in place and does not duplicate FTS rows or reset `promoted_at`. Enable automatic loading with `AIOSON_OPERATOR_MEMORY=true`.
+
+See [Operator memory](./operator-memory.md).
+
+---
+
+## Review intelligence commands
+
+These additive commands bind an agent review to an exact feature artifact and its current authorities. They provide auditability for the role-aware two-pass review; they do not run models, tests, web research, workflow transitions, or gates.
+
+```bash
+aioson review:prepare [path] --agent=<agent> --feature=<slug> [--artifact=<path>] [--json]
+aioson review:check   [path] --agent=<agent> --feature=<slug> --report=<path> [--json]
+aioson review:status  [path] --feature=<slug> [--json]
+```
+
+`review:prepare` selects the approved profile for the agent, hashes the artifact and known authorities, publishes an immutable `review-packet/v1`, and returns `draft_path`, a bound report template, and the exact next command. Omitting `--artifact` uses only the agent's declared default; a missing or ambiguous default fails without creating a packet. Repeating prepare with unchanged bytes returns the same packet ID and path.
+
+The agent completes at most two evidence passes and writes a candidate report. `review:check` validates schema, paths, limits, packet bindings, current hashes, evidence, and state coherence before promoting the report immutably. Structurally valid actionable reports are retained; malformed, mismatched, unsafe, or stale reports are not promoted.
+
+`review:status` reports the latest current result per agent. An empty review store is intentionally non-gating. Delivery assurance exposes five separate axes — specification fidelity, acceptance coverage, code health, runtime truth, and residual risk — with no aggregate score.
+
+| Exit | Meaning |
+|---|---|
+| `0` | Operation succeeded and the current review is `pass`; empty status also returns `0` |
+| `1` | A valid current report was stored with `blocked`, `decision_required`, or `unverified` |
+| `2` | Invalid invocation/report, unsafe path, missing binding, limit violation, or stale artifact/authority |
+
+Exit `1` is actionable evidence, not a schema failure. Exit `2` must not be ignored: correct the report or run prepare again after an artifact/authority change. Review results inform each agent's existing approval or QA contract but never change `phase_gates`, workflow state, or handoff state automatically. On older installations without the skill or commands, the participating agents use the same bounded review manually and preserve their previous workflow behavior.
+
+## Commit guard boundaries
+
+For a staged scan, `git:guard` reads `.aioson/git-guard.json` from the Git index. An unstaged or untracked allow rule therefore cannot authorize staged content. New exceptions should use path-and-rule-scoped `contentAllowRules`; whole-file `contentAllowPaths` remains legacy compatibility only.
+
+`commit:prepare --agent-safe` accepts only `--mode=headless`. The interactive `guarded` and user-reviewed `trusted` modes are rejected in agent-safe execution; high-confidence guard errors always remain blocking.
+

@@ -119,6 +119,21 @@ test('structural contract §2: every agent declares ## Required input (except al
   assert.deepEqual(missing, [], `agents missing ## Required input:\n${missing.join('\n')}`);
 });
 
+test('structural contract §2: every agent declares ## Hard constraints (except alias)', () => {
+  const EXEMPT = new Set(['pair.md']);
+  const missing = [];
+
+  for (const file of agentFiles()) {
+    if (EXEMPT.has(file)) continue;
+    const content = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8');
+    if (!/^## Hard constraints\s*$/m.test(content)) {
+      missing.push(file);
+    }
+  }
+
+  assert.deepEqual(missing, [], `agents missing ## Hard constraints:\n${missing.join('\n')}`);
+});
+
 // §1 — every agent declares the LANGUAGE BOUNDARY rule. Most use the canonical
 // line-3 blockquote; a few use a `## Language boundary` section or sit after an
 // `⚡ ACTIVATED` banner. Placement varies; the declaration must always be present.

@@ -65,18 +65,31 @@ aioson git:guard . --uninstall-hook
 aioson git:guard . --allow-warnings
 ```
 
-A política do projeto fica em `.aioson/git-guard.json`:
+A política do projeto fica em `.aioson/git-guard.json`. Para um stage, o guard usa a versão presente no Git index; uma regra unstaged ou untracked nunca pode liberar conteúdo já staged:
 
 ```json
 {
   "version": 1,
   "allowPaths": [],
   "contentAllowPaths": [],
+  "contentAllowRules": [
+    {
+      "path": "tests/provider.fixture.js",
+      "rules": ["github_token"],
+      "reason": "fixture sintética revisada para testar o redactor"
+    }
+  ],
   "blockPaths": ["node_modules/**", "aioson-logs/**"],
   "allowExtensions": [],
   "blockExtensions": []
 }
 ```
+
+Arquivos de teste, mocks e fixtures continuam sendo inspecionados. O detector ignora mensagens naturais — por exemplo, uma tradução como `login_no_token: "No token provided"` — e suprime valores claramente sintéticos quando o nome (`FAKE_TOKEN`, `MOCK_API_KEY`) ou o marcador `aioson-secret: fixture` deixa a intenção explícita. Um segredo com aparência real dentro de `tests/` continua bloqueando o commit.
+
+Use `contentAllowRules` somente depois de revisar a linha: a exceção vale para o par caminho + regra e exige justificativa. `contentAllowPaths` permanece por compatibilidade, mas desliga toda a inspeção de conteúdo do arquivo e não deve receber novas entradas.
+
+No `commit:prepare`, `--agent-safe` exige `--mode=headless`. Os modos `guarded` e `trusted` são opções interativas/humanas e são rejeitados nesse modo automatizado.
 
 ## Como os agentes consomem o baseline
 

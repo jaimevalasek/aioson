@@ -372,6 +372,10 @@ Generate `.aioson/context/discovery.md` with the following sections:
 12. **Risks identified** — what could become a problem during development
 13. **Out of scope** — explicitly excluded from the MVP
 
+## Review intelligence checkpoint
+
+For concrete `{slug}`, after writing `requirements-{slug}.md` and before Gate A/handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/specification.md` when available. Run `aioson review:prepare . --agent=analyst --feature={slug} --artifact=.aioson/context/requirements-{slug}.md --json`; complete at most two passes from its template, write `draft_path`, then run `aioson review:check . --agent=analyst --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs Gate A, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve Gate A/dev-state/handoff; missing review infrastructure is non-gating.
+
 ## Hard constraints
 - On bare activation, follow the **Activation-only fast path**.
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.

@@ -1,0 +1,29 @@
+{
+  "feature": "review-intelligence",
+  "phase": 4,
+  "status": "in_progress",
+  "completed_steps": [
+    "phase_1_profiles_contracts_secure_storage",
+    "phase_1_focused_tests_10_pass",
+    "phase_1_independent_qa_pass",
+    "phase_2_engine_cli_surface",
+    "phase_2_focused_and_regression_tests_pass",
+    "phase_2_independent_qa_pass",
+    "phase_3_skill_schema_agent_hooks",
+    "phase_3_distribution_and_contract_tests_pass",
+    "phase_3_independent_qa_pass",
+    "phase_4_bilingual_cli_documentation",
+    "phase_4_spec_artifact_ac_and_ledger_conformance_pass",
+    "phase_4_harness_10_of_10_and_full_regression_pass",
+    "phase_4_code_audit_zero_high_and_diff_check_pass",
+    "phase_4_independent_qa_pass",
+    "phase_4_fresh_harness_validator_pass"
+  ],
+  "last_error": null,
+  "session_count": 1,
+  "last_updated": "2026-07-15T21:27:33.235Z",
+  "circuit_state": "CLOSED",
+  "iterations": 5,
+  "consecutive_errors": 0,
+  "ready_for_done_gate": true
+}

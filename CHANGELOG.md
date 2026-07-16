@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.37.2] - 2026-07-16
+
+### Added
+- **Review Intelligence** — a deterministic review engine, CLI command, schema, role-aware process skill, agent hooks, localized help, and immutable review packets/reports. Reviews now challenge feature artifacts before existing gates without adding a new workflow stage.
+- **Agent-execution and operator-memory coverage** — strengthened command contracts, model-resolution traces, anonymous-memory safety, archival controls, and their PT/EN documentation.
+
+### Changed
+- **Operational hygiene is lifecycle-aware.** Historical review and QA evidence can be retained through an explicit registry only when its outcome is safe; archived feature artifacts are moved out of active context and stale noise files are removed after their checks are resolved.
+- **Documentation and templates** now describe the hardened commit guard, headless agent-safe behavior, Review Intelligence, agent execution, and operator memory consistently across the shipped framework.
+
+### Fixed
+- **Commit and security safeguards** — staged-content detection, git-guard policy evaluation, and commit preparation now resist transient workspace state and unsafe secret-bearing paths more reliably.
+- **Hygiene retention cannot hide unresolved security findings.** Blocking security reports remain blocking even when a retention entry exists.
+
+### Validation
+- Full suite: 3,816 passing tests, zero failures, and one skipped test; JavaScript static checks and the hygiene scan are clean.
+
 ## [1.37.1] - 2026-07-11
 
 ### Added

@@ -117,6 +117,18 @@ function validateContextData(data) {
     }
   }
 
+  const hasInteractionLanguage = Object.prototype.hasOwnProperty.call(data, 'interaction_language');
+  const hasConversationLanguage = Object.prototype.hasOwnProperty.call(data, 'conversation_language');
+
+  if (!hasInteractionLanguage && !hasConversationLanguage) {
+    issues.push({
+      id: 'context:missing:interaction_language',
+      key: 'doctor.context_required_field',
+      params: { field: 'interaction_language (or legacy conversation_language)' },
+      hintKey: 'doctor.context_required_field_hint'
+    });
+  }
+
   if (
     Object.prototype.hasOwnProperty.call(data, 'framework_installed') &&
     typeof data.framework_installed !== 'boolean'
@@ -166,7 +178,7 @@ function validateContextData(data) {
   }
 
   if (
-    Object.prototype.hasOwnProperty.call(data, 'interaction_language') &&
+    hasInteractionLanguage &&
     !isValidLanguageTag(data.interaction_language)
   ) {
     issues.push({
@@ -178,7 +190,7 @@ function validateContextData(data) {
   }
 
   if (
-    Object.prototype.hasOwnProperty.call(data, 'conversation_language') &&
+    hasConversationLanguage &&
     !isValidLanguageTag(data.conversation_language)
   ) {
     issues.push({
@@ -186,6 +198,24 @@ function validateContextData(data) {
       key: 'doctor.context_conversation_language_format',
       params: {},
       hintKey: 'doctor.context_conversation_language_format_hint'
+    });
+  }
+
+  if (
+    hasInteractionLanguage &&
+    hasConversationLanguage &&
+    isValidLanguageTag(data.interaction_language) &&
+    isValidLanguageTag(data.conversation_language) &&
+    String(data.interaction_language).toLowerCase() !== String(data.conversation_language).toLowerCase()
+  ) {
+    issues.push({
+      id: 'context:language:mismatch',
+      key: 'doctor.context_language_mismatch',
+      params: {
+        interaction: data.interaction_language,
+        conversation: data.conversation_language
+      },
+      hintKey: 'doctor.context_language_mismatch_hint'
     });
   }
 

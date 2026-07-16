@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTranslator, normalizeLocale } = require('../src/i18n');
+const { canonicalLocaleTag, createTranslator, normalizeLocale } = require('../src/i18n');
 
 test('normalizeLocale falls back to en', () => {
   assert.equal(normalizeLocale('pt-BR'), 'pt-br');
@@ -42,6 +42,22 @@ test('translator resolves regional variants to es and fr dictionaries', () => {
   assert.equal(fr.locale, 'fr');
   assert.equal(fr.t('cli.usage'), 'Utilisation :');
   assert.equal(fr.t('cli.unknown_command', { command: 'x' }), 'Commande inconnue : x');
+});
+
+test('english fallback help keeps the requested locale in copyable commands', () => {
+  assert.equal(canonicalLocaleTag('pt-br'), 'pt-BR');
+
+  const cases = [
+    ['pt-BR', 'cli.help_scaffold_complete', '--locale=pt-BR'],
+    ['es', 'cli.help_runtime_init', '--locale=es'],
+    ['fr', 'cli.help_runtime_init', '--locale=fr']
+  ];
+
+  for (const [locale, key, expected] of cases) {
+    const line = createTranslator(locale).t(key);
+    assert.equal(line.includes(expected), true, `${key} should preserve ${locale}`);
+    assert.equal(line.includes('--locale=en'), false, `${key} should not switch back to English`);
+  }
 });
 
 test('translator exposes parse reason unknown fallback key per locale', () => {

@@ -1,0 +1,135 @@
+{
+  "ok": true,
+  "slug": "review-intelligence",
+  "checked_at": "2026-07-16T00:04:01.883Z",
+  "strict": false,
+  "criteria_total": 10,
+  "executable_total": 10,
+  "passed": 10,
+  "failed": 0,
+  "skipped_no_verification": 0,
+  "static_total": 0,
+  "static_passed": 0,
+  "static_failed": 0,
+  "strict_errors": [],
+  "integrity": {
+    "ok": true,
+    "is_runtime_feature": false,
+    "runtime_signals": [],
+    "errors": [],
+    "warnings": []
+  },
+  "checks": [
+    {
+      "id": "RI-C01",
+      "command": "node --test --test-name-pattern=\"skill|profile|hook\" tests/review-intelligence-skill.test.js",
+      "exitCode": 0,
+      "durationMs": 220,
+      "stdout": "✔ skill is concise, trigger-oriented and forbids hidden reasoning or aggregate scoring (19.4163ms)\n✔ skill metadata and four progressive references are distributed (4.0799ms)\n✔ distributed schema stays aligned with runtime versions, profiles, agents and bounds (3.7122ms)\n✔ profile registry points to the four packaged references (0.8552ms)\n✔ all eight hooks are bounded, profile-specific, additive and placed before existing handoffs (5.955ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 119.7139\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C02",
+      "command": "node --test --test-name-pattern=\"prepare\" tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 171,
+      "stdout": "✔ tests\\review-intelligence.test.js (88.2953ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 95.8867\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C03",
+      "command": "node --test --test-name-pattern=\"check|stale|atomic\" tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 256,
+      "stdout": "✔ immutable writes are atomic, idempotent and content-addressed paths stay canonical (52.4808ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 140.0335\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C04",
+      "command": "node --test --test-name-pattern=\"security|schema|reasoning\" tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 166,
+      "stdout": "✔ evidence contract requires canonical research cache paths and rejects normalized reasoning keys (2.5326ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 86.4953\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C05",
+      "command": "node --test --test-name-pattern=\"status|assurance\" tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 170,
+      "stdout": "✔ report status semantics require blockers and owned decisions and keep pass strict (2.9318ms)\n✔ report validators enforce bounded findings, evidence and separate assurance axes (7.4353ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 95.6699\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C06",
+      "command": "node --test tests/i18n-cli.test.js tests/agent-contracts.test.js tests/review-intelligence-skill.test.js",
+      "exitCode": 0,
+      "durationMs": 5221,
+      "stdout": "✔ template ships canonical base agent files for all managed agents (15.7172ms)\n✔ locale agent packs are no longer shipped in template or workspace (0.7833ms)\n✔ managed file list excludes locale agent packs (0.1565ms)\n✔ setup agent contract includes canonical language boundary and workflow gate (3.8624ms)\n✔ core workflow agents repair context inside the workflow (4.5966ms)\n✔ committer contract enforces guarded explicit staging (1.3093ms)\n✔ core agent contracts keep actionable sections in canonical prompts (4.2941ms)\n✔ living PRD flow preserves visual identity and design-skill gating (3.4995ms)\n✔ canonical prompts preserve recovered product and planning safeguards from legacy locale drift (7.5512ms)\n✔ product, sheldon, and dev kernels use deterministic on-demand docs and stay within size targets (2.1016ms)\n✔ product.md offers the run-mode choice on screen at kickoff (no hidden-flag reliance) (1.0116ms)\n✔ dev.md carries the run-mode token (late autopilot entry/override) (0.6237ms)\n✔ agents run context discovery before selective loading (16.7376ms)\n✔ briefing and product prompts prefer evidence-backed intake over shallow questions (1.4931ms)\n✔ briefing contract enforces activation-only fast path before context loading (0.6809ms)\n✔ product, sheldon, and dev on-demand docs are managed and preserve critical guidance (7.9744ms)\n✔ feature expansion prompts preserve operational surface completeness gates (3.6074ms)\n✔ briefing prompt drives horizontal solution exploration into a solution-options artifact (0.5424ms)\n✔ prototype-forge skill and briefing-refiner prototype mode are shipped and managed (1.1276ms)\n✔ prototype contract propagates the prototype across the agent chain (2.9524ms)\n✔ design-hybrid-forge ingests external DESIGN.md sources with provenance and anti-clone (2.7108ms)\n✔ AIOSON Play compatibility docs are shipped and managed (12.5097ms)\n✔ product contract enforces activation-only fast path before source and context loading (0.5684ms)\n✔ sheldon and analyst contracts enforce activation-only fast path before heavy loading (0.8795ms)\n✔ no template agent keeps the eager rules/docs loading section (10.2547ms)\n✔ mid-flow workflow agents carry an activation guard (2.3162ms)\n✔ template rules carry routing frontmatter so context:select can load them on demand (8.6298ms)\n✔ deyvin contract prioritizes memory and hard-gates oversized requests (1.4397ms)\n✔ simple plan lane requires implementation intelligence before coding (1.6531ms)\n✔ implementation verification loop is wired into dev, deyvin, scope-check, and qa prompts (1.7648ms)\n✔ gateway SDD guidance is on-demand and excludes deyvin activation-only recovery (1.113ms)\n✔ gateway memory + workflow-enforcement contracts stay in sync across harnesses (0.6557ms)\n✔ deyvin on-demand docs are managed and preserve continuity, runtime, and debugging safeguards (2.1713ms)\n✔ squad and genome contracts stay canonical and preserve squad package and genome binding rules (0.9833ms)\n✔ squad creation defaults to investigation and runs the genome pass (2.8972ms)\n✔ squad on-demand docs are shipped, managed, and preserve critical guidance (8.736ms)\n✔ copywriter discovers genomes via INDEX and honors operational sections (0.7289ms)\n✔ persona pipeline encodes the operational method, not just identity (1.271ms)\n✔ profiler agents ship canonical prompts with interaction-language guidance (0.8258ms)\n✔ packaged design skills are shipped and managed (10.2359ms)\n✔ agent definitions expose PRD dependencies for the living PRD flow (0.9471ms)\n✔ the 13 most-used agents carry the --help token and agent-help.md covers them all (3.814ms)\n✔ help output is localized with --locale=pt-BR (381.818ms)\n✔ help exposes briefing lifecycle commands in every supported locale (1436.9789ms)\n✔ help exposes review intelligence commands in every supported locale (1422.3768ms)\n✔ unknown command error is localized in pt-BR (360.525ms)\n✔ legacy dashboard command error is localized in pt-BR (346.2043ms)\n✔ env locale pt resolves to pt-BR dictionary (358.921ms)\n✔ regional locale es-MX resolves to es dictionary (365.7527ms)\n✔ regional locale fr_CA resolves to fr dictionary (356.6256ms)\n✔ skill is concise, trigger-oriented and forbids hidden reasoning or aggregate scoring (9.2865ms)\n✔ skill metadata and four progressive references are distributed (3.5501ms)\n✔ distributed schema stays aligned with runtime versions, profiles, agents and bounds (2.5649ms)\n✔ profile registry points to the four packaged references (0.7502ms)\n✔ all eight hooks are bounded, profile-specific, additive and placed before existing handoffs (3.8681ms)\n✔ template and workspace copies are byte-identical after sync (11.0119ms)\n✔ root instructions advertise progressive loading and compatible fallback (0.8999ms)\nℹ tests 57\nℹ suites 0\nℹ pass 57\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 5143.4215\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RI-C07",
+      "command": "node --test --test-name-pattern=\"scenario|research|fallback\" tests/review-intelligence-skill.test.js tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 191,
+      "stdout": "✔ root instructions advertise progressive loading and compatible fallback (7.3479ms)\n✔ evidence contract requires canonical research cache paths and rejects normalized reasoning keys (2.5449ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 114.4086\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "AC-RI-024",
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 280270,
+      "stdout": "\n> @jaimevalasek/aioson@1.37.1 test\n> node --test\n\n✔ src\\commands\\test-agents.js (813.8125ms)\n✔ src\\test-briefing.js (875.4863ms)\n✔ extractAcIds supports slugged and numeric AC ids (1.5182ms)\n✔ ac:test-audit requires --feature (15.4074ms)\n✔ ac:test-audit passes when no AC ids exist (8.3018ms)\n✔ ac:test-audit covers AC ids referenced by test files (6.9922ms)\n✔ ac:test-audit covers AC ids referenced by executable harness criteria (5.5759ms)\n✔ ac:test-audit does not let a longer AC id cover a shorter prefix id (substring collision) (20.2329ms)\n✔ ac:test-audit blocks when an AC has no test evidence (6.5023ms)\n✔ ac:test-audit --json emits report (5.0447ms)\n✔ AC-ALL-601: 5 simulated feature closures produce zero ok=false curation checks (inception self-test) (6229.2052ms)\n✔ AC-ALL-603: checkLearningLoopTemplateParity returns 0 issues against the live template/ (3.7626ms)\n✔ AC-ALL-603: parity helper reports missing config + autonomy + placeholders when the template is incomplete (28.5634ms)\n✔ AC-ALL-605: src/doctor.js wires the 3 curation check functions (0.6491ms)\n✔ AC-ALL-605: src/commands/feature-close.js wires the distillation hook + reads classification pre-archive (0.4707ms)\n✔ AC-ALL-605: src/runtime-store.js exports appendContextLoadEvent + wires learning-loop migration (0.9106ms)\n✔ AC-ALL-605: all Phase 1-5 source modules exist on disk (1.0453ms)\n✔ AC-ALL-605: template/.aioson/agents/ chain agents are byte-identical with .aioson/agents/ for active-learning-loop scope (52.6787ms)\n▶ agent-audit.js — scoped modes\n  ✔ scans only runtime surfaces with --runtime-only (48.3705ms)\n  ✔ scans only template surfaces with --template-only (13.5624ms)\n  ✔ defaults to inception-compatible scan and includes mode metadata (24.5463ms)\n  ✔ rejects conflicting scoped modes (14.0732ms)\n✔ agent-audit.js — scoped modes (102.6104ms)\n▶ Phase 3.1 — feature:close dossier guarantee\n  ✔ synthesizes dossier from existing PRD when missing on close (757.8084ms)\n  ✔ writes minimal-fallback dossier when no source artifacts exist (EBOOTSTRAPEMPTY) (790.3277ms)\n  ✔ is idempotent — does not overwrite existing dossier (678.6044ms)\n  ✔ runs the guarantee on FAIL verdict (verdict-agnostic) (119.2383ms)\n✔ Phase 3.1 — feature:close dossier guarantee (2348.9882ms)\n▶ Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)\n  ✔ auto-inits dossier for SMALL/MEDIUM features when activating a stage (94.6194ms)\n  ✔ skips MICRO features (auto-init opt-in only via dossier:init manual) (7.5167ms)\n  ✔ is idempotent — does not overwrite existing dossier (18.04\n\n[... 11713 bytes omitted (criteria:AC-RI-024) ...]\n\n AC-AEMR-15 a recorded attempt keeps its frozen model resolution across resume (198.3385ms)\n✔ manifest has no command strings or secrets and fallback is opt-in (4.3837ms)\n✔ runtime schema rejects unknown and nested secret fields (1.2354ms)\n✔ adapter errors redact common credential forms (0.3463ms)\n✔ AC-04: partial stdout and stderr chunks remain isolated by stream (280.4971ms)\n✔ AC-09: exact final page reports has_more false (120.422ms)\n✔ AC-10: retention never removes an active running execution (106.3902ms)\n✔ AC-04 AC-05 stream is redacted, ordered and bounded (306.8416ms)\n✔ AC-11 redactor removes credential forms (0.3106ms)\n✔ HIGH: secret split across chunks and long secret never persists (89.7746ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (82.8577ms)\n✔ AC-AEMR-14 bridge preserves resolution metadata without catalog payloads (90.6253ms)\n✔ AC-04 AC-05 stream is redacted, ordered and bounded (353.4044ms)\n✔ AC-11 redactor removes credential forms (0.7513ms)\n✔ HIGH: secret split across chunks and long secret never persists (77.9943ms)\n✔ HIGH: unterminated oversized line is dropped with bounded memory (68.9846ms)\n✔ AC-AEMR-14 bridge preserves resolution metadata without catalog payloads (92.6664ms)\n✔ capacity is classified and defaults pause without fallback (4.3045ms)\n✔ capacity fallback uses only explicit ordered pairs and blocks cross-host by default (0.5752ms)\n✔ effective capacity execution follows explicit fallback order and records resolution (216.1983ms)\n✔ capacity retry preserves candidate, applies backoff and stops at the configured limit (3.1961ms)\n✔ capacity pause never retries or falls back (3.4804ms)\n✔ capacity execution rejects an adapter host absent from the registry (0.5271ms)\n✔ AC-AEMR-13 fallback model is resolved and effort-validated before execution (2.7025ms)\n✔ AC-09 telemetry CLI exposes stable status schema (220.0779ms)\n✔ MEDIUM: events rejects telemetry run owned by another feature (10.1631ms)\n✔ AC-01 AC-02 creates idempotent correlated run and attaches process (250.445ms)\n✔ AC-03 state transitions are monotonic and idempotent (95.3306ms)\n✔ AC-08 report requires strong binding (115.0911ms)\n✔ AC-09 cursor reads ordered bounded events and snapshot filters (90.7125ms)\n✔ HIGH: payload and reason are recursively redacted and bounded (98.7981ms)\n✔ MEDIUM: bounded retention removes stale paused runs (98.0871ms)\n✔ AC-AEMR-14 telemetry stores sanitized model resolution metadata in additive columns (85.3359ms)\n✔ AC-04 AC-05 stream is redacted, ordered and bounded (271.5335ms)\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-smoke",
+      "command": "node --test tests/review-intelligence.test.js",
+      "exitCode": 0,
+      "durationMs": 245,
+      "stdout": "✔ profile registry preserves the approved agent, profile, mode and default matrix (1.8182ms)\n✔ packet and report validators accept canonical contracts and reject incoherent private output (2.2746ms)\n✔ report status semantics require blockers and owned decisions and keep pass strict (1.0272ms)\n✔ report validators enforce bounded findings, evidence and separate assurance axes (3.1668ms)\n✔ delivery passes reject non-passing evidence and hidden prompt-injection carriers (0.6441ms)\n✔ evidence contract requires canonical research cache paths and rejects normalized reasoning keys (0.3531ms)\n✔ secure file hashing uses raw bytes and rejects traversal, NUL, external paths and bounds (18.5492ms)\n✔ secure file hashing rejects a symlink or junction that resolves outside the project (4.8305ms)\n✔ secure reads and immutable writes reject path swaps after containment validation (14.052ms)\n✔ immutable writes are atomic, idempotent and content-addressed paths stay canonical (38.3521ms)\n✔ failed rename leaves no canonical file or temporary artifact (15.1914ms)\n✔ canonical JSON scans are deterministic and bounded (7.9599ms)\nℹ tests 12\nℹ suites 0\nℹ pass 12\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 180.8902\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    },
+    {
+      "id": "RG-build",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "durationMs": 20572,
+      "stdout": "\n> @jaimevalasek/aioson@1.37.1 lint\n> node scripts/check-js.js\n\n",
+      "stderr": "",
+      "timedOut": false,
+      "ok": true,
+      "signature": null
+    }
+  ],
+  "static_checks": []
+}
