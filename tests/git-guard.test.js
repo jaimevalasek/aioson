@@ -291,6 +291,70 @@ test('git:guard still warns on literal-string secret assignments', async () => {
   }
 });
 
+test('git:guard ignores private-key marker references without cryptographic payload', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'src/package-validator.js',
+      [
+        'const markers = [',
+        '  "-----BEGIN PRIVATE KEY-----",',
+        '  "-----BEGIN ENCRYPTED PRIVATE KEY-----",',
+        '  "-----BEGIN RSA PRIVATE KEY-----",',
+        '  "-----BEGIN EC PRIVATE KEY-----",',
+        '  "-----BEGIN DSA PRIVATE KEY-----",',
+        '  "-----BEGIN OPENSSH PRIVATE KEY-----"',
+        '];',
+        ''
+      ].join('\n')
+    );
+    await writeFile(
+      dir,
+      'tests/package-validator.test.js',
+      'const redactedSample = "-----BEGIN OPENSSH PRIVATE KEY-----\\nredacted";\n'
+    );
+    git(dir, ['add', '--', 'src/package-validator.js', 'tests/package-validator.test.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.errors, null, 2));
+    assert.equal(result.errors.some((item) => item.id === 'private_key_block'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard still blocks plausible private-key payload', async () => {
+  const dir = await makeRepo();
+  try {
+    const payload = `MIIE${'A1b2C3d4E5f6G7h8'.repeat(5)}`;
+    await writeFile(
+      dir,
+      'src/private-key.txt',
+      `-----BEGIN PRIVATE KEY-----\n${payload}\n-----END PRIVATE KEY-----\n`
+    );
+    git(dir, ['add', '--', 'src/private-key.txt']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((item) => item.id === 'private_key_block'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('git:guard ignores natural-language i18n values whose keys mention token', async () => {
   const dir = await makeRepo();
   try {
@@ -352,6 +416,63 @@ test('git:guard suppresses explicitly fake generic credentials in test fixtures'
     assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
     assert.ok(result.suppressed.some((item) => item.id === 'generic_secret_assignment'));
     assert.equal(result.summary.suppressedCount > 0, true);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard suppresses deterministic owner identifiers in tests and smoke scripts', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'tests/operation-lock.test.js',
+      'const row = { ownerToken: "another-owner" };\n'
+    );
+    await writeFile(
+      dir,
+      'scripts/smoke-operation-lock.mjs',
+      'const data = { ownerToken: "00000000-0000-4000-8000-000000000001" };\n'
+    );
+    git(dir, ['add', '--', 'tests/operation-lock.test.js', 'scripts/smoke-operation-lock.mjs']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.equal(
+      result.suppressed.filter((item) => item.id === 'generic_secret_assignment').length,
+      2
+    );
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard still warns on realistic generic secrets in smoke scripts', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'scripts/smoke-provider.mjs',
+      // aioson-secret: fixture
+      "const ownerToken = 'A1b2C3d4E5f6G7h8';\n"
+    );
+    git(dir, ['add', '--', 'scripts/smoke-provider.mjs']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
   } finally {
     process.exitCode = 0;
     await fs.rm(dir, { recursive: true, force: true });

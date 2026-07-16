@@ -6,7 +6,7 @@ const CONTENT_RULES = Object.freeze([
     severity: 'error',
     confidence: 'high',
     reason: 'private key material detected',
-    pattern: /-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----/m
+    collectMatches: collectPrivateKeyMaterialMatches
   },
   {
     id: 'aws_access_key',
@@ -68,6 +68,42 @@ const FIXTURE_VALUE_FRAGMENT = /(?:fake|dummy|mock|fixture|example|sample|placeh
 const FIXTURE_SENTINEL = /aioson-secret(?:-scan)?:\s*(?:fixture|allow)(?:\s|$)/i;
 const PUBLIC_IDENTIFIER = /(?:public|publishable)/i;
 const TEMPLATE_INTERPOLATION_VALUE = /^\$\{[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\}$/;
+const PRIVATE_KEY_HEADER = /-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----/g;
+const PRIVATE_KEY_PAYLOAD_LINE = /^[ \t]*([A-Za-z0-9+/=]{16,})[ \t]*(?:(?:\r?\n)|\\r?\\n|$)/;
+const UUID_VALUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function collectPrivateKeyMaterialMatches(text) {
+  const matches = [];
+  let header;
+
+  PRIVATE_KEY_HEADER.lastIndex = 0;
+  while ((header = PRIVATE_KEY_HEADER.exec(text)) !== null) {
+    const afterHeader = text.slice(header.index + header[0].length);
+    const lineBreak = afterHeader.match(/^[ \t]*(?:\r?\n|\\r?\\n)/);
+    if (!lineBreak) continue;
+
+    let cursor = header.index + header[0].length + lineBreak[0].length;
+    let payloadLength = 0;
+    while (cursor < text.length) {
+      const payloadLine = text.slice(cursor).match(PRIVATE_KEY_PAYLOAD_LINE);
+      if (!payloadLine) break;
+      payloadLength += payloadLine[1].length;
+      cursor += payloadLine[0].length;
+    }
+
+    // A marker is public syntax, not a secret. Require enough plausible Base64
+    // payload to distinguish actual (even truncated) PEM material from marker
+    // lists, validation messages, and explicitly redacted test samples.
+    if (payloadLength >= 64) {
+      matches.push({
+        index: header.index,
+        value: text.slice(header.index, cursor)
+      });
+    }
+  }
+
+  return matches;
+}
 
 function normalizeRelPath(relPath) {
   return String(relPath || '').replace(/\\/g, '/').replace(/^\.\//, '');
@@ -83,6 +119,11 @@ function isFixturePath(relPath) {
   const normalized = normalizeRelPath(relPath);
   return isTestSourcePath(normalized)
     || /(^|\/)(?:fixtures?|mocks?)(\/|$)/i.test(normalized);
+}
+
+function isSyntheticUtilityPath(relPath) {
+  const normalized = normalizeRelPath(relPath);
+  return /(^|\/)(?:scripts?|tools?)\/.*(?:smoke|fixture|mock|seed)[^/]*$/i.test(normalized);
 }
 
 function isLocalizationPath(relPath) {
@@ -107,11 +148,29 @@ function lineContextAt(text, index) {
 }
 
 function isObviouslySyntheticSecret(value) {
+  const raw = String(value || '');
   const normalized = String(value || '').replace(/[^A-Za-z0-9]/g, '');
   if (normalized.length < 12) return false;
+  if (UUID_VALUE.test(raw)) {
+    const zeroCount = (normalized.match(/0/g) || []).length;
+    if (zeroCount >= 24 || new Set(normalized.toLowerCase()).size <= 4) return true;
+  }
   if (/^(.)\1{11,}$/i.test(normalized)) return true;
   if (/(?:abcdefghijklmnopqrstuvwxyz|0123456789|1234567890|abcdefabcdef|abc123abc123)/i.test(normalized)) return true;
   return /(?:fake|dummy|mock|fixture|example|placeholder|notreal)/i.test(normalized);
+}
+
+function isSelfDescribingSyntheticValue(variableName, value) {
+  const raw = String(value || '');
+  if (raw !== raw.toLowerCase() || !/^[a-z0-9]+(?:[-_][a-z0-9]+)+$/.test(raw)) return false;
+
+  const variableTerms = String(variableName || '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const valueTerms = raw.split(/[-_]+/).filter(Boolean);
+  return valueTerms.some((term) => variableTerms.includes(term));
 }
 
 function hasExplicitFixtureEvidence(relPath, context, matchedValue) {
@@ -146,18 +205,26 @@ function collectHighConfidenceFindings(relPath, text) {
   const suppressed = [];
 
   for (const rule of CONTENT_RULES) {
-    const flags = rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`;
-    const pattern = new RegExp(rule.pattern.source, flags);
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
+    let ruleMatches;
+    if (typeof rule.collectMatches === 'function') {
+      ruleMatches = rule.collectMatches(text);
+    } else {
+      const flags = rule.pattern.flags.includes('g') ? rule.pattern.flags : `${rule.pattern.flags}g`;
+      const pattern = new RegExp(rule.pattern.source, flags);
+      ruleMatches = [...text.matchAll(pattern)].map((match) => ({
+        index: match.index,
+        value: match[0]
+      }));
+    }
+
+    for (const match of ruleMatches) {
       const finding = createFinding(rule, relPath, text, match.index);
       const context = lineContextAt(text, match.index);
-      if (hasExplicitFixtureEvidence(relPath, context, match[0])) {
+      if (hasExplicitFixtureEvidence(relPath, context, match.value)) {
         suppressed.push(createSuppressed(finding, 'explicit synthetic fixture evidence'));
       } else {
         findings.push(finding);
       }
-      if (match[0].length === 0) pattern.lastIndex += 1;
     }
   }
 
@@ -191,9 +258,10 @@ function collectGenericAssignmentFindings(relPath, text) {
       line: lineNumberAt(text, match.index)
     };
     const context = lineContextAt(text, match.index);
-    const fixtureEvidence = isFixturePath(relPath)
+    const fixtureEvidence = (isFixturePath(relPath) || isSyntheticUtilityPath(relPath))
       && (FIXTURE_VALUE_FRAGMENT.test(value)
         || isObviouslySyntheticSecret(value)
+        || isSelfDescribingSyntheticValue(variableName, value)
         || TEMPLATE_INTERPOLATION_VALUE.test(value)
         || FIXTURE_SENTINEL.test(context.line)
         || FIXTURE_SENTINEL.test(context.previousLine));
