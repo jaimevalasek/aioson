@@ -402,6 +402,26 @@ test('feature:close (T5): without harness contract behaves exactly as before (re
   assert.equal(result.verdict, 'PASS');
 });
 
+test('feature:close blocks a substantive SMALL feature that lacks executable completeness evidence', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await writeFile(tmpDir, '.aioson/context/prd-substantive.md',
+    '# PRD\nA user submits a durable request, receives its result, and can retry a failed operation safely.\n');
+  await writeFile(tmpDir, '.aioson/context/requirements-substantive.md',
+    '# Requirements\nREQ-substantive-01 and AC-substantive-01 define the promised result.\n');
+  await writeFile(tmpDir, '.aioson/context/spec-substantive.md', '---\nversion: 1\n---\n# Spec\n');
+
+  const result = await runFeatureClose({
+    args: [tmpDir],
+    options: { json: true, feature: 'substantive', verdict: 'PASS' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'feature_completeness_gate_blocked');
+  assert.ok(result.errors.some((item) => item.includes('feature_capability_map_missing')));
+});
+
 test('feature:close (T5): with contract and ready_for_done_gate=true, PASS proceeds', async () => {
   const tmpDir = await makeTmpDir();
   await setupHarnessFeature(tmpDir, 'gate-pass', { ready_for_done_gate: true });

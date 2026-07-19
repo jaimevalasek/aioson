@@ -31,6 +31,7 @@ const path = require('node:path');
 const { scanArtifacts, detectClassification } = require('../preflight-engine');
 const { validateContract } = require('../harness/contract-schema');
 const { AC_ID_RE } = require('../lib/ac-test-audit');
+const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
 
 const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
 
@@ -260,6 +261,23 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
     }
   }
 
+  // ── Fechamento genérico de capacidades ──────────────────────────────────
+  // Presence-only artifacts are not a valid feature contract. This audit
+  // follows each approved CAP through requirements, design, and delivery.
+  const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
+    artifacts,
+    classification
+  });
+  if (completeness.applicable) {
+    findings.push(...completeness.findings.map((item) => ({
+      severity: 'error',
+      check: item.check,
+      stage: item.stage,
+      message: item.message,
+      artifacts: item.artifacts
+    })));
+  }
+
   const summary = {
     errors: findings.filter((f) => f.severity === 'error').length,
     warnings: findings.filter((f) => f.severity === 'warning').length,
@@ -274,6 +292,11 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
     analyzed_at: new Date().toISOString(),
     artifacts_present: present,
     contract_present: Boolean(contractInfo.exists && !contractInfo.parseError),
+    feature_completeness: {
+      applicable: completeness.applicable,
+      ok: completeness.ok,
+      summary: completeness.summary
+    },
     findings,
     summary
   };

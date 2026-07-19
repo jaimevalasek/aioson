@@ -31,6 +31,8 @@ const {
   evaluateContractIntegrityGate,
   formatContractIntegrityGateError
 } = require('../harness/contract-integrity-gate');
+const { analyzeFeatureCompleteness, findingsThroughStage } = require('../lib/feature-completeness');
+const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 
 // P0 agent-loading-contract: a feature closing is the natural cadence to roll
 // aged-out current-state.md entries into the cold archive. Conservative window
@@ -500,6 +502,43 @@ async function runFeatureClose({ args, options = {}, logger }) {
         updates.push(`harness done gate: BYPASSED via --force (ready_for_done_gate=false at close time; last_error=${progress.last_error || 'none'})`);
       } else if (progress && progress.ready_for_done_gate === true) {
         updates.push('harness done gate: PASSED (ready_for_done_gate=true)');
+      }
+    }
+
+    // Feature completeness closes on fresh executable proof, not on ledger
+    // status strings. The harness gate above deliberately runs first so its
+    // persisted report is the evidence consumed here.
+    const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
+      includeExecution: true
+    });
+    if (completeness.applicable) {
+      const completenessFindings = findingsThroughStage(completeness, 'execution');
+      const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug, {
+        requireCriteria: true,
+        requireAssertions: true
+      });
+      if (completenessFindings.length > 0 || !acAudit.ok) {
+        const errors = [
+          ...completenessFindings.map((item) => `${item.stage}/${item.check}: ${item.message}`),
+          ...(!acAudit.ok ? [`AC test audit failed: ${acAudit.missing.join(', ')}`] : [])
+        ];
+        if (!force) {
+          const errMsg = `[Feature Completeness BLOCKED] Feature "${slug}" lacks fresh executable closure:\n- ${errors.join('\n- ')}`;
+          if (options.json) {
+            return {
+              ok: false,
+              reason: 'feature_completeness_gate_blocked',
+              feature: slug,
+              error: errMsg,
+              errors
+            };
+          }
+          logger.log(errMsg);
+          return { ok: false, reason: 'feature_completeness_gate_blocked' };
+        }
+        updates.push(`feature completeness gate: BYPASSED via --force (${errors.length} finding(s))`);
+      } else {
+        updates.push('feature completeness gate: PASSED (fresh CAP/AC executable evidence)');
       }
     }
   }

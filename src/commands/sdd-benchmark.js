@@ -32,7 +32,7 @@ function specScore(specAnalyze) {
 
 function acTestScore(acAudit) {
   const total = acAudit.summary.acs_total;
-  if (total === 0) return 1;
+  if (total === 0) return acAudit.ok ? 1 : 0;
   return roundScore(acAudit.summary.covered / total);
 }
 
@@ -77,12 +77,16 @@ async function runSddBenchmark({ args, options = {}, logger }) {
 
   const artifacts = await scanArtifacts(targetDir, slug);
   const classification = await detectClassification(targetDir, slug) || 'unknown';
-  const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug);
   const specLogger = { log: () => {}, error: () => {} };
   const specAnalyze = await runSpecAnalyze({
     args: [targetDir],
     options: { feature: slug, strict: Boolean(options.strict) },
     logger: specLogger
+  });
+  const completenessApplies = Boolean(specAnalyze.feature_completeness?.applicable);
+  const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug, {
+    requireCriteria: completenessApplies || Boolean(options.strict),
+    requireAssertions: completenessApplies || Boolean(options.strict)
   });
 
   const artifact = artifactScore(artifacts, classification);

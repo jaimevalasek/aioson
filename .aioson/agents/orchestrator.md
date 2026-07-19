@@ -24,6 +24,7 @@ separate stages.
 ### Fan-out → consolidate
 
 1. **Decompose the PRD** into spec work-streams. Read `prd-{slug}.md` (+ briefing/prototype when present).
+   Load `.aioson/docs/feature-completeness-contract.md`; the Feature Capability Map is the shared decomposition key for every stream. Require each lane to apply its Contextual necessity filter and return the causal chain for every new obligation. During consolidation, accept inferable needs, route material decisions, defer supported optional proposals, and delete speculation before it reaches the plan.
 1b. **Optional — harden the PRD first (`@sheldon` enrichment).** When the PRD is thin, ambiguous, or
    technically risky (unfamiliar stack, security/perf/scaling unknowns, or it needs research), run `@sheldon`'s
    enrichment (RF-01..RF-04: deep technical analysis, web intelligence, gap analysis, sizing) BEFORE
@@ -35,13 +36,16 @@ separate stages.
    contract below), in dependency order (data → structure → plan). Use the host's sub-agent mechanism
    (Claude Code: the Task tool; otherwise a fresh session per brief). Each returns its artifact:
    - **Requirements + ACs** (the `@analyst` work) → `requirements-{slug}.md`: business rules, edge cases, data
-     model, migrations, and binary acceptance criteria. With a prototype, every Core interaction in
-     `prototype-manifest.md` becomes at least one AC.
+      model, migrations, binary acceptance criteria, and the exact `## Feature Capability Matrix`. Every required
+      CAP gets a primary trace; every canonical lens gets an explicit decision. With a prototype, every Core
+      interaction in `prototype-manifest.md` becomes at least one AC.
    - **Architecture + design** (the `@architect` + `@discovery-design-doc` work) → `design-doc-{slug}.md`:
      module/folder structure, model relationships, migration order, integration points, auth/security
-     boundaries, and exact implementation paths (create/modify/reuse/retire).
+      boundaries, exact implementation paths (create/modify/reuse/retire), and `## Implementation Leverage Matrix`
+      backed by installed package/version and repository-path evidence for every required CAP.
    - **Implementation plan** (the `@pm` work) → `implementation-plan-{slug}.md`: phased, with per-phase
-     verification commands that include the §2c runtime gate for a runtime feature.
+      verification commands, plus `## Capability Delivery Plan` covering every required CAP exactly once, that
+      include the §2c runtime gate for a runtime feature.
    - **UI spec** (the `@ux-ui` work — only when the feature is UI-heavy) → `ui-spec-{slug}.md`: screens,
      interaction states, copy placement. Otherwise `@dev` applies the `design_skill` directly — do not spawn a
      UI sub-agent for a non-UI feature.
@@ -49,16 +53,18 @@ separate stages.
 3. **Consolidate** the sub-agent outputs into the canonical artifacts above. Reconcile conflicts (shared
    models, routes, schemas), remove duplication, and make the package internally consistent — you are the
    single editor of record, not a pass-through.
-4. **Verify + redo.** Cross-check: do the ACs trace to requirements? does the design-doc cover every AC? does
-   the plan's phase order respect the migration/dependency order? Run `aioson spec:analyze . --feature={slug}
-   --json` and resolve every `error` finding. If a stream's output is thin or inconsistent, re-brief it
-   (bounded — at most twice per stream) rather than shipping drift.
+4. **Verify + redo.** Cross-check the full closure `CAP -> lens -> REQ -> AC -> phase -> files -> verification`:
+   does every approved PRD promise survive; does design cite repository leverage; does the plan's phase order
+   respect migration/dependencies; do conditional operational/integration/async/security surfaces have explicit
+   decisions? Run `aioson spec:analyze . --feature={slug} --strict --json` and resolve every `error` finding. If a stream's output is thin or inconsistent, re-brief it
+    (bounded — at most twice per stream) rather than shipping drift.
+4b. **Decision checkpoint.** Present one consolidated report containing only causal `required-inferable`, `blocking-decision`, and `optional-contextual` items, with evidence, omission consequence, recommendation, and disposition. Persist it to `.aioson/context/features/{slug}/decision-checkpoint.json` even when empty. Unresolved blocking items set both checkpoint and plan manifest pending and stop autopilot; optional items default to deferred and never block unless promoted. After a user answer, update the checkpoint and affected CAP/REQ/AC before continuing.
 5. **Spec + collapsed gates** — write `spec-{slug}.md` (the canonical spec the workflow gates read). After the
    user confirms your output, set the collapsed-hop gates approved in frontmatter so the workflow advances:
    `gate_requirements: approved`, `gate_design: approved`, `gate_plan: approved`. Leave **Gate D to `@qa`**.
 6. **Readiness** — write `readiness-{slug}.md` (verdict `ready`/`ready_with_warnings`/`blocked`, exact paths,
    reuse/componentization notes, blockers). This + the design-doc are what `@dev`'s MEDIUM preflight checks.
-7. **Harness contract** — produce `harness-contract.json` + `progress.json` with the §2c `RG-*` runtime-gate
+7. **Harness contract** — produce `harness-contract.json` + `progress.json`; every required CAP or one of its ACs must be cited by a focused executable criterion. Add the §2c `RG-*` runtime-gate
    criteria whenever the feature is a runtime feature. For ACs with a concrete greppable signature (a symbol
    that must be called/exported, an anti-pattern that must be absent), also add build-free `SG-*` static
    criteria (`files` + `must_match`/`must_not_match`) — they gate `@dev`-done cheaply at every stage, before

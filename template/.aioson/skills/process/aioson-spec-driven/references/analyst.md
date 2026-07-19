@@ -24,6 +24,7 @@
 - Declare classification (MICRO/SMALL/MEDIUM) early — it controls depth of requirements, AC verbosity, and whether Gate A is blocking
 - Gate A must be explicitly evaluated before handing off to @architect or @dev
 - `requirements-{slug}.md` is @analyst's primary output — see `artifact-map.md` for ownership chain
+- Load `.aioson/docs/feature-completeness-contract.md`; consume the product `CAP-*` map and own `## Feature Capability Matrix` plus any conditionally required Operational Decision Matrix. Gate A blocks on missing lenses or CAP→REQ→AC links.
 
 ### Conformance contract (MEDIUM only)
 

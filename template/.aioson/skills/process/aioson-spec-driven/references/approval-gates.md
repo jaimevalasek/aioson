@@ -8,6 +8,8 @@
 **Before leaving @product / @analyst → @architect or @dev (`@scope-check` only when its opt-in detour is in the sequence)**
 
 Required for the gate to pass:
+- [ ] For substantive SMALL/MEDIUM features, the PRD has `## Feature Capability Map` and requirements have `## Feature Capability Matrix` from `.aioson/docs/feature-completeness-contract.md`
+- [ ] Every required `CAP-*` has a `primary-outcome` trace to at least one `REQ-*` and one `AC-*`; every canonical completeness lens has an explicit decision and rationale
 - [ ] Objectives are clear and unambiguous
 - [ ] Expected behaviors are described (not just features — what happens when X)
 - [ ] Constraints are explicit (what this version does NOT do)
@@ -30,6 +32,7 @@ Required for the gate to pass:
 **Before leaving @architect → @dev**
 
 Required for the gate to pass:
+- [ ] `## Implementation Leverage Matrix` covers every required `CAP-*` with repository/package/framework evidence and a concrete target
 - [ ] Technical approach is chosen and documented
 - [ ] Module/folder structure is defined
 - [ ] Dependencies between components are explicit
@@ -52,6 +55,7 @@ Required for the gate to pass:
 **Before @dev or @deyvin executes a significant batch**
 
 Required for the gate to pass:
+- [ ] `## Capability Delivery Plan` covers every required `CAP-*` exactly once with phase, concrete files, and executable verification
 - [ ] Execution sequence is defined
 - [ ] Checkpoints are listed with criteria of done
 - [ ] Context package is listed as a short primary activation package plus phase-triggered loads (which files to read before each phase, and why)
@@ -73,6 +77,8 @@ Required for the gate to pass:
 **Before marking a phase or feature as complete**
 
 Required:
+- [ ] Every required `CAP-*` traces through its declared lenses, REQ/AC, implementation, asserting test/harness evidence, and runtime proof where applicable
+- [ ] Zero ACs and empty/comment-only AC tests are blocking for an applicable feature completeness contract
 - [ ] All truths verified (behavioral — not just "I think it works")
 - [ ] All artifacts verified (substantive — not stubs)
 - [ ] All key_links verified (wiring — imports, registrations, middleware)

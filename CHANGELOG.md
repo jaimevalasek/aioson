@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.38.0] - 2026-07-18
+
+### Added
+- **Generic feature-capability closure** — substantive SMALL/MEDIUM features now trace every approved `CAP-*` promise through explicit completeness-lens decisions, `REQ-*`/`AC-*`, repository leverage, delivery phases, concrete paths, and executable evidence. Operational management (including lifecycle, forms, validation, filters, pagination, and states) remains a conditional extension instead of becoming a CRUD-specific base contract.
+
+### Changed
+- **Planning and delivery agents share one deterministic feature contract.** Briefing, product, Sheldon, analyst, architect, PM, orchestrator, dev, QA, tester, and pentester now discover, preserve, implement, and challenge the same capability trace; gates, preflight, handoffs, artifact validation, spec analysis, and SDD benchmarks reject presence-only documentation.
+- **Strict AC evidence is assertion- and execution-aware.** Formal feature completion rejects zero ACs plus skipped, todo, commented, string-only, or assertion-free pseudo-tests. Harness declarations count only after a successful matching `harness:check`; Gate D rejects stale results, self-attested ledger status, non-file/symlink evidence, and unresolved blocking gaps.
+- **Autopilot decisions survive lean workflows and chat compaction.** Sheldon/Orchestrator persist causal decisions in `decision-checkpoint.json`; pending blocking decisions stop handoff and `workflow:next` even when no phased plan manifest exists. Optional findings default to deferred and remain non-blocking.
+- **Operational discovery is less keyword-driven.** Ambiguous “management” prose no longer activates CRUD analysis from unrelated verbs; explicit surface declarations and high-confidence multilingual surface phrases remain supported.
+
+### Validation
+- Full suite: 3,853 passing tests, zero failures, and one skipped test. JavaScript static checks, adversarial AC evidence cases, stale-harness closure, durable decision guards, and template/workspace synchronization are clean.
+
 ## [1.37.2] - 2026-07-16
 
 ### Added

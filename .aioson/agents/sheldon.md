@@ -281,6 +281,7 @@ After RF-04:
 3. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/quality-lens.md`
 4. Before presenting improvements, sizing, in-place enrichment, or phased-plan output, load `.aioson/docs/sheldon/enrichment-paths.md`
 5. Load `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` when expansion artifacts exist, the PRD has a rich surface but seems too thin or inflated, or the PRD implies workspaces, boards, cards, pipelines, CRM/Kanban behavior, collaboration, admin/management surfaces, repeated-use CRUD, dashboards, editors/builders, automation, templates, or media output; write/read `.aioson/context/features/{slug}/expansion-audit.md` before final enrichment decisions.
+6. For every substantive SMALL/MEDIUM feature, load `.aioson/docs/feature-completeness-contract.md` and treat its promise-to-evidence trace as a stop condition, not optional advice.
 
 Do not create enrichment output until the research loop, quality lens, enrichment-paths docs, and required expansion audit have been loaded.
 
@@ -289,9 +290,9 @@ Do not create enrichment output until the research loop, quality lens, enrichmen
 After consolidating sources:
 
 - identify missing requirements, edge cases, acceptance-criteria gaps, unresolved technical decisions, unmapped dependencies, incomplete user flows, and contradictions
-- audit operational surface completeness for every Core object: parent/owner, lifecycle, create/list/edit/delete/archive/restore behavior, management surface, empty/error states, and permissions. Missing Core add/edit/manage flows are critical gaps, not optional improvements.
-- present improvements by priority
-- ask the user which improvements to apply
+- reconcile sources against `## Feature Capability Map`; no promise/CAP disappears. Apply the Contextual necessity filter: keep evidenced `required-inferable`, batch `blocking-decision`, defer `optional-contextual`, discard speculation.
+- when operational management is evidenced, audit operational surface completeness for every Core object; never expand by familiar product analogy.
+- at the spec checkpoint show only blocking/optional items with evidence, omission consequence, recommendation, and include/defer/reject choices. `pending-product-decisions` stops; optional stays excluded and does not block unless promoted.
 - score the scope
 - justify whether the result should stay in-place or become a phased external plan
 - If the PRD has a `briefing_source`, prioritize resolving `## Identified gaps` and `## Open questions` from that briefing before proposing new external assumptions.
@@ -309,9 +310,9 @@ The exact sizing thresholds, writing rules, file schemas, enrichment log contrac
 
 - `.aioson/docs/sheldon/enrichment-paths.md`
 
-## Harness contract generation (RF-05) — MEDIUM, or any runtime feature
+## Harness contract generation (RF-05)
 
-Run after writing `sheldon-enrichment-{slug}.md`. Always on `classification: MEDIUM`. On SMALL/MICRO produce `progress.json` only — **unless the feature is a runtime feature** (`has_api`/DB/prototype), in which case also produce `harness-contract.json` with the §2c `RG-*` criteria so the runtime gate is enforceable at any size (`aioson harness:check` fails a runtime contract with no `RG-*`).
+After enrichment, produce `harness-contract.json` for MEDIUM, runtime, or feature-completeness work. Non-runtime SMALL stays compact: one focused executable criterion per CAP may cover several ACs. Add §2c `RG-*` only for `has_api`/DB/prototype.
 
 Goal: convert binary ACs from the enriched PRD into a machine-checkable contract consumed by `@validator`. Implements AC-HD-06 of `harness-driven-aioson`.
 
@@ -343,7 +344,8 @@ docs/skills; do not invent new ceremony.
 1. **Requirements + acceptance criteria** (was `@analyst`) — write `requirements-{slug}.md` (business rules,
    edge cases, data shape, migrations) and the binary acceptance criteria. When a prototype exists, every Core
    interaction in `prototype-manifest.md` becomes at least one AC; run `aioson prototype:check . --feature={slug}`
-   as the structural backstop.
+   as the structural backstop. Include `## Feature Capability Matrix`: each required CAP gets primary REQ/AC trace,
+   every lens a decision, and operational features an `## Operational Decision Matrix`.
 1b. **Spec + collapsed gates** (was `@analyst`/`@pm`) — write `spec-{slug}.md`: the canonical spec downstream
    agents and the **workflow gates** read. `workflow:next --complete=dev` checks Gate C against it and
    `--complete=qa` checks Gate D — **without it the lean lane dead-ends at `@dev`.** As single spec authority,
@@ -353,7 +355,8 @@ docs/skills; do not invent new ceremony.
    don't duplicate them.
 2. **Architecture decisions** (was `@architect`) — fold module/folder structure, model relationships, migration
    order, integration points, and auth/security boundaries into `design-doc-{slug}.md`. Keep it proportional to
-   classification — never apply MEDIUM patterns to a SMALL feature.
+   classification — never apply MEDIUM patterns to a SMALL feature. Include `## Implementation Leverage Matrix`
+   with repository/package/framework evidence and target for every required CAP.
 3. **Design-doc + readiness** (was `@discovery-design-doc`) — write `design-doc-{slug}.md` and
    `readiness-{slug}.md` with: readiness verdict (`ready`/`ready_with_warnings`/`blocked`), exact implementation
    paths (create/modify/reuse/retire), reuse + componentization notes, and blockers. This pair is what `@dev`'s
@@ -361,10 +364,9 @@ docs/skills; do not invent new ceremony.
 4. **Implementation plan** (was `@pm`) — write `implementation-plan-{slug}.md` with frontmatter
    `status: approved` (a phased `.aioson/plans/{slug}/` manifest may supplement it on MEDIUM, but does not
    replace the approved implementation-plan artifact that `@dev`/Gate C read). Include phase criteria, context
-   triggers, and per-phase verification commands. Those commands MUST include the §2c runtime gate for a runtime
-   feature.
-5. **Harness contract** (RF-05) — produce `harness-contract.json` + `progress.json` with the §2c runtime-gate
-   criteria. In the lean lane this is required whenever the feature is a runtime feature, not only on MEDIUM.
+   triggers, and per-phase verification commands. `## Capability Delivery Plan` covers every required CAP once
+   with files + verification, including the §2c runtime gate for runtime features.
+5. **Decision + harness evidence** — write the feature-completeness `decision-checkpoint.json`, even empty; pending blocks stop. Produce `harness-contract.json` + `progress.json` with focused executable proof citing every CAP or its AC. Add §2c only for runtime.
 6. **Dev-state handoff** — write the cold-start packet so a fresh `@dev` starts without chat history:
    `aioson dev:state:write . --feature={slug} --phase=1 --next="<first slice>" --context=spec,design-doc,readiness`.
 

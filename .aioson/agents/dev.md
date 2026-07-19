@@ -176,6 +176,7 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/simple-plans/{slug}.md` — when `dev-state.md` lists it or the active task is simple-plan work
 - `.aioson/context/features.md` — cold start only
 - `.aioson/context/spec-{slug}.md` — active feature only
+- `.aioson/context/requirements-{slug}.md` — required for SMALL/MEDIUM capability/REQ/AC trace; load the selected sections at activation or before their phase
 - `.aioson/context/implementation-plan-{slug}.md` — if plan exists
 - `.aioson/plans/{slug}/manifest.md` + current phase file — if Sheldon plan exists
 - `.aioson/context/skeleton-system.md` — only when navigating project structure
@@ -185,6 +186,7 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
 - `.aioson/context/prd-{slug}.md` — only on first session of a new feature
 - `.aioson/context/ui-spec-{slug}.md` (project mode: `ui-spec.md`) — only when implementing UI components
+- `.aioson/docs/feature-completeness-contract.md` — when the PRD/requirements declare the contract or `aioson preflight` reports it applicable
 
 ## Brownfield alert
 
@@ -216,15 +218,17 @@ node .aioson/brains/scripts/query.js --tags security,shell --min-quality 4 --for
 After a slice lands a *new* reusable pattern, append a node to the brain (q rated honestly), update `nodes` count + `updated` date in `_index.json`, and link `see[]` to related nodes.
 
 ## Implementation strategy
+- When completeness applies, preflight must be ready. Build a working CAP ledger from the four canonical sections and execute each phase by `CAP-*`. Each machine claim declares explicit `capability_ids: ["CAP-..."]` and existing implementation-file evidence. Ledger status is trace metadata, not proof: a CAP is done only after a fresh successful harness criterion cites that CAP or one of its ACs. Route missing/contradictory trace upstream; never implement only the easiest visible fragment or invent scope.
+- Stay proportional: MICRO and non-applicable work skip the ledger; SMALL keeps one concise claim per CAP. Implement causal `required-inferable` obligations already owned by the spec; route a newly discovered product choice upstream; never implement deferred/speculative ideas, abstractions, or optional subsystems.
 - Start from data layer (migrations/models/contracts).
 - Implement services/use-cases before UI handlers.
 - Add tests aligned with risk — and at minimum one test per acceptance criterion (PRD or requirements), regardless of classification. This floor holds at MICRO: an AC with no test is not done.
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
 - Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
-- If `.aioson/plans/{slug}/harness-contract.json` exists, run `aioson harness:check . --slug={slug}` before declaring a phase done; for MEDIUM or harness-driven work use `aioson harness:check . --slug={slug} --strict` so binary criteria without executable `verification` stay visible as blockers.
+- When completeness applies, `.aioson/plans/{slug}/harness-contract.json` is required and `aioson harness:check . --slug={slug} --strict` must run after the last relevant code/test change. For other work, run it when a contract exists. Never copy `passed` into the ledger as a substitute for the persisted harness result.
 - **Runtime done-criterion (runtime features — has_api / DB / prototype):** a slice or phase is NOT done until you have, at least once, **run the real stack** — built the app, applied the migrations to a real/ephemeral DB (`prisma migrate reset --force` / `migrate deploy`, **not** just authored the `.sql`), booted server+client, and confirmed the prototype's Core happy-path (create/list/switch/edit/archive of the primary objects) works **end to end**. `tsc --noEmit` + passing unit tests are necessary, not sufficient — they mock the DB/auth/network and prove types, not behavior. If the project has no smoke/boot harness, building one (`scripts/smoke-boot.*`, an e2e spec, or wiring `aioson qa:run`) is part of this slice. These are exactly the §2c `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke` criteria in `harness-contract.json` — make them pass for real, never by downgrading them to a unit test.
-- Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug}` when a feature slug exists. If any AC is missing test evidence, add the missing test or route explicitly to `@tester`; do not rely on prose QA sign-off to cover it.
+- Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug} --strict` for an applicable completeness contract (compatibility mode otherwise). Zero ACs, missing evidence, and empty/comment-only tests are blockers. Add the missing assertion or route explicitly to `@tester`; do not rely on prose QA sign-off.
 - Before editing any touched file, estimate whether the resulting file can exceed 500 lines. If yes, emit the file-size alert and 2-3 concrete split/extraction options before continuing.
 
 ## Implementation verification ledger

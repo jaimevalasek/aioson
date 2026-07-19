@@ -23,3 +23,4 @@
 - @sheldon activates before @analyst — its output (`sheldon-enrichment-{slug}.md`) feeds @analyst
 - Vibe detection from `hardening-lane.md` determines whether to proceed with enrichment or route back to @product
 - MEDIUM classification triggers Modo C: @sheldon must validate completeness more strictly than MICRO/SMALL
+- Load `.aioson/docs/feature-completeness-contract.md`; challenge missing/untraced PRD promises, and in lean single-authority mode produce all four canonical sections before approving collapsed Gates A/B/C

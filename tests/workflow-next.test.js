@@ -70,6 +70,18 @@ async function writeActiveFeature(dir, slug, classification = 'MEDIUM') {
   );
 }
 
+async function writeClearDecisionCheckpoint(dir, slug) {
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`),
+    JSON.stringify({
+      schema_version: 'feature-decision-checkpoint/v1',
+      feature_slug: slug,
+      status: 'clear',
+      items: []
+    })
+  );
+}
+
 function verificationReportMarkdown(report) {
   return [
     `# Implementation Verification Report - ${report.feature_slug}`,
@@ -330,6 +342,7 @@ test('workflow:next MEDIUM feature: fresh state collapses the spec phase into or
   await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
   await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
   await writeFileEnsured(path.join(dir, `.aioson/context/scope-check-${slug}.md`), '# Scope Check\n');
+  await writeClearDecisionCheckpoint(dir, slug);
   // No workflow.state.json — fresh state built from the default MEDIUM feature sequence
 
   const loaded = await loadOrCreateState(dir);
@@ -1459,6 +1472,7 @@ test('workflow:next infers a finished lean sheldon stage from its collapsed spec
   await writeFileEnsured(path.join(dir, `.aioson/context/design-doc-${slug}.md`), '# Design doc\n');
   await writeFileEnsured(path.join(dir, `.aioson/context/readiness-${slug}.md`), '# Readiness\n');
   await writeFileEnsured(path.join(dir, `.aioson/context/implementation-plan-${slug}.md`), '---\nstatus: approved\n---\n# Plan\n');
+  await writeClearDecisionCheckpoint(dir, slug);
 
   const { t } = createTranslator('en');
   const result = await runWorkflowNext({

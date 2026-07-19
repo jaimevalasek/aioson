@@ -68,6 +68,8 @@ Load each item at the step that needs it — never all upfront (see **Activation
 - `.aioson/context/project.context.md`
 - `.aioson/context/discovery.md`
 - `.aioson/context/prd.md` (if present — use acceptance criteria as test targets)
+- Feature mode: `prd-{slug}.md`, `requirements-{slug}.md`, `spec-{slug}.md`, `design-doc-{slug}.md`/`architecture.md`, and `implementation-plan-{slug}.md`; select their capability sections first, then load detail only for the CAP under review
+- `.aioson/docs/feature-completeness-contract.md` when the feature contract is applicable
 - Implemented code and existing tests
 
 ## Feature dossier
@@ -198,6 +200,16 @@ If `.aioson/context/features/{slug}/implementation-ledger.md` exists, include it
 - `NEEDS_QA_RECHECK` means rerun the named checks before PASS.
 - Absence of a report is not itself a failure unless the dev handoff or feature policy made verification strict; record it as residual risk when relevant.
 
+### Capability-first verification (SMALL/MEDIUM)
+
+Run `aioson preflight . --agent=qa --feature={slug} --json`. When feature completeness is applicable, start from the required `CAP-*` rows—not from implemented screens or existing tests—and build the evidence map `CAP -> lens -> REQ -> AC -> code/wiring -> assertion -> runtime evidence`.
+
+- Verify every required CAP independently, including its declared failure/negative behavior and conditional lenses. A green test suite cannot compensate for a missing promised capability.
+- Cross-check the Capability Delivery Plan files and verification against actual code. Inspect whether the Implementation Leverage decision was followed or explicitly revised upstream.
+- Run `aioson harness:check . --slug={slug} --strict` after the last relevant code/test change, then `aioson ac:test-audit . --feature={slug} --strict`. Zero ACs, skipped/todo/comment-only evidence, an AC without an assertion, or a CAP without a fresh passed criterion blocks Gate D. Ledger `passed` strings never replace this run.
+- Challenge omissions through the Contextual necessity filter. Fail delivery for a missing approved behavior or a causal correctness obligation only when you cite its evidence and omission consequence. If the spec lacks it, report an upstream specification gap rather than a Dev defect. A supported optional proposal is non-blocking/deferred; an analogy or generic improvement idea is discarded, not reported. Never redefine scope from the implementation.
+- Operational CRUD/list/form/filter/pagination probes are mandatory only when the Operational Decision Matrix marks them required. Apply the same principle to integrations, jobs, notifications, import/export, security, migration, scale, and accessibility/localization.
+
 ## Runtime smoke gate (MANDATORY for runtime features)
 
 A feature with a backend, a database, or a clickable prototype is **not** verifiable from unit tests + source
@@ -232,9 +244,9 @@ require the `@dev` handoff to include their output; never infer them from the pr
   to supply a smoke/boot harness — never claim the app works on mocked evidence.
 
 ## Review process
-1. **Map AC items** from `prd.md` — mark each: covered / partial / missing.
+1. **Map CAP and AC items** from the feature artifacts — mark each CAP/lens/AC: covered / partial / missing, with executable evidence.
 2. **Risk-first review** — work through checklist by category.
-3. **Write missing tests** — for Critical/High findings, write the test. Do not just describe it. **AC→test floor (all classifications):** every AC marked `missing` or `partial` must get at least one test before the feature can close — write it for Critical/High, otherwise route the uncovered ACs to `@tester`. No AC ships with zero tests. Run `aioson ac:test-audit . --feature={slug}` and treat a failed audit as Gate D blocked evidence, not advisory prose.
+3. **Write missing tests** — for Critical/High findings, write the test. Do not just describe it. **AC→test floor (all classifications):** every AC marked `missing` or `partial` must get at least one asserting test before the feature can close — write it for Critical/High, otherwise route the uncovered ACs to `@tester`. No AC ships with zero tests. Run strict AC audit when the feature completeness contract applies and treat a failed audit as Gate D blocked evidence, not advisory prose.
 4. **Deliver report** — ordered by severity, each finding: location + risk + fix.
 
 > For deeper improvement analysis — coverage gaps, regression need, execution-chain, performance, componentization/maintainability — load the shared lens `.aioson/docs/quality/code-health-analysis.md` on demand (routes coverage→@tester, structure/perf→@architect).

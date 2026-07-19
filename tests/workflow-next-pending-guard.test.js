@@ -89,6 +89,53 @@ test('AC-F3-04 no manifest: slug provided but file absent → silent skip (no ov
   await assert.doesNotReject(() => assertManifestNotPending(dir, 'nonexistent-slug', false));
 });
 
+test('durable decision checkpoint blocks even when the optional plan manifest is absent', async () => {
+  const slug = 'checkpoint-only';
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-f3-checkpoint-'));
+  const checkpointDir = path.join(dir, '.aioson', 'context', 'features', slug);
+  await fs.mkdir(checkpointDir, { recursive: true });
+  await fs.writeFile(path.join(checkpointDir, 'decision-checkpoint.json'), JSON.stringify({
+    schema_version: 'feature-decision-checkpoint/v1',
+    feature_slug: slug,
+    status: 'pending',
+    items: [{
+      id: 'DEC-channel',
+      classification: 'blocking-decision',
+      status: 'pending',
+      evidence: 'Delivery is part of the approved outcome.',
+      omission_consequence: 'The recipient cannot observe completion.',
+      recommendation: 'Choose the delivery channel.'
+    }]
+  }));
+
+  await assert.rejects(
+    () => assertManifestNotPending(dir, slug, false),
+    (err) => err.code === 'WORKFLOW_NEXT_PENDING_DECISIONS' && /DEC-channel/.test(err.message)
+  );
+});
+
+test('resolved durable checkpoint allows advancement without a manifest', async () => {
+  const slug = 'checkpoint-clear';
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-f3-checkpoint-clear-'));
+  const checkpointDir = path.join(dir, '.aioson', 'context', 'features', slug);
+  await fs.mkdir(checkpointDir, { recursive: true });
+  await fs.writeFile(path.join(checkpointDir, 'decision-checkpoint.json'), JSON.stringify({
+    schema_version: 'feature-decision-checkpoint/v1',
+    feature_slug: slug,
+    status: 'clear',
+    items: [{
+      id: 'DEC-channel',
+      classification: 'optional-contextual',
+      status: 'deferred',
+      evidence: 'A delivery channel could improve follow-up.',
+      omission_consequence: 'The approved outcome remains correct.',
+      recommendation: 'Keep deferred until explicitly promoted.'
+    }]
+  }));
+
+  await assert.doesNotReject(() => assertManifestNotPending(dir, slug, false));
+});
+
 test('AC-F3-04 no slug: project mode → silent skip', async () => {
   const dir = await makeTempProject();
   await assert.doesNotReject(() => assertManifestNotPending(dir, null, false));

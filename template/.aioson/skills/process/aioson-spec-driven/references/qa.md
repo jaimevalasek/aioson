@@ -27,4 +27,5 @@
 - @qa is the external verifier of @dev's Gate D self-certification — "I think it works" from @dev is not evidence until @qa confirms
 - Gate D verification from `approval-gates.md` maps directly to @qa's adversarial probe protocol: truths = behavior tests, artifacts = file existence checks, key_links = wiring verification
 - For MEDIUM projects, @qa should verify that `spec_version` in `spec-{slug}.md` matches the version that @dev was working from — if not, flag as potential drift
-- AC coverage mapping in the QA report should use the same `AC-*` format from `requirements-{slug}.md`; run `aioson ac:test-audit . --feature={slug}` and treat missing AC test evidence as Gate D blocked.
+- AC coverage mapping in the QA report should use the same `AC-*` format from `requirements-{slug}.md`; run `aioson ac:test-audit . --feature={slug} --strict` when feature completeness applies and treat zero ACs, weak/empty tests, or missing evidence as Gate D blocked.
+- Load `.aioson/docs/feature-completeness-contract.md` and verify from required CAPs outward, not from existing code/tests inward. Gate D needs CAP→lens→REQ→AC→implementation→assertion/runtime evidence closure.

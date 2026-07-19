@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { runSddBenchmark } = require('../src/commands/sdd-benchmark');
+const { CANONICAL_LENSES } = require('../src/lib/feature-completeness');
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sdd-benchmark-'));
@@ -45,13 +46,38 @@ test('sdd:benchmark scores a covered SMALL feature and writes markdown report', 
   const dir = await makeTmpDir();
   const slug = 'checkout';
   await writeFile(dir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
-  await writeFile(dir, `.aioson/context/prd-${slug}.md`, `AC-${slug}-01: checkout works.`);
-  await writeFile(dir, `.aioson/context/requirements-${slug}.md`, `REQ-${slug}-01. AC-${slug}-01.`);
+  await writeFile(dir, `.aioson/context/prd-${slug}.md`, [
+    '---', 'classification: SMALL', 'feature_completeness: required', '---',
+    '# PRD', '## Feature Capability Map',
+    '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
+    '|---|---|---|---|---|',
+    `| CAP-${slug}-submit | Buyer completes checkout | Buyer submits the checkout | required | Primary outcome |`
+  ].join('\n'));
+  const lensRows = CANONICAL_LENSES.map((lens) => lens === 'primary-outcome'
+    ? `| CAP-${slug}-submit | primary-outcome | required | Checkout returns a confirmation | REQ-${slug}-01 | AC-${slug}-01 |`
+    : `| feature-wide | ${lens} | not_applicable | ${lens} has no surface in this bounded fixture | — | — |`).join('\n');
+  await writeFile(dir, `.aioson/context/requirements-${slug}.md`, [
+    `REQ-${slug}-01. AC-${slug}-01.`,
+    '## Feature Capability Matrix',
+    '| CAP | Lens | Decision | Behavior / rationale | REQ | AC |',
+    '|---|---|---|---|---|---|',
+    lensRows
+  ].join('\n'));
   await writeFile(dir, `.aioson/context/spec-${slug}.md`, `AC-${slug}-01.`);
   await writeFile(dir, '.aioson/context/architecture.md', '# Arch');
-  await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, '# Design');
+  await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, [
+    '# Design', '## Implementation Leverage Matrix',
+    '| CAP | Concern | Decision | Evidence | Target |',
+    '|---|---|---|---|---|',
+    `| CAP-${slug}-submit | checkout service | reuse | package.json and src/checkout.js inspected | src/checkout.js |`
+  ].join('\n'));
   await writeFile(dir, `.aioson/context/readiness-${slug}.md`, '# Ready');
-  await writeFile(dir, 'tests/checkout.test.js', `test('AC-${slug}-01 checkout', () => {});\n`);
+  await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, [
+    '---', 'status: approved', '---', '# Plan', '## Capability Delivery Plan',
+    '| CAP | Phase | Files | Verification |', '|---|---|---|---|',
+    `| CAP-${slug}-submit | 1 | src/checkout.js, tests/checkout.test.js | npm test -- checkout |`
+  ].join('\n'));
+  await writeFile(dir, 'tests/checkout.test.js', `test('AC-${slug}-01 checkout', () => { assert.equal(checkout(), true); });\n`);
 
   const result = await runSddBenchmark({
     args: [dir],

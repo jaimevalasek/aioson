@@ -107,6 +107,11 @@ gate_status: approved
 ## Pre-Taken Decisions
 [Decisions already made — @dev does not re-discuss these]
 
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-{slug}-... | 1 | concrete/create-or-modify/path | executable command or runtime check |
+
 ## Execution Sequence
 | Phase | Wave | Scope | Primary files | Done criteria |
 |---|---|---|---|---|
@@ -127,6 +132,12 @@ Required Context Package rules:
 - Put heavier sources under phase-triggered loads, not activation: `requirements-{slug}.md` for data/business rules, `architecture.md` for module boundaries/integrations/security, `ui-spec.md` for UI work, PRD/Sheldon enrichment only for product ambiguity.
 - Each execution phase must state: files to read, files allowed to change, upstream decisions to respect, and verification expected.
 - Never copy whole upstream documents into the plan. Reference artifact paths and sections.
+
+Feature capability closure rules:
+- Load `.aioson/docs/feature-completeness-contract.md`, the PRD `## Feature Capability Map`, requirements `## Feature Capability Matrix`, and design `## Implementation Leverage Matrix` before planning.
+- Every required `CAP-*` appears exactly once in `## Capability Delivery Plan`, assigned to a phase with concrete files and non-placeholder verification. Deferred/not-applicable CAPs never become hidden tasks.
+- The Execution Sequence may split a CAP into detailed steps, but may not merge away its ID. Each phase declares which CAPs it closes and which ACs/conditional lenses its verification proves.
+- If a required CAP has no REQ/AC or no leverage decision, block Gate C and route to its owner; do not repair missing product/design decisions inside the schedule.
 
 After writing the plan, always close Gate C:
 ```

@@ -175,6 +175,10 @@ AIOSON uses the `aioson-spec-driven` process skill to enforce specification-firs
 
 Gates are blocking in MEDIUM, informational in MICRO/SMALL.
 
+### Feature completeness contract
+
+For every substantive SMALL/MEDIUM feature, load `.aioson/docs/feature-completeness-contract.md`. The PRD, requirements, design, and plan must close the same trace: `CAP -> lens -> REQ -> AC -> phase -> files -> verification -> executable evidence`. Gate checks and handoff validation reject missing sections/links; CRUD, integrations, jobs, notifications, import/export, permissions, and similar surfaces are conditional lenses, not a universal feature checklist.
+
 ### How agents load SDD
 For concrete spec/workflow work, the active agent checks for `aioson-spec-driven` in `.aioson/installed-skills/` or `.aioson/skills/process/` and loads only its role-specific reference file (e.g., `references/dev.md`, `references/qa.md`). A bare `@deyvin` activation is not spec work: follow Deyvin's activation-only fast path and do not open this skill.
 

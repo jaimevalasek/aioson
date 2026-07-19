@@ -499,13 +499,117 @@ test('feature expansion prompts preserve operational surface completeness gates'
     [sheldonSkill, '## Operational Surface Audit'],
     [sheldonSkill, 'missing workspace management, board/pipeline CRUD, primary item creation/editing'],
     [briefingAgent, 'rich operational surface: workspaces, boards, cards'],
-    [productAgent, 'force an operational surface check'],
+    [productAgent, 'Activate operational lifecycle analysis only when'],
     [productAgent, 'Do not route to implementation while a Core action'],
     [sheldonAgent, 'audit operational surface completeness for every Core object']
   ];
 
   for (const [content, token] of checks) {
     assert.equal(content.includes(token), true, `missing operational surface token: ${token}`);
+  }
+});
+
+test('product prompt owns the generic feature capability map before downstream planning', async () => {
+  const contractPath = '.aioson/docs/feature-completeness-contract.md';
+  assert.equal(MANAGED_FILES.includes(contractPath), true, 'feature completeness contract must be managed');
+  const contract = await read(path.join(ROOT, 'template', contractPath));
+  const product = await read(path.join(ROOT, 'template/.aioson/agents/product.md'));
+
+  const checks = [
+    [contract, '# Feature Completeness Contract'],
+    [contract, '## Feature Capability Map'],
+    [contract, '## Feature Capability Matrix'],
+    [contract, '## Implementation Leverage Matrix'],
+    [contract, '## Capability Delivery Plan'],
+    [contract, 'operational-management'],
+    [product, 'feature_completeness: required'],
+    [product, 'write the exact `## Feature Capability Map`'],
+    [product, 'CRUD/list/form/filter/pagination decisions remain a conditional extension']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing feature completeness token: ${token}`);
+  }
+});
+
+test('feature capability closure is carried by every planning, implementation, and QA role', async () => {
+  const files = {
+    briefing: await read(path.join(ROOT, 'template/.aioson/agents/briefing.md')),
+    refiner: await read(path.join(ROOT, 'template/.aioson/agents/briefing-refiner.md')),
+    product: await read(path.join(ROOT, 'template/.aioson/agents/product.md')),
+    sheldon: await read(path.join(ROOT, 'template/.aioson/agents/sheldon.md')),
+    analyst: await read(path.join(ROOT, 'template/.aioson/agents/analyst.md')),
+    architect: await read(path.join(ROOT, 'template/.aioson/agents/architect.md')),
+    pm: await read(path.join(ROOT, 'template/.aioson/agents/pm.md')),
+    orchestrator: await read(path.join(ROOT, 'template/.aioson/agents/orchestrator.md')),
+    dev: await read(path.join(ROOT, 'template/.aioson/agents/dev.md')),
+    qa: await read(path.join(ROOT, 'template/.aioson/agents/qa.md')),
+    tester: await read(path.join(ROOT, 'template/.aioson/agents/tester.md')),
+    pentester: await read(path.join(ROOT, 'template/.aioson/agents/pentester.md'))
+  };
+
+  const checks = [
+    [files.briefing, 'candidate promised outcomes'],
+    [files.refiner, 'A promise that disappears'],
+    [files.product, '## Feature Capability Map'],
+    [files.sheldon, '## Feature Capability Matrix'],
+    [files.sheldon, '## Implementation Leverage Matrix'],
+    [files.sheldon, '## Capability Delivery Plan'],
+    [files.analyst, 'every canonical lens gets'],
+    [files.architect, 'manifests and installed versions, existing services/repositories/components'],
+    [files.pm, 'Every required `CAP-*` appears exactly once'],
+    [files.orchestrator, 'CAP -> lens -> REQ -> AC -> phase -> files -> verification'],
+    [files.dev, 'Build a working CAP ledger'],
+    [files.dev, 'ac:test-audit . --feature={slug} --strict'],
+    [files.qa, 'Capability-first verification'],
+    [files.qa, 'skipped/todo/comment-only evidence'],
+    [files.tester, 'Required `CAP-*` IDs are the top-level test inventory'],
+    [files.tester, 'ac:test-audit . --feature={slug} --strict'],
+    [files.pentester, 'Build the threat matrix from every required `CAP-*`'],
+    [files.pentester, 'never treat an absent security decision or an unimplemented capability as implicitly not applicable']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing chain capability token: ${token}`);
+  }
+});
+
+test('feature discovery is causal and role-specific instead of a domain checklist', async () => {
+  const files = {
+    contract: await read(path.join(ROOT, 'template/.aioson/docs/feature-completeness-contract.md')),
+    product: await read(path.join(ROOT, 'template/.aioson/agents/product.md')),
+    sheldon: await read(path.join(ROOT, 'template/.aioson/agents/sheldon.md')),
+    orchestrator: await read(path.join(ROOT, 'template/.aioson/agents/orchestrator.md')),
+    analyst: await read(path.join(ROOT, 'template/.aioson/agents/analyst.md')),
+    architect: await read(path.join(ROOT, 'template/.aioson/agents/architect.md')),
+    dev: await read(path.join(ROOT, 'template/.aioson/agents/dev.md')),
+    qa: await read(path.join(ROOT, 'template/.aioson/agents/qa.md')),
+    pentester: await read(path.join(ROOT, 'template/.aioson/agents/pentester.md'))
+  };
+
+  const checks = [
+    [files.contract, 'reasoning angles, never a catalog of features'],
+    [files.contract, 'evidence -> necessary implication -> observable consequence if omitted -> owner/action'],
+    [files.contract, '`required-inferable`'],
+    [files.contract, '`blocking-decision`'],
+    [files.contract, '`optional-contextual`'],
+    [files.contract, '`speculative`'],
+    [files.contract, 'status: pending-product-decisions'],
+    [files.product, 'derive from evidence'],
+    [files.product, 'lenses never import behavior by analogy'],
+    [files.sheldon, 'never expand by familiar product analogy'],
+    [files.sheldon, '`pending-product-decisions` stops'],
+    [files.orchestrator, 'return the causal chain for every new obligation'],
+    [files.orchestrator, '**Decision checkpoint.**'],
+    [files.analyst, 'a domain invariant needs evidence and an omission consequence'],
+    [files.architect, 'familiar architecture is not evidence'],
+    [files.dev, 'never implement deferred/speculative ideas'],
+    [files.qa, 'A supported optional proposal is non-blocking/deferred'],
+    [files.pentester, 'a generic attack catalog is not evidence']
+  ];
+
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing contextual necessity token: ${token}`);
   }
 });
 

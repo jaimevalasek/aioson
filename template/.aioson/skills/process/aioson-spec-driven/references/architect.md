@@ -22,3 +22,4 @@
 - Decision rationale is mandatory for non-obvious choices — `approval-gates.md` Gate B checklist item applies
 - `design-doc*.md` is @architect's scope-specific decision document — see `artifact-map.md`
 - `architecture.md` should include dev context triggers so @dev knows when to load architecture sections instead of reading the full file at activation
+- Load `.aioson/docs/feature-completeness-contract.md`; own `## Implementation Leverage Matrix`, inspect installed packages/framework facilities/existing modules, and block Gate B when a required CAP lacks evidence plus a target

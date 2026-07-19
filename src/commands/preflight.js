@@ -33,6 +33,10 @@ const {
   extractLastCheckpoint,
   GATE_NAMES
 } = require('../preflight-engine');
+const {
+  analyzeFeatureCompleteness,
+  findingsThroughStage
+} = require('../lib/feature-completeness');
 
 const BAR = '━'.repeat(55);
 
@@ -63,7 +67,31 @@ async function runPreflight({ args, options = {}, logger }) {
   const rules = agent ? await discoverRules(targetDir, agent) : [];
   const designDocs = agent ? await discoverDesignDocs(targetDir, agent) : [];
   const contextPackage = buildContextPackage(agent || 'dev', slug, classification, artifacts, devState, manifest);
-  const readiness = evaluateReadiness(artifacts, phaseGates, classification, agent, devState, slug);
+  let readiness = evaluateReadiness(artifacts, phaseGates, classification, agent, devState, slug);
+  let completeness = null;
+  if (slug && (agent === 'dev' || agent === 'qa')) {
+    completeness = await analyzeFeatureCompleteness(targetDir, slug, {
+      artifacts,
+      classification,
+      includeExecution: agent === 'qa'
+    });
+    if (completeness.applicable) {
+      const completenessFindings = findingsThroughStage(
+        completeness,
+        agent === 'qa' ? 'execution' : 'plan'
+      );
+      if (completenessFindings.length > 0) {
+        readiness = {
+          status: 'BLOCKED',
+          blockers: [
+            ...(readiness.blockers || []),
+            ...completenessFindings.map((item) => `feature completeness [${item.check}]: ${item.message}`)
+          ],
+          warnings: readiness.warnings || []
+        };
+      }
+    }
+  }
 
   // Determine active execution artifact (AC-SDLC-24)
   const activeExecutionArtifact = manifest && manifest.exists && manifest.is_active
@@ -147,6 +175,11 @@ async function runPreflight({ args, options = {}, logger }) {
     readiness: readiness.status,
     readiness_blockers: readiness.blockers,
     readiness_warnings: readiness.warnings || [],
+    feature_completeness: completeness ? {
+      applicable: completeness.applicable,
+      ok: completeness.ok,
+      summary: completeness.summary
+    } : null,
     stale_dev_state: staleDevStateWarning || null,
     pulse: {
       last_agent: pulse.last_agent || null,

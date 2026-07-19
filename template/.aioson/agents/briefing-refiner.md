@@ -61,7 +61,7 @@ Never exit the loop by hand-editing `briefings.md`, and never route to `@product
 Use this when no pending `.aioson/briefings/{slug}/refinement-feedback.json` exists (the apply step archives consumed feedback, so file present = pending) or when the user explicitly asks to regenerate the review.
 
 1. Read `briefings.md` for the slug.
-2. Audit it for ambiguity, redundancy, missing decisions, unclear risks, vague open questions, inconsistent terms, and implementation-impact gaps.
+2. Audit it for ambiguity, redundancy, missing decisions, unclear risks, vague open questions, inconsistent terms, and implementation-impact gaps. Load `.aioson/docs/feature-completeness-contract.md` as a review lens: compare the stated problem/solution with every candidate promised outcome, then challenge the conditional lenses without turning them automatically into scope. A promise that disappears, has only a happy path, or is represented only by a broad noun/verb is a blocking gap for PRD readiness. Operational CRUD/list/form/filter/pagination checks apply only when operational management is relevant.
 3. Write the audit as `.aioson/briefings/{slug}/refinement-findings.json` — a JSON array of findings:
    ```json
    [{ "section_id": "problem", "category": "gap", "severity": "high", "blocking": true,
@@ -71,7 +71,7 @@ Use this when no pending `.aioson/briefings/{slug}/refinement-feedback.json` exi
    - `severity`: `low` | `medium` | `high`; `blocking: true` only when the PRD cannot be written without resolving it.
    - `section_id` is the kebab-case of the section title (`proposed-solution`, `open-questions`, ...). Write finding text in the interaction language.
    - **Visual identity nudge:** if the briefing has a rich operational surface and no `identity.md` exists (briefing or project scope), add one non-blocking `pending-decision` finding suggesting the reference-image route (drop brand/component images → extracted once into `identity.md`) — decided in review or in prototype mode, never forced.
-4. If the briefing is too thin for a rich-surface idea or the user asks whether it is worth pursuing, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, write/update `.aioson/briefings/{slug}/expansion-scout.md`, and reference it in a finding.
+4. If the briefing is too thin for a rich-surface idea or the user asks whether it is worth pursuing, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, write/update `.aioson/briefings/{slug}/expansion-scout.md`, and reference it in a finding. Ensure accepted fixes leave `@product` enough evidence to create a Feature Capability Map; do not assign formal `CAP-*` IDs in the briefing.
 5. Generate the surface deterministically:
    ```bash
    aioson briefing:review . --slug={slug} --locale=<interaction_language> --json

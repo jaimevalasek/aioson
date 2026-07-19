@@ -8,6 +8,8 @@ source: "Living Memory reflection — contextual commit guard QA recheck — @qa
 
 ## What the system already has
 
+- [feature-completeness · 2026-07-18] `feat(aioson): release v1.38.0` adds contextual capability closure across specification, planning, delivery, and QA; requires fresh executable evidence for acceptance criteria and Gate D; and persists blocking autopilot decisions without forcing optional scope or heavyweight workflows. Verification: lint pass, focused Windows cleanup rerun 38/38, full suite 3,853 pass / 0 fail / 1 skip.
+
 - [hygiene-remediation · 2026-07-16] Operational hygiene now has an explicit Markdown retention registry for historical project evidence, while `hygiene:scan` remains actionable-only. Two done features were archived with the canonical command, 208 verified Neural Chain impact items were closed through the native lifecycle, and commit-guard docs now cover indexed policy provenance plus headless-only agent-safe execution. Verification: 23 focused tests, lint, full suite 3,816 pass / 0 fail / 1 skip, hygiene scan clean.
 
 - [contextual-commit-guard · 2026-07-16] `git:guard` now classifies staged secrets with path and fixture evidence: localization sentences and explicitly synthetic test credentials are auditable suppressions, while realistic provider tokens and runtime passphrases remain blocking. `contentAllowRules` replaces new whole-file bypasses with path + detector-rule exceptions; `commit:prepare` implements guarded/headless/trusted warning semantics without allowing high-confidence errors; ordinary project `media/` and `output/` paths are no longer mistaken for AIOSON session artifacts. Verification: focused 112/112, lint pass, full suite 3,779 pass / 0 fail / 1 skip, workflow technical gate PASS.

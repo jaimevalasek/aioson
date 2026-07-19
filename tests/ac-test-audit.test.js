@@ -8,6 +8,7 @@ const path = require('node:path');
 
 const { extractAcIds, auditAcceptanceCriteriaTests } = require('../src/lib/ac-test-audit');
 const { runAcTestAudit } = require('../src/commands/ac-test-audit');
+const { runHarnessCheck } = require('../src/commands/harness-check');
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-ac-test-audit-'));
@@ -59,6 +60,19 @@ test('ac:test-audit passes when no AC ids exist', async () => {
   assert.equal(result.summary.acs_total, 0);
 });
 
+test('ac:test-audit strict mode rejects zero acceptance criteria', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-checkout.md', '# Requirements\nNo explicit ids yet.');
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, ['<no acceptance criteria declared>']);
+});
+
 test('ac:test-audit covers AC ids referenced by test files', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can pay.');
@@ -70,6 +84,73 @@ test('ac:test-audit covers AC ids referenced by test files', async () => {
   assert.equal(result.summary.covered, 1);
   assert.equal(result.items[0].status, 'covered');
   assert.equal(result.items[0].evidence[0].file, 'tests/checkout.test.js');
+});
+
+test('ac:test-audit strict mode rejects an empty test that only names the AC', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can pay.');
+  await writeFile(dir, 'tests/checkout.test.js', "test('AC-checkout-01 payment flow', () => {});\n");
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.items[0].status, 'weak');
+  assert.equal(result.items[0].weak_evidence[0].file, 'tests/checkout.test.js');
+});
+
+test('ac:test-audit strict mode accepts an AC-linked test with an assertion signal', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can pay.');
+  await writeFile(dir, 'tests/checkout.test.js', "test('AC-checkout-01 payment flow', () => { assert.equal(pay(), true); });\n");
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.items[0].status, 'covered');
+});
+
+for (const [variant, source] of Object.entries({
+  skipped: "test.skip('AC-checkout-01 payment flow', () => { assert.equal(pay(), true); });\n",
+  todo: "test.todo('AC-checkout-01 assert.equal(pay(), true)');\n",
+  commented: "// test('AC-checkout-01 payment flow', () => { assert.equal(pay(), true); });\n",
+  string_only: "test('unrelated', () => { const note = 'AC-checkout-01 assert.equal(pay(), true)'; });\n"
+})) {
+  test(`ac:test-audit strict mode rejects ${variant} pseudo-evidence`, async () => {
+    const dir = await makeTmpDir();
+    await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: user can pay.');
+    await writeFile(dir, 'tests/checkout.test.js', source);
+
+    const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+      requireCriteria: true,
+      requireAssertions: true
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.items[0].status, 'weak');
+  });
+}
+
+test('ac:test-audit strict mode does not borrow an assertion from a later unrelated test', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-01: payment succeeds.\n');
+  await writeFile(dir, 'tests/checkout.test.js', [
+    "test('AC-checkout-01 payment flow', () => {});",
+    "test('unrelated health check', () => { assert.equal(health(), true); });"
+  ].join('\n'));
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.items[0].status, 'weak');
 });
 
 test('ac:test-audit covers AC ids referenced by executable harness criteria', async () => {
@@ -87,12 +168,42 @@ test('ac:test-audit covers AC ids referenced by executable harness criteria', as
       }
     ]
   }));
+  const harness = await runHarnessCheck({
+    args: [dir],
+    options: { slug: 'checkout', json: true, strict: true },
+    logger: makeLogger(),
+    t: () => undefined
+  });
+  assert.equal(harness.ok, true);
 
   const result = await auditAcceptanceCriteriaTests(dir, 'checkout');
 
   assert.equal(result.ok, true);
   assert.equal(result.items[0].status, 'covered');
   assert.equal(result.items[0].evidence[0].criterion, 'C1');
+});
+
+test('ac:test-audit does not trust an unexecuted harness declaration', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/requirements-checkout.md', 'AC-checkout-02: trial can start.');
+  await writeFile(dir, '.aioson/plans/checkout/harness-contract.json', JSON.stringify({
+    feature: 'checkout',
+    governor: {},
+    criteria: [{
+      id: 'C1',
+      description: 'AC-checkout-02 is verified',
+      binary: true,
+      verification: 'node -e "process.exit(0)"'
+    }]
+  }));
+
+  const result = await auditAcceptanceCriteriaTests(dir, 'checkout', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.items[0].status, 'missing');
 });
 
 test('ac:test-audit does not let a longer AC id cover a shorter prefix id (substring collision)', async () => {

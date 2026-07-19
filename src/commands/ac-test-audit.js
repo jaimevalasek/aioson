@@ -3,6 +3,9 @@
 const path = require('node:path');
 const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 
+// --strict additionally requires at least one AC and an assertion signal near
+// each test-file AC reference. Executable harness criteria remain strong proof.
+
 async function runAcTestAudit({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args?.[0] || '.');
   const slug = String(options.feature || options.slug || '').trim();
@@ -13,7 +16,11 @@ async function runAcTestAudit({ args, options = {}, logger }) {
     return { ok: false, error: 'missing_feature' };
   }
 
-  const report = await auditAcceptanceCriteriaTests(targetDir, slug);
+  const strict = Boolean(options.strict);
+  const report = await auditAcceptanceCriteriaTests(targetDir, slug, {
+    requireCriteria: strict,
+    requireAssertions: strict
+  });
 
   if (options.json) {
     logger.log(JSON.stringify(report, null, 2));
@@ -23,7 +30,7 @@ async function runAcTestAudit({ args, options = {}, logger }) {
   logger.log('');
   logger.log(`AC test audit — ${slug}`);
   logger.log('━'.repeat(45));
-  logger.log(`ACs: ${report.summary.covered}/${report.summary.acs_total} covered; tests scanned: ${report.summary.test_files_scanned}`);
+  logger.log(`ACs: ${report.summary.covered}/${report.summary.acs_total} covered; weak: ${report.summary.weak || 0}; tests scanned: ${report.summary.test_files_scanned}`);
 
   if (report.summary.acs_total === 0) {
     logger.log('No acceptance criteria IDs found in requirements, PRD, or conformance artifacts.');

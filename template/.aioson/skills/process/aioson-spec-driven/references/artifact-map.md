@@ -16,6 +16,8 @@ prd*.md
   → spec-{slug}.md (updated)       (living state during execution — @dev)
 ```
 
+For substantive SMALL/MEDIUM features, the same artifacts carry one cross-artifact contract from `.aioson/docs/feature-completeness-contract.md`: PRD `Feature Capability Map` → requirements `Feature Capability Matrix` → design `Implementation Leverage Matrix` → plan `Capability Delivery Plan` → code/tests/runtime evidence. These are sections in existing artifacts, not new competing files.
+
 ## Artifact ownership
 
 | Artifact | Written by | Enriched by | Read by |
@@ -37,6 +39,7 @@ prd*.md
 `@dev` should not activate with the entire artifact chain loaded. The final pre-dev agent writes `dev-state.md` with a short primary package, and `implementation-plan-{slug}.md` carries phase-triggered loads:
 
 - `requirements-{slug}.md` — data, rules, ACs, migrations, edge cases
+- Capability sections — @dev must consume all four maps once, then load only the detailed artifact sections needed by the current `CAP-*`; context thrift must not erase traceability
 - `architecture.md` — module boundaries, integrations, security, cross-cutting concerns
 - `design-doc*.md` / `readiness*.md` — implementation paths, reuse decisions, readiness blockers
 - `ui-spec-{slug}.md` (project: `ui-spec.md`) — UI components, frontend routes, interaction states, visual QA

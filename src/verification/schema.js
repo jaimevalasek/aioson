@@ -106,6 +106,17 @@ function validateClaims(rootDir, claims, errors) {
     if (!CLAIM_KINDS.has(claim.kind)) errors.push({ field: `claims[${index}].kind`, reason: 'invalid' });
     if (!OWNERS.has(claim.owner)) errors.push({ field: `claims[${index}].owner`, reason: 'invalid' });
     if (!CLAIM_STATUSES.has(claim.status)) errors.push({ field: `claims[${index}].status`, reason: 'invalid' });
+    if (claim.capability_ids !== undefined) {
+      if (!Array.isArray(claim.capability_ids)) {
+        errors.push({ field: `claims[${index}].capability_ids`, reason: 'must_be_array' });
+      } else {
+        claim.capability_ids.forEach((capabilityId, capabilityIndex) => {
+          if (!/^CAP(?:-[A-Za-z0-9]+)+$/i.test(String(capabilityId || ''))) {
+            errors.push({ field: `claims[${index}].capability_ids[${capabilityIndex}]`, reason: 'invalid' });
+          }
+        });
+      }
+    }
     if (!Array.isArray(claim.evidence)) {
       errors.push({ field: `claims[${index}].evidence`, reason: 'must_be_array' });
       continue;

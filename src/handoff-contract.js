@@ -11,7 +11,12 @@
 const path = require('node:path');
 const { readFileSafe, fileExists } = require('./preflight-engine');
 const { auditAcceptanceCriteriaTests } = require('./lib/ac-test-audit');
+const {
+  analyzeFeatureCompleteness,
+  findingsThroughStage
+} = require('./lib/feature-completeness');
 const { evaluateContractIntegrityGate } = require('./harness/contract-integrity-gate');
+const { readDecisionCheckpoint } = require('./lib/decision-checkpoint');
 
 // Contract definitions per agent stage
 const CONTRACTS = {
@@ -418,6 +423,34 @@ async function validateHandoffContract(targetDir, state, stageName) {
   // an LLM-authored PRD.
   const projectClassification = await readProjectClassification(targetDir);
 
+  let completeness = null;
+  if (state.featureSlug) {
+    completeness = await analyzeFeatureCompleteness(targetDir, state.featureSlug, {
+      classification,
+      includeExecution: stageName === 'dev' || stageName === 'qa'
+    });
+    if (completeness.applicable) {
+      let completenessStage = {
+        product: 'product',
+        analyst: 'requirements',
+        architect: 'design',
+        pm: 'plan',
+        dev: 'execution',
+        tester: 'plan',
+        pentester: 'plan',
+        qa: 'execution'
+      }[stageName] || null;
+      if (stageName === 'sheldon') completenessStage = isLeanSheldonState(state) ? 'plan' : 'product';
+      if (stageName === 'orchestrator' && isMaestroOrchestratorState(state)) completenessStage = 'plan';
+      if (completenessStage) {
+        const completenessFindings = findingsThroughStage(completeness, completenessStage);
+        missing.push(...completenessFindings.map((item) =>
+          `feature completeness [${item.stage}/${item.check}]: ${item.message}`
+        ));
+      }
+    }
+  }
+
   // 1. Artifacts
   if (stageName === 'discovery-design-doc') {
     missing.push(...await validateDiscoveryDesignDocArtifacts(targetDir, state));
@@ -452,6 +485,15 @@ async function validateHandoffContract(targetDir, state, stageName) {
     (stageName === 'orchestrator' && isMaestroOrchestratorState(state))
   );
   if (isSingleSpecAuthorityToDev) {
+    const decisionCheckpoint = await readDecisionCheckpoint(targetDir, state.featureSlug);
+    if (!decisionCheckpoint.exists) {
+      missing.push(`missing decision checkpoint: .aioson/context/features/${state.featureSlug}/decision-checkpoint.json`);
+    } else if (!decisionCheckpoint.ok) {
+      missing.push(`invalid decision checkpoint: ${decisionCheckpoint.errors.join('; ')}`);
+    } else if (decisionCheckpoint.pending.length > 0) {
+      missing.push(`pending product decisions: ${decisionCheckpoint.pending.map((item) => item.id).join(', ')}`);
+    }
+
     for (const gateLetter of ['A', 'B', 'C']) {
       const gateCheck = await checkGateApproval(
         targetDir,
@@ -482,8 +524,11 @@ async function validateHandoffContract(targetDir, state, stageName) {
     }
   }
 
-  if (stageName === 'qa' && state.featureSlug) {
-    const acAudit = await auditAcceptanceCriteriaTests(targetDir, state.featureSlug);
+  if ((stageName === 'tester' || stageName === 'qa') && state.featureSlug) {
+    const acAudit = await auditAcceptanceCriteriaTests(targetDir, state.featureSlug, {
+      requireCriteria: Boolean(completeness && completeness.applicable),
+      requireAssertions: Boolean(completeness && completeness.applicable)
+    });
     if (!acAudit.ok) {
       missing.push(`AC test audit failed: missing tests for ${acAudit.missing.join(', ')}`);
     }

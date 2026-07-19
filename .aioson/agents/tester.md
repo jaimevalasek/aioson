@@ -69,6 +69,8 @@ Before writing tests, check if `.aioson/context/conformance-{slug}.yaml` exists:
 - Follow the same `AC-{slug}-{N}` naming convention where available
 - **AC→test floor (all classifications):** every acceptance criterion maps to at least one test. The conformance YAML is the MEDIUM mechanism, but the floor itself is not MEDIUM-only — an AC with zero tests is a gap, not a choice. Include the exact `AC-*` ID in the test name or adjacent test comment so `aioson ac:test-audit . --feature={slug}` can prove the mapping.
 
+**Feature-capability closure (formal SMALL/MEDIUM):** when the completeness contract applies, load `.aioson/docs/feature-completeness-contract.md` and the exact `Feature Capability Map`, `Feature Capability Matrix`, `Implementation Leverage Matrix`, and `Capability Delivery Plan` sections on demand. Required `CAP-*` IDs are the top-level test inventory: cross-check their required lenses, `REQ-*`/`AC-*`, planned paths, and delivered implementation instead of deriving scope from whatever code or tests happen to exist. Every required AC needs an executable assertion plus the integration/runtime proof appropriate to its promise. Before handoff run `aioson ac:test-audit . --feature={slug} --strict`; any broken `CAP -> lens -> REQ -> AC -> implementation -> evidence` link is a blocker for `@dev` or `@qa`, not an optional coverage note.
+
 ## Required input
 
 Load each item at the phase that needs it — never all upfront:

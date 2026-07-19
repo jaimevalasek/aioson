@@ -275,10 +275,10 @@ Scripts determinísticos que movem verificações de estado, validação de arte
 | `feature:archive` | Move artefatos de uma feature `done` para `.aioson/context/done/{slug}/` e atualiza o manifest | Chamado pelo `feature:close` automaticamente; também disponível para retroativo com `--dry-run` e `--restore` |
 | `feature:export` | **Copia** todos os artefatos de uma feature para um `--out` limpo, sem mexer na origem; gera `INDEX.md` | Exportar specs para analisar fora, entregar a cliente, ou usar o AIOSON só como gerador de specs. Veja [feature-export.md](./feature-export.md) |
 | `gate:check` | Valida pré-requisitos e artefatos de um phase gate (A/B/C/D); retorna PASS ou BLOCKED | Antes de avançar para o próximo agente |
-| `artifact:validate` | Verifica a cadeia completa de artefatos de uma feature (PRD → spec → plano → conformance) | A qualquer momento para checar completude |
-| `ac:test-audit` | Mapeia cada `AC-*` declarado em PRD/requisitos/conformance para evidência em testes ou critério executável do harness | Antes do Gate D; falha quando algum AC não tem prova de teste |
+| `artifact:validate` | Verifica presença da cadeia e integridade do contrato de capacidades (mapa do PRD → lentes/REQ/AC → reuso técnico → plano) | A qualquer momento para detectar artefato presente porém incompleto |
+| `ac:test-audit` | Mapeia cada `AC-*` para teste com asserção ou critério comprovado pelo último `harness:check`; `--strict` rejeita zero ACs e evidência skip/todo/comentada/string-only/sem asserção | Antes do Gate D; completude também exige resultado do harness mais novo que artefatos e arquivos implementados |
 | `sdd:benchmark` | Gera score determinístico de SDD usando cadeia de artefatos, `spec:analyze` e `ac:test-audit`; salva relatório em `.aioson/context/retro/` | Para medir a qualidade do harness sem depender de julgamento solto |
-| `spec:analyze` | Irmão de **conteúdo** do `artifact:validate`: consistência cruzada entre os artefatos (rastreabilidade REQ/AC, staleness, readiness, sanidade do contrato, vínculo AC→contrato, overlap de waves) antes do gate de execução | No preflight do `@scope-check` — errors viram blockers, warnings viram evidência de drift |
+| `spec:analyze` | Auditoria profunda de **conteúdo**: fechamento CAP→lente→REQ→AC→fase→arquivos→verificação, rastreabilidade, staleness, readiness, harness e overlap de waves | No preflight e nos handoffs — errors viram blockers, warnings viram evidência de drift |
 | `forge:compile` | **Lane B:** compila os artefatos de uma feature MEDIUM num `forge-run.workflow.js` auditável e versionável (parallel por Wave → convergência no `harness:check` → revisão adversarial → validador fresh-context) | Quando quer execução compilada e reproduzível via `@forge-run`; nunca roda `feature:close`/publish |
 | `workflow:execute` | Monta e executa o plano de agentes baseado na classificação; aceita `--dry-run` e `--start-from` | Para orquestrar features sem o dashboard |
 | `runner:run` | Executa uma tarefa ou worker diretamente pelo runner | Quando quer executar fora do loop principal de sessão |
@@ -1769,7 +1769,7 @@ aioson feature:close . \
   --notes="Auth edge case ausente"
 ```
 
-Fecha a feature: atualiza spec (QA sign-off), features.md e project-pulse.md em uma chamada. Em `--verdict=PASS`, dispara `feature:archive` automaticamente — todos os artefatos da feature são movidos para `.aioson/context/done/{slug}/` e o manifest é atualizado sem intervenção manual.
+Fecha a feature: atualiza spec (QA sign-off), features.md e project-pulse.md em uma chamada. Quando o contrato de completude se aplica, `PASS` exige um `harness:check` recente e aprovado para cada CAP/AC; strings `passed` do ledger não são prova. Depois dispara `feature:archive` automaticamente.
 
 ### 51. Executar workflow completo
 

@@ -20,7 +20,7 @@ Load this module immediately before writing or updating any PRD.
 
 ## Required PRD structure
 
-Use exactly these sections:
+Use these sections. For substantive SMALL/MEDIUM features, also include the conditional Feature Capability Map shown below and set `feature_completeness: required` in frontmatter.
 
 ```markdown
 # PRD — [Project Name]
@@ -33,6 +33,11 @@ Use exactly these sections:
 
 ## Users
 - [Role]: [what they need to accomplish]
+
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-[slug]-[outcome] | [observable outcome] | [actor or system trigger] | required / deferred / not_applicable | [concrete reason] |
 - [Role]: [what they need to accomplish]
 
 ## MVP scope
@@ -73,6 +78,12 @@ Include `## Visual identity` when:
 - `design_skill` is already set in `project.context.md`
 
 Omit it only when visual requirements were truly not discussed and no design skill was selected.
+
+## Feature completeness inclusion rule
+
+Load `.aioson/docs/feature-completeness-contract.md`. Include `## Feature Capability Map` for every substantive SMALL/MEDIUM feature. Omit it only for a genuinely bounded MICRO task with no rich/sensitive surface. When `operational-management` is relevant, also include `## Operational Surface Map` from `.aioson/docs/feature-expansion-taxonomy.md`.
+
+Capability rows never contain `TBD`: unresolved scope stays in `## Open questions`, and the handoff remains blocked when it changes a required promise.
 
 ### Design skill block
 

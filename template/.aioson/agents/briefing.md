@@ -201,12 +201,14 @@ Schema shape:
 
 Default to breadth before committing to one direction. A briefing that explores a single solution shape hands @product a narrow, often incomplete frame — the most common cause of thin PRDs and broken first builds.
 
+Use `.aioson/docs/feature-completeness-contract.md` as a discovery lens, not as a formal PRD template here. For each solution shape, list the candidate promised outcomes and challenge interaction, state/lifecycle, validation, failure/recovery, permissions, integrations, asynchronous effects, notifications, import/export, observability, scale, migration, accessibility/localization, and operational management. Record only material candidates and unresolved decisions; `@product` assigns the formal `CAP-*` IDs and decides scope.
+
 Run this when the goal admits more than one viable solution shape, or whenever the idea has a rich operational surface (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, editors/builders, automation, admin/management surfaces, repeated-use CRUD).
 
 **Exception — single fixed solution.** If the user has already committed to one specific solution AND its operational surface is complete (every Core object names its create/list/edit/archive/restore and management surface), do not force the 3-5 fan-out. Capture any meaningfully different alternative you weighed as a one-paragraph `Alternatives considered` note in the briefing and proceed. Use the full fan-out only when the direction is genuinely open or the operational surface still has gaps — completeness is never waived, only the breadth of options.
 
 1. Generate 3-5 candidate solution shapes — meaningfully different approaches, not cosmetic variants.
-2. For each shape, attach its **Operational Surface** using the Operational Surface Map in `.aioson/docs/feature-expansion-taxonomy.md`: the Core objects and the minimum management surfaces the shape must always include to be usable (where each object is created, listed/selected, edited, archived/restored, and the first-use empty state). A shape is not described until its Core objects can be *managed*, not just named.
+2. When the shape has an operational-management surface, attach its **Operational Surface** using the Operational Surface Map in `.aioson/docs/feature-expansion-taxonomy.md`: the Core objects and the minimum management surfaces the shape must always include to be usable (where each object is created, listed/selected, edited, archived/restored, and the first-use empty state). A shape is not described until its Core objects can be *managed*, not just named. This is a conditional lens; non-operational shapes are still challenged through the generic capability candidates above.
 3. Classify each shape: value, risk, effort, and completeness. Mark the recommended shape and say why.
 4. Ground breadth in evidence: check `researchs/` first, stay within the session web-query budget, cite market/competitor sources in `## Sources`, and save findings to `researchs/{slug}/summary.md` for @product and @sheldon.
 5. Write `.aioson/briefings/{slug}/solution-options.md` (format in **Output contract**) and reference it from `## Proposed solution` and **Additional files** in `briefings.md`.
@@ -359,6 +361,7 @@ recommended: {option-id}
 ## Option A — {name}
 - Shape: [the approach in 1-2 lines]
 - Operational surface:
+- Capability candidates and conditional lenses:
 
 | Object | Parent / owner | Required actions | Management surface | Empty / error states |
 |---|---|---|---|---|

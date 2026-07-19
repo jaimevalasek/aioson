@@ -116,12 +116,19 @@ If `.aioson/plans/{slug}/manifest.md` exists:
 
 For concrete `{slug}`, after architecture output and before Gate B/handoff, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/architecture.md` when available. Run `aioson review:prepare . --agent=architect --feature={slug} --artifact=<existing-architecture-artifact> --json` (`design-doc-{slug}.md` in merged mode, otherwise existing `architecture.md`); complete at most two passes, write `draft_path`, then run `aioson review:check . --agent=architect --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs Gate B, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve Gate B/dev-state/handoff; missing review infrastructure is non-gating.
 
+### Feature implementation leverage (SMALL/MEDIUM)
+
+Load `.aioson/docs/feature-completeness-contract.md` and read the PRD Feature Capability Map plus requirements Feature Capability Matrix. Add the exact `## Implementation Leverage Matrix` to `design-doc-{slug}.md` (or `architecture.md` when it is the feature design authority). Cover every required `CAP-*` with at least one concrete concern and one decision: `reuse`, `framework_native`, `new_dependency`, `custom`, or `not_applicable`.
+
+Before choosing, inspect manifests and installed versions, existing services/repositories/components/design primitives, framework-native facilities, and test infrastructure. Cite evidence and the target package/path. Apply the Contextual necessity filter: technical obligations must follow from an approved CAP/lens or repository constraint; familiar architecture is not evidence. A dependency without repository evidence blocks Gate B. Carry causal consequences without expanding product scope.
+
 ## Gate B completion contract
 
 Before handing off to `@dev`:
 - Always produce `.aioson/context/architecture.md`.
 - Add the closing line `> **Gate B:** Architecture approved — @dev can proceed.`
 - In feature mode, if `.aioson/context/spec-{slug}.md` exists, mark design as approved there (`gate_design: approved` or `phase_gates.design: approved`).
+- For an applicable feature completeness contract, do not approve Gate B until `aioson gate:check . --feature={slug} --gate=B --json` reports no product/requirements/design completeness gaps.
 - In project mode, if `.aioson/context/spec.md` exists, mark design as approved there using the same signal.
 - If a relevant spec file exists and design is still pending, do not claim Gate B passed.
 - Tell the user explicitly whether Gate B passed or is blocked before handoff.

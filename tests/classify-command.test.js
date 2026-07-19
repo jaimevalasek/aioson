@@ -293,7 +293,6 @@ test('classify: pt-BR Trello clone with no brand word floors to SMALL', async ()
   assert.equal(result.classification, 'SMALL');
   assert.equal(result.floored, true);
   assert.ok(result.operational_surfaces.includes('board_cards'));
-  assert.ok(result.operational_surfaces.includes('workspace'));
   assert.equal(result.recommend_prototype, true);
 });
 
@@ -323,6 +322,31 @@ test('classify: pt-BR "página de gerenciamento" floors as crud_admin', async ()
   assert.equal(result.classification, 'SMALL');
   assert.equal(result.floored, true);
   assert.ok(result.operational_surfaces.includes('crud_admin'));
+});
+
+test('classify: unrelated management prose does not activate an operational contract', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-memory.md',
+    '# Runtime docs\nThe runtime uses memory management. Maintainers create releases and update documentation.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'memory' },
+    logger: makeLogger()
+  });
+  assert.deepEqual(result.operational_surfaces, []);
+});
+
+test('classify: explicit Spanish admin surface is recognized without generic verb inference', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/prd-admin-es.md',
+    '# Clientes\nUn panel de administración permite gestionar los registros de clientes.\n');
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'admin-es' },
+    logger: makeLogger()
+  });
+  assert.ok(result.operational_surfaces.includes('crud_admin'));
+  assert.equal(result.classification, 'SMALL');
 });
 
 test('classify: pt-BR sensitive surface (pagamento/pix) floors to SMALL', async () => {

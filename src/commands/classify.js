@@ -15,6 +15,11 @@
 const path = require('node:path');
 const readline = require('node:readline');
 const { readFileSafe, contextDir } = require('../preflight-engine');
+const {
+  foldDiacritics,
+  detectRichSurfaces,
+  parseSurfacesOverride
+} = require('../lib/feature-completeness');
 
 const BAR = '━'.repeat(30);
 
@@ -116,16 +121,6 @@ const COMPLEXITY_SOME_PATTERNS = [
   /\b(notification|trigger|event)\b/gi
 ];
 
-// Fold diacritics so the surface detectors match a localized PRD the same way in
-// any supported language: "cartões"->"cartoes", "gestão"->"gestao",
-// "autenticação"->"autenticacao". Patterns below stay ASCII and run against the
-// folded text, so EN and pt-BR phrasings of the same surface are detected
-// identically. The detector recognizes the surface from the words present in the
-// text — it does NOT depend on the configured interaction_language.
-function foldDiacritics(content) {
-  return String(content || '').normalize('NFD').replace(/\p{Diacritic}/gu, '');
-}
-
 // Sensitive-surface floor (Gap 3B): a feature touching any of these surfaces is
 // never MICRO. Mirrors the secure-tdd sensitive list in @dev. The floor can only
 // RAISE the tier (MICRO -> SMALL); it never lowers it. Keep patterns tight — a
@@ -148,58 +143,6 @@ function detectSensitiveSurfaces(content) {
     if (re.test(c)) found.push(surface);
   }
   return found;
-}
-
-// Operational-surface floor: a rich operational surface (workspaces, boards +
-// cards, Kanban/CRM pipelines, explicit CRUD/admin management) is never MICRO —
-// it needs management screens, so it must get at least the SMALL chain so
-// @analyst/@architect/the prototype are not skipped. Patterns are bilingual
-// (EN + pt-BR), matched against diacritic-folded text, and kept tight to avoid
-// flooring genuinely simple features. Bare "dashboard"/"quadro" is intentionally
-// NOT a signal (too common); only admin/management surfaces and board+card pairs count.
-function detectRichSurfaces(content) {
-  const c = foldDiacritics(content);
-  const found = [];
-  if (/\b(kanban|trello|scrum board|task board|quadro kanban|quadro de tarefas)\b/i.test(c)) found.push('kanban');
-  if (/\bworkspaces?\b/i.test(c) || /\bespacos? de trabalho\b/i.test(c)) found.push('workspace');
-  if ((/\bboards?\b/i.test(c) && /\bcards?\b/i.test(c))
-    || (/\bquadros?\b/i.test(c) && /\bcart(ao|oes)\b/i.test(c))) found.push('board_cards');
-  if (/\b(crm|sales pipeline|deals? pipeline|leads? pipeline|funil de vendas|pipeline de (vendas|negocios|leads))\b/i.test(c)) found.push('crm_pipeline');
-  if (/\bcrud\b/i.test(c)
-    || /\badmin (panel|dashboard|area|console)\b/i.test(c)
-    || /\bmanagement (screen|page|panel|dashboard|interface|surface)\b/i.test(c)
-    || /\barea administrativa\b/i.test(c)
-    || /\bpainel (de )?admin(istracao)?\b/i.test(c)
-    || /\b(painel|tela|pagina|area|console) de (administracao|gestao|gerenciamento)\b/i.test(c)) found.push('crud_admin');
-  return [...new Set(found)];
-}
-
-// Explicit `sensitive_surfaces:` frontmatter override — additive, can only force
-// the floor when content detection misses. Supports inline (`[a, b]` / `a, b`)
-// and YAML block list forms.
-function parseSurfacesOverride(content, key) {
-  const fm = String(content || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!fm) return [];
-  const body = fm[1];
-  const items = [];
-  const inline = body.match(new RegExp(`^${key}:[ \\t]*(.+)$`, 'm'));
-  if (inline) {
-    inline[1].trim().replace(/^\[|\]$/g, '').split(',').forEach((s) => {
-      const v = s.trim().replace(/^["']|["']$/g, '');
-      if (v) items.push(v);
-    });
-  }
-  const block = body.match(new RegExp(`^${key}:[ \\t]*\\r?\\n((?:[ \\t]*-[ \\t]*.+\\r?\\n?)+)`, 'm'));
-  if (block) {
-    block[1].split(/\r?\n/).forEach((line) => {
-      const m = line.match(/^[ \t]*-[ \t]*(.+)$/);
-      if (m) {
-        const v = m[1].trim().replace(/^["']|["']$/g, '');
-        if (v) items.push(v);
-      }
-    });
-  }
-  return items;
 }
 
 function applySensitiveFloor(classification) {

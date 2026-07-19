@@ -20,6 +20,7 @@ const {
   contextDir
 } = require('../preflight-engine');
 const { AC_ID_RE } = require('../lib/ac-test-audit');
+const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
 
 const BAR = '━'.repeat(45);
 const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
@@ -49,6 +50,7 @@ async function runArtifactValidate({ args, options = {}, logger }) {
 
   const artifacts = await scanArtifacts(targetDir, slug);
   const classification = await detectClassification(targetDir, slug);
+  const completeness = await analyzeFeatureCompleteness(targetDir, slug, { artifacts, classification });
 
   // Gates from spec
   const specGates = artifacts.spec.exists ? parseGatesFromSpec(artifacts.spec.content) : {};
@@ -171,7 +173,8 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   const missing = chain.filter((c) => c.required && !c.exists);
   const missingOptional = chain.filter((c) => !c.required && !c.exists);
 
-  const valid = missing.length === 0;
+  const contentFindings = completeness.applicable ? completeness.findings : [];
+  const valid = missing.length === 0 && contentFindings.length === 0;
 
   // Determine next_missing and next_agent (AC-SDLC-22)
   const ARTIFACT_OWNER_MAP = {
@@ -193,6 +196,17 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     nextMissing = firstMissing.name;
     const ownerInfo = ARTIFACT_OWNER_MAP[firstMissing.name];
     if (ownerInfo) nextAgent = `${ownerInfo.agent} (${ownerInfo.reason})`;
+  } else if (!valid && contentFindings.length > 0) {
+    const firstFinding = contentFindings[0];
+    const owners = {
+      product: '@product',
+      requirements: '@analyst',
+      design: '@architect',
+      plan: '@pm',
+      execution: '@qa'
+    };
+    nextMissing = `content:${firstFinding.check}`;
+    nextAgent = `${owners[firstFinding.stage] || '@orchestrator'} (${firstFinding.message})`;
   }
 
   const result = {
@@ -207,6 +221,12 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     })),
     missing_required: missing.map((c) => c.name),
     missing_optional: missingOptional.map((c) => c.name),
+    content_integrity: {
+      applicable: completeness.applicable,
+      valid: contentFindings.length === 0,
+      findings: contentFindings,
+      summary: completeness.summary
+    },
     next_missing: nextMissing,
     next_agent: nextAgent,
     integrity: valid ? 'VALID' : 'INVALID'
@@ -234,6 +254,13 @@ async function runArtifactValidate({ args, options = {}, logger }) {
 
   if (missingOptional.length > 0 && !valid) {
     logger.log(`Missing optional: ${missingOptional.map((c) => c.name).join(', ')}`);
+  }
+
+  if (contentFindings.length > 0) {
+    logger.log(`Content completeness gaps: ${contentFindings.length}`);
+    for (const item of contentFindings.slice(0, 10)) {
+      logger.log(`  ✗ [${item.stage}/${item.check}] ${item.message}`);
+    }
   }
 
   if (valid && missingOptional.length > 0) {

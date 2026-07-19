@@ -43,6 +43,12 @@ async function writeLeanArtifacts(dir, slug) {
   await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, '# Design\n');
   await writeFile(dir, `.aioson/context/readiness-${slug}.md`, '# Readiness\n');
   await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: approved\n---\n# Plan\n');
+  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
+    schema_version: 'feature-decision-checkpoint/v1',
+    feature_slug: slug,
+    status: 'clear',
+    items: []
+  }));
 }
 
 test('sheldon handoff blocks lean lane when spec bridge is missing', async () => {
@@ -80,4 +86,29 @@ test('sheldon handoff blocks lean runtime feature without harness contract', asy
 
   assert.equal(result.ok, false);
   assert.ok(result.missing.some((item) => item.includes('missing_runtime_contract')));
+});
+
+test('sheldon handoff blocks lean lane with a durable pending product decision', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'lean-pending-decision';
+  await writeBase(dir, slug);
+  await writeLeanArtifacts(dir, slug);
+  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
+    schema_version: 'feature-decision-checkpoint/v1',
+    feature_slug: slug,
+    status: 'pending',
+    items: [{
+      id: 'DEC-email-channel',
+      classification: 'blocking-decision',
+      status: 'pending',
+      evidence: 'The approved flow requires a user-visible delivery channel.',
+      omission_consequence: 'The user cannot receive the promised result.',
+      recommendation: 'Choose email or in-app delivery before implementation.'
+    }]
+  }));
+
+  const result = await validateHandoffContract(dir, leanState(slug), 'sheldon');
+
+  assert.equal(result.ok, false);
+  assert.ok(result.missing.some((item) => item.includes('DEC-email-channel')));
 });

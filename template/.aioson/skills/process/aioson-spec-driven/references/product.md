@@ -23,3 +23,4 @@
 - Classification (MICRO/SMALL/MEDIUM) from `classification-map.md` must be declared in the PRD — it is the signal that controls all downstream process depth
 - @product does not write requirements (`requirements-{slug}.md`) — those belong to @analyst; see `artifact-map.md` for the boundary
 - If classification is MEDIUM, the PRD must include a `## Specify depth` section per `classification-map.md`
+- For substantive SMALL/MEDIUM features, load `.aioson/docs/feature-completeness-contract.md`, set `feature_completeness: required`, and own the PRD `## Feature Capability Map`; downstream roles own the other three sections

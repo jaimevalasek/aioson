@@ -293,19 +293,23 @@ For each new or modified entity, produce field-level detail (same format as Phas
 
 **`requirements-{slug}.md`** — implementation spec for the feature:
 
+Load `.aioson/docs/feature-completeness-contract.md`. Treat the PRD's `## Feature Capability Map` as scope authority: do not invent, merge away, or silently drop a `CAP-*`. Derive rules only through the Contextual necessity filter: a domain invariant needs evidence and an omission consequence; analogy to another system is not evidence. Add inferable correctness, route material product choices to `@product`/`@sheldon`, and discard unsupported possibilities before Gate A.
+
 > When `prd-{slug}.md` has a `## Prototype reference`, load `.aioson/docs/prototype-contract.md` and turn the prototype's Core screens and interactions into explicit acceptance criteria (e.g. "add card persists and re-renders", "board has a management surface"). This is how the prototype reaches @validator — as binary criteria, not a file it reads. After writing `requirements-{slug}.md`, run `aioson prototype:check . --feature={slug}` and resolve any `fail`/`warn` before handoff — it deterministically verifies every Core interaction in the prototype manifest is echoed by an acceptance criterion.
 
 1. Feature summary (1–2 lines from prd-{slug}.md)
-2. Requirement IDs (`REQ-{slug}-01...`) with source references
-3. Acceptance criteria IDs (`AC-{slug}-01...`) mapped to requirement IDs
-4. New entities and fields (full table format)
-5. Changes to existing entities
-6. Relationships (with existing entities from discovery.md when loaded)
-7. Migration additions (ordered)
-8. Business rules
-9. Edge cases (filled from the Edge-case enumeration checklist)
-10. Cross-cutting concerns — for each, mark Applicable+how or N/A+why: concurrency model, error contract (shape + codes), observability (logs/metrics for the critical path), idempotency, authz boundaries, rate/quota limits
-11. Out of scope for this feature
+2. Exact `## Feature Capability Matrix`: every required CAP gets a `primary-outcome` row; every canonical lens gets `required`, `not_applicable`, or `deferred` plus behavior/rationale; required rows cite `REQ-*` and `AC-*`
+3. Conditional `## Operational Decision Matrix` when `operational-management` is required, with explicit decisions for lifecycle, surface, validation, query controls/states, permissions, destructive behavior, and restore behavior
+4. Requirement IDs (`REQ-{slug}-01...`) with CAP/source references
+5. Acceptance criteria IDs (`AC-{slug}-01...`) mapped to requirement and CAP IDs, including negative/failure behavior where material
+6. New entities and fields (full table format)
+7. Changes to existing entities
+8. Relationships (with existing entities from discovery.md when loaded)
+9. Migration additions (ordered)
+10. Business rules
+11. Edge cases (filled from the Edge-case enumeration checklist)
+12. Cross-cutting concerns — preserve the matrix decisions for concurrency, error contract, observability, idempotency, authz, rate/quota, integrations, async effects, migration, accessibility/localization, and other applicable lenses
+13. Out of scope for this feature
 
 **`spec-{slug}.md`** — feature memory skeleton (will be enriched by @dev):
 

@@ -11,9 +11,10 @@
  * - Evidence is a token-boundary mention of the AC id in a test file or in an
  *   executable harness criterion. `mentionsAcId` matches whole hyphen-delimited
  *   tokens so AC-1 does NOT match inside AC-10 (substring collision).
- * - It cannot judge assertion strength: any token-boundary mention counts, so a
- *   weak/empty test or a comment that names the AC reads as covered. The
- *   harness `verification` path is the stronger evidence.
+ * - Compatibility mode accepts any token-boundary mention. Strict callers can
+ *   require an assertion signal near the AC reference, so an empty test or a
+ *   comment-only mention is reported as weak evidence. The harness
+ *   `verification` path is always strong evidence.
  * - A test that exercises an AC's behaviour without naming the id reads as
  *   missing — the audit enforces the "cite the AC in its test" convention.
  */
@@ -79,22 +80,140 @@ async function listTestFiles(targetDir, dirPath = targetDir, out = []) {
   return out;
 }
 
-function testEvidenceFor(acId, testContents) {
+// Blank comments and string/template contents while preserving offsets and
+// newlines. AC ids may legitimately live in test titles/comments, so matching
+// still uses the original source; only test/assertion syntax is read from this
+// masked view. This is deliberately conservative: ambiguous text is never
+// promoted to executable proof.
+function maskNonCode(content) {
+  const text = String(content || '');
+  const chars = [...text];
+  let state = 'code';
+  let quote = null;
+  let escaped = false;
+
+  for (let i = 0; i < chars.length; i += 1) {
+    const current = chars[i];
+    const next = chars[i + 1];
+
+    if (state === 'line-comment') {
+      if (current === '\n' || current === '\r') state = 'code';
+      else chars[i] = ' ';
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (current === '*' && next === '/') {
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        i += 1;
+        state = 'code';
+      } else if (current !== '\n' && current !== '\r') {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+    if (state === 'string') {
+      if (current !== '\n' && current !== '\r') chars[i] = ' ';
+      if (escaped) {
+        escaped = false;
+      } else if (current === '\\') {
+        escaped = true;
+      } else if (current === quote) {
+        state = 'code';
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '/' && next === '/') {
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i += 1;
+      state = 'line-comment';
+    } else if (current === '/' && next === '*') {
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i += 1;
+      state = 'block-comment';
+    } else if (current === '"' || current === "'" || current === '`') {
+      chars[i] = ' ';
+      state = 'string';
+      quote = current;
+      escaped = false;
+    }
+  }
+  return chars.join('');
+}
+
+function hasAssertionNearAc(content, acId) {
+  const text = String(content || '');
+  const code = maskNonCode(text);
+  const matcher = new RegExp(`(?<![\\w-])${escapeRegExp(acId)}(?![\\w-])`, 'g');
+  const testStarts = [];
+  const testStartRe = /(?:^|\n)\s*(test|it|describe)(?:\.(only|skip|todo))?\s*\(/g;
+  let testStart;
+  while ((testStart = testStartRe.exec(code)) !== null) {
+    testStarts.push({ index: testStart.index, modifier: testStart[2] || null });
+  }
+  let match;
+  while ((match = matcher.exec(text)) !== null) {
+    const previous = [...testStarts].reverse().find((entry) => entry.index <= match.index);
+    const next = testStarts.find((entry) => entry.index > match.index);
+    // Keep the AC and assertion inside one test declaration. An adjacent AC
+    // comment may bind to the immediately following test, but never to a later
+    // unrelated test block merely because it is textually close.
+    const bindToNext = next !== undefined
+      && (previous === undefined || match.index - previous.index > 1200)
+      && next.index - match.index <= 300;
+    const boundTest = bindToNext ? next : previous;
+    if (boundTest && ['skip', 'todo'].includes(boundTest.modifier)) continue;
+    const start = bindToNext ? match.index : (previous?.index ?? Math.max(0, match.index - 300));
+    const followingTest = testStarts.find((entry) => entry.index > (bindToNext ? next.index : start));
+    const end = Math.min(text.length, followingTest?.index ?? (match.index + acId.length + 1200));
+    const window = code.slice(start, end);
+    if (/\b(assert(?:\.[A-Za-z]+)?|expect|should|fail)\s*\(/i.test(window)
+      || /\.(?:toBe|toEqual|toStrictEqual|toMatch|toContain|toHave|toThrow|resolves|rejects)\b/.test(window)
+      || /\bthrow\s+new\s+Error\b/.test(window)) return true;
+  }
+  return false;
+}
+
+function testEvidenceFor(acId, testContents, options = {}) {
   return testContents
     .filter((item) => mentionsAcId(item.content, acId))
+    .filter((item) => !options.requireAssertions || hasAssertionNearAc(item.content, acId))
     .map((item) => ({
       file: item.file,
-      evidence: `test file references ${acId}`
+      evidence: options.requireAssertions
+        ? `test file references ${acId} with a nearby assertion signal`
+        : `test file references ${acId}`
     }));
 }
 
-function harnessEvidenceFor(acId, contract) {
-  if (!contract || !Array.isArray(contract.criteria)) return [];
+function weakTestEvidenceFor(acId, testContents) {
+  return testContents
+    .filter((item) => mentionsAcId(item.content, acId) && !hasAssertionNearAc(item.content, acId))
+    .map((item) => ({
+      file: item.file,
+      evidence: `test file references ${acId} without a nearby assertion signal`
+    }));
+}
+
+function harnessEvidenceFor(acId, contract, report) {
+  if (!contract || !Array.isArray(contract.criteria) || !report || report.ok !== true) return [];
+  const passedChecks = new Map((Array.isArray(report.checks) ? report.checks : [])
+    .filter((check) => check && check.ok === true)
+    .map((check) => [String(check.id), check]));
   return contract.criteria
     .filter((criterion) => {
       if (!criterion || typeof criterion !== 'object') return false;
       const text = JSON.stringify(criterion);
-      return mentionsAcId(text, acId) && typeof criterion.verification === 'string' && criterion.verification.trim();
+      const check = passedChecks.get(String(criterion.id));
+      return mentionsAcId(text, acId)
+        && typeof criterion.verification === 'string'
+        && criterion.verification.trim()
+        && check
+        && check.command === criterion.verification;
     })
     .map((criterion) => ({
       file: '.aioson/plans/{slug}/harness-contract.json',
@@ -106,6 +225,17 @@ function harnessEvidenceFor(acId, contract) {
 async function readHarnessContract(targetDir, slug) {
   const contractPath = path.join(targetDir, '.aioson', 'plans', slug, 'harness-contract.json');
   const raw = await readText(contractPath);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function readHarnessReport(targetDir, slug) {
+  const reportPath = path.join(targetDir, '.aioson', 'plans', slug, 'last-check-output.json');
+  const raw = await readText(reportPath);
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -140,7 +270,9 @@ async function collectAcceptanceCriteria(targetDir, slug) {
   return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-async function auditAcceptanceCriteriaTests(targetDir, slug) {
+async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
+  const requireCriteria = Boolean(options.requireCriteria);
+  const requireAssertions = Boolean(options.requireAssertions);
   const criteria = await collectAcceptanceCriteria(targetDir, slug);
   const testFiles = await listTestFiles(targetDir);
   const testContents = [];
@@ -152,36 +284,46 @@ async function auditAcceptanceCriteriaTests(targetDir, slug) {
   }
 
   const contract = await readHarnessContract(targetDir, slug);
+  const harnessReport = await readHarnessReport(targetDir, slug);
   const items = criteria.map((criterion) => {
-    const testEvidence = testEvidenceFor(criterion.id, testContents);
-    const harnessEvidence = harnessEvidenceFor(criterion.id, contract).map((e) => ({
+    const testEvidence = testEvidenceFor(criterion.id, testContents, { requireAssertions });
+    const weakEvidence = requireAssertions ? weakTestEvidenceFor(criterion.id, testContents) : [];
+    const harnessEvidence = harnessEvidenceFor(criterion.id, contract, harnessReport).map((e) => ({
       ...e,
       file: e.file.replace('{slug}', slug)
     }));
     const evidence = [...testEvidence, ...harnessEvidence];
     return {
       ac: criterion.id,
-      status: evidence.length > 0 ? 'covered' : 'missing',
+      status: evidence.length > 0 ? 'covered' : (weakEvidence.length > 0 ? 'weak' : 'missing'),
       sources: criterion.sources,
-      evidence
+      evidence,
+      weak_evidence: weakEvidence
     };
   });
 
-  const missing = items.filter((item) => item.status === 'missing');
+  const missingItems = items.filter((item) => item.status !== 'covered');
+  const noCriteria = requireCriteria && items.length === 0;
   const summary = {
     acs_total: items.length,
     covered: items.filter((item) => item.status === 'covered').length,
-    missing: missing.length,
+    missing: items.filter((item) => item.status === 'missing').length,
+    weak: items.filter((item) => item.status === 'weak').length,
+    criteria_required: requireCriteria,
+    assertion_signals_required: requireAssertions,
     test_files_scanned: testContents.length
   };
 
   return {
-    ok: missing.length === 0,
+    ok: !noCriteria && missingItems.length === 0,
     feature: slug,
     audited_at: new Date().toISOString(),
+    policy: { require_criteria: requireCriteria, require_assertions: requireAssertions },
     summary,
     items,
-    missing: missing.map((item) => item.ac)
+    missing: noCriteria
+      ? ['<no acceptance criteria declared>']
+      : missingItems.map((item) => item.ac)
   };
 }
 
@@ -189,6 +331,8 @@ module.exports = {
   AC_ID_RE,
   extractAcIds,
   mentionsAcId,
+  maskNonCode,
+  hasAssertionNearAc,
   collectAcceptanceCriteria,
   auditAcceptanceCriteriaTests
 };

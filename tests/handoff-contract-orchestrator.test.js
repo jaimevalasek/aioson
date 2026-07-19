@@ -43,6 +43,12 @@ async function writeMaestroArtifacts(dir, slug) {
   await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, '# Design\n');
   await writeFile(dir, `.aioson/context/readiness-${slug}.md`, '# Readiness\n');
   await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: approved\n---\n# Plan\n');
+  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
+    schema_version: 'feature-decision-checkpoint/v1',
+    feature_slug: slug,
+    status: 'clear',
+    items: []
+  }));
 }
 
 test('orchestrator handoff blocks the maestro lane when the spec package is incomplete', async () => {

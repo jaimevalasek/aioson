@@ -18,6 +18,8 @@ const {
 const { buildTestBriefing } = require('../src/test-briefing');
 const { buildPathGuardBlock } = require('../src/path-guard');
 const { openRuntimeDb } = require('../src/runtime-store');
+const { CANONICAL_LENSES } = require('../src/lib/feature-completeness');
+const { runHarnessCheck } = require('../src/commands/harness-check');
 
 describe('workflow engine hardening', () => {
   let tmpDir;
@@ -303,7 +305,6 @@ describe('workflow engine hardening', () => {
       path.join(dir, '.aioson', 'context', 'spec-feat.md'),
       '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'
     );
-
     const check = await validateHandoffContract(
       dir,
       { mode: 'feature', featureSlug: 'feat', classification: 'SMALL', sequence: ['qa'] },
@@ -318,17 +319,117 @@ describe('workflow engine hardening', () => {
     const dir = await setupProject({ classification: 'SMALL' });
     await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
     await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'prd-feat.md'),
+      [
+        '---',
+        'classification: SMALL',
+        'feature_completeness: required',
+        '---',
+        '# PRD feat',
+        '## Feature Capability Map',
+        '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
+        '|---|---|---|---|---|',
+        '| CAP-feat-verify | The user observes the verified behavior | User invokes the feature | required | Primary approved outcome |'
+      ].join('\n')
+    );
+    const capabilityRows = CANONICAL_LENSES.map((lens) => {
+      if (lens === 'primary-outcome') {
+        return '| CAP-feat-verify | primary-outcome | required | Return the verified behavior | REQ-feat-01 | AC-feat-01 |';
+      }
+      return `| feature-wide | ${lens} | not_applicable | ${lens} has no surface in this bounded fixture | — | — |`;
+    });
+    await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'requirements-feat.md'),
-      'AC-feat-01: user-visible behavior is verified.'
+      [
+        '# Requirements feat',
+        'REQ-feat-01 defines the user-visible behavior verified by AC-feat-01.',
+        '## Feature Capability Matrix',
+        '| CAP | Lens | Decision | Behavior / rationale | REQ | AC |',
+        '|---|---|---|---|---|---|',
+        ...capabilityRows
+      ].join('\n')
+    );
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'design-doc-feat.md'),
+      [
+        '# Design feat',
+        '## Implementation Leverage Matrix',
+        '| CAP | Concern | Decision | Evidence | Target |',
+        '|---|---|---|---|---|',
+        '| CAP-feat-verify | behavior verification | reuse | Existing Node test harness was inspected | tests/feat.test.js |'
+      ].join('\n')
+    );
+    await fs.writeFile(
+      path.join(dir, '.aioson', 'context', 'implementation-plan-feat.md'),
+      [
+        '# Plan feat',
+        '## Capability Delivery Plan',
+        '| CAP | Phase | Files | Verification |',
+        '|---|---|---|---|',
+        '| CAP-feat-verify | 1 | tests/feat.test.js | node --test tests/feat.test.js |'
+      ].join('\n')
     );
     await fs.writeFile(
       path.join(dir, 'tests', 'feat.test.js'),
-      "test('AC-feat-01 behavior', () => {});\n"
+      "const test = require('node:test');\nconst assert = require('node:assert/strict');\n\ntest('AC-feat-01 behavior', () => {\n  const visibleBehavior = true;\n  assert.strictEqual(visibleBehavior, true);\n});\n"
     );
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'spec-feat.md'),
       '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'
     );
+    const ledgerDir = path.join(dir, '.aioson', 'context', 'features', 'feat');
+    await fs.mkdir(ledgerDir, { recursive: true });
+    const ledger = {
+      schema_version: 'implementation-ledger/v1',
+      feature_slug: 'feat',
+      source_artifacts: [{ type: 'prd', path: '.aioson/context/prd-feat.md', role: 'product_authority' }],
+      claims: [{
+        id: 'CLAIM-feat-verify',
+        capability_ids: ['CAP-feat-verify'],
+        kind: 'required_behavior',
+        summary: 'The user observes the verified behavior.',
+        owner: 'dev',
+        status: 'implemented',
+        evidence: [
+          { type: 'file', path: 'tests/feat.test.js' },
+          { type: 'test', command: 'node --test tests/feat.test.js', status: 'passed' }
+        ]
+      }],
+      known_gaps: [],
+      verification_commands: [{ command: 'node --test tests/feat.test.js', last_status: 'passed' }]
+    };
+    await fs.writeFile(
+      path.join(ledgerDir, 'implementation-ledger.md'),
+      [
+        '# Implementation Ledger - feat',
+        '## Source Of Truth', 'PRD.',
+        '## Intended Behavior Claims', 'One capability.',
+        '## Implementation Evidence', 'Test file.',
+        '## Verification Commands', 'Node test.',
+        '## Known Gaps', 'None.',
+        '## Handoff Notes', 'Ready.',
+        '## Machine Ledger', '```json', JSON.stringify(ledger, null, 2), '```'
+      ].join('\n')
+    );
+    const planDir = path.join(dir, '.aioson', 'plans', 'feat');
+    await fs.mkdir(planDir, { recursive: true });
+    await fs.writeFile(path.join(planDir, 'harness-contract.json'), JSON.stringify({
+      feature: 'feat',
+      governor: {},
+      criteria: [{
+        id: 'CAP-feat-verify-proof',
+        description: 'CAP-feat-verify and AC-feat-01 executable proof',
+        binary: true,
+        verification: 'node --test tests/feat.test.js'
+      }]
+    }));
+    const harness = await runHarnessCheck({
+      args: [dir],
+      options: { slug: 'feat', json: true, strict: true },
+      logger: { log() {}, error() {} },
+      t: () => undefined
+    });
+    assert.strictEqual(harness.ok, true, JSON.stringify(harness, null, 2));
 
     const check = await validateHandoffContract(
       dir,
@@ -336,7 +437,7 @@ describe('workflow engine hardening', () => {
       'qa'
     );
 
-    assert.strictEqual(check.ok, true);
+    assert.strictEqual(check.ok, true, JSON.stringify(check, null, 2));
   });
 
   it('qa activation auto-runs security:audit for MEDIUM feature workflow and records runtime event', async () => {

@@ -45,6 +45,8 @@ Check only lenses relevant to the feature:
 
 For rich-surface products, expansion is incomplete until the main objects have an operational surface map.
 
+When the feature advances from exploration into a PRD/spec, load `.aioson/docs/feature-completeness-contract.md`. The taxonomy discovers operational possibilities; the generic contract turns every approved feature promise into deterministic product, requirements, architecture, plan, implementation, and QA evidence. Operational management remains only one conditional lens.
+
 Use this table shape:
 
 | Object | Parent / owner | Lifecycle states | Required actions | Management surface | Empty / error states | Permissions / roles |
@@ -54,6 +56,7 @@ Use this table shape:
 Rules:
 
 - A named Core object is not real scope until its create, list/view, edit, delete/archive, and restore behavior is either covered or explicitly deferred.
+- Search, filter, sort, pagination, form/input validation, loading, and permissions are decision-complete only when each is marked required, not applicable with a reason, or deferred with a reason in the downstream Operational Capability Matrix.
 - Every Core object needs a management surface: page, panel, modal, drawer, inline action, settings screen, or command. If there is no place to manage it, the product is underspecified.
 - Parent/child relationships must be explicit. For Trello-like systems, cards imply lists/columns, boards, workspaces, members, and at least basic role boundaries.
 - A user flow that says "manage cards" is too thin unless it names how the user adds, edits, moves, archives, restores, and sees validation feedback.

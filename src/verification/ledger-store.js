@@ -82,7 +82,7 @@ List the PRD, requirements, spec, plan, prototype, harness, or source plan that 
 
 ## Intended Behavior Claims
 
-List every behavior the implementation claims to satisfy. Use stable claim IDs such as \`CLAIM-001\`.
+List every behavior the implementation claims to satisfy. Use stable claim IDs such as \`CLAIM-001\`. For a formal feature capability, add \`capability_ids: ["CAP-..."]\` to the machine claim so Gate D can close it without inference.
 
 ## Implementation Evidence
 

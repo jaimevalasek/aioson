@@ -29,3 +29,4 @@
 - ACs produced by @pm must match or extend the ACs in `conformance-{slug}.yaml` when it exists — never contradict the analyst's behavioral contracts
 - @pm adds delivery phases and prioritization; it does NOT rewrite Vision, Problem, Users, or Flows — those belong to @product
 - At session end, always tell the user explicitly: "Gate C passed — activate [@orchestrator / @dev]" OR "Gate C blocked — [reason]"
+- Load `.aioson/docs/feature-completeness-contract.md`; own `## Capability Delivery Plan` and block Gate C when any required CAP lacks one phase, concrete file paths, or executable verification

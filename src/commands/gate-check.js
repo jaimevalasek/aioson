@@ -15,6 +15,10 @@
 const path = require('node:path');
 const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
 const {
+  analyzeFeatureCompleteness,
+  findingsThroughStage
+} = require('../lib/feature-completeness');
+const {
   contextDir,
   readFileSafe,
   fileExists,
@@ -56,7 +60,6 @@ async function checkGate(targetDir, slug, gateLetter) {
   const specFile = path.join(dir, `spec-${slug}.md`);
   const specContent = await readFileSafe(specFile);
   const gates = specContent ? parseGatesFromSpec(specContent) : {};
-  const fm = specContent ? parseFrontmatter(specContent) : {};
   const classification = await detectClassification(targetDir, slug);
 
   const gateName = GATE_NAMES[gateLetter];
@@ -65,6 +68,25 @@ async function checkGate(targetDir, slug, gateLetter) {
 
   const evidence = [];
   const missing = [];
+
+  const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
+    classification,
+    includeExecution: gateLetter === 'D'
+  });
+  if (completeness.applicable) {
+    const stageByGate = { A: 'requirements', B: 'design', C: 'plan', D: 'execution' };
+    const completenessFindings = findingsThroughStage(completeness, stageByGate[gateLetter]);
+    evidence.push({
+      type: 'feature_completeness',
+      ok: completenessFindings.length === 0,
+      stage: stageByGate[gateLetter],
+      summary: completeness.summary,
+      findings: completenessFindings
+    });
+    for (const item of completenessFindings) {
+      missing.push(`feature completeness [${item.check}]: ${item.message}`);
+    }
+  }
 
   // Check prerequisites
   for (const prereq of prerequisites) {
@@ -120,14 +142,10 @@ async function checkGate(targetDir, slug, gateLetter) {
         missing.push('QA sign-off found but verdict unclear');
       }
     } else {
-      // Check spec last_checkpoint for completion indicators
-      const checkpoint = fm.last_checkpoint || '';
-      if (checkpoint.toLowerCase().includes('complet') || checkpoint.toLowerCase().includes('done')) {
-        evidence.push({ type: 'checkpoint', value: checkpoint, ok: true });
-      } else {
-        evidence.push({ type: 'qa_signoff', exists: false, ok: false });
-        missing.push('No QA sign-off in spec file');
-      }
+      // A generic implementation checkpoint is not QA evidence. Gate D needs
+      // the role-owned sign-off even when the implementation says "done".
+      evidence.push({ type: 'qa_signoff', exists: false, ok: false });
+      missing.push('No QA sign-off in spec file');
     }
 
     // Also check spec version for explicit gate_execution
@@ -137,7 +155,10 @@ async function checkGate(targetDir, slug, gateLetter) {
       if (gateD !== 'approved') missing.push(`gate_execution: ${gateD}`);
     }
 
-    const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug);
+    const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug, {
+      requireCriteria: completeness.applicable,
+      requireAssertions: completeness.applicable
+    });
     evidence.push({
       type: 'ac_test_audit',
       ok: acAudit.ok,
@@ -240,6 +261,15 @@ async function runGateCheck({ args, options = {}, logger }) {
       const icon = a.ok ? '  ✓' : '  ✗';
       const detail = a.detail ? ` (${a.detail})` : '';
       logger.log(`${icon} ${a.file}${a.ok ? ' exists' : ' missing'}${detail}`);
+    }
+  }
+
+  const completenessEvidence = check.evidence.filter((e) => e.type === 'feature_completeness');
+  if (completenessEvidence.length > 0) {
+    for (const item of completenessEvidence) {
+      const icon = item.ok ? '  ✓' : '  ✗';
+      const errors = item.findings ? item.findings.length : 0;
+      logger.log(`${icon} Feature completeness (${item.stage}): ${errors} blocking gap(s)`);
     }
   }
 

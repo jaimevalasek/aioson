@@ -738,7 +738,7 @@ aioson harness:retro [path] --feature=<slug>|--last=<N> [--json]
 aioson harness:retro-promote [path] --feature=<slug> [--to=learnings|rules] [--apply --select=<candidate-key|all>] [--json]
 aioson gate:check [path] --gate=A|B|C|D [--json]
 aioson artifact:validate [path] --feature=<slug> [--json]
-aioson ac:test-audit [path] --feature=<slug> [--json]
+aioson ac:test-audit [path] --feature=<slug> [--strict] [--json]
 aioson sdd:benchmark [path] --feature=<slug> [--json]
 aioson detect:test-runner [path] [--json]
 aioson agent:audit [path] [--json]
@@ -749,6 +749,8 @@ aioson verify:gate [path] --feature=<slug> [--json]
 `verify:implementation` prepares/checks `.aioson/context/features/{slug}/implementation-ledger.md`, builds clean-auditor prompt packages, validates `Machine Report` JSON with reusable schema helpers in `src/verification/schema.js`, and can optionally run a constrained auditor through `codex`, `claude`, or `opencode`. Runner execution is opt-in, uses explicit timeout/output limits, writes raw output under `verification-runs/`, and promotes only a valid or system-generated `INCONCLUSIVE` report to `verification-report.md`.
 
 `workflow:next --agent=scope-check --scope-mode=post-dev --verification-policy=strict` consumes an existing local `verification-report.md` as structured evidence in the scope-check prompt. It validates and routes the report result, but never runs an external `--tool` auditor automatically.
+
+For substantive SMALL/MEDIUM features, Gate D treats the implementation ledger as trace metadata and the persisted `harness:check` result as executable proof. `ac:test-audit --strict` rejects skipped/todo/commented/string-only pseudo-tests, and `feature:close --verdict=PASS` refuses stale or missing per-CAP proof unless the human explicitly uses the existing emergency `--force` override.
 
 `harness:retro` mines schema-valid implementation verification reports as a retrospective source. It uses only non-confirming `Machine Report` findings (`DOES_NOT_CONFIRM`, `PARTIAL`, `NOT_VERIFIED`) and never includes raw auditor output, stderr, prompt packages, or finding evidence text in the generated dossier.
 

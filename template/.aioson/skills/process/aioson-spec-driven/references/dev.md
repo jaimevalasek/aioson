@@ -35,7 +35,7 @@ At session start, after reading `spec-{slug}.md`:
 3. If versions match: proceed normally
 
 Additionally, at session start for SMALL/MEDIUM:
-4. Run `aioson ac:test-audit . --feature={slug}` when a feature slug exists, or manually check that each `AC-*` from `requirements-{slug}.md` appears in a corresponding test file
+4. Run `aioson ac:test-audit . --feature={slug} --strict` when the feature completeness contract applies (compatibility mode otherwise), or manually check that each `AC-*` from `requirements-{slug}.md` appears in an asserting test
 5. If coverage is < 50%:
    > "⚠ AC coverage is low ({N}/{M} ACs have tests). Consider writing missing tests before adding new behavior."
    This is informational, not blocking.
@@ -48,3 +48,4 @@ Additionally, at session start for SMALL/MEDIUM:
 - Gate D verification must happen before marking a phase complete — not just "I think it works". The deterministic floor is `aioson ac:test-audit . --feature={slug}` plus the real test command.
 - If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
 - If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route back to their producer instead of coding first — `@orchestrator` (maestro mode) on MEDIUM, `@sheldon` on the SMALL lean lane, or `@architect` (merged mode) / `@discovery-design-doc` when those detours are active
+- Load `.aioson/docs/feature-completeness-contract.md` when applicable, build the four-section CAP ledger, and implement/verify each planned `CAP-*`; context minimization may defer detail loads but may not skip an artifact participating in the trace

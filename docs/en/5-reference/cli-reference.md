@@ -356,7 +356,7 @@ aioson workflow:next ./my-project --skip=dev
 
 ## feature:close
 
-Close a feature after QA sign-off, updating the spec, features registry, and project pulse — and automatically archive all feature artefacts on PASS.
+Close a feature after QA sign-off, updating the spec, features registry, and project pulse — and automatically archive all feature artefacts on PASS. When feature completeness applies, PASS also requires a fresh successful `harness:check` result mapped to every required CAP/AC; ledger status strings alone are not proof.
 
 ```bash
 aioson feature:close . --feature=checkout --verdict=PASS --residual="none"
@@ -712,10 +712,11 @@ Map declared acceptance criteria to deterministic test evidence.
 
 ```bash
 aioson ac:test-audit . --feature=checkout
+aioson ac:test-audit . --feature=checkout --strict
 aioson ac:test-audit . --feature=checkout --json
 ```
 
-**What it does:** extracts `AC-*` IDs from `requirements-{slug}.md`, `prd-{slug}.md`, and `conformance-{slug}.yaml`, then checks whether each ID appears in a test file or an executable harness criterion. Gate D treats missing evidence as blocking when ACs are declared.
+**What it does:** extracts `AC-*` IDs from `requirements-{slug}.md`, `prd-{slug}.md`, and `conformance-{slug}.yaml`, then maps each ID to an asserting test or a criterion proven by the latest successful `harness:check`. `--strict` rejects zero ACs plus skipped, todo, commented, string-only, or assertion-free pseudo-evidence. Gate D additionally requires the harness result to be newer than the traced feature artifacts and implementation files.
 
 ---
 
@@ -848,7 +849,7 @@ Read-only. Best-effort write for the preview artifact.
 
 ## spec:analyze
 
-The **content** sibling of `artifact:validate` (which checks chain **presence** — unchanged). Runs deterministic cross-artifact consistency checks before the execution gate. Persists `spec-analyze-{slug}.json`.
+The deep-content sibling of `artifact:validate` (which checks chain presence plus the canonical feature-completeness sections). Runs deterministic cross-artifact consistency checks before the execution gate. Persists `spec-analyze-{slug}.json`.
 
 ```bash
 # Analyze cross-artifact consistency for a feature
@@ -856,18 +857,22 @@ aioson spec:analyze . --feature=checkout
 
 # JSON output for gate scripting (errors → exit 1)
 aioson spec:analyze . --feature=checkout --json
+aioson spec:analyze . --feature=checkout --strict --json
 ```
 
 **Options:**
 - `--feature=<slug>` — **required**. Feature slug.
 - `--json` — structured output; `error` findings flip `ok: false` (exit 1).
+- `--strict` — promotes advisory harness coverage/linkage findings to errors.
 
-**What it does:** runs five deterministic checks across the feature's artifacts:
+**What it does:** runs deterministic checks across the feature's artifacts:
 1. **REQ/AC ID traceability** — declared-but-unreferenced IDs = coverage-gap warning; referenced-but-undeclared IDs = orphan/drift warning (noise-guarded for prose plans).
 2. **Staleness** — an upstream artifact modified after a downstream one = warning (60s tolerance; the project-global `architecture.md` is excluded).
 3. **Readiness** — `blocked` = error; `ready_with_warnings` = info.
 4. **Harness-contract sanity** — schema errors = error; executable-coverage = info.
 5. **AC→contract linkage** = info.
+6. **Feature capability closure** — validates Product Capability Map → requirements lens matrix → repository leverage → delivery plan, including conditional operational decisions; any missing required link = error.
+7. **Parallel-wave consistency** — same-wave phases that share Primary files = warning.
 
 An `error` flips `ok: false` (exit 1 in `--json`). `@scope-check` runs `spec:analyze` in preflight: errors are blockers, warnings are pre-computed drift evidence. When the plan carries a `Wave` column, it also runs the `wave_file_overlap` check (same-wave phases sharing Primary files = warning; plans without a `Wave` column skip it).
 

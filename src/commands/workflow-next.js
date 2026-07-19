@@ -19,6 +19,7 @@ const { readAgentManifest, buildAgentCapabilitySummary } = require('../agent-man
 const { resolveAutopilotSignal } = require('../autopilot-signal');
 const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
+const { readDecisionCheckpoint } = require('../lib/decision-checkpoint');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const { runSecurityAudit } = require('./security-audit');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
@@ -1708,6 +1709,25 @@ const PENDING_STATE_WHITELIST = ['architect', 'product', 'pm', 'qa'];
 async function assertManifestNotPending(targetDir, slug, force) {
   if (force) return; // AC-F3-03 — explicit override.
   if (!slug) return; // AC-F3-04 — no feature context, nothing to guard.
+
+  // The durable checkpoint is independent of the optional phased manifest, so
+  // lean SMALL workflows cannot lose a blocking product decision merely
+  // because no manifest was created.
+  const decisionCheckpoint = await readDecisionCheckpoint(targetDir, slug);
+  if (decisionCheckpoint.exists && (!decisionCheckpoint.ok || decisionCheckpoint.pending.length > 0)) {
+    const detail = decisionCheckpoint.ok
+      ? `pending decision(s): ${decisionCheckpoint.pending.map((item) => item.id).join(', ')}`
+      : `invalid checkpoint: ${decisionCheckpoint.errors.join('; ')}`;
+    const err = new Error(
+      `[workflow:next] Gate blocked: ${slug} decision checkpoint has ${detail}. Resolve it in .aioson/context/features/${slug}/decision-checkpoint.json before advancing. Use --force for override.`
+    );
+    err.code = 'WORKFLOW_NEXT_PENDING_DECISIONS';
+    err.slug = slug;
+    err.pendingState = 'product';
+    err.knownState = true;
+    throw err;
+  }
+
   const manifestPath = path.join(targetDir, '.aioson', 'plans', slug, 'manifest.md');
   let content;
   try {
