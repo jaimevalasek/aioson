@@ -1,5 +1,5 @@
 ---
-updated_at: "2026-07-16T01:35:00-03:00"
+updated_at: "2026-07-21T00:00:00-03:00"
 generated_at: "2026-07-16T01:35:00-03:00"
 source: "Living Memory reflection — contextual commit guard QA recheck — @qa 2026-07-16"
 ---
@@ -7,6 +7,9 @@ source: "Living Memory reflection — contextual commit guard QA recheck — @qa
 # Current State
 
 ## What the system already has
+
+- [secret-guard-p0 · 2026-07-21] P0 security hardening from the adversarial review of v1.37.2→v1.39.0: the staged-secret detector now catches modern OpenAI `sk-proj-`/Anthropic `sk-ant-` keys (kebab-lookalike FP guard via upper/digit lookahead), single-line PEM flattened with escaped newlines (`.env` `\n`, escaped `\r\n`, JS `\\n`), and generic assignments with JSON/dict quoted keys or unquoted shell/.env values (digit+letter shape guard preserves the 84ec5a7d FP reductions); operator-memory slug input is validated fail-closed at the filesystem boundary (`decisionPath`/`historyPath`/`proposalPath` via `isValidDecisionSlug`), closing the `op:reinforce`/`op:forget` arbitrary-.md read/delete traversal. Verification: 27-case PoC matrix, 16 new tests, lint pass, full suite 3,883 pass / 0 fail / 1 skip.
+
 
 - [workflow-proportional-review · 2026-07-21] `feat(aioson): release v1.39.0` keeps bounded implementation in Simple Plan/MICRO, reuses the system design baseline unless a feature has a real architecture delta, moves bounded QA/Tester/Pentester corrections to the owning specialist with final QA, and makes `agent-execution-{slug}.json` create-once and developer-owned with `1/1/1` default limits. Verification: lint pass, full suite 3,867 pass / 0 fail / 1 skip.
 

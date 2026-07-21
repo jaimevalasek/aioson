@@ -12,6 +12,15 @@
 const crypto = require('node:crypto');
 
 const MAX_SLUG_LENGTH = 40;
+// Canonical slug alphabet — mirrors deriveSlug output (lowercase alnum + dash,
+// 40-char base + collision suffixes). Enforced at the filesystem boundary
+// (decisionPath/historyPath/proposalPath) so CLI-supplied slugs can never
+// traverse outside the operator storage root.
+const DECISION_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,80}$/;
+
+function isValidDecisionSlug(value) {
+  return typeof value === 'string' && DECISION_SLUG_PATTERN.test(value);
+}
 const STOPWORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'of', 'to', 'for', 'in', 'on', 'with', 'is', 'be',
   'que', 'de', 'em', 'para', 'sem', 'com', 'um', 'uma', 'os', 'as', 'no', 'na'
@@ -86,5 +95,6 @@ module.exports = {
   deriveSlug,
   normalize,
   fingerprintProposal,
+  isValidDecisionSlug,
   MAX_SLUG_LENGTH
 };

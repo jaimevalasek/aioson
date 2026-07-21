@@ -47,8 +47,11 @@ const CONTENT_RULES = Object.freeze([
     id: 'openai_secret',
     severity: 'error',
     confidence: 'high',
-    reason: 'OpenAI-style secret detected',
-    pattern: /\bsk-[A-Za-z0-9]{20,}\b/
+    reason: 'OpenAI/Anthropic-style secret detected',
+    // Modern provider keys embed '-'/'_' in the body (sk-proj-..., sk-ant-api03-...).
+    // The uppercase-or-digit lookahead keeps lowercase kebab-case lookalikes
+    // (CSS classes, identifiers such as sk-this-is-not-a-key) out of the rule.
+    pattern: /\bsk-(?=[A-Za-z0-9_-]{20,}\b)(?=[A-Za-z0-9_-]*[A-Z0-9])(?:proj-|ant-)?[A-Za-z0-9_-]{20,}\b/
   },
   {
     id: 'npm_token',
@@ -61,15 +64,26 @@ const CONTENT_RULES = Object.freeze([
 
 // Quotes keep function calls out of scope. Compact values keep translated
 // sentences under localization keys that mention tokens out of secret heuristics.
-const GENERIC_SECRET_ASSIGNMENT = /\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\b\s*[:=]\s*(['"`])([^'"`\n\r]{8,})\2/gi;
+// The key may itself be quoted so JSON objects and Python dicts
+// ({"password": "..."}) are covered, not only YAML/shell-style bare keys.
+const GENERIC_SECRET_ASSIGNMENT = /(['"]?)\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\1\s*[:=]\s*(['"`])([^'"`\n\r]{8,})\3/gi;
+// Unquoted shell/.env assignments (`export SECRET_TOKEN=xK9...`). The value
+// charset excludes dots/parens/quotes/`$` (env lookups, member access, calls,
+// interpolation) and the collector additionally requires a digit+letter mix,
+// so identifier references and comparisons (`token === other1`) stay out.
+const GENERIC_SECRET_ASSIGNMENT_BARE = /\b([A-Z0-9_]*(?:SECRET|TOKEN|API_KEY|ACCESS_KEY|PRIVATE_KEY|PASSWORD|PASSWD|CLIENT_SECRET)[A-Z0-9_]*)\b\s*[:=]\s*(?![\s'"`])([A-Za-z0-9][A-Za-z0-9+/=_-]{11,})/gi;
 const PLACEHOLDER_VALUE = /^(?:example|sample|placeholder|dummy|changeme|change-me|replace[-_]?me|your[_-]?(?:value|token|key)|test|local|localhost|xxx+)$/i;
 const PLACEHOLDER_FRAGMENT = /(?:example|sample|dummy|placeholder|changeme|replace[-_]?me|your[_-]?(?:value|token|key)|localhost|local[_-]?dev)/i;
 const FIXTURE_VALUE_FRAGMENT = /(?:fake|dummy|mock|fixture|example|sample|placeholder|not[-_]?real|custom|test[-_](?:only|secret|token|key|credential))/i;
 const FIXTURE_SENTINEL = /aioson-secret(?:-scan)?:\s*(?:fixture|allow)(?:\s|$)/i;
 const PUBLIC_IDENTIFIER = /(?:public|publishable)/i;
 const TEMPLATE_INTERPOLATION_VALUE = /^\$\{[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\}$/;
+// Line breaks accepted after the header and between payload lines: real CRLF/LF,
+// plus the escaped forms used when a PEM is flattened into one line — `\n`
+// (.env values, shell exports), `\r\n` (escaped CRLF) and `\\n` (JS/JSON source
+// strings with a double backslash). `\\r?\\?n` covers all three.
 const PRIVATE_KEY_HEADER = /-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----/g;
-const PRIVATE_KEY_PAYLOAD_LINE = /^[ \t]*([A-Za-z0-9+/=]{16,})[ \t]*(?:(?:\r?\n)|\\r?\\n|$)/;
+const PRIVATE_KEY_PAYLOAD_LINE = /^[ \t]*([A-Za-z0-9+/=]{16,})[ \t]*(?:(?:\r?\n)|\\r?\\?n|$)/;
 const UUID_VALUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function collectPrivateKeyMaterialMatches(text) {
@@ -79,7 +93,7 @@ function collectPrivateKeyMaterialMatches(text) {
   PRIVATE_KEY_HEADER.lastIndex = 0;
   while ((header = PRIVATE_KEY_HEADER.exec(text)) !== null) {
     const afterHeader = text.slice(header.index + header[0].length);
-    const lineBreak = afterHeader.match(/^[ \t]*(?:\r?\n|\\r?\\n)/);
+    const lineBreak = afterHeader.match(/^[ \t]*(?:\r?\n|\\r?\\?n)/);
     if (!lineBreak) continue;
 
     let cursor = header.index + header[0].length + lineBreak[0].length;
@@ -234,19 +248,14 @@ function collectHighConfidenceFindings(relPath, text) {
 function collectGenericAssignmentFindings(relPath, text) {
   const findings = [];
   const suppressed = [];
-  let match;
 
-  GENERIC_SECRET_ASSIGNMENT.lastIndex = 0;
-  while ((match = GENERIC_SECRET_ASSIGNMENT.exec(text)) !== null) {
-    const variableName = String(match[1] || '');
-    const value = String(match[3] || '').trim();
-
+  const evaluateCandidate = (variableName, value, index) => {
     // Localization values commonly use keys such as `login_no_token`. Ignore
     // human-readable sentences there, but keep passphrase-style assignments
     // in runtime code under inspection.
-    if (/\s/.test(value) && isLocalizationPath(relPath)) continue;
-    if (PUBLIC_IDENTIFIER.test(variableName)) continue;
-    if (PLACEHOLDER_VALUE.test(value) || PLACEHOLDER_FRAGMENT.test(value)) continue;
+    if (/\s/.test(value) && isLocalizationPath(relPath)) return;
+    if (PUBLIC_IDENTIFIER.test(variableName)) return;
+    if (PLACEHOLDER_VALUE.test(value) || PLACEHOLDER_FRAGMENT.test(value)) return;
 
     const finding = {
       type: 'content',
@@ -255,9 +264,9 @@ function collectGenericAssignmentFindings(relPath, text) {
       id: 'generic_secret_assignment',
       path: relPath,
       reason: `possible secret assignment detected for ${variableName}`,
-      line: lineNumberAt(text, match.index)
+      line: lineNumberAt(text, index)
     };
-    const context = lineContextAt(text, match.index);
+    const context = lineContextAt(text, index);
     const fixtureEvidence = (isFixturePath(relPath) || isSyntheticUtilityPath(relPath))
       && (FIXTURE_VALUE_FRAGMENT.test(value)
         || isObviouslySyntheticSecret(value)
@@ -271,6 +280,22 @@ function collectGenericAssignmentFindings(relPath, text) {
     } else {
       findings.push(finding);
     }
+  };
+
+  let match;
+  GENERIC_SECRET_ASSIGNMENT.lastIndex = 0;
+  while ((match = GENERIC_SECRET_ASSIGNMENT.exec(text)) !== null) {
+    evaluateCandidate(String(match[2] || ''), String(match[4] || '').trim(), match.index);
+  }
+
+  GENERIC_SECRET_ASSIGNMENT_BARE.lastIndex = 0;
+  while ((match = GENERIC_SECRET_ASSIGNMENT_BARE.exec(text)) !== null) {
+    const value = String(match[2] || '');
+    // Bare values carry no quote evidence, so require a credential shape:
+    // letters AND digits. Pure identifier references (requireToken, readConfig)
+    // and numeric config (RETRY_COUNT = 3000) do not match this mix.
+    if (!/[A-Za-z]/.test(value) || !/[0-9]/.test(value)) continue;
+    evaluateCandidate(String(match[1] || ''), value, match.index);
   }
 
   return { findings, suppressed };

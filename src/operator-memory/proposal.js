@@ -25,12 +25,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ensureStorageTree, getStorageRoot } = require('./storage');
-const { fingerprintProposal } = require('./slug');
+const { fingerprintProposal, isValidDecisionSlug } = require('./slug');
 
 const MAX_QUOTES = 5;
 const VALID_SIGNAL_TYPES = ['authorization', 'exclusion', 'correction', 'confirmation'];
 
 function proposalPath(identity, slug) {
+  if (!isValidDecisionSlug(slug)) {
+    throw new Error(`invalid proposal slug: ${JSON.stringify(String(slug)).slice(0, 120)}`);
+  }
   return path.join(getStorageRoot(identity), 'proposals', `${slug}.md`);
 }
 

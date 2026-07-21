@@ -44,6 +44,180 @@ function makeLogger() {
   };
 }
 
+test('git:guard blocks modern OpenAI project keys (sk-proj-)', async () => {
+  const dir = await makeRepo();
+  try {
+    const modernKey = ['sk', 'proj', 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd'].join('-');
+    await writeFile(dir, 'src/provider.js', `const apiKey = "${modernKey}";\n`);
+    git(dir, ['add', '--', 'src/provider.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((item) => item.id === 'openai_secret'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard blocks Anthropic keys (sk-ant-)', async () => {
+  const dir = await makeRepo();
+  try {
+    const anthropicKey = ['sk', 'ant', 'api03', 'xK9mP2vL8qR5tY7uW3zA1b2C4d'].join('-');
+    await writeFile(dir, 'src/provider.js', `const apiKey = "${anthropicKey}";\n`);
+    git(dir, ['add', '--', 'src/provider.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((item) => item.id === 'openai_secret'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard ignores lowercase kebab-case sk- lookalikes without upper/digit', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(dir, 'src/theme.js', "const cssClass = 'sk-this-is-not-an-actual-key-here';\n");
+    git(dir, ['add', '--', 'src/theme.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.errors, null, 2));
+    assert.equal(result.errors.some((item) => item.id === 'openai_secret'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard blocks single-line PEM flattened with escaped newlines (.env style)', async () => {
+  const dir = await makeRepo();
+  try {
+    const payload = `MIIE${'A1b2C3d4E5f6G7h8'.repeat(5)}`;
+    const flattenedPem = ['-----BEGIN PRIVATE KEY-----', payload, '-----END PRIVATE KEY-----'].join('\\n');
+    await writeFile(dir, 'config/secrets.env', `CREDENTIAL="${flattenedPem}"\n`);
+    git(dir, ['add', '--', 'config/secrets.env']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((item) => item.id === 'private_key_block'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard still ignores flattened PEM markers without cryptographic payload', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(dir, 'src/sample.js', 'const sample = "-----BEGIN PRIVATE KEY-----\\nredacted";\n');
+    git(dir, ['add', '--', 'src/sample.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.errors, null, 2));
+    assert.equal(result.errors.some((item) => item.id === 'private_key_block'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard warns on JSON/dict quoted secret keys', async () => {
+  const dir = await makeRepo();
+  try {
+    const realistic = ['xK9mP2vL8', 'qR5tY7u'].join('');
+    await writeFile(dir, 'src/config.json', `${JSON.stringify({ password: realistic })}\n`);
+    git(dir, ['add', '--', 'src/config.json']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true, allowWarnings: false },
+      logger: makeLogger()
+    });
+
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard warns on unquoted shell-style secret assignments', async () => {
+  const dir = await makeRepo();
+  try {
+    const realistic = ['xK9mP2vL8', 'qR5tY7u'].join('');
+    await writeFile(dir, 'deploy.sh', `export SECRET_TOKEN=${realistic}\n`);
+    git(dir, ['add', '--', 'deploy.sh']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true, allowWarnings: false },
+      logger: makeLogger()
+    });
+
+    assert.ok(result.warnings.some((item) => item.id === 'generic_secret_assignment'));
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('git:guard ignores unquoted non-literal right-hand sides', async () => {
+  const dir = await makeRepo();
+  try {
+    await writeFile(
+      dir,
+      'src/cli.js',
+      [
+        'const token = requireToken(config, t);',
+        'const apiSecret = process.env.API_SECRET_123;',
+        'if (token === storedToken123456) { noop(); }',
+        'const RETRY_TOKEN_COUNT = 300012;',
+        ''
+      ].join('\n')
+    );
+    git(dir, ['add', '--', 'src/cli.js']);
+
+    const result = await runGitGuard({
+      args: [dir],
+      options: { json: true },
+      logger: makeLogger()
+    });
+
+    assert.equal(result.ok, true, JSON.stringify(result.warnings.concat(result.errors), null, 2));
+    assert.equal(result.warnings.some((item) => item.id === 'generic_secret_assignment'), false);
+  } finally {
+    process.exitCode = 0;
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('git:guard passes for a normal staged source file', async () => {
   const dir = await makeRepo();
   try {

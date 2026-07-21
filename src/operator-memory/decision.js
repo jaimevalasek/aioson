@@ -34,10 +34,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { getStorageRoot, openIndexDb } = require('./storage');
 const { deleteProposal, proposalPath } = require('./proposal');
+const { isValidDecisionSlug } = require('./slug');
 
 const SCHEMA_VERSION = '1.0';
 const MAX_BODY_CHARS = 500;
 const VALID_CATEGORIES = ['identity', 'autonomy', 'tooling', 'default'];
+
+function assertValidDecisionSlug(slug) {
+  if (!isValidDecisionSlug(slug)) {
+    throw new Error(`invalid decision slug: ${JSON.stringify(String(slug)).slice(0, 120)}`);
+  }
+}
 
 const CATEGORY_KEYWORDS = {
   identity: ['preferencia', 'preference', 'estilo', 'style', 'communication', 'comunicacao', 'linguagem', 'language', 'tom', 'tone'],
@@ -55,10 +62,12 @@ function inferCategory(signalType, body) {
 }
 
 function decisionPath(identity, slug) {
+  assertValidDecisionSlug(slug);
   return path.join(getStorageRoot(identity), 'decisions', `${slug}.md`);
 }
 
 function historyPath(identity, slug, isoStamp) {
+  assertValidDecisionSlug(slug);
   return path.join(getStorageRoot(identity), 'history', `${isoStamp.replace(/[:.]/g, '-')}-${slug}.md`);
 }
 
