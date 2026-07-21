@@ -87,6 +87,11 @@ test('workflow:execute --seed: writes the scheme with an enabled agentic_policy 
   // Seed persists BOTH state files.
   const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
   assert.equal(scheme.agentic_policy.enabled, true);
+  const executionManifest = JSON.parse(
+    await fs.readFile(path.join(tmpDir, '.aioson/context/agent-execution-cart.json'), 'utf8')
+  );
+  assert.deepEqual(executionManifest.cycle_limits, { dev_qa: 1, tester: 1, pentester: 1 });
+  assert.ok(Object.values(executionManifest.agents).every(agent => !Object.hasOwn(agent, 'reasoning_effort')));
   const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
   assert.equal(state.mode, 'feature');
   // Seed must NOT drive a stage transition — current stays null (no activation happened).
@@ -111,6 +116,89 @@ test('workflow:execute --seed: is idempotent (re-seeding the same slug resumes, 
   assert.equal(first.ok, true);
   assert.equal(second.ok, true);
   assert.equal(second.resumed, true);
+});
+
+test('workflow:execute --seed: explicit cycle options initialize the execution manifest, including zero', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/prd-review.md', '---\nclassification: SMALL\n---\n# prd\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| review | in_progress | 2026-07-01 | |\n'
+  );
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: {
+      json: true,
+      feature: 'review',
+      seed: true,
+      'max-dev-qa-cycles': '1',
+      'max-tester-cycles': '0',
+      'max-pentester-cycles': '2'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  const manifest = JSON.parse(
+    await fs.readFile(path.join(tmpDir, '.aioson/context/agent-execution-review.json'), 'utf8')
+  );
+  assert.deepEqual(manifest.cycle_limits, { dev_qa: 1, tester: 0, pentester: 2 });
+  assert.equal(result.agentic_policy.review_cycle.max_dev_qa_cycles, 1);
+  assert.equal(result.agentic_policy.review_cycle.max_tester_correction_cycles, 0);
+  assert.equal(result.agentic_policy.review_cycle.max_pentester_correction_cycles, 2);
+});
+
+test('workflow:execute --seed: never rewrites developer-owned manifest settings, even with new overrides', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/prd-preserve.md', '---\nclassification: SMALL\n---\n# prd\n');
+  await writeFile(
+    tmpDir,
+    '.aioson/context/features.md',
+    '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| preserve | in_progress | 2026-07-01 | |\n'
+  );
+  const initial = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'preserve', seed: true, tool: 'codex' },
+    logger: makeLogger()
+  });
+  assert.equal(initial.ok, true);
+  const manifestPath = path.join(tmpDir, '.aioson/context/agent-execution-preserve.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  manifest.agents.dev.model = 'gpt-custom';
+  manifest.agents.dev.reasoning_effort = 'high';
+  manifest.agents.qa.enabled = false;
+  manifest.cycle_limits = { dev_qa: 2, tester: 0, pentester: 2 };
+  const developerOwnedBytes = `${JSON.stringify(manifest, null, 4)}\r\n`;
+  await fs.writeFile(manifestPath, developerOwnedBytes, 'utf8');
+
+  const resumed = await runWorkflowExecute({
+    args: [tmpDir],
+    options: {
+      json: true,
+      feature: 'preserve',
+      seed: true,
+      tool: 'codex',
+      'max-dev-qa-cycles': '9',
+      'max-tester-cycles': '9',
+      'max-pentester-cycles': '9'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(resumed.ok, true);
+  assert.equal(await fs.readFile(manifestPath, 'utf8'), developerOwnedBytes);
+  const preserved = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  assert.equal(preserved.agents.dev.model, 'gpt-custom');
+  assert.equal(preserved.agents.dev.reasoning_effort, 'high');
+  assert.equal(preserved.agents.qa.enabled, false);
+  assert.deepEqual(preserved.cycle_limits, { dev_qa: 2, tester: 0, pentester: 2 });
+  assert.equal(resumed.agentic_policy.review_cycle.max_dev_qa_cycles, 2);
+  assert.equal(resumed.agentic_policy.review_cycle.max_tester_correction_cycles, 0);
+  assert.equal(resumed.agentic_policy.review_cycle.max_pentester_correction_cycles, 2);
 });
 
 test('workflow:execute: buildAgenticPolicy encodes bounded review loops and sidecars', () => {
@@ -425,7 +513,7 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
   assert.ok(result.suggestion);
   assert.equal(typeof result.resume_command, 'string');
   assert.equal(result.agentic_policy.enabled, true);
-  assert.equal(result.agentic_policy.review_cycle.max_dev_qa_cycles, 3);
+  assert.equal(result.agentic_policy.review_cycle.max_dev_qa_cycles, 1);
 
   const executionState = JSON.parse(
     await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8')
@@ -439,7 +527,7 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
   assert.ok(executionState.suggestion);
   assert.equal(typeof executionState.resume_command, 'string');
   assert.equal(executionState.agentic_policy.enabled, true);
-  assert.equal(executionState.agentic_policy.review_cycle.max_dev_qa_cycles, 3);
+  assert.equal(executionState.agentic_policy.review_cycle.max_dev_qa_cycles, 1);
 });
 
 test('workflow:execute: advances multiple checkpoints when --max-checkpoints is provided', async () => {

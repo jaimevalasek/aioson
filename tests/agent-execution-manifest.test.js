@@ -1,13 +1,94 @@
 'use strict';
-const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs/promises');const os=require('node:os');const path=require('node:path');
-const {defaults,initManifest,loadManifest,mergeAdditive}=require('../src/agent-execution/manifest');const {validateManifest}=require('../src/agent-execution/schema');
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const { defaults, initManifest, loadManifest } = require('../src/agent-execution/manifest');
+const { validateManifest } = require('../src/agent-execution/schema');
+
 // AC-AED-01 AC-AED-02 AC-AED-03 AC-AED-13 AC-AED-15
-test('manifest defaults contain five executable external agents',()=>{const m=defaults('demo','codex');assert.equal(validateManifest(m,'demo').ok,true);assert.equal(Object.keys(m.agents).length,5);assert.equal(m.agents.dev.model,'configured-default');assert.ok(Object.values(m.agents).every(agent=>agent.mode==='external'))});
-test('validation reports actionable JSON paths',()=>{const m=defaults('demo');m.host='invalid';m.agents.qa.model='';const r=validateManifest(m,'demo');assert.equal(r.ok,false);assert.deepEqual(r.errors.map(e=>e.path),['$.host','$.agents.qa.model'])});
-test('security: model names and fallback names are length bounded before resolution',()=>{const m=defaults('demo');m.agents.dev.model='x'.repeat(201);m.agents.qa.fallbacks=[{host:'codex',model:'y'.repeat(201)}];const r=validateManifest(m,'demo');assert.equal(r.ok,false);assert.ok(r.errors.some(e=>e.path==='$.agents.dev.model'));assert.ok(r.errors.some(e=>e.path==='$.agents.qa.fallbacks[0].model'))});
-test('additive initialization preserves operator model',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'aed-'));await initManifest(dir,'demo','codex');const file=path.join(dir,'.aioson/context/agent-execution-demo.json');const m=JSON.parse(await fs.readFile(file));m.agents.dev.model='gpt-custom';await fs.writeFile(file,JSON.stringify(m));await initManifest(dir,'demo','codex');assert.equal((await loadManifest(dir,'demo')).manifest.agents.dev.model,'gpt-custom')});
-test('merge additive adds defaults without replacing choices',()=>assert.deepEqual(mergeAdditive({a:{x:2}},{a:{x:1,y:3}}),{a:{x:2,y:3}}));
+test('Codex manifest defaults contain five executable agents, medium effort, and one review cycle', () => {
+  const manifest = defaults('demo', 'codex');
+  assert.equal(validateManifest(manifest, 'demo').ok, true);
+  assert.equal(Object.keys(manifest.agents).length, 5);
+  assert.equal(manifest.agents.dev.model, 'configured-default');
+  assert.ok(Object.values(manifest.agents).every(agent => agent.mode === 'external'));
+  assert.ok(Object.values(manifest.agents).every(agent => agent.reasoning_effort === 'medium'));
+  assert.deepEqual(manifest.cycle_limits, { dev_qa: 1, tester: 1, pentester: 1 });
+});
+
+test('hosts without reasoning-effort support do not receive an incompatible default', () => {
+  const manifest = defaults('demo', 'claude');
+  assert.equal(validateManifest(manifest, 'demo').ok, true);
+  assert.ok(Object.values(manifest.agents).every(agent => !Object.hasOwn(agent, 'reasoning_effort')));
+});
+
+test('validation reports actionable JSON paths', () => {
+  const manifest = defaults('demo');
+  manifest.host = 'invalid';
+  manifest.agents.qa.model = '';
+  const result = validateManifest(manifest, 'demo');
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors.map(error => error.path), ['$.host', '$.agents.qa.model']);
+});
+
+test('security: model names and fallback names are length bounded before resolution', () => {
+  const manifest = defaults('demo');
+  manifest.agents.dev.model = 'x'.repeat(201);
+  manifest.agents.qa.fallbacks = [{ host: 'codex', model: 'y'.repeat(201) }];
+  const result = validateManifest(manifest, 'demo');
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(error => error.path === '$.agents.dev.model'));
+  assert.ok(result.errors.some(error => error.path === '$.agents.qa.fallbacks[0].model'));
+});
+
+test('initialization is create-once and preserves every developer edit byte for byte', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aed-owned-'));
+  const made = await initManifest(dir, 'demo', 'codex');
+  assert.equal(made.created, true);
+  assert.equal(made.unchanged, false);
+
+  const manifest = made.manifest;
+  manifest.agents.dev.model = 'gpt-custom';
+  manifest.agents.dev.reasoning_effort = 'high';
+  manifest.agents.qa.enabled = false;
+  delete manifest.agents.tester.reasoning_effort;
+  manifest.cycle_limits = { dev_qa: 2, tester: 0, pentester: 2 };
+  const developerOwnedBytes = `${JSON.stringify(manifest, null, 4)}\r\n`;
+  await fs.writeFile(made.path, developerOwnedBytes, 'utf8');
+
+  const repeated = await initManifest(dir, 'demo', 'claude', {
+    cycleLimits: { dev_qa: 9, tester: 9, pentester: 9 }
+  });
+  assert.equal(repeated.created, false);
+  assert.equal(repeated.unchanged, true);
+  assert.equal(await fs.readFile(made.path, 'utf8'), developerOwnedBytes);
+
+  const loaded = await loadManifest(dir, 'demo');
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.manifest.host, 'codex');
+  assert.equal(loaded.manifest.agents.dev.model, 'gpt-custom');
+  assert.equal(loaded.manifest.agents.dev.reasoning_effort, 'high');
+  assert.equal(loaded.manifest.agents.qa.enabled, false);
+  assert.equal(Object.hasOwn(loaded.manifest.agents.tester, 'reasoning_effort'), false);
+  assert.deepEqual(loaded.manifest.cycle_limits, { dev_qa: 2, tester: 0, pentester: 2 });
+});
+
 // AC-AEMR-01 AC-AEMR-02
-test('reasoning effort is optional, validated and preserved by additive init',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'aemr-'));const made=await initManifest(dir,'demo','codex');assert.equal(Object.hasOwn(made.manifest.agents.dev,'reasoning_effort'),false);made.manifest.agents.dev.reasoning_effort='high';await fs.writeFile(made.path,JSON.stringify(made.manifest));await initManifest(dir,'demo','codex');const loaded=await loadManifest(dir,'demo');assert.equal(loaded.ok,true);assert.equal(loaded.manifest.agents.dev.reasoning_effort,'high');loaded.manifest.agents.dev.reasoning_effort='extreme';const invalid=validateManifest(loaded.manifest,'demo');assert.ok(invalid.errors.some(error=>error.path==='$.agents.dev.reasoning_effort'))});
+test('reasoning effort remains schema-validated after creation', () => {
+  const manifest = defaults('demo', 'codex');
+  manifest.agents.dev.reasoning_effort = 'extreme';
+  const invalid = validateManifest(manifest, 'demo');
+  assert.ok(invalid.errors.some(error => error.path === '$.agents.dev.reasoning_effort'));
+});
+
 // AC-AED-14
-test('missing manifest reports legacy compatibility instead of invalid config',async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'aed-legacy-'));const loaded=await loadManifest(dir,'legacy');assert.equal(loaded.ok,true);assert.equal(loaded.exists,false);assert.equal(loaded.legacy,true)});
+test('missing manifest reports legacy compatibility instead of invalid config', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aed-legacy-'));
+  const loaded = await loadManifest(dir, 'legacy');
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.exists, false);
+  assert.equal(loaded.legacy, true);
+});

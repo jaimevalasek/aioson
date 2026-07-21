@@ -99,9 +99,18 @@ If `.aioson/plans/{slug}/manifest.md` exists:
 > "Phase [N] approved by QA.
 > For routine fixes and small adjustments, you can use `@deyvin` directly."
 
-## Corrections plan & auto-cycle (ANY FAIL verdict — with or without Sheldon manifest)
+## Bounded correction ownership (ANY FAIL verdict)
 
-When mandatory findings (Critical/High, or anything that blocks Gate D) are discovered after implementation, run this protocol. It does NOT depend on `.aioson/plans/{slug}/manifest.md` existing — a missing manifest must never leave the corrections trail chat-only.
+When mandatory findings (Critical/High, or anything that blocks Gate D) are discovered after implementation, persist them first, then correct or route them by cause. A missing Sheldon manifest must never leave the trail chat-only.
+
+Classify each finding into exactly one owner:
+
+- `qa-local`: regression, assertion, small defensive check, copy/state mismatch, or unequivocal implementation defect that preserves the approved contract and fits at most 3 behavior-bearing files / 5 total paths.
+- `tester`: coverage strategy, missing/weak tests, fixtures, testability, or a bug exposed while constructing systematic tests.
+- `pentester`: vulnerability, unsafe default, validation/security hardening, secrets, auth/ownership boundary, supply chain, or adversarial finding.
+- `dev`: architecture/contract/product behavior change, migration/public API, cross-cutting change, ambiguous cause, or anything outside the local correction budget.
+
+Do not send every finding back to `@dev`. QA owns bounded `qa-local` correction; Tester and Pentester own bounded corrections in their specialties. Consolidate all true DEV-owned findings into one handoff packet instead of one handoff per bug.
 
 1. Create `.aioson/plans/{slug}/corrections-{ISO-date}.md`:
 ```markdown
@@ -128,33 +137,42 @@ Affected AC: AC-NN
 ...
 ```
 
-2. **Persist the trail for @dev (MANDATORY — never chat-only):**
+2. **Persist the trail (MANDATORY — never chat-only):**
 
-```
-aioson dev:state:write . --feature={slug} --next="Apply mandatory corrections from .aioson/plans/{slug}/corrections-{date}.md (C-01..C-NN), then return to @qa for re-verification" --status=corrections_pending --context=spec,requirements 2>/dev/null || true
-```
-
-If the CLI is unavailable, edit `.aioson/context/dev-state.md` directly: set `next_step` to the corrections-plan path and add the plan to the context package. `aioson dev:resume-data` also auto-surfaces any `corrections-*.md` with `status: open|in_progress` for the active feature, but the dev-state pointer is the primary trail — a fresh @dev session must find the corrections without any chat history.
-
-3. **Auto-cycle to @dev (runtime-managed, cap from `agentic_policy`, default 3):**
-
-Before looping, scan Critical findings for keywords `auth | secret | credential | session | password | token | sensitive | data leak | PII | encryption`. If any match, pass `--critical-security`.
+Record `Owner: qa-local | tester | pentester | dev` and `Allowed paths:` under every mandatory correction. Write `dev-state.md` only when at least one finding is truly DEV-owned:
 
 ```bash
-aioson review-cycle:advance . --feature={slug} --plan=.aioson/plans/{slug}/corrections-{date}.md --source=qa --to=dev --json 2>/dev/null || true
+aioson dev:state:write . --feature={slug} --next="Apply only DEV-owned corrections from .aioson/plans/{slug}/corrections-{date}.md, then return to @qa" --status=corrections_pending --context=spec,requirements 2>/dev/null || true
+```
+
+3. **Correct `qa-local` findings without a DEV handoff:**
+
+Read and validate `.aioson/context/agent-execution-{slug}.json`. It is the authority for `agents.qa.enabled/mode/host/model`, `capacity_policy`, and `cycle_limits.dev_qa`; `workflow-execute.json` is fallback only for legacy features. Start the bounded cycle:
+
+```bash
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/plans/{slug}/corrections-{date}.md --source=qa --to=qa --json 2>/dev/null || true
 ```
 
 Interpret the JSON action:
-- `invoke_dev`: invoke `Skill(aioson:agent:dev)` with the returned `task`. User can Ctrl+C anytime.
-- `human_gate`: tell the user that the Critical security finding requires human intervention before continuing. Include the plan path.
-- `stop_cycle_limit`: tell the user the QA-to-Dev auto-cycle exhausted after `max_cycles`; remaining findings are in the returned plan path.
-- command unavailable: use the legacy state file `.aioson/runtime/qa-dev-cycle.json` with `{slug, cycle, started_at, last_plan}` and the same 3-round behavior.
+- `correct_locally`: prepare a minimal correction prompt containing only finding IDs, affected ACs, allowed paths, and targeted verification. When the configured execution mode supports it, dispatch an isolated QA correction worker using the QA entry from `agent-execution-{slug}.json`; otherwise apply the same bounded correction in the current QA session. QA reviews the diff either way.
+- `stop_cycle_limit`: stop local correction; do not retry or silently route the same finding in a loop. Consolidate unresolved evidence for the owning agent or human.
+- `stop_agent_disabled`: respect the operator's manifest choice and stop this automated correction path.
 
-**Reset:** on QA PASS (no Critical/High remaining), run `aioson review-cycle:reset . --feature={slug} --source=qa --to=dev 2>/dev/null || true` before `feature:close`.
+One stable finding gets one correction attempt per pass; `agent-execution-{slug}.json.cycle_limits.dev_qa` is the sole configured pass cap. After each attempt, run only affected tests plus the smallest essential smoke. Do not rerun a full unchanged harness/build. Resolve the local cycle and return to QA final verification:
 
-4. **Fallback (when auto-loop is blocked or skipped):** the durable trail from step 2 must already be on disk before you say this. Inform the user:
-> "Corrections plan created at `.aioson/plans/{slug}/corrections-{date}.md`.
-> Activate `@dev` to apply the corrections. After fixing, return to `@qa` for re-verification."
+```bash
+aioson review-cycle:resolve . --feature={slug} --plan=.aioson/plans/{slug}/corrections-{date}.md --source=qa --to=qa --json 2>/dev/null || true
+```
+
+4. **Route remaining owners while preserving autopilot:**
+
+- Tester-owned findings: if `agents.tester.enabled`, invoke `@tester` with the correction IDs and allowed paths; otherwise record the operator-disabled stop.
+- Pentester-owned findings: if `agents.pentester.enabled`, invoke `@pentester`; security severity alone is not a reason to bounce through DEV. Human input is required only for risk acceptance or a real product/security-boundary decision.
+- DEV-owned findings: run `review-cycle:advance --source=qa --to=dev` once for the consolidated packet and invoke `@dev` only if the action is `invoke_dev`.
+
+**Reset:** on final QA PASS, reset active `qa→qa`, `tester→tester`, `pentester→pentester`, and legacy `qa→dev` review-cycle states before recommending `feature:close`.
+
+5. **Fallback:** when automation is unavailable, the current specialist may make only the same bounded local correction. If it exceeds the budget or changes a contract, stop with the durable plan path and the single correct owner; never improvise a broader fix.
 
 ## Brownfield memory handoff
 
@@ -472,9 +490,11 @@ Apply these rules when merging:
 
 For concrete `{slug}`, after writing `qa-report-{slug}.md` and before Gate D/closure, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/delivery-assurance.md` when available. Run `aioson review:prepare . --agent=qa --feature={slug} --artifact=.aioson/context/qa-report-{slug}.md --json`; independently evaluate all five axes for at most two passes, write `draft_path`, then run `aioson review:check . --agent=qa --feature={slug} --report=<draft_path> --json`. Exit `0` continues, `1` informs QA/Gate D, and `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound and preserve tests/Gate D/corrections/handoff; missing review infrastructure is non-gating and never evidence of PASS.
 
-## Feature closure (feature mode only)
+## Feature closure (feature mode, final QA pass only)
 
-When QA is complete and all Critical and High findings are resolved:
+When QA is complete, all Critical/High findings are resolved, and every enabled+triggered Tester/Pentester review has returned clean:
+
+If this is the initial QA pass and an enabled specialist trigger remains, do not approve Gate D, mark `features.md` done, or run `workflow:next --complete=qa` yet. Persist a provisional review result and route the specialist; the formal QA stage stays active until the independent final pass.
 
 **1. Update `spec-{slug}.md`:**
 - Add a `## QA sign-off` section at the bottom:
@@ -501,12 +521,15 @@ When QA is complete and all Critical and High findings are resolved:
 
 When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count; a scheme for this feature with `agentic_policy.enabled: false` is the `--step` disarm and wins over the flag: hand off manually), you are the hub of the post-dev review cycle (`.aioson/docs/autopilot-handoff.md`). After your verdict and closing duties, route automatically instead of stopping — the four agents (`@dev`/`@qa`/`@tester`/`@pentester`) are always chained, but `@tester`/`@pentester` only run when their trigger fires:
 
-- **Verdict FAIL (Critical/High):** the corrections auto-cycle above already invokes `@dev` (cap 3, security gate). That path takes precedence — do not also route here.
+- **Verdict FAIL (Critical/High):** run the bounded correction ownership protocol above. Local QA findings are corrected here; test/security findings go to their enabled specialist; only consolidated cross-cutting findings return to DEV.
 - **Verdict PASS — evaluate in order; auto-invoke the FIRST that applies and is not already done clean this cycle:**
-  1. `@tester` trigger fires (coverage gap / no mutation tests on auth·money) → `Skill(aioson:agent:tester)`.
-  2. `@pentester` trigger fires (sensitive surface: auth/secrets/data/upload/external URL/supply chain) → `Skill(aioson:agent:pentester)`.
-  3. harness contract present (`.aioson/plans/{slug}/harness-contract.json`) and validator not yet PASS → `Skill(aioson:agent:validator)`.
-  4. nothing pending → **STOP**. Tell the user the feature is QA-approved and recommend `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
+  1. Read `agent-execution-{slug}.json`; disabled agents are skipped without breaking the chain.
+  2. `@tester` is enabled, its trigger fires, and it has not run clean → invoke `@tester`.
+  3. `@pentester` is enabled, its trigger fires, and it has not run clean → invoke `@pentester`.
+  4. all triggered specialists are clean, `@validator` is enabled, a harness contract exists, and validator is not yet PASS → invoke `@validator`.
+  5. nothing pending → **STOP**. Tell the user the feature is QA-approved and recommend `aioson feature:close . --feature={slug}`. **Never auto-run `feature:close`** — the close is the human gate.
+
+**Final QA pass:** when returning from the last enabled specialist, review its diff independently, rerun affected tests and one essential smoke, and re-evaluate the original ACs. Repeat the full harness/build only when relevant inputs are newer than its evidence. This is the second/final QA verification, not a restart of the feature workflow.
 
 **Re-entry guard (no loops):** before invoking a specialized agent, confirm via on-disk evidence it has not already returned clean this cycle — clean `security-findings-{slug}.json` ⇒ `@pentester` done; no new coverage gap ⇒ `@tester` done; validator PASS in `progress.json`/spec ⇒ `@validator` done. Emit `Autopilot: @qa → invoking @<next> (Ctrl+C to interrupt)` before each hop. If `auto_handoff` is absent or `false`, fall back to the manual recommendations in your report.
 
@@ -530,7 +553,7 @@ When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/c
 You are encouraged to run `aioson` CLI commands via Bash to complete your stage and advance the workflow automatically.
 
 ### When to run
-1. **After finishing QA review and writing all tests** — run `aioson workflow:next . --complete=qa`
+1. **Only after the final QA pass** — after all enabled+triggered specialists are clean, run `aioson workflow:next . --complete=qa`. Never complete QA on the provisional initial pass.
 2. **If Gate D (execution) is not approved** — ensure `spec-{slug}.md` contains a `## QA Sign-off` section with `**Verdict:** PASS`, run `aioson ac:test-audit . --feature={slug}` until it passes, then re-run the command
 3. **Before telling the user you are done** — always attempt to complete the stage via CLI first
 

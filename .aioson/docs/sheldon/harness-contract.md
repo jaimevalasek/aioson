@@ -55,6 +55,8 @@ ACs that are subjective (UX feel, code style preference) get `binary: false` and
 
 **Rule of thumb:** if the assertion can be answered by a single shell command exit code or a single test, it qualifies as `binary: true`. Otherwise mark it advisory and let `@qa` cover it.
 
+**Stable-ID rule:** every criterion has one unique criterion `id` and cites its source IDs atomically in `description` or `assertion`. Never compress multiple ACs into a synthetic range such as `AC-project-001-004`. If one command proves several ACs, list every exact ID separately (`AC-project-001, AC-project-002, AC-project-003, AC-project-004`) in the same criterion; do not invent a grouped ID and do not duplicate the command across padded criteria.
+
 ### 2b. Author `verification` commands
 
 Every `binary: true` criterion **must** carry a `verification` shell command whenever one is mechanically possible. Exit code 0 = pass; anything else = fail. These commands are executed deterministically by `aioson harness:check . --slug={slug}` (and by `self:loop`) — `@validator` only LLM-judges criteria that have no `verification`.
@@ -201,6 +203,7 @@ Safe defaults for a normal MEDIUM `builder` contract:
 
 - The contract is **additive** to the enrichment log; both coexist. Enrichment explains *what* to enrich; contract defines *what "done" means*.
 - Contract criteria are derived from the **enriched** PRD ACs — never invent criteria not anchored to an AC.
+- Any file path placed in criteria/static evidence or the Capability Delivery Plan is a full repository-relative file path. Do not use basename-only, directory-only, glob, ellipsis, or compressed `A/B` shorthand; these are intentionally rejected before expensive harness commands run.
 - Mention the contract path in the post-enrichment handoff message.
 - The user approves the contract as part of the post-enrichment gate. Do not declare the contract final without confirmation.
 - Once approved, the contract is the source of truth for `@validator`. Subsequent enrichment rounds may add new criteria, never remove approved ones without explicit user instruction.

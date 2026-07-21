@@ -9,27 +9,55 @@ const { loadModelCatalog } = require('./model-catalog');
 const { resolveModel, validateReasoningEffort } = require('./model-resolver');
 
 function manifestPath(projectDir, feature) { return path.join(projectDir, '.aioson', 'context', `agent-execution-${feature}.json`); }
-function defaults(feature, host = 'codex') {
+function defaults(feature, host = 'codex', { cycleLimits } = {}) {
   const agents = {};
-  for (const id of AGENTS) agents[id] = { enabled: true, host, mode: 'external', model: 'configured-default', writable_roots: [], fallbacks: [], report: `.aioson/context/reports/${feature}/{run_id}/${id}.json` };
-  return { version: 1, feature, host, generated_at: new Date().toISOString(), agents, capacity_policy: { strategy: 'pause', max_attempts: 1, backoff_ms: 0 }, cycle_limits: { dev_qa: 3, tester: 3, pentester: 3 }, reporting: { format: 'json', markdown: true } };
+  for (const id of AGENTS) {
+    agents[id] = {
+      enabled: true,
+      host,
+      mode: 'external',
+      model: 'configured-default',
+      ...(host === 'codex' ? { reasoning_effort: 'medium' } : {}),
+      writable_roots: [],
+      fallbacks: [],
+      report: `.aioson/context/reports/${feature}/{run_id}/${id}.json`
+    };
+  }
+  return {
+    version: 1,
+    feature,
+    host,
+    generated_at: new Date().toISOString(),
+    agents,
+    capacity_policy: { strategy: 'pause', max_attempts: 1, backoff_ms: 0 },
+    cycle_limits: { dev_qa: 1, tester: 1, pentester: 1, ...cycleLimits },
+    reporting: { format: 'json', markdown: true }
+  };
 }
 function stable(value) { if (Array.isArray(value)) return value.map(stable); if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, stable(value[k])])); return value; }
 function digest(value) { return crypto.createHash('sha256').update(JSON.stringify(stable(value))).digest('hex'); }
-function mergeAdditive(existing, base) {
-  if (Array.isArray(existing)) return existing;
-  if (!existing || typeof existing !== 'object') return existing === undefined ? base : existing;
-  const out = { ...base };
-  for (const [key, value] of Object.entries(existing)) out[key] = value && typeof value === 'object' && !Array.isArray(value) ? mergeAdditive(value, base && base[key]) : value;
-  return out;
-}
-async function initManifest(projectDir, feature, host, { overwrite = false } = {}) {
-  const file = manifestPath(projectDir, feature); const base = defaults(feature, host);
+async function initManifest(projectDir, feature, host, { cycleLimits } = {}) {
+  const file = manifestPath(projectDir, feature);
+  const base = defaults(feature, host, { cycleLimits });
   await fs.mkdir(path.dirname(file), { recursive: true });
-  let value = base;
-  try { const old = JSON.parse(await fs.readFile(file, 'utf8')); if (!overwrite) value = mergeAdditive(old, base); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  await fs.writeFile(file, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  return { path: file, manifest: value, digest: digest(value) };
+  try {
+    const value = JSON.parse(await fs.readFile(file, 'utf8'));
+    return { path: file, manifest: value, digest: digest(value), created: false, unchanged: true };
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+
+  const serialized = `${JSON.stringify(base, null, 2)}\n`;
+  try {
+    await fs.writeFile(file, serialized, { encoding: 'utf8', flag: 'wx' });
+    return { path: file, manifest: base, digest: digest(base), created: true, unchanged: false };
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      const value = JSON.parse(await fs.readFile(file, 'utf8'));
+      return { path: file, manifest: value, digest: digest(value), created: false, unchanged: true };
+    }
+    throw error;
+  }
 }
 async function loadManifest(projectDir, feature) {
   const file = manifestPath(projectDir, feature);
@@ -59,4 +87,4 @@ async function resolveExecutionEntry(entry, { catalogLoader = loadModelCatalog }
   };
 }
 async function resolveAgentExecution(manifest, agent, overrides = {}, options = {}) { return resolveExecutionEntry(resolveAgent(manifest, agent, overrides), options); }
-module.exports = { defaults, digest, initManifest, loadManifest, manifestPath, mergeAdditive, resolveAgent, resolveAgentExecution, resolveExecutionEntry };
+module.exports = { defaults, digest, initManifest, loadManifest, manifestPath, resolveAgent, resolveAgentExecution, resolveExecutionEntry };

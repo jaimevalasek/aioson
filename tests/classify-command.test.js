@@ -57,6 +57,24 @@ test('classify: scores MICRO for simple single-user PRD', async () => {
   assert.equal(result.classification, 'MICRO');
 });
 
+test('classify: a prototype menu affordance stays MICRO instead of becoming a management feature', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(
+    tmpDir,
+    '.aioson/context/prd-prototype-menu.md',
+    '# Prototype shortcut\nShow a menu link when an existing briefing contains prototype.html and open it in a new Play window.\n'
+  );
+  const result = await runClassify({
+    args: [tmpDir],
+    options: { json: true, feature: 'prototype-menu' },
+    logger: makeLogger()
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.classification, 'MICRO');
+  assert.equal(result.floored, false);
+  assert.equal(result.recommend_prototype, false);
+});
+
 // ── SMALL classification ──────────────────────────────────────────────────────
 
 test('classify: scores SMALL for moderate complexity', async () => {

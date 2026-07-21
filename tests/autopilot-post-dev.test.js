@@ -42,9 +42,11 @@ test('nenhum agente do ciclo auto-roda feature:close (gate humano preservado)', 
   }
 });
 
-test('autopilot usa limite de 3 ciclos qa-dev', () => {
+test('autopilot usa o manifesto de execução como autoridade de ciclos, com defaults limitados', () => {
   const fs = require('node:fs');
   const path = require('node:path');
+  const { defaults } = require('../src/agent-execution/manifest');
+  assert.deepEqual(defaults('demo').cycle_limits, { dev_qa: 1, tester: 1, pentester: 1 });
   for (const file of [
     '.aioson/agents/qa.md',
     'template/.aioson/agents/qa.md',
@@ -52,8 +54,8 @@ test('autopilot usa limite de 3 ciclos qa-dev', () => {
     'template/.aioson/docs/autopilot-handoff.md'
   ]) {
     const text = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
-    assert.match(text, /cap (?:= )?3|bounded at 3|3 rounds/, `${file} deve manter limite 3`);
-    assert.doesNotMatch(text, /cap (?:= )?2|bounded at 2|2 rounds/, `${file} nao deve manter limite 2`);
+    assert.match(text, /agent-execution-\{slug\}\.json/, `${file} deve apontar para o manifesto da feature`);
+    assert.match(text, /cycle_limits/, `${file} deve usar os limites editáveis do manifesto`);
   }
 });
 

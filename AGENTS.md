@@ -30,6 +30,18 @@ After the mandatory first action, if the user started the chat without naming an
 - Briefing refinement with `@briefing-refiner` to review, annotate, and refine an existing briefing before PRD generation.
 - Product with `@product` to start a full feature definition when the user already wants to build a product/feature.
 
+## Concrete implementation lane gate
+
+When the user already gave a concrete implementation request, run this gate before routing to Product, Briefing, or a feature workflow:
+
+1. Inspect the nearest existing implementation pattern and estimate expected paths as `behavior` or `support`.
+2. If the request is one already-specified observable outcome, reuses existing boundaries, has no open product/architecture/security decision, and fits the Simple Plan budget (up to 5 behavior files, 8 total paths, 2 existing modules), activate `@dev` in Simple Plan mode directly.
+3. Tests, translations, exports, manifests/registrations, generated metadata, and lockfiles that support the same behavior do not independently promote the lane.
+4. A new button, menu item, link, field, or window affordance is not automatically a product feature when behavior and placement are already clear.
+5. Use MICRO only when the bounded outcome needs feature memory or a small product decision (default review budget: 10 behavior files / 15 total paths). Use SMALL only for multiple independently valuable capabilities, a new boundary/contract, or material unresolved decisions.
+
+Classify the minimum user-confirmed request, not optional scope imagined by the agent. If execution will exceed the selected budget, stop before widening it, show the before/after path estimate and causal reason, and ask for approval. An explicitly requested agent or lane still wins.
+
 ## Memory loading
 
 Default **ON** in v1.15.0+. Opt out via `AIOSON_OPERATOR_MEMORY=false`.
@@ -109,10 +121,10 @@ When AIOSON manages the session via `aioson workflow:next`, the CLI controls all
 When running Codex directly (without `aioson workflow:next`), these rules apply:
 
 **Hard constraints — no exceptions:**
-- For implementation requests (code changes, feature build, refactor, bugfix), default to workflow routing and execute via the next workflow stage agent (typically `@dev` after required upstream stages).
+- For implementation requests, apply the Concrete implementation lane gate first. Eligible Simple Plan work goes directly to `@dev` and ends there; substantive feature work uses workflow routing and the next required stage.
 - Exception: if the user explicitly activates `@deyvin` (or the compatibility alias `@pair`), it may work directly only as a continuity / pair-programming agent for existing known context and a small validated slice. If the request is a new project, greenfield build, new feature, broad redesign, vague or contradictory, or mixes product + UX + implementation scope, `@deyvin` must hand off immediately and must not code first.
 - Official workflow agents (`@setup`, `@product`, `@analyst`, `@scope-check`, `@architect`, `@ux-ui`, `@pm`, `@orchestrator`, `@dev`, `@qa`) must stay inside the workflow. Do not answer requests outside the current agent's scope.
-- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present), the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain runs the whole feature — the spec authority (`@sheldon`/`@orchestrator`) seeds the agentic scheme and crosses into `@dev` via the `dev-state.md` cold-start packet, `@dev` runs all phases in one continuous drive, and the post-dev review cycle (`@dev` → `@qa` → `@tester`/`@pentester` when their `@qa` triggers fire → `@validator`) follows automatically. It stops only for a genuine human decision (product scope/sizing still open) and never auto-runs `feature:close`/publish — those require explicit human approval.
+- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present), the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain runs the whole feature — the spec authority (`@sheldon`/`@orchestrator`) seeds the scheme and crosses into `@dev`, then initial QA routes enabled specialists from `agent-execution-{slug}.json`; QA/Tester/Pentester apply bounded owner-local corrections, the last specialist returns to final QA, and Validator runs only when enabled/applicable. DEV re-enters only for consolidated cross-cutting changes. It stops for genuine human decisions and never auto-runs `feature:close`/publish.
 - If `.aioson/context/project.context.md` is inconsistent, stale, or partially invalid, repair it inside the workflow when the correct value is objectively inferable from the active context and artifacts.
 - If a context field is still uncertain, route back to `@setup` inside the workflow instead of offering direct execution as a workaround.
 - Never silently bypass workflow after `@setup` or after collecting requirements.

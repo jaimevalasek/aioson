@@ -13,7 +13,7 @@ function resolutionErrors(resolutions){
 async function runAgentExecution({args,options={},logger,catalogLoader}){
  const projectDir=path.resolve(process.cwd(),args[0]||'.'); const sub=options.sub||'show'; const feature=String(options.feature||options.slug||'').trim();
  if(!feature)return {ok:false,reason:'feature_required',message:'Use --feature=<slug>'};
- if(sub==='init'){const created=await initManifest(projectDir,feature,String(options.host||'codex')); const result={ok:true,feature,path:path.relative(projectDir,created.path),digest:created.digest,manifest:created.manifest,availability:'validated_at_dispatch'}; if(!options.json)logger.log(`Agent execution manifest: ${result.path}\nValidate: aioson agent:execution:validate . --feature=${feature}`); return result;}
+ if(sub==='init'){const created=await initManifest(projectDir,feature,String(options.host||'codex')); const result={ok:true,feature,path:path.relative(projectDir,created.path),digest:created.digest,manifest:created.manifest,created:created.created,unchanged:created.unchanged,availability:'validated_at_dispatch'}; if(!options.json)logger.log(`${result.created?'Agent execution manifest created':'Existing agent execution manifest preserved unchanged'}: ${result.path}\nValidate: aioson agent:execution:validate . --feature=${feature}`); return result;}
  const loaded=await loadManifest(projectDir,feature);
  if(sub==='validate'){
   let resolutions={};let errors=loaded.errors||[];

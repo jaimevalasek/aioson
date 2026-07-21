@@ -2,6 +2,14 @@
 
 > Use this when deciding which phases to run and how deep to go.
 
+## Lane zero — check before feature scoring
+
+Do not create a feature merely because implementation changes product code. First classify the minimum outcome the user actually confirmed, before enriching it with optional behavior.
+
+Use `@dev` Simple Plan when the request has one specified observable outcome, reuses an existing pattern/boundary, has no open product/architecture/security decision, and is estimated at no more than 5 behavior-bearing files, 8 total paths, and 2 existing modules. A menu item, button, link, field, or window affordance is not automatically a feature. Mirror tests, translations, exports/indexes, registrations/manifests, generated metadata, and lockfiles count toward total paths but do not independently promote the lane.
+
+Only score MICRO/SMALL/MEDIUM after Simple Plan has been ruled out for a concrete reason. Record that reason; the global project classification is not one.
+
 ## Depth table
 
 | Phase | MICRO (0–1) | SMALL (2–3) | MEDIUM (4–6) |
@@ -29,6 +37,16 @@
 | Business rule complexity: complex | 2 |
 
 **0–1 = MICRO / 2–3 = SMALL / 4–6 = MEDIUM**
+
+The score calibrates genuine feature depth; it is not permission to expand the request. For feature work, use these scope review budgets alongside the score:
+
+| Lane | Default scope review budget | Additional reason required |
+|---|---|---|
+| Simple Plan | 1 outcome; <=5 behavior files; <=8 total paths; <=2 existing modules | none of the open decisions above |
+| MICRO | 1 coherent outcome; <=10 behavior files; <=15 total paths | needs feature memory, traceability, or one small product decision |
+| SMALL | more than the MICRO budget only when causally necessary | multiple independently valuable capabilities, a new boundary/contract, or material unresolved decisions |
+
+File counts are review guardrails, not an automatic promotion formula. If an estimate crosses a budget, compare before/after scope, identify the causal reason, and obtain approval before broadening. Support paths and optional behavior proposed by the agent never justify promotion by themselves.
 
 ## Sensitive-surface floor
 

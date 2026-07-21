@@ -406,11 +406,13 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 | `--tool=<tool>` | Ferramenta a usar (`claude`, `codex`, `opencode`) |
 | `--classification=<tier>` | Override manual da classificação |
 | `--agentic` | Emite/persiste `agentic_policy` para o gateway continuar handoffs determinísticos |
-| `--max-dev-qa-cycles=<n>` | Limite do loop `@dev` ↔ `@qa` no modo agentic (padrão: 3) |
-| `--max-tester-cycles=<n>` | Limite de correções após `@tester` no modo agentic (padrão: 3) |
-| `--max-pentester-cycles=<n>` | Limite de correções após `@pentester` no modo agentic (padrão: 3) |
+| `--max-dev-qa-cycles=<n>` | Limite inicial do ciclo DEV/QA no modo agentic (padrão: 1) |
+| `--max-tester-cycles=<n>` | Limite inicial de autocorreções do `@tester` (padrão: 1) |
+| `--max-pentester-cycles=<n>` | Limite inicial de autocorreções do `@pentester` (padrão: 1) |
 | `--dry-run` | Mostra o plano sem executar |
 | `--start-from=<agent>` | Pula agentes anteriores ao agente dado |
+
+Os três parâmetros `--max-*-cycles` só inicializam `.aioson/context/agent-execution-{slug}.json` quando ele ainda não existe. O manifesto é create-once e pertence ao desenvolvedor depois disso: resume, re-seed e novas flags não alteram seus modelos, `reasoning_effort`, agentes habilitados, limites ou formatação. Para mudar uma feature existente, edite o próprio manifesto.
 
 **Exemplo dry-run:**
 
@@ -432,7 +434,7 @@ aioson workflow:execute . \
   "agentic_policy": {
     "enabled": true,
     "review_cycle": {
-      "max_dev_qa_cycles": 3,
+      "max_dev_qa_cycles": 1,
       "feature_close": "human_gate"
     }
   },

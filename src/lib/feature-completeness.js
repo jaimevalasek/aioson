@@ -801,9 +801,8 @@ async function verifiedHarnessEvidence(targetDir, slug, cap, acs, plannedPaths) 
   };
 }
 
-async function validateExecutionEvidence(targetDir, slug, productMap, requirementsMatrix, delivery) {
+async function validateDeliveryPaths(targetDir, productMap, delivery, artifact) {
   const findings = [];
-  const artifact = `.aioson/context/features/${slug}/implementation-ledger.md`;
   const plannedPathsByCap = new Map();
 
   for (const row of delivery.rows) {
@@ -822,6 +821,15 @@ async function validateExecutionEvidence(targetDir, slug, productMap, requiremen
       findings.push(finding('execution', 'capability_delivery_files_missing', `${row.cap} planned file(s) do not exist: ${missingPaths.join(', ')}`, artifact));
     }
   }
+
+  return { findings, plannedPathsByCap };
+}
+
+async function validateExecutionEvidence(targetDir, slug, productMap, requirementsMatrix, delivery) {
+  const artifact = `.aioson/context/features/${slug}/implementation-ledger.md`;
+  const deliveryPaths = await validateDeliveryPaths(targetDir, productMap, delivery, artifact);
+  const findings = [...deliveryPaths.findings];
+  const { plannedPathsByCap } = deliveryPaths;
 
   const ledgerResult = await checkLedger(targetDir, slug);
   if (!ledgerResult.ok) {
@@ -891,7 +899,7 @@ function hasCompletenessSection(inputs) {
   return Boolean(
     extractSection(inputs.prd, ['Feature Capability Map', 'Mapa de Capacidades da Feature'])
     || extractSection(inputs.requirements, ['Feature Capability Matrix', 'Matriz de Capacidades da Feature'])
-    || extractSection(`${inputs.designDoc}\n${inputs.architecture}`, ['Implementation Leverage Matrix', 'Matriz de Aproveitamento de Implementacao', 'Matriz de Reuso e Implementacao'])
+    || extractSection(`${inputs.readiness}\n${inputs.designDoc}\n${inputs.architecture}`, ['Implementation Leverage Matrix', 'Matriz de Aproveitamento de Implementacao', 'Matriz de Reuso e Implementacao'])
     || extractSection(inputs.plan, ['Capability Delivery Plan', 'Plano de Entrega de Capacidades', 'Matriz de Entrega de Capacidades'])
   );
 }
@@ -903,6 +911,7 @@ async function readFeatureInputs(targetDir, slug, artifacts) {
     requirements: artifacts.requirements.content || '',
     architecture: artifacts.architecture.content || '',
     designDoc: artifacts.design_doc.content || '',
+    readiness: artifacts.readiness?.content || '',
     plan: artifacts.implementation_plan.content || '',
     scopeExpansion: await readFileSafe(path.join(targetDir, '.aioson', 'context', 'features', slug, 'scope-expansion.md')),
     expansionAudit: await readFileSafe(path.join(targetDir, '.aioson', 'context', 'features', slug, 'expansion-audit.md')),
@@ -967,6 +976,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     }
 
     const designCandidates = [
+      { content: inputs.readiness, artifact: artifacts.readiness?.path || `readiness-${slug}.md` },
       { content: inputs.designDoc, artifact: artifacts.design_doc.path || `design-doc-${slug}.md` },
       { content: inputs.architecture, artifact: artifacts.architecture.path || 'architecture.md' }
     ];
@@ -983,6 +993,15 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     if (options.includeExecution && delivery.findings.length === 0) {
       execution = await validateExecutionEvidence(targetDir, slug, productMap, requirementsMatrix, delivery);
       stageFindings.execution.push(...execution.findings);
+    } else if (options.includeExecutionStructure && delivery.findings.length === 0) {
+      const structural = await validateDeliveryPaths(
+        targetDir,
+        productMap,
+        delivery,
+        `.aioson/context/features/${slug}/implementation-ledger.md`
+      );
+      execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
+      stageFindings.execution.push(...structural.findings);
     }
   }
 

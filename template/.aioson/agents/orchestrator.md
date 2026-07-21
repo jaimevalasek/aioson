@@ -44,7 +44,7 @@ separate stages.
       boundaries, exact implementation paths (create/modify/reuse/retire), and `## Implementation Leverage Matrix`
       backed by installed package/version and repository-path evidence for every required CAP.
    - **Implementation plan** (the `@pm` work) → `implementation-plan-{slug}.md`: phased, with per-phase
-      verification commands, plus `## Capability Delivery Plan` covering every required CAP exactly once, that
+      verification commands, plus `## Capability Delivery Plan` covering every required CAP exactly once with full repository-relative paths and atomic (never grouped-range) trace IDs, that
       include the §2c runtime gate for a runtime feature.
    - **UI spec** (the `@ux-ui` work — only when the feature is UI-heavy) → `ui-spec-{slug}.md`: screens,
      interaction states, copy placement. Otherwise `@dev` applies the `design_skill` directly — do not spawn a

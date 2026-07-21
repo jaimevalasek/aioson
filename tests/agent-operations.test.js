@@ -8,6 +8,7 @@ const path = require('node:path');
 const { createTranslator } = require('../src/i18n');
 const { runAgentEpilogue } = require('../src/commands/agent-epilogue');
 const { runReviewCycle } = require('../src/commands/review-cycle');
+const { initManifest } = require('../src/agent-execution/manifest');
 
 async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-agent-ops-'));
@@ -268,6 +269,94 @@ test('review-cycle:advance uses agentic policy cap and stops at limit', async ()
     fs.access(path.join(dir, '.aioson/runtime/qa-dev-cycle.json')),
     { code: 'ENOENT' }
   );
+});
+
+test('review-cycle uses agent-execution selection and cycle limits before legacy policy', async () => {
+  const dir = await makeTempDir();
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.cycle_limits.dev_qa = 1;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(
+    dir,
+    '.aioson/context/workflow-execute.json',
+    JSON.stringify({
+      agentic_policy: {
+        enabled: true,
+        review_cycle: { max_dev_qa_cycles: 5 }
+      }
+    })
+  );
+  await writeFile(dir, '.aioson/plans/checkout/corrections.md', '---\nstatus: open\n---\n# Corrections\n');
+
+  const first = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/plans/checkout/corrections.md',
+      source: 'qa',
+      to: 'qa'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(first.action, 'correct_locally');
+  assert.equal(first.max_cycles, 1);
+
+  const resolved = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'resolve',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/plans/checkout/corrections.md',
+      source: 'qa',
+      to: 'qa'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(resolved.action, 'invoke_qa');
+  assert.equal(resolved.plan_update.reason, 'awaiting_independent_qa');
+  const plan = await fs.readFile(path.join(dir, '.aioson/plans/checkout/corrections.md'), 'utf8');
+  assert.match(plan, /status: open/);
+
+  const stopped = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/plans/checkout/corrections.md',
+      source: 'qa',
+      to: 'qa'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(stopped.action, 'stop_cycle_limit');
+});
+
+test('review-cycle respects a disabled target in agent-execution manifest', async () => {
+  const dir = await makeTempDir();
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.pentester.enabled = false;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+
+  const result = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/security-findings-checkout.json',
+      source: 'qa',
+      to: 'pentester'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.action, 'stop_agent_disabled');
+  assert.equal(result.reason, 'agent_disabled_in_execution_manifest');
 });
 
 test('review-cycle:resolve marks correction plan resolved and routes back to qa', async () => {

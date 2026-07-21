@@ -8,6 +8,8 @@ source: "Living Memory reflection — contextual commit guard QA recheck — @qa
 
 ## What the system already has
 
+- [workflow-proportional-review · 2026-07-21] `feat(aioson): release v1.39.0` keeps bounded implementation in Simple Plan/MICRO, reuses the system design baseline unless a feature has a real architecture delta, moves bounded QA/Tester/Pentester corrections to the owning specialist with final QA, and makes `agent-execution-{slug}.json` create-once and developer-owned with `1/1/1` default limits. Verification: lint pass, full suite 3,867 pass / 0 fail / 1 skip.
+
 - [feature-completeness · 2026-07-18] `feat(aioson): release v1.38.0` adds contextual capability closure across specification, planning, delivery, and QA; requires fresh executable evidence for acceptance criteria and Gate D; and persists blocking autopilot decisions without forcing optional scope or heavyweight workflows. Verification: lint pass, focused Windows cleanup rerun 38/38, full suite 3,853 pass / 0 fail / 1 skip.
 
 - [hygiene-remediation · 2026-07-16] Operational hygiene now has an explicit Markdown retention registry for historical project evidence, while `hygiene:scan` remains actionable-only. Two done features were archived with the canonical command, 208 verified Neural Chain impact items were closed through the native lifecycle, and commit-guard docs now cover indexed policy provenance plus headless-only agent-safe execution. Verification: 23 focused tests, lint, full suite 3,816 pass / 0 fail / 1 skip, hygiene scan clean.

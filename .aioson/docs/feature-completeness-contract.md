@@ -11,6 +11,8 @@ triggers: [feature completeness, capability map, requirements, implementation pl
 
 This contract prevents a feature from being declared complete when the artifacts describe only a visible fragment of the promised outcome. It applies to every substantive SMALL or MEDIUM feature. MICRO work stays lightweight unless classification floors it to SMALL because the surface is rich or sensitive.
 
+The `Implementation Leverage Matrix` belongs in the feature design delta when one exists; otherwise a SMALL feature places it in `readiness-{slug}.md` while referencing the stable project `design-doc.md`. Do not create a feature design doc solely to host this table.
+
 Completeness does not mean adding every imaginable enhancement. It means:
 
 1. every approved promise has a stable capability ID;
@@ -173,6 +175,8 @@ Every required product capability appears exactly once with:
 - concrete create/modify/reuse paths; and
 - a non-placeholder verification command or runtime check.
 
+Path authoring is deterministic: write full repository-relative file paths, one path per comma or `<br>`. Do not use basenames (`index.tsx`), directory-only shorthand (`src/frontend`), globs, ellipses, compressed path prose (`project-prototypes.ts, index.tsx`), or a combined `A/B` abbreviation. Root files such as `package.json` are valid when named exactly. Label create/modify/reuse if useful, but keep the complete path machine-readable.
+
 Deferred and not-applicable capabilities are not implementation tasks. Plan phases may contain more detail, but cannot silently omit or merge away a required `CAP-*`.
 
 ## Conditional extensions
@@ -220,6 +224,7 @@ These are reasoning prompts. Only decisions marked `required` become implementat
 - `@orchestrator` reconciles all four sections before MEDIUM implementation.
 - `@dev` loads the complete artifact package, executes by `CAP-*`, and cannot mark a phase complete while its required capabilities lack code plus verification evidence.
 - Gate D closes each required CAP through a compact implementation-ledger claim with explicit `capability_ids` and an existing implementation file, plus a fresh successful `harness:check` criterion that cites the CAP or one of its ACs. Ledger status strings are trace metadata, never executable proof. Runtime smoke depth remains conditional on a detected runtime surface; a bounded non-runtime SMALL feature needs only its focused executable criterion, not an enterprise harness or a second model.
+- Harness trace IDs are atomic. Cite each exact `CAP-*`, `REQ-*`, `AC-*`, `RG-*`, or `SG-*` token separately in the criterion description/assertion. Never synthesize grouped ranges such as `AC-checkout-001-004`; the stable-ID matcher correctly treats that as a different, nonexistent ID.
 - `@qa` starts from required capabilities and ACs, not from the tests that happen to exist. It challenges missing behavior and requires executable evidence.
 - `@tester`, `@pentester`, and `@validator` consume the same trace for behavioral, adversarial, security, and final validation.
 

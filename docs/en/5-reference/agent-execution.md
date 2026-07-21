@@ -27,6 +27,8 @@ aioson agent:execution:resume . --feature=my-feature
 
 Commands intended for automation accept `--json`.
 
+`agent:execution:init` is **create-once**: it creates the file only when it does not exist. Later initialization, resume, and reseed operations return the existing manifest without reformatting, backfilling, or replacing any field. From that point on the file is developer-owned; model, `reasoning_effort`, enabled-agent, and `cycle_limits` edits are used on subsequent runs.
+
 ## Manifest
 
 The manifest is created in the feature artifacts. A minimal example:
@@ -47,7 +49,9 @@ The manifest is created in the feature artifacts. A minimal example:
 }
 ```
 
-The manifest keeps the exact requested value. Dispatch never rewrites it; the canonical value is stored on the attempt and in the bound report.
+A new manifest defaults each review limit (`dev_qa`, `tester`, and `pentester`) to one cycle. When the initial host is `codex`, every agent also starts with `"reasoning_effort": "medium"`; hosts without that capability, including Claude and OpenCode, omit the field.
+
+The manifest keeps the exact requested value. No automatic command rewrites or backfills it after creation; the canonical value is stored on the attempt and in the bound report. The `workflow:execute` flags `--max-dev-qa-cycles`, `--max-tester-cycles`, and `--max-pentester-cycles` apply only during initial creation. If the file already exists, edit its `cycle_limits` directly.
 
 ## Model resolution
 

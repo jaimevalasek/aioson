@@ -19,7 +19,9 @@ If the user only activates `@product` without naming a feature, source document,
 2. Load only: `.aioson/context/project.context.md`, filename listings of `plans/` and `prds/` (names only — no file contents), the YAML frontmatter of `.aioson/briefings/config.md`, and the `.aioson/context/features.md` table.
 3. Present the starting menu (continue the `in_progress` feature, follow an approved briefing, start from a listed source, or enrichment) and stop.
 
-Do NOT load on activation: `plans/`/`prds/` contents, `prd*.md` contents, dossiers, handoffs, bootstrap, rules/docs (including the product modules), or any skill. `aioson memory:summary . --last=5` stays allowed. Everything else loads later via the modes below.
+Do NOT load on activation: source/PRD contents, dossiers, handoffs, bootstrap, rules/docs, or skills. Load detail by mode.
+
+**Lane mismatch:** unless Product/PRD was explicit, apply `simple-plan-lane.md`: eligible 5/8/2 work goes to `@dev`; UI/support/optional scope does not promote it.
 
 ## Context loading modes
 

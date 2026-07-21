@@ -151,6 +151,51 @@ test('generic completeness passes a fully traced non-operational feature', async
   assert.equal(analysis.summary.lens_decisions, CANONICAL_LENSES.length);
 });
 
+test('SMALL feature may reuse the project design baseline and keep its leverage matrix in readiness', async () => {
+  const dir = await makeTmpDir();
+  await writeCompleteFeature(dir);
+  await fs.rm(path.join(dir, '.aioson/context/design-doc-demo.md'));
+  await writeFile(dir, '.aioson/context/design-doc.md', '# Stable project design baseline\n');
+  await writeFile(dir, '.aioson/context/readiness-demo.md', [
+    '---',
+    'design_baseline: .aioson/context/design-doc.md',
+    'design_delta: none',
+    '---',
+    '# Readiness',
+    '',
+    '## Implementation Leverage Matrix',
+    '',
+    '| CAP | Concern | Decision | Evidence | Target |',
+    '|---|---|---|---|---|',
+    '| CAP-demo-run | implementation pattern | reuse | package.json and src/demo.js were inspected | src/demo.js |'
+  ].join('\n'));
+
+  const analysis = await analyzeFeatureCompleteness(dir, 'demo');
+
+  assert.equal(analysis.ok, true, analysis.findings.map((item) => item.message).join('\n'));
+  assert.equal(analysis.leverage_matrix.rows.length, 1);
+});
+
+test('execution structure validates concrete planned paths without requiring expensive execution evidence', async () => {
+  const dir = await makeTmpDir();
+  await writeCompleteFeature(dir);
+  await writeFile(dir, 'src/demo.js', 'module.exports = {}\n');
+
+  const analysis = await analyzeFeatureCompleteness(dir, 'demo', {
+    includeExecutionStructure: true
+  });
+  const executionFindings = findingsThroughStage(analysis, 'execution')
+    .filter((item) => item.stage === 'execution');
+
+  assert.ok(executionFindings.some((item) =>
+    item.check === 'capability_delivery_files_missing' && item.message.includes('tests/demo.test.js')));
+  assert.equal(
+    executionFindings.some((item) => item.check === 'implementation_ledger_not_ready'),
+    false,
+    'structural precheck must not demand ledger/harness evidence before commands run'
+  );
+});
+
 test('every generic completeness lens requires an explicit decision', async () => {
   const dir = await makeTmpDir();
   await writeCompleteFeature(dir, { omitLens: 'failure-recovery' });

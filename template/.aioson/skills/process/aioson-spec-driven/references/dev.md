@@ -8,7 +8,7 @@
 
 - `maintenance-and-state.md` — use to write and update `spec-{slug}.md` correctly: `phase_gates`, `last_checkpoint`, `pending_review`, and `Key decisions` format
 - `approval-gates.md` — Gate C (plan approval) must be checked before executing a significant batch; Gate D (execution verification) defines done criteria for each phase
-- For SMALL/MEDIUM work, confirm `.aioson/context/design-doc*.md` and `.aioson/context/readiness*.md` exist before implementation starts — produced by `@orchestrator` (maestro mode) on MEDIUM, by `@sheldon` on the SMALL lean lane, or by `@architect` (merged mode) / `@discovery-design-doc` when those detours are in the sequence. Load them only when `dev-state.md`, readiness, the plan, or touched paths require their details.
+- For SMALL/MEDIUM work, confirm readiness points to a valid design authority before implementation starts. SMALL with `design_delta: none` reuses the stable `.aioson/context/design-doc.md`; MEDIUM or a real architecture/contract/data/security boundary delta uses `design-doc-{slug}.md`. Producers are `@orchestrator` on MEDIUM, `@sheldon` on SMALL, or the architecture/design detours. Load only the selected sections needed by touched paths.
 
 ### Load when starting a new feature with classification context
 
@@ -47,5 +47,5 @@ Additionally, at session start for SMALL/MEDIUM:
 - Treat `dev-state.md` as the primary activation package and `implementation-plan-{slug}.md` as the source for phase-triggered context loads
 - Gate D verification must happen before marking a phase complete — not just "I think it works". The deterministic floor is `aioson ac:test-audit . --feature={slug}` plus the real test command.
 - If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
-- If `design-doc.md` or `readiness.md` is missing for SMALL/MEDIUM, route back to their producer instead of coding first — `@orchestrator` (maestro mode) on MEDIUM, `@sheldon` on the SMALL lean lane, or `@architect` (merged mode) / `@discovery-design-doc` when those detours are active
+- If readiness or its declared design authority is missing, route back to its producer instead of coding first. Do not create a per-feature design doc for a SMALL feature whose inspected design is unchanged.
 - Load `.aioson/docs/feature-completeness-contract.md` when applicable, build the four-section CAP ledger, and implement/verify each planned `CAP-*`; context minimization may defer detail loads but may not skip an artifact participating in the trace

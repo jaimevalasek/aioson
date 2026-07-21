@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.39.0] - 2026-07-21
+
+### Added
+- **Proportional implementation lanes** — bounded, already-specified work can stay in Simple Plan with explicit behavior-file/path/module budgets; MICRO receives its own larger budget, while auxiliary tests, translations, exports, manifests, and lockfiles do not promote work by themselves.
+- **Reviewer-owned bounded correction** — QA, Tester, and Pentester can correct unequivocal findings inside their specialty and return to an independent final QA pass, with DEV reserved for one consolidated cross-cutting correction packet.
+
+### Changed
+- **Small requests stay small.** Entry agents classify the minimum confirmed outcome instead of self-expanding optional scope; a minor UI affordance no longer becomes SMALL merely because it adds a menu or button. Simple Plan completes in DEV with targeted verification and no feature ceremony.
+- **Design documentation is baseline-first.** Stable system design lives in the project baseline; SMALL features create a feature design document only for a real architectural delta.
+- **Agent execution manifests are developer-owned after creation.** New manifests default review limits to `1/1/1`; Codex entries start with `reasoning_effort: medium`; init, resume, re-seed, and later `--max-*-cycles` flags preserve an existing manifest byte for byte.
+- **Autopilot review routing uses QA as the hub.** Enabled specialists run only when triggered, self-correction is bounded by the execution manifest, and final QA rechecks affected evidence without replaying the complete harness unnecessarily.
+
+### Fixed
+- Duplicate stage completion now returns before expensive gates and event emission, and cheap structural contract/path checks run before the full harness.
+- Full-path and atomic acceptance-criterion contracts prevent late QA/DEV handoff failures caused by abbreviated paths or grouped IDs.
+
+### Validation
+- Full suite: 3,867 passing tests, zero failures, and one skipped test. JavaScript static checks and template/workspace parity are clean.
+
 ## [1.38.0] - 2026-07-18
 
 ### Added

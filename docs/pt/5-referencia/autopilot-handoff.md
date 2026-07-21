@@ -68,6 +68,8 @@ aioson workflow:execute . --feature={slug} --seed --tool=<tool>
 
 `--seed` grava `.aioson/context/workflow-execute.json` (com `agentic_policy.enabled: true` — caps do ciclo de revisão, `feature_close: human_gate`, condições de parada) mais `.aioson/context/workflow.state.json`. É **seed-only**: registra a política que os agentes interativos seguem, mas **não** dirige as transições de estágio sozinho (quem faz isso são os próprios agentes, via `Skill(aioson:agent:<próximo>)` + `aioson workflow:next . --complete=<agente>`). Re-semear o mesmo slug é idempotente.
 
+O seed também cria `.aioson/context/agent-execution-{slug}.json` uma única vez. Depois da criação, esse arquivo pertence ao desenvolvedor: init, resume, re-seed e novas flags `--max-*-cycles` o preservam byte por byte. Ele controla agentes habilitados, modelos, `reasoning_effort` e limites de ciclo. Os limites novos começam em um; manifestos Codex inicializam todos os agentes com `"reasoning_effort": "medium"`, enquanto Claude/OpenCode omitem o campo incompatível. Para mudar uma feature existente, edite diretamente esse manifesto.
+
 **Falha ao semear é condição de parada.** O agente que semeia checa o resultado do comando: uma falha `different_active_feature` significa que outra feature genuinamente ativa segura o `workflow.state.json` — expõe isso ao usuário (fechar/pausar essa feature, ou `aioson feature:sweep .`) e para com o handoff manual. Nunca continue a cadeia como se o autopilot estivesse armado quando o seed falhou.
 
 ---

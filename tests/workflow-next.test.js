@@ -349,7 +349,7 @@ test('workflow:next MEDIUM feature: fresh state collapses the spec phase into or
 
   assert.deepEqual(
     loaded.state.sequence,
-    ['product', 'orchestrator', 'dev', 'pentester', 'qa']
+    ['product', 'orchestrator', 'dev', 'qa']
   );
   assert.deepEqual(
     loaded.state.completed,
@@ -1456,6 +1456,56 @@ test('workflow:next --complete=dev never walks backwards into an unresolved lean
   assert.ok(state.skipped.includes('sheldon'), 'unresolved earlier sheldon must be reconciled to skipped at finalize time');
   assert.notEqual(state.current, 'sheldon');
   assert.notEqual(state.next, 'sheldon');
+});
+
+test('workflow:next treats an inactive already-completed dev stage as idempotent', async () => {
+  const dir = await makeTempDir();
+  const slug = 'already-done';
+  await writeActiveFeature(dir, slug, 'SMALL');
+  const statePayload = {
+    version: 1,
+    mode: 'feature',
+    classification: 'SMALL',
+    sequence: ['product', 'sheldon', 'dev', 'qa'],
+    current: 'qa',
+    next: 'qa',
+    completed: ['product', 'sheldon', 'dev'],
+    skipped: [],
+    featureSlug: slug,
+    detour: null,
+    updatedAt: new Date().toISOString()
+  };
+  await writeFileEnsured(
+    path.join(dir, '.aioson/context/workflow.state.json'),
+    JSON.stringify(statePayload, null, 2)
+  );
+  // A pending checkpoint proves the duplicate fast path runs before every gate.
+  await writeFileEnsured(
+    path.join(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`),
+    JSON.stringify({
+      schema_version: 'feature-decision-checkpoint/v1',
+      feature_slug: slug,
+      status: 'pending',
+      items: [{ id: 'D-1', disposition: 'blocking-decision' }]
+    })
+  );
+
+  const { t } = createTranslator('en');
+  const result = await runWorkflowNext({
+    args: [dir],
+    options: { tool: 'codex', complete: 'dev' },
+    logger: createQuietLogger(),
+    t
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.idempotent, true);
+  assert.equal(result.alreadyCompleted, true);
+  assert.equal(result.completedStage, 'dev');
+  assert.equal(result.agent, 'qa');
+  const stateAfter = JSON.parse(await fs.readFile(path.join(dir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.deepEqual(stateAfter, statePayload, 'duplicate completion must not mutate workflow state');
+  await assert.rejects(fs.access(path.join(dir, EVENTS_RELATIVE_PATH)), { code: 'ENOENT' });
 });
 
 test('workflow:next infers a finished lean sheldon stage from its collapsed spec package', async () => {

@@ -560,15 +560,13 @@ describe('workflow engine hardening', () => {
     }
   });
 
-  it('MEDIUM feature workflow sequence includes pentester between dev and qa', () => {
+  it('MEDIUM feature workflow sequence routes dev directly to the QA review hub', () => {
     const config = buildDefaultWorkflowConfig();
     const seq = config.feature.MEDIUM;
     const devIdx = seq.indexOf('dev');
-    const pentesterIdx = seq.indexOf('pentester');
     const qaIdx = seq.indexOf('qa');
-    assert.ok(pentesterIdx !== -1, 'pentester must be in MEDIUM feature sequence');
-    assert.ok(devIdx < pentesterIdx, 'dev must come before pentester');
-    assert.ok(pentesterIdx < qaIdx, 'pentester must come before qa');
+    assert.ok(devIdx < qaIdx, 'dev must come before qa');
+    assert.ok(!seq.includes('pentester'), 'pentester is dynamically selected by QA and agent-execution manifest');
   });
 
   it('auto-heal returns healing prompt when technical gate fails', async () => {

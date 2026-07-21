@@ -22,7 +22,7 @@ Recommended workflow:
 
 ```
 SMALL:  @product -> @analyst -> @scope-check(pre-dev) -> @architect -> @discovery-design-doc -> @dev -> [@scope-check(post-dev) optional] -> @qa
-MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @pm -> @scope-check(pre-dev) -> @dev -> [@scope-check(post-dev) optional] -> @pentester -> @qa
+MEDIUM: @product -> @analyst -> @architect -> @discovery-design-doc -> @pm -> @scope-check(pre-dev) -> @dev -> [@scope-check(post-dev) optional] -> initial @qa -> enabled/triggered @tester/@pentester -> final @qa
 After QA/tester/pentester fixes: [@scope-check(post-fix) optional] only when code or behavior changed materially.
 ```
 

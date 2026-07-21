@@ -9,7 +9,7 @@
 ## Project sizes
 - MICRO: `@setup -> @product (optional) -> @dev`
 - SMALL: `@setup -> @product -> @sheldon -> @dev -> @qa` (lean by default — `@sheldon` is the single spec authority)
-- MEDIUM: `@setup -> @product -> @orchestrator -> @dev -> @qa` (project); a MEDIUM **feature** runs `@product -> @orchestrator -> @dev -> @pentester -> @qa`. `@orchestrator` is the MEDIUM single spec authority (the "maestro") — it fans out to `@analyst` + `@architect` + `@pm` (+ `@ux-ui` when UI-heavy) as sub-agents and consolidates their work into one gated spec package for `@dev`.
+- MEDIUM: `@setup -> @product -> @orchestrator -> @dev -> @qa` (project); a MEDIUM **feature** runs `@product -> @orchestrator -> @dev -> initial @qa -> enabled/triggered @tester and @pentester -> final @qa`. `agent-execution-{slug}.json` controls reviewer participation. `@orchestrator` is the MEDIUM single spec authority (the "maestro") — it fans out to `@analyst` + `@architect` + `@pm` (+ `@ux-ui` when UI-heavy) as sub-agents and consolidates their work into one gated spec package for `@dev`.
 
 > `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check(pre-dev)`, and `@ux-ui` are no longer default-chain hops — `@orchestrator` invokes them as sub-agents in the MEDIUM maestro lane, and they remain available as opt-in detours. `@architect` runs in **merged mode** (design-doc + readiness + dev-state) only on the opt-in full-chain detour that routes `@architect -> @dev` while omitting `@discovery-design-doc`. The deterministic drift check (`spec:analyze`) now runs at the `@dev`/`@qa` done gate (`finalizeCurrentStage`), not as a separate agent hop.
 

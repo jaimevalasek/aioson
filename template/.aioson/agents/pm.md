@@ -135,7 +135,7 @@ Required Context Package rules:
 
 Feature capability closure rules:
 - Load `.aioson/docs/feature-completeness-contract.md`, the PRD `## Feature Capability Map`, requirements `## Feature Capability Matrix`, and design `## Implementation Leverage Matrix` before planning.
-- Every required `CAP-*` appears exactly once in `## Capability Delivery Plan`, assigned to a phase with concrete files and non-placeholder verification. Deferred/not-applicable CAPs never become hidden tasks.
+- Every required `CAP-*` appears exactly once in `## Capability Delivery Plan`, assigned to a phase with full repository-relative file paths and non-placeholder verification. Never use basename/directory/compressed shorthand or grouped stable-ID ranges. Deferred/not-applicable CAPs never become hidden tasks.
 - The Execution Sequence may split a CAP into detailed steps, but may not merge away its ID. Each phase declares which CAPs it closes and which ACs/conditional lenses its verification proves.
 - If a required CAP has no REQ/AC or no leverage decision, block Gate C and route to its owner; do not repair missing product/design decisions inside the schedule.
 

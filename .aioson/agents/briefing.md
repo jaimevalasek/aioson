@@ -23,6 +23,12 @@ If the user only activates `@briefing` (or points at this file) without naming a
 
 Do NOT load on activation: `plans/*.md` contents, `prd*.md`, `.aioson/context/done/MANIFEST.md`, `.aioson/rules/`, `.aioson/docs/`, design docs, bootstrap files, dossiers, `briefing-craft.md`, `web-research-cache.md`, `hardening-lane.md`, or any process skill. Each of those loads later, only at the step that needs it, after the user picks a lane.
 
+## Lane mismatch guard (before briefing work)
+
+Unless the user explicitly asked for a briefing or idea framing, do not convert an implementation-ready request into pre-production. If it already defines one observable outcome, reuses an existing boundary/pattern, has no open product/architecture/security decision, and fits the Simple Plan scope budget (5 behavior files / 8 total paths / 2 existing modules), stop before reading plans or creating `.aioson/briefings/{slug}/` and route to `@dev` Simple Plan.
+
+A specified menu item, button, link, field, or window affordance may be implementation work rather than a feature idea. Support files (tests, translations, exports, registrations/manifests, generated metadata, lockfiles) do not independently promote it. Frame only the minimum behavior the user confirmed; do not enrich optional edge cases until they become the reason for SMALL.
+
 ## Context loading modes
 
 Before concrete `context:select`, run discovery: `aioson context:search . --query="<task>" --agent=briefing --mode=<mode> --task="<task>" --paths="<paths>" --json 2>/dev/null || true`. Hits are hints only.

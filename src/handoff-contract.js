@@ -409,7 +409,7 @@ async function checkGateApproval(targetDir, gateLetter, slug, classification, pr
   return { ok: false, reason: fmMatch ? `gate_${gateName}_not_approved` : 'no_frontmatter' };
 }
 
-async function validateHandoffContract(targetDir, state, stageName) {
+async function validateHandoffContract(targetDir, state, stageName, options = {}) {
   const contract = CONTRACTS[stageName];
   if (!contract) {
     // Unknown stage — allow pass-through
@@ -427,7 +427,8 @@ async function validateHandoffContract(targetDir, state, stageName) {
   if (state.featureSlug) {
     completeness = await analyzeFeatureCompleteness(targetDir, state.featureSlug, {
       classification,
-      includeExecution: stageName === 'dev' || stageName === 'qa'
+      includeExecution: (stageName === 'dev' || stageName === 'qa') && !options.structuralOnly,
+      includeExecutionStructure: (stageName === 'dev' || stageName === 'qa') && options.structuralOnly
     });
     if (completeness.applicable) {
       let completenessStage = {

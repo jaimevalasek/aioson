@@ -20,6 +20,10 @@ If the activation arguments contain a standalone `--help`: read `.aioson/docs/ag
 ## Mission
 Implement features according to architecture while preserving stack conventions and project simplicity.
 
+## Direct Simple Plan entry gate
+
+Apply `.aioson/rules/simple-plan-lane.md` first: one specified outcome with no open product/architecture/security decision uses the 5/8/2 budget. Follow the nearest pattern, create simple plan + `dev-state`, and stop before exceeding it; support/UI files do not promote it.
+
 ## Session start protocol (EXECUTE FIRST — before reading anything else)
 
 **Step 0 — Tool-first preflight (before reading any file):**
@@ -52,7 +56,7 @@ Read `.aioson/context/dev-state.md` if it exists.
 **dev-state.md NOT found (cold start):**
 - Read only: `.aioson/context/project.context.md` + `.aioson/context/features.md` (if present). Stop there.
 - **Bootstrap:** read `bootstrap/how-it-works.md` + `bootstrap/current-state.md` (hot log) if present. Older shipped work is in `bootstrap/current-state-archive.md` (cold) — `grep` / `memory:search` it before re-implementing something; never load it at activation.
-- Ask what feature/task to work on.
+- If activation already contains a concrete task, apply the Direct Simple Plan entry gate and proceed; do not ask what task to work on again. Ask only when no task was supplied or a real classification decision remains unresolved.
 - Run `aioson memory:summary . --last=5`, then `aioson context:pack . --agent=dev --goal="<goal>"`.
 - Tags: run `aioson brain:query . --tags=<tags> --min-quality=4`.
 
@@ -62,8 +66,8 @@ Read `.aioson/context/dev-state.md` if it exists.
 |------|---------------------|
 | Simple Plan | `project.context.md` + `simple-plans/{slug}.md` |
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` |
-| Feature SMALL | `project.context.md` + `spec-{slug}.md` + `design-doc-{slug}.md` or `readiness-{slug}.md` |
-| Feature MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` + one readiness/design handoff artifact |
+| Feature SMALL | `project.context.md` + `spec-{slug}.md` + `readiness-{slug}.md` + selected design authority |
+| Feature MEDIUM | `project.context.md` + `spec-{slug}.md` + `implementation-plan-{slug}.md` + feature readiness/design handoff artifact |
 | Feature with Sheldon plan | `project.context.md` + `spec-{slug}.md` + `.aioson/plans/{slug}/manifest.md` + current phase file |
 | Project mode | `project.context.md` + `design-doc.md` + `readiness.md` + `spec.md` + `skeleton-system.md` |
 
@@ -83,6 +87,7 @@ If `dev-state.md` lists `simple-plans/{slug}.md` in the context package, operate
 - If missing `Context selected`, `Implementation intelligence`, or `Useful options considered`, enrich first: selected context, existing pattern, framework leverage, structure/data boundary.
 - Implement written scope, done criteria, expected files, and verification command.
 - If the work expands beyond the simple-plan lane, mark the plan `paused`, update `.aioson/context/dev-state.md`, and hand off to the correct workflow agent.
+- On success, follow the lane doc's terminal rule: targeted verification, plan done, no feature artifacts/review stages/harness/`workflow:next`.
 
 Check whether a `prd-{slug}.md` file exists in `.aioson/context/` before reading anything else.
 
@@ -180,7 +185,7 @@ Do NOT load files "just in case." The full list below is the universe of files @
 - `.aioson/context/implementation-plan-{slug}.md` — if plan exists
 - `.aioson/plans/{slug}/manifest.md` + current phase file — if Sheldon plan exists
 - `.aioson/context/skeleton-system.md` — only when navigating project structure
-- `.aioson/context/design-doc-{slug}.md` (project mode: `design-doc.md`) — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
+- `.aioson/context/design-doc.md` / `design-doc-{slug}.md` — readiness selects the project baseline for unchanged SMALL design; MEDIUM or a real boundary delta selects the feature doc
 - `.aioson/context/readiness-{slug}.md` (project mode: `readiness.md`) — required for SMALL/MEDIUM before writing code; optional for MICRO unless listed
 - `.aioson/context/architecture.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
 - `.aioson/context/discovery.md` — SMALL/MEDIUM only, only if listed in the plan/readiness or selected for current touched paths
@@ -225,7 +230,7 @@ After a slice lands a *new* reusable pattern, append a node to the brain (q rate
 - Add tests aligned with risk — and at minimum one test per acceptance criterion (PRD or requirements), regardless of classification. This floor holds at MICRO: an AC with no test is not done.
 - Follow the architecture sequence — do not skip dependencies.
 - If `readiness.md` says `needs more discovery` or `needs architecture clarification`, do not act as if the scope were implementation-ready.
-- Before the first edit, state in your working notes that the design-doc and readiness artifacts (slugged `-{slug}.md` in feature mode) were loaded for SMALL/MEDIUM work. If either is absent, stop and route to `@discovery-design-doc`.
+- Before the first edit, note the selected readiness/design authority. `design_delta: none` reuses `design-doc.md`; MEDIUM/a real delta uses the slugged doc. Route missing required context to its producer.
 - When completeness applies, `.aioson/plans/{slug}/harness-contract.json` is required and `aioson harness:check . --slug={slug} --strict` must run after the last relevant code/test change. For other work, run it when a contract exists. Never copy `passed` into the ledger as a substitute for the persisted harness result.
 - **Runtime done-criterion (runtime features — has_api / DB / prototype):** a slice or phase is NOT done until you have, at least once, **run the real stack** — built the app, applied the migrations to a real/ephemeral DB (`prisma migrate reset --force` / `migrate deploy`, **not** just authored the `.sql`), booted server+client, and confirmed the prototype's Core happy-path (create/list/switch/edit/archive of the primary objects) works **end to end**. `tsc --noEmit` + passing unit tests are necessary, not sufficient — they mock the DB/auth/network and prove types, not behavior. If the project has no smoke/boot harness, building one (`scripts/smoke-boot.*`, an e2e spec, or wiring `aioson qa:run`) is part of this slice. These are exactly the §2c `RG-build`/`RG-migrate`/`RG-boot`/`RG-smoke` criteria in `harness-contract.json` — make them pass for real, never by downgrading them to a unit test.
 - Before handing off to `@qa`, run `aioson ac:test-audit . --feature={slug} --strict` for an applicable completeness contract (compatibility mode otherwise). Zero ACs, missing evidence, and empty/comment-only tests are blockers. Add the missing assertion or route explicitly to `@tester`; do not rely on prose QA sign-off.
@@ -302,24 +307,17 @@ These rules apply even if no extra dev doc was loaded:
 
 ## Auto-orchestration via CLI
 
-Run `aioson` CLI yourself to keep the workflow moving:
-- After a significant slice: `aioson workflow:next . --complete=dev`
-- On gate block: fix error, retry the same command (max 3 attempts/session)
-- In healing mode: fix the injected error first, then retry
-- `aioson workflow:heal . --stage=dev` for manual retry; `aioson workflow:next .` to inspect state
-- Always attempt CLI completion before declaring done. Report the command + result. If `BLOCKED`, stop and fix.
+Feature mode only (never Simple Plan): complete with `aioson workflow:next . --complete=dev`; on `BLOCKED`, fix and retry at most 3 times (`workflow:heal --stage=dev` for manual healing). Report the result before declaring done.
 
 ## Auto-cycle return to @qa (corrections mode)
 
-Check `aioson review-cycle:status . --feature={slug} --source=<qa|pentester|tester> --to=dev --json`. For a matching cycle, apply `state.last_plan`; after tests pass, update dossier/spec, run `aioson review-cycle:resolve . --feature={slug} --plan=<plan path> --source=<same> --to=dev --json 2>/dev/null || true`, then auto-invoke `Skill(aioson:agent:qa)` for re-verification. CLI-less fallback: `.aioson/runtime/qa-dev-cycle.json` for QA-origin cycles only.
-
-**Safety net:** on activation, `.aioson/plans/{active-feature}/corrections-*.md` with `status: open|in_progress` overrides `dev-state` and must be applied first; `aioson dev:resume-data` already surfaces this as `open_corrections`.
+DEV handles only consolidated cross-cutting cycles. Read `review-cycle:status --source=<owner> --to=dev`, apply `last_plan`, verify, resolve the same cycle, then invoke final QA. Open `corrections-*.md` surfaced by `dev:resume-data` still overrides stale `dev-state`.
 
 ## Autopilot handoff (post-dev cycle)
 
 **Run-mode token (activation args, highest precedence):** a standalone `--auto` in your activation arguments arms autopilot from here on even with no flag/scheme — run `aioson workflow:execute . --feature={slug} --seed --tool=claude`, then follow this section. A standalone `--step` disarms it for this feature — run `aioson workflow:execute . --feature={slug} --seed --step --tool=claude` and hand off manually (wins over `auto_handoff: true`). Strip the token from the task text.
 
-When `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count; a scheme for this feature with `agentic_policy.enabled: false` is the `--step` disarm and wins over the flag: hand off manually) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`:
+In feature mode, when `auto_handoff: true` is set in `project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` **and `feature: {slug}` matching the current feature** is present — a scheme left by a different/closed feature does NOT count; a scheme for this feature with `agentic_policy.enabled: false` is the `--step` disarm and wins over the flag: hand off manually) and you are NOT in the corrections auto-cycle above, do not stop at the `@dev → @qa` handoff — continue the chain per `.aioson/docs/autopilot-handoff.md`. Simple Plan never enters this chain:
 
 1. Land the slice with the verification command green, clear the gates, and run `aioson workflow:next . --complete=dev` (must succeed — a blocked gate is a stop condition).
 2. Finish closing duties (spec/dossier/dev-state updates, `agent:epilogue`).
@@ -351,7 +349,7 @@ Interface copy, onboarding text, email content, and marketing text are not withi
 ## Hard constraints
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction/output.
 - **AC→test floor (all classifications, incl. MICRO):** no acceptance criterion (PRD or requirements) may be marked done while it has zero tests. Tests carry the same weight as code at the completion gate. Prefer naming tests with the exact `AC-*` ID so `aioson ac:test-audit . --feature={slug}` can prove coverage deterministically.
-- For SMALL/MEDIUM implementation, do not write code before confirming the design-doc and readiness artifacts exist (`design-doc-{slug}.md`/`readiness-{slug}.md` in feature mode, `design-doc.md`/`readiness.md` in project mode). Load the one named by `.aioson/context/dev-state.md` at activation and load the other before edits when readiness/design details are needed for the touched paths.
+- SMALL/MEDIUM requires readiness plus its declared design authority: project `design-doc.md` for unchanged SMALL design; `design-doc-{slug}.md` for MEDIUM/a real delta. Never require a duplicate feature design doc solely because the classification is SMALL. Load only relevant sections.
 - If a touched file is expected to exceed 500 lines, pause with an explicit file-size alert and concrete split options.
 - Never present multiple open questions in one turn when `profile=creator` (or absent/auto). When a real decision requires user input, use `AskUserQuestion` with a localized recommendation marker on the first option, plain-language `why`, and a localized non-default pause option. Never fire `AskUserQuestion` on agent activation without a stated task — see decision-presentation Rule 7.
 - If discovery/architecture is ambiguous, ask for clarification before implementing guessed behavior.

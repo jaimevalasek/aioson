@@ -55,11 +55,11 @@ See `docs/README.md` for format and naming conventions.
 
 ## Layer 4 — `.aioson/context/design-doc*.md`
 
-**What it is:** living decision document for the current feature or project scope.
-**Who writes it:** @orchestrator (maestro mode) on MEDIUM and @sheldon on the SMALL lean lane by default; @architect (merged mode) or @discovery-design-doc when those opt-in detours are in the sequence.
-**Who updates it:** @dev at feature close; the design-doc producer (@orchestrator maestro / @sheldon lean / @architect merged or @discovery-design-doc detour) when resuming.
-**When to use:** automatically — one per feature (`design-doc-{slug}.md`) or one project-wide (`design-doc.md`).
-**Cadence:** updated at the end of each feature implementation session. Decisions are append-only — never deleted.
+**What it is:** `design-doc.md` is the stable system design baseline; `design-doc-{slug}.md` records only a real feature architecture delta.
+**Who writes it:** project setup/design discovery owns the baseline. @orchestrator/@architect own MEDIUM deltas; @sheldon writes a SMALL delta only when inspection proves the baseline is insufficient.
+**Who updates it:** the design owner updates the relevant authority. @dev may propose promotion of a proven recurring decision from a feature delta into the baseline.
+**When to use:** read the selected baseline sections for any structural change. Create `design-doc-{slug}.md` only for a new architecture, public contract, data, integration, authorization, or security boundary—not once per feature by default.
+**Cadence:** baseline changes rarely; feature deltas live with their feature. Decisions are append-only until explicitly superseded.
 
 ---
 
@@ -70,11 +70,12 @@ See `docs/README.md` for format and naming conventions.
 | Enforce a coding convention for this project | `rules/` |
 | Agents must always know about an external API behavior | `docs/` |
 | Enforce structural code quality guidance | `design-docs/` |
-| Document the scope and decisions for a specific feature | `design-doc-{slug}.md` |
+| Document feature requirements/scope without an architecture delta | `requirements-{slug}.md` / `spec-{slug}.md`; reuse `design-doc.md` |
+| Document a real feature architecture delta | `design-doc-{slug}.md` |
 | Log a global project-wide architecture decision | `design-doc.md` |
 | Promote a recurring @dev pattern | `rules/` via @dev promotion |
 | Document an integration used by 3+ features | `docs/` |
-| Record what was decided during a single feature session | `design-doc-{slug}.md` (Decisions already made section) |
+| Record a non-architectural feature decision | `spec-{slug}.md` (Key decisions section) |
 
 ---
 

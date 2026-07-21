@@ -27,6 +27,8 @@ aioson agent:execution:resume . --feature=minha-feature
 
 Todos os comandos que produzem dados para automação aceitam `--json`.
 
+`agent:execution:init` é **create-once**: cria o arquivo somente quando ele ainda não existe. Depois da criação, novas inicializações, retomadas e re-semeaduras retornam o manifesto existente sem reformatar, completar ou substituir nenhum campo. A partir daí, o arquivo pertence ao desenvolvedor; alterações de modelo, `reasoning_effort`, agentes habilitados e `cycle_limits` devem ser feitas diretamente nele e são obedecidas nas execuções seguintes.
+
 ## Manifesto
 
 O arquivo é criado dentro dos artefatos da feature. Um exemplo mínimo:
@@ -47,7 +49,9 @@ O arquivo é criado dentro dos artefatos da feature. Um exemplo mínimo:
 }
 ```
 
-O manifesto guarda exatamente o valor pedido. O dispatcher não o reescreve; o valor canônico resolvido fica na tentativa (`attempt`) e no relatório.
+Um manifesto novo usa um ciclo por padrão em cada limite (`dev_qa`, `tester` e `pentester`). Quando o host inicial é `codex`, cada agente também nasce com `"reasoning_effort": "medium"`; hosts que não oferecem essa capacidade, como Claude e OpenCode, não recebem o campo.
+
+O manifesto guarda exatamente o valor pedido. Nenhum comando automático o reescreve ou faz backfill depois da criação; o valor canônico resolvido fica na tentativa (`attempt`) e no relatório. Os parâmetros `--max-dev-qa-cycles`, `--max-tester-cycles` e `--max-pentester-cycles` de `workflow:execute` valem somente na criação inicial. Se o arquivo já existe, edite `cycle_limits` nele.
 
 ## Como o modelo é resolvido
 

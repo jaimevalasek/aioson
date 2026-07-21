@@ -53,6 +53,8 @@ Use this as the primary orientation before reading any other context file.
 
 Before routing the user, check the project's spec-driven state:
 
+0. Apply Simple Plan precedence to a concrete implementation request before inferring missing feature artifacts. One specified observable outcome that reuses existing boundaries, has no open product/architecture/security decision, and fits 5 behavior files / 8 total paths / 2 existing modules routes to `@dev` Simple Plan. Support tests, translations, exports, registrations/manifests, generated metadata, and lockfiles do not independently promote it; a specified menu/button/link/window affordance is eligible. Do not call a PRD/spec/design-doc "missing" for this lane.
+
 1. Read `.aioson/context/project-pulse.md` if it exists
    - If `blocked: true` → tell the user what's blocked and recommend the agent that can unblock it
    - If `last_agent` exists → summarize where the project left off
@@ -60,8 +62,8 @@ Before routing the user, check the project's spec-driven state:
 
 2. For routing decisions, respect classification depth:
    - MICRO: @product → @dev (skip @analyst, @architect unless user asks)
-   - SMALL: @product → @sheldon → @analyst → @scope-check → @dev
-   - MEDIUM: @product → @sheldon → @analyst → @architect → @scope-check → @dev → @qa
+   - SMALL: @product → @sheldon → @dev → @qa (lean default; extra stages only by explicit detour)
+   - MEDIUM: @product → @orchestrator → @dev → initial @qa → enabled/triggered @tester/@pentester → final @qa (maestro default)
 
 3. If the user asks "what should I do next?" or "where did we stop?":
    - Read `.aioson/context/project-pulse.md` first (global state)
@@ -137,6 +139,7 @@ Based on Step 1 results, classify the project into one of these stages:
 | **Chain audit pending** | `chain_noises_pending` flagged in Step 1.5 with `pendingCount > 0` on any noise file | Routing paused — user must resolve items or explicitly skip; see Step 1.5 |
 | **Not initialized** | config.md missing | Manual: user needs to run `aioson init` |
 | **Needs setup** | `needs_setup` or `needs_setup_repair` | `/aioson:agent:setup` |
+| **Simple Plan ready** | Concrete bounded implementation fits the Simple Plan precedence budget; feature artifacts are intentionally unnecessary | `/aioson:agent:dev` in Simple Plan mode |
 | **Needs product definition** | Context valid, no PRD | `/aioson:agent:product` |
 | **Needs analysis** | PRD exists, no discovery | `/aioson:agent:analyst` |
 | **Needs architecture** | Discovery exists, no architecture | `/aioson:agent:architect` |

@@ -142,7 +142,7 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     {
       name: designDocName,
       exists: artifacts.design_doc.exists,
-      detail: designDocRequired ? 'pre-dev design governance contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
+      detail: designDocRequired ? 'project design baseline or feature architecture delta' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
       required: designDocRequired,
       indent: 1
     },

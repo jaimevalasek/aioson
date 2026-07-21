@@ -15,6 +15,14 @@ After boot, if the user started the chat without naming an agent and has not giv
 - Briefing with `briefing` to frame and evaluate an early feature idea before committing to a PRD.
 - Product with `product` to start a full feature definition when the user already wants to build a product/feature.
 
+## Concrete implementation lane gate
+
+For a concrete implementation request, inspect the nearest existing pattern before feature routing. Activate `dev` in Simple Plan mode when there is one specified observable outcome, no open product/architecture/security decision, and the estimate fits at most 5 behavior-bearing files, 8 total paths, and 2 existing modules.
+
+Mirror tests, translations, exports, manifests/registrations, generated metadata, and lockfiles are support paths and do not independently promote the lane. A new button, menu item, link, field, or window affordance is not automatically a feature. MICRO is for a bounded outcome that genuinely needs feature memory (default review budget: 10 behavior files / 15 total paths); SMALL requires multiple independently valuable capabilities, a new boundary/contract, or material unresolved decisions.
+
+Classify only the minimum user-confirmed request. Before exceeding the selected budget, stop, show the before/after path estimate and causal reason, and ask for approval. Simple Plan ends in `dev` without PRD/spec/design-doc/harness/QA/validator ceremony.
+
 ## Project knowledge
 
 Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or recipe with its file path and a one-line summary. Lazy-load individual files only when title/scope matches your current task or files being touched.

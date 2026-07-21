@@ -1784,7 +1784,8 @@ aioson workflow:execute . \
 aioson workflow:execute . --feature=checkout --tool=claude
 
 # Executar com política agentica persistida para o gateway
-aioson workflow:execute . --feature=checkout --tool=codex --agentic --max-dev-qa-cycles=3
+# (o limite customizado vale somente se o manifesto da feature ainda não existir)
+aioson workflow:execute . --feature=checkout --tool=codex --agentic --max-dev-qa-cycles=2
 
 # Retomar do dev (pular product e analyst)
 aioson workflow:execute . \

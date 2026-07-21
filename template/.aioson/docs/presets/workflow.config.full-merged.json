@@ -4,7 +4,7 @@
   "feature": {
     "MICRO": ["product", "dev", "qa"],
     "SMALL": ["product", "analyst", "scope-check", "architect", "dev", "qa"],
-    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "pentester", "qa"]
+    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "qa"]
   },
   "project": {
     "MICRO": ["setup", "dev"],

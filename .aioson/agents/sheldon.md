@@ -353,18 +353,19 @@ docs/skills; do not invent new ceremony.
    advance: `gate_requirements: approved`, `gate_design: approved`, `gate_plan: approved`. Leave **Gate D to
    `@qa`** (it writes `## QA sign-off` PASS into the same file). Reference requirements/design-doc/plan by name;
    don't duplicate them.
-2. **Architecture decisions** (was `@architect`) — fold module/folder structure, model relationships, migration
-   order, integration points, and auth/security boundaries into `design-doc-{slug}.md`. Keep it proportional to
-   classification — never apply MEDIUM patterns to a SMALL feature. Include `## Implementation Leverage Matrix`
-   with repository/package/framework evidence and target for every required CAP.
-3. **Design-doc + readiness** (was `@discovery-design-doc`) — write `design-doc-{slug}.md` and
-   `readiness-{slug}.md` with: readiness verdict (`ready`/`ready_with_warnings`/`blocked`), exact implementation
-   paths (create/modify/reuse/retire), reuse + componentization notes, and blockers. This pair is what `@dev`'s
-   SMALL/MEDIUM preflight checks for — do not skip it, or `@dev` stops at activation.
+2. **Architecture decisions** (was `@architect`) — inspect the stable `design-doc.md` baseline and selected
+   `.aioson/design-docs/`. Create `design-doc-{slug}.md` only for a real new module/public contract/data,
+   integration, authorization, or security boundary. Keep it proportional; feature scope alone is not a delta.
+3. **Design authority + readiness** (was `@discovery-design-doc`) — always write `readiness-{slug}.md` with the
+   verdict, exact full implementation paths, reuse/componentization notes, blockers, `design_baseline`, and
+   `design_delta: none|required`. With no delta, point to `design-doc.md`, do not duplicate it, and put the
+   feature-specific `## Implementation Leverage Matrix` in readiness. With a delta, put that matrix and the new
+   decisions in `design-doc-{slug}.md`. @dev preflight needs readiness plus the selected authority, not a ritual pair.
 4. **Implementation plan** (was `@pm`) — write `implementation-plan-{slug}.md` with frontmatter
    `status: approved` (a phased `.aioson/plans/{slug}/` manifest may supplement it on MEDIUM, but does not
    replace the approved implementation-plan artifact that `@dev`/Gate C read). Include phase criteria, context
    triggers, and per-phase verification commands. `## Capability Delivery Plan` covers every required CAP once
+   using full repository-relative file paths (never basename/directory/compressed shorthand) and atomic stable IDs
    with files + verification, including the §2c runtime gate for runtime features.
 5. **Decision + harness evidence** — write the feature-completeness `decision-checkpoint.json`, even empty; pending blocks stop. Produce `harness-contract.json` + `progress.json` with focused executable proof citing every CAP or its AC. Add §2c only for runtime.
 6. **Dev-state handoff** — write the cold-start packet so a fresh `@dev` starts without chat history:

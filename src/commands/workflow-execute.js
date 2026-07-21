@@ -41,7 +41,7 @@ const {
 
 const BAR = '━'.repeat(45);
 const EXECUTION_STATE_RELATIVE_PATH = '.aioson/context/workflow-execute.json';
-const DEFAULT_AGENTIC_MAX_CYCLES = 3;
+const DEFAULT_AGENTIC_MAX_CYCLES = 1;
 
 const STEP_META = {
   setup: { description: 'Initialize project context', gate_before: null, gate_after: null },
@@ -100,11 +100,42 @@ function quoteCliArg(value) {
 }
 
 function parsePositiveIntegerOption(value, fallback, min = 1, max = 10) {
-  const parsed = Number.parseInt(String(value || ''), 10);
+  const parsed = Number.parseInt(String(value ?? ''), 10);
   if (!Number.isInteger(parsed)) return fallback;
   if (parsed < min) return min;
   if (parsed > max) return max;
   return parsed;
+}
+
+function firstDefinedOption(options, keys) {
+  for (const key of keys) {
+    if (Object.hasOwn(options, key) && options[key] !== undefined && options[key] !== null && options[key] !== '') {
+      return options[key];
+    }
+  }
+  return undefined;
+}
+
+function requestedCycleLimits(options = {}) {
+  const definitions = {
+    dev_qa: ['max-dev-qa-cycles', 'maxDevQaCycles', 'max-cycles'],
+    tester: ['max-tester-cycles', 'maxTesterCycles', 'max-specialist-cycles'],
+    pentester: ['max-pentester-cycles', 'maxPentesterCycles', 'max-specialist-cycles']
+  };
+  const limits = {};
+  for (const [name, keys] of Object.entries(definitions)) {
+    const value = firstDefinedOption(options, keys);
+    limits[name] = parsePositiveIntegerOption(value, DEFAULT_AGENTIC_MAX_CYCLES, 0);
+  }
+  return limits;
+}
+
+function applyManifestLimitsToPolicy(policy, manifest) {
+  if (!policy?.enabled || !policy.review_cycle || !manifest?.cycle_limits) return policy;
+  policy.review_cycle.max_dev_qa_cycles = manifest.cycle_limits.dev_qa;
+  policy.review_cycle.max_tester_correction_cycles = manifest.cycle_limits.tester;
+  policy.review_cycle.max_pentester_correction_cycles = manifest.cycle_limits.pentester;
+  return policy;
 }
 
 function isAgenticRequested(options = {}) {
@@ -135,18 +166,7 @@ function buildAgenticPolicy(options = {}, classification = 'SMALL') {
   const enabled = isAgenticRequested(options);
   if (!enabled) return null;
 
-  const maxDevQaCycles = parsePositiveIntegerOption(
-    options['max-dev-qa-cycles'] || options.maxDevQaCycles || options['max-cycles'],
-    DEFAULT_AGENTIC_MAX_CYCLES
-  );
-  const maxTesterCycles = parsePositiveIntegerOption(
-    options['max-tester-cycles'] || options.maxTesterCycles || options['max-specialist-cycles'],
-    DEFAULT_AGENTIC_MAX_CYCLES
-  );
-  const maxPentesterCycles = parsePositiveIntegerOption(
-    options['max-pentester-cycles'] || options.maxPentesterCycles || options['max-specialist-cycles'],
-    DEFAULT_AGENTIC_MAX_CYCLES
-  );
+  const cycleLimits = requestedCycleLimits(options);
 
   return {
     enabled: true,
@@ -158,18 +178,20 @@ function buildAgenticPolicy(options = {}, classification = 'SMALL') {
       'gate_blocked',
       'context_budget_exceeded',
       'cycle_limit_reached',
-      'critical_security_human_gate',
+      'security_or_product_decision_human_gate',
       'feature_close_human_gate'
     ],
     review_cycle: {
       hub: 'qa',
-      max_dev_qa_cycles: maxDevQaCycles,
-      max_tester_correction_cycles: maxTesterCycles,
-      max_pentester_correction_cycles: maxPentesterCycles,
-      qa_fail_route: 'dev',
-      tester_route: 'tester after qa coverage trigger',
-      pentester_route: 'pentester after sensitive-surface trigger or MEDIUM sequence stage',
-      validator_route: 'validator when harness contract is present',
+      // Compatibility snapshot only. New review runs read these values from
+      // agent-execution-{slug}.json; workflow-execute.json is a legacy fallback.
+      max_dev_qa_cycles: cycleLimits.dev_qa,
+      max_tester_correction_cycles: cycleLimits.tester,
+      max_pentester_correction_cycles: cycleLimits.pentester,
+      qa_fail_route: 'owning_specialist_first; dev_only_for_consolidated_cross_cutting_changes',
+      tester_route: 'enabled tester after qa coverage trigger; bounded self-correction; then pending pentester or final qa',
+      pentester_route: 'enabled pentester after sensitive-surface trigger; bounded self-correction; then final qa',
+      validator_route: 'enabled validator after final qa when harness contract is present',
       feature_close: 'human_gate'
     },
     lanes: {
@@ -198,8 +220,8 @@ function buildAgenticPolicy(options = {}, classification = 'SMALL') {
 function formatAgenticPolicyLines(policy) {
   if (!policy || !policy.enabled) return [];
   return [
-    `Agentic policy: enabled (dev<->qa max ${policy.review_cycle.max_dev_qa_cycles} cycles)`,
-    `Review loop: qa fail -> dev; tester max ${policy.review_cycle.max_tester_correction_cycles}; pentester max ${policy.review_cycle.max_pentester_correction_cycles}; close=${policy.review_cycle.feature_close}`,
+    `Agentic policy: enabled (agent-execution manifest owns enabled agents and cycle limits; legacy qa cap ${policy.review_cycle.max_dev_qa_cycles})`,
+    `Review loop: owning specialist self-corrects, cross-cutting findings -> dev, final qa; legacy tester max ${policy.review_cycle.max_tester_correction_cycles}; pentester max ${policy.review_cycle.max_pentester_correction_cycles}; close=${policy.review_cycle.feature_close}`,
     `Parallel lanes: ${policy.lanes.enabled ? 'enabled for independent write scopes' : 'disabled for this classification'}`
   ];
 }
@@ -778,7 +800,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
   if (!classification) classification = await detectClassification(targetDir, slug);
   if (!classification) classification = 'SMALL';
   classification = normalizeClassification(classification, 'SMALL');
-  const agenticPolicy = buildAgenticPolicy(options, classification);
+  let agenticPolicy = buildAgenticPolicy(options, classification);
 
   const autonomyProtocol = await readAutonomyProtocol(targetDir);
   const toolPolicy = getToolPolicy(autonomyProtocol, tool);
@@ -795,13 +817,18 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
 
   let agentExecution = await loadManifest(targetDir, slug);
   if (!dryRun && !agentExecution.exists) {
-    await initManifest(targetDir, slug, tool);
+    await initManifest(targetDir, slug, tool, {
+      cycleLimits: requestedCycleLimits(options)
+    });
     agentExecution = await loadManifest(targetDir, slug);
   }
   if (agentExecution.exists && !agentExecution.ok) {
     const failure = { ok: false, reason: 'agent_execution_manifest_invalid', errors: agentExecution.errors, manifest_path: agentExecution.path };
     if (!options.json) logger.error(`Invalid agent execution manifest: ${agentExecution.path}`);
     return failure;
+  }
+  if (agentExecution.exists && agentExecution.ok) {
+    agenticPolicy = applyManifestLimitsToPolicy(agenticPolicy, agentExecution.manifest);
   }
 
   if (parallelGuard && !parallelGuard.ok && !parallelGuard.skipped) {
@@ -864,13 +891,13 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     // its --step so replaying it never re-arms the scheme.
     ...(seedOnly ? ['--seed'] : agenticPolicy && agenticPolicy.enabled ? ['--agentic'] : []),
     ...(options.step ? ['--step'] : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    ...(!agentExecution.exists && agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_dev_qa_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-dev-qa-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_dev_qa_cycles)}`]
       : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_tester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    ...(!agentExecution.exists && agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_tester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-tester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_tester_correction_cycles)}`]
       : []),
-    ...(agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_pentester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
+    ...(!agentExecution.exists && agenticPolicy && agenticPolicy.review_cycle && agenticPolicy.review_cycle.max_pentester_correction_cycles !== DEFAULT_AGENTIC_MAX_CYCLES
       ? [`--max-pentester-cycles=${quoteCliArg(agenticPolicy.review_cycle.max_pentester_correction_cycles)}`]
       : [])
   ].join(' ');

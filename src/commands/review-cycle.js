@@ -3,8 +3,9 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { ensureDir, exists } = require('../utils');
+const { loadManifest } = require('../agent-execution/manifest');
 
-const DEFAULT_MAX_CYCLES = 3;
+const DEFAULT_MAX_CYCLES = 1;
 const EXECUTION_STATE_RELATIVE_PATH = '.aioson/context/workflow-execute.json';
 
 function resolveTargetDir(args) {
@@ -49,6 +50,19 @@ function parseMax(value, fallback = DEFAULT_MAX_CYCLES) {
   return Math.max(1, Math.min(parsed, 10));
 }
 
+function parseCycleLimit(value, fallback = DEFAULT_MAX_CYCLES) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed) || parsed < 0) return fallback;
+  return Math.min(parsed, 10);
+}
+
+async function readAgentExecutionManifest(targetDir, feature) {
+  if (!feature) return null;
+  const loaded = await loadManifest(targetDir, feature);
+  return loaded.exists && loaded.ok ? loaded.manifest : null;
+}
+
 async function readAgenticPolicy(targetDir) {
   const payload = await readJsonIfExists(path.join(targetDir, EXECUTION_STATE_RELATIVE_PATH));
   return payload && payload.agentic_policy && payload.agentic_policy.enabled
@@ -60,6 +74,17 @@ async function resolveMaxCycles(targetDir, source, options = {}) {
   const explicit = options['max-cycles'] || options.maxCycles;
   if (explicit) return parseMax(explicit);
 
+  const feature = options.feature ? String(options.feature).trim() : null;
+  const executionManifest = await readAgentExecutionManifest(targetDir, feature);
+  if (executionManifest && executionManifest.cycle_limits) {
+    const key = source === 'qa' ? 'dev_qa' : source;
+    if (Object.hasOwn(executionManifest.cycle_limits, key)) {
+      return parseCycleLimit(executionManifest.cycle_limits[key], DEFAULT_MAX_CYCLES);
+    }
+  }
+
+  // Compatibility fallback for features created before agent-execution manifests
+  // became the single editable execution/cycle authority.
   const policy = await readAgenticPolicy(targetDir);
   const review = policy && policy.review_cycle ? policy.review_cycle : null;
   if (!review) return DEFAULT_MAX_CYCLES;
@@ -162,6 +187,20 @@ async function runAdvance(targetDir, source, target, options = {}) {
   if (!feature) return { ok: false, reason: 'missing_feature' };
   if (!planPath) return { ok: false, reason: 'missing_plan' };
 
+  const executionManifest = await readAgentExecutionManifest(targetDir, feature);
+  if (executionManifest && executionManifest.agents?.[target]?.enabled === false) {
+    return {
+      ok: true,
+      action: 'stop_agent_disabled',
+      reason: 'agent_disabled_in_execution_manifest',
+      feature,
+      source,
+      target,
+      next_agent: null,
+      plan: planPath
+    };
+  }
+
   if (criticalSecurity) {
     return {
       ok: true,
@@ -215,7 +254,7 @@ async function runAdvance(targetDir, source, target, options = {}) {
 
   return {
     ok: true,
-    action: `invoke_${target}`,
+    action: source === target ? 'correct_locally' : `invoke_${target}`,
     feature,
     source,
     target,
@@ -224,7 +263,9 @@ async function runAdvance(targetDir, source, target, options = {}) {
     max_cycles: maxCycles,
     remaining_cycles: Math.max(0, maxCycles - nextCycle),
     plan: planPath,
-    task: buildNextTask({ source, planPath }),
+    task: source === target
+      ? `${buildNextTask({ source, planPath })} as a bounded ${source} self-correction, then return to @qa for final verification`
+      : buildNextTask({ source, planPath }),
     state_path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
     state
   };
@@ -243,7 +284,15 @@ async function runResolve(targetDir, source, target, options = {}) {
 
   let planUpdate = null;
   if (planPath) {
-    planUpdate = await updatePlanStatus(targetDir, planPath, 'resolved');
+    planUpdate = source === target
+      ? {
+          ok: true,
+          skipped: true,
+          reason: 'awaiting_independent_qa',
+          path: planPath,
+          status: 'open'
+        }
+      : await updatePlanStatus(targetDir, planPath, 'resolved');
   }
 
   const now = new Date().toISOString();
@@ -292,6 +341,22 @@ async function runReviewCycle({ args, options = {}, logger }) {
   const source = normalizeAgent(options.source || options.agent, 'qa');
   const target = normalizeAgent(options.to || options.target, 'dev');
   let result;
+
+  const feature = options.feature ? String(options.feature).trim() : null;
+  if (feature) {
+    const executionManifest = await loadManifest(targetDir, feature);
+    if (executionManifest.exists && !executionManifest.ok) {
+      result = {
+        ok: false,
+        reason: 'agent_execution_manifest_invalid',
+        feature,
+        errors: executionManifest.errors || []
+      };
+      if (options.json) return result;
+      logger.error(`review-cycle:${action} failed: ${result.reason}`);
+      return result;
+    }
+  }
 
   if (action === 'status') {
     result = await readStatus(targetDir, source, target, options);

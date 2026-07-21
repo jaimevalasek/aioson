@@ -75,6 +75,8 @@ aioson workflow:execute . --feature={slug} --seed --tool=<tool>
 
 `--seed` writes `.aioson/context/workflow-execute.json` (with `agentic_policy.enabled: true` — review-loop caps, `feature_close: human_gate`, and the stop conditions) plus `.aioson/context/workflow.state.json`. It is **seed-only**: it records the policy the interactive agents follow but does NOT drive stage transitions itself — the agents do, via `Skill(aioson:agent:<next>)` + `aioson workflow:next . --complete=<agent>`. Re-seeding the same slug is idempotent.
 
+The seed also creates `.aioson/context/agent-execution-{slug}.json` once. After creation this file is developer-owned: init, resume, re-seed, and later `--max-*-cycles` flags preserve it byte for byte. It controls enabled agents, models, `reasoning_effort`, and cycle limits. New limits default to one; Codex manifests initialize every agent with `"reasoning_effort": "medium"`, while Claude/OpenCode omit the unsupported field. Change an existing feature by editing this manifest directly.
+
 **Seed failure is a stop condition.** The seeding agent checks the command result: a `different_active_feature` failure means another feature is genuinely active in `workflow.state.json` — surface it to the user (close/pause it, or `aioson feature:sweep .`) and stop with the manual handoff. The chain is never treated as armed when the seed failed.
 
 ---

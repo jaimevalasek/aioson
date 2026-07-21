@@ -118,6 +118,6 @@ After the PRD is produced:
 |---|---|
 | MICRO | `@dev` |
 | SMALL | `@sheldon` (lean default) |
-| MEDIUM | `@orchestrator` (maestro) → `@dev` → `@pentester` → `@qa` |
+| MEDIUM | `@orchestrator` (maestro) → `@dev` → initial `@qa` → enabled/triggered `@tester`/`@pentester` → final `@qa` |
 
-Assess feature complexity from the conversation and state the next agent explicitly.
+Assess the minimum confirmed outcome, not optional behavior introduced while writing the PRD. Apply the Simple Plan gate before creating feature artifacts: one specified outcome with no open product/architecture/security decision stays with `@dev` when estimated at <=5 behavior files, <=8 total paths, and <=2 existing modules. Support tests/translations/exports/registrations do not promote it. If feature memory is genuinely needed, prefer MICRO while the same coherent outcome fits <=10 behavior files / <=15 total paths. SMALL requires multiple independently valuable capabilities, a new boundary/contract, or material unresolved decisions; the project's global classification and a new UI affordance are not reasons. State the concrete promotion reason and next agent explicitly.

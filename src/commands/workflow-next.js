@@ -58,9 +58,11 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
   // (requirements + spec[A/B/C approved] + design-doc + readiness + implementation-
   // plan + harness-contract) and hands to @dev. SMALL = @sheldon solo (vertical),
   // MEDIUM = @orchestrator fan-out (horizontal). The scope drift check is enforced at
-  // the dev/qa done gate (finalizeCurrentStage). @pentester stays as the post-dev
-  // security stage. analyst/architect/pm/ddd/scope-check/ux-ui remain opt-in detours.
-  MEDIUM: ['product', 'orchestrator', 'dev', 'pentester', 'qa']
+  // the dev/qa done gate (finalizeCurrentStage). QA is the post-dev hub and invokes
+  // Tester/Pentester only when enabled in agent-execution-{slug}.json and triggered;
+  // QA completes its workflow stage only on the final pass. Other spec agents remain
+  // opt-in detours.
+  MEDIUM: ['product', 'orchestrator', 'dev', 'qa']
 };
 
 // Stages eligible for autopilot handoff — the FULL feature chain (see
@@ -71,8 +73,9 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
 //      @dev via the dev-state.md cold-start packet once its own gates/decisions
 //      are settled. Detour agents (analyst/architect/pm/...) chain only when an
 //      opt-in detour adds them to the active sequence.
-//   2. post-dev review cycle: @dev → @qa → @tester/@pentester (when their @qa
-//      triggers fire) → @validator → STOPS before feature:close (human gate).
+//   2. post-dev review cycle: @dev → initial @qa → enabled @tester/@pentester
+//      (when their @qa triggers fire) → final @qa → enabled @validator → STOPS
+//      before feature:close (human gate).
 const AUTOPILOT_HANDOFF_STAGES = new Set([
   'product', 'sheldon', 'orchestrator',
   'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
@@ -836,16 +839,68 @@ function ensureSkippableTarget(config, state, targetAgent) {
   }
 }
 
+function isInactiveCompletedStage(state, stageName) {
+  const normalizedStage = normalizeAgentName(stageName || state.current || state.next);
+  if (!normalizedStage) return false;
+  const completedStages = new Set((state.completed || []).map(normalizeAgentName));
+  const activeStage = normalizeAgentName(state.current || state.next);
+  const activeDetour = state.detour && state.detour.active
+    ? normalizeAgentName(state.detour.agent)
+    : null;
+  return completedStages.has(normalizedStage)
+    && normalizedStage !== activeStage
+    && normalizedStage !== activeDetour;
+}
+
 async function finalizeCurrentStage(targetDir, config, state, stageName) {
   const normalizedStage = normalizeAgentName(stageName || state.current || state.next);
   if (!normalizedStage) {
     throw new Error('No stage is active to complete.');
+  }
+
+  if (isInactiveCompletedStage(state, normalizedStage)) {
+    return {
+      state,
+      completedStage: normalizedStage,
+      alreadyCompleted: true
+    };
   }
   let auditCodeSummary = null;
 
   // ── Harness Done Gate ───────────────────────────────────────────────────
   if (state.mode === 'feature' && state.featureSlug) {
     if (normalizedStage === 'dev' || normalizedStage === 'qa') {
+      // Reject missing/abbreviated delivery paths and other cheap handoff
+      // structure before running the feature's potentially expensive commands.
+      const structuralContract = await validateHandoffContract(
+        targetDir,
+        state,
+        normalizedStage,
+        { structuralOnly: true }
+      );
+      if (!structuralContract.ok) {
+        if (isSecurityGateBlocked(structuralContract, state, normalizedStage)) {
+          await emitSecurityRuntimeEvent({
+            targetDir,
+            eventType: 'security_gate_blocked',
+            message: `Gate D blocked for ${state.featureSlug} at @qa`,
+            status: 'failed',
+            agentName: 'qa',
+            source: 'workflow',
+            workflowState: state,
+            workflowStage: 'qa',
+            payload: {
+              feature_slug: state.featureSlug,
+              classification: state.classification,
+              blockers: structuralContract.missing
+            }
+          });
+        }
+        const errMsg = formatContractError(structuralContract);
+        await logError(targetDir, normalizedStage, errMsg, 'contract-structure');
+        throw new Error(errMsg);
+      }
+
       const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
         runChecks: true
       });
@@ -1778,13 +1833,16 @@ async function runWorkflowNext({ args, options, logger, t }) {
   if (options.complete || options['complete-current']) {
     // F3 (workflow-handoff-integrity v1.9.6) — pending-decisions guard.
     // Hard error if sheldon manifest has unresolved decisions; --force overrides.
-    try {
-      await assertManifestNotPending(targetDir, state.featureSlug, Boolean(options.force));
-    } catch (err) {
-      if (err && err.code === 'WORKFLOW_NEXT_PENDING_DECISIONS') {
-        logErrorLine(err.message);
+    const completionTarget = options.complete === true ? state.current || state.next : options.complete;
+    if (!isInactiveCompletedStage(state, completionTarget)) {
+      try {
+        await assertManifestNotPending(targetDir, state.featureSlug, Boolean(options.force));
+      } catch (err) {
+        if (err && err.code === 'WORKFLOW_NEXT_PENDING_DECISIONS') {
+          logErrorLine(err.message);
+        }
+        throw err;
       }
-      throw err;
     }
 
     let finalized;
@@ -1907,6 +1965,32 @@ async function runWorkflowNext({ args, options, logger, t }) {
     }
     state = finalized.state;
     completedStage = finalized.completedStage;
+    if (finalized.alreadyCompleted) {
+      logger.log(`@${completedStage} is already completed; no gates or handoff were repeated.`);
+      return {
+        ok: true,
+        targetDir,
+        locale,
+        tool,
+        statePath: STATE_RELATIVE_PATH,
+        configPath: CONFIG_RELATIVE_PATH,
+        created: loaded.created,
+        mode: state.mode,
+        classification: state.classification,
+        current: state.current,
+        next: state.next,
+        detour: state.detour,
+        completed: state.completed,
+        skipped: state.skipped,
+        completedStage,
+        featureSlug: state.featureSlug,
+        agent: state.current || state.next || null,
+        instructionPath: null,
+        prompt: null,
+        alreadyCompleted: true,
+        idempotent: true
+      };
+    }
     await require('../self-healing').incrementRetryCount(targetDir, completedStage, '');
     const { getRetryCount } = require('../self-healing');
     const retries = await getRetryCount(targetDir, completedStage);
@@ -2099,6 +2183,7 @@ module.exports = {
   resolveLocaleForTarget,
   reconcileWorkflowState,
   finalizeCurrentStage,
+  isInactiveCompletedStage,
   applySkip,
   activateStage,
   runWorkflowNext,

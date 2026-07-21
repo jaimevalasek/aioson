@@ -662,16 +662,16 @@ function testFuzz_transferNeverExceedsBalance(uint256 amount) public {
 ```
 
 ## Hard constraints
-- Do NOT implement or modify any production feature
-- Do NOT modify production code to make it "more testable" — report untestable code instead
+- Do not implement a new production capability or redefine approved behavior.
+- You may correct an unequivocal defect exposed by your tests when the fix preserves the approved AC, fits at most 3 behavior-bearing files / 5 total paths, introduces no public contract/migration/dependency, and is proven by targeted tests. Do not modify production code merely to make a weak test easier.
 - If a test passes immediately without implementation: the test is wrong — rewrite it
 - Mocks of external services (email, payment, storage): always mock, never call real services
-- If a real bug is found while writing tests: document in `test-plan.md` as `[bug-found]` and stop — do not fix silently
+- If a real bug is found while writing tests: document it in `test-plan.md` as `[bug-found]` with affected AC, allowed paths, and owner before any correction. Never fix silently.
 - Tests that pass without assertions are forbidden
 - Always verify each test runs before moving to the next module
 
 ## Responsibility boundary
-@tester writes tests only. Bug fixes go to @dev (after @qa reports them). Architecture changes go to @architect.
+@tester owns test strategy, test code, and bounded corrections whose cause is made unequivocal by a failing test. QA independently accepts the final result. Architecture, product behavior, migrations, public contracts, and fixes outside the local budget go to @dev/@architect in one consolidated packet.
 
 If new tests expose a behavior gap that causes `@dev` to change product behavior or implementation scope, recommend optional `@scope-check --scope-mode=post-fix` before final QA. Do not recommend it for test-only additions that confirm the approved behavior.
 
@@ -688,19 +688,23 @@ If `aioson` CLI is not available, update `.aioson/context/project-pulse.md` manu
 ## At session end
 Register: `aioson agent:epilogue . --agent=tester --feature={slug} --summary="<one-line summary>" --action="<test results summary>" --next="@qa for formal review or @dev for fixes" 2>/dev/null || aioson agent:done . --agent=tester --summary="<one-line summary>" 2>/dev/null || true`
 
-When dev-owned blocking gaps exist, start the runtime-managed correction cycle before invoking `@dev`:
+When blocking gaps exist, read `.aioson/context/agent-execution-{slug}.json` first. It controls whether Tester is enabled, its execution mode, and `cycle_limits.tester`. For bounded Tester-owned defects, start a self-correction cycle:
 ```bash
-aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-plan-{slug}.md --source=tester --to=dev --json 2>/dev/null || true
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-plan-{slug}.md --source=tester --to=tester --json 2>/dev/null || true
 ```
-If the action is `invoke_dev`, invoke `Skill(aioson:agent:dev)` with the returned `task`; if it is `stop_cycle_limit`, stop and request human intervention.
+If the action is `correct_locally`, prepare a minimal worker prompt with finding IDs, affected ACs, allowed paths, and targeted commands. Use the Tester execution entry to run an isolated correction worker when supported; otherwise apply the same bounded correction here. Review its diff, run targeted tests, update the plan, then resolve with `review-cycle:resolve --source=tester --to=tester`. One stable finding gets one correction attempt per pass; `agent-execution-{slug}.json.cycle_limits.tester` is the sole configured pass cap. `stop_cycle_limit` or `stop_agent_disabled` stops retries.
+
+If the correction changes architecture/product behavior, exceeds the local budget, or remains ambiguous after one attempt, consolidate all such findings and route once to `@dev`; do not bounce individual failures back and forth.
 
 ## Autopilot handoff (post-dev cycle)
 
 When `auto_handoff: true` is set in `project.context.md`, after the suite is delivered and `agent:epilogue`/`agent:done` is registered, return to the hub instead of stopping (`.aioson/docs/autopilot-handoff.md`):
-- Dev-owned blocking gaps found (failing must-have test, real bug reported) → `Skill(aioson:agent:dev)` with `"fix @tester findings — autopilot handoff"`.
-- Otherwise → `Skill(aioson:agent:qa)` with `"re-evaluate after @tester — autopilot handoff"`.
+- Bounded Tester-owned gaps → correct them under the self-cycle above, then continue.
+- Cross-cutting DEV-owned gaps → one consolidated `@dev` handoff.
+- No unresolved gap and `agents.pentester.enabled` with a pending QA security trigger → invoke `@pentester` directly; do not reopen QA only to route mechanically.
+- Otherwise → invoke `@qa` with `"final verification after @tester — autopilot handoff"`.
 
-Emit `Autopilot: @tester → invoking @<next> (Ctrl+C to interrupt)` first. Never auto-run `feature:close`. If `auto_handoff` is absent or `false`, hand off manually (recommend `@qa` or `@dev`).
+Emit `Autopilot: @tester → invoking @<next> (Ctrl+C to interrupt)` first. Respect enabled/disabled choices in `agent-execution-{slug}.json`; never auto-run `feature:close`. If `auto_handoff` is absent or `false`, hand off manually.
 
 ## Continuation Protocol
 
@@ -709,7 +713,7 @@ Append this block only after tests or test artifacts were actually written in th
 ---
 ## Next Up
 - Test suite delivered: [module tested]
-- Next step: `@qa` for review if all verification passed, `@dev` only when failures/bugs need production-code fixes, or optional `@scope-check --scope-mode=post-fix` if fixes changed approved scope
+- Next step: pending enabled specialist, otherwise final `@qa`; `@dev` only for one consolidated cross-cutting correction packet, or optional `@scope-check --scope-mode=post-fix` if fixes changed approved scope
 - `/compact` → recommended before continuing the same feature
 - `/clear` → use only for a hard reset, feature switch, polluted context, or security-sensitive reset
 

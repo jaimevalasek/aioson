@@ -937,6 +937,97 @@ test('simple plan lane requires implementation intelligence before coding', asyn
   }
 });
 
+test('bounded implementation routing is proportional and skips feature ceremony', async () => {
+  const files = await Promise.all([
+    'template/AGENTS.md',
+    'template/CLAUDE.md',
+    'template/OPENCODE.md',
+    'template/.aioson/rules/simple-plan-lane.md',
+    'template/.aioson/docs/dev/simple-plan-lane.md',
+    'template/.aioson/agents/dev.md',
+    'template/.aioson/agents/product.md',
+    'template/.aioson/agents/briefing.md',
+    'template/.aioson/agents/neo.md',
+    'template/.aioson/agents/deyvin.md',
+    'template/.aioson/docs/product/prd-contract.md',
+    'template/.aioson/skills/process/aioson-spec-driven/references/classification-map.md'
+  ].map((relative) => read(path.join(ROOT, relative))));
+  const joined = files.join('\n');
+
+  for (const token of [
+    '5 behavior',
+    '8 total path',
+    '2 existing module',
+    'support',
+    'not automatically a feature',
+    'minimum user-confirmed request'
+  ]) {
+    assert.equal(joined.toLowerCase().includes(token.toLowerCase()), true, `missing proportional routing token: ${token}`);
+  }
+
+  const simplePlanDoc = files[4];
+  const dev = files[5];
+  assert.match(simplePlanDoc, /Do not create PRD, requirements, spec, feature design doc/i);
+  assert.match(simplePlanDoc, /do not.*run `aioson workflow:next`/i);
+  assert.match(dev, /Simple Plan never enters this chain/i);
+  assert.match(dev, /do not ask what task to work on again/i);
+  assert.match(files[11], /Only score MICRO\/SMALL\/MEDIUM after Simple Plan has been ruled out/i);
+  assert.match(files[11], /File counts are review guardrails, not an automatic promotion formula/i);
+});
+
+test('post-dev reviewers self-correct within manifest-controlled bounds and return to final QA', async () => {
+  const qa = await read(path.join(ROOT, 'template/.aioson/agents/qa.md'));
+  const tester = await read(path.join(ROOT, 'template/.aioson/agents/tester.md'));
+  const pentester = await read(path.join(ROOT, 'template/.aioson/agents/pentester.md'));
+  const autopilot = await read(path.join(ROOT, 'template/.aioson/docs/autopilot-handoff.md'));
+
+  for (const [content, token] of [
+    [qa, '--source=qa --to=qa'],
+    [qa, 'agent-execution-{slug}.json.cycle_limits.dev_qa'],
+    [qa, 'Final QA pass'],
+    [tester, '--source=tester --to=tester'],
+    [tester, 'pending QA security trigger'],
+    [pentester, '--source=pentester --to=pentester'],
+    [pentester, 'Only `@qa` changes it to final'],
+    [autopilot, 'agent-execution-{slug}.json'],
+    [autopilot, 'full build/harness only when relevant inputs are newer']
+  ]) {
+    assert.equal(content.includes(token), true, `missing bounded reviewer token: ${token}`);
+  }
+
+  assert.equal(tester.includes('Do NOT implement or modify any production feature'), false);
+  assert.equal(pentester.includes('never auto-fix'), false);
+});
+
+test('handoff checks cheap structure before executing the expensive harness', async () => {
+  const workflowNext = await read(path.join(ROOT, 'src/commands/workflow-next.js'));
+  const structural = workflowNext.indexOf('const structuralContract = await validateHandoffContract');
+  const expensive = workflowNext.indexOf('runChecks: true', structural);
+  assert.ok(structural !== -1, 'structural handoff precheck is missing');
+  assert.ok(expensive > structural, 'expensive harness must run only after structural handoff validation');
+});
+
+test('feature plans require full paths and atomic trace IDs', async () => {
+  const completeness = await read(path.join(ROOT, 'template/.aioson/docs/feature-completeness-contract.md'));
+  const harness = await read(path.join(ROOT, 'template/.aioson/docs/sheldon/harness-contract.md'));
+  assert.match(completeness, /full repository-relative file paths/i);
+  assert.match(completeness, /Never synthesize grouped ranges/i);
+  assert.match(harness, /Stable-ID rule/);
+  assert.match(harness, /Never compress multiple ACs into a synthetic range/i);
+});
+
+test('SMALL features reuse the project design baseline unless they introduce a real architecture delta', async () => {
+  const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
+  const sheldon = await read(path.join(ROOT, 'template/.aioson/agents/sheldon.md'));
+  const layers = await read(path.join(ROOT, 'template/.aioson/docs/LAYERS.md'));
+  const completeness = await read(path.join(ROOT, 'template/.aioson/docs/feature-completeness-contract.md'));
+
+  assert.match(dev, /Never require a duplicate feature design doc solely because the classification is SMALL/i);
+  assert.match(sheldon, /design_delta: none\|required/i);
+  assert.match(layers, /Create `design-doc-\{slug\}\.md` only for a new architecture/i);
+  assert.match(completeness, /Do not create a feature design doc solely to host this table/i);
+});
+
 test('implementation verification loop is wired into dev, deyvin, scope-check, and qa prompts', async () => {
   const dev = await read(path.join(ROOT, 'template/.aioson/agents/dev.md'));
   const deyvin = await read(path.join(ROOT, 'template/.aioson/agents/deyvin.md'));

@@ -11,7 +11,7 @@ Use this guide when a user asks for a technical change that is clear enough to i
 
 ## Purpose
 
-The simple-plan lane reduces token cost for bounded implementation work. It is not a replacement for PRDs, requirements, architecture, or QA. It is a disk-first checkpoint for implementation tasks where the agent can define scope, done criteria, files, useful implementation options, and verification before coding.
+The simple-plan lane reduces token cost for bounded implementation work. It is not a miniature feature workflow. It is a disk-first checkpoint for implementation tasks where the agent can define scope, done criteria, files, useful implementation options, and verification before coding.
 
 It must not rely on model intuition alone. Before coding, the agent writes a lightweight implementation intelligence checkpoint into the simple plan: selected context, existing patterns, framework leverage, boundaries, and richer options considered.
 
@@ -25,8 +25,22 @@ Use this lane when all are true:
 - The verification command is known or can be inferred from the repo.
 - The agent can name at least one existing project/framework pattern to reuse or explicitly state none was found.
 - No product, UX, domain, architecture, or security decision is being made.
+- The expected change fits one observable outcome, at most 5 behavior-bearing files, at most 8 total paths, and at most 2 existing modules.
 
-Do not use it for new product surfaces, unclear requirements, sensitive surfaces, new integrations, or architecture-wide changes.
+Do not use it for unclear product behavior, sensitive surfaces, new integrations, or architecture-wide changes. A new menu item, button, link, field, or other small affordance is still eligible when its placement, behavior, states, and existing implementation pattern are already clear.
+
+## Proportional scope budget
+
+Count files after inspecting the nearest existing pattern and before creating feature artifacts:
+
+- `behavior`: component, handler, command, service, domain, backend, or integration logic;
+- `support`: mirror tests, translations, exports/indexes, registrations/manifests, generated metadata, and lockfiles for that same behavior.
+
+Support files count toward the 8-path review budget but do not independently promote the task. The numbers are a review signal, not an automatic classifier. Promotion needs a causal reason: multiple independently valuable capabilities, a new boundary/contract, or an unresolved product/architecture decision.
+
+As a default comparison, a MICRO feature has one coherent outcome and stays within 10 behavior-bearing files and 15 total paths, but needs feature memory or a small product decision. SMALL is not justified by the project's global classification, a new visual affordance, or optional scope the agent proposed itself.
+
+If execution will exceed the selected lane, pause before editing outside the approved paths. Record the estimated before/after paths, the concrete reason, and obtain approval instead of silently widening or promoting the task.
 
 If a richer option would change product behavior, UX direction, permissions, data sensitivity, architecture, or delivery scope, park it in the simple plan and hand off to the correct workflow agent instead of implementing it silently.
 
@@ -115,6 +129,8 @@ Next step: [first implementation slice.]
 5. Run the verification listed in the plan.
 6. Update `status`, `updated_at`, notes, useful options, and next step.
 7. If the task expands beyond the lane, mark the plan `paused` and hand off to the correct workflow agent.
+
+This lane ends here. Do not create PRD, requirements, spec, feature design doc, readiness, formal implementation plan, harness contract, QA/Tester/Pentester/Validator stages, or run `aioson workflow:next`. Run the smallest verification that proves the changed behavior; do not repeat an unchanged full build/harness. Read project-level `.aioson/context/design-doc.md` or `.aioson/design-docs/` only when selected as relevant system guidance.
 
 ## Quality Bar
 

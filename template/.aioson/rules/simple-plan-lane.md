@@ -31,13 +31,26 @@ Use this lane only when all conditions are true:
 
 - Objective fits in one sentence.
 - Scope is implementation-focused, not product-definition work.
-- No new user journey, product surface, or business rule needs to be decided.
+- No new user journey, product behavior, or business rule needs to be **decided**. A fully specified menu item, button, link, field, or other small affordance over an existing pattern is allowed; visual novelty alone does not make a feature.
 - No architecture-wide decision is required.
 - No new external integration is introduced.
 - The work does not touch auth, money, ownership, permissions, secrets, destructive deletion, or sensitive data storage.
-- Expected implementation is small and reviewable.
+- Expected implementation is small and reviewable under the scope budget below.
 - Done criteria and verification command can be written before coding.
 - Useful implementation options can be classified without changing product, UX, domain, architecture, or security ownership.
+
+## Scope budget (routing guardrail, not a blind classifier)
+
+Classify the minimum behavior the user confirmed, never optional behavior invented during planning.
+
+- **Simple Plan default:** one observable outcome, at most 5 behavior-bearing files, at most 8 total expected paths, and at most 2 existing modules.
+- A **behavior-bearing file** contains the component, handler, command, service, domain, backend, or integration behavior being changed.
+- Mirror tests, translation entries, index/exports, manifests/registrations, generated metadata, and lockfiles that only support the same behavior count in total paths but do not independently promote the lane.
+- Exceeding a number triggers a scope review; it does not automatically promote the task. Name the causal capability, boundary, or unresolved decision that justifies promotion.
+- A MICRO feature normally stays within one coherent outcome, at most 10 behavior-bearing files and 15 total paths. Prefer MICRO over SMALL only when product memory/traceability is genuinely needed.
+- SMALL requires multiple independently valuable capabilities, a new contract/boundary, or material unresolved product/architecture decisions. Never choose SMALL merely because the project is MEDIUM, the UI gains a new control, or support files raise the raw file count.
+
+Before implementation, list expected paths and label them `behavior` or `support`. If a Simple Plan or MICRO task will exceed its approved budget, stop before widening it, show the before/after estimate and concrete reason, and ask for approval.
 
 Escalate instead:
 
@@ -47,6 +60,8 @@ Escalate instead:
 - `@pentester` / `@qa` for sensitive surfaces or formal verification.
 
 If an option would widen behavior, UX, permissions, data sensitivity, architecture, integration scope, or verification ownership, do not implement it as part of the simple plan. Park it under `Useful options considered -> Escalate` and hand off.
+
+Simple Plan is terminal inside `@dev`: run only the targeted verification recorded in the plan, mark it done, and stop. Do not create PRD, requirements, spec, feature design doc, readiness, implementation plan, harness contract, QA/Tester/Pentester/Validator stages, or call `workflow:next` for this lane. Project-level `.aioson/context/design-doc.md` and `.aioson/design-docs/` may be read as selected references; do not create `design-doc-{slug}.md` unless a separately approved feature introduces a real architectural delta.
 
 Lifecycle:
 

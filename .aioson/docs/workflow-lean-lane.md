@@ -10,7 +10,7 @@ triggers: [lean lane, workflow.config.json, fewer agents, menos é mais, lean pi
 # Workflow Lean Lane (SMALL default; opt-in for MEDIUM)
 
 SMALL features now run the **lean chain by default**, and MEDIUM runs the **`@orchestrator` maestro lane**
-(`@product → @orchestrator → @dev → @pentester → @qa`), where `@orchestrator` fans out to
+(`@product → @orchestrator → @dev → initial @qa → enabled/triggered specialists → final @qa`), where `@orchestrator` fans out to
 `@analyst`/`@architect`/`@pm` (+ `@ux-ui` when UI-heavy) as sub-agents and consolidates one gated spec
 package, with `@scope-check`, `@discovery-design-doc`, and `@ux-ui` available as opt-in detours. The older heavy chain (`product → analyst → scope-check → architect →
 discovery-design-doc → pm → dev → qa`) is no longer a built-in default, but its spec hops can be opted
@@ -95,7 +95,7 @@ prevents the green-but-broken outcome.
   "feature": {
     "MICRO": ["product", "dev", "qa"],
     "SMALL": ["product", "analyst", "scope-check", "architect", "dev", "qa"],
-    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "pentester", "qa"]
+    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "qa"]
   },
   "project": {
     "MICRO": ["setup", "dev"],
