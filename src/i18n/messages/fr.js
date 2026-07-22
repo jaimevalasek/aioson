@@ -173,6 +173,10 @@ module.exports = {
       'aioson harness:preview <file> [--max-bytes=8192] [--json] [--locale=fr]',
     help_verification_plan:
       'aioson verification:plan [path] [--feature=<slug>] [--trigger=per-phase|end-of-feature|sensitive-surface] [--host=claude|codex|opencode] [--classification=MICRO|SMALL|MEDIUM] [--sensitive] [--json] [--locale=fr]',
+    help_delegation_plan:
+      'aioson delegation:plan [path] --explicit-model-request --host=<host> [--provider=<provider>] --model=<modèle> --kind=<type> (--task=<texte>|--task-file=<chemin>) [--json]',
+    help_delegation_run:
+      'aioson delegation:run [path] --explicit-model-request --host=<host> [--provider=<provider>] --model=<modèle> --kind=<type> (--task=<texte>|--task-file=<chemin>) [--json]',
     harnessRetro: {
       need_target: 'harness:retro requiert --feature=<slug> ou --last=<N>.',
       invalid_slug: 'Slug invalide : {slug} (doit correspondre à ^[a-z0-9][a-z0-9-]*$).',

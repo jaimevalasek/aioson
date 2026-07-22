@@ -641,14 +641,22 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
   const checks = [
     [skill, 'name: prototype-forge'],
     [skill, '## Division of labor (do not blur)'],
+    [skill, '## Non-regression order'],
+    [skill, '**Single Play-compatible file**'],
+    [skill, 'under 2,000,000 bytes'],
+    [skill, 'No build, network request'],
     [skill, '**Navigational completeness**'],
     [skill, '**Real client-side CRUD**'],
     [skill, 'Never use native `alert()`'],
     [skill, 'account/user menu'],
     [skill, 'prototype-manifest.md'],
     [skill, '## Core interactions'],
+    [skill, '## Premium quality pass (mandatory and bounded)'],
+    [skill, 'data-aioson-id'],
+    [skill, '## Quality evidence'],
     [skill, 'aioson prototype:check'],
     [refiner, '### Generate prototype (optional visual refinement)'],
+    [refiner, '### Explicit model delegation (user-requested only)'],
     [refiner, '.aioson/skills/process/prototype-forge/SKILL.md'],
     [refiner, '.aioson/briefings/{slug}/prototype.html'],
     [refiner, 'Rich-surface recommendation'],
@@ -658,6 +666,43 @@ test('prototype-forge skill and briefing-refiner prototype mode are shipped and 
   for (const [content, token] of checks) {
     assert.equal(content.includes(token), true, `missing prototype token: ${token}`);
   }
+});
+
+test('explicit model delegation contract and read-only host roles are shipped and managed', async () => {
+  const files = [
+    '.aioson/docs/model-delegation.md',
+    '.claude/agents/aioson-researcher.md',
+    '.codex/agents/aioson-researcher.toml'
+  ];
+  for (const file of files) {
+    assert.equal(MANAGED_FILES.includes(file), true, `model delegation file must be managed: ${file}`);
+    await assert.doesNotReject(() => fs.access(path.join(ROOT, 'template', file)));
+  }
+
+  const contract = await read(path.join(ROOT, 'template/.aioson/docs/model-delegation.md'));
+  const claudeAgent = await read(path.join(ROOT, 'template/.claude/agents/aioson-researcher.md'));
+  const codexAgent = await read(path.join(ROOT, 'template/.codex/agents/aioson-researcher.toml'));
+  const refiner = await read(path.join(ROOT, 'template/.aioson/agents/briefing-refiner.md'));
+  const checks = [
+    [contract, 'explicitly asks for a bounded task to run with a named model'],
+    [contract, 'never imitate the requested model'],
+    [contract, 'aioson delegation:plan'],
+    [contract, 'aioson delegation:run'],
+    [contract, 'parent agent keeps responsibility for scope'],
+    [contract, 'Codex can bind `model` in a custom-agent TOML'],
+    [claudeAgent, 'model: inherit'],
+    [claudeAgent, 'Do not edit'],
+    [codexAgent, 'sandbox_mode = "read-only"'],
+    [codexAgent, 'developer_instructions'],
+    [refiner, '.aioson/docs/model-delegation.md'],
+    [refiner, '--explicit-model-request'],
+    [refiner, 'Never claim requested-model delegation']
+  ];
+  for (const [content, token] of checks) {
+    assert.equal(content.includes(token), true, `missing model-delegation token: ${token}`);
+  }
+  assert.equal(claudeAgent, await read(path.join(ROOT, '.claude/agents/aioson-researcher.md')));
+  assert.equal(codexAgent, await read(path.join(ROOT, '.codex/agents/aioson-researcher.toml')));
 });
 
 test('prototype contract propagates the prototype across the agent chain', async () => {

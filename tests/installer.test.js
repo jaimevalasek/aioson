@@ -24,6 +24,28 @@ test('installTemplate creates base installation', async () => {
   assert.equal(result.runtime && result.runtime.dbPath.endsWith(path.join('.aioson', 'runtime', 'aios.sqlite')), true);
 });
 
+test('installTemplate migrates the legacy empty .codex marker into a custom-agent directory', async () => {
+  const dir = await makeTempDir();
+  await fs.writeFile(path.join(dir, '.codex'), '', 'utf8');
+
+  await installTemplate(dir, { mode: 'install' });
+
+  const stat = await fs.stat(path.join(dir, '.codex'));
+  assert.equal(stat.isDirectory(), true);
+  assert.equal(await fileExists(path.join(dir, '.codex/agents/aioson-researcher.toml')), true);
+});
+
+test('installTemplate refuses to replace a non-empty .codex project path', async () => {
+  const dir = await makeTempDir();
+  await fs.writeFile(path.join(dir, '.codex'), 'project-owned content', 'utf8');
+
+  await assert.rejects(
+    installTemplate(dir, { mode: 'install' }),
+    (error) => error.code === 'incompatible_codex_path'
+  );
+  assert.equal(await fs.readFile(path.join(dir, '.codex'), 'utf8'), 'project-owned content');
+});
+
 test('update mode creates backups for managed files', async () => {
   const dir = await makeTempDir();
   await installTemplate(dir, { mode: 'install' });
@@ -110,6 +132,7 @@ test('installTemplate writes Forge metadata and gitignore entry', async () => {
   assert.equal(gitignore.includes('aioson-models.json'), true);
   assert.equal(gitignore.includes('!AGENTS.md'), true);
   assert.equal(gitignore.includes('!.claude/**'), true);
+  assert.equal(gitignore.includes('!.codex/**'), true);
   assert.equal(gitignore.includes('!.aioson/**'), true);
   assert.equal(gitignore.includes('.aioson/agents/'), false, 'agents/ must NOT be gitignored (Codex @ resolution)');
   assert.equal(gitignore.includes('.aioson/locales/'), true);
@@ -136,6 +159,7 @@ test('installTemplate appends keep rules for shared AIOS files even when project
   assert.equal(gitignore.includes('.aioson/agents/'), false, 'agents/ must NOT be gitignored (Codex @ resolution)');
   assert.equal(gitignore.includes('.aioson/locales/'), true);
   assert.equal(gitignore.includes('!.claude/**'), true);
+  assert.equal(gitignore.includes('!.codex/**'), true);
   assert.equal(gitignore.includes('!AGENTS.md'), true);
   assert.equal(gitignore.includes('!CLAUDE.md'), true);
   assert.equal(gitignore.includes('!OPENCODE.md'), true);

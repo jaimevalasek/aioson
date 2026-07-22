@@ -34,6 +34,9 @@ const BOOLEAN_FLAGS = new Set([
   // briefing:apply-feedback — pure booleans; `--confirm .` / `--declined .`
   // / `--allow-stale .` must not swallow the path positional.
   'confirm', 'declined', 'allow-stale',
+  // model delegation — execution is permitted only when the user explicitly
+  // named another model; this switch must never swallow the project path.
+  'explicit-model-request',
   // `--resume` alone means "resume last"; `--resume=<id>` carries a value
   // and is handled by the `=` branch below.
   'resume'

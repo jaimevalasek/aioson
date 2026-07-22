@@ -105,6 +105,29 @@ Use this when `.aioson/briefings/{slug}/refinement-feedback.json` exists (file p
    `briefings.md` stays unchanged; skipped changes are recorded in `refinement-report.md`, and the declined feedback is archived (`refinement-feedback.declined-round{N}.json`) so the next round regenerates cleanly. Findings are kept — the briefing text did not change.
 7. Continue **The refinement loop** at step 4. If feedback contains unresolved blocking items, do not hand off as ready for `@product`.
 
+### Explicit model delegation (user-requested only)
+
+Use this only when the user explicitly names another model for a bounded research, image-research,
+critique, or verification task. Load `.aioson/docs/model-delegation.md` and follow it exactly. The model
+name is an execution requirement: never imitate that model in the parent and never say a subagent ran
+unless the requested model was actually bound and returned a result.
+
+1. Keep ownership in this agent: the briefing's scope, Operational Surface Map, completeness judgment,
+   prototype integration, and final readiness decision are never delegated.
+2. Write a narrow task file at `.aioson/briefings/{slug}/delegation-task.md`, naming the exact question,
+   expected evidence, allowed capabilities, and what is out of scope. Do not include secrets or hidden
+   reasoning.
+3. Run `aioson delegation:plan . --explicit-model-request --host=<current-host>
+   --provider=<requested-provider-or-current-host> --model="<requested-model>" --kind=<kind>
+   --task-file=.aioson/briefings/{slug}/delegation-task.md --research-slug=<research-slug> --json`.
+4. For `mode: native`, dispatch exactly one host subagent with `worker_prompt` and explicitly bind
+   `native_dispatch.model`. If that surface cannot prove the binding, use `aioson delegation:run` with
+   the same flags. For cross-provider work, use the external mode returned by the plan. Never inherit a
+   different model silently.
+5. Validate the returned evidence, persist research through the parent-owned `persistence.path`, record
+   provenance when it materially influenced the prototype, and then resume the normal completeness and
+   refinement gates. A failed/unavailable delegation is reported as a limitation, not fabricated.
+
 ### Generate prototype (optional visual refinement)
 
 Use this when the user asks to see the solution visually, or when a rich-surface briefing (workspaces, boards, cards, pipelines, CRM/Kanban, dashboards, admin/management surfaces, repeated-use CRUD) would benefit from validating screens and interactions before the PRD. It is optional and user-invoked — never block the briefing path on it.
@@ -113,9 +136,12 @@ Use this when the user asks to see the solution visually, or when a rich-surface
 2. Resolve the visual route from `design_skill` in `.aioson/context/project.context.md`:
    - **interface-design + reference images (recommended for a specific, premium look):** ask the user to drop reference images into `.aioson/briefings/{slug}/references/identity/` (brand: color, type, feel) and — for a system with specific components — into `.aioson/briefings/{slug}/references/structure/` (a board, a table, a screen). Then load `.aioson/skills/process/reference-identity-extract/SKILL.md`, extract them once into `.aioson/briefings/{slug}/identity.md`, and self-gate: `aioson verify:artifact . --kind=identity --file=.aioson/briefings/{slug}/identity.md --advisory 2>/dev/null || true`. The prototype's look comes from `identity.md`; its `## Component structure notes` feed the surface map. If the user has no images, skip extraction and let `interface-design` run intent-first — never block on images.
    - **a fixed preset:** if `design_skill` names an installed preset, use it. If `design_skill` is blank for a `site`/`web_app` and the user does not want the reference-image route, ask which installed design skill to use — do not auto-pick one.
-3. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its build contract.
-4. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
-5. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until @product/@sheldon freeze scope, at which point it is re-synced and locked as the development reference.
+3. If the user explicitly named another model for reference research or visual critique, complete
+   **Explicit model delegation** first. Otherwise do not delegate merely because another model might help.
+4. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its complete build contract, including
+   the non-regression order and bounded premium quality pass. Completeness remains the first hard gate.
+5. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
+6. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until @product/@sheldon freeze scope, at which point it is re-synced and locked as the development reference.
 
 The prototype never edits `briefings.md` and never becomes canonical feedback; structured JSON from the review flow remains the only source of applied changes.
 
@@ -142,6 +168,8 @@ Self-check either path with: `aioson verify:artifact . --kind=review --slug={slu
 - Never treat edited HTML or DOM state as canonical feedback.
 - Never hand-write `review.html` or hand-apply feedback to `briefings.md` while the CLI commands are available.
 - Never treat `prototype.html` as the briefing source of truth or as applied feedback; it is a visual reference only.
+- Never sacrifice a Core screen, action, state, or completeness finding to make the prototype look more polished.
+- Never claim requested-model delegation from a prompt imitation, inherited model, or incomplete worker run.
 - Never write refinement JSON into `.aioson/context/`.
 - Never refine a briefing with `prd_generated` set unless the user explicitly chooses a new PRD/enrichment route outside this agent.
 - Never drop mandatory briefing sections.
@@ -162,6 +190,7 @@ Prototype generation (optional) writes:
 
 ```text
 .aioson/briefings/{slug}/identity.md          # only when reference images were extracted
+.aioson/briefings/{slug}/delegation-task.md   # only when the user explicitly requested another model
 .aioson/briefings/{slug}/prototype.html
 .aioson/briefings/{slug}/prototype-manifest.md
 ```

@@ -37,6 +37,8 @@ const GITIGNORE_POLICY_LINES = [
   '!OPENCODE.md',
   '!.claude/',
   '!.claude/**',
+  '!.codex/',
+  '!.codex/**',
   '!.aioson/',
   '!.aioson/**',
   '# AIOSON — managed framework files (do not commit)',
@@ -117,6 +119,30 @@ async function ensureGitignoreEntries(targetDir, entries) {
 
 async function ensureProjectGitignorePolicy(targetDir) {
   return ensureGitignoreEntries(targetDir, GITIGNORE_POLICY_LINES);
+}
+
+async function ensureCodexDirectoryCompatibility(targetDir, dryRun = false) {
+  const codexPath = path.join(targetDir, '.codex');
+  let stat;
+  try {
+    stat = await fs.lstat(codexPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) {
+    const error = new Error('.codex must be a project directory; refusing to follow a symbolic link');
+    error.code = 'incompatible_codex_path';
+    throw error;
+  }
+  if (stat.isDirectory()) return false;
+  if (!stat.isFile() || stat.size !== 0) {
+    const error = new Error('.codex must be a directory; refusing to replace a non-empty project path');
+    error.code = 'incompatible_codex_path';
+    throw error;
+  }
+  if (!dryRun) await fs.unlink(codexPath);
+  return true;
 }
 
 // Schema fields that must always exist as arrays in git-guard.json.
@@ -292,6 +318,7 @@ async function installTemplate(targetDir, options = {}) {
   } = options;
 
   await ensureDir(targetDir);
+  await ensureCodexDirectoryCompatibility(targetDir, dryRun);
   const existingInstall = await detectExistingInstall(targetDir);
 
   const templateFiles = await listFilesRecursive(TEMPLATE_DIR);

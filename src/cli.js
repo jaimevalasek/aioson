@@ -191,6 +191,7 @@ const { runPrototypeCheck } = require('./commands/prototype-check');
 const { runVerifyImplementation } = require('./commands/verify-implementation');
 const { runVerificationPlan } = require('./commands/verification-plan');
 const { runAgentExecution } = require('./commands/agent-execution');
+const { runDelegationPlan, runDelegationRun } = require('./commands/delegation');
 const { runSizing } = require('./commands/sizing');
 const { runDetectTestRunner } = require('./commands/detect-test-runner');
 const { runPulseUpdate } = require('./commands/pulse-update');
@@ -689,6 +690,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'verify-implementation',
   'verification:plan',
   'verification-plan',
+  'delegation:plan',
+  'delegation-plan',
+  'delegation:run',
+  'delegation-run',
   'agent:execution:init',
   'agent-execution-init',
   'agent:execution:validate',
@@ -965,6 +970,8 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_harness_retro');
   logHelpLine(t, logger, 'cli.help_harness_preview');
   logHelpLine(t, logger, 'cli.help_verification_plan');
+  logHelpLine(t, logger, 'cli.help_delegation_plan');
+  logHelpLine(t, logger, 'cli.help_delegation_run');
   logHelpLine(t, logger, 'cli.help_web_map');
   logHelpLine(t, logger, 'cli.help_web_scrape');
   logHelpLine(t, logger, 'cli.help_scan_project');
@@ -1715,6 +1722,10 @@ async function main() {
       result = await runClassify({ args, options, logger: commandLogger });
     } else if (command === 'verification:plan' || command === 'verification-plan') {
       result = await runVerificationPlan({ args, options, logger: commandLogger });
+    } else if (command === 'delegation:plan' || command === 'delegation-plan') {
+      result = await runDelegationPlan({ args, options, logger: commandLogger });
+    } else if (command === 'delegation:run' || command === 'delegation-run') {
+      result = await runDelegationRun({ args, options, logger: commandLogger });
     } else if (command.startsWith('agent:execution:') || command.startsWith('agent-execution-')) {
       const sub = command.replace(/^agent:execution:|^agent-execution-/, '');
       result = await runAgentExecution({ args, options: { ...options, sub }, logger: commandLogger });

@@ -106,7 +106,17 @@ test('briefing-refiner agent is registered as official but not workflow-mandator
   const workspacePrompt = await fs.readFile(path.join(ROOT, '.aioson/agents/briefing-refiner.md'), 'utf8');
   assert.equal(templatePrompt, workspacePrompt);
 
-  for (const token of ['LANGUAGE BOUNDARY', '## Mission', '## Required input', '## Hard constraints', 'pulse:update', 'agent:done']) {
+  for (const token of [
+    'LANGUAGE BOUNDARY',
+    '## Mission',
+    '## Required input',
+    '### Explicit model delegation (user-requested only)',
+    '.aioson/docs/model-delegation.md',
+    'bounded premium quality pass',
+    '## Hard constraints',
+    'pulse:update',
+    'agent:done'
+  ]) {
     assert.equal(templatePrompt.includes(token), true, `missing prompt token: ${token}`);
   }
 

@@ -26,6 +26,8 @@ AGENTS.local.md
 !OPENCODE.md
 !.claude/
 !.claude/**
+!.codex/
+!.codex/**
 !.aioson/
 !.aioson/**
 # AIOSON — managed framework files (do not commit)

@@ -48,6 +48,7 @@ const MANAGED_FILES = [
   '.aioson/docs/feature-expansion-taxonomy.md',
   '.aioson/docs/feature-completeness-contract.md',
   '.aioson/docs/prototype-contract.md',
+  '.aioson/docs/model-delegation.md',
   '.aioson/docs/reference-identity.md',
   '.aioson/docs/product/conversation-playbook.md',
   '.aioson/docs/product/research-loop.md',
@@ -217,7 +218,9 @@ const MANAGED_FILES = [
   '.aioson/tasks/squad-pipeline.md',
   '.aioson/tasks/squad-learning-review.md',
   '.aioson/profiler-reports/.gitkeep',
-  '.aioson/advisors/.gitkeep'
+  '.aioson/advisors/.gitkeep',
+  '.claude/agents/aioson-researcher.md',
+  '.codex/agents/aioson-researcher.toml'
 ];
 
 const REQUIRED_FILES = [
