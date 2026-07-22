@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.40.0] - 2026-07-22
+
+### Added
+- **Premium briefing prototypes** — `briefing-refiner` and `prototype-forge` now preserve operational completeness first, then apply a product-specific visual thesis, stable `data-aioson-id` anchors, responsive/contrast checks, and one bounded surgical polish pass with honest quality evidence.
+- **Explicit named-model delegation** — new `delegation:plan` and `delegation:run` commands resolve the requested model conservatively, dispatch same-provider native workers when the host can prove the binding, and use shell-free external CLI fallbacks for cross-provider or dynamic-model requests.
+- **Read-only researcher roles for Claude Code and Codex** — installed host-native definitions isolate evidence and image-reference research, keep persistence with the parent, and record model/provider provenance without delegating scope or completeness decisions.
+
+### Changed
+- **Prototype output remains simple and Play-compatible.** Premium multi-screen prototypes stay in one hash-routed `prototype.html` under 2 MB with inline CSS/JS/assets and no CDN, iframe, network dependency, or viewer rewrite.
+- **Delegated execution fails closed.** Unsafe or ambiguous model names, unconfirmed fuzzy matches, task path/symlink escapes, unavailable read-only boundaries, and silent model/provider substitution are rejected before execution. Claude external fallback uses plan permissions; Codex uses the read-only sandbox.
+- The installer safely migrates the legacy empty `.codex` marker into the project-scoped custom-agent directory while refusing to replace non-empty or symlinked paths.
+
+### Fixed
+- Secret detection now covers current OpenAI/Anthropic key shapes, flattened PEM material, and quoted/bare generic assignments while operator-memory slug paths reject traversal at the filesystem boundary.
+- Agent execution renews long-running dispatcher leases, safely replaces retry telemetry, strips unsupported reasoning effort on cross-host fallback, rejects malformed completeness-table rows, and detects collaborative workspace surfaces without technical-workspace false positives.
+
+### Validation
+- Full suite: 3,911 passing tests, zero failures, and one skipped test. JavaScript static checks, template/workspace parity, delegation security cases, installer migration, and `git diff --check` are clean.
+
 ## [1.39.0] - 2026-07-21
 
 ### Added
