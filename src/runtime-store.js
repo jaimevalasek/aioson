@@ -2724,12 +2724,13 @@ function appendExecutionEvent(db, runOrCorrelation, event) {
   return tx();
 }
 
-function attachExecutionProcess(db, correlation, process) {
+function attachExecutionProcess(db, correlation, process, options={}) {
   const run=findExecutionRun(db,correlation); if(!run)throw new Error('execution_run_not_found');
-  if(run.pid && run.pid!==process.pid)throw new Error('execution_process_conflict');
+  const replacing=Boolean(run.pid)&&run.pid!==process.pid;
+  if(replacing&&!options.replace)throw new Error('execution_process_conflict');
   db.prepare('UPDATE agent_execution_runs SET pid=?,process_fingerprint=?,state=?,updated_at=? WHERE telemetry_run_id=?')
     .run(Number(process.pid),String(process.fingerprint||''),'running',nowIso(),run.telemetry_run_id);
-  appendExecutionEvent(db,run.telemetry_run_id,{type:'process_started',safe_summary:`Process ${process.pid} started`});
+  appendExecutionEvent(db,run.telemetry_run_id,{type:'process_started',safe_summary:replacing?`Process ${process.pid} started (replaces ${run.pid})`:`Process ${process.pid} started`});
   return db.prepare('SELECT * FROM agent_execution_runs WHERE telemetry_run_id=?').get(run.telemetry_run_id);
 }
 

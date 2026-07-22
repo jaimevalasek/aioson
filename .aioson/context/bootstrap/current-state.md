@@ -1,12 +1,14 @@
 ---
 updated_at: "2026-07-21T00:00:00-03:00"
-generated_at: "2026-07-16T01:35:00-03:00"
-source: "Living Memory reflection — contextual commit guard QA recheck — @qa 2026-07-16"
+generated_at: "2026-07-21T23:52:58-03:00"
+source: "Living Memory reflection — v1.38.0/v1.39.0, secret-guard-p0 e p1-runtime-completeness — @dev 2026-07-21"
 ---
 
 # Current State
 
 ## What the system already has
+
+- [p1-runtime-completeness · 2026-07-21] P1 functional fixes from the v1.37.2→v1.39.0 review: the dispatcher lease (30s) is now renewed on an unref'd interval while a dispatch runs (owner-checked atomic rewrite, cleared before release), so long executions no longer expose the feature to a stolen lease; retry/fallback spawns re-attach process telemetry via an explicit `attachExecutionProcess({replace:true})` instead of crashing with `execution_process_conflict`; cross-host fallbacks strip the inherited `reasoning_effort` (schema forbids effort on fallback entries) so codex→claude/opencode capacity fallback works instead of dying with `unsupported_reasoning_effort`, while same-host fallbacks keep the effort; the feature-completeness markdown table parser respects `\|` escapes and reports cell-count-divergent rows as `*_row_malformed` findings (fail-closed — previously rows vanished silently and gates passed vacuously); `detectRichSurfaces` now detects workspace collaboration surfaces (workspace + members/invite/switcher/team, EN/PT/ES) without flagging technical "project workspace root" prose, honoring the contract's promised workspace coverage. Verification: PoC of 4 bugs before/after, 14 new tests, lint pass, full suite 3,897 pass / 0 fail / 1 skip.
 
 - [secret-guard-p0 · 2026-07-21] P0 security hardening from the adversarial review of v1.37.2→v1.39.0: the staged-secret detector now catches modern OpenAI `sk-proj-`/Anthropic `sk-ant-` keys (kebab-lookalike FP guard via upper/digit lookahead), single-line PEM flattened with escaped newlines (`.env` `\n`, escaped `\r\n`, JS `\\n`), and generic assignments with JSON/dict quoted keys or unquoted shell/.env values (digit+letter shape guard preserves the 84ec5a7d FP reductions); operator-memory slug input is validated fail-closed at the filesystem boundary (`decisionPath`/`historyPath`/`proposalPath` via `isValidDecisionSlug`), closing the `op:reinforce`/`op:forget` arbitrary-.md read/delete traversal. Verification: 27-case PoC matrix, 16 new tests, lint pass, full suite 3,883 pass / 0 fail / 1 skip.
 

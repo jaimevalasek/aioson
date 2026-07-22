@@ -232,6 +232,8 @@ function detectRichSurfaces(content) {
     || (/\btableros?\b/i.test(c) && /\btarjetas?\b/i.test(c))
     || (/\btableaux?\b/i.test(c) && /\bcartes?\b/i.test(c))) found.push('board_cards');
   if (/\b(crm|sales pipeline|deals? pipeline|leads? pipeline|funil de vendas|pipeline de (vendas|negocios|leads)|embudo de ventas|pipeline commercial)\b/i.test(c)) found.push('crm_pipeline');
+  if (/\bworkspaces?\b/i.test(c)
+    && /\b(members?|invites?|switcher|settings|teams?|membros?|convites?|equipes?|configuracoes|miembros?|invitaciones?|equipos?)\b/i.test(c)) found.push('workspace');
   if (/\bcrud\b/i.test(c)
     || /\badmin (panel|dashboard|area|console)\b/i.test(c)
     || /\bmanagement (screen|page|panel|dashboard|interface|surface)\b/i.test(c)
@@ -276,8 +278,8 @@ function splitTableRow(line) {
   let text = String(line || '').trim();
   if (!text.includes('|')) return [];
   if (text.startsWith('|')) text = text.slice(1);
-  if (text.endsWith('|')) text = text.slice(0, -1);
-  return text.split('|').map(cleanCell);
+  if (text.endsWith('|') && !text.endsWith('\\|')) text = text.slice(0, -1);
+  return text.split(/(?<!\\)\|/).map((cell) => cleanCell(cell.replace(/\\\|/g, '|')));
 }
 
 function isDelimiterRow(cells) {
@@ -291,12 +293,16 @@ function parseFirstMarkdownTable(section) {
     const delimiter = splitTableRow(lines[i + 1]);
     if (headers.length < 2 || delimiter.length !== headers.length || !isDelimiterRow(delimiter)) continue;
     const rows = [];
+    const malformed = [];
+    let dataRow = 0;
     for (let j = i + 2; j < lines.length; j += 1) {
       const cells = splitTableRow(lines[j]);
       if (cells.length === 0) break;
+      dataRow += 1;
       if (cells.length === headers.length) rows.push(cells);
+      else malformed.push({ row: dataRow, cells: cells.length });
     }
-    return { headers, normalizedHeaders: headers.map(normalizeLabel), rows };
+    return { headers, normalizedHeaders: headers.map(normalizeLabel), rows, malformed };
   }
   return null;
 }
@@ -341,6 +347,9 @@ function validateProductCapabilityMap(content, artifact) {
   if (!table) {
     findings.push(finding('product', 'feature_capability_map_invalid', 'Feature Capability Map must contain a Markdown table', artifact));
     return { findings, rows: [], requiredCaps: [], allCaps: [] };
+  }
+  for (const bad of table.malformed) {
+    findings.push(finding('product', 'feature_capability_map_row_malformed', `Feature Capability Map row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
   }
   const columns = mapColumns(table, {
     cap: ['CAP', 'Capability ID', 'ID'],
@@ -408,6 +417,9 @@ function validateFeatureCapabilityMatrix(content, artifact, productMap) {
   if (!table) {
     findings.push(finding('requirements', 'feature_capability_matrix_invalid', 'Feature Capability Matrix must contain a Markdown table', artifact));
     return { findings, rows: [], requiredLenses: [], capToAcs: {} };
+  }
+  for (const bad of table.malformed) {
+    findings.push(finding('requirements', 'feature_capability_matrix_row_malformed', `Feature Capability Matrix row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
   }
   const columns = mapColumns(table, {
     cap: ['CAP', 'Capability', 'Capacidade'],
@@ -501,6 +513,9 @@ function validateOperationalSurfaceMap(content, artifact) {
     findings.push(finding('product', 'operational_surface_map_invalid', 'Operational Surface Map must contain a Markdown table', artifact));
     return { findings, objects: [] };
   }
+  for (const bad of table.malformed) {
+    findings.push(finding('product', 'operational_surface_map_row_malformed', `Operational Surface Map row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
+  }
   const columns = mapColumns(table, {
     object: ['Object', 'Core object', 'Objeto'],
     parent: ['Parent / owner', 'Parent owner', 'Pai / responsavel', 'Proprietario'],
@@ -537,6 +552,9 @@ function validateOperationalDecisionMatrix(content, artifact, productSurface, pr
   if (!table) {
     findings.push(finding('requirements', 'operational_decision_matrix_invalid', 'Operational Decision Matrix must contain a Markdown table', artifact));
     return { findings, rows: [] };
+  }
+  for (const bad of table.malformed) {
+    findings.push(finding('requirements', 'operational_decision_matrix_row_malformed', `Operational Decision Matrix row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
   }
   const columns = mapColumns(table, {
     object: ['Object', 'Core object', 'Objeto'],
@@ -600,6 +618,9 @@ function validateLeverageMatrix(content, artifact, productMap) {
     findings.push(finding('design', 'implementation_leverage_matrix_invalid', 'Implementation Leverage Matrix must contain a Markdown table', artifact));
     return { findings, rows: [] };
   }
+  for (const bad of table.malformed) {
+    findings.push(finding('design', 'implementation_leverage_matrix_row_malformed', `Implementation Leverage Matrix row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
+  }
   const columns = mapColumns(table, {
     cap: ['CAP', 'Capability', 'Capacidade'],
     concern: ['Concern', 'Area', 'Preocupacao'],
@@ -653,6 +674,9 @@ function validateDeliveryPlan(content, artifact, productMap) {
   if (!table) {
     findings.push(finding('plan', 'capability_delivery_plan_invalid', 'Capability Delivery Plan must contain a Markdown table', artifact));
     return { findings, rows: [] };
+  }
+  for (const bad of table.malformed) {
+    findings.push(finding('plan', 'capability_delivery_plan_row_malformed', `Capability Delivery Plan row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
   }
   const columns = mapColumns(table, {
     cap: ['CAP', 'Capability ID', 'ID'],

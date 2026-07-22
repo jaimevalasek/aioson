@@ -10,7 +10,9 @@ const {
   CANONICAL_LENSES,
   OPERATIONAL_CONCERNS,
   analyzeFeatureCompleteness,
-  findingsThroughStage
+  detectRichSurfaces,
+  findingsThroughStage,
+  parseFirstMarkdownTable
 } = require('../src/lib/feature-completeness');
 
 async function makeTmpDir() {
@@ -302,4 +304,64 @@ test('MICRO work without a formal capability contract stays lightweight even at 
   assert.equal(analysis.applicable, false);
   assert.equal(analysis.ok, true);
   assert.equal(analysis.stage_findings.execution.length, 0);
+});
+
+test('markdown table parser keeps escaped pipes inside cells', () => {
+  const table = parseFirstMarkdownTable([
+    '| CAP | Outcome |',
+    '|---|---|',
+    '| CAP-1 | allow a \\| b switch |',
+    '| CAP-2 | plain |'
+  ].join('\n'));
+
+  assert.deepEqual(table.rows, [['CAP-1', 'allow a | b switch'], ['CAP-2', 'plain']]);
+  assert.deepEqual(table.malformed, []);
+});
+
+test('markdown table parser reports rows whose cell count diverges instead of dropping them silently', () => {
+  const table = parseFirstMarkdownTable([
+    '| CAP | Outcome |',
+    '|---|---|',
+    '| CAP-1 | ok |',
+    '| CAP-2 | too | many | cells |',
+    '',
+    '| CAP-3 | prose after blank line ends the table |'
+  ].join('\n'));
+
+  assert.deepEqual(table.rows, [['CAP-1', 'ok']]);
+  assert.deepEqual(table.malformed, [{ row: 2, cells: 4 }]);
+});
+
+test('a malformed capability map row fails closed instead of vanishing from the gate', async () => {
+  const dir = await makeTmpDir();
+  await writeCompleteFeature(dir);
+  const prdPath = path.join(dir, '.aioson/context/prd-demo.md');
+  const prd = await fs.readFile(prdPath, 'utf8');
+  await fs.writeFile(prdPath, prd.replace(
+    '| CAP-demo-run |',
+    '| CAP-demo-broken | too | many | cells | here | now |\n| CAP-demo-run |'
+  ), 'utf8');
+
+  const analysis = await analyzeFeatureCompleteness(dir, 'demo');
+  const finding = analysis.findings.find((item) => item.check === 'feature_capability_map_row_malformed');
+
+  assert.equal(analysis.ok, false);
+  assert.ok(finding);
+  assert.match(finding.message, /row 1 has 6 cell\(s\), expected 5/);
+  assert.ok(analysis.product_map.requiredCaps.includes('CAP-demo-run'));
+});
+
+test('workspace collaboration surfaces activate the contract while technical workspace prose does not', () => {
+  assert.deepEqual(
+    detectRichSurfaces('The product has workspaces with members, an invite flow and a workspace switcher.'),
+    ['workspace']
+  );
+  assert.deepEqual(
+    detectRichSurfaces('O produto tem workspaces com membros e convites para a equipe.'),
+    ['workspace']
+  );
+  assert.deepEqual(
+    detectRichSurfaces('The prompt path must stay inside the project workspace root directory.'),
+    []
+  );
 });
