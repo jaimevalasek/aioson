@@ -334,6 +334,7 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
     completeness = await analyzeFeatureCompleteness(targetDir, state.featureSlug, {
       classification,
       force: isCanonicalPlannerState(state) && ['product', 'sheldon', 'planner', 'dev', 'qa'].includes(stageName),
+      preImplementation: stageName === 'planner',
       includeExecution: (stageName === 'dev' || stageName === 'qa') && !options.structuralOnly,
       includeExecutionStructure: (stageName === 'dev' || stageName === 'qa') && options.structuralOnly
     });

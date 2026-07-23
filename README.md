@@ -226,7 +226,14 @@ occurs when the execution manifest explicitly allows it for that failure class.
 
 Tester, Pentester, and Validator are also disabled by default. Enable them when
 deeper coverage, adversarial security review, or independent validation is worth
-the additional time.
+the additional time. When enabled and triggered, Tester/Pentester may apply one
+bounded, evidence-backed correction inside persisted allowed paths. QA always
+revalidates that diff and remains the final Gate D owner; broader changes return
+once to DEV. A direct user invocation activates only that specialist pass; it
+does not permanently enable future automatic runs. When the specialist is
+disabled in the manifest, its bounded self-correction starts with an explicit
+`review-cycle:advance ... --manual`; resolution verifies the Git baseline and
+refuses the QA handoff if any changed path is outside the persisted scope.
 
 ---
 
@@ -741,7 +748,7 @@ aioson agent:execution:resume [path] --feature=<slug>
 ```bash
 aioson preflight [path] [--json]
 aioson classify [path] [--json]
-aioson prototype:check [path] --feature=<slug> [--json]
+aioson prototype:check [path] --feature=<slug> [--strict] [--json]  # valida dono/status/path/manifest + cobertura no PRD
 aioson verify:implementation [path] --feature=<slug> --prepare-ledger|--check-ledger|--build-prompt|--check-report=<path> [--policy=advisory|standard|strict] [--json]
 aioson verify:implementation [path] --feature=<slug> --tool=codex|claude|opencode [--model=<model>|configured-default] [--timeout-ms=<ms>] [--max-output-bytes=<bytes>] [--policy=advisory|standard|strict] [--json]
 aioson harness:retro [path] --feature=<slug>|--last=<N> [--json]

@@ -48,10 +48,25 @@ const AGENT_PROFILES = {
     mustSurfaces: new Set(['rules', 'design_governance']),
     shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap'])
   },
+  'briefing-refiner': {
+    role: 'feature-framing',
+    mustSurfaces: new Set(['rules']),
+    shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap', 'design_governance'])
+  },
+  product: {
+    role: 'product-definition',
+    mustSurfaces: new Set(['rules']),
+    shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap', 'design_governance'])
+  },
   sheldon: {
     role: 'prd-enrichment',
     mustSurfaces: new Set(['rules']),
     shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap', 'design_governance'])
+  },
+  planner: {
+    role: 'implementation-planning',
+    mustSurfaces: new Set(['rules', 'design_governance']),
+    shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap'])
   },
   architect: {
     role: 'architecture',
@@ -75,32 +90,57 @@ const PROFILE_HINTS = {
   implementation: [
     'Load must_load paths before editing code.',
     'Use should_load paths when a decision is ambiguous or the touched path overlaps their reason.',
+    'Use a prototype only after its active-feature owner is verified; with explicit none, inspect the current production code and tests.',
     'After implementation, verify the diff against verification_hints before marking the slice done.'
   ],
   'pair-implementation': [
     'Load must_load paths before code inspection or editing.',
+    'For tracked work, reject another or closed feature\'s prototype and state whether the binding is current or none.',
     'Keep the slice small enough to verify in one loop.',
     'Escalate when the package shows missing paths, missing feature context, or architecture uncertainty.'
   ],
   'quality-review': [
     'Treat loaded rules and constraints as review criteria.',
+    'Verify prototype status, owner, canonical paths, and manifest before using fidelity as acceptance evidence.',
     'Verify behavior, regressions, and implementation shape against the package before PASS.',
     'Report gaps as actionable findings with file/path references.'
   ],
   'test-design': [
     'Turn constraints and forbidden_patterns into focused regression tests.',
     'Prioritize tests around touched paths, data boundaries, framework conventions, and prior failure signals.',
-    'Name the verification command required to prove the package.'
+    'Name the verification command required to prove the package.',
+    'Use model knowledge to generate edge-case hypotheses, but keep only cases grounded in approved behavior, code, engineering controls, or production risk.',
+    'When a defect is unequivocal and within the Tester correction budget, persist allowed paths, correct it under a finite self-cycle, and return acceptance to QA.'
   ],
   'security-review': [
     'Turn constraints into a feature-specific threat model.',
     'Probe auth, permission, input validation, data exposure, tenant boundaries, uploads, secrets, and unsafe query construction when present.',
-    'Separate confirmed vulnerabilities from hardening recommendations.'
+    'Separate confirmed vulnerabilities from hardening recommendations.',
+    'When hardening is deterministic and within the Pentester correction budget, persist allowed paths, correct it under a finite self-cycle, and return acceptance to QA.'
+  ],
+  'feature-framing': [
+    'Use selected knowledge to challenge feature assumptions before PRD generation.',
+    'When current behavior affects scope, inspect source code separately; this package contains knowledge, not implementation proof.',
+    'Turn repository contradictions into specific findings with exact evidence paths.'
+  ],
+  'product-definition': [
+    'Reconcile the approved promise with inspected current product behavior.',
+    'Record one current-system fit decision per required capability.',
+    'Resolve the prototype as feature-owned current or explicit none, exclude historical paths, and state the resolution in chat.',
+    'Apply evidence-backed routine recommendations without creating a confirmation gate.'
   ],
   'prd-enrichment': [
     'Use constraints to enrich requirements before implementation starts.',
+    'Reject a prototype owned by another or closed feature; repair an objective stale binding to explicit none.',
     'Convert downstream ambiguity into explicit acceptance criteria or open questions.',
     'Do not reopen decisions already grounded by selected rules or feature artifacts.'
+  ],
+  'implementation-planning': [
+    'Inspect source code separately and classify every delivery path as reuse, modify, create, or retire.',
+    'Plan from a prototype only when its active-feature binding is verified; otherwise use the repository baseline.',
+    'Use selected constraints to shape the implementation delta and vertical phases.',
+    'Record only evidence-triggered engineering controls, with phase verification and recovery where persistent or externally visible state can change.',
+    'Apply evidence-backed technical recommendations without creating a confirmation gate.'
   ],
   architecture: [
     'Use selected rules and design governance as architecture constraints.',

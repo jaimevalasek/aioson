@@ -107,6 +107,7 @@ test('context:brief builds a pentester package from security and data-access sig
     assert.ok(mustLoad.includes('.aioson/rules/security-baseline.md'));
     assert.ok(result.review_criteria.some((item) => /threat model|attack surfaces|probes/i.test(item)));
     assert.ok(result.verification_hints.some((item) => /Probe|threat model|attack surfaces/i.test(item)));
+    assert.ok(result.verification_hints.some((item) => /finite self-cycle.*QA/i.test(item)));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -142,6 +143,37 @@ test('context:brief gives sheldon PRD enrichment criteria without implementation
     assert.ok(result.should_load.some((item) => item.path === '.aioson/context/prd-checkout.md'));
     assert.ok(result.verification_hints.some((item) => /acceptance criteria|open questions/i.test(item)));
     assert.equal(result.gaps.some((gap) => gap.code === 'missing_paths'), false);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('context:brief gives Product and Planner repository-fit roles without pretending Markdown is code evidence', async () => {
+  const dir = await makeTmpDir();
+  try {
+    await writeLaravelProject(dir, 'checkout');
+
+    const product = await buildContextBrief(dir, {
+      agent: 'product',
+      mode: 'planning',
+      feature: 'checkout',
+      task: 'define checkout PRD from the current system'
+    });
+    const planner = await buildContextBrief(dir, {
+      agent: 'planner',
+      mode: 'planning',
+      feature: 'checkout',
+      task: 'plan checkout implementation delta',
+      paths: 'app/Services/CheckoutService.php'
+    });
+
+    assert.equal(product.intent.role, 'product-definition');
+    assert.ok(product.verification_hints.some((item) => /current-system fit decision/i.test(item)));
+    assert.ok(product.verification_hints.some((item) => /feature-owned current or explicit none/i.test(item)));
+    assert.equal(planner.intent.role, 'implementation-planning');
+    assert.ok(planner.verification_hints.some((item) => /classify every delivery path/i.test(item)));
+    assert.ok(planner.verification_hints.some((item) => /active-feature binding is verified/i.test(item)));
+    assert.ok(planner.verification_hints.some((item) => /engineering controls.*recovery/i.test(item)));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

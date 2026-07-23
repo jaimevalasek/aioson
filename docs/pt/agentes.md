@@ -581,24 +581,24 @@ Se o usuário pedir para pular o teste, o `@dev` resiste, explica, e só cede ap
 - Testes para achados críticos
 - Relatório de cobertura
 
-**Fechamento de feature (automático):**
+**Fechamento de feature (gate humano):**
 
-Quando o QA é aprovado, o `@qa` roda:
+Quando o QA registra PASS, ele para e recomenda que o usuário autorize:
 
 ```bash
 aioson feature:close . --feature={slug} --verdict=PASS --residual="..."
 ```
 
-Isso faz tudo de uma vez — sem etapas manuais:
+Depois da autorização explícita, o comando:
 1. Adiciona QA sign-off em `spec-{slug}.md`
 2. Marca a feature como `done` em `features.md`
 3. Limpa `project-pulse.md`
 4. Move todos os artefatos da feature (`prd-`, `spec-`, `requirements-`, etc.) para `.aioson/context/done/{slug}/`
 5. Atualiza `.aioson/context/done/MANIFEST.md`
 
-O root de `.aioson/context/` fica limpo automaticamente. O desenvolvedor não precisa rodar nenhum comando adicional.
+O root de `.aioson/context/` fica limpo no mesmo comando, mas QA e Autopilot nunca o executam automaticamente.
 
-> **@qa vs @tester** — O `@qa` é um revisor: lê o que foi implementado, aponta riscos e escreve testes pontuais para achados críticos. O `@tester` é um engenheiro de testes: parte de cobertura zero e constrói uma estratégia sistemática (inventário, mapa de risco, estratégia por camada). Use `@tester` quando a aplicação foi implementada sem testes adequados ou quando `@qa` identificar lacunas em 3+ módulos.
+> **@qa vs @tester** — O `@qa` é o revisor independente e único dono do PASS/Gate D. O `@tester` é um engenheiro de testes opt-in: amplia cobertura e pode corrigir apenas um defeito determinístico dentro de paths persistidos, sempre voltando ao QA.
 
 ---
 
@@ -607,10 +607,10 @@ O root de `.aioson/context/` fica limpo automaticamente. O desenvolvedor não pr
 **Quando usar:** Após `@dev`, quando a aplicação foi implementada sem testes adequados. Também em projetos legados ou quando `@qa` identificar cobertura insuficiente em múltiplos módulos.
 
 **O que faz:**
-- Produz um inventário completo de cobertura (`test-inventory.md`)
+- Produz um relatório canônico de cobertura (`test-report-{slug}.md`)
 - Mapeia regras de negócio descobertas vs testes existentes, priorizando por risco
-- Escolhe e documenta a estratégia de teste antes de escrever qualquer linha
-- Escreve testes por módulo em ordem de prioridade, com commit atômico por módulo
+- Escolhe a menor estratégia que prova os riscos concretos da feature
+- Escreve testes stack-native por ordem de risco
 - Gera relatório de cobertura antes vs depois
 
 **Estratégias disponíveis:**
@@ -641,13 +641,12 @@ O root de `.aioson/context/` fica limpo automaticamente. O desenvolvedor não pr
 ```
 
 **Entrega:**
-- `.aioson/context/test-inventory.md` — mapa de cobertura por arquivo
-- `.aioson/context/test-plan.md` — estratégia escolhida + cobertura antes/depois
-- Testes escritos por módulo, commitados incrementalmente
+- `.aioson/context/test-report-{slug}.md` — escopo, testes, comandos/resultados e riscos restantes
+- Testes stack-native implementados nos paths aprovados
 
 **Restrições:**
-- Nunca modifica código de produção
-- Se encontrar um bug real: documenta em `test-plan.md` e para — não corrige silenciosamente
+- Só modifica produção quando o defeito já é determinado pelo PRD/código e o relatório persiste `allowed_fix_paths`
+- O ciclo aceita no máximo 3 paths de comportamento/5 totais, exige baseline Git e volta ao QA; correção transversal vai ao DEV
 - Testes sem assertions são proibidos
 
 ---

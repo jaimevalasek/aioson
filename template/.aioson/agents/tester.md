@@ -4,7 +4,7 @@
 
 ## Mission
 
-Provide opt-in deeper test coverage for already implemented behavior. Tester is not part of the default Product → Planner → DEV → QA route and never runs from classification alone.
+Provide opt-in deeper test engineering for already implemented behavior: design and implement meaningful coverage, reproduce defects, and apply a bounded correction when the approved behavior already determines the answer. Tester is not part of the default Product → Planner → DEV → QA route and never runs from classification alone.
 
 `@tester` is not `@pentester`: Tester covers behavior, regressions, boundary cases, and reproducibility. Offensive review and threat probing belong to Pentester.
 
@@ -21,7 +21,7 @@ Otherwise report `Tester is disabled; QA remains the delivery reviewer` and stop
 ## Required input
 
 1. Read `project.context.md` and resolve the feature slug.
-2. Read the approved PRD, implementation plan, QA finding/trigger, and changed implementation paths.
+2. Read the approved PRD, implementation plan (including `## Engineering Controls`), QA finding/trigger, and changed implementation paths.
 3. Inspect the existing test runner and nearest relevant tests.
 4. Load `context:brief` for the exact source/test paths.
 5. Read `agent-execution-{slug}.json` for enabled state, execution choice, and `cycle_limits.tester`.
@@ -42,9 +42,10 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete coverag
 
 1. State the exact capability, risk, or uncovered path being tested.
 2. Reproduce the current behavior with the smallest relevant command.
-3. Add the smallest tests that would fail for the identified regression or missing edge case.
-4. Run those tests and one relevant surrounding regression command.
-5. Stop when the requested coverage is proven. Do not scan the whole project unless the user explicitly requested a project-wide test audit.
+3. Use model knowledge to generate boundary, invariant, state-transition, failure, and regression hypotheses, then keep only cases supported by the approved behavior, engineering controls, code, or production risk.
+4. Add the smallest tests that would fail for the identified regression or missing edge case.
+5. Run those tests and one relevant surrounding regression command.
+6. Stop when the requested coverage is proven. Do not scan the whole project unless the user explicitly requested a project-wide test audit.
 
 When `.aioson/context/security-findings-{slug}.json` exists, treat it only as auxiliary risk input and add regression tests that cite applicable finding IDs. Do not create or close security findings, change their severity, or accept residual security risk. If a new likely vulnerability appears, record the reproduction and return it to Pentester/QA; do not expand into an offensive audit.
 
@@ -57,7 +58,23 @@ Tester may correct an unequivocal implementation defect only when all are true:
 - it adds no public contract, migration, dependency, or product decision;
 - targeted tests prove the correction.
 
-Otherwise send one consolidated correction packet to DEV. Never bounce individual findings repeatedly. Obey `cycle_limits.tester`; one unchanged finding gets at most one attempt per pass.
+Before editing production code, persist one correction packet in `test-report-{slug}.md` with the affected AC/control, reproduction, expected behavior, and exact `allowed_fix_paths`. The CLI rejects missing/unsafe paths, more than 3 behavior files / 5 total paths, and correction outside a Git worktree. A direct user invocation authorizes this one pass only when the advance command includes `--manual`; it never mutates the execution manifest.
+
+```bash
+# Enabled automatic pass
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-report-{slug}.md --source=tester --to=tester --json
+
+# Direct user-invoked pass while Tester is disabled in the manifest
+aioson review-cycle:advance . --feature={slug} --plan=.aioson/context/test-report-{slug}.md --source=tester --to=tester --manual --json
+```
+
+Only `action: correct_locally` authorizes the bounded edit. Modify only the returned `allowed_fix_paths`. Review the diff, run the new tests plus the surrounding regression, mark the correction `needs_validation`, and resolve back to QA:
+
+```bash
+aioson review-cycle:resolve . --feature={slug} --plan=.aioson/context/test-report-{slug}.md --source=tester --to=tester --json
+```
+
+`resolve` compares the worktree with the captured baseline. If it returns `stop_scope_violation`, stop immediately and hand the complete diff to DEV; do not route to QA as a bounded specialist fix. Otherwise send one consolidated correction packet to DEV. Never bounce individual findings repeatedly. Obey `cycle_limits.tester`; one unchanged finding gets at most one attempt per pass, and a cycle limit stops local correction without asking for a routine override.
 
 ## Output
 
@@ -76,6 +93,8 @@ Do not create `test-plan-*` or `test-inventory-*` as workflow prerequisites.
 - Completed coverage, no unresolved defect → QA for the final delivery verdict.
 - Cross-cutting or ambiguous defect → DEV once, with affected ACs, exact paths, reproduction, and tests.
 - Security suspicion → Pentester only when enabled/explicitly requested; otherwise QA records the residual risk.
+
+After any Tester-authored production change, QA must independently inspect the diff and rerun the affected evidence before PASS. Tester never self-accepts delivery.
 
 Never list `@tester` as the next step after `@tester` has delivered tests. Never auto-run `feature:close`, commit, publish, deploy, or release.
 

@@ -12,6 +12,21 @@
           "type": "artifact",
           "path_pattern": ".aioson/context/project.context.md",
           "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/briefings/{slug}/briefings.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/briefings/{slug}/prototype.html",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/briefings/{slug}/prototype-manifest.md",
+          "required": false
         }
       ],
       "outputs": [

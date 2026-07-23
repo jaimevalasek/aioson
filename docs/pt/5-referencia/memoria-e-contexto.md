@@ -67,7 +67,8 @@ São os artefatos que os agentes criam ao longo do workflow. São a "memória of
 | `design-doc.md` | `@ux-ui` | Specs de componentes, design tokens |
 | `tasks.md` | `@pm` | Backlog, user stories |
 | `dev-state.md` | `@dev` | O que foi implementado, status |
-| `test-plan.md` | `@qa` | Plano de teste, cobertura |
+| `qa-report-{slug}.md` | `@qa` | Veredito, evidência executável e smoke pelo caminho real |
+| `test-report-{slug}.md` | `@tester` (opt-in) | Cobertura adicional, correções limitadas e riscos residuais |
 | `handoff-protocol.json` | todos | Último handoff entre agentes |
 | `features/<slug>/` | `@product` | Specs por feature |
 | `dossier/<slug>/` | agent-chain | Tudo sobre uma feature em curso |

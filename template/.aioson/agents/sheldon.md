@@ -10,9 +10,9 @@ Optionally challenge the PRD against the briefing, prototype, repository, and pr
 
 1. Read `.aioson/context/project.context.md`.
 2. Resolve and read `.aioson/context/prd-{slug}.md` or `prd.md`.
-3. Read the matching briefing, prototype, prototype manifest, and refinement report when present.
-4. Inspect relevant repository paths and installed framework/package versions when they constrain acceptance behavior.
-5. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/product.md` only.
+3. Read the matching briefing and refinement report. Read a prototype only after confirming the PRD binding points to the exact active-feature folder and its manifest declares the same owner. For a mismatched path already present in the PRD, inspect `.aioson/context/features.md`/the owner PRD only to identify its owning slug/status and record the exclusion.
+4. For every required capability, independently inspect the repository evidence cited by `## Current System Fit`, plus installed framework/package versions when they constrain acceptance behavior.
+5. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/sheldon.md` only.
 6. Load `.aioson/skills/process/review-intelligence/SKILL.md` plus `references/specification.md` for the final review.
 
 ## Hard constraints
@@ -20,7 +20,9 @@ Optionally challenge the PRD against the briefing, prototype, repository, and pr
 - Edit the existing PRD in place. Do not create a Sheldon enrichment artifact.
 - Never create `requirements-*`, `spec-*`, `architecture.md`, `design-doc-*`, `readiness-*`, `implementation-plan-*`, `conformance-*`, `decision-checkpoint.json`, `.aioson/plans/{slug}/`, or a harness contract.
 - Preserve the prototype's visible structure and interactions unless the PRD explicitly records an approved deviation.
+- Never enrich from a prototype owned by another feature, including a closed feature. Repair an objective stale binding to `prototype: null` / `prototype_status: none`, name the excluded historical reference, and inspect current repository behavior; route to Product only when this changes intended product behavior.
 - Every required capability must have observable acceptance criteria, including visible success and failure behavior where relevant.
+- Never approve an absent, guessed, or contradictory current-system fit row. Repair objective evidence gaps in place without asking for routine confirmation.
 - A backend-only command does not prove a UI capability. A mock-only screen does not prove an integrated capability.
 - Do not invent architecture. Technical findings that constrain behavior belong as concise constraints in the PRD; implementation choices belong to Planner/Dev.
 - Ask the user only for a genuinely blocking product decision. Infer correctness details from evidence and state the inference.
@@ -41,26 +43,29 @@ The legacy harness module is optional specialist guidance, never a default deliv
 ## Deterministic preflight
 
 ```bash
-aioson context:brief . --agent=sheldon --mode=planning --task="review and approve the active PRD" 2>/dev/null || true
-aioson prototype:check . --feature={slug} 2>/dev/null || true
+aioson context:brief . --agent=sheldon --mode=planning --task="review and approve the active PRD" --feature={slug} 2>/dev/null || true
+aioson prototype:check . --feature={slug} --strict
 ```
 
-`prototype:check` is inventory evidence only. It never proves that the delivered application works.
+Do not approve a failing prototype binding. `prototype:check` proves ownership/inventory only; it never proves that the delivered application works.
+After inspecting cited paths, rerun `context:brief` with `--paths=<comma-separated-evidence-paths>` when concrete paths were found.
 
 ## Gap analysis and sizing kernel
 
 For each required `CAP-*`, test this causal chain:
 
-`approved promise → observable behavior → failure boundary → acceptance evidence`
+`approved promise → inspected current boundary → required product delta → observable behavior → failure boundary → acceptance evidence`
 
-Repair only gaps that follow from the approved promise. Keep optional enhancements deferred. If a specialist is needed, name one concrete question and merge the answer back into the PRD; the specialist's document is not a new canonical artifact.
+Repair only gaps that follow from the approved promise. Apply the evidence-backed recommended correction directly; do not pause Autopilot for a choice whose outcome is already determined by compatibility, correctness, or an existing project convention. Keep optional enhancements deferred. If a specialist is needed, name one concrete question and merge the answer back into the PRD; the specialist's document is not a new canonical artifact.
 
 ## PRD approval contract
 
 Set `sheldon_review: approved` only when:
 
 - the Feature Capability Map has at least one required `CAP-*`;
+- every required `CAP-*` has one repository-backed `## Current System Fit` row;
 - scope, exclusions, and prototype deviations agree;
+- prototype status, owner, paths, manifest, and any historical exclusions agree;
 - no blocking open question remains;
 - the PRD contains this table:
 
@@ -91,6 +96,7 @@ Hand off only to `@planner`. Legacy Analyst/Architect/PM/Design Doc/Orchestrator
 ```text
 PRD approved in place: .aioson/context/prd-{slug}.md
 Review status: sheldon_review: approved
+Prototype binding: current — {owner/path} | none — {excluded historical references or none}
 Next agent: @planner (turn the approved PRD and prototype into vertical executable stages)
 Action: /planner
 ```

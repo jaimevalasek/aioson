@@ -9,8 +9,8 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 ## Required input
 
 1. Read `.aioson/context/project.context.md` and `.aioson/context/project-pulse.md`.
-2. Resolve the active feature and read `prd-{slug}.md` plus `implementation-plan-{slug}.md`.
-3. Read the prototype and manifest when the PRD references them.
+2. Resolve the active feature and read `prd-{slug}.md` plus `implementation-plan-{slug}.md`, including its repository evidence, implementation delta, and engineering controls.
+3. Run the strict prototype ownership check. Read the prototype and manifest only when it verifies a `current` binding. With `none`, inspect the current production entry point, implementation, and tests instead of opening historical prototype paths.
 4. Load only rules/docs selected by `context:brief` for the paths being touched.
 5. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/dev.md` for tracked feature work.
 6. For a bounded Simple Plan, follow `.aioson/rules/simple-plan-lane.md` instead and do not enter the feature workflow.
@@ -22,9 +22,11 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 - Never suggest direct execution outside the workflow as a workaround for stale context. Repair objectively inferable context or route to Setup when it is genuinely uncertain.
 - Do not change product scope. Route a product contradiction to Product; request Sheldon only when an independent PRD challenge is specifically warranted. Resolve normal technical details from repository evidence.
 - Do not replace a referenced prototype with a generic layout or static mock.
+- Never use a cross-feature or historically excluded prototype as implementation authority. If the owning feature is closed, that prototype still belongs only to its PRD.
 - Do not treat detached fixtures, alternate binaries, test-only flags, or mocked transports as proof that the shipped application works.
 - Do not mark a phase done until its behavior works through the default entry point and its focused verification passes.
 - Never weaken tests, assertions, or error handling merely to obtain green output.
+- Do not add dependencies, migrations, abstractions, or generic hardening that the approved plan and repository evidence do not justify.
 - Preserve unrelated user changes in a dirty worktree.
 - Never impersonate a requested external host/model with the current chat model. An unavailable CLI/model is a real pause unless that exact manifest entry declares an applicable fallback.
 
@@ -43,6 +45,7 @@ Load only when triggered:
 aioson context:brief . --agent=dev --mode=executing --task="implement {slug} from the approved PRD and plan" 2>/dev/null || true
 aioson preflight . --agent=dev --feature={slug}
 aioson gate:check . --feature={slug} --gate=C
+aioson prototype:check . --feature={slug} --strict
 ```
 
 Then inspect the actual production entry point and the files named by the active phase before editing.
@@ -50,6 +53,8 @@ Then inspect the actual production entry point and the files named by the active
 ## Context integrity
 
 If PRD and plan conflict, stop and report the exact conflict. If the repository differs only in implementation detail, update the plan's technical note or document the deviation in the dossier without creating another specification artifact.
+
+If `prototype_status: none`, explicitly tell the user which historical path was excluded (if any), then compare the approved PRD/plan against the real code and tests. Correct bounded implementation drift directly when product behavior is already clear; route to Product only when the desired behavior itself is ambiguous. Do not pause Autopilot merely to confirm the evidence-backed exclusion.
 
 ## Context drift check
 
@@ -70,6 +75,7 @@ Before each phase:
 - confirm exact write paths and existing patterns;
 - identify the real command/window/route users execute;
 - identify one focused automated check and one production-path smoke when the feature has runtime behavior.
+- identify the phase's material engineering controls, their verification, and recovery path.
 
 ## Implementation strategy
 
@@ -78,7 +84,7 @@ Implement one vertical phase at a time:
 1. Make the smallest end-to-end causal path work.
 2. Wire real state/IPC/API boundaries before visual polish that depends on them.
 3. Keep the production UI and backend in the same slice when the capability crosses both.
-4. Add focused tests that cite the relevant `AC-*` IDs.
+4. Add focused tests that cite the relevant `AC-*` IDs and prove the phase's triggered engineering controls.
 5. Run the focused command and the normal application path.
 6. Record evidence and only then advance.
 
@@ -133,13 +139,14 @@ aioson dossier:add-finding . --slug={slug} --agent=dev --section="Agent Trail" -
 
 ## Completion and handoff
 
-Run the relevant build/tests and a production-path smoke. Optional harness commands apply only when the approved plan deliberately included a harness.
+Run the relevant build/tests, each applicable engineering-control check, and a production-path smoke. Optional harness commands apply only when the approved plan deliberately included a harness.
 
 Update `dev-state.md`, then hand off to `@qa`. QA is the single default reviewer. Tester, Pentester, and Validator run only when explicitly enabled in `agent-execution-{slug}.json` and their trigger applies.
 
 ```text
 Implementation completed: [phases/CAPs]
 Production entry verified: [command/window/route]
+Prototype binding used: current — {owner/path} | none — {historical exclusions}; repository path inspected: {path}
 Evidence: [tests + user action → visible result]
 Next agent: @qa (independent verification against PRD, plan, prototype, and real app)
 Action: /qa

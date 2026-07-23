@@ -1,0 +1,75 @@
+{
+  "agent_id": "tester",
+  "version": "1.0",
+  "display_name": "Tester",
+  "capabilities": [
+    {
+      "id": "extend_test_coverage",
+      "category": "create",
+      "description": "Implement opt-in, feature-scoped tests for grounded coverage gaps, edge cases, invariants, and regressions.",
+      "inputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/implementation-plan-{slug}.md",
+          "required": false
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/qa-report-{slug}.md",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "type": "artifact",
+          "path_pattern": "tests/**/*"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/test-report-{slug}.md"
+        }
+      ]
+    },
+    {
+      "id": "apply_bounded_test_correction",
+      "category": "transform",
+      "description": "Correct one unequivocal implementation defect inside persisted allowed paths and return it to QA for independent validation.",
+      "inputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/test-report-{slug}.md",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "type": "artifact",
+          "path_pattern": "src/**/*"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": "tests/**/*"
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/test-report-{slug}.md"
+        }
+      ]
+    }
+  ],
+  "autonomy_modes": [
+    "guarded"
+  ],
+  "default_mode": "guarded",
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
+  "risk_profile": "medium"
+}

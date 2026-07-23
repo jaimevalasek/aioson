@@ -8,10 +8,10 @@ O objetivo é manter o root de `.aioson/context/` enxuto automaticamente — o u
 
 ## Como funciona
 
-Quando o `@qa` aprova uma feature e roda `aioson feature:close --verdict=PASS`, o arquivamento acontece no mesmo ato:
+Quando o `@qa` registra PASS e o usuário autoriza `aioson feature:close --verdict=PASS`, o arquivamento acontece no mesmo ato:
 
 ```
-@qa aprova → aioson feature:close --feature={slug} --verdict=PASS
+@qa registra PASS → usuário autoriza feature:close --feature={slug} --verdict=PASS
                 ├── atualiza spec-{slug}.md (QA sign-off)
                 ├── atualiza features.md → done
                 ├── limpa project-pulse.md
@@ -169,7 +169,7 @@ aioson feature:archive . --feature=checkout --json
 
 | Agente | Comportamento |
 |--------|--------------|
-| `@qa` | Roda `aioson feature:close --verdict=PASS` ao fechar — o archive cascateia automaticamente |
+| `@qa` | Registra PASS e recomenda o fechamento; o usuário autoriza `feature:close`, cujo archive cascateia automaticamente |
 | `@dev`, `@analyst`, `@architect`, `@tester`, `@pm`, `@ux-ui` | Sem mudança — já operavam apenas na feature ativa |
 | `@product` | Sem mudança — vê apenas `prd.md` e `prd-{slug}.md` ativos |
 | `@briefing` | Lê `done/MANIFEST.md` para evitar duplicar briefings de features já entregues |

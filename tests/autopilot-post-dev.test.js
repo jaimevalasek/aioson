@@ -66,6 +66,22 @@ test('AUTOPILOT_HANDOFF_STAGES inclui a cadeia canônica e os desvios opcionais'
   }
 });
 
+test('encaixe e delta seguem a recomendação objetiva sem criar confirmação básica no autopilot', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  const product = fs.readFileSync(path.join(root, '.aioson/agents/product.md'), 'utf8');
+  const sheldon = fs.readFileSync(path.join(root, '.aioson/agents/sheldon.md'), 'utf8');
+  const planner = fs.readFileSync(path.join(root, '.aioson/agents/planner.md'), 'utf8');
+  const handoff = fs.readFileSync(path.join(root, '.aioson/docs/autopilot-handoff.md'), 'utf8');
+
+  assert.match(product, /without pausing for routine confirmation/i);
+  assert.match(sheldon, /do not pause Autopilot/i);
+  assert.match(planner, /without asking for routine confirmation/i);
+  assert.match(handoff, /not new human gates/i);
+  assert.match(handoff, /Pause only when the alternatives materially change/i);
+});
+
 // O texto injetado no prompt não pode mais afirmar o modelo antigo (parada pré-@dev).
 test('exceção de autopilot injetada descreve a cadeia full-feature, não o modelo antigo', () => {
   const { buildAgentPrompt, getAgentDefinition: getDef, resolveInstructionPath } = require('../src/agents');
@@ -145,4 +161,42 @@ test('resolveAutopilotSignal: scheme desarmado para o slug atual vence o flag do
   const other = await resolveAutopilotSignal(dir, { slug: 'billing' });
   assert.equal(other.enabled, true);
   assert.equal(other.source, 'frontmatter');
+});
+
+test('resolveAutopilotSignal: flags da ativação vencem o padrão sem persistir configuração', async () => {
+  const fsp = require('node:fs/promises');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { resolveAutopilotSignal } = require('../src/autopilot-signal');
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'aioson-ap-direct-'));
+  const contextPath = path.join(dir, '.aioson/context/project.context.md');
+  await fsp.mkdir(path.dirname(contextPath), { recursive: true });
+
+  await fsp.writeFile(contextPath, '---\nauto_handoff: false\n---\n# ctx\n');
+  assert.deepEqual(
+    await resolveAutopilotSignal(dir, { slug: 'cart', auto: true }),
+    { enabled: true, source: 'activation_auto' }
+  );
+
+  await fsp.writeFile(contextPath, '---\nauto_handoff: true\n---\n# ctx\n');
+  assert.deepEqual(
+    await resolveAutopilotSignal(dir, { slug: 'cart', step: true }),
+    { enabled: false, source: 'activation_step' }
+  );
+  assert.deepEqual(
+    await resolveAutopilotSignal(dir, { slug: 'cart', auto: true, step: true }),
+    { enabled: false, source: 'activation_step' }
+  );
+});
+
+test('managed client instructions preserve per-activation Autopilot flags and the human close gate', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  for (const rel of ['AGENTS.md', 'CLAUDE.md', 'template/AGENTS.md', 'template/CLAUDE.md']) {
+    const content = fs.readFileSync(path.join(root, rel), 'utf8');
+    assert.match(content, /current activation explicitly includes `--auto`/);
+    assert.match(content, /explicit `--step` disables Autopilot for that activation/);
+    assert.match(content, /never auto-runs `feature:close`\/publish/);
+  }
 });

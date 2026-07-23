@@ -396,6 +396,59 @@ test('agent:prompt rejects pentester app_target without feature and scope', asyn
   );
 });
 
+test('agent:prompt Tester names only the canonical test report artifact', async () => {
+  const dir = await makeTempDir();
+  await writeProjectContext(dir, 'SMALL');
+  const { t } = createTranslator('en');
+  const result = await runAgentPrompt({
+    args: ['tester', dir],
+    options: {
+      tool: 'codex',
+      headless: true,
+      feature: 'checkout'
+    },
+    logger: createCollectLogger(),
+    t
+  });
+
+  assert.match(result.prompt, /test-report-checkout\.md/);
+  assert.doesNotMatch(result.prompt, /test-plan-/);
+  assert.doesNotMatch(result.prompt, /test-inventory-/);
+});
+
+test('agent:prompt applies --auto and --step to the current activation', async () => {
+  const dir = await makeTempDir();
+  const { t } = createTranslator('en');
+  const logger = createCollectLogger();
+  await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
+  const contextPath = path.join(dir, '.aioson/context/project.context.md');
+
+  await fs.writeFile(
+    contextPath,
+    '---\nproject_name: demo\nclassification: SMALL\ninteraction_language: en\nauto_handoff: false\n---\n# Context\n'
+  );
+  const auto = await runAgentPrompt({
+    args: ['dev', dir],
+    options: { tool: 'codex', headless: true, feature: 'checkout', auto: true },
+    logger,
+    t
+  });
+  assert.match(auto.prompt, /autopilot handoff is active/i);
+  assert.match(auto.prompt, /NEVER auto-run `feature:close`/);
+
+  await fs.writeFile(
+    contextPath,
+    '---\nproject_name: demo\nclassification: SMALL\ninteraction_language: en\nauto_handoff: true\n---\n# Context\n'
+  );
+  const step = await runAgentPrompt({
+    args: ['dev', dir],
+    options: { tool: 'codex', headless: true, feature: 'checkout', step: true },
+    logger,
+    t
+  });
+  assert.doesNotMatch(step.prompt, /autopilot handoff is active/i);
+});
+
 test('agent:prompt --headless --output writes prompt to file and skips bootstrap', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'MEDIUM');

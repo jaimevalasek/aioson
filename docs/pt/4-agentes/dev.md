@@ -19,7 +19,7 @@ Para MICRO, SMALL e MEDIUM, DEV recebe:
 
 ## Como trabalha
 
-DEV implementa as fases verticais, mantém o escopo aprovado, executa os checks do plano e integra a feature. Não há QA entre cada fase; QA é a revisão final independente.
+DEV implementa as fases verticais e os controles de engenharia acionados por evidência, mantém o escopo aprovado, executa os checks do plano e integra a feature. Não há QA entre cada fase; QA é a revisão final independente.
 
 Se o trabalho ultrapassar o orçamento aprovado, DEV mostra o antes/depois da estimativa e a causa antes de ampliar o escopo.
 
@@ -50,6 +50,8 @@ CLI/modelo indisponível pausa a execução. O cliente atual nunca substitui sil
 ## Autopilot
 
 O handoff padrão é `@dev → @qa`. Tester, Pentester e Validator não entram automaticamente por classificação; precisam estar habilitados e ter um gatilho explícito.
+
+DEV também valida o vínculo do protótipo antes de usá-lo. Se o PRD declarar `none` porque o protótipo encontrado pertence a uma feature fechada, DEV informa o caminho excluído no chat e vasculha o código, os testes e a entrada real da aplicação. Ele pode corrigir um desvio de implementação já definido pelo PRD/plano; não restaura silenciosamente o protótipo antigo nem muda a intenção de produto.
 
 ## Handoff típico
 

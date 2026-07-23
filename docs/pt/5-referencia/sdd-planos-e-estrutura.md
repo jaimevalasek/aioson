@@ -40,7 +40,7 @@ projeto/
     │   ├── design-doc.md           ← @ux-ui
     │   ├── tasks.md                ← @pm
     │   ├── dev-state.md            ← @dev (continuidade de sessão)
-    │   ├── test-plan.md            ← @qa
+    │   ├── qa-report-{slug}.md      ← @qa
     │   ├── features.md             ← registro de features (status por slug)
     │   └── parallel/               ← @orchestrator (lanes paralelas)
     │       ├── lane-backend.md
@@ -97,9 +97,8 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 | Arquivo | Criado por | Consumido por |
 |---|---|---|
 | `dev-state.md` | `@dev` (ao pausar/fechar) | `@deyvin` (retomada), `@dev` |
-| `test-plan.md` | `@qa` | `@qa` (iterações), `@validator` |
 | `qa-report-{slug}.md` | `@qa` | `@validator`, `@tester` |
-| `test-inventory.md` | `@tester` | `@qa` (rodada seguinte) |
+| `test-report-{slug}.md` | `@tester` | `@qa` (validação independente da cobertura/correção) |
 | `security-findings-{slug}.json` | `@pentester` | `@dev` (correção), `@qa` (regressão) |
 | `last-handoff.json` | `@validator` | fechamento da feature |
 

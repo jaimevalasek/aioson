@@ -226,7 +226,7 @@ Você > @qa
         Repassando para @dev (iteração 1/2)...
 @dev > Corrigindo... done.
 @qa > Re-rodando... 4/4 OK.
-@qa > test-plan.md e qa-report.md gravados. Feature pronta.
+@qa > qa-report-tasks.md gravado com PASS. A feature está pronta para o gate humano de fechamento.
 ```
 
 > **A novidade:** o ciclo QA→Dev devolve correções pequenas com evidência reproduzível e investigação limitada. Sob autopilot, o padrão é DEV→QA; `@tester`, `@pentester` e `@validator` só entram quando habilitados e explicitamente justificados. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
@@ -263,7 +263,7 @@ Você > [Enter para aceitar]
 ├── project.context.md         ← visão do projeto (passo 3)
 ├── architecture.md            ← decisões (passos 5+6)
 ├── dev-state.md               ← o que o @dev fez (passo 7)
-├── test-plan.md               ← plano do @qa (passo 8)
+├── qa-report-tasks.md         ← veredito do @qa (passo 8)
 ├── qa-report-test-coverage.md ← relatório de QA
 └── features/
     └── lista-todos/

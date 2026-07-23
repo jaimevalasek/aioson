@@ -28,6 +28,7 @@ const {
   GATE_NAMES,
   GATE_ALIASES
 } = require('../preflight-engine');
+const { readFreshGateCheckpoint } = require('../lib/gate-checkpoint');
 
 const BAR = '━'.repeat(35);
 
@@ -62,12 +63,21 @@ async function checkGate(targetDir, slug, gateLetter) {
   const gateName = GATE_NAMES[gateLetter];
   const gateStatus = gates[gateName] || 'pending';
   const prerequisites = GATE_PREREQUISITES[gateLetter] || [];
+  const planPath = path.join(dir, `implementation-plan-${slug}.md`);
+  const gateCCheckpoint = gateLetter === 'C'
+    ? await readFreshGateCheckpoint(targetDir, 'C', slug, planPath)
+    : { exists: false };
 
   const evidence = [];
   const missing = [];
 
   const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
     classification,
+    // Exact create/modify path-state checks describe the planning baseline.
+    // Planner writes `status: approved` before the first Gate C check, so the
+    // durable checkpoint — fresh relative to the plan — is the transition to
+    // execution semantics. A later plan edit invalidates that checkpoint.
+    preImplementation: gateLetter === 'C' && !gateCCheckpoint.exists,
     includeExecution: gateLetter === 'D'
   });
   if (completeness.applicable) {

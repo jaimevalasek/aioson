@@ -9,6 +9,12 @@ const {
   parseFrontmatter
 } = require('../preflight-engine');
 const { checkLedger } = require('../verification/ledger-store');
+const {
+  validateCurrentSystemFit,
+  validateImplementationDelta,
+  validateEngineeringControls
+} = require('./feature-repository-fit');
+const { validatePrototypeBinding } = require('./prototype-binding');
 
 const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
 const AC_ID_RE = /\bAC(?:-[A-Za-z0-9]+)+\b/g;
@@ -730,6 +736,11 @@ function extractPlannedPaths(value) {
   }))];
 }
 
+function plannedPathKey(value) {
+  const normalized = String(value || '').replace(/\\/g, '/').replace(/^\.\//, '');
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
 async function pathExistsInsideRoot(targetDir, relPath) {
   const absolute = path.resolve(targetDir, relPath);
   const relative = path.relative(targetDir, absolute);
@@ -826,9 +837,15 @@ async function verifiedHarnessEvidence(targetDir, slug, cap, acs, plannedPaths) 
   };
 }
 
-async function validateDeliveryPaths(targetDir, productMap, delivery, artifact) {
+async function validateDeliveryPaths(targetDir, productMap, delivery, artifact, implementationDelta = { rows: [] }) {
   const findings = [];
   const plannedPathsByCap = new Map();
+  const retiredPaths = new Set(
+    (implementationDelta.rows || [])
+      .filter((row) => row.action === 'retire')
+      .flatMap((row) => row.paths || [])
+      .map(plannedPathKey)
+  );
 
   for (const row of delivery.rows) {
     if (!productMap.requiredCaps.some((cap) => cap.toLowerCase() === row.cap.toLowerCase())) continue;
@@ -839,11 +856,20 @@ async function validateDeliveryPaths(targetDir, productMap, delivery, artifact) 
       continue;
     }
     const missingPaths = [];
+    const presentRetiredPaths = [];
     for (const plannedPath of plannedPaths) {
-      if (!await pathExistsInsideRoot(targetDir, plannedPath)) missingPaths.push(plannedPath);
+      const exists = await pathExistsInsideRoot(targetDir, plannedPath);
+      if (retiredPaths.has(plannedPathKey(plannedPath))) {
+        if (exists) presentRetiredPaths.push(plannedPath);
+      } else if (!exists) {
+        missingPaths.push(plannedPath);
+      }
     }
     if (missingPaths.length > 0) {
       findings.push(finding('execution', 'capability_delivery_files_missing', `${row.cap} planned file(s) do not exist: ${missingPaths.join(', ')}`, artifact));
+    }
+    if (presentRetiredPaths.length > 0) {
+      findings.push(finding('execution', 'capability_retired_files_present', `${row.cap} retired file(s) still exist: ${presentRetiredPaths.join(', ')}`, artifact));
     }
   }
 
@@ -1052,24 +1078,87 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
 
   const stageFindings = { product: [], specification: [], plan: [], execution: [] };
   let productMap = { findings: [], rows: [], requiredCaps: [], allCaps: [] };
+  let currentSystemFit = { findings: [], rows: [] };
   let acceptance = { findings: [], rows: [], capToAcs: {} };
   let delivery = { findings: [], rows: [] };
+  let engineeringControls = { findings: [], rows: [], explicitNone: false };
+  let implementationDelta = { findings: [], rows: [] };
   let execution = { findings: [], ledger: null, coveredCaps: [] };
+  let prototypeBinding = {
+    ok: true,
+    applicable: false,
+    status: 'not_applicable',
+    issues: [],
+    warnings: []
+  };
 
   if (applicable) {
     productMap = validateProductCapabilityMap(inputs.prd, artifacts.prd.path || `prd-${slug}.md`);
+    const repositoryFitToolkit = {
+      CAP_ID_EXACT_RE,
+      cleanCell,
+      normalizeLabel,
+      isPlaceholder,
+      extractSection,
+      parseFirstMarkdownTable,
+      mapColumns,
+      finding,
+      extractPlannedPaths,
+      pathExistsInsideRoot
+    };
+    currentSystemFit = validateCurrentSystemFit({
+      content: inputs.prd,
+      artifact: artifacts.prd.path || `prd-${slug}.md`,
+      productMap,
+      required: explicitlyRequired,
+      toolkit: repositoryFitToolkit
+    });
+    prototypeBinding = await validatePrototypeBinding({
+      targetDir,
+      slug,
+      prd: inputs.prd,
+      strict: explicitlyRequired
+    });
     acceptance = validatePrdAcceptanceCriteria(inputs.prd, artifacts.prd.path || `prd-${slug}.md`, productMap);
     delivery = validateDeliveryPlan(inputs.plan, artifacts.implementation_plan.path || `implementation-plan-${slug}.md`, productMap);
+    engineeringControls = validateEngineeringControls({
+      content: inputs.plan,
+      artifact: artifacts.implementation_plan.path || `implementation-plan-${slug}.md`,
+      // Enforce the new Planner contract at Gate C/Dev preflight without
+      // retroactively invalidating an already implemented legacy plan at Gate D.
+      required: explicitlyRequired && options.preImplementation === true,
+      toolkit: repositoryFitToolkit
+    });
+    implementationDelta = await validateImplementationDelta({
+      targetDir,
+      content: inputs.plan,
+      artifact: artifacts.implementation_plan.path || `implementation-plan-${slug}.md`,
+      productMap,
+      delivery,
+      required: explicitlyRequired,
+      preImplementation: options.preImplementation === true,
+      toolkit: repositoryFitToolkit
+    });
 
-    stageFindings.product.push(...productMap.findings);
+    stageFindings.product.push(
+      ...productMap.findings,
+      ...currentSystemFit.findings,
+      ...prototypeBinding.issues.map((item) => finding(
+        'product',
+        `prototype_${item.reason}`,
+        item.message,
+        artifacts.prd.path || `prd-${slug}.md`
+      ))
+    );
     stageFindings.specification.push(...acceptance.findings);
-    stageFindings.plan.push(...delivery.findings);
+    stageFindings.plan.push(...delivery.findings, ...engineeringControls.findings, ...implementationDelta.findings);
     if (options.includeExecution && delivery.findings.length === 0) {
       const structural = await validateDeliveryPaths(
         targetDir,
         productMap,
         delivery,
-        `.aioson/context/implementation-plan-${slug}.md`
+        `.aioson/context/implementation-plan-${slug}.md`,
+        implementationDelta
       );
       execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
       stageFindings.execution.push(...execution.findings);
@@ -1078,7 +1167,8 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
         targetDir,
         productMap,
         delivery,
-        `.aioson/context/features/${slug}/implementation-ledger.md`
+        `.aioson/context/features/${slug}/implementation-ledger.md`,
+        implementationDelta
       );
       execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
       stageFindings.execution.push(...structural.findings);
@@ -1101,19 +1191,26 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     stage_findings: stageFindings,
     findings,
     product_map: productMap,
+    current_system_fit: currentSystemFit,
+    prototype_binding: prototypeBinding,
     acceptance_criteria: acceptance,
     requirements_matrix: { rows: acceptance.rows, capToAcs: acceptance.capToAcs },
     operational_matrix: { rows: [] },
-    leverage_matrix: { rows: [] },
+    leverage_matrix: { rows: implementationDelta.rows },
+    engineering_controls: engineeringControls,
+    implementation_delta: implementationDelta,
     delivery_plan: delivery,
     execution_evidence: execution,
     baseline: { reqs: [], acs: acceptance.rows.map((row) => row.ac).filter(Boolean) },
     summary: {
       promised_capabilities: productMap.rows.length,
       required_capabilities: productMap.requiredCaps.length,
+      current_system_fit_rows: currentSystemFit.rows.length,
+      prototype_binding: prototypeBinding.status,
       acceptance_criteria: acceptance.rows.length,
       lens_decisions: 0,
-      leverage_rows: 0,
+      engineering_controls: engineeringControls.rows.length,
+      leverage_rows: implementationDelta.rows.length,
       delivery_rows: delivery.rows.length,
       executed_capabilities: execution.coveredCaps.length,
       errors: findings.length

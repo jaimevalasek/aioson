@@ -12,9 +12,9 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 - **What:** product discovery — defines what to build, for whom, and why; writes the PRD base.
 - **When:** starting a new feature or project definition; the kickoff of every feature chain.
-- **Options:** `--auto` (run this feature on autopilot to `feature:close`), `--step` (drive each stage manually). Without a token and no standing choice, asks the run mode once at the PRD handoff.
+- **Options:** `--auto` (autopilot through implementation and review, stopping before the human `feature:close` gate), `--step` (manual handoffs for this activation). Without a token, follows the feature scheme/project default.
 - **Typical:** `/product --auto build email notifications`, `/product redesign checkout`.
-- **Produces:** one `prd-{slug}.md` product authority plus the `features.md` index row.
+- **Produces:** one `prd-{slug}.md` product authority with explicit feature-owned prototype status (`current`/`none`) plus the `features.md` index row.
 - **Next:** `@planner` for every feature classification; optional `@sheldon` only for requested/concrete independent enrichment; `@copywriter` for a site-specific content detour.
 
 ## @briefing
@@ -32,14 +32,14 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 - **When:** a briefing exists but needs corrections, scope trims, or decisions; optionally a clickable prototype (and a reference-image visual identity) before @product.
 - **Options:** none — it locates the briefing by slug or asks which one.
 - **Typical:** `/briefing-refiner refine loyalty-program`.
-- **Produces:** review rounds (`review.html` + feedback JSON + report, archived per round) and the updated briefing (contract preserved); optionally `identity.md` + `prototype.html`.
+- **Produces:** review rounds (`review.html` + feedback JSON + report, archived per round) and the updated briefing (contract preserved); optionally `identity.md` + feature-owned `prototype.html`/`prototype-manifest.md`.
 - **Next:** `@product` (after `aioson briefing:approve`), or prototype mode first for rich surfaces.
 
 ## @dev
 
 - **What:** implements the reviewed PRD through the approved implementation plan — code, migrations, interfaces, and stack-native tests on the production path.
 - **When:** implementation entry point, resume after a break, or QA corrections.
-- **Options:** `--auto` (arm autopilot from here: implementation + review cycle run autonomously), `--step` (disarm autopilot for this feature — stop at the `@qa` handoff even in an always-autopilot project).
+- **Options:** `--auto` (arm autopilot for this activation: implementation + review cycle), `--step` (override an always-autopilot project and stop at the manual `@qa` handoff for this activation).
 - **Typical:** `/dev --auto`, `/dev` (follows the seeded scheme/flag), `/dev continue feature checkout`.
 - **Produces:** the working implementation + tests and `dev-state.md` checkpoints; it does not create another specification.
 - **Next:** `@qa` (hub of the post-dev review cycle).
@@ -91,21 +91,21 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @tester
 
-- **What:** engineering-grade test suite for already-implemented apps — coverage gaps, edge cases, mutation-style checks. Tests what exists; never implements features.
+- **What:** engineering-grade coverage for already-implemented behavior — adds tests and may correct one unequivocal bounded defect, but never invents product behavior or self-accepts delivery.
 - **When:** `@qa` flags a coverage gap, or you want a systematic test pass on a finished surface.
-- **Options:** feature-scoped via the workflow (`--feature=<slug>` when invoked through the CLI prompt).
-- **Typical:** `/tester cover feature checkout`, or auto-invoked by `@qa` under autopilot.
-- **Produces:** the test suite + a coverage report; surfaces dev-owned blocking gaps.
-- **Next:** `@dev` (blocking gaps) or back to `@qa` (sign-off).
+- **Options:** feature-scoped via the workflow (`--feature=<slug>` when invoked through the CLI prompt); a direct bounded correction over a disabled manifest entry uses `review-cycle:advance ... --manual`.
+- **Typical:** `/tester cover feature checkout`, or invoked after `@qa` only when enabled and concretely triggered.
+- **Produces:** tests + `test-report-{slug}.md`; bounded corrections stay inside persisted allowed paths and a finite review cycle.
+- **Next:** `@dev` once for cross-cutting gaps, or back to `@qa` for independent acceptance.
 
 ## @pentester
 
-- **What:** structured adversarial security review — maps the threat surface and produces reproducible findings under an explicit scope contract (not a free-form hacker).
+- **What:** structured adversarial security review — maps the threat surface, produces reproducible findings, and may apply deterministic bounded hardening under an explicit scope contract.
 - **When:** sensitive surface (auth, money, uploads, secrets, external URLs) — via `@qa`'s trigger or on demand.
-- **Options:** `--mode=app_target --feature=<slug> --scope=<target>` via `aioson agent:prompt pentester`.
+- **Options:** `--mode=app_target --feature=<slug> --scope=<target>` via `aioson agent:prompt pentester`; a direct bounded correction over a disabled manifest entry uses `review-cycle:advance ... --manual`.
 - **Typical:** `/pentester review the auth endpoints of feature accounts`.
 - **Produces:** `security-findings-{slug}.json` (owners + severities; `@qa` owns closure).
-- **Next:** `@dev` (open dev-owned findings) or back to `@qa`.
+- **Next:** `@dev` once for cross-cutting findings, or back to `@qa`; Pentester never self-accepts a fix.
 
 ## @qa
 

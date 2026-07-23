@@ -4,7 +4,7 @@
 
 ## Para que serve
 
-`@sheldon` procura lacunas, premissas implícitas, edge cases, inconsistências e riscos que poderiam tornar o plano frágil. Quando necessário, usa pesquisa ou evidência do repositório para fortalecer decisões.
+`@sheldon` procura lacunas, premissas implícitas, edge cases, inconsistências e riscos que poderiam tornar o plano frágil. Ele verifica de forma independente o `Current System Fit` do PRD contra evidência real do repositório.
 
 Ele trabalha **no mesmo** `.aioson/context/prd-{slug}.md` criado por Product. Não abre uma segunda autoridade de requisitos, arquitetura, readiness ou planejamento.
 
@@ -24,6 +24,7 @@ Sheldon pode acrescentar:
 - perguntas bloqueantes e decisões confirmadas;
 - cenários de falha e limites;
 - ACs ausentes ou ambíguos;
+- evidência e decisão de encaixe ausentes, inventadas ou desatualizadas;
 - referências e evidência relevante;
 - riscos que o Planner deve refletir nas fases.
 
@@ -45,7 +46,9 @@ Analyst, Architect, PM, UX/UI e Discovery Design Doc podem ser chamados explicit
 - **Vem de:** `@product`.
 - **Vai para:** `@planner`.
 
-Sob autopilot, esse handoff é automático quando não existe decisão humana aberta.
+Sob autopilot, correções objetivas recomendadas são aplicadas no próprio PRD e o handoff é automático. Só uma decisão material de produto permanece como gate humano.
+
+Isso inclui corrigir um protótipo legado ligado por engano: Sheldon valida status, slug, paths e dono do manifesto. Se o artefato pertence a outra feature, registra `prototype: null`, `prototype_status: none`, mantém o caminho apenas como exclusão histórica e informa o usuário no chat.
 
 ## Veja também
 

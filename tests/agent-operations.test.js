@@ -5,10 +5,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const { createTranslator } = require('../src/i18n');
 const { runAgentEpilogue } = require('../src/commands/agent-epilogue');
 const { runReviewCycle } = require('../src/commands/review-cycle');
 const { initManifest } = require('../src/agent-execution/manifest');
+const execFileAsync = promisify(execFile);
 
 async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-agent-ops-'));
@@ -18,6 +21,10 @@ async function writeFile(dir, relPath, content) {
   const full = path.join(dir, relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, content, 'utf8');
+}
+
+async function initGit(dir) {
+  await execFileAsync('git', ['init', '--quiet'], { cwd: dir, windowsHide: true });
 }
 
 function makeLogger() {
@@ -358,6 +365,234 @@ test('review-cycle respects a disabled target in agent-execution manifest', asyn
   assert.equal(result.ok, true);
   assert.equal(result.action, 'stop_agent_disabled');
   assert.equal(result.reason, 'agent_disabled_in_execution_manifest');
+});
+
+test('review-cycle gives enabled Tester one bounded self-correction and then returns to QA', async () => {
+  const dir = await makeTempDir();
+  await initGit(dir);
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.tester.enabled = true;
+  created.manifest.cycle_limits.tester = 1;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(
+    dir,
+    '.aioson/context/test-report-checkout.md',
+    '---\nstatus: open\n---\n# Tester report\n\nallowed_fix_paths: src/cart.js, tests/cart.test.js\n'
+  );
+
+  const started = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(started.action, 'correct_locally');
+  assert.equal(started.max_cycles, 1);
+  assert.deepEqual(started.allowed_fix_paths, ['src/cart.js', 'tests/cart.test.js']);
+  assert.match(started.task, /bounded tester self-correction.*return to @qa/i);
+  await writeFile(dir, 'src/cart.js', 'module.exports = { fixed: true };\n');
+  await writeFile(dir, 'tests/cart.test.js', "const test=require('node:test'); test('cart fix',()=>{});\n");
+
+  const resolved = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'resolve',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(resolved.action, 'invoke_qa');
+  assert.equal(resolved.next_agent, 'qa');
+  assert.equal(resolved.plan_update.reason, 'awaiting_independent_qa');
+  assert.equal(resolved.scope_verification.ok, true);
+  assert.deepEqual(
+    resolved.scope_verification.changed_paths.sort(),
+    ['src/cart.js', 'tests/cart.test.js']
+  );
+
+  const stopped = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(stopped.action, 'stop_cycle_limit');
+});
+
+test('review-cycle lets a directly active specialist self-correct without enabling future automatic runs', async () => {
+  const dir = await makeTempDir();
+  await initGit(dir);
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.tester.enabled = false;
+  created.manifest.cycle_limits.tester = 1;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(
+    dir,
+    '.aioson/context/test-report-checkout.md',
+    '# Direct Tester report\n\nallowed_fix_paths: tests/cart.test.js\n'
+  );
+
+  const disabled = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(disabled.action, 'stop_agent_disabled');
+
+  const result = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester',
+      manual: true
+    },
+    logger: makeLogger()
+  });
+  assert.equal(result.action, 'correct_locally');
+  assert.equal(result.max_cycles, 1);
+  assert.equal(result.manual_authorized, true);
+  const unchangedManifest = JSON.parse(await fs.readFile(created.path, 'utf8'));
+  assert.equal(unchangedManifest.agents.tester.enabled, false);
+});
+
+test('review-cycle rejects specialist correction packets without deterministic allowed paths', async () => {
+  const dir = await makeTempDir();
+  await initGit(dir);
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.tester.enabled = true;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(dir, '.aioson/context/test-report-checkout.md', '# Missing scope\n');
+
+  const result = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.action, 'stop_invalid_correction_scope');
+  assert.equal(result.reason, 'allowed_fix_paths_missing');
+  assert.equal(result.next_agent, 'dev');
+});
+
+test('review-cycle rejects specialist paths that could alter execution authority', async () => {
+  const dir = await makeTempDir();
+  await initGit(dir);
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.tester.enabled = true;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(
+    dir,
+    '.aioson/context/test-report-checkout.md',
+    'allowed_fix_paths: .aioson/context/agent-execution-checkout.json, tests/cart.test.js\n'
+  );
+
+  const result = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/test-report-checkout.md',
+      source: 'tester',
+      to: 'tester'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.action, 'stop_invalid_correction_scope');
+  assert.equal(result.reason, 'allowed_fix_paths_forbidden');
+  assert.deepEqual(
+    result.scope.forbidden_paths,
+    ['.aioson/context/agent-execution-checkout.json']
+  );
+});
+
+test('review-cycle blocks an out-of-scope specialist diff and routes it to DEV', async () => {
+  const dir = await makeTempDir();
+  await initGit(dir);
+  const created = await initManifest(dir, 'checkout', 'codex');
+  created.manifest.agents.pentester.enabled = true;
+  created.manifest.cycle_limits.pentester = 1;
+  await fs.writeFile(created.path, JSON.stringify(created.manifest, null, 2));
+  await writeFile(
+    dir,
+    '.aioson/context/security-findings-checkout.json',
+    JSON.stringify({
+      findings: [{
+        id: 'SEC-1',
+        status: 'open',
+        allowed_fix_paths: ['src/auth.js', 'tests/auth.test.js']
+      }]
+    }, null, 2)
+  );
+
+  const started = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'advance',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/security-findings-checkout.json',
+      source: 'pentester',
+      to: 'pentester'
+    },
+    logger: makeLogger()
+  });
+  assert.equal(started.action, 'correct_locally');
+
+  await writeFile(dir, 'src/auth.js', 'module.exports = { hardened: true };\n');
+  await writeFile(dir, 'src/unrelated.js', 'module.exports = true;\n');
+  const resolved = await runReviewCycle({
+    args: [dir],
+    options: {
+      sub: 'resolve',
+      json: true,
+      feature: 'checkout',
+      plan: '.aioson/context/security-findings-checkout.json',
+      source: 'pentester',
+      to: 'pentester'
+    },
+    logger: makeLogger()
+  });
+
+  assert.equal(resolved.action, 'stop_scope_violation');
+  assert.equal(resolved.reason, 'correction_scope_violation');
+  assert.equal(resolved.next_agent, 'dev');
+  assert.deepEqual(resolved.scope_verification.violations, ['src/unrelated.js']);
 });
 
 test('review-cycle:resolve marks correction plan resolved and routes back to qa', async () => {

@@ -1493,7 +1493,8 @@ async function activateStage(
   explicitAgent = null,
   requestedMode = null,
   scopeCheckMode = null,
-  verificationPolicy = 'standard'
+  verificationPolicy = 'standard',
+  autopilotOptions = {}
 ) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
   if (!stageName) {
@@ -1571,7 +1572,11 @@ async function activateStage(
     // "Autopilot" choice only seeds workflow-execute.json and never writes
     // auto_handoff, so reading the frontmatter alone silently disabled it.
     try {
-      const signal = await resolveAutopilotSignal(targetDir, { slug: state.featureSlug });
+      const signal = await resolveAutopilotSignal(targetDir, {
+        slug: state.featureSlug,
+        auto: autopilotOptions.auto === true,
+        step: autopilotOptions.step === true
+      });
       autoHandoff = signal.enabled;
     } catch {
       autoHandoff = false;
@@ -1782,7 +1787,8 @@ async function runWorkflowNext({ args, options, logger, t }) {
             failedStage,
             options.mode || null,
             null,
-            resolveVerificationPolicy(options, state)
+            resolveVerificationPolicy(options, state),
+            options
           );
           const healingPrompt = buildHealingPrompt(
             baseActivation.prompt || '',
@@ -1945,7 +1951,8 @@ async function runWorkflowNext({ args, options, logger, t }) {
     requestedAgent,
     requestedAutonomyMode,
     scopeCheckMode,
-    verificationPolicy
+    verificationPolicy,
+    options
   );
   state = activation.state;
 

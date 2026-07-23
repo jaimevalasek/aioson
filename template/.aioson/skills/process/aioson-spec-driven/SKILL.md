@@ -14,8 +14,8 @@ optional briefing/refinement → product → planner → dev → qa
 
 The route has three canonical artifacts:
 
-1. `prd-{slug}.md` — product intent, prototype contract, capabilities, acceptance criteria.
-2. `implementation-plan-{slug}.md` — executable vertical phases, exact paths, verification.
+1. `prd-{slug}.md` — product intent, prototype contract, capabilities, current-system fit, acceptance criteria.
+2. `implementation-plan-{slug}.md` — repository-backed implementation delta, executable vertical phases, exact paths, verification.
 3. `qa-report-{slug}.md` — independent delivery verdict and production-path evidence.
 
 Project mode uses the same bare names without `{slug}` where applicable. Code and tests are delivery outputs, not specification artifacts.
@@ -31,7 +31,7 @@ Sheldon, Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orche
 
 ## Non-negotiable trace
 
-`CAP → AC → vertical phase → exact files → executable check → production-path evidence`
+`CAP → current-system fit → AC → implementation delta → vertical phase → exact files → executable check → production-path evidence`
 
 This trace replaces the former `CAP → lens → REQ → AC → design → plan → harness` document chain.
 
@@ -47,6 +47,7 @@ This trace replaces the former `CAP → lens → REQ → AC → design → plan 
 Load exactly one role reference:
 
 - `references/product.md`
+- `references/sheldon.md` — only when the optional Sheldon detour is active
 - `references/planner.md`
 - `references/dev.md`
 - `references/qa.md`

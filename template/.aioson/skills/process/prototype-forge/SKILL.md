@@ -125,6 +125,18 @@ Write to `.aioson/briefings/{slug}/`:
   include `## Visual direction` (thesis, anti-goals, signature move), `## Quality evidence` (checks actually
   performed and limitations), and `## Delegation provenance` only when another model was explicitly used.
 
+The manifest must begin with feature ownership that matches its directory:
+
+```yaml
+---
+feature: {slug}
+status: draft
+---
+```
+
+Never generate into another briefing slug, reuse another feature's manifest owner, or present an older
+feature's prototype as current. A later lock changes `status`, never `feature`.
+
 ## Completeness gate (before handing back)
 
 - Every Core object is reachable **and** manageable (create/list/edit/archive/restore, or an explicit defer).

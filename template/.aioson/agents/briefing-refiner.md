@@ -43,6 +43,8 @@ aioson context:select . --agent=briefing-refiner --mode=planning --task="<refine
 
 Treat `must_read` and `should_read` from `context:search` as routing hints, not permission to bulk-load files. If a returned rule/doc looks relevant but `context:select` omits it, refine the task/paths/intent once; otherwise keep the context lean.
 
+These commands retrieve project knowledge, not source code. When the briefing extends an existing product or a current-behavior assumption affects scope, run targeted read-only repository search (`rg`, manifests, nearest implementation, tests, and production entry point). Cite exact paths and observed behavior in the corresponding finding. Do not ask the user to restate behavior that repository evidence can answer, and do not call a surface greenfield until the nearest existing boundary has been checked.
+
 ## The refinement loop
 
 The whole agent runs this loop until the briefing is clean:
@@ -61,7 +63,7 @@ Never exit the loop by hand-editing `briefings.md`, and never route to `@product
 Use this when no pending `.aioson/briefings/{slug}/refinement-feedback.json` exists (the apply step archives consumed feedback, so file present = pending) or when the user explicitly asks to regenerate the review.
 
 1. Read `briefings.md` for the slug.
-2. Audit it for ambiguity, redundancy, missing decisions, unclear risks, vague open questions, inconsistent terms, and implementation-impact gaps. Load `.aioson/docs/feature-completeness-contract.md` as a review lens: compare the stated problem/solution with every candidate promised outcome, then challenge the conditional lenses without turning them automatically into scope. A promise that disappears, has only a happy path, or is represented only by a broad noun/verb is a blocking gap for PRD readiness. Operational CRUD/list/form/filter/pagination checks apply only when operational management is relevant.
+2. Audit it for ambiguity, redundancy, missing decisions, unclear risks, vague open questions, inconsistent terms, and implementation-impact gaps. Load `.aioson/docs/feature-completeness-contract.md` as a review lens: compare the stated problem/solution with every candidate promised outcome, then challenge the conditional lenses without turning them automatically into scope. A promise that disappears, has only a happy path, is represented only by a broad noun/verb, or assumes current-system behavior contradicted by inspected repository evidence is a blocking gap for PRD readiness. Operational CRUD/list/form/filter/pagination checks apply only when operational management is relevant.
 3. Write the audit as `.aioson/briefings/{slug}/refinement-findings.json` — a JSON array of findings:
    ```json
    [{ "section_id": "problem", "category": "gap", "severity": "high", "blocking": true,
@@ -70,6 +72,7 @@ Use this when no pending `.aioson/briefings/{slug}/refinement-feedback.json` exi
    - `category`: `ambiguity` | `redundancy` | `gap` | `risk` | `pending-decision` | `scope-suggestion`
    - `severity`: `low` | `medium` | `high`; `blocking: true` only when the PRD cannot be written without resolving it.
    - `section_id` is the kebab-case of the section title (`proposed-solution`, `open-questions`, ...). Write finding text in the interaction language.
+   - For an existing-system fit finding, include the observed behavior and exact evidence paths in `text`, then put the recommended correction in `recommendation`. Evidence-backed routine corrections are recommendations, not new confirmation questions.
    - **Visual identity nudge:** if the briefing has a rich operational surface and no `identity.md` exists (briefing or project scope), add one non-blocking `pending-decision` finding suggesting the reference-image route (drop brand/component images → extracted once into `identity.md`) — decided in review or in prototype mode, never forced.
 4. If the briefing is too thin for a rich-surface idea or the user asks whether it is worth pursuing, load `.aioson/skills/process/briefing-expansion-scout/SKILL.md`, write/update `.aioson/briefings/{slug}/expansion-scout.md`, and reference it in a finding. Ensure accepted fixes leave `@product` enough evidence to create a Feature Capability Map; do not assign formal `CAP-*` IDs in the briefing.
 5. Generate the surface deterministically:
@@ -140,8 +143,9 @@ Use this when the user asks to see the solution visually, or when a rich-surface
    **Explicit model delegation** first. Otherwise do not delegate merely because another model might help.
 4. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its complete build contract, including
    the non-regression order and bounded premium quality pass. Completeness remains the first hard gate.
-5. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
-6. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until Product freezes scope, at which point it is re-synced and locked as the development reference. An optional Sheldon review may enrich that decision without being required.
+5. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`. The manifest frontmatter must declare `feature: {slug}` and `status: draft`; never write or reuse a manifest owned by another briefing slug.
+6. Before handoff, verify the owner/path invariant directly because the PRD does not exist yet. Product later runs `aioson prototype:check . --feature={slug} --strict` after it writes the PRD.
+7. Tell the user the exact owner/path, that the prototype is **mock-only** (refresh resets, no backend), and that it is a `draft` until Product freezes scope, at which point it is re-synced and locked as the development reference. An optional Sheldon review may enrich that decision without being required.
 
 The prototype never edits `briefings.md` and never becomes canonical feedback; structured JSON from the review flow remains the only source of applied changes.
 
@@ -168,6 +172,7 @@ Self-check either path with: `aioson verify:artifact . --kind=review --slug={slu
 - Never treat edited HTML or DOM state as canonical feedback.
 - Never hand-write `review.html` or hand-apply feedback to `briefings.md` while the CLI commands are available.
 - Never treat `prototype.html` as the briefing source of truth or as applied feedback; it is a visual reference only.
+- Never borrow a prototype from another briefing folder. A closed feature keeps ownership of its prototype; reuse for a new feature requires a new feature-owned artifact.
 - Never sacrifice a Core screen, action, state, or completeness finding to make the prototype look more polished.
 - Never claim requested-model delegation from a prompt imitation, inherited model, or incomplete worker run.
 - Never write refinement JSON into `.aioson/context/`.

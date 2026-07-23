@@ -88,7 +88,7 @@ Briefing/Refiner e Sheldon são opcionais. A classificação muda profundidade e
 | **`@dev`** | Implementa a feature | Código + `dev-state.md` |
 | **`@qa`** | Revisão final proporcional e independente | `qa-report-{slug}.md` |
 | **`@validator`** | Verificação binária adicional, opt-in | veredito do harness |
-| **`@tester`** | Engenharia sistemática de testes, opt-in | `test-inventory.md`, coverage tier |
+| **`@tester`** | Engenharia sistemática de testes, opt-in | `test-report-{slug}.md` + testes stack-native |
 | **`@pentester`** | Revisão adversarial de segurança, opt-in | `security-findings-*.json` |
 
 ### 3. Continuidade e entrega
@@ -161,7 +161,7 @@ seu-projeto/
         ├── design-doc.md           ← saída de @ux-ui
         ├── tasks.md                ← saída de @pm
         ├── dev-state.md            ← saída de @dev (status atual)
-        ├── test-plan.md            ← saída de @qa
+        ├── qa-report-{slug}.md     ← veredito independente do @qa
         ├── security-findings-*.json ← saída de @pentester
         ├── handoff-protocol.json   ← último handoff entre agentes
         ├── features/<slug>/        ← features em desenvolvimento

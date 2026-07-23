@@ -113,4 +113,6 @@ Relatórios que não correspondem à tentativa registrada são recusados.
 
 ## Política de revisão
 
-`aioson verification:plan . --feature=minha-feature --trigger=per-phase` não roda revisor por padrão. Em `end-of-feature`, somente QA é padrão. Tester, Pentester e Validator só rodam quando sua entrada no manifesto estiver habilitada e o gatilho correspondente existir.
+`aioson verification:plan . --feature=minha-feature --trigger=per-phase` não roda revisor por padrão. Em `end-of-feature`, somente QA é padrão. Tester, Pentester e Validator só rodam automaticamente quando sua entrada no manifesto estiver habilitada e o gatilho correspondente existir. Uma chamada direta do usuário ativa apenas aquele passe do especialista e não altera o manifesto nem habilita execuções futuras.
+
+Antes de Tester/Pentester editar produção, seu relatório precisa declarar `allowed_fix_paths`. O `review-cycle:advance` aceita no máximo 3 paths de comportamento/5 totais e captura o baseline Git. Se o especialista estiver desligado e o passe foi pedido diretamente pelo usuário, o comando exige `--manual`. O `review-cycle:resolve` só devolve ao QA quando o diff líquido respeita os paths persistidos; caso contrário retorna `stop_scope_violation` e transfere o pacote completo ao DEV.

@@ -6,7 +6,7 @@
     {
       "id": "plan_feature_delivery",
       "category": "create",
-      "description": "Turn an approved PRD and prototype into executable vertical implementation stages.",
+      "description": "Turn an approved PRD, repository evidence, and prototype into executable vertical implementation stages with evidence-triggered engineering controls.",
       "inputs": [
         {
           "type": "artifact",

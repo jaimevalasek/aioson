@@ -46,21 +46,35 @@ test('sdd:benchmark scores a covered SMALL feature and writes markdown report', 
   const slug = 'checkout';
   await writeFile(dir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
   await writeFile(dir, `.aioson/context/prd-${slug}.md`, [
-    '---', 'classification: SMALL', 'feature_completeness: required', '---',
+    '---', 'classification: SMALL', 'feature_completeness: required',
+    'prototype: null', 'prototype_status: none', 'prototype_feature: null', '---',
     '# PRD', '## Feature Capability Map',
     '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
-    '|---|---|---|---|---|',
-    `| CAP-${slug}-submit | Buyer completes checkout | Buyer submits the checkout | required | Primary outcome |`,
-    '', '## Acceptance Criteria',
-    '| AC | CAP | Observable behavior | Evidence |', '|---|---|---|---|',
-    `| AC-${slug}-01 | CAP-${slug}-submit | Checkout returns a confirmation | node test |`
-  ].join('\n'));
-  await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, [
-    '---', 'status: approved', '---', '# Plan', '## Capability Delivery Plan',
-    '| CAP | Phase | Files | Verification |', '|---|---|---|---|',
-    `| CAP-${slug}-submit | 1 | src/checkout.js, tests/checkout.test.js | npm test -- checkout |`
-  ].join('\n'));
-  await writeFile(dir, 'tests/checkout.test.js', `test('AC-${slug}-01 checkout', () => { assert.equal(checkout(), true); });\n`);
+     '|---|---|---|---|---|',
+     `| CAP-${slug}-submit | Buyer completes checkout | Buyer submits the checkout | required | Primary outcome |`,
+     '', '## Current System Fit',
+     '| CAP | Existing behavior / evidence | Fit decision | Required product delta |',
+     '|---|---|---|---|',
+     `| CAP-${slug}-submit | Checkout stubs exist in src/checkout.js and tests/checkout.test.js | extend | Complete the checkout behavior and its executable proof |`,
+     '', '## Acceptance Criteria',
+     '| AC | CAP | Observable behavior | Evidence |', '|---|---|---|---|',
+     `| AC-${slug}-01 | CAP-${slug}-submit | Checkout returns a confirmation | node test |`
+   ].join('\n'));
+   await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, [
+     '---', 'status: approved', '---', '# Plan', '## Engineering Controls',
+     '| Concern | Evidence / trigger | Planned control | Verification | Recovery |',
+     '|---|---|---|---|---|',
+     '| compatibility | Existing checkout module contract | Preserve the existing callable boundary | npm test -- checkout | Revert additive changes; no persistent data |',
+     '', '## Implementation Delta',
+     '| CAP | Action | Existing evidence | Exact paths | Required change |',
+     '|---|---|---|---|---|',
+     `| CAP-${slug}-submit | modify | Existing checkout stubs were inspected | src/checkout.js, tests/checkout.test.js | Complete behavior and AC-linked coverage |`,
+     '', '## Capability Delivery Plan',
+     '| CAP | Phase | Files | Verification |', '|---|---|---|---|',
+     `| CAP-${slug}-submit | 1 | src/checkout.js, tests/checkout.test.js | npm test -- checkout |`
+   ].join('\n'));
+   await writeFile(dir, 'src/checkout.js', 'module.exports = function checkout() { return true; };\n');
+   await writeFile(dir, 'tests/checkout.test.js', `test('AC-${slug}-01 checkout', () => { assert.equal(checkout(), true); });\n`);
 
   const result = await runSddBenchmark({
     args: [dir],

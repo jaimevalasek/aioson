@@ -1,5 +1,5 @@
 ---
-description: "Tester deep guide — mutation testing, property-based patterns, test smells catalog, contract testing, adjacent quality layers. Load when entering Phase 4 on critical modules or when a coverage gap requires graduated assertion quality."
+description: "Tester deep guide — mutation testing, property-based patterns, test smells catalog, contract testing, adjacent quality layers. Load during an enabled Tester review when a concrete coverage gap requires graduated assertion quality."
 agents: [tester, qa]
 task_types: [testing, coverage]
 triggers: [coverage quality, mutation testing, property based]
@@ -16,7 +16,9 @@ Load this when:
 
 ## 1. The four-tier coverage quality ladder
 
-| Tier | Metric | Target overall | Target critical paths |
+The values below are starting heuristics, not universal release gates. Prefer repository targets, CI policy, risk, and historical baselines when they exist.
+
+| Tier | Metric | Starting point overall | Starting point for critical paths |
 |---|---|---|---|
 | 1 — Line | line coverage | ≥ 80% | ≥ 90% |
 | 2 — Branch | branch / decision coverage | ≥ 60% | ≥ 80% |
@@ -33,6 +35,8 @@ Load this when:
 ## 2. Mutation testing — the actual quality signal
 
 ### 2.1 Tooling by stack
+
+This is a selection catalog, not an installation checklist. Use an existing project tool first. Add a dependency only when the approved plan/user authorizes it and the coverage value justifies its cost.
 
 | Stack | Tool | Install |
 |---|---|---|
@@ -306,7 +310,7 @@ Don't auto-load. Add only when the trigger fires.
 | Visual regression | Design-system-stable UI | Percy, Chromatic, Playwright `toHaveScreenshot()` |
 | Accessibility | User-facing UI | `axe-core`, `jest-axe`, `playwright/axe` |
 | Load / performance | Public API or perf-sensitive flow | `k6`, `locust`, `artillery` |
-| Dependency vuln scan | Every project | `npm audit`, `pip-audit`, `OSV-Scanner`, `Snyk`, `Trivy` |
+| Dependency vuln scan | Changed dependency/lockfile, release check, or explicit security trigger | `npm audit`, `pip-audit`, `OSV-Scanner`, `Snyk`, `Trivy` |
 
 **Rules:**
 - Snapshot — sanitize timestamps and IDs before snapshotting; never snapshot dynamic data.
@@ -315,9 +319,25 @@ Don't auto-load. Add only when the trigger fires.
 - Load — separate suite, never blocks unit/integration; report against agreed SLOs.
 - Depscan — treat as test signal in CI, fail PRs on `high`/`critical` CVEs unless explicitly accepted.
 
-## 7. Reporting template
+## 7. Bounded implementation correction
 
-When invoked on a feature, produce this structure in `test-plan-{slug}.md` (project mode: `test-plan.md`):
+Tester may repair a reproduced implementation defect only when the approved AC already determines the answer, no public contract/migration/dependency/product decision changes, the edit fits the prompt's bounded path budget, and targeted tests prove it.
+
+Before editing production code:
+
+1. write the reproduction, expected behavior, affected AC/control, and exact `allowed_fix_paths` to `test-report-{slug}.md`;
+2. advance the Tester self-cycle with `review-cycle:advance --source=tester --to=tester`; add `--manual` only for a direct pass while Tester is disabled;
+3. let the CLI validate the 3 behavior / 5 total path budget and capture the Git worktree baseline;
+4. edit only on `action: correct_locally`, and only the returned paths;
+5. run targeted and surrounding regression checks;
+6. mark the result `needs_validation`, then call `review-cycle:resolve`;
+7. return to QA only when resolution succeeds; `stop_scope_violation` routes the complete diff to Dev.
+
+Broader or ambiguous defects go once to Dev. Tester never grants Gate D.
+
+## 8. Reporting template
+
+When invoked on a feature, produce this structure in `.aioson/context/test-report-{slug}.md`:
 
 ```markdown
 ## Coverage Quality Report — {feature/module} — {date}
@@ -349,6 +369,6 @@ When invoked on a feature, produce this structure in `test-plan-{slug}.md` (proj
 - Refactor 2 smells before next sprint.
 ```
 
-## 8. References
+## 9. References
 
 This document distills `researchs/tester-coverage-quality-2026/summary.md`. See that file for the full source list and verdict.

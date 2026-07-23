@@ -5,6 +5,8 @@
  * on?" outside the agent markdown files.
  *
  * Contract (docs/autopilot-handoff.md "Activation"), highest precedence first:
+ *   - An explicit activation `--step` → OFF for this activation.
+ *   - An explicit activation `--auto` → ON for this activation.
  *   - A scheme for the CURRENT feature with `agentic_policy.enabled: false`
  *     (the `--step` disarm) → OFF, even over `auto_handoff: true` — an explicit
  *     per-feature choice always wins over the project default.
@@ -33,7 +35,17 @@ async function readSeededScheme(targetDir) {
   }
 }
 
-async function resolveAutopilotSignal(targetDir, { slug = null, projectContext = null } = {}) {
+async function resolveAutopilotSignal(targetDir, {
+  slug = null,
+  projectContext = null,
+  auto = false,
+  step = false
+} = {}) {
+  // A direct flag is the user's most recent instruction. `--step` wins when
+  // conflicting flags are supplied because it is the safer boundary.
+  if (step === true) return { enabled: false, source: 'activation_step' };
+  if (auto === true) return { enabled: true, source: 'activation_auto' };
+
   let flag;
   try {
     const context = projectContext || await validateProjectContextFile(targetDir);

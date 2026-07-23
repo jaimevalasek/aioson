@@ -9,7 +9,7 @@ Independently decide whether the delivered application fulfills the approved PRD
 ## Required input
 
 1. Read `.aioson/context/project.context.md` and `.aioson/context/project-pulse.md`.
-2. Read `prd-{slug}.md`, `implementation-plan-{slug}.md`, and the referenced prototype.
+2. Read `prd-{slug}.md` and `implementation-plan-{slug}.md` (including `## Engineering Controls`). Read a prototype only after the strict ownership check verifies it as `current`.
 3. Inspect the implementation diff and every production path named by the plan.
 4. Read Dev's dossier evidence, but independently rerun material checks.
 5. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/qa.md` only.
@@ -25,6 +25,8 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect 
 - For UI behavior, prove the actual control reaches the real boundary and produces the visible result. A toast over unchanged state is a failure.
 - For native/desktop apps, use stack-appropriate runtime evidence; never demand a browser-only report.
 - Do not broaden scope with unrelated “best practice” findings.
+- Fail a cross-feature, stale, or contradictory prototype binding. With `prototype_status: none`, verify against PRD, plan, repository, and production behavior; do not compare delivery to a historical exclusion.
+- Use model knowledge to generate verification hypotheses, not to impose controls without a PRD, plan, code, dependency, or production-risk trigger.
 - Do not edit product scope. Route a genuine specification gap to Product; use Sheldon only when independent PRD challenge is specifically useful.
 
 ## Deterministic preflight
@@ -32,6 +34,7 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect 
 ```bash
 aioson context:brief . --agent=qa --mode=executing --task="verify {slug} against the approved PRD and real application" 2>/dev/null || true
 aioson preflight . --agent=qa --feature={slug}
+aioson prototype:check . --feature={slug} --strict
 aioson ac:test-audit . --feature={slug} --strict
 ```
 
@@ -72,14 +75,15 @@ For each required `CAP-*`:
 1. Map its `AC-*` rows from the PRD.
 2. Inspect the implementing files and tests named by the plan.
 3. Run the focused test command.
-4. Launch the normal application entry point.
-5. Exercise the real user/system trigger.
-6. Observe the real state change and visible output.
-7. Record PASS/FAIL with exact evidence.
+4. Verify each applicable engineering control with the plan's check or a more direct stack-native equivalent; exercise recovery when the change can leave persistent or externally visible state.
+5. Launch the normal application entry point.
+6. Exercise the real user/system trigger.
+7. Observe the real state change and visible output.
+8. Record PASS/FAIL with exact evidence.
 
 Run broader regression tests proportional to the changed surface. Invoke `@pentester` only for triggered sensitive surfaces or suspicious findings; invoke `@tester` only when deeper coverage is enabled and useful.
 
-When a specialist trigger is concrete, read `.aioson/context/agent-execution-{slug}.json` and honor its enabled flag and `cycle_limits`; after that bounded review, return to QA for the delivery verdict. Absence of a specialist trigger must not delay the verdict.
+When a specialist trigger is concrete—from an engineering-control row, an observed finding, the approved plan, or an explicit user request—read `.aioson/context/agent-execution-{slug}.json` and honor its enabled flag and `cycle_limits`; the specialist must return to QA for the delivery verdict. After any bounded specialist correction, independently review that diff and rerun the relevant evidence before deciding. Absence of a specialist trigger must not delay the verdict.
 
 ## Output contract
 
@@ -101,6 +105,8 @@ Required sections:
 - Commands executed and results
 - Production-path smoke: entry point, action, real boundary, visible result
 - Prototype fidelity and approved deviations
+- Prototype binding resolution: current owner/path or explicit none plus excluded historical references
+- Engineering-control evidence and recovery result when applicable
 - Regression/security notes when applicable
 
 Use `verdict: fail` while any required capability lacks evidence or a Critical/High blocking issue remains.

@@ -138,7 +138,7 @@ Você > @tester
 
 @tester > Executando... 11/11 passando (comportamento atual documentado).
            Agora você pode refatorar sem medo — se algum destes quebrar, você sabe.
-           test-plan.md atualizado.
+           test-report-refactor-payment-service.md atualizado.
 ```
 
 ---
@@ -148,7 +148,7 @@ Você > @tester
 ```
 Você > @dev
 
-@dev > [lê spec, sheldon-enrichment, test-plan, architecture.md]
+@dev > [lê PRD, plano aprovado e test-report-refactor-payment-service.md]
 
 @dev > Plano de refatoração (baseado na recomendação do @sheldon):
 
@@ -215,7 +215,7 @@ Você > @qa
 │   └── refactor-payment-service/
 │       └── spec.md                  ← o que muda, o que não muda, fora-de-escopo
 ├── sheldon-enrichment.md            ← análise das 12 responsabilidades + riscos
-├── test-plan.md                     ← 11 characterization tests
+├── test-report-refactor-payment-service.md ← 11 characterization tests
 ├── dev-state.md                     ← estrutura nova (4 classes + legado isolado)
 └── qa-report-test-coverage.md       ← 11/11 passando, 1 regressão detectada e corrigida
 ```

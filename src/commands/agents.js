@@ -78,7 +78,7 @@ function buildTesterActivationContext(options = {}) {
   if (!featureSlug) return '';
   return [
     `Feature slug: ${featureSlug}.`,
-    `This is a standalone test pass over the already-implemented feature "${featureSlug}"; write test-plan-${featureSlug}.md and test-inventory-${featureSlug}.md.`,
+    `This is a standalone test pass over the already-implemented feature "${featureSlug}"; write only test-report-${featureSlug}.md as the review/correction artifact.`,
     'The feature may already be closed — do NOT fall back to project mode or pick a different slug.'
   ].join('\n');
 }
@@ -261,7 +261,9 @@ async function runAgentPrompt({ args, options, logger, t }) {
     if (AUTOPILOT_HANDOFF_STAGES.has(promptAgent.id)) {
       try {
         const signal = await resolveAutopilotSignal(targetDir, {
-          slug: options.feature ? String(options.feature).trim() : null
+          slug: options.feature ? String(options.feature).trim() : null,
+          auto: options.auto === true,
+          step: options.step === true
         });
         autoHandoff = signal.enabled;
       } catch {

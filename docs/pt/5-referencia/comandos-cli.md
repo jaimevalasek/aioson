@@ -271,7 +271,7 @@ Scripts determinísticos que movem verificações de estado, validação de arte
 | `detect:test-runner` | Detecta PHPUnit, Jest, Vitest, Pytest, RSpec, Forge e node:test via arquivos de config | Quando `@dev` ou `@tester` precisa saber como rodar os testes |
 | `pulse:update` | Atualiza `project-pulse.md` com agente, feature, gate e próximo passo | Ao final de cada sessão de agente |
 | `state:save` | Salva ponto de continuação em `dev-state.md` (fase, status, spec-version, histórico) | Durante `@dev` ao fim de cada fase ou antes de encerrar |
-| `feature:close` | Fecha feature com verdict PASS/FAIL: atualiza spec, features.md, project-pulse.md e dispara archivamento automático | Após QA sign-off — chamado pelo `@qa` automaticamente |
+| `feature:close` | Fecha feature com verdict PASS/FAIL: atualiza spec, features.md, project-pulse.md e dispara archivamento automático | Após revisar o sign-off do QA e autorizar explicitamente o gate humano |
 | `feature:archive` | Move artefatos de uma feature `done` para `.aioson/context/done/{slug}/` e atualiza o manifest | Chamado pelo `feature:close` automaticamente; também disponível para retroativo com `--dry-run` e `--restore` |
 | `feature:export` | **Copia** todos os artefatos de uma feature para um `--out` limpo, sem mexer na origem; gera `INDEX.md` | Exportar specs para analisar fora, entregar a cliente, ou usar o AIOSON só como gerador de specs. Veja [feature-export.md](./feature-export.md) |
 | `gate:check` | Valida pré-requisitos e artefatos de um phase gate (A/B/C/D); retorna PASS ou BLOCKED | Antes de avançar para o próximo agente |
@@ -1008,7 +1008,7 @@ Use **antes de começar uma sessão longa** — se `Total context load` estiver 
 
 ### 29. Arquivar artefatos de features já entregues
 
-O arquivamento é **automático** a partir do `feature:close --verdict=PASS` — o `@qa` dispara o comando e todos os artefatos da feature (`prd-`, `spec-`, `requirements-`, `sheldon-enrichment-`, etc.) são movidos para `.aioson/context/done/{slug}/` sem intervenção manual.
+O arquivamento é **automático dentro** de `feature:close --verdict=PASS`, mas o comando de fechamento é um gate humano: QA e Autopilot apenas recomendam sua execução. Depois da autorização, os artefatos da feature (`prd-`, `spec-`, `requirements-`, `sheldon-enrichment-`, etc.) são movidos para `.aioson/context/done/{slug}/` no mesmo ato.
 
 Para ver o que seria movido antes de rodar:
 

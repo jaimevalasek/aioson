@@ -15,11 +15,12 @@ Challenge only the approved product promise:
 
 - missing observable behavior or failure state;
 - contradiction between briefing, prototype, PRD, and current product behavior;
+- absent, guessed, or stale evidence in `## Current System Fit`;
 - vague acceptance evidence;
 - unresolved dependency that materially changes user scope;
 - speculative scope that should be deferred.
 
-Use repository and research evidence before asking the user. Ask for a decision only when it changes product behavior, scope, cost, or material risk.
+Use repository and research evidence before asking the user. Repair the evidence-backed recommended fit in place without pausing Autopilot. Ask for a decision only when it changes product behavior, scope, cost, data, or material risk.
 
 Apply accepted corrections directly to `prd-{slug}.md` or `prd.md`. Preserve stable `CAP-*` and `AC-*` identifiers whenever their meaning has not changed. Record rejected ideas under deferred or out-of-scope instead of expanding the MVP.
 

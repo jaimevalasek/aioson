@@ -4,6 +4,12 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { ensureDir, exists } = require('../utils');
 const { loadManifest } = require('../agent-execution/manifest');
+const {
+  SPECIALIST_AGENTS,
+  inspectCorrectionPacket,
+  captureCorrectionBaseline,
+  verifyCorrectionChanges
+} = require('../lib/specialist-correction');
 
 const DEFAULT_MAX_CYCLES = 1;
 const EXECUTION_STATE_RELATIVE_PATH = '.aioson/context/workflow-execute.json';
@@ -188,7 +194,18 @@ async function runAdvance(targetDir, source, target, options = {}) {
   if (!planPath) return { ok: false, reason: 'missing_plan' };
 
   const executionManifest = await readAgentExecutionManifest(targetDir, feature);
-  if (executionManifest && executionManifest.agents?.[target]?.enabled === false) {
+  const specialistSelfCorrection = source === target && SPECIALIST_AGENTS.has(source);
+  const specialistTarget = SPECIALIST_AGENTS.has(target);
+  const targetEnabled = executionManifest?.agents?.[target]?.enabled === true;
+  const manualAuthorized = options.manual === true || options['manual-authorization'] === true;
+  // Automatic specialist work always requires the developer-owned manifest.
+  // A direct invocation is a one-pass override only when the caller states it
+  // explicitly; it never mutates or permanently enables the manifest.
+  if (
+    specialistTarget
+    && !targetEnabled
+    && !(specialistSelfCorrection && manualAuthorized)
+  ) {
     return {
       ok: true,
       action: 'stop_agent_disabled',
@@ -235,6 +252,47 @@ async function runAdvance(targetDir, source, target, options = {}) {
     };
   }
 
+  let correctionScope = null;
+  if (specialistSelfCorrection) {
+    const packet = await inspectCorrectionPacket(targetDir, planPath, source);
+    if (!packet.ok) {
+      return {
+        ok: true,
+        action: 'stop_invalid_correction_scope',
+        reason: packet.reason,
+        feature,
+        source,
+        target,
+        next_agent: 'dev',
+        plan: planPath,
+        scope: packet
+      };
+    }
+    const captured = await captureCorrectionBaseline(targetDir);
+    if (!captured.ok) {
+      return {
+        ok: true,
+        action: 'stop_scope_guard_unavailable',
+        reason: captured.reason,
+        feature,
+        source,
+        target,
+        next_agent: 'dev',
+        plan: planPath
+      };
+    }
+    correctionScope = {
+      source,
+      packet_path: packet.packet_path,
+      packet_digest: packet.packet_digest,
+      allowed_fix_paths: packet.allowed_fix_paths,
+      total_paths: packet.total_paths,
+      behavior_paths: packet.behavior_paths,
+      manual_authorized: manualAuthorized,
+      baseline: captured.baseline
+    };
+  }
+
   const now = new Date().toISOString();
   const nextCycle = currentCycle + 1;
   const state = {
@@ -247,7 +305,8 @@ async function runAdvance(targetDir, source, target, options = {}) {
     started_at: sameFeature && existing.started_at ? existing.started_at : now,
     updated_at: now,
     last_plan: planPath,
-    last_summary: options.summary ? String(options.summary).trim() : null
+    last_summary: options.summary ? String(options.summary).trim() : null,
+    ...(correctionScope ? { correction_scope: correctionScope } : {})
   };
 
   await writeJson(statePath, state);
@@ -263,6 +322,11 @@ async function runAdvance(targetDir, source, target, options = {}) {
     max_cycles: maxCycles,
     remaining_cycles: Math.max(0, maxCycles - nextCycle),
     plan: planPath,
+    ...(correctionScope ? {
+      allowed_fix_paths: correctionScope.allowed_fix_paths,
+      correction_packet_digest: correctionScope.packet_digest,
+      manual_authorized: correctionScope.manual_authorized
+    } : {}),
     task: source === target
       ? `${buildNextTask({ source, planPath })} as a bounded ${source} self-correction, then return to @qa for final verification`
       : buildNextTask({ source, planPath }),
@@ -280,6 +344,38 @@ async function runResolve(targetDir, source, target, options = {}) {
   if (!feature) return { ok: false, reason: 'missing_feature' };
   if (!existing || existing.slug !== feature) {
     return { ok: true, action: 'no_active_cycle', feature, source, target, next_agent: 'qa' };
+  }
+
+  let scopeVerification = null;
+  if (source === target && SPECIALIST_AGENTS.has(source)) {
+    scopeVerification = await verifyCorrectionChanges(
+      targetDir,
+      existing.correction_scope,
+      path.relative(targetDir, statePath).replace(/\\/g, '/')
+    );
+    if (!scopeVerification.ok) {
+      const now = new Date().toISOString();
+      const violatedState = {
+        ...existing,
+        status: 'scope_violation',
+        updated_at: now,
+        scope_verification: scopeVerification
+      };
+      await writeJson(statePath, violatedState);
+      return {
+        ok: true,
+        action: 'stop_scope_violation',
+        reason: scopeVerification.reason,
+        feature,
+        source,
+        target,
+        next_agent: 'dev',
+        plan: planPath || existing.last_plan || null,
+        scope_verification: scopeVerification,
+        state_path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
+        state: violatedState
+      };
+    }
   }
 
   let planUpdate = null;
@@ -301,7 +397,8 @@ async function runResolve(targetDir, source, target, options = {}) {
     status: 'resolved',
     resolved_at: now,
     updated_at: now,
-    resolved_plan: planPath || existing.last_plan || null
+    resolved_plan: planPath || existing.last_plan || null,
+    ...(scopeVerification ? { scope_verification: scopeVerification } : {})
   };
   await writeJson(statePath, state);
 
@@ -314,6 +411,7 @@ async function runResolve(targetDir, source, target, options = {}) {
     next_agent: 'qa',
     state_path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
     plan_update: planUpdate,
+    ...(scopeVerification ? { scope_verification: scopeVerification } : {}),
     state
   };
 }

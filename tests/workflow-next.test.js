@@ -24,7 +24,8 @@ async function write(root, rel, body) {
 const logger = { log() {}, error() {}, warn() {} };
 const { t } = createTranslator('en');
 
-async function context(root, classification = 'SMALL') {
+async function context(root, classification = 'SMALL', autoHandoff = null) {
+  const autoLine = autoHandoff === null ? '' : `auto_handoff: ${autoHandoff}\n`;
   await write(root, '.aioson/context/project.context.md', `---
 project_name: demo
 project_type: web_app
@@ -32,7 +33,7 @@ profile: developer
 framework: Node.js
 framework_installed: true
 classification: ${classification}
-interaction_language: en
+${autoLine}interaction_language: en
 conversation_language: en
 aioson_version: 1.40.0
 ---
@@ -73,6 +74,20 @@ test('fresh feature starts at Product', async () => {
   const result = await next(root);
   assert.equal(result.agent, 'product');
   assert.deepEqual(result.completed, []);
+});
+
+test('workflow activation applies direct --auto and --step overrides', async () => {
+  const autoRoot = await tmp();
+  await context(autoRoot, 'SMALL', false);
+  await active(autoRoot);
+  const autoResult = await next(autoRoot, { auto: true });
+  assert.match(autoResult.prompt, /autopilot handoff is active/i);
+
+  const stepRoot = await tmp();
+  await context(stepRoot, 'SMALL', true);
+  await active(stepRoot);
+  const stepResult = await next(stepRoot, { step: true });
+  assert.doesNotMatch(stepResult.prompt, /autopilot handoff is active/i);
 });
 
 test('a Product-ready PRD advances directly to Planner', async () => {

@@ -12,6 +12,8 @@ Briefing and Briefing Refiner are optional when the user already has an approved
 
 MICRO, SMALL, and MEDIUM use the same route. Classification changes depth, risk coverage, and implementation budget—not the number of specification agents.
 
+`@dev --auto` (or `aioson agent:prompt dev . --auto`) enables Autopilot for that activation even when the project default is off. `--step` disables it for that activation and wins if both flags are supplied. Neither option rewrites the persisted preference. In every mode, the chain stops after QA and waits for explicit human authorization before `feature:close`/publish.
+
 ## DEV execution
 
 DEV reads the approved PRD, the single implementation plan, repository evidence, selected project rules/docs, and the non-blocking dossier.
@@ -34,7 +36,7 @@ QA is the single default reviewer and receives a proportional budget:
 
 No QA agent runs between DEV phases. QA stops broad investigation after finding a reproducible implementation defect and returns the smallest correction packet. An unchanged diagnostic is not repeated more than twice.
 
-Tester, Pentester, and Validator are disabled by default. They run only when enabled in `agent-execution-{slug}.json` and triggered by explicit user choice, approved-plan need, or a concrete QA finding. Classification alone never activates them.
+Tester, Pentester, and Validator are disabled by default. They run only when enabled in `agent-execution-{slug}.json` and triggered by explicit user choice, approved-plan need, or a concrete QA finding. Classification alone never activates them. Tester/Pentester correction packets persist exact `allowed_fix_paths`; the CLI enforces the 3 behavior/5 total path budget, captures a Git baseline, and refuses the QA handoff after an out-of-scope diff. A direct pass over a disabled specialist requires `--manual` and does not mutate the manifest.
 
 ## Stop conditions
 

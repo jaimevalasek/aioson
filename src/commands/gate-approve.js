@@ -16,6 +16,7 @@
 
 const path = require('node:path');
 const fs = require('node:fs/promises');
+const crypto = require('node:crypto');
 const {
   contextDir,
   readFileSafe,
@@ -26,8 +27,8 @@ const {
 } = require('../preflight-engine');
 const { ensureDir } = require('../utils');
 const { runGateCheck } = require('./gate-check');
+const { CHECKPOINTS_DIR } = require('../lib/gate-checkpoint');
 
-const CHECKPOINTS_DIR = '.aioson/runtime/checkpoints';
 const CHECKPOINT_MAX_BYTES = 5120;
 
 const BAR = '━'.repeat(45);
@@ -180,7 +181,12 @@ async function runGateApprove({ args, options = {}, logger }) {
       const filePath = path.join(contextDir(targetDir), ev.file);
       const stat = await fileStat(filePath);
       if (stat) {
-        snapshot.push({ file: ev.file, mtime: stat.mtime.toISOString() });
+        const artifactContent = await fs.readFile(filePath);
+        snapshot.push({
+          file: ev.file,
+          mtime: stat.mtime.toISOString(),
+          sha256: crypto.createHash('sha256').update(artifactContent).digest('hex')
+        });
       }
     }
 

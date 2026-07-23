@@ -6,6 +6,8 @@
 > - Quando usar @deyvin em vez de @dev.
 > - Como ele recupera contexto de uma sessão anterior.
 
+Em correções de continuidade de uma feature rastreada, Deyvin valida primeiro se o protótipo pertence ao mesmo slug do PRD. Um protótipo de feature fechada é apenas histórico. Se o vínculo atual for `none`, Deyvin informa isso no chat e compara o comportamento aprovado com o código, os testes e o caminho real da aplicação; corrige somente um bug limitado e já definido, ou encaminha uma mudança de intenção para Product/DEV.
+
 ## Para que serve
 
 Você estava implementando uma feature ontem. Fechou o editor. Hoje quer continuar. Mas você não quer re-explicar tudo para a IA — stack, o que foi feito, o que falta, por que tomou aquela decisão.

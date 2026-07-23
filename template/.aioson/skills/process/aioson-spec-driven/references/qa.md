@@ -20,6 +20,7 @@ For every capability in the selected budget, independently verify:
 - real user/system trigger;
 - real boundary/state change;
 - visible result and promised failure behavior;
-- prototype fidelity or an approved deviation.
+- verified current-prototype fidelity or, with `prototype_status: none`, explicit confirmation that historical references were not used as delivery authority;
+- applicable evidence-triggered engineering controls and recovery when persistent/external state can change.
 
 Write `qa-report-{slug}.md` with `verdict: pass|fail`. Gate D passes only with an independent PASS and AC evidence. Browser-only evidence is never mandatory for native apps. The dossier is optional context memory; harnesses and specialists are conditional tools available to every classification.

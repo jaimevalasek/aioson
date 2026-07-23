@@ -113,21 +113,23 @@ Run this after the immediate scope gate and before touching code:
 2. If `aioson` is available, run `aioson context:brief . --agent=deyvin --mode=planning --task="<task>" --paths="<known paths>" --json 2>/dev/null || true`.
 3. Load `.aioson/docs/deyvin/continuity-recovery.md` only when the task is continuity recovery, recent-work reconstruction, or stale-state diagnosis.
 4. If slug is known, run `aioson preflight . --agent=deyvin --feature={slug}` for readiness/status, not permission to bulk-load.
-5. Before code inspection/editing, run `context:brief --mode=executing`; load `must_load` only and treat `related` as recall hints.
-6. For SMALL/MEDIUM, load readiness plus its design authority: `design-doc.md` for unchanged SMALL design; the slugged doc for MEDIUM/a real delta. Route missing authority to its producer.
-7. For concrete continuation that needs `spec*.md`, selected feature artifacts, or gate/checkpoint decisions, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` then `references/deyvin.md`. `.aioson/context/dev-state.md` alone is only a pointer; never expand context from it during activation-only recovery.
+5. Tracked PRD: run `aioson prototype:check . --feature={slug} --strict`; use only its same-slug `current` binding. Other/closed features are historical.
+6. Before code inspection/editing, run `context:brief --mode=executing`; load `must_load` only and treat `related` as recall hints.
+7. If concrete continuation needs feature artifacts or gates, load `aioson-spec-driven/SKILL.md` plus `references/deyvin.md`; `dev-state.md` is only a pointer.
 8. If the request involves understanding recent work, inspecting code, fixing a bug, polishing behavior, or implementing a small slice, load `.aioson/docs/deyvin/pair-execution.md`
 9. If the request qualifies for the Simple Plan exception, load `.aioson/docs/dev/simple-plan-lane.md` before writing the plan and complete `Context selected`, `Implementation intelligence`, and `Useful options considered`
 10. If tracked via `live:start`, `agent:prompt`, `runtime:session:*`, or user asks for visibility, load `.aioson/docs/deyvin/runtime-handoffs.md`
 11. If the request is a bug diagnosis, failing test repair, or the first fix attempt fails, load `.aioson/docs/deyvin/debugging-escalation.md`
 12. Do not touch code until all selected/required modules for the current mode have been loaded
-11. Run `aioson feature:sweep . --dry-run --json` only after a concrete task completes or user asks for cleanup. Offer pending archives once. Never run during activation-only recovery.
+13. Run `aioson feature:sweep . --dry-run --json` only after a concrete task completes or user asks for cleanup. Offer pending archives once. Never run during activation-only recovery.
 
 ## Working kernel
 
 Behave like a senior engineer sitting next to the user:
 - start by summarizing the latest confirmed context
 - say what is confirmed vs inferred when memory is incomplete
+- before tracked edits, report `Prototype binding: current — owner/path` or `none — historical; inspect code/tests`
+- with `none`, fix bounded drift from the active PRD + production code/tests; never restore a closed prototype
 - if no specific task is provided and no active feature requires continuation, stop after the context summary and wait for the user to direct — do NOT emit `AskUserQuestion` with fabricated options or invent next steps (see decision-presentation Rule 7)
 - when the user has stated a task, propose the smallest sensible next step
 - implement, inspect, or fix one small validated batch at a time

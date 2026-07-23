@@ -14,6 +14,7 @@
 
 const path = require('node:path');
 const {
+  contextDir,
   loadProjectContext,
   scanArtifacts,
   scanActiveManifest,
@@ -37,6 +38,7 @@ const {
   analyzeFeatureCompleteness,
   findingsThroughStage
 } = require('../lib/feature-completeness');
+const { readFreshGateCheckpoint } = require('../lib/gate-checkpoint');
 
 const BAR = '━'.repeat(55);
 
@@ -68,11 +70,23 @@ async function runPreflight({ args, options = {}, logger }) {
   const designDocs = agent ? await discoverDesignDocs(targetDir, agent) : [];
   const contextPackage = buildContextPackage(agent || 'dev', slug, classification, artifacts, devState, manifest);
   let readiness = evaluateReadiness(artifacts, phaseGates, classification, agent, devState, slug);
+  const gateCCheckpoint = slug && artifacts.implementation_plan.exists
+    ? await readFreshGateCheckpoint(
+      targetDir,
+      'C',
+      slug,
+      path.join(contextDir(targetDir), `implementation-plan-${slug}.md`)
+    )
+    : { exists: false };
   let completeness = null;
   if (slug && (agent === 'dev' || agent === 'qa')) {
     completeness = await analyzeFeatureCompleteness(targetDir, slug, {
       artifacts,
       classification,
+      // A fresh Gate C checkpoint proves the plan baseline was validated before
+      // implementation. The plan's own status is insufficient because Planner
+      // writes `approved` before the first gate check.
+      preImplementation: agent === 'dev' && !gateCCheckpoint.exists,
       includeExecution: agent === 'qa'
     });
     if (completeness.applicable) {

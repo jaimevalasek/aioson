@@ -12,6 +12,8 @@ Briefing e Briefing Refiner são opcionais quando o usuário já possui direçã
 
 MICRO, SMALL e MEDIUM usam a mesma rota. A classificação altera profundidade, cobertura de risco e orçamento de implementação — não a quantidade de agentes de especificação.
 
+`@dev --auto` (ou `aioson agent:prompt dev . --auto`) ativa o Autopilot apenas para essa ativação, mesmo quando o padrão do projeto está desligado. `--step` faz o inverso e vence em caso de conflito. Esses flags não reescrevem a preferência persistente da feature. Em qualquer modo, a cadeia termina no veredito do QA e aguarda autorização humana para `feature:close`/publicação.
+
 ## Execução do DEV
 
 DEV lê o PRD aprovado, o único plano de implementação, evidência do repositório, rules/docs selecionados e o dossier não bloqueante.
@@ -35,6 +37,12 @@ QA é o único revisor padrão e recebe orçamento proporcional:
 Nenhum QA roda entre fases do DEV. Ao encontrar um defeito reproduzível, QA para de ampliar a investigação e devolve o menor pacote de correção. O mesmo diagnóstico sem evidência nova não é repetido mais de duas vezes.
 
 Tester, Pentester e Validator começam desligados. Só rodam quando estão habilitados em `agent-execution-{slug}.json` e possuem gatilho por escolha explícita do usuário, necessidade do plano aprovado ou finding concreto do QA. Classificação sozinha nunca os ativa.
+
+Quando Tester/Pentester encontra um defeito determinístico que preserva comportamento, contratos, dados e arquitetura e cabe no orçamento limitado do especialista, ele persiste os paths permitidos, implementa a correção em um ciclo finito e devolve ao QA como `needs_validation`. O CLI limita o pacote a 3 paths de comportamento/5 totais, captura o baseline Git e impede o retorno ao QA quando o diff sai do escopo. Um passe direto sobre especialista desligado exige `--manual` no `review-cycle:advance` e não altera o manifesto. Correções transversais são consolidadas uma única vez para o DEV. QA sempre reinspeciona o diff e é o único dono do PASS/Gate D.
+
+Essas correções baseadas em evidência não abrem confirmação mecânica no Autopilot. O fluxo pausa apenas para decisão material, limite esgotado ou ação externa/destrutiva sem autorização.
+
+O vínculo de protótipo também é resolvido sem confirmação mecânica: somente o protótipo e manifesto da pasta do slug ativo podem ser `current`; um artefato ausente, cruzado ou pertencente a uma feature fechada vira `none`, é citado como referência histórica excluída e o repositório passa a ser o baseline. Product, Sheldon, Planner, DEV/Deyvin e QA mostram essa resolução no chat. O Autopilot só pausa se o usuário quiser promover o protótipo histórico a nova autoridade de produto.
 
 ## Condições de parada
 

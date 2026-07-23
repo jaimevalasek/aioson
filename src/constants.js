@@ -427,8 +427,12 @@ const AGENT_DEFINITIONS = [
     description: 'Systematic test engineering for implemented apps (all sizes)',
     command: '@tester',
     path: '.aioson/agents/tester.md',
-    dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/test-inventory-{slug}.md + .aioson/context/test-plan-{slug}.md (project mode: bare names)'
+    dependsOn: [
+      '.aioson/context/project.context.md',
+      '.aioson/context/prd-{slug}.md (active feature)',
+      '.aioson/context/implementation-plan-{slug}.md (approved controls and paths)'
+    ],
+    output: '.aioson/context/test-report-{slug}.md'
   },
   {
     id: 'orchestrator',

@@ -10,9 +10,11 @@
 .aioson/context/implementation-plan-{slug}.md
 ```
 
-O plano conecta `CAP → AC → fase vertical → arquivos esperados → check executável → evidência pelo caminho de produção`.
+O plano conecta `CAP → encaixe no sistema atual → AC → delta de implementação → fase vertical → arquivos esperados → check executável → evidência pelo caminho de produção`.
 
 Ele não reescreve o PRD e não cria requisitos, arquitetura ou readiness paralelos. Quando falta uma decisão de produto, devolve ao dono do PRD; quando uma decisão técnica exige consultoria, pode recomendar `@architect` explicitamente.
+
+Além do delta por arquivo, o Planner registra em `## Engineering Controls` somente controles acionados por evidência: compatibilidade, mudança/recuperação de dados, autorização, validação, concorrência/idempotência, falhas/retry, observabilidade, desempenho, acessibilidade/localização ou dependências. Conhecimento do modelo gera hipóteses; o PRD e o código decidem o que entra no plano.
 
 ## Profundidade proporcional
 
@@ -38,10 +40,14 @@ As faixas continuam internas ao DEV, rodam sequencialmente no worktree compartil
 Antes de implementação significativa, o plano precisa estar aprovado e:
 
 - cobrir cada capacidade/AC relevante;
-- nomear arquivos ou áreas esperadas;
+- classificar cada caminho exato como `reuse`, `modify`, `create` ou `retire` com evidência do repositório;
 - incluir checks executáveis;
-- identificar riscos e dependências;
+- identificar riscos e dependências materiais, com verificação e recuperação quando o estado persistente/externo puder mudar;
 - respeitar o orçamento da classificação.
+
+Controles genéricos sem gatilho não são adicionados “por boas práticas”. As escolhas técnicas rotineiras baseadas no repositório seguem automaticamente no Autopilot.
+
+Antes de planejar por um protótipo, Planner executa a validação estrita de propriedade. Com `prototype_status: current`, usa apenas o protótipo da pasta da própria feature. Com `none`, ignora referências históricas e planeja a partir do PRD e do código/caminho de produção inspecionado.
 
 ## Handoff típico
 

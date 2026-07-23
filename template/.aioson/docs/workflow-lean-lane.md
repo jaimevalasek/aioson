@@ -36,13 +36,13 @@ It deliberately contains one PRD, one implementation plan, and one QA verdict. C
 
 ## Role boundaries
 
-- Product creates an implementation-ready PRD with capabilities and acceptance criteria.
+- Product creates an implementation-ready PRD with capabilities, current-system fit, and acceptance criteria.
 - Sheldon may challenge and enrich that same PRD in place when requested or when a concrete contradiction warrants independent review.
-- Planner inspects the repository and writes vertical executable phases.
-- Dev implements through the production path.
-- QA independently proves the real application behavior.
+- Planner inspects the repository, records the per-path implementation delta, and writes vertical executable phases with evidence-triggered engineering controls.
+- Dev implements and integrates those phases and controls through the production path.
+- QA independently proves the real application behavior and revalidates any bounded specialist-authored correction.
 
-Sheldon, Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orchestrator, Tester, Pentester, and Validator remain available to every classification as opt-in detours. Use one for a named uncertainty or triggered review, then merge the conclusion into a canonical artifact. The lightweight feature dossier is a non-blocking context cache, not a fourth deliverable.
+Sheldon, Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orchestrator, Tester, Pentester, and Validator remain available to every classification as opt-in detours. Use one for a named uncertainty or triggered review, then merge the conclusion into a canonical artifact. Tester/Pentester may apply only their bounded, evidence-backed corrections and must return final acceptance to QA. The lightweight feature dossier is a non-blocking context cache, not a fourth deliverable.
 
 ## Compatibility
 

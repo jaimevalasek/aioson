@@ -25,7 +25,7 @@
 | [@qa](./qa.md) | Revisão final proporcional e independente | Após `@dev` | `qa-report-{slug}.md` |
 | [@validator](./validator.md) | Verifica contrato binário quando habilitado | Especialista opt-in após QA | veredicto do harness |
 | [@forge-run](./forge-run.md) | Lane B opt-in: compila e roda o workflow de verificação executável de uma feature MEDIUM | MEDIUM com contrato `verification` + plano com Wave | `forge-run.workflow.js` |
-| [@tester](./tester.md) | Engenharia de testes para apps já existentes | Especialista opt-in para cobertura adicional | `test-inventory.md` |
+| [@tester](./tester.md) | Engenharia de testes para apps já existentes | Especialista opt-in para cobertura adicional | `test-report-{slug}.md` |
 | [@pentester](./pentester.md) | Revisão adversarial de segurança | Especialista opt-in, por pedido ou risco concreto | `security-findings-*.json` |
 
 ---
