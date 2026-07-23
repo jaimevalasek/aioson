@@ -1,6 +1,6 @@
 # Fluxo de artefatos entre agentes
 
-> Como os artefatos produzidos por @product e @sheldon chegam ao @analyst e ao @dev — e o que cada agente lê de fato.
+> Como o único PRD, o único plano e o único veredito QA atravessam o workflow — e o que cada agente lê de fato.
 
 ---
 
@@ -141,15 +141,11 @@ Regras duras — sem exceções:
 
 ---
 
-## Por que @analyst é o elo entre @sheldon e @dev
+## Handoff canônico para DEV
 
-Quando @sheldon cria um plano externo, **@analyst é obrigatório** antes de @dev para projetos SMALL/MEDIUM. O motivo:
+Product mantém o único `prd-{slug}.md`; Sheldon pode enriquecê-lo in-place; Planner cria o único `implementation-plan-{slug}.md`. Esses dois artefatos aprovados são suficientes para o handoff ao DEV.
 
-- O manifest do Sheldon define **o quê** (fases, escopo, sequência)
-- O @analyst produz **como** (entidades concretas, campos, regras de negócio com IDs, ACs verificáveis)
-- O @dev precisa de `requirements-{slug}.md` e `spec-{slug}.md` para implementar com qualidade — sem eles, há uma hard constraint no próprio agente: `NEVER write production code for SMALL/MEDIUM projects without approved spec artifacts`
-
-Se você pular @analyst e ir direto para @dev com um plano do Sheldon, @dev entende a estrutura do plano via `manifest.md`, mas vai parar e avisar que faltam os artefatos de spec.
+Analyst, Architect, PM, UX/UI e Discovery Design Doc são consultorias explícitas. Quando um parecer muda escopo ou ACs, ele volta ao PRD; quando muda sequência, arquivos ou checks, volta ao plano. A ausência de requirements/spec/design/readiness separados não bloqueia a implementação.
 
 ---
 

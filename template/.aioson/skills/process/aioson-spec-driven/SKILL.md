@@ -1,51 +1,54 @@
 # Skill: aioson-spec-driven
 
-> Process methodology skill. Covers: phase sequencing, artifact contracts, approval gates, and hardening lane.
-> Load this file first. Then load only the `references/` file relevant to your current role and phase.
+> Streamlined feature delivery methodology. Load this file first, then exactly one role reference.
 
 ## When to use
 
-Load this skill when:
-- starting spec work for a new feature or project (any agent)
-- deciding phase depth based on classification (MICRO / SMALL / MEDIUM)
-- preparing a clean handoff to the next agent
-- retaking work after a session break (check `last_checkpoint` + `phase_gates` first)
+Use for substantive feature definition, planning, implementation, or QA. Do not use for a bounded Simple Plan or bare Deyvin recovery.
 
-Do not load this skill for `@deyvin` activation-only recovery. A bare `@deyvin` activation is status recovery, not spec work; run Deyvin's fast path and stop before opening this file.
+## Canonical route
 
-Do NOT load the entire `references/` folder. Load only the file matching your current need.
+```text
+optional briefing/refinement → product → planner → dev → qa
+```
 
-## What phases exist
+The route has three canonical artifacts:
 
-| Phase | AIOSON artifact | Primary agent | MICRO | SMALL | MEDIUM |
-|-------|----------------|---------------|-------|-------|--------|
-| Specify | `prd*.md` | @product | lite | full | full |
-| Research/Discuss | `sheldon-enrichment*.md` | @sheldon | optional | recommended | required |
-| Requirements | `requirements-{slug}.md` | @analyst | skip | required | required |
-| Alignment Check | `scope-check*.md` | @scope-check (detour) | skip | opt-in detour | opt-in detour |
-| Design | `architecture.md`, `design-doc*.md` | @architect | skip | selective | required |
-| Tasks/Plan | `implementation-plan*.md` | @dev | optional | recommended | required |
-| Execute | code, commits, spec updates | @dev, @deyvin | — | — | — |
-| State/Resume | `spec*.md`, runtime | @dev, @deyvin | — | — | — |
+1. `prd-{slug}.md` — product intent, prototype contract, capabilities, acceptance criteria.
+2. `implementation-plan-{slug}.md` — executable vertical phases, exact paths, verification.
+3. `qa-report-{slug}.md` — independent delivery verdict and production-path evidence.
 
-## Phase depth by classification
+Project mode uses the same bare names without `{slug}` where applicable. Code and tests are delivery outputs, not specification artifacts.
 
-- **MICRO**: Specify (lite) + Execute. Skip Requirements, Design, Plan unless complexity warrants it.
-- **SMALL**: lean by default — Specify (`@product`) + `@sheldon` as the single spec authority (requirements + ACs, design-doc + readiness, plan, and harness contract in one pass) → `@dev` → `@qa`. The heavier multi-agent chain (`@analyst` + selective Design + `@scope-check` detour) is an opt-in escape hatch.
-- **MEDIUM**: `@orchestrator` maestro — `@product → @orchestrator → @dev → initial @qa → enabled/triggered @tester/@pentester → final @qa` (feature). `agent-execution-{slug}.json` controls reviewer participation. `@orchestrator` is the single spec authority: it fans out to `@analyst` + `@architect` + `@pm` (+ `@ux-ui` when UI-heavy) as sub-agents, then consolidates/verifies/redoes their output into one gated spec package (requirements + spec[Gates A/B/C] + design-doc + readiness + implementation-plan + harness-contract) for `@dev` — the horizontal counterpart to `@sheldon`'s lean lane. `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, and `@ux-ui` are no longer default hops (sub-agents the orchestrator invokes) and remain opt-in detours; `@architect`'s merged mode survives only for the opt-in full-chain detour. The deterministic drift check (`spec:analyze`) runs at the `@dev`/`@qa` done gate, not as a separate scope-check hop. Implementation plan required.
+## Classification depth
 
-**Lean lane (SMALL default; opt-in for MEDIUM):** `@product → @sheldon → @dev → @qa`, where `@sheldon` runs **Lean lane mode (RF-LEAN)** and produces the requirements/ACs, design-doc + readiness, implementation plan, and §2c runtime-gated harness contract in one pass — replacing the analyst/architect/discovery-design-doc/pm hops. SMALL runs this by default; MEDIUM opts in via `.aioson/context/workflow.config.json`. See `.aioson/docs/workflow-lean-lane.md`. The runtime smoke gate is mandatory in both lanes.
+- **Simple Plan (outside feature workflow):** already-specified bounded technical work may go directly to Dev with proportionate verification.
+- **MICRO:** one bounded product capability; the same Product → Planner → Dev → QA route with a terse PRD and plan.
+- **SMALL:** multiple related capabilities or one new boundary; the same route with broader file/AC coverage.
+- **MEDIUM:** broader or riskier impact; the same route with more constraints, checkpoints, and risk-focused evidence.
 
-## References available
+Sheldon, Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orchestrator, Tester, Pentester, and Validator are opt-in specialists available at every classification. Invoke one only for a named unresolved decision, explicit request, or triggered verification need. Merge its conclusion into the PRD, plan, implementation, or QA report; do not create a second canonical chain. The feature dossier is a lightweight non-blocking context cache.
 
-Load the file that matches your current context — do not load all at once:
+## Non-negotiable trace
 
-| File | Load when |
-|------|-----------|
-| `references/artifact-map.md` | You need to know which artifact lives where and who owns it |
-| `references/classification-map.md` | You need to decide phase depth for a project or feature |
-| `references/approval-gates.md` | You are preparing a handoff and need to know what must be ready |
-| `references/hardening-lane.md` | The input is vague, exploratory, or "vibe-style" and needs to be converted |
-| `references/maintenance-and-state.md` | You are writing or reading `spec*.md`, checkpoints, or retaking work |
-| `references/ui-language.md` | You need to present options, status symbols, or checkpoints to the user with consistent visual standards |
-| `references/qa.md` | You are running QA review and need Gate D verification criteria or artifact validation |
+`CAP → AC → vertical phase → exact files → executable check → production-path evidence`
+
+This trace replaces the former `CAP → lens → REQ → AC → design → plan → harness` document chain.
+
+## Runtime truth
+
+- Verify the application's normal entry point.
+- For UI capabilities, prove action → real boundary → state change → visible result.
+- A detached fixture, alternate binary, test-only flag, mock-only screen, artifact count, or test count is not production evidence.
+- Harnesses are optional when the plan deliberately needs them; never generate one by classification alone.
+
+## References
+
+Load exactly one role reference:
+
+- `references/product.md`
+- `references/planner.md`
+- `references/dev.md`
+- `references/qa.md`
+
+Compatibility references for legacy specialist detours remain available. Use `artifact-map.md`, `approval-gates.md`, or `classification-map.md` only when a CLI/gate question specifically requires them.

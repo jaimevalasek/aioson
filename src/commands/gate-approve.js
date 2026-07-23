@@ -4,8 +4,8 @@
  * aioson gate:approve — approve a phase gate for a feature.
  *
  * Validates with gate:check before writing. If gate:check fails, blocks approval.
- * Writes flat frontmatter fields to spec-{slug}.md:
- *   gate_requirements, gate_design, gate_plan, gate_execution
+ * Records approval on the canonical artifact for that checkpoint. It never
+ * creates a second spec document.
  *
  * Usage:
  *   aioson gate:approve . --feature=checkout --gate=C
@@ -21,8 +21,6 @@ const {
   readFileSafe,
   fileExists,
   fileStat,
-  parseFrontmatter,
-  parseGatesFromSpec,
   GATE_NAMES,
   GATE_ALIASES
 } = require('../preflight-engine');
@@ -34,17 +32,17 @@ const CHECKPOINT_MAX_BYTES = 5120;
 
 const BAR = '━'.repeat(45);
 
-const GATE_FLAT_FIELDS = {
-  A: 'gate_requirements',
-  B: 'gate_design',
-  C: 'gate_plan',
-  D: 'gate_execution'
+const GATE_TARGETS = {
+  A: (slug) => ({ file: `prd-${slug}.md`, field: 'product_scope', value: 'approved' }),
+  B: (slug) => ({ file: `prd-${slug}.md`, field: 'prd_ready', value: 'approved' }),
+  C: (slug) => ({ file: `implementation-plan-${slug}.md`, field: 'status', value: 'approved' }),
+  D: (slug) => ({ file: `qa-report-${slug}.md`, field: 'verdict', value: 'pass' })
 };
 
 const GATE_NEXT_AGENTS = {
-  A: { agent: '@architect', action: '/architect', why: 'Gate A (requirements) approved — architecture can proceed' },
-  B: { agent: '@pm', action: '/pm', why: 'Gate B (design) approved — implementation plan can be written' },
-  C: { agent: '@orchestrator or @dev', action: '/orchestrator (MEDIUM) or /dev (MICRO/SMALL)', why: 'Gate C (plan) approved — implementation can proceed' },
+  A: { agent: '@product', action: '/product', why: 'Product scope exists — Product can finish observable acceptance criteria and PRD readiness' },
+  B: { agent: '@planner', action: '/planner', why: 'Product marked the PRD implementation-ready — planning can proceed' },
+  C: { agent: '@dev', action: '/dev', why: 'Implementation plan approved — development can proceed' },
   D: { agent: 'feature complete', action: 'mark feature done in features.md', why: 'Gate D (execution) approved — feature is complete' }
 };
 
@@ -125,9 +123,9 @@ async function runGateApprove({ args, options = {}, logger }) {
     logger: silentLogger
   });
 
-  const specFile = path.join(contextDir(targetDir), `spec-${slug}.md`);
-  const specExists = await fileExists(specFile);
-  const specFieldName = GATE_FLAT_FIELDS[gateLetter];
+  const target = GATE_TARGETS[gateLetter](slug);
+  const targetFile = path.join(contextDir(targetDir), target.file);
+  const targetExists = await fileExists(targetFile);
   const gateName = GATE_NAMES[gateLetter];
 
   if (!check.ok) {
@@ -140,9 +138,9 @@ async function runGateApprove({ args, options = {}, logger }) {
       feature: slug,
       reason: 'gate_check_failed',
       missing: check.missing || [],
-      manual_fallback: specExists
-        ? `To manually approve when prerequisites are met:\n  File: .aioson/context/spec-${slug}.md\n  Field: ${specFieldName}\n  Value: approved`
-        : `spec-${slug}.md does not exist. Create it with ${specFieldName}: approved in frontmatter after prerequisites are satisfied.`
+      manual_fallback: targetExists
+        ? `To manually approve when prerequisites are met:\n  File: .aioson/context/${target.file}\n  Field: ${target.field}\n  Value: ${target.value}`
+        : `${target.file} does not exist. Its owning agent must create it before approval.`
     };
 
     if (options.json) return result;
@@ -156,26 +154,19 @@ async function runGateApprove({ args, options = {}, logger }) {
     for (const m of check.missing || []) logger.log(`  ✗ ${m}`);
     logger.log('');
     logger.log('Manual fallback (use only after all prerequisites are satisfied):');
-    logger.log(`  File:  .aioson/context/spec-${slug}.md`);
-    logger.log(`  Field: ${specFieldName}`);
-    logger.log(`  Value: approved`);
+    logger.log(`  File:  .aioson/context/${target.file}`);
+    logger.log(`  Field: ${target.field}`);
+    logger.log(`  Value: ${target.value}`);
     logger.log('');
     logger.log('Tip: re-run gate:check after satisfying prerequisites, then gate:approve again.');
     logger.log('');
     return result;
   }
 
-  // Step 2: write flat frontmatter field (AC-SDLC-07 — flat format, not nested phase_gates)
-  let content = specExists ? await readFileSafe(specFile) : null;
-
-  if (!content) {
-    // Create minimal spec with gate field
-    content = `---\nfeature: ${slug}\n${specFieldName}: approved\n---\n\n# Spec — ${slug}\n\nCreated by gate:approve.\n`;
-  } else {
-    content = updateFrontmatterField(content, specFieldName, 'approved');
-  }
-
-  await fs.writeFile(specFile, content, 'utf8');
+  // Step 2: persist the approval on the artifact that owns the decision.
+  const content = await readFileSafe(targetFile);
+  if (!content) throw new Error(`Cannot approve Gate ${gateLetter}; ${target.file} is missing.`);
+  await fs.writeFile(targetFile, updateFrontmatterField(content, target.field, target.value), 'utf8');
 
   // M1 checkpoint-at-gate: best-effort checkpoint write (BR-AO-01)
   let checkpointWritten = false;
@@ -225,8 +216,8 @@ async function runGateApprove({ args, options = {}, logger }) {
     gate: gateLetter,
     gate_name: gateName,
     feature: slug,
-    field_written: specFieldName,
-    spec_file: `.aioson/context/spec-${slug}.md`,
+    field_written: target.field,
+    artifact_file: `.aioson/context/${target.file}`,
     checkpoint_written: checkpointWritten,
     next_agent: nextInfo.agent,
     next_action: nextInfo.action,
@@ -240,7 +231,7 @@ async function runGateApprove({ args, options = {}, logger }) {
   logger.log(BAR);
   logger.log(`Result: ✓ APPROVED`);
   logger.log('');
-  logger.log(`Written: ${specFieldName}: approved → .aioson/context/spec-${slug}.md`);
+  logger.log(`Written: ${target.field}: ${target.value} → .aioson/context/${target.file}`);
   logger.log('');
   logger.log(`Next agent: ${nextInfo.agent}`);
   logger.log(`Why: ${nextInfo.why}`);

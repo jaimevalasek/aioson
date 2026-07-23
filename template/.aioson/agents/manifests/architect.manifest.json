@@ -1,50 +1,19 @@
 {
   "agent_id": "architect",
-  "version": "1.0",
+  "version": "2.0",
   "display_name": "Architect",
-  "capabilities": [
-    {
-      "id": "design_architecture",
-      "category": "create",
-      "description": "Design the technical architecture for the approved scope.",
-      "inputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/discovery.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/requirements-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/spec-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "gate",
-          "path_pattern": "gate:A",
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/architecture.md"
-        }
-      ]
-    }
-  ],
-  "autonomy_modes": [
-    "guarded"
-  ],
+  "capabilities": [{
+    "id": "resolve_named_technical_boundary",
+    "category": "analyze",
+    "description": "Resolve one named technical boundary using repository and dependency evidence.",
+    "inputs": [
+      { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": false },
+      { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false }
+    ],
+    "outputs": []
+  }],
+  "autonomy_modes": ["guarded"],
   "default_mode": "guarded",
-  "supported_tools": [
-    "codex",
-    "claude",
-    "opencode"
-  ],
+  "supported_tools": ["codex", "claude", "opencode"],
   "risk_profile": "medium"
 }

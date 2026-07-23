@@ -52,7 +52,7 @@ AIOSON is governed by six articles that **no agent can override**. They live in 
 ### Article II — Right-Sized Process
 > MICRO, SMALL, and MEDIUM don't receive the same process depth. Applying MEDIUM ceremony to a MICRO project wastes more than it protects.
 
-**In practice:** the AI won't ask you for a 30-page PRD for a 50-line script. Each classification has its own flow.
+**In practice:** the AI won't ask you for a 30-page PRD for a 50-line script. Every classification keeps the same Product → Planner → DEV → QA chain, while the depth, budget, and evidence stay proportional.
 
 ### Article III — Observable Work
 > Important actions leave visible artifacts or runtime signals. Work that exists only in conversation history is work that can be lost.

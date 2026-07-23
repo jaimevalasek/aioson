@@ -23,7 +23,19 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const AC_ID_RE = /\bAC(?:-[A-Za-z0-9]+)+\b/g;
-const TEST_FILE_RE = /(?:^|[\\/])(?:tests?|__tests__)[\\/].+\.(?:test|spec)\.(?:js|cjs|mjs|ts|tsx|jsx)$|(?:^|[\\/])[^\\/]+\.(?:test|spec)\.(?:js|cjs|mjs|ts|tsx|jsx)$/i;
+const JS_TEST_FILE_RE = /(?:^|[\\/])(?:tests?|__tests__)[\\/].+\.(?:test|spec)\.(?:js|cjs|mjs|ts|tsx|jsx)$|(?:^|[\\/])[^\\/]+\.(?:test|spec)\.(?:js|cjs|mjs|ts|tsx|jsx)$/i;
+
+function isTestFile(relPath) {
+  const rel = String(relPath || '').replace(/\\/g, '/');
+  if (JS_TEST_FILE_RE.test(rel)) return true;
+  if (/(?:^|\/)tests?\/.*\.rs$/i.test(rel) || /_test\.rs$/i.test(rel) || /^(?:src|crates|packages)\/.*\.rs$/i.test(rel)) return true;
+  if (/_test\.go$/i.test(rel)) return true;
+  if (/(?:^|\/)(?:test_.+|.+_test)\.py$/i.test(rel) || /(?:^|\/)tests?\/.*\.py$/i.test(rel)) return true;
+  if (/(?:^|\/)tests?\/.*(?:Test\.php|\.php)$/i.test(rel)) return true;
+  if (/(?:_spec|_test)\.rb$/i.test(rel)) return true;
+  if (/(?:Test|Tests)\.(?:java|kt|kts|cs)$/i.test(rel)) return true;
+  return false;
+}
 
 function extractAcIds(content) {
   return [...new Set(String(content || '').match(AC_ID_RE) || [])].sort();
@@ -75,7 +87,7 @@ async function listTestFiles(targetDir, dirPath = targetDir, out = []) {
     }
     if (!entry.isFile()) continue;
     const rel = toRel(targetDir, full);
-    if (TEST_FILE_RE.test(rel)) out.push(full);
+    if (isTestFile(rel)) out.push(full);
   }
   return out;
 }
@@ -173,7 +185,12 @@ function hasAssertionNearAc(content, acId) {
     const window = code.slice(start, end);
     if (/\b(assert(?:\.[A-Za-z]+)?|expect|should|fail)\s*\(/i.test(window)
       || /\.(?:toBe|toEqual|toStrictEqual|toMatch|toContain|toHave|toThrow|resolves|rejects)\b/.test(window)
-      || /\bthrow\s+new\s+Error\b/.test(window)) return true;
+      || /\bthrow\s+new\s+Error\b/.test(window)
+      || /\b(?:assert(?:_eq|_ne|_matches)?|debug_assert(?:_eq|_ne)?|matches|panic)!\s*\(/.test(window)
+      || /\b(?:assert|assertEqual|assertTrue|assertFalse|assertRaises)\b(?:\s|\()/i.test(window)
+      || /\b(?:assertEquals|assertThat|assertThrows|Assertions\.[A-Za-z]+)\s*\(/.test(window)
+      || /\b(?:Assert\.[A-Za-z]+|Should\(\)|Expect\()/.test(window)
+      || /\b(?:t\.(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow)|require\.[A-Za-z]+|assert\.[A-Za-z]+)\s*\(/.test(window)) return true;
   }
   return false;
 }
@@ -330,6 +347,7 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
 module.exports = {
   AC_ID_RE,
   extractAcIds,
+  isTestFile,
   mentionsAcId,
   maskNonCode,
   hasAssertionNearAc,

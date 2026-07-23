@@ -2,12 +2,11 @@
 
 const path = require('node:path');
 const { validateProjectContextFile } = require('../context');
+const {
+  PROJECT_WORKFLOW_BY_CLASSIFICATION
+} = require('../workflow-profile');
 
-const WORKFLOW_BY_CLASSIFICATION = {
-  MICRO: ['setup', 'dev'],
-  SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
-  MEDIUM: ['setup', 'product', 'orchestrator', 'dev', 'qa']
-};
+const WORKFLOW_BY_CLASSIFICATION = PROJECT_WORKFLOW_BY_CLASSIFICATION;
 
 function normalizeClassification(value, fallback = 'MICRO') {
   const text = String(value || '').trim().toUpperCase();
@@ -34,11 +33,8 @@ function buildWorkflowPlan(input = {}) {
   }
   if (classification === 'MICRO') {
     noteKeys.push('micro_scope');
-    noteKeys.push('product_optional');
   }
-  if (classification === 'SMALL' || classification === 'MEDIUM') {
-    noteKeys.push('feature_flow');
-  }
+  noteKeys.push('feature_flow');
 
   return {
     classification,

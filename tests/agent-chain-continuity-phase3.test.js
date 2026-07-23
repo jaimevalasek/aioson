@@ -162,7 +162,7 @@ describe('Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)', ()
     }
   });
 
-  it('skips MICRO features (auto-init opt-in only via dossier:init manual)', async () => {
+  it('auto-inits the same non-blocking dossier context cache for MICRO features', async () => {
     const tmp = await makeProject();
     try {
       await writePrd(tmp, 'feat-micro', 'MICRO');
@@ -178,7 +178,7 @@ describe('Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)', ()
 
       const dossierPath = path.join(tmp, '.aioson', 'context', 'features', 'feat-micro', 'dossier.md');
       const exists = await fs.access(dossierPath).then(() => true).catch(() => false);
-      assert.equal(exists, false, 'MICRO must NOT auto-init dossier');
+      assert.equal(exists, true, 'MICRO should receive the same lightweight context memory');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
@@ -243,7 +243,8 @@ describe('Phase 3.2 — workflow:next pre-stage hook (ensureFeatureDossier)', ()
       const exists = await fs.access(dossierPath).then(() => true).catch(() => false);
       assert.ok(exists, 'minimal-fallback dossier must be written when no artifacts');
       const dossier = await fs.readFile(dossierPath, 'utf8');
-      assert.match(dossier, /auto-init by workflow:next/);
+      assert.match(dossier, /lightweight workflow context cache/);
+      assert.match(dossier, /populated as evidence becomes available/);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }

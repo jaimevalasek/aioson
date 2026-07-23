@@ -17,6 +17,7 @@ const MANAGED_FILES = [
   '.aioson/agents/pair.md',
   '.aioson/agents/pm.md',
   '.aioson/agents/sheldon.md',
+  '.aioson/agents/planner.md',
   '.aioson/agents/dev.md',
   '.aioson/agents/qa.md',
   '.aioson/agents/validator.md',
@@ -237,6 +238,7 @@ const REQUIRED_FILES = [
   '.aioson/agents/discover.md',
   '.aioson/agents/analyst.md',
   '.aioson/agents/ux-ui.md',
+  '.aioson/agents/planner.md',
   '.aioson/agents/dev.md',
   '.aioson/context/.gitkeep'
 ];
@@ -268,11 +270,11 @@ const AGENT_DEFINITIONS = [
   {
     id: 'discovery-design-doc',
     displayName: 'Discovery/Design Doc',
-    description: 'Discovery and design doc generation',
+    description: 'Optional repository-surface discovery for a named implementation unknown',
     command: '@discovery-design-doc',
     path: '.aioson/agents/discovery-design-doc.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/design-doc*.md + .aioson/context/readiness*.md'
+    output: 'bounded repository evidence + optional dossier code-map entry'
   },
   {
     id: 'discover',
@@ -290,7 +292,7 @@ const AGENT_DEFINITIONS = [
     command: '@product',
     path: '.aioson/agents/product.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/prd.md or .aioson/context/prd-{slug}.md (PRD base)'
+    output: '.aioson/context/prd.md or .aioson/context/prd-{slug}.md (single product authority)'
   },
   {
     id: 'deyvin',
@@ -300,72 +302,68 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/deyvin.md',
     aliases: ['pair'],
     dependsOn: ['.aioson/context/project.context.md'],
-    output: 'small code changes + continuity notes in spec.md + runtime logs/tasks'
+    output: 'small code changes + continuity notes + runtime logs/tasks'
   },
   {
     id: 'analyst',
     displayName: 'Analyst',
-    description: 'Domain discovery and entity mapping (SMALL/MEDIUM)',
+    description: 'Optional evidence-backed analysis of a named ambiguity (all sizes)',
     command: '@analyst',
     path: '.aioson/agents/analyst.md',
     dependsOn: ['.aioson/context/project.context.md'],
-    output: '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
+    output: 'bounded recommendation to Product or Planner + optional dossier entry'
   },
   {
     id: 'scope-check',
     displayName: 'Scope Check',
-    description: 'Scope alignment before development and optional post-dev drift checks',
+    description: 'Optional evidence-based review of a named scope-drift concern',
     command: '@scope-check',
     path: '.aioson/agents/scope-check.md',
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
     ],
-    output: '.aioson/context/scope-check.md or .aioson/context/scope-check-{slug}.md'
+    output: 'bounded alignment verdict + optional dossier entry'
   },
   {
     id: 'architect',
     displayName: 'Architect',
-    description: 'Project structure and technical decisions (SMALL/MEDIUM)',
+    description: 'Optional repository-grounded answer to a named technical boundary (all sizes)',
     command: '@architect',
     path: '.aioson/agents/architect.md',
     dependsOn: [
       '.aioson/context/project.context.md',
-      '.aioson/context/discovery.md or .aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md'
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
     ],
-    output: '.aioson/context/architecture.md'
+    output: 'bounded technical decision to Planner or Dev + optional dossier entry'
   },
   {
     id: 'ux-ui',
     displayName: 'UI/UX',
-    description: 'UI/UX design system and component spec (SMALL/MEDIUM)',
+    description: 'Optional prototype-grounded interaction decision (all sizes)',
     command: '@ux-ui',
     path: '.aioson/agents/ux-ui.md',
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/discovery.md',
-      '.aioson/context/architecture.md'
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
     ],
-    output: '.aioson/context/ui-spec-{slug}.md (project mode: .aioson/context/ui-spec.md) + Visual identity enrichment in prd.md or prd-{slug}.md'
+    output: 'bounded interaction decision to Product or Planner + optional dossier entry'
   },
   {
     id: 'pm',
     displayName: 'PM',
-    description: 'Backlog and user stories (MEDIUM only)',
+    description: 'Optional prioritization, dependency, and rollout advisor (all sizes)',
     command: '@pm',
     path: '.aioson/agents/pm.md',
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/requirements-{slug}.md + .aioson/context/spec-{slug}.md (feature mode)',
-      '.aioson/context/discovery.md',
-      '.aioson/context/architecture.md',
-      '.aioson/context/design-doc-{slug}.md + .aioson/context/readiness-{slug}.md (feature mode, when present)',
-      '.aioson/context/ui-spec.md (when present)'
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
     ],
-    output: '.aioson/context/prd.md or prd-{slug}.md (enriched with acceptance criteria) + .aioson/context/implementation-plan-{slug}.md for MEDIUM features'
+    output: 'bounded recommendation to Product or Planner + optional dossier entry'
   },
   {
     id: 'dev',
@@ -375,8 +373,9 @@ const AGENT_DEFINITIONS = [
     path: '.aioson/agents/dev.md',
     dependsOn: [
       '.aioson/context/project.context.md',
-      '.aioson/context/discovery.md',
-      '.aioson/context/architecture.md'
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md',
+      '.aioson/briefings/{slug}/prototype.html + prototype-manifest.md (when referenced by the PRD)'
     ],
     output: 'code changes'
   },
@@ -393,18 +392,22 @@ const AGENT_DEFINITIONS = [
     ],
     dependsOn: [
       '.aioson/context/project.context.md',
-      '.aioson/context/spec-{slug}.md (active feature)'
+      '.aioson/context/prd-{slug}.md (active feature)',
+      '.aioson/context/implementation-plan-{slug}.md (approved paths and risk surfaces)'
     ],
     output: '.aioson/context/security-findings-{slug}.json'
   },
   {
     id: 'qa',
     displayName: 'QA',
-    description: 'Risk-first review and test generation (SMALL/MEDIUM)',
+    description: 'Proportional delivery review with bounded focused verification (all sizes)',
     command: '@qa',
     path: '.aioson/agents/qa.md',
-    dependsOn: ['.aioson/context/discovery.md'],
-    output: 'QA report'
+    dependsOn: [
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
+    ],
+    output: '.aioson/context/qa-report-{slug}.md'
   },
   {
     id: 'validator',
@@ -430,18 +433,15 @@ const AGENT_DEFINITIONS = [
   {
     id: 'orchestrator',
     displayName: 'Orchestrator',
-    description: 'Session protocol and parallel execution (MEDIUM)',
+    description: 'Optional coordination for genuinely parallel or cross-cutting execution (all sizes)',
     command: '@orchestrator',
     path: '.aioson/agents/orchestrator.md',
     dependsOn: [
       '.aioson/context/project.context.md',
-      '.aioson/context/discovery.md',
-      '.aioson/context/architecture.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/ui-spec.md (when present)',
-      '.aioson/context/implementation-plan.md or implementation-plan-{slug}.md (when present)'
+      '.aioson/context/implementation-plan.md or implementation-plan-{slug}.md'
     ],
-    output: '.aioson/context/parallel/*.status.md'
+    output: 'bounded lane ownership and merge order + optional dossier entry'
   },
   {
     id: 'squad',
@@ -513,8 +513,25 @@ const AGENT_DEFINITIONS = [
     description: 'PRD quality review and pre-implementation enrichment',
     command: '@sheldon',
     path: '.aioson/agents/sheldon.md',
-    dependsOn: ['.aioson/context/project.context.md'],
-    output: 'enriched PRD or phased execution plan (+ sheldon-validation-{slug}.md readiness gate on MEDIUM)'
+    dependsOn: [
+      '.aioson/context/project.context.md',
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/briefings/{slug}/prototype.html + prototype-manifest.md (when present)'
+    ],
+    output: 'optional in-place PRD enrichment, marked sheldon_review: approved when requested'
+  },
+  {
+    id: 'planner',
+    displayName: 'Planner',
+    description: 'Executable vertical implementation planning from the approved PRD',
+    command: '@planner',
+    path: '.aioson/agents/planner.md',
+    dependsOn: [
+      '.aioson/context/project.context.md',
+      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
+      '.aioson/briefings/{slug}/prototype.html + prototype-manifest.md (when referenced by the PRD)'
+    ],
+    output: '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
   },
   {
     id: 'committer',

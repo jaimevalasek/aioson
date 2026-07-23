@@ -30,10 +30,30 @@ async function scaffold(slug, { code }) {
   execFileSync('git', ['config', 'user.email', 'a@b.c'], { cwd: dir });
   execFileSync('git', ['config', 'user.name', 'a'], { cwd: dir });
   await wf(dir, '.aioson/context/project.context.md', '---\nclassification: "SMALL"\n---\n# C\n');
-  await wf(dir, `.aioson/context/prd-${slug}.md`, '---\nclassification: SMALL\n---\n# PRD\n');
-  await wf(dir, `.aioson/context/spec-${slug}.md`,
-    '---\nclassification: SMALL\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\nNotes.\n');
-  await wf(dir, `.aioson/context/readiness-${slug}.md`, '---\nreadiness: ready\n---\n# Readiness\n');
+  await wf(dir, `.aioson/context/prd-${slug}.md`, `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+---
+# PRD
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-${slug}-01 | Feature runs | User invokes it | required | Core |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-${slug}-01 | CAP-${slug}-01 | Feature returns a result | focused test |
+`);
+  await wf(dir, `.aioson/context/implementation-plan-${slug}.md`, `---
+status: approved
+---
+# Plan
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-${slug}-01 | 1 | src/feature.ts, tests/feature.test.js | node --test |
+`);
   await wf(dir, '.aioson/context/project-pulse.md', '# Pulse\n');
   await wf(dir, '.aioson/context/dev-state.md', `---\nactive_feature: ${slug}\nstatus: in_progress\n---\n# Dev State\n`);
   const contract = {
@@ -50,6 +70,7 @@ async function scaffold(slug, { code }) {
   }, null, 2));
   // The source file we control — an untracked .ts, so it shows up in --changed.
   await wf(dir, 'src/feature.ts', code);
+  await wf(dir, 'tests/feature.test.js', `const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-${slug}-01',()=>assert.ok(true));\n`);
   return dir;
 }
 
@@ -59,7 +80,7 @@ const CLEAN_CODE = 'export const add = (a: number, b: number): number => a + b;\
 function devState(slug) {
   return {
     version: 1, mode: 'feature', featureSlug: slug, classification: 'SMALL',
-    sequence: ['product', 'dev', 'qa'], completed: ['product'], skipped: [],
+    sequence: ['product', 'planner', 'dev', 'qa'], completed: ['product', 'planner'], skipped: [],
     current: 'dev', next: 'qa', detour: null
   };
 }

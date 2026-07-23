@@ -286,7 +286,7 @@ test('producer-contract: idempotent — running twice produces same state file',
   assert.equal(fm1, fm2);
 });
 
-test('producer-contract: backward-compat — without --context, falls back to auto-detect', async () => {
+test('producer-contract: without --context, canonical auto-detect ignores a legacy spec', async () => {
   const slug = 'legacy';
   const dir = await makeFeatureProject({
     slug,
@@ -299,10 +299,9 @@ test('producer-contract: backward-compat — without --context, falls back to au
   });
 
   assert.equal(result.ok, true);
-  // Legacy auto-detect path: project.context + spec + impl-plan
+  // Canonical auto-detect path: project.context + implementation plan.
   assert.deepEqual(result.context_package, [
     'project.context.md',
-    `spec-${slug}.md`,
     `implementation-plan-${slug}.md`
   ]);
 });

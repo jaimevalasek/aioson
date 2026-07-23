@@ -9,13 +9,21 @@ const { defaults, initManifest, loadManifest } = require('../src/agent-execution
 const { validateManifest } = require('../src/agent-execution/schema');
 
 // AC-AED-01 AC-AED-02 AC-AED-03 AC-AED-13 AC-AED-15
-test('Codex manifest defaults contain five executable agents, medium effort, and one review cycle', () => {
+test('Codex manifest defaults keep DEV/QA on, specialists off, and optional development lanes dormant', () => {
   const manifest = defaults('demo', 'codex');
   assert.equal(validateManifest(manifest, 'demo').ok, true);
   assert.equal(Object.keys(manifest.agents).length, 5);
   assert.equal(manifest.agents.dev.model, 'configured-default');
   assert.ok(Object.values(manifest.agents).every(agent => agent.mode === 'external'));
   assert.ok(Object.values(manifest.agents).every(agent => agent.reasoning_effort === 'medium'));
+  assert.equal(manifest.agents.dev.enabled, true);
+  assert.equal(manifest.agents.qa.enabled, true);
+  assert.equal(manifest.agents.tester.enabled, false);
+  assert.equal(manifest.agents.pentester.enabled, false);
+  assert.equal(manifest.agents.validator.enabled, false);
+  assert.equal(manifest.development_lanes.strategy, 'single');
+  assert.equal(manifest.development_lanes.integration_owner, 'dev');
+  assert.ok(Object.values(manifest.development_lanes.lanes).every(lane => lane.enabled === false));
   assert.deepEqual(manifest.cycle_limits, { dev_qa: 1, tester: 1, pentester: 1 });
 });
 
@@ -42,6 +50,20 @@ test('security: model names and fallback names are length bounded before resolut
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(error => error.path === '$.agents.dev.model'));
   assert.ok(result.errors.some(error => error.path === '$.agents.qa.fallbacks[0].model'));
+});
+
+test('split development lanes require explicit enabled scope and valid fallback reasons', () => {
+  const manifest = defaults('demo');
+  manifest.development_lanes.strategy = 'split';
+  manifest.development_lanes.lanes.backend.enabled = true;
+  manifest.development_lanes.lanes.backend.write_paths = ['src/api/**', 'tests/api/**'];
+  manifest.development_lanes.lanes.backend.fallbacks = [
+    { host: 'claude', model: 'configured-default', on: ['unavailable'] }
+  ];
+  assert.equal(validateManifest(manifest, 'demo').ok, true);
+  manifest.development_lanes.lanes.backend.write_paths = [];
+  const invalid = validateManifest(manifest, 'demo');
+  assert.ok(invalid.errors.some(error => error.path === '$.development_lanes.lanes.backend.write_paths'));
 });
 
 test('initialization is create-once and preserves every developer edit byte for byte', async () => {

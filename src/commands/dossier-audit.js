@@ -6,6 +6,7 @@ const path = require('node:path');
 const CHAIN_AGENTS = Object.freeze([
   'product',
   'sheldon',
+  'planner',
   'analyst',
   'architect',
   'ux-ui',
@@ -149,7 +150,7 @@ async function checkCoverage({ projectRoot }) {
     if (feature.status !== 'in_progress') continue;
     const classification = await readClassificationForFeature({ projectRoot, slug: feature.slug });
     checked.push({ slug: feature.slug, status: feature.status, classification });
-    if (classification !== 'SMALL' && classification !== 'MEDIUM') continue;
+    if (!['MICRO', 'SMALL', 'MEDIUM'].includes(classification)) continue;
     const dossierPath = path.join(ctxDir, 'features', feature.slug, 'dossier.md');
     const dossierRaw = await readFileOrNull(dossierPath);
     if (dossierRaw === null) {
@@ -195,7 +196,7 @@ async function runDossierAudit({ args = [], options = {}, logger } = {}) {
     if (result.features_md_missing) {
       log('coverage check skipped — .aioson/context/features.md missing.');
     } else if (ok) {
-      log(`coverage OK — ${result.features_checked.length} in-progress feature(s) verified; all SMALL/MEDIUM have a dossier.`);
+      log(`coverage OK — ${result.features_checked.length} in-progress feature(s) verified; every tracked classification has a dossier.`);
     } else {
       log(`coverage FAILED — ${result.missing_dossier.length} feature(s) without dossier:`);
       for (const m of result.missing_dossier) {

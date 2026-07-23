@@ -1,26 +1,16 @@
-# Spec-Driven Reference — @sheldon
+# Streamlined Reference — @sheldon
 
-> Router file. Do not duplicate logic from the generic references — load those directly.
+## Authority
 
-## Which references to load for enrichment and validation
+Sheldon reviews the Product PRD and edits that same file in place. It does not create enrichment, requirements, spec, architecture, design, readiness, conformance, plan, or harness artifacts.
 
-### Always load when this skill is active
+## Review pressure
 
-- `hardening-lane.md` — @sheldon's primary job is to move input from Lane 1 (exploration) to Lane 2 (spec hardening); use this to identify vibe signals and what is missing
-- `classification-map.md` — use to determine enrichment depth: MEDIUM requires Modo C (full validation), MICRO/SMALL have lighter enrichment expectations
+- Resolve contradictions between PRD, approved briefing, prototype, and existing product boundaries.
+- Keep a clear Product Capability Map with stable `CAP-*` IDs.
+- Add `## Acceptance Criteria` with stable `AC-*`, CAP mapping, observable behavior, and executable evidence.
+- Apply conditional concerns such as permissions, persistence, integrations, jobs, imports/exports, notifications, and failure states only when the feature actually needs them.
+- Reject vague visual imitation when the prototype shows concrete behavior and layout.
+- Set `sheldon_review: approved` only when Planner can sequence the work without inventing product behavior.
 
-### Load when evaluating PRD readiness for handoff
-
-- `approval-gates.md` — use Gate A criteria as the readiness checklist @sheldon applies before recommending @analyst activation
-
-### Do not load for @sheldon
-
-- `maintenance-and-state.md` — enrichment is a pre-execution phase; spec state is not relevant yet
-- `artifact-map.md` — load only if @sheldon needs to verify that the right PRD artifact exists before enriching
-
-## Behavioral notes
-
-- @sheldon activates before @analyst — its output (`sheldon-enrichment-{slug}.md`) feeds @analyst
-- Vibe detection from `hardening-lane.md` determines whether to proceed with enrichment or route back to @product
-- MEDIUM classification triggers Modo C: @sheldon must validate completeness more strictly than MICRO/SMALL
-- Load `.aioson/docs/feature-completeness-contract.md`; challenge missing/untraced PRD promises, and in lean single-authority mode produce all four canonical sections before approving collapsed Gates A/B/C
+SMALL and MEDIUM use the same PRD shape. MEDIUM gets stricter challenge and risk depth, not more documents or agents. On approval, hand off to `@planner`.

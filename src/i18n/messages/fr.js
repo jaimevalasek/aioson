@@ -680,9 +680,9 @@ module.exports = {
     note_micro_scope:
       'Gardez un scope d implementation minimal et evitez les agents optionnels.',
     note_product_optional:
-      '@product est optionnel pour MICRO — passez directement a @dev si l idee est deja claire.',
+      'Pour un travail technique borne et deja specifie, utilisez Simple Plan ; les features MICRO suivies utilisent Product → Planner → Dev → QA.',
     note_feature_flow:
-      'Flux nouvelle feature (apres configuration initiale) : @product → @analyst → @scope-check → @dev → @qa. Pas de @setup.'
+      'Flux nouvelle feature (apres configuration initiale) : @product → @planner → @dev → @qa. Sheldon est facultatif. Un PRD, un plan et un verdict QA.'
   },
   parallel_init: {
     context_missing:
@@ -1094,11 +1094,11 @@ module.exports = {
     folder_required_example_llm:
       '  API automatique : aioson scan:project . --folder=src --with-llm --provider=openai',
     folder_required_example_cli:
-      '  Sans API LLM    : aioson scan:project . --folder=src  -> puis lancez @analyst dans Codex/Claude',
+      '  Sans API LLM    : aioson scan:project . --folder=src  -> transmettez la carte a @planner avec un PRD actif',
     folder_required_example_prompt:
-      '  Prompt pret     : aioson agent:prompt analyst --tool=codex',
+      '  Prompt pret     : aioson agent:prompt planner --tool=codex',
     folder_required_example_next:
-      '  Workflow apres scan complet : @analyst -> @scope-check -> @architect -> @dev',
+      '  Avec PRD actif apres le scan : @planner -> @dev -> @qa (utilisez @product si aucun PRD existe)',
     folder_not_found: 'Le dossier "{folder}" est introuvable dans ce projet. Dossiers de premier niveau detectes : {available}',
     config_missing: '{file} introuvable. Pour utiliser le mode LLM, copiez aioson-models.json et renseignez vos cles API.',
     config_invalid: 'JSON invalide dans aioson-models.json : {error}',
@@ -1107,7 +1107,7 @@ module.exports = {
     model_info: '  Modele   : {model}',
     context_found: '  Contexte : project.context.md trouve',
     context_missing: '  Contexte : project.context.md introuvable (executez aioson setup:context d\'abord)',
-    spec_found: '  Spec     : spec.md trouve — memoire de developpement incluse',
+    spec_found: '  Heritage : spec.md trouve — contexte historique facultatif, sans autorite de livraison',
     existing_discovery_found: '  Contexte : discovery.md existant trouve dans {path}',
     existing_skeleton_found: '  Contexte : skeleton-system.md existant trouve dans {path}',
     context_update_mode: '  Mode     : update/merge du contexte existant active pour discovery.md + skeleton-system.md',
@@ -1126,7 +1126,7 @@ module.exports = {
     dry_run_done: '[dry-run] Analyserait {treeCount} entrees et {keyCount} fichiers cles — aucun appel LLM.',
     local_done: '  Resultat : scan local termine — index, carte des dossiers, scans demandes et .aioson prets.',
     local_missing: '  Manque   : discovery.md + skeleton-system.md n ont pas encore ete generes dans ce scan local.',
-    architecture_note: '  Note     : architecture.md n est pas genere par scan:project ; ce fichier vient ensuite avec @architect.',
+    architecture_note: '  Note     : les artefacts du scan sont des preuves du depot ; ils n ajoutent aucune etape ni document obligatoire.',
     local_paths_title: '\n\x1b[33m  Comment generer discovery maintenant :\x1b[0m',
     local_path_api: '  \x1b[32mChemin A — API automatique\x1b[0m',
     calling_llm: '  Appel de {provider} ({model})...',
@@ -1148,17 +1148,17 @@ module.exports = {
     skeleton_missing: 'Delimiteur skeleton absent de la reponse LLM — skeleton-system.md non ecrit.',
     local_next_steps: '  1. Lancez : aioson scan:project {target} --folder={folders} --with-llm --provider=<provider>',
     local_path_cli: '  \x1b[36mChemin B — Votre AI CLI (sans API dans aioson)\x1b[0m',
-    local_cli_step_analyst: '  2. Dans Codex, Claude Code ou un autre client, lancez @analyst — il peut utiliser scan-index.md + scan-folders.md + scan-<dossier>.md pour ecrire discovery.md',
-    local_cli_step_prompt_codex: '  3. Si le client ne comprend pas @analyst, generez un prompt pret : aioson agent:prompt analyst --tool=codex',
+    local_cli_step_analyst: '  2. Avec un PRD actif, lancez @planner — il utilise les cartes du scan comme preuve pour le plan unique',
+    local_cli_step_prompt_codex: '  3. Si le client ne comprend pas @planner, generez un prompt pret : aioson agent:prompt planner --tool=codex',
     local_cli_step_prompt_claude: '  4. Remplacez --tool=codex par --tool=claude quando necessario si besoin',
     local_cli_step_model_hint: '  5. Si votre client permet de choisir un modele, preferez un modele rapide/moins cher pour cette etape',
-    local_workflow_title: '\n\x1b[33m  Apres discovery :\x1b[0m',
-    local_step_architect: '  3. Lancez @architect — genere architecture.md a partir du discovery consolide',
-    local_step_dev: '  4. Lancez @dev — commencez a coder seulement apres discovery.md + architecture.md',
+    local_workflow_title: '\n\x1b[33m  Apres la carte du depot :\x1b[0m',
+    local_step_architect: '  Ensuite : lancez @planner avec le PRD actif — il ecrit le plan executable unique',
+    local_step_dev: '  Puis : lancez @dev et @qa — les specialistes optionnels repondent a une question concrete',
     next_steps: '\n  Etapes suivantes :',
-    step_analyst: '  1. Ouvrez votre session IA et lancez @analyst — revoit discovery.md + skeleton-system.md et consolide le scope courant',
-    step_architect: '  2. Lancez @architect — genere architecture.md a partir du discovery consolide',
-    step_dev: '  3. Lancez @dev — lit skeleton-system.md d\'abord, puis discovery.md + architecture.md + spec.md'
+    step_analyst: '  1. Avec un PRD actif, lancez @planner — utilisez discovery.md + skeleton-system.md comme preuve pour un plan',
+    step_architect: '  2. Lancez @dev — implementez le plan par le point d entree normal de production',
+    step_dev: '  3. Lancez @qa — effectuez une revue proportionnee et un smoke sur le chemin reel'
   },
   squad_investigate: {
     no_runtime: 'Runtime store introuvable. Lancez aioson runtime:init d\'abord.',

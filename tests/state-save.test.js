@@ -93,15 +93,16 @@ test('state:save: json returns correct fields', async () => {
   assert.equal(result.next_step, 'Write tests');
 });
 
-test('state:save: includes spec in context_package when spec exists', async () => {
+test('state:save: auto-detect includes the canonical Planner plan instead of a legacy spec', async () => {
   const tmpDir = await makeTmpDir();
-  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 3\n---');
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', '---\nstatus: approved\n---');
   const result = await runStateSave({
     args: [tmpDir],
     options: { json: true, feature: 'checkout', next: 'Continue', status: 'in_progress' },
     logger: makeLogger()
   });
-  assert.ok(result.context_package.some((p) => p.includes('spec-checkout.md')));
+  assert.ok(result.context_package.some((p) => p.includes('implementation-plan-checkout.md')));
+  assert.equal(result.context_package.some((p) => p.includes('spec-checkout.md')), false);
 });
 
 test('state:save: updates existing dev-state.md preserving history', async () => {

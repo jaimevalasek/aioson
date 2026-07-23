@@ -229,7 +229,7 @@ Você > @qa
 @qa > test-plan.md e qa-report.md gravados. Feature pronta.
 ```
 
-> **A novidade:** o ciclo *autônomo QA→Dev* (cap 3, `agentic_policy.review_cycle`) deixa o @qa pedir correções pequenas sem você ter que reativar manualmente. Sob autopilot, esse mesmo ciclo pode encadear até `@tester`/`@pentester`/`@validator` e a recomendação de `feature:close` sem parar — veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+> **A novidade:** o ciclo QA→Dev devolve correções pequenas com evidência reproduzível e investigação limitada. Sob autopilot, o padrão é DEV→QA; `@tester`, `@pentester` e `@validator` só entram quando habilitados e explicitamente justificados. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
 
 ---
 
@@ -276,7 +276,7 @@ Daqui a três meses, alguém (você ou outra IA) pode abrir esse projeto e enten
 
 ## E quando eu quiser uma feature nova?
 
-Volte para o passo 4. A lane depende do tamanho da feature: **SMALL** → `@product → @sheldon → @dev → @qa`; **MEDIUM** → `@product → @orchestrator → @dev → @pentester → @qa`. O `@setup` não precisa rodar de novo (já tem o contexto).
+Volte para o passo 4. Toda feature rastreada segue `[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa`; MICRO, SMALL e MEDIUM mudam a profundidade, não a cadeia. O `@setup` não precisa rodar de novo (já tem o contexto).
 
 Se você se perder no meio, lembre:
 

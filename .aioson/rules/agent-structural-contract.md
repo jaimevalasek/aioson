@@ -34,20 +34,20 @@ Every agent that interacts with the user MUST have these sections (order may var
 | `## Hard constraints` | Non-negotiable rules | All agents |
 | Observability block | `agent:done` + `pulse:update` at session end | All agents |
 
-Agents that are part of the SDD workflow additionally MUST have:
+Agents in the canonical feature workflow additionally MUST have:
 
 | Section | Purpose | Required for |
 |---|---|---|
-| Handoff section | Structured next-agent recommendation | briefing, product, sheldon, analyst, architect, pm, orchestrator |
-| `## Feature dossier` | Dossier read/write integration | product, sheldon, analyst, architect, pm, orchestrator |
+| Handoff section | Structured next-agent recommendation | briefing, product, sheldon, planner |
+| `## Feature dossier` | Dossier read/write integration | product, sheldon, planner, dev, qa |
 
 ## 3. Observability command order (session end)
 
 At session end, commands MUST appear in this exact order. Missing steps are acceptable when marked N/A — wrong order is not.
 
 ```
-1. gate:approve     (if this agent owns a gate — analyst=A, architect=B, pm=C, qa=D)
-2. op:capture       (if user confirmed decisions — product, sheldon, pm)
+1. gate:approve     (if this agent owns a gate — planner=C, qa=D)
+2. op:capture       (if user confirmed decisions — product, sheldon, planner)
 3. pulse:update     (ALL agents — automated project-pulse update)
 4. agent:done       (ALL agents — ALWAYS LAST)
 ```
@@ -61,10 +61,11 @@ At session end, commands MUST appear in this exact order. Missing steps are acce
 | @briefing | Briefing draft written | Briefing approved |
 | @product | PRD written | Feature registered in `.aioson/context/features.md` |
 | @sheldon | Sizing decided | Enrichment applied |
+| @planner | Repository path mapped | Vertical plan approved |
 | @analyst | Requirements written | Spec skeleton created |
 | @architect | Architecture decided | Gate B check |
-| @pm | Implementation plan written | Gate C approved |
-| @orchestrator | Lanes initialized | Merge complete |
+| @pm | Named priority question identified | Recommendation returned |
+| @orchestrator | Execution lanes justified | Ownership and merge order resolved |
 | @dev | Slice started | Slice landed |
 | @qa | Review started | Verdict decided |
 
@@ -163,6 +164,6 @@ Rules:
 When an agent file violates this contract:
 
 1. **During @qa Gate D:** flag as a Medium finding with `recommended_owner: dev`.
-2. **During @sheldon enrichment:** flag in `sheldon-enrichment-{slug}.md` improvements list.
+2. **During @sheldon review:** repair the existing PRD or flag the prompt itself; do not create an enrichment artifact.
 3. **During @deyvin pair session:** fix inline if the touched file is already in scope.
 4. **Never block a feature** for structural violations alone — document and fix as follow-up.

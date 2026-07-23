@@ -84,14 +84,12 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 |---|---|---|
 | `project.context.md` | `@setup` | todos os agentes (sempre) |
 | `project-pulse.md` | qualquer agente (ao fechar sessão) | todos os agentes (ao iniciar sessão) |
-| `prd.md` | `@product` (projeto novo) | `@sheldon`, `@orchestrator`, `@dev` |
-| `prd-{slug}.md` | `@product` (feature) | idem |
-| `sheldon-enrichment.md` | `@sheldon` | `@sheldon` (re-entrada) |
-| `requirements-{slug}.md` | `@sheldon` (SMALL) ou `@analyst` via `@orchestrator` (MEDIUM) | `@dev`, `@qa` |
-| `architecture.md` | `@sheldon` (SMALL) ou `@architect` via `@orchestrator` (MEDIUM) | `@dev`, `@qa` |
-| `implementation-plan-{slug}.md` | `@sheldon` (SMALL) ou `@pm` via `@orchestrator` (MEDIUM) | `@dev` |
-| `design-doc.md` | `@ux-ui` via `@orchestrator` (MEDIUM, UI-heavy) ou detour | `@dev` |
-| `tasks.md` | `@pm` via `@orchestrator` (MEDIUM) | `@orchestrator`, `@dev` |
+| `prd-{slug}.md` | `@product`, enriquecido in-place por `@sheldon` quando escolhido | `@planner`, `@dev`, `@qa` |
+| `implementation-plan-{slug}.md` | `@planner` | `@dev`, `@qa` |
+| `requirements-{slug}.md` | especialista, somente quando pedido | memória consultiva |
+| `architecture.md` / ADR | `@architect` quando o projeto/decisão pedir | `@planner`, `@dev` |
+| `design-doc.md` | `@ux-ui` ou `@discovery-design-doc`, quando solicitado | `@planner`, `@dev` |
+| `tasks.md` | `@pm`, quando solicitado | Product/Planner |
 | `features.md` | qualquer agente | todos (status por slug) |
 
 ### Artefatos de execução
@@ -105,24 +103,19 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 | `security-findings-{slug}.json` | `@pentester` | `@dev` (correção), `@qa` (regressão) |
 | `last-handoff.json` | `@validator` | fechamento da feature |
 
-### `parallel/` — lanes do `@orchestrator`
+### Faixas de desenvolvimento do DEV
 
-No MEDIUM, o `@orchestrator` atua como **maestro de spec**: produz o pacote de spec consolidado (via fan-out de sub-agentes) e pode criar esta subpasta quando a implementação tem frentes genuinamente paralelizáveis:
+Quando o usuário ou o plano aprovado exige hosts/modelos diferentes, `agent-execution-{slug}.json` pode declarar faixas do DEV:
 
 ```
-.aioson/context/parallel/
-├── lane-backend.md         ← tarefas sem dependência de UI
-├── lane-ui.md              ← componentes front-end
-├── lane-migration.md       ← schema de banco
-└── harness-contract.json   ← contrato de sucesso (lido por @validator)
+.aioson/context/
+├── agent-execution-{slug}.json
+└── execution-prompts/{slug}/
+    ├── backend.md
+    └── frontend.md
 ```
 
-Cada `lane-*.md` tem:
-- Lista de tarefas com ordem de execução
-- Dependências entre lanes (ex: "lane-ui depende da API definida em lane-backend")
-- Critérios de aceite por lane
-
-O `@dev` pode trabalhar uma lane por sessão. O `@deyvin` retoma a lane que ficou incompleta.
+Cada faixa declara `host`, `model`, `prompt` e `write_paths`. Elas rodam sequencialmente no worktree compartilhado; DEV verifica o diff, integra fronteiras e roda os checks completos. Host/modelo indisponível pausa, salvo fallback explicitamente declarado.
 
 ---
 
@@ -294,32 +287,18 @@ O `aioson pulse:update` atualiza este arquivo via script (sem precisar de LLM). 
 plans/ → prd.md → [dev implementa] → qa-report.md
 ```
 
-### SMALL (lean lane — padrão v1.35.0)
+### MICRO, SMALL e MEDIUM
 
-```
-plans/ → prd.md
-       → @sheldon: sheldon-enrichment.md + requirements-{slug}.md
-                   + architecture.md + implementation-plan-{slug}.md
-                   + harness-contract.json   ← pacote de spec (Gates A/B/C)
-       → @dev: dev-state.md (por fase, com verificação por fase)
-       → @qa: test-plan.md → qa-report.md
+```text
+plans/ ou briefing
+       → @product: prd-{slug}.md
+       → [@sheldon]: enriquece o mesmo PRD
+       → @planner: implementation-plan-{slug}.md
+       → @dev: código + dev-state.md
+       → @qa: qa-report-{slug}.md
 ```
 
-### MEDIUM (maestro lane — v1.35.0)
-
-```
-plans/ → prd.md
-       → @orchestrator fan-out:
-           @analyst  → requirements-{slug}.md
-           @architect → architecture.md
-           @pm        → implementation-plan-{slug}.md
-           @ux-ui     → design-doc-{slug}.md  (quando UI-heavy)
-         consolidação → parallel/harness-contract.json  ← Gates A/B/C
-       → @dev: dev-state.md (por fase) + parallel/lane-*.md
-       → @pentester: security-findings-{slug}.json
-       → @qa: test-plan.md → qa-report.md → test-inventory.md
-       → @validator: last-handoff.json
-```
+A classificação muda a profundidade desses três artefatos canônicos. Pareceres e dossiês são auxiliares; Tester, Pentester e Validator são opt-in.
 
 ---
 

@@ -15,8 +15,7 @@ const {
   analyzeFeatureCompleteness,
   findingsThroughStage
 } = require('./lib/feature-completeness');
-const { evaluateContractIntegrityGate } = require('./harness/contract-integrity-gate');
-const { readDecisionCheckpoint } = require('./lib/decision-checkpoint');
+const { isCanonicalPlannerState } = require('./workflow-profile');
 
 // Contract definitions per agent stage
 const CONTRACTS = {
@@ -37,98 +36,55 @@ const CONTRACTS = {
   },
   sheldon: {
     artifacts: (targetDir, state) => {
-      if (state.mode !== 'feature' || !state.featureSlug) {
-        return ['.aioson/context/sheldon-enrichment.md'];
-      }
-      const slug = state.featureSlug;
-      const base = [`.aioson/context/sheldon-enrichment-${slug}.md`];
-      if (!isLeanSheldonState(state)) return base;
-      return [
-        ...base,
-        `.aioson/context/requirements-${slug}.md`,
-        `.aioson/context/spec-${slug}.md`,
-        `.aioson/context/design-doc-${slug}.md`,
-        `.aioson/context/readiness-${slug}.md`,
-        `.aioson/context/implementation-plan-${slug}.md`
-      ];
+      return state.mode === 'feature' && state.featureSlug
+        ? [`.aioson/context/prd-${state.featureSlug}.md`]
+        : ['.aioson/context/prd.md'];
     },
     gates: [],
-    contextUpdates: []
+    contextUpdates: ['.aioson/context/project-pulse.md']
   },
-  analyst: {
+  planner: {
     artifacts: (targetDir, state) => {
       if (state.mode === 'feature' && state.featureSlug) {
-        return [
-          `.aioson/context/requirements-${state.featureSlug}.md`,
-          `.aioson/context/spec-${state.featureSlug}.md`
-        ];
+        return [`.aioson/context/implementation-plan-${state.featureSlug}.md`];
       }
-      return ['.aioson/context/discovery.md'];
+      return ['.aioson/context/implementation-plan.md'];
     },
-    gates: ['A'], // Gate A must be approved
+    gates: [],
+    contextUpdates: ['.aioson/context/project-pulse.md']
+  },
+  analyst: {
+    artifacts: [],
+    gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   'scope-check': {
-    artifacts: (targetDir, state) => {
-      if (state.mode === 'feature' && state.featureSlug) {
-        return [`.aioson/context/scope-check-${state.featureSlug}.md`];
-      }
-      return ['.aioson/context/scope-check.md'];
-    },
+    artifacts: [],
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   architect: {
-    artifacts: ['.aioson/context/architecture.md'],
-    gates: ['B'],
+    artifacts: [],
+    gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   'discovery-design-doc': {
-    artifacts: (targetDir, state) => {
-      if (state.mode === 'feature' && state.featureSlug) {
-        return [
-          `.aioson/context/design-doc-${state.featureSlug}.md`,
-          `.aioson/context/readiness-${state.featureSlug}.md`
-        ];
-      }
-      return ['.aioson/context/design-doc.md', '.aioson/context/readiness.md'];
-    },
+    artifacts: [],
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   'ux-ui': {
-    artifacts: ['.aioson/context/ui-spec.md'],
-    gates: ['B'],
+    artifacts: [],
+    gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   pm: {
-    artifacts: (targetDir, state) => {
-      // @pm owns implementation-plan only for MEDIUM features (AC-SDLC-16)
-      if (state.mode === 'feature' && state.featureSlug && state.classification === 'MEDIUM') {
-        return [`.aioson/context/implementation-plan-${state.featureSlug}.md`];
-      }
-      return [];
-    },
+    artifacts: [],
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
   orchestrator: {
-    artifacts: (targetDir, state) => {
-      // Maestro lane (MEDIUM, orchestrator → dev): the orchestrator produces the
-      // gated spec package via fan-out, so expect those artifacts. Otherwise it is
-      // the parallel-implementation coordinator and owns the lane workspace.
-      if (state && state.mode === 'feature' && state.featureSlug && isMaestroOrchestratorState(state)) {
-        const slug = state.featureSlug;
-        return [
-          `.aioson/context/requirements-${slug}.md`,
-          `.aioson/context/spec-${slug}.md`,
-          `.aioson/context/design-doc-${slug}.md`,
-          `.aioson/context/readiness-${slug}.md`,
-          `.aioson/context/implementation-plan-${slug}.md`
-        ];
-      }
-      return ['.aioson/context/parallel'];
-    },
+    artifacts: [],
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
@@ -163,27 +119,6 @@ const CONTRACTS = {
     contextUpdates: []
   }
 };
-
-function normalizeAgentName(input) {
-  return String(input || '')
-    .trim()
-    .toLowerCase()
-    .replace(/^@/, '');
-}
-
-function isLeanSheldonState(state) {
-  const sequence = Array.isArray(state?.sequence) ? state.sequence.map(normalizeAgentName) : [];
-  const sheldonIndex = sequence.indexOf('sheldon');
-  return sheldonIndex !== -1 && sequence[sheldonIndex + 1] === 'dev';
-}
-
-// MEDIUM maestro lane: @orchestrator routes straight to @dev (it is the single
-// spec authority that fans out to analyst/architect/pm sub-agents and consolidates).
-function isMaestroOrchestratorState(state) {
-  const sequence = Array.isArray(state?.sequence) ? state.sequence.map(normalizeAgentName) : [];
-  const idx = sequence.indexOf('orchestrator');
-  return idx !== -1 && sequence[idx + 1] === 'dev';
-}
 
 async function readSecurityFindings(findingsPath) {
   try {
@@ -242,42 +177,6 @@ async function resolveArtifacts(contract, targetDir, state) {
   return raw.map((p) => path.join(targetDir, p));
 }
 
-async function validateDiscoveryDesignDocArtifacts(targetDir, state) {
-  const slug = state?.mode === 'feature' && state?.featureSlug ? state.featureSlug : null;
-  const pairs = slug
-    ? [
-        [
-          `.aioson/context/design-doc-${slug}.md`,
-          `.aioson/context/readiness-${slug}.md`
-        ],
-        [
-          '.aioson/context/design-doc.md',
-          '.aioson/context/readiness.md'
-        ]
-      ]
-    : [
-        [
-          '.aioson/context/design-doc.md',
-          '.aioson/context/readiness.md'
-        ]
-      ];
-
-  for (const pair of pairs) {
-    const [designDoc, readiness] = pair;
-    if (
-      await fileExists(path.join(targetDir, designDoc)) &&
-      await fileExists(path.join(targetDir, readiness))
-    ) {
-      return [];
-    }
-  }
-
-  const expected = slug
-    ? `.aioson/context/design-doc-${slug}.md + .aioson/context/readiness-${slug}.md`
-    : '.aioson/context/design-doc.md + .aioson/context/readiness.md';
-  return [`missing artifact: ${expected}`];
-}
-
 function parseFrontmatterValue(markdown, key) {
   const fmMatch = String(markdown || '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!fmMatch) return null;
@@ -305,11 +204,8 @@ async function resolveClassification(targetDir, state) {
   const explicit = isNonEmptyString(state?.classification) ? state.classification.trim().toUpperCase() : null;
   if (explicit) return explicit;
 
-  // When in feature mode, the feature's own classification (in prd-{slug}.md)
-  // takes precedence over the project-level classification. A MICRO feature
-  // inside a MEDIUM project should be treated as MICRO for gate enforcement —
-  // except for Gate D security review, which falls back to the project
-  // baseline (handled in checkGateApproval via SF-project-26).
+  // In feature mode, the feature's own classification controls depth and
+  // budgets. It does not remove the PRD, plan, or delivery verdict.
   const slug = state?.featureSlug;
   if (slug) {
     const prdPath = path.join(targetDir, '.aioson', 'context', `prd-${slug}.md`);
@@ -324,21 +220,31 @@ async function resolveClassification(targetDir, state) {
 }
 
 async function checkGateApproval(targetDir, gateLetter, slug, classification, projectClassification) {
-  // MICRO features are documented as @product → @dev only — they don't pass
-  // through @analyst/@architect and therefore don't produce spec-{slug}.md.
-  // Skip the process gates (A=requirements, B=design, C=plan) for MICRO; the
-  // lightweight workflow is the gate.
-  //
-  // SF-project-26: Gate D (security review) is the project's security
-  // baseline, not a per-feature concern. Skip Gate D only when the PROJECT
-  // itself is MICRO — a MICRO feature inside a MEDIUM project must still pass
-  // Gate D because the security baseline applies project-wide. The LLM-
-  // authored prd-{slug}.md cannot lower the project's security floor.
-  if (classification === 'MICRO' && slug && gateLetter !== 'D') {
-    return { ok: true, reason: 'micro_skips_gate' };
+  // Canonical streamlined workflow: Gate C is the approved implementation
+  // plan and Gate D is QA's delivery verdict. Neither requires spec-{slug}.md.
+  if (slug && gateLetter === 'C') {
+    const planPath = path.join(targetDir, '.aioson', 'context', `implementation-plan-${slug}.md`);
+    const planContent = await readFileSafe(planPath);
+    if (!planContent) return { ok: false, reason: 'implementation_plan_missing' };
+    const status = parseFrontmatterValue(planContent, 'status');
+    return String(status || '').toLowerCase() === 'approved'
+      ? { ok: true }
+      : { ok: false, reason: 'implementation_plan_not_approved' };
   }
-  if (classification === 'MICRO' && slug && gateLetter === 'D' && projectClassification === 'MICRO') {
-    return { ok: true, reason: 'micro_skips_gate' };
+
+  if (slug && gateLetter === 'D') {
+    const reportPath = path.join(targetDir, '.aioson', 'context', `qa-report-${slug}.md`);
+    const report = await readFileSafe(reportPath);
+    if (report) {
+      const verdict = parseFrontmatterValue(report, 'verdict')
+        || parseFrontmatterValue(report, 'status');
+      if (String(verdict || '').toLowerCase() === 'pass'
+        || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(report)) {
+        return { ok: true };
+      }
+      return { ok: false, reason: 'qa_verdict_not_pass' };
+    }
+    // Fall through for legacy features that still store QA sign-off in spec.
   }
 
   const specPath = slug
@@ -427,22 +333,22 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
   if (state.featureSlug) {
     completeness = await analyzeFeatureCompleteness(targetDir, state.featureSlug, {
       classification,
+      force: isCanonicalPlannerState(state) && ['product', 'sheldon', 'planner', 'dev', 'qa'].includes(stageName),
       includeExecution: (stageName === 'dev' || stageName === 'qa') && !options.structuralOnly,
       includeExecutionStructure: (stageName === 'dev' || stageName === 'qa') && options.structuralOnly
     });
     if (completeness.applicable) {
       let completenessStage = {
-        product: 'product',
-        analyst: 'requirements',
-        architect: 'design',
-        pm: 'plan',
+        product: isCanonicalPlannerState(state) ? 'specification' : 'product',
+        planner: 'plan',
         dev: 'execution',
         tester: 'plan',
         pentester: 'plan',
         qa: 'execution'
       }[stageName] || null;
-      if (stageName === 'sheldon') completenessStage = isLeanSheldonState(state) ? 'plan' : 'product';
-      if (stageName === 'orchestrator' && isMaestroOrchestratorState(state)) completenessStage = 'plan';
+      if (stageName === 'sheldon') {
+        completenessStage = 'specification';
+      }
       if (completenessStage) {
         const completenessFindings = findingsThroughStage(completeness, completenessStage);
         missing.push(...completenessFindings.map((item) =>
@@ -453,14 +359,67 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
   }
 
   // 1. Artifacts
-  if (stageName === 'discovery-design-doc') {
-    missing.push(...await validateDiscoveryDesignDocArtifacts(targetDir, state));
-  } else {
-    const artifactPaths = await resolveArtifacts(contract, targetDir, state);
-    for (const p of artifactPaths) {
-      if (!(await fileExists(p))) {
-        missing.push(`missing artifact: ${path.relative(targetDir, p)}`);
-      }
+  const artifactPaths = await resolveArtifacts(contract, targetDir, state);
+  for (const p of artifactPaths) {
+    if (!(await fileExists(p))) {
+      missing.push(`missing artifact: ${path.relative(targetDir, p)}`);
+    }
+  }
+
+  if (stageName === 'sheldon') {
+    const prdPath = path.join(
+      targetDir,
+      '.aioson',
+      'context',
+      state.featureSlug ? `prd-${state.featureSlug}.md` : 'prd.md'
+    );
+    const prd = await readFileSafe(prdPath);
+    const review = prd ? parseFrontmatterValue(prd, 'sheldon_review') : null;
+    if (String(review || '').toLowerCase() !== 'approved') {
+      missing.push('PRD sheldon_review must be approved before planning');
+    }
+  }
+
+  if (stageName === 'product' && isCanonicalPlannerState(state)) {
+    const prdPath = path.join(
+      targetDir,
+      '.aioson',
+      'context',
+      state.featureSlug ? `prd-${state.featureSlug}.md` : 'prd.md'
+    );
+    const prd = await readFileSafe(prdPath);
+    const productScope = prd ? parseFrontmatterValue(prd, 'product_scope') : null;
+    const prdReady = prd ? parseFrontmatterValue(prd, 'prd_ready') : null;
+    if (String(productScope || '').toLowerCase() !== 'approved'
+      || String(prdReady || '').toLowerCase() !== 'approved') {
+      missing.push('PRD product_scope and prd_ready must be approved by Product before planning');
+    }
+  }
+
+  if (stageName === 'planner') {
+    const prdPath = path.join(
+      targetDir,
+      '.aioson',
+      'context',
+      state.featureSlug ? `prd-${state.featureSlug}.md` : 'prd.md'
+    );
+    const prd = await readFileSafe(prdPath);
+    const productScope = prd ? parseFrontmatterValue(prd, 'product_scope') : null;
+    const prdReady = prd ? parseFrontmatterValue(prd, 'prd_ready') : null;
+    if (String(productScope || '').toLowerCase() !== 'approved'
+      || String(prdReady || '').toLowerCase() !== 'approved') {
+      missing.push('PRD product_scope and prd_ready must be approved before development; Sheldon review is optional');
+    }
+    const planPath = path.join(
+      targetDir,
+      '.aioson',
+      'context',
+      state.featureSlug ? `implementation-plan-${state.featureSlug}.md` : 'implementation-plan.md'
+    );
+    const plan = await readFileSafe(planPath);
+    const status = plan ? parseFrontmatterValue(plan, 'status') : null;
+    if (String(status || '').toLowerCase() !== 'approved') {
+      missing.push('implementation plan status must be approved before development');
     }
   }
 
@@ -475,53 +434,6 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
     );
     if (!gateCheck.ok) {
       missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
-    }
-  }
-
-  // Single-spec-authority lanes that route straight to @dev — lean @sheldon (SMALL)
-  // and maestro @orchestrator (MEDIUM) — collapse Gates A/B/C + the plan into one
-  // hop, so re-check them here instead of at the (absent) per-hop stages.
-  const isSingleSpecAuthorityToDev = Boolean(state.featureSlug) && (
-    (stageName === 'sheldon' && isLeanSheldonState(state)) ||
-    (stageName === 'orchestrator' && isMaestroOrchestratorState(state))
-  );
-  if (isSingleSpecAuthorityToDev) {
-    const decisionCheckpoint = await readDecisionCheckpoint(targetDir, state.featureSlug);
-    if (!decisionCheckpoint.exists) {
-      missing.push(`missing decision checkpoint: .aioson/context/features/${state.featureSlug}/decision-checkpoint.json`);
-    } else if (!decisionCheckpoint.ok) {
-      missing.push(`invalid decision checkpoint: ${decisionCheckpoint.errors.join('; ')}`);
-    } else if (decisionCheckpoint.pending.length > 0) {
-      missing.push(`pending product decisions: ${decisionCheckpoint.pending.map((item) => item.id).join(', ')}`);
-    }
-
-    for (const gateLetter of ['A', 'B', 'C']) {
-      const gateCheck = await checkGateApproval(
-        targetDir,
-        gateLetter,
-        state.featureSlug,
-        classification,
-        projectClassification
-      );
-      if (!gateCheck.ok) {
-        missing.push(`gate ${gateLetter} not approved (${gateCheck.reason})`);
-      }
-    }
-
-    const planPath = path.join(targetDir, '.aioson', 'context', `implementation-plan-${state.featureSlug}.md`);
-    const planContent = await readFileSafe(planPath);
-    const planStatus = planContent ? parseFrontmatterValue(planContent, 'status') : null;
-    if (String(planStatus || '').toLowerCase() !== 'approved') {
-      missing.push(`implementation-plan-${state.featureSlug}.md status is ${planStatus || 'missing'} — @${stageName} must approve the collapsed Gate C plan`);
-    }
-
-    const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
-      runChecks: false
-    });
-    if (!integrityGate.ok) {
-      missing.push(...integrityGate.errors.map((err) =>
-        `harness contract integrity failed (${err.code}): ${err.message}`
-      ));
     }
   }
 
@@ -550,12 +462,10 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
       targetDir,
       `.aioson/context/security-findings-${state.featureSlug}.json`
     );
-    const requiresFindingsArtifact = state.mode === 'feature' && classification === 'MEDIUM';
-    if (!(await fileExists(findingsPath))) {
-      if (requiresFindingsArtifact) {
-        missing.push(`missing artifact: ${path.relative(targetDir, findingsPath)} (required for MEDIUM Gate D security audit)`);
-      }
-    } else {
+    // Security review is risk-triggered, not classification-triggered. When a
+    // findings artifact exists it remains authoritative and blocking; its mere
+    // absence does not create paperwork for an unrelated MEDIUM feature.
+    if (await fileExists(findingsPath)) {
       const envelope = await readSecurityFindings(findingsPath);
       if (!envelope || envelope.ok === false) {
         missing.push(
@@ -630,9 +540,8 @@ async function getBlockingRevisions(targetDir, featureSlug) {
  *
  * Public lookup helper used by `runAgentDone` (F2 — workflow-handoff-integrity v1.9.5)
  * to determine which artifact paths an agent is expected to produce. Returns the
- * paths declared by the agent's contract in CONTRACTS, plus accepted fallback
- * candidates for contracts that support legacy artifact names, fully resolved
- * against the workflow state.
+ * paths declared by the agent's contract in CONTRACTS, fully resolved against
+ * the workflow state.
  *
  * @param {string} agent       Agent name (with or without leading `@`).
  * @param {string} targetDir   Project root path (absolute).
@@ -647,14 +556,6 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
   if (!normalizedAgent) return null;
   const contract = CONTRACTS[normalizedAgent];
   if (!contract) return null;
-  if (normalizedAgent === 'discovery-design-doc' && state?.mode === 'feature' && state?.featureSlug) {
-    return [
-      `.aioson/context/design-doc-${state.featureSlug}.md`,
-      `.aioson/context/readiness-${state.featureSlug}.md`,
-      '.aioson/context/design-doc.md',
-      '.aioson/context/readiness.md'
-    ].map((p) => path.join(targetDir, p));
-  }
   return await resolveArtifacts(contract, targetDir, state || {});
 }
 

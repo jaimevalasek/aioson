@@ -22,8 +22,8 @@ Esta é a porta de entrada da documentação em português. Não é um índice a
 ### Quero uma receita pronta para o meu caso
 
 **Trilhas canônicas — como features chegam ao dev:**
-1. **[Feature completa com @sheldon](./3-receitas/feature-completa-com-sheldon.md)** — as duas trilhas: **SMALL lean** `@product → @sheldon → @dev → @qa` e **MEDIUM maestro** `@product → @orchestrator → @dev → @pentester → @qa` (com detours opt-in de `@tester`, `@validator`)
-2. [Da ideia ao PRD via @briefing](./3-receitas/da-ideia-ao-prd-via-briefing.md) — quando a ideia ainda é vaga
+1. **[Feature completa com @sheldon](./3-receitas/feature-completa-com-sheldon.md)** — a rota única `@product → [@sheldon] → @planner → @dev → @qa`
+2. [Da ideia ao PRD via @briefing](./3-receitas/da-ideia-ao-prd-via-briefing.md) — quando a ideia ainda é vaga; `@briefing-refiner` pode revisar antes de `@product`
 3. [Plans externos para @product](./3-receitas/plans-externos-para-product.md) — quando você planejou em ChatGPT/Claude.io e quer trazer
 
 **Por cenário:**
@@ -105,7 +105,7 @@ Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legado
 **Fase C (referência técnica completa)** — concluída · 34 docs em `5-referencia/`, incluindo execução de subagentes, memória do operador e Review Intelligence atualizadas para a versão 1.40.0.
 **Fase D (trilhas de workflow)** — concluída · 3 trilhas canônicas de feature: briefing→PRD, plans externos, e trilha completa com @sheldon.
 
-**Métricas finais:** 85 docs, ~96.000 palavras, 5 trilhas, 16 arquivos legados preservados em [`_arquivo/`](./_arquivo/) com redirects.
+**Métricas finais:** documentação organizada por trilhas, receitas, fichas de agentes e referência técnica, com o conteúdo histórico preservado em [`_arquivo/`](./_arquivo/).
 
 Próximos passos do projeto de docs (fora desta entrega):
 - Replicar a estrutura em `docs/en/` (atualmente legacy)

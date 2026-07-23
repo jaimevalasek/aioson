@@ -21,7 +21,6 @@ const { runMemoryReflectPrepare } = require('./memory-reflect-prepare');
 const { inspectStagedChanges } = require('../lib/git-commit-guard');
 const { readDecisionCheckpoint } = require('../lib/decision-checkpoint');
 const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
-const { runSecurityAudit } = require('./security-audit');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
@@ -39,45 +38,31 @@ const {
   verificationRunsDir,
   relativeFromRoot
 } = require('../verification/path-policy');
+const {
+  FEATURE_WORKFLOW_BY_CLASSIFICATION,
+  copyWorkflowMap
+} = require('../workflow-profile');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
 const EVENTS_RELATIVE_PATH = '.aioson/context/workflow.events.jsonl';
 const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 
-const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = {
-  MICRO: ['product', 'dev', 'qa'],
-  // SMALL defaults to the lean lane: @sheldon is the single spec authority
-  // (requirements + spec + design-doc + readiness + plan + harness-contract in
-  // one pass), replacing analyst/scope-check/architect/discovery-design-doc.
-  // Those agents remain available as opt-in detours (allowDetours: true).
-  SMALL: ['product', 'sheldon', 'dev', 'qa'],
-  // MEDIUM collapses the spec phase into @orchestrator — the maestro that fans out
-  // to @analyst + @architect + @pm (+ @ux-ui when UI-heavy) as sub-agents, then
-  // consolidates/verifies/redoes their output into the gated spec package
-  // (requirements + spec[A/B/C approved] + design-doc + readiness + implementation-
-  // plan + harness-contract) and hands to @dev. SMALL = @sheldon solo (vertical),
-  // MEDIUM = @orchestrator fan-out (horizontal). The scope drift check is enforced at
-  // the dev/qa done gate (finalizeCurrentStage). QA is the post-dev hub and invokes
-  // Tester/Pentester only when enabled in agent-execution-{slug}.json and triggered;
-  // QA completes its workflow stage only on the final pass. Other spec agents remain
-  // opt-in detours.
-  MEDIUM: ['product', 'orchestrator', 'dev', 'qa']
-};
+const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = copyWorkflowMap(
+  FEATURE_WORKFLOW_BY_CLASSIFICATION
+);
 
 // Stages eligible for autopilot handoff — the FULL feature chain (see
 // .aioson/docs/autopilot-handoff.md). Activation = auto_handoff: true in
 // project.context.md OR the seeded scheme (resolveAutopilotSignal). Two segments:
-//   1. spec → dev chain: @product seeds the agentic scheme and invokes the spec
-//      authority (@sheldon lean / @orchestrator maestro), which crosses into
-//      @dev via the dev-state.md cold-start packet once its own gates/decisions
-//      are settled. Detour agents (analyst/architect/pm/...) chain only when an
-//      opt-in detour adds them to the active sequence.
+//   1. PRD → plan → dev chain: @product writes the implementation-ready PRD
+//      and @planner turns it into executable vertical stages. @sheldon and all
+//      other specialists are explicit/evidence-triggered detours only.
 //   2. post-dev review cycle: @dev → initial @qa → enabled @tester/@pentester
 //      (when their @qa triggers fire) → final @qa → enabled @validator → STOPS
 //      before feature:close (human gate).
 const AUTOPILOT_HANDOFF_STAGES = new Set([
-  'product', 'sheldon', 'orchestrator',
+  'product', 'sheldon', 'planner', 'orchestrator',
   'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
   'dev', 'qa', 'tester', 'pentester', 'validator'
 ]);
@@ -95,29 +80,13 @@ function normalizeClassification(value, fallback = 'MICRO') {
   return fallback;
 }
 
-// MEDIUM maestro lane: @orchestrator routes straight to @dev (it is the single
-// spec authority that fans out to analyst/architect/pm sub-agents and consolidates).
-function isMaestroOrchestratorState(state) {
-  const sequence = Array.isArray(state && state.sequence) ? state.sequence.map(normalizeAgentName) : [];
-  const idx = sequence.indexOf('orchestrator');
-  return idx !== -1 && sequence[idx + 1] === 'dev';
-}
-
-// Lean lane (SMALL, sheldon → dev): @sheldon is the single spec authority.
-// Mirrors isLeanSheldonState in handoff-contract.js.
-function isLeanSheldonState(state) {
-  const sequence = Array.isArray(state && state.sequence) ? state.sequence.map(normalizeAgentName) : [];
-  const idx = sequence.indexOf('sheldon');
-  return idx !== -1 && sequence[idx + 1] === 'dev';
-}
-
 function buildDefaultWorkflowConfig() {
   return {
     version: 1,
     project: {
-      MICRO: ['setup', 'dev'],
-      SMALL: ['setup', 'product', 'sheldon', 'dev', 'qa'],
-      MEDIUM: ['setup', 'product', 'orchestrator', 'dev', 'qa']
+      MICRO: ['setup', 'product', 'planner', 'dev', 'qa'],
+      SMALL: ['setup', 'product', 'planner', 'dev', 'qa'],
+      MEDIUM: ['setup', 'product', 'planner', 'dev', 'qa']
     },
     feature: DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION,
     rules: {
@@ -130,7 +99,6 @@ function buildDefaultWorkflowConfig() {
 function parseFeaturesMarkdown(markdown) {
   return String(markdown || '')
     .split(/\r?\n/)
-    .slice(3)
     .map((line) => line.trim())
     .filter(Boolean)
     .filter((line) => line.startsWith('|'))
@@ -167,10 +135,9 @@ function resolveVerificationPolicy(options = {}, state = {}) {
     options.verification_policy ||
     options.policy;
   if (explicit) return normalizePolicy(explicit) || 'standard';
-  // No explicit policy: MEDIUM features default to strict so the auto-injected
-  // scope-check verification briefing matches the strict `--check-report` the
-  // @dev / @scope-check prompts run. Smaller tiers stay advisory (standard).
-  return String(state.classification || '').toUpperCase() === 'MEDIUM' ? 'strict' : 'standard';
+  // Classification controls the expected depth of an explicit plan, not which
+  // review tools run. Strict verification must be requested or risk-triggered.
+  return 'standard';
 }
 
 function chooseActiveFeature(features, preferredSlug = null) {
@@ -329,6 +296,12 @@ async function validateStageArtifacts(targetDir, state, stage) {
     }
     return false;
   };
+  const hasApprovedFrontmatter = async (filePath, field = 'status') => {
+    const content = await fs.readFile(filePath, 'utf8').catch(() => '');
+    if (!content) return false;
+    const value = parseFrontmatterValue(content, field);
+    return String(value || '').trim().toLowerCase() === 'approved';
+  };
 
   if (stage === 'setup') {
     const context = await validateProjectContextFile(targetDir);
@@ -379,53 +352,28 @@ async function validateStageArtifacts(targetDir, state, stage) {
   }
 
   if (stage === 'pm') {
-    // Feature mode: @pm's canonical artifact is the implementation plan
-    // (Gate C input). Project mode has no single canonical pm artifact —
-    // the handoff contract covers feature MEDIUM (AC-SDLC-16).
-    if (state.mode === 'feature' && slug) {
-      return await exists(path.join(base, `implementation-plan-${slug}.md`));
-    }
+    // PM is a bounded advisory detour. It owns no canonical artifact.
     return true;
   }
 
+  if (stage === 'planner') {
+    const planPath = slug
+      ? path.join(base, `implementation-plan-${slug}.md`)
+      : path.join(base, 'implementation-plan.md');
+    return (await exists(planPath)) && (await hasApprovedFrontmatter(planPath));
+  }
+
   if (stage === 'sheldon') {
-    // Lean lane (SMALL, sheldon → dev): @sheldon is the single spec authority —
-    // "done" once the collapsed spec package exists (mirrors the orchestrator
-    // maestro branch below; the handoff contract re-checks Gates A/B/C). Without
-    // this branch nothing ever marks the sheldon stage resolved, and a later
-    // `--complete=dev` computes `next: sheldon` — the state machine walking
-    // BACKWARDS into the spec agent after implementation.
-    if (state.mode === 'feature' && slug && isLeanSheldonState(state)) {
-      const designDoc = [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')];
-      const readiness = [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')];
-      return (await exists(path.join(base, `sheldon-enrichment-${slug}.md`)))
-        && (await exists(path.join(base, `requirements-${slug}.md`)))
-        && (await exists(path.join(base, `spec-${slug}.md`)))
-        && (await exists(path.join(base, `implementation-plan-${slug}.md`)))
-        && (await anyExists(designDoc))
-        && (await anyExists(readiness));
-    }
-    if (state.mode === 'feature' && slug) {
-      return await exists(path.join(base, `sheldon-enrichment-${slug}.md`));
-    }
-    return await exists(path.join(base, 'sheldon-enrichment.md'));
+    // Sheldon enriches the PRD in place. The marker proves that the optional
+    // detour ran; no enrichment/spec package is created.
+    const prdPath = slug ? path.join(base, `prd-${slug}.md`) : path.join(base, 'prd.md');
+    return (await exists(prdPath)) && (await hasApprovedFrontmatter(prdPath, 'sheldon_review'));
   }
 
   if (stage === 'orchestrator') {
-    // Maestro lane (MEDIUM, orchestrator → dev): the orchestrator is the single
-    // spec authority — "done" once the gated spec package exists (mirrors how the
-    // per-hop stages were inferred). Otherwise it is the parallel-impl coordinator
-    // and owns the lane workspace.
-    if (state.mode === 'feature' && slug && isMaestroOrchestratorState(state)) {
-      const designDoc = [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')];
-      const readiness = [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')];
-      return (await exists(path.join(base, `requirements-${slug}.md`)))
-        && (await exists(path.join(base, `spec-${slug}.md`)))
-        && (await exists(path.join(base, `implementation-plan-${slug}.md`)))
-        && (await anyExists(designDoc))
-        && (await anyExists(readiness));
-    }
-    return await exists(path.join(base, 'parallel'));
+    // Orchestrator is an optional coordination consultation with no canonical
+    // document of its own.
+    return true;
   }
 
   return true;
@@ -554,10 +502,9 @@ function isInferableStage(stage) {
   // could never infer scope-check as completed during stale-state recovery.
   // pm is inferable from implementation-plan-{slug}.md for the same reason:
   // it sits before scope-check in the MEDIUM feature sequence.
-  // sheldon (lean lane) and orchestrator (maestro lane) are the single spec
-  // authorities — both inferable from their collapsed spec package so stale-state
-  // recovery and mid-lane seeding never re-activate a finished spec stage.
-  return ['setup', 'product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'sheldon', 'orchestrator'].includes(
+  // Sheldon and Planner are inferable from the in-place PRD review marker and
+  // approved implementation plan. Legacy spec authorities remain inferable.
+  return ['setup', 'product', 'planner', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'sheldon', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }
@@ -570,29 +517,6 @@ function isSecurityGateBlocked(contractCheck, state, stageName) {
     item.includes('security:') ||
     item.includes(`security-findings-${state.featureSlug}.json`)
   );
-}
-
-function buildQaSecurityAuditBriefing(result, targetDir) {
-  if (!result) return '';
-
-  if (result.ok === false && result.reason) {
-    return [
-      '## Secure by Default audit',
-      `- Auto-run failed before QA review: ${result.reason}.`,
-      '- Gate D will remain blocked until a valid `security-findings-{slug}.json` artifact exists.',
-      '- If CLI is unavailable in your client, use the fallback checklist and record the limitation explicitly in the QA report and `project-pulse.md`.'
-    ].join('\n');
-  }
-
-  return [
-    '## Secure by Default audit',
-    `- Auto-ran \`security:audit\` for feature \`${result.slug}\` at QA activation.`,
-    `- Exit code: ${result.exitCode}. Findings: ${result.findingsCount}.`,
-    `- Summary: critical=${result.summary.critical}, high=${result.summary.high}, medium=${result.summary.medium}, low=${result.summary.low}, inconclusive=${result.summary.inconclusive}.`,
-    `- Artifact: \`${path.relative(targetDir, result.artifactPath)}\`.`,
-    '- If the audit or manual heuristics indicate auth, money, or ownership risk, invoke `@pentester` with `--mode=app_target --feature=<slug> --scope=<target>` before final Gate D sign-off.',
-    '- If CLI is unavailable in your client, use the fallback checklist and record the limitation explicitly in the QA report and `project-pulse.md`.'
-  ].join('\n');
 }
 
 async function inferCompletedStages(targetDir, draftState) {
@@ -852,6 +776,63 @@ function isInactiveCompletedStage(state, stageName) {
     && normalizedStage !== activeDetour;
 }
 
+/**
+ * Keep a lightweight context cache for every feature classification. The
+ * dossier is intelligence infrastructure, not a canonical artifact or gate:
+ * initialization is best-effort and can never block stage activation.
+ */
+async function ensureFeatureDossier(targetDir, state) {
+  if (state.mode !== 'feature' || !state.featureSlug) return;
+
+  const classification = normalizeClassification(state.classification, 'MICRO');
+  const contextDir = path.join(targetDir, '.aioson', 'context');
+  const dossierFile = path.join(contextDir, 'features', state.featureSlug, 'dossier.md');
+  if (await exists(dossierFile)) return;
+
+  let mode = null;
+  try {
+    await dossierBootstrap.initFromExisting({
+      slug: state.featureSlug,
+      contextDir,
+      classification,
+      targetDir
+    });
+    mode = 'from-existing';
+  } catch (err) {
+    if (!err || err.code !== 'EBOOTSTRAPEMPTY') return;
+    try {
+      await dossierStore.init({
+        slug: state.featureSlug,
+        contextDir,
+        classification,
+        whyText: '(lightweight workflow context cache)',
+        whatText: '(populated as evidence becomes available)'
+      });
+      mode = 'minimal-fallback';
+    } catch {
+      return;
+    }
+  }
+
+  if (!mode) return;
+  try {
+    await emitDossierEvent(targetDir, {
+      agent: 'workflow-next',
+      type: 'dossier_auto_initialized',
+      summary: `${state.featureSlug} ${mode}`,
+      meta: {
+        feature_slug: state.featureSlug,
+        classification,
+        trigger_source: 'workflow_next_context_cache',
+        mode,
+        blocking: false
+      }
+    });
+  } catch {
+    // Context-cache telemetry is deliberately non-blocking.
+  }
+}
+
 async function finalizeCurrentStage(targetDir, config, state, stageName) {
   const normalizedStage = normalizeAgentName(stageName || state.current || state.next);
   if (!normalizedStage) {
@@ -901,13 +882,25 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
         throw new Error(errMsg);
       }
 
-      const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
-        runChecks: true
-      });
-      if (!integrityGate.ok) {
-        const errMsg = formatContractIntegrityGateError(integrityGate, normalizedStage);
-        await logError(targetDir, normalizedStage, errMsg, 'harness-contract');
-        throw new Error(errMsg);
+      const harnessContractPath = path.join(
+        targetDir,
+        '.aioson',
+        'plans',
+        state.featureSlug,
+        'harness-contract.json'
+      );
+      // Harnesses are optional specialist evidence. If a feature deliberately
+      // declares one, keep enforcing it; never require a harness merely because
+      // the feature is SMALL/MEDIUM or has a prototype.
+      if (await exists(harnessContractPath)) {
+        const integrityGate = await evaluateContractIntegrityGate(targetDir, state.featureSlug, {
+          runChecks: true
+        });
+        if (!integrityGate.ok) {
+          const errMsg = formatContractIntegrityGateError(integrityGate, normalizedStage);
+          await logError(targetDir, normalizedStage, errMsg, 'harness-contract');
+          throw new Error(errMsg);
+        }
       }
 
       // ── Scope drift gate (absorbs @scope-check's deterministic spec:analyze) ──
@@ -917,7 +910,15 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
       // Non-strict spec:analyze only raises error-severity findings for those
       // genuine problems (never for merely-absent artifacts), so this never
       // false-blocks an artifact-light feature. Defensive: never crashes the run.
-      try {
+      const legacyScopeArtifacts = [
+        path.join(targetDir, '.aioson', 'context', `spec-${state.featureSlug}.md`),
+        path.join(targetDir, '.aioson', 'context', `design-doc-${state.featureSlug}.md`),
+        path.join(targetDir, '.aioson', 'context', `readiness-${state.featureSlug}.md`)
+      ];
+      if (await Promise.any(legacyScopeArtifacts.map(async (filePath) => {
+        if (await exists(filePath)) return true;
+        throw new Error('missing');
+      })).catch(() => false)) try {
         const drift = await runSpecAnalyze({
           args: [targetDir],
           options: { feature: state.featureSlug },
@@ -1145,65 +1146,6 @@ function applySkip(config, state, target) {
     current: null,
     next: normalizedTarget
   });
-}
-
-async function ensureFeatureDossier(targetDir, state) {
-  if (state.mode !== 'feature' || !state.featureSlug) return;
-  const classification = String(state.classification || '').toUpperCase();
-  if (classification !== 'SMALL' && classification !== 'MEDIUM') return;
-
-  const ctxDir = path.join(targetDir, '.aioson', 'context');
-  const dossierFile = path.join(ctxDir, 'features', state.featureSlug, 'dossier.md');
-  try {
-    await fs.access(dossierFile);
-    return;
-  } catch {
-    // proceed to create
-  }
-
-  let mode = null;
-  try {
-    await dossierBootstrap.initFromExisting({
-      slug: state.featureSlug,
-      contextDir: ctxDir,
-      classification,
-      targetDir
-    });
-    mode = 'from-existing';
-  } catch (err) {
-    if (err && err.code === 'EBOOTSTRAPEMPTY') {
-      try {
-        await dossierStore.init({
-          slug: state.featureSlug,
-          contextDir: ctxDir,
-          classification,
-          whyText: '(auto-init by workflow:next; no source artifacts yet)',
-          whatText: '(auto-init by workflow:next; no source artifacts yet)'
-        });
-        mode = 'minimal-fallback';
-      } catch {
-        return;
-      }
-    } else if (err && err.code === 'EDOSSIEREXISTS') {
-      return;
-    } else {
-      return;
-    }
-  }
-
-  if (mode) {
-    await emitDossierEvent(targetDir, {
-      agent: 'workflow-next',
-      type: 'dossier_auto_initialized',
-      summary: `${state.featureSlug} ${mode}`,
-      meta: {
-        feature_slug: state.featureSlug,
-        classification,
-        trigger_source: 'workflow_next_pre_stage',
-        mode
-      }
-    });
-  }
 }
 
 async function readTextIfExists(filePath) {
@@ -1468,8 +1410,8 @@ async function buildImplementationVerificationBriefing(targetDir, state, scopeCh
     lines.push('Report status: missing');
     if (state.classification === 'MICRO') {
       lines.push('MICRO: missing report is not a workflow blocker by default; record residual risk only when the dev handoff relied on verification.');
-    } else if (state.classification === 'MEDIUM' && policy === 'strict') {
-      lines.push('Strict MEDIUM guidance: do not issue final clean scope approval until @dev produces a valid report or documents an explicit N/A rationale.');
+    } else if (policy === 'strict') {
+      lines.push('Strict policy guidance: do not issue final clean scope approval until @dev produces a valid report or documents an explicit N/A rationale.');
     } else {
       lines.push('Guidance: absence is advisory unless the feature policy or dev handoff made verification strict.');
     }
@@ -1563,9 +1505,6 @@ async function activateStage(
     };
   }
 
-  // Pre-stage hook: ensure feature dossier exists for SMALL/MEDIUM features.
-  // Silent (no logging); idempotent (no-op if dossier already exists).
-  // Defense-in-depth alongside the @product prompt instruction.
   await ensureFeatureDossier(targetDir, state);
 
   // ── Committer Safety Gate ───────────────────────────────────────────────
@@ -1588,41 +1527,12 @@ async function activateStage(
 
   // ── Test Briefing Injection for qa/tester ───────────────────────────────
   let testBriefing = '';
-  let securityAuditBriefing = '';
   if (stageName === 'qa' || stageName === 'tester') {
     try {
       testBriefing = await buildTestBriefing(targetDir);
     } catch {
       // Non-fatal: if briefing generation fails, proceed without it
       testBriefing = '';
-    }
-  }
-
-  if (
-    stageName === 'qa' &&
-    state.mode === 'feature' &&
-    state.classification === 'MEDIUM' &&
-    state.featureSlug
-  ) {
-    try {
-      const auditResult = await runSecurityAudit({
-        args: [targetDir],
-        options: {
-          slug: state.featureSlug,
-          json: true,
-          runtimeAgentName: 'qa',
-          runtimeSource: 'workflow',
-          runtimeState: state,
-          runtimeWorkflowStage: 'qa'
-        },
-        logger: { log() {}, error() {}, warn() {} }
-      });
-      securityAuditBriefing = buildQaSecurityAuditBriefing(auditResult, targetDir);
-    } catch {
-      securityAuditBriefing = buildQaSecurityAuditBriefing({
-        ok: false,
-        reason: 'audit_runtime_failure'
-      }, targetDir);
     }
   }
 
@@ -1690,10 +1600,6 @@ async function activateStage(
 
   if (testBriefing) {
     prompt += '\n\n' + testBriefing;
-  }
-
-  if (securityAuditBriefing) {
-    prompt += '\n\n' + securityAuditBriefing;
   }
 
   if (pathGuardBlock) {

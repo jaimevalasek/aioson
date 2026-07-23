@@ -1,78 +1,19 @@
 {
   "agent_id": "pm",
-  "version": "1.0",
+  "version": "2.0",
   "display_name": "PM",
-  "capabilities": [
-    {
-      "id": "plan_delivery",
-      "category": "orchestrate",
-      "description": "Refine PRD delivery sequencing and acceptance criteria for the approved scope.",
-      "inputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/requirements-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/spec-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/architecture.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/design-doc-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/readiness-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/ui-spec.md",
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd.md"
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd-{slug}.md"
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/implementation-plan-{slug}.md"
-        }
-      ]
-    }
-  ],
-  "autonomy_modes": [
-    "guarded"
-  ],
+  "capabilities": [{
+    "id": "advise_prioritization",
+    "category": "analyze",
+    "description": "Resolve a named prioritization, dependency, sequencing, or rollout question without owning the canonical plan.",
+    "inputs": [
+      { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": false },
+      { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false }
+    ],
+    "outputs": []
+  }],
+  "autonomy_modes": ["guarded"],
   "default_mode": "guarded",
-  "supported_tools": [
-    "codex",
-    "claude",
-    "opencode"
-  ],
+  "supported_tools": ["codex", "claude", "opencode"],
   "risk_profile": "low"
 }

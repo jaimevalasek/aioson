@@ -62,9 +62,11 @@ Detecta a classificação da feature (MICRO / SMALL / MEDIUM) automaticamente a 
 | Integrações externas | nenhuma | 1 | 2+ |
 | Regras de negócio | simples | moderadas | complexas |
 
-- **0–1:** MICRO — `@product → @dev → @qa`, sem fase de spec formal
-- **2–3:** SMALL (lean) — `@product → @sheldon → @dev → @qa`
-- **4–6:** MEDIUM (maestro) — `@product → @orchestrator → @dev → @pentester → @qa`
+- **0–1:** MICRO — mesma rota, profundidade mínima
+- **2–3:** SMALL — mesma rota, profundidade padrão
+- **4–6:** MEDIUM — mesma rota, mais detalhe nos riscos e integrações
+
+Rota: `[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa`.
 
 **Flags:**
 
@@ -395,9 +397,9 @@ Monta e executa o plano de agentes para uma feature com base na classificação.
 
 | Tier | Passos |
 |---|---|
-| MICRO | `@product → @dev → @qa` |
-| SMALL | `@product → @sheldon → @dev → @qa` |
-| MEDIUM | `@product → @orchestrator → @dev → @pentester → @qa` |
+| MICRO | rota canônica, profundidade mínima |
+| SMALL | rota canônica, profundidade padrão |
+| MEDIUM | rota canônica, profundidade ampliada |
 
 **Flags:**
 

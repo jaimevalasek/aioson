@@ -113,6 +113,8 @@ const SYSTEM_BUILD_ALLOWED_EXTS = new Set([
   '.prisma',
 ]);
 
+const RUNTIME_SERVER_SOURCE_EXTS = new Set(['.ts', '.tsx']);
+
 // Dirs/files to skip when collecting sources
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.turbo', '.next',
@@ -302,8 +304,13 @@ async function collectSystemFiles(dir, { buildMode = false } = {}) {
     const ext = entryName.includes('.')
       ? `.${entryName.split('.').pop().toLowerCase()}`
       : '';
+    const isRuntimeServerSource =
+      buildMode &&
+      relPath.startsWith('server/') &&
+      RUNTIME_SERVER_SOURCE_EXTS.has(ext);
     const extAllowed =
       allowedExts.has(ext) ||
+      isRuntimeServerSource ||
       (forceInclude && AIOSON_RUNTIME_EXTS.has(ext)) ||
       RUNTIME_CONFIG_RE.test(entryName); // vite.config.* viaja mesmo no --build
     if (!extAllowed && ext !== '') return;
@@ -761,4 +768,4 @@ async function runSystemInstall({ args, options, logger, t }) {
   return { ok: true, slug, path: pkgDir, manifest: response.manifest };
 }
 
-module.exports = { runSystemPackage, runSystemPublish, runSystemList, runSystemInstall };
+module.exports = { collectSystemFiles, runSystemPackage, runSystemPublish, runSystemList, runSystemInstall };

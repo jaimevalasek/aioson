@@ -270,7 +270,7 @@ Isso cria um histórico auditável de todas as features — útil para onboardin
 - Projeto MICRO com uma única feature — o `project.context.md` e o `dev-state.md` já bastam.
 - Exploração rápida de código — use `@deyvin` direto sem inicializar dossier.
 
-Para projetos SMALL e MEDIUM, o dossier é altamente recomendado. Projetos MEDIUM com `@orchestrator` usam dossier por padrão.
+Para features rastreadas, o dossiê é memória auxiliar recomendada em qualquer classificação. Ele não adiciona estágios nem substitui PRD, plano ou relatório QA.
 
 ---
 

@@ -17,16 +17,17 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 @product      ← gera o PRD base vivo e roteia o fluxo
 @deyvin       ← companheiro tecnico para continuidade e pequenas implementacoes
 @discovery-design-doc ← quando precisa clarear escopo e gerar design doc vivo
-@analyst      ← projetos SMALL e MEDIUM
+@analyst      ← consultoria de domínio sob pedido
 @scope-check  ← valida alinhamento antes de codar ou depois de fix relevante
-@architect    ← projetos SMALL e MEDIUM
-@ux-ui        ← UI/UX quando há interfaces (SMALL e MEDIUM)
-@pm           ← apenas MEDIUM
-@orchestrator ← apenas MEDIUM
-@pentester    ← revisao adversarial e seguranca antes do fechamento (MEDIUM)
+@architect    ← consultoria técnica sob pedido
+@ux-ui        ← UI/UX sob pedido
+@pm           ← consultoria de backlog sob pedido
+@orchestrator ← coordenação sob pedido
+@pentester    ← revisão adversarial opt-in
+@planner      ← cria o único plano de implementação
 @dev          ← sempre o último antes do QA
-@qa           ← projetos SMALL e MEDIUM
-@tester       ← engenharia de testes e cobertura sistematica
+@qa           ← revisão final proporcional
+@tester       ← engenharia de testes opt-in
 @squad        ← cria squads especializados no projeto
 @genome       ← cria genomes de domínio reutilizáveis
 
@@ -59,7 +60,7 @@ Quando o projeto ja existe e voce roda `scan:project`, o handoff correto agora e
 scan:project -> @analyst -> @scope-check -> @dev (ou @architect quando o full-merged opt-in do SMALL estiver ativo)
 ```
 
-> Desde a lane lean (v1.35.0), `@analyst`/`@architect` nao sao mais hops obrigatorios do fluxo padrao apos o scan. A classificacao decide a lane: SMALL segue `@sheldon` como autoridade unica de spec (`@product -> @sheldon -> @dev`), MEDIUM segue o maestro `@orchestrator` (que dispara `@analyst`/`@architect`/`@pm` como sub-agentes do fan-out). Um `@analyst` isolado logo apos o scan continua valido como detour opt-in para mapear o dominio existente antes de abrir a primeira feature.
+> Fluxo atual: `[@briefing -> @briefing-refiner] -> @product -> [@sheldon] -> @planner -> @dev -> @qa`. MICRO, SMALL e MEDIUM mudam profundidade, não a cadeia. `@analyst`, `@architect`, `@pm`, `@orchestrator` e outros especialistas entram somente sob pedido explícito.
 
 Regras do fluxo:
 - os artefatos locais do scan (`scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`) servem como mapas brutos do codigo
@@ -401,7 +402,7 @@ tests/
 
 ## @orchestrator
 
-**Quando usar:** Sempre útil para gerenciar sessões de trabalho, obrigatório em projetos MEDIUM para paralelismo.
+**Quando usar:** sob pedido explícito para coordenar sessões ou múltiplos especialistas; não é obrigatório em MEDIUM.
 
 **O que faz:**
 - Gerencia o **protocolo de sessão** (início, durante, fim) — define objetivo, acompanha progresso, atualiza spec.md
@@ -974,19 +975,11 @@ Extraia o design de https://exemplo.com como uma skill
 ```
 Duração típica: minutos a horas. Sem análise, sem arquitetura formal.
 
-### SMALL — lean lane (padrão v1.35.0)
+### MICRO, SMALL e MEDIUM — mesma rota
 ```
-@setup → @product → @sheldon → @dev → @qa → [@tester]
+@setup → [@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa
 ```
-Duração típica: horas a dias. `@sheldon` é a autoridade única de spec: produz requirements + decisões técnicas + plano faseado + harness-contract (Gates A/B/C) em uma passada. `@analyst`, `@architect`, `@scope-check` são detours opt-in.
-
-### MEDIUM — maestro lane (v1.35.0)
-```
-@setup → @product → [@sheldon] → @orchestrator → @dev → @pentester → @qa → [@tester]
-```
-Duração típica: dias a semanas. `@orchestrator` é o maestro de spec: faz fan-out para `@analyst` + `@architect` + `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos. `@pentester` é inline (entre `@dev` e `@qa`).
-
-> `[@sheldon]` — opcional no MEDIUM como pré-etapa antes do `@orchestrator` para endurecer o PRD.
+A classificação muda detalhe, orçamento e cobertura de risco. Sheldon é enriquecimento opcional do mesmo PRD. Tester, Pentester e Validator são opt-in e nunca entram apenas pela classificação.
 > `[@tester]` — opcional, recomendado quando a cobertura de testes for insuficiente após `@dev`.
 
 ---

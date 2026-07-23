@@ -5,16 +5,15 @@ const path = require('node:path');
 
 const { scanArtifacts, detectClassification } = require('../preflight-engine');
 const { auditAcceptanceCriteriaTests } = require('../lib/ac-test-audit');
-const { runSpecAnalyze } = require('./spec-analyze');
+const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
 
 function roundScore(value) {
   return Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
 }
 
 function artifactScore(artifacts, classification) {
-  const required = ['project_context', 'prd', 'requirements', 'spec'];
-  if (classification !== 'MICRO') required.push('architecture', 'design_doc', 'readiness');
-  if (classification === 'MEDIUM') required.push('implementation_plan');
+  const required = ['project_context', 'prd'];
+  required.push('implementation_plan');
 
   const present = required.filter((key) => artifacts[key] && artifacts[key].exists);
   return {
@@ -45,12 +44,12 @@ function renderMarkdown(report) {
     `- Implementation proxy: ${report.scores.implementation}`,
     `- Test proof: ${report.scores.tests}`,
     '',
-    '> Deterministic process-hygiene baseline (artifact chain + spec consistency + AC→test citation). It does not measure runtime correctness, token cost, or scope adherence.',
+    '> Deterministic process-hygiene baseline (PRD + plan consistency + AC→test citation). It does not replace production-path QA.',
     '',
     '## Evidence',
     '',
     `- Required artifacts present: ${report.artifacts.present.length}/${report.artifacts.required.length}`,
-    `- Spec analyze: ${report.spec_analyze.summary.errors} error(s), ${report.spec_analyze.summary.warnings} warning(s), ${report.spec_analyze.summary.info} info`,
+    `- PRD/plan completeness: ${report.spec_analyze.summary.errors} error(s)`,
     `- AC test audit: ${report.ac_test_audit.summary.covered}/${report.ac_test_audit.summary.acs_total} covered`,
     ''
   ];
@@ -77,13 +76,18 @@ async function runSddBenchmark({ args, options = {}, logger }) {
 
   const artifacts = await scanArtifacts(targetDir, slug);
   const classification = await detectClassification(targetDir, slug) || 'unknown';
-  const specLogger = { log: () => {}, error: () => {} };
-  const specAnalyze = await runSpecAnalyze({
-    args: [targetDir],
-    options: { feature: slug, strict: Boolean(options.strict) },
-    logger: specLogger
+  const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
+    artifacts,
+    classification,
+    force: Boolean(options.strict)
   });
-  const completenessApplies = Boolean(specAnalyze.feature_completeness?.applicable);
+  const specAnalyze = {
+    ok: completeness.ok,
+    summary: { errors: completeness.findings.length, warnings: 0, info: 0 },
+    findings: completeness.findings,
+    feature_completeness: completeness
+  };
+  const completenessApplies = completeness.applicable;
   const acAudit = await auditAcceptanceCriteriaTests(targetDir, slug, {
     requireCriteria: completenessApplies || Boolean(options.strict),
     requireAssertions: completenessApplies || Boolean(options.strict)
@@ -130,7 +134,7 @@ async function runSddBenchmark({ args, options = {}, logger }) {
   logger.log(`Implementation proxy: ${implementation}`);
   logger.log(`Test proof: ${tests}`);
   logger.log(`Report: .aioson/context/retro/sdd-benchmark-${slug}.md`);
-  logger.log('Note: deterministic process-hygiene baseline (artifact chain + spec consistency + AC→test citation) — not a measure of runtime correctness.');
+  logger.log('Note: deterministic process-hygiene baseline (PRD + plan + AC→test citation) — production-path correctness still belongs to QA.');
   logger.log('');
   return report;
 }

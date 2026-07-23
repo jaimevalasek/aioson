@@ -1,132 +1,68 @@
-# @product — Defina o que vai ser construído e por quê
+# @product — Dono do PRD
 
-> **Para quem é:** quem está começando uma feature ou um projeto e precisa transformar uma ideia em escopo concreto.
-> **Tempo de leitura:** 4 min.
-> **O que você vai sair sabendo:**
-> - Quando e como invocar `@product`
-> - O que ele produz e onde fica
-
----
+> **Para quem é:** quem já decidiu construir uma feature e precisa transformar intenção em escopo aprovado e critérios verificáveis.
 
 ## Para que serve
 
-Quando você vai a um dev e diz "preciso de um app de agendamento", ele vai te perguntar: "para quem? com que restrições? o que é fora de escopo?". Se você não responde bem, ele implementa o que imaginou, não o que você precisava.
+`@product` é o dono do único PRD da feature: `.aioson/context/prd-{slug}.md`. Ele consolida briefing, feedback do Briefing Refiner, planos externos e decisões do usuário sem criar especificações paralelas.
 
-`@product` faz essas perguntas por você — antes de qualquer linha de código. Ele conduz uma conversa estruturada que transforma intenções vagas numa especificação que todos os agentes subsequentes vão usar como base.
+O PRD registra:
 
-Ele é o primeiro agente técnico num projeto novo (logo após `@setup`) e o ponto de entrada para cada nova feature em projetos existentes.
+- problema, usuários e resultado observável;
+- capacidades e exclusões;
+- critérios de aceitação concretos;
+- riscos e decisões de produto;
+- `product_scope: approved` e `prd_ready: approved` quando a feature está pronta para planejamento.
 
-Se você tiver notas no `plans/` ou `prds/`, o `@product` as detecta automaticamente e pergunta se deve usá-las como material. Os arquivos originais nunca são modificados.
-
-**Modo briefing-aware:** se existir `.aioson/briefings/` com algum briefing `status: approved` e `prd_generated: null`, o `@product` lista esses briefings antes da detecção de modo e oferece converter em PRD. Se aceito, o PRD nasce com `briefing_source: {slug}` no frontmatter — rastreio completo do briefing original. Veja [Da ideia ao PRD via @briefing](../3-receitas/da-ideia-ao-prd-via-briefing.md).
-
----
+MICRO, SMALL e MEDIUM mudam o detalhe do PRD, não o próximo estágio canônico.
 
 ## Quando invocar
 
-- Início de projeto: você quer construir algo mas ainda não tem spec.
-- Nova feature: projeto existe, você quer adicionar funcionalidade nova.
-- Refinamento: a spec existe mas ficou desatualizada e precisa de revisão.
-- Síntese de anotações: você tem notas em `plans/*.md` e quer transformar em PRD real.
+- Para iniciar uma feature com direção de produto já razoavelmente clara.
+- Depois de `@briefing` e, opcionalmente, `@briefing-refiner`.
+- Quando existem planos externos em `plans/` que precisam virar um PRD governado.
+- Para revisar escopo, ACs ou exclusões antes do planejamento.
 
----
+Se a tarefa já é um resultado técnico delimitado, reutiliza fronteiras existentes e cabe no orçamento de Simple Plan, `@dev` pode tratar diretamente sem abrir uma feature rastreada.
 
-## Quando NÃO invocar
+## Sheldon é opcional
 
-- Você já tem a spec pronta e quer ir direto para implementação → invoke `@dev`.
-- Você quer refinar UX, não produto → invoke `@ux-ui`.
-- Você quer entender o estado do projeto antes de escolher → invoke `@neo`.
+Depois de aprovar o PRD, você pode:
 
----
-
-## Diálogo típico
-
-```
-Você > @product
-
-@product > Li project.context.md. Projeto "minha-loja", SMALL, pt-BR.
-           Encontrei plans/checkout-v2.md. Usar como material para o PRD? Os originais ficam intactos.
-Você > Sim
-
-@product > [lê plans/checkout-v2.md]
-           Feature identificada: "Checkout com cartão de crédito via Stripe".
-           
-           Para afinar o escopo:
-           1. O usuário pode salvar cartões para uso futuro?
-           2. Precisa suportar múltiplos cartões no mesmo pedido?
-           3. O que está fora de escopo agora?
-
-Você > Não salvar cartões. Um cartão por pedido. Fora de escopo: parcelamento.
-
-@product > PRD criado em .aioson/context/prd-checkout-stripe.md
-           Spec inicial em .aioson/context/features/checkout-stripe/spec.md
-           Próximo agente: @analyst (para mapear domínio).
+```text
+@product → @planner
 ```
 
----
+ou pedir uma revisão crítica:
 
-## Modo de execução: autopilot ou passo a passo
-
-No handoff do PRD, `@product` decide como a feature vai rodar daqui em diante:
-
-- **Token inline (maior precedência, nunca pergunta):** `/product --auto <tarefa>` arma o autopilot para toda a feature; `/product --step <tarefa>` desarma para esta feature (grava a escolha mesmo em projeto "sempre autopilot"). O token é removido do texto da tarefa.
-- **Sem token, com escolha já registrada** (`auto_handoff: true`/`false` no `project.context.md`, ou um esquema já semeado para esta feature): `@product` segue a escolha em silêncio.
-- **Sem token e sem escolha registrada:** `@product` pergunta uma vez, na tela, ao fechar o PRD — *Autopilot (só esta feature)* / *Passo a passo* / *Sempre autopilot neste projeto* (grava `auto_handoff: true`).
-
-Escolhendo autopilot, `@product` semeia o esquema agêntico (`aioson workflow:execute . --feature={slug} --seed`) e invoca automaticamente o próximo agente — `@sheldon` (SMALL), `@orchestrator` (MEDIUM) ou `@dev` (MICRO) — que por sua vez encadeia sozinho até a recomendação de `aioson feature:close`. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md) para a cadeia completa e as condições de parada.
-
----
-
-## Opção `--help`
-
-Uma ativação com `--help` (`/product --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
-
----
-
-## Saídas em disco
-
-| Arquivo | Quando cria |
-|---|---|
-| `.aioson/context/prd.md` | Projeto novo |
-| `.aioson/context/prd-{slug}.md` | Feature nova |
-| `.aioson/context/features/{slug}/spec.md` | Sempre |
-| `plans/source-manifest.md` | Quando consome material de `plans/` |
-
----
-
-## Como ele lê seu projeto
-
-Antes de qualquer pergunta, lê:
-- `.aioson/context/project.context.md` — classificação, idioma, stack
-- `.aioson/context/bootstrap/what-is.md` e `what-it-does.md` — se existirem
-- `plans/*.md` e `prds/*.md` — detecta fontes de entrada
-- `.aioson/rules/` — regras com `agents: product`
-
----
-
-## Comandos CLI relacionados
-
-```bash
-# Ver estado atual do workflow (qual agente é o próximo)
-aioson workflow:next .
-
-# Verificar contexto válido antes de invocar
-aioson context:validate .
+```text
+@product → @sheldon → @planner
 ```
 
----
+Sheldon enriquece o mesmo PRD. Não cria outro requirements/spec/plano.
+
+## Autopilot
+
+Com autopilot habilitado, Product entrega a próxima etapa determinística. Sheldon só entra quando foi escolhido; caso contrário, o próximo agente é Planner.
+
+O autopilot nunca remove perguntas reais de produto e nunca executa `feature:close`, commit, publish, deploy ou release sem autorização.
+
+## Saída principal
+
+| Artefato | Dono | Consumidores |
+|---|---|---|
+| `.aioson/context/prd-{slug}.md` | `@product` | `@sheldon`, `@planner`, `@dev`, `@qa` |
+
+Dossiês, pesquisas e pareceres de especialistas são contexto auxiliar. O PRD continua sendo a autoridade de escopo.
 
 ## Handoff típico
 
-- **Vem de:** `@setup` (projeto novo) ou você mesmo (nova feature)
-- **Vai para:** `@sheldon` (SMALL — lane lean) · `@orchestrator` (MEDIUM — lane maestro) · `@dev` (MICRO)
+- **Vem de:** `@briefing-refiner`, `@briefing`, `@setup` ou pedido direto.
+- **Vai para:** `@sheldon` quando enriquecimento foi escolhido; caso contrário, `@planner`.
 
----
+## Veja também
 
-## Próximo passo
-
-- Trilha canônica de feature completa → [Feature completa com @sheldon](../3-receitas/feature-completa-com-sheldon.md)
-- Ideia ainda vaga? → [Da ideia ao PRD via @briefing](../3-receitas/da-ideia-ao-prd-via-briefing.md)
-- Já planejou em outro chat? → [Plans externos para @product](../3-receitas/plans-externos-para-product.md)
-- [Ficha do @analyst](./analyst.md) — próximo no fluxo SMALL/MEDIUM
-- [Glossário: Dossier, Spec, PRD](../1-entender/glossario.md)
+- [Da ideia ao PRD via briefing](../3-receitas/da-ideia-ao-prd-via-briefing.md)
+- [Ficha do @sheldon](./sheldon.md)
+- [Ficha do @planner](./planner.md)
+- [Autopilot Handoff](../5-referencia/autopilot-handoff.md)

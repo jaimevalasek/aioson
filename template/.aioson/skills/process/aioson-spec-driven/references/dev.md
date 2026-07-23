@@ -1,51 +1,20 @@
-# Spec-Driven Reference — @dev
+# Streamlined Reference — Dev
 
-> Router file. Do not duplicate logic from the generic references — load those directly.
+## Authority
 
-## Which references to load for implementation
+PRD + implementation plan + repository. The prototype is binding when referenced. Legacy artifacts may be consulted, but their absence never blocks the canonical lane.
 
-### Always load when this skill is active
+## Phase loop
 
-- `maintenance-and-state.md` — use to write and update `spec-{slug}.md` correctly: `phase_gates`, `last_checkpoint`, `pending_review`, and `Key decisions` format
-- `approval-gates.md` — Gate C (plan approval) must be checked before executing a significant batch; Gate D (execution verification) defines done criteria for each phase
-- For SMALL/MEDIUM work, confirm readiness points to a valid design authority before implementation starts. SMALL with `design_delta: none` reuses the stable `.aioson/context/design-doc.md`; MEDIUM or a real architecture/contract/data/security boundary delta uses `design-doc-{slug}.md`. Producers are `@orchestrator` on MEDIUM, `@sheldon` on SMALL, or the architecture/design detours. Load only the selected sections needed by touched paths.
+1. Load the phase's CAP/AC, exact paths, and existing implementation pattern.
+2. Implement a working vertical slice.
+3. Add stack-native focused tests citing AC IDs.
+4. Run the focused check.
+5. Exercise the default application entry point and observe the promised result.
+6. Record evidence, update Dev state, advance.
 
-### Load when starting a new feature with classification context
+Do not self-certify with compile success, mocks, static UI, an alternate binary, or a test-only route. Stop for product contradiction; resolve ordinary technical choices from evidence.
 
-- `classification-map.md` — use to confirm whether an implementation plan is optional (MICRO), recommended (SMALL), or required (MEDIUM) before starting
+## Handoff
 
-### Load when resuming or checking artifact chain
-
-- `artifact-map.md` — use to verify which upstream artifacts exist and which @dev should read before implementing
-
-### Do not load for @dev
-
-- `hardening-lane.md` — @dev activates after hardening; if the spec is still in vibe mode, stop and route back
-- `ui-language.md` — load only when producing a checkpoint or gate status presentation for the user
-
-## Spec drift detection
-
-At session start, after reading `spec-{slug}.md`:
-
-1. Compare `spec_version` in `spec-{slug}.md` with the version recorded in `dev-state.md` (`last_spec_version` field)
-2. If versions differ:
-   > "⚠ Spec changed since last session (version {old} → {new}). Reading the changes before continuing."
-   - Read the diff (Key decisions, Entities added, Edge cases sections)
-   - Update `dev-state.md` with new `last_spec_version`
-3. If versions match: proceed normally
-
-Additionally, at session start for SMALL/MEDIUM:
-4. Run `aioson ac:test-audit . --feature={slug} --strict` when the feature completeness contract applies (compatibility mode otherwise), or manually check that each `AC-*` from `requirements-{slug}.md` appears in an asserting test
-5. If coverage is < 50%:
-   > "⚠ AC coverage is low ({N}/{M} ACs have tests). Consider writing missing tests before adding new behavior."
-   This is informational, not blocking.
-
-## Behavioral notes
-
-- `spec-{slug}.md` must be updated at the end of every implementation session — see `maintenance-and-state.md` for format
-- Gate C from `approval-gates.md` means the implementation plan is locked — do not re-discuss pre-taken decisions
-- Treat `dev-state.md` as the primary activation package and `implementation-plan-{slug}.md` as the source for phase-triggered context loads
-- Gate D verification must happen before marking a phase complete — not just "I think it works". The deterministic floor is `aioson ac:test-audit . --feature={slug}` plus the real test command.
-- If `phase_gates.plan` is `pending` and classification is SMALL/MEDIUM, suggest generating an implementation plan before proceeding
-- If readiness or its declared design authority is missing, route back to its producer instead of coding first. Do not create a per-feature design doc for a SMALL feature whose inspected design is unchanged.
-- Load `.aioson/docs/feature-completeness-contract.md` when applicable, build the four-section CAP ledger, and implement/verify each planned `CAP-*`; context minimization may defer detail loads but may not skip an artifact participating in the trace
+All required phases implemented with production-path evidence → `@qa`.

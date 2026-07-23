@@ -25,7 +25,7 @@ function byAgent(result, id) {
   return result.agents.find((a) => a.agent === id);
 }
 
-test('per-phase on SMALL runs only qa, native on a cheap Claude tier', async () => {
+test('per-phase on SMALL launches no review agent', async () => {
   const dir = await makeTmpDir();
   const result = await runVerificationPlan({
     args: [dir],
@@ -34,7 +34,7 @@ test('per-phase on SMALL runs only qa, native on a cheap Claude tier', async () 
   });
   assert.equal(result.ok, true);
   assert.equal(result.host, 'claude');
-  assert.equal(byAgent(result, 'qa').run, true);
+  assert.equal(byAgent(result, 'qa').run, false);
   assert.equal(byAgent(result, 'qa').model, 'sonnet-4.6');
   assert.equal(byAgent(result, 'tester').run, false);
   assert.equal(byAgent(result, 'pentester').run, false);
@@ -51,21 +51,20 @@ test('per-phase on MICRO skips qa (skip_on_micro budget)', async () => {
   assert.equal(byAgent(result, 'qa').run, false);
 });
 
-test('end-of-feature on MEDIUM + sensitive runs qa, tester, pentester, validator', async () => {
+test('end-of-feature on MEDIUM + sensitive still runs only QA by default', async () => {
   const dir = await makeTmpDir();
   const result = await runVerificationPlan({
     args: [dir],
     options: { feature: 'checkout', trigger: 'end-of-feature', classification: 'MEDIUM', sensitive: true, json: true },
     logger: noopLogger
   });
-  for (const id of ['qa', 'tester', 'pentester', 'validator']) {
-    assert.equal(byAgent(result, id).run, true, `${id} should run`);
-  }
+  assert.equal(byAgent(result, 'qa').run, true);
+  for (const id of ['tester', 'pentester', 'validator']) assert.equal(byAgent(result, id).run, false, `${id} should remain opt-in`);
   assert.equal(byAgent(result, 'validator').cross_check.enabled, false);
   assert.equal(byAgent(result, 'pentester').report, 'security-findings-checkout.json');
 });
 
-test('end-of-feature MEDIUM without a sensitive surface does not run pentester', async () => {
+test('classification does not enable Tester or Pentester', async () => {
   const dir = await makeTmpDir();
   const result = await runVerificationPlan({
     args: [dir],
@@ -73,7 +72,25 @@ test('end-of-feature MEDIUM without a sensitive surface does not run pentester',
     logger: noopLogger
   });
   assert.equal(byAgent(result, 'pentester').run, false);
-  assert.equal(byAgent(result, 'tester').run, true);
+  assert.equal(byAgent(result, 'tester').run, false);
+});
+
+test('execution manifest may explicitly enable optional post-DEV specialists', async () => {
+  const dir = await makeTmpDir();
+  const ctx = path.join(dir, '.aioson', 'context');
+  await fs.mkdir(ctx, { recursive: true });
+  const manifest = defaults('checkout', 'codex');
+  manifest.agents.tester.enabled = true;
+  manifest.agents.pentester.enabled = true;
+  manifest.agents.validator.enabled = true;
+  await fs.writeFile(path.join(ctx, 'agent-execution-checkout.json'), JSON.stringify(manifest));
+  const result = await runVerificationPlan({
+    args: [dir],
+    options: { feature: 'checkout', trigger: 'end-of-feature', classification: 'MICRO', json: true },
+    logger: noopLogger,
+    catalogLoader: async () => ({ available: false, reason: 'fixture', models: [] })
+  });
+  for (const id of ['qa', 'tester', 'pentester', 'validator']) assert.equal(byAgent(result, id).run, true, `${id} should honor explicit enablement`);
 });
 
 test('--host pins the dispatch host and its native model', async () => {

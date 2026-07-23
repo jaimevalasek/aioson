@@ -267,6 +267,7 @@ async function scanArtifacts(targetDir, slug) {
     design_doc: await checkFirst('design-doc', designDocCandidates),
     readiness: await checkFirst('readiness', readinessCandidates),
     implementation_plan: slug ? await check('impl-plan', path.join(dir, `implementation-plan-${slug}.md`)) : { exists: false },
+    qa_report: slug ? await check('qa-report', path.join(dir, `qa-report-${slug}.md`)) : { exists: false },
     conformance: slug ? await check('conformance', path.join(dir, `conformance-${slug}.yaml`)) : { exists: false },
     dev_state: await check('dev-state', path.join(dir, 'dev-state.md')),
     features: await check('features', path.join(dir, 'features.md'))
@@ -330,8 +331,36 @@ async function readPhaseGates(targetDir, slug) {
     : path.join(contextDir(targetDir), 'spec.md');
 
   const content = await readFileSafe(specFile);
-  if (!content) return {};
-  return parseGatesFromSpec(content);
+  const gates = content ? parseGatesFromSpec(content) : {};
+  if (!slug) return gates;
+
+  const dir = contextDir(targetDir);
+  const [prd, plan, qaReport] = await Promise.all([
+    readFileSafe(path.join(dir, `prd-${slug}.md`)),
+    readFileSafe(path.join(dir, `implementation-plan-${slug}.md`)),
+    readFileSafe(path.join(dir, `qa-report-${slug}.md`))
+  ]);
+
+  if (prd) {
+    const prdFm = parseFrontmatter(prd);
+    if (String(prdFm.product_scope || '').toLowerCase() === 'approved') {
+      gates.requirements = 'approved';
+    }
+    if (String(prdFm.prd_ready || '').toLowerCase() === 'approved') {
+      gates.design = 'approved';
+    }
+  }
+  if (plan && String(parseFrontmatter(plan).status || '').toLowerCase() === 'approved') {
+    gates.plan = 'approved';
+  }
+  if (qaReport) {
+    const fm = parseFrontmatter(qaReport);
+    const verdict = String(fm.verdict || fm.status || '').toLowerCase();
+    if (verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(qaReport)) {
+      gates.execution = 'approved';
+    }
+  }
+  return gates;
 }
 
 // ─── Dev state reader ─────────────────────────────────────────────────────────
@@ -471,50 +500,29 @@ async function discoverDesignDocs(targetDir, agent) {
 
 function buildContextPackage(agent, slug, classification, artifacts, devState, manifest) {
   const pkg = [];
-  const designDoc = artifacts.design_doc || { exists: false };
-  const readiness = artifacts.readiness || { exists: false };
 
   if (artifacts.project_context.exists) pkg.push(artifacts.project_context.path);
 
   if (slug) {
-    const downstreamAgents = ['discovery-design-doc', 'pm', 'orchestrator', 'dev', 'deyvin', 'qa'];
-    const shouldCarryFullFeatureContext = downstreamAgents.includes(agent);
+    const prdConsumers = ['sheldon', 'planner', 'analyst', 'architect', 'ux-ui', 'discovery-design-doc', 'pm', 'scope-check', 'orchestrator', 'dev', 'deyvin', 'qa', 'tester', 'pentester', 'validator'];
+    const planConsumers = ['analyst', 'architect', 'ux-ui', 'discovery-design-doc', 'pm', 'scope-check', 'orchestrator', 'dev', 'deyvin', 'qa', 'tester', 'pentester', 'validator'];
 
-    if (shouldCarryFullFeatureContext && artifacts.prd.exists) pkg.push(artifacts.prd.path);
-    if (shouldCarryFullFeatureContext && artifacts.sheldon_enrichment.exists) pkg.push(artifacts.sheldon_enrichment.path);
-    if (shouldCarryFullFeatureContext && artifacts.sheldon_validation && artifacts.sheldon_validation.exists) {
-      pkg.push(artifacts.sheldon_validation.path);
+    if (prdConsumers.includes(agent) && artifacts.prd.exists) pkg.push(artifacts.prd.path);
+    if (planConsumers.includes(agent) && artifacts.implementation_plan.exists) {
+      pkg.push(artifacts.implementation_plan.path + ' [PRIMARY]');
     }
-    if ((shouldCarryFullFeatureContext || ['analyst', 'architect'].includes(agent)) && artifacts.requirements.exists) {
-      pkg.push(artifacts.requirements.path);
-    }
-
-    if (artifacts.spec.exists) pkg.push(artifacts.spec.path);
-
-    if (shouldCarryFullFeatureContext && artifacts.architecture.exists) pkg.push(artifacts.architecture.path);
-    if (shouldCarryFullFeatureContext && designDoc.exists) pkg.push(designDoc.path);
-    if (shouldCarryFullFeatureContext && readiness.exists) pkg.push(readiness.path);
-    if (shouldCarryFullFeatureContext && artifacts.conformance.exists) pkg.push(artifacts.conformance.path);
-
-    // Manifest precedence (AC-SDLC-24, AC-SDLC-25):
-    // If active Sheldon manifest exists and is not done, it is the primary execution artifact.
-    // implementation-plan is supporting context only.
+    // Older manifests remain readable only as explicit compatibility context
+    // for an already-running Dev continuation. They are never prerequisites.
     if (manifest && manifest.exists && manifest.is_active && (agent === 'dev' || agent === 'deyvin')) {
-      pkg.push(manifest.path + ' [PRIMARY — active Sheldon manifest]');
+      pkg.push(manifest.path + ' [legacy optional context]');
       if (manifest.next_pending_phase && manifest.next_pending_phase.file) {
-        pkg.push(path.join(path.dirname(manifest.path), manifest.next_pending_phase.file).split(path.sep).join('/') + ' [current phase]');
+        pkg.push(path.join(path.dirname(manifest.path), manifest.next_pending_phase.file).split(path.sep).join('/') + ' [legacy current phase]');
       }
-      if (artifacts.implementation_plan.exists) {
-        pkg.push(artifacts.implementation_plan.path + ' [supporting context only]');
-      }
-    } else if (artifacts.implementation_plan.exists) {
-      pkg.push(artifacts.implementation_plan.path);
     }
   }
 
   // Agent-specific additions
   if (agent === 'dev' && artifacts.dev_state.exists) pkg.push('dev-state.md (check for stale state before using)');
-  if (agent === 'architect' && artifacts.architecture.exists) pkg.push(artifacts.architecture.path);
 
   return [...new Set(pkg)];
 }
@@ -619,8 +627,6 @@ function parseFeaturesMap(content) {
 function evaluateReadiness(artifacts, phaseGates, classification, agent, devState, slug) {
   const blockers = [];
   const warnings = [];
-  const designDoc = artifacts.design_doc || { exists: false };
-  const readiness = artifacts.readiness || { exists: false };
 
   if (!artifacts.project_context.exists) blockers.push('project.context.md missing');
 
@@ -628,78 +634,62 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
     if (!artifacts.prd.exists) {
       blockers.push('prd file missing — @product must produce prd-{slug}.md first');
     }
-    if (!artifacts.sheldon_enrichment.exists) {
-      warnings.push('sheldon-enrichment file not found — this will be a first-session enrichment');
+  }
+
+  if (agent === 'planner') {
+    if (!artifacts.prd.exists) {
+      blockers.push('prd file missing — @product must produce prd-{slug}.md first');
+    } else if (String(artifacts.prd.frontmatter.product_scope || '').toLowerCase() !== 'approved'
+      || String(artifacts.prd.frontmatter.prd_ready || '').toLowerCase() !== 'approved') {
+      blockers.push('PRD is not implementation-ready — @product must approve product_scope and prd_ready; @sheldon is optional');
     }
   }
 
   if (agent === 'analyst') {
     if (slug && !artifacts.prd.exists) {
-      warnings.push('prd file missing — feature is not framed yet; @analyst may run project discovery/research only, or hand off to @product/@briefing to create prd-{slug}.md before formal feature requirements');
+      warnings.push('PRD missing — Analyst can answer only the named evidence question; Product owns feature scope');
     }
   }
 
   if (agent === 'architect') {
-    if (!artifacts.requirements.exists) {
-      blockers.push('requirements file missing — @analyst must produce requirements-{slug}.md first (Gate A)');
-    }
+    if (!artifacts.prd.exists) warnings.push('PRD missing — Architect can answer only the named technical question; Product owns feature scope');
+    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — Planner owns executable technical decisions');
   }
 
   if (agent === 'pm') {
-    if (!artifacts.architecture.exists) {
-      blockers.push('architecture.md missing — @architect must complete design first (Gate B)');
-    }
-    if (!artifacts.requirements.exists) {
-      warnings.push('requirements file missing — @pm should review it before writing the implementation plan');
-    }
+    if (!artifacts.prd.exists) warnings.push('PRD missing — PM can advise only on the named question; Product owns feature scope');
+    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — Planner owns sequencing and Gate C');
   }
 
   if (agent === 'discovery-design-doc') {
-    if (!artifacts.architecture.exists) {
-      blockers.push('architecture.md missing — @architect must complete design first (Gate B)');
-    }
-    if (!designDoc.exists) {
-      warnings.push('design-doc.md missing — @discovery-design-doc must create the project baseline before implementation');
-    }
+    if (!artifacts.prd.exists) warnings.push('PRD missing — repository discovery will be limited to the named surface');
+    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — return discovered paths to Planner');
   }
 
   if (agent === 'orchestrator') {
-    if (!artifacts.requirements.exists) {
-      blockers.push('requirements file missing — Gate A not satisfied');
-    }
-    if (!artifacts.spec.exists) {
-      blockers.push('spec file missing — Gate C not satisfied');
-    }
     const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };
-    if (classification === 'MEDIUM' && !implementationPlan.exists) {
-      blockers.push('implementation-plan-{slug}.md missing — @pm must produce it before orchestration');
-    } else if (classification === 'MEDIUM' && implementationPlan.frontmatter.status !== 'approved') {
-      blockers.push(`implementation plan is not approved: ${implementationPlan.frontmatter.status || 'missing status'} — @pm must approve it`);
+    if (!artifacts.prd.exists) {
+      blockers.push('PRD missing — Product must define the approved scope before optional coordination');
+    }
+    if (!implementationPlan.exists) {
+      blockers.push('implementation-plan-{slug}.md missing — Planner must create it before optional coordination');
+    } else if (String(implementationPlan.frontmatter.status || '').toLowerCase() !== 'approved') {
+      blockers.push(`implementation plan is not approved: ${implementationPlan.frontmatter.status || 'missing status'} — Planner owns Gate C`);
     }
     if (phaseGates.plan !== 'approved') {
-      blockers.push(`Gate C (plan) not approved: ${phaseGates.plan || 'pending'} — @pm must produce and approve implementation-plan-{slug}.md`);
+      blockers.push(`Gate C (plan) not approved: ${phaseGates.plan || 'pending'} — Planner must approve implementation-plan-{slug}.md`);
     }
   }
 
   if (agent === 'dev' || agent === 'deyvin') {
-    if (!artifacts.spec.exists) blockers.push('spec file missing');
-    if (classification && classification !== 'MICRO') {
-      if (!designDoc.exists) {
-        blockers.push('design-doc.md missing — @architect (merged mode) or @sheldon must produce it before implementation');
-      }
-      if (!readiness.exists) {
-        blockers.push('readiness.md missing — @architect (merged mode) or @sheldon must produce it before implementation');
-      }
-    }
-    if (classification === 'MEDIUM') {
+    if (slug && !artifacts.prd.exists) blockers.push('prd file missing');
+    if (classification) {
       const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };
       if (!implementationPlan.exists) {
-        blockers.push('implementation-plan-{slug}.md missing — @pm must produce it before implementation');
+        blockers.push('implementation-plan-{slug}.md missing — @planner must produce it before implementation');
       } else if (implementationPlan.frontmatter.status !== 'approved') {
         blockers.push(`implementation plan is not approved: ${implementationPlan.frontmatter.status || 'missing status'}`);
       }
-    }
-    if (classification && classification !== 'MICRO') {
       if (phaseGates.plan !== 'approved') {
         blockers.push(`Gate C (plan) not approved: ${phaseGates.plan || 'pending'} — run "aioson gate:check . --feature=${slug || '<slug>'} --gate=C"`);
       }
@@ -712,16 +702,14 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
   }
 
   if (agent === 'qa') {
-    if (!artifacts.spec.exists) blockers.push('spec file missing');
-    if (classification === 'MEDIUM') {
+    if (slug && !artifacts.prd.exists) blockers.push('prd file missing');
+    if (classification) {
       const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };
       if (!implementationPlan.exists) {
         blockers.push('implementation-plan-{slug}.md missing');
       } else if (implementationPlan.frontmatter.status !== 'approved') {
         blockers.push(`implementation plan is not approved: ${implementationPlan.frontmatter.status || 'missing status'}`);
       }
-    }
-    if (classification && classification !== 'MICRO') {
       if (phaseGates.plan !== 'approved') {
         blockers.push(`Gate C (plan) not approved: ${phaseGates.plan || 'pending'}`);
       }

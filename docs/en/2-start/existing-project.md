@@ -100,8 +100,8 @@ You > Yes — discount policy by customer tier, commission rules
 @setup > project.context.md created with MEDIUM classification.
 @setup > Since you already have running code, I recommend:
         - Run @discover to build the semantic cache
-        - Then @analyst to map the existing domain (initial brownfield scan)
-        - Only then start features via @product → @orchestrator (MEDIUM maestro)
+        - Start the feature with @product
+        - Request @analyst only if a named domain question remains unresolved
 ```
 
 ---
@@ -124,7 +124,9 @@ This step is **optional for small projects**, but critical in medium and large c
 
 ---
 
-## Step 5 — `@analyst` maps the existing domain
+## Step 5 — Optional: ask `@analyst` a concrete domain question
+
+The semantic cache is already available to Product, Planner, DEV, and QA. Use Analyst only when a specific brownfield question needs a dedicated investigation; it is not a prerequisite for MEDIUM features.
 
 ```
 You > @analyst
@@ -135,8 +137,8 @@ You > @analyst
         - Auth via NextAuth
         - Active Stripe webhook
         - Tier table in customer.tier (free|pro|enterprise)
-@analyst > Domain map saved to architecture.md.
-@analyst > Ready for the next feature.
+@analyst > Findings saved as non-blocking feature evidence.
+@analyst > Product or Planner can now apply these findings to the canonical artifact.
 ```
 
 > **Why this matters:** when you create the next feature with `@product`, it will already come with **context**. The agent knows Customer already exists and won't suggest creating it again.
@@ -154,10 +156,10 @@ You > "order-cancellation" — allow canceling an order within 1 hour
 @product > Acceptance criteria?
 You > [...]
 
-@product > Spec saved. Next: @orchestrator (MEDIUM maestro — will fan out @analyst, @architect, @pm).
+@product > PRD saved to prd-order-cancellation.md. Next: @planner.
 ```
 
-From there, the MEDIUM maestro flow applies: `@product → @orchestrator → @dev → @pentester → @qa`. `@orchestrator` fans out `@analyst`, `@architect`, and `@pm` as sub-agents (the domain knowledge from Step 5 feeds into them), consolidates the gated spec package, and hands to `@dev`. See [Full feature with @sheldon — MEDIUM variant](../3-recipes/full-feature-with-sheldon.md#medium-maestro-variant) for the full walkthrough.
+From there, the canonical flow applies at MEDIUM depth: `@product → optional @sheldon → @planner → @dev → @qa`. Product owns one PRD, Planner owns one implementation plan, and QA writes one verdict. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check can enrich those artifacts when explicitly requested, but they do not become stages. See [Full feature with optional @sheldon](../3-recipes/full-feature-with-sheldon.md) for the walkthrough.
 
 ---
 
@@ -165,7 +167,7 @@ From there, the MEDIUM maestro flow applies: `@product → @orchestrator → @de
 
 ### I have legacy code without tests
 
-Use **`@tester`** (not just `@qa`) — it does systematic test engineering for already-implemented apps. It recently gained *coverage quality tier* and *test smell audit*.
+Explicitly opt into **`@tester`** when you want systematic test engineering beyond the canonical QA review. Classification does not enable it.
 
 ```
 You > @tester
@@ -210,7 +212,7 @@ Create `.aioson/rules/<name>.md`. Example:
 Controllers never access the ORM directly. Always via the service layer.
 ```
 
-Every technical agent (`@dev`, `@qa`, etc.) loads these rules automatically. See [Design Docs Governance](../5-reference/design-docs-governance.md).
+Every technical agent (`@dev`, `@qa`, etc.) loads applicable rules automatically. See [Design Docs Governance (PT)](../../pt/5-referencia/design-docs-governance.md).
 
 ### Whole team on the same project
 

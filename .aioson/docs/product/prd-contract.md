@@ -1,123 +1,80 @@
 ---
-description: "Product PRD contract — exact PRD structure, visual identity block, output paths, and next-step routing."
-agents: [product]
+description: "Single-authority PRD contract for the streamlined Product → Planner workflow, with optional Sheldon enrichment."
+agents: [product, sheldon]
 modes: [executing]
-task_types: [prd-writing, prd-finalization, output-contract, artifact-writing]
+task_types: [prd-writing, prd-finalization, output-contract]
 load_tier: trigger
-triggers: [writing PRD, updating PRD, PRD contract, output path, next-step routing, visual identity]
+triggers: [writing PRD, updating PRD, PRD contract, output path, prototype]
 ---
 
 # Product PRD Contract
 
-Load this module immediately before writing or updating any PRD.
+## Output
 
-## Output paths
+- Project: `.aioson/context/prd.md`
+- Feature: `.aioson/context/prd-{slug}.md`
 
-- Creation / enrichment mode → `.aioson/context/prd.md`
-- Feature mode → `.aioson/context/prd-{slug}.md`
+This file is the single product/specification authority. Product must make it ready for planning; Sheldon may challenge and enrich it in place.
 
-`.aioson/context/` accepts only `.md` files.
+## Frontmatter
 
-## Required PRD structure
-
-Use these sections. For substantive SMALL/MEDIUM features, also include the conditional Feature Capability Map shown below and set `feature_completeness: required` in frontmatter.
-
-```markdown
-# PRD — [Project Name]
-
-## Vision
-[One sentence. What this product is and why it matters.]
-
-## Problem
-[2–3 lines. The specific pain point and who experiences it.]
-
-## Users
-- [Role]: [what they need to accomplish]
-
-## Feature Capability Map
-| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
-|---|---|---|---|---|
-| CAP-[slug]-[outcome] | [observable outcome] | [actor or system trigger] | required / deferred / not_applicable | [concrete reason] |
-- [Role]: [what they need to accomplish]
-
-## MVP scope
-### Must-have 🔴
-- [Feature or capability — why it's required for launch]
-
-### Should-have 🟡
-- [Feature or capability — why it's valuable but not blocking]
-
-## Out of scope
-- [What is explicitly excluded from this version]
-
-## User flows
-### [Key flow name]
-[Step-by-step: User does X → System does Y → User sees Z]
-
-## Success metrics
-- [Metric]: [target and timeframe]
-
-## Open questions
-- [Unresolved decision that needs an answer before or during development]
-
-## Visual identity
-### Design skill
-### Aesthetic direction
-### Color & theme
-### Typography
-### Motion & interactions
-### Component style
-### Quality bar
+```yaml
+---
+feature: {slug}
+classification: SMALL
+feature_completeness: required
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+prototype: .aioson/briefings/{slug}/prototype.html
+---
 ```
 
-## Visual identity inclusion rule
+If Sheldon is explicitly invoked, it records `sheldon_review: approved` after the independent enrichment. Planner never requires that optional marker.
 
-Include `## Visual identity` when:
+## Required structure
 
-- the client expressed visual preferences, or
-- `design_skill` is already set in `project.context.md`
+- Vision
+- Problem and users
+- `## Feature Capability Map`
+- MVP scope
+- Out of scope
+- User flows, including visible success/failure states
+- Success metrics
+- Prototype contract and approved deviations
+- Open questions, with blocking questions explicitly marked
+- Visual identity when relevant
+- `## Acceptance Criteria` (owned and finalized by Product before Planner)
 
-Omit it only when visual requirements were truly not discussed and no design skill was selected.
+Capability map:
 
-## Feature completeness inclusion rule
+```markdown
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-{slug}-main | observable outcome | actor/trigger | required | concrete reason |
+```
 
-Load `.aioson/docs/feature-completeness-contract.md`. Include `## Feature Capability Map` for every substantive SMALL/MEDIUM feature. Omit it only for a genuinely bounded MICRO task with no rich/sensitive surface. When `operational-management` is relevant, also include `## Operational Surface Map` from `.aioson/docs/feature-expansion-taxonomy.md`.
+Acceptance criteria:
 
-Capability rows never contain `TBD`: unresolved scope stays in `## Open questions`, and the handoff remains blocked when it changes a required promise.
+```markdown
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-{slug}-01 | CAP-{slug}-main | production-path behavior | focused test + real app smoke |
+```
 
-### Design skill block
+## Prototype contract
 
-Inside `### Design skill`:
-
-- write the selected design skill if chosen
-- if postponed, write `pending-selection`
-- add a note that `@ux-ui` must read `.aioson/skills/design/{skill}/SKILL.md` before design work when a skill is selected
+When a briefing prototype exists, it is binding source evidence for layout, interactions, states, and visual direction. Record deliberate changes in the PRD. Never treat a static copy or test fixture as equivalent to a working application.
 
 ## Writing rules
 
-- Do not invent undiscussed content unless the user explicitly requested surprise mode
-- In standard finalize mode, unresolved sections become `TBD — not discussed.`
-- Keep the PRD focused; summarize sections that are getting too long
-- Preserve the user's product framing; do not drift into analyst or architect territory
+- Preserve user intent and explicit exclusions.
+- Do not invent optional features.
+- Avoid implementation architecture and file plans.
+- Never create requirements/spec/design/readiness/conformance/harness artifacts as PRD companions.
 
-## Next-step routing
+## Routing
 
-After the PRD is produced:
-
-### New project (`prd.md`)
-
-| classification | Next step |
-|---|---|
-| MICRO | `@dev` |
-| SMALL | `@sheldon` (lean default) |
-| MEDIUM | `@orchestrator` (maestro spec authority) |
-
-### New feature (`prd-{slug}.md`)
-
-| feature complexity | Next step |
-|---|---|
-| MICRO | `@dev` |
-| SMALL | `@sheldon` (lean default) |
-| MEDIUM | `@orchestrator` (maestro) → `@dev` → initial `@qa` → enabled/triggered `@tester`/`@pentester` → final `@qa` |
-
-Assess the minimum confirmed outcome, not optional behavior introduced while writing the PRD. Apply the Simple Plan gate before creating feature artifacts: one specified outcome with no open product/architecture/security decision stays with `@dev` when estimated at <=5 behavior files, <=8 total paths, and <=2 existing modules. Support tests/translations/exports/registrations do not promote it. If feature memory is genuinely needed, prefer MICRO while the same coherent outcome fits <=10 behavior files / <=15 total paths. SMALL requires multiple independently valuable capabilities, a new boundary/contract, or material unresolved decisions; the project's global classification and a new UI affordance are not reasons. State the concrete promotion reason and next agent explicitly.
+- MICRO/SMALL/MEDIUM feature → `@planner`, then `@dev` and `@qa`.
+- A bounded already-specified technical outcome may use the separate Simple Plan lane directly with `@dev`.
+- Sheldon and other specialists are opt-in for one concrete unresolved decision, explicit review, or triggered risk in any classification.

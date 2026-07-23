@@ -14,6 +14,7 @@ const {
   resolveHost,
   getAgentDispatch,
   shouldRunForTrigger,
+  agentHasTrigger,
   resolveAgentReportPath,
   getCrossCheck,
   getBudget,
@@ -33,10 +34,10 @@ const CLASSIFICATIONS = ['MICRO', 'SMALL', 'MEDIUM'];
 // without ending the turn.
 function buildContinuationDirective(trigger, phaseLoop) {
   if (trigger === 'end-of-feature') {
-    return 'END-OF-FEATURE — last phase: run the full runtime smoke (build + migrate + boot + Core happy-path), then hand off through the post-dev review cycle. Do not close/publish — that is the human gate.';
+    return 'END-OF-FEATURE — last phase: run the relevant full build/tests and production-path smoke once, then hand off to QA. Optional specialists run only when explicitly enabled and triggered. Do not close/publish — that is the human gate.';
   }
   if (phaseLoop && phaseLoop.auto_continue) {
-    return 'CONTINUE-NOW — a clean report is a checkpoint, not a stop. Go DIRECTLY into the next phase in this same turn: do not stop, do not ask "continue?", do not summarize-and-end, and never self-issue /compact (the host auto-compacts transparently). Halt only on a failing gate/verification after retries or a genuine hard stop.';
+    return 'CONTINUE-NOW — focused phase checks are a checkpoint, not a QA handoff. Go DIRECTLY into the next phase in this same turn: do not stop, do not ask "continue?", do not summarize-and-end, and never self-issue /compact (the host auto-compacts transparently). Halt only after bounded check retries fail or for a genuine hard stop.';
   }
   return 'PAUSE — auto_continue is off: after this phase report, stop and wait for confirmation before the next phase.';
 }
@@ -97,23 +98,28 @@ async function runVerificationPlan({ args, options = {}, logger, catalogLoader }
   const agents = [];
   for (const agentId of VERIFICATION_AGENTS) {
     const dispatch = getAgentDispatch(config, agentId, host);
-    const execution = executionManifest.exists ? await resolveAgentExecution(executionManifest.manifest, agentId, {}, { catalogLoader }) : null;
+    const configuredExecution = executionManifest.exists ? executionManifest.manifest.agents[agentId] : null;
+    const execution = configuredExecution?.enabled
+      ? await resolveAgentExecution(executionManifest.manifest, agentId, {}, { catalogLoader })
+      : null;
     if (execution && !execution.ok) {
       return { ok: false, reason: 'model_resolution_failed', agent: agentId, resolution: execution };
     }
     const entry = {
       agent: agentId,
-      run: shouldRunForTrigger(config, agentId, context),
-      host: execution ? execution.host : (dispatch ? dispatch.host : host),
-      mode: execution ? execution.mode : (dispatch ? dispatch.mode : 'native'),
-      model: execution ? execution.model : (dispatch ? dispatch.model : 'configured-default'),
-      model_requested: execution ? execution.model_requested : (dispatch ? dispatch.model : 'configured-default'),
-      model_resolved: execution ? execution.model_resolved : (dispatch ? dispatch.model : 'configured-default'),
-      model_resolution_strategy: execution ? execution.model_resolution_strategy : 'legacy',
+      run: executionManifest.exists
+        ? Boolean(configuredExecution?.enabled && agentHasTrigger(config, agentId, trigger))
+        : shouldRunForTrigger(config, agentId, context),
+      host: execution ? execution.host : (configuredExecution?.host || (dispatch ? dispatch.host : host)),
+      mode: execution ? execution.mode : (configuredExecution?.mode || (dispatch ? dispatch.mode : 'native')),
+      model: execution ? execution.model : (configuredExecution?.model || (dispatch ? dispatch.model : 'configured-default')),
+      model_requested: execution ? execution.model_requested : (configuredExecution?.model || (dispatch ? dispatch.model : 'configured-default')),
+      model_resolved: execution ? execution.model_resolved : (configuredExecution?.model || (dispatch ? dispatch.model : 'configured-default')),
+      model_resolution_strategy: execution ? execution.model_resolution_strategy : (configuredExecution ? 'disabled' : 'legacy'),
       reasoning_effort: execution ? (execution.reasoning_effort || null) : null,
-      report: execution ? execution.report.replace('{run_id}', '{run_id}') : resolveAgentReportPath(config, agentId, slug || '{slug}'),
-      execution_source: execution ? 'manifest' : 'legacy',
-      execution: execution || undefined
+      report: execution ? execution.report.replace('{run_id}', '{run_id}') : (configuredExecution?.report || resolveAgentReportPath(config, agentId, slug || '{slug}')),
+      execution_source: configuredExecution ? 'manifest' : 'legacy',
+      execution: execution || configuredExecution || undefined
     };
     if (agentId === 'validator') {
       const cc = getCrossCheck(config, agentId);

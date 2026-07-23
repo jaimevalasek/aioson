@@ -65,14 +65,14 @@ class GreetingService {
 
 **`@product` / `@sheldon`:** describe squad behavior and objective in PRDs — never literal prompts. Prompts are `@squad` territory.
 
-**`@analyst` / `@architect`:** include the driver layer as explicit component in `architecture.md`:
+**Optional `@analyst` / `@architect`:** when asked one concrete squad-driver question, return this boundary to Product, Planner, Dev, or the dossier; do not create `architecture.md`:
 ```
 SquadRunner — loads definitions from .aioson/squads/ and executes via LLM API
   dependencies: fs (read .md), llm-client (model call)
   no domain logic — only orchestrates loading and execution
 ```
 
-**`@pm`:** separate squad phases from code phases in implementation plans:
+**Optional `@pm`:** advise Planner on priority or release sequencing without creating a second implementation plan:
 - Squad phases → `executor: @squad`
 - Driver phases → `executor: @dev` with task "create SquadRunner that loads `.aioson/squads/{slug}/`"
 

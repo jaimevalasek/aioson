@@ -1,329 +1,211 @@
-# Recipe: Full feature with `@sheldon` (canonical SMALL trail)
+# Recipe: Full feature with optional `@sheldon` enrichment
 
-> **Who this is for:** SMALL features where wrong early decisions are costly.
-> **Time to run:** 1–4 hours, spread across 1–2 sessions.
-> **What you'll have at the end:** a feature implemented, tested, and reviewed — spec + code + tests traceable on disk.
-> **Status:** this is the DEFAULT lean lane for SMALL projects (v1.35.0+).
+> **Who this is for:** tracked features that need a PRD, an executable plan, implementation, and a final delivery verdict.
+> **What you'll have at the end:** one PRD, one implementation plan, integrated code, and one QA verdict, all traceable on disk.
 
 ---
 
 ## The trail in one line
 
+```text
+optional @briefing → optional @briefing-refiner → @product
+→ optional @sheldon → @planner → @dev → @qa
 ```
-@product → @sheldon → @dev → @qa
-```
 
-`@sheldon` is the **single spec authority** for SMALL: in one pass it produces requirements + spec (Gates A/B/C approved) + design-doc + readiness + implementation-plan + harness-contract, then hands directly to `@dev`.
+The route is the same for MICRO, SMALL, and MEDIUM. Classification changes how deeply each stage investigates risk, how large the implementation budget is, and how broad QA should be. It does not add specification agents or security reviewers to the default chain.
 
-> **MEDIUM?** Use the maestro variant: `@product → @orchestrator → @dev → @pentester → @qa` — `@orchestrator` fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package, then hands to `@dev`. See [MEDIUM maestro variant](#medium-maestro-variant).
-
-**Why order matters:** each agent reads the artifacts left by the previous one. Skipping the spec authority means `@dev` improvises — improvisation on big decisions becomes rework.
-
-> **Step by step or autopilot?** This recipe walks the **manual** path — you invoke each agent yourself. But building the feature the normal way (`@product` → `@sheldon`/`@orchestrator` → `@dev` → `@qa`) can also run **on its own** up to the `feature:close` recommendation: `@product` asks the run mode once at the PRD handoff (or you decide up front with `/product --auto`/`/product --step`), and each agent auto-invokes the next. See [Autopilot handoff](../5-reference/autopilot-handoff.md) for the full chain, the inline tokens, and the stop conditions. The steps below still describe what each agent does under the hood, autopilot on or off.
+This recipe shows Sheldon because it is useful when a ready PRD would benefit from another critical enrichment pass. Skip it when Product's PRD is already actionable.
 
 ---
 
 ## Scenario
 
-You are building a meaningful SMALL feature — typical examples: **subscription billing with Stripe**, **seller dashboard in a marketplace**, **order cancellation with time-window rules**. Something that mixes backend + business rules + optional UI.
+You are adding subscription billing. The feature includes payment-provider webhooks, upgrades and downgrades, and a small management UI. It is meaningful enough to track, and some product edge cases deserve a critical review before planning.
 
-If the feature is truly trivial (simple CRUD, no business logic), skip this trail — go straight to `@product → @dev → @qa` (MICRO). This trail is a cannon; don't use it to shoot sparrows.
-
-## Prerequisites
-
-- Project with `aioson init/install` already run
-- `project.context.md` populated (`@setup` already done)
-- Classification **SMALL**
-- AI client open in the project
+For an already-specified bounded technical outcome that fits the Simple Plan budget, go directly to `@dev`; do not manufacture a feature workflow.
 
 ---
 
-## Step 1 — `@product` defines the PRD
+## Step 1 — `@product` owns the PRD
 
-```
+```text
 You > @product
 
-@product > Let's define a feature. What's the slug?
+@product > Feature slug?
 You > billing-subscription
 
-@product > In one sentence, the problem?
-You > Customer wants to subscribe to monthly/annual plan and manage payment
-
-@product > [guided questions: ACs, out-of-scope, dependencies, SLA limits]
-@product > PRD created at .aioson/context/prd.md (copy at features/billing-subscription/spec.md).
-@product > Next: @sheldon to close the spec and produce the implementation package.
+@product > [drives problem, users, scope, exclusions, ACs, risks]
+@product > PRD approved:
+           .aioson/context/prd-billing-subscription.md
 ```
 
-**What was left on disk:** `prd.md` with clear sections (problem, scope, ACs, out-of-scope).
+Product owns the single specification authority. The PRD contains capabilities, concrete acceptance criteria, exclusions, and unresolved decisions. Optional dossiers, prototypes, prior briefings, and consultant findings are evidence for this document—not competing specifications.
 
-> **Variation:** if you already have material in `/plans/` or an approved briefing, `@product` detects it and offers to use it as a base. See [External plans for @product](./external-plans-for-product.md) and [From idea to PRD via @briefing](./from-idea-to-prd-via-briefing.md).
+If a genuine product decision remains open, resolve it here before planning.
 
 ---
 
-## Step 2 — `@sheldon` closes the spec (single spec authority)
+## Step 2 — Optional: `@sheldon` enriches the same PRD
 
-This is the step that replaces the old multi-hop chain (`@analyst → @scope-check → @architect → ...`). `@sheldon` does it all in one pass.
+Use Sheldon when the PRD has a rich surface, material edge cases, or would benefit from independent challenge.
 
-```
+```text
 You > @sheldon
 
-@sheldon > Reading prd.md... scanning architecture.md, dependencies, plans/.
-@sheldon > Detected 4 gaps:
-        1. PRD does not cover plan downgrade (only upgrade)
-        2. No decision on proportional billing (proration)
-        3. Stripe webhook has no retry/idempotency policy
-        4. No ACs for billing failure after 3 attempts (dunning)
+@sheldon > Reviewing prd-billing-subscription.md...
+@sheldon > Four gaps need attention:
+           1. downgrade timing is not explicit
+           2. proration policy is ambiguous
+           3. webhook idempotency has no AC
+           4. dunning after repeated failure is excluded accidentally
 
-@sheldon > Do you have external sources? [URL, local file, "no"]
-You > docs.stripe.com/billing/subscriptions/upgrade-downgrade
+You > [resolve product decisions]
 
-@sheldon > [researches, reads, cites]
-@sheldon > Closing spec — producing single-spec-authority package:
-        ✓ requirements-billing-subscription.md (gaps resolved, ACs hardened)
-        ✓ design-doc-billing-subscription.md (technical structure + reuse decisions)
-        ✓ readiness-billing-subscription.md (Gate B: ready_with_warnings → cleared)
-        ✓ implementation-plan.md (3 phases, file-disjoint waves)
-        ✓ harness-contract.json (RG-smoke criteria + verification commands)
-
-@sheldon > Gates A/B/C: approved.
-@sheldon > Next: @dev — implementation-plan.md is the input.
+@sheldon > Enrichment applied to the same PRD.
+           Product scope and readiness remain explicit.
+           Next: @planner.
 ```
 
-**What `@sheldon` produces in one pass:**
-- Closes all PRD gaps (with web research when needed)
-- Creates the design-doc + readiness verdict (Gate B)
-- Writes the phased implementation-plan
-- Authors the harness-contract with binary success criteria + `verification` commands
-- Signs off Gates A/B/C before handing to `@dev`
+Sheldon does not create requirements, design-doc, readiness, conformance, or harness documents as mandatory prerequisites. It preserves Product ownership and updates the same PRD in place.
 
-**Can run multiple times:** if the first pass left gaps, invoke `@sheldon` again. It detects existing artifacts and offers a new round without starting over.
+When you need a named specialist decision, request it explicitly:
 
-> **When NOT to run `@sheldon`:** trivial features (basic CRUD) or MICRO. The spec effort does not pay off.
+| Consultant | Use it for |
+|---|---|
+| `@analyst` | A concrete brownfield/domain question |
+| `@architect` | A material boundary, integration, security, or operability decision |
+| `@discovery-design-doc` | A standalone discovery/design investigation |
+| `@pm` | Backlog or user-story consultation |
+| `@ux-ui` | A formal interaction or visual-design decision |
+| `@scope-check` | A bounded intent/plan/delivery drift review |
+
+Their findings feed the PRD or implementation plan. They do not become default stages or create blocking artifact packages.
 
 ---
 
-## Step 3 — `@dev` implements (phase loop)
+## Step 3 — `@planner` owns the implementation plan
 
+```text
+You > @planner
+
+@planner > Reading the approved PRD and repository evidence.
+@planner > Plan approved:
+           .aioson/context/implementation-plan-billing-subscription.md
+
+           Stage 1: webhook ingestion + idempotency + focused checks
+           Stage 2: subscription service + upgrade/downgrade behavior
+           Stage 3: management UI + production-path smoke
+@planner > Every AC maps to a vertical stage and executable verification.
+           Next: @dev.
 ```
+
+Planner creates one vertical plan. It names exact expected files, repository reuse, dependencies, stage-level verification, production-path evidence, and any approved development lanes.
+
+MICRO plans stay concise. SMALL plans cover the whole feature without excess ceremony. MEDIUM plans add depth only for named risks and integration boundaries.
+
+---
+
+## Step 4 — `@dev` implements and integrates
+
+```text
 You > @dev
 
-@dev > Reading implementation-plan.md. 3 phases detected. Starting Phase 1.
-
-── Phase 1/3: DB migrations + webhook handler ──
-@dev > [implements]
-@dev > aioson harness:check → OK. Verification sub-agent: pass.
-@dev > Compacting context for Phase 2...
-
-── Phase 2/3: billing routes + dunning cron ──
-@dev > [implements]
-@dev > aioson harness:check → OK. Verification sub-agent: pass.
-@dev > Compacting context for Phase 3...
-
-── Phase 3/3: UI components ──
-@dev > [implements]
-@dev > aioson harness:check → OK.
-@dev > dev-state.md updated. All phases complete. Next: @qa.
+@dev > Reading the PRD, implementation plan, selected rules/docs, and repository evidence.
+@dev > Implementing stages sequentially...
+@dev > Focused checks pass after each meaningful slice.
+@dev > Full planned verification passes.
+@dev > dev-state.md updated. Next: @qa.
 ```
 
-**The `@dev` phase loop:**
-- Implements phase-by-phase, **auto-continues between phases** (no "continue?" prompts)
-- Runs `aioson harness:check` after each phase (deterministic exit-code check)
-- Runs a light per-phase verification sub-agent; fixes in-phase if needed
-- Compacts context between phases to maintain a clean context window
-- The expensive full **Runtime smoke** runs **once at end-of-feature** (inside `@qa`), never per phase
+DEV is the integration owner. It loads rules, docs, skills, and consultant evidence only when relevant.
 
-> `@dev` is **resumable**. If the session drops midway, next session `@deyvin` reads `dev-state.md` and continues exactly where it left off. See [Continuity between sessions](./continuity-between-sessions.md).
+### Optional development lanes
+
+If `agent-execution-billing-subscription.json` explicitly enables generic development lanes, DEV may delegate disjoint scopes to registered CLI hosts/models:
+
+```text
+DEV → backend lane → frontend lane → DEV integration → QA
+```
+
+Each lane declares `host`, `model`, `prompt`, and `write_paths`. Lanes run sequentially in the shared worktree. DEV audits each diff, resolves shared boundaries, and performs final integrated verification.
+
+An unavailable host/model pauses the run. The active client never silently substitutes itself. A fallback is legal only when the manifest explicitly declares an applicable fallback.
 
 ---
 
-## Step 4 — `@qa` + Runtime smoke gate
+## Step 5 — `@qa` writes the final verdict
 
-```
+```text
 You > @qa
 
-@qa > 18 ACs identified. Writing tests...
-@qa > Failure on AC-12 (proration calculation).
-        Iteration 1/2 — passing to @dev autonomously.
-@dev > [fixes calculation, renames misleading variable]
-@qa > Re-running... 18/18 OK.
-@qa > Runtime smoke gate: build + migrations (applied to real DB) + boot + Core happy-path...
-@qa > Runtime smoke: PASS.
-@qa > test-plan.md and qa-report.md saved. Feature ready.
+@qa > Reviewing the PRD, plan, diff, DEV evidence, and production path.
+@qa > AC-12 fails with a reproducible proration case.
+@qa > Returning the smallest correction packet to @dev:
+           command: npm test -- proration.test.js
+           expected: downgrade credit is applied once
+           observed: credit applied twice
+
+@dev > Fix applied; focused and integrated checks pass.
+@qa > Re-checking changed evidence...
+@qa > qa-report-billing-subscription.md saved. Verdict: PASS.
 ```
 
-**`@qa` owns Gate D:** the feature does NOT close until the Runtime smoke gate passes — build + migrations applied to a real DB + boot + Core happy-path on the REAL stack. Passing unit tests + `tsc` is the floor, not "done."
+QA is proportional and bounded:
 
-**Cap 2 autonomous loop:** `@qa ↔ @dev` runs at most 2 iterations automatically. If it still fails, `@qa` stops and calls you for human review — prevents infinite loops.
+- MICRO/Simple Plan: changed ACs, focused tests, one production-path smoke.
+- SMALL: all feature ACs, focused regression, one production-path smoke.
+- MEDIUM: deeper negative and integration checks only for named risks.
+
+QA stops broad investigation after finding a reproducible implementation defect. It does not repeat an unchanged diagnostic more than twice, and it does not run between DEV stages.
+
+Tester, Pentester, and Validator are disabled by default. They run only when their manifest entry is enabled and an explicit user choice, approved-plan need, or concrete QA finding triggers them. Classification alone never enables them.
 
 ---
 
-## Optional steps — security and coverage
+## Autopilot behavior
 
-### Optional: `@pentester ↔ @dev` for security-sensitive features
+When autopilot is armed, deterministic handoffs can continue through the canonical chain. The default delivery handoff is:
 
-When to activate:
-- Feature touches sensitive data (payment, PII, auth)
-- Going to production
-- There is a regulatory requirement
-
-```
-You > @pentester
-
-@pentester > Mapping attack surfaces (OWASP + supply chain + tooling).
-@pentester > Findings:
-        - HIGH: Stripe webhook without signature validation in dev mode
-        - MEDIUM: /billing/portal route without rate-limit
-        - LOW: log includes customer email in plaintext
-
-@pentester > Iteration 1 — passing to @dev to fix.
-@dev > [fixes signature validation, adds rate-limit, redacts log]
-@pentester > Re-scan: HIGH=0, MEDIUM=0, LOW=1 (accepted as low risk).
-@pentester > security-findings-billing-subscription.json saved.
+```text
+DEV → QA
 ```
 
-> **Note:** in MEDIUM, `@pentester` is inline (not optional — it runs between `@dev` and `@qa`).
+Autopilot pauses for genuine product or security decisions, unavailable requested host/model without an explicit fallback, exhausted correction limits, and actions requiring new authority. It never runs `feature:close`, commit, publish, deploy, or release without explicit approval.
 
-### Optional: `@tester` for systematic coverage
-
-When to activate:
-- High-load feature needing coverage beyond PRD ACs
-- Suspected edge cases (timezones, concurrency, locales)
-- Legacy code touched by the feature
-
-```
-You > @tester
-
-@tester > Reading qa-report. Current coverage: 78%. Quality tier: MEDIUM.
-@tester > Identified 3 zones with test smell:
-        - Tests coupled to brittle fixtures (3 tests)
-        - 2 tests only verify "no throw" (don't check behavior)
-        - Missing proration coverage on edge dates (29th–31st of month)
-@tester > Additional test plan saved to test-inventory.md.
-@tester > Next: run @qa again to implement missing tests.
-```
-
-After `@tester`, **run `@qa` again** — the `@qa ↔ @dev` loop repeats on the new tests.
-
-### Optional: `@validator` — contract verification in fresh context
-
-When to activate: a `harness-contract.json` exists and you want a binary verdict before closing.
-
-```
-You > @validator
-
-@validator > Running harness:check first... 18/18 criteria pass.
-@validator > LLM-judging non-executable criteria (2 criteria)...
-@validator > Verdict: all criteria met. Feature ready for feature:close.
-```
-
-`@validator` always runs in a **fresh, isolated context** — never inline in the implementing session.
+See [Autopilot handoff](../5-reference/autopilot-handoff.md).
 
 ---
 
-## Opt-in detours — when to add more spec agents
+## Canonical audit trail
 
-The SMALL lean trail (`@product → @sheldon → @dev → @qa`) is the default. The agents below are **NOT default hops** — none are deleted; invoke them explicitly when the need arises, or use the MEDIUM trail which fans them out automatically.
-
-| Agent | When to invoke explicitly |
-|---|---|
-| **`@analyst`** | Deep brownfield domain mapping, complex entity relationships |
-| **`@architect`** | Sensitive technical decision requiring a dedicated review (microservices boundary, library choice) |
-| **`@pm`** | Large feature needing formal user stories + backlog management |
-| **`@ux-ui`** | UI-heavy feature needing a formal design system spec before `@dev` |
-| **`@discovery-design-doc`** | Exploratory mode (vague idea → clarity checkpoint); or an explicit pre-dev design contract |
-| **`@scope-check`** | Explicit drift audit (intent vs plan vs diff) — `spec:analyze` also runs automatically at the `@dev`/`@qa` done gate |
-
----
-
-## MEDIUM maestro variant
-
-**Trail:** `@product → @orchestrator → @dev → @pentester → @qa`
-
-`@orchestrator` is the **single spec authority** for MEDIUM (horizontal / fan-out): it spawns `@analyst` + `@architect` + `@pm` (+ `@ux-ui` when UI-heavy) as sub-agents, then **consolidates / verifies / redoes** their output into one gated spec package, then hands to `@dev`. Optionally `@sheldon` hardens the PRD as a pre-step.
-
-```
-You > @orchestrator
-
-@orchestrator > Starting MEDIUM spec phase. Fanning out sub-agents...
-        [spawns @analyst → maps domain: Subscription, Plan, Invoice, PaymentMethod]
-        [spawns @architect → structures modules: webhook handler, dunning cron, migrations]
-        [spawns @pm → implementation plan + user stories]
-@orchestrator > Consolidating output... verifying cross-agent consistency...
-@orchestrator > Gated spec package ready:
-        - requirements.md (consolidated + ACs hardened)
-        - architecture.md (decisions)
-        - tasks.md (user stories + implementation plan)
-        - harness-contract.json (RG-smoke criteria + verifications)
-@orchestrator > Gates A/B/C: approved. Next: @dev.
-```
-
-After `@orchestrator`, `@dev` runs the same phase loop as SMALL. `@pentester` then runs inline (not optional in MEDIUM), and `@qa` closes with the Runtime smoke gate.
-
----
-
-## What was left on disk (SMALL audit trail)
-
-```
+```text
 .aioson/context/
-├── prd.md                               ← @product
-├── requirements-billing-subscription.md ← @sheldon (closed gaps, ACs)
-├── design-doc-billing-subscription.md   ← @sheldon (technical structure)
-├── readiness-billing-subscription.md    ← @sheldon (Gate B)
-├── implementation-plan.md               ← @sheldon (phases + waves)
-├── dev-state.md                         ← @dev (phase log, updated each session)
-├── test-plan.md                         ← @qa
-├── qa-report-billing-subscription.md    ← @qa
-├── test-inventory.md                    ← @tester (optional)
-├── security-findings-billing-subscription.json ← @pentester (optional)
-└── features/billing-subscription/
-    ├── spec.md
-    └── done/                            ← archived by feature:close
-
-.aioson/plans/billing-subscription/
-├── harness-contract.json                ← @sheldon (success contract)
-└── progress.json                        ← current status
+├── prd-billing-subscription.md
+├── implementation-plan-billing-subscription.md
+├── dev-state.md
+└── qa-report-billing-subscription.md
 ```
 
-Six months from now, anyone (or any AI) reads these files and understands **everything**: what was planned, why, what was implemented, what was discarded.
-
----
-
-## Trail variations
-
-### MICRO (no spec phase)
-`@product → @dev → @qa`. Skip everything else. The Constitution's Article II (*Right-Sized Process*) protects you from unnecessary ceremony.
-
-### SMALL lean (this trail — default)
-`@product → @sheldon → @dev → @qa`. `@sheldon` is the single spec authority. Add opt-in detours (`@analyst`, `@architect`, `@ux-ui`, etc.) when explicitly needed.
-
-### MEDIUM maestro
-`@product → @orchestrator → @dev → @pentester → @qa`. `@orchestrator` fans out `@analyst`/`@architect`/`@pm`/`@ux-ui` as sub-agents automatically. `@pentester` is inline (not opt-in).
+A dossier, prototype, consultant report, test inventory, security findings, or harness contract may exist as non-blocking evidence. None replaces the PRD, plan, or QA verdict.
 
 ---
 
 ## Troubleshooting
 
-| Problem | Solution |
+| Problem | Response |
 |---|---|
-| `@sheldon` complains the PRD is vague | Go back to `@product` and refine. `@sheldon` does not invent what is not clear. |
-| `@dev` phase loop stalls mid-phase | `@deyvin` picks up via `dev-state.md`. See [Continuity between sessions](./continuity-between-sessions.md). |
-| `@qa ↔ @dev` loop hit cap 3 | There is a design defect. Return to `@sheldon` or `@product` before writing more code. |
-| `@pentester` HIGH finding won't clear | Don't force it. Document as accepted risk or defer the feature. |
-| `@orchestrator` creates only 1 lane | Your feature is probably SMALL in disguise. Use the `@sheldon` trail instead. |
-| Session dropped mid-`@dev` | `@deyvin` picks up. See [Continuity between sessions](./continuity-between-sessions.md). |
+| Product decisions remain open | Resolve them in `@product`; do not ask Planner or DEV to invent product policy |
+| The PRD needs critical enrichment | Run optional `@sheldon`, then keep the result in the same PRD |
+| Planner finds a material unresolved boundary | Request the relevant consultant, feed the decision back into the PRD/plan, then resume |
+| A development host/model is unavailable | Pause or use a manifest-declared fallback; never silently run it in the current client |
+| QA finds a reproducible defect | Return the smallest correction packet to DEV, then re-check only affected evidence plus required regression |
+| QA investigation is not converging | Stop at the bounded attempt limit and ask for a human decision |
 
 ---
 
-## When NOT to use this trail
+## Next steps
 
-- **Isolated bug fix** — go straight to `@dev` (with bug ID reference) and `@qa`.
-- **Refactor without behavior change** — use [Large refactor](./large-refactor.md).
-- **MICRO feature without new business logic** — overhead not worth it.
-
----
-
-## Next step
-
-- [From idea to PRD via @briefing](./from-idea-to-prd-via-briefing.md) — when the idea is still vague
-- [Continuity between sessions](./continuity-between-sessions.md) — to resume the trail in another session
-- [Ecosystem map](../1-understand/ecosystem-map.md) — view all agents
+- [From idea to PRD via @briefing](./from-idea-to-prd-via-briefing.md)
+- [Continuity between sessions](./continuity-between-sessions.md)
+- [Agent execution and development lanes](../5-reference/agent-execution.md)
+- [Ecosystem map](../1-understand/ecosystem-map.md)

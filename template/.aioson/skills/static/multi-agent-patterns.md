@@ -1,44 +1,27 @@
 # Multi-Agent Patterns for MEDIUM Projects
 
-> Load when orchestrating a MEDIUM project with 3+ features or 5+ phases.
+> Load only when a MEDIUM project benefits from parallel execution. MEDIUM changes depth and evidence, not the canonical agent chain.
 
 ## Pattern: Planner / Generator / Evaluator (PGE)
 
-### Roles
+| Role | AIOSON agents | Durable output |
+|---|---|---|
+| Product authority | `@product` with optional `@sheldon` challenge | One implementation-ready PRD |
+| Delivery planner | `@planner` | One vertical implementation plan |
+| Generator | `@dev` or `@deyvin` | Working code and stack-native tests |
+| Evaluator | `@qa` | One QA report with production-path evidence |
 
-| Role | AIOSON Agents | Responsibility |
-|------|--------------|----------------|
-| Planner | @product → @sheldon → @analyst → @architect | Produce spec pack: PRD + requirements + architecture + implementation plan |
-| Generator | @dev, @deyvin | Implement against the spec pack, one phase at a time |
-| Evaluator | @qa, @tester | Verify implementation against spec, report findings |
-
-### Feedback loops
-
-```
-Planner ──spec-pack──→ Generator ──code──→ Evaluator
-    ^                                          |
-    └──────── findings + drift report ─────────┘
+```text
+PRD → implementation plan → working software → QA verdict
+ ↑                                      |
+ └──────────── concrete findings ───────┘
 ```
 
-When Evaluator finds issues:
-1. **Minor (Low/Medium findings):** Generator fixes in next phase
-2. **Major (Critical/High findings):** Generator stops, Evaluator reports to user
-3. **Spec drift detected:** Route back to Planner (@analyst or @sheldon) for spec update
-4. **Architecture issue:** Route to @architect for design revision
+Parallel workers may implement independent approved plan phases, but they do not generate competing specs. Findings route to the owner of the decision:
 
-### Session isolation
+1. Implementation defect → `@dev`.
+2. Missing or contradictory observable outcome → `@sheldon`, editing the same PRD.
+3. Invalid sequencing/path choice → `@planner`, editing the same plan.
+4. A named architecture, UX, security, or test-engineering question → invoke that specialist once, then fold the decision into PRD or plan.
 
-Each role should run from a compact operational handoff:
-- Planner sessions: produce artifacts, then /compact for same-feature continuation
-- Generator sessions: read spec pack + implement, then /compact for same-feature continuation
-- Evaluator sessions: read code + spec + verify, then /compact for same-feature continuation
-- Use /clear only for a hard reset, feature switch, polluted context, or security-sensitive reset
-
-Cross-role communication happens through artifacts on disk, not conversation history.
-
-### When NOT to use PGE
-
-- MICRO projects: skip Planner (except @product), go direct to Generator
-- SMALL projects: compressed PGE — Planner is 1-2 sessions, not 4
-- Bug fixes: Generator only, Evaluator optional
-- Exploration: not PGE at all — use @deyvin in pair mode
+Cross-role communication uses the PRD, plan, code, and QA report on disk. MICRO work and bounded fixes use Simple Plan directly.

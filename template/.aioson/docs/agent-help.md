@@ -14,8 +14,8 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 - **When:** starting a new feature or project definition; the kickoff of every feature chain.
 - **Options:** `--auto` (run this feature on autopilot to `feature:close`), `--step` (drive each stage manually). Without a token and no standing choice, asks the run mode once at the PRD handoff.
 - **Typical:** `/product --auto build email notifications`, `/product redesign checkout`.
-- **Produces:** `prd-{slug}.md`, `features.md` row; seeds the autopilot scheme when armed.
-- **Next:** `@sheldon` (SMALL), `@orchestrator` (MEDIUM), `@dev` (MICRO), `@copywriter` (site).
+- **Produces:** one `prd-{slug}.md` product authority plus the `features.md` index row.
+- **Next:** `@planner` for every feature classification; optional `@sheldon` only for requested/concrete independent enrichment; `@copywriter` for a site-specific content detour.
 
 ## @briefing
 
@@ -37,11 +37,11 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @dev
 
-- **What:** implements features per the spec/plan — code, migrations, interfaces, tests; drives all phases in one continuous run.
+- **What:** implements the reviewed PRD through the approved implementation plan — code, migrations, interfaces, and stack-native tests on the production path.
 - **When:** implementation entry point, resume after a break, or QA corrections.
 - **Options:** `--auto` (arm autopilot from here: implementation + review cycle run autonomously), `--step` (disarm autopilot for this feature — stop at the `@qa` handoff even in an always-autopilot project).
 - **Typical:** `/dev --auto`, `/dev` (follows the seeded scheme/flag), `/dev continue feature checkout`.
-- **Produces:** the implementation + tests, `spec-{slug}.md` updates, `dev-state.md` checkpoints.
+- **Produces:** the working implementation + tests and `dev-state.md` checkpoints; it does not create another specification.
 - **Next:** `@qa` (hub of the post-dev review cycle).
 
 ## @deyvin
@@ -82,12 +82,12 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @orchestrator
 
-- **What:** the MEDIUM spec maestro — fans out to analyst/architect/pm (+ux-ui) as sub-agents and consolidates one gated spec package (requirements, spec with Gates A/B/C, design-doc, readiness, plan, harness contract). MEDIUM only.
-- **When:** feature classified MEDIUM, right after `@product`.
-- **Options:** none at activation — under autopilot it seeds the scheme, completes its stage, and crosses into `@dev` automatically.
-- **Typical:** `/orchestrator continue feature billing-portal`.
-- **Produces:** the gated spec package + `dev-state.md` cold-start packet.
-- **Next:** `@dev`.
+- **What:** optional coordination specialist for a user-requested parallel execution problem; it is not a specification authority.
+- **When:** the approved implementation plan contains genuinely independent work that benefits from explicit coordination.
+- **Options:** use only with a named coordination goal and ownership boundaries.
+- **Typical:** `/orchestrator coordinate phases 2 and 3 of billing-portal`.
+- **Produces:** coordination state and consolidated execution status, not a requirements/spec/design pack.
+- **Next:** the current canonical owner (`@planner`, `@dev`, or `@qa`).
 
 ## @tester
 
@@ -109,18 +109,27 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 ## @qa
 
-- **What:** risk-first review — objective findings, the runtime smoke gate (build + migrate + boot + Core happy-path on the real stack), and the post-dev routing hub.
+- **What:** proportional delivery review — checks the relevant ACs, focused tests, and the normal production path, then returns a fast PASS or a concise reproduction to Dev.
 - **When:** right after `@dev`; re-verification after corrections.
 - **Options:** none at activation — verdicts and routing are evidence-driven.
 - **Typical:** `/qa verify feature checkout`, or auto-invoked by `@dev` under autopilot.
-- **Produces:** QA report + verdict (PASS/FAIL), Gate D, corrections plans on FAIL.
-- **Next:** `@dev` (FAIL), `@tester`/`@pentester` (triggers), `@validator` (harness contract), or STOP recommending `aioson feature:close` (human gate).
+- **Produces:** `qa-report-{slug}.md` with verdict (PASS/FAIL), executable checks, and production-path evidence.
+- **Next:** `@dev` (FAIL), a risk-triggered specialist, or STOP recommending `aioson feature:close` (human gate).
 
 ## @sheldon
 
-- **What:** the SMALL single spec authority (lean lane) — PRD gap analysis, sizing, enrichment, and the full collapsed spec package in one pass.
-- **When:** feature classified SMALL, right after `@product`; or PRD quality review on demand.
-- **Options:** none at activation — under autopilot it seeds the scheme, completes its stage (`--complete=sheldon`), and crosses into `@dev` automatically.
+- **What:** optionally challenges and enriches the Product PRD in place without creating a parallel specification pack.
+- **When:** the user asks for independent enrichment or Product/Planner identifies a concrete contradiction or material risk.
+- **Options:** none at activation — it edits the existing PRD and never creates a parallel spec pack.
 - **Typical:** `/sheldon continue feature quick-filters`.
-- **Produces:** `sheldon-enrichment-{slug}.md`, `spec-{slug}.md` (Gates A/B/C), design-doc, readiness, plan, harness contract, `dev-state.md`.
+- **Produces:** the same `prd-{slug}.md` with `sheldon_review: approved` and stable `CAP-*`/`AC-*` trace.
+- **Next:** `@planner`.
+
+## @planner
+
+- **What:** converts the Product-ready PRD and prototype into executable vertical implementation stages.
+- **When:** every MICRO/SMALL/MEDIUM feature after `@product`, or after an optional Sheldon enrichment.
+- **Options:** none; unresolved product behavior returns to Product, while a truly specialist decision may trigger one bounded detour.
+- **Typical:** `/planner plan feature quick-filters`.
+- **Produces:** one `implementation-plan-{slug}.md` with exact paths, dependencies, checks, and early production-path proof.
 - **Next:** `@dev`.

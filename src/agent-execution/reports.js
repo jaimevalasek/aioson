@@ -3,7 +3,38 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const VERDICTS = ['PASS', 'FAIL', 'BLOCKED'];
 const IDENTITY_FIELDS = ['feature','run_id','attempt_id','agent','host','model_resolved','manifest_digest'];
-function validateReport(r, expected = null) { const errors=[]; const req=['version','feature','run_id','attempt_id','agent','host','model_requested','model_resolved','manifest_digest','writable_roots','started_at','finished_at','verdict','findings','evidence'];if(expected?.model_resolution_strategy!==undefined)req.push('model_resolution_strategy'); for(const k of req) if(r?.[k]===undefined) errors.push({path:`$.${k}`,message:'is required'}); if(r && !VERDICTS.includes(r.verdict)) errors.push({path:'$.verdict',message:'must be PASS, FAIL, or BLOCKED'}); if(r && !Array.isArray(r.findings)) errors.push({path:'$.findings',message:'must be an array'});if(r&&!Array.isArray(r.writable_roots))errors.push({path:'$.writable_roots',message:'must be an array'}); if(expected) for(const key of IDENTITY_FIELDS) if(r?.[key]!==expected[key]) errors.push({path:`$.${key}`,message:'does not match the registered attempt'});for(const key of ['model_requested','model_resolution_strategy'])if(expected?.[key]!==undefined&&r?.[key]!==expected[key])errors.push({path:`$.${key}`,message:'does not match the registered attempt'});if(expected&&expected.reasoning_effort&&r?.reasoning_effort!==expected.reasoning_effort)errors.push({path:'$.reasoning_effort',message:'does not match the registered attempt'});if(expected&&JSON.stringify(r?.writable_roots)!==JSON.stringify(expected.writable_roots))errors.push({path:'$.writable_roots',message:'does not match the registered attempt'}); if(expected && !['ready','running'].includes(expected.status)) errors.push({path:'$.attempt_id',message:'attempt is not eligible to report'}); return {ok:errors.length===0,errors}; }
+function validateReport(r, expected = null) {
+  const errors = [];
+  const req = ['version','feature','run_id','attempt_id','agent','host','model_requested','model_resolved','manifest_digest','writable_roots','started_at','finished_at','verdict','findings','evidence'];
+  if (expected?.model_resolution_strategy !== undefined) req.push('model_resolution_strategy');
+  if (expected?.lane !== undefined) req.push('lane', 'write_paths');
+  for (const key of req) if (r?.[key] === undefined) errors.push({ path: `$.${key}`, message: 'is required' });
+  if (r && !VERDICTS.includes(r.verdict)) errors.push({ path: '$.verdict', message: 'must be PASS, FAIL, or BLOCKED' });
+  if (r && !Array.isArray(r.findings)) errors.push({ path: '$.findings', message: 'must be an array' });
+  if (r && !Array.isArray(r.writable_roots)) errors.push({ path: '$.writable_roots', message: 'must be an array' });
+  if (expected) {
+    for (const key of IDENTITY_FIELDS) {
+      if (r?.[key] !== expected[key]) errors.push({ path: `$.${key}`, message: 'does not match the registered attempt' });
+    }
+  }
+  for (const key of ['model_requested', 'model_resolution_strategy', 'lane']) {
+    if (expected?.[key] !== undefined && r?.[key] !== expected[key]) {
+      errors.push({ path: `$.${key}`, message: 'does not match the registered attempt' });
+    }
+  }
+  if (expected?.reasoning_effort && r?.reasoning_effort !== expected.reasoning_effort) {
+    errors.push({ path: '$.reasoning_effort', message: 'does not match the registered attempt' });
+  }
+  for (const key of ['writable_roots', 'write_paths']) {
+    if (expected?.[key] !== undefined && JSON.stringify(r?.[key]) !== JSON.stringify(expected[key])) {
+      errors.push({ path: `$.${key}`, message: 'does not match the registered attempt' });
+    }
+  }
+  if (expected && !['ready', 'running'].includes(expected.status)) {
+    errors.push({ path: '$.attempt_id', message: 'attempt is not eligible to report' });
+  }
+  return { ok: errors.length === 0, errors };
+}
 function safeReportPath(projectDir, relative) { const root=path.resolve(projectDir,'.aioson','context','reports'); const target=path.resolve(projectDir,relative); if(target!==root && !target.startsWith(root+path.sep)) throw new Error('report path escapes report root'); return target; }
 async function writeReport(projectDir, relative, report, expected) { const check=validateReport(report,expected); if(!check.ok){const e=new Error('invalid report');e.errors=check.errors;throw e;} const file=safeReportPath(projectDir,relative); await fs.mkdir(path.dirname(file),{recursive:true}); const handle=await fs.open(file,'wx'); try{await handle.writeFile(`${JSON.stringify(report,null,2)}\n`,'utf8')}finally{await handle.close()} return file; }
 module.exports={validateReport,safeReportPath,writeReport};

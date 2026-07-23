@@ -1,9 +1,9 @@
 ---
 name: aioson-context-boundary
-description: .aioson/context/ is Markdown-first with explicit machine-readable exceptions
+description: .aioson/context/ is Markdown-first with explicit machine-readable workflow exceptions
 priority: 10
-version: 1.0.0
-agents: [product, analyst, architect, ux-ui, pm, dev, qa, sheldon]
+version: 2.0.0
+agents: [product, sheldon, planner, dev, qa, analyst, architect, ux-ui, pm]
 modes: [executing]
 task_types: [artifact-write, file-creation]
 load_tier: trigger
@@ -12,62 +12,40 @@ triggers: [writing artifacts, creating files, saving context, context artifact, 
 paths: [.aioson/context/**]
 ---
 
-# Context Boundary: .aioson/context/
+# Context Boundary: `.aioson/context/`
 
-`.aioson/context/` is Markdown-first. Human-authored feature and project artifacts should be Markdown unless a file is one of the explicit machine-readable exceptions below.
-
-Prohibited by default: `.json`, `.yaml`/`.yml`, `.js`, `.ts`, `.py`, any non-Markdown format.
+`.aioson/context/` is Markdown-first. Feature and project knowledge stays human-readable unless a file is one of the explicit runtime/security exceptions below.
 
 Allowed machine-readable exceptions:
 
-- `.aioson/context/conformance-{slug}.yaml`
 - `.aioson/context/security-findings-{slug}.json`
 - `.aioson/context/workflow.state.json`
 - `.aioson/context/handoff-protocol.json`
 - `.aioson/context/last-handoff.json`
 - `.aioson/context/parallel/*.json`
 
-## Correct location by artifact type
+Legacy `conformance-{slug}.yaml` files remain readable for compatibility but are not created by the canonical workflow.
 
-| Artifact type | Correct location |
+## Canonical locations
+
+| Artifact | Location |
 |---|---|
 | Project configuration | `.aioson/config.md` |
-| Conformance schema | `.aioson/context/conformance-{slug}.yaml` ← machine-readable exception |
-| Security findings | `.aioson/context/security-findings-{slug}.json` ← machine-readable exception |
-| Workflow handoff/runtime state | `.aioson/context/workflow.state.json`, `.aioson/context/handoff-protocol.json`, `.aioson/context/last-handoff.json` |
-| Parallel coordination machine files | `.aioson/context/parallel/*.json` |
-| Simple implementation plans | `.aioson/context/simple-plans/{slug}.md` |
-| Retrospective dossier | `.aioson/context/retro/{slug}.md` (or `window-last-{N}.md`) ← harness:retro |
-| Squad definitions | `.aioson/squads/{slug}/` |
-| Skill manifests | `.aioson/skills/{category}/{slug}/SKILL.md` |
-| Feature artifacts | `.aioson/context/{artifact}-{slug}.md` |
-| Project artifacts | `.aioson/context/{artifact}.md` |
+| Product authority | `.aioson/context/prd.md` or `prd-{slug}.md` |
+| Delivery plan | `.aioson/context/implementation-plan-{slug}.md` |
+| QA verdict | `.aioson/context/qa-report-{slug}.md` |
+| Simple Plan | `.aioson/context/simple-plans/{slug}.md` |
+| Project/feature indexes | `.aioson/context/features.md`, `project-pulse.md`, `dev-state.md` |
+| Workflow runtime state | `.aioson/context/workflow.state.json`, `handoff-protocol.json`, `last-handoff.json` |
+| Parallel coordination | `.aioson/context/parallel/*.json` |
+| Security findings, only when triggered | `.aioson/context/security-findings-{slug}.json` |
+| Optional specialist notes | `.aioson/context/{artifact}-{slug}.md` |
 
-## Valid artifacts in .aioson/context/
-
-```
-project.context.md            ← setup
-discovery.md                  ← analyst
-requirements-{slug}.md        ← analyst
-architecture.md               ← architect
-ui-spec.md / ui-spec-{slug}.md ← ux-ui (`ui-spec.md` is the current canonical runtime artifact)
-prd.md / prd-{slug}.md        ← product
-spec-{slug}.md                ← dev
-implementation-plan-{slug}.md ← pm
-simple-plans/{slug}.md       ← dev / deyvin
-retro/{slug}.md               ← harness:retro (retrospective dossier; window-last-{N}.md for windows)
-features.md                   ← product / pm
-project-pulse.md              ← all agents (update at session end)
-conformance-{slug}.yaml       ← conformance machine-readable exception
-security-findings-{slug}.json ← pentester/qa security findings exception
-workflow.state.json           ← workflow runtime exception
-handoff-protocol.json         ← workflow handoff exception
-last-handoff.json             ← workflow handoff exception
-parallel/*.json               ← parallel coordination exception
-```
+Requirements/spec/design/readiness/conformance documents are legacy optional inputs, not canonical outputs or prerequisites. Do not create them simply because a feature is SMALL or MEDIUM.
 
 ## On violation detected
 
-1. Do not create the file.
-2. Identify correct format and location.
-3. Inform user: "`.aioson/context/` is Markdown-first. Non-Markdown is allowed only for the listed machine-readable exceptions. Creating `{artifact}` in `{correct-location}` instead."
+1. Do not create an arbitrary machine-readable context file.
+2. Put product behavior and acceptance criteria in the PRD.
+3. Put delivery decisions, exact paths, and executable checks in the implementation plan.
+4. Put the verdict and evidence in the QA report.

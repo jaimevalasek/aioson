@@ -65,7 +65,24 @@ test('workflow:execute: dry-run returns plan without executing', async () => {
 test('workflow:execute --seed: writes the scheme with an enabled agentic_policy and does NOT advance stages', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n# ctx\n');
-  await writeFile(tmpDir, '.aioson/context/prd-cart.md', '---\nclassification: MEDIUM\n---\n# prd\n');
+  await writeFile(tmpDir, '.aioson/context/prd-cart.md', `---
+classification: MEDIUM
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# PRD
+
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-cart-01 | User sees cart | User opens cart | required | Core promise |
+
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-cart-01 | CAP-cart-01 | Cart appears | focused test |
+`);
   await writeFile(
     tmpDir,
     '.aioson/context/features.md',
@@ -250,7 +267,7 @@ test('workflow:execute: dry-run --agentic returns runtime policy and resumable c
   assert.match(result.resume_command, /--max-pentester-cycles='5'/);
 });
 
-test('workflow:execute: dry-run SMALL is the lean lane (product, sheldon, dev, qa)', async () => {
+test('workflow:execute: dry-run SMALL uses Product, Planner, Dev, and QA', async () => {
   const tmpDir = await makeTmpDir();
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -259,7 +276,8 @@ test('workflow:execute: dry-run SMALL is the lean lane (product, sheldon, dev, q
   });
   const agents = result.steps.map((s) => s.agent);
   assert.ok(agents.includes('product'));
-  assert.ok(agents.includes('sheldon'));
+  assert.ok(agents.includes('planner'));
+  assert.ok(!agents.includes('sheldon'));
   assert.ok(agents.includes('dev'));
   assert.ok(agents.includes('qa'));
   assert.ok(!agents.includes('analyst'), 'lean SMALL drops analyst');
@@ -275,13 +293,28 @@ test('workflow:execute: dry-run MICRO follows the official feature sequence', as
   });
   const agents = result.steps.map((s) => s.agent);
   assert.ok(agents.includes('product'));
+  assert.ok(agents.includes('planner'));
   assert.ok(agents.includes('dev'));
   assert.ok(agents.includes('qa'));
 });
 
 test('workflow:execute: dry-run skips product when prd already exists', async () => {
   const tmpDir = await makeTmpDir();
-  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+---
+# PRD
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-checkout-01 | Checkout visible | User opens checkout | required | Core |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-checkout-01 | CAP-checkout-01 | Checkout appears | focused test |
+`);
   const result = await runWorkflowExecute({
     args: [tmpDir],
     options: { json: true, feature: 'checkout', 'dry-run': true, classification: 'SMALL' },
@@ -316,7 +349,7 @@ test('workflow:execute: explicit --classification overrides project context duri
 
   assert.equal(result.ok, true);
   assert.equal(result.classification, 'MICRO');
-  assert.deepEqual(result.steps.map((step) => step.agent), ['product', 'dev', 'qa']);
+  assert.deepEqual(result.steps.map((step) => step.agent), ['product', 'planner', 'dev', 'qa']);
   assert.equal(result.status_snapshot.classification, 'MICRO');
   assert.equal(Array.isArray(result.status_snapshot.artifacts), true);
   assert.equal(Object.hasOwn(result.status_snapshot.artifacts[0], 'content'), false);
@@ -438,7 +471,7 @@ test('workflow:execute: dry-run predicts blockers for an active stage with missi
   });
 
   const devStep = result.steps.find((step) => step.agent === 'dev');
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.resumed, true);
   assert.equal(devStep.status, 'active');
   assert.ok(devStep.predicted_blockers.some((item) => item.toLowerCase().includes('gate c')));
@@ -451,9 +484,39 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
     '.aioson/context/project.context.md',
     `---\nproject_name: "demo"\nproject_type: "api"\nprofile: "developer"\nframework: "Node.js"\nframework_installed: true\nclassification: "SMALL"\nconversation_language: "en"\naioson_version: "1.2.1"\n---\n`
   );
-  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
-  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Requirements');
-  await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\ngate_requirements: approved\ngate_plan: approved\n---\n# Spec');
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# PRD
+
+## Feature Capability Map
+
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-checkout-01 | User completes checkout | User submits | required | Core promise |
+
+## Acceptance Criteria
+
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-checkout-01 | CAP-checkout-01 | Checkout result appears | integration test |
+`);
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', `---
+status: approved
+---
+# Plan
+
+## Capability Delivery Plan
+
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-checkout-01 | 1 | src/checkout.js, tests/checkout.test.js | node --test |
+`);
+  await writeFile(tmpDir, 'src/checkout.js', 'module.exports = true;\n');
+  await writeFile(tmpDir, 'tests/checkout.test.js', "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-checkout-01',()=>assert.equal(true,true));\n");
   await writeFile(tmpDir, '.aioson/context/project-pulse.md', '# Pulse');
   await writeFile(tmpDir, '.aioson/context/dev-state.md', '# Dev State');
   await writeFile(
@@ -487,10 +550,10 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: 'checkout',
       detour: null,
@@ -504,7 +567,7 @@ test('workflow:execute: resumes an existing feature workflow and writes a checkp
     logger: makeLogger()
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.resumed, true);
   assert.equal(result.active_stage, 'qa');
   assert.equal(result.checkpoint.active_stage, 'qa');
@@ -537,13 +600,30 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     '.aioson/context/project.context.md',
     `---\nproject_name: "demo"\nproject_type: "api"\nprofile: "developer"\nframework: "Node.js"\nframework_installed: true\nclassification: "SMALL"\nconversation_language: "en"\naioson_version: "1.2.1"\n---\n`
   );
-  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '# PRD');
-  await writeFile(tmpDir, '.aioson/context/requirements-checkout.md', '# Requirements');
-  await writeFile(
-    tmpDir,
-    '.aioson/context/spec-checkout.md',
-    '---\ngate_requirements: approved\ngate_plan: approved\n---\n# Spec'
-  );
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+---
+# PRD
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-checkout-01 | User completes checkout | User submits | required | Core |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-checkout-01 | CAP-checkout-01 | Checkout succeeds | focused test |
+`);
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-checkout.md', `---
+status: approved
+---
+# Plan
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-checkout-01 | 1 | src/checkout.js, tests/checkout.test.js | node --test |
+`);
   await writeFile(tmpDir, '.aioson/context/project-pulse.md', '# Pulse');
   await writeFile(
     tmpDir,
@@ -557,9 +637,9 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'product',
-      next: 'analyst',
+      next: 'planner',
       completed: [],
       skipped: [],
       featureSlug: 'checkout',
@@ -574,9 +654,9 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     logger: makeLogger()
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.max_checkpoints, 2);
-  assert.equal(result.active_stage, 'scope-check');
+  assert.equal(result.active_stage, 'dev');
   assert.ok(Array.isArray(result.transitions));
   assert.equal(result.transitions.length, 2);
   assert.deepEqual(
@@ -585,10 +665,10 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
   );
   assert.deepEqual(
     result.transitions.map((transition) => transition.agent),
-    ['product', 'analyst']
+    ['product', 'planner']
   );
-  assert.equal(result.execution_state.checkpoint.active_stage, 'scope-check');
-  assert.equal(result.execution_state.status_snapshot.activeStage, 'scope-check');
+  assert.equal(result.execution_state.checkpoint.active_stage, 'dev');
+  assert.equal(result.execution_state.status_snapshot.activeStage, 'dev');
   assert.equal(result.execution_state.suggestion.action, 'continue_stage');
   assert.ok(result.resume_command.includes("--max-checkpoints='2'"));
 
@@ -596,7 +676,7 @@ test('workflow:execute: advances multiple checkpoints when --max-checkpoints is 
     await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8')
   );
   assert.equal(executionState.status, 'active');
-  assert.equal(executionState.checkpoint.active_stage, 'scope-check');
+  assert.equal(executionState.checkpoint.active_stage, 'dev');
   assert.ok(Array.isArray(executionState.history));
   assert.equal(executionState.history.length, 1);
 });
@@ -886,7 +966,7 @@ test('workflow:execute: blocked step message includes feature slug in gate:appro
   );
 });
 
-test('workflow:execute: Gate C blocked qa step names @pm or @dev as responsible', async () => {
+test('workflow:execute: Gate C blocked qa step names @planner as responsible', async () => {
   const tmpDir = await makeTmpDir();
   // qa has gate_before='C' and IS in the default MEDIUM feature sequence
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---');
@@ -911,8 +991,8 @@ test('workflow:execute: Gate C blocked qa step names @pm or @dev as responsible'
 
   const blockerMsg = qaStep.predicted_blockers[0];
   assert.ok(
-    blockerMsg.toLowerCase().includes('@pm') || blockerMsg.toLowerCase().includes('@dev'),
-    `Gate C blocker must mention @pm or @dev, got: ${blockerMsg}`
+    blockerMsg.toLowerCase().includes('@planner'),
+    `Gate C blocker must mention @planner, got: ${blockerMsg}`
   );
   assert.ok(
     blockerMsg.includes('--gate=C'),
@@ -920,7 +1000,7 @@ test('workflow:execute: Gate C blocked qa step names @pm or @dev as responsible'
   );
 });
 
-test('workflow:execute --seed: infers the finished lean sheldon stage — next is dev, not sheldon', async () => {
+test('workflow:execute --seed: infers Product-ready PRD — next is Planner', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
   await writeFile(
@@ -928,13 +1008,26 @@ test('workflow:execute --seed: infers the finished lean sheldon stage — next i
     '.aioson/context/features.md',
     '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| checkout | in_progress | 2026-07-01 | |\n'
   );
-  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', '---\nclassification: SMALL\n---\n# prd\n');
-  // @sheldon finished: spec exists with the collapsed Gates A/B/C approved.
-  await writeFile(
-    tmpDir,
-    '.aioson/context/spec-checkout.md',
-    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# spec\n'
-  );
+  await writeFile(tmpDir, '.aioson/context/prd-checkout.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# PRD
+
+## Feature Capability Map
+
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-checkout-01 | User completes checkout | User submits | required | Core promise |
+
+## Acceptance Criteria
+
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-checkout-01 | CAP-checkout-01 | Checkout succeeds | integration test |
+`);
 
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -942,15 +1035,14 @@ test('workflow:execute --seed: infers the finished lean sheldon stage — next i
     logger: makeLogger()
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, JSON.stringify(result));
   const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
-  // A seed run AFTER the spec stage finished must not point the scheme backwards.
-  assert.deepEqual(state.completed, ['product', 'sheldon']);
-  assert.equal(state.next, 'dev');
-  assert.equal(result.next_stage, 'dev');
+  assert.deepEqual(state.completed, ['product']);
+  assert.equal(state.next, 'planner');
+  assert.equal(result.next_stage, 'planner');
 });
 
-test('workflow:execute --seed: infers the finished maestro orchestrator stage — next is dev', async () => {
+test('workflow:execute --seed: infers the approved Planner stage — next is Dev', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n# ctx\n');
   await writeFile(
@@ -958,12 +1050,37 @@ test('workflow:execute --seed: infers the finished maestro orchestrator stage �
     '.aioson/context/features.md',
     '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| billing | in_progress | 2026-07-01 | |\n'
   );
-  await writeFile(tmpDir, '.aioson/context/prd-billing.md', '---\nclassification: MEDIUM\n---\n# prd\n');
-  await writeFile(
-    tmpDir,
-    '.aioson/context/spec-billing.md',
-    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# spec\n'
-  );
+  await writeFile(tmpDir, '.aioson/context/prd-billing.md', `---
+classification: MEDIUM
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# PRD
+
+## Feature Capability Map
+
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-billing-01 | User sees billing result | User submits | required | Core promise |
+
+## Acceptance Criteria
+
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-billing-01 | CAP-billing-01 | Billing result appears | integration test |
+`);
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-billing.md', `---
+status: approved
+---
+# Plan
+
+## Capability Delivery Plan
+
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-billing-01 | 1 | src/billing.js, tests/billing.test.js | node --test |
+`);
 
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -973,7 +1090,7 @@ test('workflow:execute --seed: infers the finished maestro orchestrator stage �
 
   assert.equal(result.ok, true);
   const state = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
-  assert.deepEqual(state.completed, ['product', 'orchestrator']);
+  assert.deepEqual(state.completed, ['product', 'planner']);
   assert.equal(state.next, 'dev');
 });
 

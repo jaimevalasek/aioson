@@ -28,12 +28,19 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 
 ### O que muda em cada uma
 
-#### MICRO — `@setup → @product → @dev → @qa`
+A rota rastreada é a mesma nos três níveis:
 
-- Para: scripts, automações, protótipos, apps pessoais simples.
-- Não há fase de spec formal. Você fala direto com `@dev`.
-- `@product` é opcional — você pode passar a spec direto no chat se quiser.
-- `@qa` é opcional no MICRO; verificação por fase do `@dev` é suprimida para economizar tokens.
+```text
+[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa
+```
+
+Briefing e Briefing Refiner são opcionais quando a direção já está clara. Sheldon é um enriquecimento opcional do mesmo PRD. A classificação regula profundidade, orçamento de arquivos, cobertura de risco e quantidade de evidência — não cria outra cadeia de agentes.
+
+#### MICRO
+
+- Para: scripts, automações, protótipos e apps pessoais simples que ainda precisam de memória de feature.
+- PRD e plano são curtos, mas continuam sendo as duas autoridades antes do código.
+- QA revisa os ACs alterados, testes focados e um smoke pelo caminho real.
 
 **Exemplos típicos:**
 - Script Python que processa CSV
@@ -41,11 +48,12 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 - Página estática de portfólio
 - Mini-API de 3 endpoints
 
-#### SMALL — lean lane (padrão) — `@setup → @product → @sheldon → @dev → @qa`
+#### SMALL
 
 - Para: a maioria dos apps reais.
-- `@sheldon` é a **autoridade única de spec**: em uma passada, produz requirements, decisões técnicas, plano de implementação e contrato de harness — com Gates A/B/C aprovados — antes de passar para `@dev`.
-- `@analyst`, `@architect`, `@scope-check` e outros agentes de spec são **detours opt-in**, não hops padrão.
+- O PRD tem ACs concretos e o Planner cria um único plano vertical.
+- Sheldon pode enriquecer o PRD, mas não cria uma especificação paralela.
+- QA cobre todos os ACs da feature, regressão focada e um smoke pelo caminho real.
 
 **Exemplos típicos:**
 - App SaaS para um único persona
@@ -53,12 +61,13 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 - Loja online simples
 - Blog com painel admin
 
-#### MEDIUM — maestro lane — `@setup → @product → @orchestrator → @dev → @pentester → @qa`
+#### MEDIUM
 
 - Para: produtos com múltiplos tipos de usuário, várias integrações, regras complexas.
-- `@orchestrator` é o **maestro de spec**: faz fan-out para `@analyst`, `@architect`, `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos, e entrega o pacote de spec com Gates A/B/C aprovados.
-- `@pentester` é **inline** na lane (entre `@dev` e `@qa`), não apenas opt-in.
-- Lanes paralelas possíveis (`@orchestrator` também coordena a execução paralela pós-spec).
+- Usa o mesmo PRD, o mesmo plano e o mesmo veredito QA, com mais detalhe nos riscos nomeados.
+- Analyst, Architect, PM, UX/UI e Discovery Design Doc continuam disponíveis por pedido explícito, sem virar pré-requisitos.
+- O DEV pode usar faixas de desenvolvimento declaradas por host, modelo, prompt e `write_paths`; executa-as sequencialmente e integra o resultado.
+- Tester, Pentester e Validator continuam desligados até serem explicitamente habilitados e disparados.
 - Threshold de contexto mais agressivo (55% — alerta cedo).
 
 **Exemplos típicos:**
@@ -71,7 +80,7 @@ Soma de três fatores (cada um vale 0, 1 ou 2 pontos):
 
 | Situação | Sugestão |
 |---|---|
-| Projeto pessoal, mas com uma integração externa pesada | SMALL — a integração compensa o `@architect` |
+| Projeto pessoal, mas com uma integração externa pesada | SMALL — a integração pede mais detalhe no PRD, plano e QA |
 | Score 1, mas sei que vou crescer | Comece MICRO. Pode promover depois com `@setup` |
 | Score 4, mas time é só você | MEDIUM mesmo. As regras de negócio complexas se beneficiam dos artefatos |
 | Score 2, mas é greenfield e quero design caprichado | SMALL + ative o design skill no wizard |

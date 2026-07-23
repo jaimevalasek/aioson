@@ -115,15 +115,15 @@ describe('workflow engine hardening', () => {
   it('handoff contract passes dev when Gate C is approved', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
     await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'spec-test.md'),
-      '---\ngate_plan: approved\n---\n'
+      path.join(dir, '.aioson', 'context', 'implementation-plan-test.md'),
+      '---\nstatus: approved\n---\n'
     );
 
     const check = await validateHandoffContract(dir, { mode: 'feature', featureSlug: 'test', sequence: ['dev'] }, 'dev');
     assert.strictEqual(check.ok, true);
   });
 
-  it('handoff contract accepts feature-scoped discovery-design-doc artifacts', async () => {
+  it('optional repository discovery does not require a design-doc artifact', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
     await fs.writeFile(path.join(dir, '.aioson', 'context', 'design-doc-checkout.md'), '# Design Doc\n');
     await fs.writeFile(path.join(dir, '.aioson', 'context', 'readiness-checkout.md'), '# Readiness\n');
@@ -137,7 +137,7 @@ describe('workflow engine hardening', () => {
     assert.strictEqual(check.ok, true);
   });
 
-  it('handoff contract reports feature-scoped discovery docs when they are missing', async () => {
+  it('optional repository discovery remains non-blocking when legacy artifacts are absent', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
 
     const check = await validateHandoffContract(
@@ -146,12 +146,11 @@ describe('workflow engine hardening', () => {
       'discovery-design-doc'
     );
 
-    assert.strictEqual(check.ok, false);
-    assert.ok(check.missing.some((m) => m.includes('design-doc-checkout.md')));
-    assert.ok(check.missing.some((m) => m.includes('readiness-checkout.md')));
+    assert.strictEqual(check.ok, true);
+    assert.equal(check.missing.some((m) => /design-doc|readiness/.test(m)), false);
   });
 
-  it('canonical discovery-design-doc artifacts prefer slugged paths in feature mode', async () => {
+  it('optional repository discovery owns no canonical feature artifact', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
 
     const artifacts = await getCanonicalArtifactsForAgent(
@@ -160,11 +159,10 @@ describe('workflow engine hardening', () => {
       { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
     );
 
-    assert.ok(artifacts.some((artifact) => artifact.endsWith('design-doc-checkout.md')));
-    assert.ok(artifacts.some((artifact) => artifact.endsWith('readiness-checkout.md')));
+    assert.deepEqual(artifacts, []);
   });
 
-  it('canonical discovery-design-doc artifacts keep global fallback paths for auto-advance', async () => {
+  it('optional repository discovery owns no global fallback artifacts', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
 
     const artifacts = await getCanonicalArtifactsForAgent(
@@ -173,8 +171,7 @@ describe('workflow engine hardening', () => {
       { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
     );
 
-    assert.ok(artifacts.some((artifact) => artifact.endsWith('design-doc.md')));
-    assert.ok(artifacts.some((artifact) => artifact.endsWith('readiness.md')));
+    assert.deepEqual(artifacts, []);
   });
 
   it('test briefing extracts mock helpers and ui strings', async () => {
@@ -329,7 +326,11 @@ describe('workflow engine hardening', () => {
         '## Feature Capability Map',
         '| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |',
         '|---|---|---|---|---|',
-        '| CAP-feat-verify | The user observes the verified behavior | User invokes the feature | required | Primary approved outcome |'
+        '| CAP-feat-verify | The user observes the verified behavior | User invokes the feature | required | Primary approved outcome |',
+        '## Acceptance Criteria',
+        '| AC | CAP | Observable behavior | Evidence |',
+        '|---|---|---|---|',
+        '| AC-feat-01 | CAP-feat-verify | Return the verified behavior | node test |'
       ].join('\n')
     );
     const capabilityRows = CANONICAL_LENSES.map((lens) => {
@@ -362,6 +363,7 @@ describe('workflow engine hardening', () => {
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'implementation-plan-feat.md'),
       [
+        '---', 'status: approved', '---',
         '# Plan feat',
         '## Capability Delivery Plan',
         '| CAP | Phase | Files | Verification |',
@@ -440,7 +442,7 @@ describe('workflow engine hardening', () => {
     assert.strictEqual(check.ok, true, JSON.stringify(check, null, 2));
   });
 
-  it('qa activation auto-runs security:audit for MEDIUM feature workflow and records runtime event', async () => {
+  it('qa activation does not auto-run security audit merely because the feature is MEDIUM', async () => {
     const dir = await setupProject({ classification: 'MEDIUM' });
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'features.md'),
@@ -480,84 +482,50 @@ describe('workflow engine hardening', () => {
     });
 
     assert.equal(result.agent, 'qa');
-    assert.match(result.prompt, /Auto-ran `security:audit` for feature `feat`/);
-
+    assert.doesNotMatch(result.prompt, /Auto-ran `security:audit`/);
     const findingsPath = path.join(dir, '.aioson', 'context', 'security-findings-feat.json');
-    await assert.doesNotReject(() => fs.access(findingsPath));
-
-    const runtime = await openRuntimeDb(dir, { mustExist: true });
-    try {
-      const event = runtime.db.prepare(`
-        SELECT event_type, source, workflow_stage
-        FROM execution_events
-        WHERE event_type = 'security_audit_completed'
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-      `).get();
-
-      assert.equal(event.event_type, 'security_audit_completed');
-      assert.equal(event.source, 'workflow');
-      assert.equal(event.workflow_stage, 'qa');
-    } finally {
-      runtime.db.close();
-    }
+    await assert.rejects(() => fs.access(findingsPath));
   });
 
-  it('qa completion records security_gate_blocked when MEDIUM audit artifact is missing', async () => {
+  it('MEDIUM QA does not require a security artifact unless risk triggered it', async () => {
     const dir = await setupProject({ classification: 'MEDIUM' });
-    await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'features.md'),
-      '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| feat | in_progress | 2026-06-02 | — |\n'
+    await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+    await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'prd-feat.md'), `---
+classification: MEDIUM
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# PRD
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-feat-01 | User sees result | User submits | required | Core promise |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-feat-01 | CAP-feat-01 | Result appears | node test |
+`);
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'implementation-plan-feat.md'), `---
+status: approved
+---
+# Plan
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-feat-01 | 1 | src/feat.js, tests/feat.test.js | node --test |
+`);
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'qa-report-feat.md'), '---\nverdict: PASS\n---\n# QA\n');
+    await fs.writeFile(path.join(dir, 'src', 'feat.js'), 'module.exports = true;\n');
+    await fs.writeFile(path.join(dir, 'tests', 'feat.test.js'), "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-feat-01',()=>assert.ok(true));\n");
+    const check = await validateHandoffContract(
+      dir,
+      { mode: 'feature', featureSlug: 'feat', classification: 'MEDIUM', sequence: ['product', 'planner', 'dev', 'qa'] },
+      'qa'
     );
-    await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'spec-feat.md'),
-      '---\ngate_execution: approved\n---\n## QA Sign-off\n\n**Verdict:** PASS\n'
-    );
-    await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'workflow.state.json'),
-      JSON.stringify({
-        version: 1,
-        mode: 'feature',
-        classification: 'MEDIUM',
-        sequence: ['product', 'analyst', 'dev', 'pentester', 'qa'],
-        current: 'qa',
-        next: null,
-        completed: ['product', 'analyst', 'dev', 'pentester'],
-        skipped: [],
-        featureSlug: 'feat',
-        detour: null,
-        updatedAt: new Date().toISOString()
-      })
-    );
-
-    await assert.rejects(
-      async () => runWorkflowNext({
-        args: [dir],
-        options: { complete: 'qa', tool: 'codex' },
-        logger: { log: () => {}, error: () => {} },
-        t: (key, params) => params?.agent || key
-      }),
-      /security-findings-feat\.json/
-    );
-
-    const runtime = await openRuntimeDb(dir, { mustExist: true });
-    try {
-      const event = runtime.db.prepare(`
-        SELECT event_type, status, payload_json
-        FROM execution_events
-        WHERE event_type = 'security_gate_blocked'
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-      `).get();
-
-      assert.equal(event.event_type, 'security_gate_blocked');
-      assert.equal(event.status, 'failed');
-      const payload = JSON.parse(event.payload_json);
-      assert.equal(payload.feature_slug, 'feat');
-      assert.ok(payload.blockers.some((line) => line.includes('security-findings-feat.json')));
-    } finally {
-      runtime.db.close();
-    }
+    assert.equal(check.ok, true, JSON.stringify(check.missing));
+    assert.equal(check.missing.some((line) => line.includes('security-findings-feat.json')), false);
   });
 
   it('MEDIUM feature workflow sequence routes dev directly to the QA review hub', () => {

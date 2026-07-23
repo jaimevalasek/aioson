@@ -6,27 +6,17 @@
     {
       "id": "implement_feature",
       "category": "create",
-      "description": "Implement code changes according to spec and architecture.",
+      "description": "Implement the approved PRD through the executable Planner stages.",
       "inputs": [
         {
           "type": "artifact",
-          "path_pattern": ".aioson/context/spec-{slug}.md",
-          "required": false
+          "path_pattern": ".aioson/context/prd-{slug}.md",
+          "required": true
         },
         {
           "type": "artifact",
           "path_pattern": ".aioson/context/implementation-plan-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/design-doc-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/readiness-{slug}.md",
-          "required": false
+          "required": true
         },
         {
           "type": "artifact",

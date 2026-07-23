@@ -85,7 +85,7 @@ Exit `1` é evidência acionável, não erro de schema. Exit `2` não deve ser i
 | `agent:execution:init` | Cria o manifesto de execução por feature | Antes de despachar subagentes com modelo/capability explícitos |
 | `agent:execution:validate` | Valida manifesto, catálogo e modelos contra o runtime atual | Antes do primeiro dispatch e no CI |
 | `agent:execution:show` | Mostra agentes, modelos solicitados/resolvidos e estratégia de matching | Para auditar a seleção antes do spawn |
-| `agent:execution:dispatch` | Executa um agente e grava tentativa, relatório e telemetria | Para rodar `qa`, `tester`, `pentester` ou `validator` isoladamente |
+| `agent:execution:dispatch` | Executa um agente ou faixa DEV e grava tentativa, relatório e telemetria | Use `--agent=qa` ou uma faixa explicitamente habilitada com `--lane=backend`; especialistas são opt-in |
 | `agent:execution:resume` | Retoma uma tentativa pausada | Depois de corrigir capability, modelo ou relatório |
 | `agent:execution:status` / `events` | Consulta tentativas e eventos sanitizados | Para investigar uma execução em CI ou local |
 
@@ -107,7 +107,7 @@ O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `
 
 | Comando | O que faz | Quando usar |
 |---|---|---|
-| `parallel:init` | Cria a estrutura de lanes paralelas para projetos MEDIUM | Antes de acionar o `@orchestrator` |
+| `parallel:init` | Cria a estrutura legada de lanes coordenadas | Somente em coordenação explícita; não é requisito do MEDIUM |
 | `parallel:doctor` | Verifica e repara arquivos de paralelismo | Quando faltam lanes ou arquivos de coordenação |
 | `parallel:assign` | Distribui escopo entre as lanes | Quando quer dividir trabalho entre agentes |
 | `parallel:status` | Consolida o estado de todas as lanes | Quando quer visão central do andamento |
@@ -730,7 +730,7 @@ aioson parallel:status .
 aioson parallel:doctor . --fix
 ```
 
-Use em projetos `MEDIUM` quando o `@orchestrator` vai dividir trabalho em lanes.  
+Use somente quando uma coordenação explícita ainda adota a estrutura legada de lanes. Para faixas atuais de backend/frontend/outro host-modelo, use `development_lanes` no manifesto e deixe o DEV integrar.
 Alias equivalentes:
 - `orchestrator:init`
 - `orchestrator:assign`
@@ -1794,7 +1794,7 @@ aioson workflow:execute . \
   --start-from=dev
 
 # Semear o esquema agêntico do full-feature autopilot sem avançar estágio
-# (é isso que @product/@sheldon/@orchestrator rodam ao terminar sob autopilot)
+# (o gateway usa o estado canônico ao terminar Product/Sheldon/Planner/DEV/QA)
 aioson workflow:execute . --feature=checkout --seed --tool=claude
 
 # Semear já desarmado — equivalente ao token inline /product --step

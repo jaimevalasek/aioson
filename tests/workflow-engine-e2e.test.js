@@ -34,23 +34,23 @@ describe('workflow engine hardening — end-to-end', () => {
     return tmpDir;
   }
 
-  async function writeSpecAndPlan(dir) {
+  async function writeProductAndPlan(dir) {
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'features.md'),
       '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| test-feature | in_progress | 2026-06-02 | — |\n'
     );
     await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'spec-test-feature.md'),
-      `---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n
-# Spec Test Feature\n`
-    );
-    await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'prd-test-feature.md'),
-      `---\n---\n# PRD\n`
+      `---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\nsheldon_review: not_requested\n---\n# PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-test-01 | Type-safe behavior is delivered | User starts the app | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-test-01 | CAP-test-01 | App compiles through the normal project command | focused test |\n`
     );
     await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'requirements-test-feature.md'),
-      `---\n---\n# Requirements\n`
+      path.join(dir, '.aioson', 'context', 'implementation-plan-test-feature.md'),
+      `---\nstatus: approved\n---\n# Implementation Plan\n\n## Capability Delivery Plan\n\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-test-01 | 1 | src/index.ts, tests/index.test.js | npm test and npx tsc --noEmit |\n`
+    );
+    await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'tests', 'index.test.js'),
+      "const test = require('node:test'); const assert = require('node:assert/strict'); test('AC-test-01', () => assert.ok(true));\n"
     );
   }
 
@@ -58,7 +58,7 @@ describe('workflow engine hardening — end-to-end', () => {
     const dir = await setupMinimalProject();
     await fs.mkdir(path.join(dir, 'src'), { recursive: true });
     await fs.writeFile(path.join(dir, 'src', 'index.ts'), 'const x: number = "broken";');
-    await writeSpecAndPlan(dir);
+    await writeProductAndPlan(dir);
 
     // Setup workflow state at dev
     const statePath = path.join(dir, '.aioson', 'context', 'workflow.state.json');
@@ -66,10 +66,10 @@ describe('workflow engine hardening — end-to-end', () => {
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: 'test-feature',
       detour: null,
@@ -87,7 +87,7 @@ describe('workflow engine hardening — end-to-end', () => {
     const dir = await setupMinimalProject();
     await fs.mkdir(path.join(dir, 'src'), { recursive: true });
     await fs.writeFile(path.join(dir, 'src', 'index.ts'), 'const x: number = "broken";');
-    await writeSpecAndPlan(dir);
+    await writeProductAndPlan(dir);
 
     // Create a mock helper and a component to verify test briefing later
     await fs.mkdir(path.join(dir, 'tests', 'helpers'), { recursive: true });
@@ -100,10 +100,10 @@ describe('workflow engine hardening — end-to-end', () => {
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: 'test-feature',
       detour: null,
@@ -151,17 +151,16 @@ describe('workflow engine hardening — end-to-end', () => {
     assert.ok(qaResult.prompt.includes('Auto-generated Test Context'), 'test briefing should be injected');
     assert.ok(qaResult.prompt.includes('mocks.ts'), 'mock helper should be referenced');
 
-    // Step 5: complete qa -- should verify Gate D in spec
+    // Step 5: complete qa -- should require the canonical QA report
     await assert.rejects(
       async () => runWorkflowNext({ args: [dir], options: { complete: true, tool: 'claude' }, logger, t: (k, p) => p?.agent || k }),
       /Handoff Contract BLOCKED/
     );
 
-    // Step 6: add QA sign-off to spec so Gate D passes
+    // Step 6: add the independent QA verdict so Gate D passes
     await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'spec-test-feature.md'),
-      `---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n
-# Spec Test Feature\n\n## QA Sign-off\n- Date: 2026-04-16\n- AC coverage: 1/1 fully covered\n- Residual risks: none\n\n**Verdict:** PASS\n`
+      path.join(dir, '.aioson', 'context', 'qa-report-test-feature.md'),
+      `---\nverdict: PASS\n---\n# QA Report\n\n- AC-test-01: PASS\n- Normal-entry smoke: PASS\n`
     );
 
     const qaComplete = await runWorkflowNext({

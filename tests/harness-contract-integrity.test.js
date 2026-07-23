@@ -229,16 +229,33 @@ test('workflow finalize blocks dev when runtime contract-integrity fails even if
     progress: { feature: slug, status: 'in_progress', completed_steps: [], ready_for_done_gate: true, circuit_state: 'CLOSED' }
   });
   await fs.mkdir(path.join(tmp, '.aioson', 'context'), { recursive: true });
-  await fs.writeFile(path.join(tmp, '.aioson', 'context', `prd-${slug}.md`), '---\nclassification: MICRO\n---\n# PRD\n', 'utf8');
+  await fs.writeFile(
+    path.join(tmp, '.aioson', 'context', `prd-${slug}.md`),
+    `---\nclassification: MICRO\nproduct_scope: approved\nprd_ready: approved\n---\n# PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-${slug}-01 | Runtime result appears | User triggers action | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-${slug}-01 | CAP-${slug}-01 | Runtime result appears | focused test |\n`,
+    'utf8'
+  );
+  await fs.writeFile(
+    path.join(tmp, '.aioson', 'context', `implementation-plan-${slug}.md`),
+    `---\nstatus: approved\n---\n# Plan\n\n## Capability Delivery Plan\n\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-${slug}-01 | 1 | src/runtime.js, tests/runtime.test.js | node --test tests/runtime.test.js |\n`,
+    'utf8'
+  );
   await fs.writeFile(path.join(tmp, '.aioson', 'context', 'project-pulse.md'), 'pulse', 'utf8');
   await fs.writeFile(path.join(tmp, '.aioson', 'context', 'dev-state.md'), 'state', 'utf8');
+  await fs.mkdir(path.join(tmp, 'src'), { recursive: true });
+  await fs.mkdir(path.join(tmp, 'tests'), { recursive: true });
+  await fs.writeFile(path.join(tmp, 'src', 'runtime.js'), 'module.exports = () => true;\n', 'utf8');
+  await fs.writeFile(
+    path.join(tmp, 'tests', 'runtime.test.js'),
+    `// AC-${slug}-01\nconst assert = require('node:assert/strict');\nassert.equal(require('../src/runtime')(), true);\n`,
+    'utf8'
+  );
 
   const state = {
     mode: 'feature',
     featureSlug: slug,
     classification: 'MICRO',
-    sequence: ['dev', 'qa'],
-    completed: [],
+    sequence: ['product', 'planner', 'dev', 'qa'],
+    completed: ['product', 'planner'],
     skipped: [],
     current: 'dev',
     next: 'dev'

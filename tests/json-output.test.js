@@ -12,6 +12,14 @@ async function makeTempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-json-cli-'));
 }
 
+function productReadyPrd(slug = 'demo') {
+  return `---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\nsheldon_review: not_requested\n---\n# Feature PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-${slug}-01 | User sees the result | User triggers action | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-${slug}-01 | CAP-${slug}-01 | Result appears through the normal entry point | focused automated test |\n`;
+}
+
+function approvedPlan(slug = 'demo') {
+  return `---\nstatus: approved\n---\n# Implementation Plan\n\n## Capability Delivery Plan\n\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-${slug}-01 | 1 | src/protocol.js, tests/protocol.test.js | node --test tests/protocol.test.js |\n`;
+}
+
 function runCli(args, cwd = process.cwd()) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [path.join(process.cwd(), 'bin/aioson.js'), ...args], {
@@ -223,8 +231,8 @@ test('workflow:next --json returns structured payload without human logs', async
   assert.equal(cli.stderr.trim(), '');
   const parsed = JSON.parse(cli.stdout);
   assert.equal(parsed.ok, true);
-  assert.equal(parsed.agent, 'sheldon');
-  assert.equal(parsed.current, 'sheldon');
+  assert.equal(parsed.agent, 'product');
+  assert.equal(parsed.current, 'product');
   assert.equal(parsed.statePath, '.aioson/context/workflow.state.json');
 });
 
@@ -243,7 +251,7 @@ test('workflow:next --status --json returns structured workflow insights', async
   assert.equal(cli.stderr.trim(), '');
   const parsed = JSON.parse(cli.stdout);
   assert.equal(parsed.ok, true);
-  assert.equal(parsed.activeStage, 'sheldon');
+  assert.equal(parsed.activeStage, 'product');
   assert.equal(parsed.tool, 'codex');
   assert.equal(typeof parsed.suggestion.reason, 'string');
 });
@@ -281,13 +289,8 @@ test('workflow:next --suggest --json returns a deterministic next command', asyn
     '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| protocol-contracts | in_progress | 2026-04-16 | — |\n',
     'utf8'
   );
-  await fs.writeFile(path.join(dir, '.aioson/context/prd-protocol-contracts.md'), '# Feature PRD\n', 'utf8');
-  await fs.writeFile(path.join(dir, '.aioson/context/requirements-protocol-contracts.md'), '# Requirements\n', 'utf8');
-  await fs.writeFile(
-    path.join(dir, '.aioson/context/spec-protocol-contracts.md'),
-    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n',
-    'utf8'
-  );
+  await fs.writeFile(path.join(dir, '.aioson/context/prd-protocol-contracts.md'), productReadyPrd('protocol-contracts'), 'utf8');
+  await fs.writeFile(path.join(dir, '.aioson/context/implementation-plan-protocol-contracts.md'), approvedPlan('protocol-contracts'), 'utf8');
   await fs.writeFile(path.join(dir, '.aioson/context/project-pulse.md'), '# Pulse\n', 'utf8');
   await fs.writeFile(path.join(dir, '.aioson/context/dev-state.md'), '# Dev State\n', 'utf8');
   await fs.writeFile(
@@ -296,10 +299,10 @@ test('workflow:next --suggest --json returns a deterministic next command', asyn
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst', 'architect'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: 'protocol-contracts',
       detour: null,
@@ -315,8 +318,8 @@ test('workflow:next --suggest --json returns a deterministic next command', asyn
   assert.equal(parsed.ok, true);
   assert.equal(parsed.activeStage, 'dev');
   assert.equal(parsed.effectiveMode, 'trusted');
-  assert.equal(parsed.suggestion.action, 'complete_stage');
-  assert.equal(parsed.suggestion.command, 'aioson workflow:next . --complete=dev --auto-heal --tool=codex');
+  assert.equal(parsed.suggestion.action, 'continue_stage');
+  assert.equal(parsed.suggestion.command, 'aioson workflow:next . --agent=dev --tool=codex');
 });
 
 test('legacy dashboard commands return a structured migration error with --json', async () => {
@@ -720,7 +723,7 @@ test('workflow:plan --json returns workflow payload', async () => {
   assert.equal(parsed.ok, true);
   assert.equal(parsed.classification, 'SMALL');
   assert.equal(Array.isArray(parsed.commands), true);
-  assert.equal(parsed.commands.includes('@sheldon'), true);
+  assert.deepEqual(parsed.commands, ['@setup', '@product', '@planner', '@dev', '@qa']);
 });
 
 test('parallel:init --json returns structured parallel workspace payload', async () => {

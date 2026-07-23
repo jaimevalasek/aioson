@@ -1,124 +1,116 @@
-# Execução de agentes e resolução de modelos
+# Execução de agentes, faixas de desenvolvimento e modelos
 
-O subsistema de execução de agentes permite validar e despachar subagentes a partir de um manifesto por feature. Ele separa o modelo solicitado do modelo efetivamente executado, resolve nomes humanos ou com pequenos erros contra o catálogo local do Codex e mantém essa decisão nos relatórios e na telemetria.
+O AIOSON usa `.aioson/context/agent-execution-{feature}.json` para executar uma tarefa delimitada por um host CLI e um modelo registrados. Esse manifesto é configuração de runtime, não outra especificação.
 
-## Quando usar
+## Padrões
 
-Use este fluxo quando uma feature precisa executar `@qa`, `@tester`, `@pentester`, `@validator` ou outro agente em um processo separado, com contrato verificável e possibilidade de retomada.
+Um manifesto novo habilita somente:
 
-O fluxo é opt-in por feature. A ausência do manifesto preserva o comportamento legado (`configured-default`).
+- `dev`;
+- `qa`.
 
-## Ciclo básico
+`tester`, `pentester`, `validator` e todas as faixas de desenvolvimento começam desligados. A classificação MICRO/SMALL/MEDIUM nunca os habilita.
+
+A rota canônica continua Product → Planner → DEV → QA. Faixas opcionais rodam dentro do DEV; revisores opcionais só podem rodar depois do QA quando estiverem explicitamente habilitados e tiverem um gatilho concreto.
+
+## Comandos
 
 ```bash
 aioson agent:execution:init . --feature=minha-feature --host=codex
 aioson agent:execution:validate . --feature=minha-feature --json
 aioson agent:execution:show . --feature=minha-feature --json
 aioson agent:execution:dispatch . --feature=minha-feature --agent=qa
-aioson agent:execution:status . --feature=minha-feature --json
-aioson agent:execution:events . --feature=minha-feature --run=<telemetry_run_id>
-```
-
-Se uma execução ficar pausada, retome com:
-
-```bash
+aioson agent:execution:dispatch . --feature=minha-feature --lane=backend
 aioson agent:execution:resume . --feature=minha-feature
+aioson agent:execution:status . --feature=minha-feature --json
 ```
 
-Todos os comandos que produzem dados para automação aceitam `--json`.
+A inicialização é create-once. Novos init, resume e seeds do workflow preservam byte por byte o manifesto que já pertence ao desenvolvedor.
 
-`agent:execution:init` é **create-once**: cria o arquivo somente quando ele ainda não existe. Depois da criação, novas inicializações, retomadas e re-semeaduras retornam o manifesto existente sem reformatar, completar ou substituir nenhum campo. A partir daí, o arquivo pertence ao desenvolvedor; alterações de modelo, `reasoning_effort`, agentes habilitados e `cycle_limits` devem ser feitas diretamente nele e são obedecidas nas execuções seguintes.
+## Faixas de desenvolvimento
 
-## Manifesto
-
-O arquivo é criado dentro dos artefatos da feature. Um exemplo mínimo:
+Use faixas somente quando o usuário ou o plano aprovado pedir hosts/modelos diferentes ou escopos separados.
 
 ```json
 {
-  "version": 1,
-  "feature": "minha-feature",
-  "host": "codex",
-  "agents": {
-    "qa": {
-      "mode": "native",
-      "model": "GPT 5.6 Terra",
-      "reasoning_effort": "high",
-      "report": ".aioson/context/done/minha-feature/qa-report-{run_id}.md"
+  "development_lanes": {
+    "strategy": "split",
+    "integration_owner": "dev",
+    "lanes": {
+      "backend": {
+        "enabled": true,
+        "host": "codex",
+        "mode": "external",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "high",
+        "writable_roots": [],
+        "prompt": ".aioson/context/execution-prompts/minha-feature/backend.md",
+        "write_paths": ["src/api/**", "tests/api/**"],
+        "fallbacks": [],
+        "report": ".aioson/context/reports/minha-feature/{run_id}/dev-backend.json"
+      },
+      "frontend": {
+        "enabled": true,
+        "host": "opencode",
+        "mode": "external",
+        "model": "provider/model-id",
+        "writable_roots": [],
+        "prompt": ".aioson/context/execution-prompts/minha-feature/frontend.md",
+        "write_paths": ["src/ui/**", "tests/ui/**"],
+        "fallbacks": [],
+        "report": ".aioson/context/reports/minha-feature/{run_id}/dev-frontend.json"
+      }
     }
   }
 }
 ```
 
-Um manifesto novo usa um ciclo por padrão em cada limite (`dev_qa`, `tester` e `pentester`). Quando o host inicial é `codex`, cada agente também nasce com `"reasoning_effort": "medium"`; hosts que não oferecem essa capacidade, como Claude e OpenCode, não recebem o campo.
+`host` identifica um adaptador CLI registrado; `model` é o identificador de modelo/provedor aceito por esse host. Um modelo como Grok pode ser usado por um host compatível, como OpenCode; não é necessário criar agentes canônicos `@frontend` e `@backend`.
 
-O manifesto guarda exatamente o valor pedido. Nenhum comando automático o reescreve ou faz backfill depois da criação; o valor canônico resolvido fica na tentativa (`attempt`) e no relatório. Os parâmetros `--max-dev-qa-cycles`, `--max-tester-cycles` e `--max-pentester-cycles` de `workflow:execute` valem somente na criação inicial. Se o arquivo já existe, edite `cycle_limits` nele.
+O DEV cria o prompt curto de runtime a partir do PRD e do plano aprovados, despacha as faixas habilitadas sequencialmente no worktree compartilhado, confere o diff contra `write_paths`, integra as fronteiras compartilhadas e roda a verificação completa. O relatório vincula a identidade da faixa e seus caminhos declarados.
 
-## Como o modelo é resolvido
+Os adaptadores registrados atualmente incluem Codex, Claude Code, OpenCode e Kimi Code. Um host novo precisa de adaptador para manter resolução de executável, capabilities, argumentos, redação e telemetria em modo fail-closed.
 
-Para `codex`, o AIOSON lê o catálogo local em `~/.codex/models_cache.json` (ou em `$CODEX_HOME`). A seleção é determinística e conservadora, nesta ordem:
+## Fallback somente explícito
 
-1. slug exato;
-2. nome normalizado (`gpt-5.6-terra`, `GPT 5.6 Terra`, acentos e separadores equivalentes);
-3. alias único por sufixo;
-4. correção aproximada limitada (por exemplo, um typo curto);
-5. falha explícita quando não há candidato ou há ambiguidade.
+CLI ausente, capability incompatível ou modelo indisponível pausa a execução. O modelo do chat atual nunca pode imitar silenciosamente o modelo solicitado.
 
-Os números informados são invariantes: `gpt-5.6` nunca pode virar `gpt-5.5`. Um alias genérico como `gpt` não é suficiente para escolher um modelo.
-
-O resultado expõe:
-
-- `model_requested`: o texto original;
-- `model_resolved`: o slug canônico;
-- `model_resolution_strategy`: `exact_slug`, `normalized_name`, `unique_alias`, `fuzzy_unique`, `configured_default` ou `unverified_literal`;
-- `catalog_source` e `catalog_fetched_at`, quando o catálogo estava disponível.
-
-Ambiguidade, catálogo inválido, catálogo grande demais e entradas fora dos limites são bloqueados antes do spawn. Sem catálogo, um ID literal seguro pode continuar como `unverified_literal`; o AIOSON nunca finge que validou disponibilidade.
-
-## Reasoning effort
-
-`reasoning_effort` é independente do nome do modelo. Os valores aceitos pelo manifesto são `low`, `medium`, `high`, `xhigh`, `max` e `ultra`. Quando o catálogo informa níveis do modelo, o AIOSON recusa um nível incompatível; não faz downgrade silencioso.
+Um fallback só roda quando a entrada e a política global o autorizam:
 
 ```json
 {
-  "model": "gpt-5.6-terra",
-  "reasoning_effort": "high"
+  "fallbacks": [
+    {
+      "host": "codex",
+      "model": "configured-default",
+      "on": ["unavailable", "capacity"]
+    }
+  ],
+  "capacity_policy": {
+    "strategy": "fallback",
+    "max_attempts": 2,
+    "backoff_ms": 0,
+    "allow_cross_host": true
+  }
 }
 ```
 
-O nível escolhido acompanha a tentativa, o fallback, o relatório, o plano de verificação e os eventos de telemetria. Se o fallback não suporta o nível pedido, a execução pausa e pede correção.
+Sem essa declaração, o estado fica `paused` e traz um comando de retomada.
 
-## Fallback e capacidade
+## Resolução e vínculo do relatório
 
-O dispatcher valida host, modo, executável, permissões de escrita e capability antes de iniciar o processo. Uma falha transitória pode seguir a sequência de fallback configurada, mas cada candidato é resolvido e validado novamente. Se nenhum candidato for seguro, o estado vira `paused` e o comando de `resume` é retornado.
+Nomes de modelos Codex são resolvidos de forma conservadora pelo catálogo local: slug exato, nome normalizado, alias único e correção curta limitada. Versões numéricas nunca mudam. Outros hosts aceitam IDs literais seguros quando não possuem catálogo.
 
-Relatórios são aceitos somente quando pertencem à tentativa registrada: caminho, feature, agente, modelo resolvido, estratégia, reasoning effort e veredicto são comparados antes de avançar o estado.
+Estado, relatório e telemetria preservam:
 
-## Observabilidade
+- modelo solicitado e resolvido;
+- estratégia de resolução;
+- reasoning effort quando suportado;
+- host e histórico de fallback;
+- feature, run, tentativa, agente/faixa, raízes graváveis e caminhos declarados.
 
-`status` mostra as tentativas por feature/agente. `events` lê eventos ordenados por cursor, com limites e saída sanitizada. O runtime preserva correlação entre `run_id`, feature, agente, host, modelo solicitado/resolvido e transições como `retry`, `fallback`, `paused`, `passed` e `failed`.
+Relatórios que não correspondem à tentativa registrada são recusados.
 
-Para investigar uma execução:
+## Política de revisão
 
-```bash
-aioson agent:execution:status . --feature=minha-feature --agent=qa --json
-aioson agent:execution:events . --feature=minha-feature --run=<run_id> --limit=100 --json
-```
-
-## Segurança e limites
-
-- nomes de modelo têm tamanho máximo de 200 caracteres;
-- o catálogo local é limitado a 5 MiB e 1.000 modelos;
-- IDs aceitos usam apenas caracteres literais seguros;
-- caminhos de prompt e relatório ficam dentro das raízes permitidas;
-- stdout/stderr de subagentes são tratados como saída não confiável e passam por redação e limites;
-- adapters indisponíveis falham fechado; não há simulação de sucesso.
-
-## Integração com o plano de verificação
-
-Quando a feature possui manifesto, `aioson verification:plan` usa o mesmo resolver. A saída mostra o modelo solicitado, o resolvido, a estratégia e o reasoning effort de cada verificador:
-
-```bash
-aioson verification:plan . --feature=minha-feature --trigger=per-phase --json
-```
-
-Assim, o plano, o spawn e a auditoria não podem divergir sobre qual modelo será usado.
+`aioson verification:plan . --feature=minha-feature --trigger=per-phase` não roda revisor por padrão. Em `end-of-feature`, somente QA é padrão. Tester, Pentester e Validator só rodam quando sua entrada no manifesto estiver habilitada e o gatilho correspondente existir.

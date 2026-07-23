@@ -27,10 +27,11 @@
         ┌──────────────────────────────────────┐
         │       NÚCLEO DE DESENVOLVIMENTO      │
         │                                      │
-        │  Product → Sheldon → Analyst →       │
-        │  Architect → UX-UI → PM →            │
-        │  Orchestrator → Dev → QA →           │
-        │  Validator → Tester → Pentester      │
+        │  Product → [Sheldon] → Planner →      │
+        │  Dev → QA                            │
+        │                                      │
+        │  Especialistas sob pedido: Analyst,  │
+        │  Architect, PM, Tester, Pentester…   │
         │                                      │
         └──────────────────────────────────────┘
                       │
@@ -68,30 +69,27 @@
 
 ### 2. Núcleo de desenvolvimento (workflow oficial)
 
-A ordem padrão depende da classificação (v1.35.0):
+A ordem é a mesma em MICRO, SMALL e MEDIUM:
 
-**MICRO:** `@setup → @product → @dev → @qa`
-**SMALL (lean — padrão):** `@setup → @product → @sheldon → @dev → @qa`
-**MEDIUM (maestro):** `@setup → @product → @orchestrator → @dev → @pentester → @qa`
+`@setup → [@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa`
 
-> **Por que `@sheldon` substitui toda a cadeia de spec no SMALL?** Ele é a **autoridade única de spec**: em uma passada vertical produz requirements + decisões técnicas + design-doc + readiness + plano de implementação + harness-contract (Gates A/B/C aprovados). `@analyst`, `@architect`, `@scope-check` e outros viram **detours opt-in**, não hops padrão.
-
-> **Por que `@orchestrator` substitui a cadeia longa no MEDIUM?** Ele é o **maestro de spec**: faz fan-out para `@analyst`, `@architect`, `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos. Mesma qualidade, menos hops manuais.
+Briefing/Refiner e Sheldon são opcionais. A classificação muda profundidade e orçamento. Especialistas entram somente por pedido explícito ou necessidade nomeada.
 
 | Agente | O que faz | Saída principal |
 |---|---|---|
-| **`@product`** | Define visão, escopo, PRD da feature | `prd.md`, `spec.md` |
-| **`@sheldon`** | **SMALL:** autoridade única de spec (vertical/solo) — produz requirements + decisões técnicas + plano + harness-contract (Gates A/B/C) em uma passada. **Qualquer lane:** gap analysis, pesquisa web, endurecimento de PRD. | `sheldon-enrichment-{slug}.md`, `requirements-{slug}.md`, `implementation-plan-{slug}.md`, `harness-contract.json` |
-| **`@analyst`** | Discovery de domínio: entidades, fluxos, regras de negócio. **MEDIUM:** sub-agente do `@orchestrator`. **Qualquer tamanho:** detour opt-in. | `requirements-{slug}.md`, ER diagrams |
-| **`@architect`** | Decisões técnicas: estrutura, libs, integração. **Merged mode:** também produz design-doc + readiness quando `@discovery-design-doc` não está no fluxo. **MEDIUM:** sub-agente do `@orchestrator`. **Qualquer tamanho:** detour opt-in. | `architecture.md` |
-| **`@ux-ui`** | Spec de UI/UX e componentes. **MEDIUM com UI pesada:** sub-agente do `@orchestrator`. **Qualquer tamanho:** detour opt-in. | `design-doc.md` |
-| **`@pm`** | Backlog, user stories, plano de implementação. **MEDIUM:** sub-agente do `@orchestrator`. **Qualquer tamanho:** detour opt-in. | `tasks.md`, `implementation-plan-{slug}.md` |
-| **`@orchestrator`** | **MEDIUM:** maestro de spec (faz fan-out para @analyst/@architect/@pm/@ux-ui, consolida e verifica, entrega pacote de spec com Gates A/B/C). Também coordena lanes paralelas de implementação pós-spec. | `parallel/`, `implementation-plan-{slug}.md`, `harness-contract.json` |
+| **`@product`** | Define visão, escopo e ACs | `prd-{slug}.md` |
+| **`@sheldon`** | Enriquece criticamente o mesmo PRD, quando solicitado | `prd-{slug}.md` atualizado |
+| **`@planner`** | Cria fases verticais e checks executáveis | `implementation-plan-{slug}.md` |
+| **`@analyst`** | Consultoria explícita de domínio | parecer incorporado ao PRD/plano |
+| **`@architect`** | Consultoria explícita de arquitetura | decisão incorporada ao PRD/plano |
+| **`@ux-ui`** | Consultoria de UI/UX quando solicitada | spec auxiliar |
+| **`@pm`** | Consultoria de backlog/priorização | parecer auxiliar |
+| **`@orchestrator`** | Coordenação de sessão ou especialistas sob pedido | handoffs e coordenação |
 | **`@dev`** | Implementa a feature | Código + `dev-state.md` |
-| **`@qa`** | Escreve testes, valida ACs, ciclo autônomo de correção (cap 3), hub do autopilot pós-dev (roteia para `@tester`/`@pentester`/`@validator`) | `test-plan.md`, `qa-report-*.md` |
-| **`@validator`** | Valida tecnicamente contra `harness-contract.json` em sandbox de contexto | `.aioson/plans/{slug}/last-validator-output.json` (consumido por `harness:apply-validation`, atualiza `progress.json`) |
-| **`@tester`** | Engenharia sistemática de testes (legacy/brownfield) | `test-inventory.md`, coverage tier |
-| **`@pentester`** | Revisão adversarial de segurança (OWASP, LLM Top 10) | `security-findings-*.json` |
+| **`@qa`** | Revisão final proporcional e independente | `qa-report-{slug}.md` |
+| **`@validator`** | Verificação binária adicional, opt-in | veredito do harness |
+| **`@tester`** | Engenharia sistemática de testes, opt-in | `test-inventory.md`, coverage tier |
+| **`@pentester`** | Revisão adversarial de segurança, opt-in | `security-findings-*.json` |
 
 ### 3. Continuidade e entrega
 
@@ -209,19 +207,20 @@ Você > @product
 @product > Vamos começar uma feature. Como ela se chama? Qual o problema?
 Você > "checkout-stripe", finalizar pedido com cartão.
 @product > [...várias perguntas...] PRD criado em context/prd-checkout-stripe.md.
-@product > Próximo: @sheldon para produzir o pacote de spec.
+@product > Próximo: @sheldon para enriquecimento opcional, ou @planner.
 
 ─── Sessão 2 (no dia seguinte) ───
 Você > @neo
-@neo > Você parou em @product. Próximo: @sheldon.
+@neo > Você parou em @product. O PRD pede enriquecimento; próximo: @sheldon.
 Você > @sheldon
-@sheldon > [lê PRD, varre codebase, detecta 3 gaps, pesquisa fontes] Gates A/B/C aprovados.
-           Pacote de spec: requirements + architecture + implementation-plan + harness-contract.
-@sheldon > Próximo: @dev.
+@sheldon > [lê PRD, detecta 3 gaps e os incorpora no mesmo arquivo]
+@sheldon > PRD pronto. Próximo: @planner.
 
 ─── Sessão 3 ───
+Você > @planner
+@planner > Plano vertical aprovado. Próximo: @dev.
 Você > @dev
-@dev > [lê pacote de spec, implementa por fases com auto-continue, verifica por fase]
+@dev > [lê PRD e plano, implementa por fases e roda os checks do plano]
 @dev > Todas as fases completas. dev-state.md atualizado.
 @dev > Próximo: @qa.
 

@@ -198,7 +198,7 @@ Complete these items before finishing the stage.
 | `@analyst` | `requirements-{slug}.md`, `spec-{slug}.md` | A |
 | `@architect` | `architecture.md` | B |
 | `@ux-ui` | `ui-spec.md` | B |
-| `@pm` | `implementation-plan-{slug}.md` | — |
+| `@planner` | `implementation-plan-{slug}.md` | — |
 | `@dev` | — (código) | C |
 | `@qa` | — (testes/relatório) | D |
 

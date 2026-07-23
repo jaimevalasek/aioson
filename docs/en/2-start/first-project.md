@@ -4,7 +4,7 @@
 > **Execution time:** 30–45 min.
 > **What you'll have at the end:** a simple web app (a to-do list) with a spec, code, tests, and a dossier — all traceable on disk.
 
-We're going to build a **mini TODO app** using the SMALL cycle. You'll see each agent enter, do its part, and hand off to the next.
+We're going to build a **mini TODO app** using the MICRO-depth canonical cycle. You'll see Product, Planner, DEV, and QA each own one durable artifact or outcome.
 
 ---
 
@@ -14,7 +14,7 @@ We're going to build a **mini TODO app** using the SMALL cycle. You'll see each 
 - An AI client configured: **Claude Code**, **Codex CLI**, or **OpenCode**. Examples here use Claude Code; switching is trivial.
 - A terminal open
 
-If you don't have an AI client yet: Claude Code is the most widely used by the AIOSON community. See [`clientes-ai.md`](../5-reference/clientes-ai.md).
+If you don't have an AI client yet: Claude Code is widely used by the AIOSON community. See the current [AI clients reference (PT)](../../pt/5-referencia/clientes-ai.md).
 
 ---
 
@@ -85,8 +85,8 @@ You > 0
 @setup > Any non-obvious business rules (special calculations, multi-condition flows)?
 You > No
 
-@setup > [calculates] Score: 0+0+0 = 0 → MICRO. But you asked for spec/tests...
-@setup > I recommend SMALL to have @qa at the end. Agree?
+@setup > [calculates] Score: 0+0+0 = 0 → MICRO.
+@setup > The stage chain still ends in @qa; MICRO keeps each stage concise. Agree?
 You > Yes
 
 @setup > project.context.md created.
@@ -105,7 +105,7 @@ project_name: "my-todo"
 project_type: "web_app"
 profile: "developer"
 framework: "Node.js"
-classification: "SMALL"
+classification: "MICRO"
 interaction_language: "en"
 ...
 ---
@@ -129,39 +129,36 @@ You > Let users create tasks and mark them as completed
 @product > What are the acceptance criteria?
 You > Create a task with text. Mark as completed. List pending and completed separately. Persist in SQLite.
 
-@product > [...details...] Spec saved to
-        .aioson/context/features/task-list/spec.md
-@product > Next: @analyst.
+@product > [...details...] PRD saved to
+        .aioson/context/prd-task-list.md
+@product > Scope approved. Next: @planner.
 ```
 
 ```bash
-cat .aioson/context/features/task-list/spec.md
+cat .aioson/context/prd-task-list.md
 ```
 
-You'll see a structured spec with scope, ACs, and out-of-scope items.
+You'll see the single feature authority with scope, ACs, and out-of-scope items.
 
 ---
 
-## Step 5 — `@sheldon` closes the spec (single spec authority for SMALL)
+## Step 5 — `@planner` creates the implementation plan
 
 ```
-You > @sheldon
+You > @planner
 
-@sheldon > Reading spec.md... stack: Node + Express + SQLite.
-@sheldon > No external gaps detected (simple scope). Producing spec package:
-        ✓ design-doc-task-list.md (structure: src/{routes,db,server}.js)
-        ✓ readiness-task-list.md (Gate B: ready)
-        ✓ implementation-plan.md (1 phase — scope is tight)
-        ✓ harness-contract.json (4 RG-smoke criteria matching the ACs)
+@planner > Reading prd-task-list.md... stack: Node + Express + SQLite.
+@planner > The scope is tight. Creating one vertical implementation stage:
+        ✓ implementation-plan-task-list.md
 
-@sheldon > Notes:
+@planner > Decisions:
         - Persistence: better-sqlite3 (synchronous SQLite, simple)
         - Validation: manual (no extra libs — Article VI)
         - Test framework: node:test (built-in, no dependency)
-@sheldon > Gates A/B/C: approved. Next: @dev.
+@planner > Plan approved. Next: @dev.
 ```
 
-> **Note Article VI ("Simplicity Over Ceremony"):** `@sheldon` flagged no unnecessary libraries. On a simple project like this it produces a lean package; on a complex feature it would do web research and multi-phase planning.
+> **Why no Sheldon here?** The PRD is already concrete. Sheldon is an optional PRD enrichment pass, not a classification-based gate. Article VI ("Simplicity Over Ceremony") keeps this MICRO feature lean.
 
 ---
 
@@ -170,7 +167,7 @@ You > @sheldon
 ```
 You > @dev
 
-@dev > [reads implementation-plan.md, spec, project.context]
+@dev > [reads implementation-plan-task-list.md, prd-task-list.md, project.context]
 @dev > Phase 1/1: full implementation (tight scope).
 @dev > Creating:
         package.json
@@ -180,7 +177,7 @@ You > @dev
         tests/tasks.test.js (placeholder — @qa covers)
 
 @dev > [implements]
-@dev > aioson harness:check → 4/4 criteria pass.
+@dev > node --test → focused checks pass.
 @dev > dev-state.md updated.
 @dev > Next: @qa.
 ```
@@ -202,7 +199,7 @@ cat .aioson/context/dev-state.md
 ```
 You > @qa
 
-@qa > Reading spec... 4 ACs identified.
+@qa > Reading prd-task-list.md... 4 ACs identified.
 @qa > Test plan:
         AC-01: create task → POST returns 201 and id
         AC-02: mark completed → PATCH changes completed
@@ -210,15 +207,15 @@ You > @qa
         AC-04: persistence → restart process, data persists
 @qa > Writing tests/tasks.test.js... running...
 
-[If a test fails? Autonomous QA→Dev cycle (up to 2 iterations):]
+[If a test fails? QA returns a small reproducible correction packet:]
 @qa > AC-03 failed: GET without filter returns mixed results.
-        Passing back to @dev (iteration 1/2)...
+        Returning to @dev with the failing command and smallest affected scope...
 @dev > Fixing... done.
 @qa > Re-running... 4/4 OK.
-@qa > test-plan.md and qa-report.md saved. Feature ready.
+@qa > qa-report-task-list.md saved. Verdict: PASS.
 ```
 
-> **What's new:** the *autonomous QA→Dev cycle* (cap 3, `agentic_policy.review_cycle`) lets `@qa` request small fixes without you having to manually reactivate it. Under autopilot, this same cycle can chain all the way to `@tester`/`@pentester`/`@validator` and the `feature:close` recommendation without stopping — see [Autopilot handoff](../5-reference/autopilot-handoff.md).
+> **Bounded QA:** a MICRO review checks changed ACs, focused tests, and one production-path smoke. QA does not start broad investigations or automatically invoke Tester, Pentester, or Validator. Under autopilot, DEV hands directly to QA; genuine decisions and close/publish remain human gates.
 
 ---
 
@@ -250,18 +247,10 @@ You > [Enter to accept]
 ```
 .aioson/context/
 ├── project.context.md           ← project view (step 3)
-├── design-doc-task-list.md      ← @sheldon spec (step 5)
-├── readiness-task-list.md       ← @sheldon Gate B (step 5)
-├── implementation-plan.md       ← @sheldon (step 5)
+├── prd-task-list.md             ← @product authority (step 4)
+├── implementation-plan-task-list.md ← @planner (step 5)
 ├── dev-state.md                 ← what @dev did (step 6)
-├── test-plan.md                 ← @qa's plan (step 7)
-├── qa-report-test-coverage.md   ← QA report
-└── features/
-    └── task-list/
-        └── spec.md              ← original spec (step 4)
-
-.aioson/plans/task-list/
-└── harness-contract.json        ← @sheldon success contract
+└── qa-report-task-list.md       ← @qa's single verdict (step 7)
 ```
 
 Three months from now, someone (you or another AI) can open this project and understand **everything** just by reading these files. No chat history needed.
@@ -270,7 +259,7 @@ Three months from now, someone (you or another AI) can open this project and und
 
 ## What if I want a new feature?
 
-Go back to step 4. `@product` creates a new feature → `@sheldon` (closes the spec) → `@dev` → `@qa`. `@setup` doesn't need to run again (context is already there).
+Go back to step 4. `@product` creates the PRD → optional `@sheldon` enriches it → `@planner` creates the plan → `@dev` implements → `@qa` reviews. `@setup` doesn't need to run again (context is already there).
 
 If you get lost in the middle:
 
@@ -288,7 +277,7 @@ It tells you who's next.
 |---|---|
 | The agent "forgot" the context | Check `cat .aioson/context/project.context.md`. If fields are missing, run `@setup` again. |
 | I want to resume an interrupted feature | Run `@deyvin` — it reads `dev-state.md` and continues. |
-| Not sure if SMALL is the right classification | Ask `@neo` — it explains the calculation. |
+| Not sure if MICRO is the right classification | Ask `@neo` — it explains the calculation and proportional depth. |
 | Install failed | `npx @jaimevalasek/aioson doctor` — diagnoses and suggests a fix. |
 | I want to add Codex later | `npx @jaimevalasek/aioson install --reconfigure`. |
 

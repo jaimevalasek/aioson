@@ -42,6 +42,10 @@ function makeLogger() {
   return { log: (m = '') => lines.push(String(m)), error: (m = '') => lines.push(String(m)), lines };
 }
 
+function productReadyPrd(scope = 'pending', ready = 'pending') {
+  return `---\nproduct_scope: ${scope}\nprd_ready: ${ready}\n---\n# PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-demo-01 | User sees the result | User triggers action | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-demo-01 | CAP-demo-01 | Result appears | focused test |\n`;
+}
+
 // ─── readLatestCheckpoint unit tests ──────────────────────────────────────────
 
 test('readLatestCheckpoint: returns null when checkpoints dir does not exist (EC-AO-02)', async () => {
@@ -122,11 +126,11 @@ test('readLatestCheckpoint: returns null when checkpoints dir is empty', async (
 test('integration: gate:approve writes checkpoint that readLatestCheckpoint reads', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'roundtrip';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   await runGateApprove({
     args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'A', agent: 'analyst' },
+    options: { json: true, feature: slug, gate: 'A', agent: 'product' },
     logger: makeLogger()
   });
 
@@ -134,7 +138,7 @@ test('integration: gate:approve writes checkpoint that readLatestCheckpoint read
   assert.ok(cp, 'checkpoint must be readable');
   assert.equal(cp.gate, 'A');
   assert.equal(cp.slug, slug);
-  assert.equal(cp.agent, 'analyst');
+  assert.equal(cp.agent, 'product');
   assert.ok(cp.timestamp);
   assert.ok(Array.isArray(cp.prerequisites_snapshot));
   assert.ok(cp.gate_check_result.ok === true);
@@ -143,23 +147,22 @@ test('integration: gate:approve writes checkpoint that readLatestCheckpoint read
 test('integration: multiple gate:approve calls, readLatestCheckpoint picks highest gate', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'multi-approve';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
-  await writeFile(tmpDir, `.aioson/context/architecture.md`, '# Architecture\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   await runGateApprove({
     args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'A', agent: 'analyst' },
+    options: { json: true, feature: slug, gate: 'A', agent: 'product' },
     logger: makeLogger()
   });
   await runGateApprove({
     args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'B', agent: 'architect' },
+    options: { json: true, feature: slug, gate: 'B', agent: 'product' },
     logger: makeLogger()
   });
 
   const cp = await readLatestCheckpoint(tmpDir, slug);
   assert.equal(cp.gate, 'B', 'must select B as highest approved gate');
-  assert.equal(cp.agent, 'architect');
+  assert.equal(cp.agent, 'product');
 });
 
 // ─── BR-AO-03: size cap stress test ─────────────────────────────────────────
@@ -167,7 +170,7 @@ test('integration: multiple gate:approve calls, readLatestCheckpoint picks highe
 test('BR-AO-03: checkpoint truncates decision_log when payload exceeds 5KB', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'size-stress';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   const result = await runGateApprove({
     args: [tmpDir],

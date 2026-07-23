@@ -14,6 +14,7 @@ const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
 const AC_ID_RE = /\bAC(?:-[A-Za-z0-9]+)+\b/g;
 const CAP_ID_RE = /\bCAP(?:-[A-Za-z0-9]+)+\b/g;
 const CAP_ID_EXACT_RE = /^CAP(?:-[A-Za-z0-9]+)+$/i;
+const AC_ID_EXACT_RE = /^AC(?:-[A-Za-z0-9]+)+$/i;
 
 const CANONICAL_LENSES = Object.freeze([
   'primary-outcome',
@@ -944,27 +945,104 @@ async function readFeatureInputs(targetDir, slug, artifacts) {
   };
 }
 
+function validatePrdAcceptanceCriteria(content, artifact, productMap) {
+  const findings = [];
+  const section = extractSection(content, ['Acceptance Criteria', 'Criterios de Aceite']);
+  if (!section) {
+    findings.push(missingSection('specification', 'acceptance_criteria_missing', 'Acceptance Criteria in the PRD', artifact));
+    return { findings, rows: [], capToAcs: {} };
+  }
+
+  const table = parseFirstMarkdownTable(section);
+  if (!table) {
+    findings.push(finding('specification', 'acceptance_criteria_invalid', 'Acceptance Criteria must contain a Markdown table', artifact));
+    return { findings, rows: [], capToAcs: {} };
+  }
+
+  const columns = mapColumns(table, {
+    ac: ['AC', 'Acceptance criterion', 'Criterio de aceite'],
+    cap: ['CAP', 'Capability', 'Capacidade'],
+    behavior: ['Observable behavior', 'Behavior', 'Comportamento observavel', 'Comportamento'],
+    evidence: ['Evidence', 'Verification', 'Evidencia', 'Verificacao']
+  });
+  if (columns.missing.length > 0) {
+    findings.push(finding('specification', 'acceptance_criteria_columns', `Acceptance Criteria missing column(s): ${columns.missing.join(', ')}`, artifact));
+    return { findings, rows: [], capToAcs: {} };
+  }
+
+  for (const bad of table.malformed) {
+    findings.push(finding('specification', 'acceptance_criteria_row_malformed', `Acceptance Criteria row ${bad.row} has ${bad.cells} cell(s), expected ${table.headers.length}; escape literal pipes as \\|`, artifact));
+  }
+
+  const knownCaps = new Set(productMap.allCaps.map((cap) => cap.toLowerCase()));
+  const seenAcs = new Set();
+  const capToAcs = new Map();
+  const rows = [];
+  table.rows.forEach((row, index) => {
+    const ac = cleanCell(row[columns.indexes.ac]);
+    const caps = extractIds(row[columns.indexes.cap], CAP_ID_RE);
+    const behavior = cleanCell(row[columns.indexes.behavior]);
+    const evidence = cleanCell(row[columns.indexes.evidence]);
+    const rowNumber = index + 1;
+
+    if (!AC_ID_EXACT_RE.test(ac)) {
+      findings.push(finding('specification', 'acceptance_criterion_id_invalid', `Acceptance Criteria row ${rowNumber} must use one stable AC-* ID`, artifact));
+    }
+    if (seenAcs.has(ac.toLowerCase())) {
+      findings.push(finding('specification', 'acceptance_criterion_duplicate', `duplicate acceptance criterion: ${ac}`, artifact));
+    }
+    seenAcs.add(ac.toLowerCase());
+    if (caps.length === 0) {
+      findings.push(finding('specification', 'acceptance_criterion_cap_missing', `${ac || `row ${rowNumber}`} must cite at least one CAP-*`, artifact));
+    }
+    for (const cap of caps) {
+      if (!knownCaps.has(cap.toLowerCase())) {
+        findings.push(finding('specification', 'acceptance_criterion_cap_unknown', `${ac || `row ${rowNumber}`} references undeclared capability: ${cap}`, artifact));
+      }
+      if (!capToAcs.has(cap.toLowerCase())) capToAcs.set(cap.toLowerCase(), new Set());
+      if (AC_ID_EXACT_RE.test(ac)) capToAcs.get(cap.toLowerCase()).add(ac);
+    }
+    if (isPlaceholder(behavior)) {
+      findings.push(finding('specification', 'acceptance_criterion_behavior_missing', `${ac || `row ${rowNumber}`} has no observable behavior`, artifact));
+    }
+    if (isPlaceholder(evidence)) {
+      findings.push(finding('specification', 'acceptance_criterion_evidence_missing', `${ac || `row ${rowNumber}`} has no verification method`, artifact));
+    }
+    rows.push({ ac, caps, behavior, evidence });
+  });
+
+  for (const cap of productMap.requiredCaps) {
+    if (!(capToAcs.get(cap.toLowerCase())?.size > 0)) {
+      findings.push(finding('specification', 'acceptance_criteria_capability_coverage_missing', `${cap} has no acceptance criterion`, artifact));
+    }
+  }
+  if (table.rows.length === 0) {
+    findings.push(finding('specification', 'acceptance_criteria_empty', 'Acceptance Criteria has no rows', artifact));
+  }
+
+  return {
+    findings,
+    rows,
+    capToAcs: Object.fromEntries([...capToAcs].map(([cap, acs]) => [cap, [...acs]]))
+  };
+}
+
 async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
   const artifacts = options.artifacts || await scanArtifacts(targetDir, slug);
   const classification = String(options.classification || await detectClassification(targetDir, slug) || '').toUpperCase();
   const inputs = await readFeatureInputs(targetDir, slug, artifacts);
-  const discoverySources = [
-    inputs.prd,
-    inputs.requirements,
-    inputs.scopeExpansion,
-    inputs.expansionAudit,
-    inputs.expansionScout,
-    inputs.solutionOptions
-  ].filter(Boolean);
+  const discoverySources = [inputs.prd, inputs.scopeExpansion, inputs.expansionAudit, inputs.expansionScout, inputs.solutionOptions].filter(Boolean);
   const detectedSurfaces = discoverySources.flatMap(detectRichSurfaces);
   const declaredSurfaces = discoverySources.flatMap((content) => parseSurfacesOverride(content));
   const operationalSurfaces = [...new Set([...detectedSurfaces, ...declaredSurfaces])];
   const prdFrontmatter = parseFrontmatter(inputs.prd || '');
-  const requirementsFrontmatter = parseFrontmatter(inputs.requirements || '');
-  const explicitlyRequired = [prdFrontmatter, requirementsFrontmatter]
-    .some((fm) => String(fm.feature_completeness || '').toLowerCase() === 'required');
-  const contractPresent = hasCompletenessSection(inputs);
-  const formal = ['SMALL', 'MEDIUM'].includes(classification);
+  const explicitlyRequired = String(prdFrontmatter.feature_completeness || '').toLowerCase() === 'required';
+  const contractPresent = Boolean(
+    extractSection(inputs.prd, ['Feature Capability Map', 'Mapa de Capacidades da Feature'])
+    || extractSection(inputs.prd, ['Acceptance Criteria', 'Criterios de Aceite'])
+    || extractSection(inputs.plan, ['Capability Delivery Plan', 'Plano de Entrega de Capacidades', 'Matriz de Entrega de Capacidades'])
+  );
+  const formal = ['MICRO', 'SMALL', 'MEDIUM'].includes(classification);
   const meaningfulPromise = hasMeaningfulFeaturePromise(inputs);
   const applicable = Boolean(options.force
     || explicitlyRequired
@@ -972,50 +1050,28 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     || operationalSurfaces.length > 0
     || (formal && meaningfulPromise));
 
-  const stageFindings = { product: [], requirements: [], design: [], plan: [], execution: [] };
+  const stageFindings = { product: [], specification: [], plan: [], execution: [] };
   let productMap = { findings: [], rows: [], requiredCaps: [], allCaps: [] };
-  let requirementsMatrix = { findings: [], rows: [], requiredLenses: [], capToAcs: {} };
-  let productSurface = { findings: [], objects: [] };
-  let operationalMatrix = { findings: [], rows: [] };
-  let leverage = { findings: [], rows: [] };
+  let acceptance = { findings: [], rows: [], capToAcs: {} };
   let delivery = { findings: [], rows: [] };
   let execution = { findings: [], ledger: null, coveredCaps: [] };
-  let baseline = { findings: [], reqs: [], acs: [] };
 
   if (applicable) {
     productMap = validateProductCapabilityMap(inputs.prd, artifacts.prd.path || `prd-${slug}.md`);
-    baseline = validateRequirementsBaseline(inputs.requirements, artifacts.requirements.path || `requirements-${slug}.md`, true);
-    requirementsMatrix = validateFeatureCapabilityMatrix(inputs.requirements, artifacts.requirements.path || `requirements-${slug}.md`, productMap);
-
-    const operationalRequired = operationalSurfaces.length > 0
-      || requirementsMatrix.rows.some((row) => row.lens === 'operational-management' && row.decision === 'required');
-    if (operationalRequired) {
-      productSurface = validateOperationalSurfaceMap(inputs.prd, artifacts.prd.path || `prd-${slug}.md`);
-      operationalMatrix = validateOperationalDecisionMatrix(
-        inputs.requirements,
-        artifacts.requirements.path || `requirements-${slug}.md`,
-        productSurface,
-        productMap
-      );
-    }
-
-    const designCandidates = [
-      { content: inputs.readiness, artifact: artifacts.readiness?.path || `readiness-${slug}.md` },
-      { content: inputs.designDoc, artifact: artifacts.design_doc.path || `design-doc-${slug}.md` },
-      { content: inputs.architecture, artifact: artifacts.architecture.path || 'architecture.md' }
-    ];
-    const selectedDesign = designCandidates.find((item) => extractSection(item.content, ['Implementation Leverage Matrix', 'Matriz de Aproveitamento de Implementacao', 'Matriz de Reuso e Implementacao']))
-      || designCandidates.find((item) => item.content)
-      || designCandidates[0];
-    leverage = validateLeverageMatrix(selectedDesign.content, selectedDesign.artifact, productMap);
+    acceptance = validatePrdAcceptanceCriteria(inputs.prd, artifacts.prd.path || `prd-${slug}.md`, productMap);
     delivery = validateDeliveryPlan(inputs.plan, artifacts.implementation_plan.path || `implementation-plan-${slug}.md`, productMap);
 
-    stageFindings.product.push(...productMap.findings, ...productSurface.findings);
-    stageFindings.requirements.push(...baseline.findings, ...requirementsMatrix.findings, ...operationalMatrix.findings);
-    stageFindings.design.push(...leverage.findings);
+    stageFindings.product.push(...productMap.findings);
+    stageFindings.specification.push(...acceptance.findings);
     stageFindings.plan.push(...delivery.findings);
     if (options.includeExecution && delivery.findings.length === 0) {
-      execution = await validateExecutionEvidence(targetDir, slug, productMap, requirementsMatrix, delivery);
+      const structural = await validateDeliveryPaths(
+        targetDir,
+        productMap,
+        delivery,
+        `.aioson/context/implementation-plan-${slug}.md`
+      );
+      execution = { findings: structural.findings, ledger: null, coveredCaps: [] };
       stageFindings.execution.push(...execution.findings);
     } else if (options.includeExecutionStructure && delivery.findings.length === 0) {
       const structural = await validateDeliveryPaths(
@@ -1045,17 +1101,19 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     stage_findings: stageFindings,
     findings,
     product_map: productMap,
-    requirements_matrix: requirementsMatrix,
-    operational_matrix: operationalMatrix,
-    leverage_matrix: leverage,
+    acceptance_criteria: acceptance,
+    requirements_matrix: { rows: acceptance.rows, capToAcs: acceptance.capToAcs },
+    operational_matrix: { rows: [] },
+    leverage_matrix: { rows: [] },
     delivery_plan: delivery,
     execution_evidence: execution,
-    baseline: { reqs: baseline.reqs, acs: baseline.acs },
+    baseline: { reqs: [], acs: acceptance.rows.map((row) => row.ac).filter(Boolean) },
     summary: {
       promised_capabilities: productMap.rows.length,
       required_capabilities: productMap.requiredCaps.length,
-      lens_decisions: requirementsMatrix.rows.length,
-      leverage_rows: leverage.rows.length,
+      acceptance_criteria: acceptance.rows.length,
+      lens_decisions: 0,
+      leverage_rows: 0,
       delivery_rows: delivery.rows.length,
       executed_capabilities: execution.coveredCaps.length,
       errors: findings.length
@@ -1066,10 +1124,11 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
 function findingsThroughStage(analysis, stage) {
   const stages = {
     product: ['product'],
-    requirements: ['product', 'requirements'],
-    design: ['product', 'requirements', 'design'],
-    plan: ['product', 'requirements', 'design', 'plan'],
-    execution: ['product', 'requirements', 'design', 'plan', 'execution']
+    specification: ['product', 'specification'],
+    requirements: ['product', 'specification'],
+    design: ['product', 'specification'],
+    plan: ['product', 'specification', 'plan'],
+    execution: ['product', 'specification', 'plan', 'execution']
   };
   return (stages[stage] || stages.execution).flatMap((name) => analysis.stage_findings[name] || []);
 }
@@ -1086,6 +1145,7 @@ module.exports = {
   extractSection,
   parseFirstMarkdownTable,
   validateRequirementsBaseline,
+  validatePrdAcceptanceCriteria,
   analyzeFeatureCompleteness,
   findingsThroughStage
 };

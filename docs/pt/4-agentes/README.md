@@ -1,10 +1,10 @@
 # Guia de Agentes AIOSON
 
-> Índice com 31 agentes e 1 alias, com situação de uso e saída esperada.
+> Índice dos agentes públicos, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
 > `@pair` é alias de `@deyvin` e não possui ficha separada.
 
-> **As colunas "Quando invocar" abaixo descrevem a capacidade de cada agente, não a ordem obrigatória do fluxo padrão.** Desde a lane lean/maestro (v1.35.0), o fluxo padrão é `@product → @sheldon → @dev → @qa` (SMALL) ou `@product → @orchestrator → @dev → @pentester → @qa` (MEDIUM) — `@analyst`, `@architect`, `@ux-ui` e `@pm` são detours opt-in ou sub-agentes do fan-out do `@orchestrator`, não hops obrigatórios. Construir a feature assim também pode rodar sozinho até a recomendação de `feature:close` — veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
+> **As colunas "Quando invocar" descrevem capacidades, não a ordem obrigatória.** A rota de feature é `[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa`. Os colchetes indicam etapas opcionais. MICRO, SMALL e MEDIUM mudam profundidade e orçamento, não a cadeia. Especialistas entram somente sob pedido explícito ou por uma necessidade nomeada. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
 
 ---
 
@@ -12,20 +12,21 @@
 
 | Agente | Para que serve | Quando invocar | Saída principal |
 |---|---|---|---|
-| [@product](./product.md) | Define visão, PRD e escopo da feature | Início de projeto ou nova feature | `prd.md`, `spec.md` |
-| [@analyst](./analyst.md) | Descobre domínio, entidades, fluxos | Detour opt-in / sub-agente do `@orchestrator` (MEDIUM) | `architecture.md` (domínio) |
-| [@scope-check](./scope-check.md) | Confronta intenção, plano e artefatos antes do código | `spec:analyze` roda automático no gate `@dev`/`@qa`; detour explícito também disponível | `scope-check.md` |
-| [@architect](./architect.md) | Decide stack, estrutura, integração técnica | Detour opt-in / sub-agente do `@orchestrator` (MEDIUM) | `architecture.md` (técnico) |
+| [@product](./product.md) | Define visão, PRD e escopo da feature | Início de projeto ou nova feature | `prd-{slug}.md` |
+| [@analyst](./analyst.md) | Descobre domínio, entidades, fluxos | Consultoria explícita quando há dúvida de domínio | análise no PRD ou artefato consultivo |
+| [@scope-check](./scope-check.md) | Confronta intenção, plano e entrega como parecer consultivo | Somente sob pedido explícito; checks determinísticos não ativam o agente | `scope-check.md` |
+| [@architect](./architect.md) | Decide stack, estrutura, integração técnica | Consultoria explícita para uma decisão arquitetural aberta | registro da decisão ou parecer |
 | [@ux-ui](./ux-ui.md) | Design system e specs de componentes | Detour opt-in para specs UI-heavy | `design-doc.md`, `discovery.md` |
-| [@pm](./pm.md) | Backlog, user stories, ACs detalhados | Sub-agente do `@orchestrator` (MEDIUM) ou detour opt-in | `tasks.md` |
-| [@sheldon](./sheldon.md) | **Autoridade única de spec (SMALL)** — requirements + decisões técnicas + plano faseado + harness-contract numa passada | Após `@product`, padrão do SMALL | `requirements-*.md`, `implementation-plan-*.md`, `harness-contract.json` |
-| [@orchestrator](./orchestrator.md) | **Maestro de spec (MEDIUM)** — fan-out para `@analyst`/`@architect`/`@pm` (+`@ux-ui`), consolida o pacote de spec com Gates A/B/C; secundário: coordena lanes paralelas pós-spec | Após `@product`, padrão do MEDIUM | `.aioson/context/parallel/`, pacote de spec consolidado |
-| [@dev](./dev.md) | Implementa a feature | Após o pacote de spec (`@sheldon`/`@orchestrator`) ou direto após `@product` (MICRO) | código + `dev-state.md` |
-| [@qa](./qa.md) | Testa, valida ACs, ciclo autônomo com `@dev` (cap 3), hub do autopilot pós-dev | Após `@dev` | `test-plan.md`, `qa-report-*.md` |
-| [@validator](./validator.md) | Gate final: valida contrato binário de sucesso | Após `@qa`, antes de fechar feature | veredicto em `last-handoff.json` |
+| [@pm](./pm.md) | Consultoria de backlog e priorização | Sob pedido explícito; não substitui `@planner` | parecer ou backlog consultivo |
+| [@sheldon](./sheldon.md) | Enriquece e revisa criticamente o PRD em vigor | Opcional após `@product` | o mesmo `prd-{slug}.md`, enriquecido |
+| [@planner](./planner.md) | Transforma o PRD aprovado em etapas verticais executáveis | Sempre antes de implementação significativa | `implementation-plan-{slug}.md` |
+| [@orchestrator](./orchestrator.md) | Coordena uma sessão ou especialistas quando solicitado | Somente sob pedido explícito | coordenação e handoffs |
+| [@dev](./dev.md) | Implementa e integra a feature | Após o plano aprovado | código + `dev-state.md` |
+| [@qa](./qa.md) | Revisão final proporcional e independente | Após `@dev` | `qa-report-{slug}.md` |
+| [@validator](./validator.md) | Verifica contrato binário quando habilitado | Especialista opt-in após QA | veredicto do harness |
 | [@forge-run](./forge-run.md) | Lane B opt-in: compila e roda o workflow de verificação executável de uma feature MEDIUM | MEDIUM com contrato `verification` + plano com Wave | `forge-run.workflow.js` |
-| [@tester](./tester.md) | Engenharia de testes para apps já existentes | Legacy/brownfield ou lacunas graves | `test-inventory.md` |
-| [@pentester](./pentester.md) | Revisão adversarial de segurança | Antes de publicar ou por demanda | `security-findings-*.json` |
+| [@tester](./tester.md) | Engenharia de testes para apps já existentes | Especialista opt-in para cobertura adicional | `test-inventory.md` |
+| [@pentester](./pentester.md) | Revisão adversarial de segurança | Especialista opt-in, por pedido ou risco concreto | `security-findings-*.json` |
 
 ---
 
@@ -57,7 +58,7 @@
 | [@design-hybrid-forge](./design-hybrid-forge.md) | Combina dois design skills num híbrido | Quer visual que não existe nos padrões | novo design skill |
 | [@orache](./orache.md) | Investigação de domínio e pesquisa estratégica | Antes de entrar num mercado novo | relatório de domínio |
 | [@copywriter](./copywriter.md) | Copy de conversão: landing pages, emails | Quando precisa de texto que converte | copy entregável |
-| [@discovery-design-doc](./discovery-design-doc.md) | Consolida discovery, readiness e design doc | Escopo vago ou etapa pré-dev SMALL/MEDIUM | `design-doc*.md` + `readiness*.md` |
+| [@discovery-design-doc](./discovery-design-doc.md) | Consolida discovery e design quando isso é o objetivo | Consultoria explícita; não é gate canônico | `design-doc*.md` + `readiness*.md` |
 
 ---
 

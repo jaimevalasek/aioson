@@ -46,6 +46,8 @@ const DEFAULT_AGENTIC_MAX_CYCLES = 1;
 const STEP_META = {
   setup: { description: 'Initialize project context', gate_before: null, gate_after: null },
   product: { description: 'Generate PRD', gate_before: null, gate_after: null },
+  sheldon: { description: 'Challenge and approve the PRD in place', gate_before: null, gate_after: null },
+  planner: { description: 'Create executable vertical implementation stages', gate_before: null, gate_after: 'C' },
   analyst: { description: 'Map requirements + spec', gate_before: null, gate_after: 'A' },
   architect: { description: 'Architecture design', gate_before: 'A', gate_after: 'B' },
   'discovery-design-doc': { description: 'Prepare design-doc and readiness contract', gate_before: 'B', gate_after: null },
@@ -65,9 +67,9 @@ const GATE_NAMES = {
 };
 
 const GATE_RESPONSIBLE_AGENT = {
-  A: '@analyst',
-  B: '@architect',
-  C: '@pm (for MEDIUM) or @dev (for SMALL/MICRO)',
+  A: '@product (legacy alias: @analyst)',
+  B: '@product (legacy alias: @architect)',
+  C: '@planner',
   D: '@qa'
 };
 
@@ -263,17 +265,27 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
     let inferred = false;
 
     if (normalized === 'product') {
-      inferred = Boolean(artifacts.prd && artifacts.prd.exists);
+      inferred = Boolean(
+        artifacts.prd && artifacts.prd.exists
+        && String(artifacts.prd.frontmatter?.product_scope || '').toLowerCase() === 'approved'
+        && String(artifacts.prd.frontmatter?.prd_ready || '').toLowerCase() === 'approved'
+      );
     } else if (normalized === 'analyst') {
       inferred = Boolean(artifacts.requirements && artifacts.requirements.exists && gates.requirements === 'approved');
     } else if (normalized === 'architect') {
       inferred = Boolean(artifacts.architecture && artifacts.architecture.exists && gates.design === 'approved');
-    } else if (normalized === 'sheldon' || normalized === 'orchestrator') {
-      // Single spec authorities (lean @sheldon / maestro @orchestrator) collapse
-      // Gates A/B/C into one hop — done once the spec package exists with the
-      // collapsed gates approved. Without this, a seed run AFTER the spec stage
-      // finished reported `next: sheldon|orchestrator` and pointed the whole
-      // agentic scheme backwards.
+    } else if (normalized === 'sheldon') {
+      inferred = Boolean(
+        artifacts.prd && artifacts.prd.exists
+        && String(artifacts.prd.frontmatter?.sheldon_review || '').toLowerCase() === 'approved'
+      );
+    } else if (normalized === 'planner') {
+      inferred = Boolean(
+        artifacts.implementation_plan && artifacts.implementation_plan.exists
+        && String(artifacts.implementation_plan.frontmatter?.status || '').toLowerCase() === 'approved'
+      );
+    } else if (normalized === 'orchestrator') {
+      // Compatibility with pre-Planner maestro workflows.
       inferred = Boolean(
         artifacts.spec && artifacts.spec.exists &&
         gates.requirements === 'approved' &&

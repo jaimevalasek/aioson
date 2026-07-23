@@ -28,13 +28,7 @@ const SKILL_FILES = [
 
 const HOOKS = {
   briefing: { reference: 'framing.md', before: '## Rules' },
-  'briefing-refiner': { reference: 'framing.md', before: '## Handoff' },
-  product: { reference: 'framing.md', before: '## Handoff' },
-  sheldon: { reference: 'specification.md', before: '## Handoff' },
-  analyst: { reference: 'specification.md', before: '## Hard constraints' },
-  architect: { reference: 'architecture.md', before: '## Gate B completion contract' },
-  'scope-check': { reference: 'delivery-assurance.md', before: '## Handoff Rules' },
-  qa: { reference: 'delivery-assurance.md', before: '## Feature closure' }
+  'briefing-refiner': { reference: 'framing.md', before: '## Handoff' }
 };
 
 async function readAt(root, relativePath) {
@@ -129,8 +123,8 @@ test('profile registry points to the four packaged references', async () => {
   }
 });
 
-test('all eight hooks are bounded, profile-specific, additive and placed before existing handoffs', async () => {
-  assert.deepEqual(Object.keys(HOOKS), REVIEW_AGENTS);
+test('explicit briefing hooks remain bounded while feature delivery review is conditional', async () => {
+  assert.deepEqual(Object.keys(HOOKS), ['briefing', 'briefing-refiner']);
 
   for (const [agent, contract] of Object.entries(HOOKS)) {
     const relativePath = `agents/${agent}.md`;
@@ -149,6 +143,13 @@ test('all eight hooks are bounded, profile-specific, additive and placed before 
     assert.match(content, /never suppress it/);
     assert.match(content, /missing review infrastructure/i);
   }
+
+  for (const agent of ['product', 'sheldon', 'analyst', 'architect', 'scope-check', 'qa']) {
+    const content = await readAt(TEMPLATE_ROOT, `agents/${agent}.md`);
+    assert.ok((content.match(/## Review intelligence checkpoint/g) || []).length <= 1, `${agent}: duplicate review hook`);
+  }
+  const qa = await readAt(TEMPLATE_ROOT, 'agents/qa.md');
+  assert.match(qa, /Load review-intelligence only when/);
 });
 
 test('template and workspace copies are byte-identical after sync', async () => {

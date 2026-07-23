@@ -71,10 +71,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **Definição:** o tamanho do projeto, calculado a partir de 3 fatores (tipos de usuário, integrações externas, regras de negócio). Define quanta cerimônia o workflow vai aplicar.
 
-**Como funciona:**
-- 0–1 ponto → **MICRO** (`@setup → @product → @dev → @qa`)
-- 2–3 pontos → **SMALL** — lean lane: `@setup → @product → @sheldon → @dev → @qa` (`@sheldon` é a autoridade única de spec)
-- 4–6 pontos → **MEDIUM** — maestro lane: `@setup → @product → @orchestrator → @dev → @pentester → @qa` (`@orchestrator` faz fan-out de spec)
+**Como funciona:** 0–1 ponto → MICRO; 2–3 → SMALL; 4–6 → MEDIUM. Todos usam a mesma rota `[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa`; o nível muda profundidade, orçamento e cobertura de risco.
 
 **Onde aparece:** `classification:` no frontmatter do `project.context.md`.
 

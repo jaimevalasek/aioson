@@ -214,16 +214,8 @@ async function runPreflight({ args, options = {}, logger }) {
   const checks = [
     ['project.context.md', artifacts.project_context.exists, null],
     slug ? [`prd-${slug}.md`, artifacts.prd.exists, null] : null,
-    slug ? [`sheldon-enrichment-${slug}.md`, artifacts.sheldon_enrichment.exists, 'optional'] : null,
-    slug ? [`requirements-${slug}.md`, artifacts.requirements.exists, null] : null,
-    slug
-      ? [`spec-${slug}.md`, artifacts.spec.exists, specVersion ? `version: ${specVersion}${lastCheckpoint ? ', last: "' + lastCheckpoint + '"' : ''}` : null]
-      : null,
-    ['architecture.md', artifacts.architecture.exists, null],
-    ['design-doc.md', artifacts.design_doc.exists, classification === 'MICRO' ? 'SMALL/MEDIUM pre-dev only' : null],
-    ['readiness.md', artifacts.readiness.exists, classification === 'MICRO' ? 'SMALL/MEDIUM pre-dev only' : null],
     slug ? [`implementation-plan-${slug}.md`, artifacts.implementation_plan.exists, artifacts.implementation_plan.exists ? `status: ${artifacts.implementation_plan.frontmatter.status || 'unknown'}` : null] : null,
-    slug ? [`conformance-${slug}.yaml`, artifacts.conformance.exists, classification === 'SMALL' || classification === 'MICRO' ? 'MEDIUM only — not required' : null] : null
+    slug ? [`qa-report-${slug}.md`, artifacts.qa_report.exists, artifacts.qa_report.exists ? `verdict: ${artifacts.qa_report.frontmatter.verdict || 'unknown'}` : 'created by @qa'] : null
   ].filter(Boolean);
 
   for (const [name, exists, note] of checks) {

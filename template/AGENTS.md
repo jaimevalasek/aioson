@@ -86,6 +86,7 @@ Describe your intent. The agent system will match and execute.
 | @ux-ui | "design the UI", "use the UI/UX agent" |
 | @product | "define the product vision", "use the product agent", "start the product wizard" |
 | @sheldon | "review/enrich this PRD before implementation", "validate the PRD", "use the sheldon agent" |
+| @planner | "create the implementation plan", "turn the PRD into vertical stages", "use the planner agent" |
 | @deyvin | "continue what we were doing", "use the deyvin agent", "let's fix this together" |
 | @pm | "create the user stories", "use the pm agent" |
 | @dev | "implement the feature", "use the dev agent" |
@@ -120,11 +121,11 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 **Hard constraints — no exceptions:**
 - For implementation requests, apply the Concrete implementation lane gate first. Eligible Simple Plan work goes directly to `@dev` and ends there; substantive feature work uses workflow routing and the next required stage.
 - Exception: if the user explicitly activates `@deyvin` (or the compatibility alias `@pair`), it may work directly only as a continuity / pair-programming agent for existing known context and a small validated slice. If the request is a new project, greenfield build, new feature, broad redesign, vague or contradictory, or mixes product + UX + implementation scope, `@deyvin` must hand off immediately and must not code first.
-- Official workflow agents (`@setup`, `@product`, `@analyst`, `@scope-check`, `@architect`, `@ux-ui`, `@pm`, `@orchestrator`, `@dev`, `@qa`) must stay inside the workflow. Do not answer requests outside the current agent's scope.
-- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present), the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next agent's skill instead of stopping. That chain runs the whole feature — the spec authority (`@sheldon`/`@orchestrator`) seeds the scheme and crosses into `@dev`, then initial QA routes enabled specialists from `agent-execution-{slug}.json`; QA/Tester/Pentester apply bounded owner-local corrections, the last specialist returns to final QA, and Validator runs only when enabled/applicable. DEV re-enters only for consolidated cross-cutting changes. It stops for genuine human decisions and never auto-runs `feature:close`/publish.
+- Canonical workflow agents (`@setup`, `@product`, `@planner`, `@dev`, `@qa`) must stay inside the workflow. `@sheldon` is an optional PRD-enrichment detour. Other specialists (`@analyst`, `@architect`, `@pm`, `@ux-ui`, `@discovery-design-doc`, `@scope-check`, `@orchestrator`) are opt-in for a named unresolved decision, never default document-producing hops.
+- Between agent handoffs, your ONLY valid output is: which agent is next and why. Do not continue into that agent's work. Single exception: when `auto_handoff: true` is set in `.aioson/context/project.context.md` (or a seeded `.aioson/context/workflow-execute.json` with `agentic_policy.enabled` is present), the agents covered by `.aioson/docs/autopilot-handoff.md` auto-invoke the next skill. The chain is `@product → @planner → @dev → @qa`; Sheldon is optional. DEV may dispatch explicitly enabled development lanes, remains their integration owner, and pauses on unavailable host/model unless the manifest declares an applicable fallback. Tester, Pentester, and Validator are disabled by default and run only when explicitly enabled and triggered. The chain stops for genuine human decisions and never auto-runs `feature:close`/publish.
 - If `.aioson/context/project.context.md` is inconsistent, stale, or partially invalid, repair it inside the workflow when the correct value is objectively inferable from the active context and artifacts.
 - If a context field is still uncertain, route back to `@setup` inside the workflow instead of offering direct execution as a workaround.
-- Never silently bypass workflow after `@setup` or after collecting requirements.
+- Never silently bypass workflow after `@setup` or after confirming product scope.
 
 **Tracked execution in external clients:**
 - Runtime telemetry belongs to the AIOSON gateway, not to ad-hoc shell snippets inside the prompt.
@@ -147,6 +148,7 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 - @ux-ui → `.aioson/agents/ux-ui.md`
 - @product → `.aioson/agents/product.md`
 - @sheldon → `.aioson/agents/sheldon.md`
+- @planner → `.aioson/agents/planner.md`
 - @deyvin → `.aioson/agents/deyvin.md` (`@pair` remains as a compatibility alias)
 - @pm → `.aioson/agents/pm.md`
 - @dev → `.aioson/agents/dev.md`
@@ -171,25 +173,26 @@ When running Codex directly (without `aioson workflow:next`), these rules apply:
 
 ## Spec-Driven Development (SDD)
 
-AIOSON uses the `aioson-spec-driven` process skill to enforce specification-first development.
+AIOSON uses the `aioson-spec-driven` process skill to keep product intent, implementation, and runtime evidence connected without multiplying documents.
 
 ### Core artifacts
 - `constitution.md` — governs all agents with 6 articles
 - `.aioson/context/project-pulse.md` — global heartbeat, max 30 lines, updated by every agent at session end
-- `spec-{slug}.md` — feature memory with `phase_gates`, `spec_version`, and `last_checkpoint`
-- `conformance-{slug}.yaml` — machine-readable AC definitions (MEDIUM projects only)
+- `prd-{slug}.md` — the single Product-owned specification authority, optionally enriched in place by Sheldon
+- `implementation-plan-{slug}.md` — Planner's vertical executable stages
+- `qa-report-{slug}.md` — independent delivery verdict
 
 ### Phase gates
-- **Gate A** (requirements): must pass before @architect starts
-- **Gate B** (design): must pass before @dev starts
-- **Gate C** (plan): must pass before significant implementation
-- **Gate D** (execution): must pass before feature is marked done
+- Product scope: PRD exists with required capabilities and exclusions
+- Product readiness: the PRD has concrete ACs plus `product_scope: approved` and `prd_ready: approved`; Sheldon review is optional
+- **Gate C**: Planner's implementation plan is approved before significant implementation
+- **Gate D**: QA report records PASS with executable and production-path evidence
 
-Gates are blocking in MEDIUM, informational in MICRO/SMALL.
+Gate depth is proportional, but the artifact shape and canonical route stay the same for MICRO, SMALL, and MEDIUM. The lightweight dossier is non-blocking context memory available to every classification.
 
 ### Feature completeness contract
 
-For every substantive SMALL/MEDIUM feature, load `.aioson/docs/feature-completeness-contract.md`. The PRD, requirements, design, and plan must close the same trace: `CAP -> lens -> REQ -> AC -> phase -> files -> verification -> executable evidence`. Gate checks and handoff validation reject missing sections/links; CRUD, integrations, jobs, notifications, import/export, permissions, and similar surfaces are conditional lenses, not a universal feature checklist.
+For every tracked MICRO/SMALL/MEDIUM feature, load `.aioson/docs/feature-completeness-contract.md`. Close the trace `CAP -> AC -> vertical phase -> exact files -> executable check -> production-path evidence`. Requirements/spec/design/readiness/conformance/harness artifacts are not canonical prerequisites. Simple Plan remains the separate lane for an already-specified bounded technical outcome.
 
 ### How agents load SDD
 For concrete spec/workflow work, the active agent checks for `aioson-spec-driven` in `.aioson/installed-skills/` or `.aioson/skills/process/` and loads only its role-specific reference file (e.g., `references/dev.md`, `references/qa.md`). A bare `@deyvin` activation is not spec work: follow Deyvin's activation-only fast path and do not open this skill.
@@ -203,8 +206,8 @@ Located at: `.aioson/skills/process/aioson-spec-driven/SKILL.md`
 
 This is a first-party process skill. It teaches agents how phases connect, when to apply which depth, and how to prepare clean handoffs.
 
-Agents that load it: @product, @analyst, @scope-check, @architect, @sheldon, @dev, @deyvin, @qa, @tester, @orchestrator, @pm
-When to load: at the start of concrete spec work (PRD, requirements, architecture, implementation, testing); not during `@deyvin` activation-only recovery
+Agents that load it: @product, @sheldon, @planner, @dev, @qa; optional specialists load it only for a concrete detour
+When to load: at the start of PRD, planning, implementation, or QA work; not during `@deyvin` activation-only recovery
 What to load: `SKILL.md` first, then only the `references/` file relevant to the current phase
 
 ## Process skill: design-hybrid-forge

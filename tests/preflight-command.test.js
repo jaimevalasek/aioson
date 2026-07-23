@@ -78,7 +78,7 @@ test('preflight: analyst feature without PRD is unframed_feature and not blocked
   assert.equal(result.mode, 'unframed_feature');
   assert.equal(result.readiness, 'READY_WITH_WARNINGS');
   assert.equal(result.readiness_blockers.length, 0);
-  assert.ok(result.readiness_warnings.some((w) => w.includes('not framed yet')));
+  assert.ok(result.readiness_warnings.some((w) => w.includes('PRD missing')));
 });
 
 test('preflight: detects classification from project.context.md', async () => {
@@ -92,12 +92,40 @@ test('preflight: detects classification from project.context.md', async () => {
   assert.equal(result.classification, 'MEDIUM');
 });
 
-test('preflight: readiness READY when project context and spec exist for dev', async () => {
+test('preflight: readiness READY when reviewed PRD and approved plan exist for dev', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
-  await writeFile(tmpDir, '.aioson/context/spec-feat.md', '---\ngate_plan: approved\n---');
-  await writeFile(tmpDir, '.aioson/context/design-doc.md', '# Design Doc\n');
-  await writeFile(tmpDir, '.aioson/context/readiness.md', '# Readiness\n');
+  await writeFile(tmpDir, '.aioson/context/prd-feat.md', `---
+classification: SMALL
+product_scope: approved
+prd_ready: approved
+sheldon_review: not_requested
+---
+# Feature
+
+## Feature Capability Map
+
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-feat-01 | User sees the result | User submits | required | Core promise |
+
+## Acceptance Criteria
+
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-feat-01 | CAP-feat-01 | Result appears | integration test |
+`);
+  await writeFile(tmpDir, '.aioson/context/implementation-plan-feat.md', `---
+status: approved
+---
+# Plan
+
+## Capability Delivery Plan
+
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-feat-01 | 1 | src/feat.js, tests/feat.test.js | node --test |
+`);
   const result = await runPreflight({
     args: [tmpDir],
     options: { json: true, agent: 'dev', feature: 'feat' },

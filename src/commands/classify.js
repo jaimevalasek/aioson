@@ -67,20 +67,20 @@ function classificationToPhaseDepth(classification) {
   if (classification === 'SMALL') {
     return {
       specify: 'full PRD',
-      research: 'recommended (@sheldon)',
-      requirements: 'required (requirements-{slug}.md)',
-      design: 'selective (only if new pattern)',
-      plan: 'recommended',
-      execute: 'from requirements + spec'
+      research: 'PRD challenge by @sheldon',
+      requirements: 'acceptance criteria inside the PRD',
+      design: 'technical decisions inside the implementation plan',
+      plan: 'required (@planner)',
+      execute: 'from approved PRD + vertical plan'
     };
   }
   return {
     specify: 'full PRD + stakeholder review',
-    research: 'required (@sheldon)',
-    requirements: 'required + conformance YAML',
-    design: 'required (@ux-ui + @architect)',
-    plan: 'required + @pm backlog',
-    execute: 'from approved plan, phased delivery'
+    research: 'deep PRD challenge by @sheldon',
+    requirements: 'detailed acceptance criteria inside the PRD',
+    design: 'deeper repository/technical decisions inside the implementation plan',
+    plan: 'required (@planner), vertical and risk-aware',
+    execute: 'from approved PRD + vertical plan with broader QA'
   };
 }
 
@@ -223,12 +223,12 @@ async function runClassify({ args, options = {}, logger }) {
   if (interactive) {
     ({ userTypeCount, integrationCount, complexityLevel } = await runInteractive(logger));
   } else {
-    // Auto-detect from PRD or requirements file
+    // Auto-detect from the canonical PRD; legacy sources remain fallbacks.
     const dir = contextDir(targetDir);
     const candidates = slug
       ? [
-          path.join(dir, `requirements-${slug}.md`),
           path.join(dir, `prd-${slug}.md`),
+          path.join(dir, `requirements-${slug}.md`),
           path.join(dir, `sheldon-enrichment-${slug}.md`)
         ]
       : [path.join(dir, 'requirements.md'), path.join(dir, 'prd.md')];
@@ -265,8 +265,8 @@ async function runClassify({ args, options = {}, logger }) {
   }
 
   // Operational-surface floor (deterministic; raises MICRO -> SMALL only). A rich
-  // operational surface needs management screens, so a Trello/Kanban/CRM/workspace
-  // feature can't take the MICRO shortcut that skips @analyst/@architect/prototype.
+  // operational surface receives a larger planning and verification budget; it
+  // does not add mandatory specialist stages or documents.
   const detectedOps = content ? detectRichSurfaces(content) : [];
   const declaredOps = content ? parseSurfacesOverride(content, 'operational_surfaces') : [];
   const operationalSurfaces = [...new Set([...detectedOps, ...declaredOps])];

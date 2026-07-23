@@ -25,7 +25,7 @@ test('getAgentDefinition resolves ux-ui agent', () => {
   assert.equal(Boolean(agent), true);
   assert.equal(agent.id, 'ux-ui');
   assert.equal(agent.displayName, 'UI/UX');
-  assert.equal(agent.output.includes('.aioson/context/ui-spec.md'), true);
+  assert.equal(agent.output.includes('bounded interaction decision'), true);
 });
 
 test('getAgentDefinition resolves deyvin agent', () => {
@@ -89,8 +89,8 @@ test('buildAgentPrompt appends autopilot exception only when autoHandoff is true
 
   const autopilotPrompt = buildAgentPrompt(agent, 'claude', { ...baseOptions, autoHandoff: true });
   assert.equal(autopilotPrompt.includes('.aioson/docs/autopilot-handoff.md'), true);
-  assert.equal(autopilotPrompt.includes('post-dev review cycle'), true);
-  assert.equal(autopilotPrompt.includes('final `@qa`'), true);
+  assert.equal(autopilotPrompt.includes('disabled by default'), true);
+  assert.equal(autopilotPrompt.includes('return to `@qa`'), true);
   assert.equal(autopilotPrompt.includes('feature:close'), true);
 });
 

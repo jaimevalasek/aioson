@@ -227,7 +227,7 @@ Você > @qa
 | Situação | Ajuste |
 |---|---|
 | Já tenho testes existentes | `@tester` analisa os existentes antes de criar novos. Quality tier indica gaps. |
-| Módulo de 3.000+ linhas | `@orchestrator` divide em lanes paralelas. Cada lane refatora um grupo de responsabilidades. |
+| Módulo de 3.000+ linhas | `@planner` delimita fases e fronteiras; `@dev` pode usar faixas declaradas por host/modelo/`write_paths` e integra o resultado. |
 | Posso introduzir breaking changes na interface | Declare isso no `@product` como AC. O `@dev` atualizará todos os chamadores. |
 | Quero refatorar banco de dados também | Escopo separado — crie outra feature slug para o migration. Não misture na mesma spec. |
 

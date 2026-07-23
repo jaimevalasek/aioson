@@ -242,14 +242,14 @@ In default mode, prints `aios-qa-report.md` to the terminal.
 
 ## Integration with @qa agent
 
-When the `@qa` agent runs, it automatically checks for `aios-qa-report.md` in the project root. If found, it:
+When browser QA is part of the approved plan or explicitly requested, `@qa` can consume `aios-qa-report.md` from the project root. If consumed, it:
 
 1. Maps browser findings to AC status — any AC that failed in the browser is marked **Missing**
 2. Promotes severity — if both static review and browser test flag the same issue, severity goes up one level
 3. Adds a **Browser findings (aios-qa)** subsection to its report
 4. Tags ACs that passed in the browser with `[browser-validated]`
 
-This means running `aioson qa:run` before `@qa` gives you a richer, more complete QA report with zero extra effort.
+Run `aioson qa:run` before `@qa` only when browser coverage is proportional to the feature's named risks. The result enriches the single QA verdict; it does not create another mandatory gate.
 
 ---
 
@@ -258,8 +258,8 @@ This means running `aioson qa:run` before `@qa` gives you a richer, more complet
 Two terminals, running in parallel:
 
 ```bash
-# Terminal 1 — aioson agents (SMALL lean example)
-/aioson:agent:setup → @product → @sheldon → @dev
+# Terminal 1 — canonical feature flow
+/aioson:agent:setup → @product → optional @sheldon → @planner → @dev
 
 # Terminal 2 — browser QA (while app is running)
 aioson qa:init --url=http://localhost:3000

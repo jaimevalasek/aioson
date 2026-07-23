@@ -4,14 +4,14 @@
  * aioson state:save (alias: dev:state:write) — create/update dev-state.md
  * for @dev session resumption.
  *
- * Stores active feature, phase, next step, spec version, and context package.
- * Invoked by upstream agents (@analyst, @product, @sheldon, @architect) at
+ * Stores active feature, phase, next step, and a compact context package.
+ * Invoked by upstream agents (@product, @sheldon, @planner; legacy specialists supported) at
  * session end so the next @dev activation auto-resumes on `next_step` instead
  * of cold-starting.
  *
  * Usage:
  *   aioson dev:state:write . --feature=checkout --phase=3 \
- *     --next="Implement notification listeners" --context=spec,requirements,impl-plan
+ *     --next="Implement notification listeners" --context=prd,impl-plan
  *   aioson state:save . --feature=checkout --next="Continue payment webhook"
  *
  * --context (optional): comma-separated canonical type tokens. Each token
@@ -21,19 +21,17 @@
  *
  * Canonical context tokens:
  *   prd          → prd-{slug}.md
- *   requirements → requirements-{slug}.md
- *   spec         → spec-{slug}.md
- *   architecture → architecture.md
  *   impl-plan    → implementation-plan-{slug}.md
- *   sheldon      → sheldon-enrichment-{slug}.md
+ *   sheldon      → prd-{slug}.md (compatibility alias)
+ *   requirements/spec/architecture/design-doc/readiness remain legacy optional tokens
  *   design-doc   → design-doc-{slug}.md (falls back to design-doc.md)
  *   readiness    → readiness-{slug}.md (falls back to readiness.md)
  *   ui-spec      → ui-spec.md
  *   dossier      → features/{slug}/dossier.md
  *   simple-plan  → simple-plans/{slug}.md
  *
- * When --context is omitted, auto-detect kicks in (legacy behavior): include
- * project.context.md + spec-{slug}.md + plan if present.
+ * When --context is omitted, auto-detect includes project context + reviewed PRD
+ * + implementation plan when present.
  */
 
 const fs = require('node:fs/promises');
@@ -48,7 +46,7 @@ const CONTEXT_TYPE_MAP = {
   spec:          { rel: (slug) => `spec-${slug}.md` },
   architecture:  { rel: () => 'architecture.md' },
   'impl-plan':   { rel: (slug) => `implementation-plan-${slug}.md` },
-  sheldon:       { rel: (slug) => `sheldon-enrichment-${slug}.md` },
+  sheldon:       { rel: (slug) => `prd-${slug}.md` },
   'design-doc':  { rel: (slug) => `design-doc-${slug}.md`, fallback: () => 'design-doc.md' },
   readiness:     { rel: (slug) => `readiness-${slug}.md`, fallback: () => 'readiness.md' },
   'ui-spec':      { rel: () => 'ui-spec.md' },
@@ -132,10 +130,9 @@ async function runStateSave({ args, options = {}, logger }) {
       }
     }
   } else {
-    // Auto-detect (legacy behavior): keep backward compatibility for callers
-    // that haven't migrated to --context yet.
+    // Auto-detect the compact canonical implementation context.
     if (artifacts.project_context.exists) contextPackage.push('project.context.md');
-    if (artifacts.spec.exists) contextPackage.push(`spec-${slug}.md`);
+    if (artifacts.prd.exists) contextPackage.push(`prd-${slug}.md`);
     if (plan) contextPackage.push(plan);
     else if (artifacts.implementation_plan.exists) contextPackage.push(`implementation-plan-${slug}.md`);
   }

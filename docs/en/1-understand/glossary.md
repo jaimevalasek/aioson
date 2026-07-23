@@ -69,12 +69,14 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 ## Classification (MICRO / SMALL / MEDIUM)
 
-**Definition:** the size of the project, calculated from 3 factors (user types, external integrations, business rules). Determines how much ceremony the workflow applies.
+**Definition:** the size/risk profile calculated from 3 factors (user types, external integrations, business rules). It determines the depth, work budget, and review coverage—not the stage chain.
 
 **How it works:**
-- 0–1 points → **MICRO** (`@setup → @product → @dev → @qa`)
-- 2–3 points → **SMALL** lean default (`@setup → @product → @sheldon → @dev → @qa`) — `@sheldon` is the single spec authority
-- 4–6 points → **MEDIUM** maestro (`@setup → @product → @orchestrator → @dev → @pentester → @qa`) — `@orchestrator` fans out `@analyst`/`@architect`/`@pm` as sub-agents
+- 0–1 points → **MICRO**: concise PRD/plan and focused QA
+- 2–3 points → **SMALL**: normal feature depth and focused regression
+- 4–6 points → **MEDIUM**: deeper named-risk, integration, and negative-path evidence
+
+All three use Product → optional Sheldon → Planner → DEV → QA after setup.
 
 **Where it appears:** `classification:` in the `project.context.md` frontmatter.
 
@@ -191,13 +193,13 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 **Definition:** `@pentester` agent that does adversarial security review — scans OWASP Top 10, LLM Top 10, supply chain, and maps attack surfaces.
 
-**When to use:** before publishing a feature to production, or when you need a specific audit point.
+**When to use:** when the user explicitly requests an adversarial security review or an approved plan/QA finding names that need. It is disabled by default at every classification.
 
 ---
 
 ## Pipeline / Workflow
 
-**Definition:** the ordered sequence of agents that AIOSON applies to a feature, based on the classification. Three default lanes exist: MICRO (`@product → @dev → @qa`), SMALL lean (`@product → @sheldon → @dev → @qa`), and MEDIUM maestro (`@product → @orchestrator → @dev → @pentester → @qa`). Spec agents like `@analyst`, `@architect`, `@pm`, and `@ux-ui` are opt-in detours or fan-out sub-agents — not default hops.
+**Definition:** the canonical tracked-feature sequence: optional Briefing → optional Briefing Refiner → Product → optional Sheldon → Planner → DEV → QA. Classification changes depth and budget, not the sequence. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check are explicit consultants; Tester, Pentester, and Validator are opt-in reviewers.
 
 **Central command:** `aioson workflow:next .` — shows which agent is next.
 
@@ -205,9 +207,9 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 ## Plan
 
-**Definition:** documents in `/plans/` (project root) that describe a planned execution. Not committed (local memory).
+**Definition:** either source notes in `/plans/` (project root), or the canonical `implementation-plan-{slug}.md` owned by `@planner`.
 
-**What they're for:** planning before executing; serve as "seed plans" for features.
+**What they're for:** source notes may seed Product/Briefing. The canonical implementation plan maps PRD capabilities and ACs to vertical stages, exact files, checks, and production-path evidence.
 
 ---
 
@@ -261,7 +263,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 ## Tester
 
-**Definition:** `@tester` agent — systematic test engineering for already-implemented apps. Use when regular `@qa` isn't enough (legacy, brownfield, gaps across 3+ modules).
+**Definition:** opt-in `@tester` agent — systematic test engineering for already-implemented apps. Enable it explicitly when the proportional QA review is intentionally not enough (legacy, brownfield, gaps across 3+ modules).
 
 **Recent:** gained *coverage quality tier* and *test smell audit*.
 
@@ -269,7 +271,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 ## Validator
 
-**Definition:** `@validator` agent — technically validates a feature against the success contract defined in the spec, before close-out.
+**Definition:** opt-in `@validator` agent — technically validates a feature against an enabled success contract in a fresh context. It is never activated by classification alone.
 
 ---
 

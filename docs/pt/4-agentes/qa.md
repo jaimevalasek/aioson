@@ -1,134 +1,58 @@
-# @qa — Teste, valide e feche a feature com segurança
+# @qa — Revisão final proporcional
 
-> **Para quem é:** quem quer garantir que o que foi implementado realmente atende ao que foi especificado.
-> **Tempo de leitura:** 4 min.
-> **O que você vai sair sabendo:**
-> - Como `@qa` valida os critérios de aceitação
-> - O ciclo autônomo de correção QA→Dev
-
----
+> **Para quem é:** quem precisa de um veredito independente sobre a entrega implementada.
 
 ## Para que serve
 
-"Funciona" é uma afirmação subjetiva. "O endpoint POST /checkout retorna 201 com order_id quando dados válidos são enviados" é verificável.
+QA é o único revisor padrão da rota canônica. Ele verifica o PRD, o plano aprovado, o diff e a evidência executável, então grava um único `qa-report-{slug}.md` com PASS ou FAIL.
 
-`@qa` lê os ACs definidos em `prd-{slug}.md` e `requirements-{slug}.md`, verifica se o código implementado os atende, escreve os testes que comprovam isso, e gera um relatório. Se algo falhar e a falha for pequena, ele pode iterar diretamente com `@dev` sem você precisar intervir.
+QA não refaz discovery, produto ou arquitetura. Também não tenta explicar indefinidamente um defeito já reproduzido.
 
-Seu lema interno: nenhum finding inventado para parecer rigoroso. Nenhum risco ignorado para evitar atrito.
+## Profundidade proporcional
 
----
+- **Simple Plan/MICRO:** ACs alterados, testes focados e um smoke pelo caminho real.
+- **SMALL:** todos os ACs da feature, regressão focada e um smoke pelo caminho real.
+- **MEDIUM:** negativos e integrações mais profundos apenas nos riscos nomeados.
 
-## Quando invocar
+## Investigação limitada
 
-- Após `@dev` terminar a implementação.
-- Para revisar cobertura de testes em features antigas (junto com `@tester`).
-- Quando você quer saber se uma feature pode ir para produção com segurança.
+Ao encontrar um defeito reproduzível, QA:
 
----
+1. registra comando, evidência e impacto;
+2. identifica o menor pacote de correção;
+3. devolve ao DEV.
 
-## Quando NÃO invocar
+O mesmo diagnóstico sem evidência nova não é repetido mais de duas vezes. QA não deve gastar uma sessão longa investigando especulações numa mudança pequena.
 
-- A implementação ainda não está feita → `@qa` não tem o que testar.
-- Você precisa de engenharia de testes para um app grande sem testes → use `@tester`.
-- Você quer revisão adversarial de segurança → use `@pentester`.
+## Especialistas opt-in
 
----
+Tester, Pentester e Validator começam desligados em todas as classificações. Podem ser recomendados quando:
 
-## Diálogo típico
+- o usuário pede cobertura adicional;
+- o plano aprovado nomeia a necessidade;
+- QA encontra evidência concreta que justifica a especialidade.
 
-```
-Você > @qa
+Mesmo assim, a entrada correspondente precisa estar habilitada no manifesto de execução. A classificação nunca basta.
 
-@qa > Lendo prd-checkout-stripe.md, requirements-checkout-stripe.md e spec-checkout-stripe.md...
-      
-      ACs identificados (4):
-      AC-01: POST /checkout com dados válidos → 201 + order_id
-      AC-02: POST /checkout com cartão inválido → 422 + mensagem clara
-      AC-03: Order.status = 'paid' após confirmação Stripe
-      AC-04: Dados de pagamento não persistem em texto plano (PCI-lite)
-      
-      Verificando código...
-      
-      [roda testes]
-      
-      AC-01: PASS
-      AC-02: PASS
-      AC-03: FAIL — Order.status não é atualizado no webhook handler
-      AC-04: PASS
-      
-      Ciclo autônomo: enviando AC-03 para @dev (iteração 1/2)...
-      [@dev corrige webhook handler]
-      Re-rodando... AC-03: PASS
-      
-      4/4 ACs cobertos.
-      test-plan.md e qa-report-test-coverage.md gravados.
-      Dossier atualizado: QA PASS.
-      Próximo: @validator (se feature usa harness-contract) ou feature:close.
-```
+## Gate D e saída
 
----
+O relatório fecha a trilha `CAP → AC → fase → arquivos → check → evidência pelo caminho de produção`.
 
-## Saídas em disco
-
-| Arquivo | Conteúdo |
+| Veredito | Próxima ação |
 |---|---|
-| `.aioson/context/test-plan.md` | Plano de teste com ACs mapeados |
-| `.aioson/context/qa-report-test-coverage.md` | Resultado: cobertura, findings, verdict |
-| `.aioson/plans/{slug}/corrections-{date}.md` | Plano de correções quando há findings |
+| PASS | recomendar fechamento humano da feature |
+| FAIL | retornar ao DEV com o menor pacote reproduzível |
 
----
-
-## Como ele lê seu projeto
-
-- `.aioson/context/prd-{slug}.md` — ACs que serão validados
-- `.aioson/context/requirements-{slug}.md` — regras de negócio e edge cases
-- `.aioson/context/spec-{slug}.md` — o que foi implementado
-- `.aioson/context/features/{slug}/dossier.md` — code map e agent trail
-- `.aioson/rules/` — regras com `agents: qa`
-
----
-
-## Detalhes recentes
-
-**Ciclo autônomo QA→Dev (cap 3):** em falhas pequenas e localizadas, `@qa` itera com `@dev` automaticamente, com cap de 3 rodadas (`agentic_policy.review_cycle`). Ao esgotar as tentativas, para e pede sua intervenção. Isso evita loops infinitos sem perder a agilidade de correções óbvias.
-
-**Suporte a Sheldon phased plans:** quando a feature usa um plano por fases, `@qa` valida fase a fase, marcando `qa_approved` só quando todos os Criticals/Highs da fase estão resolvidos.
-
-**`@qa` é o hub do autopilot pós-dev:** sob autopilot (`auto_handoff: true`, esquema semeado, ou token `--auto`), `@qa` não para no PASS — ele encaminha automaticamente para `@tester` (se o trigger de gap de cobertura disparar), `@pentester` (se a superfície é sensível: auth/pagamentos/upload/secrets) e `@validator` (se há harness-contract), nessa ordem, até não sobrar pendência. Só então recomenda `aioson feature:close`. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
-
----
-
-## Opção `--help`
-
-Uma ativação com `--help` (`/qa --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
-
----
-
-## Comandos CLI relacionados
-
-```bash
-# Registrar finding no dossier
-aioson dossier:add-finding . --slug=checkout-stripe \
-  --agent=qa --section="Agent Trail" \
-  --content="QA concluído. Verdict: PASS. Cobertura: 87%."
-
-# Ver estado do dossier
-aioson dossier:show . --slug=checkout-stripe
-```
-
----
+QA e o autopilot nunca executam `feature:close`, commit, publish, deploy ou release sem autorização explícita.
 
 ## Handoff típico
 
-- **Vem de:** `@dev`
-- **Vai para:** `@tester` (gap de cobertura) · `@pentester` (superfície sensível) · `@validator` (harness-contract presente) — ou recomendação de `feature:close` quando nada fica pendente
+- **Vem de:** `@dev`.
+- **Vai para:** `@dev` em FAIL; recomendação de fechamento em PASS; especialista opt-in somente quando habilitado e justificado.
 
-> Desde a v1.24.0, o `@validator` roda `aioson harness:check` **primeiro** (verificação determinística, exit 0 = pass) e julga por LLM só os critérios sem `verification`. Ele é ativado a partir do `validator-prompt.txt` autocontido (critérios + resultados do check + diff vs. base) em **contexto fresco e isolado** — não na sessão que implementou. Ver [Ficha do @validator](./validator.md).
+## Veja também
 
----
-
-## Próximo passo
-
-- [Ficha do @validator](./validator.md) — gate final técnico
-- [Ficha do @tester](./tester.md) — quando há gaps grandes de cobertura
-- [Ficha do @pentester](./pentester.md) — revisão adversarial de segurança
+- [Ficha do @dev](./dev.md)
+- [Ficha do @tester](./tester.md)
+- [Ficha do @pentester](./pentester.md)
+- [Ficha do @validator](./validator.md)

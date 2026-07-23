@@ -20,14 +20,15 @@ Imagine you want to build a house.
 
 - **Briefing** listens to your raw idea (the "napkin sketch") and hands back a structured briefing — with risks and open questions — *before* it becomes a project.
 - **Product** understands what you want to build and why — and writes the PRD.
-- **Sheldon** is the spec authority for SMALL projects: in one pass it closes the PRD, writes the requirements, designs the technical structure, produces the implementation plan, and authors the harness contract. In larger (MEDIUM) projects it hardens the PRD before the full maestro phase.
-- **Analyst** discovers what already exists in the codebase and what's missing (opt-in detour, or fan-out sub-agent in MEDIUM).
-- **Architect** designs the structure (opt-in detour, or fan-out sub-agent in MEDIUM).
+- **Sheldon** optionally enriches Product's PRD in place before planning.
+- **Planner** turns the approved PRD into one vertical implementation plan.
+- **Analyst** discovers what already exists in the codebase and what's missing when explicitly requested.
+- **Architect** resolves a named technical boundary or decision when explicitly requested.
 - **UX-UI** designs how the end user will live there.
 - **Dev** builds.
 - **Deyvin** is the site foreman who picks up the job when you return from a trip: reads what's confirmed, flags what's inferred, and proceeds one small step at a time without you having to re-explain anything.
 - **QA** inspects.
-- **Pentester** tests the locks (security).
+- **Pentester** can test the locks when an explicit security review is enabled.
 - **Committer** writes the meeting minutes (commit message).
 
 Each one knows when to step in, when to step out, and what document to hand to the next. You talk to any of them by typing `@name` in your AI client.
@@ -85,7 +86,7 @@ Agents are *prompts*, not plugins. They live in `.md` files and your AI client r
 - **You want to explore an idea freely** in 5 minutes. AIOSON asks for setup first.
 - **You won't open the project again.** The value is precisely in repeated sessions.
 
-For these cases, AIOSON itself has a lightweight path — the **MICRO** classification (`@setup → @product → @dev → @qa`). But if even that doesn't fit, don't force it.
+For these cases, AIOSON applies the same Product → Planner → DEV → QA chain at **MICRO** depth, or uses the separate Simple Plan lane for an already-specified bounded technical outcome. If even that does not fit, do not force it.
 
 ## Next step
 

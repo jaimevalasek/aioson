@@ -26,7 +26,7 @@ The **Feature Dossier** (agent-chain continuity system, implemented in 8 phases 
 
 ## How a dossier is created
 
-The dossier is initialized automatically when you start a feature via the normal workflow (`@product` → `@analyst` → `@dev`). You can also create it manually:
+The dossier is initialized automatically when you start a feature via the normal workflow (`@product` → `@planner` → `@dev`). You can also create it manually:
 
 ```bash
 npx @jaimevalasek/aioson dossier:init --slug=checkout-stripe
@@ -55,7 +55,7 @@ The file has standardized sections:
 slug: checkout-stripe
 status: in_progress
 classification: SMALL
-agents_trail: [@product, @sheldon, @dev]
+agents_trail: [@product, @sheldon, @planner, @dev]
 last_agent: @dev
 last_updated: 2026-05-06T14:32:00Z
 
@@ -196,7 +196,7 @@ npx @jaimevalasek/aioson dossier:show --slug=checkout-stripe
 ```
 FEATURE: checkout-stripe
 Status: in_progress
-Agents: @product, @sheldon, @dev, @deyvin
+Agents: @product, @sheldon, @planner, @dev, @deyvin
 Progress: 4/5 steps done (80%)
 Files: 5 (3 created, 2 pending)
 Research: 1 (stripe webhooks)
@@ -270,7 +270,7 @@ This creates an auditable history of all features — useful for onboarding new 
 - MICRO project with a single feature — `project.context.md` and `dev-state.md` are enough.
 - Quick code exploration — use `@deyvin` directly without initializing a dossier.
 
-For SMALL and MEDIUM projects, the dossier is strongly recommended. MEDIUM projects with `@orchestrator` use it by default.
+For tracked features, the dossier is useful non-blocking memory at every classification. It enriches the PRD, plan, implementation, and QA review without adding a mandatory workflow stage.
 
 ---
 
@@ -298,6 +298,6 @@ For SMALL and MEDIUM projects, the dossier is strongly recommended. MEDIUM proje
 
 ## Next step
 
-- Want to start with this flow on a legacy project? → [Integration in large codebase](./integration-in-large-codebase.md)
+- Want to start with this flow on a legacy project? → [Integration in large codebase (PT)](../../pt/3-receitas/integracao-em-codebase-grande.md)
 - Want to understand what else the dossier tracks? See the [Glossary — Dossier](../1-understand/glossary.md).
 - Want the full artifact map? → [Ecosystem map](../1-understand/ecosystem-map.md).

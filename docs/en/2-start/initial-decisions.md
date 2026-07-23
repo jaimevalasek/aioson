@@ -8,7 +8,7 @@
 
 ## The classification: MICRO, SMALL, MEDIUM
 
-AIOSON is the opposite of "one size fits all." It applies **more ceremony to larger projects and less to smaller ones**. This is Article II of the Constitution: *Right-Sized Process*.
+AIOSON is the opposite of "one size fits all." It applies **more depth and evidence to riskier work and less to smaller work**. This is Article II of the Constitution: *Right-Sized Process*.
 
 ### How the score is calculated
 
@@ -28,12 +28,21 @@ The sum of three factors (each worth 0, 1, or 2 points):
 
 ### What changes at each level
 
-#### MICRO — `@setup → @product → @dev → @qa`
+After one-time setup, every tracked feature uses the same stage chain:
 
-- For: scripts, automations, prototypes, simple personal apps.
-- No formal spec phase — no `@sheldon` or `@orchestrator`. Lightweight.
-- `@product` is optional — you can pass the spec directly in chat if you prefer.
-- No per-phase verification; `@dev` phase checks are suppressed to save tokens.
+```text
+optional @briefing → optional @briefing-refiner → @product
+→ optional @sheldon → @planner → @dev → @qa
+```
+
+Classification changes the detail of the PRD and plan, the implementation budget, and the risk-proportional QA review. It does not insert Analyst, Architect, Orchestrator, Pentester, or other specialists into the default route.
+
+#### MICRO — the lightest version of the canonical chain
+
+- For: bounded features in scripts, automations, prototypes, and simple personal apps.
+- One concise PRD, one concise implementation plan, and one focused QA verdict.
+- `@sheldon` is normally unnecessary unless a small product ambiguity benefits from enrichment.
+- QA checks changed acceptance criteria, focused tests, and one production-path smoke.
 
 **Typical examples:**
 - Python script that processes CSV
@@ -41,12 +50,13 @@ The sum of three factors (each worth 0, 1, or 2 points):
 - Static portfolio page
 - Mini API with 3 endpoints
 
-#### SMALL — `@setup → @product → @sheldon → @dev → @qa` (lean default)
+#### SMALL — the normal version of the canonical chain
 
 - For: most real apps.
-- `@sheldon` is the **single spec authority**: in one pass it produces requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract, then hands directly to `@dev`.
-- `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check` are opt-in detours — not in the default hop sequence.
-- `@dev` runs a phase loop: auto-continues between phases, per-phase verification, context compaction.
+- `@product` owns the PRD; `@sheldon` may enrich that same PRD in place.
+- `@planner` owns the single vertical implementation plan.
+- `@dev` implements and integrates the plan; `@qa` reviews all feature ACs, focused regression, and a production-path smoke.
+- `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are explicit consultants, not default stages.
 
 **Typical examples:**
 - SaaS app for a single persona
@@ -54,12 +64,13 @@ The sum of three factors (each worth 0, 1, or 2 points):
 - Simple online store
 - Blog with admin panel
 
-#### MEDIUM — `@setup → @product → @orchestrator → @dev → @pentester → @qa` (maestro lane)
+#### MEDIUM — the deepest version of the canonical chain
 
 - For: products with multiple user types, several integrations, complex rules.
-- `@orchestrator` is the **single spec authority**: fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package, then hands to `@dev`.
-- `@pentester` runs inline (not opt-in) before `@qa`.
-- Quality gates applied at each handoff.
+- The stage chain stays Product → optional Sheldon → Planner → DEV → QA.
+- The PRD and plan carry deeper integration, negative-path, operational, and security evidence for named risks.
+- DEV may use explicitly configured development lanes, then remains responsible for final integration.
+- Tester, Pentester, and Validator remain disabled by default and run only when explicitly enabled and triggered.
 - More aggressive context threshold (55% — warns early).
 
 **Typical examples:**
@@ -72,9 +83,9 @@ The sum of three factors (each worth 0, 1, or 2 points):
 
 | Situation | Suggestion |
 |---|---|
-| Personal project, but with one heavy external integration | SMALL — the integration justifies `@architect` |
+| Personal project, but with one heavy external integration | SMALL — request `@architect` only if a concrete boundary decision remains unresolved |
 | Score 1, but I know it will grow | Start MICRO. Can promote later with `@setup` |
-| Score 4, but the team is just me | MEDIUM anyway. Complex business rules benefit from the artifacts |
+| Score 4, but the team is just me | MEDIUM anyway. Complex rules benefit from deeper PRD, plan, and QA evidence |
 | Score 2, but greenfield and I want careful design | SMALL + activate a design skill in the wizard |
 
 > **Frequently forgotten truth:** AIOSON fights unnecessary ceremony. If you're unsure between two levels, **choose the smaller one**. Promoting later is easy. Demoting later is painful.

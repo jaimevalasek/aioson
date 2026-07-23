@@ -1,13 +1,13 @@
 'use strict';
 
-// Verification sub-agent policy (.aioson/config/verification.json).
+// Verification review policy (.aioson/config/verification.json).
 //
 // Piece 1 of the "smart harness, fewer agents doing more" redesign. This is the
-// reader the @dev phase-loop (auto-continue) and the post-dev review cycle
-// consult to decide WHICH verification sub-agent runs, WHEN, and on WHICH model
+// reader the post-dev review cycle consults to decide WHICH optional reviewer
+// runs, WHEN, and on WHICH model
 // — resolved per host harness.
 //
-// Two dispatch modes per agent, keyed by the host harness (claude|codex|opencode):
+// Two compatibility dispatch modes per reviewer, keyed by the host harness:
 //   - native:   in-harness sub-agent. On Claude Code the Task tool runs a Claude
 //               model tier (e.g. sonnet-4.6); codex/opencode run their own
 //               configured model. You CANNOT run a codex/gpt model as a native
@@ -39,7 +39,7 @@ const DEFAULT_MODEL = 'configured-default';
 
 function defaultTriggers(agentId) {
   switch (agentId) {
-    case 'qa': return ['per-phase', 'end-of-feature'];
+    case 'qa': return ['end-of-feature'];
     case 'pentester': return ['sensitive-surface', 'end-of-feature'];
     default: return ['end-of-feature'];
   }
@@ -56,12 +56,11 @@ function defaultReport(agentId) {
 }
 
 function buildDefaultAgent(agentId) {
-  // pentester/validator default to the strongest tier; qa/tester to a cheaper
-  // tier — the per-phase verifier should be cheap, the security/contract
-  // verdicts should not be.
+  // QA is the single default post-DEV reviewer. Additional specialists are
+  // opt-in and never become active merely because a feature is SMALL/MEDIUM.
   const claudeModel = (agentId === 'pentester' || agentId === 'validator') ? 'opus-4.8' : 'sonnet-4.6';
   const agent = {
-    enabled: (agentId === 'qa' || agentId === 'validator') ? true : 'auto',
+    enabled: agentId === 'qa',
     triggers: defaultTriggers(agentId),
     dispatch: {
       claude: { mode: 'native', model: claudeModel },
@@ -84,7 +83,7 @@ function buildDefaultVerificationConfig() {
     host: 'auto',
     agents,
     budget: {
-      max_subagents_per_phase: 1,
+      max_subagents_per_phase: 0,
       skip_on_micro: true,
       full_smoke: 'end-of-feature-only'
     },
@@ -297,19 +296,19 @@ function getAgentDispatch(config, agentId, host = null) {
 }
 
 // Resolve enabled:true|false|'auto' to a concrete boolean given run context.
-// 'auto' lets the framework decide: pentester only on a sensitive surface,
-// tester on anything above MICRO, everything else on.
+// 'auto' is conservative: it needs a concrete runtime/plan trigger. Feature
+// classification alone never enables an optional specialist.
 function resolveAgentEnabled(config, agentId, context = {}) {
   const agent = getAgentConfig(config, agentId);
   if (!agent) return false;
   if (agent.enabled === true) return true;
   if (agent.enabled === false) return false;
-  const classification = String(context.classification || '').trim().toUpperCase();
-  const sensitiveSurface = Boolean(context.sensitiveSurface);
   switch (String(agentId).trim()) {
-    case 'pentester': return sensitiveSurface;
-    case 'tester': return classification !== 'MICRO';
-    default: return true;
+    case 'pentester': return Boolean(context.explicitSpecialist || context.riskTriggered);
+    case 'tester': return Boolean(context.explicitSpecialist || context.coverageGap);
+    case 'validator': return Boolean(context.explicitSpecialist || context.harnessPlanned);
+    case 'qa': return true;
+    default: return Boolean(context.explicitSpecialist);
   }
 }
 

@@ -1,45 +1,19 @@
 {
   "agent_id": "ux-ui",
-  "version": "1.0",
+  "version": "2.0",
   "display_name": "UI/UX",
-  "capabilities": [
-    {
-      "id": "design_ui_spec",
-      "category": "create",
-      "description": "Produce UI specification and visual direction for the approved scope.",
-      "inputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/architecture.md",
-          "required": true
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd-{slug}.md",
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/ui-spec.md"
-        }
-      ]
-    }
-  ],
-  "autonomy_modes": [
-    "guarded"
-  ],
+  "capabilities": [{
+    "id": "resolve_named_interaction_decision",
+    "category": "analyze",
+    "description": "Resolve one named interaction, state, accessibility, or visual-system ambiguity.",
+    "inputs": [
+      { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": true },
+      { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": false }
+    ],
+    "outputs": []
+  }],
+  "autonomy_modes": ["guarded"],
   "default_mode": "guarded",
-  "supported_tools": [
-    "codex",
-    "claude",
-    "opencode"
-  ],
+  "supported_tools": ["codex", "claude", "opencode"],
   "risk_profile": "medium"
 }

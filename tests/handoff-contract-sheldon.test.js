@@ -5,110 +5,52 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-
 const { validateHandoffContract } = require('../src/handoff-contract');
 
-async function makeTmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sheldon-contract-'));
+async function tmp() { return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sheldon-contract-')); }
+async function write(root, rel, body) {
+  const file = path.join(root, rel);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, body, 'utf8');
+}
+function state(slug, classification = 'SMALL') {
+  return { mode: 'feature', featureSlug: slug, classification, sequence: ['product', 'sheldon', 'planner', 'dev', 'qa'] };
+}
+function prd(review) {
+  return `---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\nsheldon_review: ${review}\n---\n# Demo\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-demo-01 | User sees saved result | User submits | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-demo-01 | CAP-demo-01 | Saved result appears | integration test |\n`;
 }
 
-async function writeFile(dir, relPath, content) {
-  const full = path.join(dir, relPath);
-  await fs.mkdir(path.dirname(full), { recursive: true });
-  await fs.writeFile(full, content, 'utf8');
-}
-
-async function writeBase(dir, slug, classification = 'SMALL') {
-  await writeFile(dir, '.aioson/context/project.context.md', `---\nclassification: "${classification}"\n---\n# Project\n`);
-  await writeFile(dir, `.aioson/context/prd-${slug}.md`, `---\nclassification: ${classification}\n---\n# PRD\n`);
-}
-
-function leanState(slug, classification = 'SMALL') {
-  return {
-    mode: 'feature',
-    featureSlug: slug,
-    classification,
-    sequence: ['product', 'sheldon', 'dev', 'qa']
-  };
-}
-
-async function writeLeanArtifacts(dir, slug) {
-  await writeFile(dir, `.aioson/context/sheldon-enrichment-${slug}.md`, '# Sheldon\n');
-  await writeFile(dir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
-  await writeFile(
-    dir,
-    `.aioson/context/spec-${slug}.md`,
-    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
-  );
-  await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, '# Design\n');
-  await writeFile(dir, `.aioson/context/readiness-${slug}.md`, '# Readiness\n');
-  await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: approved\n---\n# Plan\n');
-  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
-    schema_version: 'feature-decision-checkpoint/v1',
-    feature_slug: slug,
-    status: 'clear',
-    items: []
-  }));
-}
-
-test('sheldon handoff blocks lean lane when spec bridge is missing', async () => {
-  const dir = await makeTmpDir();
-  const slug = 'lean-missing-spec';
-  await writeBase(dir, slug);
-  await writeFile(dir, `.aioson/context/sheldon-enrichment-${slug}.md`, '# Sheldon\n');
-
-  const result = await validateHandoffContract(dir, leanState(slug), 'sheldon');
-
+test('optional Sheldon handoff blocks when its explicit review is unfinished', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', prd('pending'));
+  const result = await validateHandoffContract(root, state('demo'), 'sheldon');
   assert.equal(result.ok, false);
-  assert.ok(result.missing.some((item) => item.includes(`spec-${slug}.md`)));
-  assert.ok(result.missing.some((item) => item.includes('gate C')));
+  assert.ok(result.missing.some((item) => item.includes('sheldon_review')));
 });
 
-test('sheldon handoff passes lean lane with bridge artifacts and approved collapsed gates', async () => {
-  const dir = await makeTmpDir();
-  const slug = 'lean-ready';
-  await writeBase(dir, slug);
-  await writeLeanArtifacts(dir, slug);
-
-  const result = await validateHandoffContract(dir, leanState(slug), 'sheldon');
-
-  assert.equal(result.ok, true, `expected pass, got: ${JSON.stringify(result.missing)}`);
+test('optional Sheldon handoff passes with the reviewed PRD only', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', prd('approved').replace('SMALL', 'MEDIUM'));
+  const result = await validateHandoffContract(root, state('demo', 'MEDIUM'), 'sheldon');
+  assert.equal(result.ok, true, JSON.stringify(result.missing));
 });
 
-test('sheldon handoff blocks lean runtime feature without harness contract', async () => {
-  const dir = await makeTmpDir();
-  const slug = 'lean-runtime';
-  await writeBase(dir, slug);
-  await writeLeanArtifacts(dir, slug);
-  await writeFile(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, '# Core interactions\n');
-
-  const result = await validateHandoffContract(dir, leanState(slug), 'sheldon');
-
-  assert.equal(result.ok, false);
-  assert.ok(result.missing.some((item) => item.includes('missing_runtime_contract')));
+test('optional Sheldon handoff never requires enrichment, spec, design, readiness, conformance, or harness artifacts', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', prd('approved'));
+  const result = await validateHandoffContract(root, state('demo'), 'sheldon');
+  assert.equal(result.ok, true);
+  assert.equal(result.missing.some((item) => /enrichment|requirements|spec-|design-doc|readiness|conformance|harness/i.test(item)), false);
 });
 
-test('sheldon handoff blocks lean lane with a durable pending product decision', async () => {
-  const dir = await makeTmpDir();
-  const slug = 'lean-pending-decision';
-  await writeBase(dir, slug);
-  await writeLeanArtifacts(dir, slug);
-  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
-    schema_version: 'feature-decision-checkpoint/v1',
-    feature_slug: slug,
-    status: 'pending',
-    items: [{
-      id: 'DEC-email-channel',
-      classification: 'blocking-decision',
-      status: 'pending',
-      evidence: 'The approved flow requires a user-visible delivery channel.',
-      omission_consequence: 'The user cannot receive the promised result.',
-      recommendation: 'Choose email or in-app delivery before implementation.'
-    }]
-  }));
-
-  const result = await validateHandoffContract(dir, leanState(slug), 'sheldon');
-
+test('optional Sheldon handoff catches a thin approved PRD', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', '---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\nsheldon_review: approved\n---\n# Thin\n');
+  const result = await validateHandoffContract(root, state('demo'), 'sheldon');
   assert.equal(result.ok, false);
-  assert.ok(result.missing.some((item) => item.includes('DEC-email-channel')));
+  assert.ok(result.missing.some((item) => item.includes('feature completeness')));
 });

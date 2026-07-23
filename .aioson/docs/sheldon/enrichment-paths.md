@@ -1,180 +1,42 @@
 ---
-description: "Sheldon enrichment paths — gap analysis dimensions, sizing, in-place vs phased plan outputs, enrichment log, and handoff."
+description: "Optional Sheldon enrichment paths for challenging and repairing the existing PRD without creating a second specification package."
 agents: [sheldon]
-task_types: [enrichment, sizing]
-triggers: [enrichment paths, sizing, phased plan]
+task_types: [enrichment, prd-review]
+triggers: [explicit enrichment request, concrete PRD contradiction, material product risk]
 ---
 
 # Sheldon Enrichment Paths
 
-Load this module after source consolidation and before writing any enrichment output.
+Load this module only after the active PRD and its source evidence are known. Classification never triggers Sheldon or changes the output shape.
 
-## Gap analysis dimensions
+## One path: repair the PRD in place
 
-Analyze the PRD for:
+Challenge only the approved product promise:
 
-- missing requirements
-- edge cases
-- vague or absent acceptance criteria
-- unresolved technical decisions
-- unmapped external dependencies
-- incomplete user flows
-- internal contradictions
+- missing observable behavior or failure state;
+- contradiction between briefing, prototype, PRD, and current product behavior;
+- vague acceptance evidence;
+- unresolved dependency that materially changes user scope;
+- speculative scope that should be deferred.
 
-Show improvements grouped by:
+Use repository and research evidence before asking the user. Ask for a decision only when it changes product behavior, scope, cost, or material risk.
 
-- critical gaps
-- important improvements
-- refinements
+Apply accepted corrections directly to `prd-{slug}.md` or `prd.md`. Preserve stable `CAP-*` and `AC-*` identifiers whenever their meaning has not changed. Record rejected ideas under deferred or out-of-scope instead of expanding the MVP.
 
-The user must choose which improvements to apply before you write anything.
+## Output boundary
 
-## Sizing decision
+The PRD remains the only specification authority. Never create:
 
-Score the enriched scope using:
+- a Sheldon enrichment or validation report;
+- requirements, spec, architecture, design-doc, readiness, conformance, or user-story files;
+- a delivery plan, phased-plan directory, decision checkpoint, or harness contract.
 
-| Criterion | Weight |
-|---|---|
-| Main entities above 3 | +1 each |
-| Distinct delivery phases above 1 | +2 each |
-| External integrations | +1 each |
-| User flows above 3 | +1 each |
-| AC complexity above 10 | +1 |
+An optional expansion skill may leave a non-canonical working note when explicitly triggered. Merge useful conclusions into the PRD; its presence and completeness never block Planner.
 
-Decision thresholds:
+## Dossier trail
 
-- `0–3` → enrich PRD in place
-- `4–6` → enrich PRD in place and add `## Delivery plan`
-- `7+` → create external phased plan in `.aioson/plans/{slug}/`
-
-Present the decision and justification before creating any files.
-
-## Path A — In-place enrichment
-
-For scores `0–6`:
-
-- expand existing sections
-- add missing sections when needed
-- never remove existing content
-- never rewrite `Vision`, `Problem`, or `Users`
-- mark Sheldon-added content with `_(sheldon)_`
-
-For scores `4–6`, add `## Delivery plan` with numbered phases inside the PRD.
-
-Also add or update:
-
-- `## Reference sources (sheldon)`
-
-## Path B — External phased plan
-
-For scores `7+`, create:
-
-- `.aioson/plans/{slug}/manifest.md`
-- `.aioson/plans/{slug}/plan-{phase-slug}.md`
-
-Rules:
-
-- create `manifest.md` first
-- phase slugs must be descriptive
-- phases must be independently implementable
-- phase ACs must be independently verifiable
-- pre-made decisions are final
-- deferred decisions must state who decides and when
-
-## `manifest.md`
-
-Include:
-
-- target PRD
-- Sheldon version
-- created date
-- status
-- overview
-- phase table
-- pre-made decisions
-- deferred decisions
-- reference sources
-
-## `plan-{phase-slug}.md`
-
-Each phase file should include:
-
-- scope
-- new or modified entities
-- user flows covered
-- acceptance criteria
-- implementation sequence
-- external dependencies
-- notes for `@dev`
-- notes for `@qa`
-- phase-specific reference sources
-
-## Enrichment log
-
-Create or update `.aioson/context/sheldon-enrichment-{slug}.md` at the end of every session (use the bare `sheldon-enrichment.md` only for a project-level PRD with no slug). `{slug}` is the PRD slug selected in RF-01; `@analyst` reads this exact slugged path downstream, so never write the bare file when a feature slug exists.
-
-It must track:
-
-- target PRD
-- enrichment round count
-- last enrichment date
-- plan path or `null`
-- sizing score
-- sizing decision
-- sources used
-- improvements applied
-- improvements discarded
-
-## Validation report (MEDIUM only)
-
-For `classification: MEDIUM`, after the enrichment log and the RF-05 harness contract, write a human-readable readiness verdict to `.aioson/context/sheldon-validation-{slug}.md` (bare `sheldon-validation.md` only for a project-level PRD with no slug). `{slug}` is the PRD slug selected in RF-01 — never write the bare file when a feature slug exists. Skip entirely on MICRO and SMALL.
-
-This is the go/no-go readiness verdict downstream agents read when present, and `artifact:validate` surfaces it separately from enrichment. It is distinct from the machine-checkable harness contract (which `@validator` executes): this report is the human readiness verdict; the contract is the automated check.
-
-Schema:
-
-```markdown
----
-validated_at: {ISO-date}
-status: ready | blocked
-blocking_items: {n}
----
-
-# Sheldon Validation Report — {Feature title}
-
-## Overall verdict
-**READY 🟢 | BLOCKED 🔴** — one-line rationale.
-
-## Audited artifacts
-- `prd-{slug}.md` — READY | BLOCKED (reason)
-- `sheldon-enrichment-{slug}.md` — READY (decisions taken)
-- plan path (Path B only) — READY | BLOCKED
-
-## Downstream gate
-| Agent | Status | Reason |
-|-------|--------|--------|
-| @analyst | 🟢/🟡/🔴 | ... |
-| @architect | 🟢/🟡/🔴 | ... |
-| @ux-ui | 🟢/🟡/🔴 | ... |
-| @dev | 🟢/🟡/🔴 | ... |
-| @qa | 🟢/🟡/🔴 | ... |
-
-## Attention items (non-blocking)
-- ...
-
-## Recommended next steps
-1. ...
-```
-
-Set `status: blocked` with `blocking_items > 0` only for gaps that genuinely stop the next agent; everything else is a non-blocking attention item. The user approves the verdict before handoff.
+When the feature dossier exists, append one compact best-effort entry containing the concrete gap reviewed, PRD changes, ideas rejected, and residual risk. Do not copy the PRD or turn the dossier into another approval artifact.
 
 ## Handoff
 
-If enrichment stayed in-place:
-
-- tell the user to activate `@analyst`
-
-If an external phased plan was created:
-
-- tell the user where `manifest.md` lives
-- tell them to activate `@analyst`
+When the PRD is coherent, set `sheldon_review: approved` and return directly to `@planner`. If a truly blocking product decision remains, return it to Product or the user as one bounded question. Never route by default through Analyst, Architect, PM, Design Doc, Scope Check, or Orchestrator.

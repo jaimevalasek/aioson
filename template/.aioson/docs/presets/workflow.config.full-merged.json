@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "_about": "Full chain with @discovery-design-doc merged into @architect. Copy to .aioson/context/workflow.config.json. When discovery-design-doc is absent from the sequence, @architect runs in merged mode and produces design-doc + readiness + dev-state itself. See .aioson/docs/workflow-lean-lane.md and agents/architect.md (Architect merged mode). Runtime smoke gate stays mandatory.",
+  "_about": "Canonical compact workflow. Full means every specialist remains available as an explicit or evidence-triggered detour; it does not add classification-driven document stages.",
   "feature": {
-    "MICRO": ["product", "dev", "qa"],
-    "SMALL": ["product", "analyst", "scope-check", "architect", "dev", "qa"],
-    "MEDIUM": ["product", "analyst", "architect", "pm", "scope-check", "dev", "qa"]
+    "MICRO": ["product", "planner", "dev", "qa"],
+    "SMALL": ["product", "planner", "dev", "qa"],
+    "MEDIUM": ["product", "planner", "dev", "qa"]
   },
   "project": {
-    "MICRO": ["setup", "dev"],
-    "SMALL": ["setup", "product", "analyst", "scope-check", "architect", "dev", "qa"],
-    "MEDIUM": ["setup", "product", "analyst", "architect", "ux-ui", "pm", "orchestrator", "scope-check", "dev", "qa"]
+    "MICRO": ["setup", "product", "planner", "dev", "qa"],
+    "SMALL": ["setup", "product", "planner", "dev", "qa"],
+    "MEDIUM": ["setup", "product", "planner", "dev", "qa"]
   },
   "rules": { "required": ["dev"], "allowDetours": true }
 }

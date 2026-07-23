@@ -54,63 +54,58 @@ Fases do SDD:
 Specify → Research → Requirements → Design → Tasks → Execute → State
 ```
 
-## As 3 lanes padrão (v1.35.0)
+## Uma rota, três profundidades
 
-O SDD não escala pelo número de agentes — escala pelas **lanes**: cada classificação tem uma lane com uma autoridade única de spec.
+O SDD escala a profundidade, não o número de documentos nem a cadeia:
 
-| Lane | Classificação | Cadeia padrão |
-|---|---|---|
-| **MICRO** | 0–1 pts | `@product → @dev → @qa` |
-| **SMALL — lean (padrão)** | 2–3 pts | `@product → @sheldon → @dev → @qa` |
-| **MEDIUM — maestro** | 4–6 pts | `@product → @orchestrator → @dev → @pentester → @qa` |
+```text
+[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa
+```
 
-**Autoridade única de spec:**
-- **SMALL:** `@sheldon` (vertical / solo) — produz requirements + decisões técnicas + design-doc + readiness + implementation-plan + harness-contract em uma passada.
-- **MEDIUM:** `@orchestrator` (horizontal / fan-out) — dispara `@analyst` + `@architect` + `@pm` (+ `@ux-ui` quando UI-heavy) como sub-agentes, consolida e verifica os artefatos, e entrega o pacote de spec com Gates A/B/C aprovados.
+- Briefing e Briefing Refiner são enquadramento opcional antes do PRD.
+- Product é dono do único PRD.
+- Sheldon pode enriquecer esse mesmo PRD; não cria uma segunda especificação.
+- Planner é dono do único plano de implementação.
+- DEV implementa e integra.
+- QA emite o único veredito final.
 
-> `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check` e `@ux-ui` **não são hops padrão** — são detours opt-in ou sub-agentes do fan-out do `@orchestrator`. Nenhum foi removido; apenas deixaram de ser obrigatórios no caminho padrão.
+`@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, `@ux-ui` e `@orchestrator` continuam disponíveis como consultores explícitos. Seus pareceres podem enriquecer PRD ou plano, mas não são gates canônicos.
 
 ## Profundidade por classificação
 
-| Fase | MICRO | SMALL (lean) | MEDIUM (maestro) |
+| Fase | MICRO | SMALL | MEDIUM |
 |---|---|---|---|
 | Specify (PRD) | obrigatória | obrigatória | obrigatória |
-| Spec authority | — | `@sheldon` (solo) | `@orchestrator` (fan-out) |
-| Requirements | pulada | dentro do `@sheldon` | sub-agente `@analyst` via `@orchestrator` |
-| Design técnico | pulado | dentro do `@sheldon` | sub-agente `@architect` via `@orchestrator` |
-| UI/UX | pulada | detour opt-in | sub-agente `@ux-ui` via `@orchestrator` (UI-heavy) |
-| Plan/Tasks | opcional | dentro do `@sheldon` | sub-agente `@pm` via `@orchestrator` |
-| Execute (`@dev`) | direto | após Gates A/B/C | após Gates A/B/C |
-| Pentester | opt-in | opt-in | **inline** (entre `@dev` e `@qa`) |
-| QA/Validation | opcional | obrigatória | audit-blocking |
-
-Para MICRO: spec lite direto ao `@dev`. Nenhuma cerimônia.
-Para MEDIUM: cada dimensão de spec é coberta por um sub-agente especializado coordenado pelo `@orchestrator`.
+| Enriquecimento Sheldon | opcional | opcional | opcional |
+| Plano do Planner | curto | vertical completo | vertical completo, com riscos e integrações nomeados |
+| Execute (`@dev`) | orçamento reduzido | orçamento padrão | orçamento ampliado; faixas DEV se declaradas |
+| QA | ACs alterados + smoke | todos os ACs + regressão focada + smoke | negativos/integrações profundos nos riscos nomeados |
+| Tester/Pentester/Validator | opt-in | opt-in | opt-in |
 
 ## Gates de aprovação
 
-Em SMALL e MEDIUM, gates determinísticos controlam o avanço entre fases. Os 4 gates principais:
+Gates determinísticos controlam o avanço sem exigir documentos duplicados:
 
 | Gate | O que verifica | Quem produz / verifica |
 |---|---|---|
 | **Runtime smoke** | Build + migrations (em DB real) + boot + Core happy-path no stack real. Uma feature com backend/DB não fecha sem passar. `tsc` + testes unitários é o piso, não o "done". | `@qa` (Gate D) |
-| **Contract-integrity** | Bloqueia quando o harness-contract está ausente, sem critérios `RG-*`, ou com verificações duplicadas. Roda deterministicamente no gate de conclusão do `@dev`/`@qa`. | `aioson harness:check` |
-| **Scope-drift** | `spec:analyze` roda no gate done do `@dev`/`@qa`; bloqueia em drift real (readiness bloqueado, contrato inválido). `@scope-check` também disponível como detour explícito. | `aioson spec:analyze` / `@scope-check` |
-| **Single-spec-authority handoff** | Quando `@sheldon` (SMALL) ou `@orchestrator` (MEDIUM) passa para `@dev`, os Gates A/B/C + plano de implementação aprovado + integridade de contrato são verificados. | `@sheldon` / `@orchestrator` |
+| **Plan-integrity** | O único plano referencia capacidades/ACs do PRD, fases verticais, arquivos esperados e checks executáveis. | `@planner` |
+| **Scope-drift** | `spec:analyze` pode detectar drift real; `@scope-check` continua disponível como revisão explícita. | CLI / `@scope-check` |
+| **Product-to-plan handoff** | PRD tem ACs concretos, `product_scope: approved` e `prd_ready: approved` antes de planejamento significativo. | `@product` / `@sheldon` |
 
-Gates A/B/C = spec completa verificável (A: requisitos, B: decisões técnicas, C: plano faseado + harness-contract).
-Gate D = pré-ship: Runtime smoke + nenhum finding HIGH/CRITICAL de segurança.
+Gate C = plano de implementação aprovado antes de implementação significativa.
+Gate D = relatório QA PASS com evidência executável e pelo caminho de produção.
 
 ## Sub-agentes de verificação (configuráveis, token-aware)
 
-`.aioson/config/verification.json` (auto-gerado, editável manualmente) declara quais verificadores (`qa` / `tester` / `pentester` / `validator`) rodam, **quando** (`per-phase` / `end-of-feature` / `sensitive-surface`), e em **qual modelo** — indexado por host harness.
+O manifesto `agent-execution-{slug}.json` declara quais verificadores (`qa` / `tester` / `pentester` / `validator`) e faixas DEV estão habilitados, em qual host/modelo e sob qual gatilho.
 
 | Modo de dispatch | Descrição |
 |---|---|
 | **`native`** | Sub-agente in-harness num modelo do mesmo host (Claude Code → tier Claude como sonnet/opus; codex/opencode → seu modelo configurado). |
 | **`external`** | Dispara uma CLI de fornecedor diferente como auditor read-only (segunda opinião cross-vendor). Use para rodar GPT ou outro modelo como auditor externo — você não pode rodar um modelo GPT como sub-agente *nativo* do Claude Code. |
 
-Budget de tokens: verificações por fase são leves (um sub-agente barato), o smoke completo roda uma vez ao fim da feature, e verificação por fase é suprimida no MICRO.
+QA é o único revisor padrão e roda ao fim do DEV. Tester, Pentester e Validator ficam desligados por padrão em todas as classificações. Ausência de host/modelo pausa a execução; fallback só existe quando o manifesto o declara.
 
 ```bash
 # Resolver o plano de verificação para um slug/trigger/host

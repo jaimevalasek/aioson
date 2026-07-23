@@ -436,22 +436,22 @@ test('buildContextPackage: includes project.context if exists', async () => {
   assert.ok(pkg.some((p) => p && p.includes('project.context.md')));
 });
 
-test('buildContextPackage: includes spec when exists', async () => {
+test('buildContextPackage: does not inject a legacy spec into Dev context', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '---\nversion: 1\n---');
   const artifacts = await scanArtifacts(tmpDir, 'checkout');
   const pkg = buildContextPackage('dev', 'checkout', 'SMALL', artifacts, { exists: false });
-  assert.ok(pkg.some((p) => p && p.includes('spec-checkout.md')));
+  assert.equal(pkg.some((p) => p && p.includes('spec-checkout.md')), false);
 });
 
-test('buildContextPackage: includes sheldon-validation for downstream agents when present', async () => {
+test('buildContextPackage: does not inject legacy Sheldon validation into Dev context', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\n---');
   await writeFile(tmpDir, '.aioson/context/spec-checkout.md', '# Spec');
   await writeFile(tmpDir, '.aioson/context/sheldon-validation-checkout.md', '---\nverdict: ready\n---\n# Validation');
   const artifacts = await scanArtifacts(tmpDir, 'checkout');
   const pkg = buildContextPackage('dev', 'checkout', 'MEDIUM', artifacts, { exists: false });
-  assert.ok(pkg.some((p) => p && p.includes('sheldon-validation-checkout.md')));
+  assert.equal(pkg.some((p) => p && p.includes('sheldon-validation-checkout.md')), false);
 });
 
 // ── evaluateReadiness ─────────────────────────────────────────────────────────
@@ -475,7 +475,8 @@ test('evaluateReadiness: READY when all conditions met for dev', () => {
     prd: { exists: true },
     requirements: { exists: true },
     design_doc: { exists: true },
-    readiness: { exists: true }
+    readiness: { exists: true },
+    implementation_plan: { exists: true, frontmatter: { status: 'approved' } }
   };
   const gates = { plan: 'approved' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'dev');
@@ -483,7 +484,7 @@ test('evaluateReadiness: READY when all conditions met for dev', () => {
   assert.equal(result.blockers.length, 0);
 });
 
-test('evaluateReadiness: BLOCKED when dev spec missing', () => {
+test('evaluateReadiness: BLOCKED when the Planner plan is missing', () => {
   const artifacts = {
     project_context: { exists: true },
     spec: { exists: false },
@@ -494,22 +495,22 @@ test('evaluateReadiness: BLOCKED when dev spec missing', () => {
   };
   const result = evaluateReadiness(artifacts, { plan: 'approved' }, 'SMALL', 'dev');
   assert.equal(result.status, 'BLOCKED');
-  assert.ok(result.blockers.some((b) => b.includes('spec')));
+  assert.ok(result.blockers.some((b) => b.includes('implementation-plan')));
 });
 
-test('evaluateReadiness: BLOCKED when dev lacks discovery-design-doc artifacts', () => {
+test('evaluateReadiness: legacy design-doc artifacts are not Dev prerequisites', () => {
   const artifacts = {
     project_context: { exists: true },
     spec: { exists: true },
     prd: { exists: true },
     requirements: { exists: true },
     design_doc: { exists: false },
-    readiness: { exists: false }
+    readiness: { exists: false },
+    implementation_plan: { exists: true, frontmatter: { status: 'approved' } }
   };
   const result = evaluateReadiness(artifacts, { plan: 'approved' }, 'SMALL', 'dev');
-  assert.equal(result.status, 'BLOCKED');
-  assert.ok(result.blockers.some((b) => b.includes('design-doc.md')));
-  assert.ok(result.blockers.some((b) => b.includes('readiness.md')));
+  assert.equal(result.status, 'READY');
+  assert.equal(result.blockers.some((b) => /design-doc|readiness/.test(b)), false);
 });
 
 test('evaluateReadiness: analyst can proceed with warning for unframed feature discovery', () => {
@@ -522,7 +523,7 @@ test('evaluateReadiness: analyst can proceed with warning for unframed feature d
   const result = evaluateReadiness(artifacts, {}, 'SMALL', 'analyst', { exists: false }, 'code-tab-ide-ux');
   assert.equal(result.status, 'READY_WITH_WARNINGS');
   assert.equal(result.blockers.length, 0);
-  assert.ok(result.warnings.some((w) => w.includes('not framed yet')));
+  assert.ok(result.warnings.some((w) => w.includes('PRD missing')));
 });
 
 // ── extractSpecVersion / extractLastCheckpoint ────────────────────────────────
@@ -583,7 +584,8 @@ test('evaluateReadiness: qa BLOCKED when Gate C not approved for SMALL', () => {
     prd: { exists: true },
     requirements: { exists: true },
     design_doc: { exists: true },
-    readiness: { exists: true }
+    readiness: { exists: true },
+    implementation_plan: { exists: true, frontmatter: { status: 'approved' } }
   };
   const gates = { plan: 'pending' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'qa');
@@ -598,14 +600,15 @@ test('evaluateReadiness: qa READY when Gate C approved for SMALL', () => {
     prd: { exists: true },
     requirements: { exists: true },
     design_doc: { exists: true },
-    readiness: { exists: true }
+    readiness: { exists: true },
+    implementation_plan: { exists: true, frontmatter: { status: 'approved' } }
   };
   const gates = { plan: 'approved' };
   const result = evaluateReadiness(artifacts, gates, 'SMALL', 'qa');
   assert.equal(result.status, 'READY');
 });
 
-test('evaluateReadiness: qa skips Gate C check for MICRO', () => {
+test('evaluateReadiness: MICRO uses the same Planner plan and Gate C contract', () => {
   const artifacts = {
     project_context: { exists: true },
     spec: { exists: true },
@@ -614,7 +617,8 @@ test('evaluateReadiness: qa skips Gate C check for MICRO', () => {
   };
   const gates = { plan: 'pending' };
   const result = evaluateReadiness(artifacts, gates, 'MICRO', 'qa');
-  assert.equal(result.status, 'READY');
+  assert.equal(result.status, 'BLOCKED');
+  assert.ok(result.blockers.some((b) => /implementation-plan|Gate C/.test(b)));
 });
 
 // ── scanActiveManifest — phase table parsing (AC-SDLC-27) ────────────────────

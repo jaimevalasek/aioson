@@ -1,54 +1,22 @@
 ---
 name: prd-section-ownership
-description: Defines which agent owns each PRD section — other agents cannot modify sections they do not own
+description: Keeps the PRD as one product authority while Product and Sheldon use explicit write boundaries.
 priority: 9
-version: 1.0.0
-agents: [product, pm, analyst, architect, ux-ui, sheldon]
+version: 2.0.0
+agents: [product, sheldon, planner, dev, qa]
 modes: [planning, executing]
-task_types: [prd-edit, prd-enrichment]
+task_types: [prd-edit, prd-review]
 load_tier: trigger
-triggers: [prd, acceptance criteria, delivery phases, editing prd, enriching prd]
+triggers: [prd, acceptance criteria, editing prd, reviewing prd]
 paths: [.aioson/context/prd*.md]
 ---
 
 # PRD Section Ownership
 
-`prd.md` and `prd-{slug}.md` are shared documents. Each section has one owner — others may only read or append sub-sections, never replace.
+The PRD is the single product/specification authority.
 
-## Ownership table
+- `@product` owns vision, problem, users, capability map, scope, exclusions, flows, metrics, prototype contract, visual identity, open questions, final Acceptance Criteria, `product_scope`, and `prd_ready`.
+- `@sheldon`, when explicitly invoked, may repair contradictions anywhere while preserving confirmed intent and records `sheldon_review`; it does not become a mandatory co-owner.
+- `@planner`, `@dev`, and `@qa` read the PRD. They do not add implementation design, status logs, or QA results to it.
 
-| PRD Section | Owner | Others may |
-|---|---|---|
-| `## Objective` | `@product` | Read only |
-| `## Problem` | `@product` | Read only |
-| `## Users And Personas` | `@product` | Read only |
-| `## Features` | `@product` | Read only |
-| `## Acceptance Criteria` | `@product` (structure) / `@pm` (enrichment) | `@analyst`, `@architect` add technical sub-items |
-| `## Delivery Phases` | `@pm` | Read only |
-| `## Technical Constraints` | `@architect` | Read only |
-| `## UX Considerations` | `@ux-ui` | Read only |
-| `## Risks` | `@pm` | `@analyst`, `@architect` add new risks only |
-| `## Registered Decisions` | `@sheldon` (project) / `@pm` (feature) | Read only |
-
-## Modification rule
-
-An agent may only modify sections it owns. Non-owners may only **add** a new sub-section at the end — never replace or rewrite existing content.
-
-## Safe addition pattern
-
-```markdown
-## Acceptance Criteria
-<!-- @product: owner of this section -->
-
-- CA-01: User can schedule an appointment
-- CA-02: System sends confirmation email
-
-### Technical criteria (added by @analyst)
-- CA-T01: Scheduling validates availability via DB query before confirming
-- CA-T02: Email queue uses BullMQ with 3x retry
-```
-
-## On violation detected
-
-1. Do not overwrite the section.
-2. Create a sub-section with explicit attribution (`<!-- added by @{agent} -->`), OR create a separate artifact (`requirements-{slug}.md`, `architecture.md`, etc.).
+If Planner/Dev/QA discovers a material product contradiction, route the exact issue to Product or request an independent Sheldon review. If it is a normal technical decision, keep it in the implementation plan, code, or QA report—never create a parallel spec.

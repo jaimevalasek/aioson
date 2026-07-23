@@ -1,75 +1,19 @@
 {
   "agent_id": "orchestrator",
-  "version": "1.0",
+  "version": "2.0",
   "display_name": "Orchestrator",
-  "capabilities": [
-    {
-      "id": "coordinate_parallel_work",
-      "category": "orchestrate",
-      "description": "Coordinate execution slices and parallel work artifacts for complex scopes.",
-      "inputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/project.context.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/discovery.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/architecture.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/prd-{slug}.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/ui-spec.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/implementation-plan.md",
-          "required": false
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/implementation-plan-{slug}.md",
-          "required": false
-        }
-      ],
-      "outputs": [
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/parallel/shared-decisions.md"
-        },
-        {
-          "type": "artifact",
-          "path_pattern": ".aioson/context/parallel/*.status.md"
-        }
-      ]
-    }
-  ],
-  "autonomy_modes": [
-    "guarded",
-    "trusted"
-  ],
+  "capabilities": [{
+    "id": "coordinate_parallel_execution",
+    "category": "orchestrate",
+    "description": "Coordinate explicitly requested, genuinely parallel or cross-cutting approved plan phases.",
+    "inputs": [
+      { "type": "artifact", "path_pattern": ".aioson/context/prd-{slug}.md", "required": true },
+      { "type": "artifact", "path_pattern": ".aioson/context/implementation-plan-{slug}.md", "required": true }
+    ],
+    "outputs": []
+  }],
+  "autonomy_modes": ["guarded", "trusted"],
   "default_mode": "guarded",
-  "supported_tools": [
-    "codex",
-    "claude",
-    "opencode"
-  ],
+  "supported_tools": ["codex", "claude", "opencode"],
   "risk_profile": "medium"
 }

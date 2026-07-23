@@ -27,9 +27,11 @@ ideia vaga / anotações
        ↓
 aioson briefing:approve
        ↓
-   @product   →  prd.md (ou prd-{slug}.md)
+   @product   →  prd-{slug}.md
        ↓
- (opcional) @sheldon  →  enriquecimento + phased plan
+ (opcional) @sheldon  →  enriquece o mesmo PRD
+       ↓
+   @planner   →  implementation-plan-{slug}.md
 ```
 
 ---
@@ -124,7 +126,7 @@ Você > push-notifications
             Fora do escopo: notificações por email (briefing sinalizou para fase 2).
 
             PRD criado: .aioson/context/prd-push-notifications.md
-            Próximo: @sheldon (recomendado — há 1 risco técnico aberto no briefing).
+            Próximo: @sheldon para enriquecimento opcional, ou @planner.
 ```
 
 ---
@@ -228,6 +230,7 @@ plans/                              ← seus rascunhos (intocados)
 └── {tema-especifico}.md            ← (opcional) temas complexos
 .aioson/briefings/config.md         ← índice de briefings
 .aioson/context/prd-{slug}.md       ← output do @product
+.aioson/context/implementation-plan-{slug}.md ← output do @planner
 ```
 
 ---
@@ -235,7 +238,7 @@ plans/                              ← seus rascunhos (intocados)
 ## Próximos passos
 
 - [Plans externos para @product](./plans-externos-para-product.md) — como usar ChatGPT/Claude.ai como fonte para `plans/`
-- [Feature completa com @sheldon](./feature-completa-com-sheldon.md) — quando o PRD está pronto e a trilha é SMALL/MEDIUM
+- [Feature completa com @sheldon](./feature-completa-com-sheldon.md) — quando o PRD está pronto para enriquecimento opcional e planejamento
 - [@briefing — ficha](../4-agentes/briefing.md) — referência técnica do agente
 - [@briefing-refiner — ficha](../4-agentes/briefing-refiner.md) — loop de revisão/refino do briefing antes do PRD
 - [@product — ficha](../4-agentes/product.md) — referência técnica do agente

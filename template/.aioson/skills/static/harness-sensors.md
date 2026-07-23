@@ -1,74 +1,29 @@
-# Harness Sensors — Post-Action Verification
+# Harness Sensors — Optional Post-Action Feedback
 
-> Load this when you need to verify that agent actions comply with project constraints.
-> Sensors run AFTER the action, not before (that's what guides/gates do).
+Load only when the approved implementation plan deliberately includes a harness contract. Classification, a prototype, or ordinary runtime behavior never creates this requirement.
 
-## When to run sensors
+Sensors are advisory feedback after an action. They do not create workflow gates or extra feature documents.
 
-| Trigger | Sensor | Agent |
-|---------|--------|-------|
-| After commit | Rule compliance check | @dev, @deyvin |
-| After spec update | Drift detection vs requirements | @dev, @analyst |
-| After architecture.md written | Constitution compliance | @architect |
-| After feature closure | AC coverage verification | @qa |
-| After session end | Context budget report | All agents |
+## Sensors
 
-## Sensor 1 — Rule compliance check
+### Rule compliance
 
-After every commit, verify:
-1. Read all `.md` files in `.aioson/rules/`
-2. For each rule, check if the committed files violate any stated convention
-3. If violation found: do not revert — log warning and continue
-4. Write violations to `project-pulse.md` under "Blockers" if severity is high
+Use the rules selected for the changed paths and report a concrete violation with its file and impact. Never reread every project rule by default.
 
-**Implementation:** This sensor is agent-internal (instruction-based), not a CLI hook.
-The agent instruction says: "after committing, re-read the rules and verify your commit complies."
+### PRD/plan drift
 
-## Sensor 2 — Spec drift check
+Compare the active PRD `CAP-*`/`AC-*` with the implementation plan and completed harness steps. Report only missing or contradictory mappings. Put a compact finding in the dossier or QA report; never create a spec file.
 
-After updating `spec-{slug}.md`:
-1. Compare `requirements-{slug}.md` AC list with `spec-{slug}.md` "Edge cases handled" section
-2. If ACs exist in requirements that are not mentioned in spec: flag as potential drift
-3. Write flagged items to `pending_review` in spec frontmatter
+### Harness contract integrity
 
-## Sensor 3 — Constitution compliance (architecture)
+When a planned `harness-contract.json` exists, verify that its binary criteria exercise distinct real boundaries and that runtime behavior includes a real production-path criterion. A repeated command is not independent evidence.
 
-After writing `architecture.md`:
-1. Read `constitution.md`
-2. For each article, verify:
-   - Article I: Is there a spec artifact that preceded this architecture?
-   - Article II: Is the architecture depth proportional to classification?
-   - Article VI: Does the architecture introduce unnecessary layers?
-3. Self-report: add `## Constitution check` section at end of `architecture.md`
+### QA evidence
 
-## Sensor 4 — AC coverage verification
+QA still owns the delivery verdict from PRD + plan + implementation + focused tests + normal-entry smoke. Harness output is supporting evidence, not a substitute for shipped behavior.
 
-After @qa writes its report:
-1. Count ACs with status "Covered" vs total ACs
-2. Count adversarial probes executed vs minimum required (1)
-3. If coverage < 80% or probes < 1: VERDICT cannot be PASS
+### Context budget
 
-## Sensor 5 — Context budget report
+If context becomes noisy, compact around the PRD, current plan phase, selected project knowledge, changed paths, and concrete evidence. Do not create another summary artifact merely to reduce context.
 
-At session end, before writing project-pulse.md:
-1. Estimate how many files were read during the session
-2. If > 8 large files: flag context budget concern
-3. Write to project-pulse.md: "Last session context: {N} files read, estimated {light|moderate|heavy}"
-
-## How sensors differ from gates
-
-| | Gates (guides) | Sensors (feedback) |
-|---|---|---|
-| When | Before action | After action |
-| Blocking | Yes (MEDIUM) | No — advisory |
-| Who triggers | Agent checks before proceeding | Agent checks after completing |
-| Response | Stop + ask user | Log + warn + continue |
-| Example | Gate A before @architect | Rule compliance after commit |
-
-## Progressive adoption
-
-1. **Phase 1 (current):** All sensors are agent-internal instructions. No CLI hooks.
-2. **Phase 2 (future):** Move high-value sensors to `hooks-emit.js` for automated execution.
-3. **Phase 3 (future):** Add configurable sensor severity (warn vs block) in project config.
-
-Sensors should be lightweight — a sensor that takes longer than the action it monitors is worse than no sensor.
+The harness remains optional and bounded by the plan. A failing planned harness criterion may block that planned phase; absence of a harness never blocks the normal Product → Planner → Dev → QA route.

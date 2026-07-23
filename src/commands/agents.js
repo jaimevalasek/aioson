@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('node:path');
-const fsp = require('node:fs/promises');
 const {
   normalizeAgentName,
   listAgentDefinitions,
@@ -25,6 +24,8 @@ const { emitSecurityRuntimeEvent } = require('../lib/security/runtime-events');
 const WORKFLOW_AGENT_IDS = new Set([
   'setup',
   'product',
+  'sheldon',
+  'planner',
   'analyst',
   'scope-check',
   'architect',
@@ -82,40 +83,14 @@ function buildTesterActivationContext(options = {}) {
   ].join('\n');
 }
 
-// True when the project's workflow.config.json routes @sheldon directly into
-// @dev in any sequence — i.e. the lean lane is active. Best-effort + read-only.
-async function detectLeanLaneFromConfig(targetDir) {
-  try {
-    const configPath = path.join(targetDir, '.aioson', 'context', 'workflow.config.json');
-    const config = JSON.parse(await fsp.readFile(configPath, 'utf8'));
-    const groups = [config.feature, config.project].filter((g) => g && typeof g === 'object');
-    for (const group of groups) {
-      for (const seq of Object.values(group)) {
-        if (!Array.isArray(seq)) continue;
-        const norm = seq.map((s) => String(s || '').trim().toLowerCase().replace(/^@/, ''));
-        const i = norm.indexOf('sheldon');
-        if (i !== -1 && norm[i + 1] === 'dev') return true;
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-// Deterministic lane signal for a directly-activated @sheldon. When the project
-// opted into the lean lane (workflow.config.json routes @sheldon -> @dev) but the
-// session is started by hand (slash / agent:prompt, not workflow:next), nothing
-// otherwise tells @sheldon to run RF-LEAN — so it falls back to enrichment mode
-// and hands to @analyst. This pins the lane into the prompt so the LLM does not
-// have to infer it. Empty string ⇒ full chain (unchanged default behavior).
-async function buildSheldonActivationContext(targetDir, options) {
-  if (!(await detectLeanLaneFromConfig(targetDir))) return '';
+// Direct activations receive the same streamlined contract as tracked runs.
+function buildSheldonActivationContext(options) {
   const slug = String(options.feature || options.slug || '').trim() || '{slug}';
   return [
-    'Active lane: LEAN (workflow.config.json routes @sheldon -> @dev).',
-    `Run RF-LEAN as the single spec authority — in this one pass produce requirements-${slug}.md, spec-${slug}.md (gates A/B/C marked approved), design-doc-${slug}.md, readiness-${slug}.md, implementation-plan-${slug}.md (status: approved), and the §2c RG-* harness-contract for a runtime feature.`,
-    'Hand off to @dev when done. Do NOT route to @analyst/@architect/@discovery-design-doc/@pm — they are collapsed into you in this lane.'
+    'Active lane: STREAMLINED.',
+    `Review and enrich prd-${slug}.md in place, add concrete acceptance criteria, preserve any referenced prototype, and set sheldon_review: approved.`,
+    'Do not create requirements, spec, design-doc, readiness, implementation-plan, conformance, decision-checkpoint, or harness artifacts.',
+    'Hand off to @planner. Legacy specialists are opt-in only for a named unresolved decision.'
   ].join('\n');
 }
 
@@ -268,7 +243,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
     } else if (promptAgent.id === 'tester') {
       activationContext = buildTesterActivationContext(options);
     } else if (promptAgent.id === 'sheldon') {
-      activationContext = await buildSheldonActivationContext(targetDir, options);
+      activationContext = buildSheldonActivationContext(options);
     }
     const autonomyProtocol = await readAutonomyProtocol(targetDir);
     const manifest = await readAgentManifest(targetDir, promptAgent.id);

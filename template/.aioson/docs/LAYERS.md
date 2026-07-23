@@ -1,92 +1,55 @@
 ---
-description: "Guide to the three project memory layers: rules, docs, and design-docs — when to use each"
+description: "Guide to AIOSON project knowledge and delivery memory without duplicating the feature specification."
 task_types: [framework-structure]
-triggers: [framework layers, docs structure]
+triggers: [framework layers, docs structure, project knowledge]
 agents: []
 ---
 
 # AIOSON Project Memory Layers
 
-Four directories accumulate project knowledge over time.
-Each has a different purpose and a different update cadence.
+Project intelligence is available to every classification. The layers differ by authority and lifetime; they do not add workflow stages.
 
----
+## Stable project knowledge
 
-## Layer 1 — `.aioson/rules/`
+### `.aioson/rules/`
 
-**What it is:** behavioral overrides for agents.
-**Who writes it:** the user, or promoted from recurring @dev patterns.
-**When to use:** when you want to enforce a convention that overrides agent defaults — globally or for specific agents.
-**Cadence:** stable. Rules change rarely; only when a convention is proven wrong or superseded.
+Enforce project-specific behavior and constraints. Rules override generic agent defaults and are selected for the concrete task and paths being touched.
 
-Examples of good rules:
-- "All API routes must follow REST naming conventions in this project"
-- "Never use float for monetary values — use integer cents"
-- "The @dev agent must always write a migration for schema changes"
+### `.aioson/docs/`
 
-See `rules/README.md` for format and frontmatter reference.
+Store reusable domain, integration, operational, and technical reference. Load only the documents whose scope matches the task.
 
----
+### `.aioson/design-docs/`
 
-## Layer 2 — `.aioson/docs/`
+Store stable structural governance such as folder conventions, reuse rules, naming, and component boundaries. These are repository guidance, not feature design stages.
 
-**What it is:** domain knowledge and technical reference that agents load on demand.
-**Who writes it:** the user or @architect, based on real integration and domain complexity.
-**When to use:** when multiple agents across different features need the same external context — API behavior, third-party quirks, data model explanations, integration patterns.
-**Cadence:** updated when the referenced system changes, not after every feature.
+### `.aioson/learnings/`
 
-Examples of good docs:
-- `stripe-integration-context.md` — describes webhook event model, idempotency keys used
-- `auth-rbac-model.md` — explains the role/permission system as it stands in production
-- `legacy-api-behavior.md` — documents known quirks of an external API affecting multiple features
+Store proven project gotchas and recipes. Read the index first and lazy-load matching entries.
 
-See `docs/README.md` for format and naming conventions.
+## Feature delivery memory
 
----
+Only three feature artifacts are canonical and blocking:
 
-## Layer 3 — `.aioson/design-docs/`
+| Authority | Artifact | Owner |
+|---|---|---|
+| Product promise and acceptance behavior | `prd-{slug}.md` | Product; optional Sheldon edits in place |
+| Executable vertical delivery sequence | `implementation-plan-{slug}.md` | Planner |
+| Independent delivery verdict | `qa-report-{slug}.md` | QA |
 
-**What it is:** structural code governance: folder structure, componentization, reuse, naming, and file-size thresholds.
-**Who writes it:** installed by AIOSON, then edited by the project team when conventions change.
-**When to use:** before architectural structure decisions and before implementation that creates files, splits modules, introduces reusable code, or names APIs.
-**Cadence:** stable. These files are project-local and preserved on update.
+The prototype and briefing are source evidence. `.aioson/context/features/{slug}/dossier.md` is lightweight, best-effort context memory shared across every classification. It may record decisions, code paths, specialist advice, and evidence, but it never becomes a gate or a substitute for the three authorities above.
 
----
+## Decision guide
 
-## Layer 4 — `.aioson/context/design-doc*.md`
+| Situation | Destination |
+|---|---|
+| Product behavior, scope, exclusions, acceptance criteria | PRD |
+| Exact implementation paths, vertical phases, verification commands | implementation plan |
+| Delivery evidence and PASS/FAIL | QA report |
+| Reusable project rule or constraint | `rules/` |
+| Reusable domain/integration knowledge | `docs/` |
+| Stable structural convention | `design-docs/` |
+| Proven gotcha or recipe | `learnings/` |
+| Temporary feature context, specialist conclusion, code map | dossier |
 
-**What it is:** `design-doc.md` is the stable system design baseline; `design-doc-{slug}.md` records only a real feature architecture delta.
-**Who writes it:** project setup/design discovery owns the baseline. @orchestrator/@architect own MEDIUM deltas; @sheldon writes a SMALL delta only when inspection proves the baseline is insufficient.
-**Who updates it:** the design owner updates the relevant authority. @dev may propose promotion of a proven recurring decision from a feature delta into the baseline.
-**When to use:** read the selected baseline sections for any structural change. Create `design-doc-{slug}.md` only for a new architecture, public contract, data, integration, authorization, or security boundary—not once per feature by default.
-**Cadence:** baseline changes rarely; feature deltas live with their feature. Decisions are append-only until explicitly superseded.
-
----
-
-## Decision Guide
-
-| Situation | Where it goes |
-|-----------|--------------|
-| Enforce a coding convention for this project | `rules/` |
-| Agents must always know about an external API behavior | `docs/` |
-| Enforce structural code quality guidance | `design-docs/` |
-| Document feature requirements/scope without an architecture delta | `requirements-{slug}.md` / `spec-{slug}.md`; reuse `design-doc.md` |
-| Document a real feature architecture delta | `design-doc-{slug}.md` |
-| Log a global project-wide architecture decision | `design-doc.md` |
-| Promote a recurring @dev pattern | `rules/` via @dev promotion |
-| Document an integration used by 3+ features | `docs/` |
-| Record a non-architectural feature decision | `spec-{slug}.md` (Key decisions section) |
-
----
-
-## What NOT to put in these layers
-
-| Content | Where it actually belongs |
-|---------|--------------------------|
-| Feature requirements | `requirements-{slug}.md` |
-| PRD / product scope | `prd-{slug}.md` |
-| Execution sequence | `implementation-plan-{slug}.md` |
-| Current implementation state | `spec-{slug}.md` |
-| Project-wide context | `project.context.md` |
-| Domain entity map | `discovery.md` |
-| Technical architecture | `architecture.md` |
+Do not create requirements, spec, architecture, discovery, design-doc, readiness, conformance, validation, or harness artifacts merely to make a feature appear thorough. A specialist answers one named question and returns the conclusion to Product, Planner, Dev, QA, or the dossier. A harness is valid only when the approved implementation plan deliberately chooses one.

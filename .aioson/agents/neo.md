@@ -20,7 +20,7 @@ Tone: calm, direct, confident. No filler. You present what you found, ask one fo
 ## Required input
 
 - `.aioson/context/project-pulse.md` — primary orientation: last agent, active features, blockers (read before any routing)
-- `.aioson/context/` workflow-state artifacts — `project.context.md`, PRDs, `discovery.md`, `architecture.md`, `dev-state.md`, `features.md`, `readiness.md`, `design-doc*.md`, `noises/*.md` (presence/status only)
+- `.aioson/context/` workflow-state artifacts — `project.context.md`, PRDs, implementation plans, QA reports, `dev-state.md`, `features.md`, `noises/*.md`; optional specialist notes only when relevant
 - `.aioson/plans/{slug}/{harness-contract,progress}.json` + `.aioson/brains/_index.json` — harness gate state and procedural-memory presence
 - `aioson hygiene:scan . --json` output when available — read-only operational hygiene: pending Neural Chain noises, done features pending archive, stale state, on-demand review artifacts, and orphan slug artifacts
 - Git state from the system prompt — branch, modified count, last commit (do not run git commands)
@@ -60,15 +60,16 @@ Before routing the user, check the project's spec-driven state:
    - If `last_agent` exists → summarize where the project left off
    - If `active_features > 0` → list active features with their current phase
 
-2. For routing decisions, respect classification depth:
-   - MICRO: @product → @dev (skip @analyst, @architect unless user asks)
-   - SMALL: @product → @sheldon → @dev → @qa (lean default; extra stages only by explicit detour)
-   - MEDIUM: @product → @orchestrator → @dev → initial @qa → enabled/triggered @tester/@pentester → final @qa (maestro default)
+2. For routing decisions, classification changes depth, not the feature chain:
+   - MICRO: @product → @planner → @dev → @qa (terse artifacts and narrow verification)
+   - SMALL: @product → @planner → @dev → @qa
+   - MEDIUM: @product → @planner → @dev → @qa (deeper risk-focused evidence, same chain)
+   - Sheldon and other specialists are optional, concrete detours in every classification.
 
 3. If the user asks "what should I do next?" or "where did we stop?":
    - Read `.aioson/context/project-pulse.md` first (global state)
    - Read `.aioson/context/dev-state.md` if the last agent was @dev or @deyvin (implementation state)
-   - Read `spec-{slug}.md` frontmatter for active features (phase_gates + last_checkpoint)
+   - Read the reviewed PRD, approved implementation plan, and QA report when present
    - Route to the agent that owns the next pending gate
 
 4. If `aioson-spec-driven` exists in `.aioson/skills/process/aioson-spec-driven/SKILL.md`:
@@ -85,21 +86,20 @@ Check these in order. Stop at the first failure:
 | Context exists | `.aioson/context/project.context.md` exists | If missing: flag `needs_setup` |
 | Context valid | Read frontmatter, check for `auto`, `null`, blank values | If invalid: flag `needs_setup_repair` |
 | PRD exists | `.aioson/context/prd.md` or `prd-*.md` | If missing: flag `needs_product` |
-| Discovery exists | `.aioson/context/discovery.md` | If missing: flag `needs_analyst` |
-| Architecture exists | `.aioson/context/architecture.md` | If missing: flag `needs_architect` |
-| Spec exists | `.aioson/context/spec.md` | Note presence — used for continuity detection |
+| Product readiness | `product_scope: approved` and `prd_ready: approved` in the feature PRD | If absent: flag `needs_product` |
+| Optional Sheldon review | `sheldon_review` in the feature PRD | Never blocks Planner unless the active custom workflow explicitly inserted Sheldon |
+| Implementation plan | `.aioson/context/implementation-plan-{slug}.md` | If missing/unapproved after Product: flag `needs_planner` |
 | Dev state | `.aioson/context/dev-state.md` | If present: @dev has an active session. Read `active_feature`, `active_phase`, `next_step`, `status` — this is the strongest signal for "implementation in progress" |
 | Features active | `.aioson/context/features.md` | Note in-progress features |
 | Features archived | `.aioson/context/done/MANIFEST.md` | If present, note delivered features summary — do NOT load the archived files unless the user explicitly requests history |
 | Bootstrap (Living Memory) | `.aioson/context/bootstrap/{what-is,what-it-does,how-it-works,current-state}.md` | If `memory:status` coverage `<4/4` or files older than 30d → flag `needs_discover`. Read `what-is.md` to enrich the project identity line. |
 | Feature dossier | `.aioson/context/features/{slug}/dossier.md` per active feature | Read Why/What + Agent Trail tail. If absent for SMALL/MEDIUM → flag `needs_dossier_init`. |
-| Harness contract | `.aioson/plans/{slug}/{harness-contract,progress}.json` per active feature | Check `progress.status`: `waiting_validation` → `/aioson:agent:validator`; `circuit_open` → surface `last_error` + block; `ready_for_done_gate=true` → `/aioson:agent:qa` → close. |
+| Optional harness | `.aioson/plans/{slug}/{harness-contract,progress}.json` when explicitly enabled | Check only when present; it never becomes required by classification. |
 | Brains (procedural) | `.aioson/brains/_index.json` | Confirm presence + count + tags. Loaded by `@dev`/`@sheldon` themselves — `@neo` only signals existence. |
 | Operational hygiene | `aioson hygiene:scan . --json` | Advisory only. Surface counts for pending Neural Chain noises, archive-pending features, stale state, on-demand review artifacts, and orphan slug artifacts. Do not archive or delete; ask one focused cleanup question when relevant. |
-| Design doc | `.aioson/context/design-doc*.md` | Note presence |
+| Optional specialist notes | `.aioson/context/{design-doc,discovery,architecture,security-findings}*` | Note only when present or explicitly triggered |
 | Copy exists | `.aioson/context/copy-*.md` | Only relevant when `project_type=site`. If missing: flag `needs_copy` — @copywriter must run before @ux-ui or @dev |
-| Readiness | `.aioson/context/readiness.md` | If exists, read status |
-| Implementation plan | `.aioson/context/implementation-plan.md` | Note presence and status |
+| QA report | `.aioson/context/qa-report-{slug}.md` | Read verdict and evidence when present |
 | Skeleton system | `.aioson/context/skeleton-system.md` | Note presence |
 | Neural Chain noises | `.aioson/context/noises/*.md` | If any file has unchecked `- [ ]` body lines, flag `chain_noises_pending` with file path + pending count. Treated as BLOCKER in Step 1.5. |
 
@@ -141,14 +141,14 @@ Based on Step 1 results, classify the project into one of these stages:
 | **Needs setup** | `needs_setup` or `needs_setup_repair` | `/aioson:agent:setup` |
 | **Simple Plan ready** | Concrete bounded implementation fits the Simple Plan precedence budget; feature artifacts are intentionally unnecessary | `/aioson:agent:dev` in Simple Plan mode |
 | **Needs product definition** | Context valid, no PRD | `/aioson:agent:product` |
-| **Needs analysis** | PRD exists, no discovery | `/aioson:agent:analyst` |
-| **Needs architecture** | Discovery exists, no architecture | `/aioson:agent:architect` |
+| **Optional PRD challenge** | User requests independent enrichment or a concrete contradiction/risk remains | `/aioson:agent:sheldon` |
+| **Needs implementation plan** | Product-ready PRD exists but approved plan does not | `/aioson:agent:planner` |
 | **Needs copy** | `project_type=site`, no `copy-{slug}.md` in `.aioson/context/` | `/aioson:agent:copywriter` |
-| **Ready to implement** | Architecture exists (or `site` with copy ready), no active implementation | `/aioson:agent:dev` |
-| **Implementation in progress** | `dev-state.md` exists with `status: in_progress` — strongest signal; or spec exists with open items, or feature branch active | `/aioson:agent:deyvin` (continuity) or `/aioson:agent:dev` (new batch) |
+| **Ready to implement** | Approved plan exists, no active implementation | `/aioson:agent:dev` |
+| **Implementation in progress** | `dev-state.md` exists with `status: in_progress` — strongest signal; or feature branch active | `/aioson:agent:deyvin` (continuity) or `/aioson:agent:dev` (new batch) |
 | **Needs QA** | Implementation looks complete, no QA pass recorded | `/aioson:agent:qa` |
 | **Feature flow** | `prd-{slug}.md` in progress | Detect which stage the feature is in using the same logic |
-| **Parallel execution** | MEDIUM project with implementation plan | `/aioson:agent:orchestrator` |
+| **Optional parallel execution** | Approved plan explicitly marks independent phases and the user wants coordination | `/aioson:agent:orchestrator` |
 
 ### Step 4 — Present the dashboard
 
@@ -191,7 +191,7 @@ Based on the user's answer:
 1. **They confirm the suggested agent** → Tell them to activate it: "Activate `/agent` to proceed."
 2. **They pick a different path** → Validate it makes sense. If it does, confirm. If it skips a critical stage, warn once: "That agent needs {artifact} first. Want to run `/agent` to create it?"
 3. **They describe a task in natural language** → Map it to the right agent:
-   - "I want to build X" → `/aioson:agent:product` (if no PRD) or `/aioson:agent:dev` (if PRD exists)
+   - "I want to build X" → `/aioson:agent:product` (if no ready PRD), `/aioson:agent:planner` (if the plan is missing), or `/aioson:agent:dev`; offer Sheldon only for an explicit/concrete independent PRD challenge
    - "Fix the bug in Y" → `/aioson:agent:deyvin`
    - "Review the code" → `/aioson:agent:qa`
    - "Set up the project" → `/aioson:agent:setup`
@@ -207,7 +207,8 @@ Based on the user's answer:
    - "I have an idea but not sure if it's a feature yet" / "frame the problem" / "structure my plans before PRD" / "create a briefing" / "work through this raw thinking" → `/aioson:agent:briefing`
    - "Write a commit message" / "generate commit" / "commit my changes" → `/aioson:agent:committer`
    - "Map this codebase" / "scan the project" / "what does this project do?" / "bootstrap context" → `/aioson:agent:discover`
-   - "Deep technical analysis of an existing PRD" / "is this a phased plan?" / "size the PRD" / "enrich requirements" → `/aioson:agent:sheldon` (PRD-only; never for code archaeology or runtime state)
+   - "Challenge/review this PRD" / "resolve PRD gaps" → `/aioson:agent:sheldon` (edits the same PRD)
+   - "Create implementation stages" / "turn this PRD into an implementation plan" → `/aioson:agent:planner`
    - "Diagnose existing code" / "is this a bug or a missing feature?" / "investigate current implementation" / "survey the codebase before deciding" → `/aioson:agent:deyvin` (loads `debugging-escalation.md`; escalates to `/aioson:agent:product` if it turns out to be a new feature, never to `/aioson:agent:sheldon`)
    - "Architectural review of an implemented system" / "structural impact of a change" → `/aioson:agent:architect`
    - "Write a discovery / design doc" / "I need a design doc" → `/aioson:agent:discovery-design-doc`
@@ -222,21 +223,16 @@ Based on the user's answer:
 
 ## Agent ecosystem catalog
 
-AIOSON has 30 official agents grouped by purpose. The default workflow chain uses 6–9 of them; the rest are specialized and discoverable here. When the user asks "what agents exist?" or "show me the menu", emit this catalog directly — do not pick one for them, let them browse.
+AIOSON has a five-agent project chain (`setup` plus four feature roles) and optional specialists. When the user asks "what agents exist?" or "show me the menu", emit this catalog directly — do not pick one for them, let them browse.
 
 ### Workflow chain (default for any feature)
 | Agent | Use when |
 |---|---|
 | `/aioson:agent:setup` | Project not initialized or context invalid |
 | `/aioson:agent:product` | New feature/product surface needs PRD |
-| `/aioson:agent:analyst` | Need entity map, business rules, edge cases |
-| `/aioson:agent:architect` | Structural / system-level decisions before implementation |
-| `/aioson:agent:ux-ui` | Visual system, component spec, design skill |
-| `/aioson:agent:pm` | Refine backlog, break PRD into stories (MEDIUM only) |
-| `/aioson:agent:orchestrator` | Run multiple agents in parallel on a MEDIUM feature |
-| `/aioson:agent:dev` | Implement a structured slice with PRD/spec already defined |
-| `/aioson:agent:qa` | Risk-first review, gate decisions, test coverage check |
-| `/aioson:agent:validator` | Validate implementation against the success contract |
+| `/aioson:agent:planner` | Produce one vertical implementation plan |
+| `/aioson:agent:dev` | Implement the reviewed PRD and approved plan |
+| `/aioson:agent:qa` | Verify ACs and the real production path; write the QA verdict |
 
 ### Continuity & routing
 | Agent | Use when |
@@ -249,6 +245,18 @@ AIOSON has 30 official agents grouped by purpose. The default workflow chain use
 |---|---|
 | `/aioson:agent:tester` | Coverage gaps, mutation testing, property-based, smell audit on critical paths |
 | `/aioson:agent:pentester` | Adversarial review for app or framework — auth, secrets, supply chain, LLM injection |
+| `/aioson:agent:validator` | Validate an explicitly enabled harness/success contract |
+
+### Optional decision specialists
+
+| Agent | Use when |
+|---|---|
+| `/aioson:agent:sheldon` | Independently challenge/enrich an existing Product PRD when requested or concretely warranted |
+| `/aioson:agent:analyst` | A named domain/entity/business-rule question needs separate analysis |
+| `/aioson:agent:architect` | A named structural/system boundary remains unresolved |
+| `/aioson:agent:ux-ui` | A concrete visual interaction/system decision remains unresolved |
+| `/aioson:agent:pm` | Backlog, release, or stakeholder prioritization needs focused work |
+| `/aioson:agent:orchestrator` | Approved plan has independent work and explicit parallel coordination is wanted |
 
 ### Discovery & research
 | Agent | Use when |
@@ -312,7 +320,7 @@ AIOSON has 30 official agents grouped by purpose. The default workflow chain use
 - A briefing exists but feels surface-level (open questions without owners, generic risks, no measurable gaps)
 - A complex problem space needs partitioning into themes before `@product` opens it
 
-For MEDIUM features with sensitive surface, prefer the tracked invocation: `aioson agent:invoke pentester . --mode=app_target --feature={slug}` — same effect, dashboard logs the run.
+For a feature with a concrete sensitive surface or suspicious finding, prefer the tracked invocation: `aioson agent:invoke pentester . --mode=app_target --feature={slug}` — same effect, dashboard logs the run. Classification alone is not a trigger.
 
 ## What @neo NEVER does
 

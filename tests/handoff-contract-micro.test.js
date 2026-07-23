@@ -7,276 +7,91 @@ const path = require('node:path');
 const os = require('node:os');
 const { validateHandoffContract } = require('../src/handoff-contract');
 
-async function ensureDir(dir) {
-  await fs.mkdir(dir, { recursive: true });
+async function write(root, rel, content) {
+  const file = path.join(root, rel);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, content, 'utf8');
 }
 
-async function writePrd(tmpDir, slug, classification) {
-  await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-  await fs.writeFile(
-    path.join(tmpDir, '.aioson', 'context', `prd-${slug}.md`),
-    `---\nslug: ${slug}\nclassification: ${classification}\nstatus: in_progress\n---\n\n# PRD ${slug}\n`
-  );
+function state(slug = 'tiny-fix') {
+  return {
+    mode: 'feature',
+    featureSlug: slug,
+    classification: 'MICRO',
+    sequence: ['product', 'planner', 'dev', 'qa']
+  };
 }
 
-async function writeProjectContext(tmpDir, classification) {
-  await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-  await fs.writeFile(
-    path.join(tmpDir, '.aioson', 'context', 'project.context.md'),
-    `---\nclassification: "${classification}"\n---\n\n# Project\n`
-  );
-}
+const prd = `---
+classification: MICRO
+product_scope: approved
+prd_ready: approved
+---
+# Tiny fix
 
-describe('handoff-contract — MICRO-aware gate validation', () => {
-  let tmpDir;
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-tiny-01 | User sees the result | User triggers action | required | Core outcome |
+
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-tiny-01 | CAP-tiny-01 | Result appears in the normal app | focused test |
+`;
+
+const plan = `---
+status: approved
+---
+# Plan
+
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-tiny-01 | 1 | src/tiny.js, tests/tiny.test.js | node --test |
+`;
+
+describe('handoff-contract — MICRO uses the same compact feature contract', () => {
+  let root;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'handoff-micro-'));
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'handoff-micro-'));
+    await write(root, '.aioson/context/project.context.md', '---\nclassification: MEDIUM\n---\n# Project\n');
+    await write(root, '.aioson/context/project-pulse.md', '# Pulse\n');
+    await write(root, '.aioson/context/dev-state.md', '# Dev State\n');
+    await write(root, '.aioson/context/prd-tiny-fix.md', prd);
   });
 
-  afterEach(async () => {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+  afterEach(async () => fs.rm(root, { recursive: true, force: true }));
+
+  it('blocks Dev when the compact Planner artifact is missing', async () => {
+    const result = await validateHandoffContract(root, state(), 'dev');
+    assert.equal(result.ok, false);
+    assert.ok(result.missing.some((item) => /gate C|implementation-plan/i.test(item)));
+    assert.equal(result.missing.some((item) => /requirements|spec-|architecture|readiness/i.test(item)), false);
   });
 
-  it('dev stage with MICRO feature passes without spec-{slug}.md', async () => {
-    await writePrd(tmpDir, 'tiny-fix', 'MICRO');
-    await writeProjectContext(tmpDir, 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'tiny-fix' };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(
-      result.ok,
-      true,
-      `MICRO feature should pass dev gate without spec; got missing: ${JSON.stringify(result.missing)}`
-    );
+  it('passes Dev with Product-ready PRD, compact plan, real paths, and focused AC evidence', async () => {
+    await write(root, '.aioson/context/implementation-plan-tiny-fix.md', plan);
+    await write(root, 'src/tiny.js', 'module.exports = true;\n');
+    await write(root, 'tests/tiny.test.js', "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-tiny-01',()=>assert.ok(true));\n");
+    const result = await validateHandoffContract(root, state(), 'dev');
+    assert.equal(result.ok, true, JSON.stringify(result.missing));
   });
 
-  it('dev stage with SMALL feature still blocks on missing spec', async () => {
-    await writePrd(tmpDir, 'real-feature', 'SMALL');
-    await writeProjectContext(tmpDir, 'SMALL');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'real-feature' };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(result.ok, false, 'SMALL feature without spec must still block dev gate');
-    assert.ok(
-      result.missing.some((m) => m.includes('gate C') && m.includes('spec_missing')),
-      `expected gate C spec_missing blocker, got: ${JSON.stringify(result.missing)}`
-    );
+  it('requires the same independent QA verdict, without classification-driven security paperwork', async () => {
+    await write(root, '.aioson/context/implementation-plan-tiny-fix.md', plan);
+    await write(root, 'src/tiny.js', 'module.exports = true;\n');
+    await write(root, 'tests/tiny.test.js', "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-tiny-01',()=>assert.ok(true));\n");
+    await write(root, '.aioson/context/qa-report-tiny-fix.md', '---\nverdict: PASS\n---\n# QA\n');
+    const result = await validateHandoffContract(root, state(), 'qa');
+    assert.equal(result.ok, true, JSON.stringify(result.missing));
+    assert.equal(result.missing.some((item) => /security-findings/i.test(item)), false);
   });
 
-  it('dev stage with MEDIUM feature still blocks on missing spec (regression)', async () => {
-    await writePrd(tmpDir, 'big-feature', 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'big-feature' };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(result.ok, false, 'MEDIUM feature without spec must still block');
-  });
-
-  it('qa stage with MICRO feature in MICRO project passes without spec-{slug}.md', async () => {
-    // SF-project-26: Gate D short-circuits only when the *project* is MICRO.
-    // The original test assumed any MICRO feature skips Gate D regardless of
-    // project context — that is the exact gate-bypass the finding addresses.
-    // Setting project.context.md to MICRO captures the legitimate scenario
-    // this test was meant to verify.
-    await writePrd(tmpDir, 'tiny-fix', 'MICRO');
-    await writeProjectContext(tmpDir, 'MICRO');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'tiny-fix' };
-    const result = await validateHandoffContract(tmpDir, state, 'qa');
-    assert.equal(
-      result.ok,
-      true,
-      `MICRO feature in MICRO project should pass qa gate without spec; got missing: ${JSON.stringify(result.missing)}`
-    );
-  });
-
-  it('feature classification (MICRO) overrides project classification (MEDIUM)', async () => {
-    await writePrd(tmpDir, 'micro-in-medium', 'MICRO');
-    await writeProjectContext(tmpDir, 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'micro-in-medium' };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(
-      result.ok,
-      true,
-      'MICRO feature inside a MEDIUM project must be treated as MICRO for gate enforcement'
-    );
-  });
-
-  it('explicit state.classification still takes precedence over PRD frontmatter', async () => {
-    await writePrd(tmpDir, 'mismatch', 'MICRO');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = {
-      mode: 'feature',
-      featureSlug: 'mismatch',
-      classification: 'MEDIUM'
-    };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(
-      result.ok,
-      false,
-      'explicit MEDIUM in state must override MICRO from PRD frontmatter'
-    );
-  });
-
-  it('project mode (no slug) is unaffected by the MICRO short-circuit', async () => {
-    await writeProjectContext(tmpDir, 'MICRO');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'project', featureSlug: null };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    // Project mode without spec.md returns ok via 'project_mode_without_spec';
-    // the MICRO short-circuit must not change that path.
-    assert.equal(result.ok, true);
-  });
-
-  // ─── SF-project-26 regression: Gate D respects project baseline ────────
-
-  it('SF-project-26: qa stage with MICRO feature in MEDIUM project BLOCKS on Gate D', async () => {
-    await writePrd(tmpDir, 'micro-but-medium-project', 'MICRO');
-    await writeProjectContext(tmpDir, 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'micro-but-medium-project' };
-    const result = await validateHandoffContract(tmpDir, state, 'qa');
-    assert.equal(
-      result.ok,
-      false,
-      'Gate D (security review) must still run when project is MEDIUM, even for MICRO features'
-    );
-    assert.ok(
-      result.missing.some((m) => m.includes('gate D')),
-      `expected gate D blocker, got: ${JSON.stringify(result.missing)}`
-    );
-  });
-
-  it('SF-project-26: qa stage with MICRO feature in SMALL project BLOCKS on Gate D', async () => {
-    // SMALL is not MICRO — the security baseline must still apply.
-    await writePrd(tmpDir, 'micro-in-small', 'MICRO');
-    await writeProjectContext(tmpDir, 'SMALL');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'micro-in-small' };
-    const result = await validateHandoffContract(tmpDir, state, 'qa');
-    assert.equal(
-      result.ok,
-      false,
-      'Gate D must still run when project is SMALL, even for MICRO features'
-    );
-  });
-
-  it('SF-project-26: dev stage with MICRO feature in MEDIUM project still passes (Gate C is process-level, not security)', async () => {
-    // Process gates (A, B, C) keep the lightweight MICRO workflow. Only Gate D
-    // (security review) escalates to the project baseline.
-    await writePrd(tmpDir, 'lightweight-feature', 'MICRO');
-    await writeProjectContext(tmpDir, 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'dev-state.md'),
-      'state'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'lightweight-feature' };
-    const result = await validateHandoffContract(tmpDir, state, 'dev');
-    assert.equal(
-      result.ok,
-      true,
-      'Gate C must continue to short-circuit for MICRO features regardless of project classification'
-    );
-  });
-
-  it('SF-project-26: MICRO feature in MEDIUM project passes Gate D when QA Sign-off PASS is recorded in spec', async () => {
-    await writePrd(tmpDir, 'reviewed-micro', 'MICRO');
-    await writeProjectContext(tmpDir, 'MEDIUM');
-    await ensureDir(path.join(tmpDir, '.aioson', 'context'));
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'),
-      'pulse'
-    );
-    // A MICRO feature in a MEDIUM project that DID get a security review can
-    // produce a minimal spec-{slug}.md carrying the QA verdict — this satisfies
-    // Gate D and unblocks the handoff.
-    await fs.writeFile(
-      path.join(tmpDir, '.aioson', 'context', 'spec-reviewed-micro.md'),
-      '---\nslug: reviewed-micro\n---\n\n# Spec\n\n## QA Sign-off\n\n**Verdict:** PASS\n'
-    );
-
-    const state = { mode: 'feature', featureSlug: 'reviewed-micro' };
-    const result = await validateHandoffContract(tmpDir, state, 'qa');
-    assert.equal(
-      result.ok,
-      true,
-      `Gate D should accept a recorded PASS verdict; got: ${JSON.stringify(result.missing)}`
-    );
+  it('does not require Sheldon in the MICRO canonical sequence', async () => {
+    await write(root, '.aioson/context/implementation-plan-tiny-fix.md', plan);
+    const result = await validateHandoffContract(root, state(), 'planner', { structuralOnly: true });
+    assert.equal(result.ok, true, JSON.stringify(result.missing));
   });
 });

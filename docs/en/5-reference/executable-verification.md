@@ -10,7 +10,7 @@
 
 ## The idea in one paragraph
 
-AIOSON already has two strong foundations: the **`harness-contract.json`** (binary success criteria per feature) and the **SDD artifact chain** (PRD → spec → plan → conformance). The executable-verification theme builds on both to make verification **deterministic** (run a command, read an exit code) and to make specs **compilable** (turn a ready spec into an auditable workflow). Everything is **additive**: the default SMALL lean lane (`@sheldon → @dev → @qa`) and MEDIUM maestro lane (`@orchestrator → @dev → @pentester → @qa`) are **unchanged** in structure. The new pieces tighten the verification surface — `@scope-check`'s `spec:analyze` now runs **automatically at the `@dev`/`@qa` done gate** (scope-drift gate) in addition to being available as an explicit detour. `@validator` remains a detour when a harness contract exists.
+AIOSON's canonical authorities are one PRD, one implementation plan, and one QA verdict. The executable-verification commands are optional evidence that can make selected criteria deterministic or compile an explicitly configured harness workflow. They do not create mandatory specification artifacts or workflow gates. The default route remains Product → optional Sheldon → Planner → DEV → QA at every classification. Scope Check and Validator are opt-in specialists.
 
 The theme ships in five phases.
 
@@ -18,7 +18,7 @@ The theme ships in five phases.
 
 ## Phase 1 (v1.24.0) — `harness:check` + the `verification` field
 
-A `harness-contract.json` criterion can now carry an authored **`verification`** field: a shell command that proves the criterion mechanically. `@sheldon` authors it for every mechanically-checkable `binary: true` criterion — preferring the project's own test runner, deterministic, cross-platform, with **exit 0 = pass**. Legacy contracts without `verification` stay valid; `validateContract` only emits an advisory **warning** (never an error) for `binary: true` criteria that lack it.
+A `harness-contract.json` criterion can carry an authored **`verification`** field: a shell command that proves the criterion mechanically. When a feature explicitly opts into a harness contract, verification should prefer the project's own test runner, remain deterministic and cross-platform, and use **exit 0 = pass**. Contracts without `verification` stay valid; `validateContract` only emits an advisory warning for binary criteria that lack it.
 
 The new command runs those commands deterministically:
 
@@ -97,7 +97,7 @@ It runs five deterministic checks:
 4. **Harness-contract sanity** — schema errors = error; executable-coverage = info.
 5. **AC→contract linkage** = info.
 
-An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. `spec:analyze` runs **automatically at the `@dev`/`@qa` done gate** (scope-drift gate) — errors block completion, warnings are pre-computed drift evidence. `@scope-check` also runs it in preflight when invoked as an explicit detour.
+An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. The command remains available as deterministic drift evidence when the approved plan or an explicitly requested Scope Check calls for it; it does not add a workflow stage.
 
 See [`spec:analyze`](./cli-reference.md#specanalyze) in the CLI reference.
 
@@ -105,7 +105,7 @@ See [`spec:analyze`](./cli-reference.md#specanalyze) in the CLI reference.
 
 ## Phase 4 (v1.27.0) — Wave parallelism markers
 
-`@pm`'s Execution Sequence table gains a **`Wave`** column. Same-wave phases are **file-disjoint and dependency-free**, so they can run in parallel (via isolated subagents or worktrees). Waves run in ascending order, and marking is **conservative**: when in doubt, sequential.
+An optional compiled-harness plan may carry a **`Wave`** column. Same-wave phases must be file-disjoint and dependency-free. Wave metadata is specialist evidence; Planner still owns the single canonical implementation plan.
 
 `spec:analyze` gains the **`wave_file_overlap`** check: same-wave phases that share Primary files raise a warning. Plans without a `Wave` column skip the check entirely.
 
@@ -115,7 +115,7 @@ The Wave column is what Phase 5 compiles into `parallel()` blocks.
 
 ## Phase 5 (v1.28.0) — Lane B: `forge:compile` + `@forge-run`
 
-Lane B is an **opt-in, additive** second lane: it compiles a MEDIUM feature's artifacts into a single auditable, versionable workflow and runs the whole verification cycle end to end. The default lane stays the recommended path.
+Lane B is an **opt-in, additive** compiled-harness path. Classification does not activate it. It applies only when the user deliberately maintains the optional contract and Wave metadata; the canonical Product → Planner → DEV → QA route remains authoritative.
 
 ```bash
 # Compile the feature into a forge-run.workflow.js
@@ -143,21 +143,18 @@ See [`forge:compile`](./cli-reference.md#forgecompile) in the CLI reference and 
 ## How the phases fit together
 
 ```text
-@sheldon (SMALL) / @orchestrator (MEDIUM) authors verification
-                          ──► harness:check (deterministic, exit 0 = pass)         [Phase 1]
-                                        │
-spec:analyze runs automatically ◄───────┤  at @dev/@qa done gate (scope-drift)    [Phase 3]
-  (also: @scope-check preflight)        │  (errors block, warnings = drift evidence)
-@pm fills the Wave column ──────────────┤  (parallelizable, file-disjoint)        [Phase 4]
-                                        │
-SMALL lane:   @sheldon ► @dev ► @qa ► harness:validate (review payload)            [Phase 2]
-MEDIUM lane:  @orchestrator ► @dev ► @pentester ► @qa ► harness:validate
-                              └► @validator in a FRESH, ISOLATED context (detour)
-                                        │
-Lane B (opt-in):  @forge-run ► forge:compile ► run the compiled workflow           [Phase 5]
+Product ► optional Sheldon ► Planner ► DEV ► QA
+                              │
+                              ├► harness:check when the approved plan enables it
+                              ├► spec:analyze when explicitly planned/requested
+                              └► QA consumes the bounded evidence
+
+Optional specialists:
+  @validator ► fresh-context contract review (explicitly enabled)
+  @forge-run ► forge:compile ► compiled harness workflow
 ```
 
-The default lane and Lane B consume the **same** contract, plan, and `spec:analyze` results — Lane B just compiles them into one executable script.
+The optional compiled path may consume the same plan and verification evidence, but it never replaces the canonical PRD, implementation plan, DEV integration responsibility, or QA verdict.
 
 ---
 

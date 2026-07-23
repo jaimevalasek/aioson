@@ -1,111 +1,116 @@
-# Agent execution and model resolution
+# Agent execution, development lanes, and model resolution
 
-The agent-execution subsystem validates and dispatches feature-scoped sub-agents from a manifest. It keeps the requested model separate from the model that actually runs, resolves human-readable names or small typos against the local Codex catalog, and carries that decision into reports and telemetry.
+AIOSON uses `.aioson/context/agent-execution-{feature}.json` to run a bounded feature task through a registered CLI host and model. The manifest is runtime configuration, not another specification.
 
-## When to use it
+## Defaults
 
-Use this flow when a feature needs `@qa`, `@tester`, `@pentester`, `@validator`, or another agent in a separate process with a verifiable contract and resumable state.
+A new manifest enables only:
 
-The flow is opt-in per feature. Without a manifest, the legacy `configured-default` behavior remains active.
+- `dev`;
+- `qa`.
 
-## Basic cycle
+`tester`, `pentester`, `validator`, and all development lanes are disabled. MICRO/SMALL/MEDIUM classification never enables them.
+
+The canonical delivery route remains Product → Planner → DEV → QA. Optional development lanes execute inside DEV; optional reviewers execute after QA only when explicitly enabled and triggered.
+
+## Commands
 
 ```bash
 aioson agent:execution:init . --feature=my-feature --host=codex
 aioson agent:execution:validate . --feature=my-feature --json
 aioson agent:execution:show . --feature=my-feature --json
 aioson agent:execution:dispatch . --feature=my-feature --agent=qa
-aioson agent:execution:status . --feature=my-feature --json
-aioson agent:execution:events . --feature=my-feature --run=<telemetry_run_id>
-```
-
-Resume a paused execution with:
-
-```bash
+aioson agent:execution:dispatch . --feature=my-feature --lane=backend
 aioson agent:execution:resume . --feature=my-feature
+aioson agent:execution:status . --feature=my-feature --json
 ```
 
-Commands intended for automation accept `--json`.
+Initialization is create-once. Later init, resume, and workflow seed operations preserve the developer-owned manifest byte for byte.
 
-`agent:execution:init` is **create-once**: it creates the file only when it does not exist. Later initialization, resume, and reseed operations return the existing manifest without reformatting, backfilling, or replacing any field. From that point on the file is developer-owned; model, `reasoning_effort`, enabled-agent, and `cycle_limits` edits are used on subsequent runs.
+## Development lanes
 
-## Manifest
-
-The manifest is created in the feature artifacts. A minimal example:
+Use lanes only when the user or approved plan explicitly asks for different execution hosts/models or separately owned scopes.
 
 ```json
 {
-  "version": 1,
-  "feature": "my-feature",
-  "host": "codex",
-  "agents": {
-    "qa": {
-      "mode": "native",
-      "model": "GPT 5.6 Terra",
-      "reasoning_effort": "high",
-      "report": ".aioson/context/done/my-feature/qa-report-{run_id}.md"
+  "development_lanes": {
+    "strategy": "split",
+    "integration_owner": "dev",
+    "lanes": {
+      "backend": {
+        "enabled": true,
+        "host": "codex",
+        "mode": "external",
+        "model": "gpt-5.6-sol",
+        "reasoning_effort": "high",
+        "writable_roots": [],
+        "prompt": ".aioson/context/execution-prompts/my-feature/backend.md",
+        "write_paths": ["src/api/**", "tests/api/**"],
+        "fallbacks": [],
+        "report": ".aioson/context/reports/my-feature/{run_id}/dev-backend.json"
+      },
+      "frontend": {
+        "enabled": true,
+        "host": "opencode",
+        "mode": "external",
+        "model": "provider/model-id",
+        "writable_roots": [],
+        "prompt": ".aioson/context/execution-prompts/my-feature/frontend.md",
+        "write_paths": ["src/ui/**", "tests/ui/**"],
+        "fallbacks": [],
+        "report": ".aioson/context/reports/my-feature/{run_id}/dev-frontend.json"
+      }
     }
   }
 }
 ```
 
-A new manifest defaults each review limit (`dev_qa`, `tester`, and `pentester`) to one cycle. When the initial host is `codex`, every agent also starts with `"reasoning_effort": "medium"`; hosts without that capability, including Claude and OpenCode, omit the field.
+`host` names a registered CLI adapter; `model` is the model/provider identifier understood by that host. A model such as Grok may be used through a compatible host such as OpenCode; it does not require a canonical `@frontend` or `@backend` agent.
 
-The manifest keeps the exact requested value. No automatic command rewrites or backfills it after creation; the canonical value is stored on the attempt and in the bound report. The `workflow:execute` flags `--max-dev-qa-cycles`, `--max-tester-cycles`, and `--max-pentester-cycles` apply only during initial creation. If the file already exists, edit its `cycle_limits` directly.
+DEV creates the short runtime prompt from the approved PRD and implementation plan, dispatches enabled lanes sequentially in the shared worktree, audits their diffs against `write_paths`, integrates shared boundaries, and runs the full planned verification. Lane reports bind the lane identity and declared paths.
 
-## Model resolution
+Currently registered execution adapters include Codex, Claude Code, OpenCode, and Kimi Code. New hosts require a registered adapter so executable resolution, capabilities, arguments, redaction, and telemetry remain fail-closed.
 
-For `codex`, AIOSON reads the local catalog at `~/.codex/models_cache.json` (or `$CODEX_HOME`). Matching is deterministic and conservative:
+## Explicit fallback only
 
-1. exact slug;
-2. normalized name (`gpt-5.6-terra`, `GPT 5.6 Terra`, accents and separators are equivalent);
-3. a unique suffix alias;
-4. a bounded short typo correction;
-5. an explicit failure when no candidate or more than one candidate remains.
+Missing CLI, unsupported capability, or unavailable model pauses execution. The active chat must never imitate the requested model.
 
-Numbers are invariants: `gpt-5.6` can never resolve to `gpt-5.5`. A generic alias such as `gpt` is not enough to select a model.
-
-The result exposes `model_requested`, `model_resolved`, `model_resolution_strategy`, and catalog provenance. Ambiguity, invalid/oversized catalogs, and out-of-bounds input are blocked before spawn. Without a catalog, a safe literal ID may continue as `unverified_literal`; AIOSON never pretends availability was verified.
-
-## Reasoning effort
-
-`reasoning_effort` is independent from the model name. Manifest values are `low`, `medium`, `high`, `xhigh`, `max`, and `ultra`. When the catalog advertises supported levels, an incompatible request is rejected; there is no silent downgrade.
+A fallback runs only when both the entry and the global policy authorize it:
 
 ```json
 {
-  "model": "gpt-5.6-terra",
-  "reasoning_effort": "high"
+  "fallbacks": [
+    {
+      "host": "codex",
+      "model": "configured-default",
+      "on": ["unavailable", "capacity"]
+    }
+  ],
+  "capacity_policy": {
+    "strategy": "fallback",
+    "max_attempts": 2,
+    "backoff_ms": 0,
+    "allow_cross_host": true
+  }
 }
 ```
 
-The selected level follows the attempt, fallback, report, verification plan, and telemetry events. If a fallback cannot support the requested level, execution pauses for correction.
+Without this explicit declaration, execution returns `paused` with a resume command.
 
-## Fallback, reports, and observability
+## Model and report binding
 
-Before spawning, the dispatcher validates the host, mode, executable, writable roots, and capabilities. Each fallback candidate is resolved and validated again. Reports are accepted only when they match the registered attempt: feature, agent, path, resolved model, strategy, reasoning effort, and verdict.
+Codex model names resolve conservatively against the local catalog: exact slug, normalized name, unique alias, then bounded typo correction. Numeric versions never drift. Other hosts accept safe literal IDs when no catalog adapter exists.
 
-`status` lists attempts. `events` reads bounded, sanitized events by cursor and preserves correlation among `run_id`, feature, agent, host, requested/resolved model, and transitions such as `retry`, `fallback`, `paused`, `passed`, and `failed`.
+State, report, and telemetry keep:
 
-```bash
-aioson agent:execution:status . --feature=my-feature --agent=qa --json
-aioson agent:execution:events . --feature=my-feature --run=<run_id> --limit=100 --json
-```
+- requested and resolved model;
+- resolution strategy;
+- reasoning effort when supported;
+- host and fallback history;
+- feature, run, attempt, agent/lane, writable roots, and declared lane paths.
 
-## Security limits
+Reports that do not match the registered attempt are rejected.
 
-- model names are capped at 200 characters;
-- the local catalog is capped at 5 MiB and 1,000 models;
-- model IDs use a safe literal character set;
-- prompt and report paths stay inside approved roots;
-- child stdout/stderr is untrusted and is redacted and bounded;
-- unavailable adapters fail closed instead of simulating success.
+## Review policy
 
-## Verification plan integration
-
-When a feature has a manifest, `aioson verification:plan` uses the same resolver and exposes the requested model, resolved slug, strategy, and reasoning effort for each verifier:
-
-```bash
-aioson verification:plan . --feature=my-feature --trigger=per-phase --json
-```
-
-The plan, spawn, and audit therefore cannot disagree about which model will run.
+`aioson verification:plan . --feature=my-feature --trigger=per-phase` runs no reviewer by default. At `end-of-feature`, QA is the only default reviewer. Tester, Pentester, and Validator run only when their manifest entry is enabled and its trigger applies.

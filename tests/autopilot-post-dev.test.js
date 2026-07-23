@@ -17,8 +17,9 @@ test('AUTOPILOT_HANDOFF_STAGES inclui o ciclo de review pós-dev', () => {
   }
 });
 
-// Cada agente do ciclo carrega a seção de autopilot no seu prompt (modo direto).
-test('os 5 agentes do ciclo têm a seção "Autopilot handoff (post-dev" no prompt', () => {
+// Canonical prompts keep the human close gate; specialist mechanics remain in
+// their own opt-in prompts and in the shared handoff document.
+test('Dev and QA preserve the human close gate without mandatory specialist sections', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   for (const id of ['dev', 'qa', 'tester', 'pentester', 'validator']) {
@@ -26,7 +27,6 @@ test('os 5 agentes do ciclo têm a seção "Autopilot handoff (post-dev" no prom
     assert.ok(agent, `agente ${id} existe`);
     const file = path.resolve(__dirname, '..', '.aioson', 'agents', `${id}.md`);
     const text = fs.readFileSync(file, 'utf8');
-    assert.match(text, /Autopilot handoff \(post-dev/, `${id}.md deve ter a seção de autopilot pós-dev`);
     assert.match(text, /feature:close/, `${id}.md deve referenciar o gate humano feature:close`);
   }
 });
@@ -35,7 +35,7 @@ test('os 5 agentes do ciclo têm a seção "Autopilot handoff (post-dev" no prom
 test('nenhum agente do ciclo auto-roda feature:close (gate humano preservado)', () => {
   const fs = require('node:fs');
   const path = require('node:path');
-  for (const id of ['dev', 'qa', 'tester', 'pentester', 'validator']) {
+  for (const id of ['dev', 'qa']) {
     const text = fs.readFileSync(path.resolve(__dirname, '..', '.aioson', 'agents', `${id}.md`), 'utf8');
     assert.match(text, /[Nn]ever auto-run `feature:close`|recommend .*feature:close|fall back|hand off manually/,
       `${id}.md deve tratar feature:close como gate humano`);
@@ -60,8 +60,8 @@ test('autopilot usa o manifesto de execução como autoridade de ciclos, com def
 });
 
 // Full-feature autopilot: o segmento spec→dev também é encadeado.
-test('AUTOPILOT_HANDOFF_STAGES inclui product e as spec authorities (full-feature chain)', () => {
-  for (const stage of ['product', 'sheldon', 'orchestrator']) {
+test('AUTOPILOT_HANDOFF_STAGES inclui a cadeia canônica e os desvios opcionais', () => {
+  for (const stage of ['product', 'planner', 'dev', 'qa', 'sheldon', 'orchestrator']) {
     assert.equal(AUTOPILOT_HANDOFF_STAGES.has(stage), true, `${stage} deve estar encadeado no autopilot`);
   }
 });
@@ -76,9 +76,9 @@ test('exceção de autopilot injetada descreve a cadeia full-feature, não o mod
     autoHandoff: true
   });
   assert.doesNotMatch(prompt, /stops before the first `@dev`/, 'texto antigo (parada pré-dev) removido');
-  assert.match(prompt, /runs the whole feature/, 'texto novo descreve a cadeia completa');
-  assert.match(prompt, /dev-state\.md/, 'cruza para @dev via cold-start packet');
-  assert.match(prompt, /NEVER auto-runs `feature:close`/, 'gate humano preservado');
+  assert.match(prompt, /canonical chain is `@product → @planner → @dev → @qa`/, 'texto novo descreve a cadeia canônica');
+  assert.match(prompt, /only when enabled and triggered/, 'especialistas continuam proporcionais');
+  assert.match(prompt, /NEVER auto-run `feature:close`/, 'gate humano preservado');
 });
 
 // resolveAutopilotSignal: flag OU scheme semeado (escopado por slug).

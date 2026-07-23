@@ -21,19 +21,18 @@ Every agent that creates or writes files MUST resolve the target path using this
 | Directory | Purpose | Write rule |
 |---|---|---|
 | `plans/` (root) | Pre-production research and source material only | READ-ONLY for agents. Exception: `plans/source-manifest.md` may be updated when consuming a source plan. |
-| `.aioson/plans/{slug}/` | Active phased plan produced by `@sheldon` | Written by `@sheldon`. Consumed by `@dev` and `@qa` during execution. |
+| `.aioson/plans/{slug}/` | Optional specialist/harness evidence for legacy or explicitly selected workflows | Never required by the canonical feature route. |
 | `docs/pt/` | Public system documentation for implemented behavior | Written only after behavior is implemented. Never used as operational planning space or scratchpad. |
 
 ## Operational artifact destinations
 
 | Artifact | Correct destination | Owner |
 |---|---|---|
-| Operational feature plan (phased) | `.aioson/plans/{slug}/manifest.md` + phase files | `@sheldon` |
-| MEDIUM execution plan | `.aioson/context/implementation-plan-{slug}.md` | `@pm` |
+| Operational feature plan (phased) | `.aioson/context/implementation-plan-{slug}.md` | `@planner` |
 | PRD | `.aioson/context/prd-{slug}.md` | `@product` |
-| Requirements | `.aioson/context/requirements-{slug}.md` | `@analyst` |
-| Architecture | `.aioson/context/architecture.md` | `@architect` |
-| Spec (living memory) | `.aioson/context/spec-{slug}.md` | `@dev` |
+| Legacy specialist requirements | `.aioson/context/requirements-{slug}.md` | `@analyst` (opt-in only) |
+| Project architecture baseline | `.aioson/context/architecture.md` | `@architect` (opt-in only) |
+| Legacy feature spec | `.aioson/context/spec-{slug}.md` | Compatibility only |
 | Simple implementation plan | `.aioson/context/simple-plans/{slug}.md` | `@dev` / `@deyvin` |
 | QA report | `.aioson/context/qa-report-{slug}.md` | `@qa` |
 
@@ -48,7 +47,7 @@ Every agent that creates or writes files MUST resolve the target path using this
 
 | User says | Agent resolves to |
 |---|---|
-| "plans" or "plans folder" | Ask: root `plans/` (pre-production) or `.aioson/plans/{slug}/` (feature plan)? |
+| "plans" or "plans folder" | Default to `.aioson/context/implementation-plan-{slug}.md`; ask only if the user explicitly means research or a specialist harness. |
 | "docs" or "documentation" | Ask: `docs/` root (project docs) or `docs/pt/` (PT system docs) or `.aioson/docs/` (agent on-demand docs)? |
 | "context" | `.aioson/context/` (framework artifacts) |
 | "rules" | `.aioson/rules/` (agent rules) |

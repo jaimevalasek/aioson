@@ -73,13 +73,14 @@ dossier:init criado → dossier.json
 @product → prd.md
         │
         ▼
-autoridade de spec:
-  SMALL → @sheldon (pacote de spec completo em uma passada)
-  MEDIUM → @orchestrator (fan-out: @analyst + @architect + @pm + @ux-ui → consolida)
+autoridades canônicas:
+  @product → único PRD
+  [@sheldon] → enriquecimento opcional do mesmo PRD
+  @planner → único plano de implementação
         │
-        ▼  Gates A/B/C aprovados
+        ▼  PRD pronto + Gate C aprovado
 @dev implementa por fases → dev-state.md (atualizado a cada fase)
-        │    ↕ verificação por fase (sub-agente leve, auto-continue)
+        │    ↕ checks do plano; QA somente ao final
         │                       handoff-protocol.json (escrito no handoff)
         │
         ▼
@@ -90,13 +91,10 @@ autoridade de spec:
         └─ next agent lê artifact_uris do handoff-protocol
         │
         ▼
-@pentester (MEDIUM, inline) → findings → @dev corrige → @pentester re-varre
+@qa → runtime smoke + ACs → PASS ou menor pacote reproduzível → @dev corrige → @qa revalida
         │
         ▼
-@qa → runtime smoke gate + ACs → devolve para @dev se houver falhas (ciclo autônomo, cap 3)
-        │
-        ▼
-@validator → verifica contra harness-contract em contexto isolado → gate final → feature:close
+[especialista opt-in, se habilitado e justificado] → fechamento humano
         │
         ▼
 dossier arquivado em .aioson/context/done/

@@ -27,17 +27,14 @@
         ┌──────────────────────────────────────┐
         │         DEVELOPMENT CORE             │
         │                                      │
-        │  MICRO:  Product → Dev → QA          │
-        │  SMALL:  Product → Sheldon → Dev     │
-        │          → QA                        │
-        │  MEDIUM: Product → Orchestrator      │
-        │          → Dev → Pentester → QA      │
+        │  Product → optional Sheldon          │
+        │          → Planner → Dev → QA        │
         │                                      │
-        │  Spec sub-agents (opt-in/fan-out):   │
+        │  Explicit consultants:               │
         │  Analyst · Architect · PM · UX-UI    │
         │  Scope-Check · Discovery-Design-Doc  │
         │                                      │
-        │  Post-dev (on demand):               │
+        │  Opt-in reviewers:                   │
         │  Validator · Tester · Pentester      │
         └──────────────────────────────────────┘
                       │
@@ -75,28 +72,27 @@
 
 ### 2. Development core (official workflow)
 
-The default lane depends on the classification:
+After one-time setup, every tracked feature uses:
 
-**MICRO:** `@setup → @product → @dev → @qa`
-**SMALL (lean — default):** `@setup → @product → @sheldon → @dev → @qa`
-**MEDIUM (maestro):** `@setup → @product → @orchestrator → @dev → @pentester → @qa`
+`optional @briefing → optional @briefing-refiner → @product → optional @sheldon → @planner → @dev → @qa`
 
-> **The spec authority changes by size.** For SMALL, `@sheldon` is the **single spec authority** — in one pass it produces requirements + spec (Gates A/B/C approved) + design-doc + readiness + implementation-plan + harness-contract. For MEDIUM, `@orchestrator` is the **maestro** — it fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, then consolidates and gates the full spec package. Agents like `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are **opt-in detours** or **fan-out sub-agents** — none deleted, none invoked by default in the new lanes.
+> **The authorities stay stable at every classification.** Product owns one PRD, Planner owns one implementation plan, DEV owns implementation and final integration, and QA owns one final verdict. MICRO, SMALL, and MEDIUM change depth, risk coverage, and work budget—not the stage chain. Other specialists are explicitly requested consultants or reviewers.
 
 | Agent | What it does | Main output |
 |---|---|---|
-| **`@product`** | Defines vision, scope, feature PRD | `prd.md`, `spec.md` |
-| **`@sheldon`** | **SMALL single spec authority** — one pass: requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract. Also a PRD-hardening / enrichment capability usable in any lane. | `requirements-{slug}.md`, `design-doc-{slug}.md`, `readiness-{slug}.md`, `implementation-plan.md`, `harness-contract.json` |
-| **`@analyst`** | Domain discovery — entities, flows, brownfield mapping. **Opt-in detour / fan-out sub-agent** (invoked by `@orchestrator` in MEDIUM) | `architecture.md`, ER diagrams |
-| **`@architect`** | Technical decisions: structure, libs, integrations. **Opt-in detour / fan-out sub-agent**; runs in **merged mode** (also produces design-doc + readiness) when `@discovery-design-doc` is omitted | `architecture.md` (decisions) |
-| **`@ux-ui`** | UI/UX spec — **opt-in detour** for UI-heavy specs; `@dev` applies design skills directly | `design-doc.md`, `discovery.md` |
-| **`@pm`** | Backlog, user stories, implementation plan (Gate C). **Opt-in detour / fan-out sub-agent** (MEDIUM) | `tasks.md`, user stories |
-| **`@orchestrator`** | **MEDIUM maestro / single spec authority** — fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package. Secondary: coordinate parallel `@dev` lanes post-spec. | `parallel/`, execution plan, consolidated spec package |
-| **`@dev`** | Implements the feature — runs phases as a **loop**: auto-continues between phases, compacts context between phases, per-phase verification (light sub-agent). Full Runtime smoke runs once at end-of-feature. | Code + `dev-state.md` |
-| **`@qa`** | Writes tests, validates ACs, autonomous fix cycle (cap 3), hub of the post-dev autopilot review cycle. Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). | `test-plan.md`, `qa-report-*.md` |
-| **`@validator`** | Technically validates against `harness-contract.json` in a **fresh isolated context** (detour when a harness contract exists) | `.aioson/plans/{slug}/last-validator-output.json` |
-| **`@tester`** | Systematic test engineering (legacy/brownfield) — triggered by `@qa` when conditions fire | `test-inventory.md`, coverage tier |
-| **`@pentester`** | Adversarial security review (OWASP, LLM Top 10). Inline in MEDIUM; opt-in in SMALL. | `security-findings-*.json` |
+| **`@product`** | Defines vision, scope, capabilities, exclusions, and ACs | `prd-{slug}.md` |
+| **`@sheldon`** | Optional critical PRD enrichment; updates the same Product-owned PRD | enriched `prd-{slug}.md` |
+| **`@planner`** | Converts the approved PRD into one vertical executable plan | `implementation-plan-{slug}.md` |
+| **`@analyst`** | Explicit consultant for domain discovery and brownfield mapping | findings applied to PRD/plan |
+| **`@architect`** | Explicit consultant for a named technical boundary or decision | decision evidence applied to PRD/plan |
+| **`@ux-ui`** | Explicit consultant for interaction or visual-design decisions | design evidence |
+| **`@pm`** | Explicit consultant for backlog and user-story questions | backlog evidence |
+| **`@orchestrator`** | Opt-in coordination specialist; not a default workflow stage | coordination evidence |
+| **`@dev`** | Implements the plan, optionally dispatches configured development lanes, and owns final integration | code + `dev-state.md` |
+| **`@qa`** | Runs a proportional, bounded final review and records PASS/FAIL | `qa-report-{slug}.md` |
+| **`@validator`** | Opt-in binary contract verification in a fresh context | validator evidence |
+| **`@tester`** | Opt-in systematic test engineering for legacy/brownfield coverage | `test-inventory.md`, coverage tier |
+| **`@pentester`** | Opt-in adversarial security review | `security-findings-*.json` |
 
 ### 3. Continuity and delivery
 
@@ -119,7 +115,7 @@ The default lane depends on the classification:
 | **`@design-hybrid-forge`** | Combines two design skills into a hybrid |
 | **`@orache`** | Domain investigation and strategic research |
 | **`@copywriter`** | Conversion copy for landing pages, emails |
-| **`@discovery-design-doc`** | Discovery + design doc combined — opt-in; absorbed by `@architect` merged mode, `@sheldon`, or `@orchestrator` by default |
+| **`@discovery-design-doc`** | Explicit standalone discovery/design consultation; findings enrich canonical artifacts |
 
 ---
 
@@ -128,27 +124,24 @@ The default lane depends on the classification:
 They **don't talk to each other directly**. They talk **through disk artifacts**. This is the heart of the architecture.
 
 ```
-┌─────────────┐  writes    ┌──────────────────┐  reads  ┌──────────────┐
-│  @product   ├───────────▶│  spec.md         │◀────────┤  @architect  │
-└─────────────┘            │  prd.md          │         └──────────────┘
-                           └──────────────────┘
-                                    │
-                                    ▼ reads
-                           ┌──────────────────┐  reads  ┌──────────────┐
-                           │  @architect      │         │  @dev        │
-                           │  writes →        ├────────▶│              │
-                           │  architecture.md │         └──────┬───────┘
-                           └──────────────────┘                │
-                                                               ▼ writes
-                                                      ┌──────────────────┐
-                                                      │  dev-state.md    │
-                                                      │  (code)          │
-                                                      └────────┬─────────┘
-                                                               │ reads
-                                                               ▼
-                                                      ┌──────────────┐
-                                                      │  @qa         │
-                                                      └──────────────┘
+┌─────────────┐ writes ┌────────────────┐ reads ┌─────────────┐
+│  @product   ├───────▶│ prd-{slug}.md  ├──────▶│  @planner   │
+└─────────────┘        └────────────────┘       └──────┬──────┘
+                                                     │ writes
+                                                     ▼
+                                      ┌───────────────────────────────┐
+                                      │ implementation-plan-{slug}.md │
+                                      └──────────────┬────────────────┘
+                                                     │ reads
+                                                     ▼
+                                              ┌─────────────┐
+                                              │    @dev     │
+                                              └──────┬──────┘
+                                                     │ code + evidence
+                                                     ▼
+                                              ┌─────────────┐
+                                              │     @qa     │
+                                              └─────────────┘
 ```
 
 **Advantage:** if a session drops, the next agent only needs to read the artifacts. No conversational memory is lost.
@@ -163,13 +156,11 @@ your-project/
     └── context/
         ├── project.context.md      ← global context (created by @setup)
         ├── project-pulse.md        ← live state, updated each session
-        ├── architecture.md         ← decisions from @analyst and @architect
-        ├── prd.md                  ← output of @product
-        ├── design-doc.md           ← output of @ux-ui
-        ├── tasks.md                ← output of @pm
+        ├── prd-{slug}.md           ← single Product-owned authority
+        ├── implementation-plan-{slug}.md ← single Planner-owned plan
         ├── dev-state.md            ← output of @dev (current status)
-        ├── test-plan.md            ← output of @qa
-        ├── security-findings-*.json ← output of @pentester
+        ├── qa-report-{slug}.md     ← single QA verdict
+        ├── security-findings-*.json ← optional @pentester evidence
         ├── handoff-protocol.json   ← last handoff between agents
         ├── features/<slug>/        ← features in development
         ├── done/                   ← archived features (after feature:close)
@@ -190,7 +181,7 @@ You in Claude Code:
 > Reading project-pulse.md... you're on the "my-store" project, SMALL classification,
   with the "checkout-stripe" feature in progress. @dev finished yesterday.
 > Natural next step: @qa to write tests for the feature.
-> If you want a security review before QA: @pentester.
+> If you explicitly want extra security coverage: enable and run @pentester.
 > If you want to pair first: @deyvin.
 ```
 
@@ -213,26 +204,29 @@ You > en
 You > @product
 @product > Let's start a feature. What's it called? What's the problem?
 You > "checkout-stripe", complete order with card payment.
-@product > [...several questions...] Spec created at context/features/checkout-stripe/spec.md.
-@product > Next: @sheldon to close the spec and produce the implementation package.
+@product > [...several questions...] PRD created at context/prd-checkout-stripe.md.
+@product > Next: optional @sheldon enrichment, or @planner if the PRD is ready.
 
 ─── Session 2 (next day) ───
 You > @neo
-@neo > You stopped at @product. Next: @sheldon (single spec authority for SMALL).
+@neo > You stopped at @product. The PRD has two material gaps; optional @sheldon is useful.
 You > @sheldon
-@sheldon > Reading spec.md + codebase... Detected 2 gaps: no idempotency policy on Stripe webhook,
+@sheldon > Reading the PRD + codebase... Detected 2 gaps: no idempotency policy on Stripe webhook,
            no AC for payment failure retry. Researching Stripe docs...
-@sheldon > Spec package ready: requirements, design-doc, readiness (Gate B), implementation-plan (2 phases),
-           harness-contract.json. Gates A/B/C: approved. Next: @dev.
+@sheldon > PRD enriched in place. Next: @planner.
+
+You > @planner
+@planner > implementation-plan-checkout-stripe.md approved with 2 vertical stages. Next: @dev.
 
 ─── Session 3 ───
 You > @dev
-@dev > Reading implementation-plan.md. 2 phases.
-       Phase 1/2: Stripe integration + webhook... harness:check OK. Compacting...
-       Phase 2/2: UI checkout flow... harness:check OK. dev-state.md updated. Next: @qa.
+@dev > Reading the PRD and implementation plan. 2 stages.
+       Stage 1/2: Stripe integration + webhook... focused checks OK.
+       Stage 2/2: UI checkout flow... integrated checks OK. dev-state.md updated. Next: @qa.
 
 You > @qa
-@qa > 12 ACs. Tests written. 12/12 OK. Runtime smoke: PASS. Feature ready.
+@qa > 12 ACs. Focused regression and production-path smoke pass.
+      qa-report-checkout-stripe.md: PASS.
 ```
 
 ---

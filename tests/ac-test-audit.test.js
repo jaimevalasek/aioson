@@ -115,6 +115,24 @@ test('ac:test-audit strict mode accepts an AC-linked test with an assertion sign
   assert.equal(result.items[0].status, 'covered');
 });
 
+test('ac:test-audit discovers Rust tests and assertion macros', async () => {
+  const dir = await makeTmpDir();
+  await writeFile(dir, '.aioson/context/prd-renderer.md', '# PRD\n\nAC-renderer-01\n');
+  await writeFile(dir, 'src/renderer_test.rs', `
+#[test]
+fn renders_frame() {
+    // AC-renderer-01
+    assert_eq!(2 + 2, 4);
+}
+`);
+  const result = await auditAcceptanceCriteriaTests(dir, 'renderer', {
+    requireCriteria: true,
+    requireAssertions: true
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.summary.covered, 1);
+});
+
 for (const [variant, source] of Object.entries({
   skipped: "test.skip('AC-checkout-01 payment flow', () => { assert.equal(pay(), true); });\n",
   todo: "test.todo('AC-checkout-01 assert.equal(pay(), true)');\n",

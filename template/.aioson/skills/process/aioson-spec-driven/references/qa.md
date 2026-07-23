@@ -1,31 +1,25 @@
-# Spec-Driven Reference — @qa
+# Streamlined Reference — QA
 
-> Router file. Do not duplicate logic from the generic references — load those directly.
+## Verification direction
 
-## Which references to load for quality verification
+Start from required CAP/AC promises, then inspect code/tests. Do not start from what happens to be implemented.
 
-### Always load when this skill is active
+QA is a delivery reviewer, not a second implementation team. Start with the smallest check capable of producing a trustworthy verdict:
 
-- `approval-gates.md` — Gate D (execution verification) defines done criteria; @qa is the external verifier of Gate D claims
-- `artifact-map.md` — use to verify that all artifacts claimed by upstream agents actually exist and are substantive
+- **MICRO / Simple Plan:** changed ACs, focused tests, one normal-entry smoke.
+- **SMALL:** all feature ACs, focused tests, one relevant regression command, one normal-entry smoke.
+- **MEDIUM:** the same sequence; add negative/integration depth only for risks named by the PRD or plan.
 
-### Load when evaluating AC coverage
+Never repeat the same failing command or diagnostic more than twice without new evidence. Once an implementation defect is reproducible, stop expanding the investigation and return the minimal reproduction to Dev. Tester, Pentester, Validator, browser automation, and broad stress/full-suite work require a concrete risk, plan trigger, or explicit request—not a classification.
 
-- `classification-map.md` — use to calibrate verification depth: MICRO gets happy path + auth only; MEDIUM gets full checklist + invariant tests
+For every capability in the selected budget, independently verify:
 
-### Load when investigating failures or forensics
+- exact implementing paths;
+- focused stack-native tests;
+- normal application launch;
+- real user/system trigger;
+- real boundary/state change;
+- visible result and promised failure behavior;
+- prototype fidelity or an approved deviation.
 
-- `maintenance-and-state.md` — use to read `phase_gates`, `last_checkpoint`, and `pending_review` from `spec-{slug}.md` during forensics mode
-
-### Do not load for @qa
-
-- `hardening-lane.md` — @qa activates after implementation; hardening is not relevant
-- `ui-language.md` — @qa produces structured reports, not interactive checkpoints
-
-## Behavioral notes
-
-- @qa is the external verifier of @dev's Gate D self-certification — "I think it works" from @dev is not evidence until @qa confirms
-- Gate D verification from `approval-gates.md` maps directly to @qa's adversarial probe protocol: truths = behavior tests, artifacts = file existence checks, key_links = wiring verification
-- For MEDIUM projects, @qa should verify that `spec_version` in `spec-{slug}.md` matches the version that @dev was working from — if not, flag as potential drift
-- AC coverage mapping in the QA report should use the same `AC-*` format from `requirements-{slug}.md`; run `aioson ac:test-audit . --feature={slug} --strict` when feature completeness applies and treat zero ACs, weak/empty tests, or missing evidence as Gate D blocked.
-- Load `.aioson/docs/feature-completeness-contract.md` and verify from required CAPs outward, not from existing code/tests inward. Gate D needs CAP→lens→REQ→AC→implementation→assertion/runtime evidence closure.
+Write `qa-report-{slug}.md` with `verdict: pass|fail`. Gate D passes only with an independent PASS and AC evidence. Browser-only evidence is never mandatory for native apps. The dossier is optional context memory; harnesses and specialists are conditional tools available to every classification.

@@ -13,7 +13,7 @@ const USES = [
   {
     id: 'development',
     label: 'Development',
-    desc: 'Agent workflow: setup → analyst → scope-check → architect → dev → qa',
+    desc: 'Agent workflow: setup → product → planner → dev → qa',
     locked: true
   },
   {

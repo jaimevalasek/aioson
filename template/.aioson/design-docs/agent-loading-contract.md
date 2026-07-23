@@ -47,7 +47,7 @@ The agent's own `.md` file and `CLAUDE.md` are loaded by the harness and are out
 |---|---|
 | Needs recently shipped capability context (review, avoid rediscovery) | `current-state.md` **HOT section only**; cold/archive by keyword |
 | Architectural/structural reasoning | `bootstrap/how-it-works.md` |
-| Request names/implies a feature slug | `features/{slug}/dossier.md` + `spec-{slug}.md` (+ prd/requirements) |
+| Request names/implies a feature slug | `features/{slug}/dossier.md` + reviewed PRD + implementation plan when present |
 | Implementation touches module/naming/reuse boundaries | Relevant `design-docs/*.md` |
 | Rule whose `agents:` includes the agent or is `[]` | That rule |
 | Task matches a process (SDD, secure-tdd, decision-presentation) | Matching SKILL |
@@ -81,16 +81,16 @@ General rule: every append-growing memory file needs retention, not infinite app
 
 | Agent | Tier 0 | Typical Tier 1 triggers | Reads full `current-state`? |
 |---|---|---|---|
-| @product, @analyst | what-is + optional what-it-does | dossier/spec if feature named | never |
+| @product, @sheldon, @planner, @analyst | what-is + optional what-it-does | dossier + PRD/plan if feature named | never |
 | @neo | what-is | router only | never |
-| @deyvin | Tier 0 | HOT + dossier/spec by slug; pair-exec/debug docs by trigger | HOT only (full = Tier 2) |
-| @dev | Tier 0 + how-it-works | HOT + dossier/spec + dev rules + design-docs on touch | HOT only |
+| @deyvin | Tier 0 | HOT + dossier/PRD/plan by slug; pair-exec/debug docs by trigger | HOT only (full = Tier 2) |
+| @dev | Tier 0 + how-it-works | HOT + dossier/PRD/plan + dev rules + design-docs on touch | HOT only |
 | @qa | Tier 0 | HOT to avoid re-flagging shipped work + area under review | HOT only |
 | @architect | Tier 0 + how-it-works | HOT + governance design docs | HOT only |
 
 ## Deterministic Triggers
 
-When the request **names or implies** a feature, the agent **must** resolve the slug via `.aioson/context/features.md` / `.aioson/context/project-pulse.md` and load `dossier` + `spec` **before editing code**.
+When the request **names or implies** a feature, the agent **must** resolve the slug via `.aioson/context/features.md` / `.aioson/context/project-pulse.md` and load its dossier, reviewed PRD, and approved implementation plan **before editing code**.
 This converts the trigger from heuristic ("agent decides") into contract ("must resolve + load").
 Use `aioson context:pack . --agent=<a> --goal="<request>"` to get the exact file set.
 
@@ -98,7 +98,7 @@ Use `aioson context:pack . --agent=<a> --goal="<request>"` to get the exact file
 
 - `aioson context:health` **must** include `bootstrap/*.md` plus one budget line per tier.
 - Budgets: Tier 0 <= ~2k tokens; activation (Tier 0 + agent prompt) target <= ~8k tokens.
-- `@qa` (Gate D) and `@sheldon` (enrichment) check prompts against this contract, as they already do with `agent-structural-contract`; violation = Medium finding with `recommended_owner: dev`, never blocks a feature by itself.
+- `@qa` (Gate D) and `@sheldon` (PRD review) check prompts against this contract, as they already do with `agent-structural-contract`; violation = Medium finding with `recommended_owner: dev`, never blocks a feature by itself.
 
 ## Implementation Sequence (@dev — inception-mirror src/ + template/)
 

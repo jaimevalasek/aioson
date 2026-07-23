@@ -1,178 +1,54 @@
-# @sheldon — Autoridade única de spec (SMALL) e endurecedor de PRD
+# @sheldon — Enriquecimento opcional do PRD
 
-> **Para quem é:** quem trabalha em projetos SMALL (o caso mais comum) e quer a fase de spec completa numa única passada; ou quem quer análise técnica profunda e endurecimento de PRD em qualquer tamanho de projeto.
-> **Tempo de leitura:** 5 min.
-> **O que você vai sair sabendo:**
-> - Por que `@sheldon` é a autoridade única de spec no SMALL (v1.35.0)
-> - O que ele produz numa passada e quais gates ele aprova
-> - Como usá-lo no MEDIUM para endurecer o PRD antes do fan-out
-
----
+> **Para quem é:** quem já tem um PRD e quer uma revisão crítica antes do plano de implementação.
 
 ## Para que serve
 
-### SMALL — autoridade única de spec (papel principal)
+`@sheldon` procura lacunas, premissas implícitas, edge cases, inconsistências e riscos que poderiam tornar o plano frágil. Quando necessário, usa pesquisa ou evidência do repositório para fortalecer decisões.
 
-Em projetos SMALL, toda a fase de especificação — requisitos, decisões técnicas, design doc, readiness, plano de implementação e contrato de harness — pode (e deve) ser produzida por **um único agente em uma única passada**. Isso elimina hops, evita drift entre artefatos e entrega ao `@dev` um pacote coeso e já verificado.
-
-`@sheldon` é essa autoridade. Ele executa verticalmente: lê o PRD, varre o codebase, detecta gaps, pesquisa fontes externas quando necessário, e produz o pacote de spec completo com Gates A/B/C aprovados antes de passar o bastão.
-
-**Lane SMALL (padrão em v1.35.0):**
-
-```
-@product → @sheldon → @dev → @qa
-```
-
-### Qualquer lane — endurecimento de PRD
-
-Em qualquer tamanho de projeto, `@sheldon` pode ser ativado após `@product` para fazer **gap analysis, pesquisa web, sizing técnico e endurecimento do PRD** — antes do fan-out de `@orchestrator` no MEDIUM ou antes de qualquer outra etapa.
-
----
-
-## O que `@sheldon` produz numa passada (SMALL)
-
-| Artefato | Descrição |
-|---|---|
-| PRD enriquecido (in-place) | Gaps detectados e preenchidos diretamente no `prd-{slug}.md` |
-| `sheldon-enrichment-{slug}.md` | Registro das rodadas de enriquecimento |
-| `requirements-{slug}.md` | Entidades, regras de negócio, edge cases, MER (missing entity relationships) |
-| `architecture.md` (atualizado) | Decisões técnicas: estrutura, libs, integração |
-| `implementation-plan-{slug}.md` | Plano faseado com fases numeradas |
-| `harness-contract.json` | Contrato de sucesso com critérios RG-* para `@validator` |
-| Gates A/B/C aprovados | Pré-condições verificadas antes do `@dev` iniciar |
-
----
+Ele trabalha **no mesmo** `.aioson/context/prd-{slug}.md` criado por Product. Não abre uma segunda autoridade de requisitos, arquitetura, readiness ou planejamento.
 
 ## Quando invocar
 
-- Projetos **SMALL** (classificação 2–3), após `@product` — é o passo padrão da lane.
-- PRD tem gaps ou decisões difíceis e você quer análise técnica antes de implementar.
-- Você quer enriquecer um PRD com pesquisa de fontes externas (Stripe docs, RFCs, posts técnicos).
-- Como pré-etapa opcional antes de `@orchestrator` no MEDIUM (endurece o PRD antes do fan-out).
-- Você quer **revisão crítica do PRD**: campos de negócio não especificados, fluxos de erro ausentes, premissas implícitas que podem virar bugs.
+- O domínio tem decisões difíceis ou premissas ainda frágeis.
+- Billing, tenancy, autorização, integrações ou migração precisam de edge cases explícitos.
+- O usuário quer uma revisão adversarial do PRD antes de aprová-lo para planejamento.
+- Uma pesquisa externa pode melhorar materialmente os ACs ou exclusões.
 
----
+Não invoque por classificação. MICRO, SMALL e MEDIUM podem usar Sheldon ou seguir diretamente para Planner.
 
-## Quando NÃO invocar
+## O que muda no PRD
 
-- Projeto MICRO sem decisões técnicas novas → `@dev` lê o PRD diretamente.
-- PRD ainda não existe → `@product` primeiro.
-- Spec já está completa e Gates A/B/C aprovados → vá direto para `@dev`.
-- Implementação já foi feita → `@pentester` ou `@qa` são mais adequados agora.
+Sheldon pode acrescentar:
 
----
+- perguntas bloqueantes e decisões confirmadas;
+- cenários de falha e limites;
+- ACs ausentes ou ambíguos;
+- referências e evidência relevante;
+- riscos que o Planner deve refletir nas fases.
 
-## Diálogo típico (SMALL)
+O enriquecimento termina quando `product_scope` e `prd_ready` podem permanecer aprovados com o conteúdo revisado. Se uma decisão de produto ainda depende do usuário, Sheldon pausa.
 
-```
-Você > @sheldon
+## Relação com especialistas
 
-@sheldon > Lendo prd-checkout-stripe.md...
-           Varrendo codebase: models, services, routes...
-           
-           Gaps detectados no PRD:
-           1. Sem tratamento de downgrade de plano (só upgrade)
-           2. Sem política de proration na troca de plano
-           3. Webhook Stripe sem política de retry/idempotency
-           4. Nenhum AC para falha de cobrança após 3 tentativas (dunning)
-           5. Entidade "OrderItem" referenciada mas não modelada no PRD
-           
-           Fontes externas? [URL / arquivo local / "não"]
+Analyst, Architect, PM, UX/UI e Discovery Design Doc podem ser chamados explicitamente para uma dúvida delimitada. O parecer volta ao PRD ou ao plano pertinente e não cria um gate adicional.
 
-Você > docs.stripe.com/billing/subscriptions/upgrade-downgrade
+## Saída principal
 
-@sheldon > [pesquisa, lê, cita]
-           
-           Enriquecendo PRD in-place (gaps 1 e 2 são decisões de produto)...
-           prd-checkout-stripe.md atualizado.
-           
-           Produzindo requirements, architecture, implementation-plan...
-           
-           Gate A (requisitos verificáveis): ✓
-           Gate B (decisões técnicas): ✓
-           Gate C (plano faseado + harness-contract com RG-*): ✓
-           
-           Pacote de spec pronto:
-             .aioson/context/requirements-checkout-stripe.md
-             .aioson/context/architecture.md
-             .aioson/context/implementation-plan-checkout-stripe.md
-             .aioson/context/sheldon-enrichment-checkout-stripe.md
-             .aioson/plans/checkout-stripe/harness-contract.json
-           
-           Próximo: @dev.
-```
-
----
-
-## `@sheldon` no MEDIUM
-
-No MEDIUM, `@sheldon` pode atuar de duas formas:
-
-1. **Pré-etapa antes de `@orchestrator`:** endurece o PRD com análise técnica e pesquisa web antes que `@orchestrator` dispare o fan-out.
-2. **Stream do fan-out do `@orchestrator`:** `@orchestrator` o inclui como um dos sub-agentes para análise técnica profunda.
-
-```
-@product → @sheldon (endurece PRD) → @orchestrator → @dev → @pentester → @qa
-```
-
----
-
-## Múltiplas rodadas
-
-`@sheldon` pode ser invocado N vezes no mesmo PRD. Ao detectar `sheldon-enrichment-{slug}.md` existente, ele entra em modo de **re-enrichment**: lê o que mudou desde a última rodada e oferece nova análise incremental, sem refazer do zero.
-
----
-
-## Autopilot: travessia automática para `@dev`
-
-Sob autopilot (`auto_handoff: true`, esquema já semeado para a feature, ou token `--auto` recebido do `@product`), `@sheldon` não para no handoff manual: uma vez com sizing/enriquecimento confirmados e o pacote lean + `dev-state.md` gravados, ele semeia o esquema agêntico (`aioson workflow:execute . --feature={slug} --seed`), completa o próprio estágio (`aioson workflow:next . --complete=sheldon`) e invoca `@dev` diretamente. Um Gate A/B/C bloqueado, ou uma decisão de sizing/escopo ainda em aberto, continua sendo parada manual normal. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
-
----
-
-## Opção `--help`
-
-Uma ativação com `--help` (`/sheldon --help`) imprime um resumo rápido — o que faz, quando usar, opções, chamada típica, o que produz, próximo agente — localizado no seu idioma, e para sem executar nada. Fonte: `.aioson/docs/agent-help.md`.
-
----
-
-## Saídas em disco
-
-| Arquivo | Criado por | Consumido por |
-|---|---|---|
-| `prd-{slug}.md` | `@sheldon` (atualiza in-place) | `@dev`, `@qa` |
-| `sheldon-enrichment-{slug}.md` | `@sheldon` | `@sheldon` (re-entrada) |
-| `requirements-{slug}.md` | `@sheldon` | `@dev`, `@qa` |
-| `architecture.md` | `@sheldon` (atualiza) | `@dev`, `@qa` |
-| `implementation-plan-{slug}.md` | `@sheldon` | `@dev` |
-| `harness-contract.json` | `@sheldon` | `@validator` |
-
-**Campo `verification` no contrato (v1.24.0+):** ao gerar o `harness-contract.json`, o `@sheldon` autora um comando de shell `verification` para todo critério `binary:true` mecanicamente verificável. Com isso, `aioson harness:check` consegue verificar o critério de forma determinística fora do self-loop.
-
----
-
-## Como ele lê seu projeto
-
-- `.aioson/context/project.context.md` — stack, classificação
-- `.aioson/context/prd-{slug}.md` — o PRD alvo
-- `.aioson/context/sheldon-enrichment-{slug}.md` — histórico de enriquecimentos (re-entrada)
-- `.aioson/context/architecture.md` — estado atual da arquitetura
-- `.aioson/context/bootstrap/` — cache semântico do `@discover` (quando disponível)
-- `.aioson/briefings/{slug}/briefings.md` — se `briefing_source` está no PRD
-- Fontes externas — URLs e arquivos que você fornecer explicitamente
-- Código-fonte diretamente (models, schemas, services)
-
----
+| Artefato | Tratamento |
+|---|---|
+| `.aioson/context/prd-{slug}.md` | enriquecido in-place, preservando Product como dono |
+| pesquisa/dossiê | memória auxiliar não bloqueante, quando necessário |
 
 ## Handoff típico
 
-- **Vem de:** `@product`
-- **Vai para:** `@dev` (SMALL) — ou `@orchestrator` (MEDIUM, como pré-etapa)
+- **Vem de:** `@product`.
+- **Vai para:** `@planner`.
 
----
+Sob autopilot, esse handoff é automático quando não existe decisão humana aberta.
 
-## Próximo passo
+## Veja também
 
-- [Ficha do @dev](./dev.md) — implementa com base no pacote de spec produzido
-- [Ficha do @orchestrator](./orchestrator.md) — maestro de spec para MEDIUM
-- [Receita: Feature completa](../3-receitas/feature-completa-com-sheldon.md) — fluxo prático com todos os artefatos
-- [SDD: planos e estrutura](../5-referencia/sdd-planos-e-estrutura.md) — mapa de todos os artefatos
+- [Ficha do @product](./product.md)
+- [Ficha do @planner](./planner.md)
+- [Feature completa com Sheldon opcional](../3-receitas/feature-completa-com-sheldon.md)

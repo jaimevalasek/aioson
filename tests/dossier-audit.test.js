@@ -207,7 +207,7 @@ describe('dossier:audit --check=template-parity', () => {
 });
 
 describe('dossier:audit --check=coverage', () => {
-  it('returns ok=true when all in-progress SMALL/MEDIUM features have a dossier', async () => {
+  it('returns ok=true when all in-progress tracked features have a dossier', async () => {
     const tmp = await makeProject();
     try {
       await fs.writeFile(
@@ -240,7 +240,7 @@ content`,
     }
   });
 
-  it('reports SMALL/MEDIUM in-progress features without a dossier', async () => {
+  it('reports MICRO/SMALL/MEDIUM in-progress features without a dossier', async () => {
     const tmp = await makeProject();
     try {
       await fs.writeFile(
@@ -262,13 +262,13 @@ content`,
 
       const result = await checkCoverage({ projectRoot: tmp });
       const missingSlugs = result.missing_dossier.map((m) => m.slug).sort();
-      assert.deepEqual(missingSlugs, ['feat-medium', 'feat-small']);
+      assert.deepEqual(missingSlugs, ['feat-medium', 'feat-micro', 'feat-small']);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
   });
 
-  it('skips MICRO features and done features from missing-dossier report', async () => {
+  it('includes MICRO but skips done features from missing-dossier report', async () => {
     const tmp = await makeProject();
     try {
       await fs.writeFile(
@@ -285,7 +285,7 @@ content`,
       await fs.writeFile(path.join(tmp, '.aioson', 'context', 'prd-micro-feat.md'), `---\nclassification: MICRO\n---`, 'utf8');
       await fs.writeFile(path.join(tmp, '.aioson', 'context', 'prd-done-feat.md'), `---\nclassification: MEDIUM\n---`, 'utf8');
       const result = await checkCoverage({ projectRoot: tmp });
-      assert.equal(result.missing_dossier.length, 0);
+      assert.deepEqual(result.missing_dossier.map((item) => item.slug), ['micro-feat']);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }

@@ -4,7 +4,7 @@
  * aioson feature:current — resolve the active feature slug deterministically.
  *
  * Single source of truth for "which feature is active right now", so every spec
- * agent (product, sheldon, analyst, ux-ui, scope-check, discovery-design-doc)
+ * agent (product, sheldon, planner, and any optional specialist)
  * resolves the SAME {slug} instead of re-guessing and colliding on bare paths
  * (design-doc.md, readiness.md, scope-check.md, ui-spec.md, sheldon-enrichment.md).
  *

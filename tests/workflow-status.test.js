@@ -55,12 +55,18 @@ async function seedFeatureWorkflow(dir, { gatePlanApproved = false } = {}) {
     path.join(dir, '.aioson/context/features.md'),
     '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| protocol-contracts | in_progress | 2026-04-16 | — |\n'
   );
-  await writeFileEnsured(path.join(dir, '.aioson/context/prd-protocol-contracts.md'), '# Feature PRD\n');
-  await writeFileEnsured(path.join(dir, '.aioson/context/requirements-protocol-contracts.md'), '# Requirements\n');
   await writeFileEnsured(
-    path.join(dir, '.aioson/context/spec-protocol-contracts.md'),
-    `---\ngate_requirements: approved\ngate_design: approved${gatePlanApproved ? '\ngate_plan: approved' : ''}\n---\n# Spec\n`
+    path.join(dir, '.aioson/context/prd-protocol-contracts.md'),
+    `---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\n---\n# Feature PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-protocol-01 | Protocol behavior is delivered | User starts the app | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-protocol-01 | CAP-protocol-01 | Protocol behavior works | focused test |\n`
   );
+  if (gatePlanApproved) {
+    await writeFileEnsured(
+      path.join(dir, '.aioson/context/implementation-plan-protocol-contracts.md'),
+      `---\nstatus: approved\n---\n# Plan\n\n## Capability Delivery Plan\n\n| CAP | Phase | Files | Verification |\n|---|---|---|---|\n| CAP-protocol-01 | 1 | src/protocol.js, tests/protocol.test.js | node --test |\n`
+    );
+    await writeFileEnsured(path.join(dir, 'src/protocol.js'), 'module.exports = true;\n');
+    await writeFileEnsured(path.join(dir, 'tests/protocol.test.js'), "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-protocol-01',()=>assert.ok(true));\n");
+  }
   await writeFileEnsured(path.join(dir, '.aioson/context/project-pulse.md'), '# Pulse\n');
   await writeFileEnsured(path.join(dir, '.aioson/context/dev-state.md'), '# Dev State\n');
   await writeFileEnsured(
@@ -69,10 +75,10 @@ async function seedFeatureWorkflow(dir, { gatePlanApproved = false } = {}) {
       version: 1,
       mode: 'feature',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst', 'architect'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: 'protocol-contracts',
       detour: null,
@@ -99,8 +105,8 @@ test('workflow:status reports effective autonomy mode and pending gate for activ
   assert.deepEqual(result.pendingGates, ['C']);
   assert.equal(result.contractCheck.ok, false);
   assert.equal(result.suggestion.action, 'resolve_gate_c');
-  assert.equal(result.suggestion.agent, 'pm');
-  assert.equal(result.suggestion.command, 'aioson workflow:next . --agent=pm --tool=codex');
+  assert.equal(result.suggestion.agent, 'planner');
+  assert.equal(result.suggestion.command, 'aioson workflow:next . --agent=planner --tool=codex');
 });
 
 test('workflow:status --suggest recommends completion when the handoff contract is ready', async () => {
@@ -131,10 +137,10 @@ test('workflow:status does not recommend completion while context evidence is mi
       version: 1,
       mode: 'project',
       classification: 'SMALL',
-      sequence: ['product', 'analyst', 'architect', 'dev', 'qa'],
+      sequence: ['product', 'planner', 'dev', 'qa'],
       current: 'dev',
       next: 'qa',
-      completed: ['product', 'analyst', 'architect'],
+      completed: ['product', 'planner'],
       skipped: [],
       featureSlug: null,
       detour: null,

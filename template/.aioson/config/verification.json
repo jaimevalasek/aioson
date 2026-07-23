@@ -4,7 +4,7 @@
   "agents": {
     "qa": {
       "enabled": true,
-      "triggers": ["per-phase", "end-of-feature"],
+      "triggers": ["end-of-feature"],
       "dispatch": {
         "claude": { "mode": "native", "model": "sonnet-4.6" },
         "codex": { "mode": "native", "model": "configured-default" },
@@ -13,7 +13,7 @@
       "report": "qa-report-{slug}.md"
     },
     "tester": {
-      "enabled": "auto",
+      "enabled": false,
       "triggers": ["end-of-feature"],
       "dispatch": {
         "claude": { "mode": "native", "model": "sonnet-4.6" },
@@ -23,7 +23,7 @@
       "report": "test-report-{slug}.md"
     },
     "pentester": {
-      "enabled": "auto",
+      "enabled": false,
       "triggers": ["sensitive-surface", "end-of-feature"],
       "dispatch": {
         "claude": { "mode": "native", "model": "opus-4.8" },
@@ -33,7 +33,7 @@
       "report": "security-findings-{slug}.json"
     },
     "validator": {
-      "enabled": true,
+      "enabled": false,
       "triggers": ["end-of-feature"],
       "dispatch": {
         "claude": { "mode": "native", "model": "opus-4.8" },
@@ -45,7 +45,7 @@
     }
   },
   "budget": {
-    "max_subagents_per_phase": 1,
+    "max_subagents_per_phase": 0,
     "skip_on_micro": true,
     "full_smoke": "end-of-feature-only"
   },

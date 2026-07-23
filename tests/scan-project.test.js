@@ -58,7 +58,7 @@ test('scan:project requires --folder before scanning', async () => {
       true
     );
     assert.equal(
-      logger.lines.some((line) => line.includes('aioson agent:prompt analyst --tool=codex')),
+      logger.lines.some((line) => line.includes('aioson agent:prompt planner --tool=codex')),
       true
     );
   } finally {
@@ -199,7 +199,7 @@ test('scan:project runs in local-only mode by default and writes folder-specific
       path.join(projectDir, '.aioson/context/module-src.md')
     ]);
     assert.equal(logger.lines.some((line) => line.includes('scan local apenas')), true);
-    assert.equal(logger.lines.some((line) => line.includes('architecture.md nao e gerado pelo scan:project')), true);
+    assert.equal(logger.lines.some((line) => line.includes('nao criam etapa ou documento obrigatorio')), true);
     assert.equal(logger.lines.some((line) => line.includes('memory-index.md')), true);
     assert.equal(logger.lines.some((line) => line.includes('spec-current.md')), true);
     assert.equal(logger.lines.some((line) => line.includes('spec-history.md')), true);
@@ -211,9 +211,9 @@ test('scan:project runs in local-only mode by default and writes folder-specific
       ),
       true
     );
-    assert.equal(logger.lines.some((line) => line.includes('Codex, Claude Code')), true);
-    assert.equal(logger.lines.some((line) => line.includes('agent:prompt analyst --tool=codex')), true);
-    assert.equal(logger.lines.some((line) => line.includes('Execute @architect')), true);
+    assert.equal(logger.lines.some((line) => line.includes('Com PRD ativo')), true);
+    assert.equal(logger.lines.some((line) => line.includes('agent:prompt planner --tool=codex')), true);
+    assert.equal(logger.lines.some((line) => line.includes('execute @planner com o PRD ativo')), true);
 
     const indexPath = path.join(projectDir, '.aioson/context/scan-index.md');
     const foldersPath = path.join(projectDir, '.aioson/context/scan-folders.md');

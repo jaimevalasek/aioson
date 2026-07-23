@@ -109,7 +109,7 @@ Toda vez que um agente consume um arquivo de `plans/`, ele registra em `plans/so
 | File | Consumed by | Date | Artifact produced |
 |------|-------------|------|-------------------|
 | plans/analise-stripe-billing.md | @product | 2026-05-07 | .aioson/context/prd-billing-assinatura.md |
-| plans/pesquisa-webhook-seguranca.md | @sheldon | 2026-05-07 | .aioson/context/sheldon-enrichment-billing-assinatura.md |
+| plans/pesquisa-webhook-seguranca.md | @sheldon | 2026-05-07 | .aioson/context/prd-billing-assinatura.md (enriquecido) |
 ```
 
 Isso permite rastrear: "qual artefato foi gerado a partir de qual pesquisa?".
@@ -148,11 +148,11 @@ São duas coisas distintas:
 
 | | `plans/` (raiz) | `.aioson/plans/` |
 |---|---|---|
-| **Quem escreve** | Você (pesquisa externa) | `@sheldon` (plano faseado) |
-| **Quando existe** | Antes do ciclo de agentes | Durante/após `@sheldon` |
-| **O que contém** | Rascunhos, anotações, exportações | Fases de implementação geradas por IA |
+| **Quem escreve** | Você (pesquisa externa) | `@planner` |
+| **Quando existe** | Antes do ciclo de agentes | Após aprovação do PRD |
+| **O que contém** | Rascunhos, anotações, exportações | Plano vertical canônico da feature |
 | **É gitignored?** | Sim (padrão) | Não (comprometido com o projeto) |
-| **Lido por** | `@briefing`, `@product`, `@sheldon` | `@analyst`, `@architect`, `@dev` |
+| **Lido por** | `@briefing`, `@product`, `@sheldon` | `@dev`, `@qa` |
 
 Veja [SDD: planos e estrutura](../5-referencia/sdd-planos-e-estrutura.md) para a referência completa.
 

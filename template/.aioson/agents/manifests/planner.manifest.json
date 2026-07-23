@@ -1,0 +1,41 @@
+{
+  "agent_id": "planner",
+  "version": "1.0",
+  "display_name": "Planner",
+  "capabilities": [
+    {
+      "id": "plan_feature_delivery",
+      "category": "create",
+      "description": "Turn an approved PRD and prototype into executable vertical implementation stages.",
+      "inputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/prd-{slug}.md",
+          "required": true
+        },
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/briefings/{slug}/prototype.html",
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "type": "artifact",
+          "path_pattern": ".aioson/context/implementation-plan-{slug}.md"
+        }
+      ]
+    }
+  ],
+  "autonomy_modes": [
+    "guarded",
+    "trusted"
+  ],
+  "default_mode": "guarded",
+  "supported_tools": [
+    "codex",
+    "claude",
+    "opencode"
+  ],
+  "risk_profile": "medium"
+}

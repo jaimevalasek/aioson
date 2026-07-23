@@ -18,72 +18,51 @@ async function writeFile(dir, relPath, content) {
   await fs.writeFile(full, content, 'utf8');
 }
 
-async function writeBase(dir, slug, classification = 'MEDIUM') {
+async function writeBase(dir, classification = 'MEDIUM') {
   await writeFile(dir, '.aioson/context/project.context.md', `---\nclassification: "${classification}"\n---\n# Project\n`);
-  await writeFile(dir, `.aioson/context/prd-${slug}.md`, `---\nclassification: ${classification}\n---\n# PRD\n`);
+  await writeFile(dir, '.aioson/context/project-pulse.md', '# Pulse\n');
 }
 
-// MEDIUM maestro lane: @orchestrator routes straight to @dev as the single spec authority.
-function maestroState(slug, classification = 'MEDIUM') {
+function optionalCoordinatorState(slug, classification = 'MEDIUM') {
   return {
     mode: 'feature',
     featureSlug: slug,
     classification,
-    sequence: ['product', 'orchestrator', 'dev', 'pentester', 'qa']
+    sequence: ['product', 'planner', 'orchestrator', 'dev', 'qa']
   };
 }
 
-async function writeMaestroArtifacts(dir, slug) {
-  await writeFile(dir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
-  await writeFile(
-    dir,
-    `.aioson/context/spec-${slug}.md`,
-    '---\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
-  );
-  await writeFile(dir, `.aioson/context/design-doc-${slug}.md`, '# Design\n');
-  await writeFile(dir, `.aioson/context/readiness-${slug}.md`, '# Readiness\n');
-  await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: approved\n---\n# Plan\n');
-  await writeFile(dir, `.aioson/context/features/${slug}/decision-checkpoint.json`, JSON.stringify({
-    schema_version: 'feature-decision-checkpoint/v1',
-    feature_slug: slug,
-    status: 'clear',
-    items: []
-  }));
-}
-
-test('orchestrator handoff blocks the maestro lane when the spec package is incomplete', async () => {
+test('orchestrator handoff owns no specification package or gate', async () => {
   const dir = await makeTmpDir();
-  const slug = 'maestro-missing-spec';
-  await writeBase(dir, slug);
-  await writeFile(dir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  const slug = 'bounded-coordination';
+  await writeBase(dir);
 
-  const result = await validateHandoffContract(dir, maestroState(slug), 'orchestrator');
+  const result = await validateHandoffContract(dir, optionalCoordinatorState(slug), 'orchestrator');
 
-  assert.equal(result.ok, false);
-  assert.ok(result.missing.some((item) => item.includes(`spec-${slug}.md`)));
-  assert.ok(result.missing.some((item) => item.includes('gate C')));
+  assert.equal(result.ok, true, JSON.stringify(result.missing));
+  assert.equal(result.missing.some((item) => /requirements-|spec-|architecture|design-doc|readiness|gate [ABC]/i.test(item)), false);
 });
 
-test('orchestrator handoff passes the maestro lane with the consolidated spec package and approved gates', async () => {
+test('orchestrator handoff does not invent a harness requirement for a runtime feature', async () => {
   const dir = await makeTmpDir();
-  const slug = 'maestro-ready';
-  await writeBase(dir, slug);
-  await writeMaestroArtifacts(dir, slug);
-
-  const result = await validateHandoffContract(dir, maestroState(slug), 'orchestrator');
-
-  assert.equal(result.ok, true, `expected pass, got: ${JSON.stringify(result.missing)}`);
-});
-
-test('orchestrator handoff blocks a maestro runtime feature without a harness contract', async () => {
-  const dir = await makeTmpDir();
-  const slug = 'maestro-runtime';
-  await writeBase(dir, slug);
-  await writeMaestroArtifacts(dir, slug);
+  const slug = 'runtime-coordination';
+  await writeBase(dir);
   await writeFile(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, '# Core interactions\n');
 
-  const result = await validateHandoffContract(dir, maestroState(slug), 'orchestrator');
+  const result = await validateHandoffContract(dir, optionalCoordinatorState(slug), 'orchestrator');
 
-  assert.equal(result.ok, false);
-  assert.ok(result.missing.some((item) => item.includes('missing_runtime_contract')));
+  assert.equal(result.ok, true, JSON.stringify(result.missing));
+  assert.equal(result.missing.some((item) => item.includes('harness') || item.includes('runtime_contract')), false);
+});
+
+test('orchestrator remains nonblocking when canonical PRD and plan are already present', async () => {
+  const dir = await makeTmpDir();
+  const slug = 'canonical-coordination';
+  await writeBase(dir, 'SMALL');
+  await writeFile(dir, `.aioson/context/prd-${slug}.md`, '---\nproduct_scope: approved\nprd_ready: approved\n---\n# PRD\n');
+  await writeFile(dir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: approved\n---\n# Plan\n');
+
+  const result = await validateHandoffContract(dir, optionalCoordinatorState(slug, 'SMALL'), 'orchestrator');
+
+  assert.equal(result.ok, true, JSON.stringify(result.missing));
 });

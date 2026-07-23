@@ -414,7 +414,7 @@ updated: "<ISO-8601>"
 
 If `framework_installed=true` (code was detected in the workspace), always include this after setup:
 
-> "Your project already has code. Run `aioson scan:project . --folder=src` to generate the local code maps first. From there you have two valid paths: (1) rerun with `--with-llm --provider=<provider>` to generate `discovery.md` automatically, or (2) open Codex, Claude Code, or another AI client and activate `@analyst` to generate `discovery.md` from the local scan artifacts. `architecture.md` still comes later from @architect."
+> "Your project already has code. Run `aioson scan:project . --folder=src` when a local code map would help. Continue to `@product`; the canonical feature workflow does not require separate discovery or architecture documents."
 
 ### 4. Tell the user which agent to activate next
 
@@ -422,16 +422,15 @@ After setup is complete, always close with the recommended next step. Use the ex
 
 | project_type | classification | Next agent |
 |---|---|---|
-| `site` | any | **@ux-ui** |
-| `web_app` / `api` / `script` | MICRO | **@product** (optional) or **@dev** |
-| `web_app` / `api` | SMALL | **@product** → then @analyst |
-| `web_app` / `api` | MEDIUM | **@product** → then @analyst → @architect |
-| `dapp` | any | **@product** (optional) → then @analyst |
+| `site` | any | **@product** (then use `@ux-ui` only when the PRD leaves a concrete visual decision open) |
+| `web_app` / `api` / `script` | MICRO | **@product**, then **@planner** |
+| `web_app` / `api` | SMALL | **@product** → @planner |
+| `web_app` / `api` | MEDIUM | **@product** → @planner |
+| `dapp` | MICRO | **@product**, then **@planner** |
+| `dapp` | SMALL / MEDIUM | **@product** → @planner |
 
 Example closing message:
-> "Setup complete. Next step: activate **@ux-ui** to design your landing page."
-> or
-> "Setup complete. Next step: activate **@analyst** to map out the requirements."
+> "Setup complete. Next step: activate **@product** to create the feature PRD."
 
 ## Done gate
 Before declaring setup complete, prove the artifact is well-formed — don't rely on having "filled in the fields":

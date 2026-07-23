@@ -56,9 +56,9 @@ const ACTIVE_STATE = {
   version: 1,
   mode: 'feature',
   classification: 'MEDIUM',
-  sequence: ['product', 'analyst', 'dev', 'qa'],
-  current: 'analyst',
-  next: 'analyst',
+  sequence: ['product', 'planner', 'dev', 'qa'],
+  current: 'planner',
+  next: 'planner',
   completed: ['product'],
   skipped: [],
   featureSlug: 'demo-feature',
@@ -71,7 +71,7 @@ test('AC-F2-02 backward-compat: workflow.state.json absent → skip auto-advance
   const logger = makeMockLogger();
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger,
     t: (k) => k
@@ -85,12 +85,11 @@ test('AC-F2-02 backward-compat: workflow.state.json absent → skip auto-advance
 test('AC-F2-03 opt-out: --no-auto-advance flag disables even when state is active', async () => {
   const dir = await makeTempProject();
   await writeState(dir, ACTIVE_STATE);
-  await writeArtifact(dir, '.aioson/context/requirements-demo-feature.md');
-  await writeArtifact(dir, '.aioson/context/spec-demo-feature.md');
+  await writeArtifact(dir, '.aioson/context/implementation-plan-demo-feature.md', '---\nstatus: approved\n---\n# Plan\n');
   const logger = makeMockLogger();
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: { 'no-auto-advance': true },
     logger,
     t: (k) => k
@@ -105,7 +104,7 @@ test('AC-F2-03 opt-out: camelCase alias --noAutoAdvance also works', async () =>
   await writeState(dir, ACTIVE_STATE);
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: { noAutoAdvance: true },
     logger: makeMockLogger(),
     t: (k) => k
@@ -120,7 +119,7 @@ test('AC-F2-09 graceful degradation: corrupt workflow.state.json → warn, skip,
   const logger = makeMockLogger();
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger,
     t: (k) => k
@@ -139,7 +138,7 @@ test('AC-F2-09 graceful degradation: --json mode suppresses warning on corrupt s
   const logger = makeMockLogger();
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: { json: true },
     logger,
     t: (k) => k
@@ -153,7 +152,7 @@ test('inactive workflow (current=null) → skip auto-advance', async () => {
   await writeState(dir, { ...ACTIVE_STATE, current: null });
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger: makeMockLogger(),
     t: (k) => k
@@ -166,7 +165,7 @@ test('AC-F2-05 idempotency: re-execution within 1s window returns idempotency_wi
   await writeState(dir, { ...ACTIVE_STATE, last_workflow_event_at: Date.now() - 500 });
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger: makeMockLogger(),
     t: (k) => k
@@ -180,7 +179,7 @@ test('AC-F2-05 idempotency: re-execution past 1s window proceeds', async () => {
   // Don't write artifacts → next skip is "artifact_missing", proving we passed the window.
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger: makeMockLogger(),
     t: (k) => k
@@ -220,10 +219,10 @@ test('AC-F2-06 no canonical artifact: agent with empty contract (e.g. @dev) skip
 test('AC-F2-06 artifact missing on disk: skip without advance', async () => {
   const dir = await makeTempProject();
   await writeState(dir, ACTIVE_STATE);
-  // Don't write requirements/spec files → analyst contract expects them but none exist.
+  // Do not write the Planner artifact.
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger: makeMockLogger(),
     t: (k) => k
@@ -234,20 +233,17 @@ test('AC-F2-06 artifact missing on disk: skip without advance', async () => {
 test('AC-F2-01 happy path: artifact present + active workflow → advances + writes last_workflow_event_at', async () => {
   const dir = await makeTempProject();
   await writeState(dir, ACTIVE_STATE);
-  await writeArtifact(dir, '.aioson/context/requirements-demo-feature.md');
-  await writeArtifact(dir, '.aioson/context/spec-demo-feature.md');
-  // Approve gate A so runWorkflowNext doesn't reject (BR-04 — defense in depth).
   await writeArtifact(
     dir,
-    '.aioson/context/spec-demo-feature.md',
-    '---\nfeature: demo-feature\ngate_requirements: approved\n---\n# Spec\n'
+    '.aioson/context/implementation-plan-demo-feature.md',
+    '---\nfeature: demo-feature\nstatus: approved\n---\n# Plan\n'
   );
 
   const logger = makeMockLogger();
   const before = Date.now();
   const result = await maybeAutoAdvanceWorkflow({
     targetDir: dir,
-    normalizedAgent: '@analyst',
+    normalizedAgent: '@planner',
     options: {},
     logger,
     t: (k) => k

@@ -7,13 +7,15 @@
 - For `project_type=site` and `project_type=web_app`, visual system choice is explicit workflow data. Record it in `design_skill` or leave it blank on purpose; never auto-pick a design skill silently.
 
 ## Project sizes
-- MICRO: `@setup -> @product (optional) -> @dev`
-- SMALL: `@setup -> @product -> @sheldon -> @dev -> @qa` (lean by default — `@sheldon` is the single spec authority)
-- MEDIUM: `@setup -> @product -> @orchestrator -> @dev -> @qa` (project); a MEDIUM **feature** runs `@product -> @orchestrator -> @dev -> initial @qa -> enabled/triggered @tester and @pentester -> final @qa`. `agent-execution-{slug}.json` controls reviewer participation. `@orchestrator` is the MEDIUM single spec authority (the "maestro") — it fans out to `@analyst` + `@architect` + `@pm` (+ `@ux-ui` when UI-heavy) as sub-agents and consolidates their work into one gated spec package for `@dev`.
+- MICRO: `@setup -> @product -> @planner -> @dev -> @qa` (terse artifacts and narrow review)
+- SMALL: `@setup -> @product -> @planner -> @dev -> @qa`
+- MEDIUM: `@setup -> @product -> @planner -> @dev -> @qa`
 
-> `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check(pre-dev)`, and `@ux-ui` are no longer default-chain hops — `@orchestrator` invokes them as sub-agents in the MEDIUM maestro lane, and they remain available as opt-in detours. `@architect` runs in **merged mode** (design-doc + readiness + dev-state) only on the opt-in full-chain detour that routes `@architect -> @dev` while omitting `@discovery-design-doc`. The deterministic drift check (`spec:analyze`) now runs at the `@dev`/`@qa` done gate (`finalizeCurrentStage`), not as a separate agent hop.
+MICRO, SMALL, and MEDIUM use the same feature agents and the same three-artifact contract. Classification controls budgets and depth inside the PRD, plan, implementation, tests, and runtime evidence; it does not add or remove document-producing hops. An already-specified bounded technical task uses the separate Simple Plan lane.
 
-**Lean lane (SMALL default; opt-in for MEDIUM):** `@sheldon` is the single spec authority — `@product -> @sheldon -> @dev -> @qa` (with a `@validator` detour when a harness contract exists). SMALL runs this by default; MEDIUM defaults to the `@orchestrator` maestro lane (the horizontal fan-out counterpart) but can opt into the `@sheldon` lean shape by dropping the lean preset into `.aioson/context/workflow.config.json`. Full guide in `.aioson/docs/workflow-lean-lane.md`. The **runtime smoke gate** (build + migrate + boot + Core happy-path on the real stack, `harness-contract.md` §2c) is mandatory in **both** lanes — neither closes a runtime feature without running the real app.
+Canonical artifacts are exactly: one PRD from `@product` (optionally enriched in place by `@sheldon`), one `implementation-plan-{slug}.md` from `@planner`, and one `qa-report-{slug}.md` from `@qa`. Briefing and briefing refinement are optional inputs before Product. Requirements/spec/design/readiness/conformance/harness documents are never canonical prerequisites.
+
+The lightweight feature dossier, selected project knowledge, and all specialists are intelligence available to every classification. `@sheldon`, `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, `@ux-ui`, and `@orchestrator` remain opt-in for a concrete unresolved question. `@tester`, `@pentester`, and `@validator` run only when the approved plan, the risk surface, QA findings, or the user explicitly trigger them. None is a classification-driven gate. The normal runtime smoke uses the real application and real production path; a separate harness is optional.
 
 Optional alignment checkpoints:
 - After `@dev`: `@scope-check --scope-mode=post-dev` when the implementation changed planned behavior, touched unexpected files, or skipped approved scope.
@@ -67,7 +69,7 @@ Optional testing fields:
 - `test_runner` (for example `pest`, `jest`, `vitest`, `pytest`, `rspec`, `foundry`)
 
 Optional workflow fields:
-- `auto_handoff` (boolean, default `false`) — when `true`, the deterministic pre-dev feature-workflow agents chain automatically via skill auto-invocation up to the `@dev` handoff instead of stopping for manual activation. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`. Upstream agents (`@briefing`, `@product`, `@sheldon`, `@orchestrator`) always hand off manually — so neither the SMALL lean default nor the MEDIUM maestro default has pre-dev hops to auto-chain. `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, and `@ux-ui` auto-chain only as opt-in detours when present in the active sequence.
+- `auto_handoff` (boolean, default `false`) — when `true`, the canonical feature chain advances `@product -> @planner -> @dev -> @qa` until a real human decision or failed gate stops it. Sheldon and other specialists run only through an explicit evidence-based detour. Protocol and stop conditions: `.aioson/docs/autopilot-handoff.md`.
 
 Allowed `project_type` values:
 - `web_app`
@@ -231,9 +233,9 @@ Default governance files:
 
 **When to use:** folder structure, naming, reuse, component boundaries, file-size thresholds, and maintainability constraints.
 
-### Design docs (`.aioson/context/design-doc.md`)
+### Optional design docs (`.aioson/context/design-doc.md`)
 
-Living decision documents that bridge discovery and implementation. Produced by `@orchestrator` (maestro mode) on MEDIUM and `@sheldon` on the SMALL lean lane by default; by `@architect` (merged mode) or `@discovery-design-doc` when those opt-in detours are in the sequence.
+Design docs are opt-in decision records for a genuinely unresolved technical boundary. They are produced only when the user or `@planner` explicitly routes an architecture/design specialist; they are not a SMALL or MEDIUM prerequisite.
 
 ```markdown
 ---
@@ -247,13 +249,13 @@ agents: [dev, architect]   # empty [] = all agents load it
 
 | | PRD (`prd.md`) | Code governance (`.aioson/design-docs/`) | Design doc (`design-doc.md`) |
 |---|---|---|---|
-| **Produced by** | `@product` | Installer + project team | `@orchestrator` maestro / `@sheldon` lean (`@architect` merged or `@discovery-design-doc` detour) |
+| **Produced by** | `@product`, enriched in place by `@sheldon` | Installer + project team | Opt-in `@architect` or `@discovery-design-doc` |
 | **Focus** | What and why — vision, users, problem, features | Structural code quality rules | How — technical flows, decisions, risks, slices |
 | **Audience** | All agents | Agents doing structural planning or implementation | Technical agents (dev, architect, qa) |
-| **Lifecycle** | Written once, enhanced by @pm | Stable, edited when conventions change | Living document, updated as decisions are made |
-| **When to create** | Every project/feature | Installed by default | Complex features needing technical clarity |
+| **Lifecycle** | One feature authority, refined in place | Stable, edited when conventions change | Living only while its named decision remains relevant |
+| **When to create** | Every substantive project/feature | Installed by default | Only for a named unresolved technical decision |
 
-A project can have both: the PRD defines the product; the design-doc defines the approach. For simple features (MICRO), only the PRD may be needed.
+A feature may have both, but the implementation plan remains the canonical technical delivery artifact. The design doc is supporting evidence, never another gate by mere classification.
 
 ### Bootstrap (`.aioson/context/bootstrap/`)
 

@@ -10,7 +10,7 @@
 
 Você tem um produto ou serviço novo e precisa de uma página de apresentação. O desafio clássico: ou você escreve copy genérico ("Bem-vindo ao nosso produto"), ou gasta horas tentando encontrar as palavras certas. E quando chega no código, o visual fica inconsistente — um botão com uma cor, o header com outra.
 
-Com AIOSON, quatro agentes resolvem isso em sequência: `@product` define o que comunicar, `@copywriter` escreve copy orientado a conversão, `@ux-ui` especifica o sistema visual, e `@dev` implementa. O resultado é uma página com narrativa e visual coerentes.
+Com AIOSON, `@product` define o que comunicar, `@copywriter` e `@ux-ui` podem enriquecer o PRD sob pedido explícito, `@planner` transforma o resultado num plano vertical e `@dev` implementa. `@qa` fecha com um veredito proporcional. O resultado é uma página com narrativa e visual coerentes.
 
 Este é um projeto **SMALL** (1 tipo de usuário, 0 integrações externas, sem regras de negócio complexas — mas o design justifica o `@ux-ui`).
 

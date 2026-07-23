@@ -28,14 +28,18 @@ function makeLogger() {
   };
 }
 
+function productReadyPrd(scope = 'pending', ready = 'pending') {
+  return `---\nclassification: SMALL\nproduct_scope: ${scope}\nprd_ready: ${ready}\nsheldon_review: not_requested\n---\n# PRD\n\n## Feature Capability Map\n\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-demo-01 | User sees the result | User triggers action | required | Core promise |\n\n## Acceptance Criteria\n\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-demo-01 | CAP-demo-01 | Result appears | focused test |\n`;
+}
+
 test('checkpoint: written on successful gate:approve', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'ckpt-test';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   const result = await runGateApprove({
     args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'A', agent: 'analyst' },
+    options: { json: true, feature: slug, gate: 'A', agent: 'product' },
     logger: makeLogger()
   });
 
@@ -48,7 +52,7 @@ test('checkpoint: written on successful gate:approve', async () => {
 
   assert.equal(cp.gate, 'A');
   assert.equal(cp.slug, slug);
-  assert.equal(cp.agent, 'analyst');
+  assert.equal(cp.agent, 'product');
   assert.ok(cp.timestamp);
   assert.ok(Array.isArray(cp.prerequisites_snapshot));
   assert.ok(cp.gate_check_result);
@@ -58,7 +62,7 @@ test('checkpoint: written on successful gate:approve', async () => {
 test('checkpoint: agent defaults to unknown when not provided', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'no-agent';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Req\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   const result = await runGateApprove({
     args: [tmpDir],
@@ -75,7 +79,7 @@ test('checkpoint: agent defaults to unknown when not provided', async () => {
 test('checkpoint: prerequisites_snapshot includes artifact mtimes', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'snapshot-test';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   await runGateApprove({
     args: [tmpDir],
@@ -118,7 +122,7 @@ test('checkpoint: not written when gate:check fails', async () => {
 test('checkpoint: file stays under 5KB', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'size-cap';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
 
   await runGateApprove({
     args: [tmpDir],
@@ -134,7 +138,7 @@ test('checkpoint: file stays under 5KB', async () => {
 test('checkpoint: gate:approve succeeds even if checkpoint dir is unwritable (BR-AO-01)', async () => {
   const tmpDir = await makeTmpDir();
   const slug = 'ro-ckpt';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
   // Create a FILE where the directory should be — ensureDir will fail
   await writeFile(tmpDir, `${CHECKPOINTS_DIR}`, 'not a directory');
 
@@ -146,7 +150,7 @@ test('checkpoint: gate:approve succeeds even if checkpoint dir is unwritable (BR
 
   assert.equal(result.ok, true, 'gate must still approve');
   assert.equal(result.checkpoint_written, false, 'checkpoint not written');
-  assert.equal(result.field_written, 'gate_requirements');
+  assert.equal(result.field_written, 'product_scope');
 });
 
 test('checkpoint: multiple gates produce separate files (EC-AO-03)', async () => {
@@ -154,15 +158,14 @@ test('checkpoint: multiple gates produce separate files (EC-AO-03)', async () =>
   const slug = 'multi-gate';
 
   // Setup for Gate A
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
+  await writeFile(tmpDir, `.aioson/context/prd-${slug}.md`, productReadyPrd());
   await runGateApprove({
     args: [tmpDir],
     options: { json: true, feature: slug, gate: 'A' },
     logger: makeLogger()
   });
 
-  // Setup for Gate B (need A approved + architecture.md)
-  await writeFile(tmpDir, `.aioson/context/architecture.md`, '# Architecture\n');
+  // Gate B is a second decision on the same canonical PRD.
   await runGateApprove({
     args: [tmpDir],
     options: { json: true, feature: slug, gate: 'B' },

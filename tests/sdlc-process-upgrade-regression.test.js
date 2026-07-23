@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Regression tests for sdlc-process-upgrade (AC-SDLC-01 through AC-SDLC-40).
- * Covers: path contract, gate approval, preflight readiness, Sheldon RF-01,
- * manifest/plan precedence, and PM ownership.
+ * Regression coverage for the streamlined Product → Planner → Dev → QA
+ * contract. Legacy requirements/spec/architecture/PM ownership assertions
+ * intentionally do not belong here.
  */
 
 const test = require('node:test');
@@ -18,442 +18,173 @@ const { runArtifactValidate } = require('../src/commands/artifact-validate');
 const {
   evaluateReadiness,
   detectStaleDevState,
-  scanActiveManifest,
   buildContextPackage,
   parseFrontmatter
 } = require('../src/preflight-engine');
 
-async function makeTmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-sdlc-regress-'));
+async function tmp() { return fs.mkdtemp(path.join(os.tmpdir(), 'aioson-streamlined-sdlc-')); }
+async function write(root, rel, content) {
+  const file = path.join(root, rel);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, content, 'utf8');
+  return file;
+}
+const logger = { log() {}, error() {} };
+
+function prd({ productScope = 'pending', prdReady = 'pending' } = {}) {
+  return `---
+classification: SMALL
+product_scope: ${productScope}
+prd_ready: ${prdReady}
+sheldon_review: not_requested
+---
+# Feature
+
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-demo-01 | User sees result | User submits | required | Core promise |
+
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-demo-01 | CAP-demo-01 | Result appears | focused test |
+`;
 }
 
-async function writeFile(dir, relPath, content) {
-  const full = path.join(dir, relPath);
-  await fs.mkdir(path.dirname(full), { recursive: true });
-  await fs.writeFile(full, content, 'utf8');
-  return full;
+function plan(status = 'pending') {
+  return `---
+status: ${status}
+---
+# Plan
+
+## Capability Delivery Plan
+| CAP | Phase | Files | Verification |
+|---|---|---|---|
+| CAP-demo-01 | 1 | src/demo.js, tests/demo.test.js | node --test |
+`;
 }
 
-function makeLogger() {
-  const lines = [];
-  return {
-    log: (msg = '') => lines.push(String(msg)),
-    error: (msg = '') => lines.push(String(msg)),
-    lines
-  };
+async function seed(root, slug = 'demo', planStatus = 'pending') {
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# Context\n');
+  await write(root, `.aioson/context/prd-${slug}.md`, prd());
+  await write(root, `.aioson/context/implementation-plan-${slug}.md`, plan(planStatus));
 }
 
-// ── AC-SDLC-01 / AC-SDLC-02: Path contract — canonical-path-contract.md ───────
-
-test('path contract rule exists and contains docs/pt restriction', async () => {
-  const rulePath = path.join(process.cwd(), '.aioson/rules/canonical-path-contract.md');
-  const content = await fs.readFile(rulePath, 'utf8');
-  assert.ok(content.includes('docs/pt/'), 'rule must mention docs/pt/');
-  assert.ok(
-    content.toLowerCase().includes('system documentation') || content.toLowerCase().includes('documentação'),
-    'rule must describe docs/pt/ as system documentation'
-  );
-  assert.ok(
-    content.toLowerCase().includes('not') || content.toLowerCase().includes('never') || content.toLowerCase().includes('nunca'),
-    'rule must prohibit operational plans in docs/pt/'
-  );
-});
-
-test('path contract rule distinguishes root plans/ from .aioson/plans/', async () => {
-  const rulePath = path.join(process.cwd(), '.aioson/rules/canonical-path-contract.md');
-  const content = await fs.readFile(rulePath, 'utf8');
-  assert.ok(content.includes('plans/'), 'rule must mention plans/ root');
-  assert.ok(content.includes('.aioson/plans/{slug}/'), 'rule must mention .aioson/plans/{slug}/');
-});
-
-test('canonical-path-contract is a universal rule (empty agents or absent)', async () => {
-  const rulePath = path.join(process.cwd(), '.aioson/rules/canonical-path-contract.md');
-  const content = await fs.readFile(rulePath, 'utf8');
+test('canonical path rule keeps system docs separate from workflow artifacts', async () => {
+  const content = await fs.readFile(path.join(process.cwd(), '.aioson/rules/canonical-path-contract.md'), 'utf8');
   const fm = parseFrontmatter(content);
-  // Universal rules have agents: [] or absent
-  const agentsField = fm.agents || '';
-  assert.ok(
-    agentsField === '[]' || agentsField === '' || !fm.agents,
-    'canonical-path-contract must be a universal rule (agents: [] or absent)'
-  );
+  assert.match(content, /docs\/pt\//);
+  assert.match(content, /plans\//);
+  assert.match(content, /\.aioson\/plans\/\{slug\}\//);
+  assert.ok(!fm.agents || fm.agents === '[]');
 });
 
-// ── AC-SDLC-03: project-map.md covers all agents ─────────────────────────────
-
-test('project-map.md includes product/orchestrator/sheldon/pm/discover in agents list', async () => {
-  const mapPath = path.join(process.cwd(), '.aioson/context/project-map.md');
-  const content = await fs.readFile(mapPath, 'utf8');
-  const fm = parseFrontmatter(content);
-  const agentsList = fm.agents || '';
-  for (const agent of ['product', 'orchestrator', 'sheldon', 'pm', 'discover']) {
-    assert.ok(
-      agentsList.includes(agent),
-      `project-map.md must include agent: ${agent} in frontmatter agents list`
-    );
-  }
-});
-
-// ── AC-SDLC-06: gate:approve blocks when gate:check fails ────────────────────
-
-test('gate:approve: blocks if gate:check fails (missing artifacts)', async () => {
-  const tmpDir = await makeTmpDir();
-  // No spec file, no requirements file — Gate A will fail
-  const result = await runGateApprove({
-    args: [tmpDir],
-    options: { json: true, feature: 'my-feature', gate: 'A' },
-    logger: makeLogger()
-  });
-  assert.equal(result.ok, false);
-  assert.equal(result.blocked, true);
-  assert.ok(result.manual_fallback, 'must include manual fallback instructions');
-});
-
-// ── AC-SDLC-07: gate:approve writes flat frontmatter field ───────────────────
-
-test('gate:approve: writes flat gate_requirements field when Gate A passes', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'my-feature';
-
-  // Create requirements file (Gate A needs it)
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\nREQ-01\n');
-
-  const result = await runGateApprove({
-    args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'A' },
-    logger: makeLogger()
-  });
-
+test('Gate A approval writes product_scope to the Product PRD', async () => {
+  const root = await tmp();
+  await seed(root);
+  const result = await runGateApprove({ args: [root], options: { json: true, feature: 'demo', gate: 'A' }, logger });
   assert.equal(result.ok, true);
-  assert.equal(result.field_written, 'gate_requirements');
-
-  // Verify the spec file was written with flat field
-  const specPath = path.join(tmpDir, `.aioson/context/spec-${slug}.md`);
-  const specContent = await fs.readFile(specPath, 'utf8');
-  assert.ok(specContent.includes('gate_requirements: approved'), 'spec must have flat gate_requirements field');
+  assert.equal(result.field_written, 'product_scope');
+  assert.equal(result.artifact_file, '.aioson/context/prd-demo.md');
+  assert.match(await fs.readFile(path.join(root, result.artifact_file), 'utf8'), /product_scope: approved/);
 });
 
-// ── AC-SDLC-08: manual fallback includes file, field, value ──────────────────
+test('Gate B approval writes prd_ready to the same Product PRD', async () => {
+  const root = await tmp();
+  await seed(root);
+  const result = await runGateApprove({ args: [root], options: { json: true, feature: 'demo', gate: 'B' }, logger });
+  assert.equal(result.ok, true);
+  assert.equal(result.field_written, 'prd_ready');
+  assert.equal(result.next_agent, '@planner');
+  assert.match(await fs.readFile(path.join(root, result.artifact_file), 'utf8'), /prd_ready: approved/);
+});
 
-test('gate:approve: manual fallback shows exact file, field, and value', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'test-feature';
-
-  const result = await runGateApprove({
-    args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'C' },
-    logger: makeLogger()
-  });
-
+test('Gate C missing-plan fallback names Planner and the canonical plan', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  await write(root, '.aioson/context/prd-demo.md', prd({ productScope: 'approved', prdReady: 'approved' }));
+  const result = await runGateApprove({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
   assert.equal(result.ok, false);
-  assert.ok(result.manual_fallback.includes('spec-test-feature.md'), 'fallback must name the spec file');
-  assert.ok(result.manual_fallback.includes('gate_plan'), 'fallback must name the flat field');
-  assert.ok(result.manual_fallback.includes('approved'), 'fallback must show the target value');
+  assert.match(result.manual_fallback, /implementation-plan-demo\.md/);
+  assert.match(result.manual_fallback, /owning agent must create it/i);
 });
 
-// ── AC-SDLC-09: gate:approve uses flat frontmatter, not phase_gates ──────────
-
-test('gate:approve: written spec uses flat fields, not nested phase_gates', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'flat-test';
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
-
-  await runGateApprove({
-    args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'A' },
-    logger: makeLogger()
-  });
-
-  const specPath = path.join(tmpDir, `.aioson/context/spec-${slug}.md`);
-  const specContent = await fs.readFile(specPath, 'utf8');
-  assert.ok(!specContent.includes('phase_gates'), 'spec must NOT use phase_gates nested format');
-  assert.ok(specContent.includes('gate_requirements: approved'), 'spec must use flat gate_requirements field');
+test('Gate C rejects a draft plan and points to Planner', async () => {
+  const root = await tmp();
+  await seed(root, 'demo', 'draft');
+  const result = await runGateCheck({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  assert.equal(result.result, 'BLOCKED');
+  assert.match(result.recommendation, /@planner/);
+  assert.ok(result.missing.some((item) => /status/i.test(item)));
 });
 
-// ── AC-SDLC-12: stale dev-state detection ────────────────────────────────────
-
-test('detectStaleDevState: warns when active_feature differs from slug', () => {
-  const devState = { exists: true, active_feature: 'old-feature', status: 'in_progress' };
-  const warning = detectStaleDevState(devState, 'new-feature');
-  assert.ok(warning !== null, 'must return a warning for mismatched feature');
-  assert.ok(warning.includes('old-feature'), 'warning must name the stale feature');
+test('Gate C approval writes approved status to the one Planner artifact', async () => {
+  const root = await tmp();
+  await seed(root);
+  const result = await runGateApprove({ args: [root], options: { json: true, feature: 'demo', gate: 'C' }, logger });
+  assert.equal(result.ok, true);
+  assert.equal(result.field_written, 'status');
+  assert.equal(result.next_agent, '@dev');
+  assert.match(await fs.readFile(path.join(root, result.artifact_file), 'utf8'), /status: approved/);
 });
 
-test('detectStaleDevState: warns when dev-state is done', () => {
-  const devState = { exists: true, active_feature: 'doc-refresh', status: 'done' };
-  const warning = detectStaleDevState(devState, 'doc-refresh');
-  assert.ok(warning !== null, 'must return a warning for done dev-state');
-  assert.ok(warning.toLowerCase().includes('done') || warning.toLowerCase().includes('completed'), 'warning must mention done status');
+test('stale dev-state detection preserves feature continuity safeguards', () => {
+  assert.match(detectStaleDevState({ exists: true, active_feature: 'old', status: 'in_progress' }, 'new'), /old/);
+  assert.match(detectStaleDevState({ exists: true, active_feature: 'demo', status: 'done' }, 'demo'), /done|completed/i);
+  assert.equal(detectStaleDevState({ exists: true, active_feature: 'demo', status: 'in_progress' }, 'demo'), null);
 });
 
-test('detectStaleDevState: no warning when active_feature matches slug and is in_progress', () => {
-  const devState = { exists: true, active_feature: 'checkout', status: 'in_progress' };
-  const warning = detectStaleDevState(devState, 'checkout');
-  assert.equal(warning, null, 'must not warn when dev-state belongs to the current feature');
-});
-
-// ── AC-SDLC-15/AC-SDLC-17: gate:check points to @pm when plan is missing ─────
-
-test('gate:check Gate C: recommendation mentions @pm when plan is missing', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'missing-plan';
-
-  // Gate A and B approved in spec — MEDIUM, the only classification where
-  // implementation-plan-{slug}.md is required (AC-SDLC-15)
-  await writeFile(tmpDir, `.aioson/context/project.context.md`, '---\nclassification: MEDIUM\n---\n# Context\n');
-  await writeFile(tmpDir, `.aioson/context/spec-${slug}.md`,
-    '---\nfeature: missing-plan\ngate_requirements: approved\ngate_design: approved\n---\n# Spec\n'
-  );
-  await writeFile(tmpDir, `.aioson/context/requirements-${slug}.md`, '# Requirements\n');
-  await writeFile(tmpDir, `.aioson/context/architecture.md`, '# Architecture\n');
-  // No implementation-plan — Gate C should fail pointing to @pm
-
-  const result = await runGateCheck({
-    args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'C' },
-    logger: makeLogger()
-  });
-
-  assert.equal(result.result, 'BLOCKED', 'Gate C must be BLOCKED without implementation plan');
-  assert.ok(
-    result.recommendation.toLowerCase().includes('@pm') || result.recommendation.toLowerCase().includes('pm'),
-    'recommendation must mention @pm as the agent to produce the plan'
-  );
-});
-
-test('gate:check Gate C: blocks draft implementation plan', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'draft-plan';
-
-  await writeFile(tmpDir, `.aioson/context/project.context.md`, '---\nclassification: MEDIUM\n---\n# Context\n');
-  await writeFile(tmpDir, `.aioson/context/spec-${slug}.md`,
-    '---\nfeature: draft-plan\ngate_requirements: approved\ngate_design: approved\ngate_plan: approved\n---\n# Spec\n'
-  );
-  await writeFile(tmpDir, `.aioson/context/implementation-plan-${slug}.md`, '---\nstatus: draft\n---\n# Plan\n');
-
-  const result = await runGateCheck({
-    args: [tmpDir],
-    options: { json: true, feature: slug, gate: 'C' },
-    logger: makeLogger()
-  });
-
-  assert.equal(result.result, 'BLOCKED', 'Gate C must be blocked when implementation plan is draft');
-  assert.ok(result.missing.some((m) => m.includes('@pm')), 'blocker must identify @pm as owner');
-});
-
-// ── AC-SDLC-19: preflight sheldon includes prd when it exists ────────────────
-
-test('evaluateReadiness: sheldon is BLOCKED when prd is missing', () => {
-  const artifacts = {
+test('optional Sheldon readiness needs a PRD but no enrichment artifact', () => {
+  const base = {
     project_context: { exists: true },
     prd: { exists: false },
-    sheldon_enrichment: { exists: false },
-    requirements: { exists: false },
-    spec: { exists: false },
-    architecture: { exists: false },
     implementation_plan: { exists: false },
-    conformance: { exists: false },
-    dev_state: { exists: false },
-    features: { exists: false }
+    requirements: { exists: false }, spec: { exists: false }, architecture: { exists: false },
+    sheldon_enrichment: { exists: false }, conformance: { exists: false }, dev_state: { exists: false }, features: { exists: false }
   };
-  const result = evaluateReadiness(artifacts, {}, 'SMALL', 'sheldon', null, null);
-  assert.equal(result.status, 'BLOCKED', 'sheldon must be BLOCKED without prd');
-  assert.ok(result.blockers.some((b) => b.includes('prd')), 'blockers must mention prd');
+  assert.equal(evaluateReadiness(base, {}, 'SMALL', 'sheldon', null, 'demo').status, 'BLOCKED');
+  assert.equal(evaluateReadiness({ ...base, prd: { exists: true, path: 'prd-demo.md' } }, {}, 'SMALL', 'sheldon', null, 'demo').status, 'READY');
 });
 
-test('evaluateReadiness: sheldon with prd and no enrichment is READY_WITH_WARNINGS', () => {
-  const artifacts = {
-    project_context: { exists: true },
-    prd: { exists: true, path: 'prd-test.md' },
-    sheldon_enrichment: { exists: false },
-    requirements: { exists: false },
-    spec: { exists: false },
-    architecture: { exists: false },
-    implementation_plan: { exists: false },
-    conformance: { exists: false },
-    dev_state: { exists: false },
-    features: { exists: false }
-  };
-  const result = evaluateReadiness(artifacts, {}, 'SMALL', 'sheldon', null, null);
-  assert.equal(result.status, 'READY_WITH_WARNINGS', 'sheldon with prd but no enrichment should be READY_WITH_WARNINGS');
-});
-
-// ── AC-SDLC-20: preflight orchestrator blocks without Gate C ─────────────────
-
-test('evaluateReadiness: orchestrator is BLOCKED without Gate C', () => {
-  const artifacts = {
-    project_context: { exists: true },
-    prd: { exists: true, path: 'prd.md' },
-    sheldon_enrichment: { exists: false },
-    requirements: { exists: true, path: 'requirements.md' },
-    spec: { exists: true, path: 'spec.md' },
-    architecture: { exists: true },
-    implementation_plan: { exists: false },
-    conformance: { exists: false },
-    dev_state: { exists: false },
-    features: { exists: false }
-  };
-  const phaseGates = { requirements: 'approved', design: 'approved', plan: 'pending', execution: 'pending' };
-  const result = evaluateReadiness(artifacts, phaseGates, 'MEDIUM', 'orchestrator', null, 'my-feature');
-  assert.equal(result.status, 'BLOCKED', 'orchestrator must be BLOCKED without Gate C');
-  assert.ok(result.blockers.some((b) => b.toLowerCase().includes('gate c') || b.toLowerCase().includes('plan')), 'must mention Gate C blocker');
-});
-
-// ── AC-SDLC-22: artifact:validate shows next_missing and next_agent ───────────
-
-test('artifact:validate: shows next_missing and next_agent when chain is incomplete', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'validate-test';
-  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# Context\n');
-  // No prd file — prd should be next_missing, @product next_agent
-
-  const result = await runArtifactValidate({
-    args: [tmpDir],
-    options: { json: true, feature: slug },
-    logger: makeLogger()
-  });
-
+test('artifact validation routes a missing PRD to Product', async () => {
+  const root = await tmp();
+  await write(root, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n');
+  const result = await runArtifactValidate({ args: [root], options: { json: true, feature: 'demo' }, logger });
   assert.equal(result.ok, false);
-  assert.ok(result.next_missing, 'must have next_missing field');
-  assert.ok(result.next_agent, 'must have next_agent field');
-  assert.ok(result.next_agent.includes('@product'), `next_agent must point to @product, got: ${result.next_agent}`);
+  assert.match(result.next_agent, /@product/);
 });
 
-// ── AC-SDLC-24/AC-SDLC-25: active manifest wins over implementation-plan ─────
-
-test('scanActiveManifest: detects active manifest (status != done)', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'my-feature';
-  await writeFile(
-    tmpDir,
-    `.aioson/plans/${slug}/manifest.md`,
-    '---\nfeature: my-feature\nstatus: ready\n---\n# Manifest\n'
-  );
-
-  const result = await scanActiveManifest(tmpDir, slug);
-  assert.equal(result.exists, true);
-  assert.equal(result.is_active, true, 'manifest with status ready must be active');
-});
-
-test('scanActiveManifest: done manifest is not active', async () => {
-  const tmpDir = await makeTmpDir();
-  const slug = 'done-feature';
-  await writeFile(
-    tmpDir,
-    `.aioson/plans/${slug}/manifest.md`,
-    '---\nfeature: done-feature\nstatus: done\n---\n# Manifest\n'
-  );
-
-  const result = await scanActiveManifest(tmpDir, slug);
-  assert.equal(result.exists, true);
-  assert.equal(result.is_active, false, 'manifest with status done must not be active');
-});
-
-test('buildContextPackage: active manifest appears as PRIMARY for @dev when present', async () => {
+test('Dev context treats Planner plan as PRIMARY and old manifests as optional compatibility', () => {
   const artifacts = {
     project_context: { exists: true, path: '.aioson/context/project.context.md' },
-    prd: { exists: false },
-    sheldon_enrichment: { exists: false },
-    requirements: { exists: false },
-    spec: { exists: true, path: '.aioson/context/spec-feat.md' },
-    architecture: { exists: false },
-    implementation_plan: { exists: true, path: '.aioson/context/implementation-plan-feat.md' },
-    conformance: { exists: false },
-    dev_state: { exists: false },
-    features: { exists: false }
+    prd: { exists: true, path: '.aioson/context/prd-demo.md' },
+    implementation_plan: { exists: true, path: '.aioson/context/implementation-plan-demo.md' },
+    sheldon_enrichment: { exists: false }, sheldon_validation: { exists: false },
+    requirements: { exists: false }, spec: { exists: false }, architecture: { exists: false },
+    conformance: { exists: false }, dev_state: { exists: false }
   };
-  const manifest = { exists: true, path: '.aioson/plans/feat/manifest.md', status: 'ready', is_active: true };
-  const pkg = buildContextPackage('dev', 'feat', 'MEDIUM', artifacts, null, manifest);
-
-  const manifestEntry = pkg.find((p) => p.includes('manifest.md'));
-  assert.ok(manifestEntry, 'context package must include manifest');
-  assert.ok(manifestEntry.includes('PRIMARY'), 'manifest entry must be labeled PRIMARY');
-
-  const planEntry = pkg.find((p) => p.includes('implementation-plan-feat'));
-  assert.ok(planEntry, 'context package must also include implementation-plan');
-  assert.ok(planEntry.includes('supporting'), 'implementation-plan entry must be labeled supporting');
+  const manifest = { exists: true, is_active: true, path: '.aioson/plans/demo/manifest.md' };
+  const pkg = buildContextPackage('dev', 'demo', 'SMALL', artifacts, null, manifest);
+  assert.ok(pkg.some((item) => /implementation-plan-demo\.md \[PRIMARY\]/.test(item)));
+  assert.ok(pkg.some((item) => /manifest\.md \[legacy optional context\]/.test(item)));
 });
 
-// ── AC-SDLC-32: @product hardconstraint — features.md registration ────────────
-
-test('product.md: hard constraints include features.md registration requirement', async () => {
-  const productPath = path.join(process.cwd(), '.aioson/agents/product.md');
-  const content = await fs.readFile(productPath, 'utf8');
-  assert.ok(
-    content.includes('features.md') && (content.includes('Always register') || content.includes('every new feature')),
-    'product.md must mandate features.md registration in hard constraints'
-  );
+test('Product prompt registers feature state and hands directly to Planner', async () => {
+  const content = await fs.readFile(path.join(process.cwd(), '.aioson/agents/product.md'), 'utf8');
+  assert.match(content, /Always register.*features\.md/i);
+  assert.match(content, /Next agent: @planner/);
+  assert.match(content, /Sheldon review: optional/);
 });
 
-// ── AC-SDLC-33: @product handoff is explicit ─────────────────────────────────
-
-test('product.md: includes Handoff section with next agent and action', async () => {
-  const productPath = path.join(process.cwd(), '.aioson/agents/product.md');
-  const content = await fs.readFile(productPath, 'utf8');
-  assert.ok(content.includes('## Handoff'), 'product.md must have a Handoff section');
-  assert.ok(content.includes('Next agent:'), 'Handoff section must name the next agent');
-  assert.ok(content.includes('Action:'), 'Handoff section must specify an action');
+test('Sheldon is optional PRD-only enrichment and does not depend on spec.md', async () => {
+  const content = await fs.readFile(path.join(process.cwd(), '.aioson/agents/sheldon.md'), 'utf8');
+  assert.match(content, /Optionally challenge/);
+  assert.match(content, /Edit the existing PRD in place/);
+  assert.doesNotMatch(content, /spec\.md.*done indicator/i);
 });
 
-// ── AC-SDLC-29: Sheldon RF-01 lists PRDs first, checks status after ──────────
-
-test('sheldon.md: RF-01 lists PRDs before checking status', async () => {
-  const sheldonPath = path.join(process.cwd(), '.aioson/agents/sheldon.md');
-  const content = await fs.readFile(sheldonPath, 'utf8');
-  const sectionStart = content.indexOf('## PRD target detection (RF-01)');
-  const sectionEnd = content.indexOf('## Re-entrance detection (RF-02)');
-  const rf01 = content.slice(sectionStart, sectionEnd);
-
-  // Step order matters: listing PRDs must come before status check
-  const listIdx = rf01.indexOf('list all');
-  const statusIdx = rf01.indexOf('check `.aioson/context/features.md`');
-  assert.ok(listIdx !== -1 && statusIdx !== -1, 'sheldon.md must have both list and status steps');
-  assert.ok(listIdx < statusIdx, 'listing PRDs (step 3) must appear before status check (step 5) in RF-01');
-});
-
-test('sheldon.md: spec.md project-level explicitly not a done indicator', async () => {
-  const sheldonPath = path.join(process.cwd(), '.aioson/agents/sheldon.md');
-  const content = await fs.readFile(sheldonPath, 'utf8');
-  assert.ok(
-    content.includes('spec.md') && content.includes('NOT') || content.includes('not a done'),
-    'sheldon.md must explicitly state that spec.md does not block enrichment'
-  );
-});
-
-// ── AC-SDLC-16 fix (H-01): handoff-contract @pm is MEDIUM-only ───────────────
-
-test('handoff-contract: pm artifacts require implementation-plan only for MEDIUM', async () => {
+test('PM never owns the canonical implementation plan by classification', () => {
   const { CONTRACTS } = require('../src/handoff-contract');
-  const pmContract = CONTRACTS.pm;
-
-  // MEDIUM feature — plan required
-  const mediumState = { mode: 'feature', featureSlug: 'checkout', classification: 'MEDIUM' };
-  const mediumArtifacts = typeof pmContract.artifacts === 'function'
-    ? pmContract.artifacts('.', mediumState)
-    : pmContract.artifacts;
-  assert.ok(
-    mediumArtifacts.some((a) => a.includes('implementation-plan-checkout.md')),
-    'MEDIUM feature: pm contract must require implementation-plan'
-  );
-
-  // SMALL feature — plan NOT required
-  const smallState = { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' };
-  const smallArtifacts = typeof pmContract.artifacts === 'function'
-    ? pmContract.artifacts('.', smallState)
-    : pmContract.artifacts;
-  assert.equal(
-    smallArtifacts.length,
-    0,
-    'SMALL feature: pm contract must NOT require implementation-plan'
-  );
-
-  // No classification — plan NOT required (safe default)
-  const unknownState = { mode: 'feature', featureSlug: 'checkout' };
-  const unknownArtifacts = typeof pmContract.artifacts === 'function'
-    ? pmContract.artifacts('.', unknownState)
-    : pmContract.artifacts;
-  assert.equal(
-    unknownArtifacts.length,
-    0,
-    'unknown classification: pm contract must NOT require implementation-plan (safe default)'
-  );
+  assert.deepEqual(CONTRACTS.pm.artifacts, []);
 });

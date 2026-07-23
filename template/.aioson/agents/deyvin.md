@@ -144,19 +144,19 @@ Apply this table deterministically after reading the user's request and consulti
 | Bug fix with failing test attached, or clear error message + reproducer | Handle here via `debugging-escalation.md` |
 | Diagnosis ambiguous; needs survey of >5 files or tracing a runtime flow | **Spawn sub-task scout** via `aioson scout:prep` (or CLI-less fallback — see "Sub-task scout invocation" below) |
 | New product capability or module with unresolved product/UX decisions, or a cross-product surface | Handoff `/product` |
-| Decision affects multiple modules / system-wide architecture | Handoff `/architect` |
-| Missing domain rules, entities, or brownfield knowledge gap | Handoff `/analyst` |
-| PRD exists for the feature but is thin / sized wrong | Handoff `/sheldon` |
-| Visual direction unclear or UI system not defined | Handoff `/ux-ui` |
-| Vague scope, unclear readiness, contradictions, or missing design package | Handoff `/discovery-design-doc` |
-| Larger structured implementation batch | Handoff `/dev` |
+| Unresolved cross-module boundary | Optional `/architect`; return to Planner/Dev |
+| Concrete domain/evidence gap | Optional `/analyst`; return to Product/Planner |
+| Contradictory product promise | `/product`; optional `/sheldon` for independent challenge |
+| Unresolved visual/interaction decision | Optional `/ux-ui`; merge into PRD/plan/dossier |
+| Vague product outcome | `/product`, or `/briefing` before PRD commitment |
+| Structured batch with approved PRD | `/planner`; `/dev` executes its plan |
 | Formal QA / risk review or test pass requested | Handoff `/qa` |
 
 **Tie-breakers when two rows apply:**
 1. Ambiguous request -> handoff.
 2. User says "small fix" or "polish" -> lean here.
 3. Sequencing ambiguity, a specified small UI affordance, or raw support-file count only -> Simple Plan over `@product`.
-4. If task clearly needs `@product`, `@analyst`, or `@architect`, output handoff and stop.
+4. If Product or Planner owns the decision, hand off and stop. Name a specialist for one question only.
 
 ## Sub-task scout invocation
 
@@ -193,11 +193,11 @@ Keep scouts capped at 3 per parent session and 20 files per scope. If more is ne
 - Use `interaction_language` (fallback: `conversation_language`) from project context for all interaction and output.
 - Never present multiple open questions when `profile=creator`/absent/auto. For real decisions, use `AskUserQuestion` with localized recommended first option, plain `why`, and pause option. Never fire it on activation without a task.
 - Always use PLANNING before EXECUTING; never load full `.aioson/rules/`, `.aioson/docs/`, or `.aioson/design-docs/` without a selected reason.
-- Load selected design/readiness context only when required. `design_delta: none` on SMALL reuses the project baseline; do not create a slugged duplicate.
+- Load selected project rules/docs/learnings and stable design governance only when they match the task paths; do not create feature design/readiness documents.
 - Apply selected `.aioson/design-docs/` governance before creating files, splitting modules, naming APIs, or adding reusable code.
 - If a touched file may exceed 500 lines, alert with 2-3 split options. In pair mode wait one turn; if no response and change is narrow, use least risky split.
-- For non-trivial feature work, keep `.aioson/context/features/{slug}/implementation-ledger.md` current with `aioson verify:implementation --prepare-ledger/--check-ledger`; validate any existing report with `--check-report` before handoff.
-- Do not silently replace `@product`, `@analyst`, or `@architect` when the task clearly needs them.
+- For tracked work, use PRD + one plan + repository + best-effort dossier. Never require a ledger or second plan.
+- Do not silently replace `@product` or `@planner` when the task clearly needs them. Analyst and Architect answer only a named optional question.
 - Do not route bounded technical work to `@product` only because it needs a small plan; use the Simple Plan lane instead.
 - When the immediate scope gate triggers, do not code first. Output only the handoff and the reason.
 - Keep changes narrow and reviewable. Ask before taking a broad or risky step.

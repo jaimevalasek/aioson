@@ -37,11 +37,11 @@ test('verification config defaults when the file is missing', async () => {
   const config = await readVerificationConfig(dir);
 
   assert.equal(config.host, 'auto');
-  // qa/validator default ON; tester/pentester default to 'auto' (framework decides).
+  // QA is the only default reviewer; deeper specialists are opt-in.
   assert.equal(config.agents.qa.enabled, true);
-  assert.equal(config.agents.validator.enabled, true);
-  assert.equal(config.agents.tester.enabled, 'auto');
-  assert.equal(config.agents.pentester.enabled, 'auto');
+  assert.equal(config.agents.validator.enabled, false);
+  assert.equal(config.agents.tester.enabled, false);
+  assert.equal(config.agents.pentester.enabled, false);
 });
 
 test('the shipped default config equals buildDefaultVerificationConfig (round-trip)', async () => {
@@ -85,28 +85,29 @@ test('getAgentDispatch resolves the right native model per host', () => {
 
 test("resolveAgentEnabled resolves 'auto' from run context", () => {
   const config = buildDefaultVerificationConfig();
+  config.agents.pentester.enabled = 'auto';
+  config.agents.tester.enabled = 'auto';
 
   // qa is hard-true regardless of context
   assert.equal(resolveAgentEnabled(config, 'qa', {}), true);
-  // pentester 'auto' => only on a sensitive surface
-  assert.equal(resolveAgentEnabled(config, 'pentester', { sensitiveSurface: true }), true);
-  assert.equal(resolveAgentEnabled(config, 'pentester', { sensitiveSurface: false }), false);
-  // tester 'auto' => on anything above MICRO
-  assert.equal(resolveAgentEnabled(config, 'tester', { classification: 'SMALL' }), true);
-  assert.equal(resolveAgentEnabled(config, 'tester', { classification: 'MICRO' }), false);
+  // Classification/surface alone do not activate optional specialists.
+  assert.equal(resolveAgentEnabled(config, 'pentester', { sensitiveSurface: true }), false);
+  assert.equal(resolveAgentEnabled(config, 'pentester', { riskTriggered: true }), true);
+  assert.equal(resolveAgentEnabled(config, 'tester', { classification: 'MEDIUM' }), false);
+  assert.equal(resolveAgentEnabled(config, 'tester', { coverageGap: true }), true);
 });
 
 test('shouldRunForTrigger combines trigger + enabled + skip-on-micro budget', () => {
   const config = buildDefaultVerificationConfig();
 
-  // qa runs per-phase on SMALL...
-  assert.equal(shouldRunForTrigger(config, 'qa', { trigger: 'per-phase', classification: 'SMALL' }), true);
-  // ...but per-phase is suppressed on MICRO to save tokens (skip_on_micro)
+  // No per-phase reviewer runs by default.
+  assert.equal(shouldRunForTrigger(config, 'qa', { trigger: 'per-phase', classification: 'SMALL' }), false);
   assert.equal(shouldRunForTrigger(config, 'qa', { trigger: 'per-phase', classification: 'MICRO' }), false);
+  assert.equal(shouldRunForTrigger(config, 'qa', { trigger: 'end-of-feature', classification: 'SMALL' }), true);
   // qa has no sensitive-surface trigger
   assert.equal(shouldRunForTrigger(config, 'qa', { trigger: 'sensitive-surface' }), false);
-  // pentester runs on a sensitive surface only
-  assert.equal(shouldRunForTrigger(config, 'pentester', { trigger: 'sensitive-surface', sensitiveSurface: true }), true);
+  // Pentester is disabled even when a sensitive surface exists.
+  assert.equal(shouldRunForTrigger(config, 'pentester', { trigger: 'sensitive-surface', riskTriggered: true }), false);
   assert.equal(shouldRunForTrigger(config, 'pentester', { trigger: 'sensitive-surface', sensitiveSurface: false }), false);
 });
 
@@ -155,9 +156,10 @@ test('cross_check is normalized only for validator and reports resolve {slug}', 
   assert.equal(resolveAgentReportPath(config, 'pentester', 'checkout'), 'security-findings-checkout.json');
 
   // sanity on triggers + budget + unknown agent
-  assert.equal(agentHasTrigger(config, 'qa', 'per-phase'), true);
+  assert.equal(agentHasTrigger(config, 'qa', 'per-phase'), false);
+  assert.equal(agentHasTrigger(config, 'qa', 'end-of-feature'), true);
   assert.equal(agentHasTrigger(config, 'validator', 'per-phase'), false);
-  assert.equal(getBudget(config).max_subagents_per_phase, 1);
+  assert.equal(getBudget(config).max_subagents_per_phase, 0);
   assert.equal(getAgentConfig(config, 'nope'), null);
 });
 

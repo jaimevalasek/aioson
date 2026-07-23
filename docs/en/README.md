@@ -22,8 +22,8 @@ This is the entry door to the English documentation. It is not an alphabetical i
 
 ### I want a recipe ready for my case
 
-**Canonical trails — how features reach the dev:**
-1. **[Full feature with @sheldon](./3-recipes/full-feature-with-sheldon.md)** — SMALL lean default: `@product → @sheldon → @dev → @qa`; MEDIUM maestro: `@product → @orchestrator → @dev → @pentester → @qa`
+**Canonical trail — how features reach delivery:**
+1. **[Full feature with optional @sheldon enrichment](./3-recipes/full-feature-with-sheldon.md)** — `@product → optional @sheldon → @planner → @dev → @qa`
 2. [From idea to PRD via @briefing](./3-recipes/from-idea-to-prd-via-briefing.md) — when the idea is still vague
 3. [Continuity between sessions](./3-recipes/continuity-between-sessions.md) — feature dossier, dev-resume, drift detection
 
@@ -67,8 +67,8 @@ Terms that show up everywhere. Expanded version in [`1-understand/glossary.md`](
 | **Squad** | A group of custom agents you build for a specific domain |
 | **Genome** | The "cognitive DNA" of a persona — used to build advisors with personality |
 | **Skill** | A pluggable instruction package (design system, process, domain knowledge) |
-| **Dossier** | A feature folder: spec, plan, decisions, status — everything in one place |
-| **Classification** | MICRO / SMALL / MEDIUM — defines how much process the project needs |
+| **Dossier** | Non-blocking feature memory that can enrich the PRD, plan, implementation, and review |
+| **Classification** | MICRO / SMALL / MEDIUM — changes depth, risk coverage, and work budget, not the stage chain |
 | **Constitution** | 6 principles every agent respects — non-overridable |
 
 ---

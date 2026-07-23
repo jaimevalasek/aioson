@@ -27,13 +27,16 @@ vague idea / notes
        ↓
 aioson briefing:approve
        ↓
-   @product   →  prd.md (or prd-{slug}.md)
+   @product   →  prd-{slug}.md
        ↓
- SMALL: @sheldon  →  single spec authority (full spec package: requirements + design-doc +
-                       readiness + implementation-plan + harness-contract) → @dev → @qa
- MICRO: skip @sheldon  →  @dev → @qa
-MEDIUM: @orchestrator  →  maestro (fans out @analyst/@architect/@pm) → @dev → @pentester → @qa
+ (optional) @sheldon  →  enriches the same PRD in place
+       ↓
+   @planner  →  implementation-plan-{slug}.md
+       ↓
+     @dev → @qa
 ```
+
+MICRO, SMALL, and MEDIUM follow this same route. Classification changes the depth and budget of each stage. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check remain available as explicitly requested consultants; Tester, Pentester, and Validator are opt-in reviewers.
 
 ---
 
@@ -52,7 +55,7 @@ plans/
 ```
 
 > `plans/` is **read-only for agents** — they read but never modify. Your files stay intact.
-> See [External plans for @product](./external-plans-for-product.md) for details on this flow.
+> See [External plans for @product (PT)](../../pt/3-receitas/plans-externos-para-product.md) for details on this flow.
 
 ### Step 2 — Activate `@briefing`
 
@@ -127,7 +130,7 @@ You > push-notifications
             Out of scope: email notifications (briefing flagged for phase 2).
 
             PRD created: .aioson/context/prd-push-notifications.md
-            Next: @sheldon — single spec authority for SMALL (closes gaps, produces full spec package).
+            Next: optional @sheldon enrichment, or @planner if the PRD is ready.
 ```
 
 ---
@@ -217,8 +220,8 @@ The rest of the flow is the same: approve via CLI → `@product`.
 
 ## When to skip `@briefing`
 
-- Simple and clear feature: MICRO, no ambiguity — go straight to `@product`.
-- You already have an enriched PRD — use `@sheldon` to refine it.
+- Simple and clear feature with no ambiguity — go straight to `@product`.
+- You already have a ready PRD — go to `@planner`; use `@sheldon` only when you want another enrichment pass.
 - It is a continuation of an already started feature — use `@deyvin`.
 
 ---
@@ -238,8 +241,8 @@ plans/                              ← your drafts (untouched)
 
 ## Next steps
 
-- [External plans for @product](./external-plans-for-product.md) — how to use ChatGPT/Claude.ai output as source for `plans/`
+- [External plans for @product (PT)](../../pt/3-receitas/plans-externos-para-product.md) — how to use ChatGPT/Claude.ai output as source for `plans/`
 - [Full feature with @sheldon](./full-feature-with-sheldon.md) — when the PRD is ready and the trail is SMALL/MEDIUM
-- [@briefing — agent sheet](../4-agents/briefing.md) — technical reference for the agent
+- [@briefing — agent sheet (PT)](../../pt/4-agentes/briefing.md) — technical reference for the agent
 - [@briefing-refiner — agent sheet](../4-agents/briefing-refiner.md) — briefing review/refinement loop before the PRD
-- [@product — agent sheet](../4-agents/product.md) — technical reference for the agent
+- [@product — agent sheet (PT)](../../pt/4-agentes/product.md) — technical reference for the agent

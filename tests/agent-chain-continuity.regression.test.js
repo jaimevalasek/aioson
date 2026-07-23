@@ -100,7 +100,7 @@ describe('agent-chain-continuity — AC regression bundle', () => {
     }
   });
 
-  it('AC-ACC-02: auto-init does NOT fire for MICRO features', async () => {
+  it('AC-ACC-02: auto-init provides non-blocking dossier intelligence for MICRO features too', async () => {
     const tmp = await makeProject();
     try {
       await writePrd(tmp, 'acc-02', 'MICRO');
@@ -112,7 +112,7 @@ describe('agent-chain-continuity — AC regression bundle', () => {
         'product',
         null
       );
-      assert.equal(await dossierExists(tmp, 'acc-02'), false);
+      assert.equal(await dossierExists(tmp, 'acc-02'), true);
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
@@ -286,27 +286,27 @@ describe('agent-chain-continuity — AC regression bundle', () => {
     }
   });
 
-  it('AC-ACC-10: @dev prompt instructs drift detection by comparing path against code_map_paths', async () => {
+  it('AC-ACC-10: @dev prompt compares planned paths against dossier code_map_paths', async () => {
     const dev = await fs.readFile(path.join(REPO_ROOT, '.aioson', 'agents', 'dev.md'), 'utf8');
     assert.match(dev, /code_map_paths/);
-    assert.match(dev, /Drift detection/i);
-    assert.match(dev, /3 options.*\(proceed/);
+    assert.match(dev, /Context drift check/i);
+    assert.match(dev, /three bounded options/i);
     assert.match(dev, /DRIFT:/);
   });
 
-  it('AC-ACC-11: @dev prompt instructs drift detection for already-executed Sheldon plan steps', async () => {
+  it('AC-ACC-11: @dev prompt reconciles already-executed Planner phases', async () => {
     const dev = await fs.readFile(path.join(REPO_ROOT, '.aioson', 'agents', 'dev.md'), 'utf8');
-    assert.match(dev, /Sheldon\s+plan\s+step.*already\s+ran.*without an Agent Trail entry/i);
+    assert.match(dev, /Planner phase appears to have already run without an Agent Trail entry/i);
   });
 
-  it('AC-ACC-12: drift detection scope is limited to Code Map paths and Sheldon plan steps', async () => {
+  it('AC-ACC-12: drift detection scope is limited to Code Map paths and planned phases', async () => {
     const dev = await fs.readFile(path.join(REPO_ROOT, '.aioson', 'agents', 'dev.md'), 'utf8');
-    const sectionStart = dev.indexOf('**Drift detection');
-    const sectionEnd = dev.indexOf('**Per slice');
+    const sectionStart = dev.indexOf('## Context drift check');
+    const sectionEnd = dev.indexOf('## Deterministic preflight');
     assert.ok(sectionStart > -1 && sectionEnd > sectionStart);
     const block = dev.slice(sectionStart, sectionEnd);
     assert.match(block, /code_map_paths/);
-    assert.match(block, /Sheldon/);
+    assert.match(block, /Planner phase/);
     assert.doesNotMatch(block, /every file modified/i);
   });
 

@@ -22,6 +22,7 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'orchestrator',
   'pair',
   'pentester',
+  'planner',
   'pm',
   'product',
   'profiler-enricher',

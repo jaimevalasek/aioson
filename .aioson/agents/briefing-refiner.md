@@ -141,7 +141,7 @@ Use this when the user asks to see the solution visually, or when a rich-surface
 4. Load `.aioson/skills/process/prototype-forge/SKILL.md` and follow its complete build contract, including
    the non-regression order and bounded premium quality pass. Completeness remains the first hard gate.
 5. Write `.aioson/briefings/{slug}/prototype.html` and `.aioson/briefings/{slug}/prototype-manifest.md`.
-6. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until @product/@sheldon freeze scope, at which point it is re-synced and locked as the development reference.
+6. Tell the user the prototype is **mock-only** (refresh resets, no backend) and that it is a `draft` until Product freezes scope, at which point it is re-synced and locked as the development reference. An optional Sheldon review may enrich that decision without being required.
 
 The prototype never edits `briefings.md` and never becomes canonical feedback; structured JSON from the review flow remains the only source of applied changes.
 

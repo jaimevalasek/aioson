@@ -28,7 +28,7 @@ Artifacts must be self-contained enough for the next agent to start without re-r
 Do not add layers, files, or workflows unless they reduce downstream ambiguity. Three similar lines of code is better than a premature abstraction. One well-written spec is better than five thin artifacts.
 
 ## Article VII — Zero Trust by Default
-Security is a baseline, not a feature. Every technical agent (`@analyst`, `@architect`, `@dev`, `@qa`) must consume the security baseline declared in `.aioson/rules/security-baseline.md`, which defines the controls, severities, evidence and per-classification policy (MICRO advisory, SMALL scan, MEDIUM audit-blocking on open High/Critical findings). Controls carry stable IDs (`SEC-SBD-01`..`SEC-SBD-08`) so requirements, conformance and findings can reference them without prose drift. Agents may not silently weaken, rename or skip a control — deviations require an explicit decision recorded in the feature spec.
+Security is a baseline, not a classification-driven stage. Planner, Dev, and QA consume the controls selected by the concrete risk surface from `.aioson/rules/security-baseline.md`. No scan, audit, Pentester run, or security artifact is required merely because work is MICRO, SMALL, or MEDIUM; when a control is triggered, reproducible High/Critical findings block delivery at every size. Controls carry stable IDs (`SEC-SBD-01`..`SEC-SBD-08`) so the PRD, plan, code, and findings can reference them without prose drift. Agents may not silently weaken, rename, or skip an applicable control—deviations require an explicit decision recorded in the PRD or QA report.
 
 ## Governance
 - Amendments require explicit user approval

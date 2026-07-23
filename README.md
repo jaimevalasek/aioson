@@ -24,8 +24,10 @@
 
 <div align="center">
 
-AIOSON gives every AI session a **role**, a **protocol**, and a **lifecycle**.  
-Instead of one massive prompt doing everything, each agent owns a well-defined slice — from discovery to deployment — and hands off cleanly to the next.
+AIOSON gives AI development a **small, explicit lifecycle** without forcing every
+idea through a committee of agents. Start with the product intent, create one
+implementation plan, let DEV build it, and finish with a proportional QA review.
+Specialists remain available when the work actually needs them.
 
 </div>
 
@@ -124,64 +126,51 @@ This copies the latest agents, skills, and templates into `.aioson/`, respecting
 ## How it works
 
 ```
-  New project                              Existing project
-       │                                         │
-       ▼                                         ▼
-  aioson init                           aioson install .
-       │                                aioson scan:project
-       └──────────────┬──────────────────────────┘
-                      │
-                      ▼
-              ┌───────────────┐
-              │  /setup       │  ← Project context & onboarding
-              └───────┬───────┘
-                      │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-    /analyst     /architect    /product      ← Discovery & planning
-          │           │           │
-          └───────────┼───────────┘
-                      ▼
-              ┌───────────────┐
-              │  /sheldon     │  ← PRD enrichment & deep technical reasoning
-              └───────┬───────┘
-                      ▼
-              ┌───────────────┐
-              │   /ux-ui      │  ← Design system & UI specs
-              └───────┬───────┘
-                      │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-      /deyvin       /dev        /pm          ← Implementation
-          │           │           │
-          └───────────┼───────────┘
-                      ▼
-              ┌───────────────┐
-              │ /pentester    │  ← Adversarial security review (MEDIUM)
-              └───────┬───────┘
-                      ▼
-              ┌───────────────┐
-              │    /qa        │  ← Review, tests, browser QA
-              └───────┬───────┘
-                      ▼
-              ┌───────────────┐
-              │   /tester     │  ← Systematic test engineering (when needed)
-              └───────────────┘
+  Optional framing                     Canonical delivery
+
+  /briefing ──> /briefing-refiner ─┐
+                                   │
+                                   ▼
+                              /product
+                                   │
+                          /sheldon (optional)
+                                   │
+                                   ▼
+                               /planner
+                                   │
+                                   ▼
+                                 /dev
+                                   │
+                          development lanes
+                             (optional)
+                                   │
+                                   ▼
+                                  /qa
 ```
 
-Each agent runs as a tracked live session with full runtime observability — milestones, handoffs, and context snapshots recorded in the AIOSON dashboard.
+Concrete, bounded changes can take the **Simple Plan** lane directly through DEV.
+For feature work, the canonical chain produces one PRD, one implementation plan,
+and one QA verdict. `MICRO`, `SMALL`, and `MEDIUM` tune depth and verification
+budget; they do not introduce different bureaucratic chains.
+
+Analyst, Architect, Discovery Design Doc, PM, UX/UI, Tester, Pentester, and
+Validator remain available as opt-in specialists. They are not automatic stages.
+Each active agent can still run as a tracked live session with milestones,
+handoffs, and context snapshots recorded in the AIOSON dashboard.
 
 ---
 
 ## Why AIOSON
 
-Most AI sessions are conversations. AIOSON is a **protocol**.
+Most AI sessions are conversations. AIOSON is a **delivery protocol**.
 
-Every feature goes through a defined lifecycle — spec, gate, build, verify — and every agent knows exactly where it is in that lifecycle. The result: AI that doesn't guess, doesn't drift, and doesn't lose track when the context window fills up.
+The protocol keeps product intent, implementation, and verification connected
+without generating documents that do not help the code. It preserves decisions
+across context windows while keeping optional expertise available on demand.
 
-### Spec-Driven Development
+### Lean product-to-code delivery
 
-Vague prompt → unambiguous spec → gated execution. No skipping phases, no silent assumptions.
+Idea → product intent → executable plan → implementation → evidence.
 
 ```
 "add a stock management feature"
@@ -189,42 +178,55 @@ Vague prompt → unambiguous spec → gated execution. No skipping phases, no si
          ▼ @product
    prd-stock-management.md
    ┌──────────────────────────────────────┐
-   │ objectives, out-of-scope, open items │
+   │ outcomes, scope, decisions, ACs       │
    └──────────────────────────────────────┘
          │
-         ▼ @sheldon          ← PRD enrichment
-   sheldon-enrichment-stock.md
-   ┌──────────────────────────────────────┐
-   │ gray areas decided, readiness score  │
-   │ RF-GA extraction, AC hardening       │
-   └──────────────────────────────────────┘
+         ├─ @sheldon (optional enrichment)
          │
-         ▼ Gate A            ← requirements approved?
-   requirements-stock.md     ← REQ-stock-001, AC-stock-001 …
-         │
-         ▼ Gate B            ← design approved?
-   architecture.md + design-doc-stock.md
-         │
-         ▼ Gate C            ← implementation plan reviewed?
+         ▼ @planner
    implementation-plan-stock.md
+   ┌──────────────────────────────────────┐
+   │ ordered phases, files, verification  │
+   └──────────────────────────────────────┘
          │
-         ▼ @dev / @deyvin    ← code, commits, spec updates
+         ▼ @dev
+   code + focused checks + execution evidence
          │
-         ▼ Gate D            ← 4-tier verification
-   @qa forensics: Exists → Substantive → Wired → Functional
+         ▼ @qa
+   one proportional final verdict
 ```
 
-**Gates are blocking in MEDIUM projects, informational in SMALL.** Each gate is enforced by a checklist in `spec-{slug}.md` — agents can't advance without explicit approval signals. No more AI that starts coding before the requirements are clear.
+**What the workflow keeps:**
 
-**What you get in the spec file:**
+| Artifact | Purpose |
+|----------|---------|
+| PRD | Product intent, boundaries, decisions, and acceptance criteria |
+| Implementation plan | Ordered code changes, ownership, and verification |
+| Feature dossier | Optional, non-blocking context and specialist insight |
+| Execution manifest | Runtime host/model choices and enabled reviewers |
+| QA verdict | Final evidence, defects, residual risk, and outcome |
 
-| Field | What it tracks |
-|-------|----------------|
-| `phase_gates` | `requirements: approved`, `design: approved`, `plan: approved` |
-| `last_checkpoint` | Exactly where the agent stopped — resume without re-reading everything |
-| `gray_areas_decided` | Every ambiguity that was surfaced and decided, with rationale |
-| `must_haves` | Triplet contract: truths, artifacts, key links |
-| `readiness` / `readiness_notes` | @sheldon's go/no-go signal before implementation starts |
+---
+
+### Model-aware development lanes
+
+DEV may split implementation into explicit lanes such as `backend`, `frontend`,
+or another bounded slice. Each lane can select its own execution host and model,
+prompt, and writable paths. Lanes run sequentially in the shared worktree, and
+DEV remains the integration owner.
+
+Registered execution adapters currently include Codex, Claude Code, OpenCode,
+and Kimi Code. Other providers can run through a compatible registered host or
+a dedicated adapter; the contract is based on `host + model`, not a hardcoded
+frontend/backend agent.
+
+If a requested host, executable, or model is unavailable, execution pauses. It
+never silently substitutes the model running the current session. Fallback only
+occurs when the execution manifest explicitly allows it for that failure class.
+
+Tester, Pentester, and Validator are also disabled by default. Enable them when
+deeper coverage, adversarial security review, or independent validation is worth
+the additional time.
 
 ---
 
@@ -561,21 +563,23 @@ aioson squad:dashboard              # real-time web monitoring panel
 |-------|------|----------|
 | `/aioson:agent:setup` | Project onboarding & context | First step on any project |
 | `/aioson:agent:product` | Product decisions & PRD | Feature scope, user stories |
-| `/aioson:agent:sheldon` | Deep technical reasoning & PRD hardening | Hard engineering problems, spec review |
-| `/aioson:agent:analyst` | Domain discovery & entity mapping | Understanding the problem space |
-| `/aioson:agent:architect` | Project structure & technical decisions | Architecture, stack choices |
-| `/aioson:agent:ux-ui` | UI/UX design system & component specs | Dashboards, flows, components |
-| `/aioson:agent:pm` | Backlog & user stories | Sprint planning, task breakdown |
+| `/aioson:agent:planner` | One executable implementation plan | Turning the PRD into ordered code work |
+| `/aioson:agent:sheldon` | Optional PRD enrichment | Hard engineering questions and spec review |
+| `/aioson:agent:analyst` | Opt-in domain discovery | Material domain uncertainty |
+| `/aioson:agent:architect` | Opt-in architecture consultation | New boundaries and consequential technical decisions |
+| `/aioson:agent:ux-ui` | Opt-in UI/UX specialization | Dashboards, flows, components |
+| `/aioson:agent:pm` | Opt-in backlog consultation | Backlogs and external planning systems |
 | `/aioson:agent:orchestrator` | Session protocol & parallel execution | Multi-agent coordination |
-| `/aioson:agent:dev` | Feature implementation (any stack) | Focused dev tasks |
-| `/aioson:agent:deyvin` / `/aioson:agent:pair` | Pair programming & continuity | Coding — greenfield or brownfield |
-| `/aioson:agent:qa` | Risk-first review & test generation | Quality gates before ship |
-| `/aioson:agent:tester` | Systematic test engineering | Coverage gaps, legacy code testing |
-| `/aioson:agent:pentester` | Adversarial security review | Security gates before release |
+| `/aioson:agent:dev` | Implementation and integration owner | Focused dev tasks and model-aware lanes |
+| `/aioson:agent:deyvin` / `/aioson:agent:pair` | Pair programming & continuity | Debugging and small validated slices |
+| `/aioson:agent:qa` | Proportional final review | Evidence-backed release verdict |
+| `/aioson:agent:tester` | Optional deeper test engineering | Explicit coverage expansion |
+| `/aioson:agent:pentester` | Optional adversarial review | Explicit security assessment |
 | `/aioson:agent:squad` | Parallel agent squads | Large feature sets in parallel |
 | `/aioson:agent:genome` | Agent knowledge & learning | Adaptive squad intelligence |
 | `/aioson:agent:committer` | Semantic commit messages | High-quality Git commits |
 | `/aioson:agent:briefing` | Plan → structured briefing | Pre-production planning, problem framing |
+| `/aioson:agent:briefing-refiner` | Optional briefing refinement | Reviewing an existing briefing before Product |
 | `/aioson:agent:copywriter` | Conversion copy & content | Marketing pages, VSL scripts |
 | `/aioson:agent:discover` | System discovery & semantic cache | Brownfield mapping, knowledge bootstrap |
 | `/aioson:agent:neo` | Onboarding & next steps | "Where do I start?" guidance |
@@ -585,8 +589,8 @@ aioson squad:dashboard              # real-time web monitoring panel
 | `/aioson:agent:profiler-forge` | Profile generation | Genome 3.0 advisor creation |
 | `/aioson:agent:site-forge` | Site cloning & design extraction | Clone, harvest, blend, or forge skills from any URL |
 | `/aioson:agent:design-hybrid-forge` | Hybrid design system generation | Merge two visual parents into one |
-| `/aioson:agent:discovery-design-doc` | Discovery & design doc generation | Living design doc bridging discovery to implementation |
-| `/aioson:agent:validator` | Deliverable validation | Pre-gate verification |
+| `/aioson:agent:discovery-design-doc` | Opt-in discovery/design consultation | Explicit legacy or exploratory design work |
+| `/aioson:agent:validator` | Optional independent validation | Additional verification when explicitly enabled |
 
 ---
 
@@ -616,7 +620,7 @@ aioson agents
 # Get the activation prompt for any agent
 aioson agent:prompt setup --tool=claude
 
-# See the recommended agent sequence for your project size
+# See the canonical route with depth tuned for the project size
 aioson workflow:plan --classification=SMALL
 ```
 
@@ -721,12 +725,18 @@ aioson workflow:heal [path] --stage=<agent>
 aioson workflow:harden [path] [--dry-run]
 aioson workflow:execute [path] [--dry-run] [--start-from=<agent>]
 aioson intake:ask [path] --agent=<agent> --schema=<questions.json> [--out=<answers.json>] [--json]
+aioson agent:execution:init [path] --feature=<slug> --host=<host>
+aioson agent:execution:validate [path] --feature=<slug> [--json]
+aioson agent:execution:show [path] --feature=<slug> [--json]
+aioson agent:execution:dispatch [path] --feature=<slug> --agent=<agent>
+aioson agent:execution:dispatch [path] --feature=<slug> --lane=<lane>
+aioson agent:execution:resume [path] --feature=<slug>
 ```
 
 </details>
 
 <details>
-<summary><strong>SDD automation & gates</strong></summary>
+<summary><strong>Optional verification and legacy gate tools</strong></summary>
 
 ```bash
 aioson preflight [path] [--json]
@@ -750,7 +760,10 @@ aioson verify:gate [path] --feature=<slug> [--json]
 
 `workflow:next --agent=scope-check --scope-mode=post-dev --verification-policy=strict` consumes an existing local `verification-report.md` as structured evidence in the scope-check prompt. It validates and routes the report result, but never runs an external `--tool` auditor automatically.
 
-For substantive SMALL/MEDIUM features, Gate D treats the implementation ledger as trace metadata and the persisted `harness:check` result as executable proof. `ac:test-audit --strict` rejects skipped/todo/commented/string-only pseudo-tests, and `feature:close --verdict=PASS` refuses stale or missing per-CAP proof unless the human explicitly uses the existing emergency `--force` override.
+These commands remain available for projects that explicitly opt into the legacy
+SDD gate or hardening contracts. Classification alone does not activate that
+chain. In those projects, Gate D can treat the implementation ledger as trace
+metadata and persisted harness checks as executable proof.
 
 `harness:retro` mines schema-valid implementation verification reports as a retrospective source. It uses only non-confirming `Machine Report` findings (`DOES_NOT_CONFIRM`, `PARTIAL`, `NOT_VERIFIED`) and never includes raw auditor output, stderr, prompt packages, or finding evidence text in the generated dossier.
 
@@ -925,13 +938,13 @@ aioson setup:context . \
   --rpc-provider=Alchemy
 ```
 
-See the [Web3 guide](docs/en/web3.md) for full details.
+See the [Web3 guide](docs/en/5-reference/web3.md) for full details.
 
 ---
 
 ## JSON output for CI
 
-Most commands support `--json` for structured output. See [JSON schemas](docs/en/json-schemas.md) for contracts.
+Most commands support `--json` for structured output. See [JSON schemas](docs/en/5-reference/json-schemas.md) for contracts.
 
 ```bash
 aioson info --json
@@ -951,6 +964,8 @@ aioson scan:project --json
 - [JSON schemas](docs/en/5-reference/json-schemas.md) — `--json` output contracts
 
 **Feature guides**
+- [Agent execution](docs/en/5-reference/agent-execution.md)
+- [Autopilot handoff](docs/en/5-reference/autopilot-handoff.md)
 - [Parallel orchestration](docs/en/5-reference/parallel.md)
 - [MCP guide](docs/en/5-reference/mcp.md)
 - [Browser QA guide](docs/en/5-reference/qa-browser.md)
@@ -988,6 +1003,8 @@ aioson scan:project --json
 - [Referência por agente](docs/pt/4-agentes/README.md)
 
 *Referência*
+- [Execução de agentes](docs/pt/5-referencia/agent-execution.md)
+- [Autopilot e handoffs](docs/pt/5-referencia/autopilot-handoff.md)
 - [Clientes AI](docs/pt/5-referencia/clientes-ai.md)
 - [SDD framework](docs/pt/5-referencia/sdd-framework.md)
 - [Motor hardening](docs/pt/5-referencia/motor-hardening.md)

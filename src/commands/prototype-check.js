@@ -3,17 +3,15 @@
 /**
  * aioson prototype:check — deterministic fidelity guard for the prototype contract.
  *
- * When a PRD carries a `## Prototype reference` (the carrier @product writes), this
- * command verifies that the prototype actually reaches the build:
+ * When a PRD carries a `## Prototype contract` (legacy: Prototype reference), this
+ * command verifies that the prototype reaches the single product authority:
  *   1. the referenced prototype.html + manifest exist (no dangling pointer);
- *   2. a requirements-{slug}.md bridge exists;
- *   3. the Core interactions the manifest lists are echoed as acceptance criteria
- *      in requirements (this is the only place infidelity becomes machine-checkable —
- *      @validator never reads the prototype, only the AC authored by @analyst).
+ *   2. the Core interactions the manifest lists are echoed in the PRD acceptance
+ *      contract authored by Product/Sheldon.
  *
  * It is a STRUCTURAL check, not a semantic one: coverage is a folded substring match
- * of each manifest interaction phrase against the requirements text. The prototype
- * contract instructs @analyst to echo the interaction names verbatim
+ * of each manifest interaction phrase against the PRD text. The prototype
+ * contract instructs Product/Sheldon to preserve the interaction names
  * (e.g. "add card persists and re-renders"), so the match is deterministic, not fuzzy.
  *
  * Features with no `## Prototype reference` are a no-op (status: not_applicable).
@@ -38,7 +36,7 @@ function fold(s) {
 // The `## Prototype reference` section body, if present. Captures from the heading
 // to the next `## ` heading or end of file (no `m` flag, so `$` means end-of-input).
 function prototypeReferenceSection(prd) {
-  const m = String(prd || '').match(/##\s+Prototype reference[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
+  const m = String(prd || '').match(/##\s+Prototype (?:contract|reference)[^\n]*\n([\s\S]*?)(?=\n##\s|$)/i);
   return m ? m[1] : null;
 }
 
@@ -65,7 +63,6 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
   const dir = contextDir(targetDir);
 
   const prdFile = slug ? `prd-${slug}.md` : 'prd.md';
-  const reqFile = slug ? `requirements-${slug}.md` : 'requirements.md';
   const prd = await readFileSafe(path.join(dir, prdFile));
 
   const emit = (result) => {
@@ -93,7 +90,7 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
   const section = prototypeReferenceSection(prd);
   if (!section) {
     return emit({ ok: true, status: 'not_applicable', feature_slug: slug,
-      message: 'PRD has no `## Prototype reference` — feature has no prototype contract.' });
+      message: 'PRD has no `## Prototype contract` — feature has no prototype contract.' });
   }
 
   // Resolve prototype + manifest paths (from the section, else the default location).
@@ -102,7 +99,7 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
   const manifestRel = parsePath(section, 'manifest')
     || (slug ? `.aioson/briefings/${slug}/prototype-manifest.md` : null);
 
-  const checks = { prototype_exists: false, manifest_exists: false, requirements_exists: false };
+  const checks = { prototype_exists: false, manifest_exists: false, prd_acceptance_contract: false };
 
   const protoSafe = protoRel ? resolveInsideRoot(targetDir, protoRel) : { ok: false, reason: 'missing_path' };
   if (!protoSafe.ok) {
@@ -128,27 +125,26 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
       message: `Prototype exists but its manifest ${manifestRel || '(unspecified)'} is missing.` });
   }
 
-  const requirements = await readFileSafe(path.join(dir, reqFile));
-  checks.requirements_exists = requirements !== null;
-  if (!checks.requirements_exists) {
-    return emit({ ok: false, status: 'fail', reason: 'missing_requirements', feature_slug: slug, checks,
-      message: `PRD references a prototype but ${reqFile} is missing — @analyst has not authored the acceptance-criteria bridge.` });
+  checks.prd_acceptance_contract = /##\s+Acceptance Criteria\b/i.test(prd);
+  if (!checks.prd_acceptance_contract) {
+    return emit({ ok: false, status: 'fail', reason: 'missing_acceptance_criteria', feature_slug: slug, checks,
+      message: 'PRD references a prototype but has no `## Acceptance Criteria` bridge for its interactions.' });
   }
 
   const interactions = extractInteractions(manifest);
-  const reqFolded = fold(requirements);
-  const uncovered = interactions.filter((i) => !reqFolded.includes(fold(i)));
+  const prdFolded = fold(prd);
+  const uncovered = interactions.filter((i) => !prdFolded.includes(fold(i)));
   const covered = interactions.length - uncovered.length;
   const interactionsResult = { total: interactions.length, covered, uncovered };
 
   if (interactions.length === 0) {
     return emit({ ok: true, status: 'ok', feature_slug: slug, checks, interactions: interactionsResult,
-      message: 'Prototype, manifest, and requirements all present. Manifest lists no machine-readable Core interactions to cover.' });
+      message: 'Prototype, manifest, and PRD acceptance contract are present. Manifest lists no machine-readable Core interactions to cover.' });
   }
 
   if (covered === 0) {
     return emit({ ok: false, status: 'fail', reason: 'no_ac_coverage', feature_slug: slug, checks, interactions: interactionsResult,
-      message: 'None of the prototype Core interactions appear in the requirements ACs — the prototype is not reaching @validator.' });
+      message: 'None of the prototype Core interactions appear in the PRD acceptance contract.' });
   }
 
   if (uncovered.length > 0) {
@@ -157,7 +153,7 @@ async function runPrototypeCheck({ args, options = {}, logger }) {
   }
 
   return emit({ ok: true, status: 'ok', feature_slug: slug, checks, interactions: interactionsResult,
-    message: 'Every prototype Core interaction is echoed in the requirements ACs.' });
+    message: 'Every prototype Core interaction is echoed in the PRD acceptance contract.' });
 }
 
 module.exports = { runPrototypeCheck };

@@ -3,8 +3,8 @@
 /**
  * aioson artifact:validate — validate the complete artifact chain for a feature.
  *
- * Checks all expected artifacts (prd → sheldon → requirements → spec →
- * architecture → implementation-plan → conformance) and reports chain integrity.
+ * Checks the canonical artifact chain (PRD → implementation plan → QA report)
+ * and reports trace integrity. Legacy documents are ignored, not required.
  *
  * Usage:
  *   aioson artifact:validate . --feature=checkout
@@ -14,29 +14,11 @@
 const path = require('node:path');
 const {
   scanArtifacts,
-  detectClassification,
-  parseGatesFromSpec,
-  parseFrontmatter,
-  contextDir
+  detectClassification
 } = require('../preflight-engine');
-const { AC_ID_RE } = require('../lib/ac-test-audit');
 const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
 
 const BAR = '━'.repeat(45);
-const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
-
-function gateDisplay(gates) {
-  const letters = { requirements: 'A', design: 'B', plan: 'C', execution: 'D' };
-  return Object.entries(letters).map(([name, letter]) => {
-    const status = gates[name];
-    return status === 'approved' ? `${letter}✓` : `${letter}○`;
-  }).join(' ');
-}
-
-function artifactDisplayName(artifact, fallbackName) {
-  if (artifact && artifact.exists && artifact.path) return path.basename(artifact.path);
-  return fallbackName;
-}
 
 async function runArtifactValidate({ args, options = {}, logger }) {
   const targetDir = path.resolve(process.cwd(), args[0] || '.');
@@ -51,42 +33,14 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   const artifacts = await scanArtifacts(targetDir, slug);
   const classification = await detectClassification(targetDir, slug);
   const completeness = await analyzeFeatureCompleteness(targetDir, slug, { artifacts, classification });
-
-  // Gates from spec
-  const specGates = artifacts.spec.exists ? parseGatesFromSpec(artifacts.spec.content) : {};
-
-  // Spec details
-  const specFm = artifacts.spec.exists ? parseFrontmatter(artifacts.spec.content) : {};
-  const specVersion = specFm.version || null;
-  const specGateDisplay = artifacts.spec.exists ? gateDisplay(specGates) : null;
-
-  // Sheldon readiness
-  const sheldonReady = artifacts.sheldon_enrichment.exists
-    ? (artifacts.sheldon_enrichment.frontmatter.readiness === 'ready_for_downstream' ? 'ready_for_downstream' : 'present')
-    : null;
-  const sheldonValidationReady = artifacts.sheldon_validation.exists
-    ? (artifacts.sheldon_validation.frontmatter.verdict || artifacts.sheldon_validation.frontmatter.readiness || 'present')
-    : null;
+  const productScope = String(artifacts.prd.frontmatter?.product_scope || '').toLowerCase();
+  const prdReadyStatus = String(artifacts.prd.frontmatter?.prd_ready || '').toLowerCase();
+  const prdReady = artifacts.prd.exists && productScope === 'approved' && prdReadyStatus === 'approved';
 
   // Implementation plan status
   const planStatus = artifacts.implementation_plan.exists
     ? (artifacts.implementation_plan.frontmatter.status || 'present')
     : null;
-
-  // Requirement count. Accept both simple IDs (REQ-01) and slugged IDs
-  // (REQ-SDLC-01), because feature contracts use slugged identifiers.
-  let reqCount = null;
-  if (artifacts.requirements.exists && artifacts.requirements.content) {
-    const reqs = artifacts.requirements.content.match(REQ_ID_RE) || [];
-    const acs = artifacts.requirements.content.match(AC_ID_RE) || [];
-    reqCount = `${new Set(reqs).size} REQs, ${new Set(acs).size} ACs`;
-  }
-
-  // Conformance required?
-  const conformanceRequired = classification === 'MEDIUM';
-  const designDocRequired = classification === 'SMALL' || classification === 'MEDIUM';
-  const designDocName = artifactDisplayName(artifacts.design_doc, `design-doc-${slug}.md`);
-  const readinessName = artifactDisplayName(artifacts.readiness, `readiness-${slug}.md`);
 
   // Build chain items
   const chain = [
@@ -99,59 +53,12 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     },
     {
       name: `prd-${slug}.md`,
-      exists: artifacts.prd.exists,
-      detail: artifacts.prd.exists ? `${artifacts.prd.size}B` : null,
+      exists: prdReady,
+      detail: artifacts.prd.exists
+        ? `product_scope: ${productScope || 'missing'}, prd_ready: ${prdReadyStatus || 'missing'}`
+        : null,
       required: true,
       indent: 0
-    },
-    {
-      name: `sheldon-enrichment-${slug}.md`,
-      exists: artifacts.sheldon_enrichment.exists,
-      detail: sheldonReady ? `readiness: ${sheldonReady}` : null,
-      required: false,
-      indent: 1
-    },
-    {
-      name: `sheldon-validation-${slug}.md`,
-      exists: artifacts.sheldon_validation.exists,
-      detail: sheldonValidationReady ? `verdict: ${sheldonValidationReady}` : 'MEDIUM readiness verdict when @sheldon runs',
-      required: false,
-      indent: 1
-    },
-    {
-      name: `requirements-${slug}.md`,
-      exists: artifacts.requirements.exists,
-      detail: reqCount,
-      required: true,
-      indent: 1
-    },
-    {
-      name: `spec-${slug}.md`,
-      exists: artifacts.spec.exists,
-      detail: artifacts.spec.exists ? `version: ${specVersion || '?'}, gates: ${specGateDisplay || '?'}` : null,
-      required: true,
-      indent: 1
-    },
-    {
-      name: 'architecture.md',
-      exists: artifacts.architecture.exists,
-      detail: null,
-      required: true,
-      indent: 1
-    },
-    {
-      name: designDocName,
-      exists: artifacts.design_doc.exists,
-      detail: designDocRequired ? 'project design baseline or feature architecture delta' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
-      required: designDocRequired,
-      indent: 1
-    },
-    {
-      name: readinessName,
-      exists: artifacts.readiness.exists,
-      detail: designDocRequired ? 'pre-dev readiness contract' : `SMALL/MEDIUM only — NOT required for ${classification || 'MICRO'}`,
-      required: designDocRequired,
-      indent: 1
     },
     {
       name: `implementation-plan-${slug}.md`,
@@ -161,10 +68,10 @@ async function runArtifactValidate({ args, options = {}, logger }) {
       indent: 1
     },
     {
-      name: `conformance-${slug}.yaml`,
-      exists: artifacts.conformance.exists,
-      detail: !conformanceRequired ? `required for MEDIUM — NOT required for ${classification || 'SMALL'}` : null,
-      required: conformanceRequired,
+      name: `qa-report-${slug}.md`,
+      exists: artifacts.qa_report.exists,
+      detail: artifacts.qa_report.exists ? `verdict: ${artifacts.qa_report.frontmatter.verdict || artifacts.qa_report.frontmatter.status || 'present'}` : 'created by @qa after implementation',
+      required: false,
       indent: 1
     }
   ];
@@ -180,13 +87,7 @@ async function runArtifactValidate({ args, options = {}, logger }) {
   const ARTIFACT_OWNER_MAP = {
     'project.context.md': { agent: '@setup', reason: 'setup not complete' },
     [`prd-${slug}.md`]: { agent: '@product', reason: 'PRD not produced yet' },
-    [`requirements-${slug}.md`]: { agent: '@analyst', reason: 'requirements not produced yet (Gate A)' },
-    'architecture.md': { agent: '@architect', reason: 'architecture not produced yet (Gate B)' },
-    [designDocName]: { agent: '@discovery-design-doc', reason: 'design governance contract not produced yet' },
-    [readinessName]: { agent: '@discovery-design-doc', reason: 'readiness contract not produced yet' },
-    [`implementation-plan-${slug}.md`]: { agent: '@pm', reason: 'implementation plan not produced yet (Gate C)' },
-    [`spec-${slug}.md`]: { agent: '@analyst', reason: 'spec not produced yet — @analyst seeds the feature memory' },
-    [`conformance-${slug}.yaml`]: { agent: '@analyst', reason: 'conformance contract missing — @analyst creates it for MEDIUM features' }
+    [`implementation-plan-${slug}.md`]: { agent: '@planner', reason: 'implementation plan not produced yet' }
   };
 
   let nextMissing = null;
@@ -200,9 +101,10 @@ async function runArtifactValidate({ args, options = {}, logger }) {
     const firstFinding = contentFindings[0];
     const owners = {
       product: '@product',
-      requirements: '@analyst',
-      design: '@architect',
-      plan: '@pm',
+      specification: '@product',
+      requirements: '@product',
+      design: '@planner',
+      plan: '@planner',
       execution: '@qa'
     };
     nextMissing = `content:${firstFinding.check}`;

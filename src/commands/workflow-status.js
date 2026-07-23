@@ -242,9 +242,9 @@ function buildSuggestion({
     if (focusStage === 'dev' && state.mode === 'feature' && state.featureSlug && isGateCPlanBlocker(contractCheck)) {
       return {
         action: 'resolve_gate_c',
-        agent: 'pm',
-        command: `aioson workflow:next . --agent=pm --tool=${safeTool}`,
-        reason: `@dev is blocked by Gate C: implementation plan is missing or not approved. Run @pm first.`,
+        agent: 'planner',
+        command: `aioson workflow:next . --agent=planner --tool=${safeTool}`,
+        reason: `@dev is blocked by Gate C: implementation plan is missing or not approved. Run @planner first.`,
         details: [...contractCheck.missing]
       };
     }

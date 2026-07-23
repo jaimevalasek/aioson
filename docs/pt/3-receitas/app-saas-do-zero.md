@@ -1,237 +1,124 @@
-# Receita: App SaaS do zero (classificação MEDIUM)
+# Receita: App SaaS do zero
 
-> **Para quem é:** desenvolvedor ou time montando um SaaS com auth, billing e painel admin.
-> **Tempo de execução:** 2–4 horas (processo distribuído em múltiplas sessões).
-> **O que você vai ter no fim:** SaaS funcional com autenticação, planos de assinatura via Stripe, painel de admin, testes e artefatos completos de spec/arquitetura/QA.
+> **Cenário:** SaaS com autenticação, cobrança, área do cliente e administração.
+> **Classificação típica:** MEDIUM pela quantidade de integrações, usuários e regras.
 
----
+MEDIUM aumenta a profundidade. Não cria uma cadeia diferente:
 
-## Cenário
-
-Você quer construir um SaaS: usuários se cadastram, escolhem um plano pago (Stripe), e acessam um painel com as funcionalidades. Tem também um admin para gerenciar usuários e assinaturas.
-
-Isso é um projeto **MEDIUM** (3 tipos de usuário: visitante, subscriber, admin — e integrações externas: Stripe, email). O AIOSON aplica a **maestro lane**: `@orchestrator` atua como autoridade única de spec (faz fan-out para `@analyst`, `@architect`, `@pm` e `@ux-ui` como sub-agentes, consolida o pacote de spec) e depois pode coordenar lanes paralelas de implementação.
-
-Se você nunca viu o AIOSON em ação, comece pela receita [Primeiro projeto do zero](../2-comecar/primeiro-projeto.md) antes desta.
-
----
-
-## Pré-requisitos
-
-- Node.js 18+, conta Stripe (modo teste é suficiente)
-- Claude Code ou Codex
-- `npx @jaimevalasek/aioson init meu-saas` já executado
-- Modo: Development + Squads (não obrigatório, mas recomendado para MEDIUM)
-
----
-
-## Passo 1 — Setup classifica o projeto como MEDIUM
-
-```bash
-cd meu-saas
-claude .
+```text
+[@briefing → @briefing-refiner] → @product → [@sheldon] → @planner → @dev → @qa
 ```
 
-```
-Você > @setup
+## 1. Enquadre o produto
 
-@setup > Qual o tipo? [web_app · api · site · ...]
-Você > web_app
+Se a ideia ainda está aberta, use Briefing e Briefing Refiner para confirmar problema, usuários, billing, tenancy e exclusões. Se essas decisões já existem, comece em Product.
 
-@setup > Stack?
-Você > Next.js + Prisma + PostgreSQL + Stripe
+## 2. Product fecha o PRD
 
-@setup > Tipos de usuário?
-Você > Visitante (público), Subscriber (pago), Admin (interno) — 3 tipos
+O PRD único deve incluir, no mínimo:
 
-@setup > Integrações externas?
-Você > Stripe (billing) + SendGrid (email) — 2
+- papéis e limites de autorização;
+- ciclo da assinatura e estados de cobrança;
+- comportamento de webhooks e idempotência;
+- dados pessoais e retenção;
+- fluxos principais de usuário e administração;
+- exclusões da primeira entrega;
+- ACs observáveis.
 
-@setup > Regras de negócio não-óbvias?
-Você > Sim — degrade de plano, trial de 14 dias, acesso por feature flag por plano
-
-@setup > Score: 2 + 1 + 2 = 5 → MEDIUM.
-@setup > project.context.md criado. Próximo: @product.
-```
-
----
-
-## Passo 2 — `@product` define escopo e PRD
-
-```
+```text
 Você > @product
 
-@product > Qual o nome do produto e o problema que ele resolve?
-Você > Senty — ferramenta de monitoramento de uptime para devs independentes
-
-@product > Features no MVP?
-Você > Monitor de URL (ping a cada 5min), alerta por email se cair, histórico 30 dias,
-       plano Free (3 monitores) e Pro (20 monitores, alertas SMS)
-
-@product > Critérios de aceitação do MVP?
-Você > [lista detalhada de ACs]
-
-@product > PRD gravado em context/prd.md. Spec do MVP em features/mvp/spec.md.
-           Próximo: @sheldon para revisão antes de implementar, ou @analyst.
+@product > PRD criado: .aioson/context/prd-saas-mvp.md
+           product_scope: approved
+           prd_ready: approved
 ```
 
-> **`@sheldon` opcional aqui:** se o PRD tiver decisões difíceis (billing por uso vs. por assento, multi-tenant vs. single-tenant), rode `@sheldon` para detectar lacunas e endurecer o PRD **antes** de `@orchestrator`. Para fluxos claros, `@orchestrator` pode ir direto.
+## 3. Sheldon é uma revisão opcional
 
----
+Para billing, multi-tenancy ou integrações sensíveis, Sheldon pode revisar o mesmo PRD:
 
-## Passo 3 — `@orchestrator` produz o pacote de spec
+```text
+Você > @sheldon
 
-Em v1.35.0, `@orchestrator` é o **maestro de spec** do MEDIUM: você não precisa invocar `@analyst`, `@architect`, `@ux-ui` e `@pm` manualmente — o `@orchestrator` os dispara como sub-agentes no fan-out, consolida os artefatos e entrega o pacote de spec completo (Gates A/B/C).
-
-```
-Você > @orchestrator
-
-@orchestrator > Classificação MEDIUM confirmada. Lendo prd.md...
-                
-                Fan-out de spec:
-                ├── @analyst   → mapeamento de entidades e domínio
-                ├── @architect → decisões técnicas (monorepo, auth, billing, worker)
-                ├── @ux-ui     → design Aurora Command UI, telas e componentes
-                └── @pm        → 18 user stories, 3 epics, estimativas
-                
-                [sub-agentes executados]
-                
-                Consolidando e verificando consistência...
-                ⚠ US-06 sem AC verificável em webhook → retrabalhando
-                Gates A/B/C aprovados.
-                
-                Pacote de spec:
-                  requirements-mvp.md · architecture.md
-                  design-doc-mvp.md · tasks.md
-                  implementation-plan-mvp.md
-                
-                Lanes de implementação criadas:
-                  LANE 1 — Auth + DB schema
-                  LANE 2 — Core de monitores + worker
-                  LANE 3 — Billing + Admin
-                
-                Gate C: lanes 1+2 devem ter testes unitários passando antes do merge.
-                
-                aioson parallel:init . executado.
-                Workspace em .aioson/context/parallel/.
-                
-                Próximo: @dev (pode trabalhar lanes em sessões separadas).
+@sheldon > Acrescentei ACs para webhook duplicado, downgrade e falha de pagamento.
+           O PRD continua sendo a única autoridade.
 ```
 
-> **Os passos individuais de @analyst, @architect, @ux-ui e @pm** ainda acontecem — agora como sub-agentes coordenados pelo `@orchestrator`. Se você quiser inspecionar o que cada sub-agente produziu, leia os artefatos em `.aioson/context/` após o `@orchestrator` finalizar.
+## 4. Planner cria fases verticais
 
----
+Um bom plano MEDIUM entrega valor verificável em cada fase:
 
-## Passo 4 — `@dev` implementa (por lane, em sessões separadas)
+1. identidade, papéis e persistência mínima;
+2. assinatura e webhook idempotente;
+3. área do cliente com estado real da assinatura;
+4. administração e trilha de auditoria;
+5. integração, migração e smoke pelo caminho de produção.
 
-Abra três terminais ou sessões do cliente AI. Em cada um:
+Cada fase referencia os ACs, arquivos esperados, checks e riscos. Analyst, Architect, PM, UX/UI e Discovery Design Doc são consultorias opcionais para dúvidas nomeadas, não etapas automáticas.
 
-```bash
-# Sessão A (Lane 1)
-claude .
-```
-```
-Você > @dev
-@dev > [lê lane 1 em parallel/lane-01.md, implementa auth + schema]
-@dev > Lane 1 concluída. Tests: 12/12.
-```
+## 5. DEV implementa e integra
 
-```bash
-# Sessão B (Lane 2)
-claude .
-```
-```
-Você > @dev
-@dev > [lê lane 2, implementa monitors + worker]
-@dev > Lane 2 concluída. Tests: 24/24.
-```
+DEV pode trabalhar sozinho ou usar faixas declaradas no manifesto:
 
-```bash
-# Sessão C (Lane 3)
-claude .
-```
-```
-Você > @dev
-@dev > [lê lane 3, implementa billing + admin]
-@dev > Lane 3 concluída. Tests: 8/8.
-```
-
----
-
-## Passo 5 — Merge e QA final
-
-```bash
-# De volta à sessão principal
-```
-```
-Você > aioson parallel:status .
-```
-```
-Lane 1: done  Lane 2: done  Lane 3: done  Gate C: PASS
-```
-```
-Você > aioson parallel:merge . --apply
-```
-```
-@orchestrator > Merge determinístico executado. Verificando conflitos... nenhum.
-```
-```
-Você > @qa
-
-@qa > Rodando suite completa: 44/44 testes passando.
-       Verificando ACs do PRD...
-       AC-Billing-01: webhook Stripe atualiza plano ✓
-       AC-Monitor-03: Free fica bloqueado no 4º monitor ✓
-       AC-Admin-01: admin vê tabela paginada ✓
-       Todos os 12 ACs passando. QA completo.
+```json
+{
+  "development_lanes": {
+    "strategy": "split",
+    "integration_owner": "dev",
+    "lanes": {
+      "backend": {
+        "enabled": true,
+        "host": "codex",
+        "model": "gpt-5.6-sol",
+        "prompt": ".aioson/context/execution-prompts/saas-mvp/backend.md",
+        "write_paths": ["src/api/**", "tests/api/**"],
+        "fallbacks": []
+      },
+      "frontend": {
+        "enabled": true,
+        "host": "opencode",
+        "model": "provider/model-id",
+        "prompt": ".aioson/context/execution-prompts/saas-mvp/frontend.md",
+        "write_paths": ["src/ui/**", "tests/ui/**"],
+        "fallbacks": []
+      }
+    }
+  }
+}
 ```
 
----
+As faixas rodam sequencialmente no worktree compartilhado. DEV verifica `write_paths`, integra contratos compartilhados e executa a suíte completa. Uma combinação indisponível pausa; não há fallback implícito para o modelo do chat.
 
-## O que ficou em disco (rastreio)
+## 6. QA revisa proporcionalmente
 
-```
+Como a feature é MEDIUM, QA aprofunda negativos e integrações nos riscos nomeados:
+
+- autorização entre papéis;
+- reprocessamento de webhook;
+- falha, cancelamento e downgrade;
+- migração e boot;
+- smoke do cadastro à assinatura pelo caminho real.
+
+QA grava um único `qa-report-saas-mvp.md`. Em FAIL, retorna ao DEV com evidência reproduzível; em PASS, recomenda o fechamento humano.
+
+## Segurança adicional é opt-in
+
+Pentester não é inline por ser MEDIUM. Ative-o quando o usuário quiser auditoria adicional ou o plano/QA justificar a especialidade, e habilite sua entrada no manifesto. O mesmo vale para Tester e Validator.
+
+## Artefatos finais
+
+```text
 .aioson/context/
-├── project.context.md        ← MEDIUM, web_app, Aurora Command UI
-├── prd.md                    ← PRD completo (@product)
-├── architecture.md           ← decisões técnicas (@analyst + @architect)
-├── design-doc-mvp.md         ← telas e componentes (@ux-ui)
-├── tasks.md                  ← 18 user stories (@pm)
-├── parallel/
-│   ├── lane-01.md            ← escopo lane Auth
-│   ├── lane-02.md            ← escopo lane Monitors
-│   └── lane-03.md            ← escopo lane Billing
-├── features/mvp/spec.md      ← spec original
-├── dev-state.md              ← status pós-merge
-└── qa-report-test-coverage.md
+├── prd-saas-mvp.md
+├── implementation-plan-saas-mvp.md
+└── qa-report-saas-mvp.md
 ```
 
----
+Pesquisas, dossiê e pareceres permanecem auxiliares e não bloqueantes.
 
-## Variações
+## Veja também
 
-| Situação | Ajuste |
-|---|---|
-| Não quer Stripe agora | Retire billing do escopo no `@product`. Lane 3 desaparece. |
-| Time de 3 pessoas | Cada pessoa executa uma lane. Os artefatos de `parallel/` são o contrato entre vocês. |
-| Quer começar pequeno e crescer | Classifique como SMALL agora. Quando o produto crescer, reabra `@setup` e reclassifique MEDIUM. |
-| Auth com OAuth (Google/GitHub) | Declare no `@architect`. NextAuth tem providers prontos. |
-
----
-
-## Solução de problemas
-
-| Problema | Solução |
-|---|---|
-| `parallel:merge` relata conflito | `aioson parallel:doctor . --fix` — diagnostica e sugere resolução manual |
-| Webhooks Stripe não chegam em dev | Use Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` |
-| Lane 2 depende de schema ainda não migrado | Lane 1 deve terminar e rodar `prisma migrate dev` antes da Lane 2 começar |
-| `@qa` acha ACs vagos demais | Abra `spec.md`, torne os ACs mais específicos, reative `@qa` |
-
----
-
-## Próximo passo
-
-- Quer auditar segurança antes de ir para produção? → [Auditoria de segurança](./auditoria-seguranca.md)
-- Quer publicar o SaaS no aioson.com? → [Publicar no aioson.com](./publicar-no-aioson-com.md)
-- Sessão caiu no meio de uma lane? → [Continuidade entre sessões](./continuidade-entre-sessoes.md)
+- [Decisões iniciais](../2-comecar/decisoes-iniciais.md)
+- [Feature completa com Sheldon opcional](./feature-completa-com-sheldon.md)
+- [Execução de agentes](../5-referencia/agent-execution.md)
+- [Secure by Default](../5-referencia/secure-by-default.md)

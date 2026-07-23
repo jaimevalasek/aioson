@@ -1,115 +1,36 @@
-# @analyst — Descubra o domínio antes de implementar
+# @analyst — Consultoria de domínio
 
-> **Para quem é:** quem vai implementar uma feature e precisa saber exatamente o que existe no codebase e quais entidades estão envolvidas.
-> **Tempo de leitura:** 4 min.
-> **O que você vai sair sabendo:**
-> - Qual o papel de `@analyst` no fluxo
-> - Quais artefatos ele produz e como downstream os usa
-
----
+> **Para quem é:** quem tem uma dúvida concreta sobre entidades, regras de negócio ou fluxos existentes.
 
 ## Para que serve
 
-Implementar sem descobrir o domínio é como reformar um apartamento sem ver a planta: você pode quebrar uma parede que esconde encanamento.
+`@analyst` investiga o domínio e o codebase para responder uma pergunta delimitada: quais entidades já existem, quais regras estão implícitas e onde um novo comportamento se conecta.
 
-`@analyst` lê a spec produzida por `@product` e mergulha no codebase para descobrir: quais entidades já existem, quais fluxos já estão implementados, quais regras de negócio estão implícitas no código. Ele produz um mapa de domínio que impede o `@dev` de duplicar entidades, criar conflitos de schema, ou ignorar regras que já existem.
-
-Em projetos com `@discover` já rodado, o `@analyst` usa o cache semântico em vez de varrer o código todo — economizando muito contexto.
-
----
+Ele não é um estágio automático de MICRO, SMALL ou MEDIUM. Também não precisa produzir um `requirements-{slug}.md` separado para toda feature.
 
 ## Quando invocar
 
-- **No MEDIUM:** `@orchestrator` o dispara automaticamente como sub-agente no fan-out de spec — você não precisa invocar manualmente.
-- **Detour explícito:** quando uma nova feature toca entidades existentes e você quer mapeamento de domínio independente antes de qualquer implementação.
-- Quando alguém novo entra no projeto e precisa entender o domínio rapidamente.
-- Quando a spec mudou e você quer sincronizar o mapeamento de domínio.
-- Para classificação de complexidade (`aioson classify`) — `@analyst` produz o score MICRO/SMALL/MEDIUM.
+- O PRD depende de uma regra de negócio que o codebase ainda não esclareceu.
+- Uma feature toca entidades existentes e há risco de duplicação ou conflito.
+- Product, Sheldon ou Planner pede uma análise de domínio específica.
+- Um novo colaborador precisa de um mapa consultivo do domínio.
 
-> **SMALL:** na lane lean padrão (`@product → @sheldon → @dev → @qa`), `@analyst` não é um hop padrão — o `@sheldon` cobre o mapeamento de domínio sozinho. Invoque `@analyst` explicitamente apenas se precisar de discovery de domínio mais aprofundado como detour.
+## Como o resultado entra no fluxo
 
----
+O parecer atualiza o artefato dono da decisão:
 
-## Quando NÃO invocar
+- escopo ou AC → PRD;
+- sequência/impacto de implementação → plano;
+- detalhe local de código → notas do DEV.
 
-- Projeto MICRO sem novas entidades → o `@dev` lê o contexto direto.
-- Projeto SMALL em lane padrão → `@sheldon` já cobre o domínio; `@analyst` só se necessário como detour.
-- Você quer rever decisões técnicas (não de domínio) → invoke `@architect`.
-- A feature não toca modelo de dados e não tem fluxos novos → pule direto para o próximo passo.
-
----
-
-## Diálogo típico
-
-```
-Você > @analyst
-
-@analyst > Lendo prd-checkout-stripe.md e spec-checkout-stripe.md...
-           Verificando se requirements-checkout-stripe.md já existe... não existe.
-           
-           Mapeando domínio...
-           
-           Entidades encontradas no codebase:
-           - Customer { id, email, name, tier }      ← já existe em src/models/customer.js
-           - Order { id, customer_id, total, status } ← já existe em src/models/order.js
-           - Payment                                  ← NÃO existe — nova entidade necessária
-           
-           Fluxos mapeados:
-           - Criação de pedido: Order ← Customer (many-to-one) ✓
-           - Pagamento: Payment ← Order (one-to-one) — a implementar
-           
-           Regras de negócio detectadas no código:
-           - Order.status aceita: ['pending','paid','cancelled'] — Payment deve respeitar isso
-           
-           Artefatos criados:
-           - .aioson/context/requirements-checkout-stripe.md
-           Próximo: @architect.
-```
-
----
-
-## Saídas em disco
-
-| Arquivo | Conteúdo |
-|---|---|
-| `.aioson/context/discovery.md` | Mapa de domínio geral do projeto (novo projeto) |
-| `.aioson/context/requirements-{slug}.md` | Entidades, regras, edge cases da feature |
-| `.aioson/context/architecture.md` | Contribuição de domínio (enriquecido junto com `@architect`) |
-
----
-
-## Como ele lê seu projeto
-
-- `.aioson/context/project.context.md` — stack, classificação
-- `.aioson/context/prd-{slug}.md` e `spec-{slug}.md` — escopo da feature
-- `.aioson/context/bootstrap/` — cache semântico do `@discover` (se existir)
-- `.aioson/rules/` — regras com `agents: analyst`
-- Código-fonte diretamente (models, schemas, services) — quando não há cache
-
----
-
-## Comandos CLI relacionados
-
-```bash
-# Verificar se requirements estão atualizados em relação ao PRD
-aioson plan:stale . --feature=checkout-stripe
-
-# Validar contexto antes de iniciar
-aioson context:validate .
-aioson workflow:status .
-```
-
----
+O parecer pode ser salvo como memória auxiliar, mas não cria um gate canônico.
 
 ## Handoff típico
 
-- **Vem de:** `@orchestrator` (como sub-agente no MEDIUM) ou invocação explícita como detour
-- **Vai para:** `@architect` (quando usado como detour); o resultado consolida para `@orchestrator` quando em sub-agente
+- **Vem de:** pedido explícito de Product, Sheldon, Planner, DEV ou usuário.
+- **Vai para:** o dono do artefato que fez a pergunta.
 
----
+## Veja também
 
-## Próximo passo
-
-- [Ficha do @architect](./architect.md)
-- [O que é o cache do @discover](../1-entender/glossario.md#discover)
-- [Mapa do ecossistema](../1-entender/mapa-do-ecossistema.md)
+- [Ficha do @product](./product.md)
+- [Ficha do @planner](./planner.md)

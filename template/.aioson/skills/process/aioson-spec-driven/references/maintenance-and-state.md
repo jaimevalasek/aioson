@@ -85,17 +85,18 @@ Next: {clear instruction for next agent or next session}
 | Agent | Primary artifact |
 |-------|-----------------|
 | @product | `prd.md` or `prd-{slug}.md` |
-| @sheldon | `sheldon-enrichment-{slug}.md` |
+| @sheldon | the same `prd.md` or `prd-{slug}.md` |
+| @planner | `implementation-plan-{slug}.md` |
 | @analyst | `discovery.md` or `requirements-{slug}.md` |
 | @architect | `architecture.md` |
 | @dev | `dev-state.md` (already does this) |
-| @deyvin | `dev-state.md` or `spec-{slug}.md` |
+| @deyvin | `dev-state.md` or the active Simple Plan |
 | @qa | QA report file |
 
 ## How @deyvin should use this file
 
-1. Read `phase_gates` first — know which phases are locked
-2. Read `last_checkpoint` — start from there, not from the beginning
+1. Read the plan status and `dev-state.md` checkpoint first
+2. Resume the next incomplete plan phase, not the documentation chain
 3. Read `pending_review` — these may need user input before proceeding
 4. Read `Key decisions` only if the next task involves re-touching those areas
-5. Do NOT re-read the full spec pack unless `last_checkpoint` is null or unclear
+5. Do not load legacy spec packs unless the active plan explicitly references one

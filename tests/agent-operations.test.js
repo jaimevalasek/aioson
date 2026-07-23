@@ -58,7 +58,7 @@ test('agent:epilogue updates pulse and registers agent completion', async () => 
   assert.match(pulse, /Requirements mapped/);
 });
 
-test('agent:prompt sheldon injects the RF-LEAN directive when workflow.config routes sheldon -> dev', async () => {
+test('agent:prompt keeps Sheldon PRD-only even when a legacy config routes it to Dev', async () => {
   const dir = await makeTempDir();
   const { runAgentPrompt } = require('../src/commands/agents');
   await writeFile(dir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# Project\n');
@@ -75,9 +75,10 @@ test('agent:prompt sheldon injects the RF-LEAN directive when workflow.config ro
     t: () => undefined
   });
 
-  assert.ok(res.prompt.includes('Active lane: LEAN'), 'lean directive must be injected');
-  assert.ok(res.prompt.includes('RF-LEAN'));
-  assert.ok(res.prompt.includes('spec-demo.md'));
+  assert.ok(!res.prompt.includes('Active lane: LEAN'));
+  assert.ok(!res.prompt.includes('RF-LEAN'));
+  assert.ok(!res.prompt.includes('spec-demo.md'));
+  assert.match(res.prompt, /prd-\{slug\}\.md|prd-demo\.md/i);
 });
 
 test('agent:prompt sheldon does NOT inject the lean directive in the full chain (no config)', async () => {

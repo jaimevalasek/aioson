@@ -1,26 +1,19 @@
-# Spec-Driven Reference — @product
+# Streamlined Reference — Product
 
-> Router file. Do not duplicate logic from the generic references — load those directly.
+## Product owns
 
-## Which references to load for PRD and feature scoping
+- One PRD with explicit scope, exclusions, user flows, prototype contract, stable `CAP-*` outcomes, and observable `AC-*` rows.
+- `product_scope: approved`, `prd_ready: approved`, and `sheldon_review: not_requested` in frontmatter.
+- No implementation design or plan.
 
-### Always load when this skill is active
+## Optional independent enrichment
 
-- `classification-map.md` — use to declare MICRO/SMALL/MEDIUM at the start of scoping; classification controls PRD depth, whether a `## Specify depth` section is required, and which downstream phases are mandatory
-- `artifact-map.md` — use to understand what @product's PRD feeds into downstream; helps scope the PRD correctly without over-specifying what belongs to @analyst or @architect
+Product normally hands the PRD directly to Planner. Route to Sheldon only when the user requests an independent challenge or a concrete contradiction/risk cannot be safely resolved by Product. Sheldon edits this same PRD, may repair `AC-*` rows, and marks `sheldon_review: approved`; it creates no parallel specification pack.
 
-### Load when input is still ambiguous or exploratory
+## Stop conditions
 
-- `hardening-lane.md` — use to detect if the request is still in vibe mode and needs more discovery before a PRD can be written
+Stop only for a decision that materially changes product behavior, scope, cost, data, or risk. Infer correctness details from evidence. Keep useful but nonessential ideas deferred.
 
-### Do not load for @product
+## Handoff
 
-- `approval-gates.md` — @product produces the PRD; Gate A is evaluated by @analyst after @product hands off
-- `maintenance-and-state.md` — this is for execution/continuation sessions
-
-## Behavioral notes
-
-- Classification (MICRO/SMALL/MEDIUM) from `classification-map.md` must be declared in the PRD — it is the signal that controls all downstream process depth
-- @product does not write requirements (`requirements-{slug}.md`) — those belong to @analyst; see `artifact-map.md` for the boundary
-- If classification is MEDIUM, the PRD must include a `## Specify depth` section per `classification-map.md`
-- For substantive SMALL/MEDIUM features, load `.aioson/docs/feature-completeness-contract.md`, set `feature_completeness: required`, and own the PRD `## Feature Capability Map`; downstream roles own the other three sections
+Any implementation-ready feature PRD → `@planner`. Already-specified bounded technical work uses the separate Simple Plan lane instead of pretending to be a MICRO feature.

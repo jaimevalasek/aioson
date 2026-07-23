@@ -8,8 +8,8 @@ Estas três trilhas mostram **como features chegam ao desenvolvimento** no AIOSO
 
 | Trilha | Quando usar | Agentes-chave |
 |---|---|---|
-| **[Feature completa com @sheldon](./feature-completa-com-sheldon.md)** | Você tem PRD em mente e quer a trilha canônica (a mais usada) | SMALL: `@product → @sheldon → @dev → @qa` · MEDIUM: `@product → @orchestrator → @dev → @pentester → @qa` |
-| [Da ideia ao PRD via @briefing](./da-ideia-ao-prd-via-briefing.md) | Sua ideia ainda é vaga, várias anotações soltas | @briefing → @product |
+| **[Feature completa com @sheldon](./feature-completa-com-sheldon.md)** | Você tem uma direção de produto e quer a rota canônica | `@product → [@sheldon] → @planner → @dev → @qa` |
+| [Da ideia ao PRD via @briefing](./da-ideia-ao-prd-via-briefing.md) | Sua ideia ainda é vaga, várias anotações soltas | `[@briefing → @briefing-refiner] → @product` |
 | [Plans externos para @product](./plans-externos-para-product.md) | Você já planejou em outro chat (ChatGPT, Claude.io Web) | @product (lê `/plans/`) |
 
 ## Receitas por cenário
@@ -17,7 +17,7 @@ Estas três trilhas mostram **como features chegam ao desenvolvimento** no AIOSO
 | Receita | Cenário | Agentes principais |
 |---|---|---|
 | [Landing page](./landing-page.md) | Criar página de apresentação com copy e design | @product, @copywriter, @ux-ui, @dev, @qa |
-| [App SaaS do zero](./app-saas-do-zero.md) | SaaS completo: auth, billing Stripe, admin | Workflow MEDIUM completo + @orchestrator |
+| [App SaaS do zero](./app-saas-do-zero.md) | SaaS completo: auth, billing Stripe, admin | Workflow canônico em profundidade MEDIUM |
 | [Integração em codebase grande](./integracao-em-codebase-grande.md) | Instalar AIOSON em legado de 10k–100k linhas | @discover, @analyst |
 | [Refatoração grande](./refatoracao-grande.md) | Reescrever módulo crítico sem quebrar nada | @sheldon, @tester, @dev, @qa |
 | [Auditoria de segurança](./auditoria-seguranca.md) | Revisar vulnerabilidades antes de produção | @pentester |

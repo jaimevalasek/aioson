@@ -12,7 +12,7 @@
 |---|---|
 | [loop-guardrails.md](./loop-guardrails.md) | Contrato verificável para o self:loop: scope guard, budget, human gates, criteria evaluation (v1.22.0) |
 | [harness-retro.md](./harness-retro.md) | Minerar o histórico de falhas de uma feature sem LLM — dossiê retrospectivo + harness:preview (v1.23.0) |
-| [autopilot-handoff.md](./autopilot-handoff.md) | Full-feature autopilot: cadeia @product → @sheldon/@orchestrator → @dev → @qa (hub) → @tester/@pentester/@validator até `feature:close`; tokens inline `--auto`/`--step`, opção `--help` nos 13 agentes mais usados |
+| [autopilot-handoff.md](./autopilot-handoff.md) | Autopilot canônico: Product → Sheldon opcional → Planner → DEV → QA; especialistas opt-in e fechamento humano |
 | [feature-dossier.md](./feature-dossier.md) | Dossier de feature: ponto único de verdade (spec, plano, histórico, status) |
 | [agent-chain-continuity.md](./agent-chain-continuity.md) | Sistema de continuidade entre sessões — Fases 1–8 (dev-resume, drift detection, handoff v2) |
 | [sdd-framework.md](./sdd-framework.md) | Spec-Driven Development: Constitution, project-pulse, skill aioson-spec-driven, MICRO/SMALL/MEDIUM |
@@ -31,7 +31,7 @@
 
 | Documento | Descrição |
 |---|---|
-| [fluxo-artefatos.md](./fluxo-artefatos.md) | Mapa de quem cria o quê: @product → @sheldon → @analyst → @dev → @qa |
+| [fluxo-artefatos.md](./fluxo-artefatos.md) | Mapa do PRD único → plano único → implementação → veredito QA único |
 | [feature-archive.md](./feature-archive.md) | Arquivamento automático de features concluídas via feature:close |
 | [feature-export.md](./feature-export.md) | Exportar (copiar) todos os artefatos de uma feature para um local limpo — entregável portátil |
 | [memoria-e-contexto.md](./memoria-e-contexto.md) | Memória persistente, context cache, context search, context monitor — guia consolidado |
@@ -56,7 +56,7 @@
 
 | Documento | Descrição |
 |---|---|
-| [sdd-planos-e-estrutura.md](./sdd-planos-e-estrutura.md) | Mapa completo de artefatos: plans/, .aioson/plans/, .aioson/context/, lanes paralelas, tasks.md |
+| [sdd-planos-e-estrutura.md](./sdd-planos-e-estrutura.md) | Mapa dos artefatos canônicos e das faixas opcionais do DEV |
 | [sdd-automation-scripts.md](./sdd-automation-scripts.md) | Regra dos 80%: scripts determinísticos de gate, classificação e estado |
 | [motor-hardening.md](./motor-hardening.md) | Hardening do motor: gates técnicos, auto-cura, test briefing |
 | [design-docs-governance.md](./design-docs-governance.md) | Regras hard de código que agentes aplicam automaticamente |

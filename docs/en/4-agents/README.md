@@ -6,17 +6,16 @@ Cards are being translated progressively. Until a card is available here, the PT
 
 ---
 
-## Default lanes (v1.35.0)
+## Canonical feature route
 
-| Classification | Default lane |
-|---|---|
-| **MICRO** | `@product → @dev → @qa` |
-| **SMALL** (lean — default) | `@product → @sheldon → @dev → @qa` |
-| **MEDIUM** (maestro) | `@product → @orchestrator → @dev → @pentester → @qa` |
+```text
+optional @briefing → optional @briefing-refiner → @product
+→ optional @sheldon → @planner → @dev → @qa
+```
 
-`@sheldon` (SMALL) and `@orchestrator` (MEDIUM) are the **single spec authorities** for their respective sizes. Agents like `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are **opt-in detours** or **fan-out sub-agents** — none deleted, none in the default hop sequence.
+MICRO, SMALL, and MEDIUM change depth, risk coverage, and work budget—not the stage chain. Product owns one PRD, Planner owns one implementation plan, and QA owns one final verdict. `@sheldon` may enrich the PRD in place. Agents such as `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are explicitly requested consultants whose evidence may enrich canonical artifacts without becoming gates.
 
-Building a feature the normal way through this lane can now run the whole chain automatically, up to the `feature:close` recommendation — `feature:close`/publish is always a human gate. See [Autopilot handoff](../5-reference/autopilot-handoff.md) for the run-mode decision (`--auto`/`--step` tokens, the `@product` kickoff question), the post-dev review cycle hub (`@qa` → `@tester`/`@pentester`/`@validator`), and the `--help` quick-help token available on the 13 most-used agents.
+Autopilot defaults to the DEV → QA handoff and can cover the full canonical chain when configured. Tester, Pentester, and Validator are disabled by default and never activate because of classification alone. `feature:close`/publish remains a human gate. See [Autopilot handoff](../5-reference/autopilot-handoff.md).
 
 ---
 
@@ -30,19 +29,20 @@ Building a feature the normal way through this lane can now run the whole chain 
 | `@briefing` | Pre-PRD framing — turn `plans/` sketches into structured briefings with gap analysis |
 | [`@briefing-refiner`](./briefing-refiner.md) | Briefing refinement loop — audits the briefing into structured findings, the CLI renders the localized `review.html` surface (`briefing:review`), confirmed feedback is applied via `briefing:apply-feedback`, rounds repeat until nothing blocks the PRD |
 | `@product` | PRD — vision, problem, users, scope, acceptance criteria |
-| `@sheldon` | **SMALL single spec authority** (RF-LEAN): one pass produces requirements + spec (Gates A/B/C) + design-doc + readiness + implementation-plan + harness-contract. Also a PRD-hardening / enrichment capability usable in any lane. |
-| `@analyst` | Domain discovery — entities, flows, brownfield mapping. **Opt-in detour / fan-out sub-agent** (invoked by `@orchestrator` in MEDIUM) |
-| `@scope-check` | Scope-drift gate — `spec:analyze` runs **automatically** at the `@dev`/`@qa` done gate; also available as an explicit detour |
-| `@architect` | Technical decisions — structure, libraries, integration boundaries. **Opt-in detour / fan-out sub-agent**; runs in **merged mode** (also produces design-doc + readiness + dev-state) when `@discovery-design-doc` is omitted |
+| `@sheldon` | Optional PRD review and enrichment; updates Product's single PRD instead of creating a parallel specification package |
+| `@planner` | Converts the approved PRD into the single vertical implementation plan |
+| `@analyst` | Explicit consultant for domain discovery, entities, flows, and brownfield mapping |
+| `@scope-check` | Explicit consultant for bounded intent/plan/delivery drift review |
+| `@architect` | Explicit consultant for named technical decisions, integration boundaries, and security-sensitive structure |
 | `@ux-ui` | UI/UX spec — **opt-in detour** for UI-heavy specs; `@dev` applies design skills directly by default |
-| `@pm` | Backlog, user stories, implementation plan (Gate C). **Opt-in detour / fan-out sub-agent** (MEDIUM) |
-| `@orchestrator` | **MEDIUM maestro / single spec authority** — fans out `@analyst`/`@architect`/`@pm` (+ `@ux-ui` for UI-heavy) as sub-agents, consolidates the gated spec package. Secondary: coordinate parallel `@dev` lanes post-spec. |
-| `@dev` | Feature implementation — any stack. Runs the plan as a **phase loop**: auto-continues between phases, per-phase verification (light sub-agent), context compaction between phases. Full Runtime smoke runs once at end-of-feature. |
-| `@qa` | Risk-first review, test generation, autonomous fix/test loop (cap 3), hub of the post-dev autopilot review cycle (routes to `@tester`/`@pentester`/`@validator`). Owns Gate D: **Runtime smoke gate** (build + migrations on real DB + boot + Core happy-path on REAL stack). |
-| `@validator` | Binary contract verification against `harness-contract.json` in a **fresh isolated context** (detour when a harness contract exists) |
+| `@pm` | Explicit consultant for backlog and user-story questions; not the implementation-plan owner |
+| `@orchestrator` | Opt-in coordination specialist, not a default feature stage or specification authority |
+| `@dev` | Feature implementation and final integration. May dispatch configured development lanes sequentially in the shared worktree, then verifies the integrated plan. |
+| `@qa` | Proportional final review with a bounded investigation budget; writes the single QA verdict and returns reproducible defects to DEV. |
+| `@validator` | Opt-in binary contract verification in a fresh isolated context |
 | [`@forge-run`](./forge-run.md) | Lane B (opt-in) — compile a MEDIUM feature's specs into an executable workflow and run it (`forge:compile`) |
-| `@tester` | Systematic test engineering — legacy and coverage gaps. Triggered by `@qa` when conditions fire. |
-| `@pentester` | Adversarial security review — OWASP Top 10, LLM Top 10, supply chain. Inline in MEDIUM; opt-in in SMALL. |
+| `@tester` | Opt-in systematic test engineering for legacy systems and coverage gaps |
+| `@pentester` | Opt-in adversarial security review — OWASP Top 10, LLM Top 10, and supply chain |
 
 ### Continuity & delivery
 
@@ -66,7 +66,7 @@ Building a feature the normal way through this lane can now run the whole chain 
 | `@design-hybrid-forge` | Combine two design skills into a hybrid |
 | `@orache` | Domain investigation and strategic research |
 | `@copywriter` | Conversion copy — landing pages, VSL scripts |
-| [`@discovery-design-doc`](./discovery-design-doc.md) | Discovery, readiness, and design doc package — opt-in; absorbed by `@architect` merged mode, `@sheldon`, or `@orchestrator` by default |
+| [`@discovery-design-doc`](./discovery-design-doc.md) | Explicit consultant for a standalone discovery/design investigation; its findings enrich the PRD or plan without becoming a required package |
 
 ---
 

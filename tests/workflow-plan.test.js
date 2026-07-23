@@ -45,16 +45,16 @@ test('normalizeClassification supports known values and fallback', () => {
 
 test('buildWorkflowPlan maps classifications to agent sequence', () => {
   const micro = buildWorkflowPlan({ classification: 'MICRO' });
-  assert.deepEqual(micro.commands, ['@setup', '@dev']);
+  assert.deepEqual(micro.commands, ['@setup', '@product', '@planner', '@dev', '@qa']);
 
   const small = buildWorkflowPlan({ classification: 'SMALL' });
-  assert.deepEqual(small.commands, ['@setup', '@product', '@sheldon', '@dev', '@qa']);
+  assert.deepEqual(small.commands, ['@setup', '@product', '@planner', '@dev', '@qa']);
 
   const medium = buildWorkflowPlan({ classification: 'MEDIUM' });
   assert.deepEqual(medium.commands, [
     '@setup',
     '@product',
-    '@orchestrator',
+    '@planner',
     '@dev',
     '@qa'
   ]);

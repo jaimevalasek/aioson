@@ -11,7 +11,7 @@ const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
 const DOC_REL = '.aioson/docs/quality/code-health-analysis.md';
-const WIRED_AGENTS = ['tester', 'pentester', 'sheldon', 'qa', 'architect', 'deyvin'];
+const WIRED_AGENTS = ['planner', 'dev', 'qa', 'architect', 'tester', 'pentester', 'deyvin'];
 
 test('code-health-analysis doc exists in template and workspace, byte-identical', () => {
   const tpl = fs.readFileSync(path.join(ROOT, 'template', DOC_REL), 'utf8');

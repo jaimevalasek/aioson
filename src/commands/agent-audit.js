@@ -39,7 +39,7 @@ const CHARS_PER_TOKEN = 4;
 const AGENT_TYPES = [
   { type: 'auto-loaded',   slugs: ['CLAUDE', 'AGENTS'],                    target: 3500, hard: 4000 },
   { type: 'orchestrator',  slugs: ['orchestrator', 'squad'],                target: 12000, hard: 20000 },
-  { type: 'generalist',    slugs: ['dev', 'architect', 'deyvin', 'sheldon', 'setup', 'product', 'ux-ui', 'site-forge'], target: 15000, hard: 40000 },
+  { type: 'generalist',    slugs: ['dev', 'architect', 'deyvin', 'sheldon', 'planner', 'setup', 'product', 'ux-ui', 'site-forge'], target: 15000, hard: 40000 },
   { type: 'focused',       slugs: [],                                       target: 8000,  hard: 16000 } // default
 ];
 

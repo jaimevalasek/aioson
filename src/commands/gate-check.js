@@ -22,8 +22,8 @@ const {
   contextDir,
   readFileSafe,
   fileExists,
-  parseGatesFromSpec,
   parseFrontmatter,
+  readPhaseGates,
   detectClassification,
   GATE_NAMES,
   GATE_ALIASES
@@ -33,24 +33,21 @@ const BAR = '━'.repeat(35);
 
 const GATE_PREREQUISITES = {
   A: [],
-  B: ['A'],
-  C: ['A', 'B'],
-  D: ['A', 'B', 'C']
+  B: [],
+  C: [],
+  D: ['C']
 };
 
 const GATE_REQUIRED_ARTIFACTS = {
-  A: (slug) => [`requirements-${slug}.md`],
-  B: (slug) => ['architecture.md'],
-  // implementation-plan-{slug}.md is a MEDIUM-only artifact (@pm owns it,
-  // AC-SDLC-15/16). SMALL/MICRO sequences never route through @pm, so
-  // requiring it unconditionally dead-ends Gate C for those features.
-  C: (slug, classification) => (classification === 'MEDIUM' ? [`implementation-plan-${slug}.md`] : []),
-  D: (slug) => [] // Gate D validated by QA sign-off in spec
+  A: (slug) => [`prd-${slug}.md`],
+  B: (slug) => [`prd-${slug}.md`],
+  C: (slug) => [`implementation-plan-${slug}.md`],
+  D: (slug) => [`qa-report-${slug}.md`]
 };
 
 const GATE_DESCRIPTIONS = {
-  A: 'requirements',
-  B: 'design',
+  A: 'product scope',
+  B: 'PRD readiness',
   C: 'plan',
   D: 'execution'
 };
@@ -59,7 +56,7 @@ async function checkGate(targetDir, slug, gateLetter) {
   const dir = contextDir(targetDir);
   const specFile = path.join(dir, `spec-${slug}.md`);
   const specContent = await readFileSafe(specFile);
-  const gates = specContent ? parseGatesFromSpec(specContent) : {};
+  const gates = await readPhaseGates(targetDir, slug);
   const classification = await detectClassification(targetDir, slug);
 
   const gateName = GATE_NAMES[gateLetter];
@@ -74,7 +71,7 @@ async function checkGate(targetDir, slug, gateLetter) {
     includeExecution: gateLetter === 'D'
   });
   if (completeness.applicable) {
-    const stageByGate = { A: 'requirements', B: 'design', C: 'plan', D: 'execution' };
+    const stageByGate = { A: 'product', B: 'specification', C: 'plan', D: 'execution' };
     const completenessFindings = findingsThroughStage(completeness, stageByGate[gateLetter]);
     evidence.push({
       type: 'feature_completeness',
@@ -114,9 +111,25 @@ async function checkGate(targetDir, slug, gateLetter) {
         const status = fileFm.status ? String(fileFm.status).toLowerCase() : null;
         if (status) detail = `status: ${status}`;
 
-        if (gateLetter === 'C' && status !== 'approved') {
+        if (gateLetter === 'B') {
+          const prdReady = String(fileFm.prd_ready || '').toLowerCase();
+          detail = `prd_ready: ${prdReady || 'missing'}`;
+        }
+        if (gateLetter === 'C' && status && !['pending', 'approved'].includes(status)) {
           ok = false;
-          missing.push(`${fileName} status is ${status || 'missing'} — @pm must approve the implementation plan`);
+          missing.push(`${fileName} status must be approved (or pending approval), found: ${status}`);
+        }
+        // Gate B/C checks validate whether the artifact is ready to approve.
+        // gate:approve writes the approval marker itself, so a pending marker
+        // cannot be treated as a prerequisite for its own approval.
+        if (gateLetter === 'D') {
+          const verdict = String(fileFm.verdict || fileFm.status || '').toLowerCase();
+          const pass = verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(content);
+          if (!pass) {
+            ok = false;
+            missing.push(`${fileName} must record a PASS verdict`);
+          }
+          detail = `verdict: ${verdict || (pass ? 'pass' : 'missing')}`;
         }
       }
       evidence.push({ type: 'artifact', file: fileName, exists: true, detail, ok });
@@ -126,9 +139,11 @@ async function checkGate(targetDir, slug, gateLetter) {
     }
   }
 
-  // Gate D: check for QA sign-off in spec
+  // Gate D: QA report is the canonical delivery verdict. Legacy spec sign-off
+  // remains accepted only when no QA report was produced.
   if (gateLetter === 'D') {
-    if (specContent && specContent.includes('## QA Sign-off')) {
+    const qaReport = await readFileSafe(path.join(dir, `qa-report-${slug}.md`));
+    if (!qaReport && specContent && specContent.includes('## QA Sign-off')) {
       // Check verdict
       const passMatch = specContent.match(/\*\*Verdict:\*\*\s*(PASS|FAIL)/i);
       const passVerdict = passMatch ? passMatch[1].toUpperCase() : null;
@@ -141,11 +156,11 @@ async function checkGate(targetDir, slug, gateLetter) {
         evidence.push({ type: 'qa_signoff', verdict: null, ok: false });
         missing.push('QA sign-off found but verdict unclear');
       }
-    } else {
+    } else if (!qaReport) {
       // A generic implementation checkpoint is not QA evidence. Gate D needs
       // the role-owned sign-off even when the implementation says "done".
       evidence.push({ type: 'qa_signoff', exists: false, ok: false });
-      missing.push('No QA sign-off in spec file');
+      missing.push(`No qa-report-${slug}.md with PASS verdict`);
     }
 
     // Also check spec version for explicit gate_execution
@@ -176,19 +191,17 @@ async function checkGate(targetDir, slug, gateLetter) {
   let recommendation = '';
   if (result === 'PASS') {
     const nextAgents = {
-      A: '@architect',
-      B: classification === 'MEDIUM' ? '@pm' : '@dev',
-      C: classification === 'MEDIUM' ? '@orchestrator' : '@dev',
+      A: '@product',
+      B: '@planner',
+      C: '@dev',
       D: 'feature complete'
     };
     recommendation = `${nextAgents[gateLetter] || 'proceed'} can proceed`;
   } else {
     const fixAgents = {
-      A: `activate @analyst to produce requirements-${slug}.md, then run: aioson gate:approve . --feature=${slug} --gate=A`,
-      B: `activate @architect to produce architecture.md, then run: aioson gate:approve . --feature=${slug} --gate=B`,
-      C: classification === 'MEDIUM'
-        ? `activate @pm to produce and approve implementation-plan-${slug}.md, then run: aioson gate:approve . --feature=${slug} --gate=C`
-        : `approve Gates A and B first, then run: aioson gate:approve . --feature=${slug} --gate=C`,
+      A: `activate @product to produce prd-${slug}.md`,
+      B: `activate @product to complete acceptance criteria and approve prd-${slug}.md`,
+      C: `activate @planner to produce and approve implementation-plan-${slug}.md`,
       D: `activate @qa for final verification; if QA passes, run: aioson gate:approve . --feature=${slug} --gate=D`
     };
     recommendation = `BLOCKED — ${fixAgents[gateLetter] || 'resolve missing items'}`;

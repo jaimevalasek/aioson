@@ -275,7 +275,7 @@ aioson agent:prompt analyst --tool=opencode
 
 ## workflow:plan
 
-Show the recommended agent sequence for the current project based on its `classification`.
+Show the recommended agent sequence for the current project. `classification` controls proportional depth and budget; it does not change the canonical stage chain.
 
 ```bash
 aioson workflow:plan
@@ -293,8 +293,7 @@ aioson workflow:plan --json
 Workflow plan — SMALL:
   @setup
   @product
-  @analyst
-  @architect
+  @planner
   @dev
   @qa
 
@@ -302,23 +301,21 @@ Notes:
   — Framework not installed: agents will include installation steps.
 ```
 
-**Sequences by classification (v1.35.0):**
-- `MICRO`: `@setup → @product → @dev → @qa`
-- `SMALL` (lean default): `@setup → @product → @sheldon → @dev → @qa` — `@sheldon` is the single spec authority
-- `MEDIUM` (maestro): `@setup → @product → @orchestrator → @dev → @pentester → @qa` — `@orchestrator` fans out `@analyst`/`@architect`/`@pm` as sub-agents
+**Canonical sequence at every classification:**
 
-Spec agents (`@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, `@discovery-design-doc`) are **opt-in detours** or fan-out sub-agents — not default hops.
+`@setup → @product → @planner → @dev → @qa`
+
+Briefing and Briefing Refiner may precede Product; Sheldon may enrich the PRD between Product and Planner. These steps are optional and need-driven.
+
+Consultants (`@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, `@discovery-design-doc`, `@orchestrator`) are explicitly requested and never inserted by classification. Tester, Pentester, and Validator are disabled by default.
 
 **Feature development workflow (after initial setup):**
 
 Once the project is set up, each new feature follows a shorter sequence — no `@setup` required:
 
-```
-SMALL:  /aioson:agent:product → @sheldon → @dev → @qa
-MEDIUM: /aioson:agent:product → @orchestrator → @dev → @pentester → @qa
-```
+`/aioson:agent:product → optional @sheldon → @planner → @dev → @qa`
 
-`@product` creates a feature-scoped `prd-{slug}.md`. `@sheldon` (SMALL) produces the full spec package: requirements, design-doc, readiness, implementation-plan, and harness-contract. `@orchestrator` (MEDIUM) fans out `@analyst`/`@architect`/`@pm` and consolidates the gated spec package. `@dev` runs the implementation-plan phase by phase. `@qa` closes the feature by running `feature:close --verdict=PASS`, which updates `spec-{slug}.md` with a QA sign-off, marks it `done` in `features.md`, and automatically archives all feature artefacts to `.aioson/context/done/{slug}/`.
+`@product` creates the single feature-scoped `prd-{slug}.md`. Optional `@sheldon` enriches that same PRD. `@planner` creates the single `implementation-plan-{slug}.md`. `@dev` implements and integrates the plan. `@qa` performs a proportional bounded review and writes `qa-report-{slug}.md`. Close/archive remains a separate human-authorized action.
 
 The `SMALL` and `MEDIUM` outputs include a note reminding you of this sequence.
 
@@ -338,8 +335,8 @@ aioson workflow:next ./my-project --skip=dev
 
 **What it does:**
 - initializes `.aioson/context/workflow.state.json` if it does not exist
-- infers the current project stage from existing artifacts like `project.context.md`, `prd.md`, `discovery.md`, and `architecture.md`
-- follows the default sequence by classification, or a custom `.aioson/context/workflow.config.json` if the project defines one
+- infers the current project stage from canonical artifacts such as `project.context.md`, `prd-{slug}.md`, `implementation-plan-{slug}.md`, and `qa-report-{slug}.md`
+- follows the canonical sequence; classification adjusts proportional work inside a stage rather than changing stage order
 - supports detours such as `--agent=ux-ui`, then returns to the saved next stage automatically
 - allows skipping ahead only until `@dev`; it never allows skipping past `@dev`
 
@@ -350,7 +347,7 @@ aioson workflow:next ./my-project --skip=dev
 
 ### workflow:execute --seed (full-feature autopilot)
 
-`aioson workflow:execute . --feature=<slug> --seed --tool=<tool>` seeds the agentic scheme (`.aioson/context/workflow-execute.json` with `agentic_policy.enabled: true`) without advancing a stage — this is what a spec agent (`@product`/`@sheldon`/`@orchestrator`) runs on its own once it finishes, to arm the full-feature autopilot chain described in [Autopilot handoff](./autopilot-handoff.md). Add `--step` to seed it already disarmed (equivalent to the inline `--step` token). A stale `workflow.state.json` left by a closed/abandoned feature is discarded and reseeded automatically; a genuinely different active feature returns `different_active_feature` — close/pause it, or run `aioson feature:sweep .` to discard stale state explicitly.
+`aioson workflow:execute . --feature=<slug> --seed --tool=<tool>` seeds the agentic scheme (`.aioson/context/workflow-execute.json` with `agentic_policy.enabled: true`) without advancing a stage. Product, optional Sheldon, or Planner may seed the canonical chain described in [Autopilot handoff](./autopilot-handoff.md). Add `--step` to seed it disarmed. A stale `workflow.state.json` left by a closed/abandoned feature is discarded and reseeded automatically; a genuinely different active feature returns `different_active_feature`.
 
 ---
 
@@ -378,7 +375,7 @@ aioson feature:close . --feature=checkout --verdict=PASS --no-archive
 3. Clears active work from `project-pulse.md`.
 4. If `verdict=PASS` and `--no-archive` is not set, calls `feature:archive` automatically to move all artefacts to `.aioson/context/done/{slug}/`.
 
-**When to use:** run by `@qa` automatically when QA is approved. Can also be run manually.
+**When to use:** after reviewing QA's verdict, when the user explicitly authorizes close/archive. QA and autopilot never run it automatically.
 
 ---
 
@@ -917,6 +914,7 @@ aioson agent:execution:init . --feature=checkout --host=codex
 aioson agent:execution:validate . --feature=checkout --json
 aioson agent:execution:show . --feature=checkout --json
 aioson agent:execution:dispatch . --feature=checkout --agent=qa
+aioson agent:execution:dispatch . --feature=checkout --lane=backend
 aioson agent:execution:resume . --feature=checkout
 aioson agent:execution:status . --feature=checkout --json
 aioson agent:execution:events . --feature=checkout --run=<run_id> --json
@@ -924,7 +922,7 @@ aioson agent:execution:events . --feature=checkout --run=<run_id> --json
 
 The same resolver is used by `verification:plan`. Human-readable values such as `GPT 5.6 Terra` and short typos resolve to a local Codex slug only when the match is unique and numeric tokens agree. Ambiguous models, incompatible `reasoning_effort`, invalid catalogs, and unsafe paths fail closed.
 
-See [Agent execution and model resolution](./agent-execution.md).
+The manifest enables DEV and QA by default. Development lanes and Tester/Pentester/Validator are opt-in. See [Agent execution, development lanes, and model resolution](./agent-execution.md).
 
 ---
 

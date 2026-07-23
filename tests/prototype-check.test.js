@@ -29,6 +29,10 @@ const SLUG = 'kanban';
 const PRD_WITH_REF = `# Kanban\n\n## Prototype reference\n- prototype: .aioson/briefings/${SLUG}/prototype.html\n- manifest: .aioson/briefings/${SLUG}/prototype-manifest.md\n- status: draft\n\n## MVP scope\nStuff.\n`;
 const MANIFEST = `# Prototype manifest\n\n## Core interactions\n- \`add card\` — adds a card to a list\n- \`create board\` — creates a board\n- \`archive workspace\` — archives a workspace\n`;
 
+function prdWithAcceptance(criteria) {
+  return `${PRD_WITH_REF}\n## Acceptance Criteria\n${criteria}\n`;
+}
+
 async function run(dir, options = {}) {
   return runPrototypeCheck({ args: [dir], options: { json: true, feature: SLUG, ...options }, logger: makeLogger() });
 }
@@ -128,23 +132,23 @@ test('prototype:check — fail when manifest missing', async () => {
   assert.equal(r.reason, 'missing_manifest');
 });
 
-test('prototype:check — fail when requirements (analyst bridge) missing', async () => {
+test('prototype:check — fail when the Product PRD has no acceptance criteria', async () => {
   const dir = await makeTmpDir();
   await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
   const r = await run(dir);
   assert.equal(r.ok, false);
-  assert.equal(r.reason, 'missing_requirements');
+  assert.equal(r.reason, 'missing_acceptance_criteria');
 });
 
 test('prototype:check — ok when every interaction is echoed in the ACs', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance(
+    'AC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.\nAC-03: archive workspace hides it.'
+  ));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
-    '# Requirements\nAC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.\nAC-03: archive workspace hides it.\n');
   const r = await run(dir);
   assert.equal(r.ok, true);
   assert.equal(r.status, 'ok');
@@ -154,11 +158,11 @@ test('prototype:check — ok when every interaction is echoed in the ACs', async
 
 test('prototype:check — warn on partial coverage and lists the gap', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance(
+    'AC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.'
+  ));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
-    '# Requirements\nAC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.\n');
   const r = await run(dir);
   assert.equal(r.ok, true);
   assert.equal(r.status, 'warn');
@@ -167,11 +171,11 @@ test('prototype:check — warn on partial coverage and lists the gap', async () 
 
 test('prototype:check — strict fails on partial coverage', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance(
+    'AC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.'
+  ));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
-    '# Requirements\nAC-01: add card persists and re-renders.\nAC-02: create board seeds default lists.\n');
   const r = await run(dir, { strict: true });
   assert.equal(r.ok, false);
   assert.equal(r.status, 'fail');
@@ -181,11 +185,11 @@ test('prototype:check — strict fails on partial coverage', async () => {
 
 test('prototype:check — fail when no interaction reaches the ACs', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance(
+    'AC-01: the user can view a list of items.'
+  ));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, MANIFEST);
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
-    '# Requirements\nAC-01: the user can view a list of items.\n');
   const r = await run(dir);
   assert.equal(r.ok, false);
   assert.equal(r.reason, 'no_ac_coverage');
@@ -193,10 +197,9 @@ test('prototype:check — fail when no interaction reaches the ACs', async () =>
 
 test('prototype:check — ok when manifest lists no machine-readable interactions', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance('AC-01: something.'));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`, '# Manifest\nFree prose, no backtick tokens.\n');
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`, '# Requirements\nAC-01: something.\n');
   const r = await run(dir);
   assert.equal(r.ok, true);
   assert.equal(r.status, 'ok');
@@ -205,12 +208,12 @@ test('prototype:check — ok when manifest lists no machine-readable interaction
 
 test('prototype:check — pt-BR interactions match folded ACs (accents ignored)', async () => {
   const dir = await makeTmpDir();
-  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, PRD_WITH_REF);
+  await writeFile(dir, `.aioson/context/prd-${SLUG}.md`, prdWithAcceptance(
+    'AC-01: adicionar cartao persiste e re-renderiza.\nAC-02: arquivar quadro oculta o quadro.'
+  ));
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype.html`, '<html></html>');
   await writeFile(dir, `.aioson/briefings/${SLUG}/prototype-manifest.md`,
     '# Manifesto\n\n## Core interactions\n- `adicionar cartão` — adiciona um cartão\n- `arquivar quadro` — arquiva o quadro\n');
-  await writeFile(dir, `.aioson/context/requirements-${SLUG}.md`,
-    '# Requisitos\nAC-01: adicionar cartao persiste e re-renderiza.\nAC-02: arquivar quadro oculta o quadro.\n');
   const r = await run(dir);
   assert.equal(r.ok, true);
   assert.equal(r.status, 'ok');
