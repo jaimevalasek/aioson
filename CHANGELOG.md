@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.41.0] - 2026-07-23
+
+### Added
+- **Repository-fit intelligence across the feature lifecycle** — briefing refinement, Product, Sheldon, Planner, DEV, and QA now carry evidence about existing patterns, reusable hooks and triggers, exact integration points, planned deltas, and executable checks instead of planning from the specification alone.
+- **Explicit prototype ownership** — each current prototype is bound to one feature/PRD, while historical or removed references are classified separately so a closed feature cannot silently reactivate an older prototype.
+- **Model-aware execution and bounded specialist correction** — development manifests can route supported implementation lanes by host/model, and explicitly enabled Tester or Pentester specialists can correct unequivocal findings within declared path and cycle budgets before independent QA revalidation.
+
+### Changed
+- **Planner is the canonical implementation-design stage.** Approved product intent becomes vertical, executable phases that trace capabilities and acceptance criteria through exact repository paths, existing leverage, implementation work, and production-path evidence.
+- **Autopilot activation and resumption are deterministic.** `--auto` and `--step` make run mode explicit, while a content-bound Gate C checkpoint prevents stale plan approval from resuming significant implementation.
+- Agent prompts, workflow contracts, templates, and bilingual documentation were streamlined around the canonical Product → optional Sheldon → Planner → DEV → QA chain, with optional specialists remaining opt-in.
+
+### Fixed
+- Removed ambiguity between current, historical, stale, and explicitly absent prototypes, including the case where an earlier feature's prototype was incorrectly inherited by a new PRD.
+- Specialist correction now fails closed on unapproved paths, missing Git baselines, exceeded budgets, or cross-cutting changes that must return to DEV.
+- Repository-fit, prototype-binding, Gate C, and correction evidence are validated consistently by preflight, workflow, completeness, and QA paths.
+
+### Validation
+- Full suite: 3,836 passing tests, zero failures, and one skipped test. JavaScript static checks, focused workflow/prototype/security regressions, template/workspace parity, and `git diff --check` are clean.
+
 ## [1.40.0] - 2026-07-22
 
 ### Added

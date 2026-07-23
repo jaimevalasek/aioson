@@ -102,7 +102,7 @@ Atualmente só PT está em reforma. EN/ES/FR continuam usando os arquivos legado
 
 **Fase A (entender + começar)** — concluída · 8 docs em `1-entender/` e `2-comecar/`.
 **Fase B (receitas práticas + ficha por agente)** — concluída · 11 receitas em `3-receitas/` + 29 fichas em `4-agentes/`.
-**Fase C (referência técnica completa)** — concluída · 34 docs em `5-referencia/`, incluindo execução de subagentes, memória do operador e Review Intelligence atualizadas para a versão 1.40.0.
+**Fase C (referência técnica completa)** — concluída · 34 docs em `5-referencia/`, incluindo execução de subagentes, memória do operador e Review Intelligence atualizadas para a versão 1.41.0.
 **Fase D (trilhas de workflow)** — concluída · 3 trilhas canônicas de feature: briefing→PRD, plans externos, e trilha completa com @sheldon.
 
 **Métricas finais:** documentação organizada por trilhas, receitas, fichas de agentes e referência técnica, com o conteúdo histórico preservado em [`_arquivo/`](./_arquivo/).
