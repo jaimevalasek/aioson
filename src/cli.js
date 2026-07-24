@@ -63,6 +63,7 @@ const { runSquadStatus } = require('./commands/squad-status');
 const { runSquadDoctor } = require('./commands/squad-doctor');
 const { runSquadRepairGenomes } = require('./commands/squad-repair-genomes');
 const { runSquadValidate } = require('./commands/squad-validate');
+const { runSquadEval } = require('./commands/squad-eval');
 const { runSquadRoleScan } = require('./commands/squad-role-scan');
 const { runSquadPlaybook } = require('./commands/squad-playbook');
 const { runSquadExport } = require('./commands/squad-export');
@@ -378,6 +379,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'squad-repair-genomes',
   'squad:validate',
   'squad-validate',
+  'squad:eval',
+  'squad-eval',
   'squad:role-scan',
   'squad-role-scan',
   'squad:playbook',
@@ -982,6 +985,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_squad_doctor');
   logHelpLine(t, logger, 'cli.help_squad_repair_genomes');
   logHelpLine(t, logger, 'cli.help_squad_validate');
+  logHelpLine(t, logger, 'cli.help_squad_eval');
   logHelpLine(t, logger, 'cli.help_squad_export');
   logHelpLine(t, logger, 'cli.help_squad_pipeline');
   logHelpLine(t, logger, 'cli.help_squad_agent_create');
@@ -1393,6 +1397,8 @@ async function main() {
       result = await runSquadRepairGenomes({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:validate' || command === 'squad-validate') {
       result = await runSquadValidate({ args, options, logger: commandLogger, t });
+    } else if (command === 'squad:eval' || command === 'squad-eval') {
+      result = await runSquadEval({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:role-scan' || command === 'squad-role-scan') {
       result = await runSquadRoleScan({ args, options, logger: commandLogger });
     } else if (command === 'squad:playbook' || command === 'squad-playbook') {

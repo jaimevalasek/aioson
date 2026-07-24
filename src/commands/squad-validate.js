@@ -2,6 +2,12 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {
+  isContainedPath,
+  validatePremiumManifest,
+  validateSquadManifest
+} = require('../squad/manifest-validator');
+const { isValidSlug } = require('../dossier/schema');
 
 async function pathExists(targetPath) {
   try { await fs.access(targetPath); return true; } catch { return false; }
@@ -77,7 +83,11 @@ async function validateStructure(projectDir, slug, manifest) {
   const executors = Array.isArray(manifest.executors) ? manifest.executors : [];
   for (const exec of executors) {
     if (exec.file) {
-      const absPath = path.join(projectDir, exec.file);
+      const absPath = path.resolve(projectDir, exec.file);
+      if (!isContainedPath(projectDir, absPath)) {
+        errors.push(`Executor "${exec.slug}" file escapes project: ${exec.file}`);
+        continue;
+      }
       if (!(await pathExists(absPath))) {
         errors.push(`Executor "${exec.slug}" file not found: ${exec.file}`);
       }
@@ -364,10 +374,22 @@ async function validateSemanticDeep(projectDir, slug, manifest) {
 async function runSquadValidate({ args = [], options = {}, logger = console } = {}) {
   const projectDir = path.resolve(process.cwd(), args[0] || '.');
   const slug = options.squad || args[1];
+  const strict = options.strict === true || options.strict === 'true';
 
   if (!slug) {
     logger.error('Usage: aioson squad:validate [path] --squad=<slug>');
     return { valid: false, errors: ['No slug provided'], warnings: [] };
+  }
+  if (!isValidSlug(slug)) {
+    logger.error(`Invalid squad slug: "${slug}"`);
+    return {
+      ok: false,
+      valid: false,
+      strict,
+      errors: ['Invalid squad slug'],
+      warnings: [],
+      status: 'INVALID'
+    };
   }
 
   const manifestPath = path.join(projectDir, '.aioson', 'squads', slug, 'squad.manifest.json');
@@ -381,10 +403,20 @@ async function runSquadValidate({ args = [], options = {}, logger = console } = 
   const allErrors = [];
   const allWarnings = [];
 
-  // Layer 1: Schema
-  const schema = validateManifestFields(manifest);
-  allErrors.push(...schema.errors);
-  allWarnings.push(...schema.warnings);
+  // Layer 1: canonical Draft-07 schema plus legacy compatibility checks.
+  const legacySchema = validateManifestFields(manifest);
+  allErrors.push(...legacySchema.errors);
+  allWarnings.push(...legacySchema.warnings);
+
+  const canonicalSchema = await validateSquadManifest(projectDir, manifest);
+  const canonicalMessages = canonicalSchema.errors.map((error) => (
+    `Canonical schema ${error.code} at ${error.path}: ${error.message}`
+  ));
+  if (strict) {
+    allErrors.push(...canonicalMessages);
+  } else {
+    allWarnings.push(...canonicalMessages);
+  }
 
   // Layer 2: Structure
   const structure = await validateStructure(projectDir, slug, manifest);
@@ -401,38 +433,67 @@ async function runSquadValidate({ args = [], options = {}, logger = console } = 
   allErrors.push(...semanticDeep.errors);
   allWarnings.push(...semanticDeep.warnings);
 
+  const premium = strict
+    ? await validatePremiumManifest(projectDir, slug, manifest, {
+      skipEval: options.skipEval === true || options.skipEval === 'true'
+    })
+    : { errors: [], warnings: [] };
+  allErrors.push(...premium.errors);
+  allWarnings.push(...premium.warnings);
+
   // Report
   const valid = allErrors.length === 0;
   const status = valid
     ? (allWarnings.length > 0 ? 'VALID (with warnings)' : 'VALID')
     : 'INVALID';
 
-  logger.log('');
-  logger.log(`\u2550\u2550 Squad Validation: ${slug} \u2550\u2550`);
-  logger.log('');
-  logger.log(`  Schema:         ${schema.errors.length === 0 ? '\u2705 PASS' : '\u274c FAIL'}`);
-  logger.log(`  Structure:      ${structure.errors.length === 0 ? '\u2705 PASS' : '\u274c FAIL'}`);
-  logger.log(`  Semantics:      ${semantics.errors.length === 0 ? (semantics.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
-  logger.log(`  Semantic deep:  ${semanticDeep.errors.length === 0 ? (semanticDeep.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
-  logger.log(`  Output strategy: ${manifest.outputStrategy ? `${manifest.outputStrategy.mode || 'unknown'} mode` : 'not configured'}`);
-
-  if (allErrors.length > 0) {
+  if (!options.json) {
     logger.log('');
-    logger.log('  Errors:');
-    for (const err of allErrors) logger.log(`    \u274c ${err}`);
+    logger.log(`\u2550\u2550 Squad Validation: ${slug} \u2550\u2550`);
+    logger.log('');
+    logger.log(`  Canonical schema: ${canonicalSchema.valid ? '\u2705 PASS' : (strict ? '\u274c FAIL' : '\u26a0\ufe0f  ADVISORY')}`);
+    logger.log(`  Legacy schema:    ${legacySchema.errors.length === 0 ? '\u2705 PASS' : '\u274c FAIL'}`);
+    logger.log(`  Structure:        ${structure.errors.length === 0 ? '\u2705 PASS' : '\u274c FAIL'}`);
+    logger.log(`  Semantics:        ${semantics.errors.length === 0 ? (semantics.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
+    logger.log(`  Semantic deep:    ${semanticDeep.errors.length === 0 ? (semanticDeep.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
+    if (strict) {
+      logger.log(`  Premium gate:     ${premium.errors.length === 0 ? (premium.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
+    }
+    logger.log(`  Output strategy:  ${manifest.outputStrategy ? `${manifest.outputStrategy.mode || 'unknown'} mode` : 'not configured'}`);
+
+    if (allErrors.length > 0) {
+      logger.log('');
+      logger.log('  Errors:');
+      for (const err of allErrors) logger.log(`    \u274c ${err}`);
+    }
+
+    if (allWarnings.length > 0) {
+      logger.log('');
+      logger.log('  Warnings:');
+      for (const warn of allWarnings) logger.log(`    \u26a0\ufe0f  ${warn}`);
+    }
+
+    logger.log('');
+    logger.log(`  Result: ${status}`);
+    logger.log('');
   }
 
-  if (allWarnings.length > 0) {
-    logger.log('');
-    logger.log('  Warnings:');
-    for (const warn of allWarnings) logger.log(`    \u26a0\ufe0f  ${warn}`);
-  }
-
-  logger.log('');
-  logger.log(`  Result: ${status}`);
-  logger.log('');
-
-  return { valid, errors: allErrors, warnings: allWarnings, status };
+  return {
+    ok: valid,
+    valid,
+    strict,
+    schema: {
+      valid: canonicalSchema.valid,
+      path: canonicalSchema.schemaPath
+        ? path.relative(projectDir, canonicalSchema.schemaPath).replace(/\\/g, '/')
+        : null,
+      errors: canonicalSchema.errors
+    },
+    premium: strict ? premium : null,
+    errors: allErrors,
+    warnings: allWarnings,
+    status
+  };
 }
 
 module.exports = { runSquadValidate };

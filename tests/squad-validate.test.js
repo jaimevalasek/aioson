@@ -218,3 +218,60 @@ test('validate handles squad without manifest gracefully', async () => {
   // Error should mention manifest not found
   assert.ok(result.errors.some(e => e.includes('Manifest') || e.includes('manifest') || e.includes('invalid')));
 });
+
+test('AC-premium-14 strict gate rejects escaped paths, stale research evidence and pending genomes', async () => {
+  const dir = await makeTempDir();
+  const slug = 'premium-invalid';
+  const manifest = await createValidSquad(dir, slug);
+  manifest.sourceDocs = ['../outside.md'];
+  manifest.researchPolicy = { policy: 'live-required', reason: 'Current facts affect output' };
+  manifest.composition = { persistent_core: ['orquestrador', 'writer'] };
+  manifest.executors[0] = {
+    ...manifest.executors[0],
+    type: 'agent',
+    persistent: true,
+    contribution: 'Integrate the result',
+    decisionRights: ['final']
+  };
+  manifest.executors[1] = {
+    ...manifest.executors[1],
+    type: 'reviewer',
+    persistent: true,
+    contribution: 'Review evidence',
+    decisionRights: ['quality veto']
+  };
+  manifest.genomeBindings = {
+    squad: [{ slug: 'premium-method', status: 'pending', owner: 'writer', action: 'compile it' }],
+    executors: {}
+  };
+  manifest.evaluation = {
+    contractVersion: '1.0.0',
+    criteria: [{
+      id: 'c1',
+      kind: 'grounding',
+      statement: 'Ground every claim',
+      source: 'goal',
+      executor: 'writer',
+      expectedTerms: ['evidence']
+    }],
+    heldOutCases: [{
+      id: 'h1',
+      task: 'Unseen task',
+      dimensions: { grounding: { candidate: 0.9, threshold: 0.8, critical: true } }
+    }]
+  };
+  await fs.writeFile(
+    path.join(dir, '.aioson', 'squads', slug, 'squad.manifest.json'),
+    JSON.stringify(manifest)
+  );
+
+  const result = await runSquadValidate({
+    args: [dir],
+    options: { squad: slug, strict: true, skipEval: true, json: true },
+    logger: createCollectLogger()
+  });
+  assert.equal(result.valid, false);
+  assert.equal(result.errors.some((error) => error.includes('sourceDocs path escapes project')), true);
+  assert.equal(result.errors.some((error) => error.includes('Evidence Pack')), true);
+  assert.equal(result.errors.some((error) => error.includes('Genome binding')), true);
+});

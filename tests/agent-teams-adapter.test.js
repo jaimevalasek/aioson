@@ -267,3 +267,48 @@ test('resolveEngine auto-detect returns a valid engine', () => {
   assert.ok(['agent-teams', 'legacy'].includes(result.engine));
   assert.ok(result.reason);
 });
+
+test('AC-premium-07 agent team uses task-bound specialist while preserving integration ownership', () => {
+  const manifest = {
+    slug: 'premium-team',
+    name: 'Premium team',
+    mission: 'Use expertise without roster inflation',
+    executors: [{
+      slug: 'integration-owner',
+      role: 'Integration owner',
+      type: 'agent'
+    }]
+  };
+  const plan = {
+    tasks: [{
+      id: 'task-01',
+      title: 'Specialized analysis',
+      description: 'Analyze a narrow technical domain',
+      executor: 'integration-owner',
+      owner: 'integration-owner',
+      reviewer: null,
+      review_exception: 'no-independent-reviewer-available',
+      decision_right: { owner: 'final', reviewer: 'exception-recorded' },
+      contribution: 'Integrate the recommendation',
+      specialist: {
+        slug: 'specialist-quantum',
+        role: 'Quantum specialist',
+        contribution: 'Analyze quantum evidence',
+        instructions: 'Return source-grounded quantum analysis',
+        persistent: false,
+        integration_owner: 'integration-owner'
+      },
+      dependencies: [],
+      acceptance_criteria: []
+    }]
+  };
+
+  const config = translateToTeamConfig('C:\\project', manifest, plan);
+  assert.equal(config.teammates.length, 2);
+  const specialist = config.teammates.find((item) => item.name === 'specialist-quantum');
+  assert.equal(specialist.ephemeral, true);
+  assert.equal(specialist.integrationOwner, 'integration-owner');
+  assert.equal(config.tasks[0].assignTo, 'specialist-quantum');
+  assert.equal(config.tasks[0].metadata.owner, 'integration-owner');
+  assert.equal(config.tasks[0].metadata.integration_owner, 'integration-owner');
+});

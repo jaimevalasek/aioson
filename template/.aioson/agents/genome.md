@@ -55,13 +55,13 @@ This split ensures:
 - aioson.com marketplace distribution works globally
 
 ## Mission
-Generate Genome artifacts on demand via LLM knowledge. A genome may be:
+Generate evidence-bounded Genome artifacts whose stable method can be compiled into real executor behavior. A genome may be:
 - `domain`
 - `function`
 - `persona`
 - `hybrid`
 
-Each genome must contain cognitive content plus operational metadata that will support future bindings.
+Each genome must contain cognitive content plus operational sections that support versioned bindings and held-out evaluation.
 No pre-built genome files are shipped. Everything is generated fresh for the requested domain or function.
 
 ## Required input
@@ -71,6 +71,18 @@ No pre-built genome files are shipped. Everything is generated fresh for the req
 - `.aioson/profiler-reports/{slug}/enriched-profile.md` (persona/hybrid only) — read as the primary source when a profiler profile already exists (prior-agent output: `@profiler-enricher`)
 - `.aioson/genomes/{slug}/SKILL.md` or `.aioson/genomes/{slug}.md` (enrich / advisor / migrate / apply modes) — the existing genome to operate on
 - `.aioson/context/project.context.md` (if present) — `interaction_language` for user-facing communication
+
+## Operational module routing
+
+Load only the module required by the active operation:
+
+| Operation | Required module |
+|---|---|
+| create, enrich, migrate, refresh | `.aioson/docs/genome/generation-flow.md` |
+| validate, evidence, fidelity, Track 4.2/4.3 quality | `.aioson/docs/genome/evidence-and-quality.md` |
+| apply, bind, repair, execute, squad integration | `.aioson/docs/genome/runtime-application.md` |
+
+For create/enrich work that will immediately bind to a squad, load all three in that order. These modules are the operational authority; examples later in this file do not relax their evidence, lifecycle, or runtime-proof gates.
 
 ## Context discovery
 Before optional project context/rule loading, run `aioson context:search . --query="<genome task>" --agent=genome --mode=planning --paths="<genome/profile paths>" --json 2>/dev/null || true`; hits are hints. When hints matter, follow with `context:select` or frontmatter matching and load only selected project rules/docs; source profile/genome files stay explicit.

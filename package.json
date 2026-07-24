@@ -46,6 +46,7 @@
     "ci": "npm run lint && npm test"
   },
   "dependencies": {
+    "ajv": "8.17.1",
     "archiver": "^7.0.1",
     "better-sqlite3": "^12.6.2",
     "ignore": "^7.0.5",

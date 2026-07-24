@@ -17,6 +17,8 @@ const TOOL_FILES = {
 // Squad agent/task/skill paths (non-locale)
 const SQUAD_PATHS = [
   /^\.aioson\/agents\/(squad|orache|genome|profiler-researcher|profiler-enricher|profiler-forge)\.md$/,
+  /^\.aioson\/docs\/squad\//,
+  /^\.aioson\/docs\/genome\//,
   /^\.aioson\/tasks\/squad-/,
   /^\.aioson\/skills\/squad\//,
   /^\.aioson\/templates\/squads\//,

@@ -109,6 +109,19 @@ When they exist, also persist:
 
 The manifest must mirror the real files you generated.
 
+### Premium research and evidence
+
+When output depends on external or current facts, the manifest records `researchPolicy` and names one responsible research executor/stage. Do not advance while a `live-required` or `live-check` task has only cache, snippets, or an unavailable provider presented as success.
+
+The research stage must create a versioned Evidence Pack under the active squad
+session containing query, freshness policy, source URLs/timestamps/hashes,
+supported or contradicted claims, gaps, and provenance. Every supported claim
+maps explicitly to collected `source_ids`; AIOSON never infers that every source
+supports every claim. A live pack with zero mapped claims is `unverified`. Other
+executors consume that pack; they do not duplicate the same search by default.
+
+Use `closed-world` only for private/user-provided material or when network access is explicitly inappropriate. It must produce `not-applicable`, never a fake research pass. Volatile facts stay in Evidence Packs; genomes carry stable methods, prohibitions, checklists, style, and output structure.
+
 ## Executor generation
 
 ### Workers

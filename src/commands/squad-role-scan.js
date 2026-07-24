@@ -14,14 +14,17 @@ const STOPWORDS = new Set([
   'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might',
   'can', 'this', 'that', 'these', 'those', 'it', 'its', 'as', 'not', 'no', 'than',
   'then', 'also', 'via', 'per', 'etc', 'you', 'your', 'they', 'their', 'our', 'we',
+  'uma', 'umas', 'uns', 'com', 'sem', 'por', 'para', 'das', 'dos', 'que', 'seu',
+  'sua', 'seus', 'suas', 'isso', 'isto', 'essa', 'esse', 'estas', 'estes', 'como',
+  'mais', 'menos', 'tambem', 'entre', 'sobre', 'cada', 'quando', 'onde', 'qual',
 ]);
 
 // Action verbs grouped by work-mode — mirrors the domain-decomposition lens in
 // creation-flow.md (originate / transform / judge), so the output maps to roles.
 const ACTION_MODES = {
-  originate: ['create', 'research', 'draft', 'design', 'build', 'write', 'generate', 'produce', 'plan', 'define', 'discover', 'collect', 'gather'],
-  transform: ['transform', 'edit', 'refactor', 'synthesize', 'reconcile', 'process', 'convert', 'migrate', 'sync', 'translate', 'format', 'optimize', 'update', 'merge'],
-  judge: ['review', 'validate', 'verify', 'check', 'approve', 'audit', 'test', 'assess', 'evaluate', 'grade', 'moderate'],
+  originate: ['create', 'research', 'draft', 'design', 'build', 'write', 'generate', 'produce', 'plan', 'define', 'discover', 'collect', 'gather', 'criar', 'pesquisar', 'redigir', 'projetar', 'construir', 'escrever', 'gerar', 'produzir', 'planejar', 'definir', 'descobrir', 'coletar'],
+  transform: ['transform', 'edit', 'refactor', 'synthesize', 'reconcile', 'process', 'convert', 'migrate', 'sync', 'translate', 'format', 'optimize', 'update', 'merge', 'transformar', 'editar', 'refatorar', 'sintetizar', 'reconciliar', 'processar', 'converter', 'migrar', 'sincronizar', 'traduzir', 'formatar', 'otimizar', 'atualizar', 'mesclar'],
+  judge: ['review', 'validate', 'verify', 'check', 'approve', 'audit', 'test', 'assess', 'evaluate', 'grade', 'moderate', 'revisar', 'validar', 'verificar', 'conferir', 'aprovar', 'auditar', 'testar', 'avaliar', 'moderar'],
 };
 
 function tokenize(text) {
@@ -48,12 +51,13 @@ const NON_ENTITY = new Set([
   'The', 'A', 'An', 'This', 'That', 'These', 'Those', 'We', 'Our', 'You', 'Your',
   'They', 'Their', 'It', 'Its', 'He', 'She', 'If', 'When', 'Then', 'Before', 'After',
   'Run', 'Use', 'For', 'And', 'But', 'Or', 'To', 'In', 'On', 'At', 'Of', 'Each',
+  'Uma', 'Umas', 'Uns', 'Esta', 'Este', 'Essas', 'Esses', 'Nos', 'Nossa', 'Voce',
+  'Seu', 'Sua', 'Eles', 'Elas', 'Se', 'Quando', 'Antes', 'Depois', 'Use', 'Cada',
 ]);
 
 function extractEntities(text, limit = 20) {
-  // Title-Case phrases of 1-3 words (e.g. "Content Strategy"), within a single line —
-  // the gap is [ \t]+ (never a newline), so a heading never glues to the next sentence.
-  const re = /\b([A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+){0,2})\b/g;
+  // Unicode Title-Case phrases of 1-3 words, never crossing a line.
+  const re = /(?<![\p{L}\p{N}])(\p{Lu}\p{Ll}+(?:[ \t]+\p{Lu}\p{Ll}+){0,2})(?![\p{L}\p{N}])/gu;
   const freq = new Map();
   let m;
   while ((m = re.exec(text)) !== null) {
@@ -68,6 +72,24 @@ function extractEntities(text, limit = 20) {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit)
     .map(([entity, count]) => ({ entity, count }));
+}
+
+function buildRoleCandidates(actions, entities) {
+  const entity = entities[0]?.entity || 'Domain';
+  const labels = {
+    originate: 'originator',
+    transform: 'transformer',
+    judge: 'reviewer'
+  };
+  return Object.entries(actions)
+    .filter(([, verbs]) => verbs.length > 0)
+    .map(([workMode, verbs]) => ({
+      slug: `${entity.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${labels[workMode]}`.replace(/^-+|-+$/g, ''),
+      work_mode: workMode,
+      contribution: `${labels[workMode]} for ${entity}`,
+      evidence: verbs,
+      persistent: false
+    }));
 }
 
 function inflections(v) {
@@ -161,6 +183,7 @@ async function runSquadRoleScan({ args = [], options = {}, logger = console } = 
     entities: extractEntities(corpus),
     actions: extractActions(corpus),
   };
+  signals.roleCandidates = buildRoleCandidates(signals.actions, signals.entities);
   const result = { ok: true, slug: slug || null, docCount: read.length, missing, rejected, signals };
 
   if (options.json) return result;

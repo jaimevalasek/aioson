@@ -78,3 +78,30 @@ test('attachBindingsToExecutors applies squad-level bindings to each executor', 
   assert.deepEqual(executors[0].genomes.map((item) => item.slug), ['base-context']);
   assert.deepEqual(executors[1].genomes.map((item) => item.slug), ['qa-pass', 'base-context']);
 });
+
+test('AC-premium-08 binding lifecycle and compilation identity survive normalization round-trip', () => {
+  const pending = normalizeGenomeBindings({
+    executors: {
+      writer: [{
+        slug: 'evidence-writing',
+        status: 'pending',
+        compilationId: null,
+        sourceHash: 'abc123',
+        dependencies: ['foundation'],
+        conflicts: [],
+        owner: 'writer',
+        action: 'install foundation'
+      }]
+    }
+  });
+  const binding = pending.executors.writer[0];
+  assert.equal(binding.status, 'pending');
+  assert.equal(binding.compilationId, null);
+  assert.equal(binding.sourceHash, 'abc123');
+  assert.deepEqual(binding.dependencies, ['foundation']);
+  assert.equal(binding.owner, 'writer');
+  assert.equal(binding.action, 'install foundation');
+
+  const roundTrip = normalizeGenomeBindings(JSON.parse(JSON.stringify(pending)));
+  assert.deepEqual(roundTrip, pending);
+});

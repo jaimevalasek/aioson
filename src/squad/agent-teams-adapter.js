@@ -66,6 +66,16 @@ function detectAgentTeams() {
  * Build a teammate definition from a squad executor.
  */
 function executorToTeammate(executor, squadSlug, projectDir) {
+  if (executor.ephemeral === true || executor.persistent === false) {
+    return {
+      name: executor.slug,
+      role: executor.role || executor.slug,
+      type: 'subagent',
+      ephemeral: true,
+      prompt: executor.instructions || executor.contribution || executor.role,
+      integrationOwner: executor.integration_owner || null
+    };
+  }
   // Normalize to forward-slashes after path.join: agentFile is a string fed
   // into agent tooling (Codex/Claude/OpenCode), JSON outputs, and CLI logs.
   // Node's fs APIs accept forward-slash on Windows, but if we emit native
@@ -130,11 +140,18 @@ function planToTeamTasks(plan, executors) {
       id: task.id,
       title: task.title,
       description: task.description,
-      assignTo: task.executor || null,
+      assignTo: task.specialist?.slug || task.executor || null,
       dependencies: task.dependencies || [],
       acceptance_criteria: task.acceptance_criteria || [],
       priority: task.priority || 0,
-      metadata: {}
+      metadata: {
+        owner: task.owner || task.executor || null,
+        reviewer: task.reviewer || null,
+        review_exception: task.review_exception || null,
+        decision_right: task.decision_right || null,
+        contribution: task.contribution || null,
+        integration_owner: task.specialist?.integration_owner || task.owner || task.executor || null
+      }
     };
 
     // Map must_haves to structured acceptance criteria
@@ -174,11 +191,18 @@ function planToTeamTasks(plan, executors) {
 function translateToTeamConfig(projectDir, manifest, plan, options = {}) {
   const { budget = {} } = options;
   const executors = manifest.executors || [];
+  const specialists = (plan.tasks || [])
+    .map((task) => task.specialist)
+    .filter(Boolean)
+    .filter((specialist, index, all) => all.findIndex((item) => item.slug === specialist.slug) === index);
 
   // Build teammates
   const teammates = executors.map((e) =>
     executorToTeammate(e, manifest.slug, projectDir)
   );
+  teammates.push(...specialists.map((specialist) => (
+    executorToTeammate({ ...specialist, ephemeral: true }, manifest.slug, projectDir)
+  )));
 
   // Build tasks
   const tasks = planToTeamTasks(plan, executors);

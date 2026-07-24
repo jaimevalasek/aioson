@@ -1,0 +1,38 @@
+{
+  "packet_id": "sha256:d72cea5d05d5bee1ebc036ce341f35c11d1eeb52eb9a9ea68bd749f1cb450fc3",
+  "schema_version": "review-packet/v1",
+  "feature_slug": "premium-squad-intelligence",
+  "agent": "product",
+  "profile": "framing",
+  "review_mode": "self_review",
+  "artifact": {
+    "path": ".aioson/context/prd-premium-squad-intelligence.md",
+    "sha256": "e35705e8dc0a21becccc94c2b44b9a268e050a42ba9bf38113c3a91a9a9b9c60",
+    "bytes": 20886
+  },
+  "authorities": [
+    {
+      "kind": "project-context",
+      "path": ".aioson/context/project.context.md",
+      "sha256": "ab157beec4b01f6972c83ce45efd2016643542797c89b91e7ce3cc9340300239",
+      "bytes": 2879
+    },
+    {
+      "kind": "scope-expansion",
+      "path": ".aioson/context/features/premium-squad-intelligence/scope-expansion.md",
+      "sha256": "05c7ae98b5eb44f1735915116af018070fee9e035e3a5e2b3e535682be7ddd6f",
+      "bytes": 5858
+    }
+  ],
+  "reference_path": ".aioson/skills/process/review-intelligence/references/framing.md",
+  "challenge_lenses": [
+    "problem",
+    "user-value",
+    "scope",
+    "assumptions",
+    "future-state",
+    "ownership"
+  ],
+  "max_passes": 2,
+  "prepared_at": "2026-07-24T02:21:42.623Z"
+}

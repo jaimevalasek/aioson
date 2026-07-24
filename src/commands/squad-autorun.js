@@ -107,6 +107,24 @@ function estimateTaskTokens(task) {
   return Math.ceil((descLen + criteriaLen) / 4) + 500; // 500 base overhead
 }
 
+function hasExecutionEvidence(output) {
+  if (output === null || output === undefined) return false;
+  if (typeof output === 'string') return output.trim().length > 0;
+  if (Array.isArray(output)) return output.length > 0;
+  if (typeof output === 'object') {
+    return Object.keys(output).some((key) => hasExecutionEvidence(output[key]));
+  }
+  return true;
+}
+
+async function loadAttemptHistory(projectDir, squadSlug, sessionId, taskId) {
+  const plan = await loadPlan(projectDir, squadSlug, sessionId);
+  const savedTask = plan?.tasks?.find((candidate) => candidate.id === taskId);
+  return Array.isArray(savedTask?.result?.attempt_history)
+    ? savedTask.result.attempt_history
+    : [];
+}
+
 // ─── Heartbeat wrapper ────────────────────────────────────────────────────────
 
 /**
@@ -166,10 +184,14 @@ async function checkAntiLoop(projectDir, squadSlug, sessionId, task, enableBus, 
  */
 async function runTask(projectDir, squadSlug, task, sessionId, options, logger) {
   const { enableBus, enableReflect, timeoutMs } = options;
+  const specialist = task.specialist?.slug && task.specialist.persistent !== true
+    ? task.specialist
+    : null;
+  const executionSlug = specialist?.slug || task.executor || task.id;
   const taskCtx = {
     projectDir,
     squadSlug,
-    executorSlug: task.executor || 'unknown',
+    executorSlug: executionSlug || 'unknown',
     taskTitle: task.title,
     iteration: task._attempt || 1
   };
@@ -197,6 +219,18 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     must_haves: task.must_haves || null,
     session_id: sessionId,
     bus_enabled: enableBus,
+    execution_owner: task.executor || null,
+    ...(specialist
+      ? {
+          specialist: {
+            slug: specialist.slug,
+            role: specialist.role || null,
+            contribution: specialist.contribution || null,
+            integration_owner: specialist.integration_owner || task.executor || null,
+            instructions: specialist.instructions || null
+          }
+        }
+      : {}),
     ...(task._failure_context ? { failure_context: task._failure_context, attempt: task._attempt } : {})
   };
 
@@ -206,7 +240,7 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
 
   const workers = await listWorkers(projectDir, squadSlug);
   const workerConfig = workers.find(
-    (w) => w.slug === task.executor || w.slug === task.id
+    (worker) => worker.slug === executionSlug || (!specialist && worker.slug === task.id)
   );
 
   if (workerConfig) {
@@ -219,8 +253,27 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
       ? JSON.stringify(workerResult.output || '')
       : `Worker failed: ${workerResult.error}`;
   } else {
-    taskOutput = `[no-worker-script] Task "${task.title}" assigned to executor "${task.executor}". Run manually or scaffold a worker with: aioson squad:worker --squad=${squadSlug} create --slug=${task.executor}`;
-    workerResult = { ok: true, output: { message: taskOutput }, noScript: true };
+    const error = specialist ? 'specialist_executor_unavailable' : 'no_worker_script';
+    taskOutput = specialist
+      ? `[specialist-unavailable] Task "${task.title}" requires ephemeral specialist "${specialist.slug}". Legacy autorun refuses to substitute integration owner "${task.executor}". Scaffold the specialist worker or use the Agent Teams engine.`
+      : `[no-worker-script] Task "${task.title}" assigned to executor "${task.executor}". Run manually or scaffold a worker with: aioson squad:worker --squad=${squadSlug} create --slug=${task.executor}`;
+    workerResult = {
+      ok: false,
+      error,
+      output: { message: taskOutput },
+      noScript: true,
+      attempts: 0
+    };
+  }
+
+  if (workerResult.ok && !hasExecutionEvidence(workerResult.output)) {
+    workerResult = {
+      ...workerResult,
+      ok: false,
+      error: 'invalid_worker_output',
+      invalidOutput: true
+    };
+    taskOutput = 'Worker failed: output did not contain execution evidence';
   }
 
   // Anti-analysis-loop check after task runs
@@ -256,13 +309,39 @@ async function runTask(projectDir, squadSlug, task, sessionId, options, logger) 
     finalStatus = 'completed';
   }
 
+  const attemptHistory = await loadAttemptHistory(
+    projectDir,
+    squadSlug,
+    sessionId,
+    task.id
+  );
+  const finishedAt = nowIso();
+  const attemptRecord = {
+    attempt: task._attempt || workerResult.attempt || 1,
+    status: finalStatus,
+    worker_ran: workerRan,
+    error: workerResult.ok ? null : workerResult.error,
+    timed_out: Boolean(workerResult.timedOut),
+    output_summary: String(taskOutput || '').slice(0, 500),
+    finished_at: finishedAt
+  };
   await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, finalStatus, {
     worker_ran: workerRan,
     output_summary: String(taskOutput || '').slice(0, 500),
+    execution_evidence: workerResult.ok
+      ? {
+          worker: workerConfig?.slug || null,
+          attempt: workerResult.attempt || task._attempt || 1,
+          duration_ms: workerResult.durationMs || null,
+          output_present: true
+        }
+      : null,
+    attempt_history: [...attemptHistory, attemptRecord],
     reflection: reflectionResult
       ? { verdict: reflectionResult.verdict, score: reflectionResult.score }
       : null,
-    completed_at: nowIso()
+    finished_at: finishedAt,
+    completed_at: finalStatus === 'completed' ? finishedAt : null
   });
 
   if (enableBus) {
@@ -497,10 +576,18 @@ async function runTaskWithGapClosure(
   // Exhausted retries — escalate
   logger.log(`    ✗ Gap closure exhausted (${maxRetries} attempts) — escalating`);
 
+  const latestPlan = await loadPlan(projectDir, squadSlug, sessionId);
+  const latestTask = latestPlan?.tasks?.find((candidate) => candidate.id === task.id);
+  const latestResult = latestTask?.result && typeof latestTask.result === 'object'
+    ? latestTask.result
+    : {};
+  const finishedAt = nowIso();
   await updateTaskStatus(projectDir, squadSlug, sessionId, task.id, 'escalated', {
+    ...latestResult,
     gap_closure_exhausted: true,
     last_error: lastError,
-    completed_at: nowIso()
+    finished_at: finishedAt,
+    completed_at: null
   });
 
   if (enableBus) {
@@ -1141,7 +1228,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
   await stateManager.recordSessionEnd(targetDir, squadSlug, sessionId, results).catch(() => {});
 
   // ── 5.1 Automatic Learning Extraction ─────────────────────────────────────
-  if (completedCount > 0 || escalatedCount > 0) {
+  if (completedCount > 0) {
     const allBusMessages = enableBus
       ? await bus.read(targetDir, squadSlug, sessionId).catch(() => [])
       : [];
@@ -1151,7 +1238,7 @@ async function runSquadAutorun({ args, options = {}, logger }) {
 
     const learnings = await extractLearnings(targetDir, squadSlug, sessionId, {
       busMessages: allBusMessages,
-      taskResults: results,
+      taskResults: results.filter((result) => result.finalStatus === 'completed'),
       reflectionReports: allReflections
     }).catch(() => []);
 

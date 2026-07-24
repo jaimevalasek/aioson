@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aiosforge.dev/schemas/squad-eval-report.schema.json",
+  "title": "AIOSON Squad Eval Report",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "squad",
+    "generated_at",
+    "verdict",
+    "inputs",
+    "precheck",
+    "source_rubric",
+    "held_out",
+    "genome_comparison",
+    "dimensions",
+    "critical_failures",
+    "reproduction"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "squad": {
+      "type": "string",
+      "minLength": 2
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "verdict": {
+      "enum": ["PASS", "WARN", "FAIL", "UNVERIFIED", "NOT_APPLICABLE"]
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["manifest_hash", "source_hash", "sources"],
+      "properties": {
+        "manifest_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "sources": {
+          "type": "array"
+        }
+      }
+    },
+    "precheck": {
+      "type": "object",
+      "required": ["status", "strict", "errors", "warnings"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "fail"]
+        },
+        "strict": {
+          "const": true
+        },
+        "errors": {
+          "type": "array"
+        },
+        "warnings": {
+          "type": "array"
+        }
+      }
+    },
+    "source_rubric": {
+      "type": "object",
+      "required": ["status", "criteria"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "warn", "fail", "unverified", "not-applicable"]
+        },
+        "criteria": {
+          "type": "array"
+        }
+      }
+    },
+    "held_out": {
+      "type": "object",
+      "required": ["status", "cases"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "warn", "fail", "unverified", "not-applicable"]
+        },
+        "cases": {
+          "type": "array"
+        }
+      }
+    },
+    "genome_comparison": {
+      "type": "object",
+      "required": ["status", "bindings", "dimensions", "reason"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "warn", "fail", "unverified", "not-applicable"]
+        },
+        "bindings": {
+          "type": "array"
+        },
+        "dimensions": {
+          "type": "array"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object"
+    },
+    "critical_failures": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reproduction": {
+      "type": "object",
+      "required": ["command", "deterministic", "contract"],
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "deterministic": {
+          "const": true
+        },
+        "contract": {
+          "const": "1.0.0"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

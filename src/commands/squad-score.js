@@ -2,6 +2,12 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const {
+  findCurrentEvidencePack,
+  flattenGenomeBindings
+} = require('../squad/manifest-validator');
+const { runSquadValidate } = require('./squad-validate');
+const { isValidSlug } = require('../dossier/schema');
 
 async function readJsonIfExists(filePath) {
   try {
@@ -85,10 +91,10 @@ function scoreCompletude(manifest) {
   const hasWorker = executors.some(e => e.type === 'worker' || e.usesLLM === false);
   if (hasWorker) { score += 2; details.workersPresent = true; }
 
-  // Investigation report (3pts)
-  if (manifest._hasInvestigation) {
+  // Current evidence (3pts)
+  if (manifest._hasCurrentEvidence) {
     score += 3;
-    details.investigationReport = manifest._investigationSource || true;
+    details.currentEvidence = manifest._evidencePath || true;
   }
 
   // Model tiering (2pts)
@@ -162,13 +168,19 @@ function scoreQualidadeEstrutural(manifest) {
   if (os && os.mode && os.mode !== 'hybrid') { score += 4; details.outputStrategy = true; }
   else if (os && os.mode === 'hybrid') { score += 4; details.outputStrategy = true; }
 
-  // Genome bindings (3pts)
-  const genomes = manifest.genomes;
-  const hasGenome = genomes && (
-    (Array.isArray(genomes) && genomes.length > 0) ||
-    (typeof genomes === 'object' && !Array.isArray(genomes))
-  );
-  if (hasGenome) { score += 3; details.genomeBindings = true; }
+  // Genome bindings (3pts) — operational effect, not metadata presence.
+  const bindings = flattenGenomeBindings(manifest);
+  const compiled = bindings.length > 0 && bindings.every((binding) => (
+    binding.status === 'compiled' && binding.compilationId
+  ));
+  if (compiled) {
+    score += 3;
+    details.compiledGenomeBindings = true;
+  } else if (bindings.length > 0) {
+    details.genomeBindingsPending = true;
+  } else if (manifest.genomes) {
+    details.legacyGenomeMetadata = true;
+  }
 
   // Format references (5pts)
   const hasFormat = executors.some(e => Array.isArray(e.formats) && e.formats.length > 0);
@@ -190,18 +202,26 @@ function scorePotencial(manifest) {
   );
   if (hasVeto) { score += 5; details.antiPatternGuards = true; }
 
-  // Domain vocabulary — investigation (5pts)
-  if (manifest._hasInvestigation) {
+  // Domain vocabulary — current Evidence Pack (5pts)
+  if (manifest._hasCurrentEvidence) {
     score += 5;
-    details.domainVocabulary = manifest._investigationSource || true;
+    details.domainVocabulary = manifest._evidencePath || true;
   }
 
   // Structural patterns — content blueprints (5pts)
   const blueprints = Array.isArray(manifest.contentBlueprints) ? manifest.contentBlueprints : [];
   if (blueprints.length > 0) { score += 5; details.structuralPatterns = true; }
 
-  // Executor coherence + Output realism (10pts) → LLM-only, mark as partial
-  details.llmAssessmentPending = true;
+  // Executor coherence + output realism come from executable eval evidence.
+  if (manifest._latestEval?.source_rubric?.status === 'pass') {
+    score += 5;
+    details.executorCoherence = true;
+  }
+  if (manifest._latestEval?.held_out?.status === 'pass') {
+    score += 5;
+    details.outputRealism = true;
+  }
+  if (!manifest._latestEval) details.evaluationPending = true;
 
   return { score, max: 25, details };
 }
@@ -233,6 +253,10 @@ async function runSquadScore({ args = [], options = {}, logger = console, transl
     logger.error('Usage: aioson squad:score [path] --squad=<slug>');
     return { valid: false, error: 'No slug provided' };
   }
+  if (!isValidSlug(slug)) {
+    logger.error(`Invalid squad slug: "${slug}"`);
+    return { valid: false, error: 'invalid_slug' };
+  }
 
   const manifestPath = path.join(projectDir, '.aioson', 'squads', slug, 'squad.manifest.json');
   const manifest = await readJsonIfExists(manifestPath);
@@ -246,14 +270,65 @@ async function runSquadScore({ args = [], options = {}, logger = console, transl
   manifest._hasInvestigation = investigationEvidence.present;
   manifest._investigationSource = investigationEvidence.source;
   manifest._investigationPath = investigationEvidence.path;
+  const researchPolicy = manifest.researchPolicy?.policy;
+  const policyDefaultHours = researchPolicy === 'live-required'
+    ? 6
+    : researchPolicy === 'live-check'
+      ? 24
+      : 168;
+  const declaredHours = manifest.researchPolicy?.maxAgeHours !== undefined
+    ? Number(manifest.researchPolicy.maxAgeHours)
+    : manifest.researchPolicy?.maxAgeDays !== undefined
+      ? Number(manifest.researchPolicy.maxAgeDays) * 24
+      : policyDefaultHours;
+  const evidence = await findCurrentEvidencePack(projectDir, slug, {
+    maxAgeHours: Math.min(
+      Number.isFinite(declaredHours) && declaredHours > 0 ? declaredHours : policyDefaultHours,
+      policyDefaultHours
+    ),
+    expectedPolicy: researchPolicy || null,
+    expectedSquad: slug
+  });
+  manifest._hasCurrentEvidence = evidence.current
+    && evidence.pack?.status === 'pass'
+    && evidence.pack?.provider?.available === true;
+  manifest._evidencePath = evidence.path || null;
+  manifest._latestEval = await readJsonIfExists(
+    path.join(projectDir, '.aioson', 'squads', slug, 'evals', 'latest.json')
+  );
 
   const d1 = scoreCompletude(manifest);
   const d2 = scoreProfundidade(manifest);
   const d3 = scoreQualidadeEstrutural(manifest);
   const d4 = scorePotencial(manifest);
 
-  const total = d1.score + d2.score + d3.score + d4.score;
+  const rawTotal = d1.score + d2.score + d3.score + d4.score;
   const maxTotal = d1.max + d2.max + d3.max + d4.max;
+  const declaresPremium = Boolean(
+    manifest.evaluation
+    || manifest.composition
+    || manifest.researchPolicy
+    || manifest.genomeBindings
+  );
+  let strictValidation = null;
+  if (declaresPremium) {
+    strictValidation = await runSquadValidate({
+      args: [projectDir],
+      options: { squad: slug, strict: true, json: true },
+      logger: { log() {}, error() {} }
+    });
+  }
+  const caps = [];
+  if (declaresPremium && strictValidation && !strictValidation.valid) {
+    caps.push({ reason: 'strict-premium-gate-failed', maximum: 69 });
+  }
+  if (manifest._latestEval && (
+    ['FAIL', 'UNVERIFIED'].includes(manifest._latestEval.verdict)
+    || Number(manifest._latestEval.critical_failures || 0) > 0
+  )) {
+    caps.push({ reason: 'critical-eval-failure', maximum: 49 });
+  }
+  const total = caps.reduce((value, cap) => Math.min(value, cap.maximum), rawTotal);
   const grade = gradeFromScore(total);
   const wins = suggestQuickWins(d1, d2, d3, d4);
 
@@ -266,6 +341,7 @@ async function runSquadScore({ args = [], options = {}, logger = console, transl
   logger.log(`  Potencial de Resultado:  ${String(d4.score).padStart(2)}/${d4.max}*`);
   logger.log(`  ${'─'.repeat(40)}`);
   logger.log(`  TOTAL:                   ${String(total).padStart(2)}/${maxTotal}`);
+  if (total !== rawTotal) logger.log(`  Raw score:               ${String(rawTotal).padStart(2)}/${maxTotal} (capped by delivery evidence)`);
   logger.log(`  Grade: ${grade}`);
   logger.log('');
   logger.log('  * Dimensão 4 parcial (sem LLM assessment)');
@@ -301,10 +377,26 @@ async function runSquadScore({ args = [], options = {}, logger = console, transl
   return {
     slug,
     total,
+    rawTotal,
     max: maxTotal,
     grade,
     dimensions: { completude: d1, profundidade: d2, qualidade: d3, potencial: d4 },
-    quickWins: wins
+    quickWins: wins,
+    assurance: {
+      strict: strictValidation ? {
+        valid: strictValidation.valid,
+        errors: strictValidation.errors
+      } : null,
+      eval: manifest._latestEval ? {
+        verdict: manifest._latestEval.verdict,
+        criticalFailures: manifest._latestEval.critical_failures
+      } : null,
+      evidence: {
+        current: Boolean(manifest._hasCurrentEvidence),
+        path: manifest._evidencePath
+      },
+      caps
+    }
   };
 }
 

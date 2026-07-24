@@ -23,8 +23,11 @@ Before running any WebSearch:
 1. Derive the slug from the topic you are about to search
 2. Check if `researchs/{slug}/summary.md` exists
 3. Read `searched_at` from its frontmatter
-4. If `searched_at` is within the last **7 days** → use the cached result, do not search again
-5. If older than 7 days or missing → proceed to search
+4. Apply the active research policy:
+   - `live-required` / `live-check`: cache is a seed; revalidate or discover live sources before claiming freshness
+   - `cache-eligible`: use cache only inside the policy's `maxAgeHours` window
+   - `closed-world`: do not search; record `not-applicable`
+5. If the cache cannot confirm under that policy, proceed to live research
 
 ## Step 2 — Run the search
 
@@ -33,6 +36,7 @@ Before running any WebSearch:
 - For technical/library decisions, prefer primary sources first: official docs, changelog/release notes, GitHub repo, standards, or vendor API reference
 - For product/domain decisions, prefer sources that expose real patterns: official product docs, pricing pages, support docs, market reports, competitor docs, or credible case studies
 - Open/extract the source pages before using them. Search result snippets are routing signals, not evidence.
+- Persist one execution-linked Evidence Pack after extraction. It must connect source → claim → executor/decision/output criterion and preserve contradictions or `unverified` gaps.
 - Run at most one query expansion pass if the first query returns weak results: add domain/source constraints, synonyms, or the concrete decision being evaluated
 - Maximum **4 queries per session** — focus on decisions with highest risk of being outdated or materially wrong
 - If WebSearch fails for a query: record the error in `summary.md` and continue — do not block
@@ -127,10 +131,10 @@ If all findings are `confirmed`:
 ## Rules
 
 - **Never search without saving** — unsaved results are lost after the session
-- **Never block on search failure** — record the error and continue
+- **Never fabricate success on search failure** — record the error and continue only with `unverified`, an allowed cache fallback, or `closed-world`
 - **Never use snippets as final evidence** — inspect source pages or use cached summaries
 - **Never show `confirmed` findings** — they add noise without value
 - **Never modify the PRD/plan without user confirmation** — surface findings, let the user decide
 - **Cache is shared across all agents** — if another agent already searched the same topic this week, use their result
 - `@product`, `@sheldon`, and `@squad` should derive short keyword phrases from the active task and scout the cache before finalizing substantial output
-- The user decides whether to act on findings. Agents surface, humans decide.
+- Apply routine safe recommendations under Autopilot. Ask the user only when a material trade-off remains unresolved; do not ask them to reconfirm the recommended freshness class.

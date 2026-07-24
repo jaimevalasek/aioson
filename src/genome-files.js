@@ -23,6 +23,14 @@ function getGenomeMetaPath(projectRoot, slug) {
   return path.join(getGenomeDir(projectRoot), `${slug}.meta.json`);
 }
 
+function getGenomeFolderPath(projectRoot, slug) {
+  return path.join(getGenomeDir(projectRoot), slug);
+}
+
+function getGenomeFolderManifestPath(projectRoot, slug) {
+  return path.join(getGenomeFolderPath(projectRoot, slug), 'manifest.json');
+}
+
 async function readMetaFile(filePath, slug) {
   try {
     const text = await fs.readFile(filePath, 'utf8');
@@ -109,6 +117,66 @@ async function readGenome(projectRoot, slug) {
   };
 }
 
+async function readGenomeSource(projectRoot, slug) {
+  const folderPath = getGenomeFolderPath(projectRoot, slug);
+  const manifestPath = getGenomeFolderManifestPath(projectRoot, slug);
+  if (await exists(manifestPath)) {
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    const documents = [];
+    const folderRoot = path.resolve(folderPath);
+    const references = Array.isArray(manifest.references) ? manifest.references : [];
+    for (const reference of references) {
+      const relativePath = typeof reference === 'string' ? reference : reference?.file;
+      if (!relativePath) continue;
+      const referencePath = path.resolve(folderRoot, relativePath);
+      if (referencePath !== folderRoot && !referencePath.startsWith(`${folderRoot}${path.sep}`)) {
+        throw new Error(`Genome reference escapes folder: ${relativePath}`);
+      }
+      try {
+        documents.push({
+          id: typeof reference === 'object' ? reference.id || relativePath : relativePath,
+          path: relativePath.replace(/\\/g, '/'),
+          content: await fs.readFile(referencePath, 'utf8'),
+          priority: typeof reference === 'object' ? reference.load_priority || null : null
+        });
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    }
+    const skillPath = path.join(folderPath, 'SKILL.md');
+    if (await exists(skillPath)) {
+      documents.unshift({
+        id: 'skill',
+        path: 'SKILL.md',
+        content: await fs.readFile(skillPath, 'utf8'),
+        priority: 'high'
+      });
+    }
+    return {
+      kind: 'modular',
+      slug,
+      manifest,
+      documents,
+      paths: { folderPath, manifestPath }
+    };
+  }
+
+  const loaded = await readGenome(projectRoot, slug);
+  return {
+    kind: 'single-file',
+    slug,
+    manifest: loaded.meta,
+    genome: loaded.genome,
+    documents: [{
+      id: 'genome',
+      path: path.basename(loaded.paths.markdownPath),
+      content: await fs.readFile(loaded.paths.markdownPath, 'utf8'),
+      priority: 'high'
+    }],
+    paths: loaded.paths
+  };
+}
+
 async function loadExistingMeta(projectRoot, slug) {
   const metaPath = getGenomeMetaPath(projectRoot, slug);
   const rawMeta = await readMetaFile(metaPath, slug);
@@ -191,7 +259,10 @@ module.exports = {
   getGenomeDir,
   getGenomeMarkdownPath,
   getGenomeMetaPath,
+  getGenomeFolderPath,
+  getGenomeFolderManifestPath,
   readGenome,
+  readGenomeSource,
   writeGenome,
   listGenomes,
   genomeExists

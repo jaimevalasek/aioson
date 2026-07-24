@@ -86,8 +86,18 @@ function buildExecutorList(squadJson, discoveredFiles) {
         slug,
         name: config.name || config.title || slug,
         role: config.role || slug,
+        type: config.type || 'agent',
+        persistent: config.persistent !== false,
+        contribution: config.contribution || null,
+        decisionRights: config.decisionRights || config.decision_rights || [],
+        expertise: config.expertise || {},
         skills: config.skills || [],
-        keywords: extractKeywords(config.role || '', config.name || config.title || '', config.skills || [])
+        keywords: extractKeywords(
+          config.role || '',
+          config.name || config.title || '',
+          config.skills || [],
+          config.expertise || {}
+        )
       };
     }
   }
@@ -99,6 +109,11 @@ function buildExecutorList(squadJson, discoveredFiles) {
         slug,
         name: slug,
         role: slug,
+        type: 'agent',
+        persistent: true,
+        contribution: null,
+        decisionRights: [],
+        expertise: {},
         skills: [],
         keywords: extractKeywords(slug)
       };
@@ -109,7 +124,7 @@ function buildExecutorList(squadJson, discoveredFiles) {
 }
 
 function extractKeywords(...sources) {
-  const text = sources.flat().join(' ').toLowerCase();
+  const text = JSON.stringify(sources.flat()).toLowerCase();
   return text.split(/[\s,;_-]+/).filter((w) => w.length > 3);
 }
 
@@ -117,14 +132,14 @@ function extractKeywords(...sources) {
 
 // Action verb patterns → task type mapping
 const ACTION_VERBS = {
-  research:   ['research', 'investigate', 'analyze', 'study', 'explore', 'discover', 'find'],
-  write:      ['write', 'create', 'draft', 'compose', 'produce', 'generate', 'craft'],
-  review:     ['review', 'critique', 'evaluate', 'assess', 'check', 'validate', 'verify'],
-  design:     ['design', 'plan', 'structure', 'outline', 'architect', 'map'],
-  publish:    ['publish', 'post', 'distribute', 'share', 'deliver', 'send', 'output'],
-  summarize:  ['summarize', 'consolidate', 'compile', 'aggregate', 'collect'],
-  translate:  ['translate', 'adapt', 'localize', 'convert', 'rewrite'],
-  optimize:   ['optimize', 'improve', 'refine', 'enhance', 'edit', 'revise']
+  research:   ['research', 'investigate', 'analyze', 'study', 'explore', 'discover', 'find', 'pesquisar', 'investigar', 'analisar', 'estudar', 'explorar', 'descobrir', 'encontrar'],
+  write:      ['write', 'create', 'draft', 'compose', 'produce', 'generate', 'craft', 'escrever', 'criar', 'redigir', 'compor', 'produzir', 'gerar'],
+  review:     ['review', 'critique', 'evaluate', 'assess', 'check', 'validate', 'verify', 'revisar', 'criticar', 'avaliar', 'conferir', 'validar', 'verificar'],
+  design:     ['design', 'plan', 'structure', 'outline', 'architect', 'map', 'projetar', 'planejar', 'estruturar', 'arquitetar', 'mapear'],
+  publish:    ['publish', 'post', 'distribute', 'share', 'deliver', 'send', 'output', 'publicar', 'distribuir', 'compartilhar', 'entregar', 'enviar'],
+  summarize:  ['summarize', 'consolidate', 'compile', 'aggregate', 'collect', 'resumir', 'consolidar', 'compilar', 'agregar', 'coletar'],
+  translate:  ['translate', 'adapt', 'localize', 'convert', 'rewrite', 'traduzir', 'adaptar', 'localizar', 'converter', 'reescrever'],
+  optimize:   ['optimize', 'improve', 'refine', 'enhance', 'edit', 'revise', 'otimizar', 'melhorar', 'refinar', 'aprimorar', 'editar']
 };
 
 const EXECUTOR_ROLE_MAP = {
@@ -146,24 +161,56 @@ function detectVerbType(text) {
   return 'write'; // default
 }
 
-function scoreExecutorForType(executor, verbType) {
+function scoreExecutorForType(executor, verbType, taskText = '') {
   const roleKeywords = EXECUTOR_ROLE_MAP[verbType] || [];
   const execKeywords = executor.keywords;
-  return roleKeywords.reduce((score, rk) => {
-    return score + (execKeywords.some((ek) => ek.includes(rk) || rk.includes(ek)) ? 1 : 0);
-  }, 0);
+  const roleScore = roleKeywords.reduce((score, roleKeyword) => (
+    score + (execKeywords.some((keyword) => keyword.includes(roleKeyword) || roleKeyword.includes(keyword)) ? 3 : 0)
+  ), 0);
+  const taskKeywords = new Set(extractKeywords(taskText));
+  const domainScore = execKeywords.reduce((score, keyword) => (
+    score + (taskKeywords.has(keyword) ? 1 : 0)
+  ), 0);
+  const reviewBonus = verbType === 'review' && executor.type === 'reviewer' ? 4 : 0;
+  return roleScore + domainScore + reviewBonus;
 }
 
-function assignExecutor(executors, verbType) {
-  if (executors.length === 0) return null;
+function assignExecutor(executors, verbType, taskText = '') {
+  if (executors.length === 0) return { executor: null, score: 0 };
 
   const scored = executors.map((e) => ({
     executor: e,
-    score: scoreExecutorForType(e, verbType)
+    score: scoreExecutorForType(e, verbType, taskText)
   }));
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort((a, b) => b.score - a.score || a.executor.slug.localeCompare(b.executor.slug));
 
-  return scored[0].score > 0 ? scored[0].executor : executors[0];
+  return scored[0].score > 0 ? scored[0] : { executor: executors[0], score: 0 };
+}
+
+function selectIndependentReviewer(executors, ownerSlug, taskText) {
+  const candidates = executors
+    .filter((executor) => executor.slug !== ownerSlug)
+    .map((executor) => ({
+      executor,
+      score: scoreExecutorForType(executor, 'review', taskText)
+    }))
+    .sort((a, b) => b.score - a.score || a.executor.slug.localeCompare(b.executor.slug));
+  return candidates[0]?.executor || null;
+}
+
+function buildEphemeralSpecialist(taskText, verbType, owner, expertiseScore) {
+  if (!owner || expertiseScore > 0) return null;
+  const domainTerms = extractKeywords(taskText).slice(0, 3);
+  const domain = domainTerms.join('-') || verbType;
+  return {
+    slug: `specialist-${domain}`.slice(0, 80),
+    role: `Task-specific ${verbType} specialist`,
+    contribution: `Close the uncovered ${verbType} capability for this task only`,
+    evidence: domainTerms,
+    persistent: false,
+    integration_owner: owner.slug,
+    instructions: `Apply specialist ${verbType} expertise to "${taskText}" and return evidence to integration owner ${owner.slug}.`
+  };
 }
 
 function extractSubGoals(goal) {
@@ -331,7 +378,7 @@ function assignParallelGroups(tasks) {
       assigned.add(t.id);
     }
 
-    remaining = remaining.filter((t) => !assigned.has(t));
+    remaining = remaining.filter((t) => !assigned.has(t.id));
     group++;
   }
 
@@ -343,7 +390,10 @@ function heuristicDecompose(goal, executors) {
 
   let tasks = subGoals.map((sg, i) => {
     const verbType = detectVerbType(sg);
-    const executor = assignExecutor(executors, verbType);
+    const assignment = assignExecutor(executors, verbType, sg);
+    const executor = assignment.executor;
+    const reviewer = selectIndependentReviewer(executors, executor?.slug, sg);
+    const specialist = buildEphemeralSpecialist(sg, verbType, executor, assignment.score);
     const criteria = buildAcceptanceCriteria(sg, verbType);
     const mustHaves = buildMustHaves(sg, verbType);
     const readFirstHints = buildReadFirstHints(verbType);
@@ -356,6 +406,16 @@ function heuristicDecompose(goal, executors) {
       must_haves: mustHaves,
       read_first_hints: readFirstHints,
       executor: executor ? executor.slug : null,
+      owner: executor ? executor.slug : null,
+      reviewer: reviewer ? reviewer.slug : null,
+      review_exception: reviewer ? null : 'no-independent-reviewer-available',
+      decision_right: {
+        owner: 'final',
+        reviewer: reviewer ? 'veto-on-quality-failure' : 'exception-recorded'
+      },
+      contribution: executor?.contribution || `Own ${verbType} integration for this task`,
+      expertise_score: assignment.score,
+      specialist,
       dependencies: [],
       priority: i + 1,
       parallel_group: 1,
@@ -386,7 +446,26 @@ function heuristicDecompose(goal, executors) {
   // Clean up internal field; set wave = parallel_group for clarity
   const cleanTasks = tasks.map(({ _verbType, ...rest }) => ({ ...rest, wave: rest.parallel_group }));
 
-  return { tasks: cleanTasks, executionOrder, parallelGroups, waves };
+  const ephemeralSpecialists = cleanTasks
+    .map((task) => task.specialist)
+    .filter(Boolean)
+    .filter((specialist, index, all) => all.findIndex((item) => item.slug === specialist.slug) === index);
+  const persistentCore = [...new Set(cleanTasks.map((task) => task.owner).filter(Boolean))];
+  const uncoveredCapabilities = cleanTasks
+    .filter((task) => !task.owner)
+    .map((task) => ({ task: task.id, capability: task.title }));
+
+  return {
+    tasks: cleanTasks,
+    executionOrder,
+    parallelGroups,
+    waves,
+    composition: {
+      persistent_core: persistentCore,
+      ephemeral_specialists: ephemeralSpecialists,
+      uncovered_capabilities: uncoveredCapabilities
+    }
+  };
 }
 
 function topologicalSort(tasks) {
@@ -445,6 +524,9 @@ For each sub-task, provide:
 3. 3–5 acceptance criteria (specific, verifiable)
 4. The executor slug that should handle it
 5. Dependencies (list task IDs that must complete first, or empty)
+6. One persistent integration owner and one independent reviewer
+7. Decision rights and the executor's concrete contribution
+8. An optional task-specific specialist only when the persistent roster has a named capability gap
 
 Output ONLY valid JSON in this format:
 {
@@ -455,13 +537,21 @@ Output ONLY valid JSON in this format:
       "description": "...",
       "acceptance_criteria": ["...", "..."],
       "executor": "executor-slug",
+      "owner": "executor-slug",
+      "reviewer": "independent-reviewer-slug",
+      "decision_right": {"owner": "final", "reviewer": "veto-on-quality-failure"},
+      "contribution": "...",
+      "specialist": null,
       "dependencies": []
     }
   ]
 }
 
 Rules:
-- Do not create tasks for unavailable executors
+- Keep the persistent roster small; do not add a permanent executor without repeated contribution
+- A temporary specialist must be task-bound, non-persistent, and return work to a named integration owner
+- Never average away the relevant expert's decision right through naive voting
+- If no independent reviewer exists, record an explicit review exception instead of pretending independence
 - Research tasks always precede write tasks when both exist
 - Review/critique tasks always depend on write tasks
 - Maximum 7 tasks — merge smaller tasks if needed
@@ -529,16 +619,16 @@ async function decompose(projectDir, squadSlug, goal, options = {}) {
 
   const { executors, discoverySource } = await loadSquadManifest(projectDir, squadSlug);
 
-  let tasks, executionOrder, parallelGroups, waves;
+  let tasks, executionOrder, parallelGroups, waves, composition;
   let structuredPrompt = null;
 
   if (mode === 'structured') {
     // Return a prompt template for the agent to fill in with LLM
     structuredPrompt = buildStructuredPrompt(goal, executors, squadSlug);
     // Use heuristic as fallback scaffold
-    ({ tasks, executionOrder, parallelGroups, waves } = heuristicDecompose(goal, executors));
+    ({ tasks, executionOrder, parallelGroups, waves, composition } = heuristicDecompose(goal, executors));
   } else {
-    ({ tasks, executionOrder, parallelGroups, waves } = heuristicDecompose(goal, executors));
+    ({ tasks, executionOrder, parallelGroups, waves, composition } = heuristicDecompose(goal, executors));
   }
 
   const plan = {
@@ -554,6 +644,7 @@ async function decompose(projectDir, squadSlug, goal, options = {}) {
     execution_order: executionOrder,
     parallel_groups: parallelGroups,
     waves,
+    composition,
     structured_prompt: structuredPrompt
   };
 
@@ -648,5 +739,11 @@ module.exports = {
   formatPlan,
   heuristicDecompose,
   buildStructuredPrompt,
-  loadSquadManifest
+  loadSquadManifest,
+  extractSubGoals,
+  assignExecutor,
+  selectIndependentReviewer,
+  detectDependencies,
+  assignParallelGroups,
+  topologicalSort
 };

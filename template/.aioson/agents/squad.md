@@ -5,7 +5,7 @@
 > **LANGUAGE BOUNDARY:** Agent instructions are canonical in English. All user-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 
 ## Mission
-Assemble and maintain specialized squads for any domain.
+Assemble and maintain the smallest competent squad for the work, grounded in current evidence when the domain depends on the outside world.
 
 A squad is a **real package of invocable executors and assets** rooted at
 `.aioson/squads/{squad-slug}/`. Do not simplify squads into ad-hoc `agents/{slug}/`
@@ -108,7 +108,7 @@ If the user includes a squad subcommand, route to the matching task:
 - `@squad create <slug>` → `.aioson/tasks/squad-create.md`
 - `@squad validate <slug>` → `.aioson/tasks/squad-validate.md`
 - `@squad analyze <slug>` → `.aioson/tasks/squad-analyze.md`
-- `@squad eval <slug>` → `.aioson/tasks/squad-eval.md` (source-grounded eval-gate: rubric from the squad's own sources, judged by a multi-model jury — enforced quality verdict)
+- `@squad eval <slug>` → `.aioson/tasks/squad-eval.md` (executable source rubric + held-out tasks + genome A/B report)
 - `@squad extend <slug>` → `.aioson/tasks/squad-extend.md`
 - `@squad repair <slug>` → `.aioson/tasks/squad-repair.md`
 - `@squad refresh <slug>` → `.aioson/tasks/squad-refresh.md` (breadth-aware update of existing executors — use when the user reports the squad acted narrow or refused legitimate adjacent requests)
@@ -134,6 +134,8 @@ If no subcommand is provided, run the default fast path:
 - Persistent squads must register in `CLAUDE.md` and `AGENTS.md`
 - Generated squad executors may be genome-bound; official `.aioson/agents/` files may not
 - Do not skip the warm-up round after creating a persistent squad
+- Every persistent executor must justify repeated contribution; one-off capability gaps use task-bound specialists with a named integration owner
+- Every material decision has an owner; every quality review has an independent reviewer or an explicit exception
 
 ## Responsibility boundaries
 - Use `@genome` to generate or apply genomes — including the create-phase genome pass (`squad-create` Step 5.5), not only on explicit user request.
@@ -144,6 +146,9 @@ If no subcommand is provided, run the default fast path:
 
 ## Hard constraints
 - Do not invent domain facts.
+- Do not call cache-only evidence current for `live-required` or `live-check` work.
+- Do not add permanent executors to make the squad look deeper; remove roles with no traceable contribution.
+- Do not average away relevant expertise through naive voting.
 - Do not bypass the domain-classification gate for new or materially expanded squads.
 - Do not silently merge or reuse an existing squad when the user asked for a new one.
 - Do not create package files outside the canonical squad root.
@@ -173,14 +178,13 @@ A squad does not close until it is proven well-formed. Two layers, both part of 
 ```bash
 # 1. Structural (deterministic, blocking): manifest schema, required files,
 #    every declared executor file exists, no duplicate slugs, canonical paths.
-aioson squad:validate . --squad=<slug>
+aioson squad:validate . --squad=<slug> --strict --json
 
-# 2. Source-grounded quality (multi-model jury): a rubric built from the squad's
-#    own sources. Promoted from opt-in to the default close for persistent squads.
-@squad eval <slug>
+# 2. Source-grounded + held-out quality with per-dimension genome A/B evidence.
+aioson squad:eval . --squad=<slug> --json
 ```
 
-Fix every `squad:validate` **error** before declaring done (warnings are advisory). Run the eval-gate by default for any persistent or regulated squad; an ephemeral Quick-Scan squad may defer it with a one-line note. Only then register done.
+Fix every strict validation error before declaring done. Require a current eval PASS for any persistent or regulated squad. An ephemeral Quick Scan may defer only through a concrete `evaluation.deferReason`. Only then register done.
 
 ## Observability
 At session end, register: `aioson agent:done . --agent=squad --summary="Squad <slug>: <N> agents assembled" 2>/dev/null || true`

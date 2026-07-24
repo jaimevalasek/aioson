@@ -50,7 +50,29 @@ test('SF-08: research summary strips injection chars and wraps sources as untrus
   };
 
   try {
-    const result = await runResearchWorker(projectDir, config, {});
+    // This test isolates content sanitization. Network boundary behavior is
+    // covered separately by web-security.test.js, so inject a fixture provider
+    // instead of weakening production SSRF protection for localhost.
+    const result = await runResearchWorker(projectDir, config, {}, {
+      researchProvider: {
+        async discover() {
+          return {
+            available: true,
+            source: 'test-fixture',
+            candidates: [{ url, title: 'Fixture source', primary: true }]
+          };
+        },
+        async fetch(candidate) {
+          const response = await fetch(candidate.url);
+          return {
+            ok: response.ok,
+            url: candidate.url,
+            title: candidate.title,
+            text: await response.text()
+          };
+        }
+      }
+    });
     assert.equal(result.ok, true, 'worker must succeed');
   } finally {
     server.close();

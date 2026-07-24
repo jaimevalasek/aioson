@@ -33,6 +33,20 @@ Verify that these exist:
 - **Executor depth:** for each executor of type `agent`/`clone`/`assistant`, does the `.md` file include a depth block in `## Quick context` (Variant A `persona`+`expertise` or Variant B `operational_breadth`; see `package-contract.md` § Executor depth block)? Standalone `role:` without the block = WARNING (basic executor). In `--strict`, it becomes ERROR.
 - **Distilled sources:** if the manifest has `sourceDocs`/`analysis`, does at least one executor reference the vocabulary/frameworks from those sources? If none reference them = WARNING (sources became metadata only).
 
+### Layer 4 - Premium Strict Gate
+
+With `--strict`, also verify:
+- executor and source paths remain contained in the project/squad package
+- `researchPolicy` is explicit; live policies have a current live Evidence Pack
+- persistent executors state contribution and decision rights
+- independent review exists
+- every genome binding has compiled effect and compilation identity
+- the evaluation contract has source criteria and held-out cases
+- persistent/regulatory squads have a current PASS eval for the current manifest
+
+`squad:eval` invokes this strict gate with only the previous-eval requirement
+temporarily skipped, then writes the new report.
+
 ### Report
 Classify each check as:
 - PASS
@@ -60,6 +74,6 @@ Result: VALID (2 warnings)
 ## Rules
 - Do not automatically fix problems; report only.
 - Suggest the correction command when possible, for example: `run @squad extend to add skills`.
-- `--strict`: converts WARNINGs into ERRORs, including basic executor warnings; useful in CI/delivery gates.
+- `--strict`: enforces the canonical schema and premium readiness invariants; legacy non-strict validation remains compatible and advisory.
 - Depth gaps (basic executor, undistilled sources) route to `@squad refresh <slug>`.
-- This is the cheap always-on gate: structure + depth-block presence. For the deep source-grounded verdict (source rubric + multi-model jury), use `@squad eval <slug>` (`.aioson/tasks/squad-eval.md`).
+- This is the cheap always-on gate. For source-grounded and held-out proof, run `aioson squad:eval . --squad=<slug>`.

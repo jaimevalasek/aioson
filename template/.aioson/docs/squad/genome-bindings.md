@@ -30,6 +30,8 @@ When a genome is applied to an existing squad:
 - record whether the binding is squad-wide or agent-specific
 - rewrite affected executor prompts in `.aioson/squads/{squad-slug}/agents/` so they include `## Active genomes`
 
+Presence is not readiness. Preserve binding lifecycle (`pending`, `resolved`, `compiled`, `conflicted`, `stale`, `removed`), source version/hash, compilation identity, dependencies, owner, and next action. A premium binding is ready only after the applicable procedure, restrictions, checklist, style, or output contract is materialized in the intended executor.
+
 ## Compatibility rules
 
 When inspecting or modifying an existing squad:
@@ -54,6 +56,15 @@ When a bound genome carries operational sections, apply them to the bound execut
 - `## Delivery Checklist` → materialize or extend a checklist in `.aioson/squads/{slug}/checklists/`
 - `## Operating Procedure` → reference it in the executor's `## Response pattern` — the executor works the method's numbered steps, not a generic flow
 - `## Style Metrics` / `## Output Structure` → fold into the executor's `## Output contract` when the executor produces that deliverable
+
+Run the compiler through the normal apply path and inspect the generated prompt/checklist. If the target prompt is missing, a dependency is absent, relations conflict, the source version is stale, or compilation has no operational effect, keep the binding visible and block premium readiness.
+
+When a binding becomes `removed`, `stale`, `conflicted`, or otherwise has no
+compiled operational effect, the compiler must remove its managed prompt block
+and replace any generated checklist with an explicit inactive state. Historical
+instructions must never remain executable after the binding stops being ready.
+
+For outcome claims, execute the same held-out task with and without the binding and report dimensions separately. Metadata presence, prompt length, or self-review alone does not prove improvement.
 
 ## Non-negotiable boundary
 

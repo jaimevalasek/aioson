@@ -1,5 +1,8 @@
 'use strict';
 
+const dns = require('node:dns/promises');
+const net = require('node:net');
+
 const DEFAULT_TIMEOUT_MS = 10000;
 const DEFAULT_MAX_HTML_CHARS = 500000;
 const DEFAULT_USER_AGENT = 'AIOSON-Web/1.0 (+https://aioson.dev)';
@@ -10,6 +13,63 @@ function ensureValidUrl(input) {
   } catch {
     throw new Error(`Invalid URL: ${input || ''}`);
   }
+}
+
+function isPrivateIpAddress(address) {
+  const normalized = String(address || '').toLowerCase();
+  const family = net.isIP(normalized);
+  if (family === 4) {
+    const octets = normalized.split('.').map(Number);
+    return octets[0] === 0
+      || octets[0] === 10
+      || octets[0] === 127
+      || (octets[0] === 169 && octets[1] === 254)
+      || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+      || (octets[0] === 192 && octets[1] === 168)
+      || (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127)
+      || octets[0] >= 224;
+  }
+  if (family === 6) {
+    return normalized === '::'
+      || normalized === '::1'
+      || normalized.startsWith('fc')
+      || normalized.startsWith('fd')
+      || normalized.startsWith('fe8')
+      || normalized.startsWith('fe9')
+      || normalized.startsWith('fea')
+      || normalized.startsWith('feb')
+      || normalized.startsWith('::ffff:127.')
+      || normalized.startsWith('::ffff:10.')
+      || normalized.startsWith('::ffff:192.168.');
+  }
+  return false;
+}
+
+async function assertSafeRemoteUrl(input, options = {}) {
+  const url = ensureValidUrl(input);
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error(`Unsafe remote URL scheme: ${url.protocol}`);
+  }
+  if (url.username || url.password) {
+    throw new Error('Remote URLs with embedded credentials are not allowed');
+  }
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
+  if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
+    throw new Error(`Private remote host is not allowed: ${hostname}`);
+  }
+  if (net.isIP(hostname)) {
+    if (isPrivateIpAddress(hostname)) throw new Error(`Private remote address is not allowed: ${hostname}`);
+    return url;
+  }
+  const lookup = options.lookup || dns.lookup;
+  const addresses = await lookup(hostname, { all: true, verbatim: true });
+  if (!Array.isArray(addresses) || addresses.length === 0) {
+    throw new Error(`Remote host did not resolve: ${hostname}`);
+  }
+  if (addresses.some((entry) => isPrivateIpAddress(entry.address))) {
+    throw new Error(`Remote host resolves to a private address: ${hostname}`);
+  }
+  return url;
 }
 
 function normalizeUrl(input) {
@@ -159,12 +219,27 @@ async function fetchPage(url, options = {}) {
     ...(options.headers || {})
   };
 
-  const response = await fetch(String(url), {
-    method: 'GET',
-    headers,
-    redirect: 'follow',
-    signal: AbortSignal.timeout(timeoutMs)
-  });
+  const fetchImpl = options.fetch || globalThis.fetch;
+  const safeRemote = options.safeRemote === true;
+  const maxRedirects = Math.min(Math.max(Number(options.maxRedirects || 5), 0), 10);
+  let currentUrl = String(url);
+  let response;
+  for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
+    if (safeRemote) {
+      await assertSafeRemoteUrl(currentUrl, { lookup: options.lookup });
+    }
+    response = await fetchImpl(currentUrl, {
+      method: 'GET',
+      headers,
+      redirect: safeRemote ? 'manual' : 'follow',
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!safeRemote || response.status < 300 || response.status >= 400) break;
+    const location = response.headers.get('location');
+    if (!location) break;
+    if (redirectCount === maxRedirects) throw new Error(`Too many redirects for ${url}`);
+    currentUrl = new URL(location, currentUrl).toString();
+  }
 
   const finalUrl = normalizeUrl(response.url || url);
   const contentType = response.headers.get('content-type') || '';
@@ -280,5 +355,7 @@ module.exports = {
   htmlToText,
   fetchPage,
   scrapePage,
-  mapWebsite
+  mapWebsite,
+  isPrivateIpAddress,
+  assertSafeRemoteUrl
 };

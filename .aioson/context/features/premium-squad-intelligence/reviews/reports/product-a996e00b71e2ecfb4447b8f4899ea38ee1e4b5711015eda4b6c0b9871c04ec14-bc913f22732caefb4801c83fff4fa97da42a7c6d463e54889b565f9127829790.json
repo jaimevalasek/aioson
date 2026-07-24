@@ -1,0 +1,17 @@
+{
+  "schema_version": "review-report/v1",
+  "packet_id": "sha256:a996e00b71e2ecfb4447b8f4899ea38ee1e4b5711015eda4b6c0b9871c04ec14",
+  "feature_slug": "premium-squad-intelligence",
+  "agent": "product",
+  "profile": "framing",
+  "review_mode": "self_review",
+  "artifact": {
+    "path": ".aioson/context/prd-premium-squad-intelligence.md",
+    "sha256": "62b730fd378f66143724754d356421ec1b7c82ea6d5757a2aeb3ec0666599715"
+  },
+  "passes_completed": 2,
+  "review_status": "pass",
+  "summary": "O PRD fecha o problema, valor, escopo, assumptions, estados futuros e ownership sem decisão bloqueante. A revisão reforçou o encaixe da composição dinâmica no decompositor e adapter de execução existentes; pesquisa closed-world, falhas de provider, bindings sem efeito, falso sucesso e compatibilidade legada possuem comportamento observável e ACs próprios.",
+  "findings": [],
+  "completed_at": "2026-07-24T02:23:00.000Z"
+}

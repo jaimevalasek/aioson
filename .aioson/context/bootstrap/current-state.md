@@ -1,12 +1,16 @@
 ---
-updated_at: "2026-07-21T00:00:00-03:00"
-generated_at: "2026-07-21T23:52:58-03:00"
-source: "Living Memory reflection — v1.38.0/v1.39.0, secret-guard-p0 e p1-runtime-completeness — @dev 2026-07-21"
+updated_at: "2026-07-24T01:33:00-03:00"
+generated_at: "2026-07-24T01:34:00-03:00"
+source: "Living Memory reflection — premium-squad-intelligence QA PASS — @qa 2026-07-24"
 ---
 
 # Current State
 
 ## What the system already has
+
+- [premium-squad-intelligence · 2026-07-24] Squad creation now classifies research freshness (`live-required` 6h, `live-check` 24h, `cache-eligible`, `closed-world`), requires explicit claim-to-source provenance in Evidence Packs, derives a minimal task-conditioned roster with truthful ephemeral-specialist routing, and compiles genome methods into squad prompts/checklists with lifecycle cleanup. `squad:validate --strict` enforces premium readiness; localized `squad:eval` requires real held-out execution, resolves/hashes rubric sources, rejects static self-scoring, and uses controlled same-worker/same-input genome A/B. Autorun preserves retry evidence and never marks absent, failed, escalated, or bypassed-specialist work complete. Playbook learning is atomic, preserves original provenance, and promotes only from a later schema-valid held-out PASS. QA resolved eight adversarial findings; all 20 ACs are covered, delivery-assurance and Gate D passed, and full CI finished at 3,876 pass / 0 fail / 1 skip.
+
+- [premium-squad-intelligence · 2026-07-24] `feat(squads): add premium intelligence` committed the evidence-backed research, controlled genome evaluation, hardened squad execution, synchronized templates, and comprehensive coverage.
 
 - [p1-runtime-completeness · 2026-07-22] `fix(runtime): close P1 review findings` committed the validated dispatcher, telemetry, fallback, completeness-table, and workspace-surface corrections.
 

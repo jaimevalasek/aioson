@@ -1,0 +1,43 @@
+{
+  "packet_id": "sha256:e36411c6fdc99c1d9ae51ffa4d953c5680fde6b6f910ba85b93d772902caf466",
+  "schema_version": "review-packet/v1",
+  "feature_slug": "premium-squad-intelligence",
+  "agent": "qa",
+  "profile": "delivery-assurance",
+  "review_mode": "independent_review",
+  "artifact": {
+    "path": ".aioson/context/qa-report-premium-squad-intelligence.md",
+    "sha256": "a856a043f48e184f580ffbdf2ae64e5dc7868e60c5197332b1f5a50d6a259a22",
+    "bytes": 7232
+  },
+  "authorities": [
+    {
+      "kind": "prd",
+      "path": ".aioson/context/prd-premium-squad-intelligence.md",
+      "sha256": "62b730fd378f66143724754d356421ec1b7c82ea6d5757a2aeb3ec0666599715",
+      "bytes": 21076
+    },
+    {
+      "kind": "implementation-plan",
+      "path": ".aioson/context/implementation-plan-premium-squad-intelligence.md",
+      "sha256": "a16a33885aa0135b6458c8b2fadef9840739e726a473da610f9e82fcd4a3e1ea",
+      "bytes": 42529
+    },
+    {
+      "kind": "dossier",
+      "path": ".aioson/context/features/premium-squad-intelligence/dossier.md",
+      "sha256": "f85ce7dd48b5d10cdae4833298afed6ca43c975ba3c8574a9aff0af7406d595b",
+      "bytes": 888
+    }
+  ],
+  "reference_path": ".aioson/skills/process/review-intelligence/references/delivery-assurance.md",
+  "challenge_lenses": [
+    "specification-fidelity",
+    "acceptance-coverage",
+    "code-health",
+    "runtime-truth",
+    "residual-risk"
+  ],
+  "max_passes": 2,
+  "prepared_at": "2026-07-24T04:05:40.584Z"
+}

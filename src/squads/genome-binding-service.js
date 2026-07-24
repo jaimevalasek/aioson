@@ -7,6 +7,7 @@ const {
   mergeGenomeBindings,
   normalizeGenomeBindings
 } = require('../genomes/bindings');
+const { compileGenomeBindingsForSquad } = require('./genome-compiler');
 
 function normalizeSlug(value, fallback = '') {
   const normalized = String(value || fallback)
@@ -67,6 +68,19 @@ function renderGenomeBindingsSection(genomeBindings) {
     lines.push('');
   }
 
+  const stateLines = [];
+  for (const binding of normalized.squad) {
+    stateLines.push(`- squad/${binding.slug}: ${binding.status}${binding.action ? ` — ${binding.action}` : ''}`);
+  }
+  for (const [executorSlug, bindings] of executors) {
+    for (const binding of bindings) {
+      stateLines.push(`- ${executorSlug}/${binding.slug}: ${binding.status}${binding.action ? ` — ${binding.action}` : ''}`);
+    }
+  }
+  if (stateLines.length > 0) {
+    lines.push('### Compilation state', ...stateLines, '');
+  }
+
   return lines.join('\n').trimEnd();
 }
 
@@ -117,10 +131,17 @@ async function applyGenomeBindingsToSquad({ projectRoot, squadSlug, genomeBindin
     legacyExecutors: manifest?.executors
   });
   const incoming = normalizeGenomeBindings(genomeBindings);
-  const finalBindings = mergeGenomeBindings({
+  const mergedBindings = mergeGenomeBindings({
     blueprintBindings: existingBindings,
     manifestBindings: incoming
   });
+  const compilation = await compileGenomeBindingsForSquad({
+    projectRoot,
+    squadSlug: paths.squadSlug,
+    executors: manifest.executors || [],
+    genomeBindings: mergedBindings
+  });
+  const finalBindings = compilation.genomeBindings;
 
   const nextBlueprint = {
     ...blueprint,
@@ -143,7 +164,8 @@ async function applyGenomeBindingsToSquad({ projectRoot, squadSlug, genomeBindin
   return {
     squadSlug: paths.squadSlug,
     paths,
-    genomeBindings: finalBindings
+    genomeBindings: finalBindings,
+    compilation: compilation.reports
   };
 }
 

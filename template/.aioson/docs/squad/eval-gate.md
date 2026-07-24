@@ -1,82 +1,109 @@
 ---
-description: "Squad eval-gate — derive a citation-grounded quality rubric from the squad's own sources and grade each executor with a multi-model jury. The enforced, source-grounded counterpart of quality-lens.md."
+description: "Executable squad eval gate: source-grounded criteria, held-out tasks, genome A/B comparison, and reproducible evidence."
 agents: [squad]
 task_types: [eval, quality]
-triggers: [eval gate, jury, rubric]
+triggers: [eval gate, held-out, genome comparison, rubric]
 ---
 
-# Squad Eval-Gate
+# Squad Eval Gate
 
-The quality bar is **derived from the same sources that generated the squad**, then enforced. `quality-lens.md` is the squad's self-review (advisory); the eval-gate is the *enforced* verdict — run it before delivery or in CI via `@squad eval <slug>`.
+`aioson squad:eval . --squad=<slug>` is the enforced quality gate. It first runs
+`squad:validate --strict` without requiring an older eval, then executes the
+manifest's source rubric and held-out contract. It writes:
 
-Why source-grounded: a rubric invented by the grader drifts to a generic "is it helpful?". A rubric *extracted from the brief / design-doc / sourceDocs* tests what THIS squad was actually asked to be — and every criterion traces back to a span the user can audit. (Grounded in 2026 eval research; see `.aioson/design-docs/squad-self-improving-roadmap.md`.)
+- `.aioson/squads/<slug>/evals/eval-<timestamp>.json`
+- `.aioson/squads/<slug>/evals/latest.json`
+- `.aioson/squads/<slug>/docs/EVAL-<date>.md`
 
-## Step 1 — Synthesize the rubric (from the sources, not from priors)
+The JSON report is validated against
+`.aioson/schemas/squad-eval-report.schema.json` and records manifest, source,
+artifact, compilation, and run evidence needed to reproduce the verdict.
 
-Inputs: `sourceDocs`, `analysis` (entities/workflows/stakeholders), the design intent (problem/goal/scope), and `package-contract.md` § Executor depth block.
+## Evaluation contract
 
-For each executor, extract **atomic requirement claims** — one testable statement each, binary (met / not-met), every claim citing its origin:
+Declare `evaluation.contractVersion`, `criteria`, and `heldOutCases` in
+`squad.manifest.json`.
 
-```yaml
-executor: <slug>
-claims:
-  - id: c1
-    claim: "Owns the <workflow> workflow end to end"
-    source: "analysis.workflows[<workflow>] / design goal"
-    kind: responsibility
-  - id: c2
-    claim: "Carries a persona anchored in real seniority, not a bare label"
-    source: "package-contract § depth block (Variant A)"
-    kind: depth
-  - id: c3
-    claim: "expertise.vocabulary uses terms of art from <sourceDoc>"
-    source: "<sourceDoc path / span>"
-    kind: grounding
-  - id: c4
-    claim: "Hands off <X> to <executor> when <condition>"
-    source: "design scope / workflow"
-    kind: handoff
+Each criterion is one atomic claim with:
+
+- stable `id`
+- `kind`: `responsibility`, `depth`, `grounding`, `handoff`, `anti_pattern`, or `scope`
+- `statement`
+- exact `source`
+- target `executor`
+- deterministic `expectedTerms`
+
+A criterion without a source or deterministic expectation is `unverified`; it
+cannot be silently judged from model priors. `source` must resolve to an actual
+manifest reference such as `manifest.goal` / `manifest.workflows[0]` or to a
+contained project file. The report records the resolved source hash.
+
+Each held-out case describes an unseen task plus either artifact assertions or
+an executable worker. Manifest-authored numeric scores are threshold metadata,
+not proof, and can never self-certify a `PASS`. A worker returns
+`{"dimensions": {"<name>": 0..1}}`; artifact-only cases must declare deterministic
+`expectedContains` / `expectedNotContains` assertions. Preserve every dimension.
+Mark safety, grounding, or other blocking dimensions `critical`.
+
+```json
+{
+  "id": "held-out-1",
+  "task": "Create an unseen recommendation",
+  "worker": "held-out-evaluator",
+  "dimensions": {
+    "grounding": {
+      "threshold": 0.8,
+      "critical": true,
+      "evidence": "score returned by the held-out worker"
+    }
+  }
+}
 ```
 
-Claim kinds to always cover: `responsibility` (traces to a workflow/goal), `depth` (has the depth block), `grounding` (vocabulary/frameworks come from sources), `handoff` (delegation is explicit), `anti_pattern` (role failure modes are Hard constraints), `scope` (no responsibility the sources don't imply).
+## Genome A/B
 
-Keep claims few and load-bearing (≈4–8 per executor). **A claim with no source citation is invented — drop it.**
+When a genome is bound, run the same unseen task with identical worker inputs
+through the same worker twice:
+`baselineRun` with genomes disabled and `candidateRun` with the compiled binding
+enabled. AIOSON injects the controlled `_aioson_eval` envelope; changing workers
+is not an A/B comparison and fails the control. The gate reports delta per
+dimension. Any regression fails that dimension; improvement in style cannot hide
+a grounding or safety regression. A binding without compiled effect or without
+controlled A/B evidence remains failed/unverified.
 
-## Step 2 — Grade with a jury (multi-model when available)
+## Verdict contract
 
-Grade each executor's `.md` against its claims. Prefer a **multi-model jury** — AIOSON already ships the primitive: a `reviewer` executor with `cross_ai: true` (`detect_clis: [claude, codex]`) sends the executor + rubric to multiple model families and synthesizes verdicts. Use it when the CLIs are available.
+- `PASS`: strict precheck passes, all critical criteria/dimensions pass, held-out
+  evidence exists, and compiled genomes have non-regressing A/B evidence.
+- `WARN`: verified non-critical dimension is below its target, with no critical
+  failure.
+- `FAIL`: strict precheck fails, a critical criterion fails, or an A/B dimension
+  regresses.
+- `UNVERIFIED`: required evidence, deterministic assertion, or held-out case is
+  absent.
+- `NOT_APPLICABLE`: only for an individual dimension such as genome comparison
+  when no genome is bound; it never substitutes for the overall held-out proof.
 
-If only one model is available, simulate a 3-lens jury with **distinct, adversarial perspectives** (do not grade the same way thrice):
-- *correctness* lens — is the claim literally satisfied by the prompt text?
-- *grounding* lens — is it backed by the cited source, or invented?
-- *skeptic* lens — try to REFUTE the claim; default to not-met when ambiguous.
+Persistent and regulated squads require a current `PASS` report before premium
+readiness. An ephemeral Quick Scan may defer only with a concrete
+`evaluation.deferReason`.
 
-Each judge returns per-claim met/not-met + a one-line reason.
+## Optional model jury
 
-### Reliability weighting (do not average blindly)
-2026 eval research is clear that naive equal-weight juries underperform and that judges are fragile to formatting/verbosity. So:
-- A claim is **met** only if a majority of judges agree AND the vote is not split (e.g. ≥ 2/3).
-- Mark **split** claims as `uncertain` — these need a human glance, not an auto-pass.
-- Down-weight a judge that disagrees with consensus across many claims (likely miscalibrated for this domain).
+Cross-AI review and reflection remain useful as additional evidence, but model
+availability must not be fabricated and model votes do not replace the
+deterministic contract. Persist any jury result as evidence for a dimension;
+never average away a critical failure.
 
-## Step 3 — Gate
+## Learning
 
-Per executor compute `coverage` = met / total, and `agreement` = fraction of non-split claims. Verdict (thresholds tunable):
-- **PASS** — coverage ≥ 0.85 AND no `depth`/`grounding` claim unmet AND agreement ≥ 0.8.
-- **WARN** — coverage 0.70–0.85, or some `uncertain` claims.
-- **FAIL** — coverage < 0.70, OR any `depth`/`grounding` claim unmet (a basic or ungrounded executor fails outright).
+A failed eval may capture a generalized playbook `candidate`. It is not active
+guidance yet. Promote it only after a later held-out `PASS`:
 
-A FAIL is not advisory. Route every unmet claim to `@squad refresh <slug>` as an actionable diff: "claim `<id>` unmet for `<executor>` → `<what to add>`". Then capture the *generalized* lesson to the generation playbook so the generator stops repeating it: `aioson squad:playbook capture --rule="<which generation rule produced this>" --lesson="<what to do instead>" --from=<slug>/<claim>` (see `creation-flow.md` § Generation playbook). Capture the rule, not the squad-specific fix.
+```bash
+aioson squad:playbook capture --rule="<failure pattern>" --lesson="<general correction>" --from=<slug>/<claim>
+aioson squad:playbook promote --id=<candidate-id> --squad=<slug>
+```
 
-## Honest limits (do not oversell the gate)
-- This verifies **fidelity to the spec/sources**, NOT real-world task performance. Pair it with a few held-out task-execution checks before trusting a squad in production.
-- A single quality number hides regressions — keep coverage, agreement, and the per-kind breakdown separate.
-- Auto-extracted rubrics still carry noise (~15% on first run) — treat `uncertain` as "look", not "fail", and skim once.
-- Refresh the rubric when the sources change — a stale bar passes a drifted squad.
-
-## Relationship to the other gates
-- `squad-validate` (cheap, always-on): structure + depth-block presence. The floor.
-- `quality-lens` (advisory self-review): is the package non-generic?
-- **eval-gate (this; opt-in / CI): the enforced, source-grounded verdict.** The ceiling.
-
-Run validate always; run the eval-gate before delivery or in CI.
+The promotion validates the eval-report schema and squad identity, retains the
+original failure origin, and records later reinforcements as observations.

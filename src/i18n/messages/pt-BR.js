@@ -229,7 +229,9 @@ module.exports = {
     help_squad_repair_genomes:
       'aioson squad:repair-genomes <manifest.json> [--write] [--no-backup] [--json] [--locale=pt-BR]',
     help_squad_validate:
-      'aioson squad:validate [path] --squad=<slug> [--locale=pt-BR]',
+      'aioson squad:validate [path] --squad=<slug> [--strict] [--json] [--locale=pt-BR]',
+    help_squad_eval:
+      'aioson squad:eval [path] --squad=<slug> [--json] [--locale=pt-BR]',
     help_squad_export:
       'aioson squad:export [path] --squad=<slug> [--locale=pt-BR]',
     help_squad_pipeline:
@@ -1646,6 +1648,14 @@ module.exports = {
     install_inspect_files: 'Arquivos neste pacote ({count} no total):',
     install_inspect_hint: 'Execute sem --inspect para instalar.',
     install_unverified_hint: '  Dica: Use --inspect para revisar os arquivos antes de instalar, ou --force para ignorar este aviso.'
+  },
+
+  squadEval: {
+    missing_slug: 'squad:eval exige --squad=<slug>.',
+    invalid_slug: 'Slug de squad inválido: {slug}.',
+    manifest_missing: 'Manifesto do squad não encontrado: {slug}.',
+    result: 'Avaliação do squad {slug}: {verdict}',
+    report: 'Relatório: {path}'
   },
 
   system: {

@@ -104,6 +104,26 @@ test('role-scan normalizes accented (non-ASCII) terms', async () => {
   assert.ok(result.signals.terms.some((t) => t.term === 'analise'), 'accents normalized into ranked terms');
 });
 
+test('AC-premium-06 equivalent pt-BR work verbs produce useful role candidates', async () => {
+  const dir = await makeTempDir();
+  await fs.writeFile(
+    path.join(dir, 'pt-brief.md'),
+    'A Estratégia Editorial deve pesquisar mercado, criar roteiros, editar conteúdo e revisar evidências.\n'
+  );
+  const result = await runSquadRoleScan({
+    args: [dir],
+    options: { docs: 'pt-brief.md', json: true },
+    logger: collectLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.signals.actions.originate.includes('pesquisar'));
+  assert.ok(result.signals.actions.transform.includes('editar'));
+  assert.ok(result.signals.actions.judge.includes('revisar'));
+  assert.ok(result.signals.entities.some((item) => item.entity === 'Estratégia Editorial'));
+  assert.ok(result.signals.roleCandidates.length >= 3);
+});
+
 test('role-scan returns manifest_not_found on malformed manifest JSON', async () => {
   const dir = await makeTempDir();
   const squadDir = path.join(dir, '.aioson', 'squads', 'broken');

@@ -23,6 +23,7 @@ If present, also preserve:
 - `investigation`
 - `sourceDocs`
 - `analysis` (decomposition from design Step 2.5) + `confidence`/`traces` per executor
+- `researchPolicy` and `composition` (persistent core, task-bound specialists, owners/reviewers)
 
 ### Step 2 - Create Directory Structure
 ```
@@ -79,7 +80,11 @@ Mandatory persistence:
 - `investigation`: copy when present
 - `sourceDocs`: copy when present
 - `analysis` (entities/workflows/integrations/stakeholders): copy when present
+- `researchPolicy`: copy the classified freshness policy and Evidence Pack requirement
+- `composition`: copy the persistent core and task-bound specialists; specialists remain `persistent: false`
 - `confidence` + `traces` per executor: copy from blueprint into each `executors[]` manifest entry; `squad-analyze` and `squad-validate` read these fields
+- `contribution` + `decisionRights` per executor: persist what repeated work justifies the role and which material decisions it owns
+- `evaluation`: persist source-grounded criteria and at least one held-out case; when genomes are bound, include with/without dimension evidence
 
 ### Step 4 - Generate agents.md (Text Manifest)
 Follow `.aioson/docs/squad/package-contract.md`, section `agents/agents.md`.
@@ -114,12 +119,14 @@ Minimum format:
 
 ### Step 5 - Generate Each Executor
 For each executor in the blueprint, create `.aioson/squads/<slug>/agents/<executor-slug>.md` following `.aioson/docs/squad/package-contract.md`, section `Executor generation`:
+- Generate permanent files only for the justified persistent core. A task-specific specialist stays in the execution plan with an integration owner; it does not silently become a permanent executor.
 - **Before writing**, run the *Pre-write depth gate* from `.aioson/docs/squad/creation-flow.md` for each executor: persona, frameworks, source vocabulary, signature_moves, anti-patterns. Empty gate = do not write yet.
 - Header with `# Agent @<slug>` + ACTIVATED block.
 - Mission, Quick context, Active genomes, Focus, Response standard, Hard constraints, Output contract.
 - **Mandatory depth block** in `## Quick context` (package-contract § `Executor depth block`): Variant A (persona + expertise: frameworks, vocabulary, signature_moves, quality_bar, anti_patterns) for knowledge/creative/technical executors; Variant B (operational_breadth) for customer-facing executors. A standalone `role:` without depth block = basic executor; do not deliver it.
 - **Distill sources:** if the blueprint has `sourceDocs` or `investigation`, read/reuse the extraction and inject it into each relevant executor: real terms of art, named frameworks/methods, examples, and anti-patterns. Record in `expertise.sources` which source fed each executor. Use `analysis.entities`/`analysis.workflows` and executor `traces` (design Step 2.5 decomposition) as seeds for `expertise.vocabulary` and `focus`. A source that remains only in the manifest and enters no prompt is a defect. Follow the competency tree in `.aioson/docs/squad/persona-grounding.md` (*extract, don't write*): each framework/term cites its source; uncited items are model priors.
 - Each `anti_pattern` from the depth block becomes a real line in `## Hard constraints`.
+- State the executor's contribution and decision rights. For review work, name an independent reviewer or record the explicit exception; do not use naive voting to dilute domain expertise.
 - Before moving to the next executor, apply this test: would a real senior person in this role recognize themselves in this prompt? If not, deepen before continuing.
 - If `locale_scope` is locale-specific, write user-facing behavior examples in that locale's language; code identifiers remain English.
 
@@ -129,8 +136,9 @@ Load `.aioson/docs/squad/genome-bindings.md`. Then, for each executor whose blue
 
 1. Check `.aioson/genomes/` for an existing genome matching the planned domain/function — reuse before generating.
 2. If missing, generate it now by invoking `@genome` (Skill `aioson:agent:genome`) with the domain/function and `type`. `persona` genomes are never auto-generated — queue them for the Profiler pipeline instead.
-3. Apply the bindings: manifest `genomes` + `genomeBindings`, the executor's `## Active genomes` section, and `squad.md` (squad-level and per-agent genomes).
-4. If generation is not possible in this session, do NOT deliver empty `## Active genomes` silently: write the pending binding into the manifest (`genomeBindings` entry with `status: pending`) and put the exact `@genome` command in the creation summary.
+3. Apply through the runtime binding service so manifest `genomes` + `genomeBindings`, the executor prompt, compiled checklist, readiness, source hash, and compilation identity stay coherent.
+4. Inspect what changed in each executor: procedure, restrictions, checklist, style, and output contract. Metadata-only or null-effect binding remains `conflicted`, not ready.
+5. If generation/materialization is not possible in this session, do NOT deliver empty `## Active genomes` silently: preserve `status: pending|stale|conflicted`, owner and exact repair action in the manifest and creation summary.
 
 Skip this step only for tier-3 squads whose executors are all `worker` / plain `agent` types with no specialized expertise.
 
@@ -149,8 +157,11 @@ Update root `CLAUDE.md` and `AGENTS.md` according to `.aioson/docs/squad/package
 Save `.aioson/squads/<slug>/squad.md` according to `.aioson/docs/squad/package-contract.md`, section `Squad metadata`.
 Include `locale_scope`, `locale_rationale`, `investigation`, and `sourceDocs` when present.
 
-### Step 10 - Run Validate
-After creating everything, mentally execute `squad-validate` (read `.aioson/tasks/squad-validate.md`) to verify the package is consistent.
+### Step 10 - Run Strict Validate And Eval
+Run `aioson squad:validate . --squad=<slug> --strict --json`, then
+`aioson squad:eval . --squad=<slug> --json`. Persistent and regulated squads do
+not become ready without a current PASS. An ephemeral Quick Scan may defer only
+with a concrete `evaluation.deferReason`.
 
 ### Step 11 - Warm-Up Round
 Follow `.aioson/docs/squad/workflow-quality.md`, section `Confirmation, coverage, and warm-up`: show each specialist with problem reading, initial recommendation, main risk, and suggested next step.

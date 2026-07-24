@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aioson.dev/schemas/squad-evidence-pack.schema.json",
+  "title": "AIOSON Squad Evidence Pack",
+  "type": "object",
+  "required": ["schemaVersion", "id", "topic", "query", "policy", "status", "collected_at", "sources", "claims", "provenance"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "id": { "type": "string", "minLength": 1 },
+    "squad": { "type": ["string", "null"] },
+    "session_id": { "type": ["string", "null"] },
+    "topic": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "query": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "required": ["type", "requiresLive", "networkAllowed", "cacheMayConfirm"],
+      "properties": {
+        "type": { "enum": ["live-required", "live-check", "cache-eligible", "closed-world"] },
+        "reason": { "type": "string" },
+        "requiresLive": { "type": "boolean" },
+        "networkAllowed": { "type": "boolean" },
+        "cacheMayConfirm": { "type": "boolean" },
+        "maxAgeHours": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "status": { "enum": ["pass", "warn", "fail", "unverified", "not-applicable"] },
+    "provider": { "type": "object" },
+    "collected_at": { "type": "string" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "collected_at", "content_hash", "source_type", "primary", "independent"],
+        "properties": {
+          "id": { "type": "string" },
+          "url": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "published_at": { "type": ["string", "null"] },
+          "collected_at": { "type": "string" },
+          "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "source_type": { "type": "string" },
+          "primary": { "type": "boolean" },
+          "independent": { "type": "boolean" },
+          "excerpt": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "status", "source_ids", "citations"],
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" },
+          "status": { "enum": ["supported", "contradicted", "unverified"] },
+          "source_ids": { "type": "array", "items": { "type": "string" } },
+          "citations": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "contradictions": { "type": "array" },
+    "gaps": { "type": "array" },
+    "provenance": {
+      "type": "object",
+      "required": ["generated_by", "content_hash"],
+      "properties": {
+        "worker": { "type": ["string", "null"] },
+        "run_id": { "type": ["string", "null"] },
+        "generated_by": { "type": "string" },
+        "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  },
+  "additionalProperties": true
+}

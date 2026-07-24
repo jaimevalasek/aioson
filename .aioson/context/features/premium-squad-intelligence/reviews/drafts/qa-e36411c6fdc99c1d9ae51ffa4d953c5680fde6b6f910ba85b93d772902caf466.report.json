@@ -1,0 +1,229 @@
+{
+  "schema_version": "review-report/v1",
+  "packet_id": "sha256:e36411c6fdc99c1d9ae51ffa4d953c5680fde6b6f910ba85b93d772902caf466",
+  "feature_slug": "premium-squad-intelligence",
+  "agent": "qa",
+  "profile": "delivery-assurance",
+  "review_mode": "independent_review",
+  "artifact": {
+    "path": ".aioson/context/qa-report-premium-squad-intelligence.md",
+    "sha256": "a856a043f48e184f580ffbdf2ae64e5dc7868e60c5197332b1f5a50d6a259a22"
+  },
+  "passes_completed": 2,
+  "review_status": "blocked",
+  "summary": "The delivery has broad green regression evidence, but independent review found false-positive paths in held-out evaluation, claim grounding, runtime history, genome lifecycle cleanup, path containment, specialist execution, and playbook provenance.",
+  "findings": [
+    {
+      "id": "REVIEW-QA-PSI-01",
+      "lens": "runtime-truth",
+      "status": "open",
+      "severity": "blocking",
+      "description": "Manifest-authored numeric dimensions can produce a held-out PASS without executing a task, and the genome comparison does not enforce a controlled with-versus-without binding run.",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/squad/eval-engine.js",
+          "detail": "caseDimensions returns testCase.dimensions before considering worker output; evaluateHeldOutCase accepts this as the complete case."
+        },
+        {
+          "type": "test",
+          "path": "tests/squad-eval.test.js",
+          "detail": "The default PASS fixture declares static dimensions and no held-out worker. The A/B fixture uses two unrelated worker scripts."
+        }
+      ],
+      "impact": "A persistent or regulated squad can satisfy the premium gate with self-authored scores instead of unseen executable evidence.",
+      "recommendation": "Require executable candidate evidence for every held-out PASS and a same-task controlled genome toggle for A/B. Treat static dimensions as supplemental only.",
+      "alternatives": [
+        "If no executable evaluator exists, return UNVERIFIED and keep the squad non-ready."
+      ],
+      "confidence": "high",
+      "owner": "dev",
+      "residual_risk": "Judge calibration can remain imperfect, but it must not be replaced by manifest assertions."
+    },
+    {
+      "id": "REVIEW-QA-PSI-02",
+      "lens": "specification-fidelity",
+      "status": "open",
+      "severity": "blocking",
+      "description": "Evidence Pack construction implicitly assigns all collected sources to an unmapped claim and labels it supported; a live pack can also pass with no claims.",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/squad/evidence-pack.js",
+          "detail": "Missing claim.source_ids falls back to every source ID and supported status."
+        },
+        {
+          "type": "code",
+          "path": "src/worker-runner.js",
+          "detail": "Live status is based on source count and domain independence, not claim support."
+        }
+      ],
+      "impact": "The promised source-to-claim trace may be fabricated by structure even when no source semantically supports the claim.",
+      "recommendation": "Default unmapped claims to unverified, validate explicit source IDs, and block material-claim readiness when claims are empty, contradicted, or unsupported.",
+      "alternatives": [
+        "Allow a source-discovery-only pack to pass only when no material claim contract is declared."
+      ],
+      "confidence": "high",
+      "owner": "dev",
+      "residual_risk": "Semantic support still depends on the selected evaluator, so the report must preserve unverified states."
+    },
+    {
+      "id": "REVIEW-QA-PSI-03",
+      "lens": "acceptance-coverage",
+      "status": "open",
+      "severity": "blocking",
+      "description": "Retry exhaustion overwrites attempt history and records completed_at on escalation; a capability-gap specialist is ignored by the legacy autorun engine.",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/commands/squad-autorun.js",
+          "detail": "runTaskWithGapClosure replaces task.result with a short escalation object and sets completed_at. runTask selects task.executor rather than task.specialist."
+        },
+        {
+          "type": "test",
+          "path": "tests/squad-autorun.test.js",
+          "detail": "Current tests disable gap closure and do not cover specialist execution."
+        }
+      ],
+      "impact": "AC-premium-13 loses the causal trail, while AC-premium-07 can silently execute specialized work with the wrong actor.",
+      "recommendation": "Merge the escalation result into existing history, keep completed_at null, and fail or escalate when the active engine cannot execute a required specialist.",
+      "alternatives": [
+        "Materialize a session-scoped worker for the specialist when the legacy engine supports it."
+      ],
+      "confidence": "high",
+      "owner": "dev",
+      "residual_risk": "Parallel voting writes remain a separate legacy concern outside this correction."
+    },
+    {
+      "id": "REVIEW-QA-PSI-04",
+      "lens": "code-health",
+      "status": "open",
+      "severity": "blocking",
+      "description": "A removed, stale, conflicted, or no-effect genome leaves its previously compiled managed block and checklist active.",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/squads/genome-compiler.js",
+          "detail": "materializeExecutorEffects returns without touching files when compiled.length is zero."
+        }
+      ],
+      "impact": "Manifest readiness and actual executor behavior diverge; an operator can remove a genome while its method continues influencing output.",
+      "recommendation": "Remove or explicitly deactivate the prior managed block/checklist whenever no current compiled binding applies, with lifecycle regression tests.",
+      "alternatives": [
+        "Keep an inactive audit file, but never leave old instructions in the executable prompt."
+      ],
+      "confidence": "high",
+      "owner": "dev",
+      "residual_risk": "Multi-file atomicity remains best-effort unless a transaction journal is added later."
+    },
+    {
+      "id": "REVIEW-QA-PSI-05",
+      "lens": "residual-risk",
+      "status": "open",
+      "severity": "blocking",
+      "description": "New squad paths accept unchecked slugs, live freshness uses a seven-day default inconsistent with six-hour and 24-hour policies, and playbook reinforcement overwrites the original origin.",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/commands/squad-eval.js",
+          "detail": "The CLI slug is joined directly into report read/write paths without canonical validation."
+        },
+        {
+          "type": "code",
+          "path": "src/squad/manifest-validator.js",
+          "detail": "Live evidence defaults to maxAgeDays 7 and does not require policy identity."
+        },
+        {
+          "type": "code",
+          "path": "src/commands/squad-playbook.js",
+          "detail": "Reinforcement assigns entry.from from the latest observation."
+        }
+      ],
+      "impact": "Path containment can be bypassed, stale evidence can be credited as current, and learned-rule provenance can be rewritten.",
+      "recommendation": "Validate squad slugs before path use, apply the strictest policy-derived age, reject policy mismatch, preserve immutable origin and use atomic playbook writes.",
+      "alternatives": [],
+      "confidence": "high",
+      "owner": "dev",
+      "residual_risk": "DNS rebinding defense remains a lower-level networking hardening candidate."
+    }
+  ],
+  "completed_at": "2026-07-24T04:05:40.584Z",
+  "assurance": {
+    "specification_fidelity": {
+      "status": "fail",
+      "evidence": [
+        {
+          "type": "artifact",
+          "path": ".aioson/context/prd-premium-squad-intelligence.md",
+          "detail": "The PRD requires real held-out execution and claim-level provenance."
+        },
+        {
+          "type": "code",
+          "path": "src/squad/eval-engine.js",
+          "detail": "Static manifest scores can satisfy the held-out verdict."
+        }
+      ],
+      "residual_risk": "Required premium promises are not yet true on all production paths."
+    },
+    "acceptance_coverage": {
+      "status": "fail",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "node bin/aioson.js ac:test-audit . --feature=premium-squad-intelligence --strict --json",
+          "status": "passed",
+          "detail": "20 of 20 AC IDs have assertions, but independent review found missing behavioral cases inside those ACs."
+        }
+      ],
+      "residual_risk": "Coverage mapping is complete, while negative-path behavioral coverage is incomplete."
+    },
+    "code_health": {
+      "status": "fail",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/squads/genome-compiler.js",
+          "detail": "Lifecycle cleanup does not remove stale managed instructions."
+        },
+        {
+          "type": "code",
+          "path": "src/commands/squad-autorun.js",
+          "detail": "Retry exhaustion replaces rather than extends the durable attempt record."
+        }
+      ],
+      "residual_risk": "State transitions can diverge from persisted behavior."
+    },
+    "runtime_truth": {
+      "status": "fail",
+      "evidence": [
+        {
+          "type": "test",
+          "path": "tests/squad-eval.test.js",
+          "detail": "The passing held-out fixture executes no held-out worker."
+        },
+        {
+          "type": "code",
+          "path": "src/commands/squad-autorun.js",
+          "detail": "Legacy execution bypasses a required ephemeral specialist."
+        }
+      ],
+      "residual_risk": "A ready state can still be reached without the promised execution."
+    },
+    "residual_risk": {
+      "status": "fail",
+      "evidence": [
+        {
+          "type": "code",
+          "path": "src/commands/squad-eval.js",
+          "detail": "Unchecked squad slug reaches filesystem writes."
+        },
+        {
+          "type": "code",
+          "path": "src/squad/manifest-validator.js",
+          "detail": "Freshness enforcement is weaker than the runtime policy."
+        }
+      ],
+      "residual_risk": "Gate D must remain blocked until these bounded corrections are independently retested."
+    }
+  }
+}

@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "protocol_id": "hnd-qa-end-1784177312069",
-  "created_at": "2026-07-16T04:48:32.069Z",
-  "workflow_mode": "project",
+  "protocol_id": "hnd-qa-end-1784867452080",
+  "created_at": "2026-07-24T04:30:52.080Z",
+  "workflow_mode": "feature",
   "classification": "MEDIUM",
-  "feature_slug": null,
+  "feature_slug": "premium-squad-intelligence",
   "from": {
     "agent_id": "qa",
     "capability_transferred": "verify_feature"
@@ -22,6 +22,6 @@
   "validation": {
     "handoff_contract_ok": true,
     "technical_gate_ok": true,
-    "validated_at": "2026-07-16T04:48:32.069Z"
+    "validated_at": "2026-07-24T04:30:52.080Z"
   }
 }

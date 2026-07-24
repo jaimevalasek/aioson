@@ -75,6 +75,14 @@ test('help exposes review intelligence commands in every supported locale', asyn
   }
 });
 
+test('AC-premium-20 help exposes squad:eval in every supported locale', async () => {
+  for (const locale of ['en', 'pt-BR', 'es', 'fr']) {
+    const cli = await runCli(['help', `--locale=${locale}`]);
+    assert.equal(cli.code, 0, `help failed for ${locale}`);
+    assert.equal(cli.stdout.includes('aioson squad:eval'), true, `squad:eval missing from ${locale} help`);
+  }
+});
+
 test('unknown command error is localized in pt-BR', async () => {
   const cli = await runCli(['comando-inexistente', '--locale=pt-BR']);
   assert.equal(cli.code, 1);

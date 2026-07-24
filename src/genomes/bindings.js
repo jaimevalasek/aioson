@@ -6,6 +6,14 @@ const DEFAULT_BINDING_PRIORITY = 100;
 const DEFAULT_BINDING_MODE = 'persistent';
 const DEFAULT_BINDING_SOURCE = 'manual';
 const EXECUTOR_SCOPE = 'executor';
+const BINDING_STATUSES = Object.freeze([
+  'pending',
+  'resolved',
+  'compiled',
+  'conflicted',
+  'stale',
+  'removed'
+]);
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -64,12 +72,34 @@ function normalizeBinding(binding, fallback = {}) {
       raw.evidenceMode ?? raw.evidence_mode ?? fallback.evidenceMode ?? fallback.evidence_mode,
       GENOME_EVIDENCE_MODES
     ),
-    notes: normalizeOptionalText(raw.notes ?? fallback.notes)
+    notes: normalizeOptionalText(raw.notes ?? fallback.notes),
+    status: normalizeOptionalEnum(raw.status ?? fallback.status, BINDING_STATUSES) || 'pending',
+    compilationId: normalizeOptionalText(
+      raw.compilationId ?? raw.compilation_id ?? fallback.compilationId ?? fallback.compilation_id
+    ),
+    compiledAt: normalizeOptionalText(
+      raw.compiledAt ?? raw.compiled_at ?? fallback.compiledAt ?? fallback.compiled_at
+    ),
+    sourceHash: normalizeOptionalText(
+      raw.sourceHash ?? raw.source_hash ?? fallback.sourceHash ?? fallback.source_hash
+    ),
+    dependencies: ensureArray(raw.dependencies ?? fallback.dependencies).map((value) => normalizeText(value)).filter(Boolean),
+    conflicts: ensureArray(raw.conflicts ?? fallback.conflicts).map((value) => normalizeText(value)).filter(Boolean),
+    owner: normalizeOptionalText(raw.owner ?? fallback.owner),
+    action: normalizeOptionalText(raw.action ?? fallback.action)
   };
 }
 
 function dedupeBindings(bindings = []) {
   const entries = new Map();
+  const statusRank = {
+    removed: 6,
+    compiled: 5,
+    resolved: 4,
+    stale: 3,
+    conflicted: 2,
+    pending: 1
+  };
 
   for (const binding of ensureArray(bindings)) {
     const normalized = normalizeBinding(binding);
@@ -83,7 +113,16 @@ function dedupeBindings(bindings = []) {
 
     const nextWins =
       normalized.priority > current.priority ||
-      (normalized.priority === current.priority && JSON.stringify(normalized) !== JSON.stringify(current));
+      (
+        normalized.priority === current.priority
+        && (
+          statusRank[normalized.status] > statusRank[current.status]
+          || (
+            statusRank[normalized.status] === statusRank[current.status]
+            && JSON.stringify(normalized) !== JSON.stringify(current)
+          )
+        )
+      );
 
     if (nextWins) {
       entries.set(normalized.slug, normalized);
@@ -270,6 +309,7 @@ function flattenGenomeBindings(genomeBindings = {}) {
 
 module.exports = {
   EXECUTOR_SCOPE,
+  BINDING_STATUSES,
   ensureArray,
   normalizeBinding,
   normalizeGenomeBindings,

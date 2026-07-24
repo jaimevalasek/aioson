@@ -78,9 +78,9 @@ test('scoreCompletude scores workers present', () => {
   assert.ok(result.details.workersPresent);
 });
 
-test('scoreCompletude scores investigation report', () => {
-  const result = scoreCompletude({ _hasInvestigation: true });
-  assert.ok(result.details.investigationReport);
+test('scoreCompletude scores current Evidence Pack, not investigation presence', () => {
+  const result = scoreCompletude({ _hasCurrentEvidence: true });
+  assert.ok(result.details.currentEvidence);
 });
 
 test('scoreCompletude scores model tiering', () => {
@@ -162,11 +162,17 @@ test('scoreQualidadeEstrutural scores output strategy', () => {
   assert.ok(result.details.outputStrategy);
 });
 
-test('scoreQualidadeEstrutural scores genome bindings', () => {
+test('scoreQualidadeEstrutural requires compiled genome effects', () => {
   const result = scoreQualidadeEstrutural({
-    genomes: [{ slug: 'persona-x' }]
+    genomeBindings: {
+      squad: [{ slug: 'persona-x', status: 'compiled', compilationId: 'a'.repeat(64) }],
+      executors: {}
+    }
   });
-  assert.ok(result.details.genomeBindings);
+  assert.ok(result.details.compiledGenomeBindings);
+  const legacy = scoreQualidadeEstrutural({ genomes: [{ slug: 'persona-x' }] });
+  assert.equal(legacy.details.compiledGenomeBindings, undefined);
+  assert.ok(legacy.details.genomeBindingsPending);
 });
 
 test('scoreQualidadeEstrutural scores format references', () => {
@@ -191,8 +197,8 @@ test('scorePotencial scores anti-pattern guards', () => {
   assert.ok(result.details.antiPatternGuards);
 });
 
-test('scorePotencial scores domain vocabulary via investigation', () => {
-  const result = scorePotencial({ _hasInvestigation: true });
+test('scorePotencial scores domain vocabulary via current evidence', () => {
+  const result = scorePotencial({ _hasCurrentEvidence: true });
   assert.ok(result.details.domainVocabulary);
 });
 
@@ -203,9 +209,9 @@ test('scorePotencial scores structural patterns via blueprints', () => {
   assert.ok(result.details.structuralPatterns);
 });
 
-test('scorePotencial always marks llmAssessmentPending', () => {
+test('scorePotencial marks evaluation pending when no eval evidence exists', () => {
   const result = scorePotencial({});
-  assert.ok(result.details.llmAssessmentPending);
+  assert.ok(result.details.evaluationPending);
 });
 
 // --- runSquadScore ---
@@ -318,6 +324,78 @@ test('runSquadScore gives high score to a complete manifest', async () => {
 
     // With investigation dir, all scoring criteria met, expect high score
     assert.ok(result.total >= 70, `Expected score >= 70, got ${result.total}`);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true });
+  }
+});
+
+test('AC-premium-20 runSquadScore rejects traversal slug before reading a manifest', async () => {
+  const result = await runSquadScore({
+    args: [process.cwd()],
+    options: { squad: '../outside' },
+    logger: { log() {}, error() {} }
+  });
+  assert.equal(result.valid, false);
+  assert.equal(result.error, 'invalid_slug');
+});
+
+test('AC-premium-17 critical eval failure caps the score instead of being averaged away', async () => {
+  const tmpDir = await makeTempDir();
+  try {
+    const squadDir = path.join(tmpDir, '.aioson', 'squads', 'critical-failure');
+    await fs.mkdir(path.join(squadDir, 'evals'), { recursive: true });
+    await fs.writeFile(path.join(squadDir, 'squad.manifest.json'), JSON.stringify({
+      schemaVersion: '1.0.0',
+      slug: 'critical-failure',
+      name: 'Critical failure',
+      mode: 'content',
+      mission: 'Test score cap',
+      goal: 'Do not mask critical failures',
+      researchPolicy: { policy: 'closed-world', reason: 'fixture' },
+      composition: { persistent_core: ['writer'] },
+      evaluation: {
+        contractVersion: '1.0.0',
+        criteria: [{ id: 'c1' }],
+        heldOutCases: [{ id: 'h1', task: 'held out' }]
+      },
+      executors: [{
+        slug: 'writer',
+        role: 'Writer',
+        type: 'agent',
+        modelTier: 'powerful',
+        focus: ['a', 'b', 'c'],
+        tasks: [{ slug: 't1' }],
+        formats: ['article']
+      }],
+      workflows: [{
+        phases: [{
+          id: 'p1',
+          review: { reviewer: 'reviewer' },
+          humanGate: true,
+          vetoConditions: ['critical']
+        }, { id: 'p2' }]
+      }],
+      checklists: [{ name: 'quality' }],
+      skills: [{ slug: 'a' }, { slug: 'b' }],
+      contentBlueprints: [{ sections: ['a', 'b', 'c'] }],
+      outputStrategy: { mode: 'hybrid' },
+      ports: { inputs: ['feed'] }
+    }));
+    await fs.writeFile(path.join(squadDir, 'evals', 'latest.json'), JSON.stringify({
+      verdict: 'FAIL',
+      critical_failures: 1,
+      source_rubric: { status: 'pass' },
+      held_out: { status: 'fail' }
+    }));
+    const result = await runSquadScore({
+      args: [tmpDir],
+      options: { squad: 'critical-failure' },
+      logger: { log() {}, error() {} }
+    });
+    // AC-premium-17: a critical dimension is a hard cap, never an averaged detail.
+    assert.ok(result.rawTotal > 49);
+    assert.equal(result.total, 49);
+    assert.equal(result.assurance.caps.some((cap) => cap.reason === 'critical-eval-failure'), true);
   } finally {
     await fs.rm(tmpDir, { recursive: true });
   }
