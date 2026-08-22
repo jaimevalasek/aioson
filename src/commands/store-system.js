@@ -552,9 +552,10 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (buildMode) {
     const buildCmd = manifest.build_command || 'npm run build';
     logger.log(`Building: ${buildCmd}`);
-    const { execSync } = require('child_process');
+    const { execFileSync } = require('child_process');
     try {
-      execSync(buildCmd, { cwd: dir, stdio: 'inherit', timeout: 300_000 });
+      const [cmd, ...cmdArgs] = buildCmd.split(/\s+/);
+      execFileSync(cmd, cmdArgs, { cwd: dir, stdio: 'inherit', timeout: 300_000 });
     } catch (e) {
       throw new Error(`Build failed: ${e.message}`);
     }
