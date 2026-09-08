@@ -9,7 +9,7 @@ triggers: [web search, research cache, market assumptions, competitor, pricing, 
 
 # Product Research Loop
 
-Load this module before the first synthesis, before any finalize decision, and before writing a non-trivial PRD.
+Load when an external fact, market assumption, or transferable product mechanism could materially change the PRD. Reuse relevant findings across synthesis and finalization; do not restart research merely because the conversation changed phase.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Prevent `@product` from relying only on the chat. Use a lightweight, fresh exter
 
 ## Mandatory keyword extraction
 
-Derive `3-7` short keyword phrases from the current conversation. Favor concrete phrases with `2-6` words such as:
+Name the decision research should inform and the evidence that would change the recommendation. Derive only useful short keyword phrases from the conversation and artifacts. Favor concrete phrases such as:
 
 - problem or pain point
 - user segment or buyer
@@ -48,6 +48,8 @@ Avoid broad phrases such as `app idea`, `dashboard`, or `better ux`.
 5. Search only the top `1-4` phrases that are stale or missing
 6. Save every search to `researchs/` before using the result
 
+Inspect authoritative source pages rather than treating snippets as proof. For creative exploration, research the mechanism behind an adjacent-domain analogy and the conditions under which it transfers, not just competitors' feature lists. Record source date, applicability, and contradictory evidence. Stop when further research would not change the scoped decision; unavailable evidence stays explicitly unverified.
+
 At least one phrase must be validated through cache or fresh research whenever the PRD depends on an external market, product pattern, pricing model, competitor norm, compliance expectation, or time-sensitive UX convention.
 
 ## How to use the findings
@@ -66,5 +68,7 @@ Do not dump research into the chat. Surface only the deltas that materially chan
 
 - Treat `researchs/` as a temporary shared evidence layer for current and nearby sessions
 - Mark inferred conclusions as inference, not as sourced fact
-- Never replace user confirmation with internet research
+- Research supports judgment; it never authorizes a material scope change. Apply objective corrections within approved intent without routine reconfirmation.
+- A competitor pattern is evidence of one approach, not proof of user demand or an obligation to copy it. Keep speculative opportunities separate from approved requirements.
+- If a required outcome depends on an unresolved external fact, record the blocker and owner; if only an optional proposal depends on it, defer the proposal without blocking delivery.
 - Never force a PRD rewrite because research exists; use it to improve judgment and questions

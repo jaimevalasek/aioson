@@ -223,6 +223,74 @@ test('QA dossier is soft context and a current PASS generation is terminal', asy
   assert.equal(status.historical_stale_packets, 0);
 });
 
+for (const agent of ['product', 'sheldon']) {
+test(`${agent} CLI discovers feature-owned expansion as optional context without changing the sealed generation`, async (t) => {
+  const root = await makeProject(t);
+  const input = { rootDir: root, featureSlug: SLUG, agent };
+  const initial = await prepareReview(input);
+  const scoutPath = `.aioson/briefings/${SLUG}/expansion-scout.md`;
+  const auditPath = `.aioson/context/features/${SLUG}/expansion-audit.md`;
+  assert.ok(initial.missing_context.some((item) => item.path === scoutPath));
+  assert.ok(initial.missing_context.some((item) => item.path === auditPath));
+  assert.equal(initial.missing_authorities.some((item) => [scoutPath, auditPath].includes(item.path)), false);
+
+  await writeFile(root, scoutPath, '# Opportunities\nCombine existing saved filters with export; not approved.\n');
+  await writeFile(root, auditPath, '# Audit\nA read-only report does not require editing records.\n');
+  await writeFile(root, '.aioson/briefings/other-feature/expansion-scout.md', '# Unrelated ideas\n');
+  const cli = runCli(['review:prepare', root, '--feature', SLUG, '--agent', agent, '--json']);
+  assert.equal(cli.status, 0, cli.stderr);
+  const prepared = parseSingleJson(cli.stdout);
+  assert.equal(prepared.packet.packet_id, initial.packet.packet_id);
+  assert.deepEqual(prepared.packet, initial.packet);
+  assert.deepEqual(prepared.context_sources.map((item) => [item.kind, item.path]), [
+    ['expansion-scout', scoutPath], ['expansion-audit', auditPath]
+  ]);
+  assert.equal(prepared.packet.authorities.some((item) => [scoutPath, auditPath].includes(item.path)), false);
+  assert.equal(prepared.report_template.review_status, 'unverified');
+  await assert.rejects(fs.access(path.join(root, prepared.draft_path)), { code: 'ENOENT' });
+
+  const report = {
+    ...passReport(prepared),
+    summary: 'Approved behavior reviewed; optional combination remains deferred.',
+    findings: [{
+      ...actionFinding(prepared, 'deferred', 'info', 'product'),
+      evidence: [{ type: 'artifact', path: scoutPath, detail: 'Opportunity hypothesis, not an accepted scope decision.' }],
+      alternatives: ['Keep the approved export behavior.'],
+      recommendation: 'Validate whether reusing filters reduces repeated export setup before proposing scope.'
+    }]
+  };
+  await writeJson(root, prepared.draft_path, report);
+  const checked = await checkReview({ ...input, reportPath: prepared.draft_path });
+  assert.equal(checked.exitCode, 0);
+  const sealed = await fs.readFile(path.join(root, checked.report_path), 'utf8');
+
+  await writeFile(root, auditPath, '# Audit\nUpdated optional ideas; no accepted scope change.\n');
+  await fs.unlink(path.join(root, scoutPath));
+  const repeated = await prepareReview(input);
+  assert.equal(repeated.packet.packet_id, prepared.packet.packet_id);
+  assert.equal(repeated.terminal, true);
+  assert.equal(repeated.next_command, null);
+  assert.ok(repeated.missing_context.some((item) => item.path === scoutPath));
+  assert.notEqual(repeated.context_sources[0].sha256, prepared.context_sources[1].sha256);
+  assert.equal((await reviewStatus({ rootDir: root, featureSlug: SLUG })).overall_status, 'clear');
+  assert.equal(await fs.readFile(path.join(root, checked.report_path), 'utf8'), sealed);
+  assert.equal(await fs.readFile(path.join(root, `.aioson/context/prd-${SLUG}.md`), 'utf8'), '# PRD\n');
+});
+
+test(`${agent} cannot approve an opportunity whose scope decision is still required`, async (t) => {
+  const root = await makeProject(t);
+  const input = { rootDir: root, featureSlug: SLUG, agent };
+  const prepared = await prepareReview(input);
+  await writeJson(root, prepared.draft_path, {
+    ...passReport(prepared),
+    findings: [actionFinding(prepared, 'decision_required', 'warning', 'product')]
+  });
+  await assert.rejects(checkReview({ ...input, reportPath: prepared.draft_path }),
+    (error) => error.reason === 'invalid_report');
+  assert.equal((await prepareReview(input)).terminal, false);
+});
+}
+
 // SF-review-intelligence-03 SF-review-intelligence-04
 test('check rejects hidden report carriers and status uses promotion order instead of report timestamps', async (t) => {
   const root = await makeProject(t);

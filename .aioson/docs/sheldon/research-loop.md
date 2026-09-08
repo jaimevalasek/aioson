@@ -7,11 +7,11 @@ triggers: [research loop, web search, keywords]
 
 # Sheldon Research Loop
 
-Load this module after source consolidation and before sizing.
+Load this module when an external claim or analogy could materially change an enrichment decision, inside the existing review passes.
 
 ## Goal
 
-Give `@sheldon` a lightweight but mandatory fresh-research pass so enrichment decisions are not limited to the PRD text or the user-supplied sources.
+Test decision-relevant assumptions beyond the PRD text or user-supplied sources. Research supports product imagination; it neither creates demand evidence by itself nor authorizes scope.
 
 ## Mandatory keyword extraction
 
@@ -22,6 +22,7 @@ Derive `3-7` short keyword phrases from:
 - integrations, vendors, or external systems
 - domain nouns that affect quality
 - differentiators or market claims
+- an adjacent-domain mechanism that could remove observed user friction
 - technical patterns that may have aged
 
 Keep phrases short, concrete, and searchable. Prefer `2-6` words.
@@ -45,7 +46,7 @@ Use research to:
 
 - reprioritize improvements
 - distinguish critical gaps from cosmetic refinements
-- justify whether phased planning is necessary
+- explain the value, constraints, or validation needed for a proposed alternative
 - challenge stale technical or product assumptions
 - enrich edge cases and operational details
 
@@ -56,4 +57,5 @@ If the research is purely technical and tied to named stack decisions, combine t
 - `researchs/` is a temporary shared evidence layer, not a substitute for the PRD
 - show only findings that change priority, sizing, or correctness
 - mark inference separately from sourced facts
-- do not force enrichment changes without user confirmation
+- apply objective corrections within approved intent and record the evidence; new scope, changed product intent, and prototype deviations remain proposals until an owner decision accepts them
+- do not run a separate research/review cycle or block delivery for an unverified optional idea

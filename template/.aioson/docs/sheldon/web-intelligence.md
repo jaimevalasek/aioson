@@ -67,8 +67,7 @@ Show only actionable findings:
 
 If every finding is `confirmed`, tell the user no update is needed.
 
-Never silently modify the PRD based on web validation.
-Ask whether to incorporate the update first.
+Record the evidence for any PRD correction. Apply objective compatibility/correctness repairs within approved intent without routine confirmation. A replacement technology, integration, or changed product behavior remains a proposal when it requires an owner decision; normal implementation selection belongs to Planner.
 
 ## Failure behavior
 
@@ -76,3 +75,4 @@ If a search fails:
 
 - log the failure in `summary.md`
 - continue without blocking the session
+- label the claim unverified; if the approved outcome depends on that unresolved fact, report the gap instead of approving a guessed contract

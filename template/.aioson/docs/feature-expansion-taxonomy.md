@@ -55,15 +55,15 @@ Use this table shape:
 
 Rules:
 
-- A named Core object is not real scope until its create, list/view, edit, delete/archive, and restore behavior is either covered or explicitly deferred.
+- Anchor Core to the selected product promise. For applicable lifecycle actions (create, list/view, edit, delete/archive, restore), record required, not applicable, or deferred with a reason. Read-only, imported, generated, or immutable objects need no invented local CRUD.
 - Search, filter, sort, pagination, form/input validation, loading, and permissions are decision-complete only when each is marked required, not applicable with a reason, or deferred with a reason in the downstream Operational Capability Matrix.
-- Every Core object needs a management surface: page, panel, modal, drawer, inline action, settings screen, or command. If there is no place to manage it, the product is underspecified.
-- Parent/child relationships must be explicit. For Trello-like systems, cards imply lists/columns, boards, workspaces, members, and at least basic role boundaries.
+- When the promise includes management, every Core object needs a management entry: page, panel, modal, drawer, inline action, settings screen, or command. Its absence is a gap in that promise, not a reason to add management to read-only scope.
+- Parent/child relationships must be explicit where relevant. For Trello-like systems, inspect cards, lists/columns, boards, workspaces, members, and role boundaries as candidates; category resemblance alone does not make them required.
 - A user flow that says "manage cards" is too thin unless it names how the user adds, edits, moves, archives, restores, and sees validation feedback.
 - Empty states and failure states are Core for first-use products, admin surfaces, and repeated-use operational tools.
 - Deferred lifecycle actions must be visible in Out of scope, not silently omitted.
 
-Minimum expected surfaces for Trello/Kanban/CRM/workspace-like products:
+Candidate surfaces for Trello/Kanban/CRM/workspace-like products; select only those required by approved promises and preserve exclusions:
 
 - Workspace or account home: create/select workspace, invite/manage members, edit settings.
 - Board/list/index surface: create/select/search/archive boards or pipelines.

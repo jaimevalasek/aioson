@@ -58,12 +58,12 @@ function scoreToClassification(score) {
 function classificationToPhaseDepth(classification) {
   if (classification === 'MICRO') {
     return {
-      specify: 'brief note or inline',
-      research: 'not needed',
-      requirements: 'optional',
-      design: 'skip',
-      plan: 'optional',
-      execute: 'direct from task description'
+      specify: 'compact PRD with observable capabilities and acceptance criteria',
+      research: 'bounded PRD challenge by @sheldon',
+      requirements: 'acceptance criteria inside the PRD',
+      design: 'technical decisions inside the implementation plan',
+      plan: 'required (@planner), compact vertical plan',
+      execute: 'from approved PRD + vertical plan, then independent QA'
     };
   }
   if (classification === 'SMALL') {

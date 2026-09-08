@@ -82,6 +82,27 @@
       "expect": [{ "path": ".aioson/skills/process/secure-tdd/SKILL.md", "in": "skills" }]
     },
     {
+      "name": "explicit creative enrichment reaches Sheldon without prior expansion artifacts",
+      "agent": "sheldon",
+      "mode": "planning",
+      "task": "Quero enriquecimento criativo com visao horizontal para esta proposta",
+      "expect": [{ "path": ".aioson/skills/process/sheldon-expansion-audit/SKILL.md", "in": "skills" }]
+    },
+    {
+      "name": "product creative enrichment needs no prior expansion artifact",
+      "agent": "product",
+      "mode": "planning",
+      "task": "Quero enriquecimento criativo com visao horizontal para esta proposta",
+      "expect": [{ "path": ".aioson/skills/process/product-scope-expansion/SKILL.md", "in": "skills" }]
+    },
+    {
+      "name": "bounded product correction does not require expansion",
+      "agent": "product",
+      "mode": "planning",
+      "task": "Corrigir a grafia do nome aprovado no documento existente",
+      "absent": [{ "path": ".aioson/skills/process/product-scope-expansion/SKILL.md", "in": "skills" }]
+    },
+    {
       "name": "expansion audit reaches sheldon on a thin PRD",
       "agent": "sheldon",
       "mode": "planning",

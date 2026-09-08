@@ -1,91 +1,77 @@
 ---
 name: sheldon-expansion-audit
-description: "Sheldon process skill for auditing a PRD against prior feature expansion artifacts, expected product richness, and operational surface completeness. Use in @sheldon when expansion-scout.md or scope-expansion.md exists, or when a PRD for a rich-surface feature looks too thin, too inflated, lacks acceptance criteria for enriched capabilities, or implies workspaces, boards, cards, pipelines, operational CRUD, admin/management surfaces, or Trello/CRM/Kanban-like behavior."
+description: "Discover and audit PRD enrichment through horizontal product thinking. Use in Sheldon for rich surfaces, prior expansion-scout/scope-expansion/expansion-audit artifacts, a PRD that is too thin or inflated, or an explicit request for creative enrichment."
 agents: [sheldon]
 task_types: [prd-audit, feature-expansion]
-triggers: [expansion audit, prd too thin, rich surface, scope expansion, auditar expansao, prd enxuto demais]
+triggers: [expansion audit, prd too thin, rich surface, scope expansion, auditar expansao, prd enxuto demais, creative enrichment, enriquecimento criativo]
 ---
 
 # Sheldon Expansion Audit
 
-Use this skill to judge whether product expansion was handled well. Sheldon should not be the primary dreamer; it should protect the PRD from being too poor or too large.
+Originate useful possibilities and independently challenge their value. Protect the PRD from both missed opportunities and unjustified scope. Work inside Sheldon's existing two passes; expansion is not a third review or an approval gate.
 
-## Load
+## Inputs
 
-Read `.aioson/docs/feature-expansion-taxonomy.md`.
+Read `.aioson/docs/feature-expansion-taxonomy.md` for buckets and conditional operational coverage, and `.aioson/docs/sheldon/quality-lens.md` for horizontal discovery and selection.
 
-Read available inputs:
+Read the target PRD and available feature-owned inputs:
 
-- target `prd-{slug}.md`
 - `.aioson/briefings/{slug}/expansion-scout.md`
 - `.aioson/context/features/{slug}/scope-expansion.md`
-- prior `.aioson/context/features/{slug}/expansion-audit.md`
+- `.aioson/context/features/{slug}/expansion-audit.md`
 
-If no prior expansion artifact exists, perform only a lightweight inferred expansion and label it clearly.
+Treat prior ideas as evidence to assess, not a ceiling on creativity or proof of approval. Reuse their decisions and avoid rediscovering rejected ideas without new evidence. When none exists, derive opportunities from the user's goal, source promises, actual journeys, and inspected repository capabilities; label them inferred. Lack of prior files does not restrict an explicit request for deeper exploration.
 
-## Operational Surface Audit
+## Discover, then challenge
 
-Before recommending enrichment, audit the PRD against the Operational Surface Map in `.aioson/docs/feature-expansion-taxonomy.md`.
+In pass 1, use relevant horizontal lenses to generate distinct ways to improve the result. Consider connections between capabilities and a simpler alternative alongside additions. Trace the before/after journey across actors already in scope. A transfer from an adjacent domain must explain the shared mechanism and its limitations.
 
-Flag as **critical** when a Core object exists in scope but lacks:
+In pass 2, compare the strongest candidates with the approved baseline: user value, evidence/confidence, added complexity, downside, scope/prototype impact, and a cheap validation. Do not require a fixed number of ideas. Keep the shortlist small enough for an actual decision. A new actor, product outcome, integration, or interaction is a proposal until accepted even when reuse makes it inexpensive.
 
-- parent/owner relationship
-- create, list/view, edit, delete/archive, or restore handling
-- a management surface where the user performs those actions
-- empty state and validation/error behavior
-- role/permission boundary for owner/member/admin scenarios
+For external claims that materially affect a recommendation, use Sheldon's research modules. Hypotheses and analogies must not be presented as verified demand or technical compatibility.
 
-For Trello/Kanban/CRM/workspace-like PRDs, missing workspace management, board/pipeline CRUD, primary item creation/editing, or the main work surface is a blocking product gap, not optional enrichment.
+## Conditional operational audit
 
-Do not allow generic phrases like "manage cards", "manage boards", or "workspace support" to pass unless the PRD names the surfaces and flows that make those capabilities usable.
+Use the taxonomy's Operational Surface Map when the approved feature includes objects users manage. Establish who owns each object, where in-scope actions happen, and how relevant lifecycle, empty/error, validation, and permission boundaries work.
+
+- A missing action or surface is critical only when its absence breaks a cited approved promise. Name that promise and the unusable journey.
+- Generic phrases such as "manage cards" need concrete flows; a read-only view does not imply create/edit/delete or workspace administration.
+- For Trello/Kanban/CRM/workspace-like scope, inspect the main work surface and creation/editing/management flows that the user actually approved. Category resemblance alone does not authorize new entities or roles.
+- Respect explicit exclusions and justified non-applicability/deferments. Do not impose full CRUD, collaboration, restoration, search, or dashboards on every named object.
+- Keep missing approved behavior separate from attractive enhancements and from normal Planner implementation choices.
 
 ## Output
 
-Write `.aioson/context/features/{slug}/expansion-audit.md`.
-
-Use this structure:
+Write or update `.aioson/context/features/{slug}/expansion-audit.md` as a non-canonical decision aid. Keep conclusions and evidence, not private reasoning or an exhaustive brainstorm. Use only relevant sections:
 
 ```md
 # Expansion Audit - {Feature}
 
 ## Inputs
-- PRD:
+- PRD and inspected source/repository paths:
 - Prior expansion artifacts found:
-- Audit mode: prior-artifact / inferred-lightweight
+- Audit mode: prior-artifact / inferred
+- Depth and relevant lenses:
+
+## Opportunities
+| Opportunity | Actor / friction / evidence | Mechanism and before → after | Value / confidence | Cost / downside | Bucket | Disposition / owner | Validation |
+|---|---|---|---|---|---|---|---|
 
 ## Findings
-| Severity | Finding | Evidence | Recommendation |
+| Severity | Finding | Approved promise / evidence | Required correction |
 |---|---|---|---|
 
-## Too Thin Check
-- Missing Core/Recommended MVP items:
-- Missing user states/actions:
-- Missing acceptance criteria:
-
 ## Operational Surface Audit
-| Object | Expected surface | Missing action/state | Severity | Required PRD patch |
-|---|---|---|---|---|
+| Object / in-scope action | Surface / state gap | Promise affected | Correction or exclusion rationale |
+|---|---|---|---|
 
-## Too Large Check
-- V2 items pulled into MVP:
-- Optional items without approval:
-- Classification/timeline risk:
-
-## PRD Patch Recommendations
-- Add:
-- Move to V2:
-- Ask user:
+## PRD Changes and Deferred Options
+- Applied: decision or promise → CAP/AC → observable value delta.
+- Proposed/deferred: owner, trade-off, validation; not implementation scope.
+- Cut: why the baseline is better or an exclusion applies.
 
 ## Sheldon Decision
-Proceed / enrich PRD first / return to product for decision.
+Proceed / repair approved behavior / blocking product decision, with reason.
 ```
 
-## Rules
-
-- Prefer evidence from prior expansion artifacts over inventing new ideas.
-- Flag when a rich-surface PRD has only generic fields or thin CRUD.
-- Treat missing Core management surfaces and create/edit flows as critical gaps.
-- For Trello-like products, workspace/board management and card creation/editing are Core unless explicitly excluded in the PRD.
-- Flag when V2 ideas entered MVP without explicit rationale.
-- Convert accepted expansion items into acceptance-criteria gaps.
-- Do not rewrite Product-owned Vision, Problem, or Users.
+Merge approved conclusions into the same PRD with CAP/AC trace. Originate proposed reframings when useful, but preserve Product-owned Vision, Problem, Users, scope, and prototype unless a recorded owner decision changes them. Classify scope only after accepted edits. Optional ideas can remain deferred while Sheldon approves the coherent existing scope; the audit's existence or length never blocks Planner.

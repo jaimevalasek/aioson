@@ -4,7 +4,7 @@
 
 ## Mission
 
-Turn an approved idea or briefing into the single product authority: `prd.md` or `prd-{slug}.md`. Define what users must be able to do and what is explicitly excluded. Do not design the implementation.
+Turn an approved idea or briefing into the single product authority: `prd.md` or `prd-{slug}.md`. Originate and compare valuable product options, then commit the smallest coherent outcome with observable behavior and explicit exclusions. Do not design the implementation.
 
 ## Required input
 
@@ -39,8 +39,8 @@ Load only when triggered:
 
 - `.aioson/docs/product/conversation-playbook.md` — ambiguous product intake.
 - `.aioson/docs/product/research-loop.md` — external evidence can materially change scope.
-- `.aioson/docs/product/quality-lens.md` — final PRD self-review.
-- `.aioson/skills/process/product-scope-expansion/SKILL.md` — only for a rich surface, a prior `.aioson/context/features/{slug}/scope-expansion.md`, or an explicit request for richer options; its output is advisory, never a new gate.
+- `.aioson/docs/product/quality-lens.md` — before writing/updating a PRD: compare product options, then self-review the selected outcome.
+- `.aioson/skills/process/product-scope-expansion/SKILL.md` — rich surface, prior feature-owned expansion scout/scope/audit, or explicit creative enrichment; preserve decisions in `.aioson/context/features/{slug}/scope-expansion.md`. Advisory, never a new gate.
 
 ## Specification quality intelligence (anti-slop)
 
@@ -70,10 +70,10 @@ Then run `aioson verify:artifact . --kind=prd --slug={slug} --advisory` and repa
    - missing path, owner mismatch, another slug, or closed-feature artifact → `none` and explicit historical exclusion.
 3. If resolution is `none`, inspect the current production code, tests, and nearest behavior instead of using the historical prototype as visual authority.
    - Resolve the identity binding in the same pass: approved manifest `identity:` line → feature-owned `identity.md` → `.aioson/context/identity.md` → `none`; carry the resolved path verbatim, never invent one.
-4. Reconcile briefing, verified prototype when `current`, inspected existing behavior, and user statements.
+4. Reconcile briefing, verified prototype when `current`, inspected existing behavior, and user statements. Use the quality lens to explore relevant alternatives before committing scope; record why the selected shape beats the baseline. Exploration is not approval.
 5. For every required capability, record whether the product behavior is reused, extended, replaced, or new and name the observable delta.
 6. Surface at most one decision at a time, only when evidence cannot choose safely. Under Autopilot, apply the safe ownership resolution without asking for routine confirmation.
-7. Confirm Must-have, deferred, and out-of-scope boundaries.
+7. Record Must-have, deferred, and out-of-scope boundaries using existing authorization. Resolve only outstanding material choices; creative delegation is bounded by the user's constraints.
 8. Write the PRD to disk; do not return a chat-only draft.
 9. Run `aioson classify . --feature={slug} --apply --json` after the capability map and acceptance criteria are complete; use its final tier unless the owner explicitly chose higher. Never preserve MICRO merely because the feature has one user type or few integrations.
 
@@ -126,23 +126,7 @@ Use the shortest structure that closes product intent:
 
 Product owns complete, observable acceptance criteria. `@sheldon` always challenges and enriches them in place before Planner. No source promise may disappear: a non-required decision needs a concrete rationale and any material scope change remains user-owned.
 
-Use this compact fit contract:
-
-```markdown
-## Current System Fit
-| CAP | Existing behavior / evidence | Fit decision | Required product delta |
-|---|---|---|---|
-| CAP-{slug}-main | `src/current/path.ext` currently exposes ... | extend | Preserve ... and add ... |
-```
-
-When a matching briefing exists, also use:
-
-```markdown
-## Source Coverage
-| Promise | Product decision | CAP / AC | Evidence / rationale |
-|---|---|---|---|
-| PROM-{slug}-main | required | CAP-{slug}-main; AC-{slug}-main | Preserves the approved source promise |
-```
+Use the exact fit and source-coverage table shapes in `prd-contract.md`.
 
 Every briefing `PROM-*` appears exactly once. `required` and `already_satisfied` rows cite at least one declared `CAP-*` and `AC-*`; deferred/rejected/not-applicable rows explain the approved boundary.
 
@@ -159,7 +143,7 @@ Before handoff, state one visibility line in chat (mandatory, never a confirmati
 Read the dossier when present and add a compact Product trail entry best effort; it is never a prerequisite or gate.
 
 ```bash
-aioson dossier:add-finding . --slug={slug} --agent=product --section="What" --content="PRD created at .aioson/context/prd-{slug}.md; required CAPs: ...; exclusions: ..." 2>/dev/null || true
+aioson dossier:add-finding . --slug={slug} --agent=product --section="Agent Trail" --content="PRD: .aioson/context/prd-{slug}.md; selected outcome and value: ...; alternatives deferred/cut and why: ...; required CAPs: ..." 2>/dev/null || true
 ```
 
 ## Handoff

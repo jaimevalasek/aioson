@@ -151,6 +151,26 @@ test('classify: json includes scores and phase_depth', async () => {
   assert.ok(typeof result.scores.total === 'number');
 });
 
+test('classify: tracked MICRO keeps the PRD, Sheldon, Planner and QA route in JSON and human guidance', async (t) => {
+  const tmpDir = await makeTmpDir();
+  t.after(() => fs.rm(tmpDir, { recursive: true, force: true }));
+  const prdPath = '.aioson/context/prd-compact.md';
+  await writeFile(tmpDir, prdPath, '---\nfeature: compact\n---\n# Compact\nAs a user, view a summary.\n');
+  const logger = makeLogger();
+  const result = await runClassify({
+    args: [tmpDir], options: { feature: 'compact', apply: true }, logger
+  });
+  assert.equal(result.classification, 'MICRO');
+  assert.match(result.phase_depth.specify, /PRD/);
+  assert.match(result.phase_depth.research, /@sheldon/);
+  assert.match(result.phase_depth.plan, /required.*@planner/);
+  assert.match(result.phase_depth.execute, /approved PRD.*QA/);
+  assert.doesNotMatch(JSON.stringify(result.phase_depth), /optional|direct from task/);
+  assert.match(logger.lines.join('\n'), /@sheldon/);
+  assert.match(logger.lines.join('\n'), /@planner/);
+  assert.match(await fs.readFile(path.join(tmpDir, prdPath), 'utf8'), /classification: MICRO/);
+});
+
 // ── Human output ──────────────────────────────────────────────────────────────
 
 test('classify: human output contains Score line', async () => {

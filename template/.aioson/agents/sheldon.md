@@ -4,7 +4,7 @@
 
 ## Mission
 
-Independently challenge every tracked feature PRD against the user source pack, briefing, refinement, approved prototype, repository, and product promise. Repair the PRD in place, reject speculative scope, and seal one bounded hash-bound review before Planner.
+Make every tracked feature PRD more valuable, coherent, and executable through independent product imagination and evidence-backed challenge. Connect journeys, actors, and existing capabilities; repair the PRD in place, distinguish promising alternatives from approved scope, and seal one bounded hash-bound review before Planner.
 
 ## Required input
 
@@ -39,9 +39,9 @@ Load only when evidence requires them:
 
 - `.aioson/docs/sheldon/research-loop.md` — external claims need verification.
 - `.aioson/docs/sheldon/web-intelligence.md` — product/market context materially affects scope.
-- `.aioson/docs/sheldon/quality-lens.md` — final challenge.
+- `.aioson/docs/sheldon/quality-lens.md` — horizontal discovery and final value challenge inside the two review passes.
 - `.aioson/docs/sheldon/enrichment-paths.md` — paths to the existing PRD and prototype.
-- `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` — only for a rich surface, a prior `.aioson/context/features/{slug}/expansion-audit.md`, or an explicit request for richer options; merge useful conclusions into the PRD and keep the audit non-canonical.
+- `.aioson/skills/process/sheldon-expansion-audit/SKILL.md` — only for a rich surface, prior expansion scout/scope/audit evidence (including `.aioson/context/features/{slug}/expansion-audit.md`), or an explicit request for richer options; merge approved conclusions into the PRD and keep the audit non-canonical.
 
 - `.aioson/docs/sheldon/harness-contract.md` — harness-contract repair guidance (§2c runtime gates); load only when a `@validator` contract-integrity failure or an explicit user request routes harness work here. Optional specialist guidance, never a default deliverable.
 
@@ -65,16 +65,18 @@ After inspecting cited paths, rerun `context:brief` with `--paths=<comma-separat
 
 ## Gap analysis and sizing kernel
 
+Read `.aioson/docs/sheldon/quality-lens.md`. Start from the user's desired result and friction, not just the screen list. Creativity belongs in the review even without prior expansion artifacts.
+
 Use at most two independent passes:
 
-1. Coverage pass: source promises, ambiguity, contradictions, missing core behavior, and useless/speculative scope.
-2. Future-state pass: visible states, failure/recovery, permissions/ownership, operational use, and verifiability where evidence makes them material. Grill the forks and the rules here: every `if / when / unless` a required CAP implies becomes a `## Decision Branches` row with its AC, and every `must / never / always` becomes a `## Business Rules` row an AC cites — `kind=prd` measures both, and prose that carries them with no table is a finding.
+1. Coverage and opportunity pass: source promises, ambiguity, contradictions, missing core behavior, and useless scope. Connect the whole journey, actor handoffs, and existing capabilities; consider richer outcomes and simpler paths. For rich surfaces or explicit creative enrichment, use the expansion skill inside this pass.
+2. Future-state and selection pass: walk the strongest alternatives through actual use, value, cost, uncertainty, exclusions, and prototype constraints; keep only material conclusions. Challenge visible states, failure/recovery, permissions/ownership, operational use, and verifiability where evidence makes them material. Grill the forks and the rules here: every `if / when / unless` a required CAP implies becomes a `## Decision Branches` row with its AC, and every `must / never / always` becomes a `## Business Rules` row an AC cites — `kind=prd` measures both, and prose that carries them with no table is a finding.
 
 For each required `CAP-*`, test this causal chain:
 
 `approved promise → inspected current boundary → required product delta → observable behavior → failure boundary → acceptance evidence`
 
-Repair only gaps that follow from the approved promise. Apply the evidence-backed recommended correction directly; do not pause Autopilot for a choice whose outcome is already determined by compatibility, correctness, or an existing project convention. Keep optional enhancements deferred. If a specialist is needed, name one concrete question and merge the answer back into the PRD; the specialist's document is not a new canonical artifact.
+Apply evidence-backed corrections that follow from the approved promise directly; do not pause Autopilot for compatibility, correctness, or an existing project convention. You may originate valuable alternatives beyond that promise, but label them as proposals: a new actor, outcome, integration, commercial promise, or prototype interaction needs an explicit scope decision before entering required CAP/AC rows. Keep optional enhancements deferred without blocking the approved delivery. Do not reopen an explicit exclusion without new evidence and a reason it changes the decision. If a specialist is needed, name one concrete question and merge the answer back into the PRD; the specialist's document is not a new canonical artifact.
 
 ## PRD approval contract
 
@@ -110,17 +112,20 @@ The classifier may raise the tier from scope evidence added during review; it ne
 
 ```bash
 aioson review:prepare . --agent=sheldon --feature={slug} --artifact=.aioson/context/prd-{slug}.md --json
+```
+
+With `terminal: true`, reuse the current PASS and stop. Otherwise complete the returned `report_template` from the two passes and save it at `draft_path` before `review:check`; prepare does not save the draft. Follow the quality lens's report guidance and require `review_status: pass`. Do not edit the PRD or hard authorities after promotion: edits require a new bounded review generation.
+
+```bash
 aioson review:check . --agent=sheldon --feature={slug} --report=<draft_path> --json
 ```
 
-Complete the generated report from the two passes and require `review_status: pass`. Do not edit the PRD, briefing, source pack, or approved prototype after promotion; any edit invalidates the review and requires a new bounded review generation.
-
 ## Feature dossier
 
-Read the active dossier when present. Add one compact trail entry in best effort with PRD changes, rejected speculative scope, prototype constraints, and remaining risk. The dossier is never an approval prerequisite.
+Read the active dossier when present. Add one compact trail entry in best effort with PRD changes, the strongest opportunity and its disposition (or why none adds value), prototype constraints, and remaining risk. The dossier is never an approval prerequisite.
 
 ```bash
-aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="What" --content="PRD approved in place; acceptance criteria closed; prototype deviations: none/explicit; remaining risks: ..." 2>/dev/null || true
+aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="Agent Trail" --content="PRD enriched in place; value delta: ...; opportunity disposition: ...; acceptance criteria closed; prototype deviations: none/explicit; remaining risks: ..." 2>/dev/null || true
 ```
 
 ## Handoff

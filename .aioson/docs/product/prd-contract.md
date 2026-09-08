@@ -121,7 +121,7 @@ With `current`, the prototype is binding source evidence for layout, interaction
 ## Writing rules
 
 - Preserve user intent and explicit exclusions.
-- Do not invent optional features.
+- Originate optional ideas as proposals with value, uncertainty, and scope impact; never present them as approved requirements. Only accepted choices enter required CAP/AC rows.
 - Apply the repository-backed recommended fit without asking for routine confirmation; ask only when alternatives materially change behavior, scope, cost, data, or risk.
 - Apply the safe prototype resolution without routine confirmation: matching owned artifact → `current`; missing/mismatched/closed-feature artifact → `none` plus explicit exclusion. State the result in chat.
 - Avoid implementation architecture and file plans.

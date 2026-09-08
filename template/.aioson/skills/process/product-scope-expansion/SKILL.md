@@ -1,104 +1,77 @@
 ---
 name: product-scope-expansion
-description: "Product process skill for controlled scope expansion and operational completeness before a PRD. Use in @product when a feature has a rich surface, when a briefing expansion scout exists, when the user asks for a more complete MVP, or when the product implies workspaces, boards, cards, pipelines, operational CRUD, admin/management surfaces, or Trello/CRM/Kanban-like behavior without turning the feature into an oversized V2."
+description: "Compare creative product options and operational completeness in Product before committing PRD scope. Use for rich surfaces, prior feature expansion evidence, a more complete MVP, or explicit creative enrichment; skip routine bounded edits."
 agents: [product]
 task_types: [feature-expansion, scope]
-triggers: [scope expansion, complete mvp, operational crud, expansion scout, expandir escopo, mvp completo]
+triggers: [scope expansion, complete mvp, operational crud, expansion scout, expandir escopo, mvp completo, creative enrichment, enriquecimento criativo]
 ---
 
 # Product Scope Expansion
 
-Use this skill to convert product possibilities into an approvable scope. The output informs the PRD; it does not replace user approval.
+Originate and select valuable product possibilities, including simpler alternatives. Expansion is exploration; inclusion in the PRD follows the user's approved intent and delegated decision boundary.
 
-## Load
+## Load and scope
 
-Read `.aioson/docs/feature-expansion-taxonomy.md`.
-
-Read prior expansion artifacts when present:
+Read `.aioson/docs/feature-expansion-taxonomy.md` and `.aioson/docs/product/quality-lens.md` for shared buckets and horizontal lenses. Read only matching feature-owned artifacts when present:
 
 - `.aioson/briefings/{slug}/expansion-scout.md`
 - `.aioson/context/features/{slug}/scope-expansion.md`
 - `.aioson/context/features/{slug}/expansion-audit.md`
 
-## Ask Before Expanding
+Prior artifacts are candidate evidence, not approval. Reuse recorded decisions and exclusions. If no prior artifact exists, originate options from the actor, workflow friction, existing capabilities, and intended outcome.
 
-When the feature is not obviously rich, ask a short choice:
+Run without a permission menu when a rich surface, prior evidence, or explicit richer-thinking request triggers the skill. Otherwise keep the kernel's bounded PRD process. Asking to explore is not a commitment to ship every candidate.
 
-1. Continue with simple MVP
-2. Run recommended expansion
-3. Run full expansion, then cut back to MVP
+## Explore and select
 
-When a scout artifact exists or the user explicitly asks for richer product thinking, run the skill without re-asking unless expansion would materially change classification or timeline.
+1. Establish the minimum confirmed outcome, constraints, existing workaround, and approved prototype boundary.
+2. Explore relevant journey, handoff, combination, subtraction, analogy, and repeated-use opportunities from the quality lens. Avoid synonym variants and feature-count targets.
+3. Compare serious alternatives by observable value, supporting evidence, uncertainty, added user/operational burden, dependencies, and scope impact. Include a simpler or no-change option when viable. Recommend one shape and state when a different choice would win.
+4. Classify using the shared buckets; separately record disposition and authorization. `Core` means necessary for the selected promise, not automatically accepted. An inexpensive feature can still be a material scope change.
+5. Apply objective repairs and authorized choices. Present only unresolved material decisions to the owner, with a recommendation and consequences. Defer optional candidates without blocking the agreed release.
 
-## Operational Completeness Gate
+## Conditional operational completeness
 
-Before writing or updating the PRD, build the Operational Surface Map from `.aioson/docs/feature-expansion-taxonomy.md`.
+For rich surfaces, map main objects against the selected promise. State why management is required or not applicable. Imported, immutable, generated, or read-only objects can be complete without local CRUD. A category resemblance to Trello/CRM does not authorize workspaces, members, admin screens, or restoration.
 
-This is not optional for rich-surface products. A Core object is incomplete until the PRD accounts for:
-
-- parent/owner relationship
-- lifecycle states
-- create, list/view, edit, delete/archive, and restore behavior, or an explicit deferral
-- the page, panel, modal, drawer, inline action, settings screen, or command where the user manages it
-- first-use empty state and validation/error state
-- basic role/permission boundary when ownership or collaboration exists
-
-If any Core object lacks a management surface or add/edit path, do not finalize the PRD as-is. Either ask one owner-level decision, choose the smallest defensible default, or put the missing behavior in `## Open questions` and keep it out of "ready for dev" handoff.
-
-For Trello/Kanban/CRM/workspace-like products, treat workspace/account home, board/pipeline index, main work surface, item detail, and empty/error surfaces as expected Core surfaces unless explicitly excluded.
+When the approved promise includes managing an object, close its owner/parent, lifecycle, required actions and management entry, empty/error behavior, and relevant permissions. For each applicable action, record required, not applicable, or deferred with a reason. Do not silently omit an approved create/manage flow; unresolved required behavior stays blocking in the PRD. Describe product behavior and entry points, leaving composition and implementation to their owners.
 
 ## Output
 
-Write `.aioson/context/features/{slug}/scope-expansion.md`.
-
-Use this structure:
+Write `.aioson/context/features/{slug}/scope-expansion.md` as a compact advisory record. Update existing entries rather than duplicating them. It is neither a new specification nor a handoff gate.
 
 ```md
 # Scope Expansion - {Feature}
 
-## Inputs
-- PRD/briefing source:
-- Prior expansion artifacts:
-- User approval mode: simple / recommended / full
+## Inputs and decision boundary
+- Approved outcome, sources, prototype, and exclusions:
+- Prior expansion evidence or none:
+- Existing authorization / bounded delegated judgment:
 
-## Scope Buckets
-| Bucket | Items | Why | Approval needed |
-|---|---|---|---|
-| Core | ... | ... | no |
-| Recommended MVP | ... | ... | maybe |
-| Optional V1 | ... | ... | yes |
-| Delight | ... | ... | yes |
-| V2 / Later | ... | ... | yes, future |
-| Cut List | ... | ... | no |
-
-## Operational Surface Map
-| Object | Parent / owner | Lifecycle states | Required actions | Management surface | Empty / error states | PRD destination |
-|---|---|---|---|---|---|---|
-
-## Core Capability Closure
-- Complete:
-- Missing / needs decision:
-- Explicitly deferred:
+## Product Options
+| Option / changed user moment | Value and evidence or hypothesis | Cost / downside | Bucket | Disposition / authorization | Cheap validation |
+|---|---|---|---|---|---|
 
 ## Recommended Product Shape
-- Include in PRD:
-- Keep as optional:
-- Explicitly defer:
+- Selected shape and why it beats the baseline:
+- Approved inclusions and PRD destinations:
+- Deferred / cut alternatives and reasons:
+- Material decisions remaining, if any:
+
+## Operational Surface Map
+| Object | Parent / owner | Lifecycle | Required actions or not applicable | Management entry or not applicable | Empty / error / permissions | PRD destination |
+|---|---|---|---|---|---|---|
 
 ## Risks And Classification
-- Scope risk:
-- Delivery risk:
-- Classification impact:
-
-## Cheap / Native Implementation Ideas
-- ...
+- Value uncertainty and validation:
+- User effort, scope/prototype impact, and ongoing burden:
+- Classification impact of selected scope:
 ```
 
-## PRD Incorporation Rules
+## Incorporation and stopping
 
-- Incorporate Core and approved Recommended MVP into the PRD.
-- Do not silently include Optional V1, Delight, or V2 items.
-- If expansion raises classification, surface that before finalizing.
-- Preserve "small project, small solution": a rich feature can still have a small first release.
-- Core operational surfaces must appear in `## MVP scope`, `## User flows`, `## Out of scope`, or `## Open questions`; never leave them only in `scope-expansion.md`.
-- Do not route to implementation while a Core object's create/manage flow is undefined.
+Promote only approved/authorized behavior into required CAP/AC rows. Preserve all source promises with explicit coverage decisions; do not fabricate a `PROM-*` or source approval for an original proposal. Keep stable CAP/AC IDs when enriching an existing PRD.
+
+Record intentional deviations from the approved prototype. Run `classify --apply` on the completed selected PRD, not on the ideas inventory; surface material expansion before committing it. The taxonomy's implementation lens may identify existing behavior to reuse, but never produce an architecture or implementation plan here.
+
+Stop when the product choice and required behavior are decision-complete, or name the remaining owner decision. Use the existing Product self-review and Sheldon handoff. Do not open extra rounds to fill buckets, chase novelty, or close deferred ideas.

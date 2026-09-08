@@ -49,6 +49,8 @@ const REVIEW_PROFILES = deepFreeze({
       { kind: 'briefing', path: '.aioson/briefings/{slug}/briefings.md' },
       { kind: 'prd', path: '.aioson/context/prd-{slug}.md' },
       { kind: 'scope-expansion', path: '.aioson/context/features/{slug}/scope-expansion.md' },
+      { kind: 'expansion-scout', path: '.aioson/briefings/{slug}/expansion-scout.md', freshness: 'soft' },
+      { kind: 'expansion-audit', path: '.aioson/context/features/{slug}/expansion-audit.md', freshness: 'soft' },
       { kind: 'dossier', path: '.aioson/context/features/{slug}/dossier.md', freshness: 'soft' }
     ],
     challenge_lenses: ['problem', 'user-value', 'scope', 'assumptions', 'future-state', 'ownership']
@@ -66,6 +68,8 @@ const REVIEW_PROFILES = deepFreeze({
       { kind: 'prototype-manifest', path: '.aioson/briefings/{slug}/prototype-manifest.md' },
       { kind: 'scope-expansion', path: '.aioson/context/features/{slug}/scope-expansion.md' },
       { kind: 'continuity-mapping', path: 'mappings/{slug}/continuity.md', freshness: 'soft' },
+      { kind: 'expansion-scout', path: '.aioson/briefings/{slug}/expansion-scout.md', freshness: 'soft' },
+      { kind: 'expansion-audit', path: '.aioson/context/features/{slug}/expansion-audit.md', freshness: 'soft' },
       { kind: 'dossier', path: '.aioson/context/features/{slug}/dossier.md', freshness: 'soft' }
     ],
     challenge_lenses: ['coverage', 'ambiguity', 'edge-cases', 'failure-modes', 'ownership', 'verifiability']

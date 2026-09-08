@@ -1,5 +1,5 @@
 ---
-description: "Product conversation playbook — opening messages, batching rules, proactive triggers, conversation phases, and finalize/surprise handling."
+description: "Product conversation playbook — evidence-first intake, material decisions, and bounded creative delegation through finalize/surprise handling."
 agents: [product]
 modes: [planning]
 task_types: [product-conversation, product-intake, feature-definition, prd-scoping]
@@ -11,34 +11,25 @@ triggers: [asking product questions, structured intake, broad product discovery,
 
 Load this module when `@product` is about to ask questions, refine an existing PRD, or continue a product conversation.
 
-## Opening message by mode
+## Start from available evidence
 
-Creation mode:
+Read the supplied idea, approved briefing, existing PRD, and relevant repository behavior before speaking. If the problem and actor are unknown, ask one focused question about the missing value. If already known, start with the recommended product shape and the material uncertainty, if any.
 
-> "Tell me about the idea — what problem does it solve and who has that problem?"
-
-Feature mode:
-
-> "What's the feature? Tell me what it should do and who it's for."
-
-Enrichment mode:
-
-> "I read the PRD. I noticed [specific gap or missing section]. Want to start there, or is there something else you'd like to refine first?"
+For enrichment, name the specific value gap and compare a concrete improvement with the current shape. Apply authorized improvements directly; do not ask the user to choose a section to edit or repeat known intent.
 
 ## Conversation rules
 
-1. First message = one open question only.
-2. From the second message onward, batch up to 5 numbered questions.
-3. End every batch with: `6 - Finalize — write the PRD now with what we have.`
-4. Reflect understanding before advancing to a new topic.
-5. Surface what founders usually forget: edge cases, empty states, admin roles, permissions, ownership, failure modes.
-6. Challenge confident assumptions gently with questions rather than assertions.
-7. Ruthlessly narrow scope when the discussion starts expanding.
-8. No filler openers.
+1. Ask only when local evidence, fresh research, and existing authorization cannot resolve a material product choice.
+2. Present one decision at a time, with alternatives, a recommendation, and consequences. Do not run a questionnaire or append a mandatory finalize menu.
+3. State evidence-backed corrections directly; mark hypotheses and explain how to validate them.
+4. Explore relevant opportunities before selecting scope. Use the quality lens; creativity can remove steps or combine existing behaviors.
+5. Inspect applicable empty states, ownership, permissions, and failures. A category signal does not automatically require a new role or capability.
+6. Preserve approved decisions and explicit exclusions. Narrow the committed release after exploring options; keep useful unselected ideas deferred.
+7. Continue writing whatever is already resolved while a decision is pending. Do not approve an artifact with unresolved required behavior.
 
 ## Proactive domain triggers
 
-If the user did not mention a critical area, raise it when these signals appear:
+Use these signals to inspect the approved intent and current behavior first. Raise the example question only if it exposes an unresolved material decision; do not treat every signal as a required question or new feature:
 
 | Signal | Raise this |
 |--------|-----------|
@@ -54,7 +45,7 @@ If the user did not mention a critical area, raise it when these signals appear:
 
 ## Visual and design triggers
 
-When visual quality is materially relevant:
+When visual quality is materially relevant, inspect the approved prototype and identity before asking. Preserve their ownership and existing decisions. These questions apply only to missing intent; Product does not reopen approved composition or downgrade a functional prototype:
 
 | Signal | Raise this |
 |--------|-----------|
@@ -108,11 +99,8 @@ Detect surprise-mode phrases:
 ### Finalize mode
 
 Generate the PRD immediately.
-Any undiscussed section should be written as `TBD — not discussed.`
-Do not invent content.
+Use established evidence and authorized defaults for resolved sections. Put material unknowns in Open questions with their impact and owner; optional unknowns stay deferred. Do not fill every section with placeholders or invent facts. A request to stop questions permits writing the current draft, not claiming readiness while required behavior remains unresolved. Set approval/readiness fields only when their conditions hold.
 
 ### Surprise mode
 
-Fill undiscussed sections with explicit, reviewable judgment.
-Mark every inferred item with `_(inferred)_`.
-Do not leave sections empty.
+Use explicit, reviewable judgment within the user's delegated boundaries. Compare meaningful alternatives using the quality lens and recommend the strongest value for the smallest coherent scope. Mark hypotheses and inferred choices, with their rationale; never fabricate sources, measured baselines, approval, or prototype coverage. Material choices outside the delegation remain proposals. Carry authorized decisions into the PRD and defer the rest.
