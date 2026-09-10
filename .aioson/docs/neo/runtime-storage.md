@@ -48,8 +48,9 @@ The visual and browser gates leave regenerable binaries beside their reports: ru
 `.aioson/context/features/{slug}/visual-screenshots/` (from `verify:artifact --kind=visual --screenshots`) and
 per-step snapshots under `.aioson/briefings/{slug}/browser/{script}/` or `.aioson/context/features/{slug}/browser/{script}/`
 (from `browser:run`). They are not the evidence — the JSON and Markdown reports next to them are — and every report carries
-the line that regenerates its folder. The producers replace their folder on every run, `feature:archive` drops the
-binaries when a feature closes, and `hygiene:scan` lists what is orphaned or heavy under `heavy_evidence_artifacts`.
+the line that regenerates its folder. The producers replace what they wrote once a run has measured (a capture run narrowed
+by `--route` keeps its sibling captures), `feature:archive` drops the binaries when a feature closes, and `hygiene:scan`
+lists what is orphaned or heavy under `heavy_evidence_artifacts`.
 
 - Preview: `aioson evidence:prune . --dry-run` (add `--slug={slug}` for one owner). Orphans — files the latest report no
   longer references — are the default scope; `--all` removes every capture and snapshot, never a report.

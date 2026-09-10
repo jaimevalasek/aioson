@@ -1333,22 +1333,35 @@ const ADAPTERS = {
       metrics.runtime = { available: false, reason };
     } else if (ctx.runtime) {
       const { collectRuntimeMeasurements, summarizeRuntime } = require('../lib/visual-runtime');
+      const { isContainedFolder, removeStaleFiles } = require('../lib/evidence-artifacts');
       const { pathToFileURL } = require('node:url');
       const entryUrl = ctx.url || pathToFileURL(path.resolve(ctx.targetDir, sources.entry)).href;
-      // The default capture folder is owned by this run: whatever a previous
-      // run left there (a route since renamed, a build since replaced) is
-      // cleared so the folder mirrors the latest measurement. A folder the
-      // caller named with --screenshot-dir is never cleared, and a diagnostic
-      // run (`--no-persist`) writes nothing, so it removes nothing either.
-      if (ctx.screenshotDir && ctx.screenshotDirOwned && ctx.persist !== false) {
-        const { clearDir } = require('../lib/evidence-artifacts');
-        metrics.screenshots_cleared = clearDir(ctx.screenshotDir);
+      // The default capture folder holds the captures the persisted evidence
+      // names, and nothing in it is removed before the browser has measured:
+      // a clear ahead of the launch deleted them, and when no browser opened
+      // (or a route timed out) the carried-forward runtime section still named
+      // them. A diagnostic run (`--no-persist`) writes no capture there at
+      // all — `--screenshots=full --no-persist` replaced the persisted fold
+      // with a full page the evidence still called a viewport capture — and
+      // a folder reached through a link is never written.
+      const aiosonRoot = path.join(ctx.targetDir, '.aioson');
+      let screenshotDir = ctx.screenshotDir || null;
+      if (screenshotDir && ctx.screenshotDirOwned) {
+        const relDir = path.relative(ctx.targetDir, screenshotDir).split(path.sep).join('/');
+        if (ctx.persist === false) {
+          warnings.push(`screenshots not captured: a --no-persist run writes nothing into ${relDir}/, which holds the persisted run's captures — pass --screenshot-dir=<path> for a diagnostic capture`);
+          screenshotDir = null;
+        } else if (!isContainedFolder(screenshotDir, aiosonRoot)) {
+          warnings.push(`screenshots not captured: ${relDir}/ is a link or resolves outside .aioson/ — the default capture folder is only written inside the project`);
+          screenshotDir = null;
+        }
       }
+      const narrowed = Boolean(ctx.route) || (Array.isArray(ctx.routes) && ctx.routes.length > 0);
       const collected = await collectRuntimeMeasurements({
         fileUrl: entryUrl,
         route: ctx.route || null,
         routes: ctx.routes && ctx.routes.length > 0 ? ctx.routes : (ctx.route ? null : declaredRuntimeMatrix(ctx)),
-        screenshotDir: ctx.screenshotDir || null,
+        screenshotDir,
         screenshotMode: ctx.screenshotMode || 'viewport',
         launcher: ctx.browserLauncher || null,
         projectDir: ctx.targetDir
@@ -1368,6 +1381,21 @@ const ADAPTERS = {
           ...runtime.metrics,
           findings: { issues: [...runtime.issues], warnings: [...runtime.warnings] }
         };
+        // Measured: the run that writes the feature's evidence slot over its
+        // whole matrix now removes the captures it did not produce (a route
+        // since renamed, a state since dropped). A run narrowed by --route or
+        // --routes replaces its own captures by name and leaves its siblings —
+        // the benchmark flow captures one route per run and references every
+        // image — and the slug-less folder is shared by every ad-hoc target,
+        // so no single run may call its neighbours stale.
+        if (screenshotDir && ctx.screenshotDirOwned && ctx.slug && !ctx.file && !ctx.dir && !narrowed) {
+          const produced = collected.runs.map((run) => run.screenshot).filter(Boolean).map((file) => path.basename(file));
+          const swept = removeStaleFiles(screenshotDir, produced, { root: aiosonRoot });
+          metrics.screenshots_cleared = { files: swept.files, bytes: swept.bytes };
+          if (swept.failed.length > 0) {
+            warnings.push(`screenshots: ${swept.failed.length} capture(s) from an earlier run could not be removed (${swept.failed.map((f) => f.file).join(', ')}: ${swept.failed[0].code || swept.failed[0].error}) — close whatever holds them; \`aioson evidence:prune . --slug=${ctx.slug}\` removes them later`);
+          }
+        }
       }
     }
 
@@ -1601,9 +1629,27 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
       ? path.join(targetDir, '.aioson', 'context', ...(slug ? ['features', slug] : []), 'visual-screenshots')
       : null);
   // `--screenshots` captures the first fold at each viewport; `--screenshots=full`
-  // keeps whole pages. Only the default folder is owned (and cleared) by the run.
+  // keeps whole pages. Only the default folder is owned (and swept) by the run.
   const screenshotMode = String(options.screenshots || '').toLowerCase() === 'full' ? 'full' : 'viewport';
   const screenshotDirOwned = Boolean(screenshotDir) && !screenshotOption;
+  // The slug names the folder this run writes and sweeps, so it must be a
+  // feature slug — the `features/{slug}/` rule — never a path:
+  // `--slug=../../..` resolved the default capture folder to the project
+  // root's own `visual-screenshots/`. The owned folder never leaves `.aioson/`.
+  if (kind === 'visual' && runtime && screenshotDirOwned) {
+    const { isValidSlug } = require('../dossier/schema');
+    const rel = path.relative(path.join(targetDir, '.aioson'), screenshotDir);
+    if ((slug && !isValidSlug(slug)) || rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+      const msg = `verify:artifact kind=visual: --slug=${JSON.stringify(slug)} cannot name the capture folder — a feature slug is lowercase letters, digits and hyphens (^[a-z0-9][a-z0-9-]*$), and the default --screenshots folder stays under .aioson/ (pass --screenshot-dir=<path> to capture elsewhere)`;
+      const blocking = !advisory;
+      setExitCode(blocking ? 1 : 0);
+      if (options.json) {
+        return { generator: GENERATOR, kind, slug, root: targetDir, mode: advisory ? 'advisory' : 'blocking', ok: false, blocking, issues: [msg], warnings: [], checks: [], error: 'invalid_slug', exitCode: blocking ? 1 : 0 };
+      }
+      logger.error(msg);
+      return { ok: false, kind, error: 'invalid_slug', exitCode: blocking ? 1 : 0 };
+    }
+  }
   const result = await evaluateKind(kind, {
     slug, targetDir, file, dir, noBuild, buildTimeout, buildCommand,
     runtime, route, routes, url, persist, conformance, surfaceMode, screenshotDir, screenshotMode, screenshotDirOwned, browserLauncher: options.browserLauncher || null
@@ -1644,6 +1690,18 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
         if (prevDigest && inputFingerprint && prevDigest === inputFingerprint.digest) {
           runtimeCarried = prevRuntime.carried_from || previous.measured_at || 'undated';
           result.metrics.runtime = { ...prevRuntime, carried_from: runtimeCarried };
+          // The carried section names its captures; a capture deleted since
+          // (a prune, a hand cleanup) is not carried as if it were on disk.
+          const shots = Array.isArray(prevRuntime.screenshots) ? prevRuntime.screenshots : [];
+          const present = shots.filter((rel) => fs.existsSync(path.resolve(targetDir, String(rel))));
+          if (present.length < shots.length) {
+            const gone = shots.filter((rel) => !present.includes(rel));
+            let bytes = 0;
+            for (const rel of present) { try { bytes += fs.statSync(path.resolve(targetDir, String(rel))).size; } catch { /* weightless */ } }
+            result.metrics.runtime.screenshots = present;
+            result.metrics.runtime.screenshot_capture = { ...(prevRuntime.screenshot_capture || {}), count: present.length, bytes };
+            result.warnings.push(`runtime captures gone: ${gone.length} capture(s) the carried runtime section named are no longer on disk (${gone.map((rel) => path.basename(String(rel))).join(', ')}) — a finding citing one points at nothing; rerun with --runtime --screenshots to recapture`);
+          }
           const findings = prevRuntime.findings || {};
           for (const issue of Array.isArray(findings.issues) ? findings.issues : []) if (!result.issues.includes(issue)) result.issues.push(issue);
           for (const warning of Array.isArray(findings.warnings) ? findings.warnings : []) if (!result.warnings.includes(warning)) result.warnings.push(warning);
@@ -1769,7 +1827,7 @@ async function runVerifyArtifact({ args, options = {}, logger }) {
     const capture = m.runtime && m.runtime.available && m.runtime.screenshot_capture;
     if (capture && capture.count > 0) {
       const { formatBytes } = require('../lib/evidence-artifacts');
-      logger.log(`  screenshots: ${capture.count} ${capture.mode} capture(s), ${formatBytes(capture.bytes)} → ${capture.dir} — open only the capture a finding names; the folder is replaced on every run`);
+      logger.log(`  screenshots: ${capture.count} ${capture.mode} capture(s), ${formatBytes(capture.bytes)} → ${capture.dir} — open only the capture a finding names; a narrowed run (--route) replaces only its own captures`);
     }
     if (runtimeCarried) logger.log(`  runtime: carried from the --runtime run of ${runtimeCarried} (inputs unchanged) — a static re-measure never erases it`);
   }

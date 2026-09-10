@@ -424,11 +424,14 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
     }
   }
 
+  // Both paths into done/ drop them: a folder moved whole, and a folder
+  // reconciled with an archive that already exists (`skip`), whose merge
+  // walked file by file and carried the captures and snapshots along.
   const diagnosticPlans = keepDiagnostics
     ? []
     : dirPlans
-      .filter((d) => d.action === 'move' && (d.label === 'dossier' || d.label === 'briefings'))
-      .flatMap((d) => listDiagnosticDirs(d.sourceDir).map((entry) => ({
+      .filter((d) => (d.action === 'move' || d.action === 'skip') && (d.label === 'dossier' || d.label === 'briefings'))
+      .flatMap((d) => listDiagnosticDirs(d.sourceDir, { root: path.join(targetDir, '.aioson') }).map((entry) => ({
         owner: d.label,
         dir: entry.dir,
         kind: entry.kind,
@@ -553,11 +556,11 @@ async function runFeatureArchive({ args = [], options = {}, logger }) {
   // travels, and a folder the OS refuses to delete is reported, not hidden.
   const diagnosticsDropped = [];
   for (const entry of diagnosticPlans) {
-    try {
-      const removed = clearDir(entry.dir);
+    const removed = clearDir(entry.dir);
+    if (removed.error) {
+      errors.push({ item: entry.path, kind: 'dir', code: removed.code || null, message: `could not drop regenerable diagnostics: ${removed.error}` });
+    } else {
       diagnosticsDropped.push({ owner: entry.owner, kind: entry.kind, path: entry.path, files: removed.files, bytes: removed.bytes });
-    } catch (err) {
-      errors.push({ item: entry.path, kind: 'dir', code: (err && err.code) || null, message: `could not drop regenerable diagnostics: ${(err && err.message) || String(err)}` });
     }
   }
 

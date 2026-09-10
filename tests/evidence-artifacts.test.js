@@ -9,6 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
+const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
@@ -215,31 +216,156 @@ test('feature:archive drops the regenerable diagnostics and archives the reports
   }
 });
 
+// Every path the producers write (ignored) beside the paths a slug literally
+// named `browser` or `visual-screenshots` owns (tracked). A mid-path `**`
+// rule ignored `.aioson/context/done/browser/dossier/prd.md` whole.
+const IGNORED_EVIDENCE = [
+  '.aioson/context/features/orders/visual-screenshots/a.png',
+  '.aioson/context/visual-screenshots/a.png',
+  '.aioson/context/done/old/dossier/visual-screenshots/entry-desktop.png',
+  '.aioson/context/done/old/briefings/visual-screenshots/entry-desktop.png',
+  '.aioson/briefings/orders/visual-screenshots/a.png',
+  '.aioson/context/browser/smoke/smoke-step-01-failed.png',
+  '.aioson/context/features/orders/browser/smoke/smoke-step-01-failed.aria.txt',
+  '.aioson/context/done/old/dossier/browser/proto/proto-step-01-failed.png',
+  '.aioson/context/done/old/briefings/browser/tour/tour-step-01-failed.png',
+  '.aioson/briefings/orders/browser/proto/proto-step-01-failed.png',
+  '.aioson/context/features/browser/browser/tour/tour-step-01-failed.png'
+];
+const TRACKED_PROJECT_FILES = [
+  '.aioson/briefings/orders/browser/proto.json',
+  '.aioson/context/features/orders/visual-evidence.json',
+  '.aioson/briefings/orders/prototype.html',
+  '.aioson/context/done/browser/dossier/prd.md',
+  '.aioson/context/features/browser/decisions/adr-1.md',
+  '.aioson/context/features/browser/browser/tour.json',
+  '.aioson/briefings/browser/sources/notes.md',
+  '.aioson/context/features/visual-screenshots/prd.md',
+  '.aioson/context/done/visual-screenshots/dossier/prd.md'
+];
+
 test('the installer gitignore policy keeps the binaries out and the reports in, in git itself when available', async () => {
-  const rule = policyRuleToRegExp('.aioson/context/**/browser/*/');
-  assert.equal(rule.test('.aioson/context/features/orders/browser/proto/proto-step-01-failed.png'), true);
-  assert.equal(rule.test('.aioson/context/browser/smoke/x.png'), true);
-  assert.equal(rule.test('.aioson/context/done/old/dossier/browser/proto/x.png'), true);
-  assert.equal(rule.test('.aioson/context/features/orders/browser/proto.json'), false, 'the report is not under an artifact folder');
-  const shots = policyRuleToRegExp('.aioson/context/**/visual-screenshots/');
-  assert.equal(shots.test('.aioson/context/features/orders/visual-screenshots/a.png'), true);
-  assert.equal(shots.test('.aioson/context/visual-screenshots/a.png'), true);
-  assert.equal(shots.test('.aioson/context/features/orders/visual-evidence.json'), false);
-  assert.equal(policyRuleToRegExp('.aioson/briefings/**/browser/*/').test('.aioson/briefings/orders/browser/proto/a.png'), true);
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-evidence-git-'));
+  await ensureProjectGitignorePolicy(dir);
+  const written = (await fs.readFile(path.join(dir, '.gitignore'), 'utf8')).split('\n');
+  const evidenceRules = written.filter((line) => /visual-screenshots\/|browser\/\*\//.test(line) && !line.startsWith('#'));
+  // The tracked-but-ignored remedy reads the same rules through the regex.
+  const byRegex = (rel) => evidenceRules.some((rule) => policyRuleToRegExp(rule).test(rel));
+  for (const rel of TRACKED_PROJECT_FILES) assert.equal(byRegex(rel), false, `regex keeps ${rel}`);
+  for (const rel of IGNORED_EVIDENCE) assert.equal(byRegex(rel), true, `regex ignores ${rel}`);
+  assert.equal(evidenceRules.length, 10);
+  assert.equal(evidenceRules.some((rule) => rule.includes('**')), false, 'no evidence rule spans any depth');
 
   const git = spawnSync('git', ['--version'], { encoding: 'utf8' });
   if (git.status !== 0) return; // no git on this machine — the regex half is the proof
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-evidence-git-'));
   assert.equal(spawnSync('git', ['init', '-q'], { cwd: dir, encoding: 'utf8' }).status, 0);
-  await ensureProjectGitignorePolicy(dir);
   const check = (rel) => spawnSync('git', ['check-ignore', '-q', rel], { cwd: dir, encoding: 'utf8' }).status;
-  assert.equal(check('.aioson/context/features/orders/visual-screenshots/a.png'), 0, 'captures are ignored');
-  assert.equal(check('.aioson/briefings/orders/browser/proto/proto-step-01-failed.png'), 0, 'walkthrough artifacts are ignored');
-  assert.equal(check('.aioson/context/features/orders/browser/smoke/smoke-step-01-failed.aria.txt'), 0);
+  for (const rel of IGNORED_EVIDENCE) assert.equal(check(rel), 0, `git ignores ${rel}`);
   assert.equal(check('aios-qa-screenshots/H-01.png'), 0);
-  assert.equal(check('.aioson/briefings/orders/browser/proto.json'), 1, 'the walkthrough report stays tracked');
-  assert.equal(check('.aioson/context/features/orders/visual-evidence.json'), 1, 'the evidence stays tracked');
-  assert.equal(check('.aioson/briefings/orders/prototype.html'), 1);
+  for (const rel of TRACKED_PROJECT_FILES) assert.equal(check(rel), 1, `git keeps ${rel}`);
+});
+
+test('an update swaps the retired 1.65.0 evidence lines for the anchored rules in place, once', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-evidence-retire-'));
+  // A consumer .gitignore as 1.65.0 wrote it: the whole policy block with
+  // the three broad evidence lines, saved with CRLF, between project rules.
+  await ensureProjectGitignorePolicy(dir);
+  const policy = (await fs.readFile(path.join(dir, '.gitignore'), 'utf8')).split('\n').filter(Boolean);
+  const isEvidenceRule = (line) => /visual-screenshots\/|browser\/\*\//.test(line) && !line.startsWith('#');
+  policy.splice(policy.findIndex(isEvidenceRule), policy.filter(isEvidenceRule).length,
+    '.aioson/context/**/visual-screenshots/', '.aioson/context/**/browser/*/', '.aioson/briefings/**/browser/*/');
+  const legacy = ['node_modules/', ...policy, 'my-project-rule/', ''].join('\r\n');
+  await fs.writeFile(path.join(dir, '.gitignore'), legacy, 'utf8');
+  const written = await ensureProjectGitignorePolicy(dir);
+  const lines = (await fs.readFile(path.join(dir, '.gitignore'), 'utf8')).split('\n').map((line) => line.replace(/\r$/, ''));
+  assert.equal(lines.some((line) => line.includes('**/')), false, 'the broad lines are gone');
+  assert.ok(written >= 10, `the anchored rules count as written (${written})`);
+  const header = lines.indexOf('# AIOSON — regenerable browser evidence (captures and walkthrough snapshots; the reports beside them stay tracked)');
+  assert.equal(lines[header + 1], '.aioson/context/visual-screenshots/', 'the replacement sits where the retired lines stood');
+  assert.equal(lines[header + 11], 'aios-qa-screenshots/');
+  assert.equal(lines.indexOf('my-project-rule/') > header, true, 'the project\'s own lines keep their place');
+  assert.equal(lines.filter((line) => line === '.aioson/context/features/*/browser/*/').length, 1);
+  assert.equal(await ensureProjectGitignorePolicy(dir), 0, 'a second update writes nothing');
+
+  const git = spawnSync('git', ['--version'], { encoding: 'utf8' });
+  if (git.status !== 0) return;
+  assert.equal(spawnSync('git', ['init', '-q'], { cwd: dir, encoding: 'utf8' }).status, 0);
+  const check = (rel) => spawnSync('git', ['check-ignore', '-q', rel], { cwd: dir, encoding: 'utf8' }).status;
+  assert.equal(check('.aioson/context/done/browser/dossier/prd.md'), 1, 'a slug named browser is tracked again after the update');
+  assert.equal(check('.aioson/context/features/orders/browser/smoke/smoke-step-01-failed.png'), 0);
+});
+
+test('prune never deletes a report: a folder under browser/ is an artifact folder only beside its report', async () => {
+  const dir = await seededProject();
+  // A walkthrough persisted with --out inside browser/: its own reports.
+  await write(dir, '.aioson/context/features/orders/browser/round-2/tour.json', '{"schema":1,"name":"tour","steps":[]}');
+  await write(dir, '.aioson/context/features/orders/browser/round-2/tour.md', '# Browser walkthrough — tour\n');
+  await write(dir, '.aioson/context/features/orders/browser/round-2/tour/tour-step-01-failed.png', 'png');
+  // A run that died before its report still leaves a prunable folder.
+  await write(dir, '.aioson/context/features/orders/browser/crashed/crashed-step-01-failed.png', 'png');
+  const paths = scanEvidenceArtifacts(dir).map((entry) => entry.path);
+  assert.equal(paths.includes('.aioson/context/features/orders/browser/round-2'), false);
+  assert.equal(paths.includes('.aioson/context/features/orders/browser/crashed'), true);
+  assert.equal(listDiagnosticDirs(path.join(dir, '.aioson/context/features/orders')).some((d) => d.dir.endsWith('round-2')), false, 'feature:archive never drops it either');
+
+  pruneEvidenceArtifacts(dir, {});
+  pruneEvidenceArtifacts(dir, { all: true });
+  for (const rel of ['tour.json', 'tour.md', 'tour/tour-step-01-failed.png']) {
+    assert.ok(await fs.stat(path.join(dir, '.aioson/context/features/orders/browser/round-2', rel)), `${rel} survives`);
+  }
+  await assert.rejects(fs.stat(path.join(dir, '.aioson/context/features/orders/browser/crashed')));
+});
+
+test('prune never follows a link: a junction to a folder outside the project is not an artifact folder', async () => {
+  const dir = await seededProject();
+  const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-evidence-outside-'));
+  await write(outside, 'keep.png', 'mine');
+  const shots = path.join(dir, '.aioson/context/features/orders/visual-screenshots');
+  await fs.rm(shots, { recursive: true, force: true });
+  fsSync.symlinkSync(outside, shots, 'junction');
+  // An owner tree reached through a link: `.aioson/briefings` itself.
+  const sharedBriefings = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-evidence-briefings-'));
+  await write(sharedBriefings, 'orders/browser/tour/tour-step-01-failed.png', 'theirs');
+  await write(sharedBriefings, 'orders/browser/tour.json', '{"schema":1,"name":"tour","steps":[]}');
+  await fs.rm(path.join(dir, '.aioson/briefings'), { recursive: true, force: true });
+  fsSync.symlinkSync(sharedBriefings, path.join(dir, '.aioson/briefings'), 'junction');
+
+  assert.deepEqual(scanEvidenceArtifacts(dir), [], 'nothing reached through a link is scanned');
+  pruneEvidenceArtifacts(dir, { all: true });
+  assert.equal(await fs.readFile(path.join(outside, 'keep.png'), 'utf8'), 'mine');
+  assert.equal(await fs.readFile(path.join(sharedBriefings, 'orders/browser/tour/tour-step-01-failed.png'), 'utf8'), 'theirs');
+});
+
+test('feature:archive drops the diagnostics on the reconcile path too, and the dry run lists them', async () => {
+  const dir = await seededProject();
+  await write(dir, '.aioson/context/features.md', [
+    '# Features', '',
+    '| slug | status | started | completed |',
+    '|------|--------|---------|-----------|',
+    '| orders | done | 2026-06-01 | 2026-06-02 |', ''
+  ].join('\n'));
+  await write(dir, '.aioson/context/prd-orders.md', '## Vision\nOrders.\n');
+  await write(dir, '.aioson/briefings/orders/briefings.md', '# Briefing\n');
+  // An earlier close already archived part of the feature: both folders
+  // are reconciled file by file instead of moved whole.
+  await write(dir, '.aioson/context/done/orders/dossier/decisions.md', '# Decisions\n');
+  await write(dir, '.aioson/context/done/orders/briefings/briefings.md', '# Briefing\n');
+
+  const dry = await runFeatureArchive({ args: [dir], options: { feature: 'orders', 'dry-run': true, json: true }, logger: silentLogger() });
+  assert.deepEqual(dry.dirs.filter((d) => d.label === 'dossier' || d.label === 'briefings').map((d) => d.action), ['skip', 'skip']);
+  assert.deepEqual(dry.diagnostics.map((d) => [d.owner, d.kind, d.files]), [
+    ['dossier', 'runtime_screenshots', 2],
+    ['briefings', 'walkthrough_artifacts', 3]
+  ], 'the preview names what the reconcile drops');
+
+  const result = await runFeatureArchive({ args: [dir], options: { feature: 'orders' }, logger: silentLogger() });
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  const archive = path.join(dir, '.aioson/context/done/orders');
+  assert.ok(await fs.stat(path.join(archive, 'dossier', 'visual-evidence.json')), 'the evidence report is merged');
+  assert.ok(await fs.stat(path.join(archive, 'briefings', 'browser', 'proto.json')), 'the walkthrough report is merged');
+  await assert.rejects(fs.stat(path.join(archive, 'dossier', 'visual-screenshots')), 'the captures never reach done/');
+  await assert.rejects(fs.stat(path.join(archive, 'briefings', 'browser', 'proto')), 'the snapshots never reach done/');
+  assert.deepEqual(result.diagnostics_dropped.map((d) => [d.owner, d.files]), [['dossier', 2], ['briefings', 3]]);
 });
 
 test('listDiagnosticDirs and clearDir are the producers\' primitives', async () => {
@@ -251,4 +377,18 @@ test('listDiagnosticDirs and clearDir are the producers\' primitives', async () 
   assert.deepEqual(removed, { files: 3, bytes: 25 });
   await assert.rejects(fs.stat(dirs[0].dir));
   assert.deepEqual(clearDir(dirs[0].dir), { files: 0, bytes: 0 }, 'clearing a missing folder is a no-op');
+});
+
+test('clearDir never throws: a file the OS refuses to delete comes back as what stayed', async (t) => {
+  const dir = await seededProject();
+  const shots = path.join(dir, '.aioson/context/features/orders/visual-screenshots');
+  const realRm = fsSync.rmSync;
+  t.mock.method(fsSync, 'rmSync', (target, options) => {
+    const error = new Error(`EPERM: operation not permitted, unlink '${target}'`);
+    error.code = 'EPERM';
+    if (path.resolve(String(target)).startsWith(shots)) throw error;
+    return realRm(target, options);
+  });
+  const result = clearDir(shots);
+  assert.deepEqual(result, { files: 0, bytes: 0, kept: 2, code: 'EPERM', error: `EPERM: operation not permitted, unlink '${shots}'` });
 });

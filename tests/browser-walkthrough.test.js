@@ -441,3 +441,71 @@ test('the clear never leaves the owned artifact folder: dotted names fall back a
   assert.deepEqual(result.superseded_artifacts, { files: 0, bytes: 0 }, 'an --out folder is never cleared');
   assert.equal(await fs.readFile(mine, 'utf8'), 'mine');
 });
+
+// The script name was sanitized, but the owner slug (`--slug` or the script's
+// `feature`) was joined into the report dir raw: `"feature": "../../.."`
+// resolved it to the project root, and the clear of `browser/chrome/`
+// deleted the project's own sources.
+test('the owner slug is a feature slug, never a path: a traversal is refused before the browser opens', async () => {
+  const root = await tmp();
+  const source = path.join(root, 'browser', 'chrome', 'manifest.json');
+  await fs.mkdir(path.dirname(source), { recursive: true });
+  await fs.writeFile(source, '{"name":"chrome-extension"}');
+  let opened = 0;
+  const page = fakePage();
+  const open = async (...args) => { opened += 1; return fakeOpener(page)(...args); };
+  const steps = [{ do: 'goto', url: '/', ac: 'AC-01' }];
+
+  const viaScript = await runWalkthrough({ targetDir: root, script: normalizeScript({ name: 'chrome', feature: '../../..', steps }).script, url: 'http://127.0.0.1:3000', open, clock: fastClock });
+  assert.equal(await fs.readFile(source, 'utf8').catch(() => null), '{"name":"chrome-extension"}', 'the project\'s own browser/chrome/ survives');
+  assert.equal(viaScript.ok, false);
+  assert.equal(viaScript.error, 'invalid_slug');
+  assert.match(viaScript.detail, /the script's `feature`/);
+  assert.equal(opened, 0, 'refused before any browser opened');
+
+  const viaFlag = await runWalkthrough({ targetDir: root, script: normalizeScript({ name: 'chrome', steps }).script, url: 'http://127.0.0.1:3000', slug: '..\\..\\..', prototype: true, open, clock: fastClock });
+  assert.equal(viaFlag.error, 'invalid_slug');
+  assert.match(viaFlag.detail, /--slug/);
+  assert.equal(opened, 0);
+
+  // `--out` names the folder itself: the slug is not a path there.
+  const out = await runWalkthrough({ targetDir: root, script: normalizeScript({ name: 'chrome', feature: '../../..', steps }).script, url: 'http://127.0.0.1:3000', out: 'my-reports', open, clock: fastClock });
+  assert.equal(out.persisted, true);
+  assert.equal(out.report_path, 'my-reports/chrome.json');
+
+  // A slug the dossier rule accepts (a leading digit) runs as before.
+  const accepted = await runWalkthrough({ targetDir: root, script: normalizeScript({ name: 'chrome', steps }).script, url: 'http://127.0.0.1:3000', slug: '2fa-login', open, clock: fastClock });
+  assert.equal(accepted.report_path, '.aioson/context/features/2fa-login/browser/chrome.json');
+  assert.equal(await fs.readFile(source, 'utf8'), '{"name":"chrome-extension"}');
+});
+
+// A PNG held open by an image viewer on Windows (no FILE_SHARE_DELETE):
+// the clear threw after the browser opened and outside the try/finally, so
+// the run died with no report and the session was never closed.
+test('a previous artifact the OS refuses to delete is a warning: the run reports and closes its browser', async (t) => {
+  const root = await tmp();
+  const artifactDir = path.join(root, '.aioson/context/features/orders/browser/checkout');
+  await fs.mkdir(artifactDir, { recursive: true });
+  await fs.writeFile(path.join(artifactDir, 'checkout-step-01-failed.png'), 'held open');
+  const fsSync = require('node:fs');
+  const realRm = fsSync.rmSync;
+  t.mock.method(fsSync, 'rmSync', (target, options) => {
+    if (path.resolve(String(target)).startsWith(artifactDir)) {
+      const error = new Error(`EPERM: operation not permitted, unlink '${target}'`);
+      error.code = 'EPERM';
+      throw error;
+    }
+    return realRm(target, options);
+  });
+  const opener = fakeOpener(fakePage());
+  const script = normalizeScript({ name: 'checkout', steps: [{ do: 'goto', url: '/', ac: 'AC-01' }], timeout: 50 }).script;
+  const report = await runWalkthrough({ targetDir: root, script, url: 'http://127.0.0.1:3000', slug: 'orders', open: opener, clock: fastClock });
+  assert.equal(opener.closed.count, 1, 'the browser session is closed');
+  assert.equal(report.ok, true);
+  assert.equal(report.persisted, true);
+  assert.deepEqual(report.superseded_artifacts, { files: 0, bytes: 0, kept: 1 });
+  assert.match(report.warnings.join('\n'), /previous artifacts: 1 file\(s\) in \.aioson\/context\/features\/orders\/browser\/checkout\/ could not be cleared \(EPERM\)/);
+  const md = await fs.readFile(path.join(root, report.markdown_path), 'utf8');
+  assert.match(md, /1 file\(s\) from the previous run could not be cleared/);
+  assert.doesNotMatch(md, /the folder holds this run only/);
+});

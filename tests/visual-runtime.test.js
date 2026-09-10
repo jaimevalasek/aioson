@@ -569,7 +569,7 @@ test('kind=visual --screenshots owns and replaces its default folder, and the ev
         goto: async () => {},
         waitForTimeout: async () => {},
         evaluate: async () => raw(viewport.width),
-        screenshot: async ({ path: file }) => { if (file) await fs.writeFile(file, 'png'); }
+        screenshot: async ({ path: file, fullPage }) => { if (file) await fs.writeFile(file, fullPage ? 'png-full-page' : 'png'); }
       }),
       close: async () => {}
     }),
@@ -593,26 +593,241 @@ test('kind=visual --screenshots owns and replaces its default folder, and the ev
   assert.equal(evidence.metrics.runtime.screenshot_capture.count, files.length, 'the persisted evidence names what the folder holds');
   assert.ok(evidence.metrics.runtime.screenshots.every((shot) => shot.startsWith('.aioson/context/features/orders/visual-screenshots/')));
 
-  // A diagnostic run writes nothing, so it removes nothing: the captures of
-  // the last persisted run survive a `--no-persist --screenshots` re-check.
+  // A diagnostic run writes nothing — no capture either. Comparing names
+  // alone hid it: `--screenshots=full --no-persist` replaced the persisted
+  // viewport captures with full pages the evidence still called viewport.
+  const persistedBytes = await Promise.all(files.map((name) => fs.readFile(path.join(shotDir, name), 'utf8')));
   const diagnostic = await runVerifyArtifact({
     args: [dir],
-    options: { kind: 'visual', slug: 'orders', runtime: true, screenshots: true, browserLauncher: launcher, json: true, advisory: true, suppressExitCode: true, 'no-persist': true },
+    options: { kind: 'visual', slug: 'orders', runtime: true, screenshots: 'full', browserLauncher: launcher, json: true, advisory: true, suppressExitCode: true, 'no-persist': true },
     logger: makeLogger()
   });
   assert.equal(diagnostic.metrics.screenshots_cleared, undefined, 'a --no-persist run clears nothing');
+  assert.deepEqual(diagnostic.metrics.runtime.screenshots, [], 'and captures nothing into the owned folder');
+  assert.match(diagnostic.warnings.join('\n'), /screenshots not captured: a --no-persist run writes nothing into \.aioson\/context\/features\/orders\/visual-screenshots\/.*--screenshot-dir=<path>/);
   assert.deepEqual((await fs.readdir(shotDir)).sort(), files, 'the persisted captures are still there');
+  assert.deepEqual(await Promise.all(files.map((name) => fs.readFile(path.join(shotDir, name), 'utf8'))), persistedBytes, 'byte for byte');
 
-  // A caller-named folder is never cleared.
+  // A caller-named folder is never cleared, and a diagnostic capture lands there.
   const custom = path.join(dir, 'my-shots');
   await fs.mkdir(custom, { recursive: true });
   await fs.writeFile(path.join(custom, 'keep.png'), 'mine');
-  await runVerifyArtifact({
+  const named = await runVerifyArtifact({
     args: [dir],
     options: { kind: 'visual', slug: 'orders', runtime: true, 'screenshot-dir': 'my-shots', browserLauncher: launcher, json: true, advisory: true, suppressExitCode: true, 'no-persist': true },
     logger: makeLogger()
   });
   assert.ok((await fs.readdir(custom)).includes('keep.png'));
+  assert.ok(named.metrics.runtime.screenshots.length >= 2, 'the --screenshot-dir capture still works under --no-persist');
+  assert.ok((await fs.readdir(custom)).includes('entry-desktop.png'));
+});
+
+// A browser whose captures carry the run's label, so a test reads which run
+// wrote which file; navigating to a URL containing `failOn` times out.
+function captureBrowser({ label = 'run', failOn = null } = {}) {
+  const raw = (width) => ({ scroll_width: width, viewport_width: width, viewport_height: 800, clipped: [], offscreen: [], small_targets: [], text_samples: [], primary: [] });
+  return async () => ({
+    newContext: async ({ viewport }) => ({
+      newPage: async () => ({
+        goto: async (url) => { if (failOn && String(url).includes(failOn)) throw new Error(`page.goto: Timeout 20000ms exceeded navigating to "${url}"`); },
+        waitForTimeout: async () => {},
+        evaluate: async () => raw(viewport.width),
+        screenshot: async ({ path: file, fullPage }) => { if (file) await fs.writeFile(file, `${label}:${fullPage ? 'full' : 'viewport'}`); }
+      }),
+      close: async () => {}
+    }),
+    close: async () => {}
+  });
+}
+
+const MATRIX_MANIFEST = '# Prototype manifest\n\n## Runtime matrix\n\n- entry: #/\n- orders: #/orders\n';
+
+test('a --runtime --screenshots run that measured nothing deletes nothing, and a carried section names only captures on disk', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-keep-'));
+  const owned = path.join(dir, '.aioson', 'briefings', 'orders');
+  await fs.mkdir(owned, { recursive: true });
+  await fs.writeFile(path.join(owned, 'prototype.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  await fs.writeFile(path.join(owned, 'prototype-manifest.md'), MATRIX_MANIFEST, 'utf8');
+  const shotDir = path.join(dir, '.aioson', 'context', 'features', 'orders', 'visual-screenshots');
+  const evidenceFile = path.join(dir, '.aioson', 'context', 'features', 'orders', 'visual-evidence.json');
+  const base = { kind: 'visual', slug: 'orders', runtime: true, screenshots: true, json: true, advisory: true, suppressExitCode: true };
+  const onDisk = (rel) => fs.stat(path.join(dir, rel)).then(() => true, () => false);
+  const listShots = () => fs.readdir(shotDir).then((names) => names.sort(), () => []);
+
+  const measured = await runVerifyArtifact({ args: [dir], options: { ...base, browserLauncher: captureBrowser({ label: 'first' }) }, logger: makeLogger() });
+  assert.equal(measured.metrics.runtime.available, true);
+  const captured = await listShots();
+  assert.deepEqual(captured, ['entry-desktop.png', 'entry-mobile.png', 'orders-desktop.png', 'orders-mobile.png']);
+  const first = JSON.parse(await fs.readFile(evidenceFile, 'utf8'));
+
+  // The documented command on a box without Chromium: the folder was
+  // cleared before the launch failed, and the carried section named the
+  // captures just deleted.
+  const broken = async () => { throw new Error('Executable doesn\'t exist at /ms-playwright/chromium/headless_shell'); };
+  const noBrowser = await runVerifyArtifact({ args: [dir], options: { ...base, browserLauncher: broken }, logger: makeLogger() });
+  assert.deepEqual(await listShots(), captured, 'a run that never measured removes nothing');
+  assert.equal(noBrowser.metrics.runtime.carried_from, first.measured_at);
+  assert.equal(noBrowser.metrics.screenshots_cleared, undefined);
+  for (const rel of noBrowser.metrics.runtime.screenshots) assert.ok(await onDisk(rel), `carried ${rel} is on disk`);
+
+  // A route that times out mid-matrix: the route that rendered was
+  // recaptured, the one that never rendered keeps its last capture.
+  const timedOut = await runVerifyArtifact({ args: [dir], options: { ...base, browserLauncher: captureBrowser({ label: 'second', failOn: '#/orders' }) }, logger: makeLogger() });
+  assert.match(timedOut.warnings.join('\n'), /runtime telemetry could not run: page\.goto: Timeout/);
+  assert.equal(timedOut.metrics.runtime.carried_from, first.measured_at);
+  assert.deepEqual(await listShots(), captured);
+  assert.equal(await fs.readFile(path.join(shotDir, 'orders-desktop.png'), 'utf8'), 'first:viewport');
+  for (const rel of timedOut.metrics.runtime.screenshots) assert.ok(await onDisk(rel), `carried ${rel} is on disk`);
+
+  // A capture deleted since (a prune, a hand cleanup) is not carried as if
+  // it were there, and the warning names it.
+  await fs.rm(path.join(shotDir, 'orders-mobile.png'));
+  const pruned = await runVerifyArtifact({ args: [dir], options: { ...base, browserLauncher: broken }, logger: makeLogger() });
+  assert.equal(pruned.metrics.runtime.available, true);
+  assert.equal(pruned.metrics.runtime.screenshots.some((rel) => rel.endsWith('/orders-mobile.png')), false);
+  assert.equal(pruned.metrics.runtime.screenshot_capture.count, pruned.metrics.runtime.screenshots.length);
+  assert.equal(pruned.metrics.runtime.screenshots.length, 3);
+  assert.match(pruned.warnings.join('\n'), /runtime captures gone: 1 capture\(s\) the carried runtime section named are no longer on disk \(orders-mobile\.png\)/);
+  const persisted = JSON.parse(await fs.readFile(evidenceFile, 'utf8'));
+  for (const rel of persisted.metrics.runtime.screenshots) assert.ok(await onDisk(rel), `persisted ${rel} is on disk`);
+});
+
+test('a run narrowed by --route replaces only its own captures; the benchmark flow keeps every route it measured', async () => {
+  // Slug-less, as the benchmark measures a served or built app: one route
+  // per run, then the primary route. Every run used to wipe the folder, so
+  // only the last route's images survived and the result lint failed.
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-bench-'));
+  await fs.mkdir(path.join(dir, 'app'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'app', 'index.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  const shotDir = path.join(dir, '.aioson', 'context', 'visual-screenshots');
+  const base = { kind: 'visual', file: 'app/index.html', runtime: true, screenshots: true, json: true, advisory: true, suppressExitCode: true, browserLauncher: captureBrowser() };
+  const runs = [];
+  for (const route of ['#/loading', '#/empty', '#/error']) {
+    runs.push(await runVerifyArtifact({ args: [dir], options: { ...base, route }, logger: makeLogger() }));
+  }
+  runs.push(await runVerifyArtifact({ args: [dir], options: base, logger: makeLogger() }));
+  assert.deepEqual((await fs.readdir(shotDir)).sort(), [
+    'empty-desktop.png', 'empty-mobile.png', 'entry-desktop.png', 'entry-mobile.png',
+    'error-desktop.png', 'error-mobile.png', 'loading-desktop.png', 'loading-mobile.png'
+  ], 'the project-level folder is shared by ad-hoc runs: no single run calls its neighbours stale');
+  for (const run of runs) {
+    assert.equal(run.metrics.runtime.available, true);
+    assert.equal(run.metrics.screenshots_cleared, undefined, 'a slug-less run sweeps nothing');
+  }
+
+  const { analyzeBenchmarkResult } = require('../src/lib/benchmark-result-lint');
+  await fs.writeFile(path.join(dir, 'report.md'), '# report\n', 'utf8');
+  await fs.writeFile(path.join(dir, 'benchmark-result.json'), JSON.stringify({
+    schema_version: 1,
+    status: 'completed',
+    summary: 'Static app with loading/empty/error states.',
+    entrypoints: ['app/index.html'],
+    run_instructions: ['open app/index.html'],
+    assumptions: [],
+    research: [],
+    features: ['states'],
+    validation: [{ command: 'aioson verify:artifact . --kind=visual --file=app/index.html --runtime --screenshots --route=#/loading --advisory', status: 'passed', evidence: 'report.md' }],
+    known_limitations: [],
+    artifacts: { report: 'report.md', screenshots: ['loading', 'empty', 'error'].map((state) => `.aioson/context/visual-screenshots/${state}-desktop.png`) }
+  }), 'utf8');
+  const lint = analyzeBenchmarkResult({ file: path.join(dir, 'benchmark-result.json') });
+  assert.deepEqual(lint.issues.filter((issue) => /does not exist/.test(issue)), []);
+
+  // The feature's own folder: a narrowed run keeps the matrix captures too,
+  // and the next full run of the feature drops the capture it did not produce.
+  const owned = path.join(dir, '.aioson', 'briefings', 'orders');
+  await fs.mkdir(owned, { recursive: true });
+  await fs.writeFile(path.join(owned, 'prototype.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  const featureShots = path.join(dir, '.aioson', 'context', 'features', 'orders', 'visual-screenshots');
+  const feature = { kind: 'visual', slug: 'orders', runtime: true, screenshots: true, json: true, advisory: true, suppressExitCode: true, browserLauncher: captureBrowser() };
+  await runVerifyArtifact({ args: [dir], options: feature, logger: makeLogger() });
+  const narrowed = await runVerifyArtifact({ args: [dir], options: { ...feature, route: '#/orders' }, logger: makeLogger() });
+  assert.equal(narrowed.metrics.screenshots_cleared, undefined);
+  assert.deepEqual((await fs.readdir(featureShots)).sort(), ['entry-desktop.png', 'entry-mobile.png', 'orders-desktop.png', 'orders-mobile.png']);
+  const full = await runVerifyArtifact({ args: [dir], options: feature, logger: makeLogger() });
+  assert.equal(full.metrics.screenshots_cleared.files, 2);
+  assert.deepEqual((await fs.readdir(featureShots)).sort(), ['entry-desktop.png', 'entry-mobile.png']);
+});
+
+test('kind=visual refuses a --slug that is not a feature slug before any capture folder is written or swept', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-slug-'));
+  await fs.writeFile(path.join(dir, 'page.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  // The project's own folder: `--slug=../../..` resolved the default
+  // capture folder here, and the run cleared it.
+  await fs.mkdir(path.join(dir, 'visual-screenshots'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'visual-screenshots', 'design-board.png'), 'mine');
+  const base = { kind: 'visual', file: 'page.html', runtime: true, screenshots: true, json: true, advisory: true, suppressExitCode: true, browserLauncher: captureBrowser() };
+
+  const refused = await runVerifyArtifact({ args: [dir], options: { ...base, slug: '../../..' }, logger: makeLogger() });
+  assert.deepEqual(await fs.readdir(path.join(dir, 'visual-screenshots')).catch(() => []), ['design-board.png'], 'the project\'s own folder is untouched');
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error, 'invalid_slug');
+  assert.equal(refused.exitCode, 0, '--advisory: a refusal never blocks the shell');
+  assert.match(refused.issues[0], /cannot name the capture folder/);
+  assert.equal(await fs.readFile(path.join(dir, 'visual-screenshots', 'design-board.png'), 'utf8'), 'mine');
+
+  const blocking = await runVerifyArtifact({ args: [dir], options: { ...base, advisory: false, slug: 'orders/../../../..' }, logger: makeLogger() });
+  assert.equal(blocking.error, 'invalid_slug');
+  assert.equal(blocking.exitCode, 1);
+
+  // A slug the dossier rule accepts (a leading digit) still measures.
+  const accepted = await runVerifyArtifact({ args: [dir], options: { ...base, slug: '2fa-login' }, logger: makeLogger() });
+  assert.equal(accepted.error, undefined);
+  assert.ok((await fs.readdir(path.join(dir, '.aioson', 'context', 'features', '2fa-login', 'visual-screenshots'))).includes('entry-desktop.png'));
+});
+
+test('a stale capture the OS refuses to delete is a warning on an --advisory run, never an escaped exception', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-eperm-'));
+  const owned = path.join(dir, '.aioson', 'briefings', 'orders');
+  await fs.mkdir(owned, { recursive: true });
+  await fs.writeFile(path.join(owned, 'prototype.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  const shotDir = path.join(dir, '.aioson', 'context', 'features', 'orders', 'visual-screenshots');
+  await fs.mkdir(shotDir, { recursive: true });
+  await fs.writeFile(path.join(shotDir, 'renamed-route-desktop.png'), 'held open by an image viewer');
+  // Windows refuses to delete a file another process holds without
+  // FILE_SHARE_DELETE; the clear threw and an --advisory verify exited 1.
+  const fsSync = require('node:fs');
+  const realRm = fsSync.rmSync;
+  t.mock.method(fsSync, 'rmSync', (target, options) => {
+    if (String(target).includes('visual-screenshots')) {
+      const error = new Error(`EPERM: operation not permitted, unlink '${target}'`);
+      error.code = 'EPERM';
+      throw error;
+    }
+    return realRm(target, options);
+  });
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'visual', slug: 'orders', runtime: true, screenshots: true, browserLauncher: captureBrowser(), json: true, advisory: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.exitCode, 0);
+  assert.equal(report.metrics.runtime.available, true);
+  assert.deepEqual(report.metrics.screenshots_cleared, { files: 0, bytes: 0 });
+  assert.match(report.warnings.join('\n'), /1 capture\(s\) from an earlier run could not be removed \(renamed-route-desktop\.png: EPERM\)/);
+  assert.ok((await fs.readdir(shotDir)).includes('renamed-route-desktop.png'));
+});
+
+test('the default capture folder is never written or swept through a link', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-link-'));
+  const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-vrt-outside-'));
+  await fs.writeFile(path.join(outside, 'entry-desktop.png'), 'someone else\'s picture');
+  await fs.writeFile(path.join(outside, 'keep.png'), 'mine');
+  const owned = path.join(dir, '.aioson', 'briefings', 'orders');
+  await fs.mkdir(owned, { recursive: true });
+  await fs.writeFile(path.join(owned, 'prototype.html'), CARRY_PAGE('Aprovar'), 'utf8');
+  const featureDir = path.join(dir, '.aioson', 'context', 'features', 'orders');
+  await fs.mkdir(featureDir, { recursive: true });
+  require('node:fs').symlinkSync(outside, path.join(featureDir, 'visual-screenshots'), 'junction');
+  const report = await runVerifyArtifact({
+    args: [dir],
+    options: { kind: 'visual', slug: 'orders', runtime: true, screenshots: true, browserLauncher: captureBrowser(), json: true, advisory: true, suppressExitCode: true },
+    logger: makeLogger()
+  });
+  assert.equal(report.metrics.runtime.available, true);
+  assert.match(report.warnings.join('\n'), /screenshots not captured: \.aioson\/context\/features\/orders\/visual-screenshots\/ is a link or resolves outside \.aioson\//);
+  assert.deepEqual((await fs.readdir(outside)).sort(), ['entry-desktop.png', 'keep.png']);
+  assert.equal(await fs.readFile(path.join(outside, 'entry-desktop.png'), 'utf8'), 'someone else\'s picture');
 });
 
 test('a static re-measure of unchanged inputs carries the runtime evidence forward; changed inputs drop it with a warning', async () => {

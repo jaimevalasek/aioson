@@ -13,8 +13,8 @@
  * failure pairs (22 MB) under a walkthrough report that read PASS 102/102,
  * beside 34 full-page captures (31 MB) that no report referenced. Every run
  * added files, nothing removed or even counted them, and the installer's
- * gitignore policy whitelisted them into the repository. Producers now clear
- * what they own before writing, `hygiene:scan` weighs what is left,
+ * gitignore policy whitelisted them into the repository. Producers now remove
+ * what they own and no longer produce, `hygiene:scan` weighs what is left,
  * `evidence:prune` removes it, and `feature:archive` drops it instead of
  * carrying it into `done/`.
  */
@@ -35,6 +35,41 @@ function posix(rel) {
 
 function isDir(file) {
   try { return fs.statSync(file).isDirectory(); } catch { return false; }
+}
+
+function isFile(file) {
+  try { return fs.statSync(file).isFile(); } catch { return false; }
+}
+
+// A symlink, or a junction on Windows (lstat reports both as links).
+function isLink(file) {
+  try { return fs.lstatSync(file).isSymbolicLink(); } catch { return false; }
+}
+
+// Where `target` really lives: the real path of its nearest existing
+// ancestor, joined with the part that does not exist yet.
+function realLocation(target) {
+  const absolute = path.resolve(target);
+  let probe = absolute;
+  for (;;) {
+    try { return path.join(fs.realpathSync(probe), path.relative(probe, absolute)); } catch { /* climb */ }
+    const parent = path.dirname(probe);
+    if (parent === probe) return absolute;
+    probe = parent;
+  }
+}
+
+/**
+ * True when `dir` is not a link and really lives strictly inside `root`
+ * (a folder yet to be created lives wherever its parent really is). A
+ * `visual-screenshots` junction to a folder outside the project was followed
+ * by the prune and that folder's files were deleted; nothing an artifact
+ * producer or pruner removes may be reached through a link.
+ */
+function isContainedFolder(dir, root) {
+  if (!root || isLink(dir)) return false;
+  const rel = path.relative(realLocation(root), realLocation(dir));
+  return rel !== '' && rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
 function listSubdirs(dir) {
@@ -74,13 +109,61 @@ function dirStats(dir) {
   return { files: files.length, bytes };
 }
 
-/** Remove a directory and report what it held. Missing is `{ 0, 0 }`. */
+/**
+ * Remove a directory and report what it held. Missing is `{ 0, 0 }`. Never
+ * throws: one file an image viewer holds open (EPERM on Windows) escaped the
+ * walkthrough before its browser session closed. A failed removal returns
+ * what did go (`files`, `bytes`), what stayed (`kept`) and the `error`.
+ */
 function clearDir(dir) {
   const stats = dirStats(dir);
   if (stats.files > 0 || isDir(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+    } catch (error) {
+      const left = dirStats(dir);
+      return {
+        files: stats.files - left.files,
+        bytes: stats.bytes - left.bytes,
+        kept: left.files,
+        code: (error && error.code) || null,
+        error: String((error && error.message) || error)
+      };
+    }
   }
   return stats;
+}
+
+/**
+ * Remove the files directly inside `dir` whose names are not in `keep`
+ * (compared case-insensitively, as the Windows filesystem does) and report
+ * them. Runs only after a measurement produced `keep`: a clear before the
+ * browser launched deleted the captures that the carried-forward runtime
+ * section still named when no browser opened. Never throws, never touches a
+ * subfolder, and never works on a folder reached through a link or outside
+ * `root`.
+ */
+function removeStaleFiles(dir, keep, { root } = {}) {
+  const result = { files: 0, bytes: 0, failed: [] };
+  if (!isContainedFolder(dir, root)) return result;
+  const wanted = new Set([...keep].map((name) => String(name).toLowerCase()));
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return result; }
+  for (const entry of entries) {
+    if (!entry.isFile() || wanted.has(entry.name.toLowerCase())) continue;
+    const file = path.join(dir, entry.name);
+    let size = 0;
+    try { size = fs.statSync(file).size; } catch { /* weightless */ }
+    try {
+      fs.rmSync(file, { force: true, maxRetries: 3, retryDelay: 50 });
+    } catch (error) {
+      result.failed.push({ file: entry.name, code: (error && error.code) || null, error: String((error && error.message) || error) });
+      continue;
+    }
+    result.files += 1;
+    result.bytes += size;
+  }
+  return result;
 }
 
 function readJson(file) {
@@ -143,14 +226,35 @@ function describe(targetDir, dir, kind, reportFile) {
   };
 }
 
-/** The diagnostic folders an owner directory (`features/{slug}`, `briefings/{slug}`, `done/{slug}/dossier`) can hold. */
-function listDiagnosticDirs(ownerDir, { runtimeReport = null } = {}) {
+// A walkthrough that died before writing its report leaves a folder holding
+// nothing but its own `{name}-step-*` artifacts.
+function holdsOnlyStepArtifacts(dir, name) {
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return false; }
+  return entries.length > 0 && entries.every((entry) => entry.isFile() && entry.name.startsWith(`${name}-step-`));
+}
+
+/**
+ * The diagnostic folders an owner directory (`features/{slug}`, `briefings/{slug}`, `done/{slug}/dossier`) can hold.
+ * With `root`, a folder whose real location leaves it is not one.
+ */
+function listDiagnosticDirs(ownerDir, { runtimeReport = null, root = null } = {}) {
   const out = [];
+  // A link is never an artifact folder (see isContainedFolder).
+  const owned = (dir) => (root ? isContainedFolder(dir, root) : !isLink(dir));
   const shots = path.join(ownerDir, RUNTIME_SCREENSHOT_DIR);
-  if (isDir(shots)) out.push({ dir: shots, kind: KIND_RUNTIME, report: runtimeReport });
+  if (isDir(shots) && owned(shots)) out.push({ dir: shots, kind: KIND_RUNTIME, report: runtimeReport });
   const walkthroughs = path.join(ownerDir, WALKTHROUGH_DIR);
   for (const name of listSubdirs(walkthroughs)) {
-    out.push({ dir: path.join(walkthroughs, name), kind: KIND_WALKTHROUGH, report: path.join(walkthroughs, `${name}.json`) });
+    const dir = path.join(walkthroughs, name);
+    const report = path.join(walkthroughs, `${name}.json`);
+    // `browser/{name}/` is a walkthrough's artifact folder only beside its
+    // report `browser/{name}.json` (or when it holds nothing but that
+    // script's step artifacts). Any other folder there is a caller's: a
+    // walkthrough persisted with `--out=…/browser/round-2` had its own
+    // report JSON and Markdown deleted as orphans by the default prune.
+    if (!owned(dir) || !(isFile(report) || holdsOnlyStepArtifacts(dir, name))) continue;
+    out.push({ dir, kind: KIND_WALKTHROUGH, report });
   }
   return out;
 }
@@ -162,21 +266,22 @@ function listDiagnosticDirs(ownerDir, { runtimeReport = null } = {}) {
 function scanEvidenceArtifacts(targetDir) {
   const aioson = path.join(targetDir, '.aioson');
   const context = path.join(aioson, 'context');
+  const root = aioson;
   const candidates = [];
   // Project scope: a `--kind=visual --screenshots` run without a slug, and
   // slug-less walkthroughs.
-  candidates.push(...listDiagnosticDirs(context, { runtimeReport: path.join(context, 'verify-artifact-visual.json') }));
+  candidates.push(...listDiagnosticDirs(context, { runtimeReport: path.join(context, 'verify-artifact-visual.json'), root }));
   for (const slug of listSubdirs(path.join(context, 'features'))) {
     const owned = path.join(context, 'features', slug);
-    candidates.push(...listDiagnosticDirs(owned, { runtimeReport: path.join(owned, 'visual-evidence.json') }));
+    candidates.push(...listDiagnosticDirs(owned, { runtimeReport: path.join(owned, 'visual-evidence.json'), root }));
   }
   for (const slug of listSubdirs(path.join(aioson, 'briefings'))) {
-    candidates.push(...listDiagnosticDirs(path.join(aioson, 'briefings', slug)));
+    candidates.push(...listDiagnosticDirs(path.join(aioson, 'briefings', slug), { root }));
   }
   for (const slug of listSubdirs(path.join(context, 'done'))) {
     const dossier = path.join(context, 'done', slug, 'dossier');
-    candidates.push(...listDiagnosticDirs(dossier, { runtimeReport: path.join(dossier, 'visual-evidence.json') }));
-    candidates.push(...listDiagnosticDirs(path.join(context, 'done', slug, 'briefings')));
+    candidates.push(...listDiagnosticDirs(dossier, { runtimeReport: path.join(dossier, 'visual-evidence.json'), root }));
+    candidates.push(...listDiagnosticDirs(path.join(context, 'done', slug, 'briefings'), { root }));
   }
   return candidates.map((candidate) => describe(targetDir, candidate.dir, candidate.kind, candidate.report));
 }
@@ -247,6 +352,8 @@ module.exports = {
   HEAVY_BYTES,
   dirStats,
   clearDir,
+  removeStaleFiles,
+  isContainedFolder,
   listFiles,
   listDiagnosticDirs,
   scanEvidenceArtifacts,

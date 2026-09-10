@@ -37,6 +37,35 @@ const GIT_GUARD_BASELINE_BLOCK_PATHS = [
   'aioson-logs/**'
 ];
 
+// Regenerable browser evidence, anchored to the folders its producers write
+// (and where feature:archive --keep-diagnostics carries them). A mid-path
+// `**` rule (`.aioson/context/**/browser/*/`) also matched a feature or
+// briefing slug named `browser`: `.aioson/context/features/browser/decisions/`
+// and `.aioson/context/done/browser/dossier/` were ignored whole.
+const EVIDENCE_GITIGNORE_RULES = [
+  '.aioson/context/visual-screenshots/',
+  '.aioson/context/features/*/visual-screenshots/',
+  '.aioson/context/done/*/dossier/visual-screenshots/',
+  '.aioson/context/done/*/briefings/visual-screenshots/',
+  '.aioson/briefings/*/visual-screenshots/',
+  '.aioson/context/browser/*/',
+  '.aioson/context/features/*/browser/*/',
+  '.aioson/context/done/*/dossier/browser/*/',
+  '.aioson/context/done/*/briefings/browser/*/',
+  '.aioson/briefings/*/browser/*/'
+];
+
+// Policy lines an earlier release wrote and this one replaced. The policy is
+// merged by exact text, so a retired line would stay in every consumer's
+// .gitignore after `aioson update`: it is swapped for its replacement in
+// place. Only the exact text goes — a line the project wrote is the project's.
+const RETIRED_GITIGNORE_POLICY_LINES = [
+  // 1.65.0 — matched a slug named `browser` (EVIDENCE_GITIGNORE_RULES).
+  { line: '.aioson/context/**/visual-screenshots/', replacedBy: EVIDENCE_GITIGNORE_RULES },
+  { line: '.aioson/context/**/browser/*/', replacedBy: EVIDENCE_GITIGNORE_RULES },
+  { line: '.aioson/briefings/**/browser/*/', replacedBy: EVIDENCE_GITIGNORE_RULES }
+];
+
 const GITIGNORE_POLICY_LINES = [
   '# AIOSON — keep shared project memory and tool contracts',
   '!AGENTS.md',
@@ -74,9 +103,7 @@ const GITIGNORE_POLICY_LINES = [
   '.aioson/profiler-reports/*',
   '!.aioson/profiler-reports/.gitkeep',
   '# AIOSON — regenerable browser evidence (captures and walkthrough snapshots; the reports beside them stay tracked)',
-  '.aioson/context/**/visual-screenshots/',
-  '.aioson/context/**/browser/*/',
-  '.aioson/briefings/**/browser/*/',
+  ...EVIDENCE_GITIGNORE_RULES,
   'aios-qa-screenshots/',
   '.claude/settings.local.json',
   '*:Zone.Identifier',
@@ -129,8 +156,36 @@ async function ensureGitignoreEntries(targetDir, entries) {
   return missing.length;
 }
 
+async function retireGitignorePolicyLines(targetDir) {
+  const gitignorePath = path.join(targetDir, '.gitignore');
+  if (!(await exists(gitignorePath))) return 0;
+  const lines = (await fs.readFile(gitignorePath, 'utf8')).split('\n');
+  const retired = new Map(RETIRED_GITIGNORE_POLICY_LINES.map((entry) => [entry.line, entry.replacedBy]));
+  if (!lines.some((line) => retired.has(line.trim()))) return 0;
+  const present = new Set(lines.map((line) => line.trim()));
+  const out = [];
+  let inserted = 0;
+  for (const line of lines) {
+    const replacedBy = retired.get(line.trim());
+    if (!replacedBy) { out.push(line); continue; }
+    // The replacement lands where the first retired line stood, in its
+    // line ending, so it keeps its place among the project's own rules.
+    const eol = line.endsWith('\r') ? '\r' : '';
+    for (const replacement of replacedBy) {
+      if (present.has(replacement)) continue;
+      present.add(replacement);
+      out.push(`${replacement}${eol}`);
+      inserted += 1;
+    }
+  }
+  await fs.writeFile(gitignorePath, out.join('\n'), 'utf8');
+  return inserted;
+}
+
+/** Rules written into the project's .gitignore: retired lines swapped in place, missing lines appended. */
 async function ensureProjectGitignorePolicy(targetDir) {
-  return ensureGitignoreEntries(targetDir, GITIGNORE_POLICY_LINES);
+  const replaced = await retireGitignorePolicyLines(targetDir);
+  return replaced + await ensureGitignoreEntries(targetDir, GITIGNORE_POLICY_LINES);
 }
 
 /**

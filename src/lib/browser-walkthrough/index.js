@@ -35,7 +35,8 @@ const scriptContract = require('./script');
 const targets = require('./targets');
 const steps = require('./steps');
 const reports = require('./report');
-const { clearDir } = require('../evidence-artifacts');
+const { clearDir, isContainedFolder } = require('../evidence-artifacts');
+const { isValidSlug } = require('../../dossier/schema');
 
 const {
   SCHEMA, ACTIONS, DEFAULT_TIMEOUT_MS, DEFAULT_BOUNDARY_WAIT_MS, DEFAULT_SNAPSHOT_LINES,
@@ -136,7 +137,26 @@ async function runWalkthrough(options) {
     return { ok: false, error: 'target_missing', hint: 'pass --url=<app url> or --file=<html>, or put `url`/`file` in the script' };
   }
 
+  // The owner slug names the report dir the run writes and the artifact
+  // folder it clears, so it must be a feature slug — the `features/{slug}/`
+  // rule — never a path. The script name was sanitized but the slug was
+  // joined raw: a script with `"feature": "../../.."` resolved the report dir
+  // to the project root and the clear removed the project's own
+  // `browser/chrome/` sources. Without `--out` the report dir never leaves
+  // `.aioson/`.
+  const aiosonRoot = path.join(targetDir, '.aioson');
   const dir = persist ? reportDir(targetDir, { slug: ownerSlug, scope, out }) : null;
+  if (dir && !out) {
+    const rel = path.relative(aiosonRoot, dir);
+    if ((ownerSlug && !isValidSlug(ownerSlug)) || rel === '' || rel.startsWith('..') || path.isAbsolute(rel)) {
+      return {
+        ok: false,
+        error: 'invalid_slug',
+        detail: `owner slug ${JSON.stringify(ownerSlug)} (${slug ? '--slug' : 'the script\'s `feature`'}) is not a feature slug — lowercase letters, digits and hyphens (^[a-z0-9][a-z0-9-]*$); the report dir stays under .aioson/`,
+        hint: 'name the feature or briefing slug exactly, or pass --out=<dir> to write the report elsewhere'
+      };
+    }
+  }
   const artifactDir = dir ? path.join(dir, script.name) : null;
   const startedAt = new Date(clock.now()).toISOString();
 
@@ -153,13 +173,13 @@ async function runWalkthrough(options) {
   // under a report that read PASS 102/102. The reports (`{name}.json|.md`)
   // are overwritten by this run either way. Only a folder the framework owns
   // is cleared — strictly inside its own report dir, never under a caller's
-  // `--out` — so no script name or output path can turn the clear on
-  // anything but the previous run's artifacts.
+  // `--out`, never through a link — so no script name or output path can
+  // turn the clear on anything but the previous run's artifacts.
   const ownedArtifactDir = Boolean(artifactDir) && !out && (() => {
     const rel = path.relative(dir, artifactDir);
     return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
   })();
-  const superseded = ownedArtifactDir ? clearDir(artifactDir) : { files: 0, bytes: 0 };
+  let superseded = { files: 0, bytes: 0 };
 
   const consoleLog = { errors: 0, warnings: 0, page_errors: 0, samples: [] };
   const network = { rows: [], failed: 0 };
@@ -170,6 +190,18 @@ async function runWalkthrough(options) {
   let page = null;
 
   try {
+    // Inside the try: whatever happens here, the session still closes. A
+    // file the OS refuses to delete (EPERM: a PNG held open by a viewer on
+    // Windows) is a warning on this report, never an escaped exception.
+    if (ownedArtifactDir && !isContainedFolder(artifactDir, aiosonRoot)) {
+      warnings.push(`previous artifacts not cleared: ${toRel(targetDir, artifactDir)}/ is a link or resolves outside .aioson/`);
+    } else if (ownedArtifactDir) {
+      const cleared = clearDir(artifactDir);
+      superseded = { files: cleared.files, bytes: cleared.bytes, ...(cleared.error ? { kept: cleared.kept } : {}) };
+      if (cleared.error) {
+        warnings.push(`previous artifacts: ${cleared.kept} file(s) in ${toRel(targetDir, artifactDir)}/ could not be cleared (${cleared.code || cleared.error}) — close whatever holds them; this run's artifacts are written beside them`);
+      }
+    }
     page = await session.newPage();
     if (typeof page.on === 'function') {
       page.on('console', (msg) => {
