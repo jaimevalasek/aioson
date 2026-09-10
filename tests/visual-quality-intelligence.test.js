@@ -6,6 +6,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const { queryBrains } = require('../src/brain-query');
+const { readWorkspaceMirror } = require('./helpers/workspace-mirror');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEMPLATE_ROOT = path.join(ROOT, 'template');
@@ -335,9 +336,10 @@ test('both the implementation and the prototype polish pass can reach the effect
   for (const relativePath of surfaces) {
     const [template, workspace] = await Promise.all([
       read(TEMPLATE_ROOT, relativePath),
-      read(WORKSPACE_ROOT, relativePath)
+      readWorkspaceMirror(relativePath)
     ]);
-    assert.equal(workspace, template, `template/workspace drift: ${relativePath}`);
+    // A skill mirror is local-only: a fresh checkout has none to drift.
+    if (workspace !== null) assert.equal(workspace, template, `template/workspace drift: ${relativePath}`);
     assert.match(
       template,
       /docs\/design\/visual-effects\.md/,
@@ -354,9 +356,9 @@ test('the cold start has a register vocabulary and a funnel that uses it', async
   for (const relativePath of [registers, skill, exploration]) {
     const [template, workspace] = await Promise.all([
       read(TEMPLATE_ROOT, relativePath),
-      read(WORKSPACE_ROOT, relativePath)
+      readWorkspaceMirror(relativePath)
     ]);
-    assert.equal(workspace, template, `template/workspace drift: ${relativePath}`);
+    if (workspace !== null) assert.equal(workspace, template, `template/workspace drift: ${relativePath}`);
   }
 
   const vocabulary = await read(TEMPLATE_ROOT, registers);
@@ -378,9 +380,9 @@ test('the cold start has a register vocabulary and a funnel that uses it', async
   const directions = '.aioson/skills/design/interface-design/references/design-directions.md';
   const [dirTemplate, dirWorkspace] = await Promise.all([
     read(TEMPLATE_ROOT, directions),
-    read(WORKSPACE_ROOT, directions)
+    readWorkspaceMirror(directions)
   ]);
-  assert.equal(dirWorkspace, dirTemplate, `template/workspace drift: ${directions}`);
+  if (dirWorkspace !== null) assert.equal(dirWorkspace, dirTemplate, `template/workspace drift: ${directions}`);
   assert.match(dirTemplate, /## Brand & Presence/);
   assert.match(dirTemplate, /App ranges never cap a site/);
   assert.match(dirTemplate, /never build from one line/i);

@@ -271,7 +271,10 @@ async function readExecutionRoles(projectDir, { hosts } = {}) {
   try {
     raw = await fs.readFile(file, 'utf8');
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    // ENOTDIR is how POSIX says "a parent is a file" (Windows says ENOENT):
+    // the roles file cannot exist there, so it is absent, never "present but
+    // unreadable" — which made seed answer already_present over a blocked path.
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') {
       return { present: false, ok: false, enabled: false, path: relative, reason: 'roles_file_missing', errors: [], roles: null, digest: null };
     }
     return { present: true, ok: false, enabled: false, path: relative, reason: 'roles_unreadable', errors: [{ path: '$', message: error.message }], roles: null, digest: null };

@@ -10,10 +10,10 @@ const {
   REVIEW_AGENTS,
   REVIEW_PROFILES
 } = require('../src/review-intelligence/profiles');
+const { readWorkspaceMirror } = require('./helpers/workspace-mirror');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEMPLATE_ROOT = path.join(ROOT, 'template', '.aioson');
-const WORKSPACE_ROOT = path.join(ROOT, '.aioson');
 const SKILL_ROOT = 'skills/process/review-intelligence';
 const SCHEMA_PATH = 'schemas/review-intelligence.schema.json';
 
@@ -164,7 +164,9 @@ test('template and workspace copies are byte-identical after sync', async () => 
 
   for (const relativePath of paths) {
     const template = await readAt(TEMPLATE_ROOT, relativePath);
-    const workspace = await readAt(WORKSPACE_ROOT, relativePath);
+    // Skills and schemas are local-only mirrors: a fresh checkout has none.
+    const workspace = await readWorkspaceMirror(`.aioson/${relativePath}`);
+    if (workspace === null) continue;
     assert.equal(workspace, template, `template/workspace drift: ${relativePath}`);
   }
 });

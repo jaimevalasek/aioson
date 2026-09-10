@@ -28,7 +28,15 @@
 
 ## What the release gate proves
 
-`verify:release` rejects whitespace errors and untracked files under shipped
+`verify:release` (and `:quick`) first reads the repository's own CI verdict for
+the branch being released: a red `CI` workflow blocks the gate — the "main green
+in CI" precondition above used to be prose, and eight versions shipped on top of
+a CI that had failed on every push since 2026-08-19. `--allow-red-ci` is the
+conscious override for a failure that is understood and not in the release; an
+unreachable GitHub API is recorded as `unknown` and never blocks, and inside
+GitHub Actions the read is skipped.
+
+It then rejects whitespace errors and untracked files under shipped
 roots, runs the production dependency audit, validates the exact `npm pack`
 inventory and local module closure, runs syntax/tests and the pre-publish smoke
 chain, then installs the generated tarball in an isolated project and exercises

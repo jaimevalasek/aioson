@@ -18,17 +18,101 @@ function parseArgs(argv = []) {
   const options = {
     full: false,
     allowUntracked: false,
+    allowRedCi: false,
     json: false
   };
 
   for (const argument of argv) {
     if (argument === '--full') options.full = true;
     else if (argument === '--allow-untracked') options.allowUntracked = true;
+    else if (argument === '--allow-red-ci') options.allowRedCi = true;
     else if (argument === '--json') options.json = true;
     else throw new Error(`Unknown option: ${argument}`);
   }
 
   return options;
+}
+
+// ── The CI verdict is read, not assumed ──────────────────────────────────────
+// Every CI push and every Release run failed from 2026-08-21 to 2026-09-10 —
+// v1.58.0 through v1.65.0 were cut and published on top of it — because the
+// suite was green only where gitignored workspace mirrors existed, and no gate
+// ever looked at the CI verdict. The release gate now reads the repository's
+// own CI on the branch being released: red blocks (`--allow-red-ci` is the
+// conscious override for a known flake), and an unreachable API is recorded as
+// unknown and never blocks. Inside GitHub Actions the check is skipped — a run
+// must not wait on its own verdict.
+const CI_WORKFLOW_FILE = '.github/workflows/ci.yml';
+
+/** `owner/repo` for a GitHub remote URL (ssh or https), else null. */
+function parseGithubRemote(url) {
+  const match = String(url || '').trim().match(/github\.com[:/]+([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i);
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
+/** Latest completed CI runs (newest first) → green | red | unknown, with the red streak. */
+function summarizeCiRuns(runs, { workflowFile = CI_WORKFLOW_FILE } = {}) {
+  const completed = (Array.isArray(runs) ? runs : [])
+    .filter((run) => run && run.status === 'completed' && (run.path === workflowFile || run.name === 'CI'));
+  if (completed.length === 0) return { state: 'unknown', reason: 'no completed CI run on this branch' };
+  const latest = completed[0];
+  if (latest.conclusion === 'success') {
+    return { state: 'green', sha: latest.head_sha || null, url: latest.html_url || null };
+  }
+  let streak = 0;
+  while (streak < completed.length && completed[streak].conclusion !== 'success') streak += 1;
+  return {
+    state: 'red',
+    conclusion: latest.conclusion || null,
+    sha: latest.head_sha || null,
+    url: latest.html_url || null,
+    consecutive_failures: streak,
+    since: completed[streak - 1].created_at || null,
+    no_green_in_window: streak === completed.length
+  };
+}
+
+async function fetchCiRuns(slug, branch, { fetchImpl = globalThis.fetch, timeoutMs = 8000 } = {}) {
+  if (typeof fetchImpl !== 'function') return { ok: false, reason: 'fetch is unavailable in this Node runtime' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const url = `https://api.github.com/repos/${slug}/actions/runs?branch=${encodeURIComponent(branch)}&per_page=30`;
+    const response = await fetchImpl(url, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'aioson-release-readiness' },
+      signal: controller.signal
+    });
+    if (!response.ok) return { ok: false, reason: `GitHub API answered ${response.status}` };
+    const body = await response.json();
+    return { ok: true, runs: Array.isArray(body && body.workflow_runs) ? body.workflow_runs : [] };
+  } catch (error) {
+    return { ok: false, reason: error && error.name === 'AbortError' ? 'GitHub API timed out' : String(error && error.message || error) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readCiStatus(projectRoot, { runner = runCommand, fetchImpl, env = process.env } = {}) {
+  if (String(env.GITHUB_ACTIONS || '').toLowerCase() === 'true') {
+    return { state: 'skipped', reason: 'running inside GitHub Actions' };
+  }
+  const remote = await runner('git', ['remote', 'get-url', 'origin'], { cwd: projectRoot });
+  const slug = remote.code === 0 ? parseGithubRemote(remote.stdout) : null;
+  if (!slug) return { state: 'unknown', reason: 'origin is not a GitHub remote' };
+  const head = await runner('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: projectRoot });
+  const branch = head.code === 0 ? String(head.stdout || '').trim() : '';
+  if (!branch || branch === 'HEAD') return { state: 'unknown', reason: 'detached HEAD — no branch to read CI for', repository: slug };
+  const fetched = await fetchCiRuns(slug, branch, { fetchImpl });
+  if (!fetched.ok) return { state: 'unknown', reason: fetched.reason, repository: slug, branch };
+  return { ...summarizeCiRuns(fetched.runs), repository: slug, branch };
+}
+
+function describeRedCi(ci) {
+  const streak = ci.no_green_in_window
+    ? `every one of the last ${ci.consecutive_failures} completed CI run(s) failed${ci.since ? ` (no green run since at least ${ci.since})` : ''}`
+    : `the last ${ci.consecutive_failures} completed CI run(s) failed${ci.since ? ` (since ${ci.since})` : ''}`;
+  return `CI is red on ${ci.repository}@${ci.branch}: ${streak} — latest ${ci.conclusion} at ${ci.sha ? ci.sha.slice(0, 8) : 'unknown sha'}: ${ci.url || 'no url'}.\n`
+    + 'Fix CI first, or pass --allow-red-ci when the failure is understood and not in the release.';
 }
 
 function normalizePackagePath(value) {
@@ -328,6 +412,11 @@ async function runReleaseReadiness(options = {}) {
 
   await execute('git-diff-check', 'git', ['diff', '--check']);
 
+  const ci = await (options.readCiStatus || readCiStatus)(projectRoot, {});
+  if (echo) process.stdout.write(`\n==> ci-status: ${ci.state}${ci.reason ? ` (${ci.reason})` : ''}\n`);
+  if (ci.state === 'red' && !options.allowRedCi) throw new Error(describeRedCi(ci));
+  checks.push({ id: 'ci-status', ok: ci.state !== 'red', allowed: ci.state === 'red', ...ci });
+
   const untrackedResult = await execute(
     'untracked-package-files',
     'git',
@@ -425,6 +514,11 @@ module.exports = {
   SHIPPED_ROOTS,
   REQUIRED_PACKAGE_FILES,
   parseArgs,
+  parseGithubRemote,
+  summarizeCiRuns,
+  fetchCiRuns,
+  readCiStatus,
+  describeRedCi,
   parseJsonOutput,
   extractPackFiles,
   validatePackContents,

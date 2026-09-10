@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 
 const { writeThrough } = require('../src/lib/console-write');
 
@@ -45,4 +46,35 @@ test('writeThrough writes synchronously to the fd when not a TTY', () => {
     fs.closeSync(fd);
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// The incident shape: on POSIX the child's stdout fd turns O_NONBLOCK as soon
+// as process.stdout exists, so with a reader slower than the writer a raw
+// writeSync threw EAGAIN a few hundred lines in (a harness saw `--help` end
+// mid-list) and one large --json payload arrived as a bare prefix, silently.
+// Both shapes must arrive whole on every platform.
+test('writeThrough delivers every byte to a slow pipe reader — many lines and one large JSON payload', async () => {
+  const modulePath = JSON.stringify(path.join(__dirname, '..', 'src', 'lib', 'console-write.js'));
+  const script = [
+    `const { writeThrough } = require(${modulePath});`,
+    "for (let i = 0; i < 2000; i += 1) writeThrough(process.stdout, 1, `line ${i} ${'x'.repeat(90)}\\n`);",
+    "writeThrough(process.stdout, 1, `${JSON.stringify({ items: Array.from({ length: 20000 }, (_, i) => ({ i, pad: 'y'.repeat(40) })) })}\\n`);"
+  ].join('\n');
+  const child = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  const closed = new Promise((resolve) => child.on('close', resolve));
+
+  // The slow consumer: nothing is read for a while, so the pipe fills up.
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const chunks = [];
+  child.stdout.on('data', (chunk) => chunks.push(chunk));
+  const code = await closed;
+
+  assert.equal(code, 0, stderr);
+  const lines = Buffer.concat(chunks).toString('utf8').split('\n');
+  assert.equal(lines.filter((line) => line.startsWith('line ')).length, 2000);
+  assert.equal(lines[1999].startsWith('line 1999 '), true);
+  assert.equal(JSON.parse(lines[2000]).items.length, 20000);
+  assert.equal(lines[2001], '');
 });
