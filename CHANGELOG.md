@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.66.0] - 2026-09-10
+
+### Changed
+
+- **Product and Sheldon enrich the PRD instead of only checking it.** Product originates and compares product options before committing the smallest coherent outcome, and records the selected value and the deferred alternatives in the dossier trail; Sheldon runs two bounded passes — coverage and opportunity, then future-state and selection — connecting journeys, actor handoffs and existing capabilities, and repairs the PRD in place. The quality lenses, research loops and the product/Sheldon expansion skills were rewritten around that; the shared feature-expansion taxonomy now says read-only, imported or immutable objects need no invented CRUD and category resemblance alone is not scope. `classify` on a tracked MICRO feature keeps the PRD → Sheldon → Planner → QA route in its phase guidance, and `review:prepare` hands Product and Sheldon the expansion scout and audit as soft context sources.
+
 ### Fixed
 
 - **CI failed on every push since 2026-08-19 and no gate read it.** Six tests read gitignored workspace mirrors (`.aioson/skills/`, `.aioson/schemas/`) and failed on every fresh checkout; `tests/helpers/workspace-mirror.js` now separates tracked mirrors (must exist and match) from local-only ones (compared only where present). `verify:release` and `verify:release:quick` read the branch's CI verdict and refuse a red one (`--allow-red-ci` overrides; an unreachable API is recorded as `unknown` and never blocks). The latency SLA of QA-PERF-01 moved to the `AIOSON_PERF=1` profile.
