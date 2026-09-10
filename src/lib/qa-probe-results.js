@@ -44,7 +44,10 @@ async function recordProbe(results, findings, probe, target, action) {
 
 function summarizeProbes(results) {
   const limitations = results.filter((row) => row.status === 'unavailable');
-  return { probe_results: results, limitations, execution_complete: results.length > 0 && limitations.length === 0 };
+  // A run in which no probe executed proved nothing: a trailing-slash scan
+  // persisted seven not_applicable file probes and zero routes as COMPLETE.
+  const ran = results.some((row) => row.status === 'executed' || row.status === 'failed');
+  return { probe_results: results, limitations, execution_complete: ran && limitations.length === 0 };
 }
 
 function probeSummaryMarkdown(execution) {

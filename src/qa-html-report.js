@@ -21,8 +21,15 @@ function buildRunId(mode) {
   return `${date}_${time}_${mode}`;
 }
 
-async function encodeScreenshot(screenshotsDir, id) {
-  const filePath = path.join(screenshotsDir, `${id}.png`);
+// Only the capture a finding recorded is embedded, never "<id>.png" looked up
+// by name: a leftover C-01.png from an older run attached itself to an
+// unrelated new C-01, and a refused capture has no file to embed. The path
+// comes from report JSON (data), so it must resolve inside the folder.
+async function encodeScreenshot(screenshotsDir, file) {
+  if (!file) return '';
+  const dir = path.resolve(screenshotsDir);
+  const filePath = path.resolve(dir, String(file));
+  if (!filePath.startsWith(dir + path.sep)) return '';
   try {
     const buf = await fs.readFile(filePath);
     return `data:image/png;base64,${buf.toString('base64')}`;
@@ -432,7 +439,7 @@ async function writeHtmlReport(targetDir, projectName, url, findings, acCoverage
   const findingsWithShots = await Promise.all(
     findings.map(async (f) => ({
       ...f,
-      screenshotData: f.id ? await encodeScreenshot(screenshotsDir, f.id) : ''
+      screenshotData: await encodeScreenshot(screenshotsDir, f.screenshot)
     }))
   );
 
@@ -440,7 +447,7 @@ async function writeHtmlReport(targetDir, projectName, url, findings, acCoverage
   const acWithShots = await Promise.all(
     (acCoverage || []).map(async (ac) => ({
       ...ac,
-      screenshotData: ac.id ? await encodeScreenshot(screenshotsDir, ac.id) : ''
+      screenshotData: await encodeScreenshot(screenshotsDir, ac.screenshot)
     }))
   );
 

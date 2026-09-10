@@ -133,7 +133,7 @@ async function readSecurityFindings(findingsPath) {
     const data = JSON.parse(content);
     return {
       ok: true,
-      version: Number(data.version) || 1,
+      version: data.version,
       reviewContract: data.review_contract && typeof data.review_contract === 'object'
         ? data.review_contract
         : null,
@@ -207,7 +207,10 @@ function endpointValidationIssue(value) {
 }
 
 async function validateV2SecurityEvidence(targetDir, envelope) {
-  if ((Number(envelope.version) || 1) < 2) return { errors: [], warnings: [] };
+  // Number('2.0.0') is NaN, which read as v1 and skipped this whole gate. Only
+  // an absent version or major 1 is legacy; anything else is held to v2.
+  const version = String(envelope.version ?? '').trim();
+  if (!version || Number.parseInt(version, 10) === 1) return { errors: [], warnings: [] };
 
   const errors = [];
   const warnings = [];

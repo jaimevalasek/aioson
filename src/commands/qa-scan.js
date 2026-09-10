@@ -32,22 +32,41 @@ function makeFinding(severity, category, title, location, risk, fix) {
 }
 
 // --- Crawl all routes from base URL ---
+// The base is normalized exactly like every discovered link: with the slash
+// Vite prints (http://localhost:5173/) the root never matched its own base,
+// zero routes were scanned, and the run still read COMPLETE.
+function normalizeUrl(href) {
+  try {
+    const u = new URL(href);
+    u.hash = '';
+    return u.toString().replace(/\/$/, '');
+  } catch { return ''; }
+}
+
+// Scope is the parsed origin plus a path prefix, never a string prefix: from
+// 127.0.0.1:4317 the crawler followed :43171 and 127.0.0.1:4317@localhost:43172
+// and blamed the target for the secrets it found there.
+function inCrawlScope(baseUrl, href) {
+  try {
+    const scope = new URL(baseUrl);
+    const u = new URL(href);
+    if (u.protocol !== scope.protocol || u.host !== scope.host) return false;
+    // A link may not carry credentials the operator did not configure.
+    if (u.username !== scope.username || u.password !== scope.password) return false;
+    const prefix = scope.pathname.replace(/\/$/, '');
+    return !prefix || u.pathname === prefix || u.pathname.startsWith(`${prefix}/`);
+  } catch { return false; }
+}
+
 async function crawlRoutes(page, baseUrl, maxDepth, maxPages, results) {
   const visited = new Set();
   const queue = [{ url: baseUrl, depth: 0 }];
-  const normalizeUrl = (href) => {
-    try {
-      const u = new URL(href);
-      u.hash = '';
-      return u.toString().replace(/\/$/, '');
-    } catch { return ''; }
-  };
 
   while (queue.length > 0 && visited.size < maxPages) {
     const { url, depth } = queue.shift();
     const normalized = normalizeUrl(url);
     if (!normalized || visited.has(normalized)) continue;
-    if (!normalized.startsWith(baseUrl)) continue;
+    if (!inCrawlScope(baseUrl, normalized)) continue;
     visited.add(normalized);
 
     if (depth >= maxDepth) continue;
@@ -58,7 +77,7 @@ async function crawlRoutes(page, baseUrl, maxDepth, maxPages, results) {
       const links = await page.$$eval('a[href]', (els) => els.map((el) => el.href));
       for (const link of links) {
         const n = normalizeUrl(link);
-        if (n && n.startsWith(baseUrl) && !visited.has(n)) {
+        if (n && inCrawlScope(baseUrl, n) && !visited.has(n)) {
           queue.push({ url: n, depth: depth + 1 });
         }
       }
@@ -158,7 +177,9 @@ async function scanSensitiveFiles(page, baseUrl, findings, results) {
       if (response.status() >= 400 && ![401, 403].includes(response.status())) return { status: 'unavailable', reason: `http_${response.status()}` };
       if (response.status() === 200) {
         const body = stripPublicStripeConfig(await response.text());
-        if (SECRET_PATTERNS.some(({ regex }) => regex.test(body)) || /[A-Z_]{3,}=/.test(body) || /(SECRET|PASSWORD|TOKEN|KEY)/i.test(body)) {
+        // Three is enough (a longer run ends in three); `{3,}` backtracked
+        // quadratically on an uppercase body, 100K characters for ~10 s.
+        if (SECRET_PATTERNS.some(({ regex }) => regex.test(body)) || /[A-Z_]{3}=/.test(body) || /(SECRET|PASSWORD|TOKEN|KEY)/i.test(body)) {
           findings.push(makeFinding('critical', 'security', `Sensitive file publicly accessible: ${filePath}`, target,
             'Configuration file exposes credentials, connection strings, or infrastructure details.',
             `Block ${filePath} in your web server. Never deploy .env files to public directories.`));
@@ -273,12 +294,14 @@ async function runQaScan({ args, options = {}, logger, t }) {
   const page = await session.newPage();
 
   try {
+    const base = normalizeUrl(url) || url;
+
     // Phase 1: crawl all routes
-    const routes = await crawlRoutes(page, url, maxDepth, maxPages, probeResults);
+    const routes = await crawlRoutes(page, base, maxDepth, maxPages, probeResults);
     logger.log(t('qa_scan.routes_found', { count: routes.length }));
 
-    // Phase 2: scan sensitive files (once)
-    await scanSensitiveFiles(page, url, findings, probeResults);
+    // Phase 2: scan sensitive files (once), at /.env — never //.env
+    await scanSensitiveFiles(page, base, findings, probeResults);
 
     // Phase 3: scan each route
     for (const route of routes) {
@@ -287,11 +310,14 @@ async function runQaScan({ args, options = {}, logger, t }) {
     }
 
     // Write reports
-    const execution = summarizeProbes(probeResults);
     const routesScanned = routes.filter((route) => {
       const checks = probeResults.filter((row) => row.target === route && row.probe !== 'discovery');
       return checks.some((row) => row.probe === 'navigation') && checks.every((row) => row.status !== 'unavailable');
     }).length;
+    // Clean file probes around zero scanned routes say nothing about the app:
+    // the run is INCOMPLETE by name, never a COMPLETE with no findings.
+    if (routesScanned === 0) probeResults.push({ probe: 'route_scan', target: base, status: 'unavailable', reason: 'no_route_scanned', finding_ids: [] });
+    const execution = summarizeProbes(probeResults);
     const mdContent = buildScanReport(projectName, url, routes, findings, execution, routesScanned);
     const mdPath = path.join(targetDir, 'aios-qa-report.md');
     const jsonPath = path.join(targetDir, 'aios-qa-report.json');

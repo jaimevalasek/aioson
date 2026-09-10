@@ -49,7 +49,11 @@ async function collectQaAcEvidence(targetDir, feature, url) {
       && Date.parse(candidate.finished_at) >= modifiedAt && candidate.steps.length > 0;
     if (candidate && !valid) gaps.push({ check: 'walkthrough_binding_invalid', ac: ac.id, message: 'Walkthrough owner, target, date or steps do not prove this criterion.' });
     const row = valid ? candidate : null;
-    return { ...ac, status: row ? (row.status === 'pass' ? 'Covered' : row.status === 'fail' ? 'Missing' : 'Partial') : 'Not exercised', walkthrough: row ? row.report : '', screenshot: '' };
+    // A walkthrough that stopped before the AC's step records `not_reached`
+    // (rollupUnreached); read as Partial it summed "AC exercised: 2/2". Only
+    // a status that says the step ran counts as exercise.
+    const status = row ? ({ pass: 'Covered', fail: 'Missing', partial: 'Partial' }[row.status] || 'Not exercised') : 'Not exercised';
+    return { ...ac, status, walkthrough: row ? row.report : '', screenshot: '' };
   });
   return { feature, items, gaps };
 }

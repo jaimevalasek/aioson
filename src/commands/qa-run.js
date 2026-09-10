@@ -26,6 +26,7 @@ const DEBUG_ROUTES = [
 const { loadPlaywright } = require('../lib/playwright-loader');
 const { openBrowser } = require('../lib/browser-session');
 const { collectQaAcEvidence } = require('../lib/qa-ac-evidence');
+const { clearDir } = require('../lib/evidence-artifacts');
 const { recordObservedProbe, unavailable, summarizeProbes, probeSummaryMarkdown } = require('../lib/qa-probe-results');
 
 // --- Config ---
@@ -46,8 +47,25 @@ function makeFinding(severity, category, title, location, risk, fix) {
 }
 
 // --- Screenshot helper ---
+// A page with a secret never becomes a PNG, whichever finding asks. Only the
+// secret finding itself used to skip its shot: the mobile overflow finding on
+// the same page captured the key, and --html embedded it as base64 under
+// reports/, which is not gitignored.
+let _secretRoutes = new Set();
+function routeKey(value) {
+  try { const u = new URL(value); return u.origin + u.pathname.replace(/\/$/, ''); } catch { return String(value); }
+}
+
 async function takeScreenshot(page, screenshotsDir, id) {
   try {
+    if (_secretRoutes.has(routeKey(page.url()))) return '';
+    // The asking finding may come before the hacker persona looked (naive runs
+    // first; --persona=mobile never runs it), so read the page itself too.
+    const html = await page.content();
+    if (SECRET_PATTERNS.some(({ regex }) => regex.test(html))) {
+      _secretRoutes.add(routeKey(page.url()));
+      return '';
+    }
     const file = path.join(screenshotsDir, `${id}.png`);
     await page.screenshot({ path: file, fullPage: false });
     return file;
@@ -69,6 +87,7 @@ async function navigate(page, url, options) {
 // ============================================================
 
 async function probeExposedSecrets(page, findings, screenshotsDir) {
+  const before = findings.length;
   // Check window globals: Next.js __NEXT_DATA__, window.ENV, etc.
   const exposed = await page.evaluate((patterns) => {
     const sources = {
@@ -115,6 +134,8 @@ async function probeExposedSecrets(page, findings, screenshotsDir) {
       ));
     }
   }
+  // Every later screenshot of this route is refused, not only this probe's.
+  if (findings.length > before) _secretRoutes.add(routeKey(page.url()));
 }
 
 async function probeSensitiveFiles(page, baseUrl, findings) {
@@ -125,9 +146,11 @@ async function probeSensitiveFiles(page, baseUrl, findings) {
       });
       if (response && response.status() === 200) {
         const body = stripPublicStripeConfig(await response.text().catch(unavailable('')));
+        // `{3}` matches whatever `{3,}` did without its quadratic backtracking
+        // on an uppercase body (100K characters held the loop ~10 s).
         const looksLikeSensitive =
           SECRET_PATTERNS.some(({ regex }) => regex.test(body)) ||
-          /[A-Z_]{3,}=/.test(body) ||
+          /[A-Z_]{3}=/.test(body) ||
           /<\?php/.test(body) ||
           /(SECRET|PASSWORD|TOKEN|KEY|PRIVATE)/i.test(body);
         if (looksLikeSensitive) {
@@ -179,13 +202,19 @@ async function probeOpenRedirect(page, baseUrl, findings) {
   const evil = 'https://evil-phishing-example.com';
   for (const param of params) {
     try {
-      const response = await navigate(page, `${baseUrl}?${param}=${encodeURIComponent(evil)}`, {
-        waitUntil: 'commit', timeout: 5000
-      });
-      const finalUrl = page.url();
-      const redirected = finalUrl.startsWith(evil) ||
-        (response && [301, 302, 303, 307, 308].includes(response.status()) &&
-          String(response.headers()['location'] || '').startsWith(evil));
+      // Read the app's own answer without following it. Navigating went to the
+      // external host (unresolvable, so `unavailable`), could never see the 30x
+      // goto had already followed, and left the page mid-navigation for the
+      // next probe ("execution context was destroyed").
+      const target = `${baseUrl}?${param}=${encodeURIComponent(evil)}`;
+      const response = await page.request.get(target, { maxRedirects: 0, timeout: 5000 });
+      if (response.status() >= 500) throw new Error('redirect_probe_unavailable');
+      const location = String(response.headers()['location'] || '');
+      let redirected = false;
+      if ([301, 302, 303, 307, 308].includes(response.status()) && location) {
+        // Judged by the host it leads to, so `//evil…` counts and `/next` does not.
+        try { redirected = new URL(location, target).host === new URL(evil).host; } catch { redirected = false; }
+      }
       if (redirected) {
         findings.push(makeFinding(
           'high', 'security',
@@ -302,7 +331,10 @@ async function runNaivePersona(page, baseUrl, findings, screenshotsDir) {
   const forms = await page.$$('form').catch(unavailable([]));
   for (const form of forms.slice(0, 5)) {
     const beforeUrl = page.url();
-    await page.evaluate((f) => f.submit(), form).catch(unavailable());
+    // `<input type="submit" name="submit">` shadows form.submit on ordinary
+    // pages; the prototype method still submits, and a form that refuses in
+    // the page is not a browser failure.
+    await page.evaluate((f) => { try { HTMLFormElement.prototype.submit.call(f); } catch (_) { /* not submittable */ } }, form).catch(unavailable());
     await page.waitForTimeout(800).catch(unavailable());
     const title = await page.title().catch(unavailable(''));
     const html = await page.content().catch(unavailable(''));
@@ -781,11 +813,15 @@ async function runQaRun({ args, options = {}, logger, t }) {
   const thresholds = config.performance_thresholds || {};
 
   _counter = 0;
+  _secretRoutes = new Set();
   const findings = [];
   const consoleLogs = [];
   const networkRequests = [];
 
   logger.log(t('qa_run.starting', { url }));
+  // The folder mirrors this run: a leftover C-01.png from an earlier run
+  // attached itself to an unrelated new C-01 in the HTML report.
+  clearDir(screenshotsDir);
   await ensureDir(screenshotsDir);
 
   // One resolver for every browser surface: --cdp attaches to the operator's

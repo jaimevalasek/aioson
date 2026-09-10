@@ -37,7 +37,7 @@ aioson qa:report
 Output files written to the project root:
 - `aios-qa-report.md` — full report (same severity format as `@qa`)
 - `aios-qa-report.json` — machine-readable for CI/CD
-- `aios-qa-screenshots/` — screenshot evidence per finding
+- `aios-qa-screenshots/` — screenshot evidence for findings of the latest `qa:run` (cleared at the start of every run; a page that shows a secret is never captured)
 
 ---
 
@@ -149,11 +149,11 @@ aioson qa:run [path] [--url=<app-url>] [--feature=<slug>] [--persona=naive|hacke
 - Clicks elements with `cursor:pointer` that have no handler → detects ghost clickables
 
 **`hacker` — Attacker mindset**
-- Scans `window.__NEXT_DATA__`, `window.__env__`, `window.ENV`, `window.CONFIG` for exposed secrets (OpenAI, Stripe, AWS, Google, GitHub, Slack patterns)
+- Scans `window.__NEXT_DATA__`, `window.__env__`, `window.ENV`, `window.CONFIG` for exposed secrets (OpenAI, Anthropic, Stripe secret/restricted/webhook, AWS, Google, GitHub, Slack patterns, plus credential-named assignments such as `{"DATABASE_PASSWORD":"…"}`; Stripe `pk_` publishable keys are public and never flagged)
 - Scans rendered HTML source for the same patterns
 - Tries 10 sensitive file URLs: `/.env`, `/.env.local`, `/.env.production`, `/.git/config`, `/config.js`, and more
 - Injects XSS payload in all text inputs, detects execution
-- Probes 8 redirect parameters for open redirect
+- Probes 8 redirect parameters for open redirect — reads the app's own 30x `Location` without following it, so the external host is never contacted
 - Types SQL injection payload, detects DB error messages in response
 - Tests IDOR: increments/decrements numeric IDs in URL by ±1 and +9999
 - Checks 8 debug/admin routes for unauthenticated access
@@ -191,7 +191,7 @@ aioson qa:run [path] [--url=<app-url>] [--feature=<slug>] [--persona=naive|hacke
 Thresholds are configurable in `aios-qa.config.json` under `performance_thresholds`.
 
 #### AC coverage
-If `prd.md` exists, acceptance criteria are extracted from the table and 🔴 must-have items. For each AC, a screenshot is taken of the current page state and saved to `aios-qa-screenshots/`.
+Acceptance criteria are read from the feature PRD (`--feature=<slug>`, otherwise `prd.md`). A criterion is exercised only by a `browser:run` delivery walkthrough of that feature, against the same URL, finished after the PRD last changed, with a step tagged with the AC id: `pass` → **Covered**, `fail` → **Missing**, `partial` → **Partial**. An AC the walkthrough never reached (`not_reached`), or that no valid walkthrough tags, is **Not exercised**. No screenshot is taken per AC — a picture of the entry page proves no criterion. Why a row cannot be proven is listed in `ac_coverage_gaps`.
 
 ---
 
@@ -221,6 +221,24 @@ aioson qa:scan [path] [--url=<app-url>] [--depth=3] [--max-pages=50] [--headed] 
 - Horizontal overflow detection
 
 Sensitive files (`/.env`, `/.git/config`, etc.) are probed once per domain at the start of the scan.
+
+The crawl stays on the base URL's origin (protocol, host and port) and under its path; a link that adds credentials (`user@host`) is skipped. A trailing slash on the base URL (`http://localhost:5173/`) is ignored.
+
+---
+
+## Execution status (JSON fields)
+
+A report without findings is only a clean result if the run says it executed. `qa:run` and `qa:scan` write these fields to `aios-qa-report.json` and to the `--json` output:
+
+| Field | Meaning |
+|-------|---------|
+| `execution_complete` | `true` only when at least one probe executed and none was `unavailable`. A `qa:scan` that scanned no route is always `false` |
+| `probe_results` | One row per probe and target: `executed` (ran, no finding), `failed` (ran, produced `finding_ids`), `unavailable` (did not complete; `reason` is a fixed code such as `browser_operation_failed` or `no_route_scanned`, never browser text), `not_applicable` (absent surface, e.g. `resource_absent`) |
+| `limitations` | The `unavailable` rows — what the report cannot vouch for |
+| `routes_discovered` / `routes_scanned` | `qa:scan` only: in-scope routes the crawl found, and routes whose checks all completed |
+| `ac_coverage_gaps` | `qa:run` only: why acceptance-criteria rows are inventory rather than proof (`prd_missing`, `feature_unbound`, `legacy_ac_format`, `walkthrough_binding_invalid`, …) |
+
+Read every entry of `limitations` as not tested, never as passed.
 
 ---
 
