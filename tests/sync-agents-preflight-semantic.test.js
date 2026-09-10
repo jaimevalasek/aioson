@@ -171,8 +171,17 @@ For MEDIUM features, @pm MUST produce implementation-plan-{slug}.md
 PM does not silently produce plans.
 `;
   await writeAgentPair(dir, 'pm', workspacePm, templatePm);
-  const issues = checkSemanticParity(dir);
-  // Pre-publish off → severity should be 'warning'
+  // Pre-publish off → severity should be 'warning'. Off is set here, never
+  // inherited: the Release workflow exports AIOSON_PREPUBLISH=true for the
+  // whole gate, `npm run ci` included, and this assertion failed every release.
+  const before = process.env.AIOSON_PREPUBLISH;
+  delete process.env.AIOSON_PREPUBLISH;
+  let issues;
+  try {
+    issues = checkSemanticParity(dir);
+  } finally {
+    if (before !== undefined) process.env.AIOSON_PREPUBLISH = before;
+  }
   assert.ok(issues.length > 0);
   assert.ok(issues.every((i) => i.severity === 'warning'));
   // Specifically: missing section in template + diverged section content

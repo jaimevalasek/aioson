@@ -252,7 +252,10 @@ test('the disk measurement never counts the engine\'s own files: under a root-le
   await fs.mkdir(path.join(dir, '.aioson', 'context'), { recursive: true });
   await fs.mkdir(path.join(dir, 'src'), { recursive: true });
   const stateFile = path.join(dir, '.aioson', 'context', 'execution-state-orders.json');
-  const since = Date.now();
+  // Linux stamps files from a coarse clock (a jiffy behind Date.now()), so a
+  // write a millisecond after `since` can carry an earlier mtime — the window
+  // opens two seconds back. The engine's files are excluded by path, not time.
+  const since = Date.now() - 2000;
   await fs.writeFile(stateFile, '{}');
   const engineOnly = await scanWritePaths(dir, ['**'], { since });
   assert.deepEqual(engineOnly, { newest: 0, newest_path: null, files_changed: 0, measured: true });
