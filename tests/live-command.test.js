@@ -70,6 +70,47 @@ test('live:start runs unattended by default — a session that names no permissi
   assert.deepEqual(buildLaunchArgs({ 'permission-mode': 'default', 'tool-args': '--verbose' }, 'claude'), ['--verbose']);
 });
 
+// Field report after the unattended default shipped: the flag was appended
+// whatever `--tool-args` said (codex: "the argument '--dangerously-bypass-
+// approvals-and-sandbox' cannot be used multiple times"), and it followed
+// `--tool` when `--tool-bin` launched another CLI (agy got opencode's `--auto`
+// and printed its help instead of opening).
+test('live:start never doubles or overrides the caller\'s own permission flag, and applies the flag of the binary actually launched', () => {
+  assert.deepEqual(buildLaunchArgs({ 'tool-args': '--dangerously-bypass-approvals-and-sandbox' }, 'codex'), ['--dangerously-bypass-approvals-and-sandbox']);
+  assert.deepEqual(buildLaunchArgs({ 'tool-args': '--yolo' }, 'codex'), ['--yolo'], 'the alias of the bypass is the bypass');
+  assert.deepEqual(buildLaunchArgs({ 'tool-args': '--sandbox workspace-write --ask-for-approval on-request' }, 'codex'), ['--sandbox', 'workspace-write', '--ask-for-approval', 'on-request'], 'the caller\'s own sandbox is not overridden');
+  assert.deepEqual(buildLaunchArgs({ 'permission-mode': 'yolo', 'tool-args': '--yolo' }, 'codex'), ['--yolo'], 'an explicit yolo never repeats it either');
+  assert.deepEqual(buildLaunchArgs({ resume: true, 'tool-args': '["--yolo"]' }, 'codex'), ['resume', '--last', '--yolo']);
+  assert.deepEqual(buildLaunchArgs({ 'tool-args': '--model gpt-5.6' }, 'codex'), ['--dangerously-bypass-approvals-and-sandbox', '--model', 'gpt-5.6'], 'args that state no permission keep the unattended default');
+  assert.deepEqual(buildLaunchArgs({ 'tool-bin': 'agy' }, 'opencode'), ['--dangerously-skip-permissions'], 'a registered binary gets its own flag');
+  assert.deepEqual(buildLaunchArgs({ 'tool-bin': 'C:\\tools\\grok.cmd' }, 'opencode'), ['--always-approve']);
+  const warnings = [];
+  assert.deepEqual(buildLaunchArgs({ 'tool-bin': '/opt/bin/claude-wrapper' }, 'claude', { onWarning: (w) => warnings.push(w) }), [], 'an unknown binary gets no flag it may not accept');
+  assert.match(warnings.join('\n'), /--tool-bin \/opt\/bin\/claude-wrapper is not a registered host/);
+  assert.throws(() => buildLaunchArgs({ 'tool-bin': 'claude-wrapper', 'permission-mode': 'yolo' }, 'claude'), /permission_mode_unsupported:claude-wrapper:yolo/);
+});
+
+test('live:start says what it decided about the permission flag: a launched binary the registry does not know runs with exactly the caller\'s args, a warning line and the result\'s launch block say the session will ask', async (t) => {
+  const dir = await makeTempDir();
+  t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  const { t: tr } = createTranslator('en');
+  const logger = createCollectLogger();
+  const result = await runLiveStart({
+    args: [dir],
+    options: { tool: 'claude', 'tool-bin': process.execPath, 'tool-args': '["-e","0"]', agent: 'dev', 'no-health-check': true, 'no-health': true },
+    logger,
+    t: tr
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.childExitCode, 0, 'node received no claude flag it would reject');
+  assert.equal(result.launch.host, null);
+  assert.equal(result.launch.permission_source, 'none');
+  assert.deepEqual(result.launch.permission_args, []);
+  assert.deepEqual(result.launch.args, ['-e', '0']);
+  assert.match(result.launch.warning, /is not a registered host .* the session will ask for permissions/);
+  assert.ok(logger.lines.some((line) => /^⚠ --tool-bin .* is not a registered host/.test(line)), logger.lines.join('\n'));
+});
+
 test('live session commands track start, plan progress, handoff and close for a no-launch session', async () => {
   const dir = await makeTempDir();
   await fs.writeFile(path.join(dir, 'plan.md'), [

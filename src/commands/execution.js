@@ -31,7 +31,8 @@ const {
   seedExecutionRoles,
   confirmDefaultModels,
   describeOnboarding,
-  installedExecutionHosts
+  installedExecutionHosts,
+  MAX_UNIT_TIMEOUT_MS
 } = require('../lib/execution-roles');
 const { listExecutionHosts } = require('../lib/tool-capabilities');
 const { measurePlanScale, resolveExecutionChoice, formatPlanScale, formatRecommendation, formatUnit, formatSplitProposal, proposeSplit, recommendExecution, splitMinFiles, unitCeiling } = require('../lib/plan-scale');
@@ -42,7 +43,7 @@ const {
   readExecutionPlan,
   verifyExecutionPlan
 } = require('../agent-execution/execution-plan');
-const { runExecution, decideExecution, statusExecution, describeMs, describeAge } = require('../agent-execution/execution-run');
+const { runExecution, decideExecution, statusExecution, describeMs, describeAge, describeMeasuredOn } = require('../agent-execution/execution-run');
 const { graphExecution, FORMATS: GRAPH_FORMATS } = require('../agent-execution/execution-graph');
 
 const SUBCOMMANDS = ['offer', 'seed', 'compile', 'run', 'decide', 'status', 'graph'];
@@ -52,10 +53,14 @@ const DEFAULT_WATCH_SECONDS = 5;
 /** What a running stage is doing, from its heartbeat: elapsed, last write, files. */
 function describeLive(live, { budget = true } = {}) {
   if (!live) return 'no heartbeat yet';
-  const write = live.last_write_age_ms !== null && live.last_write_age_ms !== undefined
-    ? `last write ${describeAge(live.last_write_age_ms)} ago${live.last_write_path ? ` (${live.last_write_path})` : ''}`
-    : 'no file change yet';
-  const parts = [`${describeAge(live.elapsed_ms)} elapsed`, write, `${live.files_changed || 0} file(s)`];
+  // A walk cut at its cap measured nothing: say so, never "no file change yet".
+  const unmeasured = live.measured === false;
+  const write = unmeasured
+    ? `disk not measured (too many entries under ${describeMeasuredOn(live.measured_on)})`
+    : (live.last_write_age_ms !== null && live.last_write_age_ms !== undefined
+      ? `last write ${describeAge(live.last_write_age_ms)} ago${live.last_write_path ? ` (${live.last_write_path})` : ''}`
+      : 'no file change yet');
+  const parts = [`${describeAge(live.elapsed_ms)} elapsed`, write, ...(unmeasured ? [] : [`${live.files_changed || 0} file(s)`])];
   if (budget && live.budget_ms) parts.push(`budget ${describeMs(live.budget_ms)}`);
   if (live.stalled) parts.push('stalled');
   if (live.unproductive) parts.push('unproductive');
@@ -75,9 +80,9 @@ function formatProgress(event) {
     case 'unit':
       return `${where}: ${event.status}${event.host ? ` ${event.host}/${event.model}` : ''}${event.verdict ? ` verdict ${event.verdict}` : ''}${event.reason ? ` (${event.reason})` : ''}${event.findings ? ` findings ${event.findings}` : ''}${event.corrections ? ` corrections ${event.corrections}` : ''}${event.detail ? ` — ${event.detail}` : ''}`;
     case 'stalled':
-      return `${where}: stalled for ${Math.round((event.silent_ms || 0) / 1000)}s (no output, no file change under the lane write paths)`;
+      return `${where}: stalled for ${Math.round((event.silent_ms || 0) / 1000)}s (no output, no file change under ${describeMeasuredOn(event.measured_on)})`;
     case 'unproductive':
-      return `${where}: unproductive for ${Math.round((event.since_ms || 0) / 1000)}s — no file change under the lane write paths${event.talkative ? ' while still producing output (a worker blocked on a prompt, looping, or only reading looks exactly like this)' : ''}`;
+      return `${where}: unproductive for ${Math.round((event.since_ms || 0) / 1000)}s — no file change under ${describeMeasuredOn(event.measured_on)}${event.talkative ? ' while still producing output (a worker blocked on a prompt, looping, or only reading looks exactly like this)' : ''}`;
     case 'budget':
       return `unit budget ${describeMs(event.unit_timeout_ms)} (${event.source}${event.unit_timeout_ms === 0 ? '; each worker runs until it finishes' : ''})`;
     case 'lease':
@@ -86,6 +91,8 @@ function formatProgress(event) {
         : `lease: acquired after ${Math.round((event.waited_ms || 0) / 1000)}s — the previous run was dead`;
     case 'decision_required':
       return `${where}: DECISION REQUIRED (${event.reason})${event.detail ? ` — ${event.detail}` : ''} → ${event.hint}`;
+    case 'state':
+      return `state: ${event.path} was not a valid run state (${event.error}) — moved aside to ${event.moved_to}; starting over`;
     case 'scope':
       return `wave ${event.wave}${event.unit ? ` · ${event.unit}` : ''}: ${event.check} ${event.path}${event.lane ? ` (lane ${event.lane})` : ''}`;
     case 'message':
@@ -164,7 +171,7 @@ function renderStatus(result) {
 
 /** One line for a status pane or a bar: feature, state, wave, counts, what runs now. */
 function renderStatusLine(result) {
-  if (!result.run) return `${result.feature} ${result.state_unreadable ? '●?' : '○'} ${result.message}`;
+  if (!result.run) return `${result.feature} ${result.state_corrupt ? '✗' : (result.state_unreadable ? '●?' : '○')} ${result.message}`;
   const r = result.run;
   const glyph = r.status === 'running' ? (result.engine?.alive ? '●' : '●?') : (r.status === 'completed' ? '✓' : (r.status === 'decision_required' ? '?' : '○'));
   const waves = r.waves.length;
@@ -175,7 +182,9 @@ function renderStatusLine(result) {
     `qa ${r.units.qa_passed}✓ ${r.units.qa_failed}✗`
   ];
   for (const item of result.running || []) {
-    const write = item.live && item.live.last_write_age_ms !== null && item.live.last_write_age_ms !== undefined ? `write ${describeAge(item.live.last_write_age_ms)} ago` : 'no write yet';
+    const write = item.live && item.live.measured === false
+      ? 'write not measured'
+      : (item.live && item.live.last_write_age_ms !== null && item.live.last_write_age_ms !== undefined ? `write ${describeAge(item.live.last_write_age_ms)} ago` : 'no write yet');
     parts.push(`▶ ${item.unit} ${item.stage} ${describeAge(item.elapsed_ms ?? item.live?.elapsed_ms ?? 0)} (${write})`);
   }
   if (r.decisions_pending.length) parts.push(`decisions ${r.decisions_pending.length}`);
@@ -387,6 +396,12 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       if (!Number.isInteger(parsed) || parsed < 0 || (parsed > 0 && parsed < 1000)) {
         return { ok: false, reason: 'invalid_unit_timeout', message: 'Use --unit-timeout=<ms> (0 = no limit; otherwise at least 1000)' };
       }
+      // The roles file's ceiling. Above 2^31-1 ms Node clamps a timer to 1 ms
+      // (TimeoutOverflowWarning): a budget meant as "very long" killed every
+      // unit at once and the decision read "the 833.3 h budget elapsed".
+      if (parsed > MAX_UNIT_TIMEOUT_MS) {
+        return { ok: false, reason: 'unit_timeout_too_large', max_ms: MAX_UNIT_TIMEOUT_MS, message: `--unit-timeout=${parsed} is above the ${describeMs(MAX_UNIT_TIMEOUT_MS)} ceiling (${MAX_UNIT_TIMEOUT_MS} ms, the same as execution.unit_timeout_ms in the roles file) — use --unit-timeout=0 for no limit` };
+      }
       timeout = parsed;
     }
     const result = await runExecution({
@@ -447,8 +462,9 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       result = await statusExecution({ projectDir, feature, now: nowFn() });
       // A state the engine happened to be replacing is not a run that ended:
       // keep watching, or a single unlucky read would close the window on a
-      // live run. Only a genuinely absent state, or one no longer `running`,
-      // ends the watch.
+      // live run. Only a genuinely absent state, a corrupt one (it will never
+      // parse on its own — the result says how to recover), or one no longer
+      // `running`, ends the watch.
       const live = result.run ? result.run.status === 'running' : Boolean(result.state_unreadable);
       if (!live) break;
       ticks += 1;
@@ -465,7 +481,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       if (clear && ticks > 0) write('\x1b[2J\x1b[H');
       render(result);
     }
-    return { ...result, watch: { ticks, interval_ms: intervalMs, ended: result.run ? result.run.status : (result.state_unreadable ? 'state_unreadable' : 'no_run') } };
+    return { ...result, watch: { ticks, interval_ms: intervalMs, ended: result.run ? result.run.status : (result.state_corrupt ? 'state_corrupt' : (result.state_unreadable ? 'state_unreadable' : 'no_run')) } };
   }
 
   if (sub === 'graph') {

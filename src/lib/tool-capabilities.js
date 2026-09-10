@@ -45,6 +45,14 @@
 // wrote in 14 s). A host with `null` for a mode cannot honor it and is
 // refused at build, never silently run with more (or less) power than the
 // contract says.
+//
+// `permission_flags`, next to the unattended flag, names every flag (aliases
+// included) through which a caller already states the host's permission,
+// sandbox or approval mode. A launched session whose own `--tool-args` carry
+// one gets no flag added (resolveLaunchPermission): the default appended the
+// bypass anyway, and Codex refuses it twice ("cannot be used multiple times"),
+// refuses it next to its `--yolo` alias, and silently overrode an explicit
+// `--sandbox workspace-write --ask-for-approval on-request`.
 const TOOL_CAPS = {
   claude: {
     install_command: 'npm install -g @anthropic-ai/claude-code',
@@ -57,6 +65,7 @@ const TOOL_CAPS = {
     session_picker: ['--resume'],
     supports_yolo: true,
     yolo_args: ['--dangerously-skip-permissions'],
+    permission_flags: ['--dangerously-skip-permissions', '--allow-dangerously-skip-permissions', '--permission-mode'],
     read_only_args: ['--permission-mode', 'plan'],
     execution: {
       additional_workspaces: true,
@@ -75,6 +84,9 @@ const TOOL_CAPS = {
     session_picker: ['resume'],
     supports_yolo: true,
     yolo_args: ['--dangerously-bypass-approvals-and-sandbox'],
+    // `--yolo` is the CLI's own alias of the bypass; `-s`/`-a` are the short
+    // forms of `--sandbox`/`--ask-for-approval`.
+    permission_flags: ['--dangerously-bypass-approvals-and-sandbox', '--yolo', '--sandbox', '-s', '--ask-for-approval', '-a', '--full-auto'],
     // Never `--sandbox workspace-write` for a lane worker: measured on the
     // operator's machine, the Windows sandbox setup fails to load and the
     // model reports DONE without writing (see the header note).
@@ -100,6 +112,7 @@ const TOOL_CAPS = {
     // refused at build (sandbox_mode_unsupported), never ignored.
     supports_yolo: true,
     yolo_args: ['--auto'],
+    permission_flags: ['--auto'],
     read_only_args: null,
     execution: {
       additional_workspaces: false,
@@ -120,6 +133,7 @@ const TOOL_CAPS = {
     // unattended); unattended is what a permission-mode=yolo caller means.
     supports_yolo: true,
     yolo_args: ['--auto'],
+    permission_flags: ['--auto', '--yolo', '--plan'],
     read_only_args: ['--plan'],
     execution: {
       additional_workspaces: true,
@@ -138,6 +152,7 @@ const TOOL_CAPS = {
     session_picker: null,
     supports_yolo: true,
     yolo_args: ['--yolo'],
+    permission_flags: ['--yolo', '-y', '--approval-mode', '--sandbox', '-s', '--safe-mode'],
     read_only_args: ['--approval-mode', 'plan', '--sandbox', '--safe-mode'],
     execution: {
       additional_workspaces: false,
@@ -160,6 +175,7 @@ const TOOL_CAPS = {
     // (adapters/grok.js); proven dispatchable by a real signature probe.
     supports_yolo: true,
     yolo_args: ['--always-approve'],
+    permission_flags: ['--always-approve', '--permission-mode'],
     read_only_args: ['--permission-mode', 'plan'],
     execution: {
       additional_workspaces: false,
@@ -181,6 +197,7 @@ const TOOL_CAPS = {
     // `--yolo` = `--disable-approval --disable-sandbox --trust-workspace`.
     supports_yolo: true,
     yolo_args: ['--yolo'],
+    permission_flags: ['--yolo', '--disable-approval', '--disable-sandbox', '--trust-workspace'],
     read_only_args: null,
     execution: null,
   },
@@ -197,6 +214,7 @@ const TOOL_CAPS = {
     // pre-approved or released by this flag.
     supports_yolo: true,
     yolo_args: ['--dangerously-skip-permissions'],
+    permission_flags: ['--dangerously-skip-permissions'],
     read_only_args: null,
     execution: null,
   },
@@ -289,6 +307,77 @@ function resolvePermissionModeArgs(tool, permissionMode) {
   return [...caps.yolo_args];
 }
 
+const EXECUTABLE_EXTENSION = /\.(?:exe|cmd|bat|com|ps1|sh|js|cjs|mjs)$/i;
+
+/**
+ * The registered host a `--tool-bin` value launches — its basename without an
+ * executable extension, matched against the registry's keys and binaries —
+ * or null when it names none (a wrapper, another CLI).
+ */
+function hostForBinary(binary) {
+  const base = String(binary || '').trim().split(/[\\/]/).pop().replace(EXECUTABLE_EXTENSION, '').toLowerCase();
+  if (!base) return null;
+  const hit = Object.entries(TOOL_CAPS).find(([key, caps]) => key === base || String(caps.binary || '').toLowerCase() === base);
+  return hit ? hit[0] : null;
+}
+
+/** Every flag through which a caller states the host's permissions: the declared recognizers plus the registry's own mode flags. */
+function permissionFlagsOf(caps) {
+  if (!caps) return [];
+  const own = [...(caps.yolo_args || []), ...(caps.read_only_args || [])].filter((token) => String(token).startsWith('-'));
+  return [...new Set([...(Array.isArray(caps.permission_flags) ? caps.permission_flags : []), ...own])];
+}
+
+/** The first caller arg that states a permission/sandbox/approval flag of `tool` (`--sandbox` or `--sandbox=read-only`), or null. */
+function findPermissionFlag(tool, args) {
+  const flags = permissionFlagsOf(getToolCapabilities(tool));
+  if (flags.length === 0) return null;
+  for (const arg of args || []) {
+    const token = String(arg);
+    if (flags.some((flag) => token === flag || token.startsWith(`${flag}=`))) return token;
+  }
+  return null;
+}
+
+/**
+ * The permission argv of one launched session (`live:start`), for the binary
+ * that actually runs. The unattended default shipped as "append the `--tool`
+ * flag, always", and the field found both ways it breaks a launch:
+ *   - the caller's `--tool-args` already stated the permissions — the bypass
+ *     flag itself, its `--yolo` alias, or an explicit `--sandbox workspace-write
+ *     --ask-for-approval on-request` — and Codex refused the doubled flag
+ *     ("cannot be used multiple times") or had the caller's sandbox overridden;
+ *   - `--tool-bin` launched another CLI: `--tool=opencode --tool-bin=agy` sent
+ *     opencode's `--auto` to Antigravity, which printed its help instead of
+ *     opening.
+ * So the flag is the launched binary's host's (the `--tool` when no
+ * `--tool-bin`), nothing is added when the caller's args already carry one of
+ * that host's `permission_flags`, and a binary the registry does not know gets
+ * no flag at all — with a `warning` saying the session will ask. Policy
+ * unchanged otherwise: no mode named is `yolo`; `default` adds nothing; an
+ * explicit `yolo` that cannot be translated throws, as resolvePermissionModeArgs.
+ * Returns `{ mode, host, binary, args, source: registry|tool_args|none, flag, warning }`.
+ */
+function resolveLaunchPermission(tool, { permissionMode = null, binary = null, userArgs = [] } = {}) {
+  const requested = String(tool || '').trim().toLowerCase();
+  const explicit = !(permissionMode === undefined || permissionMode === null || String(permissionMode).trim() === '');
+  const mode = explicit ? String(permissionMode).trim().toLowerCase() : DEFAULT_SESSION_PERMISSION_MODE;
+  const named = typeof binary === 'string' && binary.trim() ? binary.trim() : null;
+  const host = named ? hostForBinary(named) : requested;
+  const result = { mode, host: host && getToolCapabilities(host) ? host : null, binary: named || requested, args: [], source: 'none', flag: null, warning: null };
+  if (mode === 'default') return result;
+  if (mode !== 'yolo') throw new Error(`permission_mode_unknown:${permissionMode}`);
+  if (!host) {
+    if (explicit) throw new Error(`permission_mode_unsupported:${named}:yolo`);
+    return { ...result, mode: 'default', warning: `--tool-bin ${named} is not a registered host (${listSupportedTools().join(', ')}) — no unattended flag was added and the session will ask for permissions; pass its own flag in --tool-args` };
+  }
+  const own = findPermissionFlag(host, userArgs);
+  if (own) return { ...result, source: 'tool_args', flag: own };
+  if (explicit) return { ...result, args: resolvePermissionModeArgs(host, 'yolo'), source: 'registry' };
+  const defaulted = resolveDefaultSessionPermission(host);
+  return { ...result, mode: defaulted.mode, args: defaulted.args, source: defaulted.args.length > 0 ? 'registry' : 'none', warning: defaulted.warning };
+}
+
 // The sandbox modes an execution caller may ask for. `read-only` is the
 // researcher's (`read_only_args`); `workspace-write` is the lane worker's and
 // always means unattended (`yolo_args`) — the provider sandboxes were
@@ -334,5 +423,8 @@ module.exports = {
   listExecutionHosts,
   resolveResumeArgs,
   resolvePermissionModeArgs,
+  resolveLaunchPermission,
+  findPermissionFlag,
+  hostForBinary,
   resolveSandboxArgs,
 };

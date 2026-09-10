@@ -73,6 +73,41 @@ test('execution capabilities live in the registry and interactive-only hosts are
   assert.equal(getExecutionCapabilities('gemini'), null);
 });
 
+// The unattended default was "append the --tool's flag, always": Codex refused
+// its bypass flag passed twice ("cannot be used multiple times"), and
+// `--tool=opencode --tool-bin=agy` sent opencode's `--auto` to Antigravity,
+// which printed its help instead of opening.
+test('the registry recognizes each host\'s own permission flags (aliases included) and names the host a --tool-bin launches; the launch permission follows that host and never doubles the caller\'s flag', () => {
+  const { TOOL_CAPS, findPermissionFlag, hostForBinary, resolveLaunchPermission } = require('../src/lib/tool-capabilities');
+  for (const [tool, caps] of Object.entries(TOOL_CAPS)) {
+    assert.ok(Array.isArray(caps.permission_flags) && caps.permission_flags.length > 0, `${tool}.permission_flags sits next to its unattended flag`);
+    for (const flag of caps.yolo_args) assert.equal(findPermissionFlag(tool, ['--model', 'x', flag]), flag, `${tool} recognizes its own ${flag}`);
+  }
+  assert.equal(findPermissionFlag('codex', ['--yolo']), '--yolo', 'the CLI alias of the bypass');
+  assert.equal(findPermissionFlag('codex', ['--sandbox=read-only']), '--sandbox=read-only', 'the inline-value form');
+  assert.equal(findPermissionFlag('codex', ['-a', 'on-request']), '-a');
+  assert.equal(findPermissionFlag('codex', ['--model', 'gpt-5.6']), null);
+  assert.equal(findPermissionFlag('gemini', ['--yolo']), null);
+
+  assert.equal(hostForBinary('agy'), 'agy');
+  assert.equal(hostForBinary('C:\\Users\\op\\AppData\\Roaming\\npm\\codex.cmd'), 'codex');
+  assert.equal(hostForBinary('/usr/local/bin/claude'), 'claude');
+  assert.equal(hostForBinary('Grok.EXE'), 'grok');
+  assert.equal(hostForBinary('claude-wrapper'), null);
+  assert.equal(hostForBinary(''), null);
+
+  assert.deepEqual(resolveLaunchPermission('opencode', { binary: 'agy' }), { mode: 'yolo', host: 'agy', binary: 'agy', args: ['--dangerously-skip-permissions'], source: 'registry', flag: null, warning: null });
+  assert.deepEqual(resolveLaunchPermission('codex', { userArgs: ['--sandbox', 'workspace-write'] }), { mode: 'yolo', host: 'codex', binary: 'codex', args: [], source: 'tool_args', flag: '--sandbox', warning: null });
+  const unknown = resolveLaunchPermission('claude', { binary: 'node' });
+  assert.equal(unknown.host, null);
+  assert.equal(unknown.mode, 'default');
+  assert.deepEqual(unknown.args, []);
+  assert.match(unknown.warning, /--tool-bin node is not a registered host \(.*\) — no unattended flag was added and the session will ask for permissions/);
+  assert.throws(() => resolveLaunchPermission('claude', { binary: 'node', permissionMode: 'yolo' }), /permission_mode_unsupported:node:yolo/, 'an explicit yolo that cannot be translated is refused, not guessed');
+  assert.deepEqual(resolveLaunchPermission('claude', { binary: 'node', permissionMode: 'default' }).args, []);
+  assert.throws(() => resolveLaunchPermission('claude', { permissionMode: 'turbo' }), /permission_mode_unknown:turbo/);
+});
+
 test('every existing tool:capabilities field survives for the Play contract', () => {
   const { TOOL_CAPS } = require('../src/lib/tool-capabilities');
   const required = ['install_command', 'binary', 'supports_resume', 'resume_last', 'supports_session_id',

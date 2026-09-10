@@ -983,9 +983,21 @@ test('a timeout says what the disk saw — still writing (retry with a bigger bu
   assert.equal(state.units['phase-2'].dev.unproductive, true);
   assert.equal(state.units['phase-2'].dev.stalled, false);
   assert.ok(events.some((e) => e.type === 'unproductive' && e.unit === 'phase-2' && e.role === 'dev'));
-  assert.match(formatProgress(events.find((e) => e.type === 'unproductive' && e.unit === 'phase-2')), /unproductive for \ds — no file change under the lane write paths/);
+  assert.match(formatProgress(events.find((e) => e.type === 'unproductive' && e.unit === 'phase-2')), /unproductive for \ds — no file change under the unit's files/);
+  assert.equal(silent.timeout.measured_on, 'unit_files', 'what the verdict measured is named');
 
   assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': 'soon' } })).reason, 'invalid_unit_timeout');
+  // Above 2^31-1 ms Node clamps a timer to 1 ms: a "very long" budget killed
+  // every unit at once and the decision read "the 833.3 h budget elapsed".
+  // The option has the roles file's 4 h ceiling; 0 stays "no limit".
+  const tooLarge = await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '3000000000' } });
+  assert.equal(tooLarge.ok, false);
+  assert.equal(tooLarge.reason, 'unit_timeout_too_large');
+  assert.equal(tooLarge.max_ms, 4 * 60 * 60 * 1000);
+  assert.match(tooLarge.message, /above the 4 h ceiling \(14400000 ms, the same as execution\.unit_timeout_ms in the roles file\) — use --unit-timeout=0 for no limit/);
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '14400001' } })).reason, 'unit_timeout_too_large');
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '0', preflight: true } })).status, 'ready', '0 = no limit passes the validation');
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '14400000', preflight: true } })).status, 'ready', 'the ceiling itself is allowed');
 
   // The roles file: 0 = no limit — and editing the budget after compile is NOT roles_changed (the plan binds to what shapes the units).
   const rolesFile = path.join(ctx.dir, '.aioson', 'config', 'execution-roles.json');
@@ -1171,9 +1183,9 @@ test('the run is visible from outside its process: the state beats (engine alive
 });
 
 // The heartbeat replaces the state file by rename every few seconds, and a
-// poller that opens it in that instant reads nothing (EPERM/EBUSY on Windows,
-// a torn document from any non-atomic writer). Collapsing that into "no run"
-// is what a reader must never do.
+// poller that opens it in that instant reads nothing (EPERM/EBUSY on Windows).
+// Collapsing that into "no run" is what a reader must never do. (Bytes that
+// never parse are the corrupt case — the test after this one.)
 test('a state that exists and cannot be read is never mistaken for no run: status says unreadable and keeps the follow command, a watch keeps watching through it, and run/decide refuse instead of starting a second run over a paused one', async (t) => {
   const ctx = await setup(t);
   const stateFile = runStatePath(ctx.dir, SLUG);
@@ -1184,8 +1196,17 @@ test('a state that exists and cannot be read is never mistaken for no run: statu
   paused.units['phase-2'].pending_decision = { stage: 'dev', kind: 'unavailable', reason: 'capacity', asked_at: new Date().toISOString(), choices: ['retry'] };
   paused.units['phase-2'].status = 'decision_required';
   const pausedText = JSON.stringify(paused, null, 2);
-  const tear = () => fs.writeFile(stateFile, pausedText.slice(0, 400), 'utf8');
-  const heal = () => fs.writeFile(stateFile, pausedText, 'utf8');
+  // An I/O error that is not ENOENT — the EPERM/EBUSY of a rename in flight —
+  // stood in for, deterministically, by a directory at the state path (EISDIR).
+  const tear = async () => {
+    await fs.rm(stateFile, { recursive: true, force: true });
+    await fs.mkdir(stateFile);
+  };
+  const write = async (text) => {
+    await fs.rm(stateFile, { recursive: true, force: true });
+    await fs.writeFile(stateFile, text, 'utf8');
+  };
+  const heal = () => write(pausedText);
 
   await tear();
   const unreadable = await status(ctx);
@@ -1200,14 +1221,14 @@ test('a state that exists and cannot be read is never mistaken for no run: statu
   const refused = await run(ctx, { registry: adapters().registry });
   assert.equal(refused.reason, 'run_state_unreadable');
   assert.match(refused.message, /exists but could not be read .* do not delete it: a new run over a paused one would discard its decisions/);
-  assert.equal(await fs.readFile(stateFile, 'utf8'), pausedText.slice(0, 400), 'the refused run wrote nothing');
+  assert.equal((await fs.stat(stateFile)).isDirectory(), true, 'the refused run wrote nothing');
   const declined = await decide(ctx, 'phase-2', 'retry');
   assert.equal(declined.reason, 'run_state_unreadable');
 
   // A watch survives an unlucky read and ends only when the state is readable and no longer running.
   paused.status = 'running';
   const runningText = JSON.stringify(paused, null, 2);
-  await fs.writeFile(stateFile, runningText, 'utf8');
+  await write(runningText);
   let step = 0;
   const watched = await runCommand({
     args: [ctx.dir],
@@ -1218,13 +1239,13 @@ test('a state that exists and cannot be read is never mistaken for no run: statu
       write: () => {},
       sleep: async () => {
         step += 1;
-        if (step === 1) await fs.writeFile(stateFile, runningText.slice(0, 400), 'utf8');
-        else if (step === 2) await fs.writeFile(stateFile, runningText, 'utf8');
+        if (step === 1) await tear();
+        else if (step === 2) await write(runningText);
         else await heal();
       }
     }
   });
-  assert.equal(watched.watch.ticks, 3, 'the torn read was a tick, not the end of the watch');
+  assert.equal(watched.watch.ticks, 3, 'the unreadable read was a tick, not the end of the watch');
   assert.equal(watched.watch.ended, 'decision_required');
   assert.equal(watched.run.status, 'decision_required');
 
@@ -1234,5 +1255,232 @@ test('a state that exists and cannot be read is never mistaken for no run: statu
   assert.equal(absent.state_unreadable, undefined);
   assert.equal(absent.message, 'compiled, not started');
   const { readRunState } = require('../src/agent-execution/execution-run');
-  assert.deepEqual(await readRunState(stateFile), { state: null, missing: true, unreadable: null });
+  assert.deepEqual(await readRunState(stateFile), { state: null, missing: true, unreadable: null, corrupt: null });
+});
+
+// A state whose bytes never parse (merge-conflict markers, a hand edit, a
+// truncated write) was treated like the EPERM above: `execution:run --fresh`
+// refused forever ("retry; do not delete it"), decide refused, and
+// `execution:status --watch` polled it without end.
+test('a state whose bytes never parse is corrupt, not a read to retry: run and decide refuse with the way out, --fresh moves it aside and starts over, status ends a watch — while bytes that change or heal between retries stay a transient read', async (t) => {
+  const ctx = await setup(t);
+  const stateFile = runStatePath(ctx.dir, SLUG);
+  const conflict = '<<<<<<< HEAD\n{"version":1,"status":"paused"}\n=======\n{"version":1,"status":"completed"}\n>>>>>>> other\n';
+  await fs.writeFile(stateFile, conflict, 'utf8');
+  const { renderStatusLine } = require('../src/commands/execution');
+
+  const reported = await status(ctx);
+  assert.equal(reported.ok, false);
+  assert.equal(reported.reason, 'run_state_corrupt');
+  assert.equal(reported.state_unreadable, undefined);
+  assert.match(reported.state_corrupt, /parse_error/);
+  assert.match(reported.message, /is not a valid run state .* merge-conflict markers .* aioson execution:run \. --feature=orders --fresh, which moves the file aside \(never deletes it\)/);
+  assert.match(renderStatusLine(reported), /^orders ✗ /);
+  let slept = 0;
+  const watched = await runCommand({
+    args: [ctx.dir],
+    options: { sub: 'status', feature: SLUG, json: true, watch: '0.01' },
+    logger,
+    env: ctx.env,
+    engineOptions: { write: () => {}, sleep: async () => { slept += 1; if (slept > 3) throw new Error('the watch kept polling a state that will never parse'); } }
+  });
+  assert.equal(watched.watch.ended, 'state_corrupt');
+  assert.equal(watched.watch.ticks, 0);
+
+  const refused = await run(ctx, { registry: adapters().registry });
+  assert.equal(refused.reason, 'run_state_corrupt');
+  assert.equal(refused.exitCode, 1);
+  assert.equal(await fs.readFile(stateFile, 'utf8'), conflict, 'the refused run wrote nothing over it');
+  assert.equal((await run(ctx, { registry: adapters().registry, extra: { resume: true } })).reason, 'run_state_corrupt');
+  const declined = await decide(ctx, 'phase-1', 'retry');
+  assert.equal(declined.reason, 'run_state_corrupt');
+  assert.match(declined.message, /no decision can be applied to it/);
+
+  // --fresh is the operator's "start over": the file is moved aside, never deleted, and a finding names it.
+  const events = [];
+  const fresh = await run(ctx, { registry: adapters().registry, events, extra: { fresh: true } });
+  assert.equal(fresh.status, 'completed', JSON.stringify(fresh));
+  const aside = (await fs.readdir(path.dirname(stateFile))).filter((name) => name.startsWith(`execution-state-${SLUG}.json.corrupt-`));
+  assert.equal(aside.length, 1, 'moved aside next to the state');
+  assert.equal(await fs.readFile(path.join(path.dirname(stateFile), aside[0]), 'utf8'), conflict);
+  const finding = fresh.findings.find((f) => f.check === 'run_state_corrupt');
+  assert.ok(finding && finding.path === `.aioson/context/${aside[0]}`, JSON.stringify(fresh.findings));
+  const moved = events.find((e) => e.type === 'state' && e.status === 'moved_aside');
+  assert.match(formatProgress(moved), /^state: \.aioson\/context\/execution-state-orders\.json was not a valid run state \(parse_error: .*\) — moved aside to \.aioson\/context\/execution-state-orders\.json\.corrupt-.*; starting over$/);
+
+  // Not every parse failure is corruption: bytes a writer is still changing
+  // between retries stay unreadable, bytes that heal are read, and a document
+  // that is not an object is not a run state either.
+  const { readRunState } = require('../src/agent-execution/execution-run');
+  const probe = path.join(ctx.dir, 'probe.json');
+  await fs.writeFile(probe, '{"a":');
+  let n = 0;
+  const changing = await readRunState(probe, { sleep: async () => { n += 1; await fs.writeFile(probe, `{"a":${'1'.repeat(n)}`); } });
+  assert.ok(changing.unreadable && changing.corrupt === null, JSON.stringify(changing));
+  await fs.writeFile(probe, '{"a":');
+  assert.deepEqual((await readRunState(probe, { sleep: () => fs.writeFile(probe, '{"a":1}') })).state, { a: 1 });
+  await fs.writeFile(probe, '[]');
+  assert.match((await readRunState(probe, { sleep: async () => {} })).corrupt, /an array, not a run state object/);
+});
+
+// ───────────────────────── decide under the lease ─────────────────────────
+// execution:decide read the state, then waited up to 35 s for the run's lease,
+// then wrote the snapshot it read before the wait: whatever the run wrote in
+// between was lost.
+
+test('a decision applies to the state as the run left it when its lease frees — never to the snapshot read before the wait: a review that finished meanwhile stays finished and --resume re-runs only what was decided', async (t) => {
+  const ctx = await setup(t);
+  const first = await run(ctx, { registry: adapters({ 'dev:phase-1': { fail: 'crash' } }).registry });
+  assert.deepEqual(first.decisions_pending.map((d) => d.unit), ['phase-1']);
+  const stateFile = runStatePath(ctx.dir, SLUG);
+  const finalState = await readState(ctx);
+  assert.equal(finalState.units['phase-2'].qa.status, 'passed');
+
+  // The run is still alive: the disk holds its earlier snapshot (phase-2's review running) and it holds the lease.
+  const earlier = JSON.parse(JSON.stringify(finalState));
+  earlier.status = 'running';
+  earlier.reason = null;
+  earlier.units['phase-2'].qa = { status: 'running', host: 'claude', model: 'claude-sonnet-5', started_at: new Date().toISOString() };
+  await fs.writeFile(stateFile, JSON.stringify(earlier, null, 2));
+  const runLease = await acquireLease(ctx.dir, SLUG);
+  const pending = decide(ctx, 'phase-1', 'retry', { leaseWaitMs: 10000 });
+  // While the decide waits, the run ends: its last transitions land, then it lets go of the lease.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  finalState.findings.push({ check: 'run_final_write_marker', message: 'written by the run at its end' });
+  await fs.writeFile(stateFile, JSON.stringify(finalState, null, 2));
+  await releaseLease(runLease);
+
+  const decided = await pending;
+  assert.equal(decided.ok, true, JSON.stringify(decided));
+  const after = await readState(ctx);
+  assert.equal(after.units['phase-2'].qa.status, 'passed', 'the review the run finished during the wait is not put back to running');
+  assert.ok(after.findings.some((f) => f.check === 'run_final_write_marker'), 'the run\'s last write survives the decision');
+  assert.equal(after.units['phase-1'].status, 'pending');
+  assert.deepEqual(after.decisions.map((d) => `${d.unit}:${d.choice}`), ['phase-1:retry']);
+
+  const resumeFakes = adapters();
+  const resumed = await run(ctx, { registry: resumeFakes.registry, extra: { resume: true } });
+  assert.equal(resumed.status, 'completed', JSON.stringify(resumed));
+  assert.deepEqual(resumeFakes.log.map((e) => e.key).sort(), ['dev:phase-1', 'qa:phase-1'], 'the finished review is not re-run');
+  assert.equal(resumed.findings.some((f) => f.check === 'interrupted_unit'), false, 'no bogus interrupted unit');
+});
+
+test('two decides issued together never erase each other: the second re-reads under the lease and applies on top of the first, or refuses once the first ended the run', async (t) => {
+  const ctx = await setup(t);
+  const crashBoth = () => adapters({ 'dev:phase-1': { fail: 'crash' }, 'dev:phase-2': { fail: 'crash' } }).registry;
+  const first = await run(ctx, { registry: crashBoth() });
+  assert.deepEqual(first.decisions_pending.map((d) => d.unit).sort(), ['phase-1', 'phase-2']);
+  const [retried, skipped] = await Promise.all([
+    decide(ctx, 'phase-1', 'retry', { leaseWaitMs: 10000 }),
+    decide(ctx, 'phase-2', 'skip', { leaseWaitMs: 10000 })
+  ]);
+  assert.equal(retried.ok, true, JSON.stringify(retried));
+  assert.equal(skipped.ok, true, JSON.stringify(skipped));
+  let state = await readState(ctx);
+  assert.deepEqual(state.decisions.map((d) => `${d.unit}:${d.choice}`).sort(), ['phase-1:retry', 'phase-2:skip'], 'both decisions are on disk');
+  assert.equal(state.units['phase-1'].pending_decision, null);
+  assert.equal(state.units['phase-2'].pending_decision, null);
+  assert.equal(state.units['phase-2'].status, 'skipped');
+
+  // abort + retry together: whichever lands first, every decide that answered ok is on disk.
+  await run(ctx, { registry: crashBoth(), extra: { fresh: true } });
+  const answers = await Promise.all([
+    decide(ctx, 'phase-1', 'abort', { leaseWaitMs: 10000 }),
+    decide(ctx, 'phase-2', 'retry', { leaseWaitMs: 10000 })
+  ]);
+  state = await readState(ctx);
+  assert.deepEqual(state.decisions.map((d) => `${d.unit}:${d.choice}`).sort(), answers.filter((a) => a.ok).map((a) => `${a.unit}:${a.choice}`).sort(), JSON.stringify(answers));
+  for (const answer of answers.filter((a) => !a.ok)) assert.equal(answer.reason, 'run_terminal', 'a decide that lost the race to the abort says so');
+  assert.equal(state.status, 'cancelled', 'the abort holds whatever the order');
+});
+
+// ───────────────────────── the unit's own files, measured ─────────────────────────
+// Every disk measurement scanned the lane write paths: a unit that never wrote
+// inherited a sibling unit's writes, and the timeout detail told a worker
+// blocked on a prompt to "retry with a larger budget".
+
+const PLAN_SIBLINGS = PLAN.replace(
+  [
+    '| Phase | Wave | Files | Scope | Done when |',
+    '|---|---|---|---|---|',
+    '| 1 | 1 | src/api/orders.ts, tests/api/orders.test.ts | CAP-orders-api | npm test -- orders.api passes |',
+    '| 2 | 1 | src/ui/Orders.tsx, tests/ui/Orders.test.tsx | CAP-orders-ui | npm test -- orders.ui passes |',
+    '| 3 | 2 | src/app.ts | CAP-orders-wire | npm test -- app passes |'
+  ].join('\n'),
+  [
+    '| Phase | Wave | Files | Scope | Done when |',
+    '|---|---|---|---|---|',
+    '| 1 | 1 | src/api/orders.ts | CAP-orders-api | npm test -- orders.api passes |',
+    '| 2 | 1 | src/api/orders-report.ts | CAP-orders-api | npm test -- orders.api passes |',
+    '| 3 | 1 | src/ui/Orders.tsx | CAP-orders-ui | npm test -- orders.ui passes |',
+    '| 4 | 2 | src/app.ts | CAP-orders-wire | npm test -- app passes |'
+  ].join('\n')
+);
+
+test('two units of one lane in one wave: the one that never wrote is "never wrote" whatever its sibling writes — timeout detail, heartbeat and activity all measure the unit\'s own files', async (t) => {
+  const ctx = await setup(t);
+  await fs.writeFile(path.join(ctx.dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), PLAN_SIBLINGS, 'utf8');
+  const compiled = await runCommand({ args: [ctx.dir], options: { sub: 'compile', feature: SLUG, json: true }, logger, env: ctx.env });
+  assert.equal(compiled.ok, true, JSON.stringify(compiled.errors));
+  // phase-1 writes its own file while phase-2 (same lane, same wave) is still running and never writes.
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 700, touch: ['src/api/orders.ts'] }, 'dev:phase-2': { delay_ms: 1600, fail: 'timeout' } });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events, engine: { heartbeatMs: 50, liveLineMs: 50 } });
+  assert.equal(result.status, 'decision_required', JSON.stringify(result));
+  const phase1 = fakes.log.find((e) => e.key === 'dev:phase-1');
+  const phase2 = fakes.log.find((e) => e.key === 'dev:phase-2');
+  assert.ok(phase2.start < phase1.end, 'the sibling wrote while phase-2 was running');
+
+  const state = await readState(ctx);
+  const decision = state.units['phase-2'].pending_decision;
+  assert.equal(decision.reason, 'timeout');
+  assert.match(decision.detail, /with no file change under the unit's files — the worker never wrote/);
+  assert.equal(decision.timeout.wrote_during_budget, false);
+  assert.equal(decision.timeout.measured_on, 'unit_files');
+  assert.equal(decision.timeout.measured, true);
+  assert.equal(state.units['phase-2'].dev.activity.files_changed, 0);
+  assert.equal(state.units['phase-2'].dev.activity.last_write_path, null);
+  const beats = events.filter((e) => e.type === 'heartbeat' && e.unit === 'phase-2');
+  assert.ok(beats.length > 0, 'phase-2 beat while it ran');
+  assert.deepEqual(beats.filter((e) => e.last_write_path).map((e) => e.last_write_path), [], 'no live line credits phase-2 with its sibling\'s write');
+  assert.ok(beats.every((e) => e.measured_on === 'unit_files' && e.measured === true), JSON.stringify(beats[0]));
+  assert.equal(state.units['phase-1'].dev.activity.files_changed, 1, 'the sibling\'s own write is still its own');
+  assert.equal(state.units['phase-1'].dev.activity.last_write_path, 'src/api/orders.ts');
+});
+
+test('a measurement that stops at its entry cap gives no verdict: no stalled/unproductive flag, a timeout that says it could not tell, and a live line that says "not measured"', async (t) => {
+  const ctx = await setup(t);
+  const { describeLive } = require('../src/commands/execution');
+  // Cap 1: each unit declares two files, so every walk stops before seeing them all.
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 250, fail: 'timeout' } });
+  const events = [];
+  await run(ctx, { registry: fakes.registry, events, engine: { scanCap: 1, stallMs: 40, unproductiveMs: 40, stallCheckMs: 10, heartbeatMs: 30, liveLineMs: 30 } });
+  const state = await readState(ctx);
+  const dev = state.units['phase-1'].dev;
+  assert.equal(dev.stalled, false, 'silent, but the disk was not measured: no stall verdict');
+  assert.equal(dev.unproductive, false, 'no unproductive verdict from half a walk');
+  assert.deepEqual(dev.activity, { measured_on: 'unit_files', measured: false, files_changed: null, last_write_at: null, last_write_path: null });
+  const decision = state.units['phase-1'].pending_decision;
+  assert.equal(decision.timeout.measured, false);
+  assert.equal(decision.timeout.wrote_during_budget, null);
+  assert.match(decision.detail, /the unit's files could not be measured \(the walk stopped at its 1-entry cap\) — no verdict on whether the worker was writing/);
+  assert.equal(events.some((e) => (e.type === 'stalled' || e.type === 'unproductive') && e.unit === 'phase-1'), false);
+  const beat = events.find((e) => e.type === 'heartbeat' && e.unit === 'phase-1');
+  assert.ok(beat && beat.measured === false && beat.files_changed === null, JSON.stringify(beat));
+  assert.match(describeLive(beat), /disk not measured \(too many entries under the unit's files\)/);
+});
+
+test('an adapter that throws still ends its role: the unit asks for a decision (engine_error) and its telemetry run is closed as paused, not left running', async (t) => {
+  const ctx = await setup(t);
+  const fakes = adapters({ 'dev:phase-1': () => { throw new Error('adapter exploded'); } });
+  const result = await run(ctx, { registry: fakes.registry, engine: { heartbeatMs: 20 } });
+  assert.equal(result.status, 'decision_required', JSON.stringify(result));
+  assert.equal(result.decisions_pending.find((d) => d.unit === 'phase-1').reason, 'engine_error');
+  const { db } = await openRuntimeDb(ctx.dir);
+  try {
+    const devRun = getExecutionSnapshot(db, { feature: SLUG, agent: 'dev:phase-1' })[0];
+    assert.equal(devRun.state, 'paused');
+  } finally {
+    db.close();
+  }
 });

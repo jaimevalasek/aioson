@@ -126,19 +126,68 @@ async function readJsonSafe(file) {
  * a paused one, discarding its decisions. So a missing file is `missing` at
  * once, and an unreadable one is retried before it is reported as unreadable —
  * never as absent.
+ *
+ * A file whose bytes read fine and never parse is a third thing: `corrupt`.
+ * The engine only ever replaces the state by rename, so no reader of it can
+ * catch a half-written document; the same bytes failing on every retry are a
+ * hand edit, merge-conflict markers or a truncated write — and treating them
+ * as "retry" made `execution:run --fresh` refuse forever ("do not delete it"),
+ * decide refuse, and `execution:status --watch` loop without end. Bytes that
+ * change between retries (a non-atomic writer mid-write) stay `unreadable`.
  */
 async function readRunState(file, { attempts = 5, delayMs = 60, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
   let last = null;
+  let lastText = null;
+  let sameBytesFailures = 0;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    let text;
     try {
-      return { state: JSON.parse(await fs.readFile(file, 'utf8')), missing: false, unreadable: null };
+      text = await fs.readFile(file, 'utf8');
     } catch (error) {
-      if (error.code === 'ENOENT') return { state: null, missing: true, unreadable: null };
+      if (error.code === 'ENOENT') return { state: null, missing: true, unreadable: null, corrupt: null };
       last = error;
+      lastText = null;
+      sameBytesFailures = 0;
       if (attempt < attempts - 1) await sleep(delayMs * (attempt + 1));
+      continue;
+    }
+    try {
+      const state = JSON.parse(text);
+      if (state && typeof state === 'object' && !Array.isArray(state)) return { state, missing: false, unreadable: null, corrupt: null };
+      last = new Error(`the document is ${Array.isArray(state) ? 'an array' : (state === null ? 'null' : `a ${typeof state}`)}, not a run state object`);
+    } catch (error) {
+      last = error;
+    }
+    sameBytesFailures = text === lastText ? sameBytesFailures + 1 : 1;
+    lastText = text;
+    if (attempt < attempts - 1) await sleep(delayMs * (attempt + 1));
+  }
+  const detail = last ? `${last.code || 'parse_error'}: ${last.message}` : 'unreadable';
+  if (sameBytesFailures === attempts) return { state: null, missing: false, unreadable: null, corrupt: detail };
+  return { state: null, missing: false, unreadable: detail, corrupt: null };
+}
+
+/** What a reader tells the operator about a state file that is not a run state. */
+function corruptStateMessage(feature, detail) {
+  return `${runStateRelative(feature)} is not a valid run state (${detail}) — the same bytes failed on every read, so this is not the engine replacing it: a hand edit, merge-conflict markers or a truncated write. Restore it (git checkout, or repair the JSON) and resume, or start over with aioson execution:run . --feature=${feature} --fresh, which moves the file aside (never deletes it)`;
+}
+
+/**
+ * Move a corrupt state aside for `--fresh` — kept next to the state, never
+ * deleted: it may be the only record of a paused run's decisions. Retries the
+ * Windows rename refusals like atomicWrite.
+ */
+async function moveStateAside(file) {
+  const target = `${file}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await fs.rename(file, target);
+      return target;
+    } catch (error) {
+      if (!['EPERM', 'EBUSY', 'EACCES'].includes(error.code) || attempt >= 10) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)));
     }
   }
-  return { state: null, missing: false, unreadable: last ? `${last.code || 'parse_error'}: ${last.message}` : 'unreadable' };
 }
 
 async function atomicWrite(file, value) {
@@ -249,29 +298,59 @@ async function acquireLeaseWaiting(projectDir, feature, { maxWaitMs = DEFAULT_LE
   return held(false, await readLeaseFile(file), Date.now() - startedAt);
 }
 
-// ─── life measured, not reported: output OR files under the write paths ───
+// ─── life measured, not reported: output OR files the unit owns ───
+
+// The engine's own bookkeeping — the run state it rewrites on every heartbeat,
+// the unit reports, the telemetry — lives under `.aioson/`. A lane rooted at
+// the project (a root-level glob) counted that state file as the worker's
+// write every 15 s, so a worker blocked on a prompt never looked unproductive.
+const SCAN_SKIP = new Set(['node_modules', '.git', '.aioson']);
+const DEFAULT_SCAN_CAP = 4000;
+
+function normalizeScanPath(value) {
+  let out = String(value || '').trim().replace(/\\/g, '/');
+  while (out.startsWith('./')) out = out.slice(2);
+  return out.replace(/\/{2,}/g, '/');
+}
 
 /**
- * One bounded walk of the lane write paths: the newest file change (and which
- * file), plus how many files changed since `since`. The stall and unproductive
- * detectors read the first; the heartbeat that makes a running unit visible
- * from outside the process reads all three.
+ * One bounded walk of the paths a unit is measured on: the newest file change
+ * (and which file), plus how many files changed since `since`. The stall and
+ * unproductive detectors read the first; the heartbeat that makes a running
+ * unit visible from outside the process reads all three. Only files the paths
+ * own count (exact | directory | glob — the lane ownership rule), never one
+ * under `.aioson/`. A walk that reaches `cap` entries saw part of the disk and
+ * says so (`measured: false`) instead of passing the part off as the whole: a
+ * lane root with more entries than the cap hid a real write, and the
+ * "never wrote" read from that walk sent a working unit to fallback or abort.
  */
-async function scanWritePaths(projectDir, writePaths, { cap = 4000, since = 0 } = {}) {
+async function scanWritePaths(projectDir, writePaths, { cap = DEFAULT_SCAN_CAP, since = 0 } = {}) {
   let newest = 0;
   let newestPath = null;
   let changed = 0;
   let scanned = 0;
+  let truncated = false;
+  const seen = new Set();
+  const targets = [...new Set((writePaths || []).map(normalizeScanPath).filter((wp) => wp && wp !== '.aioson' && !wp.startsWith('.aioson/')))];
   const note = (full, mtimeMs) => {
+    const rel = path.relative(projectDir, full).split(path.sep).join('/');
+    if (seen.has(rel) || !targets.some((wp) => pathOwns(wp, rel))) return;
+    seen.add(rel);
     if (mtimeMs > newest) {
       newest = mtimeMs;
-      newestPath = full;
+      newestPath = rel;
     }
     if (since > 0 && mtimeMs >= since) changed += 1;
   };
-  const roots = [...new Set((writePaths || []).map((wp) => String(wp).split(/[*?{[]/)[0].replace(/\/+$/, '') || '.'))];
+  const take = () => {
+    if (scanned >= cap) {
+      truncated = true;
+      return false;
+    }
+    scanned += 1;
+    return true;
+  };
   const walk = async (dir) => {
-    if (scanned > cap) return;
     let entries;
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
@@ -279,8 +358,8 @@ async function scanWritePaths(projectDir, writePaths, { cap = 4000, since = 0 } 
       return;
     }
     for (const entry of entries) {
-      if (scanned++ > cap) return;
-      if (entry.name === 'node_modules' || entry.name === '.git') continue;
+      if (truncated || !take()) return;
+      if (SCAN_SKIP.has(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         await walk(full);
@@ -292,7 +371,9 @@ async function scanWritePaths(projectDir, writePaths, { cap = 4000, since = 0 } 
       }
     }
   };
+  const roots = [...new Set(targets.map((wp) => wp.split(/[*?{[]/)[0].replace(/\/+$/, '') || '.'))];
   for (const root of roots) {
+    if (truncated || !take()) break;
     const abs = path.resolve(projectDir, root);
     try {
       const stat = await fs.stat(abs);
@@ -300,11 +381,28 @@ async function scanWritePaths(projectDir, writePaths, { cap = 4000, since = 0 } 
       else note(abs, stat.mtimeMs);
     } catch { /* not created yet — the unit may still be thinking */ }
   }
-  return {
-    newest,
-    newest_path: newestPath ? path.relative(projectDir, newestPath).split(path.sep).join('/') : null,
-    files_changed: changed
-  };
+  return { newest, newest_path: newestPath, files_changed: changed, measured: !truncated };
+}
+
+/**
+ * What every disk measurement of one unit looks at: its own declared files.
+ * Measured on the lane write paths, a unit inherited its siblings' writes —
+ * two units of one lane in one wave (the planner's "cut again on disjoint
+ * files"), and the one blocked on a prompt was reported "still writing —
+ * retry with a larger budget" because the other one wrote. The lane write
+ * paths remain the fallback for a unit that declares no files, labelled so.
+ */
+function measureTarget(unit, lane) {
+  const files = (Array.isArray(unit?.files) ? unit.files : []).filter((file) => typeof file === 'string' && file.trim());
+  return files.length > 0
+    ? { measured_on: 'unit_files', paths: files }
+    : { measured_on: 'lane_write_paths', paths: Array.isArray(lane?.write_paths) ? lane.write_paths : [] };
+}
+
+function describeMeasuredOn(measuredOn) {
+  if (measuredOn === 'unit_files') return "the unit's files";
+  if (measuredOn === 'lane_write_paths') return 'the lane write paths (the unit declares no files of its own)';
+  return 'the lane write paths';
 }
 
 async function newestMtime(projectDir, writePaths, options = {}) {
@@ -313,9 +411,9 @@ async function newestMtime(projectDir, writePaths, options = {}) {
 
 /**
  * Two signals, measured separately — never chained:
- *   - `stalled`: no output AND no file change under the lane write paths for
- *     `stallMs` — the process is probably dead.
- *   - `unproductive`: no file change under the lane write paths for
+ *   - `stalled`: no output AND no change to the unit's files (`writePaths`,
+ *     see measureTarget) for `stallMs` — the process is probably dead.
+ *   - `unproductive`: no change to the unit's files for
  *     `unproductiveMs`, however talkative the process is — a worker blocked on
  *     an approval prompt keeps printing that prompt, a reasoning loop keeps
  *     streaming, a reader keeps listing files; none of them ever edits. The
@@ -325,7 +423,7 @@ async function newestMtime(projectDir, writePaths, options = {}) {
  *     host that streams nothing until it ends makes every long think look
  *     silent, so neither decides anything on its own.
  */
-function createStallWatch({ projectDir, writePaths, stallMs, unproductiveMs = null, checkMs, now, onStalled, onUnproductive }) {
+function createStallWatch({ projectDir, writePaths, stallMs, unproductiveMs = null, checkMs, now, onStalled, onUnproductive, cap = DEFAULT_SCAN_CAP }) {
   const startedAt = now();
   let lastOutputAt = startedAt;
   let stalled = false;
@@ -341,8 +439,11 @@ function createStallWatch({ projectDir, writePaths, stallMs, unproductiveMs = nu
     if (!wantStall && !wantUnproductive) return;
     checking = true;
     try {
-      const mtime = await newestMtime(projectDir, writePaths);
-      const sinceWrite = at - mtime;
+      const scan = await scanWritePaths(projectDir, writePaths, { cap });
+      // A walk cut at its cap saw part of the disk: no verdict either way —
+      // "no file change" read from half a walk is how a real write got hidden.
+      if (!scan.measured) return;
+      const sinceWrite = at - scan.newest;
       if (wantStall && sinceWrite >= stallMs) {
         stalled = true;
         onStalled?.({ silent_ms: silent });
@@ -365,13 +466,14 @@ function createStallWatch({ projectDir, writePaths, stallMs, unproductiveMs = nu
  * hosts), and the only live channel was the run's own stdout — captured by a
  * wrapper, a background task file, a `| head`, and gone. The first real run
  * showed the operator nothing for eighty minutes. So every `intervalMs` the
- * engine measures the unit from the disk — elapsed, the last file written
- * under the lane write paths and when, how many files changed since the unit
- * started — persists it into the run state (`execution:status` reads it from
- * any terminal) and prints one live line every `lineMs`. A run whose state
- * stops beating is a run whose process died: `execution:status` says so.
+ * engine measures the unit from the disk — elapsed, the last of the unit's
+ * files written and when, how many changed since the unit started, and what
+ * was measured (`measured_on`, `measured`) — persists it into the run state
+ * (`execution:status` reads it from any terminal) and prints one live line
+ * every `lineMs`. A run whose state stops beating is a run whose process
+ * died: `execution:status` says so.
  */
-function createHeartbeat({ projectDir, writePaths, intervalMs, lineMs, now, startedAtMs, budgetMs = null, stall, onBeat, onLine }) {
+function createHeartbeat({ projectDir, writePaths, measuredOn = null, intervalMs, lineMs, now, startedAtMs, budgetMs = null, stall, onBeat, onLine, cap = DEFAULT_SCAN_CAP }) {
   if (!intervalMs) return { stop() {} };
   let stopped = false;
   let busy = false;
@@ -381,18 +483,22 @@ function createHeartbeat({ projectDir, writePaths, intervalMs, lineMs, now, star
     busy = true;
     try {
       const at = now();
-      const scan = await scanWritePaths(projectDir, writePaths, { since: startedAtMs });
+      const scan = await scanWritePaths(projectDir, writePaths, { since: startedAtMs, cap });
       if (stopped) return;
-      const wrote = scan.newest >= startedAtMs;
+      // A walk cut at its cap reports no write facts at all — half a walk
+      // rendered as "no file change yet" is a verdict nobody measured.
+      const wrote = scan.measured && scan.newest >= startedAtMs;
       const live = {
         heartbeat_at: nowIso(),
         elapsed_ms: Math.max(0, at - startedAtMs),
         budget_ms: budgetMs || null,
         last_output_age_ms: Math.max(0, at - stall.lastOutputAt),
+        measured_on: measuredOn,
+        measured: scan.measured,
         last_write_at: wrote ? new Date(scan.newest).toISOString() : null,
         last_write_age_ms: wrote ? Math.max(0, at - scan.newest) : null,
         last_write_path: wrote ? scan.newest_path : null,
-        files_changed: scan.files_changed,
+        files_changed: scan.measured ? scan.files_changed : null,
         stalled: stall.stalled,
         unproductive: stall.unproductive
       };
@@ -613,7 +719,7 @@ function classifyFailure(reason) {
 async function executeRole({
   projectDir, feature, runId, role, unit, lane, config, promptText, reportRel, manifest,
   adapterRegistry, catalogLoader, timeout, signal, resolverOptions, stallMs, unproductiveMs = null, stallCheckMs, now, emit,
-  heartbeatMs = 0, liveLineMs = 0, onHeartbeat = null, independentFrom = null
+  heartbeatMs = 0, liveLineMs = 0, onHeartbeat = null, independentFrom = null, scanCap = DEFAULT_SCAN_CAP
 }) {
   const resolved = await resolveExecutionEntry(config, { catalogLoader });
   if (!resolved.ok) return { kind: 'unavailable', reason: resolved.reason, candidates: resolved.candidates || [], host: config.host, model: config.model, reasoning_effort: config.reasoning_effort || null };
@@ -661,20 +767,23 @@ async function executeRole({
     catalog_source: resolved.catalog_source
   };
   const telemetry = await createTelemetryBridge(projectDir, correlation);
+  const target = measureTarget(unit, lane);
+  const where = describeMeasuredOn(target.measured_on);
   const stall = createStallWatch({
     projectDir,
-    writePaths: lane.write_paths,
+    writePaths: target.paths,
     stallMs,
     unproductiveMs,
     checkMs: stallCheckMs,
     now,
+    cap: scanCap,
     onStalled: ({ silent_ms }) => {
-      try { telemetry.event('stalled', `${role}:${unit.id} silent for ${Math.round(silent_ms / 1000)}s — no output, no file change under the lane write paths`, { unit: unit.id, role, silent_ms }); } catch { /* telemetry is best-effort */ }
-      emit({ type: 'stalled', unit: unit.id, lane: unit.lane, wave: unit.wave, role, silent_ms });
+      try { telemetry.event('stalled', `${role}:${unit.id} silent for ${Math.round(silent_ms / 1000)}s — no output, no file change under ${where}`, { unit: unit.id, role, silent_ms, measured_on: target.measured_on }); } catch { /* telemetry is best-effort */ }
+      emit({ type: 'stalled', unit: unit.id, lane: unit.lane, wave: unit.wave, role, silent_ms, measured_on: target.measured_on });
     },
     onUnproductive: ({ since_ms, silent_ms }) => {
-      try { telemetry.event('unproductive', `${role}:${unit.id} wrote nothing under the lane write paths for ${Math.round(since_ms / 1000)}s${silent_ms < stallMs ? ' while still producing output' : ''} — a worker blocked on a prompt, looping, or only reading looks exactly like this`, { unit: unit.id, role, since_ms, silent_ms }); } catch { /* telemetry is best-effort */ }
-      emit({ type: 'unproductive', unit: unit.id, lane: unit.lane, wave: unit.wave, role, since_ms, silent_ms, talkative: silent_ms < stallMs });
+      try { telemetry.event('unproductive', `${role}:${unit.id} wrote nothing under ${where} for ${Math.round(since_ms / 1000)}s${silent_ms < stallMs ? ' while still producing output' : ''} — a worker blocked on a prompt, looping, or only reading looks exactly like this`, { unit: unit.id, role, since_ms, silent_ms, measured_on: target.measured_on }); } catch { /* telemetry is best-effort */ }
+      emit({ type: 'unproductive', unit: unit.id, lane: unit.lane, wave: unit.wave, role, since_ms, silent_ms, talkative: silent_ms < stallMs, measured_on: target.measured_on });
     }
   });
   let spawnCount = 0;
@@ -704,30 +813,45 @@ async function executeRole({
   const startedAtMs = now();
   const heartbeat = createHeartbeat({
     projectDir,
-    writePaths: lane.write_paths,
+    writePaths: target.paths,
+    measuredOn: target.measured_on,
     intervalMs: heartbeatMs,
     lineMs: liveLineMs,
     now,
     startedAtMs,
     budgetMs: timeout,
     stall,
+    cap: scanCap,
     onBeat: (live) => { try { onHeartbeat?.(live); } catch { /* best-effort */ } },
     onLine: (live) => emit({ type: 'heartbeat', unit: unit.id, lane: unit.lane, wave: unit.wave, role, host: resolved.host, model: expected.model_resolved, ...live })
   });
-  const execution = await executeWithCapacityPolicy({
-    manifest: manifest.manifest, resolved, input, adapterRegistry, catalogLoader,
-    validateCandidate: independentFrom
-      ? (candidate) => candidate.host === independentFrom.host && candidate.model === independentFrom.model ? 'self_review_blocked' : null
-      : null
-  });
-  stall.stop();
-  heartbeat.stop();
+  let execution;
+  try {
+    execution = await executeWithCapacityPolicy({
+      manifest: manifest.manifest, resolved, input, adapterRegistry, catalogLoader,
+      validateCandidate: independentFrom
+        ? (candidate) => candidate.host === independentFrom.host && candidate.model === independentFrom.model ? 'self_review_blocked' : null
+        : null
+    });
+  } catch (error) {
+    // An adapter that throws still ends this role: without this the telemetry
+    // run stayed `running` with its database handle open, and the stall and
+    // heartbeat timers kept walking the disk for the rest of the run.
+    try { telemetry.transition('paused', 'engine_error'); } catch { /* state graph tolerance */ }
+    try { telemetry.close(); } catch { /* best-effort */ }
+    throw error;
+  } finally {
+    stall.stop();
+    heartbeat.stop();
+  }
   // What the disk says the role did — the ledger's positive fact, measured once
-  // at the end whatever the outcome (a timeout reads the same numbers).
-  const scan = await scanWritePaths(projectDir, lane.write_paths, { since: startedAtMs }).catch(() => null);
-  const lastWrite = scan ? scan.newest : 0;
+  // at the end whatever the outcome (a timeout reads the same numbers). A walk
+  // cut at its cap reports no write facts (`measured: false`), never a guess.
+  const scan = await scanWritePaths(projectDir, target.paths, { since: startedAtMs, cap: scanCap }).catch(() => null);
+  const measured = Boolean(scan && scan.measured);
+  const lastWrite = measured ? scan.newest : 0;
   const activity = scan
-    ? { files_changed: scan.files_changed, last_write_at: lastWrite >= startedAtMs ? new Date(lastWrite).toISOString() : null, last_write_path: lastWrite >= startedAtMs ? scan.newest_path : null }
+    ? { measured_on: target.measured_on, measured, files_changed: measured ? scan.files_changed : null, last_write_at: measured && lastWrite >= startedAtMs ? new Date(lastWrite).toISOString() : null, last_write_path: measured && lastWrite >= startedAtMs ? scan.newest_path : null }
     : null;
   const base = {
     attempt_id: attemptId,
@@ -748,15 +872,20 @@ async function executeRole({
     const reason = execution.reason || 'crash';
     // A budget that ran out is not one thing: a worker still writing when the
     // clock killed it needs a bigger budget, not a different model; one that
-    // never wrote is the blocked/looping case. The disk already knows which.
+    // never wrote is the blocked/looping case. The disk already knows which —
+    // of the unit's own files, and only when the walk saw all of them.
     let detail = null;
     let timeoutFacts = null;
     if (reason === 'timeout') {
-      const wrote = lastWrite >= startedAtMs;
-      timeoutFacts = { budget_ms: timeout || null, wrote_during_budget: wrote, last_write_age_ms: lastWrite > 0 ? Math.max(0, now() - lastWrite) : null };
-      detail = wrote
-        ? `the ${describeMs(timeout)} budget elapsed while the worker was still writing (last file change ${describeMs(timeoutFacts.last_write_age_ms)} before the kill) — not a worker failure: retry with a larger budget (execution:run --unit-timeout=<ms>, 0 = no limit, or execution.unit_timeout_ms in the roles file)`
-        : `the ${describeMs(timeout)} budget elapsed with no file change under the lane write paths — the worker never wrote (blocked on a prompt, looping, or only reading): fallback to another host/model, or abort`;
+      const wrote = measured ? lastWrite >= startedAtMs : null;
+      timeoutFacts = { budget_ms: timeout || null, measured_on: target.measured_on, measured, wrote_during_budget: wrote, last_write_age_ms: measured && lastWrite > 0 ? Math.max(0, now() - lastWrite) : null };
+      if (!measured) {
+        detail = `the ${describeMs(timeout)} budget elapsed and ${where} could not be measured (${scan ? `the walk stopped at its ${scanCap}-entry cap` : 'the scan failed'}) — no verdict on whether the worker was writing: look at ${where} before choosing between a retry with a larger budget and a fallback`;
+      } else if (wrote) {
+        detail = `the ${describeMs(timeout)} budget elapsed while the worker was still writing (last change to ${where} ${describeMs(timeoutFacts.last_write_age_ms)} before the kill) — not a worker failure: retry with a larger budget (execution:run --unit-timeout=<ms>, 0 = no limit, or execution.unit_timeout_ms in the roles file)`;
+      } else {
+        detail = `the ${describeMs(timeout)} budget elapsed with no file change under ${where} — the worker never wrote (blocked on a prompt, looping, or only reading): fallback to another host/model, or abort`;
+      }
     }
     try { telemetry.transition('paused', reason); } catch { /* state graph tolerance */ }
     telemetry.close();
@@ -996,6 +1125,9 @@ async function runExecution({
   // the same measurement is one live line. 0 disables either.
   heartbeatMs = 15000,
   liveLineMs = 60000,
+  // Entries one disk measurement of a unit may walk before it reports
+  // `measured: false` instead of a verdict.
+  scanCap = DEFAULT_SCAN_CAP,
   qaKernelPath,
   gitBaseline = captureCorrectionBaseline,
   spawnerOptions = {}
@@ -1035,6 +1167,20 @@ async function runExecution({
   const monitor = createLeaseMonitor(lease, { intervalMs: leaseIntervalMs });
   try {
     const read = await readRunState(stateFile);
+    // A state whose bytes never parse is not a read to retry: the run refuses
+    // with the way out, and `--fresh` — the operator's "start over" — moves
+    // the file aside (never deletes it) instead of refusing forever.
+    let movedAside = null;
+    if (read.corrupt) {
+      if (!fresh) {
+        return { ok: false, status: 'refused', reason: 'run_state_corrupt', feature, path: runStateRelative(feature), error: read.corrupt, message: corruptStateMessage(feature, read.corrupt), exitCode: 1 };
+      }
+      try {
+        movedAside = path.relative(projectDir, await moveStateAside(stateFile)).split(path.sep).join('/');
+      } catch (error) {
+        return { ok: false, status: 'refused', reason: 'run_state_corrupt', feature, path: runStateRelative(feature), error: read.corrupt, message: `${corruptStateMessage(feature, read.corrupt)} — moving it aside failed (${error.code || error.message}); move it by hand, then run again`, exitCode: 1 };
+      }
+    }
     // A state that exists and cannot be read is never treated as no state:
     // starting fresh over it would put two runs on the same files.
     if (read.unreadable) {
@@ -1079,6 +1225,10 @@ async function runExecution({
       state = null;
     }
     if (!state) state = newRunState({ feature, plan, planDigest, manifestDigest: manifest.digest });
+    if (movedAside) {
+      state.findings.push({ check: 'run_state_corrupt', severity: 'medium', path: movedAside, error: read.corrupt, message: `the previous run state was not a valid run state (${read.corrupt}) — --fresh moved it aside to ${movedAside} and this run started over; that file is the only record of what the previous run decided` });
+      emit({ type: 'state', status: 'moved_aside', path: runStateRelative(feature), moved_to: movedAside, error: read.corrupt });
+    }
 
     const pending = pendingDecisions(state, feature);
     if (pending.length > 0) {
@@ -1231,7 +1381,7 @@ async function runExecution({
       const unit = planUnits[unitId];
       const lane = plan.lanes[unit.lane];
       const unitState = state.units[unitId];
-      const commonArgs = { projectDir, feature, runId: state.run_id, unit, lane, manifest, adapterRegistry: registry, catalogLoader, timeout: unitTimeout, signal: monitor.signal, resolverOptions, stallMs, unproductiveMs: unproductiveMs ?? stallMs * 3, stallCheckMs, now, emit, heartbeatMs, liveLineMs };
+      const commonArgs = { projectDir, feature, runId: state.run_id, unit, lane, manifest, adapterRegistry: registry, catalogLoader, timeout: unitTimeout, signal: monitor.signal, resolverOptions, stallMs, unproductiveMs: unproductiveMs ?? stallMs * 3, stallCheckMs, now, emit, heartbeatMs, liveLineMs, scanCap };
 
       if (unitState.status === 'pending') {
         let config;
@@ -1595,20 +1745,38 @@ function parseChoice(choice) {
 async function decideExecution({ projectDir, feature: featureInput, unit: unitId, choice, env = process.env, now = () => Date.now(), leaseWaitMs = DEFAULT_LEASE_WAIT_MS }) {
   const feature = assertFeatureSlug(featureInput);
   const stateFile = runStatePath(projectDir, feature);
-  const read = await readRunState(stateFile);
-  if (read.unreadable) return { ok: false, reason: 'run_state_unreadable', feature, path: runStateRelative(feature), error: read.unreadable, message: `${runStateRelative(feature)} exists but could not be read (${read.unreadable}) — retry` };
-  const state = read.state;
-  if (!state) return { ok: false, reason: 'run_state_missing', feature, message: `${runStateRelative(feature)} not found — nothing to decide` };
-  if (TERMINAL_STATUSES.includes(state.status)) return { ok: false, reason: 'run_terminal', feature, status: state.status };
-  const unitState = state.units?.[String(unitId || '').trim()];
-  if (!unitState) return { ok: false, reason: 'unit_unknown', feature, unit: unitId, units: Object.keys(state.units || {}) };
+  const unitKey = String(unitId || '').trim();
+  const refusal = (read) => {
+    if (read.corrupt) return { ok: false, reason: 'run_state_corrupt', feature, path: runStateRelative(feature), error: read.corrupt, message: `${corruptStateMessage(feature, read.corrupt)} — no decision can be applied to it` };
+    if (read.unreadable) return { ok: false, reason: 'run_state_unreadable', feature, path: runStateRelative(feature), error: read.unreadable, message: `${runStateRelative(feature)} exists but could not be read (${read.unreadable}) — retry` };
+    if (!read.state) return { ok: false, reason: 'run_state_missing', feature, message: `${runStateRelative(feature)} not found — nothing to decide` };
+    if (TERMINAL_STATUSES.includes(read.state.status)) return { ok: false, reason: 'run_terminal', feature, status: read.state.status };
+    if (!read.state.units?.[unitKey]) return { ok: false, reason: 'unit_unknown', feature, unit: unitId, units: Object.keys(read.state.units || {}) };
+    return null;
+  };
+  // This first read only answers the refusals that need no lease (no state, a
+  // finished run, an unknown unit) without waiting for one. It is never what
+  // gets written — see the re-read below.
+  const early = refusal(await readRunState(stateFile));
+  if (early) return early;
 
   // Decisions apply between runs only: the feature lease is the run's. A
   // lease left by a killed run is waited out, exactly as the run does.
   const acquired = await acquireLeaseWaiting(projectDir, feature, { maxWaitMs: leaseWaitMs });
-  if (!acquired.lease) return { ok: false, reason: 'run_active', feature, unit: unitState.id, lease: acquired.lease_info, message: `a run is active on this feature; decisions apply between runs — ${acquired.message}` };
+  if (!acquired.lease) return { ok: false, reason: 'run_active', feature, unit: unitKey, lease: acquired.lease_info, message: `a run is active on this feature; decisions apply between runs — ${acquired.message}` };
   const lease = acquired.lease;
   try {
+    // The wait above can last 35 s, and the run whose lease it waited for kept
+    // writing until it let go: applying the decision to the snapshot read
+    // before the wait put a finished review back to `qa: running` (the next
+    // --resume re-ran it and named a bogus interrupted_unit), and of two
+    // decides issued together the second erased the first. The decision
+    // applies to the state as it is now, re-read and re-checked under the lease.
+    const read = await readRunState(stateFile);
+    const refused = refusal(read);
+    if (refused) return refused;
+    const state = read.state;
+    const unitState = state.units[unitKey];
     if (!unitState.pending_decision) return { ok: false, reason: 'no_decision_pending', feature, unit: unitState.id, status: unitState.status };
     const parsed = parseChoice(choice);
     if (!parsed.ok) return { ok: false, reason: parsed.reason, feature, unit: unitState.id, valid: parsed.valid };
@@ -1775,6 +1943,12 @@ async function statusExecution({ projectDir, feature: featureInput, now = Date.n
   const state = stateRead.state;
   const read = await readExecutionPlan(projectDir, feature);
   if (!state) {
+    // Corrupt is neither absent nor transient: the ledger cannot be read until
+    // someone repairs or moves the file, so the reader is told how (and a
+    // watch ends here instead of polling a file that will never parse).
+    if (stateRead.corrupt) {
+      return { ok: false, reason: 'run_state_corrupt', feature, run: null, compiled: read.exists, path: runStateRelative(feature), state_corrupt: stateRead.corrupt, message: corruptStateMessage(feature, stateRead.corrupt), follow_command: null, exitCode: 1 };
+    }
     // Unreadable is not absent: a watch must keep watching, and the reader
     // must not be told the run does not exist.
     if (stateRead.unreadable) {
@@ -1845,8 +2019,10 @@ module.exports = {
   createHeartbeat,
   describeEngine,
   describeAge,
+  describeMeasuredOn,
   describeMs,
   followCommand,
+  measureTarget,
   readRunState,
   scanWritePaths,
   DEFAULT_UNIT_TIMEOUT_MS,

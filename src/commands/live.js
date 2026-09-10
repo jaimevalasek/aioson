@@ -19,7 +19,7 @@ const {
 const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
-const { resolvePermissionModeArgs, resolveResumeArgs, resolveDefaultSessionPermission } = require('../lib/tool-capabilities');
+const { resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const LIVE_EVENTS_LIMIT = 10;
@@ -118,20 +118,32 @@ function parseJsonOption(value) {
 // A session that names no permission mode runs unattended (the host's
 // registered flag): a feature is developed end to end without a prompt, on
 // any harness. `--permission-mode=default` is the explicit way to get prompts.
-function buildLaunchArgs(options, tool, { onWarning = null } = {}) {
+// The flag is the one of the binary actually launched (`--tool-bin`) and is
+// never added over the caller's own permission flag in `--tool-args` — see
+// resolveLaunchPermission for the two launches the blind append broke.
+function resolveLaunch(options, tool) {
   const resumeOpt = options.resume !== undefined ? options.resume : options.Resume;
   const resumeArgs = resolveResumeArgs(tool, resumeOpt);
-  const permissionMode = options['permission-mode'] || options.permissionMode;
-  let permissionArgs;
-  if (permissionMode === undefined || permissionMode === null || permissionMode === '') {
-    const defaulted = resolveDefaultSessionPermission(tool);
-    permissionArgs = defaulted.args;
-    if (defaulted.warning && typeof onWarning === 'function') onWarning(defaulted.warning);
-  } else {
-    permissionArgs = resolvePermissionModeArgs(tool, permissionMode);
-  }
   const userArgs = parseToolArgs(options['tool-args'] || options.toolArgs);
-  return [...resumeArgs, ...permissionArgs, ...userArgs];
+  const permission = resolveLaunchPermission(tool, {
+    permissionMode: options['permission-mode'] || options.permissionMode,
+    binary: typeof options['tool-bin'] === 'string' ? options['tool-bin'] : null,
+    userArgs
+  });
+  return { args: [...resumeArgs, ...permission.args, ...userArgs], permission };
+}
+
+function buildLaunchArgs(options, tool, { onWarning = null } = {}) {
+  const launch = resolveLaunch(options, tool);
+  if (launch.permission.warning && typeof onWarning === 'function') onWarning(launch.permission.warning);
+  return launch.args;
+}
+
+/** What a launch decided, for the result (and so for --json). */
+function describeLaunch(launch) {
+  if (!launch) return null;
+  const p = launch.permission;
+  return { binary: p.binary, host: p.host, permission_mode: p.mode, permission_args: p.args, permission_source: p.source, permission_flag: p.flag, warning: p.warning, args: launch.args };
 }
 
 function parseToolArgs(value) {
@@ -1244,6 +1256,19 @@ async function runLiveStart({ args, options = {}, logger, t }) {
     throw new Error(t('live.tool_binary_not_found', { binary: toolBinary }));
   }
 
+  // The launch argv is decided once, when a launch path first needs it (the
+  // tmux reattach never does): every path launches the same argv, and a flag
+  // AIOSON could not add (a binary the registry does not know) is said here
+  // and in the result's `launch` block instead of the session silently asking.
+  let launch = null;
+  const launchArgs = () => {
+    if (!launch) {
+      launch = resolveLaunch(options, tool);
+      if (launch.permission.warning && !options.json) logger.log(`⚠ ${launch.permission.warning}`);
+    }
+    return launch.args;
+  };
+
   const useTmux = Boolean(options.tmux) || process.env.AIOSON_TMUX === '1';
 
   // Pre-check tmux availability so we can warn early
@@ -1362,7 +1387,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           let attachResult = null;
 
           if (attach && !noLaunch) {
-            attachChild = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+            attachChild = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
               cwd: targetDir,
               env: process.env,
               stdio: 'inherit',
@@ -1400,6 +1425,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
             reused: true,
             open: true,
             attached: attach,
+            launch: describeLaunch(launch),
             childExitCode: attachResult?.code ?? null,
             childSignal: attachResult?.signal ?? null
           };
@@ -1467,11 +1493,11 @@ async function runLiveStart({ args, options = {}, logger, t }) {
             agentName,
             tool,
             binaryPath,
-            toolArgs: buildLaunchArgs(options, tool)
+            toolArgs: launchArgs()
           });
         } else {
           // Fallback to normal spawn if tmux not available
-          child = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+          child = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
             cwd: targetDir,
             env: process.env,
             stdio: 'inherit',
@@ -1484,7 +1510,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
           });
         }
       } else {
-        child = trackChild(spawn(spawnExecutable(binaryPath), buildLaunchArgs(options, tool), {
+        child = trackChild(spawn(spawnExecutable(binaryPath), launchArgs(), {
           cwd: targetDir,
           env: process.env,
           stdio: 'inherit',
@@ -1611,7 +1637,8 @@ async function runLiveStart({ args, options = {}, logger, t }) {
         pid: null,
         processState: 'tmux',
         reused: false,
-        open: true
+        open: true,
+        launch: describeLaunch(launch)
       };
     }
 
@@ -1628,6 +1655,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
       processState: detectProcessState(taskMeta.child_pid),
       reused: false,
       open: true,
+      launch: describeLaunch(launch),
       childExitCode: childResult?.code ?? null,
       childSignal: childResult?.signal ?? null
     };

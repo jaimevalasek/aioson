@@ -27,7 +27,7 @@ const { TOOL_CAPS, resolveSandboxArgs, listExecutionHosts, LANE_WORKER_MODE } = 
 const { createAdapter } = require('../src/agent-execution/adapters/base');
 const { validateExecutionRoles, readExecutionRoles, rolesBindingDigest, UNLIMITED_UNIT_TIMEOUT_MS } = require('../src/lib/execution-roles');
 const { acquireLease, renewLease, releaseLease, leasePath } = require('../src/agent-execution/dispatcher');
-const { acquireLeaseWaiting, createStallWatch, describeMs, DEFAULT_UNIT_TIMEOUT_MS } = require('../src/agent-execution/execution-run');
+const { acquireLeaseWaiting, createStallWatch, describeMs, DEFAULT_UNIT_TIMEOUT_MS, scanWritePaths, measureTarget } = require('../src/agent-execution/execution-run');
 const { duplicateSections, duplicatePhaseSections, PLAN_CANONICAL_SECTIONS, PRD_CANONICAL_SECTIONS, readExecutionPlan, verifyExecutionPlan } = require('../src/agent-execution/execution-plan');
 const { probeHostSignature, signatureKey, writeSignatures, readSignatures, UNATTENDED_PROBE_FILE } = require('../src/lib/host-signature');
 const { runHostSignature } = require('../src/commands/host-signature');
@@ -244,6 +244,58 @@ test('unproductive is measured on the disk alone: a worker that keeps talking an
   }
   assert.equal(writing.unproductive, false);
   assert.equal(events.some((e) => e.type === 'unproductive-2'), false);
+});
+
+test('the disk measurement never counts the engine\'s own files: under a root-level glob the state rewritten on every beat is skipped, so a worker that never writes is still named unproductive', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-scan-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  await fs.mkdir(path.join(dir, '.aioson', 'context'), { recursive: true });
+  await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+  const stateFile = path.join(dir, '.aioson', 'context', 'execution-state-orders.json');
+  const since = Date.now();
+  await fs.writeFile(stateFile, '{}');
+  const engineOnly = await scanWritePaths(dir, ['**'], { since });
+  assert.deepEqual(engineOnly, { newest: 0, newest_path: null, files_changed: 0, measured: true });
+  assert.deepEqual((await scanWritePaths(dir, ['.aioson/**'], { since })).files_changed, 0, 'a target inside .aioson/ is never measured');
+  await fs.writeFile(path.join(dir, 'src', 'a.ts'), 'x');
+  const owned = await scanWritePaths(dir, ['**'], { since });
+  assert.equal(owned.files_changed, 1);
+  assert.equal(owned.newest_path, 'src/a.ts');
+  assert.equal((await scanWritePaths(dir, ['src/*.css'], { since })).files_changed, 0, 'only files the paths own count');
+
+  // The engine keeps rewriting its state (every 15 s in a run; every 20 ms here): not a write of the unit.
+  const events = [];
+  const watch = createStallWatch({ projectDir: dir, writePaths: ['**'], stallMs: 5000, unproductiveMs: 150, checkMs: 20, now: () => Date.now(), onUnproductive: (e) => events.push(e) });
+  const beat = setInterval(() => { fs.writeFile(stateFile, String(Date.now())).catch(() => {}); }, 20);
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+  } finally {
+    clearInterval(beat);
+    watch.stop();
+  }
+  assert.equal(watch.unproductive, true, JSON.stringify(events));
+});
+
+test('a walk that reaches its entry cap reports measured:false and the detectors give no verdict; a unit is measured on its own files, the lane write paths only as a labelled fallback', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-scan-cap-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
+  await fs.mkdir(path.join(dir, 'src', 'api'), { recursive: true });
+  for (let i = 0; i < 12; i += 1) await fs.writeFile(path.join(dir, 'src', 'api', `f${i}.ts`), 'x');
+  const partial = await scanWritePaths(dir, ['src/api/**'], { cap: 5, since: 1 });
+  assert.equal(partial.measured, false, 'part of the disk is never reported as the whole');
+  assert.equal((await scanWritePaths(dir, ['src/api/**'], { cap: 100, since: 1 })).measured, true);
+
+  const verdicts = [];
+  const capped = createStallWatch({ projectDir: dir, writePaths: ['src/api/**'], stallMs: 60, unproductiveMs: 60, checkMs: 15, now: () => Date.now(), cap: 5, onStalled: (e) => verdicts.push(['stalled', e]), onUnproductive: (e) => verdicts.push(['unproductive', e]) });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  } finally {
+    capped.stop();
+  }
+  assert.deepEqual(verdicts, [], 'no stalled/unproductive verdict from half a walk');
+
+  assert.deepEqual(measureTarget({ files: ['src/api/a.ts', 'tests/api/a.test.ts'] }, { write_paths: ['src/api/**', 'tests/api/**'] }), { measured_on: 'unit_files', paths: ['src/api/a.ts', 'tests/api/a.test.ts'] });
+  assert.deepEqual(measureTarget({ files: [] }, { write_paths: ['src/api/**'] }), { measured_on: 'lane_write_paths', paths: ['src/api/**'] });
 });
 
 // ───────────────────────── duplicated canonical sections ─────────────────────────
