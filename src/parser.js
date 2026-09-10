@@ -48,8 +48,11 @@ const BOOLEAN_FLAGS = new Set([
   // types when following a run.
   'watch',
   // verify:artifact — pure booleans; `--advisory .` / `--no-build .` /
-  // `--runtime .` must not swallow the path positional.
-  'advisory', 'no-build', 'runtime',
+  // `--runtime .` / `--screenshots .` must not swallow the path positional
+  // (`--screenshots=full` still carries its value through the `=` branch).
+  'advisory', 'no-build', 'runtime', 'screenshots',
+  // workflow:status — pure boolean; `--repair ../proj` repaired the cwd.
+  'repair',
   // browser:run / verify:artifact — pure booleans; `--prototype .` /
   // `--continue .` / `--no-persist .` must not swallow the path positional.
   'prototype', 'continue', 'no-persist',
@@ -82,6 +85,11 @@ const BOOLEAN_FLAGS = new Set([
   'resume'
 ]);
 
+// Booleans whose value, when given, is a number: `live:status --watch 3` and
+// `runtime:session:status --watch 5` read the cadence (they did until `watch`
+// joined BOOLEAN_FLAGS, when the `3` became the project path).
+const NUMERIC_VALUE_FLAGS = new Set(['watch']);
+
 function parseArgv(argv) {
   const [, , ...tokens] = argv;
   const args = [];
@@ -107,6 +115,14 @@ function parseArgv(argv) {
       const k = stripped;
 
       const next = tokens[i + 1];
+      // A boolean that also takes a cadence keeps the space form it had
+      // before it became boolean: `--watch 3` is three seconds, while
+      // `--watch .` leaves the path positional. Only a bare number counts.
+      if (next && NUMERIC_VALUE_FLAGS.has(k) && /^\d+(?:\.\d+)?$/.test(next)) {
+        options[k] = next;
+        i += 1;
+        continue;
+      }
       if (next && !next.startsWith('-') && !BOOLEAN_FLAGS.has(k)) {
         options[k] = next;
         i += 1;

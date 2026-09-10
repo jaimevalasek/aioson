@@ -159,6 +159,33 @@ describe('parser.js — parseArgv', () => {
   });
 });
 
+it('parseArgv: --watch keeps a numeric cadence in the space form and never swallows a path', () => {
+  // `watch` became boolean so `execution:status --watch .` would keep its
+  // path; that turned `live:status --watch 3` into a project named "3".
+  const cadence = parseArgv(['node', 'aioson', 'live:status', '--watch', '3']);
+  assert.equal(cadence.options.watch, '3');
+  assert.deepEqual(cadence.args, []);
+  const decimal = parseArgv(['node', 'aioson', 'runtime:session:status', '.', '--watch', '2.5', '--agent=dev']);
+  assert.equal(decimal.options.watch, '2.5');
+  assert.deepEqual(decimal.args, ['.']);
+  const bare = parseArgv(['node', 'aioson', 'execution:status', '--watch', '.', '--feature=x']);
+  assert.equal(bare.options.watch, true);
+  assert.deepEqual(bare.args, ['.']);
+  const numericPath = parseArgv(['node', 'aioson', 'execution:status', '--watch', './3']);
+  assert.equal(numericPath.options.watch, true);
+  assert.deepEqual(numericPath.args, ['./3']);
+});
+
+it('parseArgv: --screenshots and --repair never swallow the project path', () => {
+  const shots = parseArgv(['node', 'aioson', 'verify:artifact', '--kind=visual', '--runtime', '--screenshots', 'my-app']);
+  assert.equal(shots.options.screenshots, true);
+  assert.deepEqual(shots.args, ['my-app']);
+  assert.equal(parseArgv(['node', 'aioson', 'verify:artifact', '--screenshots=full', '.']).options.screenshots, 'full');
+  const repair = parseArgv(['node', 'aioson', 'workflow:status', '--repair', '../proj']);
+  assert.equal(repair.options.repair, true);
+  assert.deepEqual(repair.args, ['../proj']);
+});
+
 it('parseArgv: --seed and --seed-only are boolean-only and never swallow the path positional', () => {
   const parsed = parseArgv(['node', 'aioson', 'workflow:execute', '--feature=x', '--seed', '.']);
   assert.equal(parsed.options.seed, true);
