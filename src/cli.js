@@ -1094,6 +1094,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_briefing_unapprove');
   logHelpLine(t, logger, 'cli.help_briefing_review');
   logHelpLine(t, logger, 'cli.help_briefing_apply_feedback');
+  logHelpLine(t, logger, 'cli.help_briefing_feedback');
   logHelpLine(t, logger, 'cli.help_briefing_migrate_lineage');
   logHelpLine(t, logger, 'cli.help_exploration');
   logHelpLine(t, logger, 'cli.help_context_validate');

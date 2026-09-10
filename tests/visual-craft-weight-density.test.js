@@ -481,4 +481,18 @@ surface_mode: brand
   const legacy = await approveWithDensity({ first_fold_occupancy_pct: 34, scope: 'desktop' });
   assert.equal(legacy.result.error, 'prototype_visual_craft_below_bar');
   assert.match(legacy.output, /first fold 66% empty/);
+
+  // A brand report from before the weight existed (v1.62.0 and earlier) over
+  // unchanged bytes stays content-fresh but carries no bar to read: stale,
+  // never a silent pass — not even with --accept-craft.
+  const report = JSON.parse(await fs.readFile(evidencePath, 'utf8'));
+  delete report.metrics.craft.weight;
+  report.metrics.runtime = { available: true, assurance: { routes_verified: ['entry'], states_verified: [] } };
+  await fs.writeFile(evidencePath, JSON.stringify(report, null, 2));
+  for (const options of [{ slug }, { slug, 'accept-craft': true }]) {
+    const logger = makeLogger();
+    const stale = await runBriefingApprove({ args: [dir], options, logger });
+    assert.equal(stale.error, 'prototype_visual_evidence_stale', logger.lines.join('\n'));
+    assert.match(logger.lines.join('\n'), /brand weight bar[\s\S]*aioson verify:artifact \. --kind=visual --slug=atelier/);
+  }
 });

@@ -16,6 +16,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { resolveTargetDir } = require('../lib/project-root');
 const { parseFrontmatter } = require('../preflight-engine');
+const { validateFeatureSlug } = require('../verification/path-policy');
 const {
   generateSeedCandidates,
   projectFingerprintId,
@@ -27,7 +28,9 @@ const {
   POLES
 } = require('../lib/design-seed');
 
-const VERSION = '1.3.0';
+// 1.3.1: candidates keep their base hues apart and search disjoint rungs of
+// the ladder — same inputs draw differently than 1.3.0, so the record says so.
+const VERSION = '1.3.1';
 const GENERATOR = `aioson design:seed@${VERSION}`;
 
 /**
@@ -91,6 +94,17 @@ async function runDesignSeed({ args, options = {}, logger }) {
     logger.error(msg);
     process.exitCode = 1;
     return { ok: false };
+  }
+  // The slug becomes a path segment (features/<slug>/design-seed.json,
+  // briefings/<slug>/identity.md): `--slug=../../../../x` wrote the draw
+  // outside the project. The canonical feature-slug rule holds before any join.
+  const slugCheck = slug ? validateFeatureSlug(slug) : { ok: true };
+  if (!slugCheck.ok) {
+    const msg = `design:seed: --slug="${slug}" is not a feature slug (lowercase letters and digits in hyphen-separated words) — refused before any path is built`;
+    if (options.json) { process.exitCode = 1; return { ok: false, error: 'invalid_slug', reason: slugCheck.reason, slug }; }
+    logger.error(msg);
+    process.exitCode = 1;
+    return { ok: false, error: 'invalid_slug' };
   }
 
   const identity = options.identity === false ? null : resolveIdentity(targetDir, { slug, explicit: typeof options.identity === 'string' ? options.identity : null });

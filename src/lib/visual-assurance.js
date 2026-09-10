@@ -298,25 +298,76 @@ function meaningfulAlt(tag) {
   return !/^(?:logo|logotipo|icon|icone|ícone|avatar|placeholder|decorative|decora(?:tive|ção))\b/i.test(alt);
 }
 
+// The build contract's asset zone: images and media live in one trailing
+// `<script type="application/json" data-aioson-assets>` keyed by name. Values
+// are data URIs (a `url(...)` wrapper or a `{ src }` object is tolerated); a
+// zone that does not parse hydrates nothing, so it proves nothing.
+function assetZoneSources(markup) {
+  const sources = new Map();
+  for (const match of String(markup || '').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    if (!/data-aioson-assets/i.test(match[1])) continue;
+    let parsed;
+    try { parsed = JSON.parse(match[2]); } catch { continue; }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+    for (const [key, value] of Object.entries(parsed)) {
+      const raw = typeof value === 'string' ? value : (value && typeof value.src === 'string' ? value.src : '');
+      const source = raw.trim().replace(/^url\(\s*["']?([\s\S]*?)["']?\s*\)$/i, '$1');
+      if (source) sources.set(key, source);
+    }
+  }
+  return sources;
+}
+
 function assessMediaEvidence({ markup = '', styleText = '' } = {}) {
   const candidates = [];
   const push = (kind, source, verified, reason) => candidates.push({ kind, source, verified, reason });
+  // The asset zone moves every embedded image out of `src` and every CSS
+  // background out of `url(` — measured: a brand prototype built to the
+  // contract lost the evidence lever and the media grade (70/100 inline,
+  // 50/100 zoned) and the approve gate refused it. A named asset is judged by
+  // the bytes its key resolves to, exactly like a `src`.
+  const zone = assetZoneSources(markup);
+  const declaredAssets = new Map();
+  for (const match of String(styleText || '').matchAll(/(--asset-[\w-]+)\s*:\s*url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
+    declaredAssets.set(match[1], match[2].trim());
+  }
+  // A grain texture is atmosphere, never evidence. A zone value is not bounded
+  // by `url(...)`, so the scan may cross a `)` inside the SVG.
+  const isNoise = (source) => /^data:image\/svg\+xml[^,]*,[\s\S]*feTurbulence/i.test(source);
 
   for (const match of String(markup || '').matchAll(/<(img|video|picture)\b[^>]*>/gi)) {
     const kind = match[1].toLowerCase();
     const tag = match[0];
-    const source = attribute(tag, 'src') || attribute(tag, 'poster') || attribute(tag, 'srcset');
-    if (!source) continue;
+    const direct = attribute(tag, 'src') || attribute(tag, 'poster') || attribute(tag, 'srcset');
+    const key = direct ? null : attribute(tag, 'data-asset');
+    if (!direct && !key) continue;
     if (kind === 'img' && !meaningfulAlt(tag)) continue;
+    if (key && !zone.has(key)) {
+      push(kind, `data-asset:${key}`, false, `asset key "${key}" not in the asset zone — hydrates nothing`);
+      continue;
+    }
+    const source = direct || zone.get(key);
     const embedded = /^data:(?:image|video)\//i.test(source);
-    push(kind, source.slice(0, 160), embedded, embedded ? 'embedded asset' : 'requires rendered load verification');
+    push(kind, source.slice(0, 160), embedded, embedded ? (key ? 'embedded asset (asset zone)' : 'embedded asset') : 'requires rendered load verification');
   }
 
   for (const match of String(styleText || '').matchAll(/(?:background(?:-image)?|content)\s*:\s*[^;{}]*url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
     const source = match[1].trim();
-    if (!source || /^data:image\/svg\+xml[^,]*,[^)]*feTurbulence/i.test(source)) continue;
+    if (!source || isNoise(source)) continue;
     const embedded = /^data:image\//i.test(source);
     push('css-image', source.slice(0, 160), embedded, embedded ? 'embedded asset' : 'requires rendered load verification');
+  }
+
+  for (const match of String(styleText || '').matchAll(/(?:background(?:-image)?|content)\s*:\s*[^;{}]*var\(\s*(--asset-([\w-]+))/gi)) {
+    const [, property, key] = match;
+    const source = zone.get(key) || declaredAssets.get(property) || '';
+    if (!source) {
+      push('css-image', `var(${property})`, false, `asset key "${key}" not in the asset zone — hydrates nothing`);
+      continue;
+    }
+    if (isNoise(source)) continue;
+    const embedded = /^data:image\//i.test(source);
+    push('css-image', source.slice(0, 160), embedded, embedded ? 'embedded asset (asset zone)' : 'requires rendered load verification');
   }
 
   const verified = candidates.filter((candidate) => candidate.verified);

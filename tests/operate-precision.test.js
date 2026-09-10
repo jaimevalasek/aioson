@@ -195,3 +195,50 @@ surface_mode: operate
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// Measured fail-open: freshness is content-addressed only, so evidence
+// recorded by v1.64.0 or earlier — before `craft.precision` existed — stayed
+// "fresh" over an unchanged prototype, the precision bar had nothing to read,
+// and a 7/100 operate prototype was approved. A measured static craft with no
+// scored precision is evidence from before the bar: stale, re-measure.
+test('operate evidence recorded before the precision bar is refused as stale, naming the re-measure — --accept-craft cannot accept a number never measured', async () => {
+  const dir = await tmp();
+  const slug = 'painel';
+  try {
+    await write(dir, '.aioson/context/project.context.md', '---\nclassification: MICRO\ninteraction_language: en\n---\n');
+    await write(dir, `.aioson/briefings/${slug}/briefings.md`, '# Painel\n\nAn operations dashboard for an editorial team.\n');
+    await write(dir, `.aioson/briefings/${slug}/prototype.html`, sloppyOperateSurface({ withForm: false }));
+    await writeBriefingRegistry(dir, {
+      updated_at: '2026-09-01',
+      briefings: [{ slug, status: 'draft', source_plans: [], created_at: '2026-09-01', approved_at: null, prd_generated: null }]
+    });
+    const manifest = (craft) => `---\nfeature: ${slug}\nstatus: draft\napproved_at: null\nidentity: none\nreferences: declined\nsurface_mode: operate\n---\n\n# Prototype\n\n## Visual direction\n- register: technical\n- thesis: the whole recording is the object and the data is the product; the interface takes the editor from the index to the cut.\n- anti-goals: editorial-scale hero, uniform card wall.\n- composition signature: a fixed monospace index gutter on every row, closed by a continuous rule.\n\n## Runtime matrix\n- entry: #main\n\n## Quality evidence\n- verdict: pass\n- evidence: .aioson/context/features/${slug}/visual-evidence.json\n- craft: ${craft}\n- runtime: waived — owner explicitly accepted static-only evidence for this fixture\n- routes: 0\n`;
+    const measure = () => runVerifyArtifact({ args: [dir], options: { kind: 'visual', slug, advisory: true, json: true, suppressExitCode: true, 'no-persist': true }, logger: makeLogger() });
+    await write(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, manifest('CRAFT'));
+    const first = await measure();
+    await write(dir, `.aioson/briefings/${slug}/prototype-manifest.md`, manifest(`${first.metrics.craft.active_levers}/${first.metrics.craft.lever_count}`));
+    const report = JSON.parse(JSON.stringify(await measure()));
+    assert.equal(report.metrics.craft.measured, true);
+    assert.ok(report.metrics.craft.precision.score < 60, 'fixture: the surface sits under the bar');
+    // The evidence a v1.64.0 run left behind: same bytes, no precision block.
+    delete report.persisted;
+    delete report.metrics.craft.precision;
+    await write(dir, `.aioson/context/features/${slug}/visual-evidence.json`, JSON.stringify({ ...report, measured_at: new Date().toISOString() }, null, 2));
+
+    const logger = makeLogger();
+    const refused = await runBriefingApprove({ args: [dir], options: { slug }, logger });
+    assert.equal(refused.ok, false, 'an operate surface with no scored precision was approved');
+    assert.equal(refused.error, 'prototype_visual_evidence_stale');
+    const out = logger.lines.join('\n');
+    assert.match(out, /precision/);
+    assert.match(out, /aioson verify:artifact \. --kind=visual --slug=painel/);
+
+    const forced = await runBriefingApprove({ args: [dir], options: { slug, 'accept-craft': true }, logger: makeLogger() });
+    assert.equal(forced.ok, false);
+    assert.equal(forced.error, 'prototype_visual_evidence_stale');
+    const still = await fs.readFile(path.join(dir, '.aioson', 'briefings', slug, 'prototype-manifest.md'), 'utf8');
+    assert.match(still, /^status: draft$/m);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

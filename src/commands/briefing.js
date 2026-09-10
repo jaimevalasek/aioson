@@ -249,6 +249,23 @@ async function prepareApprovedPrototypeManifest(projectDir, slug, briefingConten
   // reports and held to the same bar.
   const familiaritySurface = ['operate', 'read'].includes(surfaceMode);
   const precision = craftMetrics && craftMetrics.precision && craftMetrics.precision.scored ? craftMetrics.precision : null;
+  // A measured craft always scores the axis of its mode, so a missing one is
+  // evidence recorded before that bar existed. Freshness is content-addressed:
+  // a v1.64.0 report over an unchanged operate prototype stayed "fresh", this
+  // check had no number to read, and a 7/100 prototype was approved. The same
+  // hole held a brand report from before the weight (v1.62.0 and earlier).
+  // Stale, never a pass — and --accept-craft records a decision about a
+  // measured number, never about its absence.
+  const unscoredAxis = !staticCraft ? null
+    : (familiaritySurface && !precision ? 'precision' : (brandSurface && !weight ? 'weight' : null));
+  if (unscoredAxis) {
+    return {
+      ok: false,
+      error: 'prototype_visual_evidence_stale',
+      manifestPath,
+      details: [`the evidence predates the ${surfaceMode} ${unscoredAxis} bar: craft was measured but metrics.craft.${unscoredAxis} was never scored — re-measure with aioson verify:artifact . --kind=visual --slug=${slug} --advisory --runtime, then approve again`]
+    };
+  }
   if (familiaritySurface && precision && Number.isFinite(precision.score) && precision.score < precision.bar) {
     const thin = Object.entries(precision.grades || {}).filter(([, g]) => g < 2).map(([axis, g]) => `${axis} ${g}/2`).join(', ');
     belowBar.push(`${surfaceMode} precision ${precision.score}/100 below the bar (${precision.bar}) — thin: ${thin}`);
@@ -860,6 +877,13 @@ function feedbackTouchesSection(section, { findings, comments, decisions, blocki
     || targets(findings, (f) => f.status === 'accepted' || (Array.isArray(f.selected_option_ids) && f.selected_option_ids.length > 0) || Boolean(f.note));
 }
 
+// One view line per note. A silent cut read as the whole note — the refiner
+// folds what it sees — so a cut says so and names where the full text lives.
+function viewLine(value, max) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > max ? `${text.slice(0, max).trimEnd()}… (cut — see --json)` : text;
+}
+
 async function runBriefingFeedback({ args, options = {}, logger }) {
   const projectDir = resolveTargetDir(args);
   const resolved = await resolveRefinableSlug(projectDir, options.slug);
@@ -942,18 +966,22 @@ async function runBriefingFeedback({ args, options = {}, logger }) {
   logger.log(`  sections: ${sections.length} · with text here: ${included.length} (${included.map((s) => s.id).join(', ') || 'none'}) · findings: ${findings.length} · comments: ${comments.length} · decisions: ${decisions.length} · blocking items: ${blocking.length}`);
   for (const f of payload.findings) {
     logger.log(`  [${f.id}] ${f.section_id || '-'} · ${f.category}/${f.severity}${f.blocking ? ' · BLOCKING' : ''} · ${f.status}${f.selected_option_ids.length ? ` · chose ${f.selected_option_ids.join('+')}` : ''}`);
-    logger.log(`      ${String(f.text || '').replace(/\s+/g, ' ').slice(0, 400)}`);
-    if (f.note) logger.log(`      note: ${String(f.note).replace(/\s+/g, ' ').slice(0, 400)}`);
-    if (f.rationale) logger.log(`      rationale: ${String(f.rationale).replace(/\s+/g, ' ').slice(0, 400)}`);
+    logger.log(`      ${viewLine(f.text, 400)}`);
+    if (f.note) logger.log(`      note: ${viewLine(f.note, 400)}`);
+    if (f.rationale) logger.log(`      rationale: ${viewLine(f.rationale, 400)}`);
   }
+  // The review page's collect() — the only producer — writes the owner's words
+  // to `note` on comments and blocking items. Reading `text`/`body` first
+  // printed every comment blank (`comment on temas: `) in the view the refiner
+  // folds from; `text`/`body`/`reason` stay as fallbacks for hand-written rounds.
   for (const c of comments) {
-    logger.log(`  comment on ${c && c.section_id ? c.section_id : '-'}: ${String((c && (c.text || c.body)) || '').replace(/\s+/g, ' ').slice(0, 400)}`);
+    logger.log(`  comment on ${c && c.section_id ? c.section_id : '-'}: ${viewLine(c && (c.note || c.text || c.body), 400)}`);
   }
   for (const d of decisions) {
-    logger.log(`  decision on ${d && d.section_id ? d.section_id : '-'}: ${String((d && (d.text || d.decision || d.status)) || '').replace(/\s+/g, ' ').slice(0, 300)}`);
+    logger.log(`  decision on ${d && d.section_id ? d.section_id : '-'}: ${viewLine(d && (d.text || d.decision || d.status), 300)}`);
   }
   for (const b of blocking) {
-    logger.log(`  blocking: ${String((b && (b.text || b.reason)) || JSON.stringify(b)).replace(/\s+/g, ' ').slice(0, 300)}`);
+    logger.log(`  blocking on ${b && b.section_id ? b.section_id : '-'}: ${viewLine((b && (b.note || b.text || b.reason)) || JSON.stringify(b), 300)}`);
   }
   for (const s of view) {
     logger.log('');

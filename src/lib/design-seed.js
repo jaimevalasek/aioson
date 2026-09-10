@@ -35,6 +35,7 @@ const {
   contrastRatio,
   hueDeltaDeg
 } = require('./color-math');
+const { validateFeatureSlug, isInsideRoot } = require('../verification/path-policy');
 
 // ─── deterministic randomness ───────────────────────────────────────────────
 
@@ -244,6 +245,9 @@ const GOLDEN_ANGLE = 137.508;
 const REPETITION_DELTA_DEG = 24;
 const REPETITION_TIGHT_DELTA_DEG = 18;
 const CANDIDATE_ACCENT_SEPARATION = 28;
+// The label names the BASE hue (`analogous-322`), so alternatives keep their
+// bases apart too — 1.2.0's rule, lost when 1.3.0 checked accents only.
+const CANDIDATE_BASE_SEPARATION = 28;
 const PALETTE_SEARCH_LIMIT = 36;
 
 // Rank constraints first; randomness only breaks equally suitable choices.
@@ -260,32 +264,52 @@ function pickLeastUsed(rng, pool, key, used, history = []) {
   return { value: selected, priorUses: minimum, recentUses: leastRecent };
 }
 
-function paletteDiversity(accentHue, pole, takenAccents, avoid) {
-  const candidateDistances = takenAccents.map((hue) => hueDeltaDeg(accentHue, hue));
+function paletteDiversity({ baseHue, accentHue }, pole, taken, avoid) {
+  const candidateDistances = taken.map((prior) => hueDeltaDeg(accentHue, prior.accent));
+  const baseDistances = taken.map((prior) => hueDeltaDeg(baseHue, prior.base));
   const recentDistances = avoid.filter((entry) => entry && Number.isFinite(entry.accent_hue))
     .map((entry) => ({ delta: hueDeltaDeg(accentHue, entry.accent_hue), samePole: entry.ground_pole === pole }));
   const candidateMatches = candidateDistances.filter((delta) => delta < CANDIDATE_ACCENT_SEPARATION).length;
+  const baseMatches = baseDistances.filter((delta) => delta < CANDIDATE_BASE_SEPARATION).length;
   const recentMatches = recentDistances.filter(({ delta, samePole }) => fingerprintMatchReason(delta, samePole)).length;
   const clearance = Math.min(180, ...candidateDistances.map((delta) => delta - CANDIDATE_ACCENT_SEPARATION),
+    ...baseDistances.map((delta) => delta - CANDIDATE_BASE_SEPARATION),
     ...recentDistances.map(({ delta, samePole }) => delta - (samePole ? REPETITION_DELTA_DEG : REPETITION_TIGHT_DELTA_DEG)));
-  return { candidateMatches, recentMatches, clearance, separation: candidateDistances.length ? Math.min(...candidateDistances) : null };
+  return {
+    candidateMatches,
+    baseMatches,
+    recentMatches,
+    clearance,
+    separation: candidateDistances.length ? Math.min(...candidateDistances) : null,
+    baseSeparation: baseDistances.length ? Math.round(Math.min(...baseDistances)) : null
+  };
 }
 
-function drawPalette(rng, { baseHue, pole, scheme, takenAccents, avoid }) {
+// Conflicts rank in order: an accent another alternative already wears (what
+// the eye compares), a base hue another alternative already names (what the
+// label names), a recent project's fingerprint; clearance breaks ties.
+function betterDraw(next, best) {
+  for (const key of ['candidateMatches', 'baseMatches', 'recentMatches']) {
+    if (next[key] !== best[key]) return next[key] < best[key];
+  }
+  return next.clearance > best.clearance;
+}
+
+function drawPalette(rng, { baseHue, stride = 1, pole, scheme, taken, avoid }) {
   let best = null;
   let trials = 0;
   for (; trials < PALETTE_SEARCH_LIMIT; trials += 1) {
-    const hue = (baseHue + trials * GOLDEN_ANGLE) % 360;
+    // Each candidate walks its own rungs of the golden-angle ladder (every
+    // `stride`-th): with a stride of one, trial k of candidate i WAS trial 0
+    // of candidate i+k, and two alternatives landed on one base hue.
+    const hue = (baseHue + trials * stride * GOLDEN_ANGLE) % 360;
     const palette = buildPalette(rng, { baseHue: hue, pole, scheme });
     const accentHue = Math.round(palette.roles.accent.h) % 360;
-    const diversity = paletteDiversity(accentHue, pole, takenAccents, avoid);
-    if (!best || diversity.candidateMatches < best.diversity.candidateMatches ||
-        (diversity.candidateMatches === best.diversity.candidateMatches &&
-          (diversity.recentMatches < best.diversity.recentMatches ||
-            (diversity.recentMatches === best.diversity.recentMatches && diversity.clearance > best.diversity.clearance)))) {
+    const diversity = paletteDiversity({ baseHue: hue, accentHue }, pole, taken, avoid);
+    if (!best || betterDraw(diversity, best.diversity)) {
       best = { hue, accentHue, palette, diversity };
     }
-    if (!diversity.candidateMatches && !diversity.recentMatches) { trials += 1; break; }
+    if (!diversity.candidateMatches && !diversity.baseMatches && !diversity.recentMatches) { trials += 1; break; }
   }
   return { ...best, trials };
 }
@@ -295,6 +319,7 @@ function candidateWarnings(candidate) {
   const warnings = [];
   if (d.recent_palette_matches) warnings.push(`${candidate.label}: palette overlaps ${d.recent_palette_matches} recent fingerprint(s) after ${d.palette_trials} trials; least-conflicting sampled palette used, chosen pole preserved`);
   if (d.accent_separation_deg !== null && d.accent_separation_deg < CANDIDATE_ACCENT_SEPARATION) warnings.push(`${candidate.label}: palette alternatives are only ${d.accent_separation_deg} degrees apart; draw diversity is limited`);
+  if (d.base_separation_deg !== null && d.base_separation_deg < CANDIDATE_BASE_SEPARATION) warnings.push(`${candidate.label}: base hue only ${d.base_separation_deg} degrees from another alternative; draw diversity is limited`);
   if (d.display_uses) warnings.push(`${candidate.label}: display reused after exhausting the compatible typeface bank`);
   if (d.hero_uses) warnings.push(`${candidate.label}: hero reused after exhausting the compatible composition bank`);
   return warnings;
@@ -333,20 +358,22 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
 
   const baseHue0 = rng() * 360;
   const candidates = [];
-  const takenAccents = [];
+  const taken = [];
   const usedDisplays = new Map();
   const usedHeroes = new Map();
   const usedMaterials = new Map();
+  const total = Math.max(1, Math.min(6, count));
 
-  for (let i = 0; i < Math.max(1, Math.min(6, count)); i += 1) {
+  for (let i = 0; i < total; i += 1) {
     const candidateRegister = normalizedRegister || pickFrom(rng, REGISTERS);
     const pole = fixedPole || pickWeighted(rng, POLE_WEIGHTS[candidateRegister] || POLE_WEIGHTS.default);
     const scheme = pickWeighted(rng, SCHEME_WEIGHTS[candidateRegister] || SCHEME_WEIGHTS.default);
 
-    // Compare final accents both inside this draw and against measured history.
-    const drawn = drawPalette(rng, { baseHue: (baseHue0 + i * GOLDEN_ANGLE) % 360, pole, scheme, takenAccents, avoid });
+    // Compare final accents AND bases inside this draw, accents against
+    // measured history; each candidate searches its own rungs of the ladder.
+    const drawn = drawPalette(rng, { baseHue: (baseHue0 + i * GOLDEN_ANGLE) % 360, stride: total, pole, scheme, taken, avoid });
     const { hue, palette } = drawn;
-    takenAccents.push(drawn.accentHue);
+    taken.push({ base: hue, accent: drawn.accentHue });
 
     const pairingPool = TYPEFACE_BANK.filter((p) => p.registers.includes(candidateRegister));
     const chosenPairing = pickLeastUsed(rng, pairingPool, (p) => p.display, usedDisplays, avoid.map((entry) => entry && entry.display_face));
@@ -376,6 +403,7 @@ function generateSeedCandidates({ project = null, slug, register = null, count =
       },
       diversity: {
         accent_separation_deg: drawn.diversity.separation,
+        base_separation_deg: drawn.diversity.baseSeparation,
         recent_palette_matches: drawn.diversity.recentMatches,
         palette_trials: drawn.trials,
         display_uses: chosenPairing.priorUses,
@@ -433,12 +461,23 @@ function registryPath() {
  * projects may record there.
  */
 function isEphemeralProjectDir(dir) {
-  const normalize = (value) => path.resolve(String(value)).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-  const resolved = normalize(dir || '.');
+  // Spellings are not paths: a Windows runner spells the temp root in 8.3 form
+  // (`C:\Users\RUNNER~1\…`) while the project path is long-form, and macOS's
+  // tmpdir is `/var/…` where realpath says `/private/var/…`. Comparing the
+  // strings let such a fixture record into the operator's default registry,
+  // so both sides are compared by their real path too (a path that cannot be
+  // resolved keeps its spelling).
+  const spellings = (value) => {
+    const resolved = path.resolve(String(value));
+    const out = [resolved];
+    try { out.push(fs.realpathSync.native(resolved)); } catch { /* absent or unreadable */ }
+    return [...new Set(out.map((p) => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()))];
+  };
+  const dirs = spellings(dir || '.');
   const roots = [os.tmpdir(), process.env.TMPDIR, process.env.TEMP, process.env.TMP]
     .filter((root) => typeof root === 'string' && root.trim().length > 0)
-    .map(normalize);
-  return roots.some((root) => resolved === root || resolved.startsWith(`${root}/`));
+    .flatMap(spellings);
+  return dirs.some((resolved) => roots.some((root) => resolved === root || resolved.startsWith(`${root}/`)));
 }
 
 function readRegistry() {
@@ -525,8 +564,21 @@ function readSeedRecord(targetDir, slug = null) {
  */
 function writeSeedRecord(targetDir, slug, payload) {
   const root = path.resolve(String(targetDir || '.'));
+  // The slug is a path segment: a `../` slug wrote design-seed.json outside
+  // the project. Canonical feature-slug rule, then containment, before any
+  // byte is written — for every caller, not only the CLI.
+  if (slug && !validateFeatureSlug(slug).ok) {
+    const error = new Error(`design-seed: ${JSON.stringify(slug)} is not a feature slug`);
+    error.code = 'invalid_slug';
+    throw error;
+  }
   if (!fs.existsSync(path.join(root, '.aioson'))) return null;
   const file = seedRecordPath(root, slug);
+  if (!isInsideRoot(path.join(root, '.aioson', 'context'), file)) {
+    const error = new Error(`design-seed: record path escapes the project (${file})`);
+    error.code = 'path_outside_root';
+    throw error;
+  }
   const previous = (() => {
     try {
       const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));

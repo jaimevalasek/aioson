@@ -70,6 +70,8 @@ module.exports = {
       'aioson briefing:review [path] [--slug=<slug>] [--findings=<path>] [--force] [--json] [--locale=en]',
     help_briefing_apply_feedback:
       'aioson briefing:apply-feedback [path] [--slug=<slug>] [--feedback=<path>] [--confirm|--declined] [--allow-stale] [--json] [--locale=en]',
+    help_briefing_feedback:
+      'aioson briefing:feedback [path] [--slug=<slug>] [--feedback=<path>] [--json] [--locale=en]',
     help_briefing_migrate_lineage:
       'aioson briefing:migrate-lineage [path] --slug=<slug> [--dry-run|--write] [--json] [--locale=en]',
     briefing_sources: {
@@ -174,7 +176,7 @@ module.exports = {
       snippet_truncated: 'Snippet truncated.'
     },
     help_brain_query:
-      'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--min-quality=4] [--format=compact|json|ids] [--json] [--locale=en]',
+      'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=en]',
     help_setup_context:
       'aioson setup:context [path] [--defaults] [--project-type=web_app|api|site|script|dapp|desktop_app] [--framework=<name>] [--backend=<name>] [--frontend=<name>] [--database=<name>] [--auth=<name>] [--uiux=<name>] [--language=<bcp47-tag>] [--web3-enabled=true|false] [--locale=en]',
     help_locale_apply: 'aioson locale:apply [path] [--lang=<bcp47-tag>] [--dry-run] [--locale=en]',
@@ -292,7 +294,7 @@ module.exports = {
     help_preflight:
       'aioson preflight [path] [--agent=<name>] [--feature=<slug>] [--json] [--locale=en]',
     help_pulse_update:
-      'aioson pulse:update [path] --agent=<name> [--feature=<slug>] [--gate=<text>] [--verdict=<text>] [--locale=en]',
+      'aioson pulse:update [path] [--agent=<name>] [--feature=<slug>] [--gate=<text>] [--verdict=<text>] [--locale=en]',
     help_agent_done:
       'aioson agent:done [path] --agent=<name> --summary=<text> [--title=<text>] [--status=completed|failed] [--json] [--locale=en]',
     help_dossier_add_finding:

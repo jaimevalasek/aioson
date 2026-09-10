@@ -64,7 +64,8 @@ async function fileExists(file) {
 }
 
 function readDesignSkillField(raw) {
-  const match = /^design_skill:\s*(.*)$/m.exec(raw || '');
+  // `[ \t]*`: `\s*` crossed the newline and read the next line as the value.
+  const match = /^design_skill:[ \t]*(.*)$/m.exec(raw || '');
   if (!match) return '';
   return match[1].trim().replace(/^["']|["']$/g, '').trim();
 }

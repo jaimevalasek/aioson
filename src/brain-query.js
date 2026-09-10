@@ -172,8 +172,20 @@ function formatBrainNodesCompact(nodes) {
 // `--id=<id> --format=compact` away.
 function firstSentence(text, max = 140) {
   const trimmed = String(text || '').replace(/\s+/g, ' ').trim();
-  const match = trimmed.match(/^[^.!?]*[.!?]/);
-  const sentence = (match ? match[0] : trimmed).trim();
+  // A sentence ends at . ! ? followed by a space or the end, outside inline
+  // code: the first `.` anywhere cut shipped nodes to "A rule under `.",
+  // "Reassigning `el." and "…collapses all durations to 0.".
+  let end = trimmed.length;
+  let inCode = false;
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const ch = trimmed[i];
+    if (ch === '`') inCode = !inCode;
+    else if (!inCode && '.!?'.includes(ch) && (i + 1 === trimmed.length || trimmed[i + 1] === ' ')) {
+      end = i + 1;
+      break;
+    }
+  }
+  const sentence = trimmed.slice(0, end).trim();
   return sentence.length > max ? `${sentence.slice(0, max - 1).trimEnd()}…` : sentence;
 }
 

@@ -556,7 +556,9 @@ async function runSkillList({ args, options = {}, logger, t }) {
   try {
     const contextPath = path.join(targetDir, '.aioson/context/project.context.md');
     const contextRaw = await fs.readFile(contextPath, 'utf8');
-    const match = contextRaw.match(/design_skill:\s*(.*)/);
+    // `[ \t]*`, never `\s*`: across the newline a bare `design_skill:` read the
+    // next line as the skill id and the engine was never marked [active].
+    const match = contextRaw.match(/design_skill:[ \t]*(.*)/);
     if (match) activeDesignSkill = match[1].trim().replace(/^["']|["']$/g, '').trim();
   } catch { /* no context */ }
   // A blank field is the engine: the design skill is never a question, and

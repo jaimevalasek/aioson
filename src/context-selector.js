@@ -38,9 +38,16 @@ const SEMANTIC_STOP_WORDS = new Set([
   'than', 'them', 'they', 'their', 'there', 'also', 'only', 'just', 'over',
   'about', 'other', 'some', 'been', 'have', 'does', 'will', 'should', 'would',
   'could', 'esse', 'essa', 'este', 'esta', 'isso', 'isto', 'aquele', 'aquela',
-  'sobre', 'entre', 'cada', 'mesmo', 'mesma', 'todo', 'toda', 'todos', 'todas',
+  // The plurals too: "estes endpoints e essas validações" selected an
+  // unrelated animation doc at 55 through four demonstratives.
+  'esses', 'essas', 'estes', 'estas', 'aqueles', 'aquelas', 'mesmos', 'mesmas',
+  'muitos', 'muitas', 'outro', 'outra', 'outros', 'outras',
+  // Not `todo`/`todos` ("all" in pt-BR, the English domain noun of every todo
+  // app) nor `antes`/`depois` (the before/after gallery a site is built on):
+  // a stop word erases a domain from the task it names.
+  'sobre', 'entre', 'cada', 'mesmo', 'mesma', 'toda', 'todas',
   'muito', 'mais', 'menos', 'pode', 'deve', 'quando', 'onde', 'tambem', 'porque',
-  'ainda', 'depois', 'antes', 'aqui',
+  'ainda', 'aqui',
   'agent', 'agente', 'agents', 'aioson', 'dev', 'deyvin', 'architect',
   'feature', 'funcionalidade', 'task', 'tarefa', 'work', 'trabalho',
   'create', 'criar', 'fazer', 'implementar', 'implement', 'implementation',
@@ -392,8 +399,16 @@ async function collectCandidates(targetDir) {
   return candidates;
 }
 
+// Tokenize the way the FTS5 prefilter does. unicode61 splits `order_status`
+// into order + status, while normalizeToken deletes `_` — and once terms match
+// at a word start, no term could reach the second part of an identifier: the
+// prefilter returned a schema doc listing `order_status`/`payment_method`, the
+// term check read `orderstatus` and dropped it (score 5, 55 before). camelCase
+// stays one word on both sides, as unicode61 keeps it: splitting it measured
+// noisier on the shipped corpus (`SaveButton` in a touched path became `save`
+// + `button` and reached binding rules) and was never matched before either.
 function normalizeForSemantic(value) {
-  return normalizeToken(value).replace(/[/-]+/g, ' ');
+  return normalizeToken(String(value || '').replace(/_/g, ' ')).replace(/[/-]+/g, ' ');
 }
 
 function addSemanticTerm(out, term) {
@@ -404,7 +419,10 @@ function addSemanticTerm(out, term) {
     if (SEMANTIC_STOP_WORDS.has(part)) continue;
     if (part.length < 4 && !SHORT_SEMANTIC_TERMS.has(part)) continue;
     out.add(part);
-    if (part.endsWith('s') && part.length > 4) out.add(part.slice(0, -1));
+    // The singular is a word of its own: `estes` → `este`, `tests` → `test`
+    // re-entered the stop list through the back door.
+    const singular = part.slice(0, -1);
+    if (part.endsWith('s') && part.length > 4 && !SEMANTIC_STOP_WORDS.has(singular)) out.add(singular);
     const synonyms = SEMANTIC_SYNONYMS.get(part) || [];
     for (const synonym of synonyms) out.add(synonym);
   }

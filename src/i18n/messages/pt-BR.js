@@ -71,6 +71,8 @@ module.exports = {
       'aioson briefing:review [caminho] [--slug=<slug>] [--findings=<caminho>] [--force] [--json] [--locale=pt-BR]',
     help_briefing_apply_feedback:
       'aioson briefing:apply-feedback [caminho] [--slug=<slug>] [--feedback=<caminho>] [--confirm|--declined] [--allow-stale] [--json] [--locale=pt-BR]',
+    help_briefing_feedback:
+      'aioson briefing:feedback [caminho] [--slug=<slug>] [--feedback=<caminho>] [--json] [--locale=pt-BR]',
     help_briefing_migrate_lineage:
       'aioson briefing:migrate-lineage [caminho] --slug=<slug> [--dry-run|--write] [--json] [--locale=pt-BR]',
     briefing_sources: {
@@ -175,7 +177,7 @@ module.exports = {
       snippet_truncated: 'Trecho truncado.'
     },
     help_brain_query:
-      'aioson brain:query [path] [--tags=<csv>] [--agent=<agente>] [--min-quality=4] [--format=compact|json|ids] [--json] [--locale=pt-BR]',
+      'aioson brain:query [path] [--tags=<csv>] [--agent=<agente>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=pt-BR]',
     help_setup_context:
       'aioson setup:context [path] [--defaults] [--project-type=web_app|api|site|script|dapp|desktop_app] [--framework=<name>] [--backend=<name>] [--frontend=<name>] [--database=<name>] [--auth=<name>] [--uiux=<name>] [--language=<bcp47-tag>] [--web3-enabled=true|false] [--locale=pt-BR]',
     help_locale_apply:
@@ -294,7 +296,7 @@ module.exports = {
     help_preflight:
       'aioson preflight [path] [--agent=<nome>] [--feature=<slug>] [--json] [--locale=pt-BR]',
     help_pulse_update:
-      'aioson pulse:update [path] --agent=<nome> [--feature=<slug>] [--gate=<texto>] [--verdict=<texto>] [--locale=pt-BR]',
+      'aioson pulse:update [path] [--agent=<nome>] [--feature=<slug>] [--gate=<texto>] [--verdict=<texto>] [--locale=pt-BR]',
     help_agent_done:
       'aioson agent:done [path] --agent=<nome> --summary=<texto> [--title=<texto>] [--status=completed|failed] [--json] [--locale=pt-BR]',
     help_dossier_add_finding:

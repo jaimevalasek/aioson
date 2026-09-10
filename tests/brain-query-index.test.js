@@ -48,6 +48,40 @@ test('firstSentence keeps the first sentence and caps the length', () => {
   assert.equal(firstSentence(''), '');
 });
 
+// Measured on the shipped brains: the index cut at the first `.` anywhere —
+// inside inline code and inside a decimal — so vq-000 read "A rule under `.",
+// vq-015 "Reassigning `el." and css-008 "…collapses all durations to 0.".
+test('a sentence ends at . ! ? before a space or the end — never inside inline code or a number, on every shipped brain', async () => {
+  assert.equal(firstSentence('A rule under `.aioson/rules/` wins over every node here. Follow the rule.'), 'A rule under `.aioson/rules/` wins over every node here.');
+  assert.equal(firstSentence('Reassigning `el.value = mask(el.value)` on input jumps the caret. Recompute it.'), 'Reassigning `el.value = mask(el.value)` on input jumps the caret.');
+  assert.equal(firstSentence('Collapses all durations to 0.01ms. Always include it.'), 'Collapses all durations to 0.01ms.');
+  assert.equal(firstSentence('Is the fold empty? Fill it.'), 'Is the fold empty?');
+  assert.equal(firstSentence('Ends at the end.'), 'Ends at the end.');
+
+  const brainsRoot = path.resolve(__dirname, '..', 'template', '.aioson', 'brains');
+  const brainFiles = [];
+  const walk = async (dir) => {
+    for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.name.endsWith('.brain.json')) brainFiles.push(full);
+    }
+  };
+  await walk(brainsRoot);
+  const cut = [];
+  const seen = new Set();
+  for (const file of brainFiles) {
+    for (const node of JSON.parse(await fs.readFile(file, 'utf8')).nodes || []) {
+      if (!node.s) continue;
+      seen.add(node.id);
+      const line = firstSentence(node.s).replace(/…$/, '');
+      if ((line.match(/`/g) || []).length % 2 === 1 || /\d\.$/.test(line)) cut.push(`${node.id}: ${line}`);
+    }
+  }
+  for (const id of ['vq-000', 'vq-015', 'css-008']) assert.ok(seen.has(id), `shipped node ${id} moved — re-point this regression`);
+  assert.deepEqual(cut, [], 'index lines cut inside inline code or a number');
+});
+
 test('the index prints one line per node with the first sentence, at a fraction of the compact cost', async () => {
   const { dir, nodes } = await makeProject();
   try {

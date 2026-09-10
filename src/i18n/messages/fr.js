@@ -71,6 +71,8 @@ module.exports = {
       'aioson briefing:review [chemin] [--slug=<slug>] [--findings=<chemin>] [--force] [--json] [--locale=fr]',
     help_briefing_apply_feedback:
       'aioson briefing:apply-feedback [chemin] [--slug=<slug>] [--feedback=<chemin>] [--confirm|--declined] [--allow-stale] [--json] [--locale=fr]',
+    help_briefing_feedback:
+      'aioson briefing:feedback [chemin] [--slug=<slug>] [--feedback=<chemin>] [--json] [--locale=fr]',
     help_briefing_migrate_lineage:
       'aioson briefing:migrate-lineage [chemin] --slug=<slug> [--dry-run|--write] [--json] [--locale=fr]',
     briefing_sources: {
@@ -175,7 +177,7 @@ module.exports = {
       snippet_truncated: 'Extrait tronqué.'
     },
     help_brain_query:
-      'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--min-quality=4] [--format=compact|json|ids] [--json] [--locale=fr]',
+      'aioson brain:query [path] [--tags=<csv>] [--agent=<agent>] [--id=<csv>] [--min-quality=4] [--format=compact|index|json|ids] [--json] [--locale=fr]',
     help_setup_context:
       'aioson setup:context [path] [--defaults] [--project-type=web_app|api|site|script|dapp|desktop_app] [--framework=<name>] [--backend=<name>] [--frontend=<name>] [--database=<name>] [--auth=<name>] [--uiux=<name>] [--language=<bcp47-tag>] [--web3-enabled=true|false] [--locale=fr]',
     help_locale_apply: 'aioson locale:apply [path] [--lang=<bcp47-tag>] [--dry-run] [--locale=fr]',

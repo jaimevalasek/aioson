@@ -317,3 +317,91 @@ test('semantic terms match word starts only: observers is not server, stable is 
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// A doc reachable only through semantic terms: a trigger no task says and a
+// neutral name/description, so a selection proves the term check alone.
+async function semanticOnlyProject(docs) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-semantic-terms-'));
+  await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\nload_tier: always\n---\n# Project');
+  for (const [relPath, body] of Object.entries(docs)) {
+    await writeFile(dir, relPath, [
+      '---', 'name: reference', 'description: reference notes', 'agents: [dev]',
+      'modes: [executing]', 'load_tier: trigger', 'triggers: [zzz-never]', '---', body
+    ].join('\n'));
+  }
+  return dir;
+}
+
+async function semanticSelection(dir, task) {
+  const result = await selectContext(dir, { agent: 'dev', mode: 'executing', task });
+  return { terms: result.semantic.terms, selected: selectedPaths(result) };
+}
+
+// Identifier parts are words, as the FTS5 prefilter reads them. unicode61
+// splits `order_status` into order + status, but the term check deleted `_`
+// and read `orderstatus`: since terms match at a word start, no term could
+// reach the second part of an identifier — the prefilter returned the schema
+// doc, the check scored it 5 and dropped it (55 before word-start matching).
+test('snake_case parts are words for the term check, as for the FTS5 prefilter: order_status is order + status', async () => {
+  const dir = await semanticOnlyProject({
+    '.aioson/docs/backend/column-notes.md': '# Columns\nColumns: `order_id`, `order_status`, `payment_method`, `shipping_address`, `created_at`. The `order_status` enum drives the fulfillment queue.\n',
+    '.aioson/docs/backend/handler-notes.md': '# Handler\nThe `stripeWebhook` handler calls `verifySignature` and `persistLedger` then `emitPaymentEvent`.\n'
+  });
+  try {
+    const snake = await semanticSelection(dir, 'add a status filter and a method filter to the address search in the admin');
+    assert.equal(snake.selected.has('.aioson/docs/backend/column-notes.md'), true, `snake_case parts unreachable; terms ${snake.terms.join(',')}`);
+    // A task that names the identifiers reaches the same words.
+    const named = await semanticSelection(dir, 'rename order_status and payment_method before the shipping_address migration');
+    assert.ok(['order', 'status', 'payment', 'method', 'shipping', 'address'].every((term) => named.terms.includes(term)), named.terms.join(','));
+    // camelCase stays one word on both sides, as unicode61 keeps it: the
+    // identifier a task names still reaches the doc that names it.
+    const camel = await semanticSelection(dir, 'the verifySignature and persistLedger calls in the stripeWebhook handler fire emitPaymentEvent twice');
+    assert.ok(camel.terms.includes('verifysignature'), camel.terms.join(','));
+    assert.equal(camel.selected.has('.aioson/docs/backend/handler-notes.md'), true, `terms ${camel.terms.join(',')}`);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+// The `-s` singular re-entered what the stop list keeps out: the check ran on
+// the plural, then `estes` → `este`, `essas` → `essa`, `tests` → `test` were
+// added unchecked, and an unrelated pt-BR animation doc was selected at 55 on
+// "estes endpoints e essas validações" through four demonstratives.
+test('a stop word never returns through its plural: estes/essas/aqueles are not vocabulary, tests→test is not re-added', async () => {
+  const dir = await semanticOnlyProject({
+    '.aioson/docs/design/animacoes.md': '# Animações\nEsta seção descreve efeitos visuais. Este guia cobre essa transição e esse brilho. Estes efeitos e essas curvas de easing valem para cards.\n'
+  });
+  try {
+    const demonstratives = await semanticSelection(dir, 'Corrigir estes endpoints e essas validações do checkout de pagamento');
+    assert.equal(demonstratives.selected.has('.aioson/docs/design/animacoes.md'), false, `selected through ${demonstratives.terms.join(',')}`);
+    const plurals = await semanticSelection(dir, 'Ajustar esses campos, estas telas, aqueles botoes, aquelas listas, os mesmos modulos e muitos outros arquivos dos tests, features e tasks');
+    for (const word of ['esses', 'esse', 'estas', 'esta', 'aqueles', 'aquele', 'aquelas', 'aquela', 'mesmos', 'mesmo', 'muitos', 'muito', 'outros', 'test', 'feature', 'task']) {
+      assert.equal(plurals.terms.includes(word), false, `${word} entered the terms: ${plurals.terms.join(',')}`);
+    }
+    for (const word of ['campos', 'telas', 'botoes', 'listas', 'arquivos']) {
+      assert.ok(plurals.terms.includes(word), `domain word ${word} lost: ${plurals.terms.join(',')}`);
+    }
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+// Stop words that are domain nouns elsewhere: `todo`/`todos` (pt-BR "all")
+// erased the English "todo" of a todo app, and `antes`/`depois` erased the
+// before/after gallery a clinic or a renovation site is built around.
+test('todo and antes/depois stay vocabulary: a todo-items doc and a before/after gallery doc are reachable', async () => {
+  const dir = await semanticOnlyProject({
+    '.aioson/docs/domain/items.md': '# Domain\nTodo items have a title, a due date, a priority and a done flag. Overdue todos are listed first.\n',
+    '.aioson/docs/domain/galeria.md': '# Galeria\nA galeria de antes e depois mostra cada tratamento com a foto de antes e a foto de depois lado a lado.\n'
+  });
+  try {
+    const todo = await semanticSelection(dir, 'add due date reminders to todo items');
+    assert.ok(todo.terms.includes('todo'), todo.terms.join(','));
+    assert.equal(todo.selected.has('.aioson/docs/domain/items.md'), true, `terms ${todo.terms.join(',')}`);
+    const gallery = await semanticSelection(dir, 'montar a galeria de antes e depois dos tratamentos da clinica');
+    assert.ok(gallery.terms.includes('antes') && gallery.terms.includes('depois'), gallery.terms.join(','));
+    assert.equal(gallery.selected.has('.aioson/docs/domain/galeria.md'), true, `terms ${gallery.terms.join(',')}`);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

@@ -268,6 +268,36 @@ test('all registers produce distinct three-way alternatives, including their fin
   assert.deepEqual(failures, []);
 });
 
+// Measured regression (design:seed 1.3.0): separation between candidates was
+// checked on the ACCENT hue only, and every candidate's trial ladder was the
+// next candidate's start — trial k of candidate i was trial 0 of candidate
+// i+k. One draw offered `analogous-322 · technical · light` and
+// `analogous-322 · quiet · chromatic`; the manifest names the chosen draw by
+// label, so the choice became ambiguous. 1.2.0: 0 duplicate labels in 1000
+// draws; 1.3.0: 4 at three candidates, 22 at six.
+test('a draw never offers two candidates under one label: 1000 draws at three and six candidates, bases and accents apart', () => {
+  const duplicates = [];
+  const closeBases = [];
+  const closeAccents = [];
+  for (let n = 0; n < 1000; n += 1) {
+    for (const count of [3, 6]) {
+      const { candidates } = generateSeedCandidates({ project: `seed-dup-${n}`, slug: `seed-dup-${n}`, count });
+      const labels = candidates.map((c) => c.label);
+      if (new Set(labels).size !== labels.length) duplicates.push(`seed-dup-${n}/${count}: ${labels.join(' | ')}`);
+      if (count !== 3) continue;
+      for (let i = 1; i < candidates.length; i += 1) {
+        for (const earlier of candidates.slice(0, i)) {
+          if (hueDeltaDeg(earlier.base_hue, candidates[i].base_hue) < 28) closeBases.push(`seed-dup-${n}: ${earlier.label} ~ ${candidates[i].label}`);
+          if (hueDeltaDeg(earlier.accent_hue, candidates[i].accent_hue) < 28) closeAccents.push(`seed-dup-${n}: ${earlier.label} ~ ${candidates[i].label}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(duplicates, [], `duplicate labels in ${duplicates.length} draws`);
+  assert.deepEqual(closeBases, [], `base hues under 28° apart in ${closeBases.length} pairs`);
+  assert.deepEqual(closeAccents, [], `accents under 28° apart in ${closeAccents.length} pairs`);
+});
+
 test('a free display face wins over recent faces without relying on lucky retries', () => {
   const pool = TYPEFACE_BANK.filter((p) => p.registers.includes('technical'));
   const free = pool[pool.length - 1].display;

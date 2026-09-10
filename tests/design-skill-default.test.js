@@ -32,7 +32,7 @@ const { createTranslator } = require('../src/i18n');
 const { runSetupContext } = require('../src/commands/setup-context');
 const { runSkillList } = require('../src/commands/skill');
 const { installTemplate } = require('../src/installer');
-const { DESIGN_ENGINE_ID } = require('../src/lib/design-presets');
+const { DESIGN_ENGINE_ID, inspectRetiredDesignPresets } = require('../src/lib/design-presets');
 const { parseFrontmatter } = require('../src/preflight-engine');
 
 const ROOT = path.join(__dirname, '..');
@@ -218,6 +218,29 @@ test('skill:list prints the engine description and marks the default engine acti
     const output = logger.lines.join('\n');
     assert.ok(output.includes(`${DESIGN_ENGINE_ID} [active]`), 'the CLI default is the active design skill');
     assert.equal(output.includes('\n    >-'), false, 'the folded indicator never prints as the description');
+  } finally {
+    await fsp.rm(projectDir, { recursive: true, force: true });
+  }
+});
+
+// Measured: in `design_skill:\s*(.*)` the `\s*` crossed the newline, so a bare
+// `design_skill:` (a blank field an older context carries) captured the next
+// line — `test_runner: "jest"` — as the skill id, and the engine a blank field
+// resolves to was never marked [active]. The retired-preset inspector read
+// the field with the same pattern.
+test('a bare design_skill: is blank, not the next line: skill:list marks the engine active', async () => {
+  const projectDir = await makeTempDir('aioson-skill-list-bare-');
+  try {
+    const engineDir = path.join(projectDir, '.aioson', 'skills', 'design', DESIGN_ENGINE_ID);
+    await fsp.mkdir(engineDir, { recursive: true });
+    await fsp.copyFile(ENGINE_SKILL, path.join(engineDir, 'SKILL.md'));
+    await fsp.mkdir(path.join(projectDir, '.aioson', 'context'), { recursive: true });
+    await fsp.writeFile(path.join(projectDir, '.aioson', 'context', 'project.context.md'), '---\nproject_name: x\ndesign_skill:\ntest_runner: "jest"\n---\n', 'utf8');
+    const logger = quietLogger();
+    await runSkillList({ args: [projectDir], options: {}, logger, t: createTranslator('en').t });
+    const output = logger.lines.join('\n');
+    assert.ok(output.includes(`${DESIGN_ENGINE_ID} [active]`), output);
+    assert.equal((await inspectRetiredDesignPresets(projectDir)).design_skill, '', 'the next line is not the design skill');
   } finally {
     await fsp.rm(projectDir, { recursive: true, force: true });
   }

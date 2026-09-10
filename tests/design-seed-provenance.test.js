@@ -92,6 +92,42 @@ test('a project under the OS temp root is ephemeral; a real path is not', () => 
   assert.equal(isEphemeralProjectDir(path.join(__dirname, '..')), false);
 });
 
+// Measured bypass: the guard compared path spellings. A Windows runner spells
+// the temp root in 8.3 form (`C:\Users\RUNNER~1\…`) while the project path is
+// long-form; macOS's tmpdir is `/var/…` where realpath says `/private/var/…`.
+// The spellings never matched and a fixture recorded into the operator's
+// default registry. A junction/symlink alias replays the same two spellings.
+test('the fixture guard compares real paths: a temp root spelled another way is still the temp root', async () => {
+  const real = await makeTmpDir('aioson-ephemeral-real-');
+  const alias = `${real}-alias`;
+  await fs.symlink(real, alias, 'junction');
+  await fs.mkdir(path.join(real, 'project'));
+  const home = await makeTmpDir('aioson-ephemeral-home-');
+  const keys = ['TEMP', 'TMP', 'TMPDIR', 'AIOSON_DESIGN_REGISTRY', 'HOME', 'USERPROFILE'];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const tempRoot = (root) => { process.env.TEMP = root; process.env.TMP = root; process.env.TMPDIR = root; };
+  try {
+    for (const [root, project] of [[alias, path.join(real, 'project')], [real, path.join(alias, 'project')]]) {
+      tempRoot(root);
+      assert.equal(isEphemeralProjectDir(project), true, `${project} is under the temp root ${root}`);
+    }
+    tempRoot(alias);
+    delete process.env.AIOSON_DESIGN_REGISTRY;
+    process.env.HOME = home;
+    process.env.USERPROFILE = home;
+    const entry = { project: 'fixture', slug: 's', accent_hue: 4, ground_pole: 'light' };
+    assert.equal(recordFingerprint(entry, { projectDir: path.join(real, 'project') }), false);
+    assert.equal(fsSync.existsSync(path.join(home, '.aioson', 'design-fingerprints.json')), false, 'a fixture reached the default registry');
+  } finally {
+    for (const key of keys) {
+      if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key];
+    }
+    await fs.unlink(alias);
+    await fs.rm(real, { recursive: true, force: true });
+    await fs.rm(home, { recursive: true, force: true });
+  }
+});
+
 test('recordFingerprint refuses an ephemeral project when the registry is the operator default', async () => {
   const home = await makeTmpDir('aioson-provenance-home-');
   const project = await makeTmpDir('aioson-craft-weight-');
@@ -227,6 +263,46 @@ test('design:seed records the draw next to the feature, keeps history on a re-dr
       assert.match(logger.lines.join('\n'), /recorded at \.aioson\/context\/features\/painel\/design-seed\.json/);
     } finally {
       await fs.rm(project, { recursive: true, force: true });
+    }
+  });
+});
+
+// Measured: `--slug` was joined under features/ unvalidated, so
+// `--slug=../../../../outside` wrote design-seed.json outside the project (and
+// the identity lookup read briefings/<slug>/ wherever it pointed). The slug is
+// refused with a named reason before any path is built.
+test('design:seed refuses a slug that is not a feature slug, before any path is built', async () => {
+  await withTempRegistry(async () => {
+    const outer = await makeTmpDir('aioson-seed-slug-');
+    const project = path.join(outer, 'project');
+    try {
+      await fs.mkdir(path.join(project, '.aioson', 'context'), { recursive: true });
+      for (const slug of ['../../../../outside', '..', 'painel/../../..', 'a/b', 'Painel', '-painel']) {
+        const result = await runDesignSeed({ args: [project], options: { slug, json: true }, logger: makeLogger() });
+        assert.equal(result.ok, false, `slug ${slug} was accepted`);
+        assert.equal(result.error, 'invalid_slug', slug);
+        assert.equal(result.reason, 'invalid_feature_slug', slug);
+        process.exitCode = 0;
+      }
+      assert.equal(fsSync.existsSync(path.join(outer, 'outside', 'design-seed.json')), false, 'a draw was written outside the project');
+      assert.equal(fsSync.existsSync(path.join(project, '.aioson', 'context', 'features')), false, 'nothing is recorded for a refused slug');
+
+      const logger = makeLogger();
+      const human = await runDesignSeed({ args: [project], options: { slug: '../x' }, logger });
+      process.exitCode = 0;
+      assert.equal(human.ok, false);
+      assert.match(logger.lines.join('\n'), /--slug="\.\.\/x" is not a feature slug/);
+
+      // The write side refuses on its own, for any caller.
+      const payload = { generator: 'test', project: 'p', project_id: 'pid', seed: 0, basis: 'b', candidates: [] };
+      assert.throws(() => writeSeedRecord(project, '../../../../outside', payload), (error) => error.code === 'invalid_slug');
+      assert.equal(fsSync.existsSync(path.join(outer, 'outside', 'design-seed.json')), false);
+
+      // A canonical slug still records.
+      const ok = await runDesignSeed({ args: [project], options: { slug: 'painel-2', json: true }, logger: makeLogger() });
+      assert.equal(ok.recorded, '.aioson/context/features/painel-2/design-seed.json');
+    } finally {
+      await fs.rm(outer, { recursive: true, force: true });
     }
   });
 });
