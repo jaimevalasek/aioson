@@ -185,10 +185,25 @@ test('Product prompt registers feature state and hands to mandatory Sheldon', as
 
 test('Sheldon is mandatory PRD-only review and does not depend on spec.md', async () => {
   const content = await fs.readFile(path.join(process.cwd(), '.aioson/agents/sheldon.md'), 'utf8');
-  assert.match(content, /Independently challenge every tracked feature PRD/);
+  // Bounded to the Mission paragraph: an unbounded pattern is satisfied by
+  // "independent passes" much later in the kernel and guards nothing.
+  assert.match(content, /## Mission\r?\n\r?\n[^\r\n]*\btracked feature PRD\b[^\r\n]*\bindependent\b/);
   assert.match(content, /Edit the existing PRD in place/);
   assert.match(content, /bounded hash-bound review/i);
   assert.doesNotMatch(content, /spec\.md.*done indicator/i);
+});
+
+// The "6 - Finalize" menu was removed on 2026-09-08 but its bare `6` stayed a
+// finalize phrase: a user answering "6" to "how many roles?" would have
+// Product write the PRD on the spot. A finalize trigger is a phrase, never a
+// number a fact answer can be.
+test('Product finalize triggers are phrases, never a bare number', async () => {
+  const playbook = await fs.readFile(path.join(process.cwd(), 'template/.aioson/docs/product/conversation-playbook.md'), 'utf8');
+  const block = playbook.match(/Detect spontaneous finalize phrases:\r?\n\r?\n((?:- `[^`]+`\r?\n)+)/);
+  assert.ok(block, 'finalize phrase list not found');
+  const phrases = [...block[1].matchAll(/- `([^`]+)`/g)].map((m) => m[1]);
+  assert.ok(phrases.length > 0);
+  assert.deepEqual(phrases.filter((phrase) => /^\d+$/.test(phrase.trim())), []);
 });
 
 test('PM never owns the canonical implementation plan by classification', () => {

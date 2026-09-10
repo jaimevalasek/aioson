@@ -238,7 +238,10 @@ async function validateSourceLineage({
         promise: ['Promise', 'PROM', 'Promessa'],
         decision: ['Product decision', 'Decision', 'Decisao do produto', 'Decisao'],
         trace: ['CAP / AC', 'CAP/AC', 'Trace', 'Rastreio'],
-        rationale: ['Evidence / rationale', 'Rationale', 'Evidence', 'Evidencia / justificativa', 'Justificativa']
+        // `Evidence or rationale` is the header prd-contract.md printed from
+        // 2026-09-08: PRDs copied from that "exact shape" must not be blocked
+        // at Gates A/B over a conjunction.
+        rationale: ['Evidence / rationale', 'Evidence or rationale', 'Rationale', 'Evidence', 'Evidencia / justificativa', 'Evidencia ou justificativa', 'Justificativa']
       });
       if (columns.missing.length > 0) {
         findings.push(finding('product', 'source_coverage_columns', `Source Coverage missing column(s): ${columns.missing.join(', ')}`, prdArtifact));

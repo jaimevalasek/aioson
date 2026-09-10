@@ -86,6 +86,21 @@ test('feature expansion skills have frontmatter and role-specific output contrac
   }
 });
 
+// The three expansion skills read one taxonomy. When the taxonomy stopped
+// treating category resemblance as scope (2026-09-08), the Briefing scout kept
+// "assume ... relevant" and "a Core object without add/edit/list/archive is a
+// blocking gap", so a read-only report feature got invented CRUD gaps that
+// Product and Sheldon then received as review context. Every reader of the
+// taxonomy must carry its two scope limits.
+test('every feature expansion skill keeps the taxonomy scope limits — no invented CRUD, resemblance is not scope', async () => {
+  const taxonomy = await read('template/.aioson/docs/feature-expansion-taxonomy.md');
+  const limits = ['need no invented local CRUD', 'category resemblance alone does not make them required'];
+  for (const limit of limits) assert.equal(taxonomy.includes(limit), true, `taxonomy lost: ${limit}`);
+  const scout = await read('template/.aioson/skills/process/briefing-expansion-scout/SKILL.md');
+  for (const limit of limits) assert.equal(scout.includes(limit), true, `briefing-expansion-scout drifted from the taxonomy: ${limit}`);
+  assert.doesNotMatch(scout, /relevant unless evidence says otherwise/);
+});
+
 test('briefing, product, and sheldon agents wire feature expansion skills on demand', async () => {
   const gateway = await read('template/AGENTS.md');
   const briefing = await read('template/.aioson/agents/briefing.md');

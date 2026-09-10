@@ -38,8 +38,8 @@ Treat this as discovery pressure, not committed PRD scope:
 
 - Name the likely Core objects and their parent/owner relationships.
 - For each Core object, identify the minimum management surface that must exist if the product ships.
-- Flag missing create/edit/delete/archive/restore paths as gaps, not optional polish.
-- For Trello/Kanban/CRM-style ideas, assume workspace/account home, board/list index, main work surface, item detail, empty states, and permission boundaries are relevant unless evidence says otherwise.
+- When the promise includes managing an object, flag its missing create/edit/delete/archive/restore paths as gaps, not optional polish. Read-only, imported, generated, or immutable objects need no invented local CRUD: mark those actions not applicable with the reason.
+- For Trello/Kanban/CRM-style ideas, inspect workspace/account home, board/list index, main work surface, item detail, empty states, and permission boundaries as candidates; category resemblance alone does not make them required — tie each to a promise or bucket it.
 - Keep speculative objects in Recommended MVP / Optional / V2 buckets until the user approves them.
 
 If the plan says "Trello-like", "board", "card", "workspace", "pipeline", "CRM", "dashboard", "admin", or "manage X", the scout must explicitly answer: where does the user create/manage each object, and what happens when there are none?
@@ -92,6 +92,6 @@ Proceed to product definition? yes / no / only after questions.
 - Separate attractive ideas from useful ideas.
 - Prefer 3-7 high-signal possibilities over exhaustive lists.
 - Do not let "simple MVP" mean "core object exists but cannot be managed."
-- A Core object without add/edit/list/archive behavior is a blocking gap in the briefing, not a V2 suggestion.
+- A Core object the promise says users manage, without add/edit/list/archive behavior, is a blocking gap in the briefing, not a V2 suggestion.
 - Do not approve V2 ideas; park them.
 - Do not modify the PRD.

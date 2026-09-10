@@ -75,7 +75,7 @@ Capability map:
 Source coverage:
 
 ```markdown
-| Promise | Product decision | CAP / AC | Evidence or rationale |
+| Promise | Product decision | CAP / AC | Evidence / rationale |
 |---|---|---|---|
 | PROM-{slug}-01 | required | CAP-{slug}-main / AC-{slug}-01 | preserved from SRC-001 |
 ```

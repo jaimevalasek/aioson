@@ -87,7 +87,6 @@ Detect spontaneous finalize phrases:
 - `go ahead and generate`
 - `wrap up`
 - `just write it`
-- `6`
 
 Detect surprise-mode phrases:
 

@@ -150,6 +150,27 @@ test('a feature with no briefing reports not-applicable instead of failing', asy
   assert.match(report.warnings.join('\n'), /not applicable/);
 });
 
+// prd-contract.md is the "exact shape" Product copies. When it printed a
+// header the parser did not know (`Evidence or rationale`, 2026-09-08), every
+// PRD built from it passed Product's own check and blocked Sheldon's first
+// command and Gates A/B. The doc's table must parse — and PRDs already
+// written with that header must keep parsing.
+test('the Source Coverage table prd-contract.md prescribes is the table kind=sources accepts', async () => {
+  const contract = await fs.readFile(path.join(__dirname, '..', 'template', '.aioson', 'docs', 'product', 'prd-contract.md'), 'utf8');
+  const block = contract.match(/Source coverage:\s*```markdown\r?\n([^\r\n]+)/);
+  assert.ok(block, 'prd-contract.md lost its Source coverage example');
+  const PRD_HEADER = '| Promise | Decision | CAP / AC | Evidence / rationale |';
+  for (const header of [block[1].trim(), '| Promise | Product decision | CAP / AC | Evidence or rationale |']) {
+    const dir = await makeProject({ prd: PRD_TEXT.replace(PRD_HEADER, header) });
+    const report = await runVerifyArtifact({
+      args: [dir],
+      options: { kind: 'sources', slug: 'orders', json: true, suppressExitCode: true },
+      logger: makeLogger()
+    });
+    assert.deepEqual(report.issues, [], `${header}: ${report.issues.join(' | ')}`);
+  }
+});
+
 test('kind=sources without --slug fails with the standard message', async () => {
   const dir = await makeTmpDir();
   const report = await runVerifyArtifact({
