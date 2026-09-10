@@ -52,6 +52,7 @@ const { resolveTargetDir } = require('../lib/project-root');
 const { isUsableDesignDocFile } = require('../lib/design-doc-seed');
 
 const { resolveActiveFeature } = require('./feature-current');
+const { featureStateArchivePath, hasWorkflowProgress, readArchivedFeatureState, archiveFeatureState, bindingMovedEvent, describeBindingRegistry } = require('../lib/workflow-binding');
 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
@@ -119,9 +120,7 @@ function assertExpectedFeature(state, options = {}, binding = null) {
     : null;
   if (expected.featureSlug === activeFeature) return expected;
 
-  const registryLine = binding && binding.source
-    ? `Feature registry: ${binding.registry || activeFeature || '(none)'} (${binding.source === 'pulse' ? 'project-pulse.md active_feature' : binding.source}) — the workflow binding follows it; \`aioson pulse:update . --feature=<slug>\` moves it, and the previous feature's progress is archived under .aioson/context/features/<slug>/workflow.state.json and restored on return.`
-    : null;
+  const registryLine = describeBindingRegistry(binding, activeFeature);
   const error = new Error(
     [
       '[workflow:next] Workflow binding mismatch — activation aborted before agent routing.',
@@ -446,30 +445,6 @@ async function detectWorkflowMode(targetDir) {
     binding_source: null,
     registry: registrySlug
   };
-}
-
-// The previous feature's progress is archived beside the feature when the
-// binding moves, and restored when it comes back — never discarded.
-function featureStateArchivePath(targetDir, featureSlug) {
-  return path.join(targetDir, '.aioson', 'context', 'features', featureSlug, 'workflow.state.json');
-}
-
-function hasWorkflowProgress(state) {
-  if (!state || typeof state !== 'object') return false;
-  return Boolean(
-    (Array.isArray(state.completed) && state.completed.length > 0)
-    || (Array.isArray(state.skipped) && state.skipped.length > 0)
-    || state.current
-    || (state.detour && state.detour.active)
-  );
-}
-
-async function readArchivedFeatureState(targetDir, featureSlug) {
-  if (!featureSlug) return null;
-  const archived = await readJsonIfExists(featureStateArchivePath(targetDir, featureSlug)).catch(() => null);
-  if (!archived || archived.mode !== 'feature' || archived.featureSlug !== featureSlug || !Array.isArray(archived.sequence)) return null;
-  const { archived_at: _archivedAt, ...state } = archived;
-  return state;
 }
 
 function getSequenceForMode(config, mode, classification) {
@@ -863,15 +838,7 @@ async function loadOrCreateState(targetDir, options = {}) {
       (modeInfo.mode !== 'feature' && existing.featureSlug)
     ) {
       binding.moved = { from: existing.featureSlug || null, to: modeInfo.featureSlug || null, mode: modeInfo.mode, archived: null, persisted: false };
-      if (existing.mode === 'feature' && existing.featureSlug && hasWorkflowProgress(existing)) {
-        const archivePath = featureStateArchivePath(targetDir, existing.featureSlug);
-        binding.moved.archived = path.relative(targetDir, archivePath).split(path.sep).join('/');
-        if (shouldPersist) {
-          await fs.mkdir(path.dirname(archivePath), { recursive: true });
-          await writeJson(archivePath, { ...existing, archived_at: new Date().toISOString() });
-          binding.moved.persisted = true;
-        }
-      }
+      Object.assign(binding.moved, await archiveFeatureState(targetDir, existing, { persist: shouldPersist }));
       existing = null;
     }
   }
@@ -1033,6 +1000,7 @@ function describeBinding(binding) {
     const to = binding.moved.to || '(project mode)';
     const via = binding.source === 'pulse' ? 'project-pulse.md active_feature' : (binding.source || 'features.md');
     lines.push(`[workflow:next] workflow binding moved: ${from} → ${to} (feature registry: ${via})${binding.moved.archived ? `; previous progress ${binding.moved.persisted ? 'archived at' : 'would be archived at'} ${binding.moved.archived}` : ''}`);
+    if (binding.moved.archive_skipped) lines.push(`[workflow:next] warning: ${from}'s progress is NOT archived — "${from}" cannot name .aioson/context/features/<slug>/ (${binding.moved.archive_skipped}); the move replaces it`);
   }
   if (binding.restored) {
     lines.push(`[workflow:next] workflow progress restored for ${binding.restored.feature} from ${binding.restored.from}`);
@@ -2535,21 +2503,25 @@ async function runWorkflowNext({ args, options, logger, t }) {
   });
   let state = loaded.state;
   assertExpectedFeature(state, options, loaded.binding);
-  for (const line of describeBinding(loaded.binding)) logger.log(line);
   if (expectedFeature.provided && loaded.changed && !loaded.persisted) {
     // The preview never archived the previous feature's progress; persisting
     // the moved state now must, or the move would be the silent discard again.
     if (loaded.binding && loaded.binding.moved && loaded.binding.moved.archived && !loaded.binding.moved.persisted) {
       const previous = await readJsonIfExists(path.join(targetDir, STATE_RELATIVE_PATH)).catch(() => null);
       if (previous && previous.featureSlug === loaded.binding.moved.from) {
-        const archivePath = featureStateArchivePath(targetDir, previous.featureSlug);
-        await fs.mkdir(path.dirname(archivePath), { recursive: true });
-        await writeJson(archivePath, { ...previous, archived_at: new Date().toISOString() });
+        Object.assign(loaded.binding.moved, await archiveFeatureState(targetDir, previous));
       }
     }
     await persistState(targetDir, state);
     if (loaded.binding && loaded.binding.restored) await fs.unlink(featureStateArchivePath(targetDir, state.featureSlug)).catch(() => {});
+    // This late persist IS the move on the --expect-feature path: it gets the
+    // event the loader appends when it persists (the move once left no trace
+    // in workflow.events.jsonl), and the lines below speak in the past tense.
+    if (loaded.binding && (loaded.binding.moved || loaded.binding.restored)) {
+      await appendWorkflowEvent(targetDir, bindingMovedEvent({ from: loaded.binding.moved ? loaded.binding.moved.from : null, to: state.featureSlug || null, mode: state.mode, source: loaded.binding.source, archived: loaded.binding.moved ? loaded.binding.moved.archived : null, restored: loaded.binding.restored ? loaded.binding.restored.from : null })).catch(() => {});
+    }
   }
+  for (const line of describeBinding(loaded.binding)) logger.log(line);
   let completedStage = null;
   let reviewCycleTransition = null;
   let reviewCycleResolution = null;
@@ -2880,6 +2852,7 @@ async function runWorkflowNext({ args, options, logger, t }) {
     skipped: state.skipped,
     completedStage,
     featureSlug: state.featureSlug,
+    binding: loaded.binding || null,
     runtime,
     agent: activation.agent,
     effectiveMode: activation.effectiveMode || null,

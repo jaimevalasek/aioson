@@ -124,4 +124,4 @@ async function runFeatureCurrent({ args = [], options = {}, logger = console } =
   return payload;
 }
 
-module.exports = { runFeatureCurrent, resolveActiveFeature };
+module.exports = { runFeatureCurrent, resolveActiveFeature, isNone };

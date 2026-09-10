@@ -11,6 +11,7 @@ const {
   verifyCorrectionChanges
 } = require('../lib/specialist-correction');
 const { resolveTargetDir } = require('../lib/project-root');
+const { validateFeatureSlug } = require('../verification/path-policy');
 
 const DEFAULT_MAX_CYCLES = 1;
 const EXECUTION_STATE_RELATIVE_PATH = '.aioson/context/workflow-execute.json';
@@ -32,6 +33,47 @@ function stateFileName(source, target) {
 
 function resolveStatePath(targetDir, source, target) {
   return path.join(targetDir, '.aioson', 'runtime', stateFileName(source, target));
+}
+
+// The live cycle file is one per route and records the feature it counts
+// (`slug`). Another feature's cycle is parked here instead of being reset or
+// overwritten: alpha's exhausted QA→Dev budget (1/1) was deleted by beta's
+// QA PASS and overwritten by beta's FAIL, and back on alpha the next FAIL got
+// a fresh cycle instead of [QA Cycle Limit Reached]. A slug that cannot name
+// a directory (the canonical feature-slug rule) has no parking place.
+function parkedStatePath(targetDir, source, target, feature) {
+  const validation = validateFeatureSlug(feature);
+  if (!validation.ok || validation.feature_slug !== feature) return null;
+  return path.join(targetDir, '.aioson', 'runtime', 'review-cycles', feature, stateFileName(source, target));
+}
+
+/**
+ * Where `feature`'s cycle lives: the live file when it is this feature's (or
+ * records no feature), otherwise this feature's parked file (`ownParked`).
+ * `foreign` names the feature the live file belongs to. Without a feature,
+ * the live file as is.
+ */
+async function locateFeatureCycle(targetDir, source, target, feature) {
+  const livePath = resolveStatePath(targetDir, source, target);
+  const live = await readJsonIfExists(livePath);
+  if (!feature || (live && (!live.slug || live.slug === feature))) {
+    return { livePath, live, foreign: null, parkedPath: null, ownParked: false, statePath: livePath, state: live };
+  }
+  // The live file is absent or another feature's: this feature's cycle, if
+  // any, is parked — a live file reset by another feature must not hand this
+  // one a fresh budget either.
+  const parkedPath = parkedStatePath(targetDir, source, target, feature);
+  const parked = parkedPath ? await readJsonIfExists(parkedPath) : null;
+  const own = parked && parked.slug === feature ? parked : null;
+  return {
+    livePath,
+    live,
+    foreign: live && live.slug ? live.slug : null,
+    parkedPath,
+    ownParked: Boolean(own),
+    statePath: own ? parkedPath : livePath,
+    state: own
+  };
 }
 
 async function readJsonIfExists(filePath) {
@@ -165,28 +207,26 @@ function buildNextTask({ source, planPath }) {
 }
 
 async function readStatus(targetDir, source, target, options = {}) {
-  const statePath = resolveStatePath(targetDir, source, target);
   const feature = options.feature ? String(options.feature).trim() : null;
-  const state = await readJsonIfExists(statePath);
+  const located = await locateFeatureCycle(targetDir, source, target, feature);
   const maxCycles = await resolveMaxCycles(targetDir, source, options);
-  // The cycle file is one per route, not per feature: read for a feature it
-  // does not name, it answered the previous feature's exhausted budget
-  // (`limit_reached`, `remaining_cycles: 0`) as if it were this one's. A
-  // foreign cycle is reported as such, and this feature starts whole —
-  // `advance` already restarts the count on a new slug.
-  const foreign = Boolean(state && feature && state.slug && state.slug !== feature);
-  const effective = foreign ? null : state;
+  // The live cycle file is one per route: read for a feature it does not
+  // name, it answered the previous feature's exhausted budget
+  // (`limit_reached`, `remaining_cycles: 0`) as if it were this one's. This
+  // feature answers with its own parked cycle, or starts whole.
+  const effective = located.state;
+  const stale = Boolean(located.foreign && !effective);
   return {
     ok: true,
     source,
     target,
     feature,
-    path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
+    path: path.relative(targetDir, located.statePath).replace(/\\/g, '/'),
     exists: Boolean(effective),
     max_cycles: maxCycles,
     remaining_cycles: Math.max(0, maxCycles - Number(effective?.cycle || 0)),
     state: effective,
-    ...(foreign ? { stale_feature: state.slug, note: `the cycle file belongs to ${state.slug}; ${feature} starts with its full budget (review-cycle:advance restarts the count on a new feature)` } : {})
+    ...(stale ? { stale_feature: located.foreign, note: `the cycle file belongs to ${located.foreign}; ${feature} starts with its full budget (review-cycle:advance parks ${located.foreign}'s cycle and keeps its budget)` } : {})
   };
 }
 
@@ -239,7 +279,28 @@ async function runAdvance(targetDir, source, target, options = {}) {
     };
   }
 
-  const existing = await readJsonIfExists(statePath);
+  const located = await locateFeatureCycle(targetDir, source, target, feature);
+  const foreignParkPath = located.foreign ? parkedStatePath(targetDir, source, target, located.foreign) : null;
+  if (located.foreign && !foreignParkPath) {
+    return {
+      ok: false,
+      reason: 'foreign_cycle_unparkable',
+      feature,
+      source,
+      target,
+      stale_feature: located.foreign,
+      state_path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
+      note: `the cycle file belongs to ${located.foreign}, whose slug cannot name a parking directory; its budget is not overwritten — review-cycle:reset --feature=${located.foreign} discards it explicitly`
+    };
+  }
+  const existing = located.state;
+  // This feature takes the live file: another feature's cycle is parked first
+  // (its budget survives), and this feature's parked cycle leaves its slot.
+  const commitState = async (payload) => {
+    if (located.foreign) await writeJson(foreignParkPath, located.live);
+    await writeJson(statePath, payload);
+    if (located.ownParked) await fs.unlink(located.parkedPath).catch(() => {});
+  };
   const sameFeature = existing && existing.slug === feature;
   const currentCycle = sameFeature ? Number(existing.cycle || 0) : 0;
 
@@ -259,7 +320,7 @@ async function runAdvance(targetDir, source, target, options = {}) {
       last_plan: planPath,
       last_summary: options.summary ? String(options.summary).trim() : existing?.last_summary || null
     };
-    await writeJson(statePath, exhaustedState);
+    await commitState(exhaustedState);
     return {
       ok: true,
       action: 'stop_cycle_limit',
@@ -333,7 +394,7 @@ async function runAdvance(targetDir, source, target, options = {}) {
     ...(correctionScope ? { correction_scope: correctionScope } : {})
   };
 
-  await writeJson(statePath, state);
+  await commitState(state);
 
   return {
     ok: true,
@@ -362,8 +423,10 @@ async function runAdvance(targetDir, source, target, options = {}) {
 async function runResolve(targetDir, source, target, options = {}) {
   const feature = options.feature ? String(options.feature).trim() : null;
   const planPath = options.plan ? String(options.plan).trim() : null;
-  const statePath = resolveStatePath(targetDir, source, target);
-  const existing = await readJsonIfExists(statePath);
+  // Resolved where it lives: the live file, or this feature's parked cycle.
+  const located = await locateFeatureCycle(targetDir, source, target, feature);
+  const statePath = located.statePath;
+  const existing = located.state;
 
   if (!feature) return { ok: false, reason: 'missing_feature' };
   if (!existing || existing.slug !== feature) {
@@ -441,19 +504,31 @@ async function runResolve(targetDir, source, target, options = {}) {
 }
 
 async function runReset(targetDir, source, target, options = {}) {
-  const statePath = resolveStatePath(targetDir, source, target);
-  const existed = await exists(statePath);
-  if (existed) {
+  const feature = options.feature ? String(options.feature).trim() : null;
+  const located = await locateFeatureCycle(targetDir, source, target, feature);
+  const statePath = located.livePath;
+  // A reset for one feature never deletes another feature's cycle: beta's QA
+  // PASS once erased alpha's exhausted budget. Without --feature the route's
+  // live file is reset as it always was.
+  let removed = false;
+  if (!located.foreign && await exists(statePath)) {
     await fs.unlink(statePath);
+    removed = true;
+  }
+  const parkedPath = feature ? parkedStatePath(targetDir, source, target, feature) : null;
+  if (parkedPath && await exists(parkedPath)) {
+    await fs.unlink(parkedPath);
+    removed = true;
   }
   return {
     ok: true,
     action: 'reset',
     source,
     target,
-    feature: options.feature ? String(options.feature).trim() : null,
-    removed: existed,
-    path: path.relative(targetDir, statePath).replace(/\\/g, '/')
+    feature,
+    removed,
+    path: path.relative(targetDir, statePath).replace(/\\/g, '/'),
+    ...(located.foreign ? { stale_feature: located.foreign, note: `the cycle file belongs to ${located.foreign} and is left untouched` } : {})
   };
 }
 

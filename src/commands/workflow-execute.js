@@ -28,11 +28,18 @@ const { validateHandoffContract } = require('../handoff-contract');
 const { readHandoff, readHandoffProtocol } = require('../session-handoff');
 const {
   STATE_RELATIVE_PATH,
+  appendWorkflowEvent,
   buildDefaultWorkflowConfig,
   detectWorkflowMode,
   readWorkflowConfig,
   runWorkflowNext
 } = require('./workflow-next');
+const {
+  resolveFeatureStateArchive,
+  readArchivedFeatureState,
+  archiveFeatureState,
+  bindingMovedEvent
+} = require('../lib/workflow-binding');
 const { runWorkflowStatus } = require('./workflow-status');
 const {
   PARALLEL_RELATIVE_DIR,
@@ -321,66 +328,132 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
 }
 
 /**
- * Reads the persisted workflow state for a seed/preview of `slug`, applying the
- * SAME staleness guard as loadOrCreateState: a state whose feature is no longer
- * the features.md-active feature is stale and gets discarded (the loader would
- * throw it away one command later anyway — hard-failing the seed on it just
- * silently disarmed autopilot). The refusal survives only for a genuinely
- * active different feature.
+ * Reads the persisted workflow state for a seed/preview of `slug`. A state
+ * bound to another feature is refused only while the feature registry still
+ * binds that feature (the next workflow:next would undo the seed); otherwise
+ * seeding moves the binding, under the contract loadOrCreateState applies
+ * when the registry moves: the outgoing feature's progress is archived and
+ * the requested feature's own archive is what resumes. The seed once dropped
+ * the outgoing state as a "stale pointer" and ignored the archive — every
+ * non-dry-run workflow:execute goes through here, and alpha's product..dev
+ * was gone the first time the pulse returned to alpha.
  */
 async function resolveExistingFeatureState(targetDir, slug) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
   let existing = await readJsonIfExists(statePath);
   const focusStage = getFocusStage(existing);
+  let outgoing = null;
 
   if (
     existing &&
     existing.mode === 'feature' &&
     existing.featureSlug &&
-    existing.featureSlug !== slug &&
-    focusStage
+    existing.featureSlug !== slug
   ) {
-    let modeInfo = null;
-    try {
-      modeInfo = await detectWorkflowMode(targetDir);
-    } catch {
-      modeInfo = null;
+    if (focusStage) {
+      let modeInfo = null;
+      try {
+        modeInfo = await detectWorkflowMode(targetDir);
+      } catch {
+        modeInfo = null;
+      }
+      const existingIsActive = Boolean(
+        modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === existing.featureSlug
+      );
+      const requestedIsActive = Boolean(
+        modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === slug
+      );
+      if (existingIsActive && !requestedIsActive) {
+        return {
+          existing: null,
+          refusal: {
+            ok: false,
+            reason: 'different_active_feature',
+            active_feature: existing.featureSlug,
+            active_stage: focusStage
+          }
+        };
+      }
     }
-    const existingIsActive = Boolean(
-      modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === existing.featureSlug
-    );
-    const requestedIsActive = Boolean(
-      modeInfo && modeInfo.mode === 'feature' && modeInfo.featureSlug === slug
-    );
-    if (!existingIsActive || requestedIsActive) {
-      existing = null; // stale pointer — reseed for the requested feature
-    } else {
-      return {
-        existing: null,
-        refusal: {
-          ok: false,
-          reason: 'different_active_feature',
-          active_feature: existing.featureSlug,
-          active_stage: focusStage
-        }
-      };
+    outgoing = existing;
+    existing = null;
+  }
+
+  let restored = null;
+  if (!(existing && existing.mode === 'feature' && existing.featureSlug === slug)) {
+    const archived = await readArchivedFeatureState(targetDir, slug);
+    if (archived) {
+      existing = archived;
+      restored = resolveFeatureStateArchive(targetDir, slug).relative;
     }
   }
 
-  return { existing, refusal: null };
+  return { existing, outgoing, restored, refusal: null };
+}
+
+/** The seed's binding move, in the shape workflow:next reports one; archives the outgoing progress when persisting. */
+async function buildSeedBinding(targetDir, slug, resolved, { persist }) {
+  if (!resolved.outgoing && !resolved.restored) return null;
+  const binding = {
+    source: 'workflow:execute',
+    moved: resolved.outgoing
+      ? { from: resolved.outgoing.featureSlug, to: slug, mode: 'feature', archived: null, persisted: false }
+      : null,
+    restored: resolved.restored ? { feature: slug, from: resolved.restored } : null
+  };
+  if (binding.moved) Object.assign(binding.moved, await archiveFeatureState(targetDir, resolved.outgoing, { persist }));
+  return binding;
+}
+
+/** After the live state is written: the restored archive is consumed and the move is recorded. */
+async function recordSeedBinding(targetDir, slug, binding) {
+  if (!binding) return;
+  if (binding.restored) await fs.unlink(resolveFeatureStateArchive(targetDir, slug).path).catch(() => {});
+  await appendWorkflowEvent(targetDir, bindingMovedEvent({
+    from: binding.moved ? binding.moved.from : null,
+    to: slug,
+    mode: 'feature',
+    source: binding.source,
+    archived: binding.moved ? binding.moved.archived : null,
+    restored: binding.restored ? binding.restored.from : null
+  })).catch(() => {});
+}
+
+function formatSeedBindingLines(binding) {
+  if (!binding) return [];
+  const lines = [];
+  if (binding.moved) {
+    const kept = binding.moved.archived
+      ? `; previous progress ${binding.moved.persisted ? 'archived at' : 'would be archived at'} ${binding.moved.archived}`
+      : '';
+    lines.push(`Workflow binding moved: ${binding.moved.from} → ${binding.moved.to} (--feature)${kept}`);
+    if (binding.moved.archive_skipped) {
+      lines.push(`Warning: ${binding.moved.from}'s progress is NOT archived — the slug cannot name .aioson/context/features/<slug>/ (${binding.moved.archive_skipped}); the seed replaces it`);
+    }
+  }
+  if (binding.restored) lines.push(`Workflow progress restored for ${binding.restored.feature} from ${binding.restored.from}`);
+  return lines;
 }
 
 async function seedFeatureWorkflowState(targetDir, slug, classification, startFrom) {
   const statePath = path.join(targetDir, STATE_RELATIVE_PATH);
-  const { existing, refusal } = await resolveExistingFeatureState(targetDir, slug);
-  if (refusal) return refusal;
+  const resolved = await resolveExistingFeatureState(targetDir, slug);
+  if (resolved.refusal) return resolved.refusal;
+  const { existing } = resolved;
+  // The outgoing progress is archived before the live file is overwritten.
+  const binding = await buildSeedBinding(targetDir, slug, resolved, { persist: true });
 
   if (existing && existing.mode === 'feature' && existing.featureSlug === slug) {
+    if (binding) {
+      await writeJson(statePath, existing);
+      await recordSeedBinding(targetDir, slug, binding);
+    }
     return {
       ok: true,
       resumed: true,
       state: existing,
-      statePath: STATE_RELATIVE_PATH
+      statePath: STATE_RELATIVE_PATH,
+      binding
     };
   }
 
@@ -414,24 +487,29 @@ async function seedFeatureWorkflowState(targetDir, slug, classification, startFr
   };
 
   await writeJson(statePath, state);
+  await recordSeedBinding(targetDir, slug, binding);
   return {
     ok: true,
     resumed: false,
     state,
-    statePath: STATE_RELATIVE_PATH
+    statePath: STATE_RELATIVE_PATH,
+    binding
   };
 }
 
 async function previewFeatureWorkflowState(targetDir, slug, classification, startFrom) {
-  const { existing, refusal } = await resolveExistingFeatureState(targetDir, slug);
-  if (refusal) return refusal;
+  const resolved = await resolveExistingFeatureState(targetDir, slug);
+  if (resolved.refusal) return resolved.refusal;
+  const { existing } = resolved;
+  const binding = await buildSeedBinding(targetDir, slug, resolved, { persist: false });
 
   if (existing && existing.mode === 'feature' && existing.featureSlug === slug) {
     return {
       ok: true,
       resumed: true,
       state: existing,
-      statePath: STATE_RELATIVE_PATH
+      statePath: STATE_RELATIVE_PATH,
+      binding
     };
   }
 
@@ -466,7 +544,8 @@ async function previewFeatureWorkflowState(targetDir, slug, classification, star
       detour: null,
       updatedAt: new Date().toISOString()
     },
-    statePath: STATE_RELATIVE_PATH
+    statePath: STATE_RELATIVE_PATH,
+    binding
   };
 }
 
@@ -923,6 +1002,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     );
     return seeded;
   }
+  if (!options.json) for (const line of formatSeedBindingLines(seeded.binding)) logger.log(line);
 
   const planData = await buildExecutionPlan(targetDir, slug, classification, seeded.state, startFrom);
   for (const step of planData.steps) {
@@ -974,6 +1054,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       requested_mode: requestedMode,
       dry_run: true,
       resumed: seeded.resumed,
+      binding: seeded.binding || null,
       state_path: seeded.statePath,
       execution_state_path: EXECUTION_STATE_RELATIVE_PATH,
       max_checkpoints: maxCheckpoints,
@@ -1059,6 +1140,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
       requested_mode: requestedMode,
       seeded: true,
       resumed: seeded.resumed,
+      binding: seeded.binding || null,
       state_path: seeded.statePath,
       execution_state_path: EXECUTION_STATE_RELATIVE_PATH,
       next_stage: nextStage,
@@ -1188,6 +1270,7 @@ async function runWorkflowExecute({ args, options = {}, logger }) {
     tool,
     requested_mode: requestedMode,
     resumed: seeded.resumed,
+    binding: seeded.binding || null,
     state_path: seeded.statePath,
     execution_state_path: EXECUTION_STATE_RELATIVE_PATH,
     max_checkpoints: maxCheckpoints,

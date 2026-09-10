@@ -3,8 +3,11 @@ title: "Dois registros, uma mentira — a ligação do workflow nunca seguia o r
 scope: [workflow, workflow-next, workflow-status, feature-current, pulse, review-cycle]
 paths:
   - src/commands/workflow-next.js
+  - src/commands/workflow-execute.js
+  - src/lib/workflow-binding.js
   - src/commands/feature-current.js
   - src/commands/review-cycle.js
+  - src/commands/pulse-update.js
 discovered_at: 2026-09-03
 src: "AIOSON supervised session: primeira execução orquestrada real num projeto consumidor — conferindo se o QA de entrega tinha rodado"
 status: corrigido no framework
@@ -27,8 +30,9 @@ status: corrigido no framework
 
 - `detectWorkflowMode` liga ao `active_feature` do pulse quando ele está `in_progress` no `features.md` (handoff e último in_progress como fallback); `workflow:next` e `workflow:status` passam a responder pela mesma feature que `feature:current`.
 - A transição arquiva o progresso da feature anterior em `.aioson/context/features/<slug>/workflow.state.json` e o restaura quando o registro volta; evento `binding_moved` no `workflow.events.jsonl`; linha `[workflow:next] workflow binding moved: A → B` no terminal.
-- A mensagem de mismatch do `--expect-feature` nomeia o registro e o comando que o move (`pulse:update . --feature=<slug>`).
+- A mensagem de mismatch do `--expect-feature` nomeia de onde a ligação vem (o registro, ou o fallback — nunca rotulado de registro) e o comando que o move (`pulse:update . --feature=<slug>`, que sem `--agent` move só o `active_feature` e avisa quando a feature não está `in_progress`).
 - `review-cycle:status --feature=X` responde só por X (`stale_feature` quando o arquivo é de outra; orçamento inteiro).
+- Revisão posterior (W4–W8): o `workflow:execute --seed` também é uma transição — arquiva a feature que sai e restaura o arquivo da que entra, com o mesmo `binding_moved` (antes descartava o progresso como "ponteiro velho"); `review-cycle:reset/advance` não apagam nem sobrescrevem o ciclo de outra feature (estaciona em `.aioson/runtime/review-cycles/<slug>/`); o caminho `--expect-feature` grava o evento; slug fora da regra canônica (`../x`, `feat:x`) não tem arquivo — a transição avisa e pula, nunca escreve fora do projeto nem morre no mkdir.
 
 ## Armadilhas
 

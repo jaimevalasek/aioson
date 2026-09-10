@@ -521,7 +521,7 @@ Veja [Exploração visual e arena entre modelos](../3-receitas/arena-de-explorac
 | `classify` | Detecta classificação MICRO/SMALL/MEDIUM por scoring automático do PRD ou entrada interativa | Antes de decidir o fluxo de agentes |
 | `sizing` | Determina modelo de sizing: `inplace`, `phased_inplace` ou `phased_external` | Quando o `@sheldon` ou o `@planner` precisa decidir a estrutura de entrega |
 | `detect:test-runner` | Detecta PHPUnit, Jest, Vitest, Pytest, RSpec, Forge e node:test via arquivos de config | Quando `@dev` ou `@tester` precisa saber como rodar os testes |
-| `pulse:update` | Atualiza `project-pulse.md` com agente, feature, gate e próximo passo | Ao final de cada sessão de agente |
+| `pulse:update` | Atualiza `project-pulse.md` com agente, feature, gate e próximo passo. Só `--feature=<slug>` (sem `--agent`) move apenas o `active_feature`; a ligação do workflow só o segue quando a feature está `in_progress` no `features.md` — o comando avisa quando não está | Ao final de cada sessão de agente; `--feature` sozinho para mover a ligação do workflow |
 | `state:save` | Salva ponto de continuação em `dev-state.md` (fase, status, spec-version, histórico) | Durante `@dev` ao fim de cada fase ou antes de encerrar |
 | `feature:close` | Fecha feature com verdict PASS/FAIL: atualiza spec, features.md, project-pulse.md e dispara archivamento automático | Após revisar o sign-off do QA e autorizar explicitamente o gate humano |
 | `feature:archive` | Move artefatos de uma feature `done` para `.aioson/context/done/{slug}/` e atualiza o manifest | Chamado pelo `feature:close` automaticamente; também disponível para retroativo com `--dry-run` e `--restore` |

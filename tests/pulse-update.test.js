@@ -132,6 +132,69 @@ test('pulse:update: human output confirms update', async () => {
   assert.ok(logger.lines.some((l) => l.includes('pulse updated') || l.includes('last_agent')));
 });
 
+const FEATURES = '# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n| alpha | in_progress | 2026-09-01 | |\n| beta | in_progress | 2026-09-02 | |\n| gamma | paused | 2026-09-03 | |\n';
+const PULSE = '---\nlast_updated: 2026-09-01\nlast_agent: dev\nactive_feature: alpha\nactive_work: "alpha → @dev → in_progress"\n---\n\n# Project Pulse\n\n## Status\n\n- **Last agent:** @dev\n- **Active feature:** alpha\n\n## Recent Activity\n\n- 2026-09-01 @dev → alpha: built the form\n';
+
+test('pulse:update --feature alone moves only active_feature — the remediation the workflow binding mismatch prints no longer dies on --agent', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/features.md', FEATURES);
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', PULSE);
+
+  const result = await runPulseUpdate({ args: [tmpDir], options: { json: true, feature: 'beta' }, logger: makeLogger() });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.active_feature, 'beta');
+  assert.equal(result.previous_active_feature, 'alpha');
+  assert.deepEqual(result.workflow_binding, { follows: true, feature_status: 'in_progress' });
+  const content = await fs.readFile(path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'), 'utf8');
+  assert.equal(content, PULSE.replace('active_feature: alpha', 'active_feature: beta').replace('- **Active feature:** alpha', '- **Active feature:** beta'), 'everything but active_feature is kept as it was');
+  const { resolveActiveFeature } = require('../src/commands/feature-current');
+  assert.equal((await resolveActiveFeature(tmpDir)).slug, 'beta');
+
+  // No pulse yet: a minimal one naming the feature.
+  const fresh = await makeTmpDir();
+  const created = await runPulseUpdate({ args: [fresh], options: { json: true, feature: 'beta' }, logger: makeLogger() });
+  assert.equal(created.ok, true);
+  assert.match(await fs.readFile(path.join(fresh, '.aioson', 'context', 'project-pulse.md'), 'utf8'), /^active_feature: beta$/m);
+});
+
+test('pulse:update says explicitly when the target is not in_progress in features.md — the workflow binding does not follow it', async () => {
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/features.md', FEATURES);
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', PULSE);
+
+  const logger = makeLogger();
+  const paused = await runPulseUpdate({ args: [tmpDir], options: { feature: 'gamma' }, logger });
+  assert.equal(paused.ok, true);
+  assert.equal(paused.workflow_binding.follows, false);
+  assert.equal(paused.workflow_binding.feature_status, 'paused');
+  assert.ok(logger.lines.some((line) => /warning: gamma is "paused" in features\.md, not in_progress/.test(line)), logger.lines.join('\n'));
+
+  const unlisted = await runPulseUpdate({ args: [tmpDir], options: { json: true, feature: 'delta' }, logger: makeLogger() });
+  assert.equal(unlisted.workflow_binding.feature_status, null);
+  assert.match(unlisted.workflow_binding.warning, /delta is not listed in features\.md/);
+
+  // The session form says the same.
+  const session = await runPulseUpdate({ args: [tmpDir], options: { json: true, agent: 'dev', feature: 'gamma', action: 'resumed' }, logger: makeLogger() });
+  assert.equal(session.workflow_binding.follows, false);
+});
+
+test('pulse:update still requires --agent to record a session', async () => {
+  const tmpDir = await makeTmpDir();
+  const result = await runPulseUpdate({ args: [tmpDir], options: { json: true, feature: 'beta', action: 'Implemented' }, logger: makeLogger() });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'missing_agent');
+});
+
+test('pulse:update . --feature=<slug> exits 0 through the CLI (it exited 1 on --agent is required)', async () => {
+  const { spawnSync } = require('node:child_process');
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/features.md', FEATURES);
+  const run = spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'aioson.js'), 'pulse:update', tmpDir, '--feature=beta'], { encoding: 'utf8' });
+  assert.equal(run.status, 0, `${run.stdout}\n${run.stderr}`);
+  assert.match(await fs.readFile(path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'), 'utf8'), /^active_feature: beta$/m);
+});
+
 test('pulse:update: includes phase in active work when provided', async () => {
   const tmpDir = await makeTmpDir();
   const result = await runPulseUpdate({

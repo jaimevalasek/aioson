@@ -1121,7 +1121,7 @@ status: approved
   assert.equal(state.next, 'dev');
 });
 
-test('workflow:execute --seed: discards a stale workflow.state.json from a no-longer-active feature and reseeds', async () => {
+test('workflow:execute --seed: reseeds over a workflow.state.json from a no-longer-active feature, archiving its progress', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
   await writeFile(
@@ -1164,6 +1164,136 @@ test('workflow:execute --seed: discards a stale workflow.state.json from a no-lo
   const scheme = JSON.parse(await fs.readFile(path.join(tmpDir, EXECUTION_STATE_RELATIVE_PATH), 'utf8'));
   assert.equal(scheme.agentic_policy.enabled, true);
   assert.equal(scheme.feature, 'profile-page');
+  // ...and the replaced feature's progress is archived, never discarded.
+  const archived = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/features/flow-deck/workflow.state.json'), 'utf8'));
+  assert.deepEqual(archived.completed, ['product', 'sheldon', 'dev']);
+  assert.equal(archived.next, 'qa');
+  assert.equal(result.binding.moved.archived, '.aioson/context/features/flow-deck/workflow.state.json');
+  assert.equal(result.binding.moved.persisted, true);
+});
+
+function featuresTable(rows) {
+  return `# Features\n\n| slug | status | started | completed |\n|---|---|---|---|\n${rows.map(([slug, status]) => `| ${slug} | ${status} | 2026-09-01 | |`).join('\n')}\n`;
+}
+
+function featureState(slug, overrides = {}) {
+  return {
+    version: 1,
+    mode: 'feature',
+    classification: 'SMALL',
+    sequence: ['product', 'sheldon', 'planner', 'dev', 'qa'],
+    current: 'qa',
+    next: 'qa',
+    completed: ['product', 'sheldon', 'planner', 'dev'],
+    skipped: [],
+    featureSlug: slug,
+    detour: null,
+    updatedAt: '2026-09-01T00:00:00.000Z',
+    ...overrides
+  };
+}
+
+async function readEvents(dir) {
+  const raw = await fs.readFile(path.join(dir, '.aioson/context/workflow.events.jsonl'), 'utf8').catch(() => '');
+  return raw.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+}
+
+test('workflow:execute --seed moving the binding archives the outgoing feature\'s progress, and it comes back when the registry returns', async () => {
+  // The pulse moved to beta while alpha's live workflow sat at QA; the last
+  // handoff still named alpha. Seeding beta once dropped alpha's
+  // product..dev with no archive, and back on alpha the workflow restarted
+  // at @product (`restored: null`).
+  const { loadOrCreateState } = require('../src/commands/workflow-next');
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/features.md', featuresTable([['alpha', 'in_progress'], ['beta', 'in_progress']]));
+  await writeFile(tmpDir, '.aioson/context/prd-alpha.md', '---\nclassification: SMALL\nproduct_scope: approved\nprd_ready: approved\nsheldon_review: pending\n---\n# Alpha\n\n## Feature Capability Map\n| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |\n|---|---|---|---|---|\n| CAP-alpha-01 | User sees a saved result | User submits | required | Core promise |\n\n## Acceptance Criteria\n| AC | CAP | Observable behavior | Evidence |\n|---|---|---|---|\n| AC-alpha-01 | CAP-alpha-01 | Saved result appears | focused test |\n');
+  await approveAndSealSheldonReview(tmpDir, 'alpha');
+  await writeFile(tmpDir, '.aioson/context/last-handoff.json', JSON.stringify({ feature_slug: 'alpha', workflow_mode: 'feature' }));
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json', JSON.stringify(featureState('alpha')));
+  const setPulse = (slug) => writeFile(tmpDir, '.aioson/context/project-pulse.md', `---\nactive_feature: ${slug}\n---\n# Pulse\n`);
+  await setPulse('alpha');
+  // What the engine makes of alpha's progress while it stays bound — a restore must land exactly here.
+  const reference = await loadOrCreateState(tmpDir, { persist: false });
+  assert.deepEqual(reference.state.completed, ['product', 'sheldon', 'planner', 'dev']);
+  await setPulse('beta');
+
+  const result = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'beta', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.feature, 'beta');
+  const live = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(live.featureSlug, 'beta');
+  const archivePath = path.join(tmpDir, '.aioson/context/features/alpha/workflow.state.json');
+  assert.equal(await fs.access(archivePath).then(() => true, () => false), true, 'alpha\'s progress is archived, not dropped');
+  const archived = JSON.parse(await fs.readFile(archivePath, 'utf8'));
+  assert.deepEqual(archived.completed, ['product', 'sheldon', 'planner', 'dev']);
+  assert.equal(archived.current, 'qa');
+  assert.deepEqual(result.binding.moved, { from: 'alpha', to: 'beta', mode: 'feature', archived: '.aioson/context/features/alpha/workflow.state.json', persisted: true });
+  const event = (await readEvents(tmpDir)).find((entry) => entry.event === 'binding_moved');
+  assert.equal(event.from, 'alpha');
+  assert.equal(event.to, 'beta');
+  assert.equal(event.source, 'workflow:execute');
+  assert.equal(event.archived, '.aioson/context/features/alpha/workflow.state.json');
+
+  await setPulse('alpha');
+  const back = await loadOrCreateState(tmpDir, { persist: true });
+  assert.deepEqual(back.binding.restored, { feature: 'alpha', from: '.aioson/context/features/alpha/workflow.state.json' });
+  assert.deepEqual(back.state.completed, reference.state.completed, 'alpha resumes where it left, not at @product');
+  assert.equal(back.state.current, reference.state.current);
+});
+
+test('workflow:execute --seed on a feature with an archive resumes that archive and archives the live feature first; the dry-run only previews both', async () => {
+  // Seeding alpha while alpha waited in its archive once reseeded it at
+  // @product, ignored the archive, and dropped beta's live progress unarchived.
+  const tmpDir = await makeTmpDir();
+  await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---\n# ctx\n');
+  await writeFile(tmpDir, '.aioson/context/features.md', featuresTable([['alpha', 'in_progress'], ['beta', 'in_progress']]));
+  await writeFile(tmpDir, '.aioson/context/project-pulse.md', '---\nactive_feature: alpha\n---\n# Pulse\n');
+  await writeFile(tmpDir, '.aioson/context/workflow.state.json', JSON.stringify(featureState('beta', { current: 'dev', next: 'qa', completed: ['product', 'sheldon', 'planner'] })));
+  await writeFile(tmpDir, '.aioson/context/features/alpha/workflow.state.json', JSON.stringify({ ...featureState('alpha'), archived_at: '2026-09-02T00:00:00.000Z' }));
+  const betaArchive = path.join(tmpDir, '.aioson/context/features/beta/workflow.state.json');
+  const alphaArchive = path.join(tmpDir, '.aioson/context/features/alpha/workflow.state.json');
+  const present = (file) => fs.access(file).then(() => true, () => false);
+
+  const preview = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'alpha', 'dry-run': true, tool: 'claude' },
+    logger: makeLogger()
+  });
+  assert.equal(preview.ok, true);
+  assert.equal(preview.resumed, true, 'the preview resumes the archive a real run would restore');
+  assert.deepEqual(preview.binding.moved, { from: 'beta', to: 'alpha', mode: 'feature', archived: '.aioson/context/features/beta/workflow.state.json', persisted: false });
+  assert.deepEqual(preview.binding.restored, { feature: 'alpha', from: '.aioson/context/features/alpha/workflow.state.json' });
+  assert.equal(JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8')).featureSlug, 'beta', 'a dry-run writes nothing');
+  assert.equal(await present(betaArchive), false);
+  assert.equal(await present(alphaArchive), true);
+
+  const seeded = await runWorkflowExecute({
+    args: [tmpDir],
+    options: { json: true, feature: 'alpha', seed: true, tool: 'claude' },
+    logger: makeLogger()
+  });
+  assert.equal(seeded.ok, true);
+  assert.equal(seeded.resumed, true);
+  assert.equal(seeded.next_stage, 'qa', 'alpha resumes at QA, not at @product');
+  const live = JSON.parse(await fs.readFile(path.join(tmpDir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.equal(live.featureSlug, 'alpha');
+  assert.deepEqual(live.completed, ['product', 'sheldon', 'planner', 'dev']);
+  assert.equal(live.archived_at, undefined);
+  const betaKept = JSON.parse(await fs.readFile(betaArchive, 'utf8'));
+  assert.deepEqual(betaKept.completed, ['product', 'sheldon', 'planner']);
+  assert.equal(betaKept.current, 'dev');
+  assert.equal(await present(alphaArchive), false, 'the restored archive is consumed');
+  const event = (await readEvents(tmpDir)).find((entry) => entry.event === 'binding_moved');
+  assert.equal(event.from, 'beta');
+  assert.equal(event.to, 'alpha');
+  assert.equal(event.archived, '.aioson/context/features/beta/workflow.state.json');
+  assert.equal(event.restored, '.aioson/context/features/alpha/workflow.state.json');
 });
 
 test('workflow:execute --seed: still refuses when a DIFFERENT feature is genuinely active', async () => {
