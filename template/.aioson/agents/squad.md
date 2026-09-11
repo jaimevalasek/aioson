@@ -26,44 +26,27 @@ dashboard, validation, runtime, and cloud sync all expect the canonical package 
 ## Context loading modes
 Run `aioson context:search . --query="<operation>" --agent=squad --mode=planning --paths="<squad paths>" --json 2>/dev/null || true` (hits are hints), then `aioson context:select . --agent=squad --mode=planning --task="<operation>" --paths="<squad paths>"` and load only selected files; without the CLI, load by frontmatter match only. Never scan folders wholesale; rules override defaults.
 
-## Built-in squad modules
-The squad protocol lives in on-demand docs under `.aioson/docs/squad/`; the preflight map below is the loading authority — load only what it selects.
-
-## Built-in squad skills
-Load the router `.aioson/skills/squad/SKILL.md` when the operation materially shapes executor design, workflow structure, content formats, review loops, or quality gates; then load only the domain/pattern/format/reference files it points to for the current squad — reuse existing squad skills before inventing structure, never load unrelated ones.
+## Built-in squad modules and skills
+The squad protocol lives in on-demand docs under `.aioson/docs/squad/` and the skill router `.aioson/skills/squad/SKILL.md` (then only the domain/pattern/format/reference files it points to — reuse existing squad skills before inventing structure). Preflight below is the loading authority; load only what it selects.
 
 ## Deterministic preflight
 Before acting, derive one primary `operation`: `default-create`, `design`, `create`, `validate`, `eval`, `pilot`, `analyze`, `extend`, `repair`, `refresh`, `export`, `investigate`, `plan`, `configure-output`, or `session-run`.
 
 For `default-create|design|create`, also resolve `deliveryLane` before loading deep modules: `regulated` for tier-1, `premium` only for explicit high-fidelity/publication needs, `standard` for persistent production by default, and `quick` only for explicit ephemeral/speed-first work; research, genome, eval, and warm-up modules load to that lane.
 
-Then build `required_modules` using this deterministic map:
+Then run the map — it is data, not judgment:
 
-| Condition | Required modules |
-|---|---|
-| `default-create`, `create`, `extend`, `repair`, `refresh`, `validate` | `.aioson/docs/squad/package-contract.md` |
-| `default-create`, `design`, `create`, `extend`, `refresh` | `.aioson/docs/squad/creation-flow.md` |
-| `default-create`, `design`, or request introduces a regulated domain, specialized domain, locale-specific audience, or country-specific constraints | `.aioson/docs/squad/domain-classification.md` |
-| `default-create`, `design`, `create`, `extend`, `refresh`, or customer-facing executors (retail, hospitality, support, sales, reception, etc.) — or the user reports a squad refusing legitimate adjacent requests as "out of scope" | `.aioson/docs/squad/domain-breadth.md` |
-| `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/research-loop.md` |
-| `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair` | `.aioson/docs/squad/quality-lens.md` |
-| `eval`, or a delivery / CI quality gate is requested | `.aioson/docs/squad/eval-gate.md` |
-| `pilot`, or `default-create`/`create` closing a deliverable-class squad (`mode: software`/`mixed`) | `.aioson/docs/squad/pilot-gate.md` |
-| `default-create`, `create`, `extend`, `refresh`, or grounding an executor's expertise in sources | `.aioson/docs/squad/persona-grounding.md` |
-| `default-create`, `design`, `create`, `extend`, `analyze`, `plan`, `repair`, or request implies recurring content, pipelines, multi-platform delivery, persona-based work, review loops, or executor-pattern choices | `.aioson/skills/squad/SKILL.md`, then only the relevant files under `domains/`, `patterns/`, `formats/`, and `references/` |
-| Request mentions content deliverables, `contentBlueprints`, session HTML, or `--config=output` | `.aioson/docs/squad/content-output.md` |
-| Request implies workflows, plans, 3+ phases, human gates, review loops, or 4+ executors | `.aioson/docs/squad/workflow-quality.md` |
-| Request implies ephemeral work, investigation, inter-squad routing, learnings, dashboard guidance, or recurring runs | `.aioson/docs/squad/session-operations.md` |
-| Genomes, existing `genomeBindings`, binding repair, or the create-phase pass (Step 5.5) | `.aioson/docs/squad/genome-bindings.md` |
-| `session-run` | `.aioson/docs/squad/session-operations.md`, plus `content-output.md` when the session produces content deliverables |
-| `session-run` with an approved manifest `pilot` block | `.aioson/docs/squad/pilot-gate.md` — pilot block + `docs/PILOT.md` load as the binding quality bar; below-signature deliverables are findings, not style choices |
-| `export` | its task file only (preflight rule 1); no deep modules by default |
+```bash
+aioson squad:preflight . --operation=<operation> --lane=<lane> --mode=<content|software|research|mixed> --signals=<regulated,customer-facing,content,workflow,session,genomes,sources,quality-gate,refusal,new-domain> --json
+```
+
+Load exactly its `tasks`, `modules`, and `skillRouter`, in that order; `totalBytes` is the cost of this activation. `session-run` with an approved manifest `pilot` block also loads `docs/PILOT.md` as the binding quality bar — below-signature deliverables are findings, not style choices. Without the CLI: the task file(s) for the operation, plus `package-contract.md` and `creation-flow.md` when executors are created or changed, `eval-gate.md` for validate/eval, `pilot-gate.md` for deliverable-class squads, `session-operations.md` for `session-run`; `export` loads its task file only.
 
 Preflight rules:
 
 1. An explicit subcommand reads its `.aioson/tasks/` file immediately; task files control step order.
-3. Docs and the skill router still load whenever the map requires them, even under an explicit task file.
-4. Do not proceed until every required module is loaded; never preload what the map did not select.
+2. Docs and the skill router still load whenever preflight selects them, even under an explicit task file.
+3. Do not proceed until every selected module is loaded; never preload what preflight did not select.
 
 ## Subcommand routing
 If the user includes a squad subcommand, route to the matching task:
@@ -139,7 +122,12 @@ aioson squad:eval . --squad=<slug> --json
 
 # 3. Deliverable-class squads: pilot lint; the freeze is USER-only (squad:pilot-approve)
 aioson verify:artifact . --kind=squad-pilot --slug=<slug> --advisory
+
+# 4. Package gate — strict validation + executor lint; auto-fires at agent:done
+aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory
 ```
+
+`squad:validate` measures executor bodies: a prompt under 400 bytes or carrying placeholder text is a strict error; a thin prompt, one over 16 KB, missing mission/constraints/output sections, near-duplicate executors, and argv-only workers are advisories to act on before done. Package skeletons come from `aioson squad:scaffold`, executors from `aioson squad:agent-create` — never hand-build what the CLI generates. Probe without writing: `squad:eval --no-persist`.
 
 Fix every strict validation error before done. `squad:validate` surfaces stale user genome-approvals as warnings — relay each verbatim with its exact `genome:approve` command; never re-approve yourself. Persistent or regulated squads need a current eval PASS; an ephemeral Quick Scan defers only via a concrete `evaluation.deferReason`. Only then register done.
 

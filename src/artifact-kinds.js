@@ -77,9 +77,15 @@ const AGENT_ARTIFACT_KIND = {
   // built-in visual agents pass, keyed on the DELIVERABLE, not on who built it,
   // so a squad-generated executor never ships unmeasured. Non-web pilots
   // (a report, a dataset) skip it: absence of HTML is a state, not a finding.
+  // The package itself rides the same session end: strict validation plus the
+  // executor lint. Before this rider the Done gate lived only in the kernel's
+  // prose, and squads closed green with a dozen strict errors nobody ran.
   squad: {
     kind: 'squad-pilot', needs: 'slug',
-    also: [{ kind: 'visual', needs: 'dir', dir: 'output/{slug}/pilot', skipIfNoHtml: 'output/{slug}/pilot' }]
+    also: [
+      { kind: 'squad-package', needs: 'slug' },
+      { kind: 'visual', needs: 'dir', dir: 'output/{slug}/pilot', skipIfNoHtml: 'output/{slug}/pilot' }
+    ]
   },
   shakedown: { kind: 'shakedown', needs: 'file' }
 };

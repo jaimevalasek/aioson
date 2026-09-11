@@ -15,35 +15,16 @@
 ## Process
 
 ### Step 1 - Read Blueprint
-Read `.aioson/squads/.designs/<slug>.blueprint.json` and validate required fields: slug, name, problem, goal, mode, executors.
-If present, also preserve:
-- `deliveryLane` (`standard` when absent for backward compatibility; force `regulated` for tier-1)
-- `locale_scope`
-- `locale_rationale`
-- `domainClassification`
-- `investigation`
-- `sourceDocs`
-- `analysis` (decomposition from design Step 2.5) + `confidence`/`traces` per executor
-- `researchPolicy` and `composition` (persistent core, task-bound specialists, owners/reviewers)
+Read `.aioson/squads/.designs/<slug>.blueprint.json` and validate required fields: slug, name, problem, goal, mode, executors. Carry every other field the blueprint holds through to the manifest untouched — the mandatory-persistence list in `.aioson/docs/squad/package-contract.md` § `squad.manifest.json` is the contract for what must survive. `deliveryLane` defaults to `standard` when absent (backward compatibility) and is forced to `regulated` for tier-1.
 
-### Step 2 - Create Directory Structure
-```
-.aioson/squads/<slug>/
-├── agents/
-│   ├── agents.md              # Text manifest
-│   ├── orquestrador.md        # Orchestrator
-│   └── <executor-slug>.md     # One per executor
-├── skills/
-├── templates/
-├── docs/
-│   ├── design-doc.md
-│   └── readiness.md
-└── squad.manifest.json        # Formal JSON manifest
+### Step 2 - Scaffold The Package Tree
+Do not hand-build the tree. Run the deterministic generator, then fill or replace the skeletons it writes:
 
-output/<slug>/                 # Output directory
-aioson-logs/<slug>/            # Logs directory
-media/<slug>/                  # Media directory
+```bash
+aioson squad:scaffold . --slug=<slug> --name="<name>" --mode=<content|software|research|mixed> --json
 ```
+
+It creates the canonical package plus the `output/<slug>/`, `aioson-logs/<slug>/`, and `media/<slug>/` roots. What must exist and what each file must end up carrying: `.aioson/docs/squad/package-contract.md` § Non-negotiable package shape. The steps below replace every skeleton with real content — a skeleton delivered as generated is an unfinished squad.
 
 ### Step 2.5 - Process UI/UX Capability From Blueprint
 
@@ -56,14 +37,9 @@ Read the blueprint `uiCapability` field. If absent, treat it as `mode: none`.
 
 **If `mode = executor`:**
 1. Execute the same skill steps above; the executor depends on them.
-2. Generate `.aioson/squads/{slug}/agents/ui-specialist.md` following `.aioson/docs/squad/package-contract.md`:
-   - use the same structure as other permanent executors
-   - mission focused on UI, layout, components, and visual direction
-   - the `## Visual quality intelligence` block from `package-contract.md` § Variant C is mandatory (engine, brain, `design:seed`, replaceability test, `kind=visual` done gate) — `aioson squad:agent:create` emits it when the role reads as visual
-   - expected output: `ui-spec.md` and, when appropriate, HTML/visual deliverable
-   - make explicit when business context must be delegated back to `@orquestrador`
-3. Register the executor in `squad.manifest.json` with `modelTier: powerful` and `behavioralProfile: compliant-dominant`.
-4. Add to the orchestrator routing guide: "Visual / UI / layout requests → @ui-specialist".
+2. Generate `.aioson/squads/{slug}/agents/ui-specialist.md` per `.aioson/docs/squad/package-contract.md` § "UI specialist executor" — same structure as other permanent executors, mission on UI/layout/components/visual direction, the mandatory `## Visual quality intelligence` block, `modelTier: powerful`, `behavioralProfile: compliant-dominant`, and the routing rule. `aioson squad:agent-create` emits the Variant C block when the role reads as visual.
+3. Expected output: `ui-spec.md` and, when appropriate, an HTML/visual deliverable; state explicitly when business context goes back to `@orquestrador`.
+4. Register it in `squad.manifest.json` and add "Visual / UI / layout requests → @ui-specialist" to the orchestrator routing guide.
 
 **If `mode = external`:** Add a note in `docs/design-doc.md` saying `@ux-ui` is called externally.
 
@@ -72,21 +48,7 @@ Read the blueprint `uiCapability` field. If absent, treat it as `mode: none`.
 Always save `uiCapability` in `squad.manifest.json`.
 
 ### Step 3 - Generate squad.manifest.json
-Build the manifest from the blueprint. JSON must follow `squad-manifest.schema.json`. Copy executors, skills, mcps, genomes, and contentBlueprints from the blueprint. Add package paths and rules.
-
-Mandatory persistence:
-- `locale_scope`: use `"universal"` by default when blueprint has no explicit value
-- `locale_rationale`: copy when present
-- `domainClassification`: copy when present
-- `investigation`: copy when present
-- `sourceDocs`: copy when present
-- `analysis` (entities/workflows/integrations/stakeholders): copy when present
-- `researchPolicy`: copy the classified freshness policy and Evidence Pack requirement
-- `composition`: copy the persistent core and task-bound specialists; specialists remain `persistent: false`
-- `confidence` + `traces` per executor: copy from blueprint into each `executors[]` manifest entry; `squad-analyze` and `squad-validate` read these fields
-- `contribution` + `decisionRights` per executor: persist what repeated work justifies the role and which material decisions it owns
-- `evaluation`: persist source-grounded criteria and at least one held-out case; when genomes are bound, include with/without dimension evidence
-- `deliveryLane`: copy the resolved lane so validation, readiness, and future maintenance use the same assurance contract
+Build the manifest over the scaffolded skeleton. Required fields, the mandatory-persistence list (`deliveryLane`, `analysis`, `composition`, `researchPolicy`, `evaluation`, per-executor `contribution`/`decisionRights`/`confidence`/`traces`, `genomeBindings`, `pilot`, `uiCapability`, and the rest), and the authoritative schema: `.aioson/docs/squad/package-contract.md` § `squad.manifest.json`. Copy executors, skills, mcps, genomes, and contentBlueprints from the blueprint; add package paths and rules. A blueprint field dropped here is lost permanently.
 
 ### Step 4 - Generate agents.md (Text Manifest)
 Follow `.aioson/docs/squad/package-contract.md`, section `agents/agents.md`.
@@ -96,28 +58,7 @@ Additional rules for the text manifest:
 - if a category does not exist, omit the section instead of leaving a placeholder
 - reflect `locale_scope`, skills, MCPs, and review policy when these change real squad behavior
 
-Minimum format:
-```markdown
-# Squad <name>
-
-## Mission
-[from blueprint.mission]
-
-## Does
-[derived from scope]
-
-## Does Not Do
-[derived from outOfScope]
-
-## Permanent Executors
-- @orquestrador — [role]
-- @<slug> — [role]
-
-## Squad Skills
-## Squad MCPs
-## Subagent Policy
-## Outputs And Review
-```
+Minimum sections: `# Squad <name>`, `## Mission` (from `blueprint.mission`), `## Does` (from scope), `## Does Not Do` (from `outOfScope`), `## Permanent Executors` (`- @<slug> — [role]`, `@orquestrador` first), `## Squad Skills`, `## Squad MCPs`, `## Subagent Policy`, `## Outputs And Review`.
 
 ### Step 5 - Generate Each Executor
 For each executor in the blueprint, create `.aioson/squads/<slug>/agents/<executor-slug>.md` following `.aioson/docs/squad/package-contract.md`, section `Executor generation`:
@@ -125,31 +66,27 @@ For each executor in the blueprint, create `.aioson/squads/<slug>/agents/<execut
 - **Before writing**, run the *Pre-write depth gate* from `.aioson/docs/squad/creation-flow.md` for each executor: persona, frameworks, source vocabulary, signature_moves, anti-patterns. Empty gate = do not write yet.
 - Header with `# Agent @<slug>` + ACTIVATED block.
 - Mission, Quick context, Active genomes, Focus, Response standard, Hard constraints, Output contract.
-- **Mandatory depth block** in `## Quick context` (package-contract § `Executor depth block`): Variant A (persona + expertise: frameworks, vocabulary, signature_moves, quality_bar, anti_patterns) for knowledge/creative/technical executors; Variant B (operational_breadth) for customer-facing executors. A standalone `role:` without depth block = basic executor; do not deliver it.
-- **Distill sources:** if the blueprint has `sourceDocs` or `investigation`, read/reuse the extraction and inject it into each relevant executor: real terms of art, named frameworks/methods, examples, and anti-patterns. Record in `expertise.sources` which source fed each executor. Use `analysis.entities`/`analysis.workflows` and executor `traces` (design Step 2.5 decomposition) as seeds for `expertise.vocabulary` and `focus`. A source that remains only in the manifest and enters no prompt is a defect. Follow the competency tree in `.aioson/docs/squad/persona-grounding.md` (*extract, don't write*): each framework/term cites its source; uncited items are model priors.
+- **Mandatory depth block** in `## Quick context` — `package-contract.md` § Executor depth block: Variant A for knowledge/creative/technical roles, Variant B for customer-facing ones, Variant C additionally for visual deliverables. A standalone `role:` without a depth block = basic executor; do not deliver it.
+- **Distill sources:** when the blueprint has `sourceDocs` or `investigation`, mine them with the competency-tree method in `.aioson/docs/squad/persona-grounding.md` (*extract, don't write*; each framework/term cites its source span, uncited items are model priors) and record in `expertise.sources` which source fed each executor. Seed `expertise.vocabulary` and `focus` from `analysis.entities`/`analysis.workflows` and the executor's `traces`. A source that stays in the manifest and enters no prompt is a defect.
 - Each `anti_pattern` from the depth block becomes a real line in `## Hard constraints`.
-- State the executor's contribution and decision rights. For review work, name an independent reviewer or record the explicit exception; do not use naive voting to dilute domain expertise.
+- State the executor's contribution and decision rights (`creation-flow.md` § "Domain decomposition", steps 8-9): for review work name an independent reviewer or record the explicit exception.
 - Before moving to the next executor, apply this test: would a real senior person in this role recognize themselves in this prompt? If not, deepen before continuing.
 - If `locale_scope` is locale-specific, write user-facing behavior examples in that locale's language; code identifiers remain English.
 
 ### Step 5.5 - Genome Pass (bind or queue genomes)
 
-Load `.aioson/docs/squad/genome-bindings.md`. Then, for each executor whose blueprint entry plans a genome — and for every `assistant`/`clone` in a tier-1/tier-2 domain even when the blueprint is silent:
+Binding rules, persistence, lifecycle, and operational propagation: `.aioson/docs/squad/genome-bindings.md`. Lane depth: `.aioson/docs/squad/creation-flow.md` § Delivery lane.
 
-1. Check `.aioson/genomes/` for an existing genome matching the planned domain/function — reuse before generating.
-2. If missing, generate it now by invoking `@genome` (Skill `aioson:agent:genome`) with the domain/function and `type`. `persona` genomes are never auto-generated — queue them for the Profiler pipeline instead.
-3. Apply through the runtime binding service so manifest `genomes` + `genomeBindings`, the executor prompt, compiled checklist, readiness, source hash, and compilation identity stay coherent.
-4. Inspect what changed in each executor: procedure, restrictions, checklist, style, and output contract. Metadata-only or null-effect binding remains `conflicted`, not ready.
-5. If generation/materialization is not possible in this session, do NOT deliver empty `## Active genomes` silently: preserve `status: pending|stale|conflicted`, owner and exact repair action in the manifest and creation summary.
+Create-specific ordering — executors are written first (Step 5), genomes second. For each executor whose blueprint entry plans a genome, and for every `assistant`/`clone` in a tier-1/tier-2 domain even when the blueprint is silent:
+
+1. Reuse before generating: check `.aioson/genomes/` for a genome matching the planned domain/function.
+2. If missing, generate it now via `@genome` (Skill `aioson:agent:genome`) with the domain/function and `type`. `persona` genomes are never auto-generated — queue them for the Profiler pipeline instead.
+3. Apply through the runtime binding service, then inspect what actually changed in each executor: procedure, restrictions, checklist, style, output contract. A metadata-only or null-effect binding stays `conflicted`, not ready.
+4. If generation or materialization is impossible in this session, never deliver an empty `## Active genomes` silently: persist `status: pending|stale|conflicted`, the owner, and the exact repair command in the manifest and the creation summary.
+
+Lane deltas the table does not carry: `quick` never generates in the hot path — bind an already-valid match or persist the pending owner, exact command, and `evaluation.deferReason`; `standard` binds only planned genomes whose expected behavioral contribution is named, never one per role by convention; `premium` adds the source-hash check; `regulated` adds mandatory current evidence and forbids deferring a sensitive-domain binding.
 
 Skip this step only for tier-3 squads whose executors are all `worker` / plain `agent` types with no specialized expertise.
-
-Apply the selected lane proportionally:
-
-- `quick`: reuse and bind an already-valid matching genome only. Do not generate one in the hot path; persist the pending owner, exact command, and `evaluation.deferReason`.
-- `standard`: generate/bind only planned genomes whose expected behavioral contribution is named. Do not create a genome for every role by convention.
-- `premium`: run the full planned generation, materialized binding, source-hash check, and applicable A/B evidence.
-- `regulated`: same as premium, plus mandatory current evidence and no deferred sensitive-domain binding.
 
 ### Step 6 - Generate Orchestrator
 Create `.aioson/squads/<slug>/agents/orquestrador.md` following `.aioson/docs/squad/package-contract.md`, section `Orchestrator prompt`.
@@ -167,20 +104,16 @@ Save `.aioson/squads/<slug>/squad.md` according to `.aioson/docs/squad/package-c
 Include `locale_scope`, `locale_rationale`, `investigation`, and `sourceDocs` when present.
 
 ### Step 10 - Run Strict Validate And Eval
-Always run `aioson squad:validate . --squad=<slug> --strict --json`. Then apply
-the lane:
+Always run `aioson squad:validate . --squad=<slug> --strict --json`. Strict also measures executor BODIES (Layer 6): a prompt below the size floor or carrying placeholder text (TODO/FIXME/TBD/lorem ipsum) is an ERROR; a thin or bloated prompt, a missing core section, near-duplicate executors, and workers reading input only from argv are advisory warnings. `aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory` runs strict validation plus that lint and auto-fires at `agent:done --agent=squad`.
 
-- `quick`: run one routing/entry-point smoke. Eval may be deferred only with a concrete `evaluation.deferReason`; readiness remains `provisional`.
-- `standard`: run `aioson squad:eval . --squad=<slug> --json` once; all critical held-out criteria must PASS. A non-critical WARN is allowed only with an owner and repair action.
-- `premium`: require a current full eval PASS, including applicable genome A/B evidence.
-- `regulated`: require a current full eval PASS with current/live-required evidence; no defer.
+Lane assurance: `.aioson/docs/squad/creation-flow.md` § Delivery lane. Run-level deltas: `quick` runs one routing/entry-point smoke and may defer the eval only with a concrete `evaluation.deferReason`, leaving readiness `provisional`; `standard` runs `aioson squad:eval . --squad=<slug> --json` once and tolerates a non-critical WARN only with an owner and a repair action; `premium` also requires applicable genome A/B evidence; `regulated` requires current/live-required evidence and no defer. Add `--no-persist` to measure without writing `evals/` or `docs/EVAL-*.md`.
 
 ### Step 11 - Warm-Up Round
-Follow `.aioson/docs/squad/workflow-quality.md`, section `Confirmation, coverage, and warm-up`:
+Round mechanics and the per-specialist output fields: `.aioson/docs/squad/workflow-quality.md` § `Confirmation, coverage, and warm-up`. Lane depth:
 
 - `quick`: one routing/readiness smoke; no ceremonial per-specialist round.
 - `standard`: one representative end-to-end warm-up covering the orchestrator and participating specialists.
-- `premium|regulated`: full specialist round with problem reading, initial recommendation, main risk, and suggested next step.
+- `premium|regulated`: the full specialist round.
 
 ## Output
 - Full package under `.aioson/squads/<slug>/`

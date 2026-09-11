@@ -15,6 +15,10 @@ manifest's source rubric and held-out contract. It writes:
 - `.aioson/squads/<slug>/evals/latest.json`
 - `.aioson/squads/<slug>/docs/EVAL-<date>.md`
 
+`aioson squad:eval . --squad=<slug> --json --no-persist` measures without writing any of the three — a read-only probe of another squad, or a tutorial run.
+
+The strict precheck also measures executor BODIES (`squad:validate` Layer 6): a prompt below the size floor or carrying placeholder text (TODO/FIXME/TBD/lorem ipsum) is an ERROR under `--strict`; a thin or bloated prompt, a missing core section, near-duplicate executors, and workers that read input only from argv are advisory warnings. `aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory` runs the strict validation plus that lint, and auto-fires at `agent:done --agent=squad`.
+
 The JSON report is validated against
 `.aioson/schemas/squad-eval-report.schema.json` and records manifest, source,
 artifact, compilation, and run evidence needed to reproduce the verdict.
@@ -106,9 +110,9 @@ or stale `PASS` is rejected even when its JSON is structurally valid.
 - `NOT_APPLICABLE`: only for an individual dimension such as genome comparison
   when no genome is bound; it never substitutes for the overall held-out proof.
 
-Persistent and regulated squads require a current `PASS` report before premium
-readiness. An ephemeral Quick Scan may defer only with a concrete
-`evaluation.deferReason`.
+Lane semantics: `creation-flow.md` § Delivery lane. Eval delta: persistent and
+regulated squads require a current `PASS` report before premium readiness; an
+ephemeral Quick Scan may defer only with a concrete `evaluation.deferReason`.
 
 ## Optional model jury
 

@@ -348,3 +348,46 @@ test('getWorkerRunStats aggregates correctly', async () => {
     await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
   }
 });
+
+// --- Input transport: large payloads travel through a file, never argv ---
+
+test('a payload past the argv budget reaches the worker through AIOSON_WORKER_INPUT_FILE', async () => {
+  const { prepareWorkerInput, WORKER_INPUT_ENV } = require('../src/worker-runner');
+  const tmpDir = await makeTempDir();
+  try {
+    const script = `
+const file = process.env.${WORKER_INPUT_ENV};
+const input = file ? JSON.parse(require('node:fs').readFileSync(file, 'utf8')) : JSON.parse(process.argv[2] || '{}');
+process.stdout.write(JSON.stringify({ length: (input.blob || '').length, argvBytes: (process.argv[2] || '').length }));
+process.exit(0);
+`;
+    await setupWorker(tmpDir, 'squad1', 'sink', {
+      slug: 'sink', name: 'Sink', type: 'manual', inputs: {}, outputs: {}, timeout_ms: 5000, retry: { attempts: 1 }
+    }, script);
+    // Well past the Windows command-line limit; before the file transport this
+    // was `spawn ENAMETOOLONG` surfacing as a squad:eval command_error.
+    const blob = 'x'.repeat(200_000);
+    const result = await runWorker(tmpDir, 'squad1', 'sink', { blob }, { noRetry: true });
+    assert.ok(result.ok, result.error);
+    assert.equal(result.output.length, 200_000);
+    assert.ok(result.output.argvBytes < 1000, 'argv must carry only the envelope');
+    assert.equal(result.inputTransport, 'file');
+
+    const small = await prepareWorkerInput({ a: 1 });
+    assert.equal(small.transport, 'argv');
+    const large = await prepareWorkerInput({ blob }, 1000);
+    assert.equal(large.transport, 'file');
+    assert.ok(large.env[WORKER_INPUT_ENV]);
+    await large.cleanup();
+    await assert.rejects(fs.access(large.env[WORKER_INPUT_ENV]));
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, maxRetries: 5, retryDelay: 50 });
+  }
+});
+
+test('the generated worker template reads the file transport before argv', () => {
+  const { generateRunJs } = require('../src/worker-runner');
+  const js = generateRunJs('demo', { inputs: {}, outputs: {} });
+  assert.match(js, /AIOSON_WORKER_INPUT_FILE/);
+  assert.match(js, /process\.argv\[2\]/);
+});

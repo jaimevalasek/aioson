@@ -257,6 +257,7 @@ const { runIntakeAsk } = require('./commands/intake-ask');
 const { runPreflightContext } = require('./commands/preflight-context');
 const { runContextCompact } = require('./commands/context-compact');
 const { runSquadScaffold } = require('./commands/squad-scaffold');
+const { runSquadPreflight } = require('./commands/squad-preflight');
 const { runPatternDetect } = require('./commands/pattern-detect');
 const { runSelfLoop } = require('./commands/self-implement-loop');
 const { runSquadCard } = require('./commands/squad-card');
@@ -614,6 +615,9 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'context-compact',
   'squad:scaffold',
   'squad-scaffold',
+  'squad:preflight',
+  'squad-preflight',
+  'squad:agent:create',
   'pattern:detect',
   'pattern-detect',
   'self:loop',
@@ -1196,6 +1200,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_squad_repair_genomes');
   logHelpLine(t, logger, 'cli.help_squad_validate');
   logHelpLine(t, logger, 'cli.help_squad_eval');
+  logHelpLine(t, logger, 'cli.help_squad_preflight');
   logHelpLine(t, logger, 'cli.help_squad_pilot_approve');
   logHelpLine(t, logger, 'cli.help_squad_export');
   logHelpLine(t, logger, 'cli.help_squad_pipeline');
@@ -1713,7 +1718,7 @@ async function main() {
       result = await runSquadExport({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:pipeline' || command === 'squad-pipeline') {
       result = await runSquadPipeline({ args, options, logger: commandLogger, t });
-    } else if (command === 'squad:agent-create' || command === 'squad-agent-create') {
+    } else if (command === 'squad:agent-create' || command === 'squad-agent-create' || command === 'squad:agent:create') {
       result = await runSquadAgentCreate({ args, options, logger: commandLogger, t });
     } else if (command === 'squad:investigate' || command === 'squad-investigate') {
       result = await runSquadInvestigate({ args, options, logger: commandLogger, t });
@@ -1809,6 +1814,8 @@ async function main() {
       result = await runContextCompact({ args, options, logger: commandLogger });
     } else if (command === 'squad:scaffold' || command === 'squad-scaffold') {
       result = await runSquadScaffold({ args, options, logger: commandLogger });
+    } else if (command === 'squad:preflight' || command === 'squad-preflight') {
+      result = await runSquadPreflight({ args, options, logger: commandLogger });
     } else if (command === 'pattern:detect' || command === 'pattern-detect') {
       result = await runPatternDetect({ args, options, logger: commandLogger });
     } else if (command === 'self:loop' || command === 'self-loop') {

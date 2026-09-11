@@ -16,8 +16,9 @@ iterated in draft, and frozen by the user as the squad's binding quality bar.
 ## Scope
 
 - **Deliverable-class squads** (`mode: software` or `mixed`): the pilot is part
-  of readiness. `standard` and above build it; `quick` may defer with a concrete
-  `pilot.deferReason`; `regulated` and `premium` never defer.
+  of readiness. Lane semantics: `creation-flow.md` § Delivery lane; the pilot
+  delta is that `standard` and above build it, `quick` may defer with a concrete
+  `pilot.deferReason`, and `regulated` and `premium` never defer.
 - **Content/research squads**: record `pilot.status: not_applicable` — never
   manufacture a deliverable to satisfy the gate.
 
@@ -55,10 +56,10 @@ vertical — one cinematic landing, one CRM pipeline screen — never the produc
    orchestrates and never authors the deliverable itself.
 4. `aioson verify:artifact . --kind=squad-pilot --slug={slug} --advisory` —
    repair every issue. A web pilot (any HTML under `output/{slug}/pilot/`) is
-   also measured by `--kind=visual --dir=output/{slug}/pilot` — craft floor,
-   generation tells, materials, cross-project fingerprint — and the squad's
-   `agent:done` runs that measurement itself; answer every warning with a fix
-   or a recorded reason before presenting the entrypoint.
+   also measured by `--kind=visual --dir=output/{slug}/pilot` (the floor in
+   `package-contract.md` § Variant C), and the squad's `agent:done` runs that
+   measurement itself; answer every warning with a fix or a recorded reason
+   before presenting the entrypoint.
 5. Present the entrypoint to the user and stop. Only the user runs
    `aioson squad:pilot-approve . --squad={slug}`; it refuses to freeze while the
    gate reports issues, then stamps status, fingerprint, and `approved_at`.

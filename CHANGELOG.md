@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **The squad package is measured at the session end, and the executor bodies are measured at all.** `verify:artifact --kind=squad-package` runs `squad:validate --strict` plus a new executor lint and auto-fires at `agent:done --agent=squad`; before it, the Done gate lived only in the kernel's prose and every consumer squad measured in 2026-09 had closed green while failing strict validation. `squad:validate` Layer 6 reads the executor prompts and worker entrypoints: a prompt under 400 bytes or carrying placeholder text is a strict error; thin (< 600 bytes), bloated (> 16 KB), missing mission/constraints/output sections (English or pt-BR headings), near-duplicate executors and argv-only workers are advisories, with `executors.estimatedTokens` in the report. `squad:preflight --operation --lane --mode --signals --json` returns the exact task files, docs and skill router an activation loads, with bytes and tokens, and the lane's done-gate commands; the kernel's 17-row loading table moved into it. `squad:eval --no-persist` measures without writing `evals/` or `docs/EVAL-*.md`.
+
+### Fixed
+
+- **`squad:eval` crashed with `spawn ENAMETOOLONG` on Windows for squads with real workers**: the worker runner passed the whole payload (including full baseline and candidate outputs for the scorer) as `argv[2]`. Payloads past the platform argv budget now travel through a temp file announced by `AIOSON_WORKER_INPUT_FILE` (`argv[2]` carries a `{ "$inputFile" }` envelope), a spawn failure is a worker result instead of a CLI crash, and the generated worker template reads both sources. The squad docs told the agent to run `aioson squad:agent:create`, a command that never existed (`squad:agent-create` did): the alias is registered and `tests/squad-prompt-cli-reachability.test.js` pins every `aioson` command named by a squad prompt surface to `src/cli.js`. The squad docs and tasks dropped their restated delivery-lane ladder, package file list and depth-block copies; the create task scaffolds the package with `squad:scaffold` instead of hand-building the tree.
+
+
 ## [1.66.0] - 2026-09-10
 
 ### Changed

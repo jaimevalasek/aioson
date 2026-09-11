@@ -25,11 +25,7 @@ Typical examples:
 - cybersecurity with formal compliance scope
 - veterinary, agribusiness, engineering, construction, accounting, and tax
 
-Action:
-
-- investigation via `@orache` is mandatory
-- do not finalize the blueprint, workflow, or executor roster without the report
-- if the user refuses the investigation, explain that the squad cannot be safely generated yet and stop
+Action: investigation via `@orache` is mandatory and the blueprint, workflow, and executor roster stay unfinalized without the report. If the user refuses it, explain that the squad cannot be safely generated yet and stop.
 
 ### Tier 2 — Specialized domains
 
@@ -43,10 +39,7 @@ Typical examples:
 - non-clinical psychology or coaching
 - specialized recruiting
 
-Action:
-
-- strongly recommend investigation
-- if the user declines, continue only after recording the limitation in `assumptions` and `risks`
+Action: run investigation by default; if the user declines, continue only after recording the limitation in `assumptions` and `risks`.
 
 ### Tier 3 — Common domains
 
@@ -58,10 +51,9 @@ Typical examples:
 - productivity and project management
 - broad business operations
 
-Action:
+Action: with relevant `sourceDocs` or a cached investigation, proceed directly; with none, the default is an `@orache` Quick Scan.
 
-- proceed directly
-- do not create unnecessary friction by forcing investigation
+The opt-out policy behind all three tiers: `creation-flow.md` § "Investigation default (opt-out)".
 
 ## Ephemeral exception
 

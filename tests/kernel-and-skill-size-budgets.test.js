@@ -56,7 +56,7 @@ const KERNEL_CEILINGS = {
   'ux-ui.md': 15000,
   'architect.md': 15000,
   // orchestrators (target 12000) — squad ratcheted
-  'squad.md': 12288,
+  'squad.md': 10752,
   'orchestrator.md': 12000,
   // focused (target 8000) — ratcheted where already over
   'committer.md': 12288,

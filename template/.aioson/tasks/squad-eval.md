@@ -25,6 +25,11 @@ Load `.aioson/docs/squad/eval-gate.md` and the executor depth block in
    aioson squad:eval . --squad=<slug> --json
    ```
 
+   Add `--no-persist` to measure without writing `evals/` or `docs/EVAL-*.md`.
+   The strict precheck also measures executor bodies (`squad:validate` Layer 6);
+   `aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory` runs
+   strict validation plus that lint and auto-fires at `agent:done --agent=squad`.
+
 4. Inspect the per-dimension result. Never replace it with one aggregate score.
 5. On `FAIL` or `UNVERIFIED`, route exact failed criteria/dimensions to
    `@squad refresh <slug>`. Do not claim readiness.

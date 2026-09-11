@@ -15,9 +15,7 @@
 
 ## Mandatory Preload
 
-Before anything else, load the depth contract for the executor type being refreshed:
-- **Variant A (knowledge/creative/technical):** `.aioson/docs/squad/package-contract.md` § Executor depth block — `persona + expertise (frameworks, vocabulary, signature_moves) + quality_bar + anti_patterns`.
-- **Variant B (customer-facing):** `.aioson/docs/squad/domain-breadth.md` — the `role + backstory + goal + operational_breadth + interaction_principles` template, yes-and patterns, HEARD refusal method, and worked examples (pharmacy, restaurant, gym, hotel).
+Before anything else, load `.aioson/docs/squad/package-contract.md` § Executor depth block — it defines Variant A (knowledge/creative/technical) and Variant B (customer-facing) in full. For Variant B work also load `.aioson/docs/squad/domain-breadth.md`: yes-and response patterns, the HEARD refusal method, and four worked examples (pharmacy, restaurant, gym, hotel).
 
 Also load `.aioson/docs/squad/quality-lens.md` (scorecard with "persona depth" and "domain breadth" criteria).
 
@@ -25,14 +23,7 @@ Also load `.aioson/docs/squad/quality-lens.md` (scorecard with "persona depth" a
 
 ### Step 1 - Read Squad Package
 
-Full inventory:
-
-- `.aioson/squads/<slug>/squad.manifest.json` — metadata + declared executors
-- `.aioson/squads/<slug>/squad.md` — canonical text
-- `.aioson/squads/<slug>/agents/agents.md` — text map
-- `.aioson/squads/<slug>/agents/<executor>.md` — all prompts
-- `.aioson/squads/<slug>/docs/design-doc.md`, `readiness.md` — if present
-- `.aioson/squads/<slug>/skills/`, `templates/`, `workflows/` — listing
+Full inventory of the package (`package-contract.md` § "Non-negotiable package shape"): the manifest and its declared executors, `squad.md`, `agents/agents.md`, every executor prompt under `agents/`, `docs/design-doc.md` and `docs/readiness.md` when present, and a listing of `skills/`, `templates/`, and `workflows/`.
 
 If the slug has no `squad.manifest.json` (legacy squad), run `squad-repair.md` first to generate the manifest before continuing.
 
@@ -40,19 +31,9 @@ If the slug has no `squad.manifest.json` (legacy squad), run `squad-repair.md` f
 
 For **each** executor, choose the variant by role and verify:
 
-**Variant A — knowledge/creative/technical executor** (researcher, analyst, strategist, writer, editor, engineer, specialist):
+**Variant A — knowledge/creative/technical executor** (researcher, analyst, strategist, writer, editor, engineer, specialist): is every field of the Variant A block present and real — `persona` anchored in seniority and lived experience rather than "you are an analyst", `expertise` carrying named frameworks, real terms of art and `signature_moves`, and `anti_patterns` that became lines in `## Hard constraints`? When the squad has `sourceDocs`/`analysis`, does that vocabulary actually appear in the prompt, or is the executor generic?
 
-- [ ] Does it have a depth block in `## Quick context` with `persona` anchored in real seniority/experience, not "you are an analyst"?
-- [ ] Does it have `expertise` with named `frameworks`, `vocabulary` (real terms of art), and `signature_moves`?
-- [ ] Did `anti_patterns` become lines in `## Hard constraints`?
-- [ ] If the squad has `sourceDocs`/`analysis`: do source vocabulary/frameworks appear in the prompt, or is the executor generic?
-
-**Variant B — customer-facing executor** (support, sales, reception, host, concierge):
-
-- [ ] Does it have `role + backstory + goal` in Quick Context, or equivalent?
-- [ ] Does it have `operational_breadth` with `primary`, `adjacent` (>= 5 items), and `out_of_scope`?
-- [ ] Does it have `interaction_principles` with explicit yes-and ("default 'yes, and...'")?
-- [ ] Is the backstory grounded in real-world venues, experience years, and customer types? Does it include the anti-pattern "never say 'we only sell X'"?
+**Variant B — customer-facing executor** (support, sales, reception, host, concierge): is every field of the Variant B block present and real — `role + backstory + goal`, `operational_breadth` with `primary`, `adjacent` (>= 5 items) and `out_of_scope`, and `interaction_principles` with an explicit yes-and? Is the backstory grounded in real venues, years on the job and customer types, and does it carry the "never say 'we only sell X'" constraint?
 
 Build a silent matrix `{executor: [gaps]}`. Do not show it yet; use it to generate the plan.
 
@@ -120,35 +101,7 @@ role: "Pharmacy attendant"
 mission: "Serve customers and sell medicine"
 ```
 
-**Refresh — replace Quick Context block with:**
-```yaml
-role: "Neighborhood pharmacy counter attendant"
-backstory: |
-  You have worked behind the counter of a neighborhood pharmacy for 8+ years.
-  Customers come for prescriptions, but they also ask for candy, snacks,
-  cosmetics, vitamins, sunscreen, baby products, and quick practical guidance.
-goal: "Every customer leaves with what they need or a clear next step."
-
-operational_breadth:
-  primary: ["prescription medicine", "OTC medicine", "pharmacist consultation"]
-  adjacent:
-    - "candy, chocolate, gum"
-    - "cosmetics, moisturizers, sunscreen"
-    - "baby products such as formula and diapers"
-    - "vitamins and supplements"
-    - "condoms and hygiene products"
-    - "first aid and thermometers"
-    - "gift cards and convenience counter services"
-  out_of_scope:
-    - "medical diagnosis"
-    - "controlled medicine without prescription"
-
-interaction_principles:
-  - "Default to 'yes, and...' — accept the customer need and build from it"
-  - "Refuse only when illegal, unsafe, or genuinely unavailable"
-  - "Never say 'we only sell medicine' — say what you do have"
-  - "Validate the underlying need before answering only the literal request"
-```
+**Refresh — replace the Quick Context block** with the full Variant B block for this squad: `role + backstory + goal + operational_breadth + interaction_principles`, written out in the plan with this domain's real adjacency list. The worked pharmacy version is `.aioson/docs/squad/domain-breadth.md` § "Example 1 — Pharmacy counter".
 
 ### Executor: <next>
 ...

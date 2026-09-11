@@ -243,7 +243,7 @@ const RULESETS = {
 
 // Kinds whose target file path is keyed by --slug; without it we cannot resolve
 // the artifact, so fail with a clear usage error instead of a `null/` path.
-const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy', 'review', 'sources', 'briefing', 'test-report', 'squad-pilot', 'execution-plan']);
+const REQUIRES_SLUG = new Set(['genome', 'research-report', 'enriched-profile', 'hybrid-skill', 'copy', 'review', 'sources', 'briefing', 'test-report', 'squad-pilot', 'squad-package', 'execution-plan']);
 
 // Kinds whose artifact has a date-stamped / caller-known path — resolved via
 // --file=<path> rather than derived from a slug.
@@ -1139,6 +1139,40 @@ const ADAPTERS = {
   // lane-proportional deferral, and fingerprint freshness. The taste verdict —
   // does the pilot carry the domain signature — stays with the user, whose
   // squad:pilot-approve is the only way a pilot becomes approved.
+  // The squad PACKAGE, measured at the session end the way the kernel's Done
+  // gate always demanded in prose: `squad:validate --strict` (schema,
+  // structure, semantics, premium gate, eval currency) plus the executor lint
+  // (stubs, placeholders, bloat, near-duplicates, argv-only workers). Every
+  // consumer squad measured in 2026-09 failed strict validation while its
+  // session had closed green — the gate existed, nothing fired it.
+  'squad-package': async (ctx) => {
+    const { runSquadValidate } = require('./squad-validate');
+    const silent = { log() {}, error() {} };
+    const result = await runSquadValidate({
+      args: [ctx.targetDir],
+      options: { squad: ctx.slug, strict: true, json: true },
+      logger: silent
+    });
+    const issues = Array.isArray(result.errors) ? result.errors : [];
+    const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+    const ok = result.valid === true;
+    return {
+      ok,
+      issues,
+      warnings,
+      checks: [
+        { id: 'squad-validate:strict', ok, detail: ok ? null : `${issues.length} strict error(s) — run: aioson squad:validate . --squad=${ctx.slug} --strict` },
+        { id: 'squad-executors', ok: !(result.executors && (result.executors.stubs > 0 || result.executors.withPlaceholders > 0)), detail: result.executors ? `${result.executors.measured} prompts, ~${result.executors.estimatedTokens} tokens, ${result.executors.stubs} stub(s), ${result.executors.bloated} bloated, ${result.executors.nearDuplicates} near-duplicate pair(s)` : null }
+      ],
+      metrics: {
+        errors: issues.length,
+        warnings: warnings.length,
+        executors: result.executors || null,
+        approvals: result.approvals || null
+      }
+    };
+  },
+
   'squad-pilot': async (ctx) => {
     const { analyzeSquadPilot } = require('../lib/squad-pilot-lint');
     const result = analyzeSquadPilot({ targetDir: ctx.targetDir, slug: ctx.slug });

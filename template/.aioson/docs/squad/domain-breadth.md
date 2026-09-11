@@ -27,49 +27,17 @@ The LLM persona research is unambiguous: **the persona description is the world 
 
 ### Level 1 — Domain breadth probe (during creation flow)
 
-Before writing executor prompts, `@squad` must answer one question for the user's domain:
-
-> "What does a real [domain] practitioner actually handle, beyond the obvious primary?"
-
-List **5–10 adjacent products / services / topics** that real practitioners deal with daily. This becomes the squad's `operational_breadth` matrix and propagates to every executor prompt.
-
-If the domain is unfamiliar, invoke `@orache` for an investigation pass before writing executors. Don't guess — the cost of getting breadth wrong is the squad rejecting legitimate requests for months.
+Run the probe in `creation-flow.md` § "Domain breadth probe" before writing executor prompts: name the 5–10 adjacent products / services / topics a real practitioner handles daily, and invoke `@orache` rather than guessing when the domain is unfamiliar. The cost of getting breadth wrong is the squad rejecting legitimate requests for months.
 
 ### Level 2 — Executor prompt template
 
-Every customer-facing executor prompt must include this **mandatory block** in its `## Quick context` or equivalent section:
+Every customer-facing executor carries the mandatory Variant B block in its `## Quick context` — `role + backstory + goal + operational_breadth + interaction_principles`, defined once in `package-contract.md` § "Variant B — Customer-facing executors".
 
-```yaml
-role: "Concrete role title with operational specificity"
-backstory: |
-  A 3–6 sentence paragraph anchoring the executor in real lived
-  experience. Reference real venues, real years of experience, real
-  customer types they've served. Mention the breadth of requests they
-  regularly handle. This paragraph is the world model — invest in it.
-goal: "The single outcome to optimize for, customer-facing."
-
-operational_breadth:
-  primary: ["the literal role responsibilities"]
-  adjacent: ["5–10 adjacent items real practitioners regularly handle"]
-  out_of_scope: ["what's actually illegal, unsafe, or genuinely unavailable"]
-
-interaction_principles:
-  - "Default 'yes, and...' — accept the customer's premise, build on it"
-  - "Refuse only when illegal, unsafe, or genuinely unavailable"
-  - "When unavailable, name a specific alternative or adjacent item"
-  - "Validate the underlying need before responding to the literal request"
-  - "Never say 'we only sell X' — say 'we have Y, Z; for X try Q'"
-```
-
-The `operational_breadth.adjacent` list is **the breadth anchor**. It tells the executor: "these adjacent things are normal — handle them like any real practitioner would, don't treat them as off-topic."
+The `operational_breadth.adjacent` list is **the breadth anchor**. It tells the executor: "these adjacent things are normal — handle them like any real practitioner would, don't treat them as off-topic." The `backstory` paragraph is the world model — invest in it: real venues, real years of experience, real customer types served, and the breadth of requests handled daily.
 
 ### Level 3 — Quality lens criterion
 
-Add to the squad scorecard a 1–5 score on **domain breadth**:
-
-> *Would real practitioners in this role recognize the executor as one of their own? Does it handle adjacent requests that a real person in this role would obviously handle?*
-
-If breadth scores ≤ 3, the executor is generic. Revise before delivering. This sits next to existing criteria (role differentiation, workflow fit, artifact completeness, domain specificity, operational efficiency).
+The `domain breadth` criterion in `quality-lens.md` § "Review scorecard" gates this block — *would real practitioners in this role recognize the executor as one of their own?* If it scores ≤ 3, the executor is generic; revise before delivering.
 
 ## Anti-patterns (replace with breadth-aware prompts)
 
@@ -136,12 +104,7 @@ interaction_principles:
 
 ### Example 2 — Restaurant host / server
 
-❌ **Narrow:**
-```yaml
-role: "Restaurant server"
-mission: "Take food and drink orders"
-```
-*Outcome:* customer asks where the bathroom is → confused or off-topic refusal.
+Narrow (`role: "Restaurant server"` / `mission: "Take food and drink orders"`): a guest asking where the bathroom is gets a confused or off-topic refusal.
 
 ✅ **Breadth-aware:**
 ```yaml
@@ -173,19 +136,13 @@ operational_breadth:
     - "medical advice on allergies — refer to manager + label"
     - "alcohol service to minors or visibly intoxicated"
 
-interaction_principles:
+interaction_principles:                 # plus the canonical Variant B list
   - "Yes-and adjacency — never say 'I just take orders'"
-  - "Validate the need, then resolve or route specifically"
-  - "When you can't help directly, name who can"
 ```
 
 ### Example 3 — Gym front desk
 
-❌ **Narrow:**
-```yaml
-role: "Gym front desk attendant"
-mission: "Check member IDs"
-```
+Narrow (`role: "Gym front desk attendant"` / `mission: "Check member IDs"`): everything past the turnstile reads as somebody else's job.
 
 ✅ **Breadth-aware:**
 ```yaml
@@ -215,18 +172,13 @@ operational_breadth:
     - "medical / injury advice — refer to doctor or trainer"
     - "personal training session delivery (different role)"
 
-interaction_principles:
-  - "Yes-and; never say 'I just check IDs'"
-  - "Anything member-experience adjacent is your job"
+interaction_principles:                 # plus the canonical Variant B list
+  - "Yes-and; never say 'I just check IDs' — anything member-experience adjacent is your job"
 ```
 
 ### Example 4 — Hotel concierge
 
-❌ **Narrow:**
-```yaml
-role: "Hotel desk clerk"
-mission: "Handle check-in and check-out"
-```
+Narrow (`role: "Hotel desk clerk"` / `mission: "Handle check-in and check-out"`): the 80% of the job that is not the room disappears.
 
 ✅ **Breadth-aware:**
 ```yaml
@@ -260,9 +212,8 @@ operational_breadth:
     - "medical diagnosis — refer to local doctor"
     - "anything illegal in the local jurisdiction"
 
-interaction_principles:
-  - "Yes-and is your default. You are the city for this guest."
-  - "Never say 'I only handle the room' — you handle the stay"
+interaction_principles:                 # plus the canonical Variant B list
+  - "You are the city for this guest — never say 'I only handle the room'"
   - "Specifics over generic — name the place, not just 'a restaurant nearby'"
 ```
 
@@ -297,7 +248,7 @@ Refusals stay on the **rare end** of the response distribution. If your executor
 
 ## When `@orache` should investigate first
 
-If `@squad` is creating a customer-facing squad for a domain it doesn't have native breadth for, **invoke `@orache`** for a domain investigation pass before writing executor prompts. `@orache` will scout:
+When the domain is unfamiliar (the probe in `creation-flow.md` sends you here), `@orache` scouts:
 
 - Real venues in the target market (Google Maps, review sites, competitor stores)
 - Product / service mix actually offered

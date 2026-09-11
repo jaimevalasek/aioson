@@ -131,8 +131,17 @@ aioson squad:scaffold . --slug=<slug> --name="Meu Squad" --mode=mixed
 # Diagnosticar squad existente
 aioson squad:doctor . --squad=<slug>
 
-# Validar estrutura e manifesto
+# Validar estrutura, manifesto e o corpo dos executores (stub/placeholder = erro no --strict)
 aioson squad:validate . --squad=<slug> --strict
+
+# Medir a qualidade (rubrica com fontes + held-out) sem gravar nada no squad
+aioson squad:eval . --squad=<slug> --json --no-persist
+
+# Ver o que uma ativação do @squad carrega e quanto custa em tokens
+aioson squad:preflight . --operation=create --lane=standard --mode=<content|software|research|mixed> --json
+
+# O portão do pacote (roda sozinho no agent:done do @squad)
+aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory
 
 # Congelar o pilot (só você roda isto)
 aioson squad:pilot-approve . --squad=<slug>

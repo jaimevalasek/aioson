@@ -305,7 +305,9 @@ module.exports = {
     help_squad_validate:
       'aioson squad:validate [path] --squad=<slug> [--strict] [--json] [--locale=fr]',
     help_squad_eval:
-      'aioson squad:eval [path] --squad=<slug> [--json] [--locale=fr]',
+      'aioson squad:eval [chemin] --squad=<slug> [--no-persist] [--json] [--locale=fr]',
+    help_squad_preflight:
+      'aioson squad:preflight [chemin] --operation=<opération> [--lane=quick|standard|premium|regulated] [--mode=content|software|research|mixed] [--signals=<a,b>] [--json] [--locale=fr]',
     help_squad_pilot_approve:
       'aioson squad:pilot-approve [path] --squad=<slug> [--json] [--locale=fr]',
     help_squad_export:

@@ -98,20 +98,27 @@ async function runSquadEval({ args = [], options = {}, logger = console, t } = {
     };
   }
 
+  // `--no-persist` (or --dry-run) measures without touching the squad: no
+  // evals/*.json, no latest.json, no docs/EVAL-*.md. A read-only probe of
+  // someone else's squad — or a tutorial run — must not rewrite its evidence.
+  const persist = !(options['no-persist'] || options.noPersist || options['dry-run'] || options.dryRun);
   const reportName = `eval-${safeTimestamp(report.generated_at)}.json`;
   const reportPath = path.join(squadDir, 'evals', reportName);
   const latestPath = path.join(squadDir, 'evals', 'latest.json');
   const markdownPath = path.join(squadDir, 'docs', `EVAL-${report.generated_at.slice(0, 10)}.md`);
-  const json = `${JSON.stringify(report, null, 2)}\n`;
-  await writeAtomic(reportPath, json);
-  await writeAtomic(latestPath, json);
-  await writeAtomic(markdownPath, renderMarkdown(report));
+  if (persist) {
+    const json = `${JSON.stringify(report, null, 2)}\n`;
+    await writeAtomic(reportPath, json);
+    await writeAtomic(latestPath, json);
+    await writeAtomic(markdownPath, renderMarkdown(report));
+  }
 
   const ok = report.verdict === 'PASS' || report.verdict === 'WARN';
   const result = {
     ok,
     exitCode: ok ? 0 : 1,
     slug,
+    persisted: persist,
     verdict: report.verdict,
     criticalFailures: report.critical_failures,
     report: path.relative(projectDir, reportPath).replace(/\\/g, '/'),
@@ -128,9 +135,9 @@ async function runSquadEval({ args = [], options = {}, logger = console, t } = {
     logger.log(t
       ? t('squadEval.result', { slug, verdict: report.verdict })
       : `Squad eval ${slug}: ${report.verdict}`);
-    logger.log(t
-      ? t('squadEval.report', { path: result.report })
-      : `Report: ${result.report}`);
+    logger.log(persist
+      ? (t ? t('squadEval.report', { path: result.report }) : `Report: ${result.report}`)
+      : `Report not written (--no-persist): ${result.report}`);
   }
   return result;
 }

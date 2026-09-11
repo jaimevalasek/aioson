@@ -17,19 +17,7 @@
 
 **0A — AIOSON pipeline artifacts**
 
-Before asking anything, look for:
-- `.aioson/context/implementation-plan-*.md`
-- `.aioson/context/requirements-*.md`
-- `.aioson/context/architecture.md`
-- `.aioson/context/prd.md` and `prd-*.md`
-
-If clearly relevant files exist for the current squad:
-1. Read the `implementation-plan` first when it exists.
-2. Then read relevant `requirements`, `architecture`, and `prd` files.
-3. Extract: domain, goal, output type, constraints, expected behaviors, risks, and done signals.
-4. Record consumed paths in `sourceDocs`.
-5. Do not repeat questions whose answers are already explicit in those artifacts.
-6. If more than one artifact set is possible, ask one short disambiguation question in the selected project language.
+Before asking anything, run the scan in `.aioson/docs/squad/creation-flow.md` § "Project artifact detection" over `.aioson/context/` (implementation plan first, then `requirements`, `architecture`, `prd`). Extract risks alongside the fields listed there, record consumed paths in `sourceDocs`, and never repeat a question those artifacts already answer. Ask the single disambiguation question, when one is needed, in the selected project language.
 
 **0B — Artisan input**
 
@@ -45,24 +33,11 @@ Check whether `.aioson/templates/squads/` exists. If it exists, list available t
 If the user chooses a template, read `template.json` and use it as the blueprint base (executors, content blueprints, mode).
 
 ### Step 1 - Collect Minimal Context
-Ask in one block only; do not run multiple rounds:
-1. Squad domain or topic
-2. Main problem or goal
-3. Expected output type (articles, scripts, code, analysis, etc.)
-4. Constraints (audience, tone, technical level, language)
-5. Optional: specific desired roles
-
-If the user already supplied enough context (text, docs, images), infer the answers and continue. Ask only when material gaps remain.
+Ask the five intake fields from `.aioson/docs/squad/creation-flow.md` § Intake — domain, goal, output type, constraints, optional role hints — in one block; do not run multiple rounds. If the user already supplied enough context (text, docs, images), infer the answers and continue. Ask only when material gaps remain.
 
 ### Step 1.5 - Domain Classification Gate + Locale Scope
 
-Before defining executors, classify the domain using `.aioson/docs/squad/domain-classification.md`:
-
-- **Tier 1 — regulated:** investigation via `@squad investigate` / `@orache` is mandatory. Do not finalize the blueprint without a report.
-- **Tier 2 — specialized:** run investigation by default (opt-out). If the user declines, record the limitation in `assumptions` and `risks`.
-- **Tier 3 — common:** with no `sourceDocs`, default to an `@orache` Quick Scan (announce it, let the user skip); proceed directly only when relevant sources or cached investigation already exist.
-
-If relevant investigation already exists, reuse the report instead of requesting a new one.
+Before defining executors, classify the domain with `.aioson/docs/squad/domain-classification.md` (the three tiers and the investigation policy each one carries) and apply the opt-out default in `.aioson/docs/squad/creation-flow.md` § "Investigation default". If relevant investigation already exists, reuse the report instead of requesting a new one.
 
 After classification:
 - decide `locale_scope` based on `.aioson/rules/agent-language-policy.md` when the rule exists
@@ -76,14 +51,7 @@ After classification:
   - `locale_scope`
   - `locale_rationale` when applicable
 
-Resolve and persist one `deliveryLane` before loading deeper creation modules:
-
-- `regulated` — mandatory for `tier-1-regulated`; never downgrade for speed.
-- `premium` — explicit marketplace/publication/high-fidelity request, persona/clone fidelity, or user-requested exhaustive assurance.
-- `standard` — default for a persistent production squad.
-- `quick` — only for an explicitly ephemeral experiment, quick scan, or speed-first request in a non-regulated domain.
-
-The lane controls research/genome/eval/warm-up depth, not package correctness. It may not be inferred as `premium` merely because optional capabilities could be useful.
+Resolve and persist one `deliveryLane` — `quick`, `standard`, `premium`, or `regulated` — before loading deeper creation modules. Lane semantics and selection: `.aioson/docs/squad/creation-flow.md` § Delivery lane. Design deltas: `regulated` is mandatory for `tier-1-regulated` and never downgrades for speed; the lane controls research/genome/eval/warm-up depth, not package correctness.
 
 ### Step 2 - Derive Mental Design Doc
 Before defining executors, consolidate:
@@ -99,18 +67,14 @@ Before defining executors, consolidate:
 - Delivery lane and its causal reason
 
 ### Step 2.5 - Domain Decomposition From Sources
-If there are `sourceDocs`, `investigation`, or pasted domain context, **derive the roster from sources; do not guess "3-5 roles"**. Run the four extraction passes and derivation described in `.aioson/docs/squad/creation-flow.md` § "Domain decomposition":
-- `entities` — central nouns/concepts in the domain
-- `workflows` — work units as `verb + object`, what is done with entities
-- `integrations` — systems/channels/external sources the work touches
-- `stakeholders` — roles/personas the squad serves or embodies
+If there are `sourceDocs`, `investigation`, or pasted domain context, **derive the roster from sources; do not guess "3-5 roles"**. Run the four extraction passes (entities, workflows, integrations, stakeholders) and the derivation that follows them in `.aioson/docs/squad/creation-flow.md` § "Domain decomposition".
 
 **Deterministic shortcut:** run `aioson squad:role-scan --docs=<comma-separated sourceDocs> --json` (or `--squad=<slug>` if the package already exists). It extracts `entities`, `work-modes` (originate/transform/judge), and source terms without invention. Use the output to seed the role pool before clustering.
 
 Record everything in blueprint `analysis`. Without sources, skip this pass and define the roster from the stated goal; mark executor confidence lower.
 
 ### Step 3 - Define Executors From Decomposition
-Group `workflows` into distinct work modes (originate / transform / judge / orchestrate; adapt to the domain). Each mode actually required by sources becomes an executor. The cluster, not the title, defines the role. Merge heavily overlapping clusters. For each executor, define:
+Cluster `workflows` into work modes and derive one executor per mode actually demanded by the sources, following steps 5-9 of `.aioson/docs/squad/creation-flow.md` § "Domain decomposition". For each executor, define:
 - slug (kebab-case)
 - title
 - role (one sentence)

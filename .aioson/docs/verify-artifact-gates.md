@@ -48,6 +48,7 @@ done-gate line, not a bespoke implementation.
 | `visual` | `@dev` / design flows | visual-quality measurement over the delivered surface | advisory |
 | `test-report` | `@tester` | test-report lint (mandatory sections, hypothesis classes, correction packet) | blocking done gate |
 | `squad-pilot` | `@squad` | squad-pilot lint (pilot block, fingerprint, deliverable + builder drift) | blocking — `squad:pilot-approve` refuses while issues remain |
+| `squad-package` | `@squad` | `squad:validate --strict` + executor lint (stubs, placeholders, thin/bloated prompts, missing core sections, near-duplicates, argv-only workers) | advisory rider at `agent:done`; strict errors block `validate` itself |
 | `shakedown` | `@shakedown` | shakedown lint (frontmatter enums, coverage arithmetic, punch-list evidence, `## Not visited` ⇔ complete-run invariant), resolved via `--file` or `--slug` | advisory |
 | `rule` | any rule author (`rule:new` hint) | ruleset (`.aioson/rules/` frontmatter and shape) | advisory |
 
@@ -93,8 +94,11 @@ it — the periphery analog of how `audit:code` auto-fires in `agent:epilogue`.
 
 A squad ships through its own `aioson squad:validate` (structural: manifest
 schema, required files, every declared executor file exists, no duplicate slugs,
-canonical paths) plus its source-grounded multi-model **eval-gate** — both
+canonical paths, and the executor bodies themselves — a role stub or placeholder
+text is a strict error) plus its source-grounded multi-model **eval-gate** — both
 promoted from opt-in into the default `validate` step. See `@squad`'s Done gate.
+`verify:artifact --kind=squad-package` replays that strict validation as a rider of
+the squad session end, so a package that never ran it still gets measured.
 The squad's pilot deliverable additionally runs `verify:artifact --kind=squad-pilot`
 (table above), and freezing it stays user-only via `squad:pilot-approve`.
 

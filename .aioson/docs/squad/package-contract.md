@@ -11,101 +11,66 @@ Use this module whenever `@squad` is creating, extending, repairing, or validati
 
 ## Non-negotiable package shape
 
-Every persistent squad must be created at `.aioson/squads/{squad-slug}/` with:
+Every persistent squad lives at `.aioson/squads/{squad-slug}/`. Generate the tree
+deterministically, then fill or replace the skeletons instead of hand-building it:
 
-- `agents/agents.md`
-- `agents/`
-- `workers/`
-- `workflows/`
-- `checklists/`
-- `skills/`
-- `templates/`
-- `docs/design-doc.md`
-- `docs/readiness.md`
-- `squad.manifest.json`
-- `squad.md`
-- external roots: `output/{squad-slug}/`, `aioson-logs/{squad-slug}/`, `media/{squad-slug}/`
+```bash
+aioson squad:scaffold . --slug=<slug> --name="<name>" --mode=<content|software|research|mixed> --json
+```
+
+Required files: `squad.manifest.json`, `squad.md`, `agents/agents.md`,
+`agents/orquestrador.md`, `docs/design-doc.md`, `docs/readiness.md`,
+`checklists/quality.md`, `learnings/index.md`, `workflows/default.md`.
+
+Required directories: `agents/`, `workers/`, `workflows/`, `checklists/`,
+`skills/`, `templates/`, `docs/`.
+
+External roots, never under `.aioson/`: `output/{squad-slug}/` (including
+`output/{squad-slug}/latest.html`), `aioson-logs/{squad-slug}/`, and
+`media/{squad-slug}/`.
 
 Do not collapse the squad into `agents/{slug}/`. The CLI and dashboard expect the package root under `.aioson/squads/`.
 
 ## Package derivation checklist
 
-Before writing executors, derive and register:
-
-- mission
-- goal
-- scope and out-of-scope
-- domain classification
-- locale scope and rationale
-- skills
-- MCPs
-- subagent policy
-- content blueprints when relevant
-- source docs when relevant
-- investigation summary when relevant
-- output strategy when relevant
-- design-doc summary
-- readiness status
+Before writing executors, derive and register: mission, goal, scope and out-of-scope, domain classification, locale scope and rationale, skills, MCPs, subagent policy, design-doc summary, and readiness status — plus content blueprints, source docs, investigation summary, and output strategy whenever they apply.
 
 Reuse installed squad skills from `.aioson/squads/{squad-slug}/skills/` before inventing new ones.
 
 ## `agents/agents.md`
 
 Create a short textual map at `.aioson/squads/{squad-slug}/agents/agents.md`.
-Keep it concise and actionable. It should include:
-
-- mission
-- does
-- does not
-- permanent executors
-- skills
-- MCPs
-- subagent policy
-- outputs and review policy
+Keep it concise and actionable. Sections: mission, does, does not, permanent executors, skills, MCPs, subagent policy, outputs and review policy.
 
 Do not paste full executor prompts into this file.
 
 ## `squad.manifest.json`
 
 Create `.aioson/squads/{squad-slug}/squad.manifest.json`.
+`.aioson/schemas/squad-manifest.schema.json` is the authoritative schema — validate against it, do not infer the shape.
+
 At minimum, include:
 
-- `schemaVersion`
-- `packageVersion`
-- `slug`
-- `name`
-- `mode`
-- `mission`
-- `goal`
-- `visibility`
-- `locale_scope`
+- `schemaVersion`, `packageVersion`, `slug`, `name`, `mode`, `mission`, `goal`, `visibility`
+- `locale_scope` — `"universal"` when the blueprint carries no explicit value
 - `storagePolicy`
-- `package.rootDir`
-- `package.agentsDir`
-- `package.workersDir`
-- `package.workflowsDir`
-- `package.checklistsDir`
-- `package.skillsDir`
-- `package.templatesDir`
-- `package.docsDir`
-- `rules.outputsDir`
-- `rules.logsDir`
-- `rules.mediaDir`
-- `skills`
-- `mcps`
-- `subagents`
-- `contentBlueprints`
-- `executors`
-- `checklists`
-- `workflows`
-- `genomes`
+- `package.rootDir`, `package.agentsDir`, `package.workersDir`, `package.workflowsDir`, `package.checklistsDir`, `package.skillsDir`, `package.templatesDir`, `package.docsDir`
+- `rules.outputsDir`, `rules.logsDir`, `rules.mediaDir`
+- `skills`, `mcps`, `subagents`, `contentBlueprints`, `executors`, `checklists`, `workflows`, `genomes`
 
-When they exist, also persist:
+Mandatory persistence — copy each of these from the blueprint whenever it exists.
+Validation, readiness, and every later maintenance task read them back, so a field
+dropped here is a field the squad loses permanently:
 
-- `locale_rationale`
-- `domainClassification`
-- `investigation`
-- `sourceDocs`
+- `deliveryLane` — the resolved lane, so validation, readiness, and future maintenance share one assurance contract
+- `domainClassification`, `locale_rationale`
+- `investigation`, `sourceDocs`
+- `analysis` — `entities`, `workflows`, `integrations`, `stakeholders`
+- `composition` — the persistent core plus task-bound specialists; specialists stay `persistent: false`
+- `researchPolicy` — the classified freshness policy and the Evidence Pack requirement
+- `evaluation` — source-grounded criteria and at least one held-out case; when genomes are bound, with/without dimension evidence
+- `genomeBindings`, `pilot`, `uiCapability`
+- per `executors[]` entry: `confidence`, `traces`, `contribution`, `decisionRights` — `squad-analyze` and `squad-validate` read these fields
 
 The manifest must mirror the real files you generated.
 
@@ -123,14 +88,7 @@ migrate their content to files.
 
 When output depends on external or current facts, the manifest records `researchPolicy` and names one responsible research executor/stage. Do not advance while a `live-required` or `live-check` task has only cache, snippets, or an unavailable provider presented as success.
 
-The research stage must create a versioned Evidence Pack under the active squad
-session containing query, freshness policy, source URLs/timestamps/hashes,
-supported or contradicted claims, gaps, and provenance. Every supported claim
-maps explicitly to collected `source_ids`; AIOSON never infers that every source
-supports every claim. A live pack with zero mapped claims is `unverified`. Other
-executors consume that pack; they do not duplicate the same search by default.
-
-Use `closed-world` only for private/user-provided material or when network access is explicitly inappropriate. It must produce `not-applicable`, never a fake research pass. Volatile facts stay in Evidence Packs; genomes carry stable methods, prohibitions, checklists, style, and output structure.
+Freshness classes, the versioned Evidence Pack contract, the `source_ids` mapping rule, and the `closed-world` exception: `.aioson/docs/squad/research-loop.md`. Manifest-side rule: volatile facts stay in Evidence Packs; genomes carry stable methods, prohibitions, checklists, style, and output structure.
 
 ## Executor generation
 
@@ -201,7 +159,7 @@ anti_patterns:
   - "Role-specific failure modes — each must reappear in ## Hard constraints"
 ```
 
-**Source distillation (mandatory when `sourceDocs` or `investigation` exist):** mine them into the depth block — `expertise.vocabulary`, `expertise.frameworks`, `persona` / `backstory`, and `anti_patterns` — and record which source informed each executor in `expertise.sources`. Source material persisted in the manifest but absent from every executor prompt is a defect: the squad was asked to be grounded in those sources and isn't. Never leave `sourceDocs` as unused provenance. Use the competency-tree method in `.aioson/docs/squad/persona-grounding.md` — *extract, don't write*: each grounded framework/term cites its source span; an item with no citation is a model prior, not grounding.
+**Source distillation (mandatory when `sourceDocs` or `investigation` exist):** mine them into `expertise.vocabulary`, `expertise.frameworks`, `persona`/`backstory`, and `anti_patterns`, and record in `expertise.sources` which source informed each executor. Method — competency tree, *extract, don't write*, every grounded item citing its source span: `.aioson/docs/squad/persona-grounding.md`. Source material persisted in the manifest but absent from every executor prompt is a defect; never leave `sourceDocs` as unused provenance.
 
 ### Variant B — Customer-facing executors — mandatory world-context block
 
@@ -223,15 +181,16 @@ operational_breadth:
 interaction_principles:
   - "Default 'yes, and...' — accept the premise, build on it"
   - "Refuse only when illegal, unsafe, or genuinely unavailable"
+  - "When unavailable, name a specific alternative or adjacent item"
   - "Never say 'we only sell X' — name what we DO have"
   - "Validate the underlying need before responding to the literal request"
 ```
 
-Full guidance + four worked examples (pharmacy, restaurant, gym, hotel) in `.aioson/docs/squad/domain-breadth.md`. The `quality-lens.md` scorecard now includes a `domain breadth` criterion that gates this block.
+Full guidance, the HEARD refusal method, and four worked examples (pharmacy, restaurant, gym, hotel) in `.aioson/docs/squad/domain-breadth.md`. The `quality-lens.md` scorecard now includes a `domain breadth` criterion that gates this block.
 
 ### Variant C — Visual executors — mandatory visual-quality block
 
-Any executor whose deliverable is something people **see** — UI, landing page, site, dashboard, screens, HTML/CSS, layout, visual direction (the trigger list of `squad-design` Step 3.5) — **must** additionally carry a `## Visual quality intelligence` section. The built-in visual agents (`@refiner`, `@dev`, `@ux-ui`) reach the anti-slop stack by name; a generated executor has no name the framework routes, so the stack rides in its prompt. `aioson squad:agent:create` emits the block automatically when the role reads as visual; an executor written by hand carries the same five lines and the done gate:
+Any executor whose deliverable is something people **see** — UI, landing page, site, dashboard, screens, HTML/CSS, layout, visual direction (the trigger list of `squad-design` Step 3.5) — **must** additionally carry a `## Visual quality intelligence` section. The built-in visual agents (`@refiner`, `@dev`, `@ux-ui`) reach the anti-slop stack by name; a generated executor has no name the framework routes, so the stack rides in its prompt. `aioson squad:agent-create` emits the block automatically when the role reads as visual; an executor written by hand carries the same five lines and the done gate:
 
 1. **One engine.** Resolve `design_skill` from `.aioson/context/project.context.md`; blank → `.aioson/skills/design/interface-design/SKILL.md` in intent-first mode. Load only that engine — presets are raw material, never a menu. Reference the engine in place; never copy it into the squad.
 2. **Measured patterns first:** `aioson brain:query . --tags=visual-quality,layout --min-quality=4 --format=compact`
@@ -259,21 +218,7 @@ If `uiCapability.mode = "executor"`:
 
 ## Orchestrator prompt
 
-Create `.aioson/squads/{squad-slug}/agents/orquestrador.md`.
-The orchestrator must include:
-
-- squad mission
-- members
-- routing guide
-- genomes
-- skills
-- MCPs
-- subagent policy
-- inter-squad awareness
-- execution plan awareness
-- learnings protocol
-- hard constraints
-- output contract
+Create `.aioson/squads/{squad-slug}/agents/orquestrador.md`. It must include: squad mission, members, routing guide, genomes, skills, MCPs, subagent policy, inter-squad awareness, execution plan awareness, learnings protocol, hard constraints, and output contract.
 
 The orchestrator is responsible for the final session HTML and for synthesis across specialists.
 
@@ -294,40 +239,4 @@ Rules:
 
 ## Squad metadata
 
-Create `.aioson/squads/{squad-slug}/squad.md` with:
-
-- name
-- mode
-- goal
-- agents path
-- manifest path
-- output path
-- logs path
-- media path
-- latest session path
-- locale scope
-- locale rationale when present
-- source docs when present
-- investigation path when present
-- squad-level genomes
-- per-agent genomes
-- skills
-- MCPs
-- subagent policy
-
-## Required filesystem outputs
-
-Persistent squad package:
-
-- `.aioson/squads/{squad-slug}/squad.manifest.json`
-- `.aioson/squads/{squad-slug}/squad.md`
-- `.aioson/squads/{squad-slug}/agents/`
-- `.aioson/squads/{squad-slug}/workers/`
-- `.aioson/squads/{squad-slug}/workflows/`
-- `.aioson/squads/{squad-slug}/checklists/`
-- `.aioson/squads/{squad-slug}/skills/`
-- `.aioson/squads/{squad-slug}/templates/`
-- `.aioson/squads/{squad-slug}/docs/`
-- `output/{squad-slug}/latest.html`
-- `aioson-logs/{squad-slug}/`
-- `media/{squad-slug}/`
+Create `.aioson/squads/{squad-slug}/squad.md` with: name, mode, goal, the agents/manifest/output/logs/media/latest-session paths, locale scope, squad-level and per-agent genomes, skills, MCPs, and subagent policy — plus locale rationale, source docs, and investigation path when present.

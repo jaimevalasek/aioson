@@ -1,1284 +1,863 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AIOSON Squads — Tutorial Completo</title>
-<meta name="description" content="Times de agentes especializados para qualquer domínio. 34 comandos squad:*, 29 agentes oficiais, daemon, workers, bus, MCP, ROI tracking, dashboard." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Squads no AIOSON explicados do zero: o que é um time de agentes, executores e workers, as quatro faixas de entrega, os portões que barram um squad ruim, o custo em tokens de cada ativação e um exemplo completo de clínica odontológica. Versão 1.66.0, 11/09/2026.">
+  <meta name="aioson-version" content="1.66.0">
+  <meta name="reviewed-at" content="2026-09-11">
+  <meta name="color-scheme" content="dark light">
+  <title>Squads no AIOSON — Montar um time que entrega</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
 <style>
-/* ════════════════════════════════════════════════════════════
-   AIOSON Design System — Tokens
-   ════════════════════════════════════════════════════════════ */
-:root {
-  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --font-mono:'JetBrains Mono',ui-monospace,monospace;
-  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
-  --transition-fast:140ms ease; --transition:220ms ease;
-}
-[data-theme="dark"], :root:not([data-theme]) {
-  color-scheme:dark;
-  --bg:#07080c; --bg-deep:#0b0d12;
-  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
-  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
-  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
-  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
-  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
-  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
-  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
-  --shadow:0 18px 44px rgba(0,0,0,.38);
-  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
-  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
-}
-[data-theme="light"] {
-  color-scheme:light;
-  --bg:#f4f6fb; --bg-deep:#e8edf5;
-  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
-  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
-  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
-  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
-  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
-  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
-  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
-  --shadow:0 14px 38px rgba(15,23,42,.10);
-  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
-  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
-}
+/* Estruturas específicas de Squads sobre o layout de leitura compartilhado. */
+.squad-figure { margin: 0; padding: 26px; border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); box-shadow: 0 16px 50px color-mix(in srgb, var(--tinta) 55%, transparent); }
+.squad-figure .figure-heading { color: var(--prata); }
+.squad-figure .status-dot { background: var(--prata); }
+.roster { list-style: none; margin: 19px 0 0; padding: 0; }
+.roster li { display: flex; align-items: baseline; gap: 14px; padding: 15px 0; border-top: 1px solid var(--linha-2); margin: 0; }
+.roster li:first-child { border-top: 0; }
+.roster .machine-label { display: inline-block; flex: none; width: 76px; color: var(--prata); }
+.roster strong { font-size: 16px; font-weight: 600; display: block; line-height: 1.4; }
+.roster span:last-child { font-size: 12px; color: var(--marfim-2); }
 
-* { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; }
-body {
-  font-family:var(--font-body);
-  color:var(--text);
-  background:
-    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
-    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),
-    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 26%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
-  background-attachment:fixed;
-  -webkit-font-smoothing:antialiased;
-  transition:background .4s ease, color .3s ease;
-}
-[data-theme="light"] body {
-  background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
-    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
-    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
-    linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%);
-  background-attachment:fixed;
-}
-a { color:inherit; text-decoration:none; }
-button { cursor:pointer; font:inherit; }
-h1, h2, h3, h4, p { margin:0; }
-code { font-family:var(--font-mono); }
+.piece-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 30px 0; }
+.piece-card { border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); padding: 24px; }
+.piece-card .machine-label { color: var(--prata); margin-bottom: 12px; }
+.piece-card h3 { margin: 0 0 10px; font-size: 19px; }
+.piece-card p { font-size: 15px; margin: 0 0 12px; }
+.piece-card ul { margin: 0; padding-left: 20px; }
+.piece-card li { font-size: 14px; margin-bottom: 8px; }
 
-/* ── Shell ─────────────────────────────────────────────── */
-.shell {
-  width:min(1280px, calc(100% - 32px));
-  margin:0 auto;
-  padding:0 0 60px;
-  display:flex; flex-direction:column;
-}
+.lane-track { list-style: none; margin: 28px 0; padding: 0 !important; border-top: 1px solid var(--linha-2); }
+.lane-track > li { margin: 0; padding: 22px 0 22px 22px; border-bottom: 1px solid var(--linha-2); border-left: 2px solid var(--prata); }
+.lane-track > li:nth-child(3) { border-left-color: var(--ouro); }
+.lane-track > li:nth-child(4) { border-left-color: var(--granada); }
+.lane-name { font-family: var(--voz-maquina); font-size: 13px; color: var(--prata); text-transform: uppercase; letter-spacing: .06em; }
+.lane-track > li:nth-child(3) .lane-name { color: var(--ouro); }
+.lane-track > li:nth-child(4) .lane-name { color: var(--granada); }
+.lane-track h3 { margin: 8px 0 8px; font-size: 19px; }
+.lane-track p { margin: 0 0 8px; font-size: 15px; }
+.lane-track .lane-note { font-size: 13px; color: var(--fumaca); margin: 0; }
 
-/* ════════════════════════════════════════════════════════════
-   Command Dock (sticky, fixed bug)
-   ════════════════════════════════════════════════════════════ */
-.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
-.cmd-dock {
-  display:flex; align-items:center; gap:14px;
-  padding:10px 14px;
-  border-radius:20px;
-  border:1px solid var(--border);
-  background:color-mix(in srgb, var(--panel-strong) 92%, transparent);
-  backdrop-filter:blur(18px) saturate(140%);
-  -webkit-backdrop-filter:blur(18px) saturate(140%);
-  box-shadow:var(--shadow);
-  position:relative;
-  overflow:hidden;
-  transition:box-shadow .3s ease, transform .25s ease, border-color .3s ease;
-}
-.dock-wrap.is-scrolled .cmd-dock {
-  box-shadow:var(--shadow-dock-scrolled);
-  border-color:color-mix(in srgb, var(--accent) 18%, var(--border));
-}
-.cmd-dock::after {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
-  background-size:36px 36px;
-  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-  opacity:.2;
-}
-.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
-.cmd-mark {
-  width:36px; height:36px; border-radius:11px;
-  display:inline-flex; align-items:center; justify-content:center;
-  background:
-    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
-    linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong)));
-  border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
-  box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent);
-  color:var(--accent);
-}
-.cmd-mark svg { width:18px; height:18px; }
-.cmd-brand-info { display:grid; gap:1px; }
-.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
-.cmd-brand-version {
-  display:inline-flex; align-items:center;
-  font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em;
-  padding:2px 6px; border-radius:5px;
-  background:var(--accent-2-soft); color:var(--accent-2);
-  border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border));
-}
-.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
-@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
-.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
-.cmd-nav-item {
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:.8rem; font-weight:500; color:var(--muted);
-  background:transparent; border:none; padding:6px 11px; border-radius:9px;
-  text-decoration:none; transition:var(--transition-fast);
-}
-.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
-.cmd-nav-item[aria-current="page"] {
-  color:var(--accent-strong); background:var(--panel-strong);
-  box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent);
-}
-.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
-.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
-.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
-.cmd-actions > * { flex-shrink:0; }
-.cmd-icon-btn {
-  width:34px; height:34px; border-radius:10px;
-  background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft);
-  display:inline-flex; align-items:center; justify-content:center;
-  transition:var(--transition-fast);
-}
-.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
-.cmd-divider { width:1px; height:20px; background:var(--border); }
-.cmd-cta {
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:.8rem; font-weight:600; color:#fff;
-  background:linear-gradient(135deg, var(--accent), var(--accent-2));
-  border:1px solid transparent; border-radius:10px; padding:7px 13px;
-  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
-  transition:var(--transition-fast);
-}
-.cmd-cta:hover { transform:translateY(-1px); }
+.gate-card { border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); padding: 24px 26px; margin: 24px 0; }
+.gate-card > .machine-label { color: var(--prata); }
+.gate-card h3 { margin: 10px 0 12px; font-size: 20px; }
+.gate-split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; border-top: 1px solid var(--linha); padding-top: 18px; }
+.gate-split > div p { font-size: 14px; margin: 8px 0 0; }
+.gate-split .machine-label { color: var(--patina); }
+.gate-split > div:last-child .machine-label { color: var(--fumaca); }
 
-/* ════════════════════════════════════════════════════════════
-   Marketing Hero
-   ════════════════════════════════════════════════════════════ */
-.marketing-hero {
-  border:1px solid var(--border); border-radius:26px;
-  padding:42px 36px;
-  overflow:hidden; position:relative;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
-    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
-    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
-  box-shadow:var(--shadow);
-  margin-bottom:18px;
-  display:grid;
-  grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr);
-  gap:32px;
-  align-items:center;
-}
-[data-theme="light"] .marketing-hero {
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
-    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%),
-    linear-gradient(160deg, #fff 0%, #f7faff 100%);
-  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
-}
-.marketing-hero::before {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px);
-  background-size:48px 48px;
-  mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
-  -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%);
-  opacity:.5;
-}
-.hero-copy { position:relative; z-index:1; }
-.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
-.hero-copy h1 {
-  margin-top:14px;
-  font-size:clamp(2rem, 3.2vw, 2.8rem);
-  letter-spacing:-.04em; line-height:1.02; font-weight:700;
-  color:var(--text);
-}
-.hero-copy h1 .accent-cyan { color:var(--accent); }
-.hero-copy h1 .accent-violet { color:var(--accent-2); }
-.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
-.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-.primary-button, .secondary-button {
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  min-height:38px; padding:0 16px;
-  border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap;
-  transition:var(--transition-fast);
-}
-.primary-button {
-  color:#fff;
-  background:linear-gradient(135deg, var(--accent), var(--accent-2));
-  border:1px solid transparent;
-  box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
-}
-.primary-button:hover { transform:translateY(-1px); }
-.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
-.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
-.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
-.stat-tile {
-  border-radius:14px; padding:14px 16px;
-  border:1px solid var(--border);
-  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
-}
-[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
-.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
-.stat-tile.blue   strong { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.stat-tile.green  strong { color:var(--accent-4); }
-.stat-tile.violet strong { color:var(--accent-2); }
-.stat-tile.gold   strong { color:var(--accent-3); }
+.journey { border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); padding: 26px; margin: 30px 0; }
+.journey-controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+.journey-controls button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--linha-2); border-radius: 7px; background: var(--superficie-2); color: var(--marfim-2); font-size: 13px; transition: background 160ms ease; }
+.journey-controls button[aria-pressed="true"] { background: var(--ouro); border-color: var(--ouro); color: var(--tinta); }
+.stage-panel { padding: 22px 0 0; border-top: 1px solid var(--linha-2); margin-top: 22px; }
+.stage-panel > .machine-label { color: var(--ouro); }
+.stage-panel h3 { margin-top: 14px; }
+.stage-panel p { font-size: 15px; }
+.journey[data-enhanced] .stage-panels { min-height: 470px; }
 
-/* ════════════════════════════════════════════════════════════
-   Compact callout
-   ════════════════════════════════════════════════════════════ */
-.compact-callout {
-  margin:24px 0;
-  border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border));
-  background:color-mix(in srgb, var(--accent-2-soft) 24%, var(--panel-strong));
-  border-radius:14px;
-  padding:18px 22px;
-  display:flex; gap:14px; align-items:flex-start;
-}
-[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
-.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
-.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
-.compact-callout strong { color:var(--accent-2); }
+.done-list { list-style: none; margin: 26px 0 0; padding: 0 !important; border-top: 1px solid var(--linha-2); }
+.done-list li { margin: 0; padding: 0; border-bottom: 1px solid var(--linha-2); }
+.done-item { display: flex; align-items: flex-start; gap: 14px; width: 100%; text-align: left; background: none; border: 0; padding: 16px 4px; color: var(--marfim-2); font-size: 15px; line-height: 1.6; }
+.done-item:hover { color: var(--marfim); }
+.done-box { flex: none; width: 18px; height: 18px; margin-top: 3px; border: 1px solid var(--linha-2); border-radius: 5px; color: transparent; font-size: 11px; line-height: 16px; text-align: center; }
+.done-item[aria-pressed="true"] .done-box { background: var(--patina); border-color: var(--patina); color: var(--tinta); }
+.done-item[aria-pressed="true"] .done-text { color: var(--fumaca); text-decoration: line-through; }
+.done-text strong { color: var(--marfim); font-weight: 600; }
+.done-item[aria-pressed="true"] .done-text strong { color: inherit; }
+.done-progress { display: flex; align-items: center; gap: 14px; margin-top: 20px; font-family: var(--voz-maquina); font-size: 12px; color: var(--marfim-2); }
+.done-progress button { border: 1px solid var(--linha-2); background: var(--superficie); color: var(--marfim-2); border-radius: 7px; min-height: 38px; padding: 6px 12px; font-size: 11px; }
+.done-progress button:hover { color: var(--ouro); border-color: var(--ouro); }
 
-/* ════════════════════════════════════════════════════════════
-   Site Section
-   ════════════════════════════════════════════════════════════ */
-.site-section { padding:36px 0 12px; position:relative; }
-.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
-.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
-.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
-.site-section-title .accent-cyan { color:var(--accent); }
-.site-section-title .accent-violet { color:var(--accent-2); }
-.site-section-title .accent-gold { color:var(--accent-3); }
-.site-section-title .accent-emerald { color:var(--accent-4); }
-.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
-
-/* ════════════════════════════════════════════════════════════
-   Concept cards (3 — anatomy)
-   ════════════════════════════════════════════════════════════ */
-.concept-grid { display:grid; gap:14px; grid-template-columns:repeat(3, 1fr); }
-.concept-card {
-  border:1px solid var(--border); border-radius:16px;
-  padding:18px; background:var(--panel-strong);
-  display:flex; gap:12px; align-items:flex-start;
+@media (max-width: 800px) {
+  .squad-figure { max-width: 480px; }
+  .piece-grid, .gate-split { grid-template-columns: 1fr; }
 }
-[data-theme="light"] .concept-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.concept-icon {
-  width:36px; height:36px; flex-shrink:0; border-radius:10px;
-  display:inline-flex; align-items:center; justify-content:center;
-  background:color-mix(in srgb, var(--accent-soft) 60%, var(--panel));
-  border:1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
-  color:var(--accent);
+@media (max-width: 440px) {
+  .squad-figure, .journey, .gate-card, .piece-card { padding: 20px; }
+  .journey-controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .journey-controls button { text-align: left; }
+  .journey[data-enhanced] .stage-panels { min-height: 620px; }
+  .roster li { flex-direction: column; gap: 4px; }
+  .roster .machine-label { width: auto; }
+  .lane-track > li { padding-left: 16px; }
 }
-.concept-card[data-tone="violet"] .concept-icon { background:color-mix(in srgb, var(--accent-2-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-2) 24%, var(--border)); color:var(--accent-2); }
-.concept-card[data-tone="emerald"] .concept-icon { background:color-mix(in srgb, var(--accent-4-soft) 60%, var(--panel)); border-color:color-mix(in srgb, var(--accent-4) 24%, var(--border)); color:var(--accent-4); }
-.concept-icon svg { width:18px; height:18px; }
-.concept-body h3 { font-size:.95rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
-.concept-body p { font-size:.82rem; color:var(--muted); line-height:1.6; margin-top:4px; }
-.concept-body code { font-size:.74rem; padding:2px 6px; border-radius:6px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); font-weight:500; }
-
-/* ════════════════════════════════════════════════════════════
-   Category cards (cmd categories) + dialogs
-   ════════════════════════════════════════════════════════════ */
-.cat-grid {
-  display:grid; gap:14px;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+@media (prefers-reduced-motion: reduce) { .journey-controls button { transition: none; } }
+@media print {
+  .squad-figure { max-width: 420px; margin-top: 20px; box-shadow: none; break-inside: avoid; }
+  .journey-controls, .done-progress { display: none !important; }
+  .journey[data-enhanced] .stage-panels { min-height: 0; }
+  .stage-panel, .gate-card, .piece-card { break-inside: avoid; }
+  .done-item { color: #000; }
 }
-.cat-card {
-  position:relative;
-  border:1px solid var(--border); border-radius:18px; padding:20px;
-  background:var(--panel-strong);
-  text-align:left; cursor:pointer;
-  display:flex; flex-direction:column; gap:10px;
-  transition:var(--transition-fast);
-  overflow:hidden;
-}
-[data-theme="light"] .cat-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.cat-card::before { content:''; position:absolute; inset:0 auto auto 0; width:120px; height:120px; pointer-events:none; opacity:.7; }
-.cat-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
-.cat-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.cat-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="cyan"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="emerald"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="violet"]::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="gold"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="pink"]    { background:linear-gradient(180deg, rgba(255,107,164,.08), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="pink"]::before    { background:radial-gradient(circle, rgba(255,107,164,.18), transparent 70%); }
-.cat-card[data-tone="teal"]    { background:linear-gradient(180deg, rgba(34,211,238,.08), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="teal"]::before    { background:radial-gradient(circle, rgba(34,211,238,.18), transparent 70%); }
-.cat-head { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-.cat-icon {
-  width:36px; height:36px; border-radius:10px;
-  display:inline-flex; align-items:center; justify-content:center;
-  background:color-mix(in srgb, var(--panel-strong) 70%, transparent);
-  border:1px solid var(--border);
-}
-.cat-icon svg { width:18px; height:18px; }
-.cat-card[data-tone="cyan"]    .cat-icon { color:var(--accent);   border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
-.cat-card[data-tone="emerald"] .cat-icon { color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); }
-.cat-card[data-tone="violet"]  .cat-icon { color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); }
-.cat-card[data-tone="gold"]    .cat-icon { color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); }
-.cat-card[data-tone="pink"]    .cat-icon { color:#ff6ba4; border-color:rgba(255,107,164,.28); }
-.cat-card[data-tone="teal"]    .cat-icon { color:#22d3ee; border-color:rgba(34,211,238,.28); }
-.cat-count {
-  margin-left:auto;
-  font-family:var(--font-mono); font-size:.7rem; font-weight:600;
-  color:var(--muted);
-  background:var(--surface-soft); border:1px solid var(--border);
-  border-radius:6px; padding:2px 8px;
-}
-.cat-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; position:relative; z-index:1; }
-.cat-card p { font-size:.8rem; color:var(--muted); line-height:1.55; margin:0; position:relative; z-index:1; }
-.cat-cta { margin-top:6px; display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:600; position:relative; z-index:1; transition:gap .15s ease; }
-.cat-card[data-tone="cyan"]    .cat-cta { color:var(--accent); }
-.cat-card[data-tone="emerald"] .cat-cta { color:var(--accent-4); }
-.cat-card[data-tone="violet"]  .cat-cta { color:var(--accent-2); }
-.cat-card[data-tone="gold"]    .cat-cta { color:var(--accent-3); }
-.cat-card[data-tone="pink"]    .cat-cta { color:#ff6ba4; }
-.cat-card[data-tone="teal"]    .cat-cta { color:#22d3ee; }
-.cat-card:hover .cat-cta { gap:9px; }
-
-/* Dialog (same as automation page) */
-dialog.popover {
-  width:min(900px, calc(100% - 32px));
-  max-height:min(85vh, 800px);
-  padding:0;
-  border:1px solid var(--border); border-radius:20px;
-  background:var(--panel-strong); color:var(--text);
-  box-shadow:0 30px 80px rgba(0,0,0,.5);
-  overflow:hidden;
-}
-[data-theme="light"] dialog.popover { box-shadow:0 30px 80px -10px rgba(15,23,42,.30); }
-dialog.popover::backdrop { background:rgba(7,8,12,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
-[data-theme="light"] dialog.popover::backdrop { background:rgba(15,23,42,.45); }
-dialog.popover[open] { animation:dlg-in .25s ease; }
-@keyframes dlg-in { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
-.dlg-head {
-  display:flex; align-items:center; gap:14px;
-  padding:18px 22px;
-  border-bottom:1px solid var(--border);
-  background:color-mix(in srgb, var(--panel) 60%, transparent);
-}
-.dlg-head .cat-icon { width:32px; height:32px; }
-.dlg-head .dlg-meta { flex:1; }
-.dlg-head .dlg-eyebrow { font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.dlg-head .dlg-title { font-size:1.05rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; }
-.dlg-close {
-  width:32px; height:32px; border-radius:10px;
-  background:var(--surface-soft); border:1px solid var(--border); color:var(--muted);
-  display:inline-flex; align-items:center; justify-content:center;
-  transition:var(--transition-fast); flex-shrink:0;
-}
-.dlg-close:hover { color:var(--text); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
-.dlg-body { padding:22px; overflow-y:auto; max-height:calc(85vh - 70px); }
-.dlg-intro { color:var(--muted); font-size:.88rem; line-height:1.65; margin-bottom:16px; }
-
-.cmd-grid {
-  display:grid; gap:10px;
-  grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
-  margin-bottom:18px;
-}
-.cmd-card {
-  background:color-mix(in srgb, var(--panel) 50%, var(--panel-strong));
-  border:1px solid var(--border); border-radius:12px;
-  padding:14px 16px;
-}
-[data-theme="light"] .cmd-card { background:color-mix(in srgb, var(--accent-soft) 8%, #fff); }
-.cmd-name { font-family:var(--font-mono); font-size:.74rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
-.cmd-title { font-size:.86rem; font-weight:700; color:var(--text-soft); margin-top:4px; letter-spacing:-.01em; }
-.cmd-desc { font-size:.76rem; color:var(--muted); line-height:1.55; margin-top:4px; }
-
-.terminal-card {
-  border-radius:14px;
-  border:1px solid transparent;
-  background:linear-gradient(180deg, #0e1320, #0a0f1c);
-  box-shadow:0 10px 30px -10px rgba(0,0,0,.5);
-  overflow:hidden;
-}
-.terminal-head {
-  display:flex; align-items:center; gap:10px;
-  padding:8px 12px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  background:#10182a;
-}
-.terminal-dots { display:flex; gap:5px; }
-.terminal-dots span { width:9px; height:9px; border-radius:999px; }
-.terminal-dots span:nth-child(1) { background:#ff6057; }
-.terminal-dots span:nth-child(2) { background:#febc2e; }
-.terminal-dots span:nth-child(3) { background:#28c840; }
-.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
-.terminal-copy {
-  margin-left:auto; background:transparent;
-  border:1px solid rgba(255,255,255,.10); color:#a9b3c7;
-  font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em;
-  padding:3px 9px; border-radius:5px; text-transform:uppercase;
-  transition:var(--transition-fast);
-}
-.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
-.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
-.terminal-body {
-  padding:14px 18px 16px;
-  font-family:var(--font-mono); font-size:.78rem; line-height:1.7;
-  color:#c8d8ee; overflow-x:auto;
-}
-.term-line { display:block; white-space:pre; }
-.term-prompt { color:#4dd5a6; }
-.term-cmd { color:#fff; }
-.term-flag { color:#e8b05f; }
-.term-str { color:#7be3bb; }
-.term-comment { color:#7f8796; }
-.term-out-key { color:#5ec8ff; }
-.term-out-val { color:#e5c07b; }
-.term-ok { color:#4dd5a6; }
-
-/* ════════════════════════════════════════════════════════════
-   Agent catalog grid (29 agentes)
-   ════════════════════════════════════════════════════════════ */
-.agent-group { margin-bottom:22px; }
-.agent-group-title {
-  font-family:var(--font-mono); font-size:.66rem; font-weight:700;
-  letter-spacing:.14em; text-transform:uppercase;
-  color:var(--muted); margin-bottom:10px;
-  display:flex; align-items:center; gap:10px;
-}
-.agent-group-title::after { content:''; flex:1; height:1px; background:var(--border); }
-.agent-grid { display:grid; gap:8px; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
-.agent-pill {
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
-  border:1px solid var(--border); border-radius:12px;
-  background:var(--panel-strong);
-  transition:var(--transition-fast);
-  text-decoration:none; color:inherit;
-}
-[data-theme="light"] .agent-pill { box-shadow:0 4px 12px -10px rgba(15,23,42,.10); }
-.agent-pill:hover { border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); transform:translateY(-1px); }
-.agent-slash {
-  font-family:var(--font-mono); font-size:.74rem; font-weight:700;
-  color:var(--accent); letter-spacing:-.01em;
-  background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
-  padding:3px 7px; border-radius:6px;
-  white-space:nowrap; flex-shrink:0;
-}
-.agent-pill[data-color="violet"] .agent-slash { color:var(--accent-2); background:var(--accent-2-soft); border-color:color-mix(in srgb, var(--accent-2) 26%, var(--border)); }
-.agent-pill[data-color="emerald"] .agent-slash { color:var(--accent-4); background:var(--accent-4-soft); border-color:color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
-.agent-pill[data-color="gold"] .agent-slash { color:var(--accent-3); background:var(--accent-3-soft); border-color:color-mix(in srgb, var(--accent-3) 26%, var(--border)); }
-.agent-pill[data-color="pink"] .agent-slash { color:#ff6ba4; background:rgba(255,107,164,.12); border-color:rgba(255,107,164,.28); }
-.agent-pill[data-color="teal"] .agent-slash { color:#22d3ee; background:rgba(34,211,238,.12); border-color:rgba(34,211,238,.28); }
-.agent-role { font-size:.78rem; color:var(--text-soft); line-height:1.4; }
-
-/* ════════════════════════════════════════════════════════════
-   Steps (numbered tutorial)
-   ════════════════════════════════════════════════════════════ */
-.steps { display:flex; flex-direction:column; gap:0; margin-top:18px; }
-.step { display:flex; gap:20px; position:relative; padding-bottom:24px; }
-.step:not(:last-child)::after {
-  content:''; position:absolute; left:18px; top:42px; bottom:0;
-  width:2px;
-  background:linear-gradient(to bottom, var(--border), transparent);
-}
-.step-num {
-  flex-shrink:0; width:36px; height:36px; border-radius:10px;
-  background:var(--panel-strong); border:1.5px solid var(--accent);
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:.84rem; font-weight:700;
-  color:var(--accent);
-  position:relative; z-index:1;
-}
-.step-body { flex:1; }
-.step-body h3 { font-size:1rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; letter-spacing:-.01em; }
-.step-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin:0 0 10px; }
-.step-body .terminal-card { margin-top:10px; }
-
-/* ════════════════════════════════════════════════════════════
-   Use case cards
-   ════════════════════════════════════════════════════════════ */
-.usecase-grid { display:grid; gap:14px; grid-template-columns:repeat(3, 1fr); }
-.usecase-card {
-  border:1px solid var(--border); border-radius:18px;
-  padding:22px; background:var(--panel-strong);
-  position:relative; overflow:hidden;
-  display:flex; flex-direction:column; gap:12px;
-}
-[data-theme="light"] .usecase-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.usecase-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.usecase-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.usecase-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.usecase-tag {
-  font-family:var(--font-mono); font-size:.6rem; font-weight:600;
-  letter-spacing:.14em; text-transform:uppercase;
-  padding:2px 8px; border-radius:5px;
-  background:var(--surface-soft); border:1px solid var(--border); color:var(--muted);
-  align-self:flex-start;
-}
-.usecase-card[data-tone="cyan"]    .usecase-tag { color:var(--accent);   background:var(--accent-soft);   border-color:color-mix(in srgb, var(--accent) 26%, var(--border)); }
-.usecase-card[data-tone="violet"]  .usecase-tag { color:var(--accent-2); background:var(--accent-2-soft); border-color:color-mix(in srgb, var(--accent-2) 26%, var(--border)); }
-.usecase-card[data-tone="emerald"] .usecase-tag { color:var(--accent-4); background:var(--accent-4-soft); border-color:color-mix(in srgb, var(--accent-4) 26%, var(--border)); }
-.usecase-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
-.usecase-card p { font-size:.84rem; color:var(--muted); line-height:1.6; margin:0; }
-.usecase-card ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
-.usecase-card li { font-family:var(--font-mono); font-size:.72rem; color:var(--text-soft); display:flex; align-items:center; gap:8px; }
-.usecase-card li::before { content:'›'; color:var(--accent); font-weight:700; }
-
-/* ════════════════════════════════════════════════════════════
-   Site CTA + Footer (same as automation page)
-   ════════════════════════════════════════════════════════════ */
-.site-cta {
-  border-radius:22px;
-  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  background:
-    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%),
-    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%),
-    color-mix(in srgb, var(--bg-deep) 86%, transparent);
-  padding:34px 30px;
-  display:grid; gap:18px; grid-template-columns:1.4fr 1fr;
-  align-items:center;
-  margin-top:24px;
-}
-[data-theme="light"] .site-cta {
-  background:
-    radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%),
-    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%),
-    #fff;
-  box-shadow:0 22px 48px -24px rgba(15,23,42,.18);
-}
-.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
-.site-cta-heading .accent-cyan { color:var(--accent); }
-.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
-.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
-
-.site-footer {
-  display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr;
-  padding:42px 4px 8px; margin-top:30px;
-  border-top:1px solid var(--border);
-}
-.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
-.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
-.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
-.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
-.footer-col a:hover { color:var(--accent); }
-.site-footer-base {
-  margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-  gap:14px; flex-wrap:wrap;
-  color:var(--muted); font-size:.76rem;
-}
-
-/* ════════════════════════════════════════════════════════════
-   Responsive
-   ════════════════════════════════════════════════════════════ */
-@media (max-width: 1024px) {
-  .marketing-hero { grid-template-columns:1fr; gap:24px; }
-  .cat-grid { grid-template-columns:repeat(2, 1fr); }
-  .concept-grid { grid-template-columns:1fr; }
-  .usecase-grid { grid-template-columns:1fr; }
-  .site-cta { grid-template-columns:1fr; }
-  .site-footer { grid-template-columns:repeat(2, 1fr); }
-}
-@media (max-width: 720px) {
-  .dock-wrap { padding-top:10px; }
-  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
-  .cmd-brand { padding-right:0; border-right:none; }
-  .cmd-center { order:3; width:100%; }
-  .cmd-nav { width:100%; overflow-x:auto; }
-  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
-  .marketing-hero { padding:24px 20px; }
-  .hero-copy h1 { font-size:1.8rem; }
-  .cat-grid { grid-template-columns:1fr; }
-  .hero-rail { grid-template-columns:repeat(2, 1fr); }
-  .site-footer { grid-template-columns:1fr; }
-  dialog.popover { width:100%; max-height:100vh; height:100vh; border-radius:0; }
-}
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="AIOSON — todos os tutoriais"><span class="brand-mark" aria-hidden="true">a.</span><span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">Squads</span></span></a>
+  <div class="header-actions"><a href="#exemplo">Exemplo guiado</a><button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button><button id="print-page" type="button" hidden>Imprimir / PDF</button></div>
+</header>
 
-<main class="shell">
-
-  <!-- ═══════════════════════════════════════════════════════ STICKY DOCK -->
-  <div class="dock-wrap" id="dock-wrap">
-    <nav class="cmd-dock" aria-label="Topbar">
-      <div class="cmd-brand">
-        <span class="cmd-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" />
-          </svg>
-        </span>
-        <div class="cmd-brand-info">
-          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
-          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> squads · 34 cmds · 29 agentes</span>
-        </div>
-      </div>
-      <div class="cmd-center">
-        <div class="cmd-nav">
-          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
-          <a class="cmd-nav-item" href="../index.html#guides"><span class="cmd-nav-glyph">◐</span> Tutoriais</a>
-          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">⬡</span> Squads</a>
-        </div>
-      </div>
-      <div class="cmd-actions">
-        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
-          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
-          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
-        </button>
-        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        </a>
-        <span class="cmd-divider"></span>
-        <a href="../releases/1-9-0/index.html" class="cmd-cta">
-          Release v1.9.0
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-        </a>
-      </div>
-    </nav>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════ HERO -->
-  <section class="marketing-hero">
-    <div class="hero-copy">
-      <span class="eyebrow">Tutorial · AIOSON Squads</span>
-      <h1>
-        Times de agentes<br/>
-        para <span class="accent-violet">qualquer</span> <span class="accent-cyan">domínio</span>.
-      </h1>
-      <p class="lede">
-        Squads são times de agentes especializados que executam workflows complexos juntos — software, conteúdo, jurídico, comercial. Daemon executando, workers paralelos, bus de mensagens, ROI tracking, MCP, dashboard. Tudo via 34 comandos <code>squad:*</code>.
-      </p>
-      <div class="hero-actions">
-        <a class="primary-button" href="#comandos">
-          Ver os 34 comandos
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-        </a>
-        <a class="secondary-button" href="#primeiro">Criar meu primeiro</a>
-      </div>
-    </div>
-    <aside class="hero-rail">
-      <div class="stat-tile blue"><span>comandos</span><strong>34</strong></div>
-      <div class="stat-tile violet"><span>agentes oficiais</span><strong>29</strong></div>
-      <div class="stat-tile green"><span>tiers</span><strong>0-3</strong></div>
-      <div class="stat-tile gold"><span>domínios</span><strong>∞</strong></div>
-    </aside>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ CALLOUT — O QUE É -->
-  <section class="site-section">
-    <div class="compact-callout">
-      <div class="compact-callout-icon">🤖</div>
-      <p><strong>O que é um Squad:</strong> diferente de invocar agentes oficiais um a um, um squad é um <strong>time persistente e configurável</strong> com manifesto próprio, executores customizados, memória/aprendizado compartilhados, comunicação interna (bus/webhook), telemetria de ROI e ciclo de vida (publish/install/deploy). Você cria squads para domínios específicos: software, marketing, jurídico, suporte, comercial, criação de conteúdo.</p>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ ANATOMIA -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">Anatomia de um squad</span>
-      <h2 class="site-section-title">Os <span class="accent-cyan">3 elementos</span> básicos.</h2>
-      <p class="site-section-subtitle">Todo squad tem agentes (quem decide), executores (quem faz) e infraestrutura (como se comunicam e aprendem). O resto é configuração.</p>
-    </header>
-    <div class="concept-grid">
-      <div class="concept-card">
-        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
-        <div class="concept-body">
-          <h3>Agentes (decisores)</h3>
-          <p>Personalidades com tier 0-3, mission, DISC profile e domínio. Definem <em>o quê</em> fazer. Podem ser oficiais (<code>@product</code>, <code>@dev</code>) ou customizados por <code>squad:agent-create</code>.</p>
-        </div>
-      </div>
-      <div class="concept-card" data-tone="violet">
-        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg></span>
-        <div class="concept-body">
-          <h3>Executores (workers)</h3>
-          <p>Workers determinísticos que recebem tasks do agente. Tipos: <code>shell</code>, <code>http</code>, <code>llm</code>, <code>mcp</code>, <code>custom</code>. Rodam via <code>squad:daemon</code> ou <code>squad:worker</code> individual.</p>
-        </div>
-      </div>
-      <div class="concept-card" data-tone="emerald">
-        <span class="concept-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4"/></svg></span>
-        <div class="concept-body">
-          <h3>Infraestrutura</h3>
-          <p>Bus de mensagens intra-squad, webhook externo, MCP servers, dashboard de ROI, memória + learning loop. Tudo configurável no manifesto + comandos dedicados.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ CATEGORIAS DE COMANDOS -->
-  <section class="site-section" id="comandos">
-    <header class="site-section-header">
-      <span class="eyebrow">6 categorias · 34 comandos</span>
-      <h2 class="site-section-title">Tudo que você precisa para um squad <span class="accent-cyan">vivo</span>.</h2>
-      <p class="site-section-subtitle">Click em qualquer categoria para ver os comandos, descrição e exemplo de terminal. Cada uma cobre uma fase do ciclo de vida de um squad.</p>
-    </header>
-
-    <div class="cat-grid">
-
-      <button class="cat-card" data-tone="cyan" data-dialog="dlg-create" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
-          <span class="cat-count">6</span>
-        </div>
-        <h3>Criar (compose)</h3>
-        <p>Scaffold, agent-create, plan, dependency-graph, card, validate.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="emerald" data-dialog="dlg-run" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20" /></svg></span>
-          <span class="cat-count">6</span>
-        </div>
-        <h3>Executar (run)</h3>
-        <p>Daemon, autorun, worker, processes, worktrees, recovery.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="violet" data-dialog="dlg-orch" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M8 18h8M6 8v8M18 8v8"/></svg></span>
-          <span class="cat-count">7</span>
-        </div>
-        <h3>Coordenar (orchestrate)</h3>
-        <p>Bus, webhook, merge, deploy, pipeline, learning, review.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="gold" data-dialog="dlg-share" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8h16v-8M12 4v12M8 8l4-4 4 4"/></svg></span>
-          <span class="cat-count">6</span>
-        </div>
-        <h3>Distribuir (share)</h3>
-        <p>Publish, install, grant, export, repair-genomes, list.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="pink" data-dialog="dlg-monitor" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-4 3 2 4-5"/></svg></span>
-          <span class="cat-count">6</span>
-        </div>
-        <h3>Observar (monitor)</h3>
-        <p>Dashboard, status, doctor, score, ROI, investigate.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="teal" data-dialog="dlg-extend" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M4.9 19.1l4.2-4.2M19.1 4.9l-4.2 4.2"/></svg></span>
-          <span class="cat-count">3</span>
-        </div>
-        <h3>Estender (extend)</h3>
-        <p>MCP server, MCP call, tool:register.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ 29 AGENTES OFICIAIS -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">29 agentes oficiais · ecossistema completo</span>
-      <h2 class="site-section-title">Use os <span class="accent-violet">oficiais</span> ou crie os seus.</h2>
-      <p class="site-section-subtitle">Squads podem reutilizar qualquer agente oficial do AIOSON. Cada um cobre uma responsabilidade específica do ciclo de produto. Crie squads compondo eles ou estendendo via <code>squad:agent-create</code>.</p>
-    </header>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Workflow chain (default)</div>
-      <div class="agent-grid">
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/setup</span><span class="agent-role">Inicialização do projeto</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/product</span><span class="agent-role">PRD + visão de produto</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/analyst</span><span class="agent-role">Entidades + business rules</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/architect</span><span class="agent-role">Decisões estruturais</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/ux-ui</span><span class="agent-role">Visual system + UI spec</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/pm</span><span class="agent-role">Backlog + user stories</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/orchestrator</span><span class="agent-role">Paralelismo MEDIUM</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/dev</span><span class="agent-role">Implementação</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/qa</span><span class="agent-role">Risk-first review</span></a>
-        <a class="agent-pill" href="../index.html"><span class="agent-slash">/validator</span><span class="agent-role">Harness contract validation</span></a>
-      </div>
-    </div>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Continuity & routing</div>
-      <div class="agent-grid">
-        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/deyvin</span><span class="agent-role">Pair programming + scout</span></a>
-        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/pair</span><span class="agent-role">Alias de /deyvin</span></a>
-        <a class="agent-pill" data-color="emerald" href="../index.html"><span class="agent-slash">/neo</span><span class="agent-role">Router · orienta e roteia</span></a>
-      </div>
-    </div>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Quality &amp; risk</div>
-      <div class="agent-grid">
-        <a class="agent-pill" data-color="gold" href="../index.html"><span class="agent-slash">/tester</span><span class="agent-role">Cobertura + mutation testing</span></a>
-        <a class="agent-pill" data-color="gold" href="../index.html"><span class="agent-slash">/pentester</span><span class="agent-role">Security audit + threat review</span></a>
-      </div>
-    </div>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Discovery &amp; research</div>
-      <div class="agent-grid">
-        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/briefing</span><span class="agent-role">Pré-PRD framing</span></a>
-        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/orache</span><span class="agent-role">Domínio + competitor research</span></a>
-        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/sheldon</span><span class="agent-role">Enrichment de PRD</span></a>
-        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/discovery-design-doc</span><span class="agent-role">Living design doc</span></a>
-        <a class="agent-pill" data-color="violet" href="../index.html"><span class="agent-slash">/discover</span><span class="agent-role">Semantic project scan</span></a>
-      </div>
-    </div>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Content &amp; operations</div>
-      <div class="agent-grid">
-        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/copywriter</span><span class="agent-role">Marketing copy + VSL</span></a>
-        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/committer</span><span class="agent-role">Git commit messages</span></a>
-        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/squad</span><span class="agent-role">Squad management meta-agent</span></a>
-        <a class="agent-pill" data-color="pink" href="../index.html"><span class="agent-slash">/genome</span><span class="agent-role">Domain genome extraction</span></a>
-      </div>
-    </div>
-
-    <div class="agent-group">
-      <div class="agent-group-title">Profiling &amp; cloning (pipelines)</div>
-      <div class="agent-grid">
-        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-researcher</span><span class="agent-role">Research phase do clone</span></a>
-        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-enricher</span><span class="agent-role">Enrichment do perfil</span></a>
-        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/profiler-forge</span><span class="agent-role">Forge do advisor agent</span></a>
-        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/site-forge</span><span class="agent-role">Clone visual de URL</span></a>
-        <a class="agent-pill" data-color="teal" href="../index.html"><span class="agent-slash">/design-hybrid-forge</span><span class="agent-role">Híbrido de 2 design skills</span></a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ TUTORIAL: PRIMEIRO SQUAD -->
-  <section class="site-section" id="primeiro">
-    <header class="site-section-header">
-      <span class="eyebrow">Tutorial · primeiro squad</span>
-      <h2 class="site-section-title">Crie e rode um squad em <span class="accent-cyan">5 passos</span>.</h2>
-      <p class="site-section-subtitle">Do scaffold ao dashboard. Cada passo é um comando — squads são primeira-classe no CLI, não exigem GUI.</p>
-    </header>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h3>Scaffold da estrutura base</h3>
-          <p>Cria <code>.aioson/squads/{slug}/</code> com manifesto, executors vazios, contracts iniciais.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">scaffold</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:scaffold</span> . <span class="term-flag">--name</span>=marketing-team <span class="term-flag">--domain</span>=<span class="term-str">'content'</span></span>
-<span class="term-line"><span class="term-ok">✓</span> created .aioson/squads/marketing-team/ · manifest · 0 agents · 0 workers</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h3>Adicionar agentes ao squad</h3>
-          <p>Use agentes oficiais ou crie customizados. Tier 0-3 controla autonomia, DISC profile define personalidade.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">agent-create</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:agent-create</span> . <span class="term-flag">--squad</span>=marketing-team \\</span>
-<span class="term-line">    <span class="term-flag">--name</span>=copywriter <span class="term-flag">--type</span>=agent <span class="term-flag">--tier</span>=2 <span class="term-flag">--disc</span>=I \\</span>
-<span class="term-line">    <span class="term-flag">--mission</span>=<span class="term-str">'Write conversion-focused copy'</span> <span class="term-flag">--domain</span>=<span class="term-str">'marketing'</span></span>
-<span class="term-line"><span class="term-ok">✓</span> agent copywriter created · tier 2 · DISC=I</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h3>Validar manifesto + dependências</h3>
-          <p>Verifica schema, dependency graph e contratos antes de rodar. Quebra cedo, não no daemon.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">validate + dependency-graph</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:validate</span> . <span class="term-flag">--squad</span>=marketing-team</span>
-<span class="term-line"><span class="term-ok">✓</span> manifest valid · 1 agent · 0 unresolved deps</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:dependency-graph</span> . <span class="term-flag">--squad</span>=marketing-team</span>
-<span class="term-line"><span class="term-out-key">→</span> copywriter (entry) · no downstream</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <h3>Subir o daemon e dashboard</h3>
-          <p>Daemon escuta eventos, dashboard mostra telemetria em real-time (porta 4180 por padrão).</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">daemon + dashboard</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:daemon</span> . <span class="term-flag">--sub</span>=start <span class="term-flag">--squad</span>=marketing-team</span>
-<span class="term-line"><span class="term-ok">✓</span> daemon started · pid 12847 · port 4180</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:dashboard</span> . <span class="term-flag">--squad</span>=marketing-team <span class="term-flag">--port</span>=4180</span>
-<span class="term-line"><span class="term-out-key">→</span> http://localhost:4180/squad/marketing-team</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">5</div>
-        <div class="step-body">
-          <h3>Disparar uma task + monitorar</h3>
-          <p>Send a task via bus, monitor execution, track ROI metrics.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">bus + status + roi</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:bus</span> . <span class="term-flag">--squad</span>=marketing-team <span class="term-flag">--to</span>=copywriter \\</span>
-<span class="term-line">    <span class="term-flag">--message</span>=<span class="term-str">'Write landing hero for new SaaS launch'</span></span>
-<span class="term-line"><span class="term-ok">✓</span> message dispatched · waiting...</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:roi</span> . <span class="term-flag">--sub</span>=report <span class="term-flag">--squad</span>=marketing-team</span>
-<span class="term-line"><span class="term-out-key">tasks</span>: 1 · <span class="term-out-key">avg_time</span>: 4.2s · <span class="term-out-key">tokens</span>: 1.8k · <span class="term-out-key">cost</span>: $0.04</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ CASOS DE USO -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">Casos de uso</span>
-      <h2 class="site-section-title">Squads <span class="accent-emerald">por domínio</span>.</h2>
-      <p class="site-section-subtitle">Cada squad é um time inteiro. Reusa agentes oficiais quando fazem sentido, cria customizados pro que é específico do domínio.</p>
-    </header>
-
-    <div class="usecase-grid">
-      <article class="usecase-card" data-tone="cyan">
-        <span class="usecase-tag">software</span>
-        <h3>Dev squad full-stack</h3>
-        <p>Time completo de software com SDD: PRD → arquitetura → implementação → QA → security audit.</p>
-        <ul>
-          <li>@product · @analyst · @architect</li>
-          <li>@dev · @qa · @pentester</li>
-          <li>workers: shell (npm), http (CI)</li>
-          <li>bus: webhook GitHub</li>
-        </ul>
-      </article>
-      <article class="usecase-card" data-tone="violet">
-        <span class="usecase-tag">marketing</span>
-        <h3>Content marketing squad</h3>
-        <p>Pesquisa, copy, edição, distribuição. Genomes de copywriter (Brunson, etc) injetados por padrão.</p>
-        <ul>
-          <li>@orache (research) · @copywriter</li>
-          <li>custom: editor · custom: scheduler</li>
-          <li>workers: http (CMS), mcp (analytics)</li>
-          <li>roi: pageviews / conversões</li>
-        </ul>
-      </article>
-      <article class="usecase-card" data-tone="emerald">
-        <span class="usecase-tag">jurídico</span>
-        <h3>Legal review squad</h3>
-        <p>Triagem de contratos, redação de cláusulas, compliance check, sumário executivo.</p>
-        <ul>
-          <li>custom: triador · custom: redator</li>
-          <li>custom: compliance-officer</li>
-          <li>workers: shell (LLM local), mcp (notion)</li>
-          <li>memória: precedentes do escritório</li>
-        </ul>
-      </article>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════ FINAL CTA -->
-  <section class="site-cta">
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
     <div>
-      <span class="eyebrow">Próximo passo</span>
-      <h2 class="site-cta-heading">Crie o squad que faz <span class="accent-cyan">seu trabalho</span>.</h2>
-      <p class="site-cta-text">Squads são primeira-classe no AIOSON. 34 comandos cobrem do scaffold ao deploy. Reusa os 29 agentes oficiais ou cria os seus.</p>
+      <p class="eyebrow">Guia do sistema · 11 set 2026</p>
+      <h1 id="hero-title">Um time de<br>agentes, montado<br>para o seu trabalho.</h1>
+      <p class="hero-intro">Um squad é um grupo de assistentes especializados que você cria uma vez e usa todos os dias. Esta página mostra como montar, como conferir se ele ficou bom e o que fazer quando o resultado vem errado. Não é preciso saber programar.</p>
+      <div class="hero-actions"><a class="primary-link" href="#o-que-e">Começar do zero <span aria-hidden="true">↗</span></a><a class="text-link" href="#exemplo">Ver um exemplo completo →</a></div>
+      <div class="edition"><span>AIOSON 1.66.0</span><span>39 comandos de squad</span><span>Leitura por capítulos</span></div>
     </div>
-    <div class="site-cta-actions">
-      <a class="primary-button" href="../index.html">Voltar ao hub</a>
-      <a class="secondary-button" href="../releases/1-9-0/index.html">Release v1.9.0 →</a>
-    </div>
+    <figure class="squad-figure">
+      <div class="figure-heading"><span class="status-dot" aria-hidden="true"></span> Um squad de clínica, quatro papéis</div>
+      <ul class="roster">
+        <li><span class="machine-label">executor</span><span><strong>Recepção</strong><span>Fala com o paciente e agenda</span></span></li>
+        <li><span class="machine-label">executor</span><span><strong>Orçamentos</strong><span>Explica valores e convênios</span></span></li>
+        <li><span class="machine-label">executor</span><span><strong>Pós-consulta</strong><span>Escreve o retorno e o cuidado</span></span></li>
+        <li><span class="machine-label">worker</span><span><strong>Confirmar consulta</strong><span>Script que dispara a mensagem</span></span></li>
+      </ul>
+      <figcaption>Três papéis pensam e escrevem. Um quarto apenas executa uma tarefa mecânica, sempre igual, sem consumir inteligência artificial.</figcaption>
+    </figure>
   </section>
 
-  <!-- ═══════════════════════════════════════════════════════ FOOTER -->
-  <footer class="site-footer">
-    <div class="site-footer-brand">
-      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
-      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
-    </div>
-    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="../sdd/index.html">SDD básico</a></li><li><a href="../sdd/automation.html">Automation</a></li></ul></div>
-    <div class="footer-col"><div class="footer-col-title">Releases</div><ul><li><a href="../releases/1-9-0/index.html">v1.9.0</a></li></ul></div>
-    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
-    <div class="site-footer-base" style="grid-column:1 / -1">
-      <div>34 squad cmds · 29 agentes oficiais · multi-domínio</div>
-      <div>AIOSON · inception mode</div>
-    </div>
-  </footer>
+  <div class="staff" aria-hidden="true"></div>
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do guia"><p class="machine-label">Neste guia</p><ol>
+        <li><a href="#o-que-e">O que é um squad</a></li>
+        <li><a href="#pecas">Executor e worker</a></li>
+        <li><a href="#pacote">Onde o time mora</a></li>
+        <li><a href="#caminho">O caminho rápido</a></li>
+        <li><a href="#lanes">Quanto rigor você quer</a></li>
+        <li><a href="#portoes">Os portões de qualidade</a></li>
+        <li><a href="#tokens">O preço de cada ativação</a></li>
+        <li><a href="#workers">Workers na prática</a></li>
+        <li><a href="#dia-a-dia">Operação do dia a dia</a></li>
+        <li><a href="#exemplo">Exemplo: clínica odontológica</a></li>
+        <li><a href="#erros">Erros comuns</a></li>
+        <li><a href="#checklist">O checklist final</a></li>
+        <li><a href="#glossario">Glossário e dúvidas</a></li>
+        <li><a href="#fontes">Fontes e assinatura</a></li>
+      </ol></nav>
+      <p class="sidebar-note">Primeira visita?<br>Leia os capítulos 1 a 4, acompanhe o exemplo no capítulo 10 e volte aos portões quando for validar o seu primeiro squad.</p>
+    </aside>
 
+    <article class="article">
+
+      <section id="o-que-e" aria-labelledby="o-que-e-title">
+        <p class="section-number">01 / A ideia central</p>
+        <h2 id="o-que-e-title">Um squad é um time contratado uma vez</h2>
+        <p><strong>Squad quer dizer time.</strong> No AIOSON, um squad é um grupo de assistentes especializados que você monta para um trabalho específico e passa a usar sempre que aquele trabalho aparece.</p>
+        <p>Pense em uma clínica. Existe quem atende no balcão, quem explica o orçamento, quem escreve as orientações de pós-consulta. Cada pessoa sabe uma coisa diferente, usa um vocabulário diferente e tem limites diferentes do que pode prometer. Quando você pede ajuda a uma inteligência artificial genérica, recebe uma pessoa só, que finge saber tudo e acerta pouco.</p>
+        <p>Um squad resolve isso guardando esses papéis em arquivos. Cada papel vira um texto de instruções. O conjunto vira uma pasta dentro do seu projeto. Da próxima vez, o time já existe, já sabe o vocabulário do seu negócio e já sabe o que não pode dizer.</p>
+        <div class="speech-card" id="fala"><p class="machine-label">Fala pronta · cerca de 30 segundos</p><blockquote>“Um squad é um time de assistentes que eu monto uma vez e reaproveito. Cada membro tem um papel escrito, com missão, limites e formato de resposta. Alguns membros pensam e escrevem. Outros são apenas scripts, que executam uma tarefa mecânica. Tudo fica gravado numa pasta do projeto, então o time não se perde quando a conversa acaba.”</blockquote></div>
+        <h3>O que um squad tem dentro</h3>
+        <ol class="flow-list">
+          <li><strong>Executores.</strong><p>Os papéis que pensam. Cada um é um texto de instruções que a inteligência artificial lê antes de responder.</p></li>
+          <li><strong>Workers.</strong><p>Scripts que fazem uma tarefa sempre igual, sem inteligência artificial nenhuma. Enviar uma mensagem, calcular um número, chamar um sistema externo.</p></li>
+          <li><strong>Checklists.</strong><p>Listas do que precisa estar certo antes de o time considerar um trabalho entregue.</p></li>
+          <li><strong>Workflows.</strong><p>A ordem em que os papéis se revezam quando chega um pedido.</p></li>
+        </ol>
+        <div class="callout"><p class="machine-label">Em uma frase</p><p>Um squad é um time de assistentes especializados, empacotado em arquivos, que você monta uma vez e usa todos os dias.</p></div>
+      </section>
+
+      <section id="pecas" aria-labelledby="pecas-title">
+        <p class="section-number">02 / As duas peças</p>
+        <h2 id="pecas-title">Um pensa, o outro executa</h2>
+        <p>Essa é a distinção mais importante da página, e ela decide quanto o seu squad vai custar e quão previsível ele vai ser.</p>
+        <div class="piece-grid">
+          <div class="piece-card">
+            <span class="machine-label">peça 1 · pensa</span>
+            <h3>Executor</h3>
+            <p>Um papel escrito em texto. A inteligência artificial lê esse texto e responde no personagem descrito ali.</p>
+            <ul>
+              <li>Serve para julgar, redigir, decidir, conversar.</li>
+              <li>O resultado varia um pouco a cada vez.</li>
+              <li>Custa tokens, ou seja, dinheiro, em toda conversa.</li>
+              <li>Fica em <code>agents/&lt;nome&gt;.md</code>.</li>
+            </ul>
+          </div>
+          <div class="piece-card">
+            <span class="machine-label">peça 2 · executa</span>
+            <h3>Worker</h3>
+            <p>Um script comum de computador. Recebe dados, faz a tarefa, devolve o resultado. Nenhuma inteligência artificial participa.</p>
+            <ul>
+              <li>Serve para tarefas mecânicas e repetidas.</li>
+              <li>O resultado é sempre o mesmo para a mesma entrada.</li>
+              <li>Custa praticamente nada.</li>
+              <li>Fica em <code>workers/&lt;nome&gt;/</code>.</li>
+            </ul>
+          </div>
+        </div>
+        <p><strong>A regra prática:</strong> se a tarefa tem uma resposta certa e sempre igual, ela é um worker. Se a tarefa exige interpretar, escolher palavras ou pesar um caso, ela é um executor. Disparar uma mensagem de confirmação é worker. Escrever o texto dessa mensagem para um paciente ansioso é executor.</p>
+        <p>No arquivo de identidade do squad, cada membro declara o próprio tipo. Os tipos possíveis são <code>agent</code>, <code>assistant</code>, <code>clone</code> e <code>worker</code>. Os três primeiros usam inteligência artificial. O último, não.</p>
+        <div class="callout"><p class="machine-label">Por que isso importa para o seu bolso</p><p>Toda vez que um executor entra em ação, o texto dele é lido de novo e você paga por isso. Um worker roda de graça. Times bem montados empurram para os workers tudo que não precisa de julgamento.</p></div>
+      </section>
+
+      <section id="pacote" aria-labelledby="pacote-title">
+        <p class="section-number">03 / Onde o time mora</p>
+        <h2 id="pacote-title">Uma pasta, sempre com o mesmo formato</h2>
+        <p>Todo squad vive em uma pasta com um nome curto, chamado <strong>slug</strong>. Slug é só um apelido sem espaços nem acentos, como <code>clinica-odonto</code>. O caminho é sempre <code>.aioson/squads/&lt;slug&gt;/</code> dentro do seu projeto.</p>
+        <p>O formato não é livre. Ele é um contrato, e o AIOSON sabe conferir se está completo. Esta é a árvore que um squad novo recebe.</p>
+        <pre><code>.aioson/squads/clinica-odonto/
+  squad.manifest.json     a ficha do time, lida por máquina
+  squad.md                o resumo do time, lido por gente
+  agents/
+    agents.md             o manifesto: missão, o que faz, o que não faz
+    orquestrador.md       o papel que distribui o trabalho
+    recepcao.md           um papel por arquivo
+  workers/
+    confirmar-consulta/   um script por pasta
+  workflows/              a ordem em que os papéis se revezam
+  checklists/             o que conferir antes de entregar
+  skills/                 conhecimento carregado sob demanda
+  templates/              modelos de documento
+  docs/
+    design-doc.md         a decisão de como o time foi montado
+    readiness.md          o quanto ele está pronto
+  learnings/              o que o time aprendeu usando
+  STATE.md                em que ponto o time está</code></pre>
+        <p>Três arquivos merecem atenção especial de quem não programa.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Arquivos principais de um squad"><table><caption>Os arquivos que você vai abrir de verdade</caption><thead><tr><th scope="col">Arquivo</th><th scope="col">O que é</th><th scope="col">Quando você mexe nele</th></tr></thead><tbody>
+          <tr><th scope="row">squad.manifest.json</th><td>A ficha cadastral do time. Nome, missão, faixa de entrega, lista de membros, onde os resultados são salvos.</td><td>Quase nunca à mão. Os comandos escrevem por você.</td></tr>
+          <tr><th scope="row">agents/agents.md</th><td>O manifesto do time em linguagem comum. Missão, o que o time faz, o que o time não faz, quem são os membros permanentes.</td><td>Sempre que a missão do time mudar.</td></tr>
+          <tr><th scope="row">agents/&lt;nome&gt;.md</th><td>O papel de um membro. Missão dele, contexto que ele precisa dominar, limites rígidos e formato da resposta.</td><td>Quando um papel responde raso ou sai do personagem.</td></tr>
+        </tbody></table></div>
+        <p>Os resultados não ficam dentro do pacote. Eles vão para <code>output/&lt;slug&gt;/</code>. Os registros de execução vão para <code>aioson-logs/&lt;slug&gt;/</code> e as imagens para <code>media/&lt;slug&gt;/</code>. Essa separação existe para que o time possa ser copiado para outro projeto sem levar junto o trabalho de um cliente.</p>
+      </section>
+
+      <section id="caminho" aria-labelledby="caminho-title">
+        <p class="section-number">04 / O caminho rápido</p>
+        <h2 id="caminho-title">Três passos: desenhar, criar, validar</h2>
+        <p>Você conversa com um agente chamado <code>@squad</code>. Na maioria dos clientes, basta digitar esse nome no começo da mensagem. Em alguns, a forma é <code>/squad</code>.</p>
+        <p><strong>Se você não disser mais nada além do pedido, ele percorre os três passos sozinho.</strong> Primeiro desenha o time, depois cria os arquivos, depois confere se ficou bom. É o caminho recomendado para a primeira vez.</p>
+        <div class="example">
+          <div class="example-top"><span class="machine-label">o que você fala</span><span class="example-status">caminho padrão</span></div>
+          <p class="human-voice">“@squad Preciso de um time para o atendimento de uma clínica odontológica. Agendamento, orçamento e pós-consulta.”</p>
+          <p><strong>O que acontece:</strong> ele faz de duas a três perguntas curtas, desenha os papéis, gera a pasta e roda a conferência automática no fim.</p>
+        </div>
+        <h3>Quando você quer comandar cada passo</h3>
+        <p>Dizer o passo explicitamente serve para retomar um trabalho ou para refazer só uma parte. O nome do passo vem antes do slug.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Subcomandos do agente squad"><table><caption>Os doze passos que você pode pedir por nome</caption><thead><tr><th scope="col">Passo</th><th scope="col">Para que serve</th></tr></thead><tbody>
+          <tr><th scope="row">design</th><td>Decide quem entra no time e por quê, antes de escrever qualquer arquivo.</td></tr>
+          <tr><th scope="row">create</th><td>Escreve a pasta, os papéis e a ficha do time.</td></tr>
+          <tr><th scope="row">validate</th><td>Confere estrutura, ficha e corpo dos papéis. É o portão principal.</td></tr>
+          <tr><th scope="row">eval</th><td>Avalia a qualidade com uma régua e casos de teste que o time não viu antes.</td></tr>
+          <tr><th scope="row">pilot</th><td>Produz uma entrega de vitrine, para você julgar o padrão do time.</td></tr>
+          <tr><th scope="row">extend</th><td>Acrescenta um papel ou uma capacidade a um time que já existe.</td></tr>
+          <tr><th scope="row">repair</th><td>Conserta um pacote quebrado ou incompleto.</td></tr>
+          <tr><th scope="row">refresh</th><td>Reescreve papéis rasos ou que estão recusando trabalho legítimo.</td></tr>
+          <tr><th scope="row">analyze</th><td>Explica o que o time é hoje e onde ele está fraco.</td></tr>
+          <tr><th scope="row">export</th><td>Empacota o time num arquivo para levar a outro projeto.</td></tr>
+          <tr><th scope="row">investigate</th><td>Pesquisa o domínio antes do desenho, quando o assunto é novo.</td></tr>
+          <tr><th scope="row">plan</th><td>Monta um plano de execução para um trabalho grande do time.</td></tr>
+        </tbody></table></div>
+        <div class="example">
+          <div class="example-top"><span class="machine-label">o que você fala</span><span class="example-status">passo a passo</span></div>
+          <p class="human-voice">“@squad refresh clinica-odonto. A recepção está respondendo curto demais.”</p>
+          <p><strong>O que acontece:</strong> só os papéis rasos são reescritos. A ficha, os workers e o histórico do time continuam como estavam.</p>
+        </div>
+      </section>
+
+      <section id="lanes" aria-labelledby="lanes-title">
+        <p class="section-number">05 / Quanto rigor você quer</p>
+        <h2 id="lanes-title">As quatro faixas de entrega</h2>
+        <p>Antes de montar o time, o AIOSON escolhe uma <strong>faixa de entrega</strong>. A faixa não muda o assunto do time. Ela muda quanta prova o time precisa apresentar antes de ser considerado pronto.</p>
+        <p>É a mesma diferença entre um bilhete de recado e um contrato registrado em cartório. Os dois comunicam. Só um precisa de testemunha.</p>
+        <ol class="lane-track">
+          <li>
+            <span class="lane-name">quick</span>
+            <h3>Descartável</h3>
+            <p>Para um time que você vai usar duas ou três vezes e jogar fora. Pesquisa de domínio pode ser pulada, e a avaliação de qualidade pode ficar para depois, desde que o motivo fique escrito.</p>
+            <p class="lane-note">Nunca use em assunto regulado, mesmo com pressa.</p>
+          </li>
+          <li>
+            <span class="lane-name">standard</span>
+            <h3>Padrão de produção</h3>
+            <p>A escolha certa para quase todo mundo. É um time que vai ficar. Exige uma pesquisa dirigida ao assunto, uma avaliação de qualidade com aprovação nos casos críticos e um ensaio geral representativo.</p>
+            <p class="lane-note">Se você está em dúvida, é esta.</p>
+          </li>
+          <li>
+            <span class="lane-name">premium</span>
+            <h3>Publicação e alta fidelidade</h3>
+            <p>Para quando o resultado vai a público, vai para uma loja de squads ou precisa imitar uma pessoa ou marca com fidelidade. Exige investigação completa, avaliação aprovada inteira e ensaio geral com todos os especialistas.</p>
+            <p class="lane-note">Riqueza opcional não promove um time padrão a premium. A faixa se justifica pela necessidade, não pela vontade.</p>
+          </li>
+          <li>
+            <span class="lane-name">regulated</span>
+            <h3>Domínio regulado</h3>
+            <p>Saúde, jurídico, financeiro. Tudo que premium exige, mais investigação atual obrigatória e evidência viva. Nada pode ser adiado.</p>
+            <p class="lane-note">Pressa nunca rebaixa um assunto regulado para uma faixa mais leve.</p>
+          </li>
+        </ol>
+        <div class="callout"><p class="machine-label">Cuidado comum</p><p>Escolher premium por capricho custa tempo e tokens sem melhorar nada. Escolher quick num assunto regulado cria um risco real. A faixa deve descrever o seu caso, não a sua ambição.</p></div>
+      </section>
+
+      <section id="portoes" aria-labelledby="portoes-title">
+        <p class="section-number">06 / O que impede um squad ruim</p>
+        <h2 id="portoes-title">Cinco portões, cada um com um limite</h2>
+        <p><strong>Portão</strong> é uma conferência automática. Ele mede uma coisa específica e diz se passou ou não. Nenhum portão sabe se o seu time é bom no assunto. Todos juntos evitam os erros mais comuns.</p>
+        <p>Os comandos abaixo você digita no terminal, ou pede ao agente que rode por você. O ponto depois do nome do comando significa “neste projeto aqui”.</p>
+
+        <div class="gate-card">
+          <span class="machine-label">portão 1 · o principal</span>
+          <h3>Validação estrita</h3>
+          <pre><code>aioson squad:validate . --squad=clinica-odonto --strict --json</code></pre>
+          <p>Confere quatro camadas de uma vez: se os arquivos obrigatórios existem, se a ficha do time obedece ao formato, se o conteúdo faz sentido e, desde a versão recente, <strong>se os papéis foram realmente escritos</strong>.</p>
+          <p>Essa última camada é a mais útil para quem não programa, porque ela pega o defeito mais comum de todos: um papel que ficou só com o nome.</p>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Medidas do corpo dos executores"><table><caption>O que a medição do corpo dos papéis reprova e o que ela só avisa</caption><thead><tr><th scope="col">Situação</th><th scope="col">Resultado</th></tr></thead><tbody>
+            <tr><th scope="row">Papel com menos de 400 bytes</th><td>Erro. Um rótulo de cargo não é um papel.</td></tr>
+            <tr><th scope="row">Papel com texto de rascunho, como TODO, FIXME ou lorem ipsum</th><td>Erro. O papel ficou pela metade.</td></tr>
+            <tr><th scope="row">Papel entre 400 e 600 bytes</th><td>Aviso. Cabe o nome e pouco mais.</td></tr>
+            <tr><th scope="row">Papel acima de 16.000 bytes</th><td>Aviso. Você paga esse tamanho em toda conversa.</td></tr>
+            <tr><th scope="row">Papel sem missão, sem limites ou sem formato de resposta</th><td>Aviso. Faltou uma das três seções básicas.</td></tr>
+            <tr><th scope="row">Dois papéis quase iguais</th><td>Aviso. Ou junte os dois, ou dê a cada um uma contribuição diferente.</td></tr>
+            <tr><th scope="row">Worker que só lê o argumento da linha de comando</th><td>Aviso. Pedidos grandes chegam por arquivo e vão falhar.</td></tr>
+          </tbody></table></div>
+          <div class="gate-split">
+            <div><span class="machine-label">o que ele mede</span><p>Formato, obrigatoriedade e densidade do texto. É tudo verificável sem opinião.</p></div>
+            <div><span class="machine-label">o que ele não mede</span><p>Se o conteúdo está certo. Um papel de 5.000 bytes cheio de informação errada passa neste portão.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-card">
+          <span class="machine-label">portão 2 · qualidade</span>
+          <h3>Avaliação com régua e casos reservados</h3>
+          <pre><code>aioson squad:eval . --squad=clinica-odonto --json</code></pre>
+          <p>Aplica uma régua construída a partir das fontes do assunto, roda casos de teste que foram guardados para esta hora e compara versões diferentes de um mesmo papel, quando existem. O resultado fica gravado em um relatório dentro da pasta do time.</p>
+          <p>Para medir sem gravar nada, acrescente a instrução de não persistir. Serve para experimentar antes de decidir.</p>
+          <pre><code>aioson squad:eval . --squad=clinica-odonto --no-persist</code></pre>
+          <div class="gate-split">
+            <div><span class="machine-label">o que ele mede</span><p>Se o time responde bem aos casos separados, e se as fontes citadas sustentam o que ele afirma.</p></div>
+            <div><span class="machine-label">o que ele não mede</span><p>Situações que ninguém imaginou ao montar os casos. Um relatório aprovado não é garantia de acerto em tudo.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-card">
+          <span class="machine-label">portão 3 · vitrine</span>
+          <h3>Piloto, para times que entregam software</h3>
+          <pre><code>aioson verify:artifact . --kind=squad-pilot --slug=clinica-odonto --advisory</code></pre>
+          <p>Um piloto é uma entrega de demonstração, feita para você olhar e julgar o padrão. Ele é exigido de times cujo produto é software ou uma mistura de software com conteúdo. Times só de conteúdo ou só de pesquisa registram que o piloto não se aplica.</p>
+          <p><strong>A aprovação do piloto é exclusivamente sua.</strong> Nenhum agente pode aprovar o próprio piloto. O comando de aprovação é do usuário e ponto final.</p>
+          <pre><code>aioson squad:pilot-approve . --squad=clinica-odonto</code></pre>
+          <div class="gate-split">
+            <div><span class="machine-label">o que ele mede</span><p>Se existe uma entrega de vitrine e se ela cumpre o padrão declarado.</p></div>
+            <div><span class="machine-label">o que ele não mede</span><p>Se o seu gosto foi atendido. Isso continua sendo uma decisão humana.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-card">
+          <span class="machine-label">portão 4 · automático</span>
+          <h3>Conferência do pacote no fim da sessão</h3>
+          <pre><code>aioson verify:artifact . --kind=squad-package --slug=clinica-odonto --advisory</code></pre>
+          <p>Este portão é novo e roda sozinho. Quando o agente <code>@squad</code> encerra o trabalho, ele dispara a validação estrita e a medição dos papéis outra vez, sem que ninguém peça. Antes disso, existiram times que fecharam com aparência de aprovados carregando uma dúzia de erros que ninguém tinha rodado.</p>
+          <div class="gate-split">
+            <div><span class="machine-label">o que ele mede</span><p>Exatamente o mesmo do portão 1, no momento em que o agente diz que terminou.</p></div>
+            <div><span class="machine-label">o que ele não mede</span><p>Nada além disso. Ele é uma rede de segurança, não uma avaliação nova.</p></div>
+          </div>
+        </div>
+
+        <div class="gate-card">
+          <span class="machine-label">portão 5 · nota</span>
+          <h3>Uma nota de zero a cem</h3>
+          <pre><code>aioson squad:score . --squad=clinica-odonto --json</code></pre>
+          <p>Dá uma nota em quatro dimensões: completude, profundidade, qualidade estrutural e potencial de resultado. Junto com a nota vêm sugestões curtas de melhoria, cada uma com quantos pontos ela vale.</p>
+          <pre><code>  Completude:              10/25
+  Profundidade:             0/25
+  Qualidade Estrutural:     0/25
+  Potencial de Resultado:   0/25*
+  ────────────────────────────────────────
+  TOTAL:                   10/100
+  Grade: D (Needs work)
+
+  Quick wins:
+    1. Add review loop to a workflow phase → +5 pts
+    2. Decompose at least 1 executor into tasks → +5 pts
+    3. Add a format reference to an executor → +5 pts</code></pre>
+          <p>Essa nota saiu de um time recém-criado, ainda com os papéis vazios. É exatamente o que se espera de um esqueleto.</p>
+          <div class="gate-split">
+            <div><span class="machine-label">o que ele mede</span><p>Quanto do pacote foi preenchido e quanta estrutura existe. É um bom termômetro de progresso.</p></div>
+            <div><span class="machine-label">o que ele não mede</span><p>Acerto no assunto. Nota alta com informação errada continua sendo informação errada.</p></div>
+          </div>
+        </div>
+
+        <div class="callout"><p class="machine-label">A ordem que funciona</p><p>Primeiro a validação estrita, porque ela é rápida e pega o óbvio. Depois a avaliação de qualidade. O piloto por último, quando o time entrega software. A nota serve em qualquer momento, para saber se você está melhorando.</p></div>
+      </section>
+
+      <section id="tokens" aria-labelledby="tokens-title">
+        <p class="section-number">07 / O preço de cada ativação</p>
+        <h2 id="tokens-title">Cada byte que o agente carrega, você paga</h2>
+        <p><strong>Token</strong> é a unidade de cobrança da inteligência artificial. Um token corresponde, na média, a quatro letras. Tudo que o agente lê antes de responder vira token, e você paga por isso em toda conversa, mesmo quando a resposta é curta.</p>
+        <p>Isso cria um problema silencioso. Um agente que carrega documentação demais fica caro sem ficar melhor. Três comandos existem para resolver isso.</p>
+
+        <h3>Ver o custo antes de gastar</h3>
+        <p>O primeiro comando responde uma pergunta direta: quais documentos o agente vai abrir para este trabalho, e quanto isso custa.</p>
+        <pre><code>aioson squad:preflight . --operation=create --lane=standard --mode=content --json</code></pre>
+        <p>A resposta lista cada arquivo, o motivo de ele ser carregado, o tamanho em bytes e o total estimado em tokens. Estes são números reais, medidos neste repositório.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Custo medido de cada tipo de ativação"><table><caption>Quanto custa abrir cada tipo de trabalho</caption><thead><tr><th scope="col">Trabalho</th><th scope="col">Arquivos</th><th scope="col">Custo estimado</th></tr></thead><tbody>
+          <tr><th scope="row">Criar um time, faixa padrão</th><td>12</td><td>cerca de 24.200 tokens</td></tr>
+          <tr><th scope="row">Criar um time, faixa premium, produto de software</th><td>13</td><td>cerca de 25.600 tokens</td></tr>
+          <tr><th scope="row">Validar um time</th><td>4</td><td>cerca de 8.400 tokens</td></tr>
+          <tr><th scope="row">Exportar um time</th><td>2</td><td>cerca de 2.800 tokens</td></tr>
+        </tbody></table></div>
+        <p>A leitura é simples. Pedir uma validação custa um terço do que custa uma criação. Pedir uma exportação custa quase nada. Saber disso muda a forma como você conversa com o agente, porque você para de pedir o passo grande quando precisa só do pequeno.</p>
+        <p>As opções aceitas são o tipo de trabalho, a faixa de entrega, o modo do time e os sinais do caso. Os modos possíveis são <code>content</code>, <code>software</code>, <code>research</code> e <code>mixed</code>.</p>
+
+        <h3>Gerar a estrutura sem gastar token nenhum</h3>
+        <p>O segundo comando cria a pasta inteira do time sem envolver inteligência artificial. É apenas um gerador de arquivos.</p>
+        <pre><code>aioson squad:scaffold . --slug=clinica-odonto --name="Clinica Odonto" --mode=content</code></pre>
+        <p>O resultado é imediato e previsível.</p>
+        <pre><code>Squad "Clinica Odonto" scaffolded (mode: content)
+
+Files created:
+  ✓ .aioson/squads/clinica-odonto/agents/agents.md
+  ✓ .aioson/squads/clinica-odonto/agents/orquestrador.md
+  ✓ .aioson/squads/clinica-odonto/squad.manifest.json
+  ✓ .aioson/squads/clinica-odonto/squad.md
+  ✓ .aioson/squads/clinica-odonto/docs/design-doc.md
+  ✓ .aioson/squads/clinica-odonto/docs/readiness.md
+  ✓ .aioson/squads/clinica-odonto/checklists/quality.md
+  ✓ .aioson/squads/clinica-odonto/learnings/index.md
+  ✓ .aioson/squads/clinica-odonto/workflows/default.md
+  ✓ .aioson/squads/clinica-odonto/STATE.md
+
+Total: 16 items</code></pre>
+        <p>Repare que os arquivos existem, mas ainda estão vazios de conteúdo. O gerador entrega o esqueleto. O agente gasta tokens só no que exige julgamento, que é escrever os papéis.</p>
+
+        <h3>Gerar um papel a partir de poucas informações</h3>
+        <p>O terceiro comando cria um executor já no formato correto, a partir de dados que você informa.</p>
+        <pre><code>aioson squad:agent-create . --name="recepcao" --scope=squad --squad=clinica-odonto \
+  --type=agent --tier=1 --mission="Atender pacientes e agendar consultas" \
+  --domain="clinica odontologica"</code></pre>
+        <p>Ele escreve o arquivo, registra o membro na ficha do time e ainda avisa em que nível de maturidade o papel nasceu, com os próximos passos para amadurecer.</p>
+        <pre><code>  Agent created: .aioson/squads/clinica-odonto/agents/recepcao.md
+  Added to squad manifest: clinica-odonto
+
+  Maturity: Level 2 — Functional (needs enrichment) (5/10)
+  Add real output examples and domain-specific anti-patterns to reach Level 3.</code></pre>
+        <div class="callout"><p class="machine-label">A regra de ouro do custo</p><p>Nunca peça a uma inteligência artificial o que um gerador determinístico faz melhor e de graça. Estrutura vem do gerador. Julgamento vem do agente.</p></div>
+      </section>
+
+      <section id="workers" aria-labelledby="workers-title">
+        <p class="section-number">08 / Tarefas sem inteligência artificial</p>
+        <h2 id="workers-title">Workers, os scripts do time</h2>
+        <p>Um worker é uma tarefa mecânica empacotada. Ele tem uma pasta própria dentro de <code>workers/</code>, com um arquivo de configuração e o script em si.</p>
+        <p>Você cria um worker com um comando, e o modelo gerado já vem pronto para receber dados dos dois jeitos possíveis.</p>
+        <pre><code>aioson squad:worker . --sub=scaffold --squad=clinica-odonto --worker=confirmar-consulta</code></pre>
+        <h3>Os quatro comandos que você vai usar</h3>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Comandos de worker"><table><caption>O ciclo de vida de um worker</caption><thead><tr><th scope="col">Pedido</th><th scope="col">O que faz</th></tr></thead><tbody>
+          <tr><th scope="row">list</th><td>Mostra todos os workers do time e como cada um é disparado.</td></tr>
+          <tr><th scope="row">test</th><td>Roda o worker com dados de mentira, só para ver se ele não quebra.</td></tr>
+          <tr><th scope="row">run</th><td>Roda o worker de verdade, com os dados que você mandar.</td></tr>
+          <tr><th scope="row">logs</th><td>Mostra o histórico do que aquele worker já executou.</td></tr>
+        </tbody></table></div>
+        <pre><code>aioson squad:worker . --sub=list --squad=clinica-odonto
+aioson squad:worker . --sub=test --squad=clinica-odonto --worker=confirmar-consulta
+aioson squad:worker . --sub=run  --squad=clinica-odonto --worker=confirmar-consulta \
+  --input='{"paciente":"Ana"}'</code></pre>
+        <p>Uma execução bem-sucedida devolve apenas o resultado, em formato de dados.</p>
+        <pre><code>Running worker "confirmar-consulta" on squad "clinica-odonto"...
+Worker "confirmar-consulta" completed successfully.
+{
+  "result": "ok"
+}</code></pre>
+        <h3>O detalhe que salva workers grandes</h3>
+        <p>Pedidos pequenos chegam ao script como um argumento comum de linha de comando. Pedidos grandes não cabem ali, porque todo sistema operacional tem um limite de tamanho para esse argumento. Quando o pedido é grande, o AIOSON grava os dados em um arquivo e avisa o script onde ele está, por uma variável de ambiente chamada <code>AIOSON_WORKER_INPUT_FILE</code>.</p>
+        <p>O modelo gerado pelo comando já lê os dois casos, nesta ordem. Primeiro procura o arquivo. Se não existir, usa o argumento.</p>
+        <div class="callout"><p class="machine-label">Se você vir este aviso</p><p>Um worker que lê apenas o argumento da linha de comando recebe um aviso na validação. Não é um erro hoje, mas é uma falha esperando um pedido grande. O conserto é usar o modelo gerado, que já trata os dois casos.</p></div>
+      </section>
+
+      <section id="dia-a-dia" aria-labelledby="dia-a-dia-title">
+        <p class="section-number">09 / Depois que o time existe</p>
+        <h2 id="dia-a-dia-title">O que você vai usar toda semana</h2>
+        <p>São quase quarenta comandos ao todo. Você não precisa decorar nenhum. Esta tabela existe para você reconhecer o nome quando precisar e saber a que ele serve.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Comandos de operação do dia a dia"><table><caption>Quando você vai precisar de cada um</caption><thead><tr><th scope="col">Comando</th><th scope="col">Quando você vai precisar</th></tr></thead><tbody>
+          <tr><th scope="row">squad:status</th><td>Quando quiser saber quais times existem no projeto, quantos membros cada um tem e o custo estimado por execução.</td></tr>
+          <tr><th scope="row">squad:doctor</th><td>Quando algo parar de funcionar. Ele confere arquivo por arquivo e diz o que está faltando ou travado.</td></tr>
+          <tr><th scope="row">squad:score</th><td>Quando quiser uma nota e três sugestões de melhoria imediatas.</td></tr>
+          <tr><th scope="row">squad:daemon</th><td>Quando o time precisar rodar sozinho, em segundo plano, reagindo a eventos. Aceita iniciar, ver estado, parar e ler registros.</td></tr>
+          <tr><th scope="row">squad:dashboard</th><td>Quando você preferir acompanhar por um painel no navegador em vez do terminal.</td></tr>
+          <tr><th scope="row">squad:roi</th><td>Quando precisar mostrar a alguém o retorno do time em números que você mesmo definiu.</td></tr>
+          <tr><th scope="row">squad:learning</th><td>Quando quiser ver o que o time aprendeu usando, e promover um aprendizado a regra permanente.</td></tr>
+          <tr><th scope="row">squad:playbook</th><td>Quando quiser guardar um jeito de gerar que deu certo, para repetir depois.</td></tr>
+          <tr><th scope="row">squad:export</th><td>Quando quiser levar o time para outro projeto. Gera um arquivo compactado único.</td></tr>
+          <tr><th scope="row">squad:publish e squad:install</th><td>Quando quiser distribuir o time para outras pessoas, ou instalar um time que alguém publicou.</td></tr>
+        </tbody></table></div>
+        <p>Todos aceitam o nome do time com a opção de squad e quase todos aceitam a resposta em formato de dados, útil quando outro programa vai ler o resultado.</p>
+        <pre><code>aioson squad:status .
+aioson squad:doctor . --squad=clinica-odonto
+aioson squad:export . --squad=clinica-odonto</code></pre>
+        <p>A exportação responde com o caminho do arquivo gerado, pronto para ser copiado.</p>
+        <pre><code>✅ Squad "clinica-odonto" exported to: .aioson/squads/exports/clinica-odonto.aios-squad.tar.gz</code></pre>
+      </section>
+
+      <section id="exemplo" aria-labelledby="exemplo-title">
+        <p class="section-number">10 / Do zero, passo a passo</p>
+        <h2 id="exemplo-title">Um time para uma clínica odontológica</h2>
+        <p>Este exemplo foi executado de verdade em uma pasta de teste. Os textos de saída abaixo são as mensagens reais dos comandos, incluindo o erro. Nenhuma clínica existe, e nenhum paciente foi contatado.</p>
+        <div class="journey">
+          <div class="saved-record"><span class="machine-label">A necessidade que acompanha o trabalho</span><p>“A recepção da clínica se perde entre agendamento, orçamento e o retorno depois da consulta.”</p></div>
+          <div class="journey-controls" role="group" aria-label="Escolher uma etapa do exemplo" hidden>
+            <button type="button" data-stage="fala" aria-controls="stage-fala" aria-pressed="true">1 · A conversa</button>
+            <button type="button" data-stage="design" aria-controls="stage-design" aria-pressed="false">2 · Desenho</button>
+            <button type="button" data-stage="create" aria-controls="stage-create" aria-pressed="false">3 · Criação</button>
+            <button type="button" data-stage="validate" aria-controls="stage-validate" aria-pressed="false">4 · Conferência</button>
+            <button type="button" data-stage="ruim" aria-controls="stage-ruim" aria-pressed="false">5 · Resultado ruim</button>
+            <button type="button" data-stage="conserto" aria-controls="stage-conserto" aria-pressed="false">6 · Conserto</button>
+            <button type="button" data-stage="uso" aria-controls="stage-uso" aria-pressed="false">7 · No ar</button>
+          </div>
+          <div class="stage-panels" aria-live="polite" aria-atomic="false">
+
+            <div class="stage-panel" id="stage-fala" data-panel="fala">
+              <span class="machine-label">01 / O que você fala</span>
+              <h3>Uma frase, sem jargão</h3>
+              <p class="human-voice">“@squad Quero um time para o atendimento de uma clínica odontológica. Ele precisa agendar consultas, explicar orçamento e convênio, e escrever o retorno de pós-consulta. Nada de diagnóstico.”</p>
+              <p><strong>O que acontece:</strong> como você não indicou um passo, ele segue o caminho padrão, que é desenhar, criar e conferir.</p>
+              <p><strong>O que ele pergunta:</strong> de uma a três perguntas curtas. Nesta execução, quem atende o telefone e quem pode falar de preço.</p>
+              <p><strong>O que você deve incluir na frase:</strong> o assunto, os trabalhos que o time faz e, principalmente, o que ele não pode fazer. O limite é a parte que mais melhora o resultado.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-design" data-panel="design">
+              <span class="machine-label">02 / O desenho</span>
+              <h3>Quem entra no time, e por quê</h3>
+              <p><strong>O que acontece:</strong> antes de escrever qualquer arquivo, ele decide a faixa de entrega e a lista de papéis. Saúde é assunto regulado, então a faixa sobe sozinha. Para um time interno de recepção, sem conduta clínica, a faixa padrão costuma ser suficiente.</p>
+              <p><strong>O que sai:</strong> a decisão fica escrita em <code>docs/design-doc.md</code>, com o motivo de cada papel existir. É o documento que você lê se, meses depois, quiser saber por que o time é assim.</p>
+              <p><strong>O que você decide aqui:</strong> se falta um papel, diga agora. Acrescentar depois custa um passo a mais.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-create" data-panel="create">
+              <span class="machine-label">03 / A criação</span>
+              <h3>A pasta nasce, os papéis são escritos</h3>
+              <p><strong>O que acontece:</strong> primeiro o gerador monta a estrutura, de graça. Depois o agente escreve cada papel, que é a parte que exige julgamento.</p>
+              <pre><code>Squad "Clinica Odonto" scaffolded (mode: content)
+Total: 16 items</code></pre>
+              <p><strong>O que sai:</strong> uma pasta completa em <code>.aioson/squads/clinica-odonto/</code>, com um arquivo por papel e a ficha do time preenchida.</p>
+              <p><strong>O que conferir a olho:</strong> abra <code>agents/agents.md</code> e leia as seções do que o time faz e do que ele não faz. Se aquilo não descreve a sua clínica, o resto vai sair errado.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-validate" data-panel="validate">
+              <span class="machine-label">04 / A conferência</span>
+              <h3>O portão roda e devolve um veredito</h3>
+              <pre><code>aioson squad:validate . --squad=clinica-odonto --strict</code></pre>
+              <p><strong>O que sai:</strong> um painel com uma linha por camada. Estas duas são as que interessam a quem não programa.</p>
+              <pre><code>  Structure:        ✅ PASS
+  Executor prompts: 2 measured, ~972 tokens (742–3146 bytes) ✅ PASS</code></pre>
+              <p><strong>Como ler:</strong> a estrutura está completa, dois papéis foram medidos, o menor tem 742 bytes e o maior 3.146. Os dois estão acima do piso de 400 bytes, então nenhum é um rótulo vazio.</p>
+              <p><strong>O veredito final</strong> aparece na última linha do painel. Ele só fica válido quando nenhuma camada tem erro. Um time recém-gerado quase sempre sai inválido na primeira vez, porque a ficha ainda está com os campos de fábrica.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-ruim" data-panel="ruim">
+              <span class="machine-label">05 / O resultado ruim</span>
+              <h3>Quando um papel ficou só com o nome</h3>
+              <p>Nesta execução, um terceiro papel foi acrescentado à mão, com três linhas de texto. O portão reprovou na hora.</p>
+              <pre><code>  Executor prompts: 3 measured, ~980 tokens (30–3146 bytes) ❌ 1 finding(s)
+
+  Errors:
+    ❌ Executor "agendador" is a stub: 30 bytes (&lt; 400)
+       at .aioson/squads/clinica-odonto/agents/agendador.md
+       — a role label is not an executor; write its mission, context,
+       constraints and output contract</code></pre>
+              <p><strong>Como ler:</strong> a palavra <em>stub</em> significa toco, esboço. O arquivo tem 30 bytes onde o mínimo é 400. O caminho do arquivo vem junto, então você sabe exatamente o que abrir.</p>
+              <p><strong>Por que isso importa:</strong> um papel vazio não recusa trabalho e não erra de forma visível. Ele responde de forma genérica, e ninguém percebe que o time nunca foi realmente montado.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-conserto" data-panel="conserto">
+              <span class="machine-label">06 / O conserto</span>
+              <h3>Dois caminhos, conforme o caso</h3>
+              <p><strong>Se o papel existe mas está raso,</strong> peça ao agente para reescrever apenas os papéis fracos. Ele mantém a ficha, os workers e o histórico.</p>
+              <p class="human-voice">“@squad refresh clinica-odonto”</p>
+              <p><strong>Se o papel nem deveria existir assim,</strong> gere um novo já no formato certo, com o comando determinístico.</p>
+              <pre><code>aioson squad:agent-create . --name="agendador" --scope=squad \
+  --squad=clinica-odonto --type=agent --tier=1 \
+  --mission="Organizar a agenda e evitar horários sobrepostos" \
+  --domain="clinica odontologica"</code></pre>
+              <p><strong>Depois de qualquer conserto, rode a conferência de novo.</strong> É a única forma de saber se o erro saiu da lista.</p>
+            </div>
+
+            <div class="stage-panel" id="stage-uso" data-panel="uso">
+              <span class="machine-label">07 / No ar</span>
+              <h3>O time passa a ser usado</h3>
+              <p><strong>O que acontece:</strong> a partir daqui você conversa com os papéis do time, não mais com o montador. O agendamento fala com quem agenda. O orçamento fala com quem explica valores.</p>
+              <p><strong>O que acompanhar:</strong> o estado do time, a nota e o retorno medido.</p>
+              <pre><code>aioson squad:status .
+aioson squad:score . --squad=clinica-odonto
+aioson squad:roi . --sub=report --squad=clinica-odonto</code></pre>
+              <p><strong>O que fazer com o que der errado:</strong> registre como aprendizado do time. Depois de repetir algumas vezes, aquilo pode virar uma regra permanente do time.</p>
+            </div>
+
+          </div>
+          <p class="example-note">Os botões acima trocam apenas a explicação exibida. Sem JavaScript e na impressão, todas as etapas aparecem de uma vez.</p>
+        </div>
+      </section>
+
+      <section id="erros" aria-labelledby="erros-title">
+        <p class="section-number">11 / Quando a tela fica vermelha</p>
+        <h2 id="erros-title">Erros comuns e como ler o resultado</h2>
+        <p>As mensagens do AIOSON vêm em inglês. Isso assusta quem não programa, mas elas seguem sempre o mesmo formato: o que está errado, onde está, e o que fazer. Abaixo estão as oito que mais aparecem, com a tradução do que cada uma quer dizer.</p>
+
+        <details>
+          <summary>Missing required file: agents/agents.md (Agents manifesto)</summary>
+          <p><strong>O que é:</strong> falta um arquivo obrigatório. O manifesto do time é a página que diz qual é a missão, o que o time faz e o que ele não faz.</p>
+          <p><strong>Por que acontece:</strong> a pasta foi montada à mão, ou um arquivo foi movido ou apagado sem querer.</p>
+          <p><strong>Conserto:</strong> peça ao agente um reparo do pacote, com o passo <code>repair</code>. Se o time é novo, o mais rápido é gerar a estrutura de novo com o gerador determinístico, porque ele nunca esquece um arquivo.</p>
+        </details>
+
+        <details>
+          <summary>Executor "x" is a stub: 30 bytes (&lt; 400)</summary>
+          <p><strong>O que é:</strong> um papel que tem nome mas não tem conteúdo. Trinta bytes são cerca de três linhas.</p>
+          <p><strong>Por que acontece:</strong> o papel foi criado à mão, ou a geração foi interrompida antes de escrever o corpo.</p>
+          <p><strong>Conserto:</strong> <code>refresh</code> para reescrever, ou o comando de criar executor para gerar um papel já com missão, contexto, limites e formato de resposta.</p>
+        </details>
+
+        <details>
+          <summary>Executor "x" is thin: 480 bytes (&lt; 600)</summary>
+          <p><strong>O que é:</strong> um aviso, não um erro. O papel existe, mas mal cabe a missão. Ele vai responder de forma genérica.</p>
+          <p><strong>Por que acontece:</strong> o desenho foi feito sem pesquisa do assunto, então não havia vocabulário para escrever.</p>
+          <p><strong>Conserto:</strong> pedir uma investigação do domínio antes de reescrever. Um papel sem fontes é preenchido com achismo.</p>
+        </details>
+
+        <details>
+          <summary>Executor "x" still carries placeholder text (TODO)</summary>
+          <p><strong>O que é:</strong> sobrou marca de rascunho no papel. Além de TODO, valem FIXME, TBD, lorem ipsum e trechos entre colchetes pedindo preenchimento.</p>
+          <p><strong>Por que acontece:</strong> o modelo de arquivo foi copiado e a parte que era para ser substituída não foi.</p>
+          <p><strong>Conserto:</strong> abrir o arquivo indicado e escrever o que falta. O caminho completo vem na mensagem.</p>
+        </details>
+
+        <details>
+          <summary>Latest eval report is stale for the current manifest</summary>
+          <p><strong>O que é:</strong> a última avaliação de qualidade é mais antiga que a versão atual do time. Traduzindo, o time mudou depois que foi avaliado.</p>
+          <p><strong>Por que acontece:</strong> você acrescentou ou reescreveu um papel e não rodou a avaliação de novo.</p>
+          <p><strong>Conserto:</strong> rodar a avaliação outra vez. Times permanentes e times de assunto regulado precisam de uma avaliação aprovada e atual.</p>
+        </details>
+
+        <details>
+          <summary>Premium readiness requires researchPolicy.policy</summary>
+          <p><strong>O que é:</strong> o time está numa faixa exigente e não declarou como lida com pesquisa externa. O sistema não aceita silêncio nesse ponto.</p>
+          <p><strong>Por que acontece:</strong> a faixa premium ou regulada foi escolhida, mas a política de pesquisa não foi preenchida.</p>
+          <p><strong>Conserto:</strong> ou declarar que o time trabalha em mundo fechado, sem pesquisa externa, ou nomear quem no time é responsável por buscar fatos atuais. A própria mensagem sugere o mundo fechado quando pesquisa não se aplica.</p>
+        </details>
+
+        <details>
+          <summary>Invalid locale_scope: "pt_BR"</summary>
+          <p><strong>O que é:</strong> o campo que diz para qual idioma ou país o time serve foi escrito no formato errado. O separador correto é o traço, não o sublinhado.</p>
+          <p><strong>Por que acontece:</strong> hábito de outro sistema. O formato aceito é <code>universal</code> ou algo como <code>pt-BR</code>.</p>
+          <p><strong>Conserto:</strong> corrigir o valor na ficha do time. Se o time é específico de um país, escreva também o motivo, senão aparece um aviso pedindo essa justificativa.</p>
+        </details>
+
+        <details>
+          <summary>Squad "x" has no pilot block; run @squad pilot x first</summary>
+          <p><strong>O que é:</strong> você tentou aprovar um piloto que ainda não existe.</p>
+          <p><strong>Por que acontece:</strong> a aprovação foi pedida antes de a entrega de vitrine ser produzida.</p>
+          <p><strong>Conserto:</strong> peça o passo <code>pilot</code> ao agente, olhe o resultado e só então aprove. Se o time é só de conteúdo ou só de pesquisa, ele deve registrar que o piloto não se aplica, em vez de produzir um.</p>
+        </details>
+
+        <div class="callout"><p class="machine-label">Como ler qualquer mensagem</p><p>Erros começam com o símbolo de reprovado e impedem o time de ser considerado pronto. Avisos começam com o símbolo de atenção e não impedem nada, mas quase sempre indicam onde o time vai decepcionar primeiro.</p></div>
+      </section>
+
+      <section id="checklist" aria-labelledby="checklist-title">
+        <p class="section-number">12 / Antes de dizer que está pronto</p>
+        <h2 id="checklist-title">O checklist do leigo</h2>
+        <p>Onze itens. Se todos estiverem marcados, o seu time está em condições de ser usado de verdade. Clique em cada linha para marcar. A marcação fica salva neste navegador.</p>
+        <ul class="done-list" id="done-list">
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>A missão do time cabe em uma frase.</strong> Se você precisa de um parágrafo para explicar para que ele serve, provavelmente são dois times.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>O que o time não faz está escrito.</strong> Abra o manifesto e confira a seção dos limites. Ela vale mais que a lista do que ele faz.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>A faixa de entrega descreve o seu caso.</strong> Assunto regulado nunca entra na faixa descartável.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Cada papel tem missão, limites e formato de resposta.</strong> As três seções básicas. A validação avisa quando falta alguma.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Nenhum papel tem menos de 400 bytes.</strong> A validação estrita reprova, e com razão.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Nenhum papel passa de 16.000 bytes.</strong> Passou disso, mova a parte de consulta para a pasta de conhecimento carregado sob demanda.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Dois papéis não fazem a mesma coisa.</strong> A validação aponta papéis quase iguais. Junte ou diferencie.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Tudo que é mecânico virou worker.</strong> Cada tarefa repetida que sobrou num executor é dinheiro saindo em toda conversa.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>A validação estrita passou sem erros.</strong> Avisos podem ficar. Erros, não.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>A avaliação de qualidade está atual.</strong> Se você mexeu no time depois dela, rode de novo.</span></button></li>
+          <li><button type="button" class="done-item" aria-pressed="false"><span class="done-box" aria-hidden="true">✓</span><span class="done-text"><strong>Você olhou o piloto com os próprios olhos.</strong> Quando o time entrega software, a aprovação é sua e de mais ninguém.</span></button></li>
+        </ul>
+        <p class="done-progress"><span id="done-count">0 de 11 itens marcados</span><button type="button" id="done-reset">limpar</button></p>
+        <p class="example-note">A marcação fica apenas neste navegador. Ela não é enviada a lugar nenhum e não faz parte do seu projeto.</p>
+      </section>
+
+      <section id="glossario" aria-labelledby="glossario-title">
+        <p class="section-number">13 / Sem decorar jargão</p>
+        <h2 id="glossario-title">Glossário e dúvidas comuns</h2>
+        <h3>Como começar uma conversa</h3>
+        <div class="request-list">
+          <div><h3>Se você quer um time novo</h3><p>“@squad Preciso de um time para atender uma clínica odontológica. Agendamento, orçamento e pós-consulta. Sem diagnóstico e sem falar de medicamento.”</p></div>
+          <div><h3>Se o time já existe e responde raso</h3><p>“@squad refresh clinica-odonto. Os papéis estão genéricos demais e recusam perguntas simples.”</p></div>
+          <div><h3>Se algo parou de funcionar</h3><p>“@squad repair clinica-odonto. Rode a conferência antes e me mostre exatamente quais erros apareceram.”</p></div>
+          <div><h3>Se você quer entender o time que herdou</h3><p>“@squad analyze clinica-odonto. Explique quem faz o quê e onde ele está fraco.”</p></div>
+        </div>
+        <h3>Glossário de bolso</h3>
+        <dl class="glossary">
+          <dt>Squad</dt><dd>Um time de assistentes especializados, empacotado em uma pasta do projeto.</dd>
+          <dt>Executor</dt><dd>Um papel escrito em texto, executado por inteligência artificial.</dd>
+          <dt>Worker</dt><dd>Um script determinístico, sem inteligência artificial, para tarefas mecânicas.</dd>
+          <dt>Slug</dt><dd>Um apelido curto, sem espaços nem acentos, que identifica o time nos comandos.</dd>
+          <dt>Manifesto</dt><dd>O arquivo que descreve missão, limites e membros do time em linguagem comum.</dd>
+          <dt>Ficha do time</dt><dd>O arquivo lido por máquina, com todos os campos que os portões conferem.</dd>
+          <dt>Faixa de entrega</dt><dd>Quanto rigor o time precisa provar antes de ser considerado pronto.</dd>
+          <dt>Portão</dt><dd>Uma conferência automática com resposta de passou ou não passou.</dd>
+          <dt>Token</dt><dd>A unidade de cobrança da inteligência artificial. Cerca de quatro letras.</dd>
+          <dt>Stub</dt><dd>Um arquivo que existe mas está praticamente vazio.</dd>
+          <dt>Piloto</dt><dd>Uma entrega de vitrine, feita para você julgar o padrão do time.</dd>
+          <dt>Genoma</dt><dd>Uma camada de conhecimento reaproveitável, aplicada a um ou mais papéis.</dd>
+          <dt>Daemon</dt><dd>Um processo que fica ligado em segundo plano, esperando algo acontecer.</dd>
+          <dt>Estrito</dt><dd>Modo de conferência em que avisos importantes passam a reprovar.</dd>
+        </dl>
+        <h3>Dúvidas comuns</h3>
+        <details><summary>Preciso saber programar para montar um squad?</summary><p>Não para montar e usar. Você conversa em linguagem comum e o agente escreve os arquivos. Saber ler as mensagens dos portões ajuda muito, e é justamente por isso que o capítulo 11 existe.</p></details>
+        <details><summary>Quantos membros um time deve ter?</summary><p>Tantos quantos existirem papéis realmente diferentes. Dois papéis quase iguais recebem um aviso na validação, porque cada papel a mais custa tokens sem acrescentar competência.</p></details>
+        <details><summary>Um squad é a mesma coisa que os agentes que já vêm no AIOSON?</summary><p>Não. Os agentes de fábrica cuidam do fluxo de construção de software. Um squad é um time que você cria para o seu assunto, que pode não ter nada a ver com software.</p></details>
+        <details><summary>Se a validação passou, o time está bom?</summary><p>Não necessariamente. A validação prova que o pacote está bem formado e que os papéis foram escritos com densidade. Ela não sabe se o conteúdo está certo. Quem mede isso é a avaliação de qualidade, e mesmo ela só cobre os casos previstos.</p></details>
+        <details><summary>Posso aprovar o piloto pedindo ao agente?</summary><p>Não. A aprovação do piloto é exclusivamente do usuário. Um agente não aprova a própria entrega de vitrine, e o comando é recusado quando parte dele.</p></details>
+        <details><summary>Vale a pena montar um squad para uma tarefa única?</summary><p>Raramente. O ganho vem da repetição. Para uma tarefa que acontece uma vez, converse direto com o agente adequado. Se você insistir num time descartável, use a faixa rápida e registre que ele é temporário.</p></details>
+        <details><summary>Levar o time para outro projeto perde alguma coisa?</summary><p>A exportação leva o pacote, não os resultados. Trabalho de cliente, registros de execução e imagens ficam para trás de propósito, porque moram fora da pasta do time.</p></details>
+      </section>
+
+      <section id="fontes" aria-labelledby="fontes-title">
+        <p class="section-number">14 / Uma fotografia do sistema atual</p>
+        <h2 id="fontes-title">Data, versão e fontes desta edição</h2>
+        <div class="edition-card"><dl>
+          <dt>Data da análise</dt><dd><time datetime="2026-09-11">11 de setembro de 2026</time></dd>
+          <dt>Versão do AIOSON</dt><dd>1.66.0, conforme o package.json do repositório analisado.</dd>
+          <dt>Base examinada</dt><dd>Checkout local do repositório, com alterações locais preexistentes. Esta edição descreve essa base e não afirma equivalência automática com uma publicação no npm.</dd>
+          <dt>Comandos conferidos</dt><dd>Os comandos citados foram executados contra um squad de teste criado numa pasta temporária fora do repositório, e os textos de saída reproduzidos aqui são reais. Ficaram de fora da execução os que abrem processos em segundo plano ou publicam para terceiros, citados apenas pelo nome e pela finalidade.</dd>
+          <dt>Identidade visual</dt><dd>Tinta &amp; Ouro / Porcelana. Mesmos tokens e linguagem de leitura dos tutoriais de memória e de SDD.</dd>
+          <dt>Natureza do exemplo</dt><dd>A clínica odontológica é um cenário de ensino. Nenhum atendimento real foi feito e nenhuma mensagem foi enviada a pacientes.</dd>
+        </dl></div>
+        <h3>Como as informações foram conferidas</h3>
+        <p>O tutorial anterior foi usado apenas para localizar assuntos. O funcionamento descrito veio da execução dos comandos e da leitura dos contratos vigentes. Números de custo em tokens foram medidos com o comando de pré-voo neste repositório e podem variar conforme o projeto, porque medem o tamanho real dos documentos instalados.</p>
+        <ul class="source-list">
+          <li><a href="../../.aioson/agents/squad.md">Contrato do agente de squads</a> e <a href="../../.aioson/docs/squad/package-contract.md">contrato do pacote</a>.</li>
+          <li><a href="../../.aioson/docs/squad/creation-flow.md">Faixas de entrega e fluxo de criação</a>.</li>
+          <li><a href="../../src/lib/squad-executor-lint.js">Medição do corpo dos executores</a>, com os limites de 400, 600 e 16.000 bytes.</li>
+          <li><a href="../../src/lib/squad-preflight.js">Pré-voo de custo</a> e <a href="../../src/commands/squad-scaffold.js">gerador determinístico do pacote</a>.</li>
+          <li><a href="../../src/commands/squad-validate.js">Validação</a>, <a href="../../src/commands/squad-eval.js">avaliação de qualidade</a> e <a href="../../src/artifact-kinds.js">conferência automática no fim da sessão</a>.</li>
+          <li><a href="../../package.json">Versão local do framework</a>.</li>
+        </ul>
+        <p class="source-note">Os links de código são relativos ao repositório. Se apenas a pasta de tutoriais for publicada, essas fontes precisam ser disponibilizadas à parte. A leitura desta página não depende de nenhum serviço externo.</p>
+        <div class="signature"><span class="machine-label">Análise e redação</span><strong>AIOSON</strong><p>11/09/2026 · versão 1.66.0<br>Explicação em linguagem simples, baseada nos comandos executados e nos contratos disponíveis nesta edição.</p></div>
+      </section>
+
+    </article>
+  </div>
 </main>
-
-<!-- ═══════════════════════════════════════════════════════ DIALOGS (popovers) -->
-
-<dialog class="popover" id="dlg-create">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent); border-color:color-mix(in srgb, var(--accent) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 1 · 6 comandos</div><div class="dlg-title">Criar (compose)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Composição do squad: scaffolding inicial, criação de agentes customizados, planejamento de pipeline, mapeamento de dependências, card de apresentação e validação do manifesto.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:scaffold</div><div class="cmd-title">Estrutura inicial</div><div class="cmd-desc">Cria <code>.aioson/squads/{slug}/</code> com manifest, contracts, executors vazios, README.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:agent-create</div><div class="cmd-title">Agente customizado</div><div class="cmd-desc"><code>--type=agent|assistant|clone|worker --tier=0|1|2|3 --disc=&lt;profile&gt;</code>. Opcional <code>--with-infra</code> cria scaffold de workers.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:plan</div><div class="cmd-title">Plano de execução</div><div class="cmd-desc">Gera plan.json do squad: ordem dos agentes, gates internos, dependências, tier mapping.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:dependency-graph</div><div class="cmd-title">Grafo de dependências</div><div class="cmd-desc">Visualiza quem chama quem dentro do squad. Detecta ciclos. Usa antes de daemon.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:card</div><div class="cmd-title">Card público</div><div class="cmd-desc">Gera card de apresentação do squad pra marketplace/registry. Title, summary, capabilities.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:validate</div><div class="cmd-title">Schema check</div><div class="cmd-desc">Valida manifest, schemas, dependency graph e contratos. Quebra cedo — antes do daemon.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">criar</span><button class="terminal-copy" type="button" data-copy="aioson squad:scaffold . --name=dev-team --domain=software&#10;aioson squad:agent-create . --squad=dev-team --name=tech-lead --type=agent --tier=2 --disc=D --mission='Architect decisions'&#10;aioson squad:validate . --squad=dev-team&#10;aioson squad:dependency-graph . --squad=dev-team">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:scaffold</span> . <span class="term-flag">--name</span>=dev-team <span class="term-flag">--domain</span>=software</span>
-<span class="term-line"><span class="term-ok">✓</span> .aioson/squads/dev-team/ created · 0 agents · manifest seeded</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:agent-create</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--name</span>=tech-lead <span class="term-flag">--type</span>=agent <span class="term-flag">--tier</span>=2</span>
-<span class="term-line"><span class="term-ok">✓</span> agent tech-lead added · DISC=D · tier 2</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:validate</span> . <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-ok">✓</span> manifest valid · 1 agent · 0 unresolved deps</span>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-run">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6,4 20,12 6,20"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 2 · 6 comandos</div><div class="dlg-title">Executar (run)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Tudo de execução: daemon (long-running), autorun (one-shot), workers individuais, processos rodando, worktrees git paralelas, e recovery de crashes.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:daemon</div><div class="cmd-title">Long-running daemon</div><div class="cmd-desc"><code>--sub=start|status|stop|logs</code>. Escuta bus + webhook, distribui tasks pros workers. Porta padrão 4180.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:autorun</div><div class="cmd-title">One-shot execution</div><div class="cmd-desc">Roda o squad inteiro até completar a task atual, sem ficar de daemon. Bom pra CI.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:worker</div><div class="cmd-title">Worker individual</div><div class="cmd-desc"><code>--sub=list|run|test|logs|scaffold</code>. Roda 1 worker isolado pra debug ou tarefa pontual.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:processes</div><div class="cmd-title">Inspect processos</div><div class="cmd-desc">Lista todos os processos do squad ativo (daemon, workers, MCP). PID, memória, uptime.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:worktrees</div><div class="cmd-title">Git worktrees paralelas</div><div class="cmd-desc">Cria worktrees git pra cada lane do squad rodar isolada. Evita conflito de branch.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:recovery</div><div class="cmd-title">Recovery após crash</div><div class="cmd-desc">Restaura estado do squad a partir do último checkpoint válido. Limpa locks órfãos.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">executar</span><button class="terminal-copy" type="button" data-copy="aioson squad:daemon . --sub=start --squad=dev-team&#10;aioson squad:processes . --squad=dev-team&#10;aioson squad:worker . --sub=logs --squad=dev-team --worker=ci-runner">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:daemon</span> . <span class="term-flag">--sub</span>=start <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-ok">✓</span> daemon · pid 12847 · listening on :4180</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:processes</span> . <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-out-key">daemon</span>: 12847 · <span class="term-out-key">workers</span>: 12849 (ci-runner), 12851 (linter) · <span class="term-out-key">mcp</span>: 12853</span>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-orch">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M8 18h8M6 8v8M18 8v8"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 3 · 7 comandos</div><div class="dlg-title">Coordenar (orchestrate)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Comunicação interna (bus) e externa (webhook), merging de output de várias lanes, deploy do squad inteiro, pipelines pré-definidos, ciclo de aprendizado e review entre agentes.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:bus</div><div class="cmd-title">Mensagens intra-squad</div><div class="cmd-desc">Dispatch de mensagens entre agentes do squad. <code>--to=&lt;agent&gt; --message=&lt;text&gt;</code>. Substituto moderno do mailbox.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:webhook</div><div class="cmd-title">Webhooks externos</div><div class="cmd-desc">Recebe POSTs externos (GitHub, Slack, etc) e dispara tasks no squad. URL emitida pelo daemon.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:merge</div><div class="cmd-title">Merge de output</div><div class="cmd-desc">Combina output de várias lanes paralelas em um único resultado. Strategies: concat, dedup, vote.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:deploy</div><div class="cmd-title">Deploy do squad</div><div class="cmd-desc">Empacota o squad inteiro e deploya em um ambiente alvo (cloud, server, etc). Versioned.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:pipeline</div><div class="cmd-title">Pipelines nomeadas</div><div class="cmd-desc"><code>--sub=list|show|status --pipeline=&lt;slug&gt;</code>. Pipelines pré-configuradas dentro do squad.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:learning</div><div class="cmd-title">Ciclo de aprendizado</div><div class="cmd-desc">Roda o learning loop interno do squad: distillation de tasks recentes em rules/brains próprias.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:review</div><div class="cmd-title">Review entre agentes</div><div class="cmd-desc">Faz um agente revisar output de outro antes de aprovar. Útil pra QA automation interno.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">coordenar</span><button class="terminal-copy" type="button" data-copy="aioson squad:bus . --squad=dev-team --to=tech-lead --message='New ticket: optimize query in /reports'&#10;aioson squad:pipeline . --sub=show --squad=dev-team --pipeline=ci-on-pr&#10;aioson squad:learning . --squad=dev-team">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:bus</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--to</span>=tech-lead <span class="term-flag">--message</span>=<span class="term-str">'New ticket: optimize query'</span></span>
-<span class="term-line"><span class="term-ok">✓</span> message id=msg-abc · dispatched · awaiting ack</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:pipeline</span> . <span class="term-flag">--sub</span>=show <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--pipeline</span>=ci-on-pr</span>
-<span class="term-line"><span class="term-out-key">stages</span>: lint → tests → security-audit → deploy-preview</span>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-share">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8h16v-8M12 4v12M8 8l4-4 4 4"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 4 · 6 comandos</div><div class="dlg-title">Distribuir (share)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Publicar squads no registry da nuvem, instalar squads de outros, dar acesso via grant, exportar snapshot local, reparar genomes corrompidos, listar squads disponíveis.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:publish</div><div class="cmd-title">Publicar no registry</div><div class="cmd-desc"><code>--bundle-skills=a,b --bundle-genomes=a,b --version=1.0.0 [--private] [--paid]</code>. Versionado.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:install</div><div class="cmd-title">Instalar squad</div><div class="cmd-desc"><code>&lt;code-or-slug&gt; [--email]</code>. Baixa do registry e configura local. Para squads pagos: email + grant.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:grant</div><div class="cmd-title">Conceder acesso</div><div class="cmd-desc"><code>&lt;code&gt; &lt;email&gt;</code>. Owner concede acesso a um squad pago para um usuário específico.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:export</div><div class="cmd-title">Snapshot local</div><div class="cmd-desc">Exporta squad em tar.gz para distribuição manual ou backup. Inclui manifests, brains, contracts.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:repair-genomes</div><div class="cmd-title">Reparar genomes</div><div class="cmd-desc"><code>&lt;manifest.json&gt;</code>. Repara genomes do squad com schema antigo ou paths quebrados. Backup automático.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:list</div><div class="cmd-title">Listar squads</div><div class="cmd-desc"><code>[--remote]</code>. Lista squads locais ou navega no registry remoto.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">distribuir</span><button class="terminal-copy" type="button" data-copy="aioson squad:list . --remote&#10;aioson squad:install . marketing-pro --email=user@example.com&#10;aioson squad:publish . --slug=dev-team --version=1.0.0 --private">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:list</span> . <span class="term-flag">--remote</span></span>
-<span class="term-line"><span class="term-out-key">found</span>: 47 squads · 12 free · 35 paid</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:install</span> . marketing-pro <span class="term-flag">--email</span>=user@example.com</span>
-<span class="term-line"><span class="term-ok">✓</span> installed marketing-pro@2.1.0 · 4 agents · 3 genomes bundled</span>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-monitor">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:#ff6ba4; border-color:rgba(255,107,164,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 14l3-4 3 2 4-5"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 5 · 6 comandos</div><div class="dlg-title">Observar (monitor)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Dashboard web em real-time, status snapshot, doctor com auto-fix, scoring de tasks, ROI tracking com métricas customizadas, e investigações estruturadas.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:dashboard</div><div class="cmd-title">Dashboard web</div><div class="cmd-desc"><code>--port=4180 --squad=&lt;slug&gt;</code>. Telemetria em real-time: tasks, mensagens, ROI, processos.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:status</div><div class="cmd-title">Status snapshot</div><div class="cmd-desc">CLI snapshot: daemon up, agents idle/busy, queue depth, last task. Ideal para preflight.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:doctor</div><div class="cmd-title">Health check</div><div class="cmd-desc"><code>--stale-minutes=5</code>. Detecta workers stale, locks órfãos, dependências quebradas. Sugere fixes.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:score</div><div class="cmd-title">Score de tasks</div><div class="cmd-desc">Pontua tasks executadas por métricas configuráveis. Persistido em runtime SQLite para histórico.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:roi</div><div class="cmd-title">ROI tracking</div><div class="cmd-desc"><code>--sub=config|metric|report|export --key=&lt;m&gt; --value=&lt;n&gt;</code>. Métricas próprias: tokens, $, tempo, leads.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:investigate</div><div class="cmd-title">Investigações</div><div class="cmd-desc"><code>--sub=list|show|score|link|register --investigation=&lt;slug&gt;</code>. Issues, RCAs, post-mortems do squad.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">observar</span><button class="terminal-copy" type="button" data-copy="aioson squad:status . --squad=dev-team&#10;aioson squad:dashboard . --squad=dev-team --port=4180&#10;aioson squad:roi . --sub=report --squad=dev-team">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:status</span> . <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-out-key">daemon</span>: up (2h 14m) · <span class="term-out-key">workers</span>: 3 idle, 1 busy · <span class="term-out-key">queue</span>: 0</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:roi</span> . <span class="term-flag">--sub</span>=report <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-out-key">last 7d</span> · tasks: 142 · tokens: 1.8M · cost: $42.30 · avg_time: 2.4min</span>
-      </div>
-    </div>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-extend">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:#22d3ee; border-color:rgba(34,211,238,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6M4.9 4.9l4.2 4.2M19.1 19.1l-4.2-4.2M4.9 19.1l4.2-4.2M19.1 4.9l-4.2 4.2"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">Categoria 6 · 3 comandos</div><div class="dlg-title">Estender (extend)</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">MCP (Model Context Protocol) servers integrados ao squad pra acessar ferramentas externas (filesystem, GitHub, Notion, etc) e tools customizadas registráveis. Esta é a camada de extensibilidade.</p>
-    <div class="cmd-grid">
-      <div class="cmd-card"><div class="cmd-name">aioson squad:mcp</div><div class="cmd-title">MCP server manager</div><div class="cmd-desc"><code>--sub=status|connectors|configure|test --mcp=&lt;slug&gt;</code>. Gerencia servers MCP do squad.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:mcp:call</div><div class="cmd-title">Chamar tool MCP</div><div class="cmd-desc">Invoca uma tool específica de um connector MCP do squad. Testa integração antes de wire no agente.</div></div>
-      <div class="cmd-card"><div class="cmd-name">aioson squad:tool:register</div><div class="cmd-title">Registrar tool custom</div><div class="cmd-desc">Registra função customizada (JS/Python/shell) como tool acessível pelos agentes do squad.</div></div>
-    </div>
-    <div class="terminal-card">
-      <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">estender</span><button class="terminal-copy" type="button" data-copy="aioson squad:mcp . --sub=status --squad=dev-team&#10;aioson squad:mcp:call . --squad=dev-team --mcp=github --tool=create_issue --params='{...}'&#10;aioson squad:tool:register . --squad=dev-team --tool=deploy-preview --executor=shell">Copiar</button></div>
-      <div class="terminal-body">
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:mcp</span> . <span class="term-flag">--sub</span>=status <span class="term-flag">--squad</span>=dev-team</span>
-<span class="term-line"><span class="term-out-key">connectors</span>: github (✓), notion (✓), slack (offline)</span>
-<span class="term-line"><span class="term-prompt">$</span> <span class="term-cmd">aioson squad:tool:register</span> . <span class="term-flag">--squad</span>=dev-team <span class="term-flag">--tool</span>=deploy-preview <span class="term-flag">--executor</span>=shell</span>
-<span class="term-line"><span class="term-ok">✓</span> tool deploy-preview registered · available to all agents</span>
-      </div>
-    </div>
-  </div>
-</dialog>
+<footer class="site-footer"><div class="staff" aria-hidden="true"></div><p>AIOSON · Squads · Um time de agentes, montado para o seu trabalho.</p><p>Os papéis explicam quem faz o quê. Os portões impedem que um time pela metade seja chamado de pronto.</p><a href="../index.html">← Todos os tutoriais</a> · <a href="../sdd/index.html">Da ideia à entrega →</a></footer>
 
 <script>
-  // Theme toggle
-  (function () {
-    const root = document.documentElement;
-    const toggle = document.querySelector('[data-theme-toggle]');
-    if (!toggle) return;
-    try {
-      const saved = localStorage.getItem('aioson-theme');
-      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
-    } catch (e) {}
-    const sync = () => {
-      const t = root.getAttribute('data-theme') || 'dark';
-      const moon = toggle.querySelector('.cmd-theme-moon');
-      const sun  = toggle.querySelector('.cmd-theme-sun');
-      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
-      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
-    };
-    sync();
-    toggle.addEventListener('click', () => {
-      const current = root.getAttribute('data-theme') || 'dark';
-      const next = current === 'light' ? 'dark' : 'light';
-      root.setAttribute('data-theme', next);
-      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
-      sync();
+'use strict';
+
+const root = document.documentElement;
+const themeToggle = document.getElementById('theme-toggle');
+const printButton = document.getElementById('print-page');
+const themeKey = 'aioson-squads-theme';
+
+function applyTheme(theme) {
+  const light = theme === 'light';
+  root.dataset.theme = light ? 'light' : 'dark';
+  themeToggle.textContent = light ? 'Tema: Porcelana' : 'Tema: Tinta';
+  themeToggle.setAttribute('aria-pressed', String(light));
+  themeToggle.setAttribute('aria-label', light ? 'Ativar tema Tinta' : 'Ativar tema Porcelana');
+}
+
+try { applyTheme(localStorage.getItem(themeKey)); } catch { applyTheme('dark'); }
+themeToggle.hidden = false;
+themeToggle.addEventListener('click', () => {
+  applyTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+  try { localStorage.setItem(themeKey, root.dataset.theme); } catch { /* O tema continua utilizável sem armazenamento. */ }
+});
+
+const journey = document.querySelector('.journey');
+const controls = document.querySelector('.journey-controls');
+const panels = [...document.querySelectorAll('[data-panel]')];
+
+function selectStage(stage) {
+  if (!panels.some((panel) => panel.dataset.panel === stage)) return;
+  panels.forEach((panel) => { panel.hidden = panel.dataset.panel !== stage; });
+  controls.querySelectorAll('[data-stage]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.stage === stage));
+  });
+}
+
+if (journey && controls && panels.length > 0) {
+  selectStage('fala');
+  controls.hidden = false;
+  journey.dataset.enhanced = 'true';
+  controls.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-stage]');
+    if (button && controls.contains(button)) selectStage(button.dataset.stage);
+  });
+}
+
+const doneList = document.getElementById('done-list');
+if (doneList) {
+  const doneKey = 'aioson-squads-checklist';
+  const items = [...doneList.querySelectorAll('.done-item')];
+  const counter = document.getElementById('done-count');
+  const resetButton = document.getElementById('done-reset');
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(doneKey) || '{}') || {}; } catch { state = {}; }
+
+  function renderChecklist() {
+    let marked = 0;
+    items.forEach((item, index) => {
+      const checked = state[index] === true;
+      item.setAttribute('aria-pressed', checked ? 'true' : 'false');
+      if (checked) marked += 1;
     });
-  })();
+    if (counter) counter.textContent = marked + ' de ' + items.length + ' itens marcados';
+  }
 
-  // Sticky dock scroll feedback
-  (function () {
-    const wrap = document.getElementById('dock-wrap');
-    if (!wrap) return;
-    const update = () => {
-      if (window.scrollY > 8) wrap.classList.add('is-scrolled');
-      else wrap.classList.remove('is-scrolled');
-    };
-    update();
-    window.addEventListener('scroll', update, { passive: true });
-  })();
+  items.forEach((item, index) => {
+    item.addEventListener('click', () => {
+      state[index] = !(state[index] === true);
+      try { localStorage.setItem(doneKey, JSON.stringify(state)); } catch { /* A marcação some ao fechar, sem quebrar a página. */ }
+      renderChecklist();
+    });
+  });
 
-  // Dialogs
-  (function () {
-    document.querySelectorAll('[data-dialog]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.dialog;
-        const dlg = document.getElementById(id);
-        if (!dlg) return;
-        if (typeof dlg.showModal === 'function') dlg.showModal();
-        else dlg.setAttribute('open', '');
-        document.body.style.overflow = 'hidden';
+  if (resetButton) resetButton.addEventListener('click', () => {
+    state = {};
+    try { localStorage.setItem(doneKey, '{}'); } catch { /* Nada a persistir. */ }
+    renderChecklist();
+  });
+
+  renderChecklist();
+}
+
+const navigationLinks = [...document.querySelectorAll('.sidebar a[href^="#"]')];
+if ('IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      navigationLinks.forEach((link) => {
+        if (link.hash === '#' + entry.target.id) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
       });
     });
-    document.querySelectorAll('dialog.popover').forEach((dlg) => {
-      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-      dlg.addEventListener('close', () => { document.body.style.overflow = ''; });
-      dlg.querySelectorAll('[data-dialog-close]').forEach((btn) => { btn.addEventListener('click', () => dlg.close()); });
-    });
-  })();
+  }, { rootMargin: '-15% 0px -65% 0px', threshold: 0 });
+  document.querySelectorAll('.article > section').forEach((section) => observer.observe(section));
+}
 
-  // Copy buttons
-  (function () {
-    if (!navigator.clipboard) return;
-    document.querySelectorAll('[data-copy]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
-        navigator.clipboard.writeText(text).then(() => {
-          const original = btn.textContent;
-          btn.textContent = 'copiado ✓';
-          btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
-        });
-      });
-    });
-  })();
+let printState = null;
+window.addEventListener('beforeprint', () => {
+  if (printState !== null) return;
+  printState = {
+    collapsed: [...document.querySelectorAll('details:not([open])')],
+    hiddenPanels: panels.filter((panel) => panel.hidden)
+  };
+  printState.collapsed.forEach((detail) => { detail.open = true; });
+  panels.forEach((panel) => { panel.hidden = false; });
+});
+window.addEventListener('afterprint', () => {
+  if (printState === null) return;
+  printState.collapsed.forEach((detail) => { detail.open = false; });
+  printState.hiddenPanels.forEach((panel) => { panel.hidden = true; });
+  printState = null;
+});
+printButton.hidden = false;
+printButton.addEventListener('click', () => window.print());
 </script>
-
 </body>
 </html>

@@ -10,6 +10,7 @@ const {
 const { inspectOutputPolicy } = require('../squad/output-policy');
 const { isValidSlug } = require('../dossier/schema');
 const { analyzeGenomeApprovals } = require('../lib/genome-approval-lint');
+const { analyzeSquadExecutors } = require('../lib/squad-executor-lint');
 const { resolveTargetDir } = require('../lib/project-root');
 
 async function pathExists(targetPath) {
@@ -439,6 +440,19 @@ async function runSquadValidate({ args = [], options = {}, logger = console } = 
   const approvals = analyzeGenomeApprovals({ targetDir: projectDir, squadSlug: slug });
   allWarnings.push(...approvals.issues, ...approvals.warnings);
 
+  // Layer 6: executor bodies and worker entrypoints, measured. Layers 1-5 only
+  // proved the executor files EXIST; a 273-byte role stub, placeholder text or
+  // two executors that read alike all passed. Provable findings (stub, placeholder)
+  // are errors under --strict, warnings otherwise; taste-adjacent findings
+  // (missing section, bloat, near-duplicates, argv-only workers) stay advisory.
+  const executors = analyzeSquadExecutors({ targetDir: projectDir, slug, manifest });
+  if (strict) {
+    allErrors.push(...executors.issues);
+  } else {
+    allWarnings.push(...executors.issues);
+  }
+  allWarnings.push(...executors.warnings);
+
   const premium = strict
     ? await validatePremiumManifest(projectDir, slug, manifest, {
       skipEval: options.skipEval === true || options.skipEval === 'true'
@@ -463,6 +477,7 @@ async function runSquadValidate({ args = [], options = {}, logger = console } = 
     logger.log(`  Semantics:        ${semantics.errors.length === 0 ? (semantics.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
     logger.log(`  Semantic deep:    ${semanticDeep.errors.length === 0 ? (semanticDeep.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
     logger.log(`  Genome approvals: ${approvals.metrics.approvals === 0 ? '\u2014 none recorded' : (approvals.issues.length === 0 ? '\u2705 PASS' : `\u26a0\ufe0f  ${approvals.issues.length} finding(s), ${approvals.metrics.stale} stale`)}`);
+    logger.log(`  Executor prompts: ${executors.metrics.measured} measured, ~${executors.metrics.estimatedTokens} tokens (${executors.metrics.minBytes}\u2013${executors.metrics.maxBytes} bytes)${executors.issues.length > 0 ? ` \u274c ${executors.issues.length} finding(s)` : (executors.warnings.length > 0 ? ` \u26a0\ufe0f  ${executors.warnings.length} advisory` : ' \u2705 PASS')}`);
     if (strict) {
       logger.log(`  Premium gate:     ${premium.errors.length === 0 ? (premium.warnings.length > 0 ? '\u26a0\ufe0f  WARNINGS' : '\u2705 PASS') : '\u274c FAIL'}`);
     }
@@ -502,6 +517,7 @@ async function runSquadValidate({ args = [], options = {}, logger = console } = 
       stale: approvals.metrics.stale,
       findings: approvals.issues
     },
+    executors: executors.metrics,
     errors: allErrors,
     warnings: allWarnings,
     status

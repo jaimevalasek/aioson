@@ -19,12 +19,7 @@
 4. If validation fails: emit ERROR with the missing field and a suggestion.
 
 ### Layer 2 - Structural Validation
-Verify that these exist:
-- `.aioson/squads/<slug>/squad.manifest.json` (required)
-- `.aioson/squads/<slug>/agents/agents.md` (required)
-- `.aioson/squads/<slug>/agents/orquestrador.md` (required)
-- For each executor in `manifest.executors`: referenced file exists
-- Directories: `output/<slug>/`, `aioson-logs/<slug>/`
+Verify that the required files and directories in `package-contract.md` § "Non-negotiable package shape" exist, that every `manifest.executors[]` entry's referenced file exists, and that `output/<slug>/` and `aioson-logs/<slug>/` are present.
 
 ### Layer 3 - Semantic Validation
 - Manifest slug matches directory name.
@@ -43,6 +38,9 @@ With `--strict`, also verify:
 - every genome binding has compiled effect and compilation identity
 - the evaluation contract has source criteria and held-out cases
 - persistent/regulatory squads have a current PASS eval for the current manifest
+
+### Layer 6 - Executor Bodies
+`squad:validate` also measures the executor prompts themselves, not only that their files exist. A prompt below the size floor (a role label, not an executor) or carrying placeholder text (TODO/FIXME/TBD/lorem ipsum) is an ERROR under `--strict` and a WARNING otherwise; a thin or bloated prompt, a missing core section (mission / hard constraints / output contract), near-duplicate executors, and workers that read input only from argv are advisory warnings. `aioson verify:artifact . --kind=squad-package --slug=<slug> --advisory` runs this strict validation plus the lint in one call, and auto-fires at `agent:done --agent=squad`.
 
 `squad:eval` invokes this strict gate with only the previous-eval requirement
 temporarily skipped, then writes the new report.
@@ -76,4 +74,5 @@ Result: VALID (2 warnings)
 - Suggest the correction command when possible, for example: `run @squad extend to add skills`.
 - `--strict`: enforces the canonical schema and premium readiness invariants; legacy non-strict validation remains compatible and advisory.
 - Depth gaps (basic executor, undistilled sources) route to `@squad refresh <slug>`.
-- This is the cheap always-on gate. For source-grounded and held-out proof, run `aioson squad:eval . --squad=<slug>`.
+- This is the cheap always-on gate. For source-grounded and held-out proof, run `aioson squad:eval . --squad=<slug>` (add `--no-persist` to measure without writing `evals/` or `docs/EVAL-*.md`).
+- Lane semantics behind the strict gate: `.aioson/docs/squad/creation-flow.md` § Delivery lane.

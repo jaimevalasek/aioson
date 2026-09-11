@@ -18,13 +18,13 @@ Load `.aioson/docs/squad/pilot-gate.md` and
 
 ## Process
 
-1. Preconditions: `aioson squad:validate . --squad=<slug> --strict --json` clean
-   and a current `squad:eval` PASS. On failure, route there first — the pilot is
-   the last gate, not a repair tool.
-2. Derive the flagship task from the manifest's mode, domain, goal, and sources.
-   Check `.aioson/skills/squad/domains/` for a matching domain skill; its
-   `## Pilot flagship` section defines the expected artifact. Record the task in
-   the manifest `pilot.task`.
+1. Preconditions and gate order: `pilot-gate.md` § "Order of gates" —
+   `aioson squad:validate . --squad=<slug> --strict --json` clean and a current
+   `squad:eval` PASS first. On failure, route there; the pilot is the last gate,
+   not a repair tool.
+2. Derive the flagship task from the manifest's mode, domain, goal, and sources;
+   a matching skill under `.aioson/skills/squad/domains/` defines the expected
+   artifact in its `## Pilot flagship` section. Record it in `pilot.task`.
 3. Build the pilot with the squad's own executors under `output/<slug>/pilot/`
    (benchmark posture: one complete vertical, no dead controls, real states,
    honest validation). Do not author the deliverable as `@squad`.
@@ -49,8 +49,9 @@ Load `.aioson/docs/squad/pilot-gate.md` and
 
 - A content/research squad records `pilot.status: not_applicable`; never
   manufacture a deliverable to satisfy the gate.
-- `quick` may defer with a concrete `pilot.deferReason`; `premium` and
-  `regulated` never defer.
+- Lane semantics: `.aioson/docs/squad/creation-flow.md` § Delivery lane; `quick`
+  may defer with a concrete `pilot.deferReason`, `premium` and `regulated` never
+  defer.
 - A recorded FAIL in Validations is legal evidence; a fabricated PASS is a
   defect.
 - One vertical only; depth of finish beats breadth.

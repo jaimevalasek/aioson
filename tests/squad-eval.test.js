@@ -33,15 +33,42 @@ async function createFixture(overrides = {}) {
   await fs.mkdir(path.join(squadDir, 'agents'), { recursive: true });
   await fs.mkdir(path.join(projectDir, 'output', slug), { recursive: true });
   await fs.writeFile(path.join(squadDir, 'agents', 'agents.md'), '# Premium Fixture\n');
+  // Executors carry the package contract's core sections and clear the
+  // executor-lint floor: the strict precheck now measures prompt bodies, so a
+  // three-line role label would fail the same way it fails in a real squad.
   await fs.writeFile(path.join(squadDir, 'agents', 'orquestrador.md'), [
     '# Agent @orquestrador',
+    '',
+    '## Mission',
     'Own final integration and hand off evidence checks to reviewer.',
-    'Never accept unsupported claims.'
+    'Coordinate the research executors, keep the decision log current, and',
+    'assemble the grounded recommendation the squad exists to deliver.',
+    '',
+    '## Hard constraints',
+    '- Never accept unsupported claims.',
+    '- Never close a phase without the reviewer verdict on record.',
+    '- Never rewrite a source quotation to fit the recommendation.',
+    '',
+    '## Output contract',
+    'A recommendation document with every claim mapped to a source id,',
+    'the reviewer verdict, and the open questions the sources could not settle.'
   ].join('\n'));
   await fs.writeFile(path.join(squadDir, 'agents', 'reviewer.md'), [
     '# Agent @reviewer',
-    'Independently verify every source-grounded claim.',
-    'Veto unsupported claims.'
+    '',
+    '## Mission',
+    'Independently verify every source-grounded claim before it ships.',
+    'Read the sources the claim cites, confirm the quotation and the inference,',
+    'and record the verdict where the orchestrator can act on it.',
+    '',
+    '## Hard constraints',
+    '- Veto unsupported claims.',
+    '- Never approve a claim whose source you did not open.',
+    '- Never soften a veto into a suggestion.',
+    '',
+    '## Output contract',
+    'A verdict per claim (pass, veto, needs-source) with the exact source span',
+    'that decided it, returned to the orchestrator in the same phase.'
   ].join('\n'));
 
   const manifest = {
@@ -602,4 +629,19 @@ test('AC-premium-20 eval and validation reject traversal slugs before filesystem
   assert.equal(evaluated.error, 'invalid_slug');
   assert.equal(validated.valid, false);
   assert.ok(validated.errors.includes('Invalid squad slug'));
+});
+
+test('squad:eval --no-persist measures without writing evals/ or docs/EVAL-*.md', async () => {
+  const fixture = await createFixture();
+  const result = await runSquadEval({
+    args: [fixture.projectDir],
+    options: { squad: fixture.slug, json: true, 'no-persist': true },
+    logger: quiet
+  });
+  assert.equal(result.persisted, false);
+  assert.equal(typeof result.verdict, 'string');
+  const squadDir = path.join(fixture.projectDir, '.aioson', 'squads', fixture.slug);
+  await assert.rejects(fs.access(path.join(squadDir, 'evals')));
+  const docs = await fs.readdir(path.join(squadDir, 'docs')).catch(() => []);
+  assert.ok(!docs.some((f) => /^EVAL-/.test(f)), docs.join(', '));
 });

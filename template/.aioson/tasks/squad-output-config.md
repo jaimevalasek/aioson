@@ -125,8 +125,11 @@ If webhook is configured, generate a delivery worker at `.aioson/squads/{squad-s
 import json, sys, os, urllib.request, urllib.error
 
 def main():
-    if len(sys.argv) > 1:
-        with open(sys.argv[1], 'r') as f:
+    # Framework worker input contract: AIOSON_WORKER_INPUT_FILE when set,
+    # else argv. A large payload never fits in argv on Windows.
+    input_file = os.environ.get('AIOSON_WORKER_INPUT_FILE') or (sys.argv[1] if len(sys.argv) > 1 else None)
+    if input_file:
+        with open(input_file, 'r', encoding='utf-8') as f:
             payload = json.load(f)
     else:
         payload = json.load(sys.stdin)
