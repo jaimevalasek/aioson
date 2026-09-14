@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process');
 const { capabilities, requiredCapability } = require('../capabilities');
 const { resolveExecutable } = require('../executable-resolver');
 const { resolveSandboxArgs } = require('../../lib/tool-capabilities');
+const { createUsageCollector } = require('../execution-usage');
 
 function redact(text) {
   return String(text || '').replace(
@@ -15,9 +16,10 @@ function redact(text) {
 function normalizeError(error) {
   const text = String(error?.message || error || '').toLowerCase();
   if (/unexpected argument|invalid (?:argument|option)|unknown option/.test(text)) return 'invalid_arguments';
-  if (/capacity|overloaded|rate limit/.test(text)) return 'capacity';
+  if (/capacity|overloaded|rate limit|too many requests|quota|insufficient (?:credit|fund)|payment required|billing/.test(text)) return 'capacity';
   if (/model.*invalid|unknown model/.test(text)) return 'invalid_model';
   if (/unauthorized|authentication failed|not authenticated|forbidden/.test(text)) return 'auth';
+  if (/connection|network|econnreset|enotfound|socket hang up|service unavailable|bad gateway|gateway timeout/.test(text)) return 'connection';
   if (/timeout|timed out/.test(text)) return 'timeout';
   return 'crash';
 }
@@ -91,11 +93,15 @@ function createAdapter(host, buildArgs) {
       }
       const command = buildArgs({ ...input, sandbox_args: sandbox.args });
       const args = Array.isArray(command) ? command : command.args;
+      const stdin = Array.isArray(command) ? false : command.stdin;
       return {
         ok: true,
         executable: cap.executable,
         args,
-        stdin: Boolean(command.stdin),
+        // Most adapters use `true` to stream the raw prompt. Structured-input
+        // harnesses may provide the exact bounded payload while still keeping
+        // prompts out of argv (and therefore outside Windows' argv limit).
+        stdin: typeof stdin === 'string' ? stdin : Boolean(stdin),
         options: {
           cwd: input.cwd,
           shell: false,
@@ -147,6 +153,25 @@ function createAdapter(host, buildArgs) {
         let aborted = false;
         let settled = false;
         let forceTimer = null;
+        let contextExceeded = false;
+        let structuredAbortReason = null;
+        let contextBudget = input.context_budget;
+        const usage = input.captureUsage ? createUsageCollector(host, {
+          onUpdate: value => input.onUsage?.(value),
+          onEvent: event => {
+            if (structuredAbortReason || typeof input.onStructuredEvent !== 'function') return;
+            try { structuredAbortReason = input.onStructuredEvent(event) || null; } catch { structuredAbortReason = null; }
+            if (structuredAbortReason) stopTree();
+          },
+          onContext: value => {
+            input.onContext?.(value);
+            if (contextBudget && value.context_window_tokens) contextBudget = { ...contextBudget, context_window_tokens: value.context_window_tokens, window_source: 'harness', max_tokens: Math.min(contextBudget.max_tokens, Math.floor(value.context_window_tokens * contextBudget.max_fraction)) };
+            if (!contextExceeded && contextBudget && value.tokens >= contextBudget.max_tokens) {
+              contextExceeded = true;
+              stopTree();
+            }
+          }
+        }) : null;
 
         const stopTree = () => {
           terminateChildTree(child);
@@ -160,18 +185,26 @@ function createAdapter(host, buildArgs) {
         input.signal?.addEventListener('abort', onAbort, { once: true });
         if (input.signal?.aborted) onAbort();
 
-        child.stdout.on('data', (data) => input.onStdout?.(data));
+        child.stdout.on('data', (data) => { usage?.push(data); input.onStdout?.(data); });
         child.stderr.on('data', (data) => {
           input.onStderr?.(data);
           stderr += data;
           if (stderr.length > 4000) stderr = stderr.slice(-4000);
         });
-        if (built.stdin) child.stdin.end(String(input.prompt_text || ''));
+        // A harness can exit before consuming a large prompt (for example auth
+        // failure). Its exit/stderr is authoritative; EPIPE must not kill the engine.
+        child.stdin.on('error', () => {});
+        if (typeof built.stdin === 'string') child.stdin.end(built.stdin);
+        else if (built.stdin) child.stdin.end(String(input.prompt_text || ''));
         else child.stdin.end();
 
         const finish = (result) => {
           if (settled) return;
           settled = true;
+          if (usage) result = { ...result, usage: usage.finish() };
+          if (contextBudget) result = { ...result, context_budget: contextBudget };
+          if (contextExceeded) result = { ...result, ok: false, reason: 'context_budget_exceeded' };
+          if (!result.ok && result.usage) result.usage = { ...result.usage, complete: false };
           if (timer) clearTimeout(timer);
           if (forceTimer) clearTimeout(forceTimer);
           input.signal?.removeEventListener('abort', onAbort);
@@ -199,7 +232,7 @@ function createAdapter(host, buildArgs) {
               reason: normalizeError(error),
               error: redact(error.message)
             }));
-        child.on('exit', (code) => finish(aborted
+        child.on('close', (code) => finish(aborted
           ? {
               ok: false,
               code,
@@ -207,9 +240,11 @@ function createAdapter(host, buildArgs) {
               error: 'execution aborted',
               resolver_source: resolved.source
             }
-          : code === 0 && !timedOut
-            ? { ok: true, code, resolver_source: resolved.source }
-            : {
+          : structuredAbortReason
+            ? { ok: false, code, reason: structuredAbortReason, error: `execution stopped after repeated structured activity: ${structuredAbortReason}`, resolver_source: resolved.source }
+            : code === 0 && !timedOut
+              ? { ok: true, code, resolver_source: resolved.source }
+              : {
                 ok: false,
                 code,
                 reason: timedOut ? 'timeout' : normalizeError(stderr),

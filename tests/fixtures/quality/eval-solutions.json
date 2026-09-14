@@ -1,0 +1,22 @@
+{
+  "provider-schema": "module.exports = x => x && !Array.isArray(x) && Array.isArray(x.findings) && !x.error ? \"pass\" : \"error\";\n",
+  "provider-exit": "module.exports = x => x.available === false ? \"not_run\" : x.exit === 0 || (x.exit === 1 && x.count > 0) ? \"pass\" : \"error\";\n",
+  "baseline-identity": "module.exports = x => [String(x.path || \"\").replace(/\\\\/g,\"/\"),x.rule || \"\",x.symbol || \"\"].join(\"|\");\n",
+  "severity-regression": "module.exports = x => [\"advisory\",\"medium\",\"high\",\"critical\"].indexOf(x.after) > [\"advisory\",\"medium\",\"high\",\"critical\"].indexOf(x.before);\n",
+  "ci-scope": "module.exports = x => [...new Set((x.baseProvided ? x.committed : x.local) || [])].sort();\n",
+  "relative-path": "module.exports = x => typeof x === \"string\" && x.length > 0 && !/^(?:[\\\\/]|[a-z]:)/i.test(x) && !x.split(/[\\\\/]/).includes(\"..\") && ![...x].some(c=>c.charCodeAt(0)<32);\n",
+  "canonical-feature": "module.exports = x => x.explicit || x.canonical || \"project\";\n",
+  "aggregate-checks": "module.exports = xs => !xs.length || xs.some(x=>[\"error\",\"not_run\"].includes(x)) ? \"error\" : xs.includes(\"fail\") ? \"fail\" : \"pass\";\n",
+  "money-total": "module.exports = xs => xs.reduce((n,x)=>n+x.cents*x.quantity,0);\n",
+  "empty-average": "module.exports = xs => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : null;\n",
+  "pagination": "module.exports = x => x.page < 1 ? [] : x.items.slice((x.page-1)*x.size,x.page*x.size);\n",
+  "csv-escaping": "module.exports = xs => xs.map(s=>/[,\"\\r\\n]/.test(s) ? '\"' + s.replace(/\"/g,'\"\"') + '\"' : s).join(\",\");\n",
+  "ownership": "module.exports = x => x.authenticated === true && (x.role === \"admin\" || x.userId === x.ownerId);\n",
+  "stock-reservation": "module.exports = x => Number.isInteger(x.quantity) && x.quantity > 0 && x.quantity <= x.stock ? x.stock - x.quantity : null;\n",
+  "idempotent-events": "module.exports = xs => {const seen=new Set();return xs.filter(x=>{if(seen.has(x.id))return false;seen.add(x.id);return true;});};\n",
+  "literal-search": "module.exports = x => x.names.filter(n=>n.toLowerCase().includes(x.query.toLowerCase()));\n",
+  "retry-budget": "module.exports = x => x.maximum > 0 && x.attempts < x.maximum;\n",
+  "html-text": "module.exports = x => x.replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\n",
+  "numeric-sort": "module.exports = xs => [...xs].sort((a,b)=>a-b);\n",
+  "utc-date": "module.exports = x => new Date(x).toISOString().slice(0,10);\n"
+}

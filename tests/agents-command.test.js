@@ -237,7 +237,7 @@ test('agent:prompt injects capability summary and autonomy mode when manifest an
   assert.match(result.prompt, /Declared capabilities:/);
 });
 
-test('agent:prompt keeps workflow routing when project context is invalid but workflow state exists', async () => {
+test('agent:prompt keeps workflow progress and rebases the legacy route when context is invalid', async () => {
   const dir = await makeTempDir();
   await fs.mkdir(path.join(dir, '.aioson/context'), { recursive: true });
   await fs.writeFile(
@@ -274,17 +274,21 @@ test('agent:prompt keeps workflow routing when project context is invalid but wo
 
   assert.equal(result.ok, true);
   assert.equal(result.requestedAgent, 'dev');
-  assert.equal(result.agent, 'analyst');
+  assert.equal(result.agent, 'sheldon');
   assert.equal(result.routed, true);
+
+  const saved = JSON.parse(await fs.readFile(path.join(dir, '.aioson/context/workflow.state.json'), 'utf8'));
+  assert.deepEqual(saved.sequence, ['setup', 'product', 'sheldon', 'planner', 'dev', 'qa']);
+  assert.deepEqual(saved.completed, ['setup', 'product']);
 
   const runtime = await openRuntimeDb(dir, { mustExist: true });
   try {
-    const stageRun = runtime.db.prepare("SELECT agent_name, source, workflow_stage, status FROM agent_runs WHERE agent_name = '@analyst' ORDER BY updated_at DESC LIMIT 1").get();
+    const stageRun = runtime.db.prepare("SELECT agent_name, source, workflow_stage, status FROM agent_runs WHERE agent_name = '@sheldon' ORDER BY updated_at DESC LIMIT 1").get();
     const task = runtime.db.prepare('SELECT session_key, status FROM tasks ORDER BY updated_at DESC LIMIT 1').get();
 
-    assert.equal(stageRun.agent_name, '@analyst');
+    assert.equal(stageRun.agent_name, '@sheldon');
     assert.equal(stageRun.source, 'workflow');
-    assert.equal(stageRun.workflow_stage, 'analyst');
+    assert.equal(stageRun.workflow_stage, 'sheldon');
     assert.equal(task.session_key, 'workflow:project:project:default');
     assert.equal(task.status, 'running');
   } finally {

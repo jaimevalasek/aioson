@@ -107,7 +107,7 @@ describe('quality:audit — command behavior', () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-quality-audit-'));
-    await writeFileEnsured(path.join(tmpDir, '.aioson', 'context', 'dev-state.md'), [
+    await writeFileEnsured(path.join(tmpDir, '.aioson', 'context', 'project-pulse.md'), [
       '---',
       'active_feature: quality-governance-baseline-and-new-regression-gate',
       '---',
@@ -177,8 +177,7 @@ describe('quality:audit — command behavior', () => {
       tmpDir,
       '--provider-output',
       providerPath,
-      '--changed',
-      'src/a.js',
+      '--changed=src/a.js',
       '--json'
     ], { encoding: 'utf8' });
 

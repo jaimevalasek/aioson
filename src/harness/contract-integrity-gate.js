@@ -8,6 +8,8 @@ const { checkContractIntegrity } = require('./contract-integrity');
 const { evaluateStaticCriteria } = require('./static-criteria');
 const { detectRuntimeFeature, gitChangedFiles } = require('./detect-runtime-feature');
 const { runHarnessCheck } = require('../commands/harness-check');
+const { readFeatureArtifactSafe, parseFrontmatter } = require('../preflight-engine');
+const { plannedRuntimeContract, planHasMigrations } = require('../lib/plan-contract');
 
 function readJsonSafe(filePath) {
   try {
@@ -44,9 +46,17 @@ async function evaluateContractIntegrityGate(targetDir, slug, options = {}) {
   const completedSteps = progressRead.value ? progressCompletedSteps(progressRead.value) : [];
   const changedFiles = options.changedFiles || gitChangedFiles(targetDir);
   const runtime = detectRuntimeFeature(targetDir, slug, { completedSteps, changedFiles });
+  const planContent = options.planContent || await readFeatureArtifactSafe(targetDir, slug, `implementation-plan-${slug}.md`) || '';
+  if (parseFrontmatter(planContent).runtime_contract === 'required' || (options.stage === 'planning' && planHasMigrations(planContent))) {
+    runtime.isRuntimeFeature = true;
+    runtime.signals.push('plan-runtime-obligation');
+  }
 
   const contractRead = readJsonSafe(contractPath);
   if (!contractRead.exists) {
+    if (options.stage === 'planning' && runtime.isRuntimeFeature && plannedRuntimeContract(planContent, slug)) {
+      return { ok: true, slug, has_contract: false, planned: true, runtime, errors: [], warnings: [] };
+    }
     if (!runtime.isRuntimeFeature) {
       // Tree-only evidence (advisorySignals) is not attributable to this
       // feature in a shared working tree — surface it, never block on it.
@@ -65,7 +75,7 @@ async function evaluateContractIntegrityGate(targetDir, slug, options = {}) {
       runtime,
       errors: [{
         code: 'missing_runtime_contract',
-        message: `runtime feature detected (${runtime.signals.join(', ')}) but .aioson/plans/${slug}/harness-contract.json is missing — author it with the §2c RG-* runtime-gate criteria (run \`aioson harness:init . --slug=${slug}\`, or have @sheldon/@dev produce it), then re-run the stage.`
+        message: `runtime feature detected (${runtime.signals.join(', ')}) but .aioson/plans/${slug}/harness-contract.json is missing — author it with the §2c RG-* runtime-gate criteria (run \`aioson harness:init . --slug=${slug}\`, or have @dev produce it), then re-run the stage. At Gate C, @planner may instead declare runtime_contract: required and a numbered phase with the exact contract path, all four RG IDs and aioson harness:check.`
       }],
       warnings: []
     };

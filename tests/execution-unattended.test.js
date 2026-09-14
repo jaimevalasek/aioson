@@ -139,7 +139,7 @@ test('execution-roles: there is no per-role permission knob (a lane worker is un
   assert.equal(describeMs(DEFAULT_UNIT_TIMEOUT_MS), '1 h');
 });
 
-test('the roles digest the plan binds to changes with roles, parallelism and the independent-review rule — never with the process budget or the spawner', async (t) => {
+test('the roles digest binds compile-time policy while live model routing and process budgets remain editable', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-roles-digest-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   await fs.mkdir(path.join(dir, '.aioson', 'config'), { recursive: true });
@@ -158,7 +158,12 @@ test('the roles digest the plan binds to changes with roles, parallelism and the
 
   for (const [label, roles] of [
     ['a role model', { ...ROLES, roles: { ...ROLES.roles, qa: { host: 'claude', model: 'claude-opus-5' } } }],
-    ['a role effort', { ...ROLES, roles: { ...ROLES.roles, backend_dev: { ...ROLES.roles.backend_dev, reasoning_effort: 'medium' } } }],
+    ['a role effort', { ...ROLES, roles: { ...ROLES.roles, backend_dev: { ...ROLES.roles.backend_dev, reasoning_effort: 'medium' } } }]
+  ]) {
+    await write(roles);
+    assert.equal((await readExecutionRoles(dir)).digest, base.digest, `${label} is reloaded before dispatch and does not stale the compiled graph`);
+  }
+  for (const [label, roles] of [
     ['the parallelism', { ...ROLES, parallel: { max_concurrent_lanes: 1 } }],
     ['the independent-review rule', { ...ROLES, execution: { require_independent_qa: true } }]
   ]) {
@@ -377,7 +382,7 @@ test('execution:compile refuses a plan whose canonical block appears twice (dupl
   assert.match(prdWarning.message, /first copy only/);
 });
 
-test('the self-review warning names the knob, and a budget edit after compile leaves the plan fresh while a role edit makes it stale', async (t) => {
+test('the self-review warning names the knob; budget and role edits keep the graph fresh while live signatures still gate dispatch', async (t) => {
   const sameModel = { ...ROLES, roles: { ...ROLES.roles, qa: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' } } };
   const { dir, env, result } = await compileProject(t, { planContent: PLAN_LINES.join('\n'), roles: sameModel });
   assert.equal(result.ok, true, JSON.stringify(result.errors));
@@ -391,7 +396,8 @@ test('the self-review warning names the knob, and a budget edit after compile le
   await fs.writeFile(rolesFile, JSON.stringify({ ...sameModel, roles: { ...sameModel.roles, backend_dev: { ...sameModel.roles.backend_dev, reasoning_effort: 'medium' } } }, null, 2));
   verified = await verifyExecutionPlan(dir, SLUG, { env });
   assert.equal(verified.ok, false);
-  assert.match(verified.issues.join('\n'), /roles_changed/);
+  assert.doesNotMatch(verified.issues.join('\n'), /roles_changed/);
+  assert.match(verified.issues.join('\n'), /signature_missing: backend\.dev codex\/gpt-5\.6\/medium/);
 });
 
 // ───────────────────────── the signature's unattended write probe ─────────────────────────

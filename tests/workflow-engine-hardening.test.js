@@ -20,7 +20,7 @@ const { buildPathGuardBlock } = require('../src/path-guard');
 const { openRuntimeDb } = require('../src/runtime-store');
 const { CANONICAL_LENSES } = require('../src/lib/feature-completeness');
 const { runHarnessCheck } = require('../src/commands/harness-check');
-const { qaExecutionReport } = require('./helpers/feature-evidence');
+const { qaExecutionReport, approveAndSealSheldonReview } = require('./helpers/feature-evidence');
 
 describe('workflow engine hardening', () => {
   let tmpDir;
@@ -484,25 +484,36 @@ describe('workflow engine hardening', () => {
       path.join(dir, '.aioson', 'context', 'features.md'),
       '# Features\n\n| slug | status | started | completed |\n|------|--------|---------|-----------|\n| feat | in_progress | 2026-06-02 | — |\n'
     );
-    await fs.writeFile(path.join(dir, '.aioson', 'context', 'prd-feat.md'), '# PRD feat\n');
-    await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'requirements-feat.md'),
-      '---\nclassification: "MEDIUM"\n---\n# Requirements feat\n\n## Attack Surface Map\n\n- authenticated_endpoints\n'
-    );
-    await fs.writeFile(
-      path.join(dir, '.aioson', 'context', 'spec-feat.md'),
-      '---\ngate_execution: approved\n---\n# Spec feat\n\n- SEC-SBD-03: covered\n- SEC-SBD-08: covered\n'
-    );
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'prd-feat.md'), `---
+classification: MEDIUM
+product_scope: approved
+prd_ready: approved
+sheldon_review: pending
+---
+# PRD feat
+## Feature Capability Map
+| CAP | Promised outcome | Actor / trigger | Scope decision | Rationale |
+|---|---|---|---|---|
+| CAP-feat-01 | User signs in | User submits credentials | required | Core promise |
+## Acceptance Criteria
+| AC | CAP | Observable behavior | Evidence |
+|---|---|---|---|
+| AC-feat-01 | CAP-feat-01 | User sees the signed-in page | integration test |
+## Attack Surface Map
+- authenticated_endpoints
+`);
+    await approveAndSealSheldonReview(dir, 'feat');
+    await fs.writeFile(path.join(dir, '.aioson', 'context', 'implementation-plan-feat.md'), '---\nstatus: approved\n---\n# Plan\n\n## Engineering Controls\n- SEC-SBD-03: covered\n- SEC-SBD-08: covered\n');
     await fs.writeFile(
       path.join(dir, '.aioson', 'context', 'workflow.state.json'),
       JSON.stringify({
         version: 1,
         mode: 'feature',
         classification: 'MEDIUM',
-        sequence: ['product', 'analyst', 'dev', 'pentester', 'qa'],
+        sequence: ['product', 'sheldon', 'planner', 'dev', 'qa'],
         current: null,
         next: 'qa',
-        completed: ['product', 'analyst', 'dev', 'pentester'],
+        completed: ['product', 'sheldon', 'planner', 'dev'],
         skipped: [],
         featureSlug: 'feat',
         detour: null,
@@ -592,8 +603,8 @@ status: approved
     const statePath = path.join(dir, '.aioson', 'context', 'workflow.state.json');
     await fs.writeFile(statePath, JSON.stringify({
       version: 1, mode: 'project', classification: 'SMALL',
-      sequence: ['product', 'dev', 'qa'],
-      current: 'dev', next: 'qa', completed: ['product'],
+      sequence: ['setup', 'product', 'sheldon', 'planner', 'dev', 'qa'],
+      current: 'dev', next: 'qa', completed: ['setup', 'product', 'sheldon', 'planner'],
       skipped: [], featureSlug: null, detour: null, updatedAt: new Date().toISOString()
     }));
 

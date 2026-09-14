@@ -9,11 +9,12 @@ const { createAdapter } = require('./base');
 // effort for the session. The registry declares the capability; the levels the
 // CLI accepts are the same vocabulary the schema already carries, minus
 // `ultra`, which the schema keeps for hosts that go further.
-module.exports=createAdapter('claude',i=>[
+// Print mode reads a closed text stdin pipe; recovery context can exceed argv.
+module.exports=createAdapter('claude',i=>({args:[
   '--print',
+  ...(i.captureUsage?['--output-format','stream-json','--verbose']:[]),
   ...(i.sandbox_args||[]),
   ...(i.model==='configured-default'?[]:['--model',i.model]),
   ...(i.reasoning_effort?['--effort',i.reasoning_effort]:[]),
-  ...(i.writable_roots?.length?['--add-dir',...i.writable_roots]:[]),
-  i.prompt_text
-]);
+  ...(i.writable_roots?.length?['--add-dir',...i.writable_roots]:[])
+],stdin:true}));

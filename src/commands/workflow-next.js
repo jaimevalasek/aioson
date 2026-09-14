@@ -868,15 +868,47 @@ async function loadOrCreateState(targetDir, options = {}) {
 
   if (existing && typeof existing === 'object' && Array.isArray(existing.sequence)) {
     const currentSequence = existing.sequence.map(normalizeAgentName);
-    const upgradedSequence = ensureSheldonBeforePlanner(currentSequence);
+    // A saved sequence is derived state, not a standing request for specialists.
+    // Rebase live AND restored progress onto today's defaults or the owner's
+    // explicit workflow.config.json route. Detours remain separately owned.
+    const { config } = await readWorkflowConfig(targetDir);
+    // A delivered historical workflow stays terminal. New defaults govern
+    // unfinished work; they must not manufacture retroactive delivery debt.
+    const terminal = !existing.detour?.active
+      && (existing.completed || []).map(normalizeAgentName).includes(currentSequence.at(-1));
+    const upgradedSequence = terminal
+      ? currentSequence
+      : getSequenceForMode(config, existing.mode, existing.classification);
     let upgradedStateChanged = false;
     if (JSON.stringify(upgradedSequence) !== JSON.stringify(currentSequence)) {
       existing.sequence = upgradedSequence;
-      existing.skipped = (existing.skipped || []).filter((stage) => normalizeAgentName(stage) !== 'sheldon');
+      existing.completed = (existing.completed || []).map(normalizeAgentName)
+        .filter((stage) => upgradedSequence.includes(stage));
+      existing.skipped = (existing.skipped || []).map(normalizeAgentName)
+        .filter((stage) => upgradedSequence.includes(stage) && stage !== 'sheldon');
+      // Reconciliation normally infers skipped predecessors from downstream
+      // completion. A newly required PRD/review/plan must have real evidence
+      // before it can be crossed, even when the old route had already run Dev.
+      for (const stage of upgradedSequence) {
+        if (currentSequence.includes(stage) || !['setup', 'product', 'sheldon', 'planner'].includes(stage)) continue;
+        const valid = await validateStageArtifacts(targetDir, existing, stage);
+        const contract = valid && await validateHandoffContract(targetDir, existing, stage);
+        if (valid && contract.ok) {
+          existing.completed.push(stage);
+          continue;
+        }
+        const downstream = new Set(upgradedSequence.slice(upgradedSequence.indexOf(stage)));
+        existing.completed = existing.completed.filter((item) => !downstream.has(item));
+        existing.skipped = existing.skipped.filter((item) => !downstream.has(item));
+        existing.current = null;
+        existing.next = stage;
+        break;
+      }
+      existing.completed = upgradedSequence.filter((stage) => existing.completed.includes(stage));
       upgradedStateChanged = true;
     }
 
-    if (existing.featureSlug) {
+    if (existing.featureSlug && !(terminal && !currentSequence.includes('planner'))) {
       const sheldonIndex = upgradedSequence.indexOf('sheldon');
       const currentIndex = upgradedSequence.indexOf(normalizeAgentName(existing.current));
       const nextIndex = upgradedSequence.indexOf(normalizeAgentName(existing.next));
@@ -904,6 +936,16 @@ async function loadOrCreateState(targetDir, options = {}) {
           upgradedStateChanged = true;
         }
       }
+    }
+    if (upgradedStateChanged && existing.detour?.active) {
+      existing.current = normalizeAgentName(existing.detour.agent);
+      if (!upgradedSequence.includes(normalizeAgentName(existing.detour.returnTo))) {
+        existing.detour = {
+          ...existing.detour,
+          returnTo: findNextFromSequence(upgradedSequence, existing.completed, existing.skipped)
+        };
+      }
+      existing.next = existing.detour.returnTo;
     }
     // SF-project-18: warn-on-mismatch only, never refuse — preserves
     // backwards-compat with environments that lack runtime telemetry.
@@ -2914,6 +2956,18 @@ async function runWorkflowNext({ args, options, logger, t }) {
     logger.log(t('workflow_next.done'));
   }
   logger.log(t('workflow_next.state_file', { path: STATE_RELATIVE_PATH }));
+
+  // Close only after the final workflow/handoff writes, so they cannot recreate
+  // the active feature state that feature:close just retired.
+  const closure = await require('../lib/delivery-lifecycle').closeAfterQa(targetDir, {
+    completedStage, featureSlug: state.featureSlug, nextAgent: activation.agent, step: options.step === true
+  }, logger);
+  if (closure) {
+    payload.closure = closure;
+    if (closure.attempted && !closure.ok) logger.log(`Closure pending: ${closure.reason || closure.error}. ${closure.command || ''}`);
+    else if (closure.attempted) logger.log(`Feature ${state.featureSlug} closed; followups: ${(closure.followup_plans || []).length}.`);
+    else if (closure.command) logger.log(`Closure pending: ${closure.command}`);
+  }
 
   return payload;
 }

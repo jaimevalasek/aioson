@@ -1,0 +1,3567 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-08",
+  "reason": "Initial measured adoption; new findings, undefined identifiers and parser errors remain blocking.",
+  "counts": {
+    "7feb4d0c01cd7414280ebf9f8c6d7352b5364f7d8be25c24fee4cf65fb0fffe3": 1,
+    "338880fc75e2cd2ff03d18fe56c86137930cc2f7d87cc4cd2fa574851271a89c": 1,
+    "f9c4533ebbae2aec9cf377c2c3422ee3978a5fb1fc6dfa0797cceaaae7a1fd19": 1,
+    "bb3b88f8210461269b8238e0ff30f269983df4bbabbbb7aa6b79286fe30222cd": 1,
+    "12fde3a2d696304923148333aa4a85bf83106fa8663721a714e21681a0918b32": 1,
+    "e83a462a7e29c04b582a9eba1b3fed864437858474354944344719402072f01e": 1,
+    "717d7b1ee00b342e0feb3ca4106384c984674ec95885f9402e2f445eaccc9fd3": 1,
+    "8c860ac7e7b87b60e9a6374c7326629473d3d16bb573811309b87b16696a51a1": 2,
+    "133fa93e2f4fe3f470c7bb60144047766cd75689fa3a31f172c6167bde91c426": 1,
+    "d44d054f5251a4f7cfcd60369d1837c895ae9317d7f6029925c24cee9c0728c9": 1,
+    "e8ce302bff73379cb822b95cf3d97c67425d01c961a04a0b04af3556143c4916": 1,
+    "884a3a46b9781e314f488d670a406408384e784eac932e85cd98fc6f7afe49cc": 1,
+    "20ce642253fc17edee2ce3fc513fe3d53ff38cf43c5652e8505acb6a5bbd552b": 1,
+    "26e920fd190fa521617d284864a808f7059cdd8fd97442502d01e3f175c35057": 1,
+    "c432466c602413c889b57955239046de1e3a9f4f200bc39fc84c362c265cd97c": 1,
+    "4e19754da5d90afba4cdd0f9a50ac2e7ad90f35f564b8bfbfd0506ad8b7fcf99": 1,
+    "8ca2babd491095fab125ef29e613205214103178ad546523098904a07aad8cb7": 1,
+    "692fa2d5384db000be0946b436d67f57d8c6f5ee91c9491825883339f27064ce": 1,
+    "24b51ae535004da69ea9aee92e78b0dcb718fca60934fa2e5924b280d742bbf3": 2,
+    "dffac5e3c71b1c684247ceb753e4f0ab2629f96835047a6e9c8a5a8f5eac9d82": 1,
+    "f2da4200c22443ab74fbe1f40a9fc477d36c051f8d860740357677420f90a9d6": 1,
+    "744503f329c7476081dd4a334c55d9962889d514ca8a709a7573ad11ef9f6055": 1,
+    "53f75b1e61176758438123fc3a6a6242af579c8f948e11d2a95f7ff1f2b29d9f": 2,
+    "2c7e143979e870ea873fd57ae6fef23c78aada46fbb6c039351c2332e7648b09": 2,
+    "4fefa9ba962d9245864bbef481b1b4859822e6f7723208745415fd196552112c": 1,
+    "34115f0ba7d4da9a096534dd0c729b56290afe83540b36d54be1ca56842c74de": 1,
+    "c747720253b666b55c3068ec3edcc02c919a66bee45148dae8b6d3d4797f0bec": 1,
+    "f543eb5af3cd917171ecfaeb90b1350ec17dbe621e126841938764cf3a89fabc": 1,
+    "9ddfc9bfffc84401be98914741fdb08864184ab3829b74b81305b51521b6cde3": 1,
+    "8b62cbffa17c1013e4a987862d3991246bd3b8fda4658045086c389c575398e5": 2,
+    "5847cfff405fa026b355d7e0a7379be61881675504ff77fc16694356392f4b5c": 1,
+    "c71d5a28601cab20ec643357b1669f4897603fcd15161154bc0305c3ed87b1e1": 1,
+    "9e2f50529f1ea1b50e1cbb209adfb55a545145045c418e1544261bf2c1c9ac0e": 1,
+    "ff5ed356f8c79a39460510a2ae95dfb0f82a86663e87f5f807cf19e293360e6c": 1,
+    "aede46f67c85d49f71bb519587db1247ad50fea68f2fbec99e4dd735ea0febcf": 1,
+    "51f9822606b3d18a3de23cac54de4bedf5ab83cf52e1b1937a487cc29d4316dc": 1,
+    "6773266b0a7cf69ac64873f3f81d46b0b15b7647e1c68e213eb3aeba8e752952": 1,
+    "08fa72e0f950d8a904ba79225a7cee0a62acf16b84ffe80abaedb14cc3dc4e7b": 1,
+    "71a042b8fc4723e6b985fbe14959540bbb182c31732dbe897c99c2b94ad2f680": 1,
+    "d7340d9304876fdccf527d62902e389119acab807553cd4af0bc39318a6648d3": 1,
+    "797e9d5554f6b49d118e083af09946dde502394bea0af3855588bffd891b17e0": 1,
+    "79143242adbc4401c10a7f1239b19f1c0b0d06a6b6bb13040ec991c057bf277e": 1,
+    "c18e6309b8d1a68f08abd6737e3fd6a5dad1effd64f5fc40fe7d4e98540cec03": 2,
+    "ce2fdef00cb2ad9facd1350c73c4b468f58c27628c3a3b7294cb597c990c5a86": 1,
+    "88e1fcc5da56bb03b4fcb87a36c038158402a91446ff693d1bbc53ea2ee5a570": 1,
+    "52ddcf8ae149cd735f0fecacbea356ffeeed54b8559d73d287926e4b5dc1daf6": 1,
+    "b6c2aa363dfa7119f0f589304e094e79eb2d19f466e32901d0fc2100e51024d7": 1,
+    "c4a3972abb70e749497015317398e07e6eda102d0b77e1c6a3d8b9c86a320cfc": 1,
+    "b121ba83af52bd55ff760ebe7f5c42b249e443389f1b334cf354fe8f9edc07a5": 1,
+    "f132bb6fccd601a5d94a2b3b55959cc7b35cf47921d9a3a94a461beebcb0a1c6": 1,
+    "62d68012335bfd60517936239e6cd800d11906497e8ba86847cd9e8bc4b32cd2": 1,
+    "b17576fadb34e589f0e328a610de40b9572faf48902ce0334fcfae5a6196cba5": 1,
+    "a016c4c53336e5e0a9c14724e02e009f4e6eaa3d15d70cfcbbeb386409c29166": 1,
+    "28392123d752c3da5a586f44949c91b2acdca22c40f81e4a01413eceebfd7182": 1,
+    "19558ef6c98ff6873e209f71bec4428b8a8af69daa5a252711bd208b42d136e3": 1,
+    "cb1cbeedea42bedb8b69a19bfd5608351a259165e193c14e1d888b689e98e2fe": 1,
+    "fb46f957b2fb6cc588e5dca1ddd9468efdb884acdb837b0d79471247e2351bf6": 1,
+    "52b88870b835f1e9bd68822bb95dc46d4353a8389675c16d9bb0666da69b1db3": 3,
+    "da750b6e07a9ea1507df1973376ce6b7579ecb6b11da64b8e7877a06ee7643b1": 1,
+    "85f7ce933c8c70a0bf7b01dc2a42487b281f289f66a81e4fedb6478a6b946ea7": 1,
+    "ebaed889bd4a24e55a69ff8d1132d67cc4340d46f45da77a3d886fe7b3013c47": 1,
+    "74227347a37bfbbc1656acb2116baaf555a3de9ec3b250eea78ecc8a121fa038": 1,
+    "fbc9e244cdb169c95d588946cba3ba34d1cfee85058ba85c81c7bde754f8b247": 1,
+    "e2d8817ac36a63a39d6b10ebaf50bf2aab17fb6a6b3a1c7a6bddced4c9e7efda": 1,
+    "ebdee2277dbf557d9a1b2269c904422ecb785af255c0fd7f51b1cf7a3b448f63": 1,
+    "a94c734c66e044d570740a46c9d363914e5dbf4794630b3ddaaf0185171d8815": 1,
+    "ddcdd460a13252ec0432d35cbcf28eba8866badf628748b084aaa23f09fd82c2": 1,
+    "c1b5595559d2429b7f0443972195070a3767f7ff0791a70f65571815147b4da6": 1,
+    "968ada1d2fc747aeb6f2f407ce1c860f64ac26db4331d780d21c2f3600f8b45c": 1,
+    "471d190a0b06b706412164794ef1072fa826b814ddaf935310b84826bbdcc848": 1,
+    "1ec3fe77d6470d73a96e6796d76e9f73ed8e481a17da09edf566c8d0bff33b8f": 1,
+    "c4af5005e9c2927df6765b04ca18bed69fa401891dd4a8b3983893c6777d455f": 1,
+    "1c4d36fe3e0bc5543db958cac66e794fbf7c0233dafeb8977de8818b5ca3f05e": 1,
+    "289a39328a95122e9352f4bea86b7d4fa823a21dfedcfa0953fbbbd3b3e9eec4": 1,
+    "733bfddc90e2f720d1c12c8a0bff578f8c618cc0bcfbf8685ca1df7a7c66dbff": 1,
+    "ab6c68ad3c3c4686ad3dadad429d03b35a34e34672d1bf5e031fc7e66028846e": 1,
+    "7a56d46074620e9c3084dcdb47a9fa787361076870bfa790685aefb2841c9da3": 1,
+    "47ffa1531d4b06767a253651d50f7fe34c110c82491652e4f734f262023afaee": 1,
+    "d3d59d9d91b78a80b2643dfa266195b032e4092a8a3332a85d4e9d144107b2db": 1,
+    "90b882c23b7d16e24662fd902c2cffea2e0da7a75e3b41c910a432b45299a865": 1,
+    "000a448972a290ae959af05bf1b5fc50cf06262d3fd2b2a0e9b1f5175e8d8b69": 1,
+    "67df0bf151f4fde9f7253ae5828216c1b3a9c0452322025466b360c8a0cc1d7e": 1,
+    "1c307d2081df003ba2d4399f25ebf4687173dd9cd4ace60c6eb8c8aa8f2bd0c8": 1,
+    "b9cde3455d15cd58a5932dcf3801647c455bd13a7893d3591f491a19ae963c66": 1,
+    "3dc6139e2238c8ac382b0297a7e3fac55b1ae4605238e23fd6d553b6bd2fd31b": 1,
+    "e342cd3476d387c9be31a88e4c5a42bd7fc0051f70d594ba2ba4f97c1af960be": 1,
+    "20b10b2b4a28dd51725da59ea975def26166ab53d26aeb3646b9e00ac85a518e": 1,
+    "cabd8b9901d67e2cfca9febf94acf4e54a6cd802c5a12349c8cb78529083a2cb": 1,
+    "7ecc052a2f3a1d636799f95644397a216c09e474f1b52699c9cc5d32cbb27b4d": 1,
+    "fdec075aea0c1277d85f2c835f15a2253c01a1eeff08e957f81172afe91b2288": 1,
+    "7c4d1dd8ed255d168fa7e8741a1df47ff9d755bf97546d49cd23f47447d321a2": 1,
+    "72671346c7bd9485f21e90b8d890910e9775c97f5ac00af1834605848252ca8b": 1,
+    "cb9b39e0006007251a39e9cf588a704f7dfd9e10cb9ff4690156f85fb9546f7e": 1,
+    "fa90a5d3a10d4e401eb269aeb1efd53086a3a5e6da94eedb2fcfa0e220e858f9": 1,
+    "c3858bcf975d50b7d3a8bd32ef347ac803d8b94347a955f451aa281e9ae2dfef": 1,
+    "29e18bb8db355c8c5d955a50c72e79d5b64b5f491a7780e8bd69d2bec06a352e": 1,
+    "92296cac0d29950d5106091df762032b6f87fdde226df43be8688c78adacccbe": 1,
+    "55aca84b4748b426fca2ffe4e3c397e71457cce93321192a76f86ed5133eb42a": 1,
+    "8b3e85cee82664bb49aefa507d320767e0b22abecd1870abd4ed5a48c71bd280": 1,
+    "7f122ddd92918e8c5ce2afeeb4f38f1a8d1ac11dad34450128fbfbbb5896da33": 1,
+    "966fa1bc7ef7d2495b3ddf2e1e11d04b2a9d3d5460691bca8965d8fef3cff5b2": 1,
+    "b232120702f43c00e86e31301c1d71dedf6fd77a4b49f9ff1149ac86b784b06e": 1,
+    "20a92547bdaa9737010614b88216cdeb41d73c47e1d162908395087918840ac5": 1,
+    "3ed30bfb462bc2834e7063020c0076ba36a14218894dae9fb2c7d11f2c85c340": 1,
+    "3097fd1c674fcfa4d17869644322a465b3ab91102ece7bc0c7ceaf3313a14006": 1,
+    "aa2cd7d66cd43658dceef8e8eb0f6fa4f3465e6544d0e56c9f7c1b78252da548": 1,
+    "8fa9b5610b26643dd6a570b0cd7073b7772dddc80c932cee749497a5d84ca2d8": 1,
+    "ee318f7db566275c94f64f94ef5b04ca7e9cc3f8c30205d44df44db295aaf21b": 1,
+    "4e63ea7c1ad2f33cb1297a05aa7bf1aa1ccc33f4b01ab93315adcbd131365e86": 1,
+    "05380dce613b7767c43b31cb64ff34ec57c0ac2567d27235bf32b004718bbd7d": 1,
+    "41a0d68ae7022adc412d3084727c5dcb4f415038156a1b657d5121b86aae3865": 1,
+    "f06ded4e88628c948d989e7c67cecd84da34308b64b750e3d2b39f4f11b2f278": 1,
+    "412c9a7524475a5bfad961492fd72272435e27da3bb513fe738744dba9a1e958": 1,
+    "aadec3f3cf319252453d04f1bcf1741857e14b326b838d47e051884a39aa5130": 1,
+    "220b0c483b02cd2ebe6c6b328ba089609d3f04612347e329074061a492b8c21a": 1,
+    "99d29f994a3433179c542dd7182188a46242116f7df7d97bfed418090f59873a": 1,
+    "3c8c311f299b293717a6f3f4c6492b5d1e70956da766ab9186bd1415acfe396a": 1,
+    "041b0922249532ecec9ef178937c1909d486508ee9a5a34465c17e024b18ce9b": 1,
+    "0a6e4bac86c656f227596963fc9991d9dcdd5be704db9bf042f8adaac9e3617f": 1,
+    "46f407e0e82b7f3a78b26ca85caca9425ca346ed8731bd75071a216532d95842": 1,
+    "6cfadd68b1f9683befaa1701af167856456667b7fb3942d2a5f4692509e1a5f1": 1,
+    "cf787f84b885cbce9f27b4b4eae5d4eaed919e62d36413329de4673c4c6630be": 1,
+    "a1e3299626267e00d3464baeef58894cf4782f90dcc1e2d9c8a80c29131058ec": 1,
+    "ce09f4ba9a6b96017ba13f52f7d959e6ea1ddbe262d82d2ee0d46b0f28321645": 2,
+    "d0ad1525646192f7cc35496d0668c1667abfc81e08655c0954e6069855f5b0fd": 1,
+    "f0b7d8013d24bc54bba995698b645c3814d483d19ce46c397514668ec59181a9": 1,
+    "a17542ca6328f1a58f71dc4e2c304d29c3ef3a076eb540013ab62c405892197d": 1,
+    "66d53116f4b04ca7dead934e3ffcb94d70cb591cc41f8a1c565cffa5a36f08b5": 1,
+    "99671609703748c6b9c89a3086e1d6ff28ded6d45b4304c65cea461c341a965b": 1,
+    "b0ccb97245c21bd0c4826304fface59cf441a177b9d833e59cffd52d6477db95": 1,
+    "d979d7e7817b7b1824b0041b238310f1bab356f1b44a8ac8c1392a080dadc3c4": 1,
+    "2f9172731e4124379ccd5d7eb7e51a6f7c843610f907b441268826ced927cba4": 1,
+    "9930ccf1b92707359cbde67d5bd23da38b4deab0bfdf1d7374f11c28868475d9": 1,
+    "c3b7046b934edd6592336047d8d03293a9db83573e41d5166ea369aef53fd902": 1,
+    "5ac73fbb081b5cb91750e8672b58d03ed808f4a448ab636da47f81edad1fc509": 1,
+    "0bc04bc33837d3ff90397715370ef255effbec8413b86d524446ea00a8c8bb05": 1,
+    "ba043bcec00ab4f48aeaf697564b5087ac944c89cccf9d69a273517463ef2463": 1,
+    "b2d91a10cab286bde467e9c4bc3c28b90270d8c2f24c5a63bba33954c659e0b2": 1,
+    "7ef922b2904695766ad37e747effb3f5d622a7db3dd9ce998dbc1477fc844326": 1,
+    "23c57c95307f7b0b4982dc12e00d4c0ace87ae4a84d9fff109c22a5942653254": 1,
+    "c56d77cd5060bcaad3e7ca7469c673050de489fcdb3885c6f0c52b5780d220a4": 1,
+    "a788379d5b01faf699c77d5db19887c6aaa713a2b7f4107a557150030170caaf": 1,
+    "84578dca0aac4f7d7565ee3456b41f8ffec1d9433980420935882b06da99cf1c": 1,
+    "33447ef5df1614ca27929740e768331e516591bddcaeff8599bdb026ae7d34f3": 1,
+    "ebeae3db31fed8fa8e23afda84ebf4ddc2f647a4138cf7271f721c15afea2843": 1,
+    "6f2ea89fb109744b3b2e766a1cc95ba99ddc060bc99008d66722e8cd25458c36": 1,
+    "a666d25e4f9cdb03afe68fc1dfaff8a156588dfb1bb0cf4b5fee3d84249792c9": 1,
+    "e40072ab0317ee821250bafa09d415545fb7585b156359b0f4912c44e13577bd": 1,
+    "138e27e55acc2feb7ff5c4f392ecbf1a57cd52ebeed6e03816ce82f95beb13c8": 1,
+    "680bf99e3b5aa4ae5c1dc04afbf81be413879c4efe7deb30e57736d310a947e3": 1,
+    "8e3e7429dc4f0309ce4ff355150151399555516b20e1d20a1f4e2d407cb98de4": 1,
+    "37b08242103e718b300474781d5d22de0aff63ac8c5c289243701c887bf98e81": 1,
+    "62c242ee1e0b4ce2d0bf65ed6f88573ad7606d63d91a36769e10de089395b51a": 1,
+    "cdaedd8b536c44220ae630bec913d4abf2a85b34fb4096d1c3f705c9aa8ed410": 1,
+    "828cdceb904eb025cb152e5251d5977e68b69d852153c1a4e566ab24444afdb1": 1,
+    "6ee482156fe8fb8707275f5574b70c33d18891ff00f3b8d98493baa496d10089": 1,
+    "148ed2355e041fab8058f99cb3245fc7ada095bc4a27e0b40ce370ffaa2704ea": 1,
+    "7b5e226f44764467b4cbbc1ac3e4a8017f9a01d4206a8ec4ea82656d36e74776": 1,
+    "9c797a4b278361c3a273622b143fb371a4c9c68c431845f585be651ef0cd44f4": 1,
+    "5584f57d1e7d3234444adeadc68f898bfd9aed369b26331ef3b0cfa9ebf1e6cd": 1,
+    "63f09ab612c584f4823e222955cde3c61771cfecccb732716826020c02defdc1": 2,
+    "5bf10be200c6d6c17bb0716bd751478d2720e6a55b0bdd4641a71d9825a64142": 1,
+    "177b19c50fdc0cd57328ec429331b7810dda03d0a8be3951cde51c742904a10c": 1,
+    "adaea0398a1f7aeecba823ac87ae2f998213526b1d1d7af88d18cee90862b5ff": 1,
+    "5329f97b2ff43479773d335307344fe7e52ef5e0a7ad40dc4a1269a09081ede4": 1,
+    "07d211f1b333e84e9f265294af470408313c9a779f89118226416f9c5a50ee95": 1,
+    "4f05131e03151d634ec3a0cf918acd99a9c3d641feea684dc505717d0a0b59a2": 1,
+    "c303eee6b021960b8697915954b57f1209ccfbbd9a7d5b74f3aadd60f89b1755": 1,
+    "cd2817c64e3aacc918dd3d90f844e9968a6c513bd8bd406e39bb9cba3c0456bc": 1,
+    "1a2b1ab9c21e4fd06a6c3249d598e354e63ad4970188abf5bba1404c32950e60": 1,
+    "fe4ecdec216fb5965356808110450a2825e25a511a2f5aa45c95850a85d09859": 1,
+    "f45e242f425db86b31ee8c7fcdfa1e503680fbb9d13f0eeb8602fe7f4024bc20": 1,
+    "078291a0509ea214d78f0c2b2f0c1e8ba02f330e7ddaea973524b330e7741f20": 1,
+    "d2e56f064a1b5c320e253beed921947eb35b7a1d8696d5385fa8c33f65d7d9dc": 1,
+    "fd2adc3a7037413a2ca1d3787b4b64d8080d0e258c0ed6c59ef09c308211075a": 1,
+    "30678508b3fa2f3263903118474d2020c939521fa92aae628171bb7225193281": 1,
+    "1ae74d4b1b39145ff89c1fcb3ae78a3c1dd3795aad1563c58a86573d4ae4cba8": 1,
+    "d9e1fa2125790ab3710accf4ada48ba84bfb302333facceb07df48f0f4c74818": 1,
+    "db4947aa5f9ade29935c110442d9a9d82dd45f7479cd77cfae722920f9cb7d92": 1,
+    "1cb468e5bf1a171c9712cfc05e455509e29bc9379180fd6628e5bbee361160c2": 1,
+    "cdcceb971e9e43eab53fdf0f134f66ce67073a39ce2385f0d5214864e52e70f7": 1,
+    "4c507322dd46838bfe57d8d71dc64c79b3908f3fdbc8c4be04d1c36db4dfe550": 1,
+    "3365eea02df1d0b0cb5091e8c4772f506f9614a6795a07c28e7a6dce78564257": 2,
+    "499af4db6fddf7efca7ba685d47398e934a40bf9e7918fe34f7a644480d01cc8": 1,
+    "6ec7810ce15d73c0784182348dd30fc4c2cd1b0033d6d99e3ed788a8e5b0a32c": 7,
+    "44d8c2c305300176fe9035a5ed8130d326b9c82b165f765581693dd8dea9596e": 1,
+    "bba11873506462f25c8b610d60bd0542adf5ba8d2d324ea962ac1562eb30c6c4": 1,
+    "e4b58dc89822b955e7f9e9f892b86811e8dd8a76d0483c8d70f58152570612ac": 1,
+    "f7cf859eb41c7c954be173a54602758606bb2981c4eb41957c1a6a0047e87d62": 3,
+    "8fac16b427aec1a71c43b14daeda8082720fa30216bdc36dfafa5cbe90c6e430": 1,
+    "7447374531b55b00c17d577998be33c4b4a1864826aa1da891128803cc61e0b0": 1,
+    "d7c9b5beb477188a16d16df1523eef14ef8301900e504d86d71f593ead3c2ecb": 1,
+    "f6839f9d1f28e2f00e8cf41ae3120a3c943e91d6c606eea20be7199ed04d78e0": 1,
+    "4cb24cc81a5e88844a38c9309e027614a0f2b6b8ce8bad4dcd31592b01632040": 1,
+    "9973cfcdc3dadfc956cdc2961bec94c56907ef16a10844046809723666f900e0": 1,
+    "fa799630996427f4bbb1b28836374fd31daf727192cd81b10985cc20c8e883b9": 1,
+    "1649a95442e9347b5a14e3d2e216056fd56070c2c8d73e5a6f2b6514ee6347fa": 1,
+    "4d8af725dd0cd37fb3ebf296ca4d2d55cf4c3cd2f39e5534cf45bc290c8860f9": 1,
+    "90312ce914e610eef0288a2535070fb5699cfeadd073792bd701c04280944a42": 1,
+    "b89fe541c22d35746d199874f7da7a879fbd767725bc6db44b34e2d89733408a": 1,
+    "99f30677ea4989b326a6e4c3d1c7cd507dfa132d457429e435be8e27e691dcdd": 3,
+    "8c78d36e32e581ea00d059c5548b12da2d028c3fd602d3dcceef265f16ab1432": 1,
+    "ca646358bd7fc06d34f5634d1390c5a3decb4bd92ffa699d945e905b09738caf": 1,
+    "c60f77b2befd715ecb763f7b0a107db560df352733f95a829abf9ed492a1d231": 1,
+    "826e33f61d1d7f7000785027afd14480535fce0a72fbf9a97fed70e45ee94483": 1,
+    "e198d52d173ee753b4bb39f0e62028ff9c116fb54f82106b55e3bf887ee17721": 1,
+    "cffc7550c5b107ed6abc6c3912cd4fb71a3c4b922704bdeaeea9bfa90df1527e": 1,
+    "2aaaefb28557bb7e7757fd5a6484215a164c8e4caa26918076ce7c209254f77e": 1,
+    "63c74a871d2abc92b6b902d2e33479689647330ce61cf658d13f192607b71aa8": 1,
+    "232b8406381b47008ca3a6b51fe9b967ce568eab75003b46400ba0a0233210d3": 1,
+    "51ca0df1ef5ea63ccfb15940aec6e89681d03de82fd142b16b6a00362651c631": 1,
+    "90d056efd65e080e8fc7243127d8c84ab71f6fb3d11d40b0cf695f3abeda642d": 1,
+    "93f9d008f8b62b87b849296cde11d49d71909f9e36c4d5e60211ba4ac762e309": 1,
+    "bf98a3ce7ebf643a084548c4473740f9ae87e6dcff5041bf17820f4190ce6438": 1,
+    "d86c16a77ed2b20cff742f1216b82fcf40c4ac22ac88d241bebbf455b04a4ea0": 1,
+    "8b2b8ad60b624af0b68e9c1642848addcd7511dd14c7b1c8bca65df0e9b17cd0": 1,
+    "7832a32674a40aeb3561665eb101ca178a9aa6fb9c5bac149a94fb809e71e10b": 1,
+    "9c4f609b65e686103e60a9e77a525ecba003039cbd12cb876e3f3c675a4ef926": 1,
+    "07f61aaa6373a732101b0feaf487360f118b532cec603c7df3b66cba68c4f8c1": 1,
+    "8a374fa93e62ec7d6d15794572b991d115deac2e74dd0ad0fe63ed6450952522": 1,
+    "89b8fcfcc2574dde3bf5de2fd3798c5805fed38412fb1a3d1796fcfc5ac69f81": 1,
+    "487422ad20fb6446e832a70c6c37a7d72f061ca8266e566be0008d70c0b25879": 1,
+    "b44c948123fc9549cf9340e29dde291af3cefa0474171ab25df4a09129b36803": 1,
+    "f86d1a72ba98292c5315c45391a68487f7d863fedfe317363372f2c78029d967": 1,
+    "8cae55a0e9f47498399caddc207eea519abce70baa46cdc7051c0b3495896624": 1,
+    "c0d886094f96ab14c3c42d860d9b8669347f4ef45395ac0717b60330fcb3dd1f": 1,
+    "a35142edb773013a2e83bbaac834bc6b7a2d267c949d602791f4f0c583a60638": 1,
+    "a761e3d52794fc1726a7bb97243b7d9163207ea3b92f025a3ffbfa3447cde50a": 1,
+    "356f0069c0aedaf5b446d590bfb5f59b9813f22caab9fe3efc513fc6a1e42b80": 1,
+    "d72ec3c17b44ab7d84f7d506c64c09385edb4bb7086e32b4ff39b1f152b7fd68": 1,
+    "c9b0e6047bdd7d1936eed5769f5ab10c944791dde42c838335ddfc656cd04668": 1,
+    "c65addc6ef933b2fa47e5ef0cf3021c38aa0884cd1bde3989db0a1958d0297e2": 1,
+    "25e68b32f71ec0166c08072fcd8ad5a4205948a9a1cc03521740b45c511de6c7": 1,
+    "07ffbfb6b36186a3ae221bd84655c22c377b4b976971f1830248b50fc104aab9": 2,
+    "0570b5bdde0cc5b135053815bd4bd61c98f7e4d57cb31d74c419bc27dbb48e2b": 1,
+    "4783495bdedd4073188ed91299e29fbf482d5dbdb7f9c369fb75a5ff8de43835": 1,
+    "855afd7b5b01b2a5902e8b41afeb8491367a3dfb76fbdee348da1603e2752081": 1,
+    "752397ebf149f324e02b70e7554af50400c3446fe6102f1ce0f5fc6130fe7c40": 1,
+    "0a4d8dfc7995b047f9e5552af169893936a0fb38583816a1181f39d141efe071": 1,
+    "3b3c3164380350e839f17ca551b167d15a6fbd0396c98cdf29dcf92df8c0c045": 1,
+    "090c67edc994cf03745af620b7ddc7d7e0537a9ae230366dc7d6de44b40c1c66": 1,
+    "78f5a0df5516b3b86637b88cf7f31c158ca0c0c7a6dd4cf46a195a1264a02853": 1,
+    "49e758d82442251f507f457aae455144ca9af33fff3ee740743d461ec76dfa71": 1,
+    "bf3d864202c103c773a46a974a389ff9afc7fde2ddf89459378942b28d0c7714": 1,
+    "d11584b1f8a81e18a29b0facdb7fde0a3c1a4e72a10c0b7faab599a2db69ce74": 1,
+    "9e4de0ad9f972e9ce5cbe0c36c365742f7187f30ea272db46cb02e924681eacd": 1,
+    "3a6ea1d402ac3fe7678eade0fe4d91891697fd94662a1db217a7cb1534392b8d": 1,
+    "128006efc2ed9436ef3959bf8a3ba6de25820fd83eca67b1d81d2ba8173e7606": 1,
+    "a596e9f08115f22a6b828dc6397e293ed82042f60d50907e10afc9b0ee083dbb": 1,
+    "529bf0a83b3fc82f274764b050ccefe2deb4a547e71a9c9807629f0371645c94": 18,
+    "67fb54be789a0449afb87b63ee4d977eb656d292e4c2f098c18dcceffc581fe5": 1,
+    "65d85dbae29de7c28b6dc510b1373a68d3196baa1a820d025ee32fb676dd19ff": 1,
+    "7cb4463244ec536fb61a0f9f4bb7f1c89ecec007fd634545b37b6d88094a2d4e": 1,
+    "6d8d697267636cbc56ad1bf5f275491186806e08b881ab2b724640f8daaa6edd": 2,
+    "49b4c6b2c6650608dad7b4e348f018f1845c8521a67a2616f65a8202902368ba": 1,
+    "ef769f99b20a8780e6c9e36bd276daba8a88269c06d96e33a754cc9e96c76eb9": 1,
+    "7e85a9edebdf4fb1750bb7f9f2d3c2f6acaa3a0f095c614861ebb57c2a22b7d2": 1,
+    "711e2f3c2395419a6fdc41d575a0bc3fc7f87ce22e65f26cf23070cafee0fb68": 4,
+    "bf8f89aea7e704580e26bbffe134e80c9592208f1316ac4ea2a372cb75ba2695": 1,
+    "87e2d8a21527cd3ad7a5cd6995bc30f65ed25cdfdc63487db6cdb72ac939cf36": 1,
+    "3dbc16fa544e8008dd2a8b3e476120d57ae52399faf8abf185ed6acaaa87d385": 1,
+    "e9b8008fc9fbefd3231f9e2edb16411c888c714ce536be39934e57f735ff9714": 1,
+    "bd036b798777ab244b5d91a461dd753bdd2d437268a40fd1693f215ee715ac43": 1,
+    "850c0a091cad75ba296c960175d32ed7697901764f7316be53021d38b7292315": 1,
+    "fd7d954313aacf8503627d9a5d73fb33c2c142b49814624eb122a4e66563a63f": 1,
+    "9ef76e9ad86313dabfaab11814bcb3dcd574d40522a03348cfa42e7294e45ad3": 1,
+    "84caf5f667db45d5ed56a778ef241c3d224243501cc044239c13b175c3a5bdb2": 1,
+    "83b9089de8e84a165b8d9dfdc18992e72dff07b9150b45a07c43c649064039f3": 1,
+    "09a874e1eacef9d3c53646baf462a351524169446ba7c92996161e07f3b3b645": 2,
+    "8790850c5d5c2fa788d009d7519787f1522e0463ff8bdb72e86f2e7d38794914": 1,
+    "f1ad2f4eb5b703dbaa1070539d3bace38057f3773938a5c5599dd22f5e56ba2f": 4,
+    "ffbc9c0352e9d2a31e6c5dec8ec58992c73f226d9f4bd933ea1f3caa4f7b6e1a": 1,
+    "f1771731c11dedd9a21ea62aebd753e5bc940badca15bda718d8117a8ce51840": 1,
+    "cd443f234356fe095b0564187f80253fa11050d9bb7b7793f141cc7ca66d524e": 1,
+    "545fb82945671618ba3008603c4210e5fbec08da2f2ced295d512275013b4336": 1,
+    "83594299182c3943155434f758e23c20cbea482e6b34efc11cc0be035e0fb2fe": 1,
+    "99ffaba408f788906f4ff23d2df5804e2e3f33544f0d91f1fff0e6e318729b7c": 1,
+    "fb5895eca0b964b2e69ca35f9826eb2f350cc056f89320117423a2dedf45845a": 1,
+    "11b34d668e1aed14aeb98ca5f8fc805faa253817b406665be5d2cb71b3b6e64d": 1,
+    "6c28bbbb109cf46307c53a84472a45429daaad8e72696989af9cc1598383378d": 1,
+    "718ffe749a8cfaddccaef4ad337607b2947ae3f9edd52e9066263b2d8b9b879e": 1,
+    "a171ae8aa1dad19fe22393da59388731d58ba22c2c69303eab6f9b0e0765aae6": 1,
+    "9ac5ceb53029efbc02e8225067520b975f03bafbae94a2ab09517438a25a55c3": 1,
+    "3e8119ddce90f72536aba84b46564124492939329f0cca839df8f061b69b7b4e": 1,
+    "2f002f1880276d453a9c858065a691ed8082e9b89538d0f0ae55b6e4810d9c41": 1,
+    "fc637fb5a740f5ff85921c0e8e38a0c7d30e01646242515d7a909d689b2c5e66": 84,
+    "6bf301246b6f3605c9e075bd26cee82fb77a1f060b0f30a78717c4a1bff2518d": 2,
+    "9c71dfd650cb875e10fe17de4144ee107f2dbd26bdd59131abbb1f172ae7a9b2": 50,
+    "ae88066b880af94ce7977013a6c86d02842cfaef55389015d6bfb313d27d8c87": 1,
+    "1a6fc42b0432c311a9be9644c025f3ce243f490ffb0a4e35e2b78902f892b074": 1,
+    "f11b5e618a9b4a32f9e05250ac9580edc7ae8b318a3845add41600447de47f94": 1,
+    "84127e31eb0316615cee8754930de18dda40445facc528c98eda1bff3c30ceab": 1,
+    "2d1eb624c7cab7d8ba652711afaa8266ea984e9fedb8391a9257cea4a01b978a": 1,
+    "a2284f3198eccd69771c1423468d40af36ab078e49993c5fb3b9257652949af9": 1,
+    "8ca2cd3071cad2d3dd321f2b978069ab4940cd300c2775f1dd7ef1456b8e8744": 1,
+    "dd3d75aba93dec45b86042d973f035f57d7d14cd0d2f67c9e8f72e2558e40da5": 1,
+    "531e9c01187dd2b4d870f58d80c826f4bf429b394dc01510070e86478664fc07": 1,
+    "559e83d5cacd96937d2dd8b6b8e3f720d3f4211667053656f111769454974afb": 1,
+    "a805afd5d59ad99a9b9d0c3173f0fcbebc2b65d93689e1b14fb8a6fa2684bab8": 1,
+    "321e3936c2ec879253ed86e8eed5cb7cc34118e19f8d669b55abb59beff8c60e": 1,
+    "283e2ba3eeb0fe96a9edfe7f9633d4e7519e20b95eeb98a29c1c5ea4f9cc0632": 1,
+    "e816907a5920045e657976558125356b46e3b060f86577f8e5d6ca0298058af3": 1,
+    "1a46fb4702de33f5cc667cc766918bc19208a4f995a8cd53ddfc20342feed91e": 1,
+    "621417ca8472393e7bb39854d049d2219d52724eb595b79330fedf446cc8aa29": 1,
+    "e8c38fc08eda5db868b87844ae3bbffea06a4ede4754458a411bfacc41bcedd6": 1,
+    "33a589f0b95a8e047228f618651351707e5faef3f1313d4fbfb316dee86d8f6a": 1,
+    "dc723407a712573787826b45af5a1a68ccb80daa23ac6d29c23bb9096dd5a50a": 1,
+    "73102045a0b55d1abe944f4b72d534594cc5fb029ba5881999f32b224921fe86": 1,
+    "c0abcd60ba4522cdd980a88696844daabf3ff8926ef7c0c93282bccbdc9bdc13": 1,
+    "4e76478d067cc553a15ae186f50158137678433c72ea5978f2cb0c617b18d009": 1,
+    "f50a1f6c447b65c97ff5cdd7d1c5e0e8bf57b2eba128f6aca9b3f6ea642910be": 1,
+    "e93b5904ed249b44c5a02d50ca7b72b6e3905d9c14dcba3770f047b2ab9b0d92": 1,
+    "20b42916dd152886abda1fd481a34b73004f851e11920e8570ca1a21d6e8443a": 1,
+    "12e767cf61154f1a78af6f8ae8429fcad15096e4954625efcd5df04e25fff095": 1,
+    "b4f200110954c81ab478d9c1768192a85f76843c5440675c8679cbb2996d2b21": 1,
+    "745cba670e71ecc6c8b91ee655ff8b463f2c02ce676ba124faea51a3dc4c993d": 1,
+    "c746e191621a2353863347c4e0db1af4d866e3b7379ac26480b50f63830b71f5": 1,
+    "14aeece1a959199f874fafa51c4273fe474c3b9d97fff9641317e725df194b72": 1,
+    "6f9944e35ad38752624615d9e9332325443cae733e960f47b72e02b1ae20b47f": 1,
+    "060983d093f6379e8a06488a2a9f0eb01a4270c301701f2461416677cb1c909a": 1,
+    "c06f7b317a683bf4ae563be1ea97326987344c191ecf9bfa3e36e5b382684ccb": 1,
+    "9c0f9bd70bb5dbddfbca2a4de75f746aa675cfc1699d5267d5314a2dd67d60d7": 1,
+    "9858e0f0e9a1d97a6ac519fdfafede63eea6c384a9d4eeb22e70e7afb3406cd2": 1,
+    "2d371e36bf9961e3ea9e1ba96d1c9bc32d6aed9dec6bacfc131c0ea19492f684": 1,
+    "c3b880e9dd1b4693b9e319eec2a1ba74b404f04807b4f3bbcad73ef402bcc9e5": 3,
+    "b0554d53236841f927636ee968f5237f9ee36717c3d9ad0ed25ec355c6b4cabc": 1,
+    "b0488370795e2ec408d49dc4f53ddab29d7bffe57718b1b112a5db8b40cc0a03": 1,
+    "06dc0f58e796a7bfa1f8a97cd45d418f505dc2095f5c4f65d4528ad71f51a56d": 4,
+    "6df99887526500e7463e935385cd8b28db9874bc456e29bb8952e86ef6322b36": 1,
+    "72dd5ed6f3448575d2f5c2529d9092069244d37cdcb80ff764331973e76e0ee4": 2,
+    "e38c91ef20c7a201ba3b6dfcbbc3e558509123e374e75150d46a01b0fa709a89": 1,
+    "28da495fdbb3f49851f946e07dc2f7eebf82eca9f109c27ad61726fbcc577837": 1,
+    "fb8fadbc629dcd137960ae621e72655276d5bf7d2564fdb35d638e1941940f83": 1,
+    "fd99a2af6f256a29ef25137e1fbcc314585d5990d14c83b14e0762f7092c2c8d": 1,
+    "f6d80770e3ee40c0460a728d2b8581229e3e1b2eb3826709e1b143e31ddf6393": 1,
+    "097367dad5a6a5fe0c0b0f49995db4fc7a3c71b32d41aaeea32ff2e635ac6401": 16
+  },
+  "findings": [
+    {
+      "file": "scripts/smoke-run-chain.js",
+      "rule": "no-unused-vars",
+      "message": "'regenerateIndex' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 53
+    },
+    {
+      "file": "scripts/smoke-run-chain.js",
+      "rule": "no-unused-vars",
+      "message": "'matchDecisions' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 54
+    },
+    {
+      "file": "scripts/smoke-run-chain.js",
+      "rule": "no-unused-vars",
+      "message": "'halfLifeForCategory' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 60
+    },
+    {
+      "file": "scripts/testing/release-readiness.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 44
+    },
+    {
+      "file": "src/agent-execution/execution-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'checkRoleSignatures' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 46
+    },
+    {
+      "file": "src/agent-execution/execution-plan.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'present' is not used in subsequent statements.",
+      "line": 438
+    },
+    {
+      "file": "src/agent-execution/execution-run.js",
+      "rule": "no-unused-vars",
+      "message": "'readJsonSafe' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 110
+    },
+    {
+      "file": "src/agent-execution/execution-run.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+      "line": 513
+    },
+    {
+      "file": "src/agent-execution/execution-run.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+      "line": 521
+    },
+    {
+      "file": "src/agent-execution/qa-lane-profile.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 65
+    },
+    {
+      "file": "src/agents.js",
+      "rule": "no-unused-vars",
+      "message": "'targetDir' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 67
+    },
+    {
+      "file": "src/cli.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\-.",
+      "line": 1068
+    },
+    {
+      "file": "src/commands/agent-audit.js",
+      "rule": "no-unused-vars",
+      "message": "'overTarget' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 401
+    },
+    {
+      "file": "src/commands/agent-epilogue.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'advisory' is not used in subsequent statements.",
+      "line": 203
+    },
+    {
+      "file": "src/commands/agent-epilogue.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'codeAudit' is not used in subsequent statements.",
+      "line": 227
+    },
+    {
+      "file": "src/commands/agent-epilogue.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'rulesReport' is not used in subsequent statements.",
+      "line": 260
+    },
+    {
+      "file": "src/commands/auth.js",
+      "rule": "no-unused-vars",
+      "message": "'callbackLogin' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 80
+    },
+    {
+      "file": "src/commands/brief-validate.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "src/commands/briefing-sources.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/briefing.js",
+      "rule": "no-unused-vars",
+      "message": "'configFile' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 323
+    },
+    {
+      "file": "src/commands/briefing.js",
+      "rule": "no-unused-vars",
+      "message": "'configFile' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 408
+    },
+    {
+      "file": "src/commands/chain-audit.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 20
+    },
+    {
+      "file": "src/commands/chain-audit.js",
+      "rule": "no-unused-vars",
+      "message": "'isUnsafePath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "src/commands/classify.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 171
+    },
+    {
+      "file": "src/commands/cloud.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'parsed' is not used in subsequent statements.",
+      "line": 947
+    },
+    {
+      "file": "src/commands/cloud.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'parsed' is not used in subsequent statements.",
+      "line": 979
+    },
+    {
+      "file": "src/commands/cloud.js",
+      "rule": "no-extra-boolean-cast",
+      "message": "Redundant Boolean call.",
+      "line": 1170
+    },
+    {
+      "file": "src/commands/cloud.js",
+      "rule": "no-extra-boolean-cast",
+      "message": "Redundant Boolean call.",
+      "line": 1242
+    },
+    {
+      "file": "src/commands/commit-prepare.js",
+      "rule": "no-unused-vars",
+      "message": "'promptYesNo' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 154
+    },
+    {
+      "file": "src/commands/commit-prepare.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'guardConfig' is not used in subsequent statements.",
+      "line": 187
+    },
+    {
+      "file": "src/commands/commit-prepare.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'existingPrep' is not used in subsequent statements.",
+      "line": 397
+    },
+    {
+      "file": "src/commands/commit-prepare.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'diff' is not used in subsequent statements.",
+      "line": 673
+    },
+    {
+      "file": "src/commands/commit-prepare.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'recentLog' is not used in subsequent statements.",
+      "line": 681
+    },
+    {
+      "file": "src/commands/compress-agents.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'inFrontmatter' is not used in subsequent statements.",
+      "line": 76
+    },
+    {
+      "file": "src/commands/compress-agents.js",
+      "rule": "no-unused-vars",
+      "message": "'frontmatterDone' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 85
+    },
+    {
+      "file": "src/commands/compress-agents.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'frontmatterLines' is not used in subsequent statements.",
+      "line": 88
+    },
+    {
+      "file": "src/commands/compress-agents.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'inFrontmatter' is not used in subsequent statements.",
+      "line": 89
+    },
+    {
+      "file": "src/commands/context-brief.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/context-cache.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/context-health.js",
+      "rule": "no-unused-vars",
+      "message": "'COL_TOKENS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 283
+    },
+    {
+      "file": "src/commands/context-pack.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/context-select.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/context-validate.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/delegation.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/devlog-process.js",
+      "rule": "no-unused-vars",
+      "message": "'startedAt' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 146
+    },
+    {
+      "file": "src/commands/devlog-watch.js",
+      "rule": "no-unused-vars",
+      "message": "'dbPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "src/commands/dossier.js",
+      "rule": "no-unused-vars",
+      "message": "'shouldCompact' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "src/commands/execution.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 187
+    },
+    {
+      "file": "src/commands/execution.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 329
+    },
+    {
+      "file": "src/commands/exploration.js",
+      "rule": "no-unused-vars",
+      "message": "'toPosixPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 7
+    },
+    {
+      "file": "src/commands/feature-close.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'ownerLine' is not used in subsequent statements.",
+      "line": 598
+    },
+    {
+      "file": "src/commands/feature-trace.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 16
+    },
+    {
+      "file": "src/commands/forge-compile.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'previous' is not used in subsequent statements.",
+      "line": 317
+    },
+    {
+      "file": "src/commands/gate-check.js",
+      "rule": "no-unused-vars",
+      "message": "'GATE_DESCRIPTIONS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 54
+    },
+    {
+      "file": "src/commands/gate-check.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'recommendation' is not used in subsequent statements.",
+      "line": 279
+    },
+    {
+      "file": "src/commands/genome-doctor.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 500
+    },
+    {
+      "file": "src/commands/genome-migrate.js",
+      "rule": "no-extra-boolean-cast",
+      "message": "Redundant Boolean call.",
+      "line": 15
+    },
+    {
+      "file": "src/commands/git-guard.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "src/commands/harness-retro-promote.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+      "line": 53
+    },
+    {
+      "file": "src/commands/harness-retro.js",
+      "rule": "no-unused-vars",
+      "message": "'relPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "src/commands/hooks-emit.js",
+      "rule": "no-unused-vars",
+      "message": "'execFileSync' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 17
+    },
+    {
+      "file": "src/commands/hooks-emit.js",
+      "rule": "no-unused-vars",
+      "message": "'logger' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 234
+    },
+    {
+      "file": "src/commands/hooks-install.js",
+      "rule": "no-unused-vars",
+      "message": "'configPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 316
+    },
+    {
+      "file": "src/commands/i18n-add.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 19
+    },
+    {
+      "file": "src/commands/i18n-add.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 22
+    },
+    {
+      "file": "src/commands/i18n-add.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 25
+    },
+    {
+      "file": "src/commands/implementation-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'getImplementationPlan' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "src/commands/implementation-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'updateImplementationPlanStatus' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "src/commands/implementation-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'upsertPlanPhase' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "src/commands/implementation-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'detectPlanFiles' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 70
+    },
+    {
+      "file": "src/commands/learning-evolve.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'existingLines' is not used in subsequent statements.",
+      "line": 50
+    },
+    {
+      "file": "src/commands/learning-evolve.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'existing' is not used in subsequent statements.",
+      "line": 87
+    },
+    {
+      "file": "src/commands/live.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'markdown' is not used in subsequent statements.",
+      "line": 216
+    },
+    {
+      "file": "src/commands/live.js",
+      "rule": "no-unused-vars",
+      "message": "'now' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 1278
+    },
+    {
+      "file": "src/commands/memory-archive.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 20
+    },
+    {
+      "file": "src/commands/memory-restore.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 15
+    },
+    {
+      "file": "src/commands/memory.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'payload' is not used in subsequent statements.",
+      "line": 112
+    },
+    {
+      "file": "src/commands/op-capture.js",
+      "rule": "no-unused-vars",
+      "message": "'getStorageRoot' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 24
+    },
+    {
+      "file": "src/commands/package-e2e.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'tarballName' is not used in subsequent statements.",
+      "line": 119
+    },
+    {
+      "file": "src/commands/package-e2e.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'tarballPath' is not used in subsequent statements.",
+      "line": 120
+    },
+    {
+      "file": "src/commands/package-e2e.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'doctorResult' is not used in subsequent statements.",
+      "line": 121
+    },
+    {
+      "file": "src/commands/package-e2e.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'mcpResult' is not used in subsequent statements.",
+      "line": 122
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'workspaceManifest' is not used in subsequent statements.",
+      "line": 214
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'ownershipMap' is not used in subsequent statements.",
+      "line": 215
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'mergePlan' is not used in subsequent statements.",
+      "line": 216
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'scopeItems' is not used in subsequent statements.",
+      "line": 617
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'dependencyItems' is not used in subsequent statements.",
+      "line": 618
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'currentWorkspaceManifest' is not used in subsequent statements.",
+      "line": 649
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'currentOwnershipMap' is not used in subsequent statements.",
+      "line": 650
+    },
+    {
+      "file": "src/commands/parallel-doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'currentMergePlan' is not used in subsequent statements.",
+      "line": 651
+    },
+    {
+      "file": "src/commands/parallel-status.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\-.",
+      "line": 110
+    },
+    {
+      "file": "src/commands/parallel-status.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'workspaceManifest' is not used in subsequent statements.",
+      "line": 223
+    },
+    {
+      "file": "src/commands/parallel-status.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'ownershipMap' is not used in subsequent statements.",
+      "line": 224
+    },
+    {
+      "file": "src/commands/parallel-status.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'mergePlan' is not used in subsequent statements.",
+      "line": 225
+    },
+    {
+      "file": "src/commands/pentester-report.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'entries' is not used in subsequent statements.",
+      "line": 103
+    },
+    {
+      "file": "src/commands/preflight-context.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "src/commands/preflight.js",
+      "rule": "no-unused-vars",
+      "message": "'detectStaleDevState' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 31
+    },
+    {
+      "file": "src/commands/profiler-coverage.js",
+      "rule": "no-unused-vars",
+      "message": "'re' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 43
+    },
+    {
+      "file": "src/commands/qa-init.js",
+      "rule": "no-unused-vars",
+      "message": "'exists' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 5
+    },
+    {
+      "file": "src/commands/qa-init.js",
+      "rule": "no-unused-vars",
+      "message": "'extractYamlValue' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 42
+    },
+    {
+      "file": "src/commands/qa-scan.js",
+      "rule": "no-unused-vars",
+      "message": "'browser' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 272
+    },
+    {
+      "file": "src/commands/recovery.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/rule-new.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/rules-check.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'entries' is not used in subsequent statements.",
+      "line": 329
+    },
+    {
+      "file": "src/commands/rules-check.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'checkerFindings' is not used in subsequent statements.",
+      "line": 525
+    },
+    {
+      "file": "src/commands/rules-lint.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'entries' is not used in subsequent statements.",
+      "line": 59
+    },
+    {
+      "file": "src/commands/runner-daemon.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/runner-daemon.js",
+      "rule": "no-unused-vars",
+      "message": "'currentTaskId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 242
+    },
+    {
+      "file": "src/commands/runner-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'listTasks' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 5
+    },
+    {
+      "file": "src/commands/runtime.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'required' is not used in subsequent statements.",
+      "line": 1223
+    },
+    {
+      "file": "src/commands/runtime.js",
+      "rule": "no-unused-vars",
+      "message": "'dbPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 1802
+    },
+    {
+      "file": "src/commands/scaffold-complete.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 67
+    },
+    {
+      "file": "src/commands/scan-project.js",
+      "rule": "no-unused-vars",
+      "message": "'indent' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 244
+    },
+    {
+      "file": "src/commands/scan-project.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'derivedArtifacts' is not used in subsequent statements.",
+      "line": 1110
+    },
+    {
+      "file": "src/commands/security-audit.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/security-scan.js",
+      "rule": "no-unused-vars",
+      "message": "'buildFindingId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 19
+    },
+    {
+      "file": "src/commands/security-scan.js",
+      "rule": "no-unused-vars",
+      "message": "'m' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 77
+    },
+    {
+      "file": "src/commands/security-scan.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'hasLock' is not used in subsequent statements.",
+      "line": 224
+    },
+    {
+      "file": "src/commands/self-implement-loop.js",
+      "rule": "no-unused-vars",
+      "message": "'fsp' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 24
+    },
+    {
+      "file": "src/commands/setup-context.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'profileData' is not used in subsequent statements.",
+      "line": 611
+    },
+    {
+      "file": "src/commands/skill-audit.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 15
+    },
+    {
+      "file": "src/commands/skill.js",
+      "rule": "no-unused-vars",
+      "message": "'endMarker' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 133
+    },
+    {
+      "file": "src/commands/spec-status.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/spec-sync.js",
+      "rule": "no-unused-vars",
+      "message": "'phaseGates' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 121
+    },
+    {
+      "file": "src/commands/spec-tasks.js",
+      "rule": "no-unused-vars",
+      "message": "'phasePattern' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 38
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-unused-vars",
+      "message": "'getReadyTasks' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 44
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-unused-vars",
+      "message": "'isPlanComplete' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 45
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-unused-vars",
+      "message": "'HOOK_DENY' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 56
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'workerResult' is not used in subsequent statements.",
+      "line": 238
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'taskOutput' is not used in subsequent statements.",
+      "line": 239
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'lastResult' is not used in subsequent statements.",
+      "line": 753
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'budgetExceeded' is not used in subsequent statements.",
+      "line": 1118
+    },
+    {
+      "file": "src/commands/squad-autorun.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'budgetExceeded' is not used in subsequent statements.",
+      "line": 1129
+    },
+    {
+      "file": "src/commands/squad-investigate.js",
+      "rule": "no-unused-vars",
+      "message": "'SEARCHES_DIR' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "src/commands/squad-learning.js",
+      "rule": "no-unused-vars",
+      "message": "'updateSquadLearningStatus' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 8
+    },
+    {
+      "file": "src/commands/squad-mcp.js",
+      "rule": "no-unused-vars",
+      "message": "'listMcpStatus' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 4
+    },
+    {
+      "file": "src/commands/squad-mcp.js",
+      "rule": "no-unused-vars",
+      "message": "'status' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 179
+    },
+    {
+      "file": "src/commands/squad-pipeline.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/squad-pipeline.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 4
+    },
+    {
+      "file": "src/commands/squad-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'getSquadExecutionPlan' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "src/commands/squad-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'listSquadExecutionPlans' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "src/commands/squad-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'updateSquadExecutionPlanStatus' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "src/commands/squad-plan.js",
+      "rule": "no-unused-vars",
+      "message": "'upsertSquadPlanRound' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 13
+    },
+    {
+      "file": "src/commands/squad-recovery.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/squad-repair-genomes.js",
+      "rule": "no-extra-boolean-cast",
+      "message": "Redundant Boolean call.",
+      "line": 14
+    },
+    {
+      "file": "src/commands/squad-status.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'manifest' is not used in subsequent statements.",
+      "line": 232
+    },
+    {
+      "file": "src/commands/squad-tool-register.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "src/commands/squad-worker.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/squad-worktrees.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/squad-worktrees.js",
+      "rule": "no-unused-vars",
+      "message": "'createWorktree' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 4
+    },
+    {
+      "file": "src/commands/state-save.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'removed' is not used in subsequent statements.",
+      "line": 245
+    },
+    {
+      "file": "src/commands/store-genome.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 244
+    },
+    {
+      "file": "src/commands/store-squad.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 105
+    },
+    {
+      "file": "src/commands/store-system.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 638
+    },
+    {
+      "file": "src/commands/sync-agents-copy.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'hasBlock' is not used in subsequent statements.",
+      "line": 60
+    },
+    {
+      "file": "src/commands/test-agents.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'localeEntries' is not used in subsequent statements.",
+      "line": 73
+    },
+    {
+      "file": "src/commands/test-agents.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'agentEntries' is not used in subsequent statements.",
+      "line": 85
+    },
+    {
+      "file": "src/commands/tool-registry-cmd.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/commands/verify-artifact.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'message' is not used in subsequent statements.",
+      "line": 864
+    },
+    {
+      "file": "src/commands/workflow-execute.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'inferred' is not used in subsequent statements.",
+      "line": 278
+    },
+    {
+      "file": "src/commands/workflow-execute.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'modeInfo' is not used in subsequent statements.",
+      "line": 343
+    },
+    {
+      "file": "src/commands/workflow-harden.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 24
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'registry' is not used in subsequent statements.",
+      "line": 417
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'unsubstantiated' is not used in subsequent statements.",
+      "line": 805
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'mode' is not used in subsequent statements.",
+      "line": 1103
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'entries' is not used in subsequent statements.",
+      "line": 1915
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'nextState' is not used in subsequent statements.",
+      "line": 2401
+    },
+    {
+      "file": "src/commands/workflow-next.js",
+      "rule": "no-unused-vars",
+      "message": "'statePath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 2800
+    },
+    {
+      "file": "src/commands/workflow-status.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'state' is not used in subsequent statements.",
+      "line": 330
+    },
+    {
+      "file": "src/context-memory.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'names' is not used in subsequent statements.",
+      "line": 392
+    },
+    {
+      "file": "src/context-memory.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'names' is not used in subsequent statements.",
+      "line": 439
+    },
+    {
+      "file": "src/context-memory.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'slugs' is not used in subsequent statements.",
+      "line": 804
+    },
+    {
+      "file": "src/context-search.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 269
+    },
+    {
+      "file": "src/context-search.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'size' is not used in subsequent statements.",
+      "line": 270
+    },
+    {
+      "file": "src/context-search.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'mtime' is not used in subsequent statements.",
+      "line": 271
+    },
+    {
+      "file": "src/context-selector.js",
+      "rule": "no-unused-vars",
+      "message": "'scoreCandidate' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 836
+    },
+    {
+      "file": "src/context-writer.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'slugs' is not used in subsequent statements.",
+      "line": 150
+    },
+    {
+      "file": "src/context-writer.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'squadJson' is not used in subsequent statements.",
+      "line": 160
+    },
+    {
+      "file": "src/doctor.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'declaredTools' is not used in subsequent statements.",
+      "line": 124
+    },
+    {
+      "file": "src/dossier/dossier-bootstrap.js",
+      "rule": "no-unused-vars",
+      "message": "'ARTIFACT_AGENTS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "src/dossier/dossier-compact.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'historyContent' is not used in subsequent statements.",
+      "line": 102
+    },
+    {
+      "file": "src/dossier/lock.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'existing' is not used in subsequent statements.",
+      "line": 85
+    },
+    {
+      "file": "src/dossier/revision-store.js",
+      "rule": "no-unused-vars",
+      "message": "'crypto' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/dossier/revision-store.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'newRounds' is not used in subsequent statements.",
+      "line": 255
+    },
+    {
+      "file": "src/dossier/scout-section.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'content' is not used in subsequent statements.",
+      "line": 63
+    },
+    {
+      "file": "src/friction-scanner.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "src/genome-files.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 40
+    },
+    {
+      "file": "src/harness/circuit-breaker.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 24
+    },
+    {
+      "file": "src/install-animation.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b.",
+      "line": 165
+    },
+    {
+      "file": "src/jargon-leak-doctor.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 45
+    },
+    {
+      "file": "src/learning-import-claude.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 115
+    },
+    {
+      "file": "src/learning-loop-archive.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'destAbs' is not used in subsequent statements.",
+      "line": 379
+    },
+    {
+      "file": "src/learning-loop-archive.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'fsCompleted' is not used in subsequent statements.",
+      "line": 412
+    },
+    {
+      "file": "src/learning-loop-archive.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'fsCompleted' is not used in subsequent statements.",
+      "line": 546
+    },
+    {
+      "file": "src/learning-loop-fts5.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\-.",
+      "line": 33
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 125
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 133
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 134
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 135
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 136
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 169
+    },
+    {
+      "file": "src/lib/briefing-source-pack.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 171
+    },
+    {
+      "file": "src/lib/browser-evidence.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'entries' is not used in subsequent statements.",
+      "line": 55
+    },
+    {
+      "file": "src/lib/browser-walkthrough/index.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'page' is not used in subsequent statements.",
+      "line": 170
+    },
+    {
+      "file": "src/lib/browser-walkthrough/script.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'last' is not used in subsequent statements.",
+      "line": 168
+    },
+    {
+      "file": "src/lib/code-size.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 176
+    },
+    {
+      "file": "src/lib/code-size.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 176
+    },
+    {
+      "file": "src/lib/code-size.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 176
+    },
+    {
+      "file": "src/lib/design-presets.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'raw' is not used in subsequent statements.",
+      "line": 82
+    },
+    {
+      "file": "src/lib/feature-completeness.js",
+      "rule": "no-unused-vars",
+      "message": "'validateFeatureCapabilityMatrix' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 125
+    },
+    {
+      "file": "src/lib/feature-completeness.js",
+      "rule": "no-unused-vars",
+      "message": "'validateOperationalSurfaceMap' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 220
+    },
+    {
+      "file": "src/lib/feature-completeness.js",
+      "rule": "no-unused-vars",
+      "message": "'validateOperationalDecisionMatrix' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 260
+    },
+    {
+      "file": "src/lib/feature-completeness.js",
+      "rule": "no-unused-vars",
+      "message": "'validateLeverageMatrix' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 325
+    },
+    {
+      "file": "src/lib/feature-completeness.js",
+      "rule": "no-unused-vars",
+      "message": "'hasCompletenessSection' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 702
+    },
+    {
+      "file": "src/lib/feature-source-lineage.js",
+      "rule": "no-unused-vars",
+      "message": "'normalizeLabel' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 27
+    },
+    {
+      "file": "src/lib/git-commit-guard.js",
+      "rule": "preserve-caught-error",
+      "message": "There is no `cause` attached to the symptom error being thrown.",
+      "line": 327
+    },
+    {
+      "file": "src/lib/health-check.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "src/lib/health-check.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 15
+    },
+    {
+      "file": "src/lib/host-signature.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'wrote' is not used in subsequent statements.",
+      "line": 215
+    },
+    {
+      "file": "src/lib/llm-content-sanitizer.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 8
+    },
+    {
+      "file": "src/lib/llm-content-sanitizer.js",
+      "rule": "no-misleading-character-class",
+      "message": "Unexpected joined character sequence in character class.",
+      "line": 8
+    },
+    {
+      "file": "src/lib/llm-content-sanitizer.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 8
+    },
+    {
+      "file": "src/lib/llm-content-sanitizer.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 56
+    },
+    {
+      "file": "src/lib/prototype-binding.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'prototypeContent' is not used in subsequent statements.",
+      "line": 451
+    },
+    {
+      "file": "src/lib/prototype-binding.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'prototypeArchived' is not used in subsequent statements.",
+      "line": 452
+    },
+    {
+      "file": "src/lib/retro/retro-render.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+      "line": 29
+    },
+    {
+      "file": "src/lib/retro/retro-sources.js",
+      "rule": "no-unused-vars",
+      "message": "'crypto' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 18
+    },
+    {
+      "file": "src/lib/rule-scaffold.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'exists' is not used in subsequent statements.",
+      "line": 91
+    },
+    {
+      "file": "src/lib/terminal-picker.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b.",
+      "line": 125
+    },
+    {
+      "file": "src/lib/tmux-launcher.js",
+      "rule": "no-unused-vars",
+      "message": "'tool' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 138
+    },
+    {
+      "file": "src/lib/visual-runtime.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'nodes' is not used in subsequent statements.",
+      "line": 284
+    },
+    {
+      "file": "src/lib/visual-runtime.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'groundRgb' is not used in subsequent statements.",
+      "line": 360
+    },
+    {
+      "file": "src/lib/visual-telemetry.js",
+      "rule": "no-unused-vars",
+      "message": "'ambientLoops' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 1139
+    },
+    {
+      "file": "src/memory-reflect-engine.js",
+      "rule": "no-unused-vars",
+      "message": "'runtimeDir' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 40
+    },
+    {
+      "file": "src/model-delegation.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 4
+    },
+    {
+      "file": "src/model-delegation.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x08, \\x0b, \\x0c, \\x0e, \\x1f.",
+      "line": 65
+    },
+    {
+      "file": "src/neural-chain-noise-projection.js",
+      "rule": "no-unsafe-finally",
+      "message": "Unsafe usage of ThrowStatement.",
+      "line": 96
+    },
+    {
+      "file": "src/neural-chain-noise-projection.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\).",
+      "line": 128
+    },
+    {
+      "file": "src/neural-chain-sanitize.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x1f.",
+      "line": 39
+    },
+    {
+      "file": "src/operator-memory/index-md.js",
+      "rule": "no-unused-vars",
+      "message": "'decisionPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 29
+    },
+    {
+      "file": "src/operator-memory/index-md.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 48
+    },
+    {
+      "file": "src/operator-memory/prune.js",
+      "rule": "no-unused-vars",
+      "message": "'fs' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 13
+    },
+    {
+      "file": "src/operator-memory/prune.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "src/operator-memory/prune.js",
+      "rule": "no-unused-vars",
+      "message": "'getStorageRoot' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 15
+    },
+    {
+      "file": "src/operator-memory/prune.js",
+      "rule": "no-unused-vars",
+      "message": "'decisionPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 16
+    },
+    {
+      "file": "src/operator-memory/prune.js",
+      "rule": "no-unused-vars",
+      "message": "'historyPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 16
+    },
+    {
+      "file": "src/parallel-workspace.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/parallel-workspace.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 221
+    },
+    {
+      "file": "src/permissions-generator.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'existing' is not used in subsequent statements.",
+      "line": 242
+    },
+    {
+      "file": "src/qa-html-report.js",
+      "rule": "no-unused-vars",
+      "message": "'exists' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 5
+    },
+    {
+      "file": "src/qa-html-report.js",
+      "rule": "no-unused-vars",
+      "message": "'sevColor' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 146
+    },
+    {
+      "file": "src/review-intelligence/engine.js",
+      "rule": "no-unused-vars",
+      "message": "'crypto' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "src/runtime-store.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'runKey' is not used in subsequent statements.",
+      "line": 2012
+    },
+    {
+      "file": "src/runtime-store.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'taskKey' is not used in subsequent statements.",
+      "line": 2013
+    },
+    {
+      "file": "src/sandbox.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\-.",
+      "line": 16
+    },
+    {
+      "file": "src/sandbox.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 18
+    },
+    {
+      "file": "src/sandbox.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\-.",
+      "line": 20
+    },
+    {
+      "file": "src/squad-daemon.js",
+      "rule": "no-unused-vars",
+      "message": "'loadWorkerConfig' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 7
+    },
+    {
+      "file": "src/squad-daemon.js",
+      "rule": "no-unused-vars",
+      "message": "'SQUADS_DIR' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "src/squad-dashboard/renderer.js",
+      "rule": "no-unused-vars",
+      "message": "'info' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 710
+    },
+    {
+      "file": "src/squad-dashboard/server.js",
+      "rule": "no-unused-vars",
+      "message": "'path' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 4
+    },
+    {
+      "file": "src/squad-dashboard/server.js",
+      "rule": "no-unused-vars",
+      "message": "'reqPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 72
+    },
+    {
+      "file": "src/squad/intra-bus.js",
+      "rule": "no-unused-vars",
+      "message": "'fsSync' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 26
+    },
+    {
+      "file": "src/squad/learning-extractor.js",
+      "rule": "no-unused-vars",
+      "message": "'randomUUID' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 18
+    },
+    {
+      "file": "src/squad/learning-extractor.js",
+      "rule": "no-unused-vars",
+      "message": "'reflectionReports' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 35
+    },
+    {
+      "file": "src/squad/pattern-detector.js",
+      "rule": "no-unused-vars",
+      "message": "'key' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 150
+    },
+    {
+      "file": "src/squad/recovery-context.js",
+      "rule": "no-unused-vars",
+      "message": "'HISTORY_TOKEN_BUDGET' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 10
+    },
+    {
+      "file": "src/squad/reflection.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\[.",
+      "line": 140
+    },
+    {
+      "file": "src/squads/genome-compiler.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'previousChecklist' is not used in subsequent statements.",
+      "line": 323
+    },
+    {
+      "file": "src/test-briefing.js",
+      "rule": "no-unused-vars",
+      "message": "'MAX_MOCK_FILES' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 21
+    },
+    {
+      "file": "src/visual-exploration/schema.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x00, \\x08, \\x0b, \\x0c, \\x0e, \\x1f.",
+      "line": 22
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 310
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 310
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 310
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 310
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 310
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 315
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 315
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 315
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 315
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 315
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 324
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 324
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 351
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 351
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 351
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 382
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 382
+    },
+    {
+      "file": "src/web.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 382
+    },
+    {
+      "file": "src/workflow-gates.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'relevantChecks' is not used in subsequent statements.",
+      "line": 242
+    },
+    {
+      "file": "tests/agent-execution-telemetry-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'passed' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 7
+    },
+    {
+      "file": "tests/briefing-feedback-view.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 94
+    },
+    {
+      "file": "tests/browser-walkthrough.test.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 344
+    },
+    {
+      "file": "tests/browser-walkthrough.test.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 359
+    },
+    {
+      "file": "tests/browser-walkthrough.test.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'remaining' is not used in subsequent statements.",
+      "line": 401
+    },
+    {
+      "file": "tests/context-cache.test.js",
+      "rule": "no-unused-vars",
+      "message": "'r1' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 32
+    },
+    {
+      "file": "tests/context-cache.test.js",
+      "rule": "no-unused-vars",
+      "message": "'r2' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 33
+    },
+    {
+      "file": "tests/context-validate-command.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 53
+    },
+    {
+      "file": "tests/context-validate-command.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 53
+    },
+    {
+      "file": "tests/context-validate-command.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 81
+    },
+    {
+      "file": "tests/context-validate-command.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 81
+    },
+    {
+      "file": "tests/design-doctrine-anchors.test.js",
+      "rule": "no-unused-vars",
+      "message": "'ENGINE' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 24
+    },
+    {
+      "file": "tests/dossier-add-research.test.js",
+      "rule": "no-unused-vars",
+      "message": "'before' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "tests/dossier-add-research.test.js",
+      "rule": "no-unused-vars",
+      "message": "'after' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "tests/dossier/codemap-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'before' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "tests/dossier/codemap-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'after' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 3
+    },
+    {
+      "file": "tests/dossier/codemap-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'VALID_ROLES' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "tests/dossier/codemap-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'VALID_COUPLING' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "tests/dossier/revision-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'rawBefore' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 343
+    },
+    {
+      "file": "tests/dossier/revision-store.test.js",
+      "rule": "no-unused-vars",
+      "message": "'rawAfter' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 345
+    },
+    {
+      "file": "tests/execution-compile.test.js",
+      "rule": "no-unused-vars",
+      "message": "'offerExecution' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "tests/execution-compile.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 347
+    },
+    {
+      "file": "tests/execution-compile.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 349
+    },
+    {
+      "file": "tests/execution-graph.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {4}.",
+      "line": 116
+    },
+    {
+      "file": "tests/execution-graph.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 122
+    },
+    {
+      "file": "tests/execution-graph.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 136
+    },
+    {
+      "file": "tests/execution-graph.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 137
+    },
+    {
+      "file": "tests/execution-graph.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 169
+    },
+    {
+      "file": "tests/execution-run.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 662
+    },
+    {
+      "file": "tests/execution-scale-routing.test.js",
+      "rule": "no-unused-vars",
+      "message": "'normalize' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 163
+    },
+    {
+      "file": "tests/feature-close-distillation.test.js",
+      "rule": "no-unused-vars",
+      "message": "'acquireDistillationLock' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 21
+    },
+    {
+      "file": "tests/feature-close-distillation.test.js",
+      "rule": "no-unused-vars",
+      "message": "'countNotifyEvents' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 84
+    },
+    {
+      "file": "tests/feature-close-distillation.test.js",
+      "rule": "no-unused-vars",
+      "message": "'result' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 250
+    },
+    {
+      "file": "tests/feature-export.test.js",
+      "rule": "no-unused-vars",
+      "message": "'silentLogger' is defined but never used. Allowed unused vars must match /^_/u.",
+      "line": 13
+    },
+    {
+      "file": "tests/harness-retro.test.js",
+      "rule": "no-useless-assignment",
+      "message": "The value assigned to 'stdout' is not used in subsequent statements.",
+      "line": 426
+    },
+    {
+      "file": "tests/implementation-plan.test.js",
+      "rule": "no-unused-vars",
+      "message": "'getPlanPhases' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "tests/install-animation.test.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b.",
+      "line": 50
+    },
+    {
+      "file": "tests/integration-context-optimizations.test.js",
+      "rule": "no-unused-vars",
+      "message": "'redactCredentials' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 18
+    },
+    {
+      "file": "tests/integration-context-optimizations.test.js",
+      "rule": "no-unused-vars",
+      "message": "'beforeForce' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 235
+    },
+    {
+      "file": "tests/jargon-leak-doctor.test.js",
+      "rule": "no-unused-vars",
+      "message": "'MVP_AGENTS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 15
+    },
+    {
+      "file": "tests/jargon-leak-doctor.test.js",
+      "rule": "no-unused-vars",
+      "message": "'loadJargonTerms' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 18
+    },
+    {
+      "file": "tests/jargon-leak-doctor.test.js",
+      "rule": "no-unused-vars",
+      "message": "'readProjectProfile' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 19
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 819
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 840
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 870
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 910
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 945
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/json-output.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 969
+    },
+    {
+      "file": "tests/llm-content-sanitizer.test.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 11
+    },
+    {
+      "file": "tests/llm-content-sanitizer.test.js",
+      "rule": "no-irregular-whitespace",
+      "message": "Irregular whitespace not allowed.",
+      "line": 11
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 46
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 115
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/mcp-init.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 196
+    },
+    {
+      "file": "tests/memory-archive.test.js",
+      "rule": "no-unused-vars",
+      "message": "'archiveTarget' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 18
+    },
+    {
+      "file": "tests/memory-archive.test.js",
+      "rule": "no-unused-vars",
+      "message": "'restoreTarget' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 19
+    },
+    {
+      "file": "tests/neural-chain-git-ingest.test.js",
+      "rule": "no-unused-vars",
+      "message": "'WINDOW_DAYS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 21
+    },
+    {
+      "file": "tests/neural-chain-git-ingest.test.js",
+      "rule": "no-unused-vars",
+      "message": "'MIN_COMMITS_FOR_INGEST' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 24
+    },
+    {
+      "file": "tests/neural-chain-invariants.test.js",
+      "rule": "no-unused-vars",
+      "message": "'writeNoiseFile' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 26
+    },
+    {
+      "file": "tests/operator-memory-capture.test.js",
+      "rule": "no-unused-vars",
+      "message": "'normalize' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 22
+    },
+    {
+      "file": "tests/operator-memory-capture.test.js",
+      "rule": "no-unused-vars",
+      "message": "'deleteProposal' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "tests/operator-memory-capture.test.js",
+      "rule": "no-unused-vars",
+      "message": "'runOpForget' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 28
+    },
+    {
+      "file": "tests/operator-memory-capture.test.js",
+      "rule": "no-unused-vars",
+      "message": "'decision' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 129
+    },
+    {
+      "file": "tests/operator-memory-conflict.test.js",
+      "rule": "no-unused-vars",
+      "message": "'readRule' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 25
+    },
+    {
+      "file": "tests/operator-memory-conflict.test.js",
+      "rule": "no-unused-vars",
+      "message": "'DEFAULT_DEBOUNCE_MS' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 30
+    },
+    {
+      "file": "tests/operator-memory-decay.test.js",
+      "rule": "no-unused-vars",
+      "message": "'HALF_LIFE_DAYS_DEFAULT' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 31
+    },
+    {
+      "file": "tests/operator-memory-identity.test.js",
+      "rule": "no-unused-vars",
+      "message": "'crypto' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "tests/operator-memory-identity.test.js",
+      "rule": "no-unused-vars",
+      "message": "'OVERRIDE_REGEX' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 21
+    },
+    {
+      "file": "tests/operator-memory-identity.test.js",
+      "rule": "no-unused-vars",
+      "message": "'SALT_V1' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 23
+    },
+    {
+      "file": "tests/operator-memory-identity.test.js",
+      "rule": "no-unused-vars",
+      "message": "'getIndexDbPath' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 32
+    },
+    {
+      "file": "tests/operator-memory-loading.test.js",
+      "rule": "no-unused-vars",
+      "message": "'regenerateIndex' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 24
+    },
+    {
+      "file": "tests/operator-memory-scoping.test.js",
+      "rule": "no-unused-vars",
+      "message": "'os' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 5
+    },
+    {
+      "file": "tests/operator-memory-scoping.test.js",
+      "rule": "no-unused-vars",
+      "message": "'stored' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 56
+    },
+    {
+      "file": "tests/path-guard.test.js",
+      "rule": "no-unused-vars",
+      "message": "'PROJECT_MAP_PATH' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 8
+    },
+    {
+      "file": "tests/plan-scale.test.js",
+      "rule": "no-unused-vars",
+      "message": "'classifySurface' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 17
+    },
+    {
+      "file": "tests/plan-scale.test.js",
+      "rule": "no-unused-vars",
+      "message": "'formatSplitProposal' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 20
+    },
+    {
+      "file": "tests/plan-scale.test.js",
+      "rule": "no-unused-vars",
+      "message": "'formatUnit' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 21
+    },
+    {
+      "file": "tests/plan-scale.test.js",
+      "rule": "no-unused-vars",
+      "message": "'unitCeiling' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 27
+    },
+    {
+      "file": "tests/qa-telemetry-foundation.test.js",
+      "rule": "no-unused-vars",
+      "message": "'fsSync' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 10
+    },
+    {
+      "file": "tests/runner-cascade.test.js",
+      "rule": "no-unused-vars",
+      "message": "'progressEvents' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 57
+    },
+    {
+      "file": "tests/runner-daemon.test.js",
+      "rule": "no-unused-vars",
+      "message": "'listTasks' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "tests/runner-queue.test.js",
+      "rule": "no-unused-vars",
+      "message": "'id1' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 68
+    },
+    {
+      "file": "tests/runner-run.test.js",
+      "rule": "no-unused-vars",
+      "message": "'detectCLI' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "tests/scan-project.test.js",
+      "rule": "no-regex-spaces",
+      "message": "Spaces are hard to count. Use {2}.",
+      "line": 255
+    },
+    {
+      "file": "tests/scout-qa-findings.test.js",
+      "rule": "no-unused-vars",
+      "message": "'fsSync' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 15
+    },
+    {
+      "file": "tests/self-loop-guardrails.test.js",
+      "rule": "no-unused-vars",
+      "message": "'before' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 14
+    },
+    {
+      "file": "tests/squad-dashboard.test.js",
+      "rule": "no-unused-vars",
+      "message": "'upsertSquadManifest' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 9
+    },
+    {
+      "file": "tests/squad-plan.test.js",
+      "rule": "no-unused-vars",
+      "message": "'getSquadPlanRounds' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 12
+    },
+    {
+      "file": "tests/sub-task-engine.test.js",
+      "rule": "no-unused-vars",
+      "message": "'PARENT_AGENT_V1' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 20
+    },
+    {
+      "file": "tests/sync-agents-preflight-semantic.test.js",
+      "rule": "no-unused-vars",
+      "message": "'extractSections' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 22
+    },
+    {
+      "file": "tests/terminal-picker.test.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b, \\x1b.",
+      "line": 147
+    },
+    {
+      "file": "tests/terminal-picker.test.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b, \\x1b.",
+      "line": 158
+    },
+    {
+      "file": "tests/terminal-picker.test.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b, \\x1b.",
+      "line": 163
+    },
+    {
+      "file": "tests/terminal-picker.test.js",
+      "rule": "no-control-regex",
+      "message": "Unexpected control character(s) in regular expression: \\x1b.",
+      "line": 174
+    },
+    {
+      "file": "tests/tool-capabilities.test.js",
+      "rule": "no-unused-vars",
+      "message": "'listExecutionHosts' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 43
+    },
+    {
+      "file": "tests/validator-agent.test.js",
+      "rule": "no-prototype-builtins",
+      "message": "Do not access Object.prototype method 'hasOwnProperty' from target object.",
+      "line": 31
+    },
+    {
+      "file": "tests/validator-agent.test.js",
+      "rule": "no-prototype-builtins",
+      "message": "Do not access Object.prototype method 'hasOwnProperty' from target object.",
+      "line": 32
+    },
+    {
+      "file": "tests/validator-agent.test.js",
+      "rule": "no-prototype-builtins",
+      "message": "Do not access Object.prototype method 'hasOwnProperty' from target object.",
+      "line": 34
+    },
+    {
+      "file": "tests/validator-agent.test.js",
+      "rule": "no-prototype-builtins",
+      "message": "Do not access Object.prototype method 'hasOwnProperty' from target object.",
+      "line": 35
+    },
+    {
+      "file": "tests/visual-assurance-adversarial.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 21
+    },
+    {
+      "file": "tests/visual-telemetry.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 1119
+    },
+    {
+      "file": "tests/visual-telemetry.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\/.",
+      "line": 1146
+    },
+    {
+      "file": "tests/workflow-engine-e2e.test.js",
+      "rule": "no-unused-vars",
+      "message": "'loadOrCreateState' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 11
+    },
+    {
+      "file": "tests/workflow-engine-hardening.test.js",
+      "rule": "no-unused-vars",
+      "message": "'loadOrCreateState' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 10
+    },
+    {
+      "file": "tests/workflow-engine-hardening.test.js",
+      "rule": "no-unused-vars",
+      "message": "'openRuntimeDb' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 20
+    },
+    {
+      "file": "tests/workflow-heal-checkpoint.test.js",
+      "rule": "no-unused-vars",
+      "message": "'written' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 66
+    },
+    {
+      "file": "tests/workflow-heal-checkpoint.test.js",
+      "rule": "no-unused-vars",
+      "message": "'raw' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+      "line": 183
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    },
+    {
+      "file": "tests/workflow-plan.test.js",
+      "rule": "no-useless-escape",
+      "message": "Unnecessary escape character: \\\".",
+      "line": 70
+    }
+  ]
+}

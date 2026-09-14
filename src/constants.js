@@ -20,6 +20,9 @@ const MANAGED_FILES = [
   '.aioson/agents/planner.md',
   '.aioson/agents/dev.md',
   '.aioson/agents/qa.md',
+  '.aioson/agents/quality.md',
+  '.aioson/docs/quality/engineering.md',
+  '.aioson/quality/evals/core.json',
   '.aioson/agents/validator.md',
   '.aioson/agents/tester.md',
   '.aioson/agents/orchestrator.md',
@@ -43,6 +46,8 @@ const MANAGED_FILES = [
   '.aioson/agents/shakedown.md',
   '.aioson/docs/shakedown/completeness-checklist.md',
   '.aioson/docs/dev/execution-lanes.md',
+  '.aioson/docs/planner/orchestrated-execution.md',
+  '.aioson/docs/delivery-followups.md',
   '.aioson/docs/squad/package-contract.md',
   '.aioson/docs/squad/creation-flow.md',
   '.aioson/docs/squad/research-loop.md',
@@ -256,6 +261,7 @@ const REQUIRED_FILES = [
   '.claude/commands/aioson/agent/discover.md',
   '.claude/commands/aioson/agent/dev.md',
   '.claude/commands/aioson/agent/qa.md',
+  '.claude/commands/aioson/agent/quality.md',
   '.aioson/config.md',
   '.aioson/agents/setup.md',
   '.aioson/agents/discovery-design-doc.md',
@@ -436,6 +442,15 @@ const AGENT_DEFINITIONS = [
       '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
     ],
     output: '.aioson/context/qa-report-{slug}.md'
+  },
+  {
+    id: 'quality',
+    displayName: 'Quality',
+    description: 'Optional engineering quality assessment, static analysis and reproducible evaluations',
+    command: '@quality',
+    path: '.aioson/agents/quality.md',
+    dependsOn: ['.aioson/context/project.context.md'],
+    output: '.aioson/context/quality-review-{target}.md + .aioson/runtime/quality/'
   },
   {
     id: 'validator',

@@ -156,7 +156,7 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
   const byPath = Object.fromEntries(bad.errors.map((error) => [error.path, error.message]));
   assert.match(byPath['$.version'], /must equal 1/);
   assert.match(byPath['$.enabled'], /boolean/);
-  assert.match(byPath['$.roles.backend_dev.host'], /must be one of claude, codex, grok, kimi, opencode, qwen/);
+  assert.match(byPath['$.roles.backend_dev.host'], /must be one of antigravity, claude, codex, grok, kimi, opencode, qwen/);
   assert.match(byPath['$.roles.frontend_dev.reasoning_effort'], /effort_unsupported_by_host/);
   assert.match(byPath['$.roles.Bad-Key'], /snake_case/);
   assert.match(byPath['$.roles.qa.api_key'], /secret fields are forbidden/);
@@ -164,6 +164,21 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
   assert.match(byPath['$.parallel.max_concurrent_lanes'], /between 1 and 8/);
   assert.match(byPath['$.on_unavailable'], /ask, fallback, pause/);
   assert.equal(laneRoleKey('mobile-app', 'qa'), 'mobile_app_qa');
+
+  const profiled = {
+    version: 1, enabled: true, active_profile: 'economy',
+    profiles: {
+      economy: { enabled: true, fallback_use: true, fallback_profiles: ['reserve'], roles: ROLES.roles },
+      reserve: { enabled: true, roles: ROLES.roles },
+      disabled: { enabled: false, roles: ROLES.roles }
+    },
+    parallel: { max_concurrent_lanes: 2 }, on_unavailable: 'ask'
+  };
+  assert.equal(validateExecutionRoles(profiled).ok, true);
+  assert.match(validateExecutionRoles({ ...profiled, active_profile: 'disabled' }).errors.find(error => error.path === '$.active_profile').message, /enabled profile/);
+  assert.match(validateExecutionRoles({ ...profiled, roles: ROLES.roles }).errors.find(error => error.path === '$').message, /exactly one/);
+  assert.match(validateExecutionRoles({ ...profiled, profiles: { ...profiled.profiles, economy: { ...profiled.profiles.economy, fallback_profiles: ['missing'] } } }).errors.find(error => error.path.endsWith('fallback_profiles')).message, /missing profile/);
+  assert.match(validateExecutionRoles({ ...profiled, profiles: { ...profiled.profiles, economy: { ...profiled.profiles.economy, fallback_profiles: ['economy'] } } }).errors.find(error => error.path.endsWith('fallback_profiles')).message, /own profile/);
 });
 
 test('execution:offer — unavailable without the unlock file, when disabled, when invalid, when a role is unsigned; available only when every role is signed', async (t) => {
@@ -286,6 +301,35 @@ test('execution:compile refuses when the roles or signatures are not there — t
 
 // ───────────────────────── compilation ─────────────────────────
 
+test('initial source footprint refuses a large read before writing compiled artifacts', async t => {
+  const { dir, env } = await setup(t);
+  await fs.mkdir(path.join(dir, 'src/api'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'src/api/orders.ts'), 'x'.repeat(200000));
+  const result = await compile(dir, env);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some(item => item.check === 'unit_initial_context_over_budget'));
+  await assert.rejects(fs.stat(path.join(dir, `.aioson/context/execution-plan-${SLUG}.json`)), { code: 'ENOENT' });
+});
+
+test('recompiling an active run honors its explicit no-context-limit choice without changing default quality or QA policy', async t => {
+  const { dir, env } = await setup(t);
+  await fs.mkdir(path.join(dir, 'src/api'), { recursive: true });
+  await fs.writeFile(path.join(dir, 'src/api/orders.ts'), 'x'.repeat(200000));
+  const file = path.join(dir, `.aioson/context/execution-state-${SLUG}.json`);
+  const state = { feature: SLUG, run_id: 'active-run', status: 'paused', context_limit_enabled: false };
+  await fs.writeFile(file, JSON.stringify(state));
+  const result = await compile(dir, env);
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.ok(result.warnings.some(item => item.check === 'unit_initial_context_over_budget' && /advisory/.test(item.message)));
+  assert.equal(result.plan.policy.qa.require_pass, true);
+  assert.equal(result.plan.policy.context.max_tokens, 80000);
+  assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), state);
+  for (const change of [{ status: 'completed' }, { status: 'paused', context_limit_enabled: true }, { feature: 'another-feature', context_limit_enabled: false }]) {
+    await fs.writeFile(file, JSON.stringify({ ...state, ...change }));
+    assert.equal((await compile(dir, env)).ok, false);
+  }
+});
+
 test('execution:compile — units per phase × lane, waves, per-unit prompts with PRD/plan excerpts, manifest lanes + qa + execution mode; verify passes; recompile is idempotent', async (t) => {
   const { dir, env } = await setup(t);
   const result = await compile(dir, env);
@@ -318,7 +362,8 @@ test('execution:compile — units per phase × lane, waves, per-unit prompts wit
   assert.equal(u1.lane, 'backend');
   assert.deepEqual(u1.caps, ['CAP-orders-api']);
   assert.deepEqual(u1.acs, ['AC-orders-01']);
-  assert.deepEqual(u1.verification, [{ cap: 'CAP-orders-api', command: 'npm test -- orders.api' }]);
+  assert.deepEqual(u1.verification, [{ cap: null, command: 'npm test -- orders.api passes' }]);
+  assert.deepEqual(u1.integration_verification, [{ cap: 'CAP-orders-api', command: 'npm test -- orders.api' }]);
   assert.deepEqual(u1.depends_on, []);
   assert.equal(u1.prompt, `.aioson/context/execution-prompts/${SLUG}/phase-1.md`);
   assert.equal(u1.report, `.aioson/context/reports/${SLUG}/{run_id}/phase-1.json`);
@@ -327,7 +372,8 @@ test('execution:compile — units per phase × lane, waves, per-unit prompts wit
   assert.equal(u3.owner, 'integration');
   assert.equal(u3.lane, null);
   assert.equal(u3.prompt, undefined, 'integration units get no lane prompt — the session DEV runs them');
-  assert.deepEqual(plan.integration, { owner: 'dev', units: ['phase-3'], role: null });
+  assert.deepEqual({ ...plan.integration, verification: undefined }, { owner: 'dev', units: ['phase-3'], role: null, verification: undefined });
+  assert.ok(plan.integration.verification.some(item => item.cap === 'CAP-orders-api'));
   assert.deepEqual(plan.parallel, { max_concurrent_lanes: 2 });
   assert.equal(plan.on_unavailable, 'ask');
   assert.equal(plan.source.plan, `.aioson/context/implementation-plan-${SLUG}.md`);
@@ -341,12 +387,14 @@ test('execution:compile — units per phase × lane, waves, per-unit prompts wit
   assert.match(prompt, /## Implementation strategy/);
   assert.match(prompt, /## Execution invariants/);
   assert.match(prompt, /Never run stage-ownership or publishing commands: workflow:next, dev:state:write, pulse:update, agent:done/);
+  assert.match(prompt, /Use Git only for read-only inspection in this shared worktree/);
+  assert.match(prompt, /Compare baselines with git show without replacing working files/);
   assert.match(prompt, /# Unit contract — orders \/ phase-1/);
   assert.match(prompt, /- Lane: backend \(write paths: src\/api\/\*\*, tests\/api\/\*\*\)/);
   assert.match(prompt, /- Phase: 1 — wave 1 of 2/);
   assert.match(prompt, /  - src\/api\/orders\.ts\n  - tests\/api\/orders\.test\.ts/);
   assert.match(prompt, /- Done when: npm test -- orders\.api passes/);
-  assert.match(prompt, /  - npm test -- orders\.api \(CAP-orders-api\)/);
+  assert.match(prompt, /  - npm test -- orders\.api passes/);
   assert.match(prompt, /\| AC-orders-01 \| CAP-orders-api \| POST \/orders creates an order \| api test \|/);
   assert.doesNotMatch(prompt, /AC-orders-02/, 'another lane\'s acceptance criteria stay out of this unit');
   assert.match(prompt, /\| CAP-orders-api \| create \| src\/api\/orders\.ts, tests\/api\/orders\.test\.ts \| order endpoints \|/);
@@ -373,7 +421,7 @@ test('execution:compile — units per phase × lane, waves, per-unit prompts wit
   assert.deepEqual(backend.write_paths, ['src/api/**', 'tests/api/**']);
   assert.equal(backend.prompt, `.aioson/context/execution-prompts/${SLUG}/backend.md`);
   assert.equal(backend.report, `.aioson/context/reports/${SLUG}/{run_id}/dev-backend.json`);
-  assert.deepEqual(backend.qa, { host: 'claude', model: 'claude-sonnet-5', report: `.aioson/context/reports/${SLUG}/{run_id}/qa-backend.json`, max_fix_files: 3 });
+  assert.deepEqual(backend.qa, { host: 'claude', model: 'claude-sonnet-5', report: `.aioson/context/reports/${SLUG}/{run_id}/qa-backend.json`, max_fix_files: 3, max_rework_rounds: 1 });
   const frontend = manifest.development_lanes.lanes.frontend;
   assert.equal(frontend.host, 'kimi');
   assert.equal(Object.hasOwn(frontend, 'reasoning_effort'), false);
@@ -478,7 +526,7 @@ test('units without an explicit CAP inherit it from the delivery plan phase or t
 
 // ───────────────────────── staleness (verify:artifact kind=execution-plan) ─────────────────────────
 
-test('verify:artifact kind=execution-plan is digest-bound: plan edits, role changes, manifest drift, unsigned hosts and hand-edited prompts are all caught', async (t) => {
+test('verify:artifact keeps runtime role routing hot while plan edits, manifest drift, unsigned compiled hosts and hand-edited prompts are caught', async (t) => {
   const { dir, env } = await setup(t);
   assert.equal((await compile(dir, env)).ok, true);
   const planFile = path.join(dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`);
@@ -495,10 +543,9 @@ test('verify:artifact kind=execution-plan is digest-bound: plan edits, role chan
   assert.match(verified.issues[0], /plan_digest_stale/);
   await fs.writeFile(planFile, PLAN, 'utf8');
 
-  await fs.writeFile(rolesFile, JSON.stringify({ ...ROLES, roles: { ...ROLES.roles, qa: { host: 'claude', model: 'claude-opus-5' } } }, null, 2));
+  await fs.writeFile(rolesFile, JSON.stringify({ ...ROLES, roles: { ...ROLES.roles, qa: { host: 'kimi', model: 'kimi-k3' } } }, null, 2));
   verified = await verifyExecutionPlan(dir, SLUG, { env });
-  assert.deepEqual(issueChecks(verified), ['execution-plan:roles']);
-  assert.match(verified.issues[0], /roles_changed/);
+  assert.deepEqual(issueChecks(verified), [], 'host/model changes are selected again at stage dispatch');
   await fs.writeFile(rolesFile, JSON.stringify(ROLES, null, 2));
 
   const manifest = JSON.parse(await fs.readFile(manifestFile, 'utf8'));

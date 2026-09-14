@@ -45,9 +45,10 @@ const {
 } = require('../agent-execution/execution-plan');
 const { runExecution, decideExecution, statusExecution, describeMs, describeAge, describeMeasuredOn } = require('../agent-execution/execution-run');
 const { graphExecution, FORMATS: GRAPH_FORMATS } = require('../agent-execution/execution-graph');
+const { renderMonitor } = require('../agent-execution/execution-terminal');
 
-const SUBCOMMANDS = ['offer', 'seed', 'compile', 'run', 'decide', 'status', 'graph'];
-const STATUS_FORMATS = ['full', 'line'];
+const SUBCOMMANDS = ['offer', 'seed', 'compile', 'run', 'decide', 'status', 'graph', 'dashboard', 'prices'];
+const STATUS_FORMATS = ['full', 'line', 'table'];
 const DEFAULT_WATCH_SECONDS = 5;
 
 /** What a running stage is doing, from its heartbeat: elapsed, last write, files. */
@@ -154,18 +155,19 @@ function renderStatus(result) {
     return lines;
   }
   const r = result.run;
-  lines.push(`${result.feature}: run ${r.run_id} ${r.status}${r.reason ? ` (${r.reason})` : ''} — lane units passed ${r.units.passed}/${r.units.lane}, qa passed ${r.units.qa_passed}, findings ${result.findings.length}, decisions pending ${r.decisions_pending.length}`);
+  lines.push(`${result.feature}: run ${r.run_id} ${r.status}${r.reason ? ` (${r.reason})` : ''} — DEV passed ${r.units.passed}/${r.units.lane}, qa passed ${r.units.qa_passed}, qa failed ${r.units.qa_failed}, findings ${result.findings.length}, decisions pending ${r.decisions_pending.length}`);
   const engine = engineLine(result);
   if (engine) lines.push(`  ${engine}`);
   for (const wave of result.waves) {
-    lines.push(`  wave ${wave.wave} ${wave.status}: ${wave.units.map((u) => `${u.id}${u.owner === 'integration' ? ' (dev)' : ` ${u.status}${u.qa && u.qa.status !== 'not_applicable' ? `/qa ${u.qa.status}` : ''}`}`).join(', ')}`);
+    lines.push(`  wave ${wave.wave} ${wave.status}:`);
+    for (const u of wave.units) lines.push(`    ${u.id}${u.owner === 'integration' ? ' (integration / dev)' : ` · dev ${u.status}${u.qa && u.qa.status !== 'not_applicable' ? ` · qa ${u.qa.status}` : ''}`}`);
   }
   for (const item of result.running || []) {
     lines.push(`  ▶ ${item.unit} ${item.stage} ${item.host}/${item.model} · ${describeLive(item.live ? { ...item.live, elapsed_ms: item.elapsed_ms ?? item.live.elapsed_ms } : (item.elapsed_ms !== null && item.elapsed_ms !== undefined ? { elapsed_ms: item.elapsed_ms, last_write_age_ms: null, files_changed: 0 } : null))}`);
   }
   for (const decision of result.decisions_pending) lines.push(`  ? ${decision.unit} [${decision.stage}] ${decision.reason} → ${decision.hint}`);
   if (result.follow_command) lines.push(`Follow: ${result.follow_command}`);
-  if (result.resume_command) lines.push(`Resume: ${result.resume_command}`);
+  if (result.resume_command && !result.engine?.alive) lines.push(`Resume: ${result.resume_command}`);
   return lines;
 }
 
@@ -381,6 +383,8 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
 
   if (sub === 'run') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
+    if (options['no-context-limit'] && options['context-limit']) return { ok: false, reason: 'conflicting_context_options', message: 'Use either --no-context-limit or --context-limit' };
+    if (options['until-complete'] && options['bounded-recovery']) return { ok: false, reason: 'conflicting_recovery_options', message: 'Use either --until-complete or --bounded-recovery' };
     // Live lines: stdout in human mode; stderr in --json mode so the JSON
     // document stays the only thing on stdout while a supervising terminal
     // still sees every event as it happens.
@@ -409,6 +413,10 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       feature,
       resume: options.resume === true,
       fresh: options.fresh === true,
+      step: options.step === true,
+      contextLimitEnabled: options['no-context-limit'] === true ? false : options['context-limit'] === true ? true : null,
+      untilComplete: options['until-complete'] === true ? true : options['bounded-recovery'] === true ? false : null,
+      expectedRunId: typeof options['expect-run'] === 'string' ? options['expect-run'] : null,
       preflightOnly: options.preflight === true,
       stopAfterWave: options.wave !== undefined && options.wave !== true ? Number(options.wave) : null,
       env,
@@ -424,7 +432,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
     if (!options.unit || options.unit === true) return { ok: false, reason: 'unit_required', message: 'Use --unit=<unit-id>' };
     if (!options.choice || options.choice === true) return { ok: false, reason: 'choice_required', message: 'Use --choice=<retry|fallback:<host>/<model>[/<effort>]|skip|skip-qa|abort>' };
-    const result = await decideExecution({ projectDir, feature, unit: String(options.unit), choice: String(options.choice), env, ...(engineOptions.now ? { now: engineOptions.now } : {}), ...(engineOptions.leaseWaitMs !== undefined ? { leaseWaitMs: engineOptions.leaseWaitMs } : {}) });
+    const result = await decideExecution({ projectDir, feature, unit: String(options.unit), choice: String(options.choice), env, expectedRunId: typeof options['expect-run'] === 'string' ? options['expect-run'] : null, ...(engineOptions.now ? { now: engineOptions.now } : {}), ...(engineOptions.leaseWaitMs !== undefined ? { leaseWaitMs: engineOptions.leaseWaitMs } : {}) });
     if (!options.json) {
       if (result.ok) logger.log(`Decision applied to ${result.unit} [${result.stage}]: ${result.choice} → run ${result.status}${result.resume_command ? `. Resume: ${result.resume_command}` : ''}`);
       else logger.error(`Decision refused (${result.reason})${result.message ? `: ${result.message}` : ''}${result.hint ? ` → ${result.hint}` : ''}`);
@@ -434,13 +442,14 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
 
   if (sub === 'status') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
-    const format = String(options.format || 'full').trim().toLowerCase();
+    const format = String(options.format || (options.watch ? 'table' : 'full')).trim().toLowerCase();
     if (!STATUS_FORMATS.includes(format)) return { ok: false, reason: 'invalid_format', valid: STATUS_FORMATS, message: `Use --format=${STATUS_FORMATS.join('|')}` };
     const watch = parseWatch(options.watch);
     if (watch && watch.error) return { ok: false, reason: 'invalid_watch', message: 'Use --watch[=<seconds>] — a positive number of seconds between refreshes (default 5)' };
     const nowFn = typeof engineOptions.now === 'function' ? engineOptions.now : () => Date.now();
     const render = (result) => {
       if (format === 'line') logger.log(renderStatusLine(result));
+      else if (format === 'table') logger.log(renderMonitor(result, { columns: engineOptions.columns || process.stdout.columns }).join('\n'));
       else for (const line of renderStatus(result)) logger.log(line);
     };
     if (!watch) {
@@ -455,7 +464,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
     const sleep = typeof engineOptions.sleep === 'function' ? engineOptions.sleep : (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const write = typeof engineOptions.write === 'function' ? engineOptions.write : (text) => process.stdout.write(text);
     const intervalMs = Math.round(watch.seconds * 1000);
-    const clear = !options.json && format === 'full' && Boolean(process.stdout.isTTY) && engineOptions.clearScreen !== false;
+    const clear = !options.json && format !== 'line' && Boolean(process.stdout.isTTY) && engineOptions.clearScreen !== false;
     let ticks = 0;
     let result;
     for (;;) {
@@ -472,7 +481,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
         write(`${JSON.stringify({ tick: ticks, ...result })}\n`);
       } else {
         if (clear) write('\x1b[2J\x1b[H');
-        else if (format === 'full') logger.log(`--- ${new Date(nowFn()).toISOString()} · tick ${ticks} · every ${watch.seconds}s (Ctrl+C to stop watching; the run keeps going) ---`);
+        else if (format !== 'line') logger.log(`--- ${new Date(nowFn()).toISOString()} · tick ${ticks} · every ${watch.seconds}s (Ctrl+C to stop watching; the run keeps going) ---`);
         render(result);
       }
       await sleep(intervalMs);
@@ -482,6 +491,21 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       render(result);
     }
     return { ...result, watch: { ticks, interval_ms: intervalMs, ended: result.run ? result.run.status : (result.state_corrupt ? 'state_corrupt' : (result.state_unreadable ? 'state_unreadable' : 'no_run')) } };
+  }
+
+  if (sub === 'prices') {
+    const { refreshPriceCatalog, readPriceCatalog, PRICES_PATH } = require('../agent-execution/execution-cost');
+    try {
+      const catalog = options.refresh ? await refreshPriceCatalog(projectDir) : (await readPriceCatalog(projectDir)).catalog;
+      const result = catalog ? { ok: true, path: PRICES_PATH, provider: catalog.provider, fetched_at: catalog.fetched_at, models: catalog.models.length } : { ok: false, reason: 'prices_not_loaded', message: 'Use execution:prices . --refresh para consultar as tarifas oficiais.' };
+      if (!options.json) logger.log(result.ok ? `Tarifas: ${result.models} modelos · ${result.provider} · ${result.fetched_at} · ${result.path}` : result.message);
+      return { ...result, exitCode: result.ok ? 0 : 1 };
+    } catch (error) { return { ok: false, reason: 'prices_refresh_failed', message: error.message, exitCode: 1 }; }
+  }
+
+  if (sub === 'dashboard') {
+    const { runExecutionDashboard } = require('./execution-dashboard');
+    return runExecutionDashboard({ projectDir, feature, options, logger });
   }
 
   if (sub === 'graph') {

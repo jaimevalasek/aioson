@@ -2,15 +2,15 @@
 description: "Code-health / improvement analysis playbook — coverage gaps, test sufficiency, regression need, execution-chain tracing, performance hotspots, componentization/maintainability. Shared on-demand lens for @tester/@qa/@pentester/@architect/@sheldon/@deyvin. Load only when the trigger fires; do not inline."
 task_types: [quality, analysis]
 triggers: [code health, improvement lens, regression]
-agents: [tester, qa, pentester, architect, sheldon, deyvin]
+agents: [quality, tester, qa, pentester, architect, sheldon, deyvin]
 ---
 
 # Code-Health Analysis
 
 > Shared, **on-demand** lens. Load when assessing where a codebase needs better tests,
 > regression guards, performance, or refactoring — never inline by default.
-> Scale depth to classification: **MICRO** → coverage + regression only; **SMALL** → add
-> execution-chain + perf; **MEDIUM** → all six facets. Respect the loading discipline in
+> Select facets by observed risk and the active agent's ownership; classification alone
+> never expands scope or adds a specialist. Respect the loading discipline in
 > `.aioson/design-docs/agent-loading-contract.md` — read only the files a facet points to.
 
 ## The loop
@@ -33,8 +33,8 @@ Prefer the smallest target that answers the question. Write down what "better" m
   Is it a recurring hotspot? If yes, a regression test pinning the exact prior failure is worth more
   than broad coverage. Pin the bug, not the function.
 - **Execution chain** — trace the runtime flow: entry → call chain → side effects → exit. Map
-  dependencies and where state mutates. For >5 files, dispatch a read-only scout instead of
-  inline-reading (see `@deyvin` sub-task scout) — preserve context.
+  dependencies and where state mutates. Bound discovery to the relevant call path; delegate
+  only when the active host and agent policy authorize it.
 - **Performance hotspots** — N+1 queries in lists, sync external calls in the request cycle,
   unbounded/unpaginated queries, repeated work in loops, missing indexes on WHERE/ORDER/JOIN,
   O(n²) over growing collections. Flag with the trigger condition, not a micro-benchmark guess.
@@ -48,12 +48,13 @@ Dedupe findings; prioritize by **risk × effort**. Separate **must-fix** (correc
 critical-path coverage) from **nice-to-have** (cosmetic refactors). Drop speculative findings.
 
 ### 4. Operate (opera)
-Produce the concrete change, not a description: **write the test**, propose the extraction with the
-target shape, or the specific perf fix. Stay within the active agent's scope — analysis agents
-recommend + write tests; structural changes route to `@dev`/`@architect`.
+Produce an actionable result within the active agent's scope. Analysis agents recommend a precise
+change and verification; they do not write tests or implementation. `@tester` owns assigned test
+work; `@dev` owns authorized implementation. `@architect` advises only on a demonstrated structural
+question, within the approved artifact contract.
 
 ### 5. Test
-Add/run the test or verification command. Confirm the change does what it claims. For a regression
+Run the verification command; add a test only when the active role owns that work. For a regression
 finding, prove the test fails before the fix and passes after.
 
 ### 6. Adjust
@@ -64,11 +65,12 @@ Re-measure against the goal from step 1. If not improved, iterate or revert. Rec
 
 | Agent | Leans on | Output |
 |---|---|---|
+| @quality | reproducible measurement, assertion effectiveness, baseline/eval integrity | quality review with evidence and remediation backlog |
 | @tester | coverage, test sufficiency, regression | writes the missing tests (line/branch/property) |
 | @qa | risk-first triage; routes coverage→@tester, perf/structure→@architect | findings in the QA report |
 | @pentester | execution-chain, attack surface (perf/componentization light) | threat-surface + chain findings |
-| @architect | componentization, maintainability, performance (structural) | structural recommendations / design-doc |
-| @sheldon | all six facets (deep technical analysis) | enrichment / analysis report |
+| @architect | componentization, maintainability, performance (structural) | bounded recommendations in the approved artifact |
+| @sheldon | facets relevant to the unresolved PRD risk | in-place PRD enrichment |
 | @deyvin | quick lens on a slice during a pair session | inline suggestions; escalate if broad |
 
 ## Trigger (when to load this doc)

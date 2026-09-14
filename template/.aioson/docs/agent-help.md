@@ -12,7 +12,7 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 
 - **What:** product discovery — defines what to build, for whom, and why; writes the PRD base.
 - **When:** starting a new feature or project definition; the kickoff of every feature chain.
-- **Options:** `--auto` (autopilot through implementation and review, stopping before the human `feature:close` gate), `--step` (manual handoffs for this activation). Without a token, follows the feature scheme/project default.
+- **Options:** `--auto` (autopilot through implementation and review, closing after final QA only under an explicitly authorized closure policy), `--step` (manual handoffs for this activation). Without a token, follows the feature scheme/project default.
 - **Typical:** `/product --auto build email notifications`, `/product redesign checkout`.
 - **Produces:** one `prd-{slug}.md` product authority with explicit feature-owned prototype status (`current`/`none`) plus the `features.md` index row.
 - **Next:** `@sheldon` for mandatory independent enrichment and hash-bound approval before Planner; `@copywriter` remains a site-specific content detour.
@@ -160,6 +160,15 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 - **Typical:** `/shakedown loyalty-program`, `/shakedown the admin orders module`.
 - **Produces:** `.aioson/context/shakedown-{slug}.md` — coverage proof plus a punch list (`bug`/`incomplete`/`polish`) with suggested fix lanes. It finds and lists, never fixes.
 - **Next:** quick wins → `@dev` (Simple Plan); product-scope gaps → `@briefing`/`@product`; verification gaps → `@tester`.
+
+## @quality
+
+- **What:** engineering quality assessment: static analysis, test effectiveness, regression coverage, benchmarks and agent/skill evaluations.
+- **When:** explicitly requested or triggered by concrete quality evidence; optional for products and the AIOSON framework. QA retains acceptance.
+- **Options:** specify target and `product` or `framework` profile. Inspect native checks with `aioson quality:run . --dry-run --json`.
+- **Typical:** `@quality assess test effectiveness in checkout`; `@quality evaluate the framework's agent contracts`.
+- **Produces:** `.aioson/context/quality-review-{target}.md` with commands, results, raw evidence and a ranked remediation backlog.
+- **Next:** the appropriate implementation/test owner for a confirmed gap, or QA for same-feature acceptance.
 
 ## @copywriter
 

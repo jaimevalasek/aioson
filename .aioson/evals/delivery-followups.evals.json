@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "qa-minor-delivery-followups-policy",
+      "agent": "qa",
+      "mode": "executing",
+      "task": "Evaluate accepted_with_followups under the closure-policy for minor delivery followups.",
+      "expect": [{ "path": ".aioson/docs/delivery-followups.md", "in": "selected" }]
+    },
+    {
+      "name": "delivery-policy-stays-quiet-for-readme-typo",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix a spelling error in the README introduction.",
+      "paths": ["README.md"],
+      "absent": [{ "path": ".aioson/docs/delivery-followups.md", "in": "selected" }]
+    }
+  ]
+}

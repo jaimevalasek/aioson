@@ -7,4 +7,6 @@ const { createAdapter } = require('./base');
 // by createAdapter (`sandbox_mode_unsupported`) instead of getting a process
 // that runs with write access — more power than a read-only researcher's
 // contract.
-module.exports=createAdapter('opencode',i=>['run',...(i.sandbox_args||[]),...(i.model==='configured-default'?[]:['--model',i.model]),i.prompt_text]);
+// `opencode run` reads piped stdin. Keep arbitrarily sized recovery context
+// outside argv so Windows' command-line limit cannot prevent dispatch.
+module.exports=createAdapter('opencode',i=>({args:['run',...(i.captureUsage?['--format','json']:[]),...(i.sandbox_args||[]),...(i.model==='configured-default'?[]:['--model',i.model])],stdin:true}));

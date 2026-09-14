@@ -1,0 +1,48 @@
+/* SDD-specific structures extend the shared memories reading layout. */
+.sdd-figure { margin: 0; padding: 26px; border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); box-shadow: 0 16px 50px color-mix(in srgb, var(--tinta) 55%, transparent); }
+.sdd-figure .human-voice { margin: 20px 0 24px; font-size: 25px; }
+.artifact-path { list-style: none; margin: 0; padding: 0; }
+.artifact-path li { padding: 17px 0; border-top: 1px solid var(--linha-2); }
+.artifact-path strong { display: block; margin: 6px 0 3px; font-size: 19px; font-weight: 600; line-height: 1.4; }
+.artifact-path .machine-label { color: var(--ouro); }
+.artifact-path li > span:last-child { font-size: 12px; color: var(--marfim-2); }
+.route-map { margin: 27px 0; border-top: 1px solid var(--linha-2); }
+.route-map > div { padding: 23px 0; border-bottom: 1px solid var(--linha-2); }
+.route-map p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin: 10px 0 0; font-size: 20px; }
+.route-map a { text-decoration: none; }
+.route-map a:hover { text-decoration: underline; }
+.proof-chain { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 26px 0; border: 1px solid var(--linha-2); border-radius: 9px; background: var(--superficie); }
+.proof-chain span { padding: 20px 16px; color: var(--marfim); font-size: 14px; line-height: 1.6; }
+.proof-chain span + span { border-left: 1px solid var(--linha-2); }
+.proof-chain span + span::before { content: "→ "; color: var(--ouro); }
+.journey { border: 1px solid var(--linha-2); border-radius: var(--radius); padding: 26px; background: var(--superficie); }
+.journey-controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+.journey-controls button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--linha-2); border-radius: 7px; background: var(--superficie-2); color: var(--marfim-2); font-size: 13px; transition: background 160ms ease; }
+.journey-controls button[aria-pressed="true"] { background: var(--ouro); border-color: var(--ouro); color: var(--tinta); }
+.stage-panel { padding: 22px 0 0; border-top: 1px solid var(--linha-2); margin-top: 22px; }
+.stage-panel .machine-label { color: var(--ouro); }
+.stage-panel h3 { margin-top: 16px; }
+.stage-panel a { display: inline-block; padding: 8px 0; font-size: 14px; }
+.journey[data-enhanced] .stage-panels { min-height: 400px; }
+.redirect-page { max-width: 760px; padding: 80px 0; }
+@media (max-width: 800px) {
+  .sdd-figure { max-width: 480px; }
+  .proof-chain { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .proof-chain span:nth-child(3) { border-left: 0; }
+  .proof-chain span:nth-child(n+3) { border-top: 1px solid var(--linha-2); }
+}
+@media (max-width: 440px) {
+  .sdd-figure, .journey { padding: 20px; }
+  .journey-controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .journey-controls button { text-align: left; }
+  .journey[data-enhanced] .stage-panels { min-height: 550px; }
+  .route-map p { font-size: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .journey-controls button { transition: none; } }
+@media print {
+  .sdd-figure { max-width: 420px; margin-top: 20px; box-shadow: none; break-inside: avoid; }
+  .journey-controls { display: none !important; }
+  .journey[data-enhanced] .stage-panels { min-height: 0; }
+  .stage-panel { break-inside: avoid; }
+  .proof-chain span { font-size: 10pt; }
+}

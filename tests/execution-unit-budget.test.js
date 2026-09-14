@@ -305,10 +305,11 @@ test('execution:seed without --lanes and without a lanes table seeds one lane pe
   else assert.equal(offered.onboarding.next, `aioson execution:seed . --feature=${SLUG} --lanes=backend,frontend`);
 });
 
-test('execution:compile names the measured shape — a unit above the ceiling, a unit writing both surfaces, one lane running one unit per wave — and the prompt carries its plan section and its context contract', async (t) => {
+test('execution:compile refuses oversized units; an explicitly raised ceiling retains shape diagnostics and context contracts', async (t) => {
   const { dir, env } = await setup(t, { plan: SINGLE_LANE_PLAN, roles: SINGLE_ROLES });
   const result = await compile(dir, env);
-  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors.map(error => error.check), ['unit_budget_exceeded', 'unit_budget_exceeded']);
   assert.deepEqual(result.warnings.map((warning) => warning.check).sort(), ['orchestration_serial', 'unit_over_budget', 'unit_over_budget', 'unit_spans_surfaces', 'unit_spans_surfaces']);
 
   const [overFiles, overAcs] = warningsOf(result, 'unit_over_budget');
@@ -327,8 +328,10 @@ test('execution:compile names the measured shape — a unit above the ceiling, a
   const [serial] = warningsOf(result, 'orchestration_serial');
   assert.equal(serial.lane, 'delivery');
   assert.match(serial.message, /one lane \("delivery"\) owning every write path and one unit per wave: this run buys a fresh context and a lane review per unit, never parallelism — lanes are the model axis/);
-  assert.deepEqual(result.summary.parallelism, { max_concurrent_units: 1, serial_chain: 4, critical_path_processes: 8, serial: true });
-  assert.deepEqual(result.summary.ceiling, { max_files: 10, max_acs: 6 });
+  const bounded = await compile(dir, { ...env, AIOSON_EXECUTION_UNIT_MAX_FILES: '12', AIOSON_EXECUTION_UNIT_MAX_ACS: '7' });
+  assert.equal(bounded.ok, true, JSON.stringify(bounded.errors));
+  assert.deepEqual(bounded.summary.parallelism, { max_concurrent_units: 1, serial_chain: 4, critical_path_processes: 8, serial: true });
+  assert.deepEqual(bounded.summary.ceiling, { max_files: 12, max_acs: 7 });
 
   // The prompt: the unit's own plan section, and what it reads beyond the prompt.
   const phase1 = await readPrompt(dir, 'phase-1');
@@ -361,6 +364,36 @@ test('execution:compile names the measured shape — a unit above the ceiling, a
   assert.equal(raised.ok, true);
   assert.deepEqual(raised.warnings.map((warning) => warning.check).sort(), ['orchestration_serial', 'unit_spans_surfaces', 'unit_spans_surfaces']);
   assert.deepEqual(raised.summary.ceiling, { max_files: 12, max_acs: 7 });
+});
+
+test('bounded source reads measure actual selected lines and reject unowned or invalid ranges', async (t) => {
+  const { dir, env } = await setup(t, { plan: GRID_PLAN, roles: GRID_ROLES });
+  const file = path.join(dir, 'src/domain/period.js');
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, '// bounded\n' + '// large line\n'.repeat(20000));
+  const initial = await compile(dir, env);
+  assert.ok(initial.errors.some(e => e.check === 'unit_initial_context_over_budget'));
+  const planFile = path.join(dir, '.aioson/context', `implementation-plan-${SLUG}.md`);
+  const addRanges = range => GRID_PLAN.split('\n').map(line => {
+    if (line.includes('| Phase | Wave |')) return line.replace(/\|\s*$/, '| Read ranges |');
+    if (line.startsWith('| 1-backend |')) return line.replace(/\|\s*$/, `| ${range} |`);
+    return line;
+  }).join('\n');
+  await fs.writeFile(planFile, addRanges('src/domain/period.js:1-2'));
+  const bounded = await compile(dir, env);
+  assert.equal(bounded.ok, true, JSON.stringify(bounded.errors));
+  const { plan } = await readExecutionPlan(dir, SLUG);
+  const source = plan.units.find(u => u.id === 'phase-1-backend').context.source_files.find(f => f.path === 'src/domain/period.js');
+  assert.equal(source.bytes, Buffer.byteLength('// bounded\n// large line\n'));
+  assert.ok(source.total_bytes > 200000);
+  assert.match(await readPrompt(dir, 'phase-1-backend'), /Do not load these files wholesale/);
+  for (const range of ['src/domain/period.js:0-1', 'src/domain/period.js:1-999999', '../outside.js:1-2']) {
+    await fs.writeFile(planFile, addRanges(range));
+    assert.equal((await compile(dir, env)).ok, false, range);
+  }
+  await fs.unlink(file);
+  await fs.writeFile(planFile, addRanges('src/domain/period.js:1-2'));
+  assert.ok((await compile(dir, env)).errors.some(e => e.check === 'read_range_missing_file'));
 });
 
 test('the grid compiles: a phase cut per lane inside one wave, a bare phase number depending on every row of that phase, the Interface Contract read from the plan', async (t) => {

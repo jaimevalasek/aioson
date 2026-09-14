@@ -66,7 +66,7 @@ function runCli(args, options = {}) {
 }
 
 test('the execution capability matrix is derived from the single host registry, unchanged for every dispatchable host', () => {
-  assert.deepEqual(Object.keys(MATRIX).sort(), ['claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(Object.keys(MATRIX).sort(), ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
   assert.deepEqual(capabilities('codex'), {
     native_subagent: false,
     fresh_session: false,
@@ -262,7 +262,7 @@ test('host:signature command: --list and --status are read-only verdicts, the pr
   result = await runHostSignature({ args: [], options: { json: true }, logger, env: store.env });
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'host_required');
-  assert.deepEqual(result.hosts, ['claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(result.hosts, ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
 
   result = await runHostSignature({ args: [], options: { host: 'kimi', model: 'kimi-k3', status: true, json: true }, logger, env: store.env });
   assert.equal(result.ok, true);

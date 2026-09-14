@@ -16,22 +16,22 @@ Load before the first real user-facing decision. Do not load merely to produce a
 | profile | questions | jargon | extras |
 |---|---|---|---|
 | `creator` or absent/empty/`auto`/legacy `beginner` | one per turn | translate | recommended first option and pause option |
-| `developer` | up to five numbered questions per batch | allowed | recommendation optional |
+| `developer` | up to five independent decisions per batch | allowed | recommended first option with why and trade-off |
 | `team` | same as developer | allowed | also write the executive summary at `agent:done`: `aioson feature:summary . --feature={slug} --write` (→ `.aioson/context/executive-summary-{slug}.md`, jargon translated per `interaction_language`); the owner records `aioson feature:acknowledge` |
 
 ## Core rules
 
-### Rule 1 — Structured decisions in creator mode
+### Rule 1 — Structured decisions in every profile
 
-Use `AskUserQuestion` with 2–4 options. Do not ask a free-form open question; free-form input is allowed only through the client-provided Other option.
+For a real choice, use the host's available structured question tool (`AskUserQuestion` or its equivalent) with 2–4 concrete options in every profile. If unavailable, present numbered options and the recommendation in text, subject to host constraints. Allow the user's own answer through the client-provided Other/free-text path. Never invent alternatives for a missing fact; ask for an irreducible fact only when evidence cannot supply it.
 
 ### Rule 2 — Recommend first
 
-The first option has a localized recommendation marker such as `(Recommended)` and a one-sentence plain-language description of why and the operational trade-off.
+In every profile, the first option has a localized recommendation marker such as `(Recommended)` and a one-sentence explanation of why and the operational trade-off. Developer/team profiles change vocabulary and cadence, never remove the recommendation.
 
 ### Rule 3 — One question per turn
 
-In creator mode, emit at most one `AskUserQuestion`; stage independent decisions across turns.
+In creator mode, present at most one decision per turn; stage independent decisions across turns. A stricter agent cadence wins: Product always presents one decision at a time, including developer/team profiles.
 
 ### Rule 4 — Translate framework jargon
 
@@ -39,7 +39,7 @@ Immediately before emitting a framework term in creator mode, load exactly one m
 
 ### Rule 5 — Pause remains available
 
-Include a localized, non-default pause option explaining that work can resume from recorded state.
+In creator mode, include a localized, non-default pause option explaining that work can resume from recorded state.
 
 ### Rule 6 — Five or more alternatives
 
@@ -51,7 +51,7 @@ Never ask because an agent activated. A question is justified only by a real for
 
 ## Output contract
 
-A creator-mode decision contains one structured question, 2–4 mutually exclusive options, recommended first option with plain-language why, localized pause, translated jargon, and no second open question. Developer/team mode may batch at most five numbered questions.
+Every profile gets concrete options and a recommended first option with why and trade-off. A creator-mode decision contains one structured question, 2–4 mutually exclusive options, localized pause, translated jargon, and no second open question. Developer/team mode may batch at most five independent decisions when the agent permits it; Product always asks one at a time. A missing structured tool never removes options or the recommendation when the host permits a text fallback.
 
 ## Loading
 

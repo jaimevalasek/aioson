@@ -14,6 +14,8 @@ const {
   getPlanPhases
 } = require('../runtime-store');
 const { resolveTargetDir } = require('../lib/project-root');
+const { parseFrontmatter } = require('../preflight-engine');
+const { parsePlanPhases, setPlanField, readProjectFile, sourcePrdPath, contentHash, planSourceStatus } = require('../lib/plan-document');
 
 const CONTEXT_DIR = path.join('.aioson', 'context');
 const PLANS_DIR = path.join('.aioson', 'plans');
@@ -32,15 +34,12 @@ async function pathExists(targetPath) {
  */
 async function resolvePlanPath(projectDir, featureSlug) {
   if (featureSlug) {
-    // 1. Try new structured directory: .aioson/plans/{slug}/manifest.md
+    // Canonical Planner output wins; retain the old harness manifest fallback.
+    const canonicalPath = path.join(projectDir, CONTEXT_DIR, `implementation-plan-${featureSlug}.md`);
+    if (await pathExists(canonicalPath)) return canonicalPath;
     const structuredPath = path.join(projectDir, PLANS_DIR, featureSlug, 'manifest.md');
     if (await pathExists(structuredPath)) return structuredPath;
-
-    // 2. Try legacy flat file: .aioson/context/implementation-plan-{slug}.md
-    const legacyPath = path.join(projectDir, CONTEXT_DIR, `implementation-plan-${featureSlug}.md`);
-    if (await pathExists(legacyPath)) return legacyPath;
-
-    return structuredPath; // default to new structure even if missing
+    return canonicalPath;
   }
 
   // No slug -> implementation-plan.md in context
@@ -55,8 +54,8 @@ async function computeSourceHash(projectDir, filePaths) {
   for (const fp of filePaths) {
     const abs = path.resolve(projectDir, fp);
     try {
-      const stat = await fs.stat(abs);
-      hash.update(`${fp}:${stat.mtimeMs}`);
+      hash.update(fp);
+      hash.update(await fs.readFile(abs));
     } catch {
       hash.update(`${fp}:missing`);
     }
@@ -104,28 +103,9 @@ async function detectPlanFiles(projectDir) {
 /**
  * Parse plan frontmatter to extract status and metadata.
  */
-function parsePlanFrontmatter(content) {
-  const text = String(content || '');
-  const match = text.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return {};
-  const meta = {};
-  for (const line of match[1].split('\n')) {
-    const [key, ...rest] = line.split(':');
-    if (key && rest.length) {
-      meta[key.trim()] = rest.join(':').trim().replace(/^"(.*)"$/, '$1');
-    }
-  }
-  return meta;
-}
+function parsePlanFrontmatter(content) { return parseFrontmatter(String(content || '')); }
 
-/**
- * Count phases in an implementation plan markdown.
- */
-function countPhases(content) {
-  const text = String(content || '');
-  const matches = text.match(/^### Fase \d+/gm);
-  return matches ? matches.length : 0;
-}
+function countPhases(content) { return parsePlanPhases(content).length; }
 
 /**
  * Subcommand: show [slug]
@@ -242,36 +222,46 @@ async function handleStale(projectDir, featureSlug, { logger, t }) {
 
   const content = await fs.readFile(planPath, 'utf8');
   const meta = parsePlanFrontmatter(content);
-  if (!meta.created) {
-    logger.log(t('implementation_plan.no_created_date'));
-    return { found: true, stale: false };
-  }
-
-  const planDate = new Date(meta.created);
-  const contextDir = path.resolve(projectDir, CONTEXT_DIR);
-  const sourceFiles = ['project.context.md', 'architecture.md', 'prd.md', 'discovery.md', 'ui-spec.md'];
-  let stale = false;
-
-  for (const sf of sourceFiles) {
-    const sfPath = path.join(contextDir, sf);
-    try {
-      const stat = await fs.stat(sfPath);
-      if (stat.mtime > planDate) {
-        logger.log(`  ⚠ ${sf} modified after plan was created`);
-        stale = true;
-      }
-    } catch {
-      // file doesn't exist, skip
+  const binding = await planSourceStatus(projectDir, featureSlug, content);
+  if (meta.source_prd_sha256 || meta.source_prd) {
+    if (binding.freshness !== 'unknown' || !meta.created) {
+      logger.log(`Plan source: ${binding.freshness}`);
+      return { found: true, ...binding };
     }
   }
-
-  if (stale) {
-    logger.log(t('implementation_plan.is_stale'));
-  } else {
-    logger.log(t('implementation_plan.is_fresh'));
+  if (!meta.created || !Number.isFinite(Date.parse(meta.created))) {
+    logger.log(t('implementation_plan.no_created_date'));
+    return { found: true, stale: false, freshness: 'unknown', reason: 'source_baseline_missing' };
   }
+  const sourceFiles = ['project.context.md', 'architecture.md', featureSlug ? `prd-${featureSlug}.md` : 'prd.md', 'discovery.md', 'ui-spec.md'];
+  let stale = false;
+  for (const source of sourceFiles) {
+    try {
+      const stat = await fs.stat(path.join(projectDir, CONTEXT_DIR, source));
+      if (stat.mtimeMs > Date.parse(meta.created)) stale = true;
+    } catch { /* Legacy optional sources may be absent. */ }
+  }
+  logger.log(t(stale ? 'implementation_plan.is_stale' : 'implementation_plan.is_fresh'));
+  return { found: true, stale, freshness: stale ? 'stale' : 'timestamp_only' };
+}
 
-  return { found: true, stale };
+async function handleBind(projectDir, featureSlug, { logger }) {
+  try {
+    if (featureSlug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(featureSlug)) throw new Error('Invalid feature slug');
+    const planPath = await resolvePlanPath(projectDir, featureSlug);
+    const relative = path.relative(projectDir, planPath);
+    let content = await readProjectFile(projectDir, relative);
+    const source = sourcePrdPath(parsePlanFrontmatter(content), featureSlug);
+    const hash = contentHash(await readProjectFile(projectDir, source));
+    content = setPlanField(content, 'source_prd', source);
+    content = setPlanField(content, 'source_prd_sha256', hash);
+    await require('../lib/delivery-followups').safeWrite(projectDir, relative, content);
+    logger.log(`Plan bound to ${source}: ${hash}`);
+    return { ok: true, source, hash };
+  } catch (error) {
+    logger.error(error.message);
+    return { ok: false, reason: 'plan_binding_failed', error: error.message };
+  }
 }
 
 /**
@@ -291,16 +281,26 @@ async function handleRegister(projectDir, featureSlug, { logger, t }) {
   const phases = countPhases(content);
 
   const contextDir = path.resolve(projectDir, CONTEXT_DIR);
-  const sourceFiles = ['project.context.md', 'architecture.md', 'prd.md'];
+  const sourceFiles = ['project.context.md', 'architecture.md', path.basename(sourcePrdPath(meta, featureSlug))];
   const existingSources = [];
   for (const sf of sourceFiles) {
     if (await pathExists(path.join(contextDir, sf))) existingSources.push(sf);
   }
-  const hash = await computeSourceHash(projectDir, existingSources.map(s => path.join(CONTEXT_DIR, s)));
+  const sourceHash = await computeSourceHash(projectDir, existingSources.map(s => path.join(CONTEXT_DIR, s)));
+  const hash = contentHash(sourceHash + content);
+  const phaseRows = parsePlanPhases(content);
+  if (new Set(phaseRows.map(phase => phase.id)).size !== phaseRows.length) return { registered: false, reason: 'duplicate_phase' };
 
   const handle = await openRuntimeDb(projectDir);
   const { db } = handle;
   try {
+    const current = listImplementationPlans(db).find(row => row.feature_slug === (meta.feature_slug || featureSlug || null)
+      && row.project_name === (meta.project || path.basename(projectDir)));
+    if (current?.source_hash === hash) {
+      const existing = new Set(getPlanPhases(db, current.plan_id).map(row => row.phase_number));
+      for (const phase of phaseRows) if (!existing.has(Number(phase.id))) upsertPlanPhase(db, current.plan_id, Number(phase.id), phase.title, 'pending');
+      return { registered: true, planId: current.plan_id, reused: true };
+    }
     const planId = upsertImplementationPlan(db, {
       projectName: meta.project || path.basename(projectDir),
       scope: meta.scope || 'project',
@@ -312,6 +312,7 @@ async function handleRegister(projectDir, featureSlug, { logger, t }) {
       sourceArtifacts: existingSources,
       sourceHash: hash
     });
+    for (const phase of phaseRows) upsertPlanPhase(db, planId, Number(phase.id), phase.title, 'pending');
     logger.log(t('implementation_plan.registered', { planId, phases }));
     return { registered: true, planId };
   } finally {
@@ -335,10 +336,12 @@ async function run(projectDir, args, context) {
       return handleCheckpoint(projectDir, rest[0] || null, rest[1], context);
     case 'stale':
       return handleStale(projectDir, rest[0] || null, context);
+    case 'bind':
+      return handleBind(projectDir, rest[0] || null, context);
     case 'register':
       return handleRegister(projectDir, rest[0] || null, context);
     default:
-      context.logger.error(`Unknown subcommand: ${sub}. Available: show, status, checkpoint, stale, register`);
+      context.logger.error(`Unknown subcommand: ${sub}. Available: show, status, checkpoint, stale, register, bind`);
       return { error: true };
   }
 }
@@ -359,10 +362,11 @@ async function runImplementationPlan({ args = [], options = {}, logger = console
     return handleCheckpoint(projectDir, slug, phase, context);
   }
   if (sub === 'stale') return handleStale(projectDir, slug, context);
+  if (sub === 'bind') return handleBind(projectDir, slug, context);
   if (sub === 'register') return handleRegister(projectDir, slug, context);
 
-  logger.error(`Unknown subcommand: ${sub}. Available: show, status, checkpoint, stale, register`);
+  logger.error(`Unknown subcommand: ${sub}. Available: show, status, checkpoint, stale, register, bind`);
   return { error: true };
 }
 
-module.exports = { run, runImplementationPlan, handleShow, handleStatus, handleCheckpoint, handleStale, handleRegister };
+module.exports = { run, runImplementationPlan, handleShow, handleStatus, handleCheckpoint, handleStale, handleRegister, handleBind };

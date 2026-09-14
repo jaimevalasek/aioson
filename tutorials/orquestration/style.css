@@ -1,0 +1,67 @@
+/* Reading structures reuse the existing Tinta & Ouro tutorial identity. */
+.execution-map { margin: 0; padding: 28px; background: var(--superficie); border: 1px solid var(--linha-2); border-radius: var(--radius); }
+.execution-map ol { margin: 22px 0; padding: 0; list-style: none; }
+.execution-map li { padding: 20px 0; border-top: 1px solid var(--linha-2); }
+.execution-map li > span { color: var(--ouro); font-size: 12px; }
+.execution-map strong, .execution-map small { display: block; }
+.execution-map strong { margin: 9px 0 6px; font-size: 21px; line-height: 1.35; }
+.execution-map small, .execution-map figcaption { color: var(--marfim-2); font-size: 13px; line-height: 1.7; }
+.term-list { margin: 28px 0; }
+.term-list > div { display: grid; grid-template-columns: 110px 1fr; padding: 16px 0; border-bottom: 1px solid var(--linha-2); gap: 18px; }
+.term-list dt { color: var(--ouro); font-weight: 600; }
+.term-list dd { margin: 0; }
+.simulation, .command-builder, .budget-demo { margin: 28px 0; border: 1px solid var(--linha-2); border-radius: var(--radius); padding: 24px; background: var(--superficie); }
+.simulation-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--linha-2); }
+#sim-step { color: var(--ouro); font-size: 13px; }
+.sim-controls, .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; }
+.sim-controls[hidden] { display: none; }
+.sim-actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+.article label { display: flex; flex-direction: column; gap: 9px; font-size: 13px; color: var(--marfim-2); }
+.article .check-label { flex-direction: row; align-items: center; gap: 10px; }
+.article input:not([type="checkbox"]), .article select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--linha-2); border-radius: 6px; color: var(--marfim); background: var(--superficie-2); font: inherit; }
+.article input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ouro); flex-shrink: 0; }
+.article button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--linha-2); border-radius: 6px; background: var(--superficie-2); color: var(--marfim); font: inherit; font-size: 13px; cursor: pointer; }
+.article #sim-next { background: var(--ouro); color: var(--tinta); border-color: var(--ouro); font-weight: 600; }
+.article button:disabled { opacity: .55; cursor: default; }
+.article :is(button, input, select):focus-visible { outline: 2px solid var(--ouro); outline-offset: 4px; }
+.unit-board { list-style: none; padding: 0; margin: 24px 0; }
+.unit-board li { display: grid; grid-template-columns: 1fr auto; gap: 3px 14px; padding: 18px 0 18px 14px; border-bottom: 1px solid var(--linha-2); border-left: 2px solid var(--linha-2); }
+.unit-board li > span, .unit-board li > small { grid-column: 1; font-size: 12px; color: var(--marfim-2); }
+.unit-board li > strong { grid-column: 1; font-weight: 600; }
+.unit-board output { grid-column: 2; grid-row: 1 / 4; align-self: center; max-width: 140px; font-size: 12px; text-align: right; }
+.unit-board li[data-stage="dev"], .unit-board li[data-stage="qa"] { border-left-color: var(--ouro); }
+.unit-board li[data-stage="done"] { border-left-color: var(--patina); }
+.unit-board li[data-stage="done"] output { color: var(--patina); }
+.unit-board li[data-stage="repair"] { border-left-color: var(--perigo, #df7565); }
+.sim-summary { padding-top: 16px; border-top: 1px solid var(--linha-2); min-height: 90px; }
+.article .simulation-caption { font-size: 12px; color: var(--marfim-2); }
+.project-map { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--linha-2); border-bottom: 1px solid var(--linha-2); margin: 25px 0; }
+.project-map > div { display: flex; flex-direction: column; padding: 20px 14px; gap: 12px; min-width: 0; }
+.project-map > div + div { border-left: 1px solid var(--linha-2); }
+.project-map span { font-size: 13px; color: var(--marfim-2); }
+.project-map code { font-size: 12px; }
+.budget-demo output { display: block; margin: 24px 0 12px; color: var(--ouro); font-size: 23px; line-height: 1.5; }
+.command-builder pre { margin-bottom: 8px; }
+.command-builder h3 { margin-top: 30px; }
+#command-validation, #copy-status { font-size: 13px; }
+#command-validation[data-invalid="true"] { color: var(--perigo, #df7565); }
+.article code { overflow-wrap: anywhere; }
+.article pre code { overflow-wrap: normal; }
+.source-links { font-size: 14px; }
+@media (max-width: 800px) { .execution-map { max-width: 520px; } }
+@media (max-width: 560px) {
+  .simulation, .command-builder, .budget-demo { padding: 18px; }
+  .field-grid, .sim-controls, .project-map { grid-template-columns: 1fr; }
+  .project-map > div + div { border-left: 0; border-top: 1px solid var(--linha-2); }
+  .term-list > div { grid-template-columns: 1fr; gap: 6px; }
+  .unit-board li { grid-template-columns: 1fr; }
+  .unit-board output { grid-column: 1; grid-row: auto; text-align: left; max-width: none; margin-top: 8px; }
+  .header-actions a { display: none; }
+  .budget-demo output { font-size: 20px; }
+}
+@media print {
+  .sim-controls, .copy-button, .field-grid, #command-validation, #copy-status { display: none !important; }
+  .execution-map, .simulation, .budget-demo { box-shadow: none; }
+  .sim-summary { min-height: 0; }
+  .command-builder { padding: 0; border: 0; }
+}

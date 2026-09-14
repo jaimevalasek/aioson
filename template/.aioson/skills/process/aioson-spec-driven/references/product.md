@@ -21,3 +21,7 @@ Stop only for a decision that materially changes product behavior, scope, cost, 
 ## Handoff
 
 Any Product-ready feature PRD → `@sheldon`; only a current Sheldon-approved PRD proceeds to `@planner`. Already-specified bounded technical work uses the separate Simple Plan lane instead of pretending to be a MICRO feature.
+
+## Calibration example
+
+If an approved source promises export and cancellation, a PRD with only export is incomplete even if every remaining row is well formatted. Preserve both promises or record an owner-approved scope decision with its evidence. “Fast and intuitive” is not an AC: describe a trigger, observable result and how QA can distinguish success from failure. Do not invent a threshold, permission policy or integration merely to fill a template. A routine correctness repair follows repository evidence; a material product choice returns to the owner.

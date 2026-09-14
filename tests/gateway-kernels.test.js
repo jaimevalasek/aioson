@@ -49,7 +49,7 @@ test('gateway kernels route progressively while preserving mandatory invariants'
       'Product → Sheldon → Planner → DEV → QA',
       'current activation explicitly includes `--auto`',
       'explicit `--step` disables Autopilot for that activation',
-      'never auto-runs `feature:close`/publish'
+      'auto-closes only after final QA under an explicitly authorized'
     ]) {
       assert.ok(content.includes(token), `gateway missing ${token}`);
     }

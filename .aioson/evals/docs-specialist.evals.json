@@ -2,6 +2,21 @@
   "version": 1,
   "scenarios": [
     {
+      "name": "quality-engineering-evaluation-pipeline",
+      "agent": "quality",
+      "mode": "planning",
+      "task": "Assess the quality pipeline, static analysis baseline, mutation testing and eval corpus for this product.",
+      "expect": [{ "path": ".aioson/docs/quality/engineering.md", "in": "selected" }]
+    },
+    {
+      "name": "quality-playbook-stays-quiet-for-readme-typo",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Fix the spelling of the project name in the README introduction.",
+      "paths": ["README.md"],
+      "absent": [{ "path": ".aioson/docs/quality/engineering.md", "in": "selected" }]
+    },
+    {
       "name": "pentester-app-playbooks-pentest",
       "agent": "pentester",
       "mode": "executing",

@@ -2,7 +2,7 @@
 name: spec-level-ownership
 description: spec.md is project-level, spec-{slug}.md is feature-level — the two levels never mix
 priority: 9
-version: 1.0.0
+version: 1.1.0
 agents: [dev, qa, pm, sheldon]
 modes: [planning, executing]
 task_types: [spec-write, spec-update]
@@ -12,6 +12,8 @@ paths: [.aioson/context/spec*.md]
 ---
 
 # Spec Ownership: Project vs Feature Level
+
+Legacy compatibility rule: new canonical features use PRD → implementation plan → QA report. Do not create a duplicate spec pack. These ownership rules apply only when an existing legacy spec is being maintained.
 
 Two distinct levels — never mix them.
 
@@ -24,11 +26,11 @@ Two distinct levels — never mix them.
 
 1. `spec.md` never receives feature-specific content → create `spec-{slug}.md` for that.
 2. `spec-{slug}.md` never receives project decisions → stack decisions go in `spec.md` or `architecture.md`.
-3. `spec-{slug}.md` is created by `@dev` at feature implementation start. One file per slug. Slug must match `prd-{slug}.md` and `implementation-plan-{slug}.md`.
+3. Maintain an existing `spec-{slug}.md` when the legacy workflow uses it; creating one is not a prerequisite for canonical implementation. One file per slug. Slug must match `prd-{slug}.md` and `implementation-plan-{slug}.md`.
 4. No `spec-{slug}.md` without a corresponding `prd-{slug}.md`.
 5. Simple-plan work does not require `spec-{slug}.md`; keep its scope and decisions in `.aioson/context/simple-plans/{slug}.md` unless the work expands into a real feature.
 
-## Mandatory structure: spec-{slug}.md
+## Legacy structure: spec-{slug}.md
 
 ```markdown
 ---
@@ -49,7 +51,7 @@ phase_gates:
 (filled by @qa on feature close)
 ```
 
-## Mandatory structure: spec.md (project level)
+## Legacy structure: spec.md (project level)
 
 ```markdown
 # Spec — {project name}

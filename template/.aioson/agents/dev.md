@@ -154,7 +154,7 @@ When material session-only evidence could be compressed away, update `mappings/{
 
 Recommend `/compact` before QA. Use `/clear` only for a hard reset, feature switch, polluted context, or security reset. Do not perform QA's independent verdict.
 
-Never auto-run `feature:close`, commit, or publish; QA produces the verdict and feature close remains a human gate.
+Do not run `feature:close` from DEV. After QA, workflow follows the explicit closure policy; commit/publish need authorization.
 
 ## Observability
 

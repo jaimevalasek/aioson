@@ -38,7 +38,7 @@ Capture authorization, exclusion, correction, and repeated confirmation best-eff
 
 Before compaction, `mappings/{slug}/continuity.md` may hold temporary nongating context.
 
-Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or a v2 feature manifest selects `orchestration.mode: autopilot` (the new default). An explicit `--step` disables Autopilot for that activation. It pauses for genuine decisions and never auto-runs `feature:close`/publish.
+Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or v2 `orchestration.mode: autopilot`. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
 
 ## Process skill: review-intelligence
 

@@ -51,6 +51,8 @@ const {
   genericBehavior
 } = require('./feature-completeness-format');
 const { readBrowserEvidence } = require('./browser-evidence');
+const { validatePlanContract } = require('./plan-contract');
+const { evaluateFollowups, VERDICT: FOLLOWUP_VERDICT } = require('./delivery-followups');
 
 function validateProductCapabilityMap(content, artifact) {
   const findings = [];
@@ -537,6 +539,10 @@ async function validateExecutionEvidence(
   );
   const findings = [...deliveryPaths.findings];
   const coveredCaps = [];
+  const disposition = parseFrontmatter(qaReport || '').verdict === FOLLOWUP_VERDICT
+    ? await evaluateFollowups(targetDir, slug) : null;
+  const deferred = new Set(disposition?.eligible ? disposition.deferred_acs : []);
+  if (disposition && !disposition.eligible) findings.push(finding('execution', 'closure_followups_invalid', disposition.error || disposition.reason, artifact));
   const evidenceByCap = new Map();
 
   if (!String(qaReport || '').trim()) {
@@ -621,7 +627,7 @@ async function validateExecutionEvidence(
     const capEvidence = evidenceByCap.get(cap.toLowerCase()) || new Map();
     const missingAcs = requiredAcs.filter((ac) => {
       const row = capEvidence.get(ac.toLowerCase());
-      return !row || !row.passed || !row.concrete;
+      return !row || (!row.passed && !deferred.has(ac.toUpperCase())) || !row.concrete;
     });
     if (requiredAcs.length === 0 || missingAcs.length > 0) {
       findings.push(finding(
@@ -853,6 +859,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
   let currentSystemFit = { findings: [], rows: [] };
   let acceptance = { findings: [], rows: [], capToAcs: {} };
   let delivery = { findings: [], rows: [] };
+  let planContract = { findings: [], warnings: [] };
   let engineeringControls = { findings: [], rows: [], explicitNone: false };
   let architectureDecisions = { findings: [], rows: [] };
   let interfaceContract = { findings: [], rows: [] };
@@ -907,6 +914,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
       }
     });
     delivery = validateDeliveryPlan(inputs.plan, artifacts.implementation_plan.path || `implementation-plan-${slug}.md`, productMap);
+    planContract = await validatePlanContract({ targetDir, slug, content: inputs.plan, acceptance, delivery });
     engineeringControls = validateEngineeringControls({
       content: inputs.plan,
       artifact: artifacts.implementation_plan.path || `implementation-plan-${slug}.md`,
@@ -949,7 +957,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
       ))
     );
     stageFindings.specification.push(...acceptance.findings);
-    stageFindings.plan.push(...delivery.findings, ...engineeringControls.findings, ...architectureDecisions.findings, ...interfaceContract.findings, ...implementationDelta.findings);
+    stageFindings.plan.push(...planContract.findings, ...delivery.findings, ...engineeringControls.findings, ...architectureDecisions.findings, ...interfaceContract.findings, ...implementationDelta.findings);
     if (options.includeExecution && delivery.findings.length === 0) {
       execution = await validateExecutionEvidence(
         targetDir,
@@ -1020,6 +1028,7 @@ async function analyzeFeatureCompleteness(targetDir, slug, options = {}) {
     requirements_matrix: { rows: acceptance.rows, capToAcs: acceptance.capToAcs },
     operational_matrix: { rows: [] },
     leverage_matrix: { rows: implementationDelta.rows },
+    plan_contract: planContract,
     engineering_controls: engineeringControls,
     architecture_decisions: architectureDecisions,
     interface_contract: interfaceContract,

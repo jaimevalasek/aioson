@@ -399,6 +399,10 @@ async function runWorkflowStatus({ args, options, logger, t }) {
     ? await validateHandoffContract(targetDir, state, focusStage)
     : { ok: true, missing: [], warnings: [] };
   const pendingGates = extractPendingGates(contractCheck);
+  const delivery = await require('../lib/delivery-lifecycle').deliveryStatus(targetDir, featureSlug);
+  let followupError = null;
+  const followupPlans = await require('./feature-closure').listFollowups(targetDir).catch(error => { followupError = error.message; return []; });
+  const pendingFollowups = followupPlans.filter(plan => !['done', 'dismissed'].includes(plan.status));
   const suggestion = buildSuggestion({
     contextValid: context.valid,
     state,
@@ -459,6 +463,9 @@ async function runWorkflowStatus({ args, options, logger, t }) {
     }
 
     logger.log('Current Status:');
+    logger.log(`  Pending delivery followups: ${followupError ? 'unavailable: ' + followupError : pendingFollowups.length} (aioson feature:closure . --list)`);
+    if (delivery) logger.log(`  Delivery: ${delivery.state}${delivery.reason ? ' — ' + delivery.reason : ''}`);
+    if (!focusStage && delivery?.command) logger.log(`  Close: ${delivery.command}`);
     logger.log(`  Active stage: ${focusStage ? `@${focusStage}` : 'none'}`);
     logger.log(`  Queued next: ${queuedNextStage ? `@${queuedNextStage}` : 'none'}`);
     logger.log(`  Autonomy mode: ${effectiveMode || 'n/a'}`);
@@ -553,6 +560,9 @@ async function runWorkflowStatus({ args, options, logger, t }) {
     effectiveMode,
     capabilitySummary,
     pendingGates,
+    delivery,
+    pendingFollowups,
+    followupError,
     contractCheck,
     artifacts,
     squads,

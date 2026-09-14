@@ -532,10 +532,18 @@ async function auditAcceptanceCriteriaTests(targetDir, slug, options = {}) {
     };
   });
 
-  const missingItems = items.filter((item) => item.status !== 'covered');
+  let deferredAcs = [];
+  if (acceptQaEvidence) {
+    const { evaluateFollowups } = require('./delivery-followups');
+    const disposition = await evaluateFollowups(targetDir, slug);
+    if (disposition.eligible) deferredAcs = disposition.deferred_acs;
+  }
+  for (const item of items) if (deferredAcs.includes(item.ac.toUpperCase())) item.status = 'deferred';
+  const missingItems = items.filter((item) => !['covered', 'deferred'].includes(item.status));
   const noCriteria = requireCriteria && items.length === 0;
   const summary = {
     acs_total: items.length,
+    deferred: items.filter(item => item.status === 'deferred').length,
     covered: items.filter((item) => item.status === 'covered').length,
     missing: items.filter((item) => item.status === 'missing').length,
     weak: items.filter((item) => item.status === 'weak').length,

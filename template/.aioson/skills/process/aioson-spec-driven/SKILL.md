@@ -61,3 +61,9 @@ Load exactly one role reference:
 - `references/qa.md`
 
 Compatibility references for legacy specialist detours remain available. Use `artifact-map.md`, `approval-gates.md`, or `classification-map.md` only when a CLI/gate question specifically requires them.
+
+## Delivery contract versions
+
+New plans declare `plan_contract: 2`, bind the reviewed PRD hash, cover every AC in numbered executable phases, and name observable completion conditions. Legacy artifacts keep their prior behavior. Runtime contracts may be planned at Gate C but must exist and verify at delivery.
+
+QA may use `accepted_with_followups` only under the explicitly authorized policy in `.aioson/docs/delivery-followups.md`. A missing test, unknown risk, failed primary flow or material security/data/availability issue remains blocking.

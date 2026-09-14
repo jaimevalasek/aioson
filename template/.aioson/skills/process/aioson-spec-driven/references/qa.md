@@ -23,4 +23,4 @@ For every capability in the selected budget, independently verify:
 - verified current-prototype fidelity or, with `prototype_status: none`, explicit confirmation that historical references were not used as delivery authority;
 - applicable evidence-triggered engineering controls and recovery when persistent/external state can change.
 
-Write `qa-report-{slug}.md` with `verdict: pass|fail`. Gate D passes only with an independent PASS and AC evidence. Browser-only evidence is never mandatory for native apps. The dossier is optional context memory; harnesses and specialists are conditional tools available to every classification.
+Write `qa-report-{slug}.md` with `verdict: pass|fail|accepted_with_followups`. PASS requires independent AC evidence; conditional acceptance requires the bound, eligible review in `.aioson/docs/delivery-followups.md` and preserves each deferred FAIL. Browser-only evidence is never mandatory for native apps. The dossier is optional context memory; harnesses and specialists are conditional tools available to every classification.

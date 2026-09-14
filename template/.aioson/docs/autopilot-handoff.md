@@ -15,7 +15,7 @@ Autopilot advances this deterministic route:
 product → sheldon → planner → dev [optional declared execution lanes → DEV integration] → qa
 ```
 
-`--auto` enables Autopilot for the current direct/tracked activation even when the project default is off. `--step` disables it for the current activation and wins if both flags are present. Neither flag rewrites the persisted project/feature preference, and neither authorizes the human `feature:close`/publish gate.
+`--auto` enables Autopilot for the current direct/tracked activation even when the project default is off. `--step` disables it for the current activation and wins if both flags are present. Neither flag rewrites the persisted project/feature preference or authorizes closing/publishing by itself. A separate explicit closure policy may authorize close after final QA; `--step` suppresses it.
 
 New `agent-execution-{slug}.json` manifests use schema v2 and add a developer-owned `orchestration` policy. New features default to `mode: autopilot`; `inherit` follows the activation/project scheme, and `step_by_step` forces that feature off. In effective Autopilot, `workflow:execute` derives its default checkpoint budget from `orchestration.max_checkpoints` instead of silently stopping after one transition. Existing v1 manifests remain valid and are never rewritten. A direct/persisted `--step` disarm still wins.
 
@@ -60,7 +60,7 @@ Stop immediately for:
 - missing authority for an external/destructive action;
 - explicit step-by-step policy.
 
-Autopilot never runs `feature:close`, commit, publish, deploy, or release without explicit human approval.
+Autopilot may run `feature:close` after final QA under the explicit project closure policy (`.aioson/docs/delivery-followups.md`). It never infers permission to commit, publish, deploy, or release from that policy.
 
 **A genuine decision is recorded, not remembered.** When an agent meets a choice only the owner can make — a product trade-off the PRD does not settle, a security posture, a contradiction between two approved artifacts — it records it with `aioson decision:add . --feature={slug} --id=DEC-NN --question="…" --evidence="…" --consequence="…" --recommendation="…" [--options="a|b"] --by=@agent` and stops. The checkpoint is durable (`.aioson/context/features/{slug}/decision-checkpoint.json`): `workflow:next` refuses to advance the feature while a blocking decision is pending, `decision:list` shows what is waiting, and only a human records the outcome with `aioson decision:resolve . --feature={slug} --id=DEC-NN --choice="…" --by="<name>"` (`--status=deferred|rejected` for the other outcomes). `--force` on `workflow:next` remains the explicit override, recorded as such. An agent never hand-edits the file.
 

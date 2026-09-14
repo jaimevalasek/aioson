@@ -126,6 +126,49 @@ const CONTRACTS = {
   }
 };
 
+async function validateSecurityForFeature(targetDir, slug, { includeWarnings = false } = {}) {
+  const missing = [];
+    let findingsPath = path.join(
+      targetDir,
+      `.aioson/context/security-findings-${slug}.json`
+    );
+    if (!await fileExists(findingsPath)) findingsPath = path.join(targetDir, `.aioson/context/done/${slug}/security-findings-${slug}.json`);
+    // Security review is risk-triggered, not classification-triggered. When a
+    // findings artifact exists it remains authoritative and blocking; its mere
+    // absence does not create paperwork for an unrelated MEDIUM feature.
+    if (await fileExists(findingsPath)) {
+      const envelope = await readSecurityFindings(findingsPath);
+      if (!envelope || envelope.ok === false) {
+        missing.push(
+          `security: invalid findings artifact in ${path.relative(targetDir, findingsPath)} (${envelope?.reason || 'invalid_json'})`
+        );
+      } else {
+        const reviewContractMissing = validateReviewContract(envelope.reviewContract);
+        if (reviewContractMissing.length > 0) {
+          missing.push(
+            `security: invalid review_contract in ${path.relative(targetDir, findingsPath)} (missing: ${reviewContractMissing.join(', ')})`
+          );
+        } else {
+          const v2Evidence = await validateV2SecurityEvidence(targetDir, envelope);
+          missing.push(...v2Evidence.errors);
+          missing.push(...v2Evidence.warnings.map((warning) => `${warning} (recommended)`));
+          const blockers = envelope.findings.filter(
+            (f) =>
+              (f.status === 'open' || f.status === 'needs_validation') &&
+              f.recommended_gate_status === 'block' &&
+              (f.severity === 'high' || f.severity === 'critical')
+          );
+          if (blockers.length > 0) {
+            missing.push(
+              `security: ${blockers.length} unresolved high/critical finding(s) blocking gate: ${blockers.map((f) => getFindingIdentifier(f)).join(', ')}`
+            );
+          }
+        }
+      }
+    }
+  return includeWarnings ? missing : missing.filter(item => !item.includes("(recommended)"));
+}
+
 async function readSecurityFindings(findingsPath) {
   try {
     const content = await readFileSafe(findingsPath);
@@ -431,6 +474,10 @@ async function checkGateApproval(targetDir, gateLetter, slug, classification, pr
     if (report) {
       const verdict = parseFrontmatterValue(report, 'verdict')
         || parseFrontmatterValue(report, 'status');
+      if (String(verdict || '').toLowerCase() === 'accepted_with_followups') {
+        const followups = await require('./lib/delivery-followups').evaluateFollowups(targetDir, slug);
+        return { ok: followups.eligible, reason: followups.reason };
+      }
       if (String(verdict || '').toLowerCase() === 'pass'
         || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(report)) {
         return { ok: true };
@@ -660,7 +707,8 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
   if ((stageName === 'tester' || stageName === 'qa') && state.featureSlug) {
     const acAudit = await auditAcceptanceCriteriaTests(targetDir, state.featureSlug, {
       requireCriteria: Boolean(completeness && completeness.applicable),
-      requireAssertions: Boolean(completeness && completeness.applicable)
+      requireAssertions: Boolean(completeness && completeness.applicable),
+      acceptQaEvidence: stageName === 'qa'
     });
     if (!acAudit.ok) {
       missing.push(`AC test audit failed: missing tests for ${acAudit.missing.join(', ')}`);
@@ -675,47 +723,7 @@ async function validateHandoffContract(targetDir, state, stageName, options = {}
     }
   }
 
-  // 4. Security findings check — qa stage only
-  // Blocks on open high/critical findings with recommended_gate_status=block.
-  if (stageName === 'qa' && state.featureSlug) {
-    const findingsPath = path.join(
-      targetDir,
-      `.aioson/context/security-findings-${state.featureSlug}.json`
-    );
-    // Security review is risk-triggered, not classification-triggered. When a
-    // findings artifact exists it remains authoritative and blocking; its mere
-    // absence does not create paperwork for an unrelated MEDIUM feature.
-    if (await fileExists(findingsPath)) {
-      const envelope = await readSecurityFindings(findingsPath);
-      if (!envelope || envelope.ok === false) {
-        missing.push(
-          `security: invalid findings artifact in ${path.relative(targetDir, findingsPath)} (${envelope?.reason || 'invalid_json'})`
-        );
-      } else {
-        const reviewContractMissing = validateReviewContract(envelope.reviewContract);
-        if (reviewContractMissing.length > 0) {
-          missing.push(
-            `security: invalid review_contract in ${path.relative(targetDir, findingsPath)} (missing: ${reviewContractMissing.join(', ')})`
-          );
-        } else {
-          const v2Evidence = await validateV2SecurityEvidence(targetDir, envelope);
-          missing.push(...v2Evidence.errors);
-          missing.push(...v2Evidence.warnings.map((warning) => `${warning} (recommended)`));
-          const blockers = envelope.findings.filter(
-            (f) =>
-              (f.status === 'open' || f.status === 'needs_validation') &&
-              f.recommended_gate_status === 'block' &&
-              (f.severity === 'high' || f.severity === 'critical')
-          );
-          if (blockers.length > 0) {
-            missing.push(
-              `security: ${blockers.length} unresolved high/critical finding(s) blocking gate: ${blockers.map((f) => getFindingIdentifier(f)).join(', ')}`
-            );
-          }
-        }
-      }
-    }
-  }
+  if (stageName === 'qa' && state.featureSlug) missing.push(...await validateSecurityForFeature(targetDir, state.featureSlug, { includeWarnings: true }));
 
   // Only hard-block on artifacts and gates; context updates are warnings unless
   // we are in strict mode. For now, treat everything as blocking to harden handoffs.
@@ -783,6 +791,7 @@ async function getCanonicalArtifactsForAgent(agent, targetDir, state) {
 }
 
 module.exports = {
+  validateSecurityForFeature,
   parseFrontmatterValue,
   readProjectClassification,
   resolveClassification,

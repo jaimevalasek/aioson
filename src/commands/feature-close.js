@@ -14,8 +14,11 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { contextDir, readFileSafe, parseFrontmatter } = require('../preflight-engine');
+const { contextDir, readFileSafe, readFeatureArtifactSafe, parseFrontmatter } = require('../preflight-engine');
 const { runFeatureArchive } = require('./feature-archive');
+const { evaluateFollowups, persistFollowupPlans } = require('../lib/delivery-followups');
+const { runGateCheck } = require('./gate-check');
+const isAcceptedVerdict = verdict => ['PASS', 'ACCEPTED_WITH_FOLLOWUPS'].includes(verdict);
 const { runStateReset } = require('./state-save');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
@@ -68,7 +71,7 @@ async function updateProjectPulseFile(pulsePath, slug, verdict, summary, date) {
   if (!existing) return false;
 
   const fm = parseFrontmatter(existing);
-  const gate = `Gate D: ${verdict === 'PASS' ? 'approved' : 'rejected'}`;
+  const gate = `Gate D: ${verdict === 'ACCEPTED_WITH_FOLLOWUPS' ? 'accepted_with_followups' : isAcceptedVerdict(verdict) ? 'approved' : 'rejected'}`;
   const recentActivities = extractRecentActivities(existing);
   let activityLine = `- ${date} @qa → ${slug} (${gate}) VERDICT: ${verdict}`;
   if (summary) activityLine += `: ${summary}`;
@@ -76,12 +79,12 @@ async function updateProjectPulseFile(pulsePath, slug, verdict, summary, date) {
   const activitySignature = stripDate(activityLine);
   const dedupedActivities = recentActivities.filter((line) => stripDate(line) !== activitySignature);
 
-  const activeFeature = verdict === 'PASS' ? '(none)' : slug;
-  const activeWork = verdict === 'PASS' ? '' : `${slug} → @qa → qa_failed`;
-  const blockers = verdict === 'PASS'
+  const activeFeature = isAcceptedVerdict(verdict) ? '(none)' : slug;
+  const activeWork = isAcceptedVerdict(verdict) ? '' : `${slug} → @qa → qa_failed`;
+  const blockers = isAcceptedVerdict(verdict)
     ? 'none'
     : (summary || fm.blockers || 'QA blockers pending');
-  const nextRecommendation = verdict === 'PASS'
+  const nextRecommendation = isAcceptedVerdict(verdict)
     ? '@product start the next feature'
     : '@dev fix QA blockers and return to @qa';
 
@@ -129,12 +132,12 @@ async function updateSpecFile(specPath, verdict, residual, date) {
     `- **Date:** ${date}`,
     `- **Verdict:** ${verdict}`,
     residual ? `- **Residual:** ${residual}` : null,
-    `- **Gate D (execution):** ${verdict === 'PASS' ? 'approved' : 'rejected'}`,
+    `- **Gate D (execution):** ${verdict === 'ACCEPTED_WITH_FOLLOWUPS' ? 'accepted_with_followups' : isAcceptedVerdict(verdict) ? 'approved' : 'rejected'}`,
     ''
   ].filter((l) => l !== null).join('\n');
 
   // Update gate_execution in frontmatter first (on original content)
-  const newStatus = verdict === 'PASS' ? 'approved' : 'rejected';
+  const newStatus = isAcceptedVerdict(verdict) ? 'approved' : 'rejected';
   const fm = parseFrontmatter(content);
   let baseContent = content;
   if (Object.keys(fm).length > 0) {
@@ -171,7 +174,7 @@ async function updateFeaturesFile(featuresPath, slug, verdict, date) {
   const content = await readFileSafe(featuresPath);
   if (!content) return false;
 
-  const status = verdict === 'PASS' ? 'done' : 'qa_failed';
+  const status = isAcceptedVerdict(verdict) ? 'done' : 'qa_failed';
   const rowRe = new RegExp(
     `^(\\|\\s*${escapeSlugForRegex(slug)}\\s*\\|)\\s*[^|]*\\s*\\|\\s*([^|]*)\\s*\\|\\s*([^|]*)\\s*\\|(.*)$`,
     'm'
@@ -415,9 +418,11 @@ async function runFeatureClose({ args, options = {}, logger }) {
     return { ok: false };
   }
 
-  if (!verdict || !['PASS', 'FAIL'].includes(verdict)) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return { ok: false, reason: 'invalid_feature' };
+
+  if (!verdict || !['PASS', 'FAIL', 'ACCEPTED_WITH_FOLLOWUPS'].includes(verdict)) {
     if (options.json) return { ok: false, reason: 'invalid_verdict' };
-    logger.log('--verdict=PASS or --verdict=FAIL is required.');
+    logger.log('--verdict=PASS, FAIL or ACCEPTED_WITH_FOLLOWUPS is required.');
     return { ok: false };
   }
 
@@ -449,8 +454,16 @@ async function runFeatureClose({ args, options = {}, logger }) {
     if (!options.json) logger.log(`feature:close --preflight — ${slug}: no gates on FAIL verdict.`);
     return report;
   }
+  const qaVerdict = String(parseFrontmatter(await readFeatureArtifactSafe(targetDir, slug, `qa-report-${slug}.md`) || '').verdict || '').toLowerCase();
+  if (verdict === 'PASS' && qaVerdict === 'accepted_with_followups') return { ok: false, reason: 'closure_verdict_mismatch', error: 'Preserve the QA verdict with --verdict=ACCEPTED_WITH_FOLLOWUPS' };
+  const conditional = verdict === 'ACCEPTED_WITH_FOLLOWUPS';
+  let followups = conditional ? await evaluateFollowups(targetDir, slug) : null;
+  let followupPlans = [];
+  if (conditional && (!followups.eligible || options.force === true)) {
+    return { ok: false, reason: 'closure_followups_ineligible', error: followups.error || followups.reason || 'Conditional acceptance never uses --force' };
+  }
   let forceBypass = null;
-  if (verdict === 'PASS') {
+  if (isAcceptedVerdict(verdict)) {
     const planDir = path.join(targetDir, '.aioson', 'plans', slug);
     const contractPath = path.join(planDir, 'harness-contract.json');
     const progressPath = path.join(planDir, 'progress.json');
@@ -653,7 +666,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
 
       // Confirmação interativa: só em TTY, fora do modo json, e apenas quando
       // todos os bloqueios são bypassáveis (publish gate nunca é).
-      const interactive = !options.json && !force
+      const interactive = !conditional && !options.json && !force
         && unforceable.length === 0
         && process.stdin.isTTY === true
         && process.stdout.isTTY === true;
@@ -674,7 +687,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
       if (!proceed) {
         const first = force && unforceable.length > 0 ? unforceable[0] : blockers[0];
         const combined = blockers.map((b) => b.message).join('\n\n');
-        const hint = unforceable.length === 0
+        const hint = !conditional && unforceable.length === 0
           ? 'Re-run with --force to close anyway (the bypass is recorded), or use --preflight to list all blockers without executing anything.'
           : null;
         if (options.json) {
@@ -725,6 +738,18 @@ async function runFeatureClose({ args, options = {}, logger }) {
     }
   }
 
+  if (conditional) {
+    const check = await runGateCheck({ args: [targetDir], options: { feature: slug, gate: 'D', json: true }, logger });
+    if (!check.ok) return { ok: false, reason: 'gate_d_blocked', missing: check.missing };
+    // Recheck after commands: a verifier can change files. Never record debt
+    // against evidence that no longer describes the delivered implementation.
+    followups = await evaluateFollowups(targetDir, slug);
+    if (!followups.eligible) return { ok: false, reason: 'closure_followups_stale', error: followups.error };
+    try { followupPlans = await persistFollowupPlans(targetDir, slug, followups); }
+    catch (error) { return { ok: false, reason: 'followup_persistence_failed', error: error.message }; }
+    updates.push(`accepted with followups: ${followupPlans.join(', ')}`);
+  }
+
   // 0. Dossier guarantee — verdict-agnostic; ensures every closed feature has a dossier
   // for archive + audit trail. Telemetry is silent on failure.
   const dossierResult = await ensureDossier({ targetDir, ctxDir: dir, slug });
@@ -756,7 +781,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   const featuresContent = await readFileSafe(featuresPath);
   if (featuresContent) {
     await updateFeaturesFile(featuresPath, slug, verdict, today);
-    updates.push(`features.md: ${slug} → ${verdict === 'PASS' ? 'done' : 'qa_failed'} (${today})`);
+    updates.push(`features.md: ${slug} → ${isAcceptedVerdict(verdict) ? 'done' : 'qa_failed'} (${today})`);
   } else {
     updates.push('features.md: not found (skipped)');
   }
@@ -766,7 +791,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // @dev cold-start try to resume it (it reads the file directly). FAIL leaves
   // it — @dev keeps working the qa_failed feature. Never touches a pointer to a
   // different active feature. Best-effort; never blocks the close.
-  if (verdict === 'PASS') {
+  if (isAcceptedVerdict(verdict)) {
     try {
       const ds = await retireDevStateForClosedFeature(targetDir, dir, slug);
       if (ds.retired) {
@@ -805,7 +830,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // Capture feature classification BEFORE archive moves prd-{slug}.md to
   // .aioson/context/done/{slug}/. The Phase 5 distillation hook below needs
   // this value to enforce the MICRO opt-out (BR-ALL-11).
-  const preArchiveClassification = verdict === 'PASS'
+  const preArchiveClassification = isAcceptedVerdict(verdict)
     ? await readFeatureClassification(targetDir, slug)
     : null;
 
@@ -827,7 +852,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // Disable explicitly with --no-archive when needed (e.g. re-running feature:close idempotently).
   let archive = null;
   const skipArchive = options['no-archive'] === true || options.archive === false;
-  if (verdict === 'PASS' && !skipArchive) {
+  if (isAcceptedVerdict(verdict) && !skipArchive) {
     try {
       archive = await runFeatureArchive({
         args: [targetDir],
@@ -932,7 +957,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
         }
       }
     }
-  } else if (verdict === 'PASS' && skipDistill) {
+  } else if (isAcceptedVerdict(verdict) && skipDistill) {
     updates.push('distill: skipped (--no-distill flag)');
   }
 
@@ -945,7 +970,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
   // too, so a tier-2 memory mutation never fires inside a hook/automation context.
   const skipTrim = options['no-trim'] === true || options.trim === false
     || process.env.AIOSON_RUNTIME_HOOK === '1';
-  if (verdict === 'PASS' && !skipTrim) {
+  if (isAcceptedVerdict(verdict) && !skipTrim) {
     try {
       const csPath = path.join(targetDir, '.aioson/context/bootstrap/current-state.md');
       const csContent = await readFileSafe(csPath);
@@ -977,6 +1002,8 @@ async function runFeatureClose({ args, options = {}, logger }) {
     updates,
     errors: closeErrors.length > 0 ? closeErrors : undefined,
     forceBypass: forceBypass || undefined,
+    disposition: conditional ? 'accepted_with_followups' : null,
+    followup_plans: followupPlans,
     archive,
     scoutArchive,
     distillation

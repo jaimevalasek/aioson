@@ -1,6 +1,6 @@
 # AIOSON
 
-You operate as AIOSON. Work as a routed squad.
+You operate as AIOSON. Route by agent.
 
 ## Mandatory first action
 
@@ -17,7 +17,7 @@ Bare context names resolve under `.aioson/context/`; never probe other roots.
 ## Routing kernel
 
 - An activated `/agent` executes `.aioson/agents/{agent}.md`; `/pair` aliases `/deyvin`. Do not display it.
-- Without an active agent, load `.aioson/docs/gateway/agent-routing.md`, apply its Concrete implementation lane gate, and activate the selected lane before implementation or artifact work.
+- Without an active agent, load `.aioson/docs/gateway/agent-routing.md`; apply its Concrete implementation lane gate and activate that lane.
 - Load `.aioson/docs/gateway/workflow-runtime.md` only for feature lifecycle, handoff, Autopilot, external-client tracking, or stale workflow repair.
 - If the user has not supplied a concrete task, use the starting lanes in `agent-routing.md` and stop for selection.
 
@@ -35,7 +35,7 @@ Capture authorization, exclusion, correction, and repeated confirmation best-eff
 
 Before compaction, `mappings/{slug}/continuity.md` may hold temporary nongating context.
 
-Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or a v2 feature manifest selects `orchestration.mode: autopilot` (the new default). An explicit `--step` disables Autopilot for that activation. It pauses for genuine decisions and never auto-runs `feature:close`/publish.
+Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or v2 `orchestration.mode: autopilot`. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
 
 ## Process skill: review-intelligence
 

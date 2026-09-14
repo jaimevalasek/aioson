@@ -279,8 +279,10 @@ module.exports = {
       'aioson harness:reject [path] --slug=<slug> --gate=<gate-id> [--reason=<text>] [--json] [--locale=en]',
     help_harness_status:
       'aioson harness:status [path] [--slug=<slug>] [--json] [--locale=en]',
+    help_feature_closure:
+      'aioson feature:closure [path] [--enable --by=<owner> --auto --allow-secondary | --disable --by=<owner> | --feature=<slug> --prepare=<json> | --list --include-resolved] [--json]',
     help_feature_close:
-      'aioson feature:close [path] --feature=<slug> --verdict=PASS|FAIL [--residual=<text>] [--preflight|--explain] [--force] [--no-archive] [--no-distill] [--json] [--locale=en]',
+      'aioson feature:close [path] --feature=<slug> --verdict=PASS|FAIL|ACCEPTED_WITH_FOLLOWUPS [--residual=<text>] [--preflight|--explain] [--force] [--no-archive] [--no-distill] [--json] [--locale=en]',
     help_feature_archive:
       'aioson feature:archive [path] --feature=<slug> [--dry-run] [--restore] [--sweep] [--force] [--json] [--locale=en]',
     help_gate_check:
@@ -374,6 +376,8 @@ module.exports = {
       'aioson squad:learning [path] [--sub=list|stats|archive|promote|export] [--squad=<slug>] [--status=<status>] [--locale=en]',
     help_agent_audit:
       'aioson agent:audit [path] [--runtime-only|--template-only|--inception] [--locales] [--verbose] [--fix] [--json] [--locale=en]',
+    help_quality_run: "quality:run [path] --profile=<product|framework> [--dry-run] [--json] — Run native quality checks (product/framework; --dry-run previews)",
+    help_quality_evals: "quality:evals [path] [--validate-seeds | --executor=<JSON argv>] [--compare=<run.json> --baseline=<run.json>] — Run repair evaluations or compare immutable paired runs",
     help_quality_audit:
       'aioson quality:audit [path] [--feature=<slug>] [--provider-output=<path>] [--baseline=<path>] [--changed=<path[,path]>] [--json] [--locale=en]',
     help_squad_dashboard:
@@ -433,7 +437,7 @@ module.exports = {
     help_runtime_emit:
       'aioson runtime:emit [path] --agent=<name> [--type=<event>] [--summary=<text>] [--title=<text>] [--refs=<file[,file2]>] [--used-skills=<id[,id2]>] [--plan-step=<id>] [--meta=<json>] [--json] [--locale=en]',
     help_host_signature:
-      'aioson host:signature [path] --host=claude|codex|opencode|kimi|qwen [--model=<id>|configured-default] [--effort=low|medium|high|xhigh|max|ultra] [--ttl=<hours>] [--timeout=<ms>] [--status] [--list] [--json] [--locale=en]',
+      'aioson host:signature [path] --host=antigravity|claude|codex|grok|kimi|opencode|qwen [--model=<id>|configured-default] [--effort=low|medium|high|xhigh|max|ultra] [--ttl=<hours>] [--timeout=<ms>] [--status] [--list] [--json] [--locale=en]',
     help_execution_offer:
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=en]',
     help_execution_seed:
@@ -441,13 +445,17 @@ module.exports = {
     help_execution_compile:
       'aioson execution:compile [path] --feature=<slug> [--dry-run] [--json] [--locale=en]',
     help_execution_run:
-      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--wave=<n>] [--json] [--locale=en]',
+      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--no-context-limit|--context-limit] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=en]',
     help_execution_decide:
       'aioson execution:decide [path] --feature=<slug> --unit=<unit-id> --choice=retry|fallback:<host>/<model>[/<effort>]|skip|skip-qa|abort [--json] [--locale=en]',
     help_execution_status:
-      'aioson execution:status [path] --feature=<slug> [--json] [--locale=en]',
+      'aioson execution:status [path] --feature=<slug> [--watch[=<seconds>]] [--format=table|full|line] [--json] [--locale=en]',
+    help_execution_dashboard:
+      'aioson execution:dashboard [path] [--feature=<slug>] [--port=4181] [--json]',
     help_execution_graph:
       'aioson execution:graph [path] --feature=<slug> [--format=ascii|mermaid|json] [--json] [--locale=en]',
+    help_execution_prices:
+      'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:
       'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy> --agent=<name> [--tool-bin=<binary>] [--permission-mode=yolo|default (default: yolo — the host runs unattended)] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
     help_live_status:

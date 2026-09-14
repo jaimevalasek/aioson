@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs/promises');const path=require('node:path');const crypto=require('node:crypto');
-const adapters={claude:require('./adapters/claude'),codex:require('./adapters/codex'),opencode:require('./adapters/opencode'),kimi:require('./adapters/kimi'),qwen:require('./adapters/qwen'),grok:require('./adapters/grok')};
+const adapters={antigravity:require('./adapters/antigravity'),claude:require('./adapters/claude'),codex:require('./adapters/codex'),opencode:require('./adapters/opencode'),kimi:require('./adapters/kimi'),qwen:require('./adapters/qwen'),grok:require('./adapters/grok')};
 const {assertFeatureSlug,loadManifest,resolveExecutionEntry,resolveExecutionTarget}=require('./manifest');
 const {safeReportPath,validateReport}=require('./reports');
 const {createTelemetryBridge}=require('./telemetry-bridge');
@@ -122,9 +122,9 @@ function createLeaseMonitor(lease,{renew=renewLease,intervalMs=Math.floor(LEASE_
 }
 async function safePromptPath(projectDir,promptPath){const root=await fs.realpath(projectDir);const candidate=path.resolve(root,promptPath||'.aioson/context/dev-state.md');const real=await fs.realpath(candidate);if(real!==root&&!real.startsWith(root+path.sep))throw new Error('prompt_path escapes project workspace');const stat=await fs.stat(real);if(!stat.isFile())throw new Error('prompt_path must be a regular file');return real}
 async function resolveWritableRoots(projectDir,roots=[]){const resolved=[];for(const configured of roots){if(typeof configured!=='string'||!configured.trim())throw new Error('writable_root must be a non-empty path');if(configured.split(/[\\/]+/).includes('..'))throw new Error(`writable_root traversal is forbidden: ${configured}`);const candidate=path.resolve(projectDir,configured);let real;try{real=await fs.realpath(candidate)}catch{throw new Error(`writable_root does not exist: ${configured}`)}if(!(await fs.stat(real)).isDirectory())throw new Error(`writable_root is not a directory: ${configured}`);if(!resolved.includes(real))resolved.push(real)}return resolved}
-function capacitySequence(manifest,resolved){const policy=manifest.capacity_policy;if(policy.strategy!=='fallback')return[];return resolved.fallbacks.filter(item=>policy.allow_cross_host===true||item.host===resolved.host)}
+function capacitySequence(manifest,resolved){const policy=manifest.capacity_policy;return resolved.fallbacks.filter(item=>item.authorized_profile===true||(policy.strategy==='fallback'&&(policy.allow_cross_host===true||item.host===resolved.host)))}
 function applyCapacityPolicy(manifest,resolved,attemptCount=0){const p=manifest.capacity_policy;if(attemptCount>=p.max_attempts)return{action:'pause',reason:'capacity_limit'};if(p.strategy==='fallback'){const sequence=capacitySequence(manifest,resolved);return sequence.length?{action:'fallback',sequence}:{action:'pause',reason:'no_authorized_fallback'}}if(p.strategy==='retry'||p.strategy==='wait')return{action:p.strategy,backoff_ms:p.backoff_ms};return{action:'pause'}}
-function fallbackReasonCategory(reason){return reason==='capacity'?'capacity':['executable_not_found','unsupported_host','unsupported_capability','unsupported_reasoning_effort','host_capability_missing','invalid_model','model_not_found','catalog_unavailable','unsupported_model_catalog'].includes(reason)?'unavailable':null}
+function fallbackReasonCategory(reason){return ['capacity','rate_limit','quota_exceeded','credits_exhausted','billing_unavailable'].includes(reason)?'capacity':['auth','connection','service_unavailable','provider_unavailable','engine_error','executable_not_found','unsupported_host','unsupported_capability','unsupported_reasoning_effort','host_capability_missing','invalid_model','model_not_found','catalog_unavailable','unsupported_model_catalog','unproductive_loop'].includes(reason)?'unavailable':null}
 function fallbackActivates(fallback,reason){const category=fallbackReasonCategory(reason);const allowed=Array.isArray(fallback?.on)&&fallback.on.length?fallback.on:['capacity'];return Boolean(category&&allowed.includes(category))}
 async function waitWithSignal(wait,ms,signal){
  if(!ms)return true;
@@ -144,10 +144,10 @@ async function executeWithCapacityPolicy({manifest,resolved,input,adapterRegistr
   const history=[];
   const candidates=[
     {entry:resolved,fallback:null},
-    ...capacitySequence(manifest,resolved).map(item=>{const crossHost=item.host!==resolved.host;return{fallback:item,entry:{...resolved,ok:false,host:item.host,model:item.model,model_requested:undefined,...(crossHost?{reasoning_effort:undefined,reasoning_effort_verification:undefined}:{})}};})
+    ...capacitySequence(manifest,resolved).map(item=>{const crossHost=item.host!==resolved.host;const hasEffort=Object.prototype.hasOwnProperty.call(item,'reasoning_effort');return{fallback:item,entry:{...resolved,ok:false,host:item.host,model:item.model,model_requested:undefined,routing_profile:item.routing_profile||null,reasoning_effort:hasEffort?item.reasoning_effort:(crossHost?undefined:resolved.reasoning_effort),...(crossHost?{reasoning_effort_verification:undefined}:{})}};})
   ];
   let index=0;
-  for(let count=0;count<manifest.capacity_policy.max_attempts;count++){
+  for(let count=0;count<Math.max(manifest.capacity_policy.max_attempts,candidates.length);count++){
     if(input.signal?.aborted)return{ok:false,reason:input.abortReason||'aborted',history};
     let candidate=candidates[index].entry;
     if(!candidate.ok){
@@ -175,9 +175,24 @@ async function executeWithCapacityPolicy({manifest,resolved,input,adapterRegistr
       .replace(/model_resolved=[^,\n]+/,`model_resolved=${candidate.model}`)
       .replace(/model_resolution_strategy=[^,\n]+/,`model_resolution_strategy=${candidate.model_resolution_strategy}`)
       .replace(/reasoning_effort=[^,\n]+/,`reasoning_effort=${candidate.reasoning_effort||'null'}`);
-    const result=await adapter.execute({...input,prompt_text,mode:candidate.mode,model:candidate.model,reasoning_effort:candidate.reasoning_effort});
-    history.push({attempt:count+1,host:candidate.host,model_requested:candidate.model_requested,model:candidate.model,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,reason:result.reason||null});
-    if(result.ok)return{...result,host:candidate.host,model:candidate.model,model_requested:candidate.model_requested,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,history};
+    const attemptStartedAt = new Date().toISOString();
+    const context_budget = input.getContextBudget ? await input.getContextBudget(candidate) : input.context_budget;
+    const budgetPrompt = context_budget ? `\n\nCONTEXT QUALITY BUDGET: keep this unit below ${context_budget.max_tokens} tokens of active context. This is a quality ceiling even when the model supports a larger window. Read only unit-owned code and selected rules; use targeted excerpts and concise tool output. Save verified progress on disk. If work cannot fit, report the remaining slice and preserve existing changes; never reread all phases or redo completed work.\n` : '';
+    await input.onAttemptStart?.({ attempt: count + 1, host: candidate.host, model: candidate.model, routing_profile: candidate.routing_profile || null, started_at: attemptStartedAt, context_budget: context_budget || null });
+    let result;
+    try {
+      result=context_budget && Math.ceil(Buffer.byteLength(prompt_text + budgetPrompt) / 2) > context_budget.max_tokens * 0.5
+        ? { ok: false, reason: 'context_prompt_over_budget', context_budget }
+        : await adapter.execute({...input,context_budget,prompt_text:prompt_text + budgetPrompt,mode:candidate.mode,model:candidate.model,reasoning_effort:candidate.reasoning_effort,onStructuredEvent:input.createStructuredObserver?.(candidate) || input.onStructuredEvent,
+        onUsage: usage => input.onUsage?.(usage, candidate, count + 1)
+      });
+    } catch (error) {
+      result = { ok: false, reason: 'engine_error', error: error.message };
+    }
+    const attempt = {attempt:count+1,host:candidate.host,model_requested:candidate.model_requested,model:candidate.model,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,routing_profile:candidate.routing_profile||null,reason:result.reason||null,started_at:attemptStartedAt,finished_at:new Date().toISOString(),usage:result.usage||null,context_budget:result.context_budget||context_budget||null};
+    history.push(attempt);
+    await input.onAttemptResult?.(attempt);
+    if(result.ok)return{...result,host:candidate.host,model:candidate.model,model_requested:candidate.model_requested,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,routing_profile:candidate.routing_profile||null,history};
     const next=candidates[index+1];
     if(next&&fallbackActivates(next.fallback,result.reason)){index+=1;continue}
     if(result.reason!=='capacity')return{...result,history};
@@ -195,7 +210,7 @@ async function executeWithCapacityPolicy({manifest,resolved,input,adapterRegistr
 }
 function buildExecutionPrompt(promptText,expected,reportPath){
  const laneContract=expected.lane
-  ? `\nDevelopment lane: ${expected.lane}. You may modify only these declared write paths: ${JSON.stringify(expected.write_paths)}.\nThe report must also include lane=${expected.lane}, write_paths=${JSON.stringify(expected.write_paths)}.`
+  ? `\nDevelopment lane: ${expected.lane}. You may modify only these declared write paths: ${JSON.stringify(expected.write_paths)}. The required report${expected.progress_notes ? ` and progress notes at ${expected.progress_notes}` : ''} are bookkeeping exceptions; they do not expand source ownership.\nThe report must also include lane=${expected.lane}, write_paths=${JSON.stringify(expected.write_paths)}.`
   : '';
  return `${promptText}\n\nAIOSON EXECUTION CONTRACT\nComplete the requested agent work, then write exactly one JSON report to: ${reportPath}${laneContract}\nThe report must include: version=1, feature=${expected.feature}, run_id=${expected.run_id}, attempt_id=${expected.attempt_id}, agent=${expected.agent}, host=${expected.host}, model_requested=${expected.model_requested}, model_resolved=${expected.model_resolved}, model_resolution_strategy=${expected.model_resolution_strategy}, reasoning_effort=${expected.reasoning_effort||'null'}, manifest_digest=${expected.manifest_digest}, writable_roots=${JSON.stringify(expected.writable_roots)}, started_at, finished_at, verdict (PASS|FAIL|BLOCKED), findings[], evidence[]. Do not report PASS unless the work and verification completed.`;
 }

@@ -29,6 +29,7 @@ Load only when the user asks about available agents or the routing matrix is ins
 - `@tester`: deeper test engineering and coverage
 - `@pentester`: adversarial security review
 - `@validator`: enabled harness/success-contract validation
+- `@quality`: optional engineering quality assessment, static analysis, test effectiveness and reproducible evaluations for products or AIOSON itself; QA retains acceptance
 - `@scope-check`: explicit scope/conformance check
 - `@shakedown`: spec-independent completeness walkthrough and punch list over a delivered system
 

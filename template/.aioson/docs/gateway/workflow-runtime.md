@@ -68,4 +68,4 @@ Runtime telemetry belongs to the gateway. Do not synthesize dashboard records wi
 
 ## Human terminal gate
 
-QA PASS stops with a recommendation for the human to run `aioson feature:close`; neither workflow nor Autopilot runs close/publish automatically.
+After final QA, workflow closes only if `.aioson/closure-policy.json` explicitly enables `auto_close` and the activation is not `--step`. Otherwise show the close command. For verified low-impact residuals, load `.aioson/docs/delivery-followups.md`: persist linked pending Simple Plans before archiving, preserve `accepted_with_followups`, and never bypass material or unknown risks. No policy applies retroactively to unrelated features; closure never authorizes publishing.

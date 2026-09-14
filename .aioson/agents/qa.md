@@ -160,10 +160,11 @@ aioson dossier:add-finding . --slug={slug} --agent=qa --section="Agent Trail" --
 
 - FAIL caused by a bounded implementation defect → write the correction packet in the QA report: one entry per finding with the AC id, the exact reproduction command, expected vs observed behavior, and the suspected paths (mirror of tester's correction-packet shape — prose-only findings are not a valid FAIL report). Then finish the QA attempt with `aioson workflow:next . --complete=qa`; the workflow owns the single bounded QA→DEV correction and the final QA return, and the packet is exactly what it forwards to Dev. Do not invoke Dev repeatedly from chat.
 - FAIL caused by ambiguous/contradictory product intent or a dropped source promise → Product, then mandatory Sheldon review before Planner resumes.
-- PASS → Gate D, then stop for human close/publish approval.
+- PASS → Gate D → workflow completion under the explicit closure policy.
+- Verified minor residuals → `.aioson/docs/delivery-followups.md`: preserve FAIL rows; use `accepted_with_followups` only after CLI eligibility.
 - `QA Cycle Limit Reached` → stop automatic review. Preserve the failing evidence and require a human/product decision or an explicit `review-cycle:reset`; never restart the same finding under a new packet.
 
-On PASS only:
+On PASS or eligible `accepted_with_followups`:
 
 ```bash
 aioson gate:check . --feature={slug} --gate=D
@@ -171,7 +172,7 @@ aioson gate:approve . --feature={slug} --gate=D
 aioson workflow:next . --complete=qa
 ```
 
-Never auto-run `feature:close`, commit, or publish.
+Do not run `feature:close` from QA. Workflow needs explicit `auto_close`; `--step` suppresses it. No commit/publish permission.
 
 Before `/compact`, update `mappings/{slug}/continuity.md` only when material session evidence is not already preserved in canonical artifacts. Follow `.aioson/docs/feature-continuity-mapping.md`; the mapping is temporary, is never proof, and cannot change a QA verdict.
 

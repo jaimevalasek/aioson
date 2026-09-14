@@ -8,19 +8,29 @@
 
 ## Steps
 1. Update `CHANGELOG.md` and `package.json` version.
-2. Run local validation:
-   - `npm run verify:release`
-   - During development only, `npm run verify:release:quick` runs the non-test
-     package, dependency, audit, and Git-boundary checks.
-3. Commit release changes.
+2. Commit release changes.
+3. Run the gate from a clean checkout of the release commit, never from the
+   shared working tree:
+   - `git worktree add --detach ../aioson-release <sha>` (a short sibling path;
+     Windows `MAX_PATH` breaks deeper ones)
+   - `cd ../aioson-release && npm ci && npm run verify:release`
+   - During development only, `npm run verify:release:quick` in the working
+     tree runs the non-test package, dependency, audit, and Git-boundary checks.
+   The worktree exists because `npm pack` and the untracked-files check read
+   the working tree, not the commit: uncommitted edits from another session
+   would either trip the gate or ship inside the tarball.
 4. Create tag:
    - `git tag vX.Y.Z`
 5. Push branch and tag:
    - `git push origin main --tags`
 6. Watch the validation-only `Release` workflow in GitHub Actions.
 7. After it is green, explicitly authorize and run
-   `npm publish --access public`.
+   `npm publish --access public` from the same clean worktree (the tarball is
+   built from the directory you publish from).
 8. Publish the GitHub release using `.github/release-notes-template.md`.
+9. Remove the worktree once the version is on npm:
+   `git worktree remove ../aioson-release`. It holds no exclusive commits, so
+   nothing is lost; `git worktree list` shows whether one is still attached.
 
 ## Verify publication
 - `npm view @jaimevalasek/aioson version`

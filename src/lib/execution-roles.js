@@ -42,7 +42,7 @@ const SEED_SOURCE_PREFIX = 'aioson-planner';
 const LANE_ID = /^[a-z][a-z0-9-]*$/;
 const EXECUTION_ROLES_VERSION = 1;
 const ROLE_KEY = /^[a-z][a-z0-9_]*$/;
-const ROOT_KEYS = ['version', 'source', 'enabled', 'roles', 'parallel', 'on_unavailable', 'execution'];
+const ROOT_KEYS = ['version', 'source', 'enabled', 'roles', 'profiles', 'active_profile', 'parallel', 'on_unavailable', 'execution'];
 const EXECUTION_KEYS = ['spawner', 'unit_timeout_ms', 'require_independent_qa'];
 const SPAWNER_KEYS = ['command', 'args'];
 const MAX_SPAWNER_ARGS = 16;
@@ -58,6 +58,8 @@ const UNLIMITED_UNIT_TIMEOUT_MS = 0;
 const DEFAULT_SPAWNER_UNIT_TIMEOUT_MS = 30 * 60 * 1000;
 const SPAWNER_ENV = 'AIOSON_EXECUTION_SPAWNER';
 const ROLE_KEYS = ['host', 'model', 'reasoning_effort'];
+const PROFILE_KEYS = ['enabled', 'fallback_use', 'fallback_profiles', 'roles'];
+const MAX_FALLBACK_PROFILES = 8;
 const ON_UNAVAILABLE = ['ask', 'fallback', 'pause'];
 const DEFAULT_ON_UNAVAILABLE = 'ask';
 const DEFAULT_MAX_CONCURRENT_LANES = 2;
@@ -96,12 +98,14 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
   }
   if (typeof value.enabled !== 'boolean') add('$.enabled', 'must be boolean');
 
-  if (!isPlainObject(value.roles)) {
-    add('$.roles', 'must be an object');
-  } else {
-    if (Object.keys(value.roles).length === 0) add('$.roles', 'must declare at least one role');
-    for (const [key, role] of Object.entries(value.roles)) {
-      const base = `$.roles.${key}`;
+  const validateRoleMap = (roleMap, basePath) => {
+    if (!isPlainObject(roleMap)) {
+      add(basePath, 'must be an object');
+      return;
+    }
+    if (Object.keys(roleMap).length === 0) add(basePath, 'must declare at least one role');
+    for (const [key, role] of Object.entries(roleMap)) {
+      const base = `${basePath}.${key}`;
       if (!ROLE_KEY.test(key)) add(base, 'role key must be snake_case');
       if (!isPlainObject(role)) {
         add(base, 'must be {host, model, reasoning_effort?}');
@@ -129,6 +133,50 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
         }
       }
     }
+  };
+  const hasLegacyRoles = value.roles !== undefined;
+  const hasProfiles = value.profiles !== undefined;
+  if (hasLegacyRoles === hasProfiles) {
+    add('$', 'declare exactly one of roles (legacy single profile) or profiles');
+  }
+  if (hasLegacyRoles) validateRoleMap(value.roles, '$.roles');
+  if (hasProfiles) {
+    if (!isPlainObject(value.profiles) || Object.keys(value.profiles).length === 0) {
+      add('$.profiles', 'must be a non-empty object');
+    } else {
+      for (const [profileName, profile] of Object.entries(value.profiles)) {
+        const base = `$.profiles.${profileName}`;
+        if (!ROLE_KEY.test(profileName)) add(base, 'profile key must be snake_case');
+        if (!isPlainObject(profile)) { add(base, 'must be {enabled?, roles}'); continue; }
+        for (const key of Object.keys(profile)) if (!PROFILE_KEYS.includes(key)) add(`${base}.${key}`, 'unknown field');
+        if (profile.enabled !== undefined && typeof profile.enabled !== 'boolean') add(`${base}.enabled`, 'must be boolean');
+        if (profile.fallback_use !== undefined && typeof profile.fallback_use !== 'boolean') add(`${base}.fallback_use`, 'must be boolean');
+        if (profile.fallback_profiles !== undefined && (!Array.isArray(profile.fallback_profiles) || profile.fallback_profiles.length > MAX_FALLBACK_PROFILES || profile.fallback_profiles.some(name => typeof name !== 'string' || !ROLE_KEY.test(name)))) {
+          add(`${base}.fallback_profiles`, `must be an array of at most ${MAX_FALLBACK_PROFILES} snake_case profile names`);
+        }
+        if (Array.isArray(profile.fallback_profiles)) {
+          if (new Set(profile.fallback_profiles).size !== profile.fallback_profiles.length) add(`${base}.fallback_profiles`, 'must not contain duplicates');
+          if (profile.fallback_profiles.includes(profileName)) add(`${base}.fallback_profiles`, 'must not reference its own profile');
+        }
+        validateRoleMap(profile.roles, `${base}.roles`);
+      }
+      for (const [profileName, profile] of Object.entries(value.profiles)) {
+        if (!isPlainObject(profile) || !Array.isArray(profile.fallback_profiles)) continue;
+        for (const target of profile.fallback_profiles) {
+          if (!Object.hasOwn(value.profiles, target)) add(`$.profiles.${profileName}.fallback_profiles`, `references missing profile ${target}`);
+          else if (value.profiles[target]?.enabled === false) add(`$.profiles.${profileName}.fallback_profiles`, `references disabled profile ${target}`);
+        }
+      }
+    }
+    if (typeof value.active_profile !== 'string' || !value.active_profile.trim()) {
+      add('$.active_profile', 'must name an enabled profile');
+    } else if (isPlainObject(value.profiles) && !Object.hasOwn(value.profiles, value.active_profile)) {
+      add('$.active_profile', 'must reference a declared profile');
+    } else if (value.profiles?.[value.active_profile]?.enabled === false) {
+      add('$.active_profile', 'must reference an enabled profile');
+    }
+  } else if (value.active_profile !== undefined) {
+    add('$.active_profile', 'requires profiles');
   }
 
   if (value.execution !== undefined) {
@@ -184,18 +232,25 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
 }
 
 function normalizeExecutionRoles(value) {
-  const roles = {};
-  for (const [key, role] of Object.entries(value.roles)) {
-    roles[key] = {
+  const activeProfile = value.profiles ? value.active_profile.trim() : null;
+  const normalizeRoleMap = roleMap => Object.fromEntries(Object.entries(roleMap).map(([key, role]) => [key, {
       host: role.host,
       model: role.model.trim(),
       reasoning_effort: role.reasoning_effort || null
-    };
-  }
+    }]));
+  const profiles = value.profiles ? Object.fromEntries(Object.entries(value.profiles).map(([name, profile]) => [name, {
+    enabled: profile.enabled !== false,
+    fallback_use: profile.fallback_use === true,
+    fallback_profiles: profile.fallback_use === true ? [...(profile.fallback_profiles || [])] : [],
+    roles: normalizeRoleMap(profile.roles)
+  }])) : null;
+  const roles = activeProfile ? profiles[activeProfile].roles : normalizeRoleMap(value.roles);
   return {
     version: value.version,
     source: value.source || null,
     enabled: value.enabled,
+    active_profile: activeProfile,
+    profiles,
     roles,
     parallel: {
       max_concurrent_lanes: value.parallel?.max_concurrent_lanes || DEFAULT_MAX_CONCURRENT_LANES
@@ -303,11 +358,14 @@ async function readExecutionRoles(projectDir, { hosts } = {}) {
   return { present: true, ok: true, enabled: true, path: relative, reason: null, errors: [], roles, digest, file_digest: fileDigest };
 }
 
-/** Digest of the roles content that shapes compiled units — never the process budget or the spawner. */
+/**
+ * Digest of compile-time execution policy. Host/model routing is deliberately
+ * absent: the engine reloads the selected profile before every new stage, so
+ * changing `active_profile` or editing its role map does not stale the plan.
+ */
 function rolesBindingDigest(roles) {
   const canonical = {
     version: roles.version,
-    roles: Object.keys(roles.roles).sort().map((key) => [key, roles.roles[key].host, roles.roles[key].model, roles.roles[key].reasoning_effort || null]),
     parallel: { max_concurrent_lanes: roles.parallel?.max_concurrent_lanes || null },
     on_unavailable: roles.on_unavailable || null,
     execution: { require_independent_qa: roles.execution?.require_independent_qa === true }
@@ -324,6 +382,20 @@ function resolveLaneRoles(roles, lane) {
     ? { role: qaKey, inherited: false, ...roles.roles[qaKey] }
     : (roles.roles.qa ? { role: 'qa', inherited: true, ...roles.roles.qa } : null);
   return { dev, qa };
+}
+
+/** Ordered, explicitly enabled profile alternatives for the same lane role. */
+function resolveProfileFallbacks(roles, lane, kind) {
+  if (!roles?.profiles || !roles.active_profile) return [];
+  const active = roles.profiles[roles.active_profile];
+  if (!active?.fallback_use) return [];
+  const key = kind === 'dev' ? laneRoleKey(lane, 'dev') : laneRoleKey(lane, 'qa');
+  return active.fallback_profiles.flatMap(profileName => {
+    const profile = roles.profiles[profileName];
+    if (!profile?.enabled) return [];
+    const role = kind === 'qa' ? (profile.roles[key] || profile.roles.qa) : profile.roles[key];
+    return role ? [{ profile: profileName, role: role === profile.roles.qa ? 'qa' : key, ...role }] : [];
+  });
 }
 
 function signatureHint(role) {
@@ -624,6 +696,7 @@ module.exports = {
   readConfirmation,
   readExecutionRoles,
   resolveLaneRoles,
+  resolveProfileFallbacks,
   rolesDigest,
   seedExecutionRoles,
   signatureHint,

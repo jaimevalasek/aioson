@@ -205,7 +205,7 @@ async function setup(t, { roles = ROLES, config = {} } = {}) {
 function run(ctx, { events = [], extra = {}, engine = {}, env = {} } = {}) {
   return runCommand({
     args: [ctx.dir],
-    options: { sub: 'run', feature: SLUG, json: true, ...extra },
+    options: { sub: 'run', feature: SLUG, json: true, 'bounded-recovery': true, ...extra },
     logger,
     env: { ...ctx.env, [SPAWNER_ENV]: ctx.spawnerCommand, ...env },
     engineOptions: { catalogLoader, resolverOptions: ctx.resolverOptions, gitBaseline: fakeBaseline, progress: (event) => events.push(event), stallMs: 60000, stallCheckMs: 30000, spawnerOptions: { pollMs: 25 }, timeout: 8000, ...engine }

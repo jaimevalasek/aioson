@@ -1,0 +1,703 @@
+{
+  "schema_version": 1,
+  "id": "aioson-quality-microtasks-v1",
+  "description": "20 isolated repair microtasks: eight framework contracts and twelve synthetic product regressions. Development corpus with transparent graders; not an end-to-end or hidden holdout benchmark.",
+  "tasks": [
+    {
+      "id": "provider-schema",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return \"pass\" only for a non-null object with an array named findings and no truthy error. Return \"error\" otherwise.",
+      "source": "module.exports = x => \"pass\";\n",
+      "vectors": [
+        {
+          "input": {},
+          "expected": "error"
+        },
+        {
+          "input": null,
+          "expected": "error"
+        },
+        {
+          "input": {
+            "findings": []
+          },
+          "expected": "pass"
+        },
+        {
+          "input": {
+            "findings": [],
+            "error": true
+          },
+          "expected": "error"
+        }
+      ]
+    },
+    {
+      "id": "provider-exit",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return \"not_run\" when available is false; \"pass\" when exit is 0 or when exit is 1 with count > 0; otherwise \"error\".",
+      "source": "module.exports = x => x.exit === 0 ? \"pass\" : \"fail\";\n",
+      "vectors": [
+        {
+          "input": {
+            "available": false
+          },
+          "expected": "not_run"
+        },
+        {
+          "input": {
+            "exit": 1,
+            "count": 2
+          },
+          "expected": "pass"
+        },
+        {
+          "input": {
+            "exit": 1,
+            "count": 0
+          },
+          "expected": "error"
+        },
+        {
+          "input": {
+            "exit": 2,
+            "count": 9
+          },
+          "expected": "error"
+        },
+        {
+          "input": {
+            "exit": 0,
+            "count": 0
+          },
+          "expected": "pass"
+        }
+      ]
+    },
+    {
+      "id": "baseline-identity",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return a stable identity joining path, rule, symbol with \"|\". Missing values become empty strings. Normalize backslashes to \"/\"; line numbers must not affect identity.",
+      "source": "module.exports = x => [x.path,x.rule,x.line].join(\"|\");\n",
+      "vectors": [
+        {
+          "input": {
+            "path": "src\\a.js",
+            "rule": "unused",
+            "symbol": "x",
+            "line": 4
+          },
+          "expected": "src/a.js|unused|x"
+        },
+        {
+          "input": {
+            "path": "src/a.js",
+            "rule": "unused",
+            "symbol": "x",
+            "line": 99
+          },
+          "expected": "src/a.js|unused|x"
+        },
+        {
+          "input": {},
+          "expected": "||"
+        }
+      ]
+    },
+    {
+      "id": "severity-regression",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return true exactly when after is more severe than before. Order: advisory, medium, high, critical.",
+      "source": "module.exports = x => x.after !== x.before;\n",
+      "vectors": [
+        {
+          "input": {
+            "before": "high",
+            "after": "medium"
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "before": "medium",
+            "after": "high"
+          },
+          "expected": true
+        },
+        {
+          "input": {
+            "before": "critical",
+            "after": "critical"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "ci-scope",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Given {baseProvided, committed, local}, return sorted distinct committed paths when baseProvided is true, otherwise local paths. Missing path arrays are empty.",
+      "source": "module.exports = x => x.local || [];\n",
+      "vectors": [
+        {
+          "input": {
+            "baseProvided": true,
+            "committed": [
+              "b",
+              "a",
+              "b"
+            ],
+            "local": []
+          },
+          "expected": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "input": {
+            "baseProvided": false,
+            "local": [
+              "b",
+              "a"
+            ]
+          },
+          "expected": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "input": {
+            "baseProvided": true
+          },
+          "expected": []
+        }
+      ]
+    },
+    {
+      "id": "relative-path",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return whether a nonempty string is a safe relative file path: reject rooted paths, Windows drive prefixes, any \"..\" segment, or characters below code point 32. Treat both slashes as separators.",
+      "source": "module.exports = x => !x.startsWith(\"/\");\n",
+      "vectors": [
+        {
+          "input": "src/a.js",
+          "expected": true
+        },
+        {
+          "input": "../a",
+          "expected": false
+        },
+        {
+          "input": "C:\\a",
+          "expected": false
+        },
+        {
+          "input": "src\\..\\a",
+          "expected": false
+        },
+        {
+          "input": "",
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "canonical-feature",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Return explicit if nonempty, otherwise canonical if nonempty, otherwise \"project\". The legacy field is stale and never authoritative.",
+      "source": "module.exports = x => x.legacy || \"project\";\n",
+      "vectors": [
+        {
+          "input": {
+            "canonical": "new",
+            "legacy": "old"
+          },
+          "expected": "new"
+        },
+        {
+          "input": {
+            "explicit": "project",
+            "canonical": "new"
+          },
+          "expected": "project"
+        },
+        {
+          "input": {
+            "legacy": "old"
+          },
+          "expected": "project"
+        }
+      ]
+    },
+    {
+      "id": "aggregate-checks",
+      "profile": "framework",
+      "provenance": "Derived from quality-audit implementation failure modes; isolated contract exercise.",
+      "prompt": "Aggregate statuses: empty list or any error/not_run => \"error\"; otherwise any fail => \"fail\"; otherwise \"pass\".",
+      "source": "module.exports = xs => xs.includes(\"fail\") ? \"fail\" : \"pass\";\n",
+      "vectors": [
+        {
+          "input": [],
+          "expected": "error"
+        },
+        {
+          "input": [
+            "pass",
+            "not_run"
+          ],
+          "expected": "error"
+        },
+        {
+          "input": [
+            "pass",
+            "fail"
+          ],
+          "expected": "fail"
+        },
+        {
+          "input": [
+            "pass"
+          ],
+          "expected": "pass"
+        }
+      ]
+    },
+    {
+      "id": "money-total",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Input is items with nonnegative integer cents and quantity. Return exact integer total cents; do not truncate quantities or convert to decimal currency.",
+      "source": "module.exports = xs => xs.reduce((n,x)=>n+x.cents,0);\n",
+      "vectors": [
+        {
+          "input": [
+            {
+              "cents": 199,
+              "quantity": 3
+            },
+            {
+              "cents": 1,
+              "quantity": 2
+            }
+          ],
+          "expected": 599
+        },
+        {
+          "input": [],
+          "expected": 0
+        },
+        {
+          "input": [
+            {
+              "cents": 100,
+              "quantity": 0
+            }
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "empty-average",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Return the arithmetic mean of numeric values; return null for an empty array. Preserve input.",
+      "source": "module.exports = xs => xs.reduce((a,b)=>a+b,0)/xs.length;\n",
+      "vectors": [
+        {
+          "input": [],
+          "expected": null
+        },
+        {
+          "input": [
+            2,
+            4,
+            6
+          ],
+          "expected": 4
+        },
+        {
+          "input": [
+            0
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    {
+      "id": "pagination",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Given items, page (1-based) and size (positive integer), return that page. Page < 1 returns []; beyond the end returns [].",
+      "source": "module.exports = x => x.items.slice(x.page*x.size,(x.page+1)*x.size);\n",
+      "vectors": [
+        {
+          "input": {
+            "items": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "page": 1,
+            "size": 2
+          },
+          "expected": [
+            1,
+            2
+          ]
+        },
+        {
+          "input": {
+            "items": [
+              1,
+              2,
+              3
+            ],
+            "page": 2,
+            "size": 2
+          },
+          "expected": [
+            3
+          ]
+        },
+        {
+          "input": {
+            "items": [
+              1
+            ],
+            "page": 0,
+            "size": 1
+          },
+          "expected": []
+        }
+      ]
+    },
+    {
+      "id": "csv-escaping",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Serialize an array of string cells as one comma-separated row without a newline. Quote cells containing comma, quote, CR or LF; double embedded quotes.",
+      "source": "module.exports = xs => xs.join(\",\");\n",
+      "vectors": [
+        {
+          "input": [
+            "a,b",
+            "c"
+          ],
+          "expected": "\"a,b\",c"
+        },
+        {
+          "input": [
+            "a\"b",
+            "x"
+          ],
+          "expected": "\"a\"\"b\",x"
+        },
+        {
+          "input": [
+            "a\nb",
+            ""
+          ],
+          "expected": "\"a\nb\","
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Allow access only when authenticated is true AND (role is admin OR userId equals ownerId). IDs are compared strictly.",
+      "source": "module.exports = x => x.role === \"admin\" || x.userId === x.ownerId;\n",
+      "vectors": [
+        {
+          "input": {
+            "authenticated": false,
+            "role": "admin",
+            "userId": 1,
+            "ownerId": 2
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "authenticated": true,
+            "role": "user",
+            "userId": 1,
+            "ownerId": 1
+          },
+          "expected": true
+        },
+        {
+          "input": {
+            "authenticated": true,
+            "role": "user",
+            "userId": "1",
+            "ownerId": 1
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "stock-reservation",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Given integer stock and quantity, return remaining stock only when quantity > 0 and <= stock; otherwise null.",
+      "source": "module.exports = x => x.stock - x.quantity;\n",
+      "vectors": [
+        {
+          "input": {
+            "stock": 5,
+            "quantity": -2
+          },
+          "expected": null
+        },
+        {
+          "input": {
+            "stock": 5,
+            "quantity": 6
+          },
+          "expected": null
+        },
+        {
+          "input": {
+            "stock": 5,
+            "quantity": 3
+          },
+          "expected": 2
+        },
+        {
+          "input": {
+            "stock": 5,
+            "quantity": 0
+          },
+          "expected": null
+        }
+      ]
+    },
+    {
+      "id": "idempotent-events",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Return the first event for each distinct id, preserving order and input. Later duplicates never replace the first.",
+      "source": "module.exports = xs => xs;\n",
+      "vectors": [
+        {
+          "input": [
+            {
+              "id": "a",
+              "v": 1
+            },
+            {
+              "id": "a",
+              "v": 2
+            },
+            {
+              "id": "b",
+              "v": 3
+            }
+          ],
+          "expected": [
+            {
+              "id": "a",
+              "v": 1
+            },
+            {
+              "id": "b",
+              "v": 3
+            }
+          ]
+        },
+        {
+          "input": [],
+          "expected": []
+        },
+        {
+          "input": [
+            {
+              "id": 1
+            },
+            {
+              "id": "1"
+            }
+          ],
+          "expected": [
+            {
+              "id": 1
+            },
+            {
+              "id": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "literal-search",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Return names containing query, case-insensitively. Query is literal text, never a regular expression. Preserve order.",
+      "source": "module.exports = x => x.names.filter(n=>new RegExp(x.query,\"i\").test(n));\n",
+      "vectors": [
+        {
+          "input": {
+            "names": [
+              "a.b",
+              "axb",
+              "A.B"
+            ],
+            "query": "."
+          },
+          "expected": [
+            "a.b",
+            "A.B"
+          ]
+        },
+        {
+          "input": {
+            "names": [
+              "[x]",
+              "abc"
+            ],
+            "query": "["
+          },
+          "expected": [
+            "[x]"
+          ]
+        },
+        {
+          "input": {
+            "names": [
+              "One",
+              "two"
+            ],
+            "query": "ONE"
+          },
+          "expected": [
+            "One"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "retry-budget",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Given completed attempts and maximum attempts, return true exactly when attempts < maximum and maximum > 0. The initial attempt counts toward the maximum.",
+      "source": "module.exports = x => x.attempts <= x.maximum;\n",
+      "vectors": [
+        {
+          "input": {
+            "attempts": 3,
+            "maximum": 3
+          },
+          "expected": false
+        },
+        {
+          "input": {
+            "attempts": 0,
+            "maximum": 3
+          },
+          "expected": true
+        },
+        {
+          "input": {
+            "attempts": 0,
+            "maximum": 0
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "html-text",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Escape a string for an HTML text node: & to &amp;, < to &lt;, > to &gt;. Leave quotes unchanged and avoid double-escaping introduced entities.",
+      "source": "module.exports = x => x.replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\").replace(/&/g,\"&amp;\");\n",
+      "vectors": [
+        {
+          "input": "<a&b>",
+          "expected": "&lt;a&amp;b&gt;"
+        },
+        {
+          "input": "plain",
+          "expected": "plain"
+        },
+        {
+          "input": "\"x\"",
+          "expected": "\"x\""
+        }
+      ]
+    },
+    {
+      "id": "numeric-sort",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Return a new array sorted numerically ascending. Never mutate the input array.",
+      "source": "module.exports = xs => xs.sort();\n",
+      "vectors": [
+        {
+          "input": [
+            10,
+            2,
+            1
+          ],
+          "expected": [
+            1,
+            2,
+            10
+          ]
+        },
+        {
+          "input": [
+            -1,
+            3,
+            -10
+          ],
+          "expected": [
+            -10,
+            -1,
+            3
+          ]
+        },
+        {
+          "input": [],
+          "expected": []
+        }
+      ]
+    },
+    {
+      "id": "utc-date",
+      "profile": "product",
+      "provenance": "Synthetic product regression exercise; not a production incident.",
+      "prompt": "Return the UTC calendar date (YYYY-MM-DD) for an ISO timestamp with an explicit offset.",
+      "source": "module.exports = x => x.slice(0,10);\n",
+      "vectors": [
+        {
+          "input": "2026-01-01T00:30:00+03:00",
+          "expected": "2025-12-31"
+        },
+        {
+          "input": "2026-02-28T23:30:00-03:00",
+          "expected": "2026-03-01"
+        },
+        {
+          "input": "2026-09-08T12:00:00Z",
+          "expected": "2026-09-08"
+        }
+      ]
+    }
+  ]
+}

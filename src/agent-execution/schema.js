@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 
-const HOSTS = ['claude', 'codex', 'opencode', 'kimi', 'qwen'];
+const HOSTS = ['claude', 'codex', 'opencode', 'kimi', 'qwen', 'antigravity'];
 const MODES = ['fresh-session', 'subagent', 'external', 'current-session'];
 const AGENTS = ['dev', 'qa', 'tester', 'pentester', 'validator'];
 const REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
@@ -10,7 +10,8 @@ const REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
 // vocabulary and the claude CLI rejects it — a shared list let an
 // `--effort=ultra` claude lane pass every static check and fail at dispatch.
 const HOST_REASONING_EFFORTS = {
-  claude: REASONING_EFFORTS.filter((effort) => effort !== 'ultra')
+  claude: REASONING_EFFORTS.filter((effort) => effort !== 'ultra'),
+  antigravity: ['low', 'medium', 'high']
 };
 function effortsForHost(host) {
   return HOST_REASONING_EFFORTS[String(host || '').toLowerCase()] || REASONING_EFFORTS;

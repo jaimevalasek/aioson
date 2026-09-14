@@ -24,12 +24,12 @@ test('renderRevealAnimation does not write anything on non-TTY', async () => {
 });
 
 // renderRevealAnimation — dumb terminal (via TERM env)
-test('renderRevealAnimation skips on TERM=dumb', async () => {
+test('renderRevealAnimation skips on TERM=dumb', async t => {
   const saved = process.env.TERM;
+  t.after(() => { if (saved === undefined) delete process.env.TERM; else process.env.TERM = saved; });
   process.env.TERM = 'dumb';
   const stdout = createMockStdout({ isTTY: true });
   await renderRevealAnimation('1.0.0', stdout);
-  process.env.TERM = saved;
   assert.equal(stdout.output, '');
 });
 
@@ -41,11 +41,13 @@ test('renderRevealAnimation skips on narrow terminal (< 50 columns)', async () =
 });
 
 // renderRevealAnimation — NO_COLOR
-test('renderRevealAnimation with NO_COLOR omits ANSI color codes', async () => {
+test('renderRevealAnimation with NO_COLOR omits ANSI color codes', async t => {
+  const saved = { TERM: process.env.TERM, NO_COLOR: process.env.NO_COLOR };
+  t.after(() => { for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
+  process.env.TERM = 'xterm';
   process.env.NO_COLOR = '1';
   const stdout = createMockStdout({ isTTY: true, columns: 120 });
   await renderRevealAnimation('1.0.0', stdout);
-  delete process.env.NO_COLOR;
   // Should not contain color escape sequences
   assert.equal(/\x1b\[[\d;]*m/.test(stdout.output), false);
   // But should still have ASCII art content

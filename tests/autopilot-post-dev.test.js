@@ -32,13 +32,14 @@ test('Dev and QA preserve the human close gate without mandatory specialist sect
 });
 
 // O gate humano: nenhum prompt do ciclo deve auto-rodar feature:close.
-test('nenhum agente do ciclo auto-roda feature:close (gate humano preservado)', () => {
+test('Dev and QA delegate closure to the explicit workflow policy', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   for (const id of ['dev', 'qa']) {
     const text = fs.readFileSync(path.resolve(__dirname, '..', '.aioson', 'agents', `${id}.md`), 'utf8');
-    assert.match(text, /[Nn]ever auto-run `feature:close`|recommend .*feature:close|fall back|hand off manually/,
-      `${id}.md deve tratar feature:close como gate humano`);
+    assert.match(text, /Do not run `feature:close` from (?:DEV|QA)/);
+    assert.match(text, /explicit.*(?:closure policy|auto_close)/);
+    assert.match(text, /commit\/publish/);
   }
 });
 
@@ -224,6 +225,8 @@ test('managed client instructions preserve per-activation Autopilot flags and th
     const content = fs.readFileSync(path.join(root, rel), 'utf8');
     assert.match(content, /current activation explicitly includes `--auto`/);
     assert.match(content, /explicit `--step` disables Autopilot for that activation/);
-    assert.match(content, /never auto-runs `feature:close`\/publish/);
+    assert.match(content, /auto-closes only after final QA under an explicitly authorized/);
+    assert.match(content, /`--step` suppresses close/);
+    assert.match(content, /Closure never authorizes publish/);
   }
 });

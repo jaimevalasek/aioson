@@ -1,0 +1,429 @@
+{
+  "generator": "aioson verify:artifact@1.0.0",
+  "kind": "visual",
+  "slug": "execution-roles-onboarding",
+  "root": "C:\\dev\\aioson",
+  "mode": "advisory",
+  "ok": false,
+  "blocking": false,
+  "verdict": "fail",
+  "issues": [
+    "card containers nested 3 deep — use rows, dividers, inset sections or a dialog instead of another card"
+  ],
+  "warnings": [
+    "token adherence 38% (1031 tokenized vs 1689 literal values) — hardcoded colors and sizes are how a design system drifts",
+    "683 spacing values off the 4px grid (padding-top: 18px, gap: 14px, padding: 10px, padding: 14px, …) — systemless rhythm is the most visible amateur tell",
+    "3 depth strategies in play (borders + shadows + blur) — pick one and let the others stay exceptions",
+    "interactive surface with no marker for: loading, empty — this surface carries a rendered collection, focusable controls, so those states are reachable; visual polish cannot hide an unfinished workflow",
+    "1 destructive control(s) with no dialog machinery in the corpus — status changes and deletions confirm through a design-system modal (status-change-confirmation rule)",
+    "18 emoji glyph(s) in the UI corpus (⚡ 🧬 🛡 ⛔ ⚠ 🧠 …) — emoji standing in for icons is a slop marker; use the icon set. Emoji inside seeded mock content is fine — judge in context",
+    "83 spaced em dash(es) across UI copy and mock content (\"<title>Autonomy v1.1 — AIOSON</title>\", \"esmo se um tool listar — ações irreversíveis se\", \"s consultam livremente — não há impacto observá\", …) — repeated em-dash cadence is a model-writing tell; keep a deliberate few and rewrite the rest with periods, colons, or shorter sentences. Quotations stay verbatim — judge in context",
+    "craft weight 50/100 below the brand bar (60): the levers are lit but thin — typography 1/2, motion 1/2, composition 1/2, media 0/2. Presence is not weight: a premium surface carries its atmosphere on more than one layer (radial wash + grain + a real blur), a hover system that moves (transform on two or more hover states), image-led media (object-fit: cover), type at 96px+ with tracked caps or italic contrast, and composition that overlaps the grid (absolute or sticky layers, negative margins, clip-path) — visual-effects.md owns the vocabulary",
+    "generation tell: 6 gradient-text declaration(s) (background-clip: text) — emphasis comes from weight, size, or the accent, not from painting the letters; keep gradients in the material layer",
+    "generation tell: 48 kicker/eyebrow label(s) directly above a heading — the heading carries its own weight; delete the label and let display scale argue. No brief earns this one back",
+    "generation tell: 6 zero-offset chromatic glow shadow(s) — a halo with no offset is decoration, not depth; shadows take offset and soft blur from the shadow vocabulary, and glow is reserved for live/focus states that mean something",
+    "generation tell: 73 font-size declaration(s) under 11px (9.6px, 9.92px, 9.28px, 10.56px) — functional text floors at 11px; if it matters enough to render, it matters enough to read",
+    "visual conformance NOT measured: no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to — this surface was not held to any prototype floor; record the outcome instead of assuming it"
+  ],
+  "checks": [
+    {
+      "id": "visual",
+      "ok": false,
+      "detail": "card containers nested 3 deep — use rows, dividers, inset sections or a dialog instead of another card"
+    }
+  ],
+  "metrics": {
+    "declarations": 6455,
+    "token_adherence_pct": 38,
+    "tokenized_values": 1031,
+    "literal_values": 1689,
+    "spacing_on_grid": 416,
+    "spacing_off_grid": 683,
+    "depth_strategies": [
+      "borders",
+      "shadows",
+      "blur"
+    ],
+    "depth_counts": {
+      "borders": 276,
+      "shadows": 118,
+      "blur": 8
+    },
+    "font_families": [
+      "inter",
+      "jetbrains mono",
+      "georgia"
+    ],
+    "display_face": "jetbrains mono",
+    "font_delivery": {
+      "font_face_blocks": 0,
+      "webfont_linked": true,
+      "stylesheet_urls": [
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      ],
+      "declared_families": [
+        "inter",
+        "jetbrains mono"
+      ],
+      "delivered_families": [
+        "inter",
+        "jetbrains mono"
+      ],
+      "undelivered_families": [],
+      "delivered": true
+    },
+    "max_font_size_px": 64,
+    "font_size_count": 68,
+    "fluid_type": true,
+    "keyframes": 1,
+    "animated_declarations": 9,
+    "reduced_motion_handled": true,
+    "motion": {
+      "designed": true,
+      "transition_only": false,
+      "transitions": 82,
+      "keyframes": 1,
+      "keyframe_names": [
+        "pulse"
+      ],
+      "applied_keyframes": 1,
+      "applied_keyframe_names": [
+        "pulse"
+      ],
+      "unapplied_keyframes": [],
+      "animated_declarations": 9,
+      "ambient_loops": 1,
+      "signature": false,
+      "signature_kinds": [],
+      "scroll_reveal": true,
+      "reduced_motion_handled": true,
+      "reduced_motion_declared": true,
+      "reduced_motion_effective": true
+    },
+    "states_present": [
+      "focus"
+    ],
+    "states_missing": [
+      "loading",
+      "empty",
+      "error",
+      "disabled"
+    ],
+    "interactive_surface": true,
+    "surface_capabilities": {
+      "focusable": true,
+      "controls": true,
+      "data_entry": false,
+      "async_work": false,
+      "collections": true
+    },
+    "states_owed": [
+      "loading",
+      "empty",
+      "focus"
+    ],
+    "states_unmet": [
+      "loading",
+      "empty"
+    ],
+    "max_card_nesting": 3,
+    "max_card_sibling_run": 7,
+    "card_sibling_class": "cmd-card",
+    "emoji_glyphs": [
+      "⚡",
+      "🧬",
+      "🛡",
+      "⛔",
+      "⚠",
+      "🧠",
+      "✅",
+      "🔁",
+      "🪟",
+      "🧑",
+      "🎨",
+      "📌",
+      "📦",
+      "📚",
+      "🤖",
+      "📅",
+      "📐",
+      "❌"
+    ],
+    "em_dash_prose": 83,
+    "prototype_anchors": false,
+    "primary_marker": false,
+    "tour_marker": false,
+    "media_elements": 0,
+    "media_evidence": {
+      "status": "absent",
+      "candidates": 0,
+      "verified": 0,
+      "unverified": 0,
+      "items": []
+    },
+    "native_dialog_calls": [],
+    "structured_inputs_without_semantics": [],
+    "destructive_controls": 1,
+    "dialog_machinery": false,
+    "kanban_surface": false,
+    "dnd_markers": false,
+    "management_surface": true,
+    "widget_markers": true,
+    "palette": {
+      "color_literals": 1765,
+      "chromatic_share_pct": 41,
+      "hue_clusters": 10,
+      "accent_hue": 288,
+      "accent_chroma": 0.254,
+      "ground": {
+        "hex": "#ffffff",
+        "l": 1,
+        "c": 0,
+        "h": 0,
+        "pole": "light"
+      },
+      "origin": "prior",
+      "provenance": {
+        "reason": "no_draw",
+        "draw": null,
+        "closest_candidate": null,
+        "delta_deg": null
+      }
+    },
+    "tells": {
+      "active": 4,
+      "present": [
+        "gradient text",
+        "kicker above heading",
+        "chromatic glow",
+        "tiny text"
+      ],
+      "gradient_text": 6,
+      "colored_side_border": 0,
+      "kicker_above_heading": 48,
+      "icon_tile_stack": 0,
+      "chromatic_glow": 6,
+      "block_shadow": 0,
+      "saturated_display_faces": [],
+      "bounce_easing": 0,
+      "tiny_text": 73,
+      "buzzwords": 0,
+      "negation_pivots": 0,
+      "sanctioned_faces": []
+    },
+    "surface_mode": {
+      "mode": "mixed",
+      "source": "detected",
+      "detected": "mixed",
+      "operate_score": 6,
+      "brand_score": 6,
+      "operate_signals": [
+        "management markers",
+        "data table",
+        "sidebar shell",
+        "toolbar / tabs"
+      ],
+      "brand_signals": [
+        "display type",
+        "hero section",
+        "marketing sections",
+        "section rhythm"
+      ]
+    },
+    "utility_classes": {
+      "tokens": 2200,
+      "utility": 0,
+      "share": 0
+    },
+    "embedded_assets": {
+      "bytes": 0,
+      "authored_style_bytes": 0,
+      "authored_style_share_pct": 0,
+      "markup_bytes": 0,
+      "markup_share_pct": 0,
+      "quarantined_bytes": 0,
+      "kinds": {}
+    },
+    "craft": {
+      "measured": true,
+      "mode": "mixed",
+      "active_levers": 4,
+      "lever_count": 5,
+      "levers": {
+        "typeface": true,
+        "display_scale": true,
+        "material": true,
+        "motion": true,
+        "evidence": false
+      },
+      "material_techniques": [
+        "gradients",
+        "layered shadows",
+        "blur",
+        "masks",
+        "modern color"
+      ],
+      "material_depth": 4,
+      "browser_surfaces": {
+        "count": 5,
+        "present": [
+          "::selection",
+          "scrollbar",
+          ":focus-visible",
+          "underline tuning",
+          "tabular numerals"
+        ]
+      },
+      "weight": {
+        "scored": true,
+        "score": 50,
+        "bar": 60,
+        "grades": {
+          "typography": 1,
+          "atmosphere": 2,
+          "motion": 1,
+          "composition": 1,
+          "media": 0
+        },
+        "signals": {
+          "hover_transforms": 31,
+          "atmospheric_layers": 22,
+          "big_blurs": 0,
+          "overlap_signals": 36,
+          "media_cover": 0,
+          "tracked_caps": 74,
+          "italic_contrast": true,
+          "weight_steps": 5
+        }
+      },
+      "precision": {
+        "scored": false,
+        "reason": "mixed surface: the premium axis is weight, not precision"
+      },
+      "unapplied_effects": [],
+      "gradient_count": 237,
+      "layered_shadow_declarations": 29,
+      "grain_noise": false,
+      "blend_modes": 0,
+      "mask_layers": 28,
+      "modern_color_functions": 399,
+      "background_images": 0,
+      "transition_declarations": 82,
+      "scroll_reveal": true,
+      "modern_css": [
+        "fluid clamp() type",
+        "oklch/color-mix",
+        "scroll-driven reveals"
+      ],
+      "modern_css_capabilities": {
+        "features": [
+          "fluid clamp() type",
+          "oklch/color-mix",
+          "scroll-driven reveals"
+        ],
+        "capabilities": {
+          "architecture": {
+            "present": [],
+            "count": 0,
+            "active": false
+          },
+          "responsive": {
+            "present": [
+              "fluid clamp() type"
+            ],
+            "count": 1,
+            "active": true
+          },
+          "color": {
+            "present": [
+              "oklch/color-mix"
+            ],
+            "count": 1,
+            "active": true
+          },
+          "typography": {
+            "present": [],
+            "count": 0,
+            "active": false
+          },
+          "interaction": {
+            "present": [],
+            "count": 0,
+            "active": false
+          },
+          "motion": {
+            "present": [
+              "scroll-driven reveals"
+            ],
+            "count": 1,
+            "active": true
+          },
+          "performance": {
+            "present": [],
+            "count": 0,
+            "active": false
+          }
+        },
+        "active_capabilities": 3,
+        "capability_count": 7
+      }
+    },
+    "files": [
+      "tutorials/autonomy/index.html",
+      "tutorials/brains/index.html",
+      "tutorials/ecosystem/index.html",
+      "tutorials/index.html",
+      "tutorials/living-memory/index.html",
+      "tutorials/memories/index.html",
+      "tutorials/releases/1-9-0/index.html",
+      "tutorials/releases/index.html",
+      "tutorials/sdd/automation.html",
+      "tutorials/sdd/index.html",
+      "tutorials/squads/index.html",
+      "tutorials/_assets/style.css",
+      "tutorials/memories/style.css",
+      "tutorials/memories/tokens.css",
+      "tutorials/sdd/style.css",
+      "tutorials/memories/script.js",
+      "tutorials/sdd/script.js"
+    ],
+    "corpus": {
+      "documents": 11,
+      "stylesheets": 4,
+      "components": 2,
+      "files_total": 17,
+      "truncated": 0
+    },
+    "conformance": {
+      "prototype": null,
+      "implementation": null,
+      "state": "not-compared",
+      "compared": [],
+      "not_compared": [
+        "craft",
+        "materials",
+        "tells",
+        "typeface",
+        "display type",
+        "modern CSS"
+      ],
+      "regressed": [],
+      "reason": "no recorded prototype evidence for execution-roles-onboarding — nothing to hold the implementation to"
+    },
+    "fingerprint_recorded": true,
+    "assurance": {
+      "verdict": "pass",
+      "reasons": [],
+      "static_craft_verified": true,
+      "runtime_craft_verified": false
+    }
+  },
+  "exitCode": 0,
+  "measured_at": "2026-09-11T19:39:34.559Z"
+}

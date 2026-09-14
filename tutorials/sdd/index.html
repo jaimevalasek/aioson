@@ -1,1052 +1,438 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Spec-Driven Development — AIOSON</title>
-<meta name="description" content="Como o AIOSON transforma ideia vaga em código funcional sem pular etapas. 29 agentes, 4 gates, classificação MICRO/SMALL/MEDIUM, Living Memory, brains, autonomy v1.1." />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<style>
-/* AIOSON Design System — Tokens */
-:root {
-  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --font-mono:'JetBrains Mono',ui-monospace,monospace;
-  --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:22px; --radius-pill:999px;
-  --transition-fast:140ms ease; --transition:220ms ease;
-}
-[data-theme="dark"], :root:not([data-theme]) {
-  color-scheme:dark;
-  --bg:#07080c; --bg-deep:#0b0d12;
-  --panel:rgba(12,15,21,.88); --panel-strong:#12161d;
-  --surface-soft:rgba(255,255,255,.035); --border:rgba(142,162,194,.12);
-  --text:#edf1f5; --text-soft:#f7f9fb; --muted:#7f8796;
-  --accent:#5ec8ff; --accent-strong:#8fdcff; --accent-soft:rgba(94,200,255,.16);
-  --accent-2:#7a6cff; --accent-2-soft:rgba(122,108,255,.14);
-  --accent-3:#e8b05f; --accent-3-soft:rgba(232,176,95,.16);
-  --accent-4:#4dd5a6; --accent-4-soft:rgba(77,213,166,.14);
-  --shadow:0 18px 44px rgba(0,0,0,.38);
-  --shadow-glow:0 0 0 1px rgba(94,200,255,.05),0 10px 28px rgba(3,12,22,.42);
-  --shadow-dock-scrolled:0 22px 56px rgba(0,0,0,.5);
-}
-[data-theme="light"] {
-  color-scheme:light;
-  --bg:#f4f6fb; --bg-deep:#e8edf5;
-  --panel:rgba(255,255,255,.92); --panel-strong:#ffffff;
-  --surface-soft:rgba(15,23,42,.04); --border:rgba(15,23,42,.10);
-  --text:#0f172a; --text-soft:#1a2236; --muted:#5b6677;
-  --accent:#1f8aff; --accent-strong:#0066d6; --accent-soft:rgba(31,138,255,.12);
-  --accent-2:#5e4dff; --accent-2-soft:rgba(94,77,255,.12);
-  --accent-3:#c08233; --accent-3-soft:rgba(192,130,51,.14);
-  --accent-4:#0fa37a; --accent-4-soft:rgba(15,163,122,.12);
-  --shadow:0 14px 38px rgba(15,23,42,.10);
-  --shadow-glow:0 0 0 1px rgba(31,138,255,.10),0 12px 28px rgba(31,138,255,.10);
-  --shadow-dock-scrolled:0 16px 38px rgba(15,23,42,.14);
-}
-* { box-sizing:border-box; }
-html, body { margin:0; min-height:100%; }
-body {
-  font-family:var(--font-body);
-  color:var(--text);
-  background:
-    radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
-    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 28%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
-  background-attachment:fixed;
-  -webkit-font-smoothing:antialiased;
-  transition:background .4s ease, color .3s ease;
-}
-[data-theme="light"] body {
-  background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 30%),
-    radial-gradient(circle at 86% 0%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 28%),
-    radial-gradient(circle at 50% 16%, color-mix(in srgb, var(--accent-4) 8%, transparent), transparent 30%),
-    linear-gradient(180deg, #fff 0%, var(--bg) 60%, var(--bg-deep) 100%);
-  background-attachment:fixed;
-}
-a { color:inherit; text-decoration:none; }
-button { cursor:pointer; font:inherit; }
-h1, h2, h3, h4, p { margin:0; }
-code { font-family:var(--font-mono); }
-
-/* Shell */
-.shell { width:min(1280px, calc(100% - 32px)); margin:0 auto; padding:0 0 60px; display:flex; flex-direction:column; }
-
-/* Command Dock */
-.dock-wrap { position:sticky; top:14px; z-index:60; padding-top:18px; margin-bottom:24px; }
-.cmd-dock {
-  display:flex; align-items:center; gap:14px;
-  padding:10px 14px; border-radius:20px;
-  border:1px solid var(--border);
-  background:color-mix(in srgb, var(--panel-strong) 92%, transparent);
-  backdrop-filter:blur(18px) saturate(140%); -webkit-backdrop-filter:blur(18px) saturate(140%);
-  box-shadow:var(--shadow);
-  position:relative; overflow:hidden;
-  transition:box-shadow .3s ease, border-color .3s ease;
-}
-.dock-wrap.is-scrolled .cmd-dock { box-shadow:var(--shadow-dock-scrolled); border-color:color-mix(in srgb, var(--accent) 18%, var(--border)); }
-.cmd-dock::after {
-  content:''; position:absolute; inset:0; pointer-events:none;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px);
-  background-size:36px 36px;
-  mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-  -webkit-mask-image:radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-  opacity:.2;
-}
-.cmd-brand { display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--border); position:relative; z-index:1; }
-.cmd-mark { width:36px; height:36px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%), linear-gradient(160deg, var(--panel-strong), color-mix(in srgb, var(--bg) 50%, var(--panel-strong))); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 50%, transparent); color:var(--accent); }
-.cmd-mark svg { width:18px; height:18px; }
-.cmd-brand-info { display:grid; gap:1px; }
-.cmd-brand-title { display:flex; align-items:baseline; gap:8px; font-size:.92rem; font-weight:700; letter-spacing:-.02em; color:var(--text); }
-.cmd-brand-version { display:inline-flex; align-items:center; font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
-.cmd-brand-sub { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-.cmd-status-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-4); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-4) 22%, transparent); animation:pulse 1.8s ease-in-out infinite; }
-@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
-.cmd-center { flex:1; display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-.cmd-nav { display:flex; gap:2px; padding:3px; border-radius:12px; background:var(--surface-soft); border:1px solid var(--border); }
-.cmd-nav-item { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:500; color:var(--muted); background:transparent; border:none; padding:6px 11px; border-radius:9px; text-decoration:none; transition:var(--transition-fast); }
-.cmd-nav-item:hover { color:var(--text); background:color-mix(in srgb, var(--panel-strong) 80%, transparent); }
-.cmd-nav-item[aria-current="page"] { color:var(--accent-strong); background:var(--panel-strong); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent), 0 4px 10px -4px color-mix(in srgb, var(--accent) 30%, transparent); }
-.cmd-nav-glyph { display:inline-flex; font-size:.86rem; color:var(--muted); }
-.cmd-nav-item[aria-current="page"] .cmd-nav-glyph { color:var(--accent); }
-.cmd-actions { display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
-.cmd-actions > * { flex-shrink:0; }
-.cmd-icon-btn { width:34px; height:34px; border-radius:10px; background:var(--panel-strong); border:1px solid var(--border); color:var(--text-soft); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); }
-.cmd-icon-btn:hover { background:color-mix(in srgb, var(--accent-soft) 30%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 30%, var(--border)); color:var(--accent-strong); }
-.cmd-divider { width:1px; height:20px; background:var(--border); }
-.cmd-cta { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; border-radius:10px; padding:7px 13px; box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition:var(--transition-fast); }
-.cmd-cta:hover { transform:translateY(-1px); }
-
-/* Marketing Hero */
-.marketing-hero {
-  border:1px solid var(--border); border-radius:26px;
-  padding:42px 36px; overflow:hidden; position:relative;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
-    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 26%),
-    linear-gradient(145deg, rgba(11,14,19,.96), rgba(7,9,13,.94));
-  box-shadow:var(--shadow);
-  margin-bottom:18px;
-  display:grid; grid-template-columns:minmax(0, 1.5fr) minmax(280px, 1fr); gap:32px; align-items:center;
-}
-[data-theme="light"] .marketing-hero { background: radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%), radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 28%), linear-gradient(160deg, #fff 0%, #f7faff 100%); box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
-.marketing-hero::before { content:''; position:absolute; inset:0; pointer-events:none; background-image: linear-gradient(color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 4%, transparent) 1px, transparent 1px); background-size:48px 48px; mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); -webkit-mask-image:radial-gradient(ellipse at 30% 40%, black 0%, transparent 60%); opacity:.5; }
-.hero-copy { position:relative; z-index:1; }
-.eyebrow { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.18em; font-size:.72rem; font-weight:600; color:var(--muted); }
-.hero-copy h1 { margin-top:14px; font-size:clamp(2rem, 3.2vw, 2.8rem); letter-spacing:-.04em; line-height:1.02; font-weight:700; color:var(--text); }
-.hero-copy h1 .accent-cyan { color:var(--accent); }
-.hero-copy h1 .accent-violet { color:var(--accent-2); }
-.lede { max-width:54ch; margin-top:14px; color:color-mix(in srgb, var(--text) 78%, var(--muted)); font-size:.95rem; line-height:1.65; }
-.hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-.primary-button, .secondary-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:38px; padding:0 16px; border-radius:12px; font-size:.84rem; font-weight:600; white-space:nowrap; transition:var(--transition-fast); }
-.primary-button { color:#fff; background:linear-gradient(135deg, var(--accent), var(--accent-2)); border:1px solid transparent; box-shadow:0 1px 0 rgba(255,255,255,.30) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent); }
-.primary-button:hover { transform:translateY(-1px); }
-.secondary-button { background:var(--panel-strong); border:1px solid var(--border); color:var(--text); }
-.secondary-button:hover { background:color-mix(in srgb, var(--accent-soft) 50%, var(--panel-strong)); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); color:var(--accent-strong); transform:translateY(-1px); }
-.hero-rail { position:relative; z-index:1; display:grid; gap:10px; grid-template-columns:repeat(2, 1fr); }
-.stat-tile { border-radius:14px; padding:14px 16px; border:1px solid var(--border); background:color-mix(in srgb, var(--panel-strong) 70%, transparent); }
-[data-theme="light"] .stat-tile { background:rgba(255,255,255,.7); }
-.stat-tile span { font-family:var(--font-mono); font-size:.58rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.stat-tile strong { display:block; margin-top:6px; font-size:1.5rem; line-height:1; letter-spacing:-.05em; color:var(--text); font-variant-numeric:tabular-nums; font-weight:700; }
-.stat-tile.blue   strong { background:linear-gradient(135deg, var(--accent), var(--accent-strong)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.stat-tile.green  strong { color:var(--accent-4); }
-.stat-tile.violet strong { color:var(--accent-2); }
-.stat-tile.gold   strong { color:var(--accent-3); }
-
-/* Compact callout */
-.compact-callout { margin:24px 0; border:1px solid color-mix(in srgb, var(--accent-2) 22%, var(--border)); background:color-mix(in srgb, var(--accent-2-soft) 24%, var(--panel-strong)); border-radius:14px; padding:18px 22px; display:flex; gap:14px; align-items:flex-start; }
-[data-theme="light"] .compact-callout { background:color-mix(in srgb, var(--accent-2-soft) 50%, #fff); }
-.compact-callout-icon { font-size:1.3rem; flex-shrink:0; }
-.compact-callout p { margin:0; color:var(--text-soft); font-size:.92rem; line-height:1.6; }
-.compact-callout strong { color:var(--accent-2); }
-
-/* Site Section */
-.site-section { padding:36px 0 12px; position:relative; }
-.site-section + .site-section { padding-top:24px; border-top:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
-.site-section-header { display:flex; flex-direction:column; gap:6px; margin-bottom:22px; max-width:64ch; }
-.site-section-title { margin-top:6px; font-size:clamp(1.4rem, 2.2vw, 1.9rem); letter-spacing:-.035em; font-weight:700; line-height:1.1; }
-.site-section-title .accent-cyan { color:var(--accent); }
-.site-section-title .accent-violet { color:var(--accent-2); }
-.site-section-title .accent-gold { color:var(--accent-3); }
-.site-section-title .accent-emerald { color:var(--accent-4); }
-.site-section-subtitle { margin-top:6px; color:var(--muted); font-size:.9rem; line-height:1.6; max-width:60ch; }
-
-/* Pipeline visual (8 agents in horizontal strip) */
-.pipeline-track {
-  display:flex; gap:0;
-  border:1px solid var(--border); border-radius:18px;
-  overflow:hidden;
-  background:var(--panel-strong);
-  box-shadow:var(--shadow);
-}
-[data-theme="light"] .pipeline-track { box-shadow:0 12px 30px -20px rgba(15,23,42,.18); }
-.pipeline-step {
-  flex:1; min-width:0; padding:14px;
-  border-right:1px solid var(--border);
-  display:flex; flex-direction:column; gap:6px;
-  position:relative;
-  background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, transparent), transparent);
-  transition:var(--transition-fast);
-}
-[data-theme="light"] .pipeline-step { background:linear-gradient(180deg, #fbfdff, transparent); }
-.pipeline-step:last-child { border-right:none; }
-.pipeline-step:hover { background:color-mix(in srgb, var(--accent-soft) 24%, transparent); }
-[data-theme="light"] .pipeline-step:hover { background:color-mix(in srgb, var(--accent-soft) 38%, #fff); }
-.pipeline-step.gate { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3) 14%, transparent), transparent); }
-.pipeline-step-num { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
-.pipeline-step.gate .pipeline-step-num { color:var(--accent-3); }
-.pipeline-step-cmd { font-family:var(--font-mono); font-size:.84rem; font-weight:600; color:var(--accent); letter-spacing:-.01em; }
-.pipeline-step.gate .pipeline-step-cmd { color:var(--accent-3); }
-.pipeline-step-name { font-size:.76rem; color:var(--text); font-weight:500; }
-.pipeline-step-desc { font-size:.7rem; color:var(--muted); line-height:1.4; }
-
-/* Gates cards (4 — A·B·C·D) */
-.gates-grid { display:grid; gap:14px; grid-template-columns:repeat(4, 1fr); }
-.gate-card {
-  border:1px solid var(--border); border-radius:16px;
-  padding:20px; background:var(--panel-strong);
-  position:relative; overflow:hidden;
-  display:flex; flex-direction:column; gap:10px;
-}
-[data-theme="light"] .gate-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.gate-letter {
-  width:44px; height:44px; border-radius:12px;
-  display:inline-flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-weight:800; font-size:1.1rem;
-  background:color-mix(in srgb, var(--accent-3-soft) 70%, var(--panel));
-  border:1px solid color-mix(in srgb, var(--accent-3) 28%, var(--border));
-  color:var(--accent-3);
-}
-.gate-eyebrow { font-family:var(--font-mono); font-size:.6rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
-.gate-card h3 { font-size:.95rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; }
-.gate-card p { font-size:.78rem; color:var(--muted); line-height:1.55; }
-.gate-artifact {
-  margin-top:auto;
-  font-family:var(--font-mono); font-size:.7rem;
-  color:var(--accent); background:var(--accent-soft);
-  border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  border-radius:6px; padding:4px 8px;
-}
-
-/* Tier table */
-.tier-table { width:100%; border-collapse:collapse; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--panel-strong); }
-[data-theme="light"] .tier-table { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.tier-table th { text-align:left; padding:10px 14px; font-family:var(--font-mono); font-size:.62rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); background:color-mix(in srgb, var(--panel) 70%, transparent); border-bottom:1px solid var(--border); }
-.tier-table td { padding:14px 16px; vertical-align:top; border-bottom:1px solid var(--border); font-size:.84rem; color:var(--text-soft); }
-.tier-table tr:last-child td { border-bottom:none; }
-.tier-table td:first-child { font-family:var(--font-mono); font-weight:700; font-size:.78rem; letter-spacing:.06em; vertical-align:top; }
-.tier-table td.chain { font-family:var(--font-mono); font-size:.74rem; color:var(--accent); line-height:1.7; }
-.tier-table td.duration { font-family:var(--font-mono); font-size:.74rem; color:var(--accent-4); }
-.t-micro { color:var(--accent-4); }
-.t-small { color:var(--accent); }
-.t-medium { color:var(--accent-2); }
-
-/* Category cards + dialogs (for advanced v1.9.0 concepts) */
-.cat-grid { display:grid; gap:14px; grid-template-columns:repeat(3, minmax(0, 1fr)); }
-.cat-card {
-  position:relative;
-  border:1px solid var(--border); border-radius:18px; padding:20px;
-  background:var(--panel-strong);
-  text-align:left; cursor:pointer;
-  display:flex; flex-direction:column; gap:10px;
-  transition:var(--transition-fast);
-  overflow:hidden;
-}
-[data-theme="light"] .cat-card { box-shadow:0 6px 18px -12px rgba(15,23,42,.14); }
-.cat-card::before { content:''; position:absolute; inset:0 auto auto 0; width:120px; height:120px; pointer-events:none; opacity:.7; }
-.cat-card:hover { transform:translateY(-2px); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); box-shadow:var(--shadow-glow); }
-.cat-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.cat-card[data-tone="cyan"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="cyan"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="emerald"] { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-4-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="emerald"]::before { background:radial-gradient(circle, color-mix(in srgb, var(--accent-4) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="violet"]  { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-2-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="violet"]::before  { background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="gold"]    { background:linear-gradient(180deg, color-mix(in srgb, var(--accent-3-soft) 40%, transparent), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="gold"]::before    { background:radial-gradient(circle, color-mix(in srgb, var(--accent-3) 20%, transparent), transparent 70%); }
-.cat-card[data-tone="pink"]    { background:linear-gradient(180deg, rgba(255,107,164,.08), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="pink"]::before    { background:radial-gradient(circle, rgba(255,107,164,.18), transparent 70%); }
-.cat-card[data-tone="teal"]    { background:linear-gradient(180deg, rgba(34,211,238,.08), transparent 60%), var(--panel-strong); }
-.cat-card[data-tone="teal"]::before    { background:radial-gradient(circle, rgba(34,211,238,.18), transparent 70%); }
-.cat-head { display:flex; align-items:center; gap:10px; position:relative; z-index:1; }
-.cat-icon { width:36px; height:36px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--panel-strong) 70%, transparent); border:1px solid var(--border); }
-.cat-icon svg { width:18px; height:18px; }
-.cat-card[data-tone="cyan"]    .cat-icon { color:var(--accent);   border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
-.cat-card[data-tone="emerald"] .cat-icon { color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border)); }
-.cat-card[data-tone="violet"]  .cat-icon { color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border)); }
-.cat-card[data-tone="gold"]    .cat-icon { color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border)); }
-.cat-card[data-tone="pink"]    .cat-icon { color:#ff6ba4; border-color:rgba(255,107,164,.28); }
-.cat-card[data-tone="teal"]    .cat-icon { color:#22d3ee; border-color:rgba(34,211,238,.28); }
-.cat-badge { margin-left:auto; font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--accent-2-soft); color:var(--accent-2); border:1px solid color-mix(in srgb, var(--accent-2) 30%, var(--border)); }
-.cat-card h3 { font-size:1rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; position:relative; z-index:1; }
-.cat-card p { font-size:.8rem; color:var(--muted); line-height:1.55; margin:0; position:relative; z-index:1; }
-.cat-cta { margin-top:6px; display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:600; position:relative; z-index:1; transition:gap .15s ease; }
-.cat-card[data-tone="cyan"]    .cat-cta { color:var(--accent); }
-.cat-card[data-tone="emerald"] .cat-cta { color:var(--accent-4); }
-.cat-card[data-tone="violet"]  .cat-cta { color:var(--accent-2); }
-.cat-card[data-tone="gold"]    .cat-cta { color:var(--accent-3); }
-.cat-card[data-tone="pink"]    .cat-cta { color:#ff6ba4; }
-.cat-card[data-tone="teal"]    .cat-cta { color:#22d3ee; }
-.cat-card:hover .cat-cta { gap:9px; }
-
-/* Dialog (popovers) */
-dialog.popover { width:min(900px, calc(100% - 32px)); max-height:min(85vh, 800px); padding:0; border:1px solid var(--border); border-radius:20px; background:var(--panel-strong); color:var(--text); box-shadow:0 30px 80px rgba(0,0,0,.5); overflow:hidden; }
-[data-theme="light"] dialog.popover { box-shadow:0 30px 80px -10px rgba(15,23,42,.30); }
-dialog.popover::backdrop { background:rgba(7,8,12,.72); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
-[data-theme="light"] dialog.popover::backdrop { background:rgba(15,23,42,.45); }
-dialog.popover[open] { animation:dlg-in .25s ease; }
-@keyframes dlg-in { from { opacity:0; transform:translateY(8px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
-.dlg-head { display:flex; align-items:center; gap:14px; padding:18px 22px; border-bottom:1px solid var(--border); background:color-mix(in srgb, var(--panel) 60%, transparent); }
-.dlg-head .cat-icon { width:32px; height:32px; }
-.dlg-head .dlg-meta { flex:1; }
-.dlg-head .dlg-eyebrow { font-family:var(--font-mono); font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
-.dlg-head .dlg-title { font-size:1.05rem; font-weight:700; color:var(--text-soft); letter-spacing:-.02em; margin-top:2px; }
-.dlg-close { width:32px; height:32px; border-radius:10px; background:var(--surface-soft); border:1px solid var(--border); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; transition:var(--transition-fast); flex-shrink:0; }
-.dlg-close:hover { color:var(--text); border-color:color-mix(in srgb, var(--accent) 28%, var(--border)); }
-.dlg-body { padding:22px; overflow-y:auto; max-height:calc(85vh - 70px); }
-.dlg-intro { color:var(--muted); font-size:.88rem; line-height:1.65; margin-bottom:16px; }
-.dlg-body h4 { font-size:.78rem; font-weight:700; color:var(--text-soft); letter-spacing:-.01em; margin:18px 0 10px; text-transform:uppercase; font-family:var(--font-mono); letter-spacing:.06em; }
-.dlg-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin-bottom:12px; }
-.dlg-body p code, .dlg-body li code { font-size:.78rem; padding:1px 6px; border-radius:5px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); }
-.dlg-body ul { padding-left:20px; margin:0 0 14px; }
-.dlg-body li { font-size:.84rem; color:var(--text-soft); line-height:1.65; margin-bottom:4px; }
-
-/* Steps */
-.steps { display:flex; flex-direction:column; gap:0; margin-top:18px; }
-.step { display:flex; gap:20px; position:relative; padding-bottom:24px; }
-.step:not(:last-child)::after { content:''; position:absolute; left:18px; top:42px; bottom:0; width:2px; background:linear-gradient(to bottom, var(--border), transparent); }
-.step-num { flex-shrink:0; width:36px; height:36px; border-radius:10px; background:var(--panel-strong); border:1.5px solid var(--accent); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:.84rem; font-weight:700; color:var(--accent); position:relative; z-index:1; }
-.step-body { flex:1; }
-.step-body h3 { font-size:1rem; font-weight:700; color:var(--text-soft); margin-bottom:6px; letter-spacing:-.01em; }
-.step-body p { font-size:.86rem; color:var(--muted); line-height:1.6; margin:0 0 10px; }
-.step-body p code { font-size:.78rem; padding:1px 5px; border-radius:5px; background:var(--surface-soft); border:1px solid var(--border); color:var(--accent); }
-
-/* Terminal card (shared from automation) */
-.terminal-card { border-radius:14px; border:1px solid transparent; background:linear-gradient(180deg, #0e1320, #0a0f1c); box-shadow:0 10px 30px -10px rgba(0,0,0,.5); overflow:hidden; }
-.terminal-head { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.06); background:#10182a; }
-.terminal-dots { display:flex; gap:5px; }
-.terminal-dots span { width:9px; height:9px; border-radius:999px; }
-.terminal-dots span:nth-child(1) { background:#ff6057; }
-.terminal-dots span:nth-child(2) { background:#febc2e; }
-.terminal-dots span:nth-child(3) { background:#28c840; }
-.terminal-title { font-family:var(--font-mono); font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a9b3c7; }
-.terminal-copy { margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,.10); color:#a9b3c7; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.06em; padding:3px 9px; border-radius:5px; text-transform:uppercase; transition:var(--transition-fast); }
-.terminal-copy:hover { color:#fff; border-color:rgba(255,255,255,.25); }
-.terminal-copy.copied { color:#7be3bb; border-color:rgba(123,227,187,.45); }
-.terminal-body { padding:14px 18px 16px; font-family:var(--font-mono); font-size:.78rem; line-height:1.7; color:#c8d8ee; overflow-x:auto; }
-.term-line { display:block; white-space:pre; }
-.term-prompt { color:#4dd5a6; }
-.term-cmd { color:#fff; }
-.term-flag { color:#e8b05f; }
-.term-str { color:#7be3bb; }
-.term-comment { color:#7f8796; }
-.term-out-key { color:#5ec8ff; }
-.term-out-val { color:#e5c07b; }
-.term-ok { color:#4dd5a6; }
-
-/* Site CTA + Footer */
-.site-cta { border-radius:22px; border:1px solid color-mix(in srgb, var(--accent) 22%, var(--border)); background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 36%), radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 36%), color-mix(in srgb, var(--bg-deep) 86%, transparent); padding:34px 30px; display:grid; gap:18px; grid-template-columns:1.4fr 1fr; align-items:center; margin-top:24px; }
-[data-theme="light"] .site-cta { background: radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 36%), radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 36%), #fff; box-shadow:0 22px 48px -24px rgba(15,23,42,.18); }
-.site-cta-heading { font-size:clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing:-.035em; font-weight:700; line-height:1.15; }
-.site-cta-heading .accent-cyan { color:var(--accent); }
-.site-cta-text { margin-top:10px; color:var(--muted); line-height:1.65; max-width:50ch; font-size:.9rem; }
-.site-cta-actions { display:flex; flex-direction:column; gap:10px; }
-.site-footer { display:grid; gap:18px; grid-template-columns:1.4fr 1fr 1fr 1fr; padding:42px 4px 8px; margin-top:30px; border-top:1px solid var(--border); }
-.site-footer-brand p { margin-top:10px; color:var(--muted); font-size:.82rem; line-height:1.6; max-width:32ch; }
-.footer-col-title { font-family:var(--font-mono); font-size:.58rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
-.footer-col ul { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
-.footer-col a { font-size:.84rem; color:var(--text-soft); transition:var(--transition-fast); }
-.footer-col a:hover { color:var(--accent); }
-.site-footer-base { margin-top:16px; padding:16px 4px 0; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:.76rem; }
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .marketing-hero { grid-template-columns:1fr; gap:24px; }
-  .gates-grid { grid-template-columns:repeat(2, 1fr); }
-  .cat-grid { grid-template-columns:repeat(2, 1fr); }
-  .pipeline-track { overflow-x:auto; }
-  .pipeline-step { min-width:130px; }
-  .site-cta { grid-template-columns:1fr; }
-  .site-footer { grid-template-columns:repeat(2, 1fr); }
-}
-@media (max-width: 720px) {
-  .dock-wrap { padding-top:10px; }
-  .cmd-dock { gap:8px; padding:8px 10px; flex-wrap:wrap; }
-  .cmd-brand { padding-right:0; border-right:none; }
-  .cmd-center { order:3; width:100%; }
-  .cmd-nav { width:100%; overflow-x:auto; }
-  .cmd-actions .cmd-icon-btn:nth-of-type(1) { display:none; }
-  .marketing-hero { padding:24px 20px; }
-  .hero-copy h1 { font-size:1.8rem; }
-  .gates-grid { grid-template-columns:1fr; }
-  .cat-grid { grid-template-columns:1fr; }
-  .hero-rail { grid-template-columns:repeat(2, 1fr); }
-  .site-footer { grid-template-columns:1fr; }
-  dialog.popover { width:100%; max-height:100vh; height:100vh; border-radius:0; }
-}
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; } }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SDD no AIOSON explicado do zero: Briefing, Refiner, Product, Sheldon, Planner, Dev e QA. Exemplos de plano, implementação e testes. Versão 1.66.0, 11/09/2026.">
+  <meta name="author" content="GPT-6 Astra">
+  <meta name="aioson-version" content="1.66.0">
+  <meta name="reviewed-at" content="2026-09-11">
+  <meta name="color-scheme" content="dark light">
+  <title>SDD no AIOSON — Da ideia à entrega verificada</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="AIOSON — todos os tutoriais"><span class="brand-mark" aria-hidden="true">a.</span><span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">SDD</span></span></a>
+  <div class="header-actions"><a href="#speech">Fala pronta</a><button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button><button id="print-page" type="button" hidden>Imprimir / PDF</button></div>
+</header>
 
-<main class="shell">
-
-  <!-- DOCK -->
-  <div class="dock-wrap" id="dock-wrap">
-    <nav class="cmd-dock" aria-label="Topbar">
-      <div class="cmd-brand">
-        <span class="cmd-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 18H4l8-18z" /><path d="M8.5 14h7" /></svg>
-        </span>
-        <div class="cmd-brand-info">
-          <span class="cmd-brand-title">AIOSON <span class="cmd-brand-version">v1.9.0</span></span>
-          <span class="cmd-brand-sub"><span class="cmd-status-dot"></span> sdd · 29 agentes · 4 gates</span>
-        </div>
-      </div>
-      <div class="cmd-center">
-        <div class="cmd-nav">
-          <a class="cmd-nav-item" href="../index.html"><span class="cmd-nav-glyph">⌂</span> Hub</a>
-          <a class="cmd-nav-item" href="./index.html" aria-current="page"><span class="cmd-nav-glyph">⚡</span> SDD</a>
-          <a class="cmd-nav-item" href="./automation.html"><span class="cmd-nav-glyph">◇</span> Automation</a>
-          <a class="cmd-nav-item" href="../squads/index.html"><span class="cmd-nav-glyph">⬡</span> Squads</a>
-        </div>
-      </div>
-      <div class="cmd-actions">
-        <button class="cmd-icon-btn" type="button" aria-label="Alternar tema" data-theme-toggle>
-          <svg class="cmd-theme-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 9.2A5.5 5.5 0 1 1 6.8 3a4.4 4.4 0 0 0 6.2 6.2z"/></svg>
-          <svg class="cmd-theme-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M2.4 8H1M15 8h-1.4M3.6 3.6l1 1M11.4 11.4l1 1M3.6 12.4l1-1M11.4 4.6l1-1"/></svg>
-        </button>
-        <a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener" class="cmd-icon-btn" aria-label="GitHub">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.69-.01-1.36-2.22.48-2.69-1.07-2.69-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.81.06 1.24.83 1.24.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.65-.89-3.65-3.96 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.28.82 2.15 0 3.08-1.87 3.75-3.66 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38C13.71 14.53 16 11.54 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        </a>
-        <span class="cmd-divider"></span>
-        <a href="../releases/1-9-0/index.html" class="cmd-cta">
-          Release v1.9.0
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-        </a>
-      </div>
-    </nav>
-  </div>
-
-  <!-- HERO -->
-  <section class="marketing-hero">
-    <div class="hero-copy">
-      <span class="eyebrow">Tutorial · Spec-Driven Development</span>
-      <h1>
-        Da <span class="accent-cyan">ideia</span> vaga<br />
-        ao <span class="accent-violet">código</span> funcional.
-      </h1>
-      <p class="lede">
-        SDD é o método central do AIOSON. 29 agentes especializados, 4 gates de aprovação, classificação automática MICRO/SMALL/MEDIUM e Living Memory que faz sessões pararem de esquecer. Tudo orquestrado por CLI determinístico — você nunca pula uma etapa.
-      </p>
-      <div class="hero-actions">
-        <a class="primary-button" href="#pipeline">
-          Ver o pipeline
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-        </a>
-        <a class="secondary-button" href="#primeira">Sua primeira feature</a>
-      </div>
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div><p class="eyebrow">Guia do sistema · 11 set 2026</p>
+      <h1 id="hero-title">Da ideia à entrega.<br>Com um caminho<br>que dá para conferir.</h1>
+      <p class="hero-intro">Entenda como o AIOSON organiza uma ideia, define o que construir, planeja a implementação e verifica se o sistema realmente faz o que foi combinado.</p>
+      <div class="hero-actions"><a class="primary-link" href="#basics">Entender do zero <span aria-hidden="true">↗</span></a><a class="text-link" href="#example">Acompanhar um exemplo →</a></div>
+      <div class="edition"><span>AIOSON 1.66.0</span><span>Por GPT-6 Astra</span><span>Leitura por capítulos</span></div>
     </div>
-    <aside class="hero-rail">
-      <div class="stat-tile blue"><span>agentes</span><strong>29</strong></div>
-      <div class="stat-tile violet"><span>gates</span><strong>A·B·C·D</strong></div>
-      <div class="stat-tile green"><span>tiers</span><strong>3</strong></div>
-      <div class="stat-tile gold"><span>v1.9.0 adds</span><strong>6</strong></div>
+    <figure class="sdd-figure"><div class="figure-heading">Uma necessidade, três referências centrais</div><p class="human-voice">“Quero conseguir reservar uma sala.”</p>
+      <ol class="artifact-path">
+        <li><span class="machine-label">01 · PRD</span><strong>O que precisa acontecer</strong><span>Product define · Sheldon revisa</span></li>
+        <li><span class="machine-label">02 · Plano</span><strong>Como construir e conferir</strong><span>Planner organiza · Dev implementa</span></li>
+        <li><span class="machine-label">03 · Relatório de QA</span><strong>O que foi comprovado</strong><span>QA verifica a entrega real</span></li>
+      </ol><figcaption>Briefing e Refiner preparam a ideia quando necessário. Código e testes concretizam o que os documentos orientam.</figcaption>
+    </figure>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do guia"><p class="machine-label">Neste guia</p><ol>
+        <li><a href="#basics">SDD, sem mistério</a></li>
+        <li><a href="#flow">O mapa do fluxo</a></li>
+        <li><a href="#briefing">Briefing: entender a ideia</a></li>
+        <li><a href="#refiner">Refiner: resolver lacunas</a></li>
+        <li><a href="#product">Product: definir a entrega</a></li>
+        <li><a href="#sheldon">Sheldon: revisar o combinado</a></li>
+        <li><a href="#planner">Planner: criar o plano</a></li>
+        <li><a href="#dev">Dev: fazer funcionar</a></li>
+        <li><a href="#execution-modes">Formas de implementação</a></li>
+        <li><a href="#qa">QA: revisar e testar</a></li>
+        <li><a href="#example">Um exemplo completo</a></li>
+        <li><a href="#gates">Aprovações e mudanças</a></li>
+        <li><a href="#automation">CLI, memória e tokens</a></li>
+        <li><a href="#glossary">Como começar e dúvidas</a></li>
+        <li><a href="#sources">Fontes e assinatura</a></li>
+      </ol></nav>
+      <p class="sidebar-note">Primeira visita?<br>Leia os capítulos 1 e 2, explore o exemplo no 11 e volte à etapa que quiser entender melhor.</p>
     </aside>
-  </section>
 
-  <!-- CALLOUT — O QUE É SDD -->
-  <section class="site-section">
-    <div class="compact-callout">
-      <div class="compact-callout-icon">🧭</div>
-      <p><strong>SDD em uma frase:</strong> ao invés do agente "tentar implementar direto" a partir de um prompt, ele segue um <strong>pipeline determinístico</strong> — primeiro entende o produto (@product), depois mapeia entidades (@analyst), define decisões estruturais (@architect), implementa (@dev), e valida com QA (@qa). Cada estágio precisa passar por um <em>gate</em> antes do próximo. Ninguém pula etapa, ninguém improvisa o que ficou ambíguo.</p>
-    </div>
-  </section>
-
-  <!-- PIPELINE VISUAL -->
-  <section class="site-section" id="pipeline">
-    <header class="site-section-header">
-      <span class="eyebrow">Pipeline · 8 estágios</span>
-      <h2 class="site-section-title">Como uma feature <span class="accent-cyan">flui</span>.</h2>
-      <p class="site-section-subtitle">Cada feature percorre uma cadeia de agentes. MICRO pula a maioria, MEDIUM passa por todos. Gates intermediários (A·B·C·D) bloqueiam quando algo está faltando.</p>
-    </header>
-
-    <div class="pipeline-track">
-      <div class="pipeline-step">
-        <div class="pipeline-step-num">01</div>
-        <div class="pipeline-step-cmd">@product</div>
-        <div class="pipeline-step-name">PRD</div>
-        <div class="pipeline-step-desc">O quê e por quê</div>
-      </div>
-      <div class="pipeline-step gate">
-        <div class="pipeline-step-num">Gate A</div>
-        <div class="pipeline-step-cmd">requirements</div>
-        <div class="pipeline-step-name">Approve</div>
-        <div class="pipeline-step-desc">PRD passou</div>
-      </div>
-      <div class="pipeline-step">
-        <div class="pipeline-step-num">02</div>
-        <div class="pipeline-step-cmd">@analyst</div>
-        <div class="pipeline-step-name">Entities</div>
-        <div class="pipeline-step-desc">BRs · ACs · ECs</div>
-      </div>
-      <div class="pipeline-step gate">
-        <div class="pipeline-step-num">Gate B</div>
-        <div class="pipeline-step-cmd">design</div>
-        <div class="pipeline-step-name">Approve</div>
-        <div class="pipeline-step-desc">spec pronta</div>
-      </div>
-      <div class="pipeline-step">
-        <div class="pipeline-step-num">03</div>
-        <div class="pipeline-step-cmd">@architect</div>
-        <div class="pipeline-step-name">Decisions</div>
-        <div class="pipeline-step-desc">Stack &amp; boundaries</div>
-      </div>
-      <div class="pipeline-step gate">
-        <div class="pipeline-step-num">Gate C</div>
-        <div class="pipeline-step-cmd">plan</div>
-        <div class="pipeline-step-name">Approve</div>
-        <div class="pipeline-step-desc">phases definidas</div>
-      </div>
-      <div class="pipeline-step">
-        <div class="pipeline-step-num">04</div>
-        <div class="pipeline-step-cmd">@dev</div>
-        <div class="pipeline-step-name">Implement</div>
-        <div class="pipeline-step-desc">Slices validadas</div>
-      </div>
-      <div class="pipeline-step gate">
-        <div class="pipeline-step-num">Gate D</div>
-        <div class="pipeline-step-cmd">@qa</div>
-        <div class="pipeline-step-name">PASS/FAIL</div>
-        <div class="pipeline-step-desc">QA verdict</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 4 GATES -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">4 gates · protegem o projeto</span>
-      <h2 class="site-section-title">Cada estágio <span class="accent-gold">precisa passar</span>.</h2>
-      <p class="site-section-subtitle">Gates são checkpoints determinísticos. Se o artefato esperado não existe ou está incompleto, o gate retorna BLOCKED e o agente seguinte recusa-se a começar. Sem ambiguidade.</p>
-    </header>
-
-    <div class="gates-grid">
-      <div class="gate-card">
-        <div class="gate-letter">A</div>
-        <div class="gate-eyebrow">requirements</div>
-        <h3>Gate A — Requirements</h3>
-        <p>Existe um PRD ou requirements doc com escopo claro, users, MVP, out-of-scope?</p>
-        <div class="gate-artifact">requirements-{slug}.md OU prd-{slug}.md</div>
-      </div>
-      <div class="gate-card">
-        <div class="gate-letter">B</div>
-        <div class="gate-eyebrow">design</div>
-        <h3>Gate B — Design</h3>
-        <p>Existe spec com entidades, business rules, edge cases e decisões registradas?</p>
-        <div class="gate-artifact">spec-{slug}.md (requer Gate A)</div>
-      </div>
-      <div class="gate-card">
-        <div class="gate-letter">C</div>
-        <div class="gate-eyebrow">plan</div>
-        <h3>Gate C — Plan</h3>
-        <p>Existe plano de implementação com fases ordenadas, dependências e pré-decisões?</p>
-        <div class="gate-artifact">implementation-plan-{slug}.md (requer A+B)</div>
-      </div>
-      <div class="gate-card">
-        <div class="gate-letter">D</div>
-        <div class="gate-eyebrow">execution</div>
-        <h3>Gate D — Execution</h3>
-        <p>QA aprovou. Spec com sign-off, features.md flipado, distillation hook disparou.</p>
-        <div class="gate-artifact">QA verdict PASS + spec sealed (requer A+B+C)</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CLASSIFICATION -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">Classificação · MICRO / SMALL / MEDIUM</span>
-      <h2 class="site-section-title">O processo escala com o <span class="accent-emerald">tamanho</span>.</h2>
-      <p class="site-section-subtitle">Nem toda feature precisa do pipeline completo. <code>aioson classify</code> mapeia a feature em um dos 3 tiers; cada um ativa uma cadeia diferente de agentes e gates.</p>
-    </header>
-
-    <table class="tier-table">
-      <thead>
-        <tr>
-          <th>Tier</th>
-          <th>Quando</th>
-          <th>Chain de agentes</th>
-          <th>Duração típica</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="t-micro">MICRO</td>
-          <td>Sem entidades novas. Fix, refactor pequeno, alias, nova flag de CLI. <code>--no-distill</code> opt-in.</td>
-          <td class="chain">@product → @dev → @qa</td>
-          <td class="duration">1-2 sessões</td>
-        </tr>
-        <tr>
-          <td class="t-small">SMALL</td>
-          <td>Entidade nova ou refactor médio. Webhooks, integrações de 1 hop, novas views.</td>
-          <td class="chain">@product → @analyst → @dev → @qa</td>
-          <td class="duration">3-5 sessões</td>
-        </tr>
-        <tr>
-          <td class="t-medium">MEDIUM</td>
-          <td>Multi-entidade, multi-hop, paralelismo, harness contract. Living Memory, Squads, novos agentes.</td>
-          <td class="chain">@product → @sheldon → @analyst → @architect → @dev → @qa → @validator</td>
-          <td class="duration">1-3 semanas</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- 6 CONCEITOS AVANÇADOS V1.9.0 -->
-  <section class="site-section">
-    <header class="site-section-header">
-      <span class="eyebrow">v1.9.0 · 6 conceitos avançados</span>
-      <h2 class="site-section-title">O que mudou na <span class="accent-violet">Living Memory Era</span>.</h2>
-      <p class="site-section-subtitle">Click em qualquer card para ver detalhes em popover. Esses 6 conceitos transformaram o SDD básico em algo persistente, procedural e adaptado pra quem está começando.</p>
-    </header>
-
-    <div class="cat-grid">
-      <button class="cat-card" data-tone="emerald" data-dialog="dlg-living" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
-          <span class="cat-badge">v1.9.0</span>
+    <article class="article">
+      <section id="basics" aria-labelledby="basics-title">
+        <p class="section-number">01 / A ideia central</p>
+        <h2 id="basics-title">Combinar o resultado antes de construir</h2>
+        <p><strong>SDD significa <em>Spec-Driven Development</em>: desenvolvimento orientado por especificação.</strong> Uma especificação é um registro claro do que o sistema precisa fazer, para quem, em quais situações e como confirmar que ficou certo.</p>
+        <p>Pense em encomendar um armário: quantidade de portas, medidas e uso precisam estar combinados. Durante a montagem, há uma ordem de trabalho. Na entrega, você confere se ele cabe, abre e guarda o que precisava. No software, o AIOSON organiza essas responsabilidades entre agentes.</p>
+        <p>Você contribui explicando a necessidade e tomando as decisões que pertencem ao produto. Os agentes investigam o projeto, organizam os documentos, implementam e verificam o resultado. Para entender e acompanhar esse processo, não é preciso saber programar.</p>
+        <div class="speech-card" id="speech"><p class="machine-label">Fala pronta · cerca de 30 segundos</p><blockquote>“No AIOSON, uma ideia vai ganhando clareza até virar algo que pode ser construído e testado. Primeiro entendemos a necessidade. Depois registramos o que o sistema deve fazer, revisamos esse combinado e criamos um plano de execução. O Dev implementa, e o QA confere o comportamento real. Assim, cada entrega pode ser comparada com o que foi pedido, e as decisões ficam registradas no projeto.”</blockquote></div>
+        <h3>O que muda na prática?</h3>
+        <ol class="flow-list">
+          <li><strong>A necessidade fica explícita.</strong><p>“Quero uma agenda” vira “quero reservar uma sala sem aceitar horários sobrepostos”.</p></li>
+          <li><strong>O trabalho tem uma sequência verificável.</strong><p>O plano mostra qual resultado cada etapa deve entregar e como conferir esse resultado.</p></li>
+          <li><strong>A conclusão precisa de evidência.</strong><p>Uma mensagem de “pronto” precisa ser sustentada por testes e pelo funcionamento da aplicação.</p></li>
+        </ol>
+        <p>O SDD reduz espaço para mal-entendidos e ajuda a detectar omissões. Não garante software sem defeitos: a qualidade ainda depende dos requisitos, da implementação e da verificação efetivamente executada.</p>
+      </section>
+      <section id="flow" aria-labelledby="flow-title">
+        <p class="section-number">02 / Quem faz o quê</p>
+        <h2 id="flow-title">Uma jornada com responsabilidades claras</h2>
+        <p>Este é o caminho atual para uma funcionalidade que começa como ideia ou conjunto de materiais. <strong>Sheldon faz parte do fluxo entre Product e Planner.</strong></p>
+        <div class="route-map" aria-label="Fluxo da ideia à verificação">
+          <div><span class="machine-label">Preparação, quando necessária</span><p><a href="#briefing">Briefing</a><span aria-hidden="true"> → </span><a href="#refiner">Refiner</a><span aria-hidden="true"> → </span><strong>Aprovação da pessoa</strong></p></div>
+          <div><span class="machine-label">Entrega de uma funcionalidade</span><p><a href="#product">Product</a><span aria-hidden="true"> → </span><a href="#sheldon">Sheldon</a><span aria-hidden="true"> → </span><a href="#planner">Planner</a><span aria-hidden="true"> → </span><a href="#dev">Dev</a><span aria-hidden="true"> → </span><a href="#qa">QA</a></p></div>
         </div>
-        <h3>Living Memory</h3>
-        <p>Bootstrap em 4 arquivos auto-sync com diffs, reflect engine pós-<code>agent:done</code>, FTS5 search. Sessões pararam de esquecer.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="violet" data-dialog="dlg-brains-c" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
-          <span class="cat-badge">v1.9.0</span>
-        </div>
-        <h3>Brains procedural</h3>
-        <p>Padrões com quality-score. Agentes carregam só nodes q ≥ 4 que fazem match com tags da task. 3 brains, 25 nodes hoje.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="gold" data-dialog="dlg-autonomy" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
-          <span class="cat-badge">v1.9.0</span>
-        </div>
-        <h3>Autonomy 3 tiers</h3>
-        <p>tier1 silent (read) · tier2 notified (memory writes) · tier3 blocking (push/publish). Materializado por harness via <code>permissions-generator</code>.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="cyan" data-dialog="dlg-profile" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
-          <span class="cat-badge">v1.9.0</span>
-        </div>
-        <h3>Profile creator/developer</h3>
-        <p>Default <code>creator</code>: 1 pergunta/turn via AskUserQuestion, jargão traduzido, opção "Pausar / quero pensar". Devs trocam pra <code>developer</code>.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="pink" data-dialog="dlg-dossier-c" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/></svg></span>
-          <span class="cat-badge">v1.8.0+</span>
-        </div>
-        <h3>Dossier por feature</h3>
-        <p>Cada feature SMALL/MEDIUM ganha <code>features/{slug}/dossier.md</code> consolidando Why/What + code map + agent trail. A "memória da feature".</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-
-      <button class="cat-card" data-tone="teal" data-dialog="dlg-harness-c" type="button">
-        <div class="cat-head">
-          <span class="cat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg></span>
-          <span class="cat-badge">MEDIUM</span>
-        </div>
-        <h3>Harness contracts</h3>
-        <p>@sheldon gera <code>harness-contract.json</code> com binary criteria, @validator avalia headless, circuit breaker bloqueia <code>feature:close</code>.</p>
-        <span class="cat-cta">Ver detalhes →</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- TUTORIAL — PRIMEIRA FEATURE -->
-  <section class="site-section" id="primeira">
-    <header class="site-section-header">
-      <span class="eyebrow">Tutorial · sua primeira feature</span>
-      <h2 class="site-section-title">Do <span class="accent-cyan">zero</span> ao Gate D PASS.</h2>
-      <p class="site-section-subtitle">5 passos pra entregar uma feature SMALL completa. Cada passo aciona um agente específico — não improvisa, não pula etapa.</p>
-    </header>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h3>Ative <code>/neo</code> pra orientar</h3>
-          <p>Neo lê o estado do projeto (pulse + Living Memory) e rotea pro próximo agente. Em projetos novos, vai direcionar pra <code>/setup</code> ou <code>/product</code>.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">/neo</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> /neo</span>
-<span class="term-line"><span class="term-out-key">project</span>: meu-app · <span class="term-out-key">stage</span>: ready for next feature</span>
-<span class="term-line"><span class="term-out-key">→ recomendado</span>: /product (sem feature ativa)</span></div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Responsabilidade de cada agente"><table><caption>A pergunta principal de cada etapa</caption><thead><tr><th scope="col">Agente</th><th scope="col">Pergunta que resolve</th><th scope="col">O que deixa para a próxima etapa</th></tr></thead><tbody>
+          <tr><th scope="row">Briefing</th><td>Qual problema queremos resolver?</td><td>Ideia organizada, fontes, riscos e perguntas abertas.</td></tr>
+          <tr><th scope="row">Refiner</th><td>O que está ambíguo, faltando ou contraditório?</td><td>Revisão, decisões aplicadas e protótipo quando há interface.</td></tr>
+          <tr><th scope="row">Product</th><td>O que entra nesta entrega e como será aceito?</td><td>PRD com capacidades, limites e critérios observáveis.</td></tr>
+          <tr><th scope="row">Sheldon</th><td>Esse combinado está completo, coerente e executável?</td><td>O mesmo PRD revisado, com aprovação vinculada ao conteúdo.</td></tr>
+          <tr><th scope="row">Planner</th><td>Como construir no projeto que já existe?</td><td>Plano com etapas, arquivos, dependências e verificações.</td></tr>
+          <tr><th scope="row">Dev</th><td>Como fazer cada etapa funcionar de verdade?</td><td>Código integrado, testes e evidências da implementação.</td></tr>
+          <tr><th scope="row">QA</th><td>A entrega cumpre o que foi combinado?</td><td>Relatório com resultados, evidências e eventuais correções.</td></tr>
+        </tbody></table></div>
+        <p><strong>Agentes são papéis com instruções e ferramentas.</strong> Os nomes não significam obrigatoriamente sete modelos diferentes. O cliente e a configuração determinam como cada papel é executado. A revisão exige trabalho próprio de verificação; repetir a conclusão do Dev não equivale a uma análise independente.</p>
+        <h3>Todo pedido passa por tudo isso?</h3>
+        <p>Uma ideia ainda vaga pode começar em Briefing. Uma funcionalidade já bem definida pode entrar em Product. Um ajuste técnico pequeno, delimitado e sem decisões de produto pendentes pode seguir por <strong>Dev Simple Plan</strong>, com plano curto e verificação proporcional, fora dessa cadeia de feature.</p>
+        <p>As classificações <code>MICRO</code>, <code>SMALL</code> e <code>MEDIUM</code> mantêm Product → Sheldon → Planner → Dev → QA. Elas mudam a profundidade e o esforço de verificação. Especialistas como Analyst e Architect entram quando há uma questão concreta que justifique sua participação.</p>
+        <p class="source-note">Base: <a href="../../src/workflow-profile.js">sequências no código</a>, <a href="../../template/.aioson/docs/gateway/agent-routing.md">roteamento</a> e <a href="../../template/.aioson/rules/simple-plan-lane.md">Simple Plan</a>.</p>
+      </section>
+      <section id="briefing" aria-labelledby="briefing-title">
+        <p class="section-number">03 / Dar forma à necessidade</p>
+        <h2 id="briefing-title">Briefing transforma materiais em entendimento</h2>
+        <p>Você pode chegar com uma conversa, um rascunho ou arquivos em <code>plans/{slug}/</code>. <strong>Slug</strong> é um nome curto para identificar o trabalho, como <code>room-booking</code>. O Briefing organiza o material sem transformá-lo prematuramente em uma lista de implementação.</p>
+        <p>Ele busca o problema, quem o enfrenta, as soluções possíveis, os riscos e as decisões ainda abertas. Também consulta evidências do projeto para evitar pedir que você repita informações que já estão disponíveis.</p>
+        <div class="example"><span class="machine-label">Exemplo sintético · reserva de sala</span><h3>Pedido inicial</h3><p class="human-voice">“Hoje as pessoas combinam a sala por mensagem e os horários se confundem.”</p><p><strong>Entendimento registrado:</strong> a equipe precisa consultar a disponibilidade e registrar uma reserva. Ainda falta definir quem pode alterar o horário e como tratar um conflito.</p><p><strong>Pergunta útil:</strong> quando uma reserva termina às 11h, a próxima pode começar exatamente às 11h?</p></div>
+        <h3>O que ele salva?</h3>
+        <p>O documento principal é <code>.aioson/briefings/{slug}/briefings.md</code>. Suas oito seções cobrem contexto, problema, solução proposta, temas, riscos, lacunas identificadas, fontes e perguntas abertas.</p>
+        <p>Quando existem fontes, o inventário identifica cada uma e registra sua impressão digital. O mapa de promessas usa identificadores <code>PROM-*</code> para acompanhar pedidos materiais. Isso ajuda a evitar que algo desapareça entre a conversa inicial e o PRD.</p>
+        <details><summary>O que acontece com as dúvidas?</summary><p>Elas são classificadas: algo a pesquisar, algo a testar, uma decisão da pessoa responsável ou um assunto fora do escopo. “Ainda não sabemos” é informação útil quando fica visível. Uma hipótese não deve aparecer como decisão aprovada.</p><p>O agente confirma o identificador antes da primeira escrita do briefing, preserva os arquivos de origem e entrega um rascunho para o Refiner. Ele não aprova o próprio briefing nem implementa a aplicação.</p></details>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/briefing.md">contrato do Briefing</a> e <a href="../../src/commands/briefing-sources.js">descoberta e inventário de fontes</a>.</p>
+      </section>
+      <section id="refiner" aria-labelledby="refiner-title">
+        <p class="section-number">04 / Conferir antes de assumir compromissos</p>
+        <h2 id="refiner-title">Refiner encontra as perguntas que faltaram</h2>
+        <p>O Refiner revisa um briefing existente. Procura ambiguidades, repetições, lacunas, riscos e contradições com o sistema atual. Confere também se as fontes continuam iguais e se as promessas foram preservadas.</p>
+        <p>Quando existe uma escolha real, apresenta opções e suas consequências. No exemplo, “editar reserva” precisa distinguir mudar a própria reserva de alterar a de outra pessoa. Essa decisão muda o comportamento do produto.</p>
+        <ol class="flow-list">
+          <li><strong>A revisão aparece em uma página.</strong><p>O agente registra os achados e o CLI gera <code>review.html</code> para você ler e responder no navegador.</p></li>
+          <li><strong>Você escolhe e comenta.</strong><p>As respostas são guardadas como feedback estruturado. Uma opção exibida na tela ainda não é uma decisão aplicada.</p></li>
+          <li><strong>O agente mostra o efeito da aplicação.</strong><p>As alterações passam por uma simulação, chamada <em>dry-run</em>. Depois da confirmação, o CLI atualiza o briefing e registra a rodada.</p></li>
+          <li><strong>O briefing pode ser aprovado.</strong><p>Com os bloqueios resolvidos e o protótipo validado quando aplicável, a pessoa responsável aprova a preparação para Product.</p></li>
+        </ol>
+        <h3>E o protótipo?</h3>
+        <p>Para um trabalho com interface ou interação visível, o Refiner é responsável pelo protótipo da própria funcionalidade. Ele permite avaliar telas, ações, estados de erro e uso no celular antes da implementação definitiva.</p>
+        <p><strong>Um protótipo aprovado orienta o resultado visual e as interações.</strong> Ele não comprova que o banco de dados, o servidor ou as integrações da aplicação final já funcionam. Um protótipo de outra funcionalidade também não vira referência obrigatória por estar no mesmo projeto.</p>
+        <p>Trabalhos realmente sem interface podem registrar o protótipo como não aplicável. A ausência precisa ser coerente com o trabalho, sem inventar uma tela só para preencher uma etapa.</p>
+        <details><summary>Arquivos e aprovação, para quem quer conferir</summary><p>Os arquivos ficam em <code>.aioson/briefings/{slug}/</code>: <code>refinement-findings.json</code>, <code>review.html</code>, feedback, <code>refinement-report.md</code> e arquivos das rodadas. Quando aplicável, também <code>prototype.html</code>, <code>prototype-manifest.md</code> e o registro de identidade visual.</p><p>Depois de revisar e aceitar o resultado, o comando de aprovação destinado à pessoa responsável é:</p><pre><code>aioson briefing:approve . --slug=room-booking</code></pre><p>O nome acima é ilustrativo. Aprovação do briefing e aplicação do feedback são atos distintos. Depois de existir PRD, mudanças de produto seguem por Product e nova revisão de Sheldon.</p></details>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/refiner.md">contrato do Refiner</a>, <a href="../../template/.aioson/docs/briefing/refinement-loop.md">feedback e aplicação</a> e <a href="../../template/.aioson/docs/briefing/prototype-and-delegation.md">protótipo</a>.</p>
+      </section>
+      <section id="product" aria-labelledby="product-title">
+        <p class="section-number">05 / Definir a entrega</p>
+        <h2 id="product-title">Product escreve o combinado que será cobrado</h2>
+        <p>Product cria o <strong>PRD</strong>, documento de requisitos do produto. Ele define o problema, as pessoas atendidas, o que entra na entrega, o que fica de fora e como verificar cada resultado esperado.</p>
+        <p>Quando o trabalho veio de Briefing e Refiner, usa as decisões aprovadas e as fontes verificadas. Também olha o código existente: o produto pode precisar reutilizar, ampliar ou substituir um comportamento que já existe.</p>
+        <h3>Capacidade e critério de aceitação</h3>
+        <p><strong>CAP</strong> identifica uma capacidade: algo útil que a pessoa conseguirá fazer. <strong>AC</strong> identifica um critério de aceitação: uma condição observável para conferir essa capacidade. Os códigos são etiquetas para ligar o pedido ao plano e aos testes.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Exemplo de capacidades e critérios de aceitação"><table><caption>Exemplo sintético: critérios que a equipe decidiu exigir</caption><thead><tr><th scope="col">Capacidade</th><th scope="col">Critério</th><th scope="col">Comportamento esperado</th></tr></thead><tbody>
+          <tr><th scope="row">CAP-01 · Reservar sala</th><td>AC-01</td><td>Uma reserva válida aparece na agenda e continua lá após recarregar a página.</td></tr>
+          <tr><th scope="row">CAP-01</th><td>AC-02</td><td>Um horário sobreposto é recusado. Reservas consecutivas, sem sobreposição, são aceitas.</td></tr>
+          <tr><th scope="row">CAP-01</th><td>AC-03</td><td>Horário final igual ou anterior ao inicial é recusado com uma explicação.</td></tr>
+          <tr><th scope="row">CAP-01</th><td>AC-04</td><td>Duas solicitações simultâneas para o mesmo horário não geram duas reservas aceitas.</td></tr>
+          <tr><th scope="row">CAP-02 · Alterar a própria reserva</th><td>AC-05</td><td>A alteração autorizada atualiza a mesma reserva, sem criar uma cópia e sem permitir alterar a de outra pessoa.</td></tr>
+          <tr><th scope="row">CAP-02</th><td>AC-06</td><td>Se a alteração conflitar com outra reserva, ela é recusada e o horário anterior é preservado.</td></tr>
+        </tbody></table></div>
+        <p>Para manter o exemplo curto, imagine uma aplicação que já identifica os membros da equipe e uma única sala, com fuso horário definido pelo projeto. Pagamentos, reservas recorrentes e múltiplas salas ficaram fora desta entrega fictícia.</p>
+        <p>Na aplicação real, o PRD detalha também regras e estados relevantes que o exemplo resume. “Agenda funcionando” seria insuficiente: não diz o que deve acontecer com horários inválidos, mudanças ou tentativas simultâneas.</p>
+        <h3>O documento criado</h3>
+        <p><code>.aioson/context/prd-room-booking.md</code>, no exemplo. Ele inclui visão, usuários, mapa de capacidades, cobertura das promessas, relação com o sistema atual, critérios de aceitação, fluxos, limites e contrato do protótipo.</p>
+        <p>As promessas recebidas ganham uma decisão explícita: entregar, reconhecer como já atendida, adiar, rejeitar ou declarar não aplicável. Mudanças materiais de escopo continuam dependendo da decisão de quem é responsável pelo produto.</p>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/product.md">contrato de Product</a> e <a href="../../template/.aioson/docs/product/prd-contract.md">estrutura do PRD</a>.</p>
+      </section>
+      <section id="sheldon" aria-labelledby="sheldon-title">
+        <p class="section-number">06 / Revisar a especificação</p>
+        <h2 id="sheldon-title">Sheldon revisa o combinado antes da construção</h2>
+        <p>Sheldon revisa e enriquece <strong>o mesmo PRD</strong>. Confere se as promessas estão cobertas, se as regras combinam, se a proposta respeita o sistema existente e se os critérios permitem provar o resultado.</p>
+        <p>No exemplo, ele pode identificar que “não sobrepor reservas” precisa considerar duas solicitações feitas ao mesmo tempo. Também verifica se a alteração de horário protege a reserva anterior em caso de erro e respeita quem pode editá-la.</p>
+        <p>O agente pode sugerir soluções melhores. Uma nova capacidade, integração ou promessa comercial é apresentada como proposta e precisa da decisão adequada para entrar no escopo. Enriquecer o PRD não autoriza aumentar silenciosamente a entrega.</p>
+        <div class="callout"><strong>Sheldon e QA revisam momentos diferentes.</strong><p>Sheldon confere se o combinado está bem definido e pode ser executado. QA confere se o software entregue cumpre esse combinado.</p></div>
+        <h3>A aprovação acompanha uma versão exata</h3>
+        <p>Depois das correções, a revisão é vinculada ao conteúdo final por uma impressão digital, chamada <strong>hash</strong>. Se o PRD ou uma autoridade vinculada muda, a revisão pode ficar desatualizada e precisar ser renovada.</p>
+        <p>O processo de revisão é limitado a até duas passagens por rodada. Lacunas materiais não resolvidas viram achados ou decisões pendentes. Um simples texto dizendo “aprovado” não substitui a revisão vigente exigida antes do Planner.</p>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/sheldon.md">contrato de Sheldon</a> e <a href="../../template/.aioson/skills/process/aioson-spec-driven/SKILL.md">método SDD atual</a>.</p>
+      </section>
+      <section id="planner" aria-labelledby="planner-title">
+        <p class="section-number">07 / Transformar o combinado em execução</p>
+        <h2 id="planner-title">Que plano o Planner cria?</h2>
+        <p>O Planner cria <code>.aioson/context/implementation-plan-{slug}.md</code>. É <strong>um plano de implementação apoiado no repositório real</strong>: mostra como sair do sistema atual e chegar ao resultado aprovado.</p>
+        <p>Antes de escrever, ele inspeciona por onde a aplicação é iniciada, os módulos existentes, os padrões que podem ser reutilizados e os comandos de teste. Assim, o plano aponta arquivos concretos e trabalho necessário, sem inventar uma segunda aplicação para demonstrar a ideia.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Conteúdo do plano do Planner"><table><caption>O plano traduzido para quem não programa</caption><thead><tr><th scope="col">Parte do plano</th><th scope="col">O que explica</th></tr></thead><tbody>
+          <tr><th scope="row">Objetivo</th><td>Qual resultado observável esta entrega deve alcançar.</td></tr>
+          <tr><th scope="row">Evidências do repositório</th><td>Como abrir o sistema, o que já existe e quais ferramentas de teste o projeto usa.</td></tr>
+          <tr><th scope="row">Mudanças necessárias</th><td>Quais arquivos reutilizar, modificar, criar ou retirar e por qual motivo.</td></tr>
+          <tr><th scope="row">Mapa de entrega</th><td>Em qual etapa cada capacidade será implementada e quais critérios ela deve cumprir.</td></tr>
+          <tr><th scope="row">Etapas verticais</th><td>Pequenas entregas que atravessam as partes necessárias do sistema e já podem ser verificadas.</td></tr>
+          <tr><th scope="row">Controles de engenharia</th><td>Cuidados exigidos pelos riscos reais: por exemplo, preservar dados ou impedir reservas concorrentes.</td></tr>
+          <tr><th scope="row">Verificação e conclusão</th><td>Comandos, ações e resultados que permitem dizer que uma etapa terminou.</td></tr>
+          <tr><th scope="row">Divisão de execução, se escolhida</th><td>Responsáveis, arquivos permitidos, contratos entre partes, dependências e ordem das unidades de trabalho.</td></tr>
+        </tbody></table></div>
+        <h3>O que significa uma etapa “vertical”?</h3>
+        <p>Uma etapa como <strong>“criar uma reserva e vê-la salva na agenda”</strong> pode precisar de tela, validação, servidor e armazenamento. Ela reúne essas partes até produzir um resultado verificável.</p>
+        <p>Isso evita considerar “a tela está desenhada” como conclusão da capacidade de reservar. Preparações técnicas entram na primeira etapa que precisa delas; o plano busca as menores entregas úteis.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Exemplo de duas etapas verticais"><table><caption>Plano sintético da reserva de sala</caption><thead><tr><th scope="col">Etapa</th><th scope="col">Resultado que passa a funcionar</th><th scope="col">Como conferir</th></tr></thead><tbody>
+          <tr><th scope="row">1 · Criar reserva</th><td>O formulário salva uma reserva real. Rejeita horários inválidos, sobreposição e concorrência indevida. Cobre CAP-01 / AC-01 a AC-04.</td><td>Testes das regras e da integração; criar na aplicação e recarregar a agenda.</td></tr>
+          <tr><th scope="row">2 · Alterar reserva</th><td>A pessoa altera sua reserva. A identidade do registro permanece e conflitos preservam o horário anterior. Cobre CAP-02 / AC-05 e AC-06.</td><td>Testes de edição e autorização; editar no fluxo real e conferir o estado após recarregar.</td></tr>
+        </tbody></table></div>
+        <details><summary>Veja como uma etapa aparece no arquivo do plano</summary>
+          <p>Trecho didático de um projeto fictício em JavaScript. Caminhos e comandos ilustram o formato; não são arquivos criados por este tutorial nem um plano completo pronto para aprovação.</p>
+          <pre><code>## Phase 1 — Criar uma reserva persistida
+- CAP/AC: CAP-01; AC-01, AC-02, AC-03, AC-04
+- User-visible outcome: reservar e consultar o horário salvo.
+- Implementation: aproveitar o cadastro atual e ligar a tela
+  às regras do servidor e à persistência existente.
+- Modify: src/server/reservations.js
+- Modify: src/server/reservation-store.js
+- Modify: src/web/ReservationForm.jsx
+- Modify: tests/reservations.test.js
+- Reuse: src/web/ReservationList.jsx
+- Verification: node --test tests/reservations.test.js;
+  abrir /reservations, criar, recarregar e conferir a reserva;
+  executar os cenários de conflito e concorrência.
+- Done when: AC-01 a AC-04 passam com evidência reproduzível.</code></pre>
+          <p>O plano completo também contém <code>Implementation Delta</code>, <code>Capability Delivery Plan</code> e <code>Engineering Controls</code>. Os arquivos dessas partes precisam concordar com os das etapas. Uma proteção contra concorrência, por exemplo, precisa de solução adequada ao banco real e de teste correspondente.</p>
+          <p>Os caminhos de reutilização, modificação e retirada precisam existir; os de criação ainda não devem existir no momento da checagem do plano. Para a entrega, o Planner usa caminhos exatos, sem “todos os arquivos dessa pasta”.</p>
+        </details>
+        <h3>Como o plano continua ligado ao PRD?</h3>
+        <p>Os planos novos usam <code>plan_contract: 2</code> e registram o hash do PRD revisado por Sheldon. O comando <code>plan:bind</code> grava essa ligação depois que o Planner confere a versão atual. Se o PRD mudar, é preciso reconciliar o impacto antes de renovar a ligação.</p>
+        <p>O plano passa pelo <strong>Gate C</strong>, a checagem de prontidão para implementar. O Planner não escreve o código da funcionalidade e não precisa produzir outro PRD, um backlog paralelo ou um pacote de especificações duplicadas.</p>
+        <details><summary>E os contratos para iniciar e testar a aplicação?</summary><p>Quando há uma superfície de execução que exige isso, como protótipo vinculado ou migrações de dados, o plano prevê um contrato de execução e sua autoria pelo Dev. Ele especifica como construir, preparar dados quando aplicável, iniciar e conferir o sistema: <code>RG-build</code>, <code>RG-migrate</code>, <code>RG-boot</code> e <code>RG-smoke</code>.</p><p>O arquivo usado nesse mecanismo é <code>.aioson/plans/{slug}/harness-contract.json</code>. É um suporte técnico condicionado ao trabalho. Não é um quarto documento de produto obrigatório para qualquer pedido. Na entrega, uma obrigação prevista precisa estar materializada e verificada.</p></details>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/planner.md">contrato do Planner</a>, <a href="../../template/.aioson/skills/process/aioson-spec-driven/references/planner.md">referência SDD do Planner</a>, <a href="../../src/commands/implementation-plan.js">ligação do plano ao PRD</a> e <a href="../../src/commands/gate-check.js">checagem dos gates</a>.</p>
+      </section>
+      <section id="dev" aria-labelledby="dev-title">
+        <p class="section-number">08 / Construir no sistema real</p>
+        <h2 id="dev-title">Dev transforma cada etapa em comportamento</h2>
+        <p>O Dev recebe o PRD revisado, o plano aprovado, as regras pertinentes e o protótipo válido quando aplicável. Confere o estado do código antes de começar, porque a aplicação pode ter mudado desde o planejamento.</p>
+        <ol class="flow-list">
+          <li><strong>Preparar o contexto da etapa.</strong><p>Localiza os critérios que vai atender, as fontes necessárias e os arquivos envolvidos. Identifica o que já pode ser reutilizado.</p></li>
+          <li><strong>Implementar o caminho completo.</strong><p>No exemplo: a ação de salvar sai da tela, chega à regra do servidor, grava uma reserva e aparece na agenda.</p></li>
+          <li><strong>Verificar o resultado e os erros relevantes.</strong><p>Executa os testes adequados e o fluxo real. Confere também conflito, dados inválidos e outras condições exigidas pelo plano.</p></li>
+          <li><strong>Registrar a evidência e seguir.</strong><p>Salva o que terminou, o que foi conferido e o próximo passo. Só avança quando a etapa atende à sua condição de conclusão.</p></li>
+        </ol>
+        <p><strong>Código e testes são entregas do Dev.</strong> Compilar sem erro ou mostrar uma mensagem de sucesso não basta se a reserva não chega ao armazenamento. O teste precisa observar o comportamento que o critério exige.</p>
+        <p>Detalhes técnicos rotineiros são resolvidos com evidência do projeto. Se o Dev descobrir uma contradição que muda o produto, ele registra o problema e o encaminha para Product e Sheldon. Não deve mudar a regra combinada só para fazer um teste passar.</p>
+        <h3>O que chega ao QA?</h3>
+        <p>A implementação integrada, os testes e suas evidências, os arquivos alterados e as eventuais limitações. O estado pode ficar em <code>dev-state.md</code> e o histórico no dossier da funcionalidade. O QA usa essas informações como ponto de partida e executa sua própria verificação.</p>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/dev.md">contrato do Dev</a>.</p>
+      </section>
+      <section id="execution-modes" aria-labelledby="execution-title">
+        <p class="section-number">09 / Organizar quem implementa</p>
+        <h2 id="execution-title">Um Dev ou trabalho dividido?</h2>
+        <p>O resultado exigido continua sendo o mesmo. O AIOSON oferece formas diferentes de executar o plano, conforme o tamanho do trabalho, a configuração disponível e a escolha autorizada.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Formas de implementação"><table><caption>Como o trabalho de Dev pode acontecer</caption><thead><tr><th scope="col">Forma</th><th scope="col">Como funciona</th><th scope="col">Quem responde pela entrega integrada?</th></tr></thead><tbody>
+          <tr><th scope="row">Dev em uma sessão</th><td>O agente executa as etapas do plano e registra checkpoints. É o caminho quando não há divisão habilitada.</td><td>O Dev que conduz a implementação.</td></tr>
+          <tr><th scope="row">Divisão sequencial configurada</th><td>O Dev aciona uma frente habilitada por vez, com limites de arquivos e verificação. Integra os resultados no projeto.</td><td>O Dev responsável pela integração.</td></tr>
+          <tr><th scope="row">Execução orquestrada</th><td>O CLI compila as tabelas do plano em unidades de trabalho e agenda processos conforme dependências. Unidades independentes podem rodar ao mesmo tempo.</td><td>O Dev integra; QA mantém o veredito final da funcionalidade.</td></tr>
+        </tbody></table></div>
+        <p>Uma <strong>frente</strong>, chamada <em>lane</em>, é uma parte delimitada do trabalho. Por exemplo, interface e servidor. Cada uma tem arquivos permitidos e pode usar um host e modelo configurados. <strong>Host</strong> é o cliente ou programa que executa o modelo.</p>
+        <h3>O que o Planner acrescenta quando o trabalho é dividido?</h3>
+        <p>Além das etapas de entrega, registra responsáveis por frente, limites de escrita, contratos entre as partes e uma sequência de unidades. Uma <strong>onda</strong> agrupa trabalho que pode acontecer em paralelo. Dependências indicam o que precisa estar pronto antes de outra unidade começar.</p>
+        <div class="example"><span class="machine-label">Exemplo sintético de divisão · não é uma recomendação automática</span><h3>Três unidades para um contrato já definido</h3><ol>
+          <li><strong>Servidor:</strong> implementa a operação de reserva e seus testes nos arquivos atribuídos.</li>
+          <li><strong>Interface:</strong> prepara o formulário e seus testes, seguindo o contrato de comunicação combinado.</li>
+          <li><strong>Integração:</strong> conecta as duas partes e verifica a reserva real. Depende das unidades anteriores.</li>
+        </ol><p>As duas primeiras só podem correr juntas quando seus arquivos de escrita não se sobrepõem e os contratos permitem. Arquivos compartilhados precisam de um responsável e de uma ordem que evite edição concorrente.</p></div>
+        <p>No fluxo orquestrado, cada unidade pode passar por Dev e QA locais. Esses resultados ajudam a verificar as partes. Eles não substituem a integração nem o QA final do conjunto.</p>
+        <details><summary>Como o AIOSON decide oferecer essa opção?</summary><p>O Planner consulta <code>execution:offer</code>, que mostra escala, recomendação e disponibilidade. A orientação atual oferece a escolha quando o plano é candidato à divisão — o padrão considera 12 ou mais arquivos — ou quando a pessoa a pede explicitamente. Ser candidato não habilita vários modelos automaticamente.</p><p>O arquivo de papéis pode ser preparado por <code>execution:seed</code>, inicialmente desabilitado. A escolha dos modelos, a habilitação e a validação dos hosts pertencem à configuração autorizada. <code>execution:compile</code> deriva o plano executável, os limites e os prompts das unidades; os arquivos compilados não devem ser remendados manualmente.</p><p>Com plano compilado, o mecanismo usa <code>execution:run</code>. Sem esse plano, frentes habilitadas podem seguir pelo despacho sequencial <code>agent:execution:dispatch</code>. Um host indisponível não autoriza fingir que outro modelo executou o trabalho.</p></details>
+        <h3>Autopilot é outra escolha</h3>
+        <p><strong>Autopilot controla a passagem entre etapas do fluxo.</strong> A divisão de implementação controla quantos processos ou frentes executam o plano. É possível ter avanço automático com um único Dev, ou trabalho dividido com decisões humanas entre etapas.</p>
+        <p>O modo efetivo é resolvido por <code>workflow:mode</code>. <code>--auto</code> pede avanço automático; <code>--step</code> pede uma etapa por vez naquela ativação. As políticas do projeto e da funcionalidade também participam dessa resolução.</p>
+        <p>O avanço automático para em decisões que pertencem à pessoa responsável, falhas de verificação ou execução indisponível sem alternativa autorizada. Ele preserva o fluxo Product → Sheldon → Planner → Dev → QA.</p>
+        <details><summary>E @deyvin, @orchestrator e @forge-run?</summary><p><code>@deyvin</code> atende continuidade e pequenas fatias de trabalho com contexto conhecido. <code>@orchestrator</code> é um especialista opcional de coordenação; o nome não significa que toda execução orquestrada precise passar por ele.</p><p><code>@forge-run</code> é uma rota especializada para execução compilada com contrato próprio. Ela depende de configuração e de sequência de execução no plano; não substitui automaticamente o Dev nem aparece por uma classificação maior. Para aprender o SDD cotidiano, comece pelo plano vertical e pelo Dev.</p></details>
+        <p class="source-note">Base: <a href="../../template/.aioson/docs/dev/execution-lanes.md">formas de execução</a>, <a href="../../src/commands/execution.js">comandos de orquestração</a>, <a href="../../src/lib/plan-scale.js">escala e recomendação</a>, <a href="../../src/agent-execution/execution-plan.js">compilação e limites</a> e <a href="../../src/commands/workflow-mode.js">modo do workflow</a>.</p>
+      </section>
+      <section id="qa" aria-labelledby="qa-title">
+        <p class="section-number">10 / Comparar a promessa com a realidade</p>
+        <h2 id="qa-title">Como QA revisa e testa a entrega?</h2>
+        <p><strong>QA significa garantia da qualidade.</strong> No AIOSON, é o papel responsável pelo veredito independente da entrega. Ele compara o software com o PRD, o plano, as decisões aceitas e o protótipo válido.</p>
+        <p>“Testar tudo” significa cobrir as capacidades e os critérios obrigatórios da funcionalidade, com verificação proporcional ao risco. Não significa tentar todas as combinações possíveis de um sistema nem garantir ausência absoluta de defeitos.</p>
+        <ol class="flow-list">
+          <li><strong>Conferir o que era obrigatório.</strong><p>O QA recupera a ligação entre promessas, capacidades, critérios, etapas e arquivos. Pode usar <code>feature:trace</code> para obter esse mapa.</p></li>
+          <li><strong>Examinar a implementação.</strong><p>Lê as alterações e os testes relevantes. Procura critérios esquecidos, desvios do combinado e riscos concretos nos caminhos alterados.</p></li>
+          <li><strong>Executar verificações próprias.</strong><p>Roda os testes adequados à tecnologia do projeto e reproduz condições de sucesso, erro e limite exigidas pela entrega.</p></li>
+          <li><strong>Usar a aplicação pelo caminho normal.</strong><p>Abre a mesma tela, rota, comando ou programa que o usuário utiliza. Confere se a ação chega à operação real, altera o estado e produz o resultado esperado.</p></li>
+          <li><strong>Registrar resultado por critério.</strong><p>Cada AC recebe resultado e evidência concreta. Uma falha inclui como reproduzir, o esperado, o observado e os arquivos suspeitos.</p></li>
+        </ol>
+        <h3>Exemplo: o botão disse “reserva salva”</h3>
+        <div class="proof-chain" aria-label="Cadeia de verificação de uma reserva"><span>Clicar em salvar</span><span>Operação real aceita</span><span>Reserva persistida</span><span>Recarregar e encontrar</span></div>
+        <p>Se a tela mostra uma mensagem, mas a reserva desaparece ao recarregar, o AC-01 falha. Se o servidor aceita dois horários sobrepostos, o AC-02 falha mesmo que o calendário pareça bonito.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Evidências que o QA procura"><table><caption>Verificações diferentes se complementam</caption><thead><tr><th scope="col">Verificação</th><th scope="col">Exemplo da reserva</th><th scope="col">O que comprova</th></tr></thead><tbody>
+          <tr><th scope="row">Regra isolada</th><td>Comparar intervalos sobrepostos e consecutivos.</td><td>O comportamento da regra nos casos testados.</td></tr>
+          <tr><th scope="row">Integração</th><td>Enviar duas solicitações concorrentes e examinar o armazenamento.</td><td>O comportamento das partes conectadas nessa condição.</td></tr>
+          <tr><th scope="row">Percurso real</th><td>Criar e editar pela interface, recarregar e verificar.</td><td>A ligação entre ação da pessoa, operação e resultado persistido.</td></tr>
+          <tr><th scope="row">Regressão</th><td>Rever criação depois de alterar o código de edição.</td><td>Que o comportamento relacionado continua funcionando nos casos exercitados.</td></tr>
+          <tr><th scope="row">Interface e acesso</th><td>Conferir erro visível, teclado, celular e quem pode editar.</td><td>Os critérios e riscos aplicáveis ao uso e à autorização.</td></tr>
+        </tbody></table></div>
+        <p>Em interfaces acessíveis por navegador, o protocolo usa um percurso reproduzível com <code>browser:snapshot</code> e <code>browser:run</code>, marcando os critérios e a fronteira real de comunicação quando aplicável. Outras tecnologias usam evidência adequada ao seu ambiente.</p>
+        <h3>O relatório que fica salvo</h3>
+        <p><code>.aioson/context/qa-report-{slug}.md</code> registra veredito, bloqueios, tabela <code>CAP | AC | Result | Evidence</code>, comandos e resultados, percurso real, fidelidade ao protótipo e verificações de engenharia pertinentes.</p>
+        <details><summary>Como é uma falha útil para o Dev?</summary><pre><code>Critério: AC-06 — conflito na alteração
+Reprodução: criar A das 10h às 11h e B das 11h às 12h;
+  tentar mover B para o intervalo das 10h às 11h.
+Esperado: recusar a alteração e preservar B das 11h às 12h.
+Observado: a operação recusa, mas B perde o horário anterior.
+Caminho suspeito: src/server/reservations.js
+Próxima verificação: repetir o caso e recarregar a agenda.</code></pre><p>Exemplo fictício. O relatório real inclui o comando ou percurso exato e suas evidências. A correção vai para Dev; depois, QA repete a reprodução e verifica a mudança.</p></details>
+        <p><strong>PASS</strong> indica que a entrega exigida foi comprovada pelas verificações realizadas. <strong>FAIL</strong> indica falha ou falta de evidência obrigatória. Ausência de teste não pode ser convertida em aprovação por confiança.</p>
+        <p>QA é o revisor final padrão. Tester, Pentester e Validator só entram quando habilitados e com motivo concreto. Eles ajudam com testes, segurança ou integridade de contrato; seus resultados voltam ao QA.</p>
+        <p>As checagens amplas são coordenadas pelo Gate D e podem ser reaproveitadas enquanto a implementação correspondente não muda. Isso evita executar a mesma suíte completa repetidamente sem informação nova.</p>
+        <p class="source-note">Base: <a href="../../template/.aioson/agents/qa.md">contrato do QA</a>, <a href="../../template/.aioson/docs/qa/browser-walkthrough.md">percurso no navegador</a>, <a href="../../src/commands/feature-trace.js">rastreabilidade</a> e <a href="../../src/commands/gate-check.js">checagem da entrega</a>.</p>
+      </section>
+      <section id="example" aria-labelledby="example-title">
+        <p class="section-number">11 / A mesma ideia de ponta a ponta</p>
+        <h2 id="example-title">Acompanhe a reserva de sala</h2>
+        <p>Este exemplo é sintético: não executa agentes, não chama modelos e não cria uma agenda. Ele mostra como o conhecimento e a responsabilidade mudam em cada etapa.</p>
+        <div class="journey">
+          <div class="saved-record"><span class="machine-label">Necessidade que acompanha o trabalho</span><p>“Quero reservar uma sala e poder ajustar o horário sem provocar conflitos.”</p></div>
+          <div class="journey-controls" role="group" aria-label="Escolher uma etapa do exemplo" hidden>
+            <button type="button" data-stage="briefing" aria-controls="stage-briefing" aria-pressed="true">1 · Briefing</button>
+            <button type="button" data-stage="refiner" aria-controls="stage-refiner" aria-pressed="false">2 · Refiner</button>
+            <button type="button" data-stage="product" aria-controls="stage-product" aria-pressed="false">3 · Product</button>
+            <button type="button" data-stage="sheldon" aria-controls="stage-sheldon" aria-pressed="false">4 · Sheldon</button>
+            <button type="button" data-stage="planner" aria-controls="stage-planner" aria-pressed="false">5 · Planner</button>
+            <button type="button" data-stage="dev" aria-controls="stage-dev" aria-pressed="false">6 · Dev</button>
+            <button type="button" data-stage="qa" aria-controls="stage-qa" aria-pressed="false">7 · QA</button>
           </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h3>Escreva o PRD com <code>/product</code></h3>
-          <p>@product conduz uma conversa estruturada — vision, problem, users, MVP must-have/should-have, out-of-scope, métricas. Saída: <code>prd-{slug}.md</code> + entrada em <code>features.md</code>.</p>
-          <p>Em <strong>profile creator</strong>, faz 1 pergunta por turno via <code>AskUserQuestion</code> com opções. Em <strong>profile developer</strong>, batcheia até 5 perguntas.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h3>Map de entidades com <code>/analyst</code></h3>
-          <p>SMALL+ entra aqui. @analyst extrai entidades, business rules, acceptance criteria, edge cases. Verifica integridade vs <code>discovery.md</code>. Gate A ✓ → Gate B em construção.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <h3>Implemente com <code>/dev</code></h3>
-          <p>@dev lê <code>dev-state.md</code> (auto-resume sem cold start), carrega só os arquivos do context_package, executa em slices validadas. Roda <code>memory:status</code> pra Living Memory bootstrap gate.</p>
-          <div class="terminal-card">
-            <div class="terminal-head"><div class="terminal-dots"><span></span><span></span><span></span></div><span class="terminal-title">/dev cold start</span></div>
-            <div class="terminal-body"><span class="term-line"><span class="term-prompt">$</span> /dev</span>
-<span class="term-line"><span class="term-out-key">resume</span>: feature=checkout · phase=2 · next=<span class="term-str">'Implement payment webhook'</span></span>
-<span class="term-line"><span class="term-out-key">context_package</span>: project.context.md, spec-checkout.md, implementation-plan-checkout.md</span>
-<span class="term-line"><span class="term-out-key">memory:status</span>: bootstrap 4/4 · brains 3 indexed</span></div>
+          <div class="stage-panels" aria-live="polite" aria-atomic="false">
+            <div class="stage-panel" id="stage-briefing" data-panel="briefing"><span class="machine-label">01 / Necessidade organizada</span><h3>O problema ganha contexto</h3><p><strong>Recebe:</strong> relatos de conflitos nas reservas por mensagem.</p><p><strong>Produz:</strong> briefing com problema, solução possível, fontes e perguntas sobre horários e edição.</p><p><strong>Passa adiante:</strong> o que já é conhecido e o que ainda precisa de definição.</p><a href="#briefing">Entender o Briefing →</a></div>
+            <div class="stage-panel" id="stage-refiner" data-panel="refiner"><span class="machine-label">02 / Decisões esclarecidas</span><h3>Os casos ambíguos ficam visíveis</h3><p><strong>Recebe:</strong> o briefing e suas fontes.</p><p><strong>Produz:</strong> revisão e protótipo. Neste exemplo, a pessoa aprova reservas consecutivas e edição apenas da própria reserva.</p><p><strong>Passa adiante:</strong> decisões aplicadas, briefing e protótipo aprovados. Uma sugestão recusada permanece fora da entrega.</p><a href="#refiner">Entender o Refiner →</a></div>
+            <div class="stage-panel" id="stage-product" data-panel="product"><span class="machine-label">03 / Resultado especificado</span><h3>A necessidade vira capacidades e critérios</h3><p><strong>Recebe:</strong> a preparação aprovada e o sistema existente.</p><p><strong>Produz:</strong> PRD com criar e alterar reservas, regras de conflito e critérios verificáveis.</p><p><strong>Passa adiante:</strong> a definição da entrega. Pagamentos e recorrência ficam explicitamente de fora.</p><a href="#product">Ver os critérios do exemplo →</a></div>
+            <div class="stage-panel" id="stage-sheldon" data-panel="sheldon"><span class="machine-label">04 / Especificação revisada</span><h3>O combinado é desafiado antes de virar código</h3><p><strong>Recebe:</strong> PRD, fontes e protótipo da funcionalidade.</p><p><strong>Verifica:</strong> concorrência, preservação do horário em caso de erro, autorização de edição e cobertura das promessas.</p><p><strong>Passa adiante:</strong> o mesmo PRD enriquecido, com revisão aprovada ligada à sua versão final.</p><a href="#sheldon">Entender a revisão de Sheldon →</a></div>
+            <div class="stage-panel" id="stage-planner" data-panel="planner"><span class="machine-label">05 / Construção organizada</span><h3>Duas etapas que já podem ser verificadas</h3><p><strong>Recebe:</strong> PRD revisado e repositório real.</p><p><strong>Produz:</strong> etapa 1 para criar e consultar reservas; etapa 2 para alterar. Cada uma tem arquivos, critérios, controles e comandos de verificação.</p><p><strong>Passa adiante:</strong> plano aprovado no Gate C. A divisão entre modelos só entra se escolhida e configurada.</p><a href="#planner">Ver o plano do exemplo →</a></div>
+            <div class="stage-panel" id="stage-dev" data-panel="dev"><span class="machine-label">06 / Implementação verificada pelo autor</span><h3>A ação passa a funcionar na aplicação</h3><p><strong>Recebe:</strong> os critérios, o plano e as referências necessárias.</p><p><strong>Produz:</strong> código da tela e do servidor integrado ao armazenamento, com testes das regras e dos fluxos.</p><p><strong>Passa adiante:</strong> implementação e evidências. O resultado ainda precisa da verificação independente de QA.</p><a href="#dev">Entender o trabalho do Dev →</a></div>
+            <div class="stage-panel" id="stage-qa" data-panel="qa"><span class="machine-label">07 / Entrega confrontada com o combinado</span><h3>A reserva precisa sobreviver ao teste real</h3><p><strong>Recebe:</strong> PRD, plano, protótipo e implementação.</p><p><strong>Verifica:</strong> cria, recarrega, tenta conflito, envia solicitações simultâneas e testa edição autorizada e recusada.</p><p><strong>Produz:</strong> relatório por critério. Se a edição apagar o horário anterior ao falhar, registra FAIL e uma reprodução para Dev. Após a correção, testa novamente antes de decidir.</p><a href="#qa">Entender as evidências do QA →</a></div>
           </div>
+          <p class="example-note">A seleção acima muda somente a explicação exibida. Sem JavaScript e na impressão, todas as etapas ficam disponíveis.</p>
         </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">5</div>
-        <div class="step-body">
-          <h3>Valide e feche com <code>/qa</code></h3>
-          <p>@qa faz risk-first review, testa critical paths, gera test plan, decide PASS/FAIL. Em MEDIUM com harness-contract, recomenda <code>/validator</code> antes do close. Após PASS, <code>feature:close</code> dispara distillation automática.</p>
+      </section>
+      <section id="gates" aria-labelledby="gates-title">
+        <p class="section-number">12 / Quando avançar, corrigir ou decidir</p>
+        <h2 id="gates-title">As aprovações protegem o combinado</h2>
+        <p><strong>Gate</strong> significa ponto de checagem. Ele verifica condições necessárias para avançar. Alguns pontos envolvem uma decisão da pessoa; outros são verificações técnicas executadas pelos agentes e pelo CLI.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Pontos de aprovação e verificação"><table><caption>Os pontos importantes no fluxo atual</caption><thead><tr><th scope="col">Momento</th><th scope="col">O que precisa estar resolvido</th></tr></thead><tbody>
+          <tr><th scope="row">Preparação para Product</th><td>Briefing e decisões revisados; aprovação da pessoa; protótipo aprovado quando aplicável.</td></tr>
+          <tr><th scope="row">Antes de Planner</th><td>PRD pronto, escopo definido e revisão atual de Sheldon sobre o conteúdo final.</td></tr>
+          <tr><th scope="row">Gate C · implementar</th><td>Plano aprovado, ligado ao PRD, com etapas, caminhos e verificações coerentes.</td></tr>
+          <tr><th scope="row">Gate D · aceitar a entrega</th><td>QA com evidência dos critérios obrigatórios e do funcionamento no caminho real.</td></tr>
+          <tr><th scope="row">Encerramento</th><td>Resultado final verificado e condições da política de fechamento atendidas.</td></tr>
+        </tbody></table></div>
+        <h3>Se QA encontra um problema</h3>
+        <p>Um defeito delimitado de implementação volta para Dev com a reprodução. Depois da correção, QA verifica novamente. O fluxo padrão limita esse retorno a uma rodada de correção e uma revisão final, salvo configuração explícita de outro limite finito.</p>
+        <p>Uma regra de produto ambígua ou uma promessa perdida volta para Product e Sheldon antes de retomar o planejamento. Se o limite de revisão for atingido, o processo registra o que falta e pede a decisão pertinente; não deve continuar repetindo a mesma tentativa indefinidamente.</p>
+        <h3>E se a ideia mudar no meio?</h3>
+        <p>Imagine acrescentar “cobrar pela sala” depois do plano. Isso muda o produto, as integrações e o risco. A mudança precisa entrar na especificação, passar pela revisão correspondente e atualizar o plano. Atualizar apenas o código deixaria os agentes trabalhando com combinados diferentes.</p>
+        <p>Um ajuste técnico compatível com os critérios existentes pode ser resolvido e registrado durante a execução. O que importa é distinguir uma escolha de implementação de uma mudança na promessa de produto.</p>
+        <details><summary>É possível concluir com pequenas pendências?</summary><p>Existe o resultado <code>accepted_with_followups</code>, condicionado à política explicitamente autorizada e à elegibilidade verificada pelo CLI. As pendências precisam ser conhecidas, de baixo impacto e registradas para acompanhamento.</p><p>Teste obrigatório ausente, risco desconhecido, fluxo principal quebrado ou problema material de segurança e dados não viram aprovação por serem chamados de “ajuste posterior”.</p></details>
+        <p>O fechamento automático depende de política explícita em <code>.aioson/closure-policy.json</code> e não ocorre sob <code>--step</code>. <strong>Encerrar uma funcionalidade não autoriza publicar o sistema.</strong> Publicação continua sendo uma ação com sua própria autorização.</p>
+        <p class="source-note">Base: <a href="../../template/.aioson/docs/gateway/workflow-runtime.md">workflow e fechamento</a>, <a href="../../src/commands/workflow-next.js">transições e correção</a> e <a href="../../template/.aioson/docs/delivery-followups.md">entrega com acompanhamentos</a>.</p>
+      </section>
+      <section id="automation" aria-labelledby="automation-title">
+        <p class="section-number">13 / Ferramentas que sustentam o processo</p>
+        <h2 id="automation-title">O CLI organiza; a memória dá continuidade</h2>
+        <p>O <strong>CLI</strong> é o programa do AIOSON usado no terminal. Ele ajuda a localizar contexto, inventariar fontes, conferir documentos, ligar versões, mapear critérios e acompanhar o workflow.</p>
+        <p>Essas operações executam código. Elas conseguem comprovar, por exemplo, que um arquivo existe, que seu conteúdo mudou ou que falta um critério na tabela. O agente ainda precisa julgar se a regra faz sentido e testar se o sistema a cumpre.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Comandos do AIOSON por finalidade"><table><caption>Não é preciso decorar; entenda para que servem</caption><thead><tr><th scope="col">Comandos</th><th scope="col">Papel no SDD</th></tr></thead><tbody>
+          <tr><th scope="row"><code>briefing:sources</code></th><td>Localizar e inventariar as fontes da ideia.</td></tr>
+          <tr><th scope="row"><code>context:brief</code></th><td>Indicar contexto obrigatório e referências relevantes à tarefa.</td></tr>
+          <tr><th scope="row"><code>verify:artifact</code></th><td>Conferir contratos e evidências suportados para um tipo de artefato.</td></tr>
+          <tr><th scope="row"><code>classify</code></th><td>Calcular a classificação conforme o escopo descrito e seus indicadores.</td></tr>
+          <tr><th scope="row"><code>plan:bind</code></th><td>Registrar a ligação do plano à versão conferida do PRD.</td></tr>
+          <tr><th scope="row"><code>feature:trace</code></th><td>Relacionar promessas, capacidades, critérios, etapas, arquivos e evidências.</td></tr>
+          <tr><th scope="row"><code>gate:check</code></th><td>Verificar as condições do ponto de avanço.</td></tr>
+          <tr><th scope="row"><code>workflow:mode</code> / <code>workflow:next</code></th><td>Resolver o modo efetivo e orientar a próxima etapa da funcionalidade vinculada.</td></tr>
+          <tr><th scope="row"><code>execution:offer</code> / <code>execution:status</code></th><td>Consultar disponibilidade da execução dividida e acompanhar uma execução configurada.</td></tr>
+          <tr><th scope="row"><code>browser:snapshot</code> / <code>browser:run</code></th><td>Observar uma página e executar um percurso reproduzível.</td></tr>
+        </tbody></table></div>
+        <details><summary>Consultas de exemplo para quem usa o terminal</summary><p>Execute na pasta do projeto. <code>.</code> significa a pasta atual. Substitua <code>room-booking</code> pelo identificador real. Consultar esses comandos não equivale a executar a funcionalidade do exemplo.</p><pre><code>aioson feature:current . --with-summary --json
+aioson workflow:status . --json
+aioson workflow:mode . --feature=room-booking --json
+aioson feature:trace . --feature=room-booking --json
+aioson execution:offer . --feature=room-booking --json
+aioson execution:status . --feature=room-booking --json
+aioson context:brief . --agent=dev --mode=executing --task="Implementar a reserva de sala" --paths=src/server/reservations.js</code></pre><p>Antes de pedir avanço ao workflow, o agente confere que a solicitação pertence à funcionalidade ativa e usa <code>workflow:next</code> com <code>--expect-feature=room-booking</code>. Um pedido novo não deve consumir o estado de outro trabalho.</p></details>
+        <h3>Os documentos do SDD também são memória</h3>
+        <p>O briefing preserva a origem da ideia. O PRD guarda o combinado. O plano guarda o caminho técnico. O relatório de QA guarda o que foi comprovado. Estado de execução e aprendizados ajudam a próxima sessão a continuar sem reconstruir toda a história.</p>
+        <p>Os arquivos persistem no projeto. Outro modelo com acesso e ferramentas adequadas pode consultar os registros pertinentes. Isso não transfere conhecimento para os parâmetros internos de um LLM: o agente recupera a memória e apresenta o contexto necessário ao modelo da sessão.</p>
+        <h3>É preciso ler todos os arquivos a cada etapa?</h3>
+        <p>Não. O agente usa o protocolo do seu papel, os cabeçalhos dos documentos, os índices e a seleção do CLI. O Planner precisa do PRD atual e das evidências de implementação; o QA precisa dos critérios e da entrega que vai verificar. Regras obrigatórias continuam sendo carregadas.</p>
+        <p>O CLI pode processar arquivos no computador sem enviá-los integralmente ao modelo. Os resultados e conteúdos apresentados ao LLM ocupam contexto e consomem tokens. A seleção reduz leituras irrelevantes, mas não garante economia fixa nem busca perfeita.</p>
+        <p>Veja o <a href="../memories/index.html#practice">tutorial de memória</a> para acompanhar como o agente salva, encontra, usa e atualiza esses registros.</p>
+        <p class="source-note">Base: <a href="../../src/cli.js">comandos registrados</a>, <a href="../../src/context-brief.js">seleção de contexto</a>, <a href="../../src/context-selector.js">metadados e busca</a> e <a href="../../template/.aioson/rules/disk-first-artifacts.md">registro dos artefatos</a>.</p>
+      </section>
+      <section id="glossary" aria-labelledby="glossary-title">
+        <p class="section-number">14 / Para usar sem decorar jargões</p>
+        <h2 id="glossary-title">Como começar uma conversa</h2>
+        <div class="request-list">
+          <div><h3>Se você tem uma ideia</h3><p>“@briefing Quero organizar reservas de uma sala. Ajude a entender o problema, as decisões e o que ainda precisamos descobrir.”</p></div>
+          <div><h3>Se o briefing já existe</h3><p>“@refiner Revise o briefing room-booking, confira suas fontes e mostre as lacunas e escolhas que preciso resolver.”</p></div>
+          <div><h3>Se a preparação já foi aprovada</h3><p>“@product Transforme o briefing aprovado em um PRD, com limites claros e critérios que possam ser testados.”</p></div>
+          <div><h3>Se você quer acompanhar a entrega</h3><p>“Mostre o que cada etapa entregou, onde está registrado e qual evidência falta para concluir.”</p></div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FINAL CTA -->
-  <section class="site-cta">
-    <div>
-      <span class="eyebrow">Próximo passo</span>
-      <h2 class="site-cta-heading">Pare de improvisar — siga o <span class="accent-cyan">pipeline</span>.</h2>
-      <p class="site-cta-text">SDD é o que faz o AIOSON diferente de "agente que tenta tudo direto". 29 agentes especializados, 4 gates, classificação automática, Living Memory persistente.</p>
-    </div>
-    <div class="site-cta-actions">
-      <a class="primary-button" href="./automation.html">Ver os scripts CLI →</a>
-      <a class="secondary-button" href="../index.html">Voltar ao hub</a>
-    </div>
-  </section>
-
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    <div class="site-footer-brand">
-      <div class="cmd-brand-title" style="font-size:1.05rem">AIOSON <span class="cmd-brand-version">v1.9.0</span></div>
-      <p>Framework Node.js para spec-driven development com agentes especializados, Living Memory e procedural brains.</p>
-    </div>
-    <div class="footer-col"><div class="footer-col-title">Tutorial</div><ul><li><a href="../index.html">Hub</a></li><li><a href="./automation.html">Automation</a></li><li><a href="../squads/index.html">Squads</a></li></ul></div>
-    <div class="footer-col"><div class="footer-col-title">Releases</div><ul><li><a href="../releases/1-9-0/index.html">v1.9.0</a></li></ul></div>
-    <div class="footer-col"><div class="footer-col-title">Comunidade</div><ul><li><a href="https://github.com/jaimevalasek/aioson" target="_blank" rel="noopener">GitHub</a></li><li><a href="https://www.npmjs.com/package/@jaimevalasek/aioson" target="_blank" rel="noopener">npm</a></li></ul></div>
-    <div class="site-footer-base" style="grid-column:1 / -1">
-      <div>29 agentes · 4 gates · MICRO/SMALL/MEDIUM · Living Memory</div>
-      <div>AIOSON · inception mode</div>
-    </div>
-  </footer>
-
+        <p>Os exemplos pressupõem um projeto com AIOSON configurado e contexto válido. A ativação pode usar <code>@agente</code> ou <code>/agente</code>, conforme o cliente. Não é preciso ativar todos de uma vez: o fluxo e o modo efetivo orientam a continuidade.</p>
+        <h3>Glossário de bolso</h3>
+        <dl class="glossary">
+          <dt>SDD</dt><dd>Desenvolver a partir de uma especificação verificável.</dd>
+          <dt>Feature</dt><dd>Uma funcionalidade ou entrega com escopo identificado.</dd>
+          <dt>Briefing</dt><dd>O entendimento inicial do problema e das possibilidades.</dd>
+          <dt>PRD</dt><dd>Documento que define o resultado de produto a entregar.</dd>
+          <dt>Escopo</dt><dd>O que entra na entrega e o que fica de fora.</dd>
+          <dt>PROM / CAP / AC</dt><dd>Etiquetas para promessa de origem, capacidade e critério de aceitação.</dd>
+          <dt>Etapa vertical</dt><dd>Parte do trabalho que atravessa as camadas necessárias até produzir um resultado verificável.</dd>
+          <dt>Gate</dt><dd>Ponto de checagem das condições para avançar.</dd>
+          <dt>Hash</dt><dd>Impressão digital calculada a partir do conteúdo, usada para detectar mudanças.</dd>
+          <dt>Smoke test</dt><dd>Checagem curta do funcionamento essencial pelo caminho real.</dd>
+          <dt>Regressão</dt><dd>Algo que funcionava deixar de funcionar depois de uma mudança.</dd>
+          <dt>Lane / unidade / onda</dt><dd>Frente responsável / tarefa delimitada de execução / grupo de unidades que podem rodar juntas.</dd>
+          <dt>Autopilot</dt><dd>Avanço entre agentes conforme a política, até uma decisão ou bloqueio que exija parar.</dd>
+          <dt>Handoff</dt><dd>Passagem de responsabilidade com registros suficientes para o próximo agente continuar.</dd>
+        </dl>
+        <h3>Dúvidas comuns</h3>
+        <details><summary>SDD é escrever muita documentação?</summary><p>O foco é tornar a entrega clara e verificável. O fluxo atual tem três documentos centrais: PRD, plano de implementação e relatório de QA. Preparação, protótipo, registros e contratos técnicos entram conforme a necessidade. A profundidade acompanha o trabalho.</p></details>
+        <details><summary>Planner decide o que o produto deve fazer?</summary><p>Product define o resultado; Sheldon o revisa. Planner define como implementá-lo no projeto real. Uma decisão técnica que muda o produto precisa voltar à autoridade de produto.</p></details>
+        <details><summary>O QA precisa ser outro modelo?</summary><p>O papel exige verificação independente da conclusão do Dev. A escolha de host e modelo depende da configuração; certas execuções orquestradas podem exigir um par diferente para QA. Trocar o nome do agente, sem executar verificações próprias, não prova independência.</p></details>
+        <details><summary>Um protótipo bonito já é a aplicação?</summary><p>Ele comunica e permite testar a interação proposta. A entrega ainda precisa implementar as operações, dados e integrações exigidas e demonstrar que funcionam no sistema real.</p></details>
+        <details><summary>Vários agentes sempre tornam o trabalho mais rápido e barato?</summary><p>Não. A divisão acrescenta preparação, contextos, coordenação e integração. Pode ajudar quando há partes independentes e volume suficiente. Tempo e custo precisam ser medidos no trabalho real.</p></details>
+        <details><summary>Passar no QA significa que qualquer situação foi testada?</summary><p>Significa que os critérios obrigatórios e riscos aplicáveis foram verificados com a evidência registrada. O relatório deve explicitar limites. Não é uma garantia de ausência de todo defeito possível.</p></details>
+        <details><summary>Onde foi parar o tutorial antigo de automação?</summary><p>Seu conteúdo útil foi reorganizado no <a href="#automation">capítulo de CLI, memória e tokens</a> e no <a href="#execution-modes">capítulo de formas de implementação</a>. A URL antiga leva a esta edição. Números de economia sem medição e a cadeia antiga de documentos foram retirados da orientação atual.</p></details>
+      </section>
+      <section id="sources" aria-labelledby="sources-title">
+        <p class="section-number">15 / Uma fotografia do sistema atual</p>
+        <h2 id="sources-title">Data, versão e fontes desta edição</h2>
+        <div class="edition-card"><dl>
+          <dt>Data da análise</dt><dd><time datetime="2026-09-11">11 de setembro de 2026</time></dd>
+          <dt>Versão do AIOSON</dt><dd>1.66.0, conforme o package.json do repositório analisado.</dd>
+          <dt>Base examinada</dt><dd>Checkout local C:/dev/aioson, HEAD a39dffe1, com alterações locais preexistentes. Esta edição descreve essa base; não afirma equivalência automática com uma publicação no npm.</dd>
+          <dt>Identidade visual</dt><dd>Tinta &amp; Ouro / Porcelana. Mesmos tokens e linguagem de leitura do tutorial memories, a partir do Design-DNA fornecido pelo usuário.</dd>
+          <dt>Natureza dos exemplos</dt><dd>Exemplos sintéticos para ensino. Não foi implementado um sistema de reservas nem emitido um veredito real de QA sobre ele.</dd>
+        </dl></div>
+        <h3>Como as informações foram conferidas</h3>
+        <p>Foram comparados o tutorial anterior, as instruções atuais dos agentes, os contratos SDD e os mecanismos locais de workflow, plano, execução e verificação. As fontes históricas ajudaram a localizar assuntos; o funcionamento atual foi descrito a partir dos contratos e do código vigente.</p>
+        <ul class="source-list">
+          <li><a href="../../src/workflow-profile.js">Fluxo padrão no código</a> e <a href="../../template/.aioson/skills/process/aioson-spec-driven/SKILL.md">skill SDD</a>.</li>
+          <li><a href="../../template/.aioson/agents/briefing.md">Briefing</a>, <a href="../../template/.aioson/agents/refiner.md">Refiner</a>, <a href="../../template/.aioson/agents/product.md">Product</a> e <a href="../../template/.aioson/agents/sheldon.md">Sheldon</a>.</li>
+          <li><a href="../../template/.aioson/agents/planner.md">Planner</a>, <a href="../../template/.aioson/agents/dev.md">Dev</a> e <a href="../../template/.aioson/agents/qa.md">QA</a>.</li>
+          <li><a href="../../src/commands/implementation-plan.js">Plano e ligação de versão</a>, <a href="../../src/commands/gate-check.js">gates</a> e <a href="../../src/commands/feature-trace.js">rastreabilidade</a>.</li>
+          <li><a href="../../src/commands/execution.js">Execução orquestrada</a>, <a href="../../src/agent-execution/execution-plan.js">compilação das unidades</a> e <a href="../../src/agent-execution/execution-run.js">motor de execução</a>.</li>
+          <li><a href="../memories/DESIGN-DNA.md">Design-DNA aplicado</a> e <a href="../../package.json">versão local</a>.</li>
+        </ul>
+        <p class="source-note">Os links de código são relativos ao repositório. Se somente a pasta tutorials for publicada, as fontes fora dela precisam ser disponibilizadas à parte. A leitura do guia e seu exemplo não dependem de serviços externos.</p>
+        <div class="signature"><span class="machine-label">Análise e redação</span><strong>GPT-6 Astra</strong><p>11/09/2026 · AIOSON 1.66.0<br>Explicação em linguagem simples, baseada nos arquivos e mecanismos disponíveis nesta edição.</p></div>
+      </section>
+    </article>
+  </div>
 </main>
-
-<!-- DIALOGS -->
-
-<dialog class="popover" id="dlg-living">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-4); border-color:color-mix(in srgb, var(--accent-4) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · 5 phases shipped</div><div class="dlg-title">Living Memory</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Antes do v1.9.0, agentes começavam toda sessão lendo 4-6 arquivos de contexto pra entender onde a coisa parou. Living Memory cortou isso: <strong>4 arquivos de bootstrap auto-sincronizados</strong> + <strong>reflect engine</strong> que classifica diffs pós-<code>agent:done</code> + <strong>FTS5 search</strong> sobre rules/learnings.</p>
-
-    <h4>Os 4 arquivos de bootstrap</h4>
-    <ul>
-      <li><code>what-is.md</code> — identidade do sistema e usuários</li>
-      <li><code>what-it-does.md</code> — capabilities ativas e improvement focus</li>
-      <li><code>how-it-works.md</code> — fluxos e contratos internos</li>
-      <li><code>current-state.md</code> — o que o sistema já tem (append-only)</li>
-    </ul>
-
-    <h4>Reflect engine</h4>
-    <p>Depois de <code>agent:done</code> ou <code>workflow:next --complete</code>, o engine analisa o git diff e classifica se o impact justifica atualizar o bootstrap. Se sim, escreve um manifest em <code>.aioson/runtime/reflect-prompt.json</code>. O agente da próxima sessão lê o manifest, edita os bootstraps listados, e commita via <code>memory:reflect-commit</code> (que valida frontmatter, snapshot hash, allowed paths).</p>
-
-    <h4>FTS5 search</h4>
-    <p><code>memory:search "harness gate"</code> retorna matches em <code>content_items</code> + <code>learnings</code> com ranking BM25. Phrase-query sanitization default + 500-char cap. Saída JSON pronta pra dashboard ou pro próprio agente consumir.</p>
-
-    <h4>Doctor checks novos</h4>
-    <p><code>bootstrap_coverage</code> · <code>rule_staleness</code> · <code>learning_orphans</code> · <code>distillation_lag</code> · <code>permissions_in_sync</code> · <code>jargon_leak_detection</code>. Todos warning-level, não bloqueiam, mas surfaceiam gaps. <code>--fix</code> auto-corrige permissions e gaps estruturais.</p>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-brains-c">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><path d="M5.5 6.5l4 4M18.5 6.5l-4 4M5.5 17.5l4-4M18.5 17.5l-4-4"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · procedural memory</div><div class="dlg-title">Brains</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Brains são <strong>memória procedural dos agentes</strong> — padrões que ele recorre ao implementar/decidir. Diferente de rules (boas práticas amplas), brains armazenam recipes específicas com <strong>quality score</strong>. Agente só carrega o que faz match com tags da task atual, com q ≥ 4 por default.</p>
-
-    <h4>Brains atuais (3 · 25 nodes)</h4>
-    <ul>
-      <li><code>site-forge/visual-patterns</code> — 14 nodes · CSS, animations, cloning</li>
-      <li><code>dev/patterns</code> — 5 nodes · security, shell, git, editing</li>
-      <li><code>sheldon/architecture-decisions</code> — 6 nodes · sandbox, parity, sizing</li>
-    </ul>
-
-    <h4>Loading lazy via tags</h4>
-    <p><code>aioson brain:query . --tags=security,shell --min-quality=4 --format=compact</code> retorna só os nodes que casam. Saída: compact (linha por node), json (estruturado), ids (só ids).</p>
-
-    <h4>Estrutura de um node</h4>
-    <ul>
-      <li><code>id</code> · slug curto</li>
-      <li><code>tags</code> · termos pra discovery</li>
-      <li><code>q</code> · quality score 1-5 (filtros usam ≥ 4)</li>
-      <li><code>v</code> · variante: PREFER ou AVOID (anti-pattern)</li>
-      <li><code>desc</code> · uma linha</li>
-      <li><code>see</code> · cross-refs pra outros nodes</li>
-    </ul>
-
-    <h4>Auto-update</h4>
-    <p>Quando um agente identifica um novo padrão reutilizável, ele acrescenta um node ao brain com q honesto. <code>_index.json</code> é atualizado com novo count + updated date. Brains evoluem com cada feature.</p>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-autonomy">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent-3); border-color:color-mix(in srgb, var(--accent-3) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · autonomy-protocol.json v1.1</div><div class="dlg-title">Autonomy 3 tiers</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Contrato de permissões em 3 tiers materializado pelo <code>permissions-generator</code> em arquivos nativos de cada harness (Claude Code, Codex, Gemini, OpenCode). <strong>Tier3 é hard-rejected</strong> mesmo se um tool listar — ações irreversíveis sempre exigem mão humana.</p>
-
-    <h4>Tier 1 — silent</h4>
-    <p>Leituras + telemetria. Não requer notificação ao usuário. Exemplos: <code>preflight</code>, <code>memory:status</code>, <code>brain:query</code>, <code>context:load</code>, <code>memory:search</code>.</p>
-
-    <h4>Tier 2 — notified</h4>
-    <p>Writes em memória (rules/brains/learnings). Notifica o usuário via <code>aioson notify --level=warn</code> antes de mutar. Exemplos: <code>memory:archive</code>, <code>memory:restore</code>, <code>memory:reflect-commit</code>.</p>
-
-    <h4>Tier 3 — blocking</h4>
-    <p>Irreversível. Hard-rejected pelo harness regardless of allow-list. Exige humano explícito. Exemplos: <code>git push</code>, <code>npm publish</code>, <code>cloud:publish:*</code>, <code>genome:publish</code>, <code>skill:publish</code>, <code>squad:publish</code>.</p>
-
-    <h4>Como funciona o materializer</h4>
-    <p>No install/update, <code>src/permissions-generator.js</code> lê <code>autonomy-protocol.json</code> e gera arquivos nativos:</p>
-    <ul>
-      <li><code>.claude/settings.json</code></li>
-      <li><code>.codex/permissions.json</code></li>
-      <li><code>.gemini/permissions.toml</code></li>
-      <li><code>.opencode/permissions.yaml</code></li>
-    </ul>
-    <p>Backups em <code>.aioson/backups/{ts}/permissions/</code>. Doctor <code>permissions_in_sync</code> detecta drift e <code>--fix</code> regenera.</p>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-profile">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:var(--accent); border-color:color-mix(in srgb, var(--accent) 28%, var(--border));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">v1.9.0 · decision-presentation skill</div><div class="dlg-title">Profile creator/developer/team</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Em <code>project.context.md</code>, o campo <code>profile</code> define como agentes interagem. Default é <code>creator</code> (mais seguro pra não-devs). Devs trocam manualmente pra <code>developer</code>.</p>
-
-    <h4>creator (default)</h4>
-    <ul>
-      <li><strong>1 pergunta por turn</strong> via <code>AskUserQuestion</code> com 2-4 opções estruturadas</li>
-      <li><strong>Marcador <code>(Recomendado)</code></strong> obrigatório na primeira opção, com plain-language why</li>
-      <li><strong>Jargão traduzido</strong> via dicionário (MICRO → "feature pequena", Gate A → "checkpoint de requisitos", etc)</li>
-      <li><strong>"Pausar / quero pensar"</strong> sempre disponível como última opção</li>
-      <li>Sem free-form questions abertas (escape via "Other / Conte com suas palavras")</li>
-    </ul>
-
-    <h4>developer</h4>
-    <ul>
-      <li>Cadência permissiva: até 5 numbered questions por batch</li>
-      <li>Jargão permitido sem tradução</li>
-      <li>Marker <code>(Recomendado)</code> opcional</li>
-    </ul>
-
-    <h4>team</h4>
-    <ul>
-      <li>Cadência igual a developer no fluxo operacional</li>
-      <li>Emite executive summary em <code>agent:done</code> usando o dicionário (operadores leem jargão; stakeholders leem tradução)</li>
-    </ul>
-
-    <h4>Onde se aplica</h4>
-    <p>Agentes com a skill <code>decision-presentation</code> wired: <code>@neo</code>, <code>@setup</code>, <code>@product</code>, <code>@dev</code>, <code>@deyvin</code>. Doctor check <code>jargon_leak_detection</code> detecta vazamento de termos não traduzidos em projetos creator.</p>
-
-    <h4>Migração</h4>
-    <p>Projetos legacy com <code>profile: beginner</code> migram automaticamente pra <code>creator</code> no próximo <code>aioson update</code>. Notify visual surfaceia a mudança.</p>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-dossier-c">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:#ff6ba4; border-color:rgba(255,107,164,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h6"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">v1.8.0+ · feature-level memory</div><div class="dlg-title">Dossier por feature</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Cada feature SMALL ou MEDIUM ganha <code>.aioson/context/features/{slug}/dossier.md</code> — uma <strong>memória dedicada da feature</strong>, separada da memória global do projeto. Auto-init silencioso após PRD pra classificações SMALL+.</p>
-
-    <h4>Seções padrão do dossier</h4>
-    <ul>
-      <li><strong>Why</strong> — motivação, problema, stakeholders</li>
-      <li><strong>What</strong> — escopo MVP, must-have, out-of-scope</li>
-      <li><strong>Code Map</strong> — paths tocados em cada slice</li>
-      <li><strong>Agent Trail</strong> — pass por pass (cada agente adiciona finding)</li>
-      <li><strong>Research</strong> — items de <code>researchs/</code> consumidos</li>
-      <li><strong>Rules linked</strong> — rules de <code>.aioson/rules/</code> consultadas</li>
-    </ul>
-
-    <h4>Para que serve</h4>
-    <ul>
-      <li><strong>Cold start barato</strong> — @dev/@deyvin leem dossier antes do PRD; entendem contexto em segundos</li>
-      <li><strong>Drift detection</strong> — antes de modificar arquivo, checam se está em code_map e se mudança diverge do plan</li>
-      <li><strong>Audit trail</strong> — quem decidiu o que, quando, com que razão</li>
-      <li><strong>Compactação</strong> — <code>dossier:compact</code> resume entradas antigas mantendo decisões importantes</li>
-    </ul>
-
-    <h4>Auto-archive em feature:close</h4>
-    <p>Quando <code>feature:close --verdict=PASS</code> roda, o dossier é arquivado em <code>.aioson/context/done/{slug}/dossier/</code> junto com PRD, spec, requirements. Fica recuperável mas não polui o contexto ativo.</p>
-  </div>
-</dialog>
-
-<dialog class="popover" id="dlg-harness-c">
-  <div class="dlg-head">
-    <span class="cat-icon" style="color:#22d3ee; border-color:rgba(34,211,238,.28);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg></span>
-    <div class="dlg-meta"><div class="dlg-eyebrow">MEDIUM only · Gate D enforcement</div><div class="dlg-title">Harness contracts</div></div>
-    <button class="dlg-close" type="button" data-dialog-close aria-label="Fechar"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-  </div>
-  <div class="dlg-body">
-    <p class="dlg-intro">Para features MEDIUM, Gate D vira enforcement programático. <strong>@sheldon</strong> gera <code>.aioson/plans/{slug}/harness-contract.json</code> com <strong>binary criteria</strong> extraídas das ACs do PRD. <strong>@validator</strong> roda headless e avalia cada criterion. <strong>Circuit breaker</strong> bloqueia <code>feature:close</code> até passar.</p>
-
-    <h4>Quando ativa</h4>
-    <p>Só em MEDIUM (RF-05 do @sheldon). MICRO e SMALL não geram harness-contract — gates A·B·C·D continuam por inspeção semântica.</p>
-
-    <h4>Anatomia do contract</h4>
-    <ul>
-      <li><code>criteria[]</code> — array de checks binários (id, description, evaluator)</li>
-      <li><code>circuit_state</code> — CLOSED (default), HALF_OPEN, OPEN</li>
-      <li><code>error_streak_limit</code> — quantos fails consecutivos abrem o circuito</li>
-      <li><code>ready_for_done_gate</code> — flag que <code>feature:close</code> consulta</li>
-    </ul>
-
-    <h4>Fluxo</h4>
-    <ol style="padding-left:20px; margin:0 0 14px; color:var(--text-soft); font-size:.84rem; line-height:1.65;">
-      <li>@dev termina implementação → <code>progress.status = 'waiting_validation'</code></li>
-      <li><code>workflow:next</code> auto-routes pra @validator (detour temporário)</li>
-      <li>@validator avalia cada criterion, escreve <code>last-validator-output.json</code></li>
-      <li><code>harness:apply-validation</code> consome output, atualiza <code>progress.json</code></li>
-      <li>Se todos passam: <code>ready_for_done_gate = true</code></li>
-      <li>Se falha: <code>last_error</code> capturado, circuit breaker incrementa</li>
-      <li><code>feature:close --verdict=PASS</code> verifica <code>ready_for_done_gate</code> antes de fechar</li>
-    </ol>
-
-    <h4>Bypass</h4>
-    <p><code>feature:close --force</code> bypassa com audit trail entry "BYPASS" registrada. <code>--verdict=FAIL</code> skipa o gate inteiro (QA já rejeitou).</p>
-  </div>
-</dialog>
-
-<script>
-  // Theme toggle
-  (function () {
-    const root = document.documentElement;
-    const toggle = document.querySelector('[data-theme-toggle]');
-    if (!toggle) return;
-    try {
-      const saved = localStorage.getItem('aioson-theme');
-      if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
-    } catch (e) {}
-    const sync = () => {
-      const t = root.getAttribute('data-theme') || 'dark';
-      const moon = toggle.querySelector('.cmd-theme-moon');
-      const sun  = toggle.querySelector('.cmd-theme-sun');
-      if (moon) moon.style.display = (t === 'dark') ? 'none' : '';
-      if (sun)  sun.style.display  = (t === 'dark') ? '' : 'none';
-    };
-    sync();
-    toggle.addEventListener('click', () => {
-      const current = root.getAttribute('data-theme') || 'dark';
-      const next = current === 'light' ? 'dark' : 'light';
-      root.setAttribute('data-theme', next);
-      try { localStorage.setItem('aioson-theme', next); } catch (e) {}
-      sync();
-    });
-  })();
-
-  // Sticky scroll feedback
-  (function () {
-    const wrap = document.getElementById('dock-wrap');
-    if (!wrap) return;
-    const update = () => {
-      if (window.scrollY > 8) wrap.classList.add('is-scrolled');
-      else wrap.classList.remove('is-scrolled');
-    };
-    update();
-    window.addEventListener('scroll', update, { passive: true });
-  })();
-
-  // Dialogs
-  (function () {
-    document.querySelectorAll('[data-dialog]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.dialog;
-        const dlg = document.getElementById(id);
-        if (!dlg) return;
-        if (typeof dlg.showModal === 'function') dlg.showModal();
-        else dlg.setAttribute('open', '');
-        document.body.style.overflow = 'hidden';
-      });
-    });
-    document.querySelectorAll('dialog.popover').forEach((dlg) => {
-      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-      dlg.addEventListener('close', () => { document.body.style.overflow = ''; });
-      dlg.querySelectorAll('[data-dialog-close]').forEach((btn) => { btn.addEventListener('click', () => dlg.close()); });
-    });
-  })();
-
-  // Copy buttons (if any added later)
-  (function () {
-    if (!navigator.clipboard) return;
-    document.querySelectorAll('[data-copy]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const text = (btn.dataset.copy || '').replace(/&#10;/g, '\n');
-        navigator.clipboard.writeText(text).then(() => {
-          const original = btn.textContent;
-          btn.textContent = 'copiado ✓';
-          btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
-        });
-      });
-    });
-  })();
-</script>
-
+<footer class="site-footer"><div class="staff" aria-hidden="true"></div><p>AIOSON · SDD · Da ideia à entrega verificada.</p><p>Os registros explicam o combinado. A implementação e os testes demonstram o resultado.</p><a href="../index.html">← Todos os tutoriais</a> · <a href="../memories/index.html">Memória do AIOSON →</a></footer>
 </body>
 </html>

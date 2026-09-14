@@ -242,3 +242,121 @@ test('Gate D rejects a PASS label without AC test evidence', async () => {
   assert.equal(result.result, 'BLOCKED');
   assert.ok(result.missing.some((item) => item.includes('AC test audit')));
 });
+
+async function seedConditional(root) {
+  await seed(root, { status: 'approved' });
+  await write(root, 'src/demo.js', 'module.exports = () => true;\n');
+  await write(root, 'tests/demo.test.js', "const test=require('node:test'); const assert=require('node:assert/strict'); test('AC-demo-01',()=>assert.equal(require('../src/demo')(),true));\n");
+  const prdPath = path.join(root, '.aioson/context/prd-demo.md');
+  await fs.appendFile(prdPath, '| AC-demo-02 | CAP-demo-01 | Caption uses current terminology | visual check |\n');
+  await approveAndSealSheldonReview(root);
+  const report = qaExecutionReport({ verdict: 'accepted_with_followups' }).replace('\n\n## Commands executed', '\n| CAP-demo-01 | AC-demo-02 | FAIL | Inspected saved result: caption uses legacy terminology |\n\n## Commands executed');
+  await write(root, '.aioson/context/qa-report-demo.md', report);
+  await write(root, '.aioson/context/features.md', '| demo | in_progress | 2026-09-08 | active |\n');
+  await write(root, '.aioson/closure-policy.json', JSON.stringify({ schema_version: 1, enabled: true, auto_close: true, allow_secondary_ac_deferral: true, authorized_by: 'test-owner' }));
+  const input = { schema_version: 1, findings: [{ id: 'caption', severity: 'low', kind: 'wording', verified: true,
+    risk: { primary_flow: false, data_loss: false, security: false, availability: false },
+    summary: 'Correct result caption', reproduction: 'Save a value and inspect the caption.', expected: 'Caption uses approved terminology.',
+    observed: 'Caption uses legacy terminology.', verification: 'node --test tests/demo.test.js and inspect caption',
+    rationale: 'Values save and load correctly; caption is readable.', files: ['src/demo.js'], ac_ids: ['AC-demo-02'] }] };
+  await require('../src/lib/delivery-followups').prepareFollowups(root, 'demo', input);
+  return { report, input };
+}
+
+test('conditional Gate D preserves QA FAIL, closes, archives and exposes one pending plan', async t => {
+  const root = await tmp(); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const { report } = await seedConditional(root);
+  const check = await runGateCheck({ args: [root], options: { feature: 'demo', gate: 'D', json: true }, logger });
+  assert.equal(check.ok, true, JSON.stringify(check.missing));
+  assert.equal(check.disposition, 'accepted_with_followups');
+  const approved = await runGateApprove({ args: [root], options: { feature: 'demo', gate: 'D', json: true }, logger });
+  assert.equal(approved.ok, true, JSON.stringify(approved));
+  assert.equal(await fs.readFile(path.join(root, '.aioson/context/qa-report-demo.md'), 'utf8'), report);
+  const { runFeatureClose } = require('../src/commands/feature-close');
+  assert.equal((await runFeatureClose({ args: [root], options: { feature: 'demo', verdict: 'PASS', force: true, json: true }, logger })).reason, 'closure_verdict_mismatch');
+  const closed = await runFeatureClose({ args: [root], options: { feature: 'demo', verdict: 'ACCEPTED_WITH_FOLLOWUPS', json: true }, logger });
+  assert.equal(closed.ok, true, JSON.stringify(closed));
+  assert.equal(closed.followup_plans.length, 1);
+  assert.equal(await fs.readFile(path.join(root, '.aioson/context/done/demo/qa-report-demo.md'), 'utf8'), report);
+  assert.match(await fs.readFile(path.join(root, '.aioson/context/features.md'), 'utf8'), /done/);
+  const { runFeatureClosure } = require('../src/commands/feature-closure');
+  const pending = await runFeatureClosure({ args: [root], options: { list: true, json: true }, logger });
+  assert.equal(pending.plans.length, 1);
+  assert.equal(pending.plans[0].status, 'pending');
+  const evaluation = await require('../src/lib/delivery-followups').evaluateFollowups(root, 'demo');
+  assert.equal(evaluation.eligible, true, JSON.stringify(evaluation));
+  await require('../src/lib/delivery-followups').persistFollowupPlans(root, 'demo', evaluation);
+  assert.equal((await runFeatureClosure({ args: [root], options: { list: true }, logger })).plans.length, 1);
+  const repeated = await runFeatureClose({ args: [root], options: { feature: 'demo', verdict: 'ACCEPTED_WITH_FOLLOWUPS', json: true }, logger });
+  assert.equal(repeated.ok, true, JSON.stringify(repeated));
+  assert.equal(repeated.followup_plans.length, 1);
+});
+
+test('conditional close cannot lose debt on write conflict or bypass security', async t => {
+  const root = await tmp(); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await seedConditional(root);
+  await write(root, '.aioson/context/simple-plans/demo-followup-caption.md', '# Owner work');
+  const { runFeatureClose } = require('../src/commands/feature-close');
+  const result = await runFeatureClose({ args: [root], options: { feature: 'demo', verdict: 'ACCEPTED_WITH_FOLLOWUPS', json: true }, logger });
+  assert.equal(result.reason, 'followup_persistence_failed', JSON.stringify(result));
+  assert.match(await fs.readFile(path.join(root, '.aioson/context/features.md'), 'utf8'), /in_progress/);
+  await write(root, '.aioson/context/security-findings-demo.json', JSON.stringify({ findings: [{ status: 'open', severity: 'critical', recommended_gate_status: 'block' }], review_contract: { scope_mode: 'focused', evidence_policy: 'verified', findings_artifact_path: '.aioson/context/security-findings-demo.json' } }));
+  const blocked = await runGateCheck({ args: [root], options: { feature: 'demo', gate: 'D', json: true }, logger });
+  assert.equal(blocked.ok, false);
+  assert.match(JSON.stringify(blocked.missing), /security|closure_followups/);
+});
+
+test('automatic close honors step and policy, and only runs after final QA', async t => {
+  const root = await tmp(); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await seedConditional(root);
+  const { closeAfterQa } = require('../src/lib/delivery-lifecycle');
+  const completion = { completedStage: 'qa', featureSlug: 'demo', nextAgent: null };
+  assert.equal(await closeAfterQa(root, { ...completion, step: true }, logger), null);
+  assert.equal(await closeAfterQa(root, { ...completion, completedStage: 'dev' }, logger), null);
+  assert.equal(await closeAfterQa(root, { ...completion, nextAgent: 'dev' }, logger), null);
+  const result = await closeAfterQa(root, completion, logger);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.attempted, true);
+  assert.equal(result.followup_plans.length, 1);
+});
+
+
+test('workflow final QA performs authorized closure after retiring workflow state', async t => {
+  const root = await tmp(); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await seedConditional(root);
+  await write(root, '.aioson/context/project.context.md', '---\nproject_name: demo\nproject_type: web_app\nprofile: developer\nframework: Node.js\nframework_installed: true\nclassification: SMALL\ninteraction_language: en\nconversation_language: en\naioson_version: 1.65.0\n---\n');
+  await write(root, '.aioson/context/features.md', '| slug | status | started | completed |\n|---|---|---|---|\n| demo | in_progress | 2026-09-08 | |\n');
+  await write(root, '.aioson/context/workflow.state.json', JSON.stringify({ version: 1, mode: 'feature', classification: 'SMALL', sequence: ['product', 'sheldon', 'planner', 'dev', 'qa'], current: 'qa', next: null, completed: ['product', 'sheldon', 'planner', 'dev'], skipped: [], featureSlug: 'demo', detour: null, updatedAt: new Date().toISOString() }));
+  const { t: translate } = require('../src/i18n').createTranslator('en');
+  const result = await require('../src/commands/workflow-next').runWorkflowNext({ args: [root], options: { tool: 'codex', complete: 'qa', 'expect-feature': 'demo' }, logger, t: translate });
+  assert.equal(result.completedStage, 'qa', JSON.stringify(result));
+  assert.equal(result.closure?.ok, true, JSON.stringify(result.closure));
+  await assert.rejects(fs.access(path.join(root, '.aioson/context/workflow.state.json')), { code: 'ENOENT' });
+  assert.equal(result.closure.followup_plans.length, 1);
+});
+
+
+test('Gate C enforces v2 AC phases and content binding without retroactive legacy rejection', async t => {
+  const root = await tmp(); t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await seed(root);
+  const planPath = path.join(root, '.aioson/context/implementation-plan-demo.md');
+  let body = plan().replace('status: pending', 'status: pending\nplan_contract: 2') + '\n## Phase 1 — Deliver saved result\n- CAP/AC: CAP-demo-01, AC-demo-01\n- Verification: node --test tests/demo.test.js\n- Done when: Saved value appears through the real application.\n';
+  await fs.writeFile(planPath, body);
+  const { handleBind } = require('../src/commands/implementation-plan');
+  assert.equal((await handleBind(root, 'demo', { logger })).ok, true);
+  const options = { feature: 'demo', gate: 'C', json: true };
+  let result = await runGateCheck({ args: [root], options, logger });
+  assert.equal(result.ok, true, JSON.stringify(result.missing));
+  body = await fs.readFile(planPath, 'utf8');
+  await fs.writeFile(planPath, body.replace('AC-demo-01', 'AC-phantom'));
+  result = await runGateCheck({ args: [root], options, logger });
+  assert.equal(result.ok, false);
+  assert.match(result.missing.join(' '), /plan_ac_unknown/);
+  assert.match(result.missing.join(' '), /plan_ac_uncovered/);
+  await fs.writeFile(planPath, body);
+  await fs.appendFile(path.join(root, '.aioson/context/prd-demo.md'), '\nOwner changed the result caption.\n');
+  await approveAndSealSheldonReview(root);
+  result = await runGateCheck({ args: [root], options, logger });
+  assert.equal(result.ok, false);
+  assert.match(result.missing.join(' '), /plan_source_stale/);
+});

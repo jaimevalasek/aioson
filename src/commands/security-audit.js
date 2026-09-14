@@ -16,7 +16,7 @@ const { resolveTargetDir } = require('../lib/project-root');
 const VERSION = '1.0.0';
 const GENERATOR = `aioson security:audit@${VERSION}`;
 
-const REQUIRED_ARTIFACT_KEYS = ['prd', 'requirements', 'spec'];
+const AUDIT_ARTIFACT_KEYS = ['prd', 'implementation_plan', 'requirements', 'spec'];
 
 const SURFACE_TO_CONTROLS = Object.freeze({
   auth: ['SEC-SBD-08', 'SEC-SBD-03'],
@@ -28,7 +28,7 @@ const SURFACE_TO_CONTROLS = Object.freeze({
   storage: ['SEC-SBD-07']
 });
 
-function missingArtifactFinding(key, filePath) {
+function missingArtifactFinding(key, filePath, owner) {
   return {
     source: 'security-audit',
     control_id: 'SEC-SBD-00',
@@ -40,8 +40,8 @@ function missingArtifactFinding(key, filePath) {
     reproduction_steps: [`stat ${filePath}`],
     evidence: [`Artifact ${key} not found at ${filePath}`],
     impact: `Cannot audit feature without ${key} artifact.`,
-    suggested_fix: `Generate ${key} via the appropriate agent before running audit.`,
-    recommended_owner: 'analyst',
+    suggested_fix: `Generate ${key} via @${owner} before running audit.`,
+    recommended_owner: owner,
     recommended_gate_status: 'review'
   };
 }
@@ -53,37 +53,37 @@ function attackSurfaceMissingFinding(slug, filePath) {
     severity: 'medium',
     scope: `${slug}:attack-surface-map`,
     affected_artifacts: [filePath],
-    preconditions: ['requirements artifact present'],
-    reproduction_steps: ['Search requirements for "Attack Surface Map" section'],
-    evidence: ['No Attack Surface Map section found in requirements.'],
+    preconditions: [`Scope artifact present at ${filePath}`],
+    reproduction_steps: [`Search ${filePath} for "Attack Surface Map" section`],
+    evidence: [`No Attack Surface Map section found in ${filePath}.`],
     impact: 'Without an Attack Surface Map, ownership/IDOR coverage cannot be verified.',
-    suggested_fix: 'Add an Attack Surface Map section to requirements (analyst).',
-    recommended_owner: 'analyst',
+    suggested_fix: 'Record the feature attack surfaces in the PRD via @product.',
+    recommended_owner: 'product',
     recommended_gate_status: 'review'
   };
 }
 
-function controlEvidenceFinding({ slug, controlId, surface, specPath }) {
+function controlEvidenceFinding({ slug, controlId, surface, scopePath, evidencePath, owner }) {
   return {
     source: 'security-audit',
     control_id: controlId,
     severity: 'high',
     scope: `${slug}:${surface}:${controlId}`,
-    affected_artifacts: [specPath],
-    preconditions: [`Surface "${surface}" present in requirements`],
-    reproduction_steps: [`Search spec-${slug}.md for ${controlId} evidence or N/A rationale`],
-    evidence: [`Surface "${surface}" present but no ${controlId} evidence or N/A rationale found in spec.`],
+    affected_artifacts: [evidencePath],
+    preconditions: [`Surface "${surface}" present in ${scopePath}`],
+    reproduction_steps: [`Search ${evidencePath} for ${controlId} evidence or N/A rationale`],
+    evidence: [`Surface "${surface}" present but no ${controlId} evidence or N/A rationale found in ${evidencePath}.`],
     impact: `Control ${controlId} is required for surface "${surface}" but its evidence is missing.`,
-    suggested_fix: `Add evidence (or explicit N/A rationale) for ${controlId} in spec-${slug}.md.`,
-    recommended_owner: 'dev',
+    suggested_fix: `Record ${controlId} evidence (or explicit N/A rationale) in ${evidencePath} via @${owner}.`,
+    recommended_owner: owner,
     recommended_gate_status: 'block'
   };
 }
 
-function specMentionsControl(specContent, controlId) {
-  if (!specContent) return false;
+function mentionsControl(content, controlId) {
+  if (!content) return false;
   const re = new RegExp(`\\b${controlId.replace(/-/g, '[-]')}\\b`);
-  return re.test(specContent);
+  return re.test(content);
 }
 
 function specDeclaresNoSensitiveSurface(specContent) {
@@ -94,33 +94,43 @@ function specDeclaresNoSensitiveSurface(specContent) {
 function buildAuditFindings({ slug, bundle }) {
   const findings = [];
   const { artifacts } = bundle;
-
-  for (const key of REQUIRED_ARTIFACT_KEYS) {
-    const a = artifacts[key];
-    if (!a || !a.present) {
-      findings.push(missingArtifactFinding(key, a ? a.path : `${key}-${slug}.md`));
-    }
+  const { prd, requirements, spec, implementation_plan: plan } = artifacts;
+  if (!prd.present) {
+    findings.push(missingArtifactFinding('prd', prd.path, 'product'));
   }
 
-  const requirements = artifacts.requirements && artifacts.requirements.content;
-  const spec = artifacts.spec && artifacts.spec.content;
-  const specPath = artifacts.spec ? artifacts.spec.path : `spec-${slug}.md`;
+  // Old projects used a stub PRD plus requirements/spec. Keep those as optional
+  // compatibility evidence, but never let them override a current PRD/plan.
+  const prdSurface = extractAttackSurfaceFlags(prd.content);
+  const canonical = plan.present || !requirements.present || prdSurface.hasMap
+    || /^(?:##\s+Feature Capability Map\b|product_scope:|prd_ready:)/m.test(prd.content || '');
+  const scope = canonical ? prd : requirements;
+  const evidence = canonical || !spec.present ? plan : spec;
+  const classification = extractClassification(prd.content)
+    || extractClassification(scope.content)
+    || extractClassification(plan.content)
+    || (!canonical && extractClassification(spec.content))
+    || 'MICRO';
+  const { hasMap, surfaces } = canonical ? prdSurface : extractAttackSurfaceFlags(scope.content);
+  const hasNoSensitiveSurface = !canonical && specDeclaresNoSensitiveSurface(spec.content);
 
-  const { hasMap, surfaces } = extractAttackSurfaceFlags(requirements);
-
-  const classification = extractClassification(requirements) || extractClassification(spec) || 'MICRO';
-  const hasNoSensitiveSurface = specDeclaresNoSensitiveSurface(spec);
-
-  if (classification === 'MEDIUM' && requirements && !hasMap) {
-    findings.push(attackSurfaceMissingFinding(slug, artifacts.requirements.path));
+  if (classification === 'MEDIUM' && scope.content && !hasMap) {
+    findings.push(attackSurfaceMissingFinding(slug, scope.path));
   }
 
   if (classification === 'MEDIUM' && !hasNoSensitiveSurface) {
+    if (surfaces.length > 0 && !evidence.present) {
+      findings.push(missingArtifactFinding('implementation_plan', plan.path, 'planner'));
+      return { findings, classification };
+    }
     for (const surface of surfaces) {
       const controls = SURFACE_TO_CONTROLS[surface] || [];
       for (const controlId of controls) {
-        if (!specMentionsControl(spec, controlId)) {
-          findings.push(controlEvidenceFinding({ slug, controlId, surface, specPath }));
+        if (!mentionsControl(evidence.content, controlId)) {
+          findings.push(controlEvidenceFinding({
+            slug, controlId, surface, scopePath: scope.path, evidencePath: evidence.path,
+            owner: evidence === plan ? 'planner' : 'dev'
+          }));
         }
       }
     }
@@ -159,7 +169,7 @@ async function runSecurityAudit({ args, options = {}, logger }) {
   }
 
   const bundle = await readSlugArtifacts(targetDir, slug);
-  const requiredAllMissing = REQUIRED_ARTIFACT_KEYS.every((k) => !bundle.artifacts[k] || !bundle.artifacts[k].present);
+  const requiredAllMissing = AUDIT_ARTIFACT_KEYS.every((k) => !bundle.artifacts[k] || !bundle.artifacts[k].present);
   if (requiredAllMissing) {
     const out = {
       ok: false,

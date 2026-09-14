@@ -55,6 +55,7 @@ const DEFAULT_MODEL = 'configured-default';
 
 function defaultAdapters() {
   return {
+    antigravity: require('../agent-execution/adapters/antigravity'),
     claude: require('../agent-execution/adapters/claude'),
     codex: require('../agent-execution/adapters/codex'),
     opencode: require('../agent-execution/adapters/opencode'),

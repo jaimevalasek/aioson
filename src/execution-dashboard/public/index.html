@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Execuções · AIOSON</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Ir para a execução</a>
+  <aside class="rail" aria-label="Features do projeto">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">a</span><span>aioson<span class="brand-sub">execution monitor</span></span></div>
+    <div class="project-label">PROJETO LOCAL</div>
+    <div id="project" class="project-name">Carregando…</div>
+    <div class="rail-heading"><span>Execuções</span><span id="feature-count" class="mono">0</span></div>
+    <label class="sr-only" for="search">Buscar feature</label>
+    <input id="search" type="search" placeholder="Buscar feature…" autocomplete="off">
+    <nav id="features" aria-label="Selecionar feature"></nav>
+    <div class="rail-footer"><span class="live-dot"></span> Observação local<div>Fechar este painel mantém os agentes em execução.</div></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span>Orquestração <span class="muted">/ Monitor</span></span><div class="top-actions"><span id="connection" role="status">Conectando…</span><button id="refresh" class="quiet" type="button">Atualizar</button><button id="theme" class="quiet" type="button" aria-label="Alternar tema">Porcelana</button></div></header>
+    <main id="main" tabindex="-1">
+      <div id="error" class="notice danger" role="alert" hidden></div>
+      <div class="heading"><div><div class="eyebrow">EXECUÇÃO ORQUESTRADA</div><h1 id="title">Acompanhe a construção.</h1><p id="subtitle" class="muted">Os agentes, as entregas e o que precisa da sua atenção.</p></div><span id="run-status" class="badge" hidden></span></div>
+      <div id="empty" class="empty" hidden><h2>Nenhuma execução por aqui.</h2><p>Features com um plano de execução compilado aparecem automaticamente neste projeto.</p><code>aioson execution:compile . --feature=&lt;slug&gt;</code></div>
+      <div id="execution" hidden>
+        <section id="metrics" class="metrics" aria-label="Resumo da execução"></section>
+        <div id="engine-warning" class="notice" hidden></div>
+        <div id="recovery-bar" class="recovery-alert" hidden><div><strong id="recovery-title">Execução interrompida</strong><p id="recovery-feedback" role="status" aria-live="polite"></p></div><button id="recover-run" type="button">Corrigir e continuar execução</button></div>
+        <section aria-labelledby="roles-title"><div class="section-heading"><h2 id="roles-title">Quem está construindo</h2><div class="routing-heading"><span id="routing-profile" class="muted small">Configuração de execução</span><button id="edit-routing" class="quiet compact" type="button">Configurar modelos</button></div></div><div id="roles" class="roles"></div></section>
+        <section class="units-panel" aria-labelledby="units-title">
+          <div class="section-heading panel-heading"><h2 id="units-title">Unidades de execução</h2><span id="pool" class="small muted"></span></div>
+          <div class="toolbar"><div class="filters" aria-label="Filtrar unidades"><button type="button" data-filter="all" aria-pressed="true">Todas</button><button type="button" data-filter="running" aria-pressed="false">Em execução</button><button type="button" data-filter="attention" aria-pressed="false">Atenção</button></div><label class="wave-filter">Onda <select id="wave" aria-label="Filtrar por onda"><option value="all">Todas</option></select></label></div>
+          <div class="table-scroll"><table><thead><tr><th scope="col">Unidade</th><th scope="col">DEV</th><th scope="col">QA</th><th scope="col">Atividade</th><th scope="col">Tempo</th></tr></thead><tbody id="units"></tbody></table></div>
+          <div id="unit-empty" class="empty small" hidden>Nenhuma unidade neste filtro.</div>
+          <div id="waves" class="wave-track" aria-label="Andamento das ondas"></div>
+        </section>
+        <section class="panel usage-panel" aria-labelledby="usage-title"><div class="section-heading"><h2 id="usage-title">Tempo e consumo por onda</h2></div><p id="usage-note" class="muted small"></p><div class="table-scroll"><table class="usage-table"><thead><tr><th>Onda</th><th>Duração</th><th>Agentes somados</th><th>Entrada reportada</th><th>Cache lido / criado</th><th>Saída</th><th>API estimada (USD)</th></tr></thead><tbody id="usage-waves"></tbody></table></div><details><summary>Composição por modelo e tarifas usadas</summary><div id="usage-models"></div></details></section>
+        <div class="bottom-grid"><section class="panel" aria-labelledby="attention-title"><div class="section-heading"><h2 id="attention-title">Pontos de atenção</h2><span id="finding-count" class="mono muted"></span></div><div id="decisions"></div><div id="findings"></div></section><section class="panel" aria-labelledby="history-title"><div class="section-heading"><h2 id="history-title">Atividade registrada</h2><span class="small muted">Mais recente primeiro</span></div><div id="events"></div></section></div>
+        <section id="integration" class="notice" hidden></section>
+        <footer class="footer"><span id="updated">Aguardando dados.</span><span>AIOSON <span class="gold">/</span> Tinta &amp; Ouro</span></footer>
+      </div>
+    </main>
+  </div>
+  <dialog id="detail" aria-labelledby="detail-title"><div class="detail-top"><span class="eyebrow">DETALHE DA UNIDADE</span><button id="close-detail" type="button" class="quiet">Fechar ×</button></div><h2 id="detail-title"></h2><div id="detail-body"></div><div id="report" class="report" aria-live="polite"></div></dialog>
+  <dialog id="routing-dialog" aria-labelledby="routing-title"><div class="detail-top"><span class="eyebrow">ROTEAMENTO AO VIVO</span><button id="close-routing" type="button" class="quiet">Fechar ×</button></div><h2 id="routing-title">Modelos e perfis</h2><p class="routing-intro">A unidade que já começou conserva seu modelo. As alterações valem no próximo disparo de DEV ou QA.</p><form id="routing-form"><div class="routing-grid"><label>Perfil ativo<select id="routing-active-profile"></select></label><label>Vagas simultâneas<input id="routing-parallel" type="number" min="1" max="8" inputmode="numeric"></label></div><div id="routing-profile-tools" class="routing-profile-tools"><label>Nome do perfil<input id="routing-profile-name" type="text" maxlength="64" pattern="[a-z][a-z0-9_]*" autocomplete="off"></label><div><button id="duplicate-profile" class="quiet" type="button">Duplicar perfil</button><button id="rename-profile" class="quiet" type="button">Renomear</button><button id="delete-profile" class="quiet danger-text" type="button">Excluir</button></div></div><div id="routing-fallback"></div><div id="routing-role-fields"></div><section id="routing-validation" class="routing-validation" hidden aria-live="polite"></section><p id="routing-feedback" class="small" role="status" aria-live="polite"></p><div class="routing-actions"><button id="cancel-routing" class="quiet" type="button">Cancelar</button><button id="validate-routing" class="quiet" type="button">Validar configuração</button><button id="save-routing" type="submit">Salvar para os próximos estágios</button></div></form></dialog>
+  <dialog id="confirm-profile-delete" class="confirm-dialog" aria-labelledby="confirm-profile-delete-title" aria-describedby="confirm-profile-delete-copy"><div class="confirm-mark" aria-hidden="true">!</div><div class="eyebrow danger-text">EXCLUSÃO DE PERFIL</div><h2 id="confirm-profile-delete-title">Excluir este perfil?</h2><p id="confirm-profile-delete-copy" class="confirm-copy"></p><div class="confirm-impact"><span>Depois da confirmação</span><strong id="confirm-profile-delete-impact"></strong></div><div class="confirm-actions"><button id="cancel-profile-delete" class="quiet" type="button">Manter perfil</button><button id="apply-profile-delete" class="danger-action" type="button">Excluir perfil</button></div></dialog>
+</body>
+</html>

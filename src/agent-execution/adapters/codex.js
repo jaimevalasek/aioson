@@ -16,6 +16,8 @@ const { createAdapter } = require('./base');
 module.exports=createAdapter('codex',i=>({args:[
   'exec',
   '--skip-git-repo-check',
+  ...(i.captureUsage ? ['--json'] : []),
+  ...(i.context_budget ? ['-c', `model_auto_compact_token_limit=${Math.floor(i.context_budget.max_tokens * 0.8)}`] : []),
   ...(i.sandbox_args||[]),
   ...(i.model==='configured-default'?[]:['--model',i.model]),
   ...(i.reasoning_effort?['-c',`model_reasoning_effort="${i.reasoning_effort}"`]:[]),

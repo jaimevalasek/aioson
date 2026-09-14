@@ -295,4 +295,90 @@ describe('security:audit', () => {
       runtime.db.close();
     }
   });
+
+  async function canonicalArtifacts({ surfaces = [], controls = [], plan = true } = {}) {
+    root = await makeProject();
+    const ctx = path.join(root, '.aioson', 'context');
+    await fs.writeFile(path.join(ctx, 'prd-current.md'), [
+      '---', 'classification: MEDIUM', 'product_scope: approved', 'prd_ready: approved', '---',
+      '# Current feature', '## Feature Capability Map', '', buildAttackSurfaceSection({ surfaces })
+    ].join('\n'));
+    if (plan) await fs.writeFile(path.join(ctx, 'implementation-plan-current.md'), [
+      '---', 'status: approved', '---', '# Implementation plan', '## Engineering Controls',
+      ...controls.map((id) => `- ${id}: covered by the named production-path check`)
+    ].join('\n'));
+    return ctx;
+  }
+
+  async function auditCurrent() {
+    const result = await runSecurityAudit({ args: [root], options: { slug: 'current', json: true }, logger: silentLogger() });
+    const payload = JSON.parse(await fs.readFile(result.artifactPath, 'utf8'));
+    assert.ok(payload.findings.every((finding) => finding.recommended_owner !== 'analyst'));
+    return { result, findings: payload.findings };
+  }
+
+  it('audits current PRD and plan without requiring retired requirements/spec files', async () => {
+    await canonicalArtifacts({ surfaces: ['authenticated_endpoints'], controls: ['SEC-SBD-03', 'SEC-SBD-08'] });
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.PASS);
+    assert.equal(result.classification, 'MEDIUM');
+    assert.deepEqual(findings, []);
+  });
+
+  it('allows a non-sensitive PRD audit before Planner without demanding legacy documents', async () => {
+    await canonicalArtifacts({ plan: false });
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.PASS);
+    assert.equal(result.summary.inconclusive, 0);
+    assert.ok(findings.every((finding) => !finding.scope.startsWith('requirements:') && !finding.scope.startsWith('spec:')));
+  });
+
+  it('routes a missing current PRD to Product even when a plan exists', async () => {
+    const ctx = await canonicalArtifacts();
+    await fs.unlink(path.join(ctx, 'prd-current.md'));
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.INCONCLUSIVE);
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].recommended_owner, 'product');
+    assert.match(findings[0].scope, /^prd:/);
+  });
+
+  it('routes missing sensitive-surface plan evidence to Planner instead of inventing spec debt', async () => {
+    await canonicalArtifacts({ surfaces: ['authenticated_endpoints'], plan: false });
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.INCONCLUSIVE);
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].recommended_owner, 'planner');
+    assert.match(findings[0].affected_artifacts[0], /implementation-plan-current\.md$/);
+  });
+
+  it('still detects missing security controls in the canonical plan', async () => {
+    await canonicalArtifacts({ surfaces: ['authenticated_endpoints'] });
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.BLOCKING);
+    assert.deepEqual(findings.map((f) => f.control_id).sort(), ['SEC-SBD-03', 'SEC-SBD-08']);
+    for (const finding of findings) {
+      assert.equal(finding.recommended_owner, 'planner');
+      assert.match(finding.affected_artifacts[0], /implementation-plan-current\.md$/);
+    }
+  });
+
+  it('old requirements/spec cannot hide missing controls from a current PRD and plan', async () => {
+    const ctx = await canonicalArtifacts({ surfaces: ['authenticated_endpoints'] });
+    await fs.writeFile(path.join(ctx, 'requirements-current.md'), '---\nclassification: MICRO\n---\n# Old requirements\n');
+    await fs.writeFile(path.join(ctx, 'spec-current.md'), 'SEC-SBD-03: covered\nSEC-SBD-08: covered\n');
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.classification, 'MEDIUM');
+    assert.equal(result.exitCode, EXIT_CODES.BLOCKING);
+    assert.equal(findings.length, 2);
+  });
+
+  it('a current PRD cannot use an old spec as a substitute for the missing plan', async () => {
+    const ctx = await canonicalArtifacts({ surfaces: ['authenticated_endpoints'], plan: false });
+    await fs.writeFile(path.join(ctx, 'requirements-current.md'), '---\nclassification: MEDIUM\n---\n# Old requirements\n');
+    await fs.writeFile(path.join(ctx, 'spec-current.md'), 'SEC-SBD-03: covered\nSEC-SBD-08: covered\n');
+    const { result, findings } = await auditCurrent();
+    assert.equal(result.exitCode, EXIT_CODES.INCONCLUSIVE);
+    assert.equal(findings[0].recommended_owner, 'planner');
+  });
 });

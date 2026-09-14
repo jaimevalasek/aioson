@@ -34,7 +34,7 @@ Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Resolve `aioson op:i
 
 Before compaction, `mappings/{slug}/continuity.md` may hold temporary nongating context.
 
-Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff` is true, or seeded agentic policy enables it. An explicit `--step` disables Autopilot for that activation. It pauses for genuine user decisions and never auto-runs `feature:close`/publish.
+Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff` is true, or seeded agentic policy enables it. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
 
 ## Process and research
 

@@ -13,6 +13,7 @@ test('tool capabilities expose an unattended flag for every registered CLI — a
   assert.deepEqual(getToolCapabilities('codex').yolo_args, ['--dangerously-bypass-approvals-and-sandbox']);
   assert.deepEqual(getToolCapabilities('opencode').yolo_args, ['--auto'], 'opencode run --auto: auto-approve permissions not explicitly denied');
   assert.deepEqual(getToolCapabilities('grok').yolo_args, ['--always-approve'], 'the installed Grok build has --always-approve, not --yolo');
+  assert.deepEqual(getToolCapabilities('antigravity').yolo_args, ['--mode', 'accept-edits', '--dangerously-skip-permissions']);
   for (const [tool, caps] of Object.entries(TOOL_CAPS)) {
     assert.equal(caps.supports_yolo, true, `${tool} must register its unattended flag`);
     assert.ok(Array.isArray(caps.yolo_args) && caps.yolo_args.length > 0, `${tool}.yolo_args`);
@@ -41,7 +42,7 @@ test('resolvePermissionModeArgs rejects unknown modes and unknown tools; a sessi
 
 test('the registry is the single host list: kimi, qwen, grok, muse and agy are known with unattended flags', () => {
   const { TOOL_CAPS, listSupportedTools, listExecutionHosts, getExecutionCapabilities } = require('../src/lib/tool-capabilities');
-  assert.deepEqual(listSupportedTools(), ['agy', 'claude', 'codex', 'grok', 'kimi', 'muse', 'opencode', 'qwen']);
+  assert.deepEqual(listSupportedTools(), ['agy', 'antigravity', 'claude', 'codex', 'grok', 'kimi', 'muse', 'opencode', 'qwen']);
   assert.equal(TOOL_CAPS.kimi.install_command, 'npm install -g @moonshot-ai/kimi-code');
   assert.equal(TOOL_CAPS.qwen.install_command, 'npm install -g @qwen-code/qwen-code');
   assert.equal(TOOL_CAPS.grok.install_command, 'npm install -g @xai-official/grok');
@@ -59,7 +60,7 @@ test('the registry is the single host list: kimi, qwen, grok, muse and agy are k
 
 test('execution capabilities live in the registry and interactive-only hosts are not dispatchable', () => {
   const { listExecutionHosts, getExecutionCapabilities } = require('../src/lib/tool-capabilities');
-  assert.deepEqual(listExecutionHosts(), ['claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(listExecutionHosts(), ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
   assert.deepEqual(getExecutionCapabilities('codex'), {
     binary: 'codex',
     install_command: 'npm install -g @openai/codex',
@@ -81,7 +82,7 @@ test('the registry recognizes each host\'s own permission flags (aliases include
   const { TOOL_CAPS, findPermissionFlag, hostForBinary, resolveLaunchPermission } = require('../src/lib/tool-capabilities');
   for (const [tool, caps] of Object.entries(TOOL_CAPS)) {
     assert.ok(Array.isArray(caps.permission_flags) && caps.permission_flags.length > 0, `${tool}.permission_flags sits next to its unattended flag`);
-    for (const flag of caps.yolo_args) assert.equal(findPermissionFlag(tool, ['--model', 'x', flag]), flag, `${tool} recognizes its own ${flag}`);
+    for (const flag of caps.yolo_args.filter(token => token.startsWith('-'))) assert.equal(findPermissionFlag(tool, ['--model', 'x', flag]), flag, `${tool} recognizes its own ${flag}`);
   }
   assert.equal(findPermissionFlag('codex', ['--yolo']), '--yolo', 'the CLI alias of the bypass');
   assert.equal(findPermissionFlag('codex', ['--sandbox=read-only']), '--sandbox=read-only', 'the inline-value form');

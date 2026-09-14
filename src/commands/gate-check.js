@@ -34,6 +34,7 @@ const { resolveGateCBaseline } = require('../lib/gate-checkpoint');
 const { runTechnicalGate } = require('../workflow-gates');
 const { validateCurrentSheldonReview } = require('../lib/sheldon-review');
 const { resolveTargetDir } = require('../lib/project-root');
+const { evaluateFollowups, VERDICT: FOLLOWUP_VERDICT } = require('../lib/delivery-followups');
 
 const BAR = '━'.repeat(35);
 
@@ -75,6 +76,7 @@ async function checkGate(targetDir, slug, gateLetter) {
 
   const evidence = [];
   const missing = [];
+  const followups = gateLetter === 'D' ? await evaluateFollowups(targetDir, slug) : null;
 
   const completeness = await analyzeFeatureCompleteness(targetDir, slug, {
     classification,
@@ -132,11 +134,14 @@ async function checkGate(targetDir, slug, gateLetter) {
     // feature:close custa o retrabalho inteiro. Avaliação estática apenas
     // (runChecks:false): nada é executado no gate de plano.
     const { evaluateContractIntegrityGate } = require('../harness/contract-integrity-gate');
-    const harnessGate = await evaluateContractIntegrityGate(targetDir, slug, { runChecks: false });
+    const harnessGate = await evaluateContractIntegrityGate(targetDir, slug, {
+      runChecks: false, stage: 'planning', planContent: await readFileSafe(planPath)
+    });
     evidence.push({
       type: 'harness_contract',
       ok: harnessGate.ok,
       has_contract: harnessGate.has_contract,
+      planned: harnessGate.planned === true,
       runtime_signals: (harnessGate.runtime && harnessGate.runtime.signals) || [],
       errors: harnessGate.errors
     });
@@ -188,7 +193,7 @@ async function checkGate(targetDir, slug, gateLetter) {
         // cannot be treated as a prerequisite for its own approval.
         if (gateLetter === 'D') {
           const verdict = String(fileFm.verdict || fileFm.status || '').toLowerCase();
-          const pass = verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(content);
+          const pass = (verdict === FOLLOWUP_VERDICT && followups?.eligible) || verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(content);
           if (!pass) {
             ok = false;
             missing.push(`${fileName} must record a PASS verdict`);
@@ -273,8 +278,12 @@ async function checkGate(targetDir, slug, gateLetter) {
     }
   }
 
+  if (gateLetter === 'D' && followups?.active) {
+    evidence.push({ type: 'closure_followups', ok: followups.eligible, disposition: followups.disposition, deferred_acs: followups.deferred_acs });
+  }
   const allOk = missing.length === 0;
   const result = allOk ? 'PASS' : 'BLOCKED';
+  const disposition = allOk && followups?.eligible ? FOLLOWUP_VERDICT : null;
 
   let recommendation = '';
   if (result === 'PASS') {
@@ -329,6 +338,7 @@ async function checkGate(targetDir, slug, gateLetter) {
     feature: slug,
     status: gateStatus,
     result,
+    disposition,
     evidence,
     missing,
     recommendation
@@ -408,7 +418,7 @@ async function runGateCheck({ args, options = {}, logger }) {
       const icon = q.ok ? '  ✓' : '  ✗';
       if (q.type === 'harness_contract') {
         const signals = q.runtime_signals && q.runtime_signals.length ? ` (runtime: ${q.runtime_signals.join(', ')})` : '';
-        logger.log(`${icon} Harness contract: ${q.ok ? (q.has_contract ? 'valid' : 'not required') : 'blocking'}${signals}`);
+        logger.log(`${icon} Harness contract: ${q.ok ? (q.has_contract ? 'valid' : q.planned ? 'planned for DEV; required at delivery' : 'not required') : 'blocking'}${signals}`);
       }
       if (q.type === 'qa_signoff') logger.log(`${icon} QA sign-off: ${q.exists === false ? 'missing' : `verdict ${q.verdict || 'unclear'}`}`);
       if (q.type === 'checkpoint') logger.log(`  ✓ last_checkpoint: "${q.value}"`);
@@ -416,7 +426,7 @@ async function runGateCheck({ args, options = {}, logger }) {
       if (q.type === 'ac_test_audit') {
         const s = q.summary || {};
         const missing = q.missing && q.missing.length ? ` (missing: ${q.missing.join(', ')})` : '';
-        logger.log(`${icon} AC test audit: ${s.covered || 0}/${s.acs_total || 0} covered${missing}`);
+        logger.log(`${icon} AC test audit: ${s.covered || 0}/${s.acs_total || 0} covered${s.deferred ? `; ${s.deferred} deferred with followups` : ''}${missing}`);
       }
       if (q.type === 'technical_gate') {
         const source = q.cached ? 'cached evidence' : 'executed now';
@@ -427,6 +437,7 @@ async function runGateCheck({ args, options = {}, logger }) {
 
   logger.log('');
   const resultIcon = check.result === 'PASS' ? '✓' : '✗';
+  if (check.disposition) logger.log(`Disposition: ${check.disposition} — pending work is preserved in linked Simple Plans at close`);
   logger.log(`Result: ${resultIcon} ${check.result} — ${check.recommendation}`);
   logger.log('');
 

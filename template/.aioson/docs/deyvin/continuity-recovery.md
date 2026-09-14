@@ -42,7 +42,8 @@ If `framework_installed=true` in `project.context.md` and the task depends on ex
 
 - prefer selected module memory, `memory-index.md`, dossier, or spec before opening broad `discovery.md` / `architecture.md`
 - use `skeleton-system.md` or `memory-index.md` first for faster orientation
-- if `discovery.md` is missing but scan artifacts exist, stop and hand off to `@analyst`
+- a missing `discovery.md` is not a gate: use scan artifacts and inspect the nearest production behavior and tests; continue a bounded known-context slice
+- if that evidence exposes unresolved product intent, return the concrete decision to `@product`; consult `@analyst` only for an explicitly requested, named domain question, then return to the current owner
 - if broad architecture decisions are required, hand off to `@architect`
 
 ## Git fallback

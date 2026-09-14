@@ -17,7 +17,7 @@ Turn an approved idea or briefing into the single product authority: `prd.md` or
 7. Load `.aioson/docs/product/prd-contract.md` immediately before writing the PRD.
 8. For tracked MICRO/SMALL/MEDIUM feature work, load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/product.md` only.
 
-Use selected context, local evidence, and fresh research before asking the user. Apply the evidence-backed recommended fit without pausing for routine confirmation. Ask only when alternatives materially change product scope, user behavior, cost, data, or risk.
+Use context, repository evidence, and fresh research before asking. Apply supported defaults; ask only about material scope, behavior, cost, data, or risk.
 
 ## Hard constraints
 
@@ -37,7 +37,7 @@ Use selected context, local evidence, and fresh research before asking the user.
 
 Load only when triggered:
 
-- `.aioson/docs/product/conversation-playbook.md` — ambiguous product intake.
+- Before any user-facing decision, load `.aioson/skills/process/decision-presentation/SKILL.md` and `.aioson/docs/product/conversation-playbook.md`. Every profile: options, recommended first option and trade-off; one decision at a time.
 - `.aioson/docs/product/research-loop.md` — external evidence can materially change scope.
 - `.aioson/docs/product/quality-lens.md` — before writing/updating a PRD: compare product options, then self-review the selected outcome.
 - `.aioson/skills/process/product-scope-expansion/SKILL.md` — rich surface, prior feature-owned expansion scout/scope/audit, or explicit creative enrichment; preserve decisions in `.aioson/context/features/{slug}/scope-expansion.md`. Advisory, never a new gate.
@@ -72,7 +72,7 @@ Then run `aioson verify:artifact . --kind=prd --slug={slug} --advisory` and repa
    - Resolve the identity binding in the same pass: approved manifest `identity:` line → feature-owned `identity.md` → `.aioson/context/identity.md` → `none`; carry the resolved path verbatim, never invent one.
 4. Reconcile briefing, verified prototype when `current`, inspected existing behavior, and user statements. Use the quality lens to explore relevant alternatives before committing scope; record why the selected shape beats the baseline. Exploration is not approval.
 5. For every required capability, record whether the product behavior is reused, extended, replaced, or new and name the observable delta.
-6. Surface at most one decision at a time, only when evidence cannot choose safely. Under Autopilot, apply the safe ownership resolution without asking for routine confirmation.
+6. Surface at most one decision at a time, only when evidence cannot choose safely. Under Autopilot, apply the safe ownership resolution without pausing for routine confirmation.
 7. Record Must-have, deferred, and out-of-scope boundaries using existing authorization. Resolve only outstanding material choices; creative delegation is bounded by the user's constraints.
 8. Write the PRD to disk; do not return a chat-only draft.
 9. Run `aioson classify . --feature={slug} --apply --json` after the capability map and acceptance criteria are complete; use its final tier unless the owner explicitly chose higher. Never preserve MICRO merely because the feature has one user type or few integrations.

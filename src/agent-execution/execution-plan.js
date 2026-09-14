@@ -43,10 +43,12 @@ const {
   CAP_ID_RE,
   AC_ID_RE
 } = require('../lib/feature-completeness-format');
-const { readExecutionRoles, resolveLaneRoles, checkRoleSignatures, laneRoleKey, EXECUTION_ROLES_RELATIVE_PATH } = require('../lib/execution-roles');
+const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, checkRoleSignatures, laneRoleKey, EXECUTION_ROLES_RELATIVE_PATH } = require('../lib/execution-roles');
 const { readSignatures, findSignature, signatureState } = require('../lib/host-signature');
 const { buildDevLaneProfile, DEV_KERNEL_RELATIVE_PATH } = require('./dev-lane-profile');
 const { MAX_DEVELOPMENT_LANES } = require('./schema');
+const { readExecutionPolicy, contextBudget } = require('./execution-policy');
+const { resolveExistingInsideRoot } = require('../verification/path-policy');
 const { measureSurfaces, unitCeiling, UNIT_MAX_FILES_ENV, UNIT_MAX_ACS_ENV } = require('../lib/plan-scale');
 const {
   assertFeatureSlug,
@@ -340,6 +342,7 @@ function unitContractLines(feature, unit, lane, maxWave) {
     lines.push('- Verification:');
     for (const item of unit.verification) lines.push(`  - ${item.command}${item.cap ? ` (${item.cap})` : ''}`);
   }
+  if (unit.integration_verification) lines.push('- Verification ownership: ONLY the local Done when / Verification above decides this unit. Capability/phase checks quoted below are deferred integration evidence, not a prerequisite for this unit. Never fail a local unit because a sibling has not yet produced its test or UI. Report the remaining integration checks as messages to integration; do not claim the whole capability passed.');
   return lines;
 }
 
@@ -357,6 +360,10 @@ function contextContract({ feature, unit, excerpts, prototype }) {
     `- Plan: ${implementationPlanRelative(feature)} — your phase section and table rows are embedded above; open the whole plan only for a cross-reference.`
   ];
   if (excerpts.prd_present) lines.push(`- PRD: ${prdRelative(feature)} — the acceptance criteria of your capabilities are embedded above; open it only for a business rule they cite.`);
+  if (unit.read_ranges?.length) {
+    lines.push('- Initial source reads are bounded below (inclusive lines at compile time). Locate the corresponding symbols with focused searches if earlier work moved them. Do not load these files wholesale. Expand only the relevant function and its callers within the context budget; checkpoint remaining work when necessary. These are reading instructions, not narrower write permissions.');
+    for (const range of unit.read_ranges) lines.push(`  - ${range.path}:${range.start}-${range.end}`);
+  }
   const surfaces = measureSurfaces(unit.files);
   if (prototype && prototype.path && (surfaces.frontend > 0 || surfaces.tests.frontend > 0)) {
     reads.push({ path: prototype.path, bytes: prototype.bytes ?? null, why: 'frontend files in this unit' });
@@ -452,7 +459,7 @@ async function rulesDigest(projectDir) {
   return { present: true, digest: hash.digest('hex'), files: files.length };
 }
 
-function compileExecutionPlan({ feature, planContent, prdContent, roles, rules = null, signatures, profile, manifest, runState = null, ceiling = unitCeiling({}), prototype = null }) {
+function compileExecutionPlan({ feature, planContent, prdContent, roles, rules = null, signatures, profile, manifest, runState = null, ceiling = unitCeiling({}), prototype = null, policy = null }) {
   const errors = [];
   const warnings = [];
   const error = (check, message, extra = {}) => errors.push({ check, message, ...extra });
@@ -536,26 +543,35 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     }
     for (const [kind, role] of [['dev', resolved.dev], ['qa', resolved.qa]]) {
       if (!role) continue;
-      const sig = signatureFor(role);
+      let effectiveRole = role;
+      let sig = signatureFor(role);
       if (sig.state !== 'valid') {
-        const why = sig.state === 'invalid' && sig.entry?.reason ? ` (${sig.entry.reason})` : '';
-        error(`role_signature_${sig.state}`, `role "${role.role}" (${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}) has ${sig.state === 'missing' ? 'no' : `an ${sig.state}`} host signature on this machine${why}`, { lane: laneId, role: role.role, host: role.host, model: role.model, reasoning_effort: role.reasoning_effort, signature_reason: sig.entry?.reason || null, hint: roleHint(role) });
+        const fallback = resolveProfileFallbacks(roles, laneId, kind).find(candidate => signatureFor(candidate).state === 'valid');
+        if (fallback) {
+          warn('role_signature_fallback', `role "${role.role}" (${role.host}/${role.model}) has an ${sig.state} signature; compilation uses signed profile ${fallback.profile} (${fallback.host}/${fallback.model})`, { lane: laneId, role: role.role, profile: fallback.profile, signature_reason: sig.entry?.reason || null });
+          effectiveRole = fallback;
+          sig = signatureFor(fallback);
+        } else {
+          const why = sig.state === 'invalid' && sig.entry?.reason ? ` (${sig.entry.reason})` : '';
+          error(`role_signature_${sig.state}`, `role "${role.role}" (${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}) has ${sig.state === 'missing' ? 'no' : `an ${sig.state}`} host signature on this machine${why}`, { lane: laneId, role: role.role, host: role.host, model: role.model, reasoning_effort: role.reasoning_effort, signature_reason: sig.entry?.reason || null, hint: roleHint(role) });
+        }
       }
       lane[kind] = {
-        role: role.role,
-        host: role.host,
-        model: role.model,
-        reasoning_effort: role.reasoning_effort || null,
-        ...(kind === 'qa' ? { inherited: role.inherited === true } : {}),
+        role: effectiveRole.role,
+        host: effectiveRole.host,
+        model: effectiveRole.model,
+        reasoning_effort: effectiveRole.reasoning_effort || null,
+        ...(effectiveRole.profile ? { routing_profile: effectiveRole.profile } : {}),
+        ...(kind === 'qa' ? { inherited: effectiveRole.inherited === true } : {}),
         signature: sig.entry ? { state: sig.state, checked_at: sig.entry.checked_at || null, expires_at: sig.entry.expires_at || null } : { state: sig.state }
       };
     }
-    if (resolved.dev && resolved.qa && resolved.dev.host === resolved.qa.host && resolved.dev.model === resolved.qa.model) {
+    if (lane.dev && lane.qa && lane.dev.host === lane.qa.host && lane.dev.model === lane.qa.model) {
       // The judge and the producer are the same model: a warning by default,
       // a refusal when the roles file says the review must be independent.
-      const detail = `lane "${laneId}": dev and qa run the same host/model (${resolved.dev.host}/${resolved.dev.model}) — the lane review is not independent`;
+      const detail = `lane "${laneId}": dev and qa run the same host/model (${lane.dev.host}/${lane.dev.model}) — the lane review is not independent`;
       if (roles?.execution?.require_independent_qa === true) {
-        error('self_review_same_model', `${detail}; execution.require_independent_qa is on — declare "${laneRoleKey(laneId, 'qa')}" (or "qa") on a different host or model in ${EXECUTION_ROLES_RELATIVE_PATH}`, { lane: laneId, host: resolved.dev.host, model: resolved.dev.model, role: resolved.qa.role, hint: `aioson host:signature . --host=<other host> --model=<other model>` });
+        error('self_review_same_model', `${detail}; execution.require_independent_qa is on — declare "${laneRoleKey(laneId, 'qa')}" (or "qa") on a different host or model in ${EXECUTION_ROLES_RELATIVE_PATH}`, { lane: laneId, host: lane.dev.host, model: lane.dev.model, role: lane.qa.role, hint: `aioson host:signature . --host=<other host> --model=<other model>` });
       } else {
         // The warning names the knob: written as a bare warning it read like a
         // block, and the key that makes it one appeared in no example file.
@@ -582,6 +598,16 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     while (usedIds.has(id)) id = `phase-${base}-${n++}`;
     usedIds.add(id);
     const files = [...new Set(row.files_raw.map(normalizeRel).filter(Boolean))];
+    const readRanges = [];
+    for (const token of String(row.read_ranges_raw || '').split(/;|<br\s*\/?\s*>/i).map(s => s.trim()).filter(s => s && s !== '-')) {
+      const match = token.replace(/`/g, '').match(/^(.+):(\d+)-(\d+)$/);
+      const relative = match && normalizeRel(match[1]);
+      const start = match && Number(match[2]);
+      const end = match && Number(match[3]);
+      if (!match || !files.includes(relative) || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 1 || end < start) {
+        error('invalid_read_range', `phase "${row.phase}": Read ranges must name an owned file with positive inclusive lines (path:1-80)`, { phase: row.phase, range: token });
+      } else readRanges.push({ path: relative, start, end });
+    }
     if (files.length === 0) {
       error('phase_without_files', `phase "${row.phase}" lists no files — a unit needs its exact paths`, { phase: row.phase });
     }
@@ -609,6 +635,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
       owner,
       lane,
       files,
+      ...(readRanges.length ? { read_ranges: readRanges } : {}),
       scope: row.scope,
       done: row.done,
       caps,
@@ -728,6 +755,11 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     unit.verification = excerpts.delivery
       .filter((row) => row.verification && row.caps.some((cap) => capSet.has(cap.toLowerCase())))
       .map((row) => ({ cap: row.caps[0] || null, command: row.verification }));
+    if (policy && unit.owner === 'lane') {
+      unit.integration_verification = unit.verification;
+      unit.verification = unit.done ? [{ cap: null, command: unit.done }] : [];
+      if (!unit.done) error('unit_verification_missing', `${unit.id}: declare the local verification in Done when; shared capability checks belong to integration`);
+    }
     if (unit.owner === 'lane' && unit.caps.length === 0) warn('unit_without_cap', `unit ${unit.id} (phase "${unit.phase}") cites no CAP-* in its scope and none could be inferred from the delivery plan or the implementation delta`, { unit: unit.id });
   }
   // ── unit load (advisory): one process is one context ─────────────────────
@@ -736,6 +768,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     if (unit.files.length > ceiling.max_files) reasons.push(`${unit.files.length} files (ceiling ${ceiling.max_files})`);
     if (unit.acs.length > ceiling.max_acs) reasons.push(`${unit.acs.length} acceptance criteria (ceiling ${ceiling.max_acs})`);
     if (reasons.length > 0) {
+      if (policy) error('unit_budget_exceeded', `${unit.id}: split this unit before execution (${reasons.join('; ')})`, { unit: unit.id, ceiling });
       warn('unit_over_budget', `unit ${unit.id} (phase "${unit.phase}") carries ${reasons.join(' and ')} for one context — cut it on disjoint files inside wave ${unit.wave} (a row per lane or surface, an Interface Contract row per boundary), or move ${UNIT_MAX_FILES_ENV}/${UNIT_MAX_ACS_ENV} deliberately`, { unit: unit.id, files: unit.files.length, acs: unit.acs.length, ceiling });
     }
     const surfaces = measureSurfaces(unit.files);
@@ -772,6 +805,11 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
   for (const unit of laneUnits) {
     const { text, context } = renderUnitPrompt({ feature, unit, lane: lanes[unit.lane], maxWave, profileText: profile.text, excerpts, prototype });
     unit.context = context;
+    if (policy) {
+      const dev = lanes[unit.lane].dev;
+      unit.context.budget = contextBudget(policy, dev.host, dev.model);
+      if (context.prompt_bytes > unit.context.budget.max_tokens * 2) error('unit_prompt_over_budget', `${unit.id}: prompt alone exceeds conservative context budget; split the unit`);
+    }
     unit.prompt = `${promptsDir}/${unit.id}.md`;
     unit.prompt_digest = sha256(text);
     unit.report = `.aioson/context/reports/${feature}/{run_id}/${unit.id}.json`;
@@ -794,6 +832,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
   }));
   const plan = {
     version: EXECUTION_PLAN_VERSION,
+    ...(policy ? { policy } : {}),
     generator: GENERATOR,
     feature,
     generated_at: new Date().toISOString(),
@@ -804,6 +843,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
       prd_digest: excerpts.prd_present ? sha256(prdContent) : null,
       roles: EXECUTION_ROLES_RELATIVE_PATH,
       roles_digest: roles?.digest || null,
+      roles_runtime: true,
       // The client's binding rules are part of what the units were compiled
       // under: a rule edited mid-run is measurable, not invisible.
       rules: RULES_RELATIVE_PATH,
@@ -818,7 +858,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
         write_paths: lane.write_paths,
         integration_owner: 'dev',
         dev: lane.dev,
-        qa: { ...lane.qa, max_fix_files: manifest?.development_lanes?.lanes?.[laneId]?.qa?.max_fix_files ?? DEFAULT_QA_MAX_FIX_FILES, max_rework_rounds: manifest?.development_lanes?.lanes?.[laneId]?.qa?.max_rework_rounds ?? 0 },
+        qa: { ...lane.qa, max_fix_files: manifest?.development_lanes?.lanes?.[laneId]?.qa?.max_fix_files ?? DEFAULT_QA_MAX_FIX_FILES, max_rework_rounds: manifest?.development_lanes?.lanes?.[laneId]?.qa?.max_rework_rounds ?? policy?.qa.max_rework_rounds ?? 0 },
         prompt: lanePrompts[laneId].path,
         prompt_digest: lanePrompts[laneId].digest,
         plan_host: lane.plan_host,
@@ -835,7 +875,8 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     integration: {
       owner: 'dev',
       units: integrationUnits.map((unit) => unit.id),
-      role: roles?.roles?.integration_dev ? { role: 'integration_dev', ...roles.roles.integration_dev } : null
+      role: roles?.roles?.integration_dev ? { role: 'integration_dev', ...roles.roles.integration_dev } : null,
+      ...(policy ? { verification: [...new Map(units.flatMap(unit => unit.integration_verification || unit.verification || []).map(item => [`${item.cap}:${item.command}`, item])).values()] } : {})
     },
     warnings,
     summary: {
@@ -937,7 +978,8 @@ function applyPlanToManifest(manifest, plan) {
         report: existing.qa && typeof existing.qa.report === 'string' && existing.qa.report.includes('{run_id}')
           ? existing.qa.report
           : `.aioson/context/reports/${feature}/{run_id}/qa-${laneId}.json`,
-        max_fix_files: lane.qa.max_fix_files
+        max_fix_files: lane.qa.max_fix_files,
+        max_rework_rounds: lane.qa.max_rework_rounds
       }
     };
     if (lane.dev.reasoning_effort) entry.reasoning_effort = lane.dev.reasoning_effort;
@@ -1000,8 +1042,8 @@ async function readPrototypeRead(projectDir, planContent) {
   }
 }
 
-async function readRunState(projectDir, feature) {
-  const content = await readFileSafe(path.join(projectDir, '.aioson', 'context', `agent-execution-state-${feature}.json`));
+async function readRunState(projectDir, feature, prefix = 'agent-execution-state') {
+  const content = await readFileSafe(path.join(projectDir, '.aioson', 'context', `${prefix}-${feature}.json`));
   if (!content) return null;
   try {
     return JSON.parse(content);
@@ -1045,6 +1087,12 @@ async function compileFeatureExecution(projectDir, featureInput, { env = process
     return { ok: false, reason: 'manifest_invalid', feature, errors: [{ check: 'manifest_invalid', message: `${path.relative(projectDir, loaded.path)} is invalid`, errors: loaded.errors }], warnings: [] };
   }
   const runState = await readRunState(projectDir, feature);
+  const executionState = await readRunState(projectDir, feature, 'execution-state');
+  const contextLimitDisabled = executionState?.feature === feature && typeof executionState.run_id === 'string'
+    && ['running', 'paused', 'decision_required'].includes(executionState.status)
+    && executionState.context_limit_enabled === false;
+  const policyRead = await readExecutionPolicy(projectDir);
+  if (!policyRead.ok) return { ok: false, reason: 'execution_policy_invalid', feature, errors: policyRead.errors.map(message => ({ check: 'execution_policy_invalid', message })), warnings: [] };
   const compiled = compileExecutionPlan({
     feature,
     planContent,
@@ -1055,12 +1103,50 @@ async function compileFeatureExecution(projectDir, featureInput, { env = process
     profile,
     manifest: loaded.exists ? loaded.manifest : null,
     runState,
+    policy: policyRead.policy,
     ceiling: unitCeiling(env),
     prototype: await readPrototypeRead(projectDir, planContent)
   });
   if (compiled.errors.length > 0) {
     return { ok: false, reason: 'compile_refused', feature, errors: compiled.errors, warnings: compiled.warnings };
   }
+  // Reserve half the operational budget for subsequent reads, tools and output.
+  // This byte estimate is a preflight heuristic, never measured model usage.
+  for (const unit of compiled.plan.units.filter(item => item.owner === 'lane')) {
+    const files = [];
+    for (const relative of unit.files) {
+      try {
+        const stat = await fs.stat(path.join(projectDir, relative));
+        if (!stat.isFile() || !(await resolveExistingInsideRoot(projectDir, relative)).ok) throw new Error('not an in-project file');
+        const ranges = (unit.read_ranges || []).filter(item => item.path === relative);
+        if (ranges.length) {
+          const lines = (await fs.readFile(path.join(projectDir, relative), 'utf8')).split(/(?<=\n)/);
+          if (ranges.some(range => range.end > lines.length)) {
+            compiled.errors.push({ check: 'read_range_out_of_bounds', unit: unit.id, path: relative, lines: lines.length });
+          }
+          const selected = new Set();
+          for (const range of ranges) for (let i = range.start - 1; i < Math.min(range.end, lines.length); i += 1) selected.add(i);
+          files.push({ path: relative, bytes: [...selected].reduce((sum, i) => sum + Buffer.byteLength(lines[i], 'utf8'), 0), total_bytes: stat.size, ranges });
+        } else files.push({ path: relative, bytes: stat.size });
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          files.push({ path: relative, bytes: 0, new_file: true });
+          if (unit.read_ranges?.some(range => range.path === relative)) compiled.errors.push({ check: 'read_range_missing_file', unit: unit.id, path: relative });
+        }
+        else compiled.errors.push({ check: 'unit_source_unreadable', unit: unit.id, path: relative });
+      }
+    }
+    unit.context.source_files = files;
+    const bytes = unit.context.prompt_bytes + files.reduce((sum, item) => sum + item.bytes, 0) + unit.context.reads.reduce((sum, item) => sum + (item.bytes || 0), 0);
+    unit.context.estimated_initial_tokens = Math.ceil(bytes / 2);
+    unit.context.estimate_basis = 'utf8_bytes_divided_by_2';
+    if (unit.context.estimated_initial_tokens > unit.context.budget.max_tokens * 0.5) {
+      const finding = { check: 'unit_initial_context_over_budget', unit: unit.id, estimated_tokens: unit.context.estimated_initial_tokens, initial_budget: Math.floor(unit.context.budget.max_tokens * 0.5), message: contextLimitDisabled ? 'Initial read estimate exceeds the quality budget; the active execution explicitly disabled its context limit, so this is advisory. Keep focused reads and all QA checks.' : 'Split the unit or narrow required reads before execution; reserve room for tools and output' };
+      (contextLimitDisabled ? compiled.warnings : compiled.errors).push(finding);
+    }
+    compiled.plan.summary.context_bytes_max = Math.max(compiled.plan.summary.context_bytes_max, bytes);
+  }
+  if (compiled.errors.length) return { ok: false, reason: 'compile_refused', feature, errors: compiled.errors, warnings: compiled.warnings };
   const baseManifest = loaded.exists ? loaded.manifest : manifestDefaults(feature, roles.roles.integration_dev?.host || roles.roles.qa?.host || 'codex');
   const nextManifest = applyPlanToManifest(baseManifest, compiled.plan);
   compiled.plan.source.manifest_digest = manifestDigest(nextManifest);
@@ -1162,7 +1248,13 @@ async function verifyExecutionPlan(projectDir, featureInput, { env = process.env
   // Bound to the binding digest (what shapes the units); a plan compiled
   // before the split carries the raw file digest and stays fresh until the
   // file changes — nobody is sent to recompile by an upgrade alone.
-  const rolesFresh = rolesRead.present && (rolesRead.digest === plan.source?.roles_digest || (rolesRead.file_digest !== undefined && rolesRead.file_digest === plan.source?.roles_digest));
+  const legacyRuntimeCompatible = plan.source?.roles_runtime !== true && rolesRead.ok && rolesRead.enabled
+    && rolesRead.roles.parallel?.max_concurrent_lanes === plan.parallel?.max_concurrent_lanes
+    && rolesRead.roles.on_unavailable === plan.on_unavailable
+    && rolesRead.roles.execution?.require_independent_qa !== true;
+  const rolesFresh = rolesRead.present && (rolesRead.digest === plan.source?.roles_digest
+    || (rolesRead.file_digest !== undefined && rolesRead.file_digest === plan.source?.roles_digest)
+    || legacyRuntimeCompatible);
   check('execution-plan:roles', rolesFresh, rolesFresh ? null : (rolesRead.present ? 'roles_changed' : rolesRead.reason));
   if (!rolesRead.present) issues.push(`${EXECUTION_ROLES_RELATIVE_PATH} not found — the orchestrated path is not unlocked on this project`);
   else if (!rolesRead.ok) issues.push(`${EXECUTION_ROLES_RELATIVE_PATH} is invalid — ${rolesRead.errors.map((e) => `${e.path}: ${e.message}`).join('; ')}`);
@@ -1215,17 +1307,33 @@ async function verifyExecutionPlan(projectDir, featureInput, { env = process.env
   const signatureFor = (role) => signatureState(findSignature(store, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null }), now);
   const roleLabel = (label, role) => `${label} ${role.host}/${role.model}${role.reasoning_effort ? `/${role.reasoning_effort}` : ''}`;
   const unsigned = [];
+  const signatureFallbacks = [];
   for (const [laneId, lane] of Object.entries(plan.lanes || {})) {
+    const selected = rolesRead.ok && rolesRead.enabled ? resolveLaneRoles(rolesRead.roles, laneId) : null;
     for (const kind of ['dev', 'qa']) {
-      const role = lane[kind];
+      const role = selected?.[kind] || lane[kind];
       if (!role) continue;
       const state = signatureFor(role);
-      if (state !== 'valid') unsigned.push(`${roleLabel(`${laneId}.${kind}`, role)} (${state})`);
+      if (state !== 'valid') {
+        const fallback = rolesRead.ok && rolesRead.enabled
+          ? resolveProfileFallbacks(rolesRead.roles, laneId, kind).find(candidate => signatureFor(candidate) === 'valid')
+          : null;
+        if (fallback) signatureFallbacks.push(`${roleLabel(`${laneId}.${kind}`, role)} (${state}) → profile:${fallback.profile} ${fallback.host}/${fallback.model}`);
+        else unsigned.push(`${roleLabel(`${laneId}.${kind}`, role)} (${state})`);
+      }
     }
   }
   // The runtime reads fallbacks from the manifest lane entries, so that is
   // where they are proven.
   const fallbackUnsigned = [];
+  if (rolesRead.ok && rolesRead.enabled) {
+    for (const laneId of Object.keys(plan.lanes || {})) for (const kind of ['dev', 'qa']) {
+      for (const fallback of resolveProfileFallbacks(rolesRead.roles, laneId, kind)) {
+        const state = signatureFor(fallback);
+        if (state !== 'valid') fallbackUnsigned.push(`${roleLabel(`${laneId}.${kind}.profile:${fallback.profile}`, fallback)} (${state})`);
+      }
+    }
+  }
   if (loaded.exists && loaded.ok) {
     for (const [laneId, entry] of Object.entries(loaded.manifest.development_lanes?.lanes || {})) {
       if (entry.enabled !== true) continue;
@@ -1240,6 +1348,7 @@ async function verifyExecutionPlan(projectDir, featureInput, { env = process.env
   }
   check('execution-plan:signatures', unsigned.length === 0, unsigned.join('; ') || null);
   if (unsigned.length > 0) issues.push(`signature_missing: ${unsigned.join('; ')} — sign with aioson host:signature or reconfigure the roles`);
+  if (signatureFallbacks.length > 0) warnings.push(`primary_signature_fallback: ${signatureFallbacks.join('; ')} — the signed fallback will be selected before dispatch`);
   check('execution-plan:fallback-signatures', fallbackUnsigned.length === 0, fallbackUnsigned.join('; ') || null);
   if (fallbackUnsigned.length > 0) warnings.push(`fallback_signature_missing: ${fallbackUnsigned.join('; ')} — an automatic capacity fallback would dispatch an unproven pair; sign it with aioson host:signature or drop it from the manifest`);
 

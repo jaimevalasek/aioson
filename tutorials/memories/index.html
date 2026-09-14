@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Entenda a memória do AIOSON: o que fica no projeto, o que vira aprendizado, como trocar de modelo e como recuperar decisões. Guia da versão 1.66.0, de 11/09/2026.">
+  <meta name="author" content="GPT-6 Astra">
+  <meta name="aioson-version" content="1.66.0">
+  <meta name="reviewed-at" content="2026-09-11">
+  <meta name="color-scheme" content="dark light">
+  <title>Memória do AIOSON — O conhecimento acompanha seu projeto</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="AIOSON — todos os tutoriais"><span class="brand-mark" aria-hidden="true">a.</span><span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">memories</span></span></a>
+  <div class="header-actions"><a href="#speech">Fala pronta</a><button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button><button id="print-page" type="button" hidden>Imprimir / PDF</button></div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">Guia do sistema · 11 set 2026</p>
+      <h1 id="hero-title">A memória acompanha<br>o seu projeto.</h1>
+      <p class="hero-intro">As decisões, os aprendizados e o ponto onde você parou podem continuar disponíveis quando a conversa termina — e quando você troca de modelo de inteligência artificial.</p>
+      <div class="hero-actions"><a class="primary-link" href="#basics">Entender do zero <span aria-hidden="true">↗</span></a><a class="text-link" href="#speech">Como explicar isso a alguém →</a></div>
+      <div class="edition"><span>AIOSON 1.66.0</span><span>Por GPT-6 Astra</span><span>Leitura por capítulos</span></div>
+    </div>
+    <figure class="memory-figure">
+      <div class="figure-heading"><span class="status-dot" aria-hidden="true"></span> Conhecimento sob seu controle</div>
+      <div class="memory-core"><span class="machine-label">Memória externa · AIOSON</span><strong>Seu projeto</strong><p>Decisões · aprendizados<br>regras · estado do trabalho</p><span class="file-label">Arquivos + registros locais</span></div>
+      <div class="connector" aria-hidden="true"></div>
+      <div class="model-pair"><div><span>Sessão de hoje</span><strong>Modelo A</strong></div><div><span>Sessão seguinte</span><strong>Modelo B</strong></div></div>
+      <figcaption>O agente recupera os registros relevantes e os apresenta ao modelo de cada sessão.</figcaption>
+    </figure>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do guia">
+        <p class="machine-label">Neste guia</p>
+        <ol>
+          <li><a href="#speech">Uma fala para apresentar</a></li>
+          <li><a href="#basics">Memória, sem mistério</a></li>
+          <li><a href="#layers">O mapa das memórias</a></li>
+          <li><a href="#capture">O que vira memória</a></li>
+          <li><a href="#cycle">Como o ciclo funciona</a></li>
+          <li><a href="#operator">A memória da pessoa</a></li>
+          <li><a href="#retrieval">Cabeçalhos, memória e tokens</a></li>
+          <li><a href="#portability">Trocar de modelo</a></li>
+          <li><a href="#maintenance">Atualizar e arquivar</a></li>
+          <li><a href="#practice">Na prática: salvar e recuperar</a></li>
+          <li><a href="#commands">Guia de comandos</a></li>
+          <li><a href="#limits">Limites e cuidados</a></li>
+          <li><a href="#glossary">Glossário e dúvidas</a></li>
+          <li><a href="#sources">Fontes e assinatura</a></li>
+        </ol>
+      </nav>
+      <p class="sidebar-note">Primeira visita?<br>Comece pelos capítulos 1 a 4. Os comandos estão reunidos mais abaixo.</p>
+    </aside>
+
+    <article class="article">
+      <section id="speech" aria-labelledby="speech-title">
+        <p class="section-number">01 / Para apresentar</p>
+        <h2 id="speech-title">Uma fala pronta, com base no que o sistema faz</h2>
+        <div class="speech-card">
+          <p class="machine-label">Versão curta · cerca de 15 segundos</p>
+          <blockquote>“Com o AIOSON, a memória do seu projeto fica em uma base que você controla. Os modelos de IA consultam essa base para trabalhar. Assim, você pode trocar de modelo e continuar a partir do conhecimento que já foi registrado.”</blockquote>
+        </div>
+        <h3>Para uma apresentação de cerca de 40 segundos</h3>
+        <blockquote class="long-quote">“Pense no AIOSON como o caderno de trabalho do seu projeto. Ele organiza as decisões, os aprendizados e o ponto onde o trabalho parou em arquivos e registros que ficam com você. A cada nova sessão, o agente consulta o que é relevante e entrega esse contexto ao modelo de inteligência artificial. Por isso, a continuidade do projeto fica do lado do AIOSON: você pode mudar de modelo sem depender exclusivamente do histórico de conversa de um fornecedor. O conhecimento registrado acompanha o projeto.”</blockquote>
+        <h3>Por que essa fala é correta?</h3>
+        <p>O AIOSON mantém uma <strong>memória externa ao modelo</strong>. O conteúdo persistente vive em arquivos e bancos de dados administrados pelas ferramentas do AIOSON. Quando o agente lê esses registros, uma parte deles entra no contexto da sessão para o modelo raciocinar.</p>
+        <p>A frase “a memória fica do lado do AIOSON” descreve <strong>onde a continuidade é mantida</strong>. Ela não significa que o modelo trabalha sem receber informações do projeto, nem que um serviço de IA não possa manter seu próprio histórico. O ganho é ter uma base recuperável que não depende exclusivamente desse histórico.</p>
+        <div class="callout"><strong>Uma frase de apoio</strong><p>“O modelo participa do trabalho; o conhecimento registrado permanece com o projeto.”</p></div>
+        <p>Se alguém perguntar “mas o modelo vai gastar muitos tokens acompanhando essa memória?”, há uma <a href="#tokens">fala pronta e uma explicação sobre a seleção pelo CLI</a> no capítulo 7.</p>
+        <p class="source-note">Base: <a href="../../src/commands/memory.js">estado da memória</a>, <a href="../../src/context-brief.js">pacote de contexto</a> e <a href="../../src/learning-materialize.js">aprendizados em arquivos</a>.</p>
+      </section>
+
+      <section id="basics" aria-labelledby="basics-title">
+        <p class="section-number">02 / Comece aqui</p>
+        <h2 id="basics-title">Imagine uma mesa, um caderno e um arquivo</h2>
+        <p>Você contrata alguém para ajudar a construir uma casa. Na mesa ficam os desenhos da tarefa de hoje. No caderno estão as decisões tomadas. No arquivo ficam os documentos antigos. Amanhã, outra pessoa consegue continuar se esses registros estiverem claros.</p>
+        <div class="concept-list">
+          <div><span class="concept-index">A</span><div><h3>A mesa é o contexto</h3><p>É o conjunto de informações que o modelo consegue usar naquele momento. Tem espaço limitado. Uma conversa longa pode ser resumida, e detalhes podem deixar de estar disponíveis.</p></div></div>
+          <div><span class="concept-index">B</span><div><h3>O caderno é a memória persistente</h3><p>É o conhecimento salvo fora da conversa: arquivos, aprendizados e decisões. Fechar a janela de chat não apaga esses arquivos.</p></div></div>
+          <div><span class="concept-index">C</span><div><h3>O índice ajuda a encontrar a página certa</h3><p>O AIOSON usa índices, buscas e regras de seleção para recuperar o que combina com a tarefa. Guardar uma informação e conseguir encontrá-la são duas etapas diferentes.</p></div></div>
+        </div>
+        <p><strong>“Aprender”, aqui, significa registrar e reutilizar conhecimento.</strong> Esse sistema não altera, por si só, os parâmetros internos do modelo nem realiza um novo treinamento da IA.</p>
+        <p>Um <strong>agente</strong> é o papel que conduz o trabalho, com instruções e ferramentas. Um <strong>modelo</strong>, também chamado de LLM, é o motor de linguagem usado nesse trabalho. O AIOSON organiza a atuação dos agentes e seus registros.</p>
+        <h3 id="markdown">Os arquivos .md gerados durante o uso são memória?</h3>
+        <p><strong>Sim, quando preservam conhecimento útil do trabalho.</strong> Um PRD guarda a intenção do produto; um plano guarda a sequência de execução; um relatório de QA guarda o resultado da verificação; uma receita guarda uma solução. Todos podem funcionar como memória documental do projeto.</p>
+        <p>Mas <code>.md</code> é apenas o formato do arquivo. Ele pode conter uma decisão aprovada, um rascunho, uma nota temporária ou um modelo vazio. A extensão não informa se o conteúdo está correto, atual, aprovado ou sendo utilizado.</p>
+        <ol>
+          <li><strong>Memória registrada:</strong> o conhecimento existe no arquivo e pode sobreviver à sessão.</li>
+          <li><strong>Memória encontrável:</strong> um índice, link, busca ou regra de carregamento permite localizar o arquivo.</li>
+          <li><strong>Memória utilizada:</strong> o agente realmente leu a parte relevante e a levou ao contexto da tarefa.</li>
+        </ol>
+        <p>Um arquivo pode estar na primeira condição sem chegar às outras duas. E um documento antigo continua sendo memória histórica, mesmo quando já não deve orientar uma decisão nova.</p>
+        <div class="callout"><strong>Uma explicação fácil de repetir</strong><p>“Os arquivos Markdown são páginas do caderno do projeto. O AIOSON organiza quais páginas consultar, e o agente precisa lê-las para usar esse conhecimento.”</p></div>
+        <p>Nem todo Markdown entra no banco de aprendizados. Para virar um <em>learning</em> estruturado, ele precisa passar pelo fluxo correspondente de extração ou registro. JSON e SQLite também guardam memória: ela não depende do formato Markdown. Este tutorial, por exemplo, é documentação de referência em HTML; sua criação não o transforma automaticamente em uma regra carregada por todo agente.</p>
+      </section>
+
+      <section id="layers" aria-labelledby="layers-title">
+        <p class="section-number">03 / Onde cada coisa mora</p>
+        <h2 id="layers-title">O AIOSON oferece várias memórias complementares</h2>
+        <p>A divisão abaixo é uma forma didática de organizar os recursos atuais. Não existe um único arquivo que guarde tudo, e nem toda instalação já terá todas essas pastas preenchidas.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Tipos de memória e seus locais">
+          <table><caption>O que é guardado, para quem serve e onde fica</caption><thead><tr><th scope="col">Memória</th><th scope="col">Em linguagem simples</th><th scope="col">Local principal</th></tr></thead><tbody>
+            <tr><th scope="row">Identidade do projeto</th><td>O que o projeto é, sua tecnologia, idioma e características.</td><td><code>.aioson/context/project.context.md</code></td></tr>
+            <tr><th scope="row">Visão do sistema</th><td>O que existe, como funciona e em que estado está.</td><td><code>.aioson/context/bootstrap/</code>; mapas de descoberta em <code>context/</code></td></tr>
+            <tr><th scope="row">Continuidade de trabalho</th><td>Onde paramos, o próximo passo e a etapa em andamento.</td><td><code>project-pulse.md</code>, <code>dev-state.md</code> e estado do workflow em <code>.aioson/</code></td></tr>
+            <tr><th scope="row">Memória de uma entrega</th><td>O que foi pedido, decidido, implementado e verificado.</td><td><code>.aioson/context/prd-{slug}.md</code>, <code>implementation-plan-{slug}.md</code>, <code>qa-report-{slug}.md</code> e <code>features/{slug}/</code></td></tr>
+            <tr><th scope="row">Regras e documentação</th><td>Acordos do projeto e explicações que devem orientar o trabalho.</td><td><code>.aioson/rules/</code>, <code>docs/</code> e <code>design-docs/</code>, sob <code>.aioson/</code></td></tr>
+            <tr><th scope="row">Aprendizados do projeto</th><td>Armadilhas descobertas e receitas que ajudam a não repetir erros.</td><td><code>.aioson/learnings/INDEX.md</code>, <code>gotchas/</code>, <code>recipes/</code>; registros em <code>project_learnings</code></td></tr>
+            <tr><th scope="row">Brains</th><td>Uma biblioteca de pequenos conhecimentos e padrões reutilizáveis.</td><td><code>.aioson/brains/</code></td></tr>
+            <tr><th scope="row">Histórico de execução</th><td>Quem fez o quê, quando, com qual resultado e evidência.</td><td><code>aioson-logs/</code> e <code>.aioson/runtime/aios.sqlite</code></td></tr>
+            <tr><th scope="row">Memória do operador</th><td>Preferências e decisões da pessoa que usa o AIOSON.</td><td><code>~/.aioson/operators/{identidade}/</code>, fora do projeto</td></tr>
+            <tr><th scope="row">Índices e cache</th><td>Ferramentas para localizar registros ou guardar um resumo temporário.</td><td><code>~/.aioson/search/</code>, <code>~/.aioson/temp/</code> e <code>context-pack.md</code></td></tr>
+          </tbody></table>
+        </div>
+        <p><code>~</code> significa a pasta pessoal do usuário do computador. <code>{slug}</code> é um nome curto que identifica um trabalho, como <code>agenda-consultas</code>. <code>.md</code> é um arquivo de texto com formatação simples, chamado Markdown.</p>
+        <details><summary>Os quatro arquivos de bootstrap, traduzidos</summary><dl>
+          <dt><code>what-is.md</code></dt><dd>O que é este sistema, para quem ele existe e qual problema resolve.</dd>
+          <dt><code>how-it-works.md</code></dt><dd>Como as partes se conectam e por onde as informações passam.</dd>
+          <dt><code>what-it-does.md</code></dt><dd>Quais funções e regras de negócio o sistema oferece.</dd>
+          <dt><code>current-state.md</code></dt><dd>O estado atual. Parte do histórico pode ir para <code>current-state-archive.md</code>.</dd>
+        </dl><p>O agente <code>@discover</code> pode produzir essa visão inicial. Mapas como <code>discovery.md</code> e <code>skeleton-system.md</code> complementam a orientação técnica. São retratos do sistema e precisam acompanhar suas mudanças.</p></details>
+        <details><summary>E dossiers, pesquisas, skills, squads e genomes?</summary>
+          <p>O <strong>dossier</strong> reúne o histórico de uma funcionalidade, incluindo descobertas, decisões, mapa do código e passagem entre agentes. O caminho atual é <code>.aioson/context/features/{slug}/dossier.md</code>. Decisões formais também podem ficar em <code>decision-checkpoint.json</code> nessa pasta. Registros temporários de continuidade podem existir em <code>.aioson/context/mappings/{slug}/continuity.md</code>.</p>
+          <p><strong>Pesquisas</strong> preservam fontes e conclusões: o cache técnico segue <code>researchs/{slug}/summary.md</code> e <code>files/</code>. Investigações de domínio do Orache usam <code>squad-searches/</code>. A existência de uma pesquisa antiga não garante que a informação continue atual.</p>
+          <p><strong>Skills</strong> são instruções de como executar um tipo de trabalho; <strong>genomes</strong> são pacotes de especialização aplicáveis a agentes e squads. Funcionam como conhecimento reutilizável, mas não são o diário automático de tudo que aconteceu. Squads também têm seus próprios aprendizados no runtime, consultáveis por <code>squad:learning</code>.</p>
+        </details>
+        <p class="source-note">Base: <a href="../../src/commands/memory.js">inventário de memória</a>, <a href="../../template/.aioson/docs/dossier/schema.md">schema do dossier</a>, <a href="../../src/commands/decision.js">decisões</a> e <a href="../../template/.aioson/docs/gateway/process-and-research.md">persistência de pesquisas</a>.</p>
+      </section>
+
+      <section id="capture" aria-labelledby="capture-title">
+        <p class="section-number">04 / O que merece ficar</p>
+        <h2 id="capture-title">Uma informação vira memória quando é registrada</h2>
+        <p>O AIOSON orienta agentes a transformar resultados úteis em registros duráveis. Ter dito algo no chat não prova que esse conteúdo já foi salvo. A escrita pode acontecer por um comando, por um arquivo produzido pelo agente ou por uma integração de execução.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Exemplos de informações e destinos de memória"><table><caption>Exemplos fictícios de um projeto de agenda</caption><thead><tr><th scope="col">O que aconteceu</th><th scope="col">O que registrar</th><th scope="col">Destino adequado</th></tr></thead><tbody>
+          <tr><td>Você definiu que duas consultas não podem ocupar o mesmo horário.</td><td>A regra do produto, seus motivos e como verificar o resultado.</td><td>PRD e critérios de aceitação; documentação do domínio quando útil.</td></tr>
+          <tr><td>Um teste falhou porque o fuso horário foi ignorado.</td><td>O problema, a condição que o causa e a solução comprovada.</td><td>Aprendizado <code>gotcha</code> ou <code>resolution</code>.</td></tr>
+          <tr><td>A sessão terminou com uma tarefa pela metade.</td><td>O que já funciona, o que falta e como retomar.</td><td><code>dev-state.md</code>, dossier e checkpoint.</td></tr>
+          <tr><td>Você pede explicações em linguagem simples.</td><td>Uma preferência pessoal com escopo e frase de origem.</td><td>Memória do operador, quando capturada como decisão persistente.</td></tr>
+          <tr><td>A equipe adotou uma convenção de nomes.</td><td>A regra e os contextos em que se aplica.</td><td><code>.aioson/rules/</code> com dados de roteamento.</td></tr>
+          <tr><td>Uma possibilidade foi discutida, sem aprovação.</td><td>A condição “proposta” ou “pendente”, se vale preservar a discussão.</td><td>Registro da decisão ou planejamento, sem apresentá-la como decisão tomada.</td></tr>
+        </tbody></table></div>
+        <h3>Aprendizado tem tipo, origem e evidência</h3>
+        <p>Os tipos básicos são <code>process</code> (forma de trabalhar), <code>domain</code> (conhecimento do negócio), <code>quality</code> (qualidade) e <code>preference</code> (preferência). Os registros técnicos também podem ter <code>kind=gotcha</code>, uma armadilha, ou <code>kind=resolution</code>, uma solução reutilizável.</p>
+        <p>O processamento de devlogs reconhece os prefixos abaixo. <code>gotcha</code> e <code>resolution</code> são guardados com tipo-base <code>quality</code> e com o subtipo correspondente.</p>
+        <pre><code>## Learnings
+- [domain] Consultas confirmadas não podem se sobrepor.
+- [gotcha] Comparar horários sem normalizar o fuso causa conflitos falsos.
+- [resolution] Normalizar os horários antes de verificar a sobreposição.</code></pre>
+        <p>Um bom registro explica <strong>quando o problema aparece, por que acontece, como foi resolvido e onde está a evidência</strong>. “Corrigimos um bug” ajuda muito menos do que uma receita que outra sessão consegue aplicar.</p>
+        <div class="callout"><strong>Repetição é um sinal, não uma prova de verdade.</strong><p>A frequência pode aumentar quando o mesmo aprendizado é detectado de novo. Ainda é necessário conferir se ele está correto e se vale para a tarefa atual.</p></div>
+        <p class="source-note">Base: <a href="../../src/commands/devlog-process.js">extração e registro de learnings</a> e <a href="../../src/learning-materialize.js">materialização em gotchas e recipes</a>.</p>
+      </section>
+
+      <section id="cycle" aria-labelledby="cycle-title">
+        <p class="section-number">05 / Da experiência ao próximo trabalho</p>
+        <h2 id="cycle-title">Como o conhecimento volta a ser útil</h2>
+        <ol class="flow-list">
+          <li><strong>O trabalho produz uma descoberta.</strong><p>Um agente implementa, verifica ou investiga algo e identifica uma decisão, uma armadilha ou uma solução reutilizável.</p></li>
+          <li><strong>A descoberta ganha um registro.</strong><p>Pode entrar no PRD, dossier, devlog ou banco de aprendizados. <code>devlog:process</code> importa os registros pendentes de <code>aioson-logs/</code> para o SQLite local.</p></li>
+          <li><strong>O sistema organiza o que deve permanecer.</strong><p>Índices apontam para os arquivos. Aprendizados técnicos podem ser materializados em <code>.aioson/learnings/</code>. Padrões elegíveis podem ser exportados ou promovidos.</p></li>
+          <li><strong>Uma nova tarefa aciona a recuperação.</strong><p>O agente lê a fundação do projeto, consulta os índices e procura os registros relacionados ao assunto e aos arquivos que vai tocar.</p></li>
+          <li><strong>O modelo recebe esse contexto e trabalha.</strong><p>O resultado pode confirmar, corrigir ou substituir o conhecimento anterior, mantendo a origem e a evidência necessárias.</p></li>
+        </ol>
+        <h3>Living Memory: atualizar a visão do sistema</h3>
+        <p>Ao concluir uma execução com <code>agent:done</code>, o runtime pode avaliar se as mudanças justificam atualizar o bootstrap. O motor considera sinais de mudança de estrutura e volume. Se houver bootstrap e mudanças relevantes, <code>memory:reflect-prepare</code> prepara um arquivo chamado <code>.aioson/runtime/reflect-prompt.json</code>.</p>
+        <p>Esse arquivo entrega ao agente a tarefa de refletir sobre as mudanças. <strong>Preparar a tarefa não é escrever o novo resumo.</strong> O agente precisa produzir o conteúdo; <code>memory:reflect-commit</code> valida a resposta e grava os arquivos permitidos. O mecanismo verifica os caminhos e detecta mudanças entre a preparação e a gravação.</p>
+        <h3>Active Learning Loop: reaproveitar aprendizados</h3>
+        <p>O fechamento de uma feature com resultado <code>PASS</code> pode executar a destilação: uma rotina que examina aprendizados e tenta transformar os elegíveis em conhecimento reutilizável. Esse passo é de melhor esforço: falhar nele não equivale a desfazer o fechamento. Features <code>MICRO</code> são dispensadas desse loop, e a opção <code>--no-distill</code> o desativa naquela chamada.</p>
+        <details><summary>Os caminhos de promoção não são todos iguais</summary>
+          <ul>
+            <li><code>learning:auto-promote</code>: por padrão, frequência mínima <strong>3</strong>; cria regras para aprendizados de <code>process</code> e <code>quality</code>. Os arquivos ficam nas regras do projeto, mesmo quando o código os chama de regras “universais”.</li>
+            <li><code>learning:evolve</code>: considera frequência mínima <strong>2</strong>; propõe mudanças em regras de processo ou seções do contexto do projeto. Há aplicação e rollback próprios. Esse caminho não pode editar diretamente <code>.aioson/agents/</code>.</li>
+            <li><code>learning:export</code>: exporta aprendizados ativos para arquivos de brain. Seu mínimo padrão é <strong>1</strong>; o wrapper <code>devlog:export-brains</code> usa <strong>2</strong>.</li>
+            <li>Materialização: registros ativos com <code>kind=gotcha</code> ou <code>kind=resolution</code> podem virar arquivos legíveis e um <code>INDEX.md</code> na etapa correspondente do loop.</li>
+          </ul>
+          <p>Uma regra criada ainda precisa ser encontrável pelo seletor. A geração atual de <code>learning:auto-promote</code> não acrescenta todos os campos de roteamento: confira com <code>rules:lint</code> e uma tarefa real. Exportar Markdown também não prova que o índice de brains foi atualizado.</p>
+        </details>
+        <p class="source-note">Base: <a href="../../src/commands/runtime.js">conclusão da execução</a>, <a href="../../src/memory-reflect-engine.js">motor de reflexão</a>, <a href="../../src/learning-loop-engine.js">destilação</a>, <a href="../../src/commands/learning-auto-promote.js">promoção automática</a> e <a href="../../src/commands/learning-evolve.js">evolução</a>.</p>
+      </section>
+
+      <section id="operator" aria-labelledby="operator-title">
+        <p class="section-number">06 / A pessoa e o projeto</p>
+        <h2 id="operator-title">Existe uma memória sobre como você trabalha</h2>
+        <p>O <strong>operador</strong> é a pessoa que usa o AIOSON. Sua memória pessoal guarda decisões persistentes, como preferências de comunicação e limites de autonomia. Ela pode ser consultada em diferentes projetos na mesma identidade local, por isso o escopo precisa estar claro.</p>
+        <p>Os arquivos ficam em <code>~/.aioson/operators/{identidade}/</code>. A identidade vem de <code>AIOSON_OPERATOR_ID</code>, quando válido, ou de um identificador derivado do e-mail configurado no Git. Sem identidade adequada, existe o fallback anônimo; o protocolo orienta a não carregar essa memória compartilhada como memória pessoal.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Sinais capturados pela memória do operador"><table><caption>Quando um sinal capturado vira decisão ativa</caption><thead><tr><th scope="col">Sinal</th><th scope="col">Exemplo fictício</th><th scope="col">Detecções</th></tr></thead><tbody>
+          <tr><th scope="row"><code>authorization</code></th><td>“Pode executar essa ação dentro deste escopo.”</td><td>1</td></tr>
+          <tr><th scope="row"><code>exclusion</code></th><td>“Não inclua essa parte nesta entrega.”</td><td>1</td></tr>
+          <tr><th scope="row"><code>correction</code></th><td>“Para este trabalho, use linguagem simples.”</td><td>1</td></tr>
+          <tr><th scope="row"><code>confirmation</code></th><td>Uma preferência confirmada de forma repetida.</td><td>2</td></tr>
+        </tbody></table></div>
+        <p>São limiares do comando de captura: o agente ainda precisa identificar o sinal e registrá-lo. A repetição de uma decisão já promovida reforça o registro, sem precisar criar outra cópia. Uma aprovação pontual deve preservar seus limites; não deve se tornar uma autorização para qualquer trabalho futuro.</p>
+        <details><summary>Arquivos pessoais, envelhecimento e controles</summary>
+          <ul>
+            <li><code>MEMORY.md</code>: índice de decisões ativas; o agente pode listar apenas os títulos e abrir os corpos relevantes.</li>
+            <li><code>decisions/</code>: conteúdo das decisões. <code>proposals/</code>: sinais ainda pendentes.</li>
+            <li><code>MEMORY-archive.md</code>: índice de arquivo, quando existente. <code>history/</code>: registros retirados por esquecimento.</li>
+            <li>O mecanismo de envelhecimento pode sugerir revisão conforme a categoria: identidade em 365 dias, autonomia em 180, ferramentas e padrão em 90, salvo configuração diferente. Isso não significa apagar automaticamente toda decisão ao atingir essa idade.</li>
+            <li><code>op:reinforce</code> reforça uma decisão; <code>op:forget</code> retira a entrada ativa e guarda histórico. Portanto, “esquecer” não é garantia de eliminação física imediata de todas as cópias.</li>
+          </ul>
+        </details>
+        <p>O carregamento é <strong>ligado por padrão</strong> no protocolo atual. Para desativá-lo no ambiente do cliente, use <code>AIOSON_OPERATOR_MEMORY=false</code>. Regras do projeto prevalecem em conflitos com decisões pessoais; uma memória também não substitui a instrução atual da pessoa.</p>
+        <p class="source-note">Base: <a href="../../src/commands/op-capture.js">captura</a>, <a href="../../src/operator-memory/identity.js">identidade</a>, <a href="../../src/operator-memory/decision.js">decisões</a>, <a href="../../src/operator-memory/decay.js">envelhecimento</a> e <a href="../../AGENTS.md">protocolo de entrada</a>.</p>
+      </section>
+
+      <section id="retrieval" aria-labelledby="retrieval-title">
+        <p class="section-number">07 / Guardar e encontrar</p>
+        <h2 id="retrieval-title">Como o agente “lembra” sem ler tudo</h2>
+        <p><strong>Isso é parte do sistema de memória.</strong> Os arquivos preservam o conhecimento; a seleção de contexto decide qual parte desse conhecimento deve chegar ao trabalho de agora. Uma biblioteca pode crescer sem que todos os livros precisem ficar abertos ao mesmo tempo.</p>
+        <p>O protocolo começa pelo contexto do projeto. Se existe um índice de aprendizados, o agente consulta seus títulos e resumos. Os corpos completos entram quando combinam com o trabalho. O mesmo princípio vale para a memória pessoal: primeiro a lista, depois as decisões relevantes.</p>
+        <p><code>context:brief</code> reúne contexto para uma tarefa concreta. Ele separa o que precisa ser carregado, como regras obrigatórias, do que é apenas uma referência relacionada. <code>context:select</code> é o seletor mais direto, usado também como fallback.</p>
+        <h3 id="tokens">“O LLM vai gastar muitos tokens monitorando tudo isso?”</h3>
+        <div class="speech-card">
+          <p class="machine-label">Fala pronta · cerca de 30 segundos</p>
+          <blockquote>“O AIOSON organiza a memória como uma biblioteca. Cada documento pode ter uma ficha dizendo do que trata e quando deve ser consultado. O agente informa a tarefa ao CLI, que faz a seleção no computador e indica o que consultar. Assim, o modelo pode trabalhar com a parte relevante da memória. Ainda há consumo de tokens, mas guardar muitos documentos não exige colocar todos eles na conversa.”</blockquote>
+        </div>
+        <p>O <strong>CLI</strong> é o programa do AIOSON que recebe comandos no terminal. Nessa seleção, ele executa código de busca e classificação localmente; não precisa pedir a outro LLM que leia toda a biblioteca. O mecanismo também não depende de manter um modelo vigiando continuamente todos os arquivos.</p>
+        <h3>Os cabeçalhos são as fichas da biblioteca</h3>
+        <p>Em arquivos de <code>.aioson/docs/</code> e <code>.aioson/rules/</code>, o cabeçalho entre duas linhas <code>---</code> se chama <strong>frontmatter</strong>. É uma ficha com informações sobre o documento. Os títulos como <code># Convenções da agenda</code> organizam o texto; o frontmatter fornece campos estruturados para as ferramentas.</p>
+        <p>Este exemplo fictício mostra a ficha e o começo do conteúdo de uma regra:</p>
+        <pre><code>---
+description: Convenções do módulo de agenda
+agents: [dev, qa]
+modes: [executing]
+task_types: [scheduling]
+triggers: [agenda, consulta, agendamento]
+paths: [src/scheduling/**]
+load_tier: trigger
+---
+
+# Convenções da agenda
+
+Antes de comparar horários, normalize o fuso.
+Verifique se uma alteração cria conflito com outra consulta.</code></pre>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Campos do cabeçalho Markdown explicados em linguagem simples"><table><caption>Como ler a ficha, sem precisar saber programar</caption><thead><tr><th scope="col">Campo</th><th scope="col">Pergunta que ele responde</th><th scope="col">No exemplo</th></tr></thead><tbody>
+          <tr><th scope="row"><code>description</code></th><td>Sobre o que é este documento?</td><td>Convenções da agenda.</td></tr>
+          <tr><th scope="row"><code>agents</code></th><td>Quais papéis podem precisar dele?</td><td>Quem implementa e quem verifica: Dev e QA.</td></tr>
+          <tr><th scope="row"><code>modes</code></th><td>Em qual modo de trabalho ele se aplica?</td><td><code>executing</code>: durante a execução. Outro modo é <code>planning</code>, para planejamento.</td></tr>
+          <tr><th scope="row"><code>task_types</code></th><td>A quais tipos de tarefa ele está associado?</td><td>Tarefas de agendamento.</td></tr>
+          <tr><th scope="row"><code>triggers</code></th><td>Quais termos ou expressões ajudam a acioná-lo?</td><td>Agenda, consulta e agendamento.</td></tr>
+          <tr><th scope="row"><code>paths</code></th><td>Em quais partes do projeto ele é relevante?</td><td>Arquivos dentro de <code>src/scheduling/</code>; <code>**</code> inclui os caminhos abaixo dessa pasta.</td></tr>
+          <tr><th scope="row"><code>load_tier</code></th><td>Como orientar seu carregamento?</td><td><code>trigger</code>: depende de um sinal relevante. <code>always</code> indica leitura obrigatória dentro das condições aplicáveis.</td></tr>
+        </tbody></table></div>
+        <p>Uma ficha não precisa ter todos os campos deste exemplo. Também existem campos como <code>priority</code>, <code>aliases</code> e <code>scope</code>. O seletor combina os sinais e os filtros; a palavra “agenda” aparecer uma vez não significa que todo documento sobre agenda será obrigatório para qualquer agente.</p>
+        <h3>Do pedido à leitura, passo a passo</h3>
+        <ol class="flow-list">
+          <li><strong>Você pede uma alteração.</strong><p>Por exemplo: “corrija a mudança de horário de uma consulta”. O agente identifica a tarefa e os arquivos envolvidos.</p></li>
+          <li><strong>O agente consulta o CLI.</strong><p>Ele informa o papel, o modo de trabalho, a tarefa e os caminhos conhecidos. Esses dados ajudam a selecionar a memória adequada.</p></li>
+          <li><strong>O programa procura e classifica as fontes.</strong><p>Usa cabeçalhos, caminhos e outros sinais. Pode também consultar o conteúdo e índices de busca para encontrar referências relacionadas.</p></li>
+          <li><strong>O CLI devolve orientações de leitura.</strong><p>O brief distingue <code>must_load</code> (carregar), <code>should_load</code> (consultar quando necessário) e <code>related</code> (referências de apoio). Também pode trazer restrições e resumos úteis.</p></li>
+          <li><strong>O agente lê o material necessário.</strong><p>O conteúdo apresentado ao modelo entra no contexto da tarefa. Se o assunto, o modo ou os arquivos mudarem, a seleção deve ser revista.</p></li>
+        </ol>
+        <pre><code>aioson context:brief . --agent=dev --mode=executing --task="Corrigir a mudanca de horario de uma consulta" --paths=src/scheduling</code></pre>
+        <p>No exemplo, a regra da agenda tem sinais para ser encontrada. Um documento sobre outra parte do projeto pode continuar guardado para quando for útil. Regras gerais obrigatórias também podem acompanhar a tarefa; a seleção não se resume a um único arquivo.</p>
+        <h3>Ler no computador é diferente de colocar na conversa</h3>
+        <div class="callout"><strong>O ajuste importante na explicação dos “headers”</strong><p>É correto dizer que os cabeçalhos ajudam o CLI a selecionar documentos. No código atual, porém, o seletor também lê arquivos completos localmente e pode usar seu conteúdo na busca. Essa leitura pelo programa não equivale a enviar cada arquivo inteiro ao LLM.</p></div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Diferença entre processamento local e consumo de contexto"><table><caption>Onde os tokens entram nessa história?</caption><thead><tr><th scope="col">Ação</th><th scope="col">O que acontece</th><th scope="col">Relação com os tokens</th></tr></thead><tbody>
+          <tr><th scope="row">Guardar um arquivo</th><td>O texto ocupa espaço no disco.</td><td>A existência do arquivo não o coloca automaticamente no contexto do modelo.</td></tr>
+          <tr><th scope="row">O CLI ler, comparar e indexar</th><td>O programa usa processamento, memória do computador e disco.</td><td>Não há consumo de tokens do LLM por cada byte lido localmente, por si só.</td></tr>
+          <tr><th scope="row">Pedir uma operação e receber sua saída</th><td>O agente faz a chamada e recebe caminhos, motivos, restrições ou trechos.</td><td>As informações apresentadas ao modelo passam a fazer parte do contexto; saídas grandes também têm custo.</td></tr>
+          <tr><th scope="row">Carregar uma fonte selecionada</th><td>O agente apresenta ao modelo o conteúdo de que precisa.</td><td>Esse conteúdo ocupa contexto. Selecionar bem reduz leituras desnecessárias.</td></tr>
+          <tr><th scope="row">Raciocinar e responder</th><td>O modelo executa seu trabalho a partir do contexto recebido.</td><td>Continua existindo consumo do modelo, conforme o serviço e a execução.</td></tr>
+        </tbody></table></div>
+        <p>A economia depende de evitar material irrelevante, manter boas fichas e devolver resultados proporcionais. Um cabeçalho mal definido pode trazer documentos demais ou deixar de apontar uma fonte importante. Uma saída enorme do CLI, se devolvida integralmente ao modelo, também pode gastar muitos tokens.</p>
+        <p><strong>Por isso, “indica os arquivos obrigatórios e relevantes” é mais preciso do que “informa exatamente e somente os arquivos certos”.</strong> Há regras de seleção e verificações, mas não uma garantia de acerto perfeito nem de um custo fixo. Sem medir uma execução real, este guia não promete uma porcentagem de economia.</p>
+        <p>O agente ainda precisa do código, dos testes e de outras evidências exigidas pela tarefa. A lista de memória selecionada não proíbe novas leituras justificadas. Se o CLI estiver indisponível, índices e cabeçalhos continuam legíveis, mas o agente terá de fazer mais dessa seleção manualmente.</p>
+        <p>Para acompanhar esse processo em uma implementação concreta, veja <a href="#form-example">como o agente encontra máscaras e validações para CPF, CNPJ e telefone</a> no capítulo 10.</p>
+        <p class="source-note">Base desta explicação: <a href="../../src/context-selector.js">coleta de arquivos, frontmatter e seleção</a>, <a href="../../src/context-brief.js">classificação das leituras e recuperação de apoio</a> e <a href="../../src/commands/context-brief.js">conteúdo devolvido pelo comando</a>. A distinção de custo decorre da diferença entre processamento local e texto apresentado ao modelo; não é um benchmark de tokens.</p>
+        <h3>Ferramentas para encontrar a memória certa</h3>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Diferença entre ferramentas de busca"><table><caption>Qual ferramenta procura o quê?</caption><thead><tr><th scope="col">Ferramenta</th><th scope="col">O que faz</th><th scope="col">Limite importante</th></tr></thead><tbody>
+          <tr><th scope="row"><code>context:brief</code> / <code>context:select</code></th><td>Selecionam fontes segundo tarefa, agente, modo e caminhos.</td><td>Uma recomendação de leitura não prova que o agente leu o arquivo.</td></tr>
+          <tr><th scope="row"><code>context:search</code></th><td>Busca documentos Markdown indexados do projeto, com classificação e ranking.</td><td>A versão analisada atualiza o índice por padrão; <code>--no-index</code> evita essa atualização.</td></tr>
+          <tr><th scope="row"><code>memory:search</code></th><td>Busca títulos e evidências de <code>project_learnings</code> no SQLite do projeto.</td><td>Não é uma busca universal em todos os arquivos, brains e preferências pessoais.</td></tr>
+          <tr><th scope="row"><code>brain:query</code></th><td>Consulta nós de brains com filtros como tags, agente e qualidade.</td><td>Depende dos arquivos e do índice de brains disponíveis e compatíveis.</td></tr>
+          <tr><th scope="row"><code>context:pack</code></th><td>Produz um pacote de leitura focado na tarefa.</td><td>É uma seleção derivada; não substitui as fontes originais.</td></tr>
+          <tr><th scope="row"><code>op:list</code> / <code>op:show</code></th><td>Listam e abrem decisões do operador.</td><td>O armazenamento é por identidade local; uma decisão pode ter escopo específico.</td></tr>
+        </tbody></table></div>
+        <p>A busca de aprendizados usa <strong>FTS5</strong>, um mecanismo de busca textual do SQLite, e <strong>BM25</strong>, uma forma de ordenar resultados por relevância textual. Esse caminho não depende de uma chamada ao modelo ou de embeddings. Ter busca textual não significa compreensão perfeita de qualquer pergunta.</p>
+        <details><summary>Como conferir se as fichas e a seleção estão funcionando</summary>
+          <p>Salvar o arquivo na pasta certa não basta para garantir uma boa seleção. <code>rules:lint</code> verifica metadados; <code>context:evals</code> exercita cenários de roteamento; <code>context:usage</code> ajuda a observar o uso registrado.</p>
+          <p><code>context:load</code> registra que um artefato foi carregado. Esses eventos tornam a consulta observável, mas a declaração de leitura não prova, sozinha, que a conclusão do agente está correta.</p>
+        </details>
+        <p class="source-note">Base: <a href="../../src/context-brief.js">brief</a>, <a href="../../src/context-selector.js">seletor</a>, <a href="../../src/commands/context-search.js">busca de documentos</a>, <a href="../../src/learning-loop-fts5.js">busca de learnings</a> e <a href="../../src/brain-query.js">consulta de brains</a>.</p>
+      </section>
+
+      <section id="portability" aria-labelledby="portability-title">
+        <p class="section-number">08 / Continuidade entre modelos</p>
+        <h2 id="portability-title">Trocar o motor não exige trocar o caderno</h2>
+        <p>Hoje você pode trabalhar com um modelo, e amanhã com outro, usando um cliente compatível e com acesso aos mesmos arquivos. O novo agente recupera as decisões e o estado já registrados. A experiência depende do cliente, das ferramentas disponíveis e da capacidade do modelo de seguir as instruções.</p>
+        <div class="example" aria-label="Exemplo de continuidade entre modelos">
+          <div class="example-top"><span class="machine-label">Exemplo ilustrativo · nenhuma IA é chamada</span><span class="example-status">Memória preservada</span></div>
+          <h3>Projeto: agenda de consultas</h3>
+          <div class="saved-record"><span class="machine-label">Registro do projeto</span><p>“Impedir duas consultas no mesmo horário. A validação já foi implementada; falta verificar a alteração de horário.”</p></div>
+          <div class="model-controls" role="group" aria-label="Escolher a sessão do exemplo" hidden><button type="button" data-model="a" aria-pressed="true">Hoje · Modelo A</button><button type="button" data-model="b" aria-pressed="false">Amanhã · Modelo B</button></div>
+          <div class="example-result" aria-live="polite"><strong id="model-heading">Hoje · Modelo A</strong><p id="model-description">O agente lê o registro e identifica o próximo passo: verificar a alteração de horário.</p></div>
+          <p class="example-note">Ao alternar as sessões, o registro continua igual. Na prática, o segundo modelo precisa receber esse contexto e verificar o estado real do código.</p>
+          <noscript><p>Amanhã, o Modelo B pode consultar o mesmo registro e recuperar esse próximo passo. Nenhuma transferência de “memória interna” entre modelos é necessária.</p></noscript>
+        </div>
+        <h3>O que precisa acompanhar uma troca de ferramenta ou máquina?</h3>
+        <ul>
+          <li><strong>Arquivos de projeto:</strong> contexto, decisões, regras, aprendizados e documentos necessários, com referências válidas. O Git pode transportá-los quando estiverem versionados.</li>
+          <li><strong>Registros só locais:</strong> o SQLite de runtime pode conter histórico ainda não exportado. Clonar o código não transfere automaticamente esse banco.</li>
+          <li><strong>Memória pessoal:</strong> mora fora do repositório e exige sua própria transferência, se desejada, e identidade compatível.</li>
+          <li><strong>Protocolo de leitura:</strong> o novo cliente precisa seguir as instruções do projeto e permitir que o agente acesse os arquivos.</li>
+        </ul>
+        <p>O AIOSON também possui importação explícita de memória técnica do Claude Code por <code>learning --sub=import-from-claude</code>. Ela lista candidatos e exige seleção para importar; não é uma sincronização automática de toda a memória privada de qualquer ferramenta.</p>
+        <p class="source-note">Base: <a href="../../src/learning-materialize.js">conhecimento em Markdown</a>, <a href="../../src/commands/learning.js">importação seletiva</a> e <a href="../../src/operator-memory/storage.js">armazenamento pessoal</a>.</p>
+      </section>
+
+      <section id="maintenance" aria-labelledby="maintenance-title">
+        <p class="section-number">09 / Uma memória que continua útil</p>
+        <h2 id="maintenance-title">Atualizar, resumir e arquivar também faz parte</h2>
+        <p>Uma memória que cresce sem organização pode ficar cara de ler e difícil de usar. O AIOSON oferece meios de manter o estado atual enxuto e preservar o histórico para consulta.</p>
+        <dl class="maintenance-list">
+          <dt>HOT e COLD: recente e histórico</dt><dd><code>current-state.md</code> mantém o conteúdo mais útil para retomada. <code>current-state-archive.md</code> recebe histórico. <code>memory:trim</code> separa entradas segundo o formato esperado, a quantidade a manter e as features ativas. Não é um resumo inteligente arbitrário de qualquer Markdown.</dd>
+          <dt>Arquivar uma memória específica</dt><dd><code>memory:archive</code> trabalha com IDs de regra, aprendizado ou brain, preserva motivo e histórico de evolução; <code>memory:restore</code> permite restaurar registros elegíveis. É diferente de apagar arquivos manualmente.</dd>
+          <dt>Arquivar uma entrega</dt><dd>O fechamento e o arquivamento de features organizam seus artefatos históricos. Um PRD em <code>.aioson/context/done/</code> continua sendo evidência do passado; não deve virar, por acidente, a instrução de uma feature nova.</dd>
+          <dt>Guardar um resumo temporário</dt><dd><code>context:cache:save</code> salva o texto fornecido. <code>context:cache:restore</code> recupera esse texto, não restaura a memória interna do modelo nem uma conversa inteira. O cache possui política padrão de 24 horas e limpeza própria.</dd>
+          <dt>Medir saúde e uso</dt><dd><code>memory:status</code>, <code>context:health</code>, <code>context:usage</code> e <code>doctor</code> ajudam a encontrar ausência de arquivos, volume, roteamento e conhecimento sem uso observado. Nenhum deles garante sozinho a exatidão de todos os documentos.</dd>
+        </dl>
+        <p>As opções <code>--dry-run</code> dos comandos que as suportam permitem ver uma proposta antes de aplicar mudanças. As operações de curadoria citadas têm limites próprios, inclusive restrição de execução em hooks automáticos.</p>
+        <p class="source-note">Base: <a href="../../src/commands/memory-trim.js">trim</a>, <a href="../../src/current-state-trim.js">separação de histórico</a>, <a href="../../src/learning-loop-archive.js">arquivo e restauração</a> e <a href="../../src/context-cache.js">cache de sessão</a>.</p>
+      </section>
+
+      <section id="practice" aria-labelledby="practice-title">
+        <p class="section-number">10 / Usando no dia a dia</p>
+        <h2 id="practice-title">Como o agente salva, encontra e usa a memória</h2>
+        <h3 id="form-example">Como o agente sabe que CPF, CNPJ e telefone precisam de tratamento?</h3>
+        <p><strong>O formulário ajuda a enxergar o ciclo da memória:</strong> registrar uma decisão útil, encontrá-la quando o assunto voltar e carregar o conhecimento necessário para trabalhar. O cabeçalho ajuda a localizar o documento; o corpo explica a regra; o agente aplica essa regra e verifica o resultado.</p>
+        <div class="speech-card">
+          <p class="machine-label">Fala pronta · um exemplo do dia a dia</p>
+          <blockquote>“O agente registra no projeto o que precisa ser lembrado, com uma ficha indicando o assunto e quando consultar. Ao receber uma tarefa, ele usa o CLI do AIOSON para encontrar os registros relevantes. Em um cadastro, procura as regras dos campos; os documentos de outros assuntos podem continuar guardados. O modelo recebe o contexto necessário para trabalhar. Depois, o agente salva as decisões e soluções úteis para a próxima tarefa. A memória permanece no projeto, sem exigir que todo o histórico seja enviado ao modelo a cada pedido.”</blockquote>
+        </div>
+        <h3>O ciclo completo: salvar → encontrar → ler → aplicar → atualizar</h3>
+        <ol class="flow-list">
+          <li><strong>Registrar o que foi definido ou comprovado.</strong><p>Na primeira implementação, o agente identifica os requisitos do cadastro, confere os componentes e testa a solução. Salva as decisões na fonte adequada: por exemplo, o documento de campos do projeto. Se esse documento já existe, atualiza-o. Uma tentativa não verificada continua identificada como tentativa.</p></li>
+          <li><strong>Dar uma ficha ao registro.</strong><p>No cabeçalho do <code>.md</code>, descreve o assunto, os gatilhos e os caminhos pertinentes. “Cadastro”, “CPF”, “CNPJ” e “telefone” ajudam a encontrar a fonte quando esses assuntos aparecem. No corpo, registra a orientação, seus motivos e os arquivos que a implementam.</p></li>
+          <li><strong>Receber uma nova tarefa e pedir a seleção.</strong><p>Mais tarde, você pede “adicione telefone ao cadastro”. O agente informa essa tarefa, seu papel e os caminhos conhecidos ao <code>context:brief</code>. O CLI compara esses sinais com os metadados e outros elementos de busca.</p></li>
+          <li><strong>Carregar as fontes indicadas.</strong><p>O agente lê as fontes obrigatórias e consulta as referências relacionadas que ajudam a resolver a tarefa. Um documento sobre exportação de relatórios pode permanecer fora do contexto, se não for necessário. As regras gerais obrigatórias continuam valendo.</p></li>
+          <li><strong>Aplicar a memória ao código atual.</strong><p>O documento de campos aponta para o componente e o validador que já existem. O agente abre esses arquivos, confere o requisito atual, reutiliza a solução adequada e testa. O cabeçalho permite descobrir a orientação; o comportamento vem do conteúdo e das evidências.</p></li>
+          <li><strong>Guardar o que mudou para o próximo uso.</strong><p>Se houve uma nova decisão ou descoberta útil, o agente atualiza a documentação ou registra um aprendizado com a evidência. Se nada mudou, não precisa criar uma cópia. A próxima sessão pode recuperar esse registro pelo mesmo processo, inclusive com outro modelo que tenha acesso ao projeto.</p></li>
+        </ol>
+        <div class="callout"><strong>Quem salva? Quem busca? Quem usa?</strong><p>O agente escreve ou atualiza a memória usando as ferramentas disponíveis. O CLI organiza e seleciona as fontes. O modelo usa o conteúdo que chega ao seu contexto. Ter um arquivo salvo não significa que todos os agentes o lerão automaticamente.</p></div>
+        <h3>Como isso evita gastar tokens sem necessidade?</h3>
+        <p>O ganho vem de <strong>selecionar antes de carregar</strong>. Para ajustar um telefone, o agente busca o contrato desse campo e as referências necessárias, em vez de colocar toda a documentação do sistema na conversa. Também salva registros objetivos e aponta para as fontes, evitando repetir páginas de histórico.</p>
+        <p>Os cabeçalhos ajudam nessa escolha, mas não contêm obrigatoriamente toda a resposta. O CLI pode ler corpos de arquivos localmente durante a busca; isso não significa enviar esses corpos inteiros ao modelo. A saída do comando e os documentos efetivamente apresentados ao LLM ocupam contexto e consomem tokens. A seleção busca relevância; não garante uma lista perfeita nem custo zero. Veja a <a href="#tokens">explicação dos cabeçalhos e dos tokens</a>.</p>
+        <h3>O AIOSON já tem uma regra para isso</h3>
+        <p>A regra <a href="../../template/.aioson/rules/form-fields-masks-and-validation.md"><code>form-fields-masks-and-validation.md</code></a> faz parte do template e está instalada neste projeto em <code>.aioson/rules/</code>. Ela é acionável por assuntos como formulário, cadastro, campos, máscaras e validação.</p>
+        <p>Seu conteúdo orienta o agente a buscar os formatos de domínio em regras e documentos do projeto, reutilizar componentes e validadores existentes, usar máscaras ou formatadores para campos estruturados e mostrar erros junto ao campo. Também pede validação em camadas e verificação do comportamento real.</p>
+        <p><strong>Isso foi conferido pelo CLI nesta análise.</strong> A consulta abaixo usou um caminho ilustrativo de formulário; ela não criou um formulário nem alterou arquivos de clientes:</p>
+        <pre><code>aioson context:brief . --agent=dev --mode=executing --task="Implementar formulario de cadastro de clientes com CPF, CNPJ e telefone" --paths=src/customers/CustomerForm.tsx</code></pre>
+        <p>Resumo do resultado observado:</p>
+        <pre><code>Leitura obrigatória (must_load):
+.aioson/rules/form-fields-masks-and-validation.md
+
+Sinais identificados:
+modo de execução; gatilhos e aliases de formulário/cadastro
+
+Também selecionada:
+.aioson/rules/crud-surface-integrity.md</code></pre>
+        <p>A segunda regra exige coerência entre criar e editar um registro, obrigatoriedade aplicada na validação do domínio e teste que preencha o formulário real. <strong>A regra ser selecionada comprova a descoberta; não comprova que a máscara já foi implementada.</strong></p>
+        <details><summary>O que essa memória precisa explicar sobre os campos?</summary>
+        <h3>“Ter máscara” não quer dizer “estar validado”</h3>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Camadas de tratamento dos campos de formulário"><table><caption>São perguntas diferentes sobre o mesmo campo</caption><thead><tr><th scope="col">Camada</th><th scope="col">O que resolve</th><th scope="col">Exemplo didático</th></tr></thead><tbody>
+          <tr><th scope="row">Máscara ou formatação</th><td>Como o valor aparece e como a pessoa o preenche.</td><td>Organizar a pontuação e os separadores de um documento ou telefone.</td></tr>
+          <tr><th scope="row">Normalização</th><td>Como representar o valor de forma consistente para comparar e guardar.</td><td>Separar a apresentação visual do valor armazenado, preservando os caracteres significativos definidos para aquele documento.</td></tr>
+          <tr><th scope="row">Validação de formato e estrutura</th><td>Se o conteúdo obedece à especificação aplicável.</td><td>Conferir tamanho, caracteres e dígitos verificadores quando esse tipo de documento os define.</td></tr>
+          <tr><th scope="row">Regra de negócio</th><td>Se aquele cadastro pode ser aceito nesta aplicação.</td><td>Documento obrigatório para um tipo de cliente, ou impedimento de duplicidade quando esse for o requisito.</td></tr>
+          <tr><th scope="row">Verificação externa</th><td>Uma confirmação que exige outra fonte ou interação.</td><td>Consultar uma situação cadastral ou confirmar acesso a um telefone, se isso fizer parte do produto.</td></tr>
+        </tbody></table></div>
+        <p>Um documento com aparência correta pode falhar na validação. Um valor estruturalmente válido não comprova, por si só, que o documento existe ou pertence à pessoa. Da mesma forma, um telefone com formato aceito não comprova que alguém consegue receber uma mensagem nele. Verificação externa é uma capacidade distinta, que exige definição e integração próprias.</p>
+        <h3>O que a memória precisa dizer sobre cada campo?</h3>
+        <p>Uma lista que diga apenas “CPF, CNPJ e telefone” é incompleta para muitas decisões. O agente precisa encontrar ou consolidar um pequeno contrato de comportamento:</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Perguntas que o agente deve resolver para cada tipo de campo"><table><caption>Exemplos de decisões a localizar, sem impor uma regra universal</caption><thead><tr><th scope="col">Campo</th><th scope="col">Formato e validação a consultar</th><th scope="col">Decisão do projeto</th></tr></thead><tbody>
+          <tr><th scope="row">CPF</th><td>Máscara adotada, normalização e verificação estrutural conforme a especificação aplicável.</td><td>Quando é obrigatório? Pode repetir? O produto exige alguma consulta externa?</td></tr>
+          <tr><th scope="row">CNPJ</th><td>Formato vigente, caracteres aceitos e validador compatível. Um exemplo antigo de máscara não basta como especificação.</td><td>Quais formatos são aceitos na entrada e pelas integrações? Como manter compatibilidade com registros existentes?</td></tr>
+          <tr><th scope="row">Telefone</th><td>País atendido, código de país, formatos e tratamento de ramal, quando necessário.</td><td>Aceita só celular ou outros telefones? É contato opcional? Precisa confirmar acesso ao número?</td></tr>
+          <tr><th scope="row">E-mail</th><td>Validação e componente apropriados; não aplicar por analogia uma máscara de documento numérico.</td><td>É único? É obrigatório? Precisa confirmar acesso ao endereço?</td></tr>
+          <tr><th scope="row">Outro documento</th><td>Tipo, emissor, país e especificação reconhecida pelo projeto.</td><td>Quais documentos atendem ao cadastro? Como tratar um formato ainda não conhecido?</td></tr>
+        </tbody></table></div>
+        <p>Esta tabela não é um catálogo de algoritmos oficiais. Ela mostra <strong>quais informações o agente precisa buscar</strong>. Para implementar um documento real, deve conferir a especificação vigente e a compatibilidade das ferramentas utilizadas. O conhecimento geral do modelo pode ajudar na investigação; não substitui essa conferência.</p>
+        <p>O requisito ou PRD define quem preenche, quais países e documentos são atendidos e o que é obrigatório. O idioma da conversa é uma pista, não prova de que todos os clientes usam documentos do mesmo país. A implementação precisa conferir também o recebimento dos dados no servidor e testar preenchimento, entradas inválidas, envio e edição.</p>
+        </details>
+        <details open><summary>Exemplo: o arquivo que o agente salva e encontra depois</summary>
+          <p>Se um projeto precisar preservar esse contrato para reutilização, pode registrá-lo em um documento roteável, como <code>.aioson/docs/customer-fields.md</code>. O conteúdo a seguir é um exemplo fictício, não um arquivo criado neste projeto:</p>
+          <pre><code>---
+description: Contrato dos campos do cadastro de clientes
+agents: [dev, qa]
+modes: [planning, executing]
+task_types: [form, registration]
+triggers: [cadastro de clientes, CPF, CNPJ, telefone]
+paths: [src/customers/**]
+load_tier: trigger
+---
+
+# Campos do cadastro de clientes
+
+## Telefone
+- Público atendido: clientes no Brasil neste exemplo.
+- Obrigatoriedade: opcional, conforme requisito aprovado.
+- Componente: src/components/PhoneField.tsx.
+- Validador compartilhado: src/shared/validation/customer.ts.
+- Armazenamento: conforme contrato em docs/api/customers.md.
+- Verificação de acesso ao número: não exigida neste exemplo.
+
+## Referências
+- Decisão: requisito TEL-01 no PRD do cadastro.
+- Registrar a fonte e a data da especificação consultada.
+- Apontar os testes que verificam esse contrato.</code></pre>
+          <p>Os caminhos de código e o requisito acima são fictícios. Na aplicação real, o agente registra os caminhos que verificou e completa as referências com evidências reais. Evite criar outro documento quando o PRD, uma regra ou um documento existente já é a fonte adequada.</p>
+          <p><strong>O cabeçalho responde “quando consultar?”. O corpo responde “o que seguir e onde conferir?”.</strong> Na próxima tarefa de cadastro, o CLI pode apontar este documento; ao lê-lo, o agente encontra o componente e o validador sem precisar abrir todos os arquivos do projeto. Se a memória estiver incompleta ou desatualizada, ele amplia a busca e corrige o registro.</p>
+          <p>A ficha ajuda a selecionar esse documento quando a tarefa menciona o cadastro ou toca seus caminhos. É o corpo do documento que explica o comportamento. <code>rules:lint</code> verifica metadados; uma consulta concreta ao brief ajuda a conferir se a fonte aparece onde se espera.</p>
+        </details>
+        <h3>Salvar um documento e salvar um aprendizado</h3>
+        <p>São caminhos complementares. Para preservar o contrato dos campos, o agente pode escrever ou atualizar o <code>.md</code> apropriado. Para guardar uma armadilha descoberta durante o trabalho, pode registrar um aprendizado pelo fluxo de devlog ou pelo mecanismo correspondente. O <code>devlog:process</code> importa os aprendizados reconhecidos para o banco; na etapa de materialização, os elegíveis podem virar arquivos em <code>.aioson/learnings/</code> e entradas no <code>INDEX.md</code>.</p>
+        <p>No primeiro caso, cabeçalhos e referências ajudam a localizar a documentação. No segundo, o índice permite consultar títulos e resumos antes de abrir o aprendizado pertinente; também existe a busca no banco. <strong>Não há um único comando que transforme qualquer texto da conversa em todos esses tipos de memória.</strong> O agente precisa concluir o registro no destino certo e conferir como ele será recuperado. O <a href="#capture">capítulo 4</a> explica o que merece ser salvo.</p>
+        <details><summary>Quais buscas o agente pode fazer, além do brief?</summary>
+          <pre><code>aioson context:search . --query="CPF"
+aioson context:search . --query="CNPJ"
+aioson context:search . --query="telefone"
+aioson memory:search "telefone" . --limit=5
+aioson brain:query . --agent=dev --tags=forms,validation --min-quality=4 --format=index</code></pre>
+          <p><code>context:search</code> procura documentos; <code>memory:search</code> procura aprendizados no banco do projeto; <code>brain:query</code> consulta os padrões indexados. Uma busca vazia não comprova que não existe uma regra: o agente também pode seguir links do requisito e procurar nomes de campos, componentes e validadores no código.</p>
+          <p>Depois da leitura, <code>context:load</code> pode registrar a consulta do artefato. Isso é evidência de carregamento, não execução automática da validação do formulário.</p>
+        </details>
+        <h3>E se ninguém tiver registrado a regra?</h3>
+        <p>O agente deve localizar a lacuna e resolvê-la proporcionalmente. Pode adotar uma implementação existente quando ela está comprovadamente alinhada ao requisito. Se falta uma especificação técnica, consulta a documentação apropriada. Se falta uma decisão de produto, como quais países atender ou tornar um documento obrigatório, a pessoa responsável precisa defini-la.</p>
+        <p>O AIOSON fornece o processo, a regra de cuidado com formulários e meios de recuperar conhecimento. <strong>A presença dessa regra não significa que ele traga validadores prontos para todos os documentos de todos os países.</strong> O agente continua responsável por encontrar, implementar ou integrar a solução adequada e provar que funciona.</p>
+        <div class="callout"><strong>Uma forma de pedir isso ao agente</strong><p>“Consulte a memória relevante para este cadastro e carregue as regras e fontes necessárias. Reutilize os componentes e as validações documentados. Depois de verificar a implementação, atualize as decisões e registre os aprendizados úteis no lugar certo, sem duplicar o que já existe. Informe onde salvou e como uma próxima sessão encontrará esse registro.”</p></div>
+        <p class="source-note">Base: <a href="../../template/.aioson/rules/form-fields-masks-and-validation.md">regra de máscaras e validação</a>, <a href="../../template/.aioson/rules/crud-surface-integrity.md">integridade de formulários de cadastro</a>, <a href="../../template/.aioson/rules/security-baseline.md">validação no servidor</a> e <a href="../../src/commands/context-load.js">registro de leitura</a>. O resultado de seleção foi observado com o CLI em 11/09/2026; os contratos de campos acima são exemplos didáticos.</p>
+        <h3>Outros pedidos simples para usar a memória</h3>
+        <p>Não é necessário memorizar comandos. O mais útil é pedir registros que outra sessão consiga entender e solicitar evidência de onde foram salvos.</p>
+        <div class="request-list">
+          <div><h3>Quando tomar uma decisão</h3><p class="human-voice">“Registre esta decisão e o motivo no documento desta funcionalidade.”</p><p>Isso preserva a escolha no contexto certo, em vez de espalhar cópias contraditórias.</p></div>
+          <div><h3>Quando resolver algo difícil</h3><p class="human-voice">“Guarde a causa deste problema e a solução que funcionou como aprendizado do projeto.”</p><p>Peça a condição de ocorrência, os arquivos envolvidos e a verificação da solução.</p></div>
+          <div><h3>Antes de encerrar uma sessão</h3><p class="human-voice">“Registre onde paramos, o que já foi verificado e qual é o próximo passo.”</p><p>O registro deve diferenciar trabalho concluído de intenção ou pendência.</p></div>
+          <div><h3>Ao retomar com outro modelo</h3><p class="human-voice">“Leia a memória desta funcionalidade, confira o código atual e retome o próximo passo registrado.”</p><p>Isso reduz a repetição de explicações e pede uma conferência contra o estado real.</p></div>
+        </div>
+        <h3>Como confirmar que houve memória de verdade?</h3>
+        <ol><li>Peça o caminho do arquivo ou o identificador do registro.</li><li>Confira se o texto representa o que foi decidido e delimita o escopo.</li><li>Veja como uma nova sessão encontra esse registro: índice, referência ou busca.</li><li>Quando o assunto mudar, atualize o registro ou marque o anterior como histórico.</li></ol>
+        <div class="callout"><strong>Memória com contexto evita interpretações erradas.</strong><p>“Prefiro esta abordagem nesta funcionalidade” é diferente de “adote esta abordagem em todos os meus projetos”. Preserve essa diferença ao capturar.</p></div>
+      </section>
+
+      <section id="commands" aria-labelledby="commands-title">
+        <p class="section-number">11 / Para quem usa o terminal</p>
+        <h2 id="commands-title">Comandos para consultar e cuidar da memória</h2>
+        <p>Execute a partir da pasta do projeto. Nos exemplos, <code>.</code> significa “esta pasta”. São instruções de uso: este tutorial não executa comandos. Nomes como <code>agenda-consultas</code> e IDs devem ser substituídos pelos registros reais.</p>
+        <h3>Primeiras consultas</h3>
+        <pre><code>aioson memory:status .
+aioson memory:summary . --last=5
+aioson learning:list .
+aioson memory:search "horario" . --limit=5
+aioson context:search . --query="agenda" --limit=5
+aioson op:list --json --titles-only</code></pre>
+        <p>Os quatro primeiros comandos mostram, respectivamente, o inventário da memória, um resumo, os aprendizados e uma busca nesses aprendizados. A busca de contexto consulta documentos e pode atualizar seu índice local. <code>op:list</code> mostra decisões pessoais.</p>
+        <details><summary>Preparar contexto e verificar o que foi consultado</summary>
+          <pre><code>aioson context:brief . --agent=dev --mode=executing --task="Retomar a agenda" --paths=src/scheduling
+aioson context:select . --agent=dev --mode=planning --task="Entender a agenda"
+aioson context:pack . --agent=dev --goal="Revisar a agenda"
+aioson brain:query . --tags=testing --min-quality=4 --format=index
+aioson context:usage .
+aioson context:health .
+aioson rules:lint . --docs
+aioson context:evals .</code></pre>
+          <p><code>context:pack</code> escreve o pacote de leitura; diagnósticos podem gerar índices e telemetria. Para registrar uma leitura real, o agente usa <code>context:load</code> com o alvo existente, por exemplo <code>--target=rule:scheduling-conventions --agent=dev</code>.</p>
+        </details>
+        <details><summary>Processar, exportar e promover aprendizados</summary>
+          <pre><code>aioson devlog:process .
+aioson learning:stats .
+aioson learning:export . --min-frequency=2
+aioson devlog:export-brains .
+aioson learning:auto-promote . --dry-run
+aioson learning:evolve . --dry-run</code></pre>
+          <p><code>devlog:process</code> importa devlogs e os marca como processados. Os comandos de exportação escrevem arquivos. As duas últimas linhas simulam propostas. <code>learning:apply</code> e <code>learning:rollback</code> administram evoluções registradas; confira seus identificadores antes de usá-los.</p>
+          <p><code>learning:promote</code> marca a associação de um aprendizado a um destino; isso não equivale, por si só, a escrever o conteúdo de uma regra. Para examinar a memória de um squad: <code>aioson squad:learning . --sub=list --squad=meu-squad</code>.</p>
+        </details>
+        <details><summary>Preparar reflexão e organizar o histórico</summary>
+          <pre><code>aioson memory:reflect-prepare . --agent=dev --force
+aioson memory:reflect-commit . --agent=dev --output=reflect-output.json --dry-run
+aioson memory:trim . --keep=12 --dry-run
+aioson memory:archive . --id=rule:regra-antiga --reason="Substituida por uma regra atual" --dry-run
+aioson memory:restore . --id=rule:regra-antiga --dry-run</code></pre>
+          <p>A preparação escreve um manifest se as condições forem atendidas. <code>reflect-output.json</code> precisa ser produzido pelo agente para esse manifest; não é um arquivo que já vem pronto. O commit real, sem <code>--dry-run</code>, aplica o conteúdo validado e consome o manifest.</p>
+        </details>
+        <details><summary>Inspecionar e controlar a memória pessoal</summary>
+          <pre><code>aioson op:identity show --json
+aioson op:list --proposals
+aioson op:list --include-archived
+aioson op:show nome-da-decisao --json
+aioson op:reinforce nome-da-decisao
+aioson op:forget nome-da-decisao</code></pre>
+          <p>As duas últimas linhas alteram o estado da decisão. Para capturar uma preferência, um exemplo fictício é:</p>
+          <pre><code>aioson op:capture --signal=correction --quote="Prefiro explicacoes em linguagem simples" --proposal="Preferencia de comunicacao: usar linguagem simples" --source-agent=dev</code></pre>
+          <p>Para desativar o carregamento no PowerShell: <code>$env:AIOSON_OPERATOR_MEMORY="false"</code>. No Bash: <code>export AIOSON_OPERATOR_MEMORY=false</code>. A configuração precisa alcançar o processo do cliente de IA.</p>
+        </details>
+        <details><summary>Cache temporário e importação de outra ferramenta</summary>
+          <pre><code>aioson context:cache:save . --content="Falta verificar a alteracao de horario" --goal="Retomar agenda" --agent=dev
+aioson context:cache
+aioson context:cache:restore --session=ID-RETORNADO
+aioson context:cache:cleanup --max-age=24
+aioson learning . --sub=import-from-claude --dry-run</code></pre>
+          <p>O cache salva somente o texto fornecido. <code>cleanup</code> remove sessões que ultrapassam a idade configurada. A importação acima apenas lista candidatos; a aplicação requer <code>--select</code> e uma origem disponível.</p>
+        </details>
+        <details><summary>Continuidade, decisões e recursos de compatibilidade</summary>
+          <pre><code>aioson feature:current . --with-summary --json
+aioson decision:list . --feature=agenda-consultas --json
+aioson dev:resume-data . --json
+aioson doctor .</code></pre>
+          <p>Outros comandos relevantes incluem <code>dev:state:write</code> para checkpoints, <code>decision:add</code> e <code>decision:resolve</code> para decisões, e os comandos <code>dossier:*</code> para a trilha da feature.</p>
+          <p><code>context:monitor</code> ajuda a acompanhar o orçamento de contexto. <code>context:compact</code> e <code>context:trim</code> têm funções próprias de redução e organização; não devem ser confundidos com <code>memory:trim</code>.</p>
+          <p>O repositório mantém recursos como <code>spec:sync</code>, <code>spec:status</code> e <code>spec:checkpoint</code> para documentos no formato de spec. A existência desses recursos não torna <code>spec.md</code>, <code>requirements.md</code> ou um design doc obrigatório em toda entrega atual. O fluxo canônico usa PRD, plano e relatório de QA, com profundidade proporcional ao trabalho.</p>
+        </details>
+      </section>
+
+      <section id="limits" aria-labelledby="limits-title">
+        <p class="section-number">12 / O que a análise permite afirmar</p>
+        <h2 id="limits-title">Memória externa traz continuidade, com condições claras</h2>
+        <ul class="limits-list">
+          <li><strong>Não é uma gravação integral de toda conversa.</strong> O conteúdo persistente depende de captura, arquivos, comandos e integrações. Algo dito apenas no chat pode não ter sido registrado.</li>
+          <li><strong>Não é treinamento do modelo.</strong> As rotinas examinadas armazenam e recuperam informação. O modelo usa o conteúdo apresentado na sessão.</li>
+          <li><strong>Não elimina erros de raciocínio.</strong> O agente pode interpretar mal uma memória, selecionar um documento antigo ou deixar de consultar uma fonte.</li>
+          <li><strong>Não garante a mesma resposta em todos os modelos.</strong> A base pode ser a mesma; o comportamento depende do modelo e do ambiente de execução.</li>
+          <li><strong>Arquivo local não significa que nada será enviado a um provedor.</strong> Quando um agente lê informação para trabalhar com uma IA remota, essa informação pode compor o contexto enviado ao serviço. As condições de retenção desse serviço são uma questão separada.</li>
+          <li><strong>O armazenamento analisado é local, mas existem integrações opcionais.</strong> Por exemplo, <code>devlog:sync --cloud</code> pode enviar registros ao endpoint configurado. Não seria correto prometer que todo uso do AIOSON é obrigatoriamente sem nuvem.</li>
+          <li><strong>Nem tudo é reconstruível a partir do Git.</strong> Os índices de busca são derivados; já o banco de runtime pode conter eventos e aprendizados ainda sem cópia em Markdown. Cache não substitui backup.</li>
+          <li><strong>Memória histórica não é autorização atual.</strong> Preserve data, estado e escopo. Uma decisão antiga ou de outro projeto não deve governar automaticamente a tarefa de hoje.</li>
+        </ul>
+        <h3>Como cuidar dos registros</h3>
+        <p>Versione a memória de projeto que faz sentido compartilhar, respeitando o <code>.gitignore</code> e a política da equipe. Evite registrar senhas, chaves e dados pessoais desnecessários. Mantenha a memória individual fora do repositório e planeje o backup dos registros locais que deseja preservar.</p>
+        <p>Ao mudar uma regra, registre a substituição e revise as referências. Se uma memória “sumiu”, confira a identidade, o projeto, o índice, o estado de arquivo e se o agente realmente carregou a fonte.</p>
+        <p class="source-note">Base: <a href="../../src/commands/runtime.js">runtime e sincronização opcional</a>, <a href="../../src/context-search.js">índice de documentos</a>, <a href="../../src/operator-memory/loader.js">recuperação pessoal</a> e <a href="../../src/operator-memory/decision.js">histórico de decisões</a>.</p>
+      </section>
+
+      <section id="glossary" aria-labelledby="glossary-title">
+        <p class="section-number">13 / Tradução dos termos</p>
+        <h2 id="glossary-title">Um glossário para consultar sem pressa</h2>
+        <dl class="glossary">
+          <dt>Persistência</dt><dd>Guardar informação para que ela continue existindo depois que a sessão termina.</dd>
+          <dt>Contexto</dt><dd>O material disponível ao modelo naquele momento para interpretar o pedido e responder.</dd>
+          <dt>Token</dt><dd>Uma unidade de texto processada pelo modelo. Mais material carregado costuma consumir mais espaço de contexto e pode aumentar o custo.</dd>
+          <dt>Markdown (.md)</dt><dd>Formato de texto legível com títulos, listas e links. Pode armazenar memória; a extensão não garante uso ou validade.</dd>
+          <dt>Frontmatter / cabeçalho</dt><dd>A ficha estruturada no início de um documento Markdown. Descreve o assunto e as condições que ajudam as ferramentas a selecioná-lo.</dd>
+          <dt>CLI / seleção de contexto</dt><dd>Programa acionado por comandos / escolha das fontes que devem ajudar na tarefa atual.</dd>
+          <dt>Máscara / normalização / validação</dt><dd>Apresentar o campo de forma adequada / padronizar sua representação / verificar se o valor atende às regras aplicáveis. São responsabilidades diferentes.</dd>
+          <dt>SQLite</dt><dd>Um banco de dados guardado em arquivo. No AIOSON, organiza registros locais de execução e aprendizado.</dd>
+          <dt>Bootstrap</dt><dd>Visão inicial e resumida do sistema, para o agente se situar.</dd>
+          <dt>Learning</dt><dd>Um aprendizado registrado com tipo, origem, frequência e outros dados.</dd>
+          <dt>Gotcha / recipe</dt><dd>Uma armadilha conhecida / uma receita que ajuda a resolver um problema.</dd>
+          <dt>Brain / nó</dt><dd>Biblioteca de conhecimento / uma pequena unidade desse conhecimento. “Zettelkasten” é a ideia de notas conectadas por referências.</dd>
+          <dt>Feature / slug</dt><dd>Uma funcionalidade ou entrega / o nome curto usado para identificá-la nos arquivos.</dd>
+          <dt>Dossier / handoff</dt><dd>Registro organizado de uma entrega / passagem de trabalho entre agentes ou sessões.</dd>
+          <dt>Retrieval / lazy loading</dt><dd>Recuperação de informação / leitura sob demanda, quando o assunto é relevante.</dd>
+          <dt>Reflexão / destilação</dt><dd>Atualizar o entendimento do sistema a partir de mudanças / selecionar aprendizados que podem virar conhecimento reutilizável.</dd>
+          <dt>Hook / telemetria</dt><dd>Rotina acionada em um evento / registros que mostram o que aconteceu na execução.</dd>
+        </dl>
+        <h3>Dúvidas frequentes</h3>
+        <details><summary>Se eu fechar a conversa, perco a memória?</summary><p>Os arquivos e registros já salvos permanecem no armazenamento. Conteúdo que ficou apenas no chat depende do cliente e pode não estar disponível na retomada. Por isso vale registrar decisões e próximos passos antes de encerrar.</p></details>
+        <details><summary>Qualquer arquivo .md será lido automaticamente?</summary><p>Não. Um arquivo pode ser memória documental sem estar no caminho de recuperação do agente. Índices, metadados, referências e instruções de leitura ajudam a fazê-lo chegar à tarefa certa.</p></details>
+        <details><summary>Mais arquivos de memória significam mais tokens em toda sessão?</summary><p>Não necessariamente. Os arquivos podem permanecer no disco, e o CLI pode fazer a seleção localmente. Consomem contexto as instruções, os resultados dos comandos e os conteúdos apresentados ao modelo. O objetivo é carregar o que a tarefa exige. Veja a <a href="#tokens">explicação dos cabeçalhos e a fala pronta sobre tokens</a>.</p></details>
+        <details><summary>O agente sabe automaticamente qual máscara usar em qualquer documento?</summary><p>O AIOSON oferece uma regra específica para formulários e ferramentas para encontrar o conhecimento do projeto. O agente precisa ler os formatos adotados, conferir componentes e validadores e resolver lacunas. Não existe uma garantia de catálogo universal para qualquer documento. Veja o <a href="#form-example">exemplo completo de CPF, CNPJ e telefone</a>.</p></details>
+        <details><summary>A memória pertence ao modelo que escreveu o arquivo?</summary><p>O registro não precisa do mesmo modelo para ser lido. Outro agente com acesso pode interpretá-lo. A autoria informa a origem; os arquivos permanecem no armazenamento do projeto ou do operador.</p></details>
+        <details><summary>Posso dizer que o AIOSON lembra tudo?</summary><p>Uma fala mais precisa é: “O AIOSON preserva e recupera o conhecimento registrado do projeto.” “Tudo” prometeria captura integral, recuperação perfeita e interpretação sem erro, o que o sistema não garante.</p></details>
+        <details><summary>Uma memória antiga deve ser apagada?</summary><p>Às vezes ela deve ser corrigida, às vezes arquivada e às vezes retirada. O histórico ajuda a entender decisões anteriores. A prioridade é impedir que um registro superado seja confundido com uma regra atual.</p></details>
+      </section>
+
+      <section id="sources" aria-labelledby="sources-title">
+        <p class="section-number">14 / Sobre esta edição</p>
+        <h2 id="sources-title">Análise do sistema disponível neste repositório</h2>
+        <div class="edition-card"><dl><dt>Data da análise</dt><dd><time datetime="2026-09-11">11 de setembro de 2026</time> · America/Sao_Paulo</dd><dt>Versão do AIOSON</dt><dd><code>1.66.0</code>, conforme <a href="../../package.json">package.json</a> e contexto validado pelo CLI.</dd><dt>Base de referência</dt><dd>HEAD <code>a39dffe1</code>, com alterações locais preexistentes. Esta edição descreve o código disponível na análise; não certifica qual versão estava publicada no npm.</dd><dt>Autoria</dt><dd>Análise, redação e implementação do tutorial: <strong>GPT-6 Astra</strong>.</dd><dt>Identidade visual</dt><dd>AIOSON Design-DNA v1 — <strong>Tinta &amp; Ouro</strong>, variant-d, fornecido pelo usuário. <a href="DESIGN-DNA.md">Documento local</a> · <a href="tokens.css">tokens originais</a>.</dd></dl></div>
+        <h3>Materiais anteriores aproveitados</h3>
+        <p>Foram consultados os tutoriais já existentes em <code>tutorials/</code>, especialmente <a href="../living-memory/index.html">Living Memory</a> e <a href="../brains/index.html">Brains</a>. Eles apresentam a base conceitual da edição 1.9.0. Este guia amplia essa base e confere o comportamento atual no código.</p>
+        <p>Algumas afirmações antigas precisam de contexto: os quatro arquivos de bootstrap não precisam ser lidos integralmente em toda ativação; <code>context:search</code> já atualiza seu índice por padrão; e o limiar de <code>learning:evolve</code> no código é 2. Quantidades antigas de brains e nós não foram repetidas como inventário atual.</p>
+        <h3>Referências para aprofundar</h3>
+        <ul class="source-list">
+          <li><a href="../../docs/pt/5-referencia/memoria-e-contexto.md">Memória e contexto</a> — visão documental; consulte os ajustes de versão explicados neste guia.</li>
+          <li><a href="../../docs/pt/5-referencia/operator-memory.md">Memória do operador</a> — identidade, captura e controles.</li>
+          <li><a href="../../docs/pt/living-memory/reflexao-in-harness.md">Reflexão no ambiente do agente</a> — preparação e gravação do bootstrap.</li>
+          <li><a href="../../docs/pt/active-learning-loop/ativo-learning-loop.md">Active Learning Loop</a> — ciclo de aprendizado e curadoria.</li>
+          <li><a href="../../docs/pt/5-referencia/devlog-pipeline.md">Pipeline de devlogs</a> — dos relatos de sessão ao SQLite.</li>
+          <li><a href="../../src/commands/learning-export.js">Exportação de learnings</a> e <a href="../../src/commands/devlog-export-brains.js">wrapper para devlogs</a> — arquivos e frequências.</li>
+          <li><a href="../../src/commands/op-list.js">Listagem pessoal</a> e <a href="../../src/operator-memory/index-md.js">índices pessoais</a> — consulta por títulos.</li>
+          <li><a href="../../src/commands/context-load.js">Registro de carregamento</a>, <a href="../../src/lib/context-usage.js">uso observado</a> e <a href="../../src/lib/context-evals.js">avaliação do roteamento</a>.</li>
+          <li><a href="../../src/cli.js">Registro de comandos do CLI</a> — ponto de entrada para verificar os comandos desta edição.</li>
+        </ul>
+        <p class="source-note">Os links de código apontam para arquivos deste repositório, relativos à página. Em uma publicação que contenha apenas a pasta tutorials, essas referências precisam ser publicadas junto ou adaptadas para o repositório. Os exemplos do guia são fictícios; nenhuma decisão privada do operador foi reproduzida.</p>
+        <div class="signature"><span class="machine-label">Assinado em 11/09/2026</span><strong>GPT-6 Astra</strong><p>Memória externa, recuperável e vinculada ao projeto.</p></div>
+      </section>
+    </article>
+  </div>
+</main>
+<footer class="site-footer"><div class="staff" aria-hidden="true"></div><p>AIOSON · Memória do sistema · 11/09/2026 · v1.66.0</p><p>Análise e redação: <strong>GPT-6 Astra</strong> · Design-DNA: Tinta &amp; Ouro</p><a href="#hero-title">Voltar ao início ↑</a></footer>
+</body>
+</html>

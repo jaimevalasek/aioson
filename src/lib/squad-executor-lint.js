@@ -123,7 +123,7 @@ function resolveExecutorFiles(targetDir, slug, manifest) {
   }
   if (files.length === 0) {
     const agentsDir = path.join(squadDir, 'agents');
-    let entries = [];
+    let entries;
     try { entries = fs.readdirSync(agentsDir); } catch { entries = []; }
     for (const name of entries) {
       if (!name.endsWith('.md') || name === 'agents.md') continue;
@@ -135,7 +135,7 @@ function resolveExecutorFiles(targetDir, slug, manifest) {
 
 function resolveWorkerEntrypoints(targetDir, slug) {
   const workersDir = path.join(targetDir, '.aioson', 'squads', slug, 'workers');
-  let entries = [];
+  let entries;
   try { entries = fs.readdirSync(workersDir, { withFileTypes: true }); } catch { return []; }
   const out = [];
   for (const entry of entries) {

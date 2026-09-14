@@ -6,7 +6,7 @@ Approved PRD, strictly verified feature-owned prototype when `current`, reposito
 
 ## Output
 
-Exactly one `implementation-plan-{slug}.md` with `status: approved`.
+Exactly one `implementation-plan-{slug}.md` with `status: approved` and `plan_contract: 2`. Bind it to the reconciled current Sheldon-approved PRD using `aioson plan:bind . --feature={slug}`; the command records its content hash.
 
 ## Required decisions
 
@@ -16,6 +16,10 @@ Exactly one `implementation-plan-{slug}.md` with `status: approved`.
 - Record only evidence-triggered compatibility, data/recovery, authorization, validation, concurrency, failure, observability, performance, accessibility/localization, or dependency controls in `## Engineering Controls`.
 - Name an exact automated command and a production-path smoke for runtime behavior.
 - Put UI and its real state/backend boundary in the same earliest useful slice.
+
+Each numbered `## Phase N — outcome` names CAP/AC IDs, exact paths, `Verification:` with an inspected command, and `Done when:` with an observable result. Every AC must have a phase; delivery rows must reference existing phases. Historical v1 plans receive diagnostics without retroactive contract migration.
+
+For runtime work, set `runtime_contract: required` and put the exact harness path, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check` in a phase assigned to DEV. Gate C checks the obligation; delivery checks the real contract.
 
 ## Invalid plans
 

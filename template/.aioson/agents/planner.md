@@ -67,6 +67,7 @@ Write frontmatter:
 ---
 feature: {slug}
 status: approved
+plan_contract: 2
 source_prd: .aioson/context/prd-{slug}.md
 source_briefing: .aioson/briefings/{slug}/briefings.md
 sheldon_review: required
@@ -75,6 +76,8 @@ prototype_status: current
 prototype_feature: {slug}
 ---
 ```
+
+Reconcile the current Sheldon-approved PRD, then run `aioson plan:bind . --feature={slug}` to record `source_prd_sha256`. Never rebind without reviewing the delta.
 
 Copy `prototype`, `prototype_status` and `prototype_feature` exactly from the verified PRD; null/none/null when no prototype binds this feature.
 
@@ -144,12 +147,9 @@ For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harne
 | 1-frontend | 1 | src/ui/Real.ext, tests/ui/Real.test.ext | CAP-{slug}-ui | ui command passes against IF-001 |
 ```
 
-- One row per UNIT (one process, one context), never per phase: cut a phase per lane inside its wave (`1-backend`, `1-frontend`) with an `## Interface Contract` row (`IF-*`) per boundary; a row over the unit ceiling (`plan.scale.units[].over_budget`: 10 files or 6 ACs) is cut again on disjoint files; small serial rows of one lane may merge. Exact Delta/Delivery paths, no globs.
-- `Wave`: positive integer, ascending; rows sharing a wave run in parallel on disjoint `Files` — `spec:analyze` blocks `wave_file_overlap`.
-- Optional `Depends on`: earlier rows this one needs (`1-backend (dev)`: when implemented; a bare phase number = every row of that phase) — it starts when they pass, not with its whole wave.
-- Shared integration files go to a later solo row, never to two rows of one wave; one lane with one row per wave is serial by construction (`orchestration_serial`).
+Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context budgets and continuous DEV → QA recovery.
 
-With a detectable runtime surface (`.aioson/briefings/{slug}/prototype-manifest.md` exists, or the plan includes DB migrations) the harness contract is mandatory, not opt-in: one delivery step where DEV authors `.aioson/plans/{slug}/harness-contract.json` with the four `RG-*` runtime-gate criteria (`aioson harness:init . --slug={slug}` seeds TODO placeholders). `gate:check --gate=C`, `workflow:next --complete=dev|qa`, and `feature:close` enforce the same §2c gate — omitting the step surfaces the block at Gate C instead of at close.
+For runtime work (owned prototype or migrations), set `runtime_contract: required`. One phase assigns DEV `.aioson/plans/{slug}/harness-contract.json`, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check`. Gate C accepts this obligation; DEV/QA/close require the real contract and evidence. See the SDD Planner reference.
 
 ## Feature dossier
 

@@ -410,7 +410,11 @@ async function readPhaseGates(targetDir, slug) {
   if (qaReport) {
     const fm = parseFrontmatter(qaReport);
     const verdict = String(fm.verdict || fm.status || '').toLowerCase();
-    if (verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(qaReport)) {
+    if (verdict === 'accepted_with_followups') {
+      const review = await require('./lib/delivery-followups').evaluateFollowups(targetDir, slug);
+      gates.execution = review.eligible ? 'approved' : 'rejected';
+      gates.execution_disposition = review.eligible ? verdict : null;
+    } else if (verdict === 'pass' || /(?:\*\*)?verdict(?:\*\*)?\s*:\s*PASS\b/i.test(qaReport)) {
       gates.execution = 'approved';
     }
   }

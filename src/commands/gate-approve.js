@@ -168,7 +168,11 @@ async function runGateApprove({ args, options = {}, logger }) {
   // Step 2: persist the approval on the artifact that owns the decision.
   const content = await readFileSafe(targetFile);
   if (!content) throw new Error(`Cannot approve Gate ${gateLetter}; ${target.file} is missing.`);
-  await fs.writeFile(targetFile, updateFrontmatterField(content, target.field, target.value), 'utf8');
+  // Conditional acceptance retains the honest QA verdict and bound bytes.
+  const preservedVerdict = gateLetter === 'D' && check.disposition === 'accepted_with_followups';
+  if (!preservedVerdict) {
+    await fs.writeFile(targetFile, updateFrontmatterField(content, target.field, target.value), 'utf8');
+  }
 
   // M1 checkpoint-at-gate: best-effort checkpoint write (BR-AO-01)
   let checkpointWritten = false;
@@ -217,13 +221,19 @@ async function runGateApprove({ args, options = {}, logger }) {
     process.stderr.write(`[gate:approve] checkpoint write failed: ${err.message}\n`);
   }
 
-  const nextInfo = GATE_NEXT_AGENTS[gateLetter];
+  const nextInfo = gateLetter === 'D' ? {
+    ...GATE_NEXT_AGENTS.D,
+    action: `aioson feature:close . --feature=${slug} --verdict=${preservedVerdict ? 'ACCEPTED_WITH_FOLLOWUPS' : 'PASS'}`,
+    why: 'Gate D validated; feature:close persists followups and archives the delivery'
+  } : GATE_NEXT_AGENTS[gateLetter];
   const result = {
     ok: true,
     gate: gateLetter,
     gate_name: gateName,
     feature: slug,
-    field_written: target.field,
+    field_written: preservedVerdict ? null : target.field,
+    verdict_preserved: preservedVerdict,
+    disposition: check.disposition || null,
     artifact_file: `.aioson/context/${target.file}`,
     checkpoint_written: checkpointWritten,
     next_agent: nextInfo.agent,
@@ -238,7 +248,8 @@ async function runGateApprove({ args, options = {}, logger }) {
   logger.log(BAR);
   logger.log(`Result: ✓ APPROVED`);
   logger.log('');
-  logger.log(`Written: ${target.field}: ${target.value} → .aioson/context/${target.file}`);
+  logger.log(preservedVerdict ? `Preserved: verdict: accepted_with_followups → .aioson/context/${target.file}`
+    : `Written: ${target.field}: ${target.value} → .aioson/context/${target.file}`);
   logger.log('');
   logger.log(`Next agent: ${nextInfo.agent}`);
   logger.log(`Why: ${nextInfo.why}`);

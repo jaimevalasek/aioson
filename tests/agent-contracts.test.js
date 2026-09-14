@@ -89,6 +89,10 @@ test('Planner creates vertical production-path stages from CAP and AC trace', as
 test('Planner asks the orchestration question on the measured scale and records the answer; the lanes table no longer names host or model (AC-plan-table)', async () => {
   for (const file of ['.aioson/agents/planner.md', 'template/.aioson/agents/planner.md']) {
     const planner = await fs.readFile(path.join(ROOT, file), 'utf8');
+    const modulePath = '.aioson/docs/planner/orchestrated-execution.md';
+    assert.match(planner, /Before writing or compiling this table, load `\.aioson\/docs\/planner\/orchestrated-execution\.md`/);
+    assert.ok(MANAGED_FILES.includes(modulePath), 'the required module ships to other projects');
+    const orchestration = await fs.readFile(path.join(ROOT, file.startsWith('template/') ? 'template' : '', modulePath), 'utf8');
     assert.match(planner, /aioson execution:offer \. --feature=\{slug\} --json/, `${file}: the offer runs after the plan is written`);
     assert.match(planner, /plan\.scale\.split_candidate/, `${file}: the question is asked on the measured number`);
     assert.match(planner, /onboarding\.next/, `${file}: a locked path names its unlock step`);
@@ -103,12 +107,12 @@ test('Planner asks the orchestration question on the measured scale and records 
     assert.match(planner, /the measured plan scale earns the question; the answer is the user's or the approved PRD's/, `${file}: classification never decides`);
     assert.doesNotMatch(planner, /answers `available: true`, ask once/, `${file}: the question no longer waits for the unlock file`);
     // The second incident: "one row per delivery phase" produced a single lane running one whole phase per process.
-    assert.match(planner, /One row per UNIT \(one process, one context\), never per phase/, `${file}: the Execution Sequence row is the unit, not the phase`);
+    assert.match(orchestration, /One row per UNIT \(one process, one context\), never per phase/, `${file}: the Execution Sequence row is the unit, not the phase`);
     assert.doesNotMatch(planner, /One row per delivery phase/, `${file}: the old prescription is gone`);
     assert.match(planner, /Lanes are the model axis \(each `\{lane\}_dev` role has its own host\/model\): one per surface when `plan\.scale\.surfaces` shows backend and frontend/, `${file}: lanes are declared by surface because the model is assigned per lane`);
-    assert.match(planner, /plan\.scale\.units\[\]\.over_budget/, `${file}: the unit ceiling is the measured cut`);
-    assert.match(planner, /a bare phase number = every row of that phase/, `${file}: Depends on semantics for a phase cut per lane`);
-    assert.match(planner, /one lane with one row per wave is serial by construction \(`orchestration_serial`\)/, `${file}: the serial shape is named`);
+    assert.match(orchestration, /plan\.scale\.units\[\]\.over_budget/, `${file}: the unit ceiling is the measured cut`);
+    assert.match(orchestration, /a bare phase number = every row of that phase/, `${file}: Depends on semantics for a phase cut per lane`);
+    assert.match(orchestration, /one lane with one row per wave is serial by construction \(`orchestration_serial`\)/, `${file}: the serial shape is named`);
     assert.doesNotMatch(planner, /Keep waves few; a solo wave is valid/, `${file}: the sentence that blessed the serial shape is gone`);
   }
 });

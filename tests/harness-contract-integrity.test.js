@@ -31,6 +31,17 @@ function makeLogger() {
 }
 const mockT = () => undefined;
 
+test('Gate C accepts an explicit runtime delivery obligation, while delivery still requires the actual contract', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-runtime-obligation-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, '.aioson/briefings/demo'), { recursive: true });
+  await fs.writeFile(path.join(root, '.aioson/briefings/demo/prototype-manifest.md'), 'feature: demo');
+  const planContent = '---\nruntime_contract: required\n---\n## Phase 1 — Working application\nCreate .aioson/plans/demo/harness-contract.json with RG-build, RG-migrate, RG-boot, RG-smoke.\nVerification: aioson harness:check . --slug=demo\n';
+  assert.equal((await evaluateContractIntegrityGate(root, 'demo', { stage: 'planning', planContent, changedFiles: [] })).ok, true);
+  assert.equal((await evaluateContractIntegrityGate(root, 'demo', { stage: 'planning', planContent: planContent.replace('RG-smoke', 'TBD'), changedFiles: [] })).ok, false);
+  assert.equal((await evaluateContractIntegrityGate(root, 'demo', { planContent, changedFiles: [] })).ok, false);
+});
+
 // ───────────────────────── pure: contract-integrity ─────────────────────────
 
 test('isRuntimeGateCriterion matches canonical and rg-* ids, case-insensitive', () => {

@@ -39,9 +39,9 @@ Goal of every briefing: give `@product` enough confidence to either commit to a 
 - **Themes that repeat the table of contents** instead of partitioning concerns.
 - **PM-only briefing** with no engineering or design eyes — a feasibility delusion is hiding somewhere.
 
-### Mitigating weak markers — handoff stays `@product`
+### Mitigating weak markers — handoff stays `@refiner`
 
-When you detect a weak marker (especially **PM-only / single-voice / feasibility delusion**), the **canonical handoff does not change**: `@briefing → @product`. The mitigation is recorded *inside* the briefing, not in the handoff.
+When you detect a weak marker (especially **PM-only / single-voice / feasibility delusion**), the **canonical handoff does not change**: `@briefing → @refiner → approval → @product`. The mitigation is recorded *inside* the briefing, not in the handoff.
 
 - **Acknowledge the marker explicitly** in `## Risks` or `## Open questions` (e.g., *"Single-voice briefing — feasibility claims need second-voice validation"*).
 - **Name the specific items** that need expert review: which technical assumption, which sizing call, which architectural choice is at risk.
@@ -53,7 +53,7 @@ When you detect a weak marker (especially **PM-only / single-voice / feasibility
 
 `@sheldon` operates **exclusively on PRDs not yet implemented** (see `sheldon.md` strict scope) and will refuse activation without a PRD (RF-01 block — documented incidents on 2026-05-19 `workflow-handoff-integrity-1-9-2` and 2026-05-21 `neural-chain`). Skipping `@product` breaks the chain.
 
-**Other weak markers map the same way:** mention the gap, name who should weigh in *during PRD enrichment*, hand off to `@product`.
+**Other weak markers map the same way:** mention the gap, name who should weigh in *during PRD enrichment*, hand off to `@refiner` for source reconciliation, then owner approval before `@product`.
 
 ## 2. Problem framing — Jobs-to-be-Done (JTBD)
 

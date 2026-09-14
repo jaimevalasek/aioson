@@ -218,6 +218,29 @@ const TOOL_CAPS = {
     read_only_args: null,
     execution: null,
   },
+  // Keep the legacy interactive `agy` key; execution roles use the product
+  // name, but must launch the headless CLI, not the Antigravity editor.
+  antigravity: {
+    install_command: null,
+    binary: 'agy',
+    supports_resume: true,
+    resume_last: ['--continue'],
+    supports_session_id: true,
+    resume_session_id: ['--conversation', '<id>'],
+    supports_session_picker: false,
+    session_picker: null,
+    supports_yolo: true,
+    // File tools auto-apply only in accept-edits; the dangerous flag covers
+    // shell/tool permission prompts. Both are required by an unattended lane.
+    yolo_args: ['--mode', 'accept-edits', '--dangerously-skip-permissions'],
+    permission_flags: ['--dangerously-skip-permissions', '--mode', '--sandbox'],
+    read_only_args: null,
+    execution: {
+      additional_workspaces: true,
+      model_catalog: false,
+      reasoning_effort: true,
+    },
+  },
 };
 
 function getToolCapabilities(tool) {

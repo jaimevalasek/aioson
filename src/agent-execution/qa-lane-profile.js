@@ -43,11 +43,12 @@ function renderQaProfile(sections, { maxFixFiles = 3 } = {}) {
     '',
     '1. Review the unit against its contract: the listed files, the capabilities and acceptance criteria, and the "done when" line. Read the code that was written; do not trust the implementer\'s report.',
     '2. Run the unit\'s verification commands and the focused tests with the project\'s real test runner. Evidence is observed output, not assertion.',
-    `3. You MAY fix simple, local defects (an off-by-one, a missing null check, a wrong import, a failing assertion the code — not the test — got wrong) in at most ${maxFixFiles} file(s), and ONLY among the unit's own files. Every fix goes into the report as one \`corrections[]\` entry: {path, summary}. Re-run the verification after fixing.`,
+    `3. You MAY fix simple, local defects (an off-by-one, a missing null check, a wrong import, a failing assertion the code — not the test — got wrong) in at most ${maxFixFiles} file(s), and ONLY among the unit's own files. This correction budget applies to this review attempt; previous rounds do not consume it. Preserve previous corrections and regressions. Every fix goes into the report as one \`corrections[]\` entry: {path, summary}. Re-run the verification after fixing.`,
     '4. Everything you cannot fix inside that boundary — design gaps, cross-lane integration, missing capabilities, anything touching files outside the unit — goes into `findings[]` as {severity: critical|high|medium|low, cap, ac, path, summary}. Never touch files outside the unit; never widen the scope.',
     '5. Never run stage-ownership or publishing commands (workflow:next, agent:done, live:handoff, feature:close, git commit/push). The parent session owns the stage.',
     '6. What a later unit or the integration owner must know goes into `messages[]` of your report as {to: "lane:<id>" | "unit:<id>" | "integration", kind: contract_change | note | question, text, paths?}; an implementer message you disagree with is a finding, not a reply.',
     '7. Report verdict PASS only when the verification passes after your corrections and no critical/high finding remains; otherwise FAIL with the findings. Write the JSON report exactly where the execution contract appended below says, then stop.',
+    '8. Use Git only for read-only inspection in this shared worktree. Never stash, reset, restore, checkout, switch, clean, add, merge or rebase. Compare baselines with git show without replacing working files; an incomplete baseline comparison does not prove a failure is pre-existing. The parent owns Git mutations.',
     ''
   );
   return lines.join('\n');

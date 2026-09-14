@@ -41,6 +41,7 @@ const path = require('node:path');
 const { scanArtifacts, detectClassification } = require('../preflight-engine');
 const { validateContract } = require('../harness/contract-schema');
 const { AC_ID_RE } = require('../lib/ac-test-audit');
+const { extractSection, parseFirstMarkdownTable } = require('../lib/feature-completeness-format');
 const { analyzeFeatureCompleteness } = require('../lib/feature-completeness');
 
 const REQ_ID_RE = /\bREQ(?:-[A-Za-z0-9]+)+\b/g;
@@ -231,7 +232,10 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
   const declaredReqs = artifacts.requirements.exists
     ? extractIds(artifacts.requirements.content, REQ_ID_RE)
     : new Set();
-  const declaredAcs = artifacts.requirements.exists
+  const acceptanceTable = artifacts.prd.exists ? parseFirstMarkdownTable(extractSection(artifacts.prd.content, ['Acceptance Criteria']) || '') : null;
+  const canonicalAcs = acceptanceTable ? extractIds(acceptanceTable.rows.map(row => row[0]).join(' '), AC_ID_RE)
+    : artifacts.prd.exists ? extractIds(artifacts.prd.content, AC_ID_RE) : new Set();
+  const declaredAcs = canonicalAcs.size > 0 ? canonicalAcs : artifacts.requirements.exists
     ? extractIds(artifacts.requirements.content, AC_ID_RE)
     : new Set();
 
@@ -242,7 +246,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
     downstream.push({ name: 'harness-contract', content: contractInfo.raw });
   }
 
-  if (artifacts.requirements.exists && downstream.length > 0) {
+  if ((artifacts.requirements.exists || declaredAcs.size > 0) && downstream.length > 0) {
     const downstreamText = downstream.map((d) => d.content).join('\n');
     const downstreamReqs = extractIds(downstreamText, REQ_ID_RE);
     const downstreamAcs = extractIds(downstreamText, AC_ID_RE);
@@ -270,10 +274,18 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
       findings.push({
         severity: 'warning',
         check: 'orphan_reference',
-        message: `${orphanIds.length} REQ/AC id(s) referenced downstream but not declared in requirements-${slug}.md: ${orphanIds.slice(0, 10).join(', ')}${orphanIds.length > 10 ? '…' : ''} (drift or cross-feature reference)`,
+        message: `${orphanIds.length} REQ/AC id(s) referenced downstream but not declared in the canonical PRD/legacy requirements for ${slug}: ${orphanIds.slice(0, 10).join(', ')}${orphanIds.length > 10 ? '…' : ''} (drift or cross-feature reference)`,
         artifacts: offenders
       });
     }
+  }
+
+  if (artifacts.implementation_plan.exists && canonicalAcs.size > 0) {
+    const { validatePlanContract } = require('../lib/plan-contract');
+    const diagnostic = await validatePlanContract({ targetDir, slug,
+      content: artifacts.implementation_plan.content,
+      acceptance: { rows: [...declaredAcs].map(ac => ({ ac })) }, delivery: { rows: [] } });
+    for (const issue of diagnostic.warnings) findings.push({ ...issue, severity: 'info', artifacts: ['implementation_plan'] });
   }
 
   // ── Staleness upstream → downstream ──────────────────────────────────────

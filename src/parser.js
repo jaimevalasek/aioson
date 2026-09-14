@@ -40,7 +40,8 @@ const BOOLEAN_FLAGS = new Set([
   'list',
   // execution:run — pure booleans; `--preflight .` / `--resume .` / `--fresh .`
   // must not swallow the path positional.
-  'preflight', 'resume', 'fresh',
+  'preflight', 'resume', 'fresh', 'no-context-limit', 'context-limit',
+  'until-complete', 'bounded-recovery', 'refresh',
   // `--watch` alone is the default cadence (execution:status 5 s, live:status
   // and runtime:session:status 2 s); `--watch=<seconds>` carries its value
   // through the `=` branch above. Bare, it must not swallow the path
@@ -80,6 +81,9 @@ const BOOLEAN_FLAGS = new Set([
   // model delegation — execution is permitted only when the user explicitly
   // named another model; this switch must never swallow the project path.
   'explicit-model-request',
+  // quality:evals seed validation never consumes the target path.
+  'validate-seeds',
+  'enable', 'disable', 'allow-secondary',
   // `--resume` alone means "resume last"; `--resume=<id>` carries a value
   // and is handled by the `=` branch below.
   'resume'

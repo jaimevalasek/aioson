@@ -2,6 +2,7 @@
 
 const { MAX_MODEL_NAME_LENGTH, REASONING_EFFORTS } = require('./schema');
 
+// Without a catalog, display names cannot be resolved to a verified host ID.
 const LITERAL_MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/;
 const GENERIC_ALIASES = new Set(['gpt', 'model', 'openai', 'codex']);
 

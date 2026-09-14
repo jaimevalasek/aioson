@@ -22,6 +22,7 @@ Optional alignment checkpoints:
 - After `@qa`, `@tester`, or `@pentester` corrections: `@scope-check --scope-mode=post-fix` when fixes changed behavior or product scope.
 
 Optional test engineering (activate after @dev when coverage is insufficient):
+- `@quality` — optional engineering assessment for products or AIOSON itself: static analysis, test effectiveness, benchmarks and evaluations. Produces evidence and a remediation backlog; QA retains acceptance and implementing agents retain responsibility for correctness.
 - `@tester` — systematic test engineering for implemented apps. Activate when: (1) app was built without adequate tests, (2) @qa identifies coverage gaps in 3+ modules, or (3) working on a legacy/brownfield project.
 
 Optional completeness walkthrough (activate after @qa, on an archived feature, after a Simple Plan delivery, or on a direct target):

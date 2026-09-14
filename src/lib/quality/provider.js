@@ -5,8 +5,11 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { classifyDesignDocSeedFile } = require('../design-doc-seed');
+const { getChangedScope } = require('./scope');
 
 const execFileAsync = promisify(execFile);
+
+async function getChangedPaths(root, options = {}) { return (await getChangedScope(root, options)).paths; }
 
 async function readJsonFile(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');
@@ -22,40 +25,13 @@ async function fileExists(filePath) {
   }
 }
 
-function splitCsv(value) {
-  if (!value) return [];
-  return String(value).split(',').map((item) => item.trim()).filter(Boolean);
-}
-
-async function getChangedPaths(targetDir, options = {}) {
-  const explicit = splitCsv(options.changed || options.changedPaths);
-  if (explicit.length > 0) return explicit.map((item) => item.replace(/\\/g, '/'));
-
-  async function runGitNames(args) {
-    try {
-      const { stdout } = await execFileAsync('git', args, {
-        cwd: targetDir,
-        windowsHide: true,
-        timeout: 5000
-      });
-      return stdout.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-    } catch {
-      return [];
-    }
-  }
-
-  const [tracked, untracked] = await Promise.all([
-    runGitNames(['diff', '--name-only', 'HEAD']),
-    runGitNames(['ls-files', '--others', '--exclude-standard'])
-  ]);
-  return [...new Set([...tracked, ...untracked])]
-    .map((item) => item.replace(/\\/g, '/'));
-}
-
 async function loadBaseline(targetDir, options = {}) {
+  if (options.baseline && typeof options.baseline !== 'string') throw new Error('Use --baseline=<file>.');
   const baselinePath = options.baseline ? path.resolve(targetDir, String(options.baseline)) : null;
   if (!baselinePath) return null;
-  return readJsonFile(baselinePath);
+  const baseline = await readJsonFile(baselinePath);
+  if (!baseline || typeof baseline !== 'object') throw new Error('Invalid baseline envelope.');
+  return baseline;
 }
 
 async function collectGovernanceSources(targetDir) {
@@ -90,41 +66,49 @@ async function collectGovernanceSources(targetDir) {
 }
 
 async function runProvider(targetDir, options = {}) {
-  if (options['provider-output']) {
-    return {
-      ok: true,
-      command: `read:${options['provider-output']}`,
-      output: await readJsonFile(path.resolve(targetDir, String(options['provider-output'])))
-    };
-  }
-
-  const localBinary = process.platform === 'win32'
-    ? path.join(targetDir, 'node_modules', '.bin', 'fallow.cmd')
-    : path.join(targetDir, 'node_modules', '.bin', 'fallow');
-
-  if (!(await fileExists(localBinary))) {
-    return {
-      ok: false,
-      reason: 'provider_missing',
-      advisory: 'Provider `fallow` was not found locally. quality:audit does not auto-install providers.'
-    };
-  }
-
   try {
-    const { stdout } = await execFileAsync(localBinary, ['--json'], {
-      cwd: targetDir,
-      windowsHide: true,
-      timeout: 30000,
-      maxBuffer: 1024 * 1024 * 10
-    });
-    return { ok: true, command: `${path.relative(targetDir, localBinary).replace(/\\/g, '/')} --json`, output: JSON.parse(stdout) };
+    if (options['provider-output']) {
+      if (typeof options['provider-output'] !== 'string') throw new Error('Use --provider-output=<file>.');
+      return { ok: true, status: 'pass', command: `read:${options['provider-output']}`,
+        output: await readJsonFile(path.resolve(targetDir, options['provider-output'])) };
+    }
+    const packageDir = path.join(targetDir, 'node_modules', 'fallow');
+    if (!(await fileExists(path.join(packageDir, 'package.json')))) {
+      return { ok: false, status: 'not_run', reason: 'provider_missing',
+        advisory: 'Provider `fallow` was not found locally. quality:audit does not auto-install providers.' };
+    }
+    const manifest = await readJsonFile(path.join(packageDir, 'package.json'));
+    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.fallow;
+    if (typeof bin !== 'string' || !bin || path.isAbsolute(bin) || bin.split(/[\\/]/).includes('..')) {
+      throw new Error('Invalid Fallow package entrypoint.');
+    }
+    const entry = path.resolve(packageDir, bin);
+    const timeout = Number(options.timeout ?? 60000);
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 600000) throw new Error('Quality timeout must be 1..600000 milliseconds.');
+    const args = [entry, '--format', 'json', '--threads', '1', '--no-cache'];
+    const command = `node ${path.relative(targetDir, entry).replace(/\\/g, '/')} --format json --threads 1 --no-cache`;
+    const processResult = await executeProvider(targetDir, args, timeout);
+    return { ok: true, status: 'pass', version: manifest.version, command,
+      exit_code: processResult.code || 0, output: JSON.parse(processResult.stdout) };
   } catch (err) {
-    return {
-      ok: false,
-      reason: 'provider_runtime_uncertainty',
-      advisory: `Provider fallow could not produce parseable JSON: ${err.message}`
-    };
+    return { ok: false, status: 'error', reason: 'provider_runtime_uncertainty',
+      advisory: `Provider fallow could not produce parseable JSON: ${err.message}` };
   }
+}
+
+async function executeProvider(targetDir, args, timeout) {
+  let processResult;
+  try { processResult = await execFileAsync(process.execPath, args, {
+    cwd: targetDir,
+    windowsHide: true,
+    timeout,
+    maxBuffer: 1024 * 1024 * 32
+  }); } catch (error) {
+    // Findings may exit 1; crashes and timeouts are never valid measurements.
+    if (error.code !== 1 || error.killed) throw error;
+    processResult = { stdout: error.stdout, code: 1 };
+  }
+  return processResult;
 }
 
 module.exports = {

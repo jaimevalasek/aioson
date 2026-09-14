@@ -86,6 +86,7 @@ const { runSquadPipeline } = require('./commands/squad-pipeline');
 const { runSquadAgentCreate } = require('./commands/squad-agent-create');
 const { runSquadInvestigate } = require('./commands/squad-investigate');
 const { runImplementationPlan } = require('./commands/implementation-plan');
+const { runFeatureClosure } = require('./commands/feature-closure');
 const { runSquadPlan } = require('./commands/squad-plan');
 const { runSquadLearning } = require('./commands/squad-learning');
 const { runLearning } = require('./commands/learning');
@@ -107,7 +108,7 @@ const { runSquadToolRegister } = require('./commands/squad-tool-register');
 const { runSquadReview } = require('./commands/squad-review');
 const { runAgentAudit } = require('./commands/agent-audit');
 const { runSkillAudit } = require('./commands/skill-audit');
-const { runQualityAudit } = require('./commands/quality-audit');
+const { isQualityCommand, runQualityCommand } = require('./commands/quality');
 const { runBriefGen } = require('./commands/brief-gen');
 const { runHarnessInit, runHarnessValidate, runHarnessApplyValidation } = require('./commands/harness');
 const { runVerifyGate } = require('./commands/verify-gate');
@@ -562,6 +563,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'plan:checkpoint',
   'plan:stale',
   'plan:register',
+  'plan:bind',
+  'plan-bind',
   'plan',
   'squad:plan',
   'squad-plan',
@@ -580,6 +583,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'skill:audit',
   'skill-audit',
   'quality:audit',
+  'quality:run',
+  'quality:evals',
   'quality-audit',
   'brief:gen',
   'harness:init',
@@ -731,6 +736,10 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'execution-decide',
   'execution:status',
   'execution-status',
+  'execution:dashboard',
+  'execution-dashboard',
+  'execution:prices',
+  'execution-prices',
   'execution:graph',
   'execution-graph',
   'scaffold:complete',
@@ -902,6 +911,8 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'dev:state:write',
   'dev-state-write',
   'feature:close',
+  'feature:closure',
+  'feature-closure',
   'feature-close',
   'feature:archive',
   'feature-archive',
@@ -1075,6 +1086,10 @@ function getCommandHelpUsage(command, t) {
   return usage === key ? null : usage;
 }
 
+function printQualityHelp(t, logger) {
+  for (const key of ['cli.help_quality_audit', 'cli.help_quality_run', 'cli.help_quality_evals']) logHelpLine(t, logger, key);
+}
+
 function printHelp(t, logger) {
   logger.log(t('cli.title_line', { title: t('cli.title') }));
   logger.log(t('cli.usage'));
@@ -1162,6 +1177,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_setup_detect');
   logHelpLine(t, logger, 'cli.help_genome_apply');
   logHelpLine(t, logger, 'cli.help_profiler_coverage');
+  logHelpLine(t, logger, 'cli.help_feature_closure');
   logHelpLine(t, logger, 'cli.help_feature_close');
   logHelpLine(t, logger, 'cli.help_feature_archive');
   logHelpLine(t, logger, 'cli.help_gate_check');
@@ -1214,7 +1230,7 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_squad_score');
   logHelpLine(t, logger, 'cli.help_squad_learning');
   logHelpLine(t, logger, 'cli.help_agent_audit');
-  logHelpLine(t, logger, 'cli.help_quality_audit');
+  printQualityHelp(t, logger);
   logHelpLine(t, logger, 'cli.help_learning');
   logHelpLine(t, logger, 'cli.help_runtime_init');
   logHelpLine(t, logger, 'cli.help_runtime_ingest');
@@ -1242,6 +1258,8 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_execution_run');
   logHelpLine(t, logger, 'cli.help_execution_decide');
   logHelpLine(t, logger, 'cli.help_execution_status');
+  logHelpLine(t, logger, 'cli.help_execution_dashboard');
+  logHelpLine(t, logger, 'cli.help_execution_prices');
   logHelpLine(t, logger, 'cli.help_execution_graph');
   logHelpLine(t, logger, 'cli.help_live_start');
   logHelpLine(t, logger, 'cli.help_live_status');
@@ -1770,8 +1788,8 @@ async function main() {
       result = await runAgentAudit({ args, options, logger: commandLogger });
     } else if (command === 'skill:audit' || command === 'skill-audit') {
       result = await runSkillAudit({ args, options, logger: commandLogger });
-    } else if (command === 'quality:audit' || command === 'quality-audit') {
-      result = await runQualityAudit({ args, options, logger: commandLogger });
+    } else if (isQualityCommand(command)) {
+      result = await runQualityCommand(command, { args, options, logger: commandLogger });
     } else if (command === 'brief:gen' || command === 'brief-gen') {
       result = await runBriefGen({ args, options, logger: commandLogger, t });
     } else if (command === 'harness:init' || command === 'harness-init') {
@@ -1850,6 +1868,8 @@ async function main() {
     } else if (command.startsWith('learning:') || command === 'learning') {
       const sub = command === 'learning' ? (options.sub || args[1] || 'list') : command.split(':')[1];
       result = await runLearning({ args, options: { ...options, sub }, logger: commandLogger, t });
+    } else if (command === 'plan:bind' || command === 'plan-bind') {
+      result = await runImplementationPlan({ args, options: { ...options, sub: 'bind' }, logger: commandLogger, t });
     } else if (command.startsWith('plan:') || command === 'plan') {
       const sub = command === 'plan' ? (args[1] || 'show') : command.split(':')[1];
       result = await runImplementationPlan({ args, options: { ...options, sub }, logger: commandLogger, t });
@@ -2096,6 +2116,8 @@ async function main() {
       result = await runOpReinforce({ args, options, logger: commandLogger });
     } else if (command === 'op:migrate' || command === 'op-migrate') {
       result = await runOpMigrate({ args, options, logger: commandLogger });
+    } else if (command === 'feature:closure' || command === 'feature-closure') {
+      result = await runFeatureClosure({ args, options, logger: commandLogger });
     } else if (command === 'feature:close' || command === 'feature-close') {
       result = await runFeatureClose({ args, options, logger: commandLogger });
     } else if (command === 'feature:archive' || command === 'feature-archive') {

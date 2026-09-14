@@ -82,7 +82,8 @@ function parseExecutionWaves(content) {
           files: lower.findIndex((c) => c.includes('file')),
           scope: lower.findIndex((c) => c.includes('scope')),
           done: lower.findIndex((c) => c.includes('done')),
-          depends: lower.findIndex((c) => /depend|^after\b|ap[oó]s|requires/.test(c))
+          depends: lower.findIndex((c) => /depend|^after\b|ap[oó]s|requires/.test(c)),
+          reads: lower.indexOf('read ranges')
         };
       }
       continue;
@@ -101,6 +102,7 @@ function parseExecutionWaves(content) {
       files_raw: filesRaw,
       scope: columns.scope >= 0 ? (cells[columns.scope] || '') : '',
       done: columns.done >= 0 ? (cells[columns.done] || '') : '',
+      read_ranges_raw: columns.reads >= 0 ? (cells[columns.reads] || '') : '',
       depends_raw: dependsRaw,
       depends: parseDependsCell(dependsRaw)
     });

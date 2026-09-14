@@ -57,7 +57,7 @@ async function readArchivedFeatureState(targetDir, featureSlug) {
   if (!featureSlug) return null;
   const archivePath = featureStateArchivePath(targetDir, featureSlug);
   if (!archivePath) return null;
-  let archived = null;
+  let archived;
   try {
     archived = JSON.parse(await fs.readFile(archivePath, 'utf8'));
   } catch {

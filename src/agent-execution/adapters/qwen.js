@@ -8,11 +8,10 @@ const { createAdapter } = require('./base');
 // by the registry (src/lib/tool-capabilities.js) through createAdapter:
 // 'workspace-write' uses the registry's unattended flag (a lane worker edits
 // files and runs tests).
-module.exports = createAdapter('qwen', input => [
+// Piped text selects headless mode without putting the task into Windows argv.
+module.exports = createAdapter('qwen', input => ({ args: [
   ...(input.model === 'configured-default' ? [] : ['--model', input.model]),
   ...(input.sandbox_args || []),
-  '--prompt',
-  input.prompt_text,
   '--output-format',
   'text'
-]);
+], stdin: true }));

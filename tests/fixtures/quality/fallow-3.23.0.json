@@ -1,0 +1,246 @@
+{
+  "kind": "combined",
+  "schema_version": 11,
+  "version": "3.23.0",
+  "elapsed_ms": 119,
+  "check": {
+    "schema_version": 9,
+    "version": "3.23.0",
+    "elapsed_ms": 49,
+    "total_issues": 2,
+    "entry_points": {
+      "total": 1,
+      "sources": {
+        "package.json": 1
+      }
+    },
+    "summary": {
+      "total_issues": 2,
+      "unused_files": 1,
+      "unused_exports": 1,
+      "unused_types": 0,
+      "private_type_leaks": 0,
+      "unused_dependencies": 0,
+      "unused_enum_members": 0,
+      "unused_class_members": 0,
+      "unused_store_members": 0,
+      "unprovided_injects": 0,
+      "unrendered_components": 0,
+      "unused_component_props": 0,
+      "unused_component_emits": 0,
+      "unused_component_inputs": 0,
+      "unused_component_outputs": 0,
+      "unused_svelte_events": 0,
+      "unused_server_actions": 0,
+      "unused_load_data_keys": 0,
+      "unresolved_imports": 0,
+      "unlisted_dependencies": 0,
+      "duplicate_exports": 0,
+      "type_only_dependencies": 0,
+      "test_only_dependencies": 0,
+      "dev_dependencies_in_production": 0,
+      "circular_dependencies": 0,
+      "re_export_cycles": 0,
+      "boundary_violations": 0,
+      "boundary_coverage_violations": 0,
+      "boundary_call_violations": 0,
+      "policy_violations": 0,
+      "stale_suppressions": 0,
+      "unused_catalog_entries": 0,
+      "empty_catalog_groups": 0,
+      "unresolved_catalog_references": 0,
+      "unused_dependency_overrides": 0,
+      "misconfigured_dependency_overrides": 0,
+      "invalid_client_exports": 0,
+      "mixed_client_server_barrels": 0,
+      "misplaced_directives": 0,
+      "route_collisions": 0,
+      "dynamic_segment_name_conflicts": 0
+    },
+    "unused_files": [
+      {
+        "path": "src/orphan.js",
+        "actions": [
+          {
+            "type": "delete-file",
+            "auto_fixable": false,
+            "description": "Delete this file",
+            "note": "File deletion may remove runtime functionality not visible to static analysis"
+          },
+          {
+            "type": "suppress-file",
+            "auto_fixable": false,
+            "description": "Suppress with a file-level comment at the top of the file",
+            "comment": "// fallow-ignore-file unused-file"
+          }
+        ]
+      }
+    ],
+    "unused_exports": [
+      {
+        "path": "src/helpers.js",
+        "export_name": "unused",
+        "is_type_only": false,
+        "line": 2,
+        "col": 13,
+        "span_start": 53,
+        "is_re_export": false,
+        "actions": [
+          {
+            "type": "remove-export",
+            "auto_fixable": true,
+            "description": "Remove the unused export from the public API"
+          },
+          {
+            "type": "suppress-line",
+            "auto_fixable": false,
+            "description": "Suppress with an inline comment above the line",
+            "comment": "// fallow-ignore-next-line unused-export"
+          }
+        ]
+      }
+    ],
+    "unused_types": [],
+    "private_type_leaks": [],
+    "unused_dependencies": [],
+    "unused_dev_dependencies": [],
+    "unused_optional_dependencies": [],
+    "unused_enum_members": [],
+    "unused_class_members": [],
+    "unresolved_imports": [],
+    "unlisted_dependencies": [],
+    "duplicate_exports": [],
+    "type_only_dependencies": [],
+    "test_only_dependencies": [],
+    "dev_dependencies_in_production": [],
+    "circular_dependencies": [],
+    "re_export_cycles": [],
+    "boundary_violations": [],
+    "boundary_coverage_violations": [],
+    "boundary_call_violations": [],
+    "policy_violations": [],
+    "stale_suppressions": [],
+    "unused_catalog_entries": [],
+    "empty_catalog_groups": [],
+    "unresolved_catalog_references": [],
+    "unused_dependency_overrides": [],
+    "misconfigured_dependency_overrides": [],
+    "invalid_client_exports": [],
+    "mixed_client_server_barrels": [],
+    "misplaced_directives": [],
+    "route_collisions": [],
+    "dynamic_segment_name_conflicts": []
+  },
+  "dupes": {
+    "clone_groups": [],
+    "clone_families": [],
+    "stats": {
+      "total_files": 0,
+      "files_with_clones": 0,
+      "total_lines": 0,
+      "duplicated_lines": 0,
+      "total_tokens": 0,
+      "duplicated_tokens": 0,
+      "clone_groups": 0,
+      "clone_instances": 0,
+      "duplication_percentage": 0
+    }
+  },
+  "health": {
+    "findings": [],
+    "summary": {
+      "files_analyzed": 3,
+      "functions_analyzed": 1,
+      "functions_above_threshold": 0,
+      "max_cyclomatic_threshold": 20,
+      "max_cognitive_threshold": 15,
+      "max_crap_threshold": 30,
+      "max_unit_size_threshold": 60,
+      "files_scored": 1,
+      "average_maintainability": 89.4,
+      "coverage_model": "static_estimated",
+      "severity_critical_count": 0,
+      "severity_high_count": 0,
+      "severity_moderate_count": 0
+    },
+    "vital_signs": {
+      "dead_file_pct": 33.3,
+      "dead_export_pct": 33.3,
+      "avg_cyclomatic": 1,
+      "critical_complexity_pct": 0,
+      "p90_cyclomatic": 1,
+      "hotspot_count": 0,
+      "hotspot_top_pct_count": 0,
+      "maintainability_avg": 89.4,
+      "maintainability_low_pct": 0,
+      "unused_dep_count": 0,
+      "unused_deps_per_k_files": 0,
+      "circular_dep_count": 0,
+      "circular_deps_per_k_files": 0,
+      "counts": {
+        "total_files": 3,
+        "total_exports": 3,
+        "dead_files": 1,
+        "dead_exports": 1,
+        "total_lines": 7,
+        "files_scored": 1,
+        "total_deps": 0
+      },
+      "unit_size_profile": {
+        "low_risk": 100,
+        "medium_risk": 0,
+        "high_risk": 0,
+        "very_high_risk": 0
+      },
+      "functions_over_60_loc_per_k": 0,
+      "unit_interfacing_profile": {
+        "low_risk": 100,
+        "medium_risk": 0,
+        "high_risk": 0,
+        "very_high_risk": 0
+      },
+      "p95_fan_in": 1,
+      "coupling_high_pct": 0,
+      "total_loc": 7
+    },
+    "file_scores": [
+      {
+        "path": "src/helpers.js",
+        "fan_in": 1,
+        "fan_out": 0,
+        "dead_code_ratio": 0.5,
+        "complexity_density": 0.33,
+        "maintainability_index": 89.4,
+        "total_cyclomatic": 1,
+        "total_cognitive": 0,
+        "function_count": 1,
+        "lines": 3,
+        "crap_max": 2,
+        "crap_above_threshold": 0
+      }
+    ],
+    "target_thresholds": {
+      "fan_in_p95": 5,
+      "fan_in_p75": 3,
+      "fan_out_p95": 8,
+      "fan_out_p90": 5
+    }
+  },
+  "next_steps": [
+    {
+      "id": "setup",
+      "command": "fallow schema",
+      "reason": "fallow has no config here; the manifest lists guided-setup commands (agent guide, commit gate) to offer the user"
+    },
+    {
+      "id": "trace-unused-export",
+      "command": "fallow dead-code --trace src/helpers.js:unused",
+      "reason": "verify an export is truly unused before deleting"
+    }
+  ],
+  "_meta": {
+    "telemetry": {
+      "analysis_run_id": "run_84da695e0af17e66"
+    }
+  }
+}

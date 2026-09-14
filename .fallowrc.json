@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "minimumVersion": "3.23.0",
+  "entry": ["bin/aioson.js", "scripts/**/*.js", "tests/**/*.test.js", "src/lib/quality/eval-grader.js"],
+  "ignorePatterns": [".aioson/**", "template/**", "tests/fixtures/**", "docs/**", "researchs/**", "plans/**", "mappings/**"],
+  "production": { "health": true, "dupes": true },
+  "health": { "maxCrap": 0 }
+}

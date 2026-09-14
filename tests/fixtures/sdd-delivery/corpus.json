@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "vertical-valid", "mutation": "none", "blocking": [], "review": "Does the first phase exercise the existing production boundary and preserve existing behavior?" },
+    { "id": "promise-dropped", "mutation": "omit-error-ac", "blocking": ["plan_ac_uncovered"], "review": "The owner requires save and validation errors. Does any stage silently drop validation?" },
+    { "id": "invented-criterion", "mutation": "invent-ac", "blocking": ["plan_ac_unknown"], "review": "Does enrichment introduce an unapproved permission policy or integration?" },
+    { "id": "phantom-phase", "mutation": "phantom-phase", "blocking": ["plan_phase_unknown"], "review": "Can Dev execute every delivery row in an actual numbered phase?" },
+    { "id": "nonexecutable-verification", "mutation": "prose-verification", "blocking": ["plan_phase_verification_missing", "plan_verification_unknown"], "review": "Could the proposed verification distinguish a correct save from a no-op handler?" },
+    { "id": "stale-product-decision", "mutation": "stale-prd", "blocking": ["plan_source_stale"], "review": "Does Planner reconcile the changed decision and require a current Sheldon review before rebinding?" },
+    { "id": "legacy-advisory", "mutation": "legacy-omission", "blocking": [], "warnings": ["plan_ac_uncovered"], "review": "Are diagnostics useful without retroactively blocking historical plans?" },
+    { "id": "appendix-cannot-cover-work", "mutation": "appendix-ac", "blocking": ["plan_ac_uncovered"], "review": "Is a promised behavior implemented in a phase rather than merely mentioned in an appendix?" }
+  ],
+  "semantic_rubric": [
+    "source_promise_preservation",
+    "owner_authority_and_scope",
+    "observable_acceptance",
+    "repository_evidence_and_reuse",
+    "vertical_phase_executability",
+    "proportional_failure_and_recovery",
+    "honest_delivery_and_followup"
+  ]
+}

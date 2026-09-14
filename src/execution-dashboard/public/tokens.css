@@ -1,0 +1,46 @@
+/* AIOSON Design-DNA v1 — Tinta & Ouro.
+   Source: aioson-ecosystem-identity / variant-d / design-dna (2026-08-12).
+   Semantic slots from the ecosystem authority; no external font dependency. */
+:root {
+  --tinta: #0b0a08;
+  --tinta-2: #0f0d0a;
+  --superficie: #161310;
+  --superficie-2: #1d1914;
+  --solido: #242019;
+  --marfim: #f5f1e8;
+  --marfim-2: #cdc5b4;
+  --fumaca: #8f8674;
+  --linha: rgba(224, 203, 163, .14);
+  --linha-2: rgba(233, 214, 177, .28);
+  --ouro: #e8ba52;
+  --cobre: #d8895b;
+  --patina: #6ec6a2;
+  --prata: #b3c2d6;
+  --rose: #d18d80;
+  --niobio: #b49bd8;
+  --granada: #c9697a;
+  --perigo: #e25d5d;
+  --voz-estrutura: Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --voz-humana: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  --voz-maquina: "JetBrains Mono", "Cascadia Code", monospace;
+}
+[data-theme="light"] {
+  --tinta: #f1ede3;
+  --tinta-2: #e9e4d6;
+  --superficie: #f9f6ee;
+  --superficie-2: #fffdf7;
+  --solido: #fffdf7;
+  --marfim: #1c1710;
+  --marfim-2: #4c4436;
+  --fumaca: #7d7362;
+  --linha: rgba(92, 74, 44, .14);
+  --linha-2: rgba(92, 74, 44, .26);
+  --ouro: #8a6512;
+  --cobre: #a55a30;
+  --patina: #177a58;
+  --prata: #5c6d80;
+  --rose: #a15a55;
+  --niobio: #6c4e9b;
+  --granada: #9c3f52;
+  --perigo: #bf3d47;
+}

@@ -100,7 +100,10 @@ test('getBanner returns simple text on narrow terminal', () => {
   assert.equal(banner.includes('╭'), false);
 });
 
-test('getBanner returns ASCII art on wide terminal', () => {
+test('getBanner returns ASCII art on wide terminal', t => {
+  const saved = process.env.TERM;
+  t.after(() => { if (saved === undefined) delete process.env.TERM; else process.env.TERM = saved; });
+  process.env.TERM = 'xterm';
   const banner = __test__.getBanner('1.0.0', { isTTY: true, columns: 120 });
   assert.ok(banner.includes('╭'));
   assert.ok(banner.includes('AI Operating Framework'));

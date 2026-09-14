@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const { spawnSync } = require('node:child_process');
 
 const { runExecution: runCommand, formatProgress } = require('../src/commands/execution');
-const { runStatePath, parseChoice, composeQaPrompt } = require('../src/agent-execution/execution-run');
+const { runStatePath, parseChoice, composeQaPrompt, nextAvailableReport } = require('../src/agent-execution/execution-run');
 const { signatureKey, writeSignatures } = require('../src/lib/host-signature');
 const { acquireLease, releaseLease } = require('../src/agent-execution/dispatcher');
 const { openRuntimeDb, getExecutionSnapshot, listExecutionEvents } = require('../src/runtime-store');
@@ -19,6 +19,21 @@ const ROOT = path.resolve(__dirname, '..');
 const BIN = path.join(ROOT, 'bin', 'aioson.js');
 const logger = { log() {}, error() {}, warn() {} };
 const SLUG = 'orders';
+
+test('a new attempt never overwrites a report left by incomplete historical state', async t => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-report-collision-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }).catch(() => {}));
+  const requested = '.aioson/context/reports/feature/run/unit.r97.json';
+  const original = path.join(dir, ...requested.split('/'));
+  await fs.mkdir(path.dirname(original), { recursive: true });
+  await fs.writeFile(original, 'historical report', 'utf8');
+  const first = await nextAvailableReport(dir, requested);
+  assert.equal(first.relative, '.aioson/context/reports/feature/run/unit.r97.attempt1.json');
+  await fs.writeFile(first.file, 'another attempt', 'utf8');
+  const second = await nextAvailableReport(dir, requested);
+  assert.equal(second.relative, '.aioson/context/reports/feature/run/unit.r97.attempt2.json');
+  assert.equal(await fs.readFile(original, 'utf8'), 'historical report');
+});
 
 const PLAN = [
   '---',
@@ -131,7 +146,7 @@ function fakeAdapter(host, { script = {}, delayMs = 25, log = [] } = {}) {
       }
       entry.end = Date.now();
       active -= 1;
-      if (behaviour.fail) return { ok: false, reason: behaviour.fail, error: `simulated ${behaviour.fail}` };
+      if (behaviour.fail) return { ok: false, reason: behaviour.fail, error: `simulated ${behaviour.fail}`, usage: behaviour.usage || null };
       if (behaviour.no_report) return { ok: true, code: 0 };
       const report = {
         version: 1,
@@ -159,7 +174,7 @@ function fakeAdapter(host, { script = {}, delayMs = 25, log = [] } = {}) {
       const reportFile = path.resolve(input.cwd, reportRel);
       await fs.mkdir(path.dirname(reportFile), { recursive: true });
       await fs.writeFile(reportFile, JSON.stringify(report, null, 2), 'utf8');
-      return { ok: true, code: 0 };
+      return { ok: true, code: 0, usage: behaviour.usage || null };
     }
   };
 }
@@ -229,7 +244,7 @@ function adapters(script = {}, opts = {}) {
 function run(ctx, { registry, events = [], extra = {}, engine = {} } = {}) {
   return runCommand({
     args: [ctx.dir],
-    options: { sub: 'run', feature: SLUG, json: true, ...extra },
+    options: { sub: 'run', feature: SLUG, json: true, 'bounded-recovery': true, ...extra },
     logger,
     env: ctx.env,
     engineOptions: {
@@ -246,7 +261,7 @@ function run(ctx, { registry, events = [], extra = {}, engine = {} } = {}) {
 }
 
 function decide(ctx, unit, choice, engine = { leaseWaitMs: 0 }) {
-  return runCommand({ args: [ctx.dir], options: { sub: 'decide', feature: SLUG, unit, choice, json: true }, logger, env: ctx.env, engineOptions: engine });
+  return runCommand({ args: [ctx.dir], options: { sub: 'decide', feature: SLUG, unit, choice, json: true, 'expect-run': engine.expectedRunId }, logger, env: ctx.env, engineOptions: engine });
 }
 
 function status(ctx) {
@@ -258,6 +273,94 @@ async function readState(ctx) {
 }
 
 // ───────────────────────── preflight ─────────────────────────
+
+test('context ceiling checkpoints work and starts a bounded fresh continuation; every attempt remains in metrics', async t => {
+  const ctx = await setup(t);
+  let calls = 0;
+  const usage = { input_tokens: 90000, uncached_input_tokens: 10000, cache_read_tokens: 80000, cache_write_tokens: 0, output_tokens: 100, complete: true, peak_context_tokens: 90000 };
+  const fakes = adapters({ 'dev:phase-1': input => {
+    calls++;
+    if (calls === 1) {
+      const notes = input.prompt_text.match(/Progress notes: ([^\n]+)/)[1];
+      const file = path.join(input.cwd, notes);
+      require('node:fs').mkdirSync(path.dirname(file), { recursive: true });
+      require('node:fs').writeFileSync(file, 'Verified createOrder; next add the duplicate-order regression.');
+      return { fail: 'context_budget_exceeded', usage, touch: ['src/api/orders.ts'] };
+    }
+    assert.match(input.prompt_text, /Context continuation: read/);
+    assert.match(input.prompt_text, /PREVIOUS WORK NOTES\nVerified createOrder; next add the duplicate-order regression\./);
+    return { usage: { ...usage, input_tokens: 3000, peak_context_tokens: 3000 } };
+  } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed');
+  assert.equal(calls, 2);
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1'].continuations.dev, 1);
+  const checkpoint = JSON.parse(await fs.readFile(path.join(ctx.dir, state.units['phase-1'].checkpoints.dev), 'utf8'));
+  assert.equal(checkpoint.reason, 'context_budget_exceeded');
+  assert.match(checkpoint.work_notes, /Verified createOrder/);
+  assert.equal(state.attempts.length, 5);
+  assert.equal(state.attempts.filter(attempt => attempt.reason === 'context_budget_exceeded').length, 1);
+  const ledger = await status(ctx);
+  assert.equal(ledger.metrics.attempts.length, 5);
+  assert.equal(ledger.metrics.usage.measured_attempts, 2);
+});
+
+test('no-context-limit persists across resume without rerunning approved units or disabling usage and QA', async t => {
+  const ctx = await setup(t);
+  const budgets = [];
+  let calls = 0;
+  const fakes = adapters({ 'dev:phase-1': input => {
+    calls++;
+    budgets.push(input.getContextBudget({ host: 'kimi', model: 'kimi-k3' }));
+    assert.equal(input.captureUsage, true);
+    assert.match(input.prompt_text, /AIOSON BOUNDED WORK CONTINUITY/);
+    return calls === 1 ? { fail: 'crash' } : {};
+  } });
+  const first = await run(ctx, { registry: fakes.registry, extra: { 'no-context-limit': true } });
+  assert.equal(first.status, 'decision_required');
+  const before = await readState(ctx);
+  assert.equal(before.context_limit_enabled, false);
+  assert.equal((await decide(ctx, 'phase-1', 'retry')).ok, true);
+  const resumed = await run(ctx, { registry: fakes.registry, extra: { resume: true } });
+  assert.equal(resumed.status, 'completed');
+  const after = await readState(ctx);
+  assert.equal(after.run_id, before.run_id);
+  assert.equal(after.context_limit_enabled, false);
+  assert.equal(after.units['phase-1'].qa.status, 'passed');
+  assert.equal(fakes.log.filter(e => e.key === 'dev:phase-2').length, 1);
+  assert.deepEqual(await Promise.all(budgets), [null, null]);
+  assert.equal((await status(ctx)).context_limit_enabled, false);
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'context-limit': true, 'no-context-limit': true } })).reason, 'conflicting_context_options');
+});
+
+test('repeated context exhaustion stops after the continuation ceiling without losing partial changes', async t => {
+  const ctx = await setup(t);
+  const fakes = adapters({ 'dev:phase-1': { fail: 'context_budget_exceeded', touch: ['src/api/orders.ts'] } });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'decision_required');
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:phase-1').length, 3);
+  assert.equal((await readState(ctx)).units['phase-1'].continuations.dev, 2);
+  assert.match(await fs.readFile(path.join(ctx.dir, 'src/api/orders.ts'), 'utf8'), /dev:phase-1/);
+});
+
+test('dashboard run binding refuses stale decide/resume without edits and retry carries the concrete error', async t => {
+  const ctx = await setup(t);
+  let calls = 0;
+  const fakes = adapters({ 'dev:phase-1': input => {
+    if (++calls === 1) return { fail: 'crash' };
+    assert.match(input.prompt_text, /Previous attempt error data/);
+    assert.match(input.prompt_text, /"reason":"crash"/);
+    return {};
+  } });
+  await run(ctx, { registry: fakes.registry });
+  const before = await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8');
+  assert.equal((await decide(ctx, 'phase-1', 'retry', { expectedRunId: 'wrong', leaseWaitMs: 0 })).reason, 'run_changed');
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { resume: true, 'expect-run': 'wrong' } })).reason, 'run_changed');
+  assert.equal(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'), before);
+  assert.equal((await decide(ctx, 'phase-1', 'retry')).ok, true);
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { resume: true } })).status, 'completed');
+});
 
 test('execution:run --preflight is deterministic: compiled plan fresh, manifest valid, every role host on PATH', async (t) => {
   const ctx = await setup(t);
@@ -286,14 +389,27 @@ test('execution:run --preflight is deterministic: compiled plan fresh, manifest 
 
 test('execution:run — lane units of a wave run concurrently as dev→qa pipelines under the concurrency cap; integration units stay with the session DEV; reports, telemetry, ledger and live events all exist', async (t) => {
   const ctx = await setup(t);
-  const fakes = adapters({}, { delayMs: 60 });
+  const devProfiles = new Set();
+  const checkDevProfile = unit => input => {
+    assert.match(input.prompt_text, /# AIOSON dev-lane profile/);
+    assert.match(input.prompt_text, /inherit the implementation discipline of the DEV kernel/);
+    assert.match(input.prompt_text, /Never run stage-ownership or publishing commands/);
+    devProfiles.add(unit);
+    return {};
+  };
+  const fakes = adapters({
+    'dev:phase-1': checkDevProfile('backend'),
+    'dev:phase-2': checkDevProfile('frontend')
+  }, { delayMs: 60 });
   const events = [];
   const result = await run(ctx, { registry: fakes.registry, events });
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.status, 'completed');
   assert.equal(result.exitCode, 0);
+  assert.deepEqual([...devProfiles].sort(), ['backend', 'frontend']);
   assert.deepEqual(result.summary.units, { total: 3, lane: 2, integration: 1, passed: 2, pending: 0, running: 0, skipped: 0, decision_required: 0, qa_passed: 2, qa_failed: 0, qa_skipped: 0 });
-  assert.deepEqual(result.integration, { owner: 'dev', units: ['phase-3'], role: null, status: 'pending' });
+  assert.deepEqual({ ...result.integration, verification: undefined }, { owner: 'dev', units: ['phase-3'], role: null, status: 'pending', verification: undefined });
+  assert.ok(result.integration.verification.length > 0);
   assert.deepEqual(result.reports.map((r) => r.unit), ['phase-1', 'phase-2']);
 
   // Concurrency: both dev units of wave 1 overlapped (cap 2), and no more than 2 pipelines ran at once.
@@ -333,6 +449,7 @@ test('execution:run — lane units of a wave run concurrently as dev→qa pipeli
     assert.deepEqual(state.units[unit].qa.corrections_paths, []);
   }
   assert.equal(state.units['phase-3'].status, 'integration');
+  assert.equal(state.attempts.some(attempt => attempt.finish_observed === false), false, 'a finishing QA never closes another live attempt as interrupted');
   assert.deepEqual(state.waves.map((w) => [w.wave, w.status]), [[1, 'completed'], [2, 'integration']]);
   assert.equal(state.scope.measured, true);
 
@@ -476,14 +593,16 @@ test('a QA PASS cannot override a measured correction cap violation', async (t) 
   assert.equal(result.summary.units.qa_failed, 1);
   assert.ok(events.some((event) => event.type === 'unit' && event.role === 'qa' && event.unit === 'phase-2' && event.status === 'failed'));
   assert.equal((await status(ctx)).units.find((unit) => unit.id === 'phase-2').qa.status, 'failed');
-  assert.equal(result.status, 'completed', 'integration still owns findings after the pipelines finish');
+  assert.equal(result.status, 'decision_required', 'failed acceptance pauses dependent work after bounded rework');
 });
 
-test('lane QA corrections are measured against the unit files and capped; scope drift and unowned changes become run findings; a failed review never blocks the run', async (t) => {
+test('explicit legacy QA policy retains measured corrections and scope findings without blocking the run', async (t) => {
   const ctx = await setup(t);
+  await fs.writeFile(path.join(ctx.dir, '.aioson/config/execution-policy.json'), JSON.stringify({ version: 1, qa: { require_pass: false, max_rework_rounds: 0 } }));
   const manifestFile = path.join(ctx.dir, '.aioson', 'context', `agent-execution-${SLUG}.json`);
   const manifest = JSON.parse(await fs.readFile(manifestFile, 'utf8'));
   manifest.development_lanes.lanes.frontend.qa.max_fix_files = 0;
+  manifest.development_lanes.lanes.frontend.qa.max_rework_rounds = 0;
   await fs.writeFile(manifestFile, JSON.stringify(manifest, null, 2));
   // The compiled plan is the run's authority and it carries the operator's fix cap from the manifest — recompile to pick it up.
   assert.equal((await runCommand({ args: [ctx.dir], options: { sub: 'compile', feature: SLUG, json: true }, logger, env: ctx.env })).ok, true);
@@ -527,11 +646,11 @@ test('lane QA corrections are measured against the unit files and capped; scope 
 
 // ───────────────────────── verdict FAIL, skip, qa decisions, abort ─────────────────────────
 
-test('a FAIL/BLOCKED implementer verdict or a missing report needs a decision; skip records a finding for the integration owner and the run completes', async (t) => {
+test('step mode: a FAIL/BLOCKED implementer verdict or missing report needs a decision; skip records a finding and the run completes', async (t) => {
   const ctx = await setup(t);
   const script = { 'dev:phase-1': { verdict: 'FAIL', findings: [{ severity: 'high', summary: 'tests red' }] }, 'dev:phase-2': { no_report: true } };
   const fakes = adapters(script);
-  let result = await run(ctx, { registry: fakes.registry });
+  let result = await run(ctx, { registry: fakes.registry, extra: { step: true } });
   assert.equal(result.status, 'decision_required');
   const reasons = Object.fromEntries(result.decisions_pending.map((d) => [d.unit, d.reason]));
   assert.deepEqual(reasons, { 'phase-1': 'verdict_fail', 'phase-2': 'report_missing' });
@@ -684,7 +803,7 @@ test('CLI: execution:run/decide/status exit codes and arguments; --preflight/--r
   // so the deterministic refusal is a stale plan: the preflight refuses through
   // the binary with exit 1 — and `--preflight .` parsed as a pure boolean.
   await fs.appendFile(path.join(ctx.dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), '\nedited after compile\n');
-  const preflight = spawn(['execution:run', '--preflight', ctx.dir, `--feature=${SLUG}`, '--json']);
+  const preflight = spawn(['execution:run', '--preflight', '--no-context-limit', ctx.dir, `--feature=${SLUG}`, '--json']);
   assert.equal(preflight.status, 1, preflight.stderr);
   const payload = JSON.parse(preflight.stdout);
   assert.equal(payload.reason, 'preflight_failed');
@@ -692,7 +811,7 @@ test('CLI: execution:run/decide/status exit codes and arguments; --preflight/--r
   assert.ok(payload.preflight.checks.some((c) => c.id === 'plan' && c.ok === false && /plan_digest_stale/.test(c.detail)));
 
   const help = spawn(['--help']);
-  assert.match(help.stdout, /aioson execution:run \[path\] --feature=<slug> \[--preflight\] \[--resume\] \[--fresh\] \[--wave=<n>\]/);
+  assert.match(help.stdout, /aioson execution:run \[path\] --feature=<slug> \[--preflight\] \[--resume\] \[--fresh\] \[--no-context-limit\|--context-limit\] \[--wave=<n>\]/);
   assert.match(help.stdout, /aioson execution:decide \[path\] --feature=<slug> --unit=<unit-id> --choice=/);
   assert.match(help.stdout, /aioson execution:status \[path\] --feature=<slug>/);
 });
@@ -717,6 +836,113 @@ const PLAN_DEPS = PLAN.replace(
     '| 5 | 3 | src/app.ts | CAP-orders-wire | npm test -- app passes | |'
   ].join('\n')
 );
+
+test('cross-wave reuse waits for the previous reviewer before starting a writer', async t => {
+  const ctx = await setup(t, { roles: { ...ROLES, parallel: { max_concurrent_lanes: 3 } } });
+  await fs.writeFile(path.join(ctx.dir, `.aioson/context/implementation-plan-${SLUG}.md`), PLAN_DEPS.replace('src/ui/OrdersList.tsx', 'src/ui/Orders.tsx'));
+  const compiled = await runCommand({ args: [ctx.dir], options: { sub: 'compile', feature: SLUG, json: true }, logger, env: ctx.env });
+  assert.equal(compiled.ok, true, JSON.stringify(compiled.errors));
+  const fakes = adapters({ 'qa:phase-2': { delay_ms: 500 } }, { delayMs: 20 });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  const reviewer = fakes.log.find(item => item.key === 'qa:phase-2');
+  const writer = fakes.log.find(item => item.key === 'dev:phase-3');
+  assert.ok(writer.start >= reviewer.end, JSON.stringify({ writer, reviewer }));
+});
+
+test('capability verification metadata does not invent a hidden pending integration step', async (t) => {
+  const ctx = await setup(t);
+  const planFile = path.join(ctx.dir, '.aioson', 'context', `execution-plan-${SLUG}.json`);
+  const plan = JSON.parse(await fs.readFile(planFile, 'utf8'));
+  plan.units = plan.units.filter((unit) => unit.owner === 'lane');
+  plan.waves = plan.waves.filter((wave) => wave.units.some((id) => plan.units.some((unit) => unit.id === id)))
+    .map((wave) => ({ ...wave, units: wave.units.filter((id) => plan.units.some((unit) => unit.id === id)) }));
+  plan.integration.units = [];
+  plan.summary.units = plan.units.length;
+  plan.summary.lane_units = plan.units.length;
+  plan.summary.integration_units = 0;
+  await fs.writeFile(planFile, `${JSON.stringify(plan, null, 2)}\n`);
+
+  const result = await run(ctx, { registry: adapters().registry });
+  assert.equal(result.status, 'completed');
+  assert.ok(result.integration.verification.length > 0);
+  assert.equal(result.integration.status, 'none');
+});
+
+test('execution:run reloads active_profile before each new DEV or QA dispatch without restarting the run', async (t) => {
+  const profiles = {
+    version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
+    profiles: {
+      primary: { enabled: true, roles: ROLES.roles },
+      credits: { enabled: true, roles: { ...ROLES.roles, qa: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' } } }
+    },
+    parallel: ROLES.parallel, on_unavailable: ROLES.on_unavailable
+  };
+  const ctx = await setup(t, { roles: profiles });
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 180 }, 'dev:phase-2': { delay_ms: 180 } });
+  const running = run(ctx, { registry: fakes.registry });
+  while (fakes.log.filter(entry => entry.key.startsWith('dev:')).length < 2) await new Promise(resolve => setTimeout(resolve, 10));
+  profiles.active_profile = 'credits';
+  await fs.writeFile(path.join(ctx.dir, '.aioson/config/execution-roles.json'), JSON.stringify(profiles, null, 2));
+  const result = await running;
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  const qaCalls = fakes.log.filter(entry => entry.key.startsWith('qa:'));
+  assert.equal(qaCalls.length, 2);
+  assert.ok(qaCalls.every(entry => entry.host === 'codex' && entry.model === 'gpt-5.6'));
+  const state = await readState(ctx);
+  assert.ok(Object.values(state.units).filter(unit => unit.owner === 'lane').every(unit => unit.qa.routing_profile === 'credits'));
+  assert.ok(state.attempts.filter(attempt => attempt.stage === 'qa').every(attempt => attempt.routing_profile === 'credits'));
+});
+
+test('profile fallback routes infrastructure failure to the same role in the next authorized profile and records the route', async (t) => {
+  const roles = {
+    version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
+    profiles: {
+      primary: { enabled: true, fallback_use: true, fallback_profiles: ['reserve'], roles: ROLES.roles },
+      reserve: { enabled: true, roles: { ...ROLES.roles, backend_dev: { host: 'kimi', model: 'kimi-k3' } } }
+    },
+    parallel: ROLES.parallel, on_unavailable: ROLES.on_unavailable
+  };
+  const ctx = await setup(t, { roles });
+  const fakes = adapters({
+    'dev:phase-1': input => input.model === 'gpt-5.6' ? { fail: 'capacity' } : {}
+  });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  const backendCalls = fakes.log.filter(entry => entry.key === 'dev:phase-1');
+  assert.deepEqual(backendCalls.map(entry => [entry.host, entry.model]), [['codex', 'gpt-5.6'], ['kimi', 'kimi-k3']]);
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1'].dev.host, 'kimi');
+  assert.equal(state.units['phase-1'].dev.routing_profile, 'reserve');
+  assert.deepEqual(state.attempts.filter(attempt => attempt.unit === 'phase-1' && attempt.stage === 'dev').map(attempt => [attempt.routing_profile, attempt.reason]), [['primary', 'capacity'], ['reserve', null]]);
+});
+
+test('an invalid active signature selects a signed profile fallback before dispatch', async (t) => {
+  const roles = {
+    version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
+    profiles: {
+      primary: { enabled: true, fallback_use: true, fallback_profiles: ['reserve'], roles: { ...ROLES.roles, backend_dev: { host: 'codex', model: 'credits-exhausted', reasoning_effort: 'high' } } },
+      reserve: { enabled: true, roles: { ...ROLES.roles, backend_dev: { host: 'kimi', model: 'kimi-k3' } } }
+    },
+    parallel: ROLES.parallel, on_unavailable: ROLES.on_unavailable
+  };
+  const invalidPrimary = {
+    ...ALL_SIGNED,
+    [signatureKey('codex', 'credits-exhausted', 'high')]: {
+      ...signed('codex', 'credits-exhausted', 'high'),
+      status: 'invalid', reason: 'host_not_unattended',
+      unattended: { yolo: { mode: 'yolo', state: 'blocked', reason: 'timeout' } }
+    }
+  };
+  const ctx = await setup(t, { roles, signatures: invalidPrimary });
+  const fakes = adapters();
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(fakes.log.filter(entry => entry.key === 'dev:phase-1').map(entry => [entry.host, entry.model]), [['kimi', 'kimi-k3']]);
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1'].dev.routing_profile, 'reserve');
+  assert.deepEqual(state.attempts.filter(attempt => attempt.unit === 'phase-1' && attempt.stage === 'dev').map(attempt => attempt.routing_profile), ['reserve']);
+});
 
 test('explicit edges schedule by readiness: a dependent starts as soon as its own dependencies allow (after_dev while the review still runs; after_qa once both reviews ended) instead of waiting for the slowest unit of the previous wave', async (t) => {
   // Three slots so the pool never masks the gates: phase-3 needs a free slot the moment phase-2's implementer passes.
@@ -836,11 +1062,17 @@ test('a unit frozen at running by an interrupted process is reclaimed on --resum
   // Simulate a killed process: the unit is mid-dev with no report ever coming.
   state.units['phase-2'].status = 'running';
   state.units['phase-2'].dev = { status: 'running', host: 'kimi', model: 'kimi-k3', started_at: '2026-08-25T10:00:00.000Z' };
+  state.attempts.push({ id: 'interrupted-metric', role_attempt_id: 'old-role', stage: 'dev', unit: 'phase-2', wave: 1, started_at: state.started_at, finished_at: null, usage: { input_tokens: 200, complete: true }, cost: { usd: 0.001, complete: true } });
+  const lastSeen = state.engine.heartbeat_at;
   await fs.writeFile(stateFile, JSON.stringify(state, null, 2));
   const resumed = await run(ctx, { registry: adapters().registry, extra: { resume: true } });
   assert.equal(resumed.ok, true, JSON.stringify(resumed));
   const final = JSON.parse(await fs.readFile(stateFile, 'utf8'));
   assert.equal(final.units['phase-2'].status, 'passed', 'the reclaimed unit re-ran from its own prompt');
+  const interrupted = final.attempts.find(item => item.id === 'interrupted-metric');
+  assert.equal(interrupted.finished_at, lastSeen);
+  assert.equal(interrupted.finish_observed, false);
+  assert.equal(interrupted.usage.complete, false);
   assert.ok(final.findings.some((f) => f.check === 'interrupted_unit' && f.unit === 'phase-2' && f.stage === 'dev'), JSON.stringify(final.findings));
 });
 

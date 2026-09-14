@@ -1,0 +1,19 @@
+---
+description: "Planner rules for parallel units, dependency evidence, context budgets and autonomous recovery."
+agents: [planner]
+task_types: [orchestrated-execution, execution-sequence]
+triggers: [orchestrated lanes, execution:compile, Execution Sequence]
+---
+
+# Planning orchestrated execution
+
+- One row per UNIT (one process, one context), never per phase: cut a phase per lane inside its wave (`1-backend`, `1-frontend`) with an `## Interface Contract` row (`IF-*`) per boundary; a row over the unit ceiling (`plan.scale.units[].over_budget`: 10 files or 6 ACs) is cut again on disjoint files; small serial rows of one lane may merge. Exact Delta/Delivery paths, no globs.
+- `Wave`: positive integer, ascending; rows sharing a wave run in parallel on disjoint `Files` — `spec:analyze` blocks `wave_file_overlap`.
+- Optional `Depends on`: earlier rows this one needs (`1-backend (dev)`: when implemented; a bare phase number = every row of that phase) — it starts when they pass, not with its whole wave.
+- Shared integration files go to a later solo row, never to two rows of one wave; one lane with one row per wave is serial by construction (`orchestration_serial`).
+- Build waves from real prerequisites, not phase numbers: independent units from different phases share the earliest safe wave. Add `Depends on` for consumed artifacts and shared-file ordering; justify each edge with its file or interface. Use `(dev)` only when the consumer can safely start before review; otherwise require QA. Never invent an edge merely because a row was written first.
+- Keep each `Done when` executable inside that unit's ownership. A frontend unit may verify an approved interface contract before backend integration exists. Assign capability-wide and end-to-end checks to an explicit integration row after all producers, retaining every CAP/AC; never copy an integration test into both workers as a local blocker.
+- Trace each generated artifact to its real runtime consumer before assigning ownership: a render graph, request payload or generated file is not delivered merely because its builder test passes. Include transport, process invocation and temporary-resource cleanup in the same unit when its local acceptance needs them, or name a later integration owner and defer those acceptance checks explicitly. Check target-platform limits with the complete production payload and supported input sizes; a reduced fragment is insufficient evidence. Never reduce requested output to make a local test pass.
+- Before compiling, inspect `.aioson/config/execution-policy.json` when present and estimate the required source/prototype reads. The default quality budget is min(50% of a known model window, 80k tokens), with room for tools/output. Split an oversized unit into bounded deliverables and disk checkpoints; a 1M model is not permission to load 800k. Missing window/usage data is unknown, never proof the budget was enforced.
+- For large existing files, `Read ranges` may declare bounded initial reads as `src/editor.ts:1-60; src/editor.ts:400-480` (owned files, inclusive valid lines). Inspect the relevant functions first; do not invent ranges just to pass a budget. The compiler measures selected bytes and keeps full file size; workers resolve moved symbols with focused searches and stay within the runtime budget.
+- For authorized Autopilot, make technical repair ownership explicit with separate DEV and QA roles. The engine defaults to continuous DEV → QA recovery; use `--bounded-recovery` only when finite retries are requested. Both backend and frontend inherit the DEV lane profile and their configured models. Assign final integration files to an existing configured lane if it must execute unattended; an unowned integration row remains with the supervising session. Do not force product decisions or unavailable capacity into technical retries.

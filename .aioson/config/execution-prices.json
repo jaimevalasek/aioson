@@ -1,0 +1,5850 @@
+{
+  "version": 1,
+  "currency": "USD",
+  "provider": "openrouter",
+  "unit": "token",
+  "fetched_at": "2026-09-13T07:10:05.358Z",
+  "models": [
+    {
+      "id": "inference-net/schematron-v2-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 3e-8,
+        "output": 1.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "inference-net/schematron-v2-small",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 5e-8,
+        "output": 2.3e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~openai/gpt-astra-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 0.000001,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "~openai/gpt-sol-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.00001,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "~openai/gpt-terra-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "~openai/gpt-luna-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000012,
+        "cache_read": 2e-8,
+        "cache_write": 2.5e-7
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "sakana/fugu-ultra-v2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.00003,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "sakana/fugu-max",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash-vl",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 6e-8,
+        "output": 1.8e-7,
+        "cache_read": 1.2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash-vl:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4.1-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": 3e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "inception/mercury-2.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 260000,
+      "rates": {
+        "input": 4e-8,
+        "output": 1.5e-7,
+        "cache_read": 4e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nex-agi/nex-n2.5-mini:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nex-agi/nex-n2.5-pro:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-6-astra",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 0.000001,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 0.000001,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash-sante:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.8-max-0902",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-spark-1.3-contributor",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1e-7,
+        "output": 2e-7,
+        "cache_read": 2e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.0025"
+      }
+    },
+    {
+      "id": "meta/muse-spark-1.3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00000425,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.0025"
+      }
+    },
+    {
+      "id": "google/gemini-3.8-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.00000375,
+        "cache_read": 7.5e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000075",
+        "audio": "0.00000075",
+        "input_audio_cache": "0.000000075",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000375"
+      }
+    },
+    {
+      "id": "google/gemini-3.8-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3.75e-7,
+        "output": 0.000001875,
+        "cache_read": 3.75e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.000000375",
+        "audio": "0.000000375",
+        "input_audio_cache": "0.0000000375",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000001875"
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00002"
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5.1:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 1.25e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "ibm-granite/granite-4.2-8b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 6e-8,
+        "output": 2.5e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy4-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 8.34e-7,
+        "output": 0.000002501,
+        "cache_read": 4.2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash-fin",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 6e-8,
+        "output": 1.8e-7,
+        "cache_read": 1.2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash-fin:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~z-ai/glm-flash-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 2.5e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.8-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 4.7e-7,
+        "cache_read": 1.6e-8,
+        "cache_write": 2e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.3-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 5e-7,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.3-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 2.5e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-spark-1.2-contributor",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1e-7,
+        "output": 2e-7,
+        "cache_read": 2e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.0025"
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-vision-exp",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 2.2e-7,
+        "output": 6.6e-7,
+        "cache_read": 7e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-vision-exp:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.1e-7,
+        "output": 3.3e-7,
+        "cache_read": 3.5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy-mt2-1.8b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 4.4e-8,
+        "output": 1.77e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy-mt2-30b-a3b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 7.4e-8,
+        "output": 2.95e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~z-ai/glm-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 9.36e-7,
+        "output": 0.000003168,
+        "cache_read": 1.872e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy-mt2-7b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 7.4e-8,
+        "output": 2.95e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 0.000001092,
+        "output": 0.000003432,
+        "cache_read": 2.028e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.3:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7e-7,
+        "output": 0.0000022,
+        "cache_read": 1.3e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.8-27b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 2.14e-7,
+        "output": 0.00000255,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "dots-studio/dots-3-note-preview:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 512000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.7-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.00000375,
+        "cache_read": 7.5e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000075",
+        "audio": "0.00000075",
+        "input_audio_cache": "0.000000075",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000375"
+      }
+    },
+    {
+      "id": "google/gemini-3.7-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3.75e-7,
+        "output": 0.000001875,
+        "cache_read": 3.75e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.000000375",
+        "audio": "0.000000375",
+        "input_audio_cache": "0.0000000375",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000001875"
+      }
+    },
+    {
+      "id": "bytedance-seed/seed-2-1-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.0000025,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.8-2.4t-a95b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.8-2.4t-a95b:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1010000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "bytedance-seed/seed-2.0-code",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.000003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro-0813",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 5.7816e-7,
+        "output": 0.00000173448,
+        "cache_read": 1.8396e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro-0813:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 6.6e-7,
+        "output": 0.00000198,
+        "cache_read": 2.2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "x-ai/grok-4.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 500000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "liquid/lfm-2.5-2.6b:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3.5-lightning",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 8e-8,
+        "output": 2e-7,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3.5-lightning:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "sakana/sakana-namazu",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9.5e-7,
+        "output": 0.000004,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.007"
+      }
+    },
+    {
+      "id": "upstage/solar-pro4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 524288,
+      "rates": {
+        "input": 9e-8,
+        "output": 3.6e-7,
+        "cache_read": 1.8e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-glimmer-30b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 3.5e-7,
+        "output": 0.0000015,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-glimmer-30b:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.75e-7,
+        "output": 7.5e-7,
+        "cache_read": 2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-spark-1.2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00000425,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.0025"
+      }
+    },
+    {
+      "id": "~deepseek/deepseek-v4-flash-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 3.52e-8,
+        "output": 1.056e-7,
+        "cache_read": 1.12e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-0731",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 4e-8,
+        "output": 8e-8,
+        "cache_read": 8e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-0731:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.1e-7,
+        "output": 3.3e-7,
+        "cache_read": 3.5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling-small",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 4.5e-7,
+        "output": 0.0000012,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling-small:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 524288,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.0000012,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling-small:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.7-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 3e-8,
+        "output": 1.3e-7,
+        "cache_read": 6e-9,
+        "cache_write": 3.8e-8
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.000003125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000005"
+      }
+    },
+    {
+      "id": "inclusionai/ling-3.0-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.1e-8,
+        "output": 6.3e-8,
+        "cache_read": 4.2e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "poolside/laguna-s-2.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 9e-8,
+        "output": 1.8e-7,
+        "cache_read": 9e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "poolside/laguna-s-2.1:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.6-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.00000375,
+        "cache_read": 7.5e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000075",
+        "audio": "0.00000075",
+        "input_audio_cache": "0.000000075",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000375"
+      }
+    },
+    {
+      "id": "google/gemini-3.6-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3.75e-7,
+        "output": 0.000001875,
+        "cache_read": 3.75e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.000000375",
+        "audio": "0.000000375",
+        "input_audio_cache": "0.0000000375",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000001875"
+      }
+    },
+    {
+      "id": "google/gemini-3.5-flash-lite",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000025,
+        "cache_read": 3e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000003",
+        "audio": "0.0000003",
+        "input_audio_cache": "0.00000003",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000025"
+      }
+    },
+    {
+      "id": "google/gemini-3.5-flash-lite:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 0.00000125,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.00000015",
+        "audio": "0.00000015",
+        "input_audio_cache": "0.000000015",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000125"
+      }
+    },
+    {
+      "id": "meituan/longcat-2.0",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048756,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 6e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.00000405,
+        "cache_read": 1.7e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 524288,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.00000405,
+        "cache_read": 1.7e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thinkingmachines/inkling:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openrouter/auto-beta",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 2000000,
+      "rates": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000002648138063,
+        "output": 0.00001328272425,
+        "cache_read": 3.0264435e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k3:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": 3e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta/muse-spark-1.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00000425,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.0025"
+      }
+    },
+    {
+      "id": "kwaipilot/kat-coder-pro-v2.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.4e-7,
+        "output": 0.00000296,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.6-luna-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000012,
+        "cache_read": 2e-8,
+        "cache_write": 2.5e-7
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-luna-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 1e-7,
+        "output": 6e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-luna",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000012,
+        "cache_read": 2e-8,
+        "cache_write": 2.5e-7
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-luna:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 1e-7,
+        "output": 6e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-terra-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-terra-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000006,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-terra",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-terra:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000006,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-sol-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.00001,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-sol-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000005,
+        "cache_read": 1e-7,
+        "cache_write": 0.00000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-sol",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.00001,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.6-sol:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000005,
+        "cache_read": 1e-7,
+        "cache_write": 0.00000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "x-ai/grok-4.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 500000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 3e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "~x-ai/grok-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 500000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "aion-labs/aion-3.0-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 7e-7,
+        "output": 0.0000014,
+        "cache_read": 1.8e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "aion-labs/aion-3.0",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000006,
+        "cache_read": 7.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.32e-7,
+        "output": 5.28e-7,
+        "cache_read": 3.3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "poolside/laguna-xs-2.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 6e-8,
+        "output": 1.2e-7,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "poolside/laguna-xs-2.1:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-sonnet-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.00001,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000004"
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000005,
+        "cache_read": 1e-7,
+        "cache_write": 0.00000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000002"
+      }
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite-image",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.0000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.00003",
+        "web_search": "0.014"
+      }
+    },
+    {
+      "id": "sakana/fugu-ultra",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.00003,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "google/gemini-3.1-flash-image",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.000003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.00006",
+        "web_search": "0.014"
+      }
+    },
+    {
+      "id": "google/gemini-3-pro-image",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.000002",
+        "image_output": "0.00012",
+        "audio": "0.000002",
+        "input_audio_cache": "0.0000002",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000012"
+      }
+    },
+    {
+      "id": "cohere/north-mini-code:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.000002,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5.2:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7e-7,
+        "output": 0.0000022,
+        "cache_read": 7e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openrouter/fusion",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k2.7-code",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.1e-7,
+        "output": 0.0000035,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~anthropic/claude-fable-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00002"
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00005,
+        "cache_read": 0.000001,
+        "cache_write": 0.0000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00002"
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3.5-content-safety",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 2e-7,
+        "output": 2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3.5-content-safety:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 6.25e-7,
+        "output": 0.000003125,
+        "cache_read": 1.875e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.7-plus",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 3.2e-7,
+        "output": 0.00000128,
+        "cache_read": 6.4e-8,
+        "cache_write": 4e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m3:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 524288,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "stepfun/step-3.7-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.00000115,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4.8",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4.8:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.000003125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000005"
+      }
+    },
+    {
+      "id": "qwen/qwen3.7-max",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000001475,
+        "output": 0.000004425,
+        "cache_read": 2.95e-7,
+        "cache_write": 0.00000184375
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "x-ai/grok-build-0.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000002,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "google/gemini-3.5-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.0000015,
+        "output": 0.000009,
+        "cache_read": 1.5e-7,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000015",
+        "audio": "0.000003",
+        "input_audio_cache": "0.0000003",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000009"
+      }
+    },
+    {
+      "id": "google/gemini-3.5-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.0000045,
+        "cache_read": 7.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.00000075",
+        "audio": "0.0000015",
+        "input_audio_cache": "0.00000015",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000045"
+      }
+    },
+    {
+      "id": "perceptron/perceptron-mk1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 0.0000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.0000015,
+        "cache_read": 2.5e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000025",
+        "audio": "0.0000005",
+        "input_audio_cache": "0.00000005",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000015"
+      }
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.25e-7,
+        "output": 7.5e-7,
+        "cache_read": 1.25e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.000000125",
+        "audio": "0.00000025",
+        "input_audio_cache": "0.000000025",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000075"
+      }
+    },
+    {
+      "id": "openai/gpt-chat-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.00003,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "x-ai/grok-4.3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.0000025,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "x-ai/grok-4.3:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000002,
+        "cache_read": 1.6e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "mistralai/mistral-medium-3-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0.0000015,
+        "output": 0.0000075,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-medium-3-5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.00000375,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~anthropic/claude-haiku-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000005,
+        "cache_read": 1e-7,
+        "cache_write": 0.00000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000002"
+      }
+    },
+    {
+      "id": "~openai/gpt-mini-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.0000045,
+        "cache_read": 7.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "~google/gemini-pro-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.000002",
+        "audio": "0.000002",
+        "input_audio_cache": "0.0000002",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000012"
+      }
+    },
+    {
+      "id": "~moonshotai/kimi-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.0000021,
+        "output": 0.00001095,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "~google/gemini-flash-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.00000375,
+        "cache_read": 7.5e-8,
+        "cache_write": 4.16666666666667e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000075",
+        "audio": "0.00000075",
+        "input_audio_cache": "0.000000075",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000375"
+      }
+    },
+    {
+      "id": "~anthropic/claude-sonnet-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.00001,
+        "cache_read": 2e-7,
+        "cache_write": 0.0000025
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000004"
+      }
+    },
+    {
+      "id": "qwen/qwen3.5-plus-20260420",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000018,
+        "cache_read": null,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.6-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 1.875e-7,
+        "output": 0.000001125,
+        "cache_read": null,
+        "cache_write": 2.34375e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.6-35b-a3b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1e-7,
+        "output": 9e-7,
+        "cache_read": 5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.6-max-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0.000001027,
+        "output": 0.000006162,
+        "cache_read": null,
+        "cache_write": 0.00000128375
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.6-27b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.000002,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.5-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00003,
+        "output": 0.00018,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.5-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.00009,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.00003,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.000015,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.0000016,
+        "output": 0.0000032,
+        "cache_read": 1.35e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 4.956e-8,
+        "output": 9.912e-8,
+        "cache_read": 9.912e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hy3-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.8e-7,
+        "output": 6e-7,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "xiaomi/mimo-v2.5-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 4.35e-7,
+        "output": 8.7e-7,
+        "cache_read": 3.6e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "xiaomi/mimo-v2.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 1.4e-7,
+        "output": 2.8e-7,
+        "cache_read": 2.8e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.4-image-2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 272000,
+      "rates": {
+        "input": 0.000008,
+        "output": 0.000015,
+        "cache_read": 0.000002,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.00003",
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "~anthropic/claude-opus-latest",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "openrouter/pareto-code",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 2000000,
+      "rates": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k2.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9.5e-7,
+        "output": 0.000004,
+        "cache_read": 1.6e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4.7",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4.7:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.000003125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000005"
+      }
+    },
+    {
+      "id": "z-ai/glm-5.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 9.66e-7,
+        "output": 0.000003036,
+        "cache_read": 1.794e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9e-8,
+        "output": 3e-7,
+        "cache_read": 5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-it:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-4-31b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9e-8,
+        "output": 3.4e-7,
+        "cache_read": 5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-4-31b-it:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 3.9e-7,
+        "output": 9.7e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-4-31b-it:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.6-plus",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 3.25e-7,
+        "output": 0.00000195,
+        "cache_read": null,
+        "cache_write": 4.0625e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5v-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 202752,
+      "rates": {
+        "input": 0.0000012,
+        "output": 0.000004,
+        "cache_read": 2.4e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "arcee-ai/trinity-large-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 8e-7,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "x-ai/grok-4.20-multi-agent",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 2000000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.0000025,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "x-ai/grok-4.20",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 2000000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.0000025,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "google/lyria-3-pro-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/lyria-3-clip-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "kwaipilot/kat-coder-pro-v2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "rekaai/reka-edge",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 16384,
+      "rates": {
+        "input": 1e-7,
+        "output": 1e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m2.7",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 6e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.4-nano",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.00000125,
+        "cache_read": 2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4-nano:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 1e-7,
+        "output": 6.25e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 7.5e-7,
+        "output": 0.0000045,
+        "cache_read": 7.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 3.75e-7,
+        "output": 0.00000225,
+        "cache_read": 3.75e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "mistralai/mistral-small-2603",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-small-2603:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 3e-7,
+        "cache_read": 7.5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 202752,
+      "rates": {
+        "input": 0.0000012,
+        "output": 0.000004,
+        "cache_read": 2.4e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3-super-120b-a12b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 8.5e-8,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nvidia/nemotron-3-super-120b-a12b:free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "bytedance-seed/seed-2.0-lite",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.000002,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-9b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1e-7,
+        "output": 1.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-9b:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.7e-7,
+        "output": 2.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.4-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00003,
+        "output": 0.00018,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.00009,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.000015,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.4:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1050000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.0000075,
+        "cache_read": 1.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "inception/mercury-2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 7.5e-7,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.0000015,
+        "cache_read": 2.5e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.00000025",
+        "audio": "0.0000005",
+        "input_audio_cache": "0.00000005",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000015"
+      }
+    },
+    {
+      "id": "bytedance-seed/seed-2.0-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1e-7,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.1-flash-image-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.000003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.00006",
+        "web_search": "0.014"
+      }
+    },
+    {
+      "id": "qwen/qwen3.5-35b-a3b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 3.125e-7,
+        "output": 0.00000125,
+        "cache_read": 1.5625e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-27b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.95e-7,
+        "output": 0.00000156,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-122b-a10b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.6e-7,
+        "output": 0.00000208,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-flash-02-23",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 6.5e-8,
+        "output": 2.6e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.1-pro-preview-customtools",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.000002",
+        "audio": "0.000002",
+        "input_audio_cache": "0.0000002",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000012"
+      }
+    },
+    {
+      "id": "openai/gpt-5.3-codex",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000175,
+        "output": 0.000014,
+        "cache_read": 1.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "aion-labs/aion-2.0",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 8e-7,
+        "output": 0.0000016,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3.1-pro-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.000002",
+        "audio": "0.000002",
+        "input_audio_cache": "0.0000002",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000012"
+      }
+    },
+    {
+      "id": "google/gemini-3.1-pro-preview:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000006,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.000001",
+        "audio": "0.000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000006"
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": 3e-7,
+        "cache_write": 0.00000375
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000006"
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.6:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000015,
+        "output": 0.0000075,
+        "cache_read": 1.5e-7,
+        "cache_write": 0.000001875
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000003"
+      }
+    },
+    {
+      "id": "qwen/qwen3.5-plus-02-15",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 2.6e-7,
+        "output": 0.00000156,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3.5-397b-a17b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 5.5e-7,
+        "output": 0.0000035,
+        "cache_read": 2.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m2.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 2.7e-7,
+        "output": 0.00000108,
+        "cache_read": 2.7e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.00000192,
+        "cache_read": 1.2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-max-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.8e-7,
+        "output": 0.0000039,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4.6:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.000003125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000005"
+      }
+    },
+    {
+      "id": "qwen/qwen3-coder-next",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.2e-7,
+        "output": 8e-7,
+        "cache_read": 7e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openrouter/free",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0,
+        "output": 0,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "stepfun/step-3.5-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1e-7,
+        "output": 3e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k2.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 4.5e-7,
+        "output": 0.00000225,
+        "cache_read": 7e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "upstage/solar-pro-3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m2-her",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "writer/palmyra-x5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1040000,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.000006,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-audio",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "audio": "0.000032",
+        "audio_output": "0.000064"
+      }
+    },
+    {
+      "id": "openai/gpt-audio-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.0000024,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "audio": "0.0000006",
+        "audio_output": "0.0000024"
+      }
+    },
+    {
+      "id": "z-ai/glm-4.7-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 6.05e-8,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.2-codex",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000175,
+        "output": 0.000014,
+        "cache_read": 1.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "bytedance-seed/seed-1.6-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 3e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "bytedance-seed/seed-1.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.000002,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m2.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000012,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-4.7",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.00000175,
+        "cache_read": 8e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-3-flash-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.000003,
+        "cache_read": 5e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000005",
+        "audio": "0.000001",
+        "input_audio_cache": "0.0000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000003"
+      }
+    },
+    {
+      "id": "google/gemini-3-flash-preview:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.0000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.00000025",
+        "audio": "0.0000005",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000015"
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-nano-30b-a3b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 5e-8,
+        "output": 2e-7,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.2-chat",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.00000175,
+        "output": 0.000014,
+        "cache_read": 1.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.2-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.000021,
+        "output": 0.000168,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.2-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.0000105,
+        "output": 0.000084,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000175,
+        "output": 0.000014,
+        "cache_read": 1.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.2:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 8.75e-7,
+        "output": 0.000007,
+        "cache_read": 8.75e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "mistralai/devstral-2512",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.000002,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "relace/relace-search",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-4.6v",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 3e-7,
+        "output": 9e-7,
+        "cache_read": 5.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openrouter/bodybuilder",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5.1-codex-max",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "amazon/nova-2-lite-v1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000025,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/ministral-14b-2512",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2e-7,
+        "output": 2e-7,
+        "cache_read": 2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/ministral-8b-2512",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 1.5e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/ministral-8b-2512:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 7.5e-8,
+        "cache_read": 7.5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/ministral-3b-2512",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1e-7,
+        "output": 1e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-large-2512",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.0000015,
+        "cache_read": 5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-large-2512:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 7.5e-7,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v3.2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.69e-7,
+        "output": 4e-7,
+        "cache_read": 1.345e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000025,
+        "cache_read": 5e-7,
+        "cache_write": 0.00000625
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00001"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4.5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 2.5e-7,
+        "cache_write": 0.000003125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000005"
+      }
+    },
+    {
+      "id": "google/gemini-3-pro-image-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000012,
+        "cache_read": 2e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.000002",
+        "image_output": "0.00012",
+        "audio": "0.000002",
+        "input_audio_cache": "0.0000002",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000012"
+      }
+    },
+    {
+      "id": "openai/gpt-5.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.1:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 6.25e-7,
+        "output": 0.000005,
+        "cache_read": 6.25e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.1-codex",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.3e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5.1-codex-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.000002,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "moonshotai/kimi-k2-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.0000025,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "amazon/nova-premier-v1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.0000125,
+        "cache_read": 6.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "perplexity/sonar-pro-search",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.018"
+      }
+    },
+    {
+      "id": "mistralai/voxtral-small-24b-2507",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 1e-7,
+        "output": 3e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "audio": "0.0001"
+      }
+    },
+    {
+      "id": "openai/gpt-oss-safeguard-20b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 3e-7,
+        "cache_read": 3.75e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 2.55e-7,
+        "output": 0.00000102,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-vl-32b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.04e-7,
+        "output": 4.16e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "ibm-granite/granite-4.0-h-micro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131000,
+      "rates": {
+        "input": 1.7e-8,
+        "output": 1.12e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5-image-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.000002,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.000008",
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-4.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000005,
+        "cache_read": 1e-7,
+        "cache_write": 0.00000125
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000002"
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-4.5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.0000025,
+        "cache_read": 5e-8,
+        "cache_write": 6.25e-7
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000001"
+      }
+    },
+    {
+      "id": "qwen/qwen3-vl-8b-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.8e-7,
+        "output": 0.0000021,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-vl-8b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.17e-7,
+        "output": 4.55e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5-image",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00001,
+        "cache_read": 0.00000125,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image_output": "0.00004",
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-flash-image",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000025,
+        "cache_read": 3e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000003",
+        "image_output": "0.00003",
+        "audio": "0.000001",
+        "input_audio_cache": "0.0000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000025"
+      }
+    },
+    {
+      "id": "qwen/qwen3-vl-30b-a3b-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000024,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-vl-30b-a3b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.00012,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.0000075,
+        "output": 0.00006,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "z-ai/glm-4.6",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 204800,
+      "rates": {
+        "input": 4.3e-7,
+        "output": 0.00000175,
+        "cache_read": 8e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": 3e-7,
+        "cache_write": 0.00000375
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000006"
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4.5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.0000015,
+        "output": 0.0000075,
+        "cache_read": 1.5e-7,
+        "cache_write": 0.000001875
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000003"
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3.2-exp",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.7e-7,
+        "output": 4.1e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thedrummer/cydonia-24b-v4.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 3e-7,
+        "output": 5e-7,
+        "cache_read": 1.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "relace/relace-apply-3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 8.5e-7,
+        "output": 0.00000125,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-vl-235b-a22b-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.000004,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-vl-235b-a22b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 2.1e-7,
+        "output": 0.0000019,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-max",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7.8e-7,
+        "output": 0.0000039,
+        "cache_read": 1.56e-7,
+        "cache_write": 9.75e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-coder-plus",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 6.5e-7,
+        "output": 0.00000325,
+        "cache_read": 1.3e-7,
+        "cache_write": 8.125e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-v3.1-terminus",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.7e-7,
+        "output": 0.000001,
+        "cache_read": 1.35e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-coder-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 1.95e-7,
+        "output": 9.75e-7,
+        "cache_read": 3.9e-8,
+        "cache_write": 2.4375e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-next-80b-a3b-thinking",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 0.0000012,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-next-80b-a3b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9e-8,
+        "output": 0.0000011,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen-plus-2025-07-28",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 2.6e-7,
+        "output": 7.8e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k2-0905",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.0000025,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-30b-a3b-thinking-2507",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 81920,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000024,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nousresearch/hermes-4-405b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-chat-v3.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 9.5e-7,
+        "cache_read": 1.3e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-medium-3.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.000002,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-medium-3.1:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.000001,
+        "cache_read": 2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-4.5v",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.0000018,
+        "cache_read": 1.1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 6.25e-7,
+        "output": 0.000005,
+        "cache_read": 6.25e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.000002,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 1.25e-7,
+        "output": 0.000001,
+        "cache_read": 1.25e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5-nano",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 5e-8,
+        "output": 4e-7,
+        "cache_read": 5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-5-nano:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 400000,
+      "rates": {
+        "input": 2.5e-8,
+        "output": 2e-7,
+        "cache_read": 2.5e-9,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-oss-120b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 3.7e-8,
+        "output": 1.7e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-oss-120b:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-oss-20b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 3e-8,
+        "output": 1.3e-7,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-oss-20b:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-8,
+        "output": 2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.000075,
+        "cache_read": 0.0000015,
+        "cache_write": 0.00001875
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00003"
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4.1:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000075,
+        "output": 0.0000375,
+        "cache_read": 7.5e-7,
+        "cache_write": 0.000009375
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000015"
+      }
+    },
+    {
+      "id": "mistralai/codestral-2508",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 3e-7,
+        "output": 9e-7,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/codestral-2508:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 4.5e-7,
+        "cache_read": 1.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-coder-30b-a3b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 7e-8,
+        "output": 2.8e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-30b-a3b-instruct-2507",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 4.815e-8,
+        "output": 1.9305e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-4.5",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 6e-7,
+        "output": 0.0000022,
+        "cache_read": 1.1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "z-ai/glm-4.5-air",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.3e-7,
+        "output": 8.5e-7,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-235b-a22b-thinking-2507",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 2.3e-7,
+        "output": 0.0000023,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-coder",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.000001,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "bytedance/ui-tars-1.5-7b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 1e-7,
+        "output": 2e-7,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-2.5-flash-lite",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1e-7,
+        "output": 4e-7,
+        "cache_read": 1e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000001",
+        "audio": "0.0000003",
+        "input_audio_cache": "0.00000003",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000004"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-flash-lite:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 5e-8,
+        "output": 2e-7,
+        "cache_read": 1e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.00000005",
+        "audio": "0.00000015",
+        "input_audio_cache": "0.00000003",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000002"
+      }
+    },
+    {
+      "id": "qwen/qwen3-235b-a22b-2507",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 8.75e-8,
+        "output": 3.5e-7,
+        "cache_read": 1.75e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "moonshotai/kimi-k2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5.7e-7,
+        "output": 0.0000023,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 2e-7,
+        "output": 9e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "tencent/hunyuan-a13b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.4e-7,
+        "output": 5.7e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "morph/morph-v3-large",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 262144,
+      "rates": {
+        "input": 9e-7,
+        "output": 0.0000019,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "morph/morph-v3-fast",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 81920,
+      "rates": {
+        "input": 8e-7,
+        "output": 0.0000012,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "baidu/ernie-4.5-vl-424b-a47b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 123000,
+      "rates": {
+        "input": 4.2e-7,
+        "output": 0.00000125,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-small-3.2-24b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-m1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 5.5e-7,
+        "output": 0.0000022,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-2.5-flash",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 3e-7,
+        "output": 0.0000025,
+        "cache_read": 3e-8,
+        "cache_write": 8.33333333333333e-8
+      },
+      "additional_pricing": {
+        "image": "0.0000003",
+        "audio": "0.000001",
+        "input_audio_cache": "0.0000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000025"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-flash:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 0.00000125,
+        "cache_read": 3e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.00000015",
+        "audio": "0.0000005",
+        "input_audio_cache": "0.0000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00000125"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.00000125",
+        "audio": "0.00000125",
+        "input_audio_cache": "0.000000125",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00001"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-pro:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 6.25e-7,
+        "output": 0.000005,
+        "cache_read": 1.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "image": "0.000000625",
+        "audio": "0.000000625",
+        "input_audio_cache": "0.000000125",
+        "web_search": "0.014",
+        "internal_reasoning": "0.000005"
+      }
+    },
+    {
+      "id": "openai/o3-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.00002,
+        "output": 0.00008,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "google/gemini-2.5-pro-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.00000125",
+        "audio": "0.00000125",
+        "input_audio_cache": "0.000000125",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00001"
+      }
+    },
+    {
+      "id": "deepseek/deepseek-r1-0528",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.00000215,
+        "cache_read": 3.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthropic/claude-opus-4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.000075,
+        "cache_read": 0.0000015,
+        "cache_write": 0.00001875
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.00003"
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": 3e-7,
+        "cache_write": 0.00000375
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.000006"
+      }
+    },
+    {
+      "id": "mistralai/mistral-medium-3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.000002,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemini-2.5-pro-preview-05-06",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.00001,
+        "cache_read": 1.25e-7,
+        "cache_write": 3.75e-7
+      },
+      "additional_pricing": {
+        "image": "0.00000125",
+        "audio": "0.00000125",
+        "input_audio_cache": "0.000000125",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00001"
+      }
+    },
+    {
+      "id": "meta-llama/llama-guard-4-12b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 1.8e-7,
+        "output": 1.8e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-30b-a3b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.2e-7,
+        "output": 5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-8b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.17e-7,
+        "output": 4.55e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-14b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 2.275e-7,
+        "output": 9.1e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-32b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 8e-8,
+        "output": 2.8e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen3-235b-a22b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 4.55e-7,
+        "output": 0.00000182,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/o4-mini-high",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000011,
+        "output": 0.0000044,
+        "cache_read": 2.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/o3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000008,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/o3:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000004,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/o4-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000011,
+        "output": 0.0000044,
+        "cache_read": 2.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/o4-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 5.5e-7,
+        "output": 0.0000022,
+        "cache_read": 1.375e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000008,
+        "cache_read": 5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000004,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 4e-7,
+        "output": 0.0000016,
+        "cache_read": 1e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 2e-7,
+        "output": 8e-7,
+        "cache_read": 5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1-nano",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 1e-7,
+        "output": 4e-7,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4.1-nano:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1047576,
+      "rates": {
+        "input": 5e-8,
+        "output": 2e-7,
+        "cache_read": 1.25e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "meta-llama/llama-4-maverick",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1048576,
+      "rates": {
+        "input": 2e-7,
+        "output": 6.96e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-4-scout",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1310720,
+      "rates": {
+        "input": 1e-7,
+        "output": 3e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-chat-v3-0324",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.000001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/o1-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.00015,
+        "output": 0.0006,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "mistralai/mistral-small-3.1-24b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 3.51e-7,
+        "output": 5.55e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-3-4b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-8,
+        "output": 1e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-3-12b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-8,
+        "output": 1.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "cohere/command-a",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 256000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "rekaai/reka-flash-3",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 1e-7,
+        "output": 2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "google/gemma-3-27b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 8e-8,
+        "output": 4.5e-7,
+        "cache_read": 4e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thedrummer/skyfall-36b-v2",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 5.5e-7,
+        "output": 8e-7,
+        "cache_read": 2.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "perplexity/sonar-reasoning-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000008,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "perplexity/sonar-pro",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "perplexity/sonar-deep-research",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000008,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005",
+        "internal_reasoning": "0.000003"
+      }
+    },
+    {
+      "id": "mistralai/mistral-saba",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 2e-7,
+        "output": 6e-7,
+        "cache_read": 2e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/o3-mini-high",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000011,
+        "output": 0.0000044,
+        "cache_read": 5.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "aion-labs/aion-rp-llama-3.1-8b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 8e-7,
+        "output": 0.0000016,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen2.5-vl-72b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 8e-7,
+        "output": 0.000001,
+        "cache_read": 4e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen-plus",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000000,
+      "rates": {
+        "input": 2.6e-7,
+        "output": 7.8e-7,
+        "cache_read": 5.2e-8,
+        "cache_write": 3.25e-7
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/o3-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.0000011,
+        "output": 0.0000044,
+        "cache_read": 5.5e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/o3-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 5.5e-7,
+        "output": 0.0000022,
+        "cache_read": 2.75e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "mistralai/mistral-small-24b-instruct-2501",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 5e-8,
+        "output": 8e-8,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "perplexity/sonar",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 127072,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.005"
+      }
+    },
+    {
+      "id": "deepseek/deepseek-r1-distill-llama-70b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 8e-7,
+        "output": 8e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-r1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 64000,
+      "rates": {
+        "input": 7e-7,
+        "output": 0.0000025,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "minimax/minimax-01",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1000192,
+      "rates": {
+        "input": 2e-7,
+        "output": 0.0000011,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "microsoft/phi-4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 16384,
+      "rates": {
+        "input": 7e-8,
+        "output": 1.4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "deepseek/deepseek-chat",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 163840,
+      "rates": {
+        "input": 2.574e-7,
+        "output": 0.0000010287,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "sao10k/l3.3-euryale-70b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 6.5e-7,
+        "output": 7.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/o1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 0.000015,
+        "output": 0.00006,
+        "cache_read": 0.0000075,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "cohere/command-r7b-12-2024",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 3.75e-8,
+        "output": 1.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-3.3-70b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1e-7,
+        "output": 3.2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "amazon/nova-lite-v1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 300000,
+      "rates": {
+        "input": 6e-8,
+        "output": 2.4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "amazon/nova-micro-v1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 3.5e-8,
+        "output": 1.4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "amazon/nova-pro-v1",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 300000,
+      "rates": {
+        "input": 8e-7,
+        "output": 0.0000032,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-2024-11-20",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": 0.00000125,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-large-2407",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen-2.5-coder-32b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 6.6e-7,
+        "output": 0.000001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "thedrummer/unslopnemo-12b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 1024000,
+      "rates": {
+        "input": 4e-7,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "anthracite-org/magnum-v4-72b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.000005,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen-2.5-7b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 1e-7,
+        "output": 2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-3.2-1b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 60000,
+      "rates": {
+        "input": 2.7e-8,
+        "output": 2.01e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-3.2-3b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-8,
+        "output": 3.3e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "qwen/qwen-2.5-72b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 32768,
+      "rates": {
+        "input": 3.6e-7,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "cohere/command-r-08-2024",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "cohere/command-r-plus-08-2024",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "sao10k/l3.1-euryale-70b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 8.5e-7,
+        "output": 8.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nousresearch/hermes-3-llama-3.1-70b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 7e-7,
+        "output": 7e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "nousresearch/hermes-3-llama-3.1-405b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000001,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "sao10k/l3-lunaris-8b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 4e-8,
+        "output": 5e-8,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-2024-08-06",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": 0.00000125,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-3.1-70b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 4e-7,
+        "output": 4e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "meta-llama/llama-3.1-8b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 5e-8,
+        "output": 8e-8,
+        "cache_read": 2.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mistralai/mistral-nemo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 131072,
+      "rates": {
+        "input": 1.9e-8,
+        "output": 3e-8,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-mini",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": 7.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-mini-2024-07-18",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 1.5e-7,
+        "output": 6e-7,
+        "cache_read": 7.5e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-mini:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 7.5e-8,
+        "output": 3e-7,
+        "cache_read": 3.75e-8,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "google/gemma-2-27b-it",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 6.5e-7,
+        "output": 6.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.0000025,
+        "output": 0.00001,
+        "cache_read": 0.00000125,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o-2024-05-13",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4o:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.00000125,
+        "output": 0.000005,
+        "cache_read": 6.25e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "mistralai/mixtral-8x22b-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65536,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "microsoft/wizardlm-2-8x22b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 65535,
+      "rates": {
+        "input": 6.2e-7,
+        "output": 6.2e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4-turbo:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.000005,
+        "output": 0.000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "anthropic/claude-3-haiku",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 200000,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 0.00000125,
+        "cache_read": 3e-8,
+        "cache_write": 3e-7
+      },
+      "additional_pricing": {
+        "web_search": "0.01",
+        "input_cache_write_1h": "0.0000005"
+      }
+    },
+    {
+      "id": "mistralai/mistral-large",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.000002,
+        "output": 0.000006,
+        "cache_read": 2e-7,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-3.5-turbo-0613",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 4095,
+      "rates": {
+        "input": 0.000001,
+        "output": 0.000002,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-4-turbo-preview",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 128000,
+      "rates": {
+        "input": 0.00001,
+        "output": 0.00003,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openrouter/auto",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 2000000,
+      "rates": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-3.5-turbo-instruct",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 4095,
+      "rates": {
+        "input": 0.0000015,
+        "output": 0.000002,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-3.5-turbo-16k",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 16385,
+      "rates": {
+        "input": 0.000003,
+        "output": 0.000004,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "mancer/weaver",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8000,
+      "rates": {
+        "input": 4e-7,
+        "output": 7.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "undi95/remm-slerp-l2-13b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 6144,
+      "rates": {
+        "input": 3.5e-7,
+        "output": 6.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "gryphe/mythomax-l2-13b",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8192,
+      "rates": {
+        "input": 6e-8,
+        "output": 6e-8,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-3.5-turbo",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 16385,
+      "rates": {
+        "input": 5e-7,
+        "output": 0.0000015,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    },
+    {
+      "id": "openai/gpt-3.5-turbo:batch",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 16385,
+      "rates": {
+        "input": 2.5e-7,
+        "output": 7.5e-7,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {
+        "web_search": "0.01"
+      }
+    },
+    {
+      "id": "openai/gpt-4",
+      "source": "https://openrouter.ai/api/v1/models",
+      "context_window_tokens": 8191,
+      "rates": {
+        "input": 0.00003,
+        "output": 0.00006,
+        "cache_read": null,
+        "cache_write": null
+      },
+      "additional_pricing": {}
+    }
+  ]
+}

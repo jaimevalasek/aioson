@@ -110,7 +110,11 @@ test('execution:graph — a wave-scheduled plan is drawn with implicit barrier e
     { from: 'phase-2', to: 'phase-3', gate: 'after_qa', explicit: false }
   ]);
   assert.deepEqual(g.summary, { nodes: 3, lane_units: 2, integration_units: 1, edges: 2, explicit_edges: 0 });
-  assert.deepEqual(g.integration, { owner: 'dev', units: ['phase-3'], role: null });
+  assert.deepEqual(g.integration, { owner: 'dev', units: ['phase-3'], role: null, verification: [
+    { cap: 'CAP-orders-api', command: 'npm test -- orders.api' },
+    { cap: 'CAP-orders-ui', command: 'npm test -- orders.ui' },
+    { cap: 'CAP-orders-wire', command: 'npm test -- app' }
+  ] });
   const mermaid = renderMermaid(g);
   assert.match(mermaid, /^flowchart TD\n/);
   assert.match(mermaid, /subgraph wave_1\["Wave 1"\]\n    phase_1\["phase-1<br\/>backend · 1<br\/>not started"\]/);

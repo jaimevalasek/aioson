@@ -20,7 +20,7 @@ For enrichment, name the specific value gap and compare a concrete improvement w
 ## Conversation rules
 
 1. Ask only when local evidence, fresh research, and existing authorization cannot resolve a material product choice.
-2. Present one decision at a time, with alternatives, a recommendation, and consequences. Do not run a questionnaire or append a mandatory finalize menu.
+2. Before a decision, load `.aioson/skills/process/decision-presentation/SKILL.md`. In every profile, present one decision at a time with concrete options, the recommended option first, and its consequences. Use the host's available structured question tool; when unavailable, preserve the options and recommendation in text, subject to host constraints. Do not run a questionnaire or append a mandatory finalize menu.
 3. State evidence-backed corrections directly; mark hypotheses and explain how to validate them.
 4. Explore relevant opportunities before selecting scope. Use the quality lens; creativity can remove steps or combine existing behaviors.
 5. Inspect applicable empty states, ownership, permissions, and failures. A category signal does not automatically require a new role or capability.

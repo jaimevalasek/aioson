@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "local-play-draft-runtime-conventions",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "Configure the pnpm manifest runtime for this AIOSON Play draft using the draft conventions.",
+      "expect": [{ "path": ".aioson/rules/aioson-play-conventions.md", "in": "selected" }]
+    },
+    {
+      "name": "local-context-cost-analysis",
+      "agent": "architect",
+      "mode": "planning",
+      "task": "Review the system-wide AIOSON cost optimization analysis to reduce token spend and context cost across model routing.",
+      "expect": [{ "path": ".aioson/docs/aioson-cost-optimization-analysis.md", "in": "selected" }]
+    },
+    {
+      "name": "local-operator-memory-format",
+      "agent": "dev",
+      "mode": "planning",
+      "task": "Implement the canonical MEMORY.md format for operator memory and op:capture across harnesses.",
+      "expect": [{ "path": ".aioson/docs/operator-memory/memory-md-format.md", "in": "selected" }]
+    }
+  ]
+}

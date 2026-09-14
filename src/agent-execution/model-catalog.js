@@ -37,6 +37,7 @@ function sanitizeModels(models) {
     bySlug.set(slug, {
       slug,
       display_name: display,
+      ...(Number.isSafeInteger(model.context_window) && model.context_window > 0 ? { context_window: model.context_window } : {}),
       supported_efforts: normalizeEfforts(model.supported_reasoning_levels)
     });
   }

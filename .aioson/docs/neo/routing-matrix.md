@@ -49,6 +49,7 @@ Classification changes artifact and evidence depth, not the `product → sheldon
 | Map/bootstrap codebase knowledge | `@discover` |
 | Discovery/design document explicitly requested | `@discovery-design-doc` |
 | Validate an explicitly enabled success contract/harness | `@validator` |
+| Assess engineering quality, static analysis or evaluation effectiveness | `@quality` (optional; no acceptance gate) |
 | Clone/extract a site's design | `@site-forge` |
 | Combine two design skills | `@design-hybrid-forge` |
 | Profile a person/persona | `@profiler-researcher → @profiler-enricher → @profiler-forge` |

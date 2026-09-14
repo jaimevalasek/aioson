@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { containedOutput } = require('./files');
 
 function formatCountMap(map) {
   return Object.entries(map || {})
@@ -16,6 +17,7 @@ function buildMarkdownReport(result, context = {}) {
     `Generated: ${new Date().toISOString()}`,
     `Status: ${result.status}`,
     `Mode: ${result.mode}`,
+    `Measurement: ${result.measurement?.status || 'unknown'}`,
     '',
     '## Provider',
     `- Name: ${result.provider.name}`,
@@ -43,34 +45,34 @@ function buildMarkdownReport(result, context = {}) {
   }
 
   lines.push('', '## Findings');
-  if (result.findings.length === 0) {
-    lines.push('- No provider findings were normalized.');
-  } else {
-    for (const finding of result.findings) {
-      const location = finding.path ? `${finding.path}${finding.line ? `:${finding.line}` : ''}` : 'unknown location';
-      const refs = finding.governance_refs.length > 0 ? ` refs=${finding.governance_refs.join(', ')}` : '';
-      lines.push(`- [${finding.classification}] ${finding.severity} ${finding.category} — ${location} — ${finding.message}${refs}`);
-      if (finding.action) lines.push(`  Action: ${finding.action}`);
-    }
-  }
+  lines.push(...renderFindings(result.findings));
 
   lines.push('', '## Advisory');
-  if (result.advisory.length === 0) {
-    lines.push('- none');
-  } else {
-    for (const item of result.advisory) lines.push(`- ${item}`);
-  }
+  lines.push(...(result.advisory.length ? result.advisory.map(item => `- ${item}`) : ['- none']));
 
   lines.push('', '## Limitations');
-  lines.push('- This MVP gates confirmed new regressions in changed code only.');
+  lines.push('- Findings are static-analysis candidates; review them before changing code.');
   lines.push('- Baseline findings remain visible but are not accepted as resolved debt.');
   lines.push('- Provider raw JSON is not written to `.aioson/context/` by this command.');
 
   return lines.join('\n');
 }
 
+function renderFindings(findings) {
+  if (findings.length === 0) return ['- No provider findings were normalized.'];
+  const lines = [];
+  for (const finding of findings) {
+    const location = finding.path ? `${finding.path}${finding.line ? `:${finding.line}` : ''}` : 'unknown location';
+    const refs = finding.governance_refs.length > 0 ? ` refs=${finding.governance_refs.join(', ')}` : '';
+    lines.push(`- [${finding.classification}] ${finding.severity} ${finding.category} — ${location} — ${finding.message}${refs}`);
+    if (finding.action) lines.push(`  Action: ${finding.action}`);
+  }
+
+  return lines;
+}
+
 async function writeMarkdownReport(targetDir, reportPath, result, context) {
-  const absolute = path.resolve(targetDir, reportPath);
+  const absolute = await containedOutput(targetDir, reportPath);
   await fs.mkdir(path.dirname(absolute), { recursive: true });
   await fs.writeFile(absolute, buildMarkdownReport(result, context), 'utf8');
   return path.relative(targetDir, absolute).replace(/\\/g, '/');
