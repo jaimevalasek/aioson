@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [1.67.0] - 2026-09-14
 
+- Fixed release verification from a clean checkout so source tests read managed skills and task files from the packaged template instead of relying on ignored files from the maintainer workspace.
+
 ### Added
 
 - **Editor visual de modelos e perfis.** O dashboard agora edita `.aioson/config/execution-roles.json`, troca o perfil ativo no próximo disparo, cria perfis por duplicação, renomeia e exclui com validação estrutural, autocomplete e proteção contra alterações concorrentes. A exclusão usa um modal destrutivo que mostra o perfil sucessor e o impacto sobre fallbacks; nenhuma edição chega ao disco antes de **Salvar configuração**.

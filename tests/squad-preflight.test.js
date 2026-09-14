@@ -83,8 +83,8 @@ test('the package digest matches the package contract doc', () => {
   for (const section of PACKAGE_DIGEST.executorSections) assert.ok(contract.includes(`## ${section}`), `## ${section} not in package-contract.md`);
 });
 
-test('measurePreflight attaches byte counts and a token estimate from the workspace', () => {
-  const r = measurePreflight(ROOT, resolveSquadPreflight({ operation: 'validate', lane: 'standard' }));
+test('measurePreflight attaches byte counts and a token estimate from the packaged template', () => {
+  const r = measurePreflight(path.join(ROOT, 'template'), resolveSquadPreflight({ operation: 'validate', lane: 'standard' }));
   assert.ok(r.load[0].file.endsWith('agents/squad.md'));
   assert.ok(r.load.every((f) => typeof f.bytes === 'number'), r.missing.join(', '));
   assert.ok(r.totalBytes > 10000);
