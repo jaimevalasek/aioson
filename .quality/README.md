@@ -3,7 +3,7 @@
 These files describe debt, not exemptions for future implementation.
 
 - `eslint-baseline.json`: 537 semantic findings present during adoption. Fingerprints use path, rule and message, with occurrence counts; line movement is neutral. Undefined names and parser failures always block, even if inserted into a baseline.
-- `fallow-baseline.json`: reviewed against committed release candidate `1db00fe5d44059ed8e394bc419d69f294c34ba13` with installed dependencies, using Fallow 3.23.0 and the adopted configuration. It records 3,024 visible findings after the v1.67.0 orchestration, dashboard, and quality delivery; future occurrences and severity or metric increases remain blocking. Provider version and canonical JSON configuration hash are checked before comparison.
+- `fallow-baseline.json`: reviewed against committed release candidate `6d569f8ee77e3157d3e8a904c911ae4f2fe8e9a2` with installed dependencies, using Fallow 3.23.0 and the adopted configuration. It records 3,024 visible findings after the v1.67.0 orchestration, dashboard, and quality delivery; future occurrences and severity or metric increases remain blocking. Provider version and canonical JSON configuration hash are checked before comparison.
 
 The Fallow configuration includes tests in the dependency graph so intentional test-facing exports are reachable. Health and duplication use production source. The separate child-process evaluator entrypoint is declared explicitly. CRAP enforcement is disabled because its current coverage model is `static_estimated`; cyclomatic complexity, cognitive complexity, function size, duplication and dependency checks remain active. Measured quality-module coverage is collected separately.
 

@@ -4,7 +4,7 @@
   "provider": "fallow",
   "provider_version": "3.23.0",
   "config_sha256": "ebdcfd0ba8de81d487c4fc2ff8a7bfe75aa9ec4243af996baf233cadbab51cd7",
-  "source_commit": "1db00fe5d44059ed8e394bc419d69f294c34ba13",
+  "source_commit": "6d569f8ee77e3157d3e8a904c911ae4f2fe8e9a2",
   "reason": "Reviewed v1.67.0 release-candidate inventory after orchestration, dashboard, and quality delivery. All findings remain visible as accepted structural debt after full automated tests, lint, syntax, coverage, and product integration verification; future occurrences and severity or metric increases remain blocking.",
   "findings": [
     {"path":"src/a2a/server.js","line":null,"category":"dead-code","severity":"medium","fingerprint":null,"rule":"unused-files","symbol":null,"message":"unused-files","metrics":null},
