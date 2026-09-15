@@ -15,6 +15,74 @@ const READ_ONLY_TOOLS = new Set([
   'websearch'
 ]);
 
+const SHELL_TOOLS = new Set(['bash', 'shell', 'run_command']);
+
+function shellCommand(parameters) {
+  if (!parameters || typeof parameters !== 'object') return '';
+  return String(parameters.command || parameters.Command || parameters.CommandLine || parameters.command_line || '').trim();
+}
+
+function scanShellCommand(command) {
+  const parts = [];
+  let current = '';
+  let quote = null;
+  let escaped = false;
+  let redirection = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    if (escaped) {
+      current += character;
+      escaped = false;
+      continue;
+    }
+    if (character === '\\' && quote !== "'") {
+      current += character;
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      current += character;
+      if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      current += character;
+      continue;
+    }
+    if (character === '>') redirection = true;
+    const doubleOperator = (character === '&' || character === '|') && command[index + 1] === character;
+    if (character === '|' || character === ';' || character === '\n' || doubleOperator) {
+      if (current.trim()) parts.push(current.trim());
+      current = '';
+      if (doubleOperator) index += 1;
+      continue;
+    }
+    current += character;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return { parts, redirection, balanced: quote === null && !escaped };
+}
+
+function readOnlyShellCommand(parameters) {
+  const command = shellCommand(parameters);
+  if (!command) return false;
+  const scanned = scanShellCommand(command);
+  if (scanned.redirection || !scanned.balanced || !scanned.parts.length) return false;
+  const parts = scanned.parts;
+  return parts.every((part) => {
+    const value = part.trim();
+    if (/^(?:rg|grep|fd|ls|dir|cat|type|head|tail|wc|pwd|Get-Content|Select-String|Get-ChildItem|Resolve-Path|Test-Path)\b/i.test(value)) return true;
+    if (/^find\b/i.test(value)) return !/(?:^|\s)-(?:delete|exec|execdir|ok|okdir)\b/i.test(value);
+    if (/^sed\b/i.test(value)) return !/(?:^|\s)-(?:i|[^\s]*i[^\s]*)\b/.test(value);
+    return /^git\s+(?:status|diff|log|show|blame|grep|ls-files|rev-parse)\b/i.test(value);
+  });
+}
+
+function toolReadOnly(tool, parameters) {
+  return READ_ONLY_TOOLS.has(tool) || (SHELL_TOOLS.has(tool) && readOnlyShellCommand(parameters));
+}
+
 function antigravityRead(event) {
   const step = event?.event === 'step_update' ? event.step_update : null;
   if (!step || step.state !== 'ACTIVE' || step.step_type !== 'tool' || !READ_ONLY_TOOLS.has(step.tool_name)) return null;
@@ -35,7 +103,7 @@ function antigravityTool(event) {
     : {};
   return {
     tool: step.tool_name,
-    read_only: READ_ONLY_TOOLS.has(step.tool_name),
+    read_only: toolReadOnly(step.tool_name, parameters),
     parameters,
     fingerprint: `${step.tool_name}:${JSON.stringify(parameters).slice(0, 4000)}`
   };
@@ -48,7 +116,7 @@ function opencodeTool(event) {
   const parameters = state.input && typeof state.input === 'object' ? state.input : {};
   return {
     tool: part.tool,
-    read_only: READ_ONLY_TOOLS.has(part.tool),
+    read_only: toolReadOnly(part.tool, parameters),
     parameters,
     fingerprint: `${part.tool}:${JSON.stringify(parameters).slice(0, 4000)}`
   };
@@ -105,4 +173,4 @@ function createExecutionLoopGuard(host, { threshold = 4, readThreshold = 24, onL
   };
 }
 
-module.exports = { READ_ONLY_TOOLS, antigravityRead, antigravityTool, opencodeTool, structuredTool, createExecutionLoopGuard };
+module.exports = { READ_ONLY_TOOLS, SHELL_TOOLS, shellCommand, scanShellCommand, readOnlyShellCommand, toolReadOnly, antigravityRead, antigravityTool, opencodeTool, structuredTool, createExecutionLoopGuard };

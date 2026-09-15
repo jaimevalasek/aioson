@@ -72,3 +72,21 @@ test('an OpenCode edit resets its read-only investigation streak', () => {
   assert.equal(guard.readsSinceProgress, 0);
   assert.equal(guard.observe(opencode('read', { filePath: 'src/b.ts' })), null);
 });
+
+test('OpenCode shell inspection counts as read-only churn', () => {
+  const guard = createExecutionLoopGuard('opencode', { threshold: 99, readThreshold: 4 });
+  assert.equal(guard.observe(opencode('bash', { command: 'rg -n "preview|stream" src/server | head -80' })), null);
+  assert.equal(guard.observe(opencode('bash', { command: 'git diff -- src/server' })), null);
+  assert.equal(guard.observe(opencode('read', { filePath: 'src/domain/timeline.ts' })), null);
+  assert.equal(guard.observe(opencode('bash', { command: 'Get-Content src/server/routes/timeline.route.ts | Select-String preview' })), 'unproductive_loop');
+});
+
+test('a shell command that may write is progress, not read-only inspection', () => {
+  const guard = createExecutionLoopGuard('opencode', { threshold: 99, readThreshold: 3 });
+  guard.observe(opencode('read', { filePath: 'src/a.ts' }));
+  guard.observe(opencode('bash', { command: 'rg -n one src | head -20' }));
+  assert.equal(guard.observe(opencode('bash', { command: 'node scripts/fix.js' })), null);
+  assert.equal(guard.readsSinceProgress, 0);
+  assert.equal(guard.observe(opencode('bash', { command: 'sed -i s/old/new/ src/a.ts' })), null);
+  assert.equal(guard.readsSinceProgress, 0);
+});
