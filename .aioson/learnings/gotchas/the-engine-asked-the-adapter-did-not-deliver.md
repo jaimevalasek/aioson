@@ -3,6 +3,8 @@ title: "O motor pedia certo, o adaptador não entregava — e a falha não tinha
 scope: [agent-execution, execution-run, adapters, host-signature, lease, execution-plan, autopilot]
 paths:
   - src/lib/tool-capabilities.js
+  - src/commands/live.js
+  - src/agent-execution/adapters/antigravity.js
   - src/agent-execution/adapters/base.js
   - src/agent-execution/execution-run.js
   - src/lib/host-signature.js
@@ -33,12 +35,13 @@ status: corrigido no framework
 
 - Tradução de `sandbox_mode` é do registro (`read_only_args` ao lado de `yolo_args`) e `createAdapter` a aplica para todo adaptador; host sem tradução recusa (`sandbox_mode_unsupported` / `permission_mode_unsupported`) — teste de paridade host × modo em `tests/execution-unattended.test.js`.
 - Lane worker roda **sempre não assistido**; o modo `sandbox` do provedor saiu do framework por decisão do dono depois da medição: nesta máquina o `codex-windows-sandbox-setup.exe` não carrega ("módulo não encontrado"), e sob `--sandbox workspace-write` o modelo respondeu DONE após 96 s SEM escrever o arquivo; sob o flag não assistido escreveu em 14 s. Não existe knob de permissão por papel de propósito.
-- Orçamento de unidade: default 60 min; `0` = sem limite (roles ou `--unit-timeout=0`); o digest de ligação do plano cobre só o que molda as unidades (papéis, paralelismo, `require_independent_qa`) — orçamento e spawner ficam fora; planos antigos seguem frescos (verify aceita o digest bruto também).
+- Workers orquestrados não têm cutoff de contexto nem prazo de relógio do AIOSON; campos legados de orçamento são ignorados. Janela/pico de contexto, tokens, duração e atividade aparecem somente nos relatórios. O digest de ligação do plano cobre só o que molda as unidades (papéis, paralelismo, `require_independent_qa`) — spawner fica fora; planos antigos seguem frescos.
 - `timeout` diz o que o disco viu (`still writing` → retry com orçamento maior; `never wrote` → fallback/abort) em `pending_decision.detail`.
-- `unproductive` medido só no disco (3 × `stallMs`, por mais falante que o processo seja); advisório.
+- `unproductive` continua medido no disco; além do aviso, o guard estruturado encerra 4 ações estruturadas idênticas ou 24 ações apenas de leitura para liberar fallback, a segunda recuperação equivalente sem mudança medida abre o circuito e uma unidade volta do QA ao DEV no máximo 5 vezes.
 - Lease: run e decide esperam uma lease que ninguém renova (≤35 s, anunciado) e recusam só a que alguém renova, com caminho e tempo restante; nunca apagam o lock.
 - `host:signature` ganha a sonda de escrita não assistida (`unattended.yolo`, `host_not_unattended`); o preflight a lê — assinatura sem sonda é aviso com o comando de re-assinar. A sonda nunca roda o sandbox do provedor (rodá-lo abriu um diálogo de erro do Windows na tela do dono).
 - `execution:compile` recusa heading canônico duplicado (`duplicate_plan_section`); PRD duplicado avisa.
+- `antigravity` é o id lógico do host; o executável headless é `agy`. Resolver o id diretamente na PATH chama `antigravity.cmd`, o launcher Electron do editor. Todo launch consulta `tool-capabilities.binary`, e o worker usa `shell:false`, pipes e `windowsHide:true`. No AGY, `--print-timeout 0ms` significa retorno parcial imediato, não ilimitado; o sentinel sem limite precisa ser traduzido para a maior duração aceita pelo cliente.
 
 ## Armadilhas para a próxima vez
 

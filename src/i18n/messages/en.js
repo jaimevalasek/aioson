@@ -442,10 +442,12 @@ module.exports = {
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=en]',
     help_execution_seed:
       'aioson execution:seed [path] --lanes=<lane-a,lane-b> [--feature=<slug>] [--json] [--locale=en]',
+    help_execution_profiles_validate:
+      'aioson execution:profiles:validate [path] [--profile=<name[,name2]>] [--concurrency=<1..10>] [--ttl=<hours>] [--timeout=<ms>] [--refresh] [--status] [--json] [--locale=en]',
     help_execution_compile:
       'aioson execution:compile [path] --feature=<slug> [--dry-run] [--json] [--locale=en]',
     help_execution_run:
-      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--no-context-limit|--context-limit] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=en]',
+      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=en]',
     help_execution_decide:
       'aioson execution:decide [path] --feature=<slug> --unit=<unit-id> --choice=retry|fallback:<host>/<model>[/<effort>]|skip|skip-qa|abort [--json] [--locale=en]',
     help_execution_status:
@@ -457,7 +459,7 @@ module.exports = {
     help_execution_prices:
       'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:
-      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy> --agent=<name> [--tool-bin=<binary>] [--permission-mode=yolo|default (default: yolo — the host runs unattended)] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
+      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<name> [--tool-bin=<binary>] [--permission-mode=yolo|default (default: yolo — the host runs unattended)] [--tool-args=<args>] [--title=<text>] [--goal=<text>] [--plan=<file>] [--session=<key>] [--message=<text>] [--attach] [--no-launch] [--tmux] [--json] [--locale=en]',
     help_live_status:
       'aioson live:status [path] [--agent=<name>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=en]',
     help_live_handoff:

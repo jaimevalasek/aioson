@@ -34,13 +34,14 @@ function observeExecution(status, plan = null) {
     const stage = unit.dev?.status === 'pending' ? 'dev' : (unit.qa?.status === 'pending' && unit.status === 'passed' ? 'qa' : null);
     if (!stage) continue;
     const deps = plans.get(unit.id)?.depends_on || [];
-    const blocked = deps.length ? deps.filter(dep => {
+    const repairBlocked = (unit.repair_dependencies || []).filter(id => !done(byId.get(id)));
+    const blocked = repairBlocked.length ? repairBlocked : deps.length ? deps.filter(dep => {
       const target = byId.get(dep.unit);
       return target && (dep.gate === 'after_dev' ? !['passed', 'skipped'].includes(target.status) : !done(target));
     }).map(dep => dep.unit) : units.filter(other => other.owner === 'lane' && other.wave < unit.wave && !done(other)).map(other => other.id);
     const writes = new Set((plans.get(unit.id)?.files || []).map(file => file.toLowerCase()));
     const conflicts = running.filter(active => (plans.get(active.unit)?.files || []).some(file => writes.has(file.toLowerCase()))).map(active => active.unit);
-    let reason = blocked.length ? (deps.length ? 'dependencies' : 'previous_wave') : conflicts.length ? 'write_conflict' : 'capacity';
+    let reason = blocked.length ? (repairBlocked.length || deps.length ? 'dependencies' : 'previous_wave') : conflicts.length ? 'write_conflict' : 'capacity';
     if (!blocked.length && conflicts.length) blocked.push(...conflicts);
     if (status.run?.status !== 'running') reason = 'run_paused';
     else if (!status.engine?.alive) reason = 'engine_missing';
@@ -63,9 +64,20 @@ function observeExecution(status, plan = null) {
   }
   for (const decision of status.decisions || []) events.push({ ...decision, type: 'decision' });
   events.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const active = new Set(running.map(item => item.unit)).size;
+  const limit = plan?.parallel?.max_concurrent_lanes ?? null;
+  const ready = waiting.filter(item => item.reason === 'capacity').length;
+  const blocked = waiting.length - ready;
   return {
     assignments, waiting, events,
-    concurrency: { active: new Set(running.map(item => item.unit)).size, limit: plan?.parallel?.max_concurrent_lanes ?? null, scope: 'unit_pipelines' },
+    concurrency: {
+      active,
+      ready,
+      blocked,
+      available: limit == null ? null : Math.max(0, limit - active),
+      limit,
+      scope: 'unit_pipelines'
+    },
     counts: {
       total: units.filter(unit => unit.owner === 'lane').length,
       dev_passed: units.filter(unit => unit.owner === 'lane' && unit.dev?.status === 'passed').length,

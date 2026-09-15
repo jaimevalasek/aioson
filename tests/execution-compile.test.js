@@ -148,7 +148,7 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
       'Bad-Key': { host: 'claude', model: '' },
       qa: { host: 'claude', model: 'claude-sonnet-5', api_key: 'x' }
     },
-    parallel: { max_concurrent_lanes: 9 },
+    parallel: { max_concurrent_lanes: 11 },
     on_unavailable: 'retry',
     token: 'nope'
   });
@@ -161,7 +161,7 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
   assert.match(byPath['$.roles.Bad-Key'], /snake_case/);
   assert.match(byPath['$.roles.qa.api_key'], /secret fields are forbidden/);
   assert.match(byPath['$.token'], /secret fields are forbidden/);
-  assert.match(byPath['$.parallel.max_concurrent_lanes'], /between 1 and 8/);
+  assert.match(byPath['$.parallel.max_concurrent_lanes'], /between 1 and 10/);
   assert.match(byPath['$.on_unavailable'], /ask, fallback, pause/);
   assert.equal(laneRoleKey('mobile-app', 'qa'), 'mobile_app_qa');
 
@@ -301,32 +301,34 @@ test('execution:compile refuses when the roles or signatures are not there — t
 
 // ───────────────────────── compilation ─────────────────────────
 
-test('initial source footprint refuses a large read before writing compiled artifacts', async t => {
+test('initial source footprint is measured without blocking compilation', async t => {
   const { dir, env } = await setup(t);
   await fs.mkdir(path.join(dir, 'src/api'), { recursive: true });
   await fs.writeFile(path.join(dir, 'src/api/orders.ts'), 'x'.repeat(200000));
   const result = await compile(dir, env);
-  assert.equal(result.ok, false);
-  assert.ok(result.errors.some(item => item.check === 'unit_initial_context_over_budget'));
-  await assert.rejects(fs.stat(path.join(dir, `.aioson/context/execution-plan-${SLUG}.json`)), { code: 'ENOENT' });
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  const unit = result.plan.units.find(item => item.id === 'phase-1');
+  assert.ok(unit.context.estimated_initial_tokens > 80000);
+  assert.deepEqual(unit.context.window, { limit_tokens: null, source: 'unknown' });
+  assert.equal((await fs.stat(path.join(dir, `.aioson/context/execution-plan-${SLUG}.json`))).isFile(), true);
 });
 
-test('recompiling an active run honors its explicit no-context-limit choice without changing default quality or QA policy', async t => {
+test('legacy context-limit state never changes compilation or QA policy', async t => {
   const { dir, env } = await setup(t);
   await fs.mkdir(path.join(dir, 'src/api'), { recursive: true });
   await fs.writeFile(path.join(dir, 'src/api/orders.ts'), 'x'.repeat(200000));
   const file = path.join(dir, `.aioson/context/execution-state-${SLUG}.json`);
-  const state = { feature: SLUG, run_id: 'active-run', status: 'paused', context_limit_enabled: false };
+  const state = { feature: SLUG, run_id: 'active-run', status: 'paused', context_limit_enabled: true };
   await fs.writeFile(file, JSON.stringify(state));
   const result = await compile(dir, env);
   assert.equal(result.ok, true, JSON.stringify(result.errors));
-  assert.ok(result.warnings.some(item => item.check === 'unit_initial_context_over_budget' && /advisory/.test(item.message)));
+  assert.ok(!result.warnings.some(item => item.check === 'unit_initial_context_over_budget'));
   assert.equal(result.plan.policy.qa.require_pass, true);
-  assert.equal(result.plan.policy.context.max_tokens, 80000);
+  assert.deepEqual(result.plan.policy.context, { models: [] });
   assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), state);
-  for (const change of [{ status: 'completed' }, { status: 'paused', context_limit_enabled: true }, { feature: 'another-feature', context_limit_enabled: false }]) {
+  for (const change of [{ status: 'completed' }, { status: 'paused', context_limit_enabled: false }, { feature: 'another-feature', context_limit_enabled: true }]) {
     await fs.writeFile(file, JSON.stringify({ ...state, ...change }));
-    assert.equal((await compile(dir, env)).ok, false);
+    assert.equal((await compile(dir, env)).ok, true);
   }
 });
 

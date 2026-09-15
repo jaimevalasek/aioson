@@ -8,6 +8,7 @@ const path = require('node:path');
 const { createTranslator } = require('../src/i18n');
 const {
   buildLaunchArgs,
+  resolveLiveToolBinary,
   runLiveStart,
   runRuntimeEmit,
   runLiveHandoff,
@@ -44,6 +45,13 @@ test('live:start maps permission-mode=yolo through tool capabilities', () => {
     buildLaunchArgs({ permissionMode: 'yolo' }, 'codex'),
     ['--dangerously-bypass-approvals-and-sandbox']
   );
+});
+
+test('live:start resolves the Antigravity host to agy instead of the Electron editor launcher', () => {
+  assert.equal(resolveLiveToolBinary({}, 'antigravity'), 'agy');
+  assert.equal(resolveLiveToolBinary({}, 'agy'), 'agy');
+  assert.equal(resolveLiveToolBinary({ 'tool-bin': 'C:\\tools\\custom-agy.exe' }, 'antigravity'), 'C:\\tools\\custom-agy.exe');
+  assert.deepEqual(buildLaunchArgs({}, 'antigravity'), ['--mode', 'accept-edits', '--dangerously-skip-permissions']);
 });
 
 test('live:start keeps resume before yolo args for codex resume subcommand', () => {

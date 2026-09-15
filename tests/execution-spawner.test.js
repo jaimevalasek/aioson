@@ -222,7 +222,7 @@ async function spawnerLog(ctx) {
 
 // ───────────────────────── configuration ─────────────────────────
 
-test('execution-roles: the optional execution block (spawner + unit timeout) is validated strictly; the environment spawner wins over the file', () => {
+test('execution-roles: the optional spawner is validated strictly while the retired unit timeout is ignored; the environment spawner wins', () => {
   const ok = validateExecutionRoles({ ...ROLES, execution: { spawner: { command: 'cockpitctl', args: ['unit', 'spawn'] }, unit_timeout_ms: 1800000 } });
   assert.deepEqual(ok, { ok: true, errors: [] });
   const bad = validateExecutionRoles({ ...ROLES, execution: { spawner: { command: '', args: 'unit spawn', token: 'x' }, unit_timeout_ms: 5, extra: true } });
@@ -230,7 +230,7 @@ test('execution-roles: the optional execution block (spawner + unit timeout) is 
   assert.match(byPath['$.execution.spawner.command'], /non-empty command/);
   assert.match(byPath['$.execution.spawner.args'], /array of at most 16 strings/);
   assert.match(byPath['$.execution.spawner.token'], /secret fields are forbidden/);
-  assert.match(byPath['$.execution.unit_timeout_ms'], /between 60000 and 14400000/);
+  assert.equal(byPath['$.execution.unit_timeout_ms'], undefined);
   assert.match(byPath['$.execution.extra'], /unknown field/);
   assert.match(validateExecutionRoles({ ...ROLES, execution: 'cockpitctl' }).errors[0].message, /must be an object/);
 
@@ -251,12 +251,12 @@ test('execution:offer reports the client seam — spawner_supported, the spawner
   const ctx = await setup(t, { roles: { ...ROLES, execution: { spawner: { command: 'cockpitctl', args: ['unit', 'spawn'] }, unit_timeout_ms: 900000 } } });
   let offer = await runCommand({ args: [ctx.dir], options: { sub: 'offer', json: true }, logger, env: ctx.env });
   assert.equal(offer.available, true);
-  assert.deepEqual(offer.execution, { spawner_supported: true, spawner: { configured: true, source: 'roles', command: 'cockpitctl', args: ['unit', 'spawn'] }, unit_timeout_ms: 900000 });
+  assert.deepEqual(offer.execution, { spawner_supported: true, spawner: { configured: true, source: 'roles', command: 'cockpitctl', args: ['unit', 'spawn'] }, context_limit_enabled: false, time_limit_enabled: false });
   offer = await runCommand({ args: [ctx.dir], options: { sub: 'offer', json: true }, logger, env: { ...ctx.env, [SPAWNER_ENV]: '"C:\\cockpit\\cockpitctl.exe" unit spawn' } });
   assert.deepEqual(offer.execution.spawner, { configured: true, source: 'env', command: 'C:\\cockpit\\cockpitctl.exe', args: ['unit', 'spawn'] });
   const plain = await setup(t);
   offer = await runCommand({ args: [plain.dir], options: { sub: 'offer', json: true }, logger, env: plain.env });
-  assert.deepEqual(offer.execution, { spawner_supported: true, spawner: { configured: false, source: null, command: null, args: [] }, unit_timeout_ms: null });
+  assert.deepEqual(offer.execution, { spawner_supported: true, spawner: { configured: false, source: null, command: null, args: [] }, context_limit_enabled: false, time_limit_enabled: false });
 });
 
 // ───────────────────────── the seam at work ─────────────────────────
@@ -264,7 +264,7 @@ test('execution:offer reports the client seam — spawner_supported, the spawner
 test('with a spawner in force the engine hands every unit to the client as an envelope, waits for the bound report the client\'s terminal writes, and records the session per unit', async (t) => {
   const ctx = await setup(t, { config: { delay_ms: 60, touch: { 'phase-1:dev': ['src/api/orders.ts'], 'phase-2:dev': ['src/ui/Orders.tsx'] } } });
   const events = [];
-  const result = await run(ctx, { events });
+  const result = await run(ctx, { events, engine: { timeout: 1 } });
   assert.equal(result.ok, true, JSON.stringify(result));
   assert.equal(result.status, 'completed');
   assert.deepEqual(result.summary.units, { total: 3, lane: 2, integration: 1, passed: 2, pending: 0, running: 0, skipped: 0, decision_required: 0, qa_passed: 2, qa_failed: 0, qa_skipped: 0 });
@@ -293,7 +293,7 @@ test('with a spawner in force the engine hands every unit to the client as an en
   assert.ok(Array.isArray(backendDev.args) && backendDev.args.includes('--dangerously-bypass-approvals-and-sandbox'));
   assert.equal(backendDev.args.includes('workspace-write'), false);
   assert.equal(typeof backendDev.prompt_stdin, 'boolean');
-  assert.equal(backendDev.timeout_ms, 8000);
+  assert.equal(Object.hasOwn(backendDev, 'timeout_ms'), false, 'the unit envelope exposes no deadline option');
   assert.equal(backendDev.sandbox_mode, 'workspace-write');
   for (const key of Object.keys(backendDev)) assert.doesNotMatch(key, /token|secret|password/i);
   const qaSpawn = spawns.find((e) => e.unit === 'phase-1' && e.role === 'qa');
@@ -308,7 +308,7 @@ test('with a spawner in force the engine hands every unit to the client as an en
   assert.match(qaPrompt, /# Unit under review — orders \/ phase-1/);
 
   const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
-  assert.deepEqual(state.spawner, { command: process.execPath, args: [path.join(ctx.client, 'fake-spawner.js')], source: 'env', unit_timeout_ms: 8000 });
+  assert.deepEqual(state.spawner, { command: process.execPath, args: [path.join(ctx.client, 'fake-spawner.js')], source: 'env' });
   assert.equal(state.units['phase-1'].dev.session_id, 'sess-phase-1:dev');
   assert.equal(state.units['phase-1'].qa.session_id, 'sess-phase-1:qa');
   assert.equal(state.units['phase-2'].dev.session_id, 'sess-phase-2:dev');
@@ -324,7 +324,7 @@ test('with a spawner in force the engine hands every unit to the client as an en
   assert.equal(started.spawner, process.execPath);
 });
 
-test('a client that refuses, crashes or never reports leaves the same decision_required as a host that cannot run; the engine asks the client to close a timed-out session; retry after a fix resumes through the seam', async (t) => {
+test('a client that refuses or crashes leaves the same decision_required as a host that cannot run; retry after a fix resumes through the seam', async (t) => {
   const ctx = await setup(t, { config: { delay_ms: 40, fail: ['phase-2:dev'], crash: ['phase-1:qa'] } });
   let result = await run(ctx);
   assert.equal(result.status, 'decision_required');
@@ -347,21 +347,6 @@ test('a client that refuses, crashes or never reports leaves the same decision_r
   state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
   assert.equal(state.units['phase-2'].qa.status, 'passed');
 
-  // Never reporting: the unit budget elapses, the engine records a timeout and asks the client to close that session.
-  const silent = await setup(t, { config: { delay_ms: 40, skip_report: ['phase-1:dev'] } });
-  result = await run(silent, { engine: { timeout: 400 } });
-  assert.equal(result.status, 'decision_required');
-  assert.deepEqual(result.decisions_pending.map((d) => [d.unit, d.stage, d.reason]), [['phase-1', 'dev', 'timeout']]);
-  const log = await spawnerLog(silent);
-  const closed = log.find((e) => e.action === 'close');
-  assert.ok(closed, 'the engine asked the client to close the session');
-  assert.equal(closed.reason, 'timeout');
-  assert.equal(closed.session_id, 'sess-phase-1:dev');
-  assert.equal(closed.unit, 'phase-1');
-  assert.equal(closed.role, 'dev');
-  state = JSON.parse(await fs.readFile(runStatePath(silent.dir, SLUG), 'utf8'));
-  assert.equal(state.units['phase-1'].dev.session_id, 'sess-phase-1:dev');
-  assert.equal(state.units['phase-2'].qa.status, 'passed', 'the other unit went through its terminal');
 });
 
 test('preflight refuses a spawner that is not resolvable, and the roles file is the project default when the environment says nothing', async (t) => {

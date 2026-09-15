@@ -440,10 +440,12 @@ module.exports = {
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=pt-BR]',
     help_execution_seed:
       'aioson execution:seed [path] --lanes=<lane-a,lane-b> [--feature=<slug>] [--json] [--locale=pt-BR]',
+    help_execution_profiles_validate:
+      'aioson execution:profiles:validate [path] [--profile=<nome[,nome2]>] [--concurrency=<1..10>] [--ttl=<horas>] [--timeout=<ms>] [--refresh] [--status] [--json] [--locale=pt-BR]',
     help_execution_compile:
       'aioson execution:compile [path] --feature=<slug> [--dry-run] [--json] [--locale=pt-BR]',
     help_execution_run:
-      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--no-context-limit|--context-limit] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=pt-BR]',
+      'aioson execution:run [path] --feature=<slug> [--preflight] [--resume] [--fresh] [--wave=<n>] [--until-complete|--bounded-recovery] [--json] [--locale=pt-BR]',
     help_execution_decide:
       'aioson execution:decide [path] --feature=<slug> --unit=<id-da-unidade> --choice=retry|fallback:<host>/<modelo>[/<effort>]|skip|skip-qa|abort [--json] [--locale=pt-BR]',
     help_execution_status:
@@ -455,7 +457,7 @@ module.exports = {
     help_execution_prices:
       'aioson execution:prices [path] [--refresh] [--json]',
     help_live_start:
-      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy> --agent=<nome> [--tool-bin=<binario>] [--permission-mode=yolo|default (padrão: yolo — o host roda sem pedir permissão)] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
+      'aioson live:start [path] --tool=<claude|codex|opencode|kimi|qwen|grok|muse|agy|antigravity> --agent=<nome> [--tool-bin=<binario>] [--permission-mode=yolo|default (padrão: yolo — o host roda sem pedir permissão)] [--tool-args=<args>] [--title=<texto>] [--goal=<texto>] [--plan=<arquivo>] [--session=<chave>] [--message=<texto>] [--attach] [--no-launch] [--tmux] [--json] [--locale=pt-BR]',
     help_live_status:
       'aioson live:status [path] [--agent=<nome>] [--limit=8] [--watch=2] [--format=compact|tmux-bar] [--json] [--locale=pt-BR]',
     help_live_handoff:

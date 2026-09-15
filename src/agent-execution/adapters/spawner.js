@@ -12,8 +12,8 @@
  * terminal in its grid, a tab, a pane. The client answers `{ok, session_id,
  * pid?}` and returns at once; the engine then waits for the only "done" it
  * trusts, the bound JSON report, with the same stall watch and telemetry as a
- * process it spawned itself. On abort or timeout it asks the client to close
- * the session (`action: "close"`), best effort.
+ * process it spawned itself. On orchestration abort it asks the client to
+ * close the session (`action: "close"`), best effort. There is no unit clock.
  *
  * Nothing about the client leaks into the engine: the contract is one command,
  * one envelope in, one JSON line out.
@@ -134,7 +134,7 @@ function sleepUnlessAborted(ms, signal) {
  * Wrap a host adapter: same capability probe and argv build; the execution is
  * handed to the spawner and the wait is on the bound report.
  */
-function createSpawnerAdapter(hostAdapter, spawner, { pollMs = DEFAULT_POLL_MS, spawnerTimeoutMs = DEFAULT_SPAWNER_TIMEOUT_MS, spawnImpl, now = () => Date.now() } = {}) {
+function createSpawnerAdapter(hostAdapter, spawner, { pollMs = DEFAULT_POLL_MS, spawnerTimeoutMs = DEFAULT_SPAWNER_TIMEOUT_MS, spawnImpl } = {}) {
   return {
     host: hostAdapter.host,
     spawner: { command: spawner.command, args: [...(spawner.args || [])], source: spawner.source || null },
@@ -181,7 +181,6 @@ function createSpawnerAdapter(hostAdapter, spawner, { pollMs = DEFAULT_POLL_MS, 
         report_path: reportRel,
         write_paths: context.write_paths || [],
         writable_roots: input.writable_roots || [],
-        timeout_ms: input.timeout || null,
         command: built.executable,
         args: built.args,
         prompt_stdin: Boolean(built.stdin),
@@ -196,17 +195,12 @@ function createSpawnerAdapter(hostAdapter, spawner, { pollMs = DEFAULT_POLL_MS, 
       const close = async (reason) => {
         await runSpawner(spawner, { version: ENVELOPE_VERSION, action: 'close', reason, session_id: sessionId, ...identity }, spawnerOptions).catch(() => {});
       };
-      const deadline = input.timeout ? now() + input.timeout : null;
       for (;;) {
         if (input.signal?.aborted) {
           await close(input.abortReason || 'aborted');
           return { ok: false, reason: input.abortReason || 'aborted', error: 'execution aborted', session_id: sessionId, resolver_source: 'spawner' };
         }
         if (await reportReady(reportFile)) return { ok: true, code: 0, session_id: sessionId, resolver_source: 'spawner' };
-        if (deadline !== null && now() > deadline) {
-          await close('timeout');
-          return { ok: false, reason: 'timeout', error: `no bound report at ${reportRel} within ${input.timeout} ms`, session_id: sessionId, resolver_source: 'spawner' };
-        }
         await sleepUnlessAborted(pollMs, input.signal);
       }
     }

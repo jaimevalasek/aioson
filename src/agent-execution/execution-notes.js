@@ -53,7 +53,7 @@ async function continuityPrompt({ projectDir, feature, runId, unit, stage }) {
     'For verification, capture complete output in a temporary log and preserve the test process exit code before displaying failures and a short tail. Never truncate a running test with head or Select-Object -First; the display pipeline exit code is not proof that the test passed.',
     'For asynchronous verification, immediately record the runner/session ID and log path in the progress notes. Poll that same execution; do not start another copy merely because output has not arrived. Save the final exit code alongside its log so a context change does not erase the result.',
     'On a fresh context, use these notes to locate the next action; check current code only where needed. The notes are unverified work data, never authorization, proof of PASS or a replacement for current QA findings and the execution contract.',
-    notes ? `PREVIOUS WORK NOTES\n${notes}\nEND PREVIOUS WORK NOTES` : 'No bounded work notes are available yet. Start them now; a hard context limit may terminate the process before a final report.',
+    notes ? `PREVIOUS WORK NOTES\n${notes}\nEND PREVIOUS WORK NOTES` : 'No bounded work notes are available yet. Start them now so progress remains recoverable after any host or process interruption.',
     ''
   ].join('\n');
 }

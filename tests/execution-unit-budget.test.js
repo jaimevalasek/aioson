@@ -372,7 +372,8 @@ test('bounded source reads measure actual selected lines and reject unowned or i
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, '// bounded\n' + '// large line\n'.repeat(20000));
   const initial = await compile(dir, env);
-  assert.ok(initial.errors.some(e => e.check === 'unit_initial_context_over_budget'));
+  assert.equal(initial.ok, true, JSON.stringify(initial.errors));
+  assert.ok(initial.plan.units.find(u => u.id === 'phase-1-backend').context.estimated_initial_tokens > 80000);
   const planFile = path.join(dir, '.aioson/context', `implementation-plan-${SLUG}.md`);
   const addRanges = range => GRID_PLAN.split('\n').map(line => {
     if (line.includes('| Phase | Wave |')) return line.replace(/\|\s*$/, '| Read ranges |');

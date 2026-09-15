@@ -7,8 +7,7 @@ const { loadModelCatalog } = require('../agent-execution/model-catalog');
 const { effortsForHost } = require('../agent-execution/schema');
 const {
   EXECUTION_ROLES_RELATIVE_PATH,
-  readExecutionRoles,
-  rolesBindingDigest,
+  profileFallbackOrder,
   validateExecutionRoles
 } = require('../lib/execution-roles');
 const { findSignature, readSignatures, signatureState } = require('../lib/host-signature');
@@ -120,7 +119,7 @@ async function validateRoutingConfiguration(config, { env = process.env, now = D
     const primary = describe(role);
     let fallback = null;
     if (primary.signature_state !== 'valid' && active.fallback_use === true) {
-      for (const fallbackName of active.fallback_profiles || []) {
+      for (const fallbackName of profileFallbackOrder({ profiles: config.profiles, active_profile: profileName })) {
         const candidateProfile = config.profiles?.[fallbackName];
         if (!candidateProfile || candidateProfile.enabled === false) continue;
         const candidateRole = fallbackRole(candidateProfile, roleKey);
@@ -150,7 +149,7 @@ async function validateRoutingConfiguration(config, { env = process.env, now = D
   };
 }
 
-async function updateRoutingConfiguration(projectDir, payload, { env = process.env, activeRun = false } = {}) {
+async function updateRoutingConfiguration(projectDir, payload, { env = process.env } = {}) {
   if (!payload || typeof payload !== 'object' || typeof payload.expected_digest !== 'string' || !payload.config || typeof payload.config !== 'object' || Array.isArray(payload.config)) {
     return { code: 400, data: { error: 'Envie expected_digest e config.' } };
   }
@@ -160,11 +159,9 @@ async function updateRoutingConfiguration(projectDir, payload, { env = process.e
   if (payload.expected_digest !== current.digest) return { code: 409, data: { error: 'A configuração mudou desde que o editor foi aberto. Recarregue antes de salvar.', reason: 'config_changed' } };
   const validation = validateExecutionRoles(payload.config);
   if (!validation.ok) return { code: 422, data: { error: 'Corrija os campos inválidos antes de salvar.', reason: 'config_invalid', errors: validation.errors } };
-  const before = await readExecutionRoles(projectDir);
-  const nextBinding = rolesBindingDigest(payload.config);
-  if (activeRun && before.ok && nextBinding !== before.digest) {
-    return { code: 409, data: { error: 'Esta execução já começou com outra estrutura. Perfil, host, modelo, esforço e fallback podem mudar agora; vagas e política de indisponibilidade valem após recompilar a próxima execução.', reason: 'active_run_structure' } };
-  }
+  // The user's saved routing is the runtime source of truth. Active engines
+  // reload it before every new stage and while filling the worker pool, so an
+  // active run is not a reason to reject profile, policy or capacity edits.
   const text = `${JSON.stringify(payload.config, null, 2)}\n`;
   if (Buffer.byteLength(text) > MAX_CONFIG_BYTES) return { code: 413, data: { error: 'A configuração excede 64 KB.' } };
   const tmp = `${current.file}.${process.pid}.${crypto.randomUUID()}.tmp`;

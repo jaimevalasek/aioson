@@ -22,7 +22,8 @@
  * The optional `execution` block is the client seam: `spawner` names the
  * command the engine hands each unit envelope to (the node becomes a process
  * — a terminal — the supervising client owns; the engine keeps waiting for the
- * bound report), `unit_timeout_ms` the per-unit budget when humans watch.
+ * bound report). Legacy `unit_timeout_ms` is accepted but ignored: AIOSON no
+ * longer owns a wall-clock deadline for an orchestrated worker.
  * The environment variable `AIOSON_EXECUTION_SPAWNER` wins over the file: it
  * is the hint of the client that owns the session's PTY.
  */
@@ -47,22 +48,24 @@ const EXECUTION_KEYS = ['spawner', 'unit_timeout_ms', 'require_independent_qa'];
 const SPAWNER_KEYS = ['command', 'args'];
 const MAX_SPAWNER_ARGS = 16;
 const MAX_SPAWNER_TOKEN_LENGTH = 200;
-// `unit_timeout_ms`: the per-process budget of one lane unit. `0` is the
-// explicit "no limit — run until it finishes" (the adapter arms no timer);
-// null/absent is the engine default. A budget that killed a unit mid-write
-// looked like a worker failure in the log; the value the owner wanted did
-// not exist in the schema.
+// Kept as exports for consumers compiled against v1. Values in the roles file
+// are legacy input only and never arm an orchestrated worker timer.
 const MIN_UNIT_TIMEOUT_MS = 60000;
 const MAX_UNIT_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 const UNLIMITED_UNIT_TIMEOUT_MS = 0;
-const DEFAULT_SPAWNER_UNIT_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_SPAWNER_UNIT_TIMEOUT_MS = 0;
 const SPAWNER_ENV = 'AIOSON_EXECUTION_SPAWNER';
 const ROLE_KEYS = ['host', 'model', 'reasoning_effort'];
 const PROFILE_KEYS = ['enabled', 'fallback_use', 'fallback_profiles', 'roles'];
 const MAX_FALLBACK_PROFILES = 8;
 const ON_UNAVAILABLE = ['ask', 'fallback', 'pause'];
 const DEFAULT_ON_UNAVAILABLE = 'ask';
-const DEFAULT_MAX_CONCURRENT_LANES = 2;
+// The scheduler limits unit pipelines, not logical lane names. A large plan
+// can therefore run several disjoint backend/frontend units at once. Ten is
+// the product default and the hard local ceiling; real dependency and file
+// conflicts still reduce the ready pool safely.
+const MAX_CONCURRENT_UNIT_PIPELINES = 10;
+const DEFAULT_MAX_CONCURRENT_LANES = MAX_CONCURRENT_UNIT_PIPELINES;
 const SECRET_KEY = /token|secret|password|authorization|api[_-]?key/i;
 
 function isPlainObject(value) {
@@ -167,6 +170,39 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
           else if (value.profiles[target]?.enabled === false) add(`$.profiles.${profileName}.fallback_profiles`, `references disabled profile ${target}`);
         }
       }
+      // Only enabled fallback edges participate in routing. Reject an
+      // indirect cycle here so a chain can be traversed transitively without
+      // ever returning to an already failed provider profile.
+      const visiting = new Set();
+      const visited = new Set();
+      const reportedCycles = new Set();
+      const visit = (profileName, trail = []) => {
+        if (visited.has(profileName)) return;
+        if (visiting.has(profileName)) return;
+        const profile = value.profiles[profileName];
+        if (!isPlainObject(profile) || profile.enabled === false || profile.fallback_use !== true) {
+          visited.add(profileName);
+          return;
+        }
+        visiting.add(profileName);
+        for (const target of Array.isArray(profile.fallback_profiles) ? profile.fallback_profiles : []) {
+          if (!Object.hasOwn(value.profiles, target) || value.profiles[target]?.enabled === false) continue;
+          if (visiting.has(target)) {
+            const start = trail.indexOf(target);
+            const cycle = [...(start >= 0 ? trail.slice(start) : trail), profileName, target];
+            const key = [...new Set(cycle)].sort().join('|');
+            if (!reportedCycles.has(key)) {
+              reportedCycles.add(key);
+              add(`$.profiles.${profileName}.fallback_profiles`, `fallback chain contains a cycle: ${cycle.join(' -> ')}`);
+            }
+            continue;
+          }
+          visit(target, [...trail, profileName]);
+        }
+        visiting.delete(profileName);
+        visited.add(profileName);
+      };
+      for (const profileName of Object.keys(value.profiles)) visit(profileName);
     }
     if (typeof value.active_profile !== 'string' || !value.active_profile.trim()) {
       add('$.active_profile', 'must name an enabled profile');
@@ -202,10 +238,7 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
           }
         }
       }
-      const unitTimeout = value.execution.unit_timeout_ms;
-      if (unitTimeout !== undefined && unitTimeout !== null && unitTimeout !== UNLIMITED_UNIT_TIMEOUT_MS && (!Number.isInteger(unitTimeout) || unitTimeout < MIN_UNIT_TIMEOUT_MS || unitTimeout > MAX_UNIT_TIMEOUT_MS)) {
-        add('$.execution.unit_timeout_ms', `must be ${UNLIMITED_UNIT_TIMEOUT_MS} (no limit) or an integer between ${MIN_UNIT_TIMEOUT_MS} and ${MAX_UNIT_TIMEOUT_MS}`);
-      }
+      // unit_timeout_ms is accepted for backward compatibility and ignored.
       const independent = value.execution.require_independent_qa;
       if (independent !== undefined && independent !== null && typeof independent !== 'boolean') {
         add('$.execution.require_independent_qa', 'must be a boolean');
@@ -220,8 +253,8 @@ function validateExecutionRoles(value, { hosts = listExecutionHosts() } = {}) {
         if (key !== 'max_concurrent_lanes') add(`$.parallel.${key}`, 'unknown field');
       }
       const max = value.parallel.max_concurrent_lanes;
-      if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > MAX_DEVELOPMENT_LANES)) {
-        add('$.parallel.max_concurrent_lanes', `must be an integer between 1 and ${MAX_DEVELOPMENT_LANES}`);
+      if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > MAX_CONCURRENT_UNIT_PIPELINES)) {
+        add('$.parallel.max_concurrent_lanes', `must be an integer between 1 and ${MAX_CONCURRENT_UNIT_PIPELINES}`);
       }
     }
   }
@@ -265,13 +298,12 @@ function normalizeExecutionRoles(value) {
 // compile warns (`self_review_same_model`); on, the same condition refuses the
 // plan. A client that proves two hosts on the machine turns it on.
 function normalizeExecutionBlock(value) {
-  if (!isPlainObject(value)) return { spawner: null, unit_timeout_ms: null, require_independent_qa: false };
+  if (!isPlainObject(value)) return { spawner: null, require_independent_qa: false };
   const spawner = isPlainObject(value.spawner) && typeof value.spawner.command === 'string' && value.spawner.command.trim()
     ? { command: value.spawner.command.trim(), args: Array.isArray(value.spawner.args) ? value.spawner.args.map(String) : [] }
     : null;
   return {
     spawner,
-    unit_timeout_ms: Number.isInteger(value.unit_timeout_ms) ? value.unit_timeout_ms : null,
     require_independent_qa: value.require_independent_qa === true
   };
 }
@@ -349,8 +381,8 @@ async function readExecutionRoles(projectDir, { hosts } = {}) {
   // `digest` is the BINDING digest — what the compiled plan is bound to — and
   // covers only what shapes the units (roles, parallelism, the independent-
   // review rule). The process budget and the spawner are read fresh by every
-  // run and stay out of it: raising `unit_timeout_ms` mid-run no longer
-  // invalidates the plan and restarts the run. `file_digest` is the raw file.
+  // run and stay out of it; legacy `unit_timeout_ms` is ignored. `file_digest`
+  // is the raw file.
   const digest = rolesBindingDigest(roles);
   if (!roles.enabled) {
     return { present: true, ok: true, enabled: false, path: relative, reason: 'roles_disabled', errors: [], roles, digest, file_digest: fileDigest };
@@ -359,17 +391,12 @@ async function readExecutionRoles(projectDir, { hosts } = {}) {
 }
 
 /**
- * Digest of compile-time execution policy. Host/model routing is deliberately
- * absent: the engine reloads the selected profile before every new stage, so
- * changing `active_profile` or editing its role map does not stale the plan.
+ * Schema marker retained in compiled plans. All execution-role choices are
+ * runtime configuration: the engine reloads profile/model/fallback policy,
+ * independent-QA policy and worker-pool capacity while a run is active.
  */
 function rolesBindingDigest(roles) {
-  const canonical = {
-    version: roles.version,
-    parallel: { max_concurrent_lanes: roles.parallel?.max_concurrent_lanes || null },
-    on_unavailable: roles.on_unavailable || null,
-    execution: { require_independent_qa: roles.execution?.require_independent_qa === true }
-  };
+  const canonical = { version: roles.version };
   return sha256(JSON.stringify(canonical));
 }
 
@@ -384,17 +411,46 @@ function resolveLaneRoles(roles, lane) {
   return { dev, qa };
 }
 
+/**
+ * Ordered, transitive profile chain. The declaration order is preserved and
+ * each route is visited once. Validation rejects cycles, while the visited set
+ * also makes this safe for callers holding an older unvalidated document.
+ */
+function profileFallbackOrder(roles, startProfile = roles?.active_profile) {
+  if (!roles?.profiles || !startProfile || !roles.profiles[startProfile]?.enabled) return [];
+  const ordered = [];
+  const visited = new Set([startProfile]);
+  const walk = (profileName) => {
+    const profile = roles.profiles[profileName];
+    if (!profile?.enabled || profile.fallback_use !== true) return;
+    for (const target of profile.fallback_profiles || []) {
+      if (visited.has(target)) continue;
+      visited.add(target);
+      if (!roles.profiles[target]?.enabled) continue;
+      ordered.push(target);
+      walk(target);
+    }
+  };
+  walk(startProfile);
+  return ordered;
+}
+
 /** Ordered, explicitly enabled profile alternatives for the same lane role. */
 function resolveProfileFallbacks(roles, lane, kind) {
   if (!roles?.profiles || !roles.active_profile) return [];
   const active = roles.profiles[roles.active_profile];
   if (!active?.fallback_use) return [];
   const key = kind === 'dev' ? laneRoleKey(lane, 'dev') : laneRoleKey(lane, 'qa');
-  return active.fallback_profiles.flatMap(profileName => {
+  const seenRoutes = new Set();
+  return profileFallbackOrder(roles).flatMap(profileName => {
     const profile = roles.profiles[profileName];
     if (!profile?.enabled) return [];
     const role = kind === 'qa' ? (profile.roles[key] || profile.roles.qa) : profile.roles[key];
-    return role ? [{ profile: profileName, role: role === profile.roles.qa ? 'qa' : key, ...role }] : [];
+    if (!role) return [];
+    const routeKey = `${role.host}\u0000${role.model}\u0000${role.reasoning_effort || ''}`;
+    if (seenRoutes.has(routeKey)) return [];
+    seenRoutes.add(routeKey);
+    return [{ profile: profileName, role: role === profile.roles.qa ? 'qa' : key, ...role }];
   });
 }
 
@@ -446,13 +502,17 @@ function seedRolesDocument({ lanes, feature, installed }) {
   const qaHost = installed.length > 1 ? installed[1] : installed[0];
   const roles = {};
   for (const lane of lanes) roles[laneRoleKey(lane, 'dev')] = { host: devHost, model: DEFAULT_MODEL, reasoning_effort: null };
+  // The final integration supervisor is a DEV (it may repair cross-unit
+  // failures); the shared QA remains its independent reviewer when a second
+  // host is available.
+  roles.integration_dev = { host: devHost, model: DEFAULT_MODEL, reasoning_effort: null };
   roles.qa = { host: qaHost, model: DEFAULT_MODEL, reasoning_effort: null };
   return {
     version: EXECUTION_ROLES_VERSION,
     source: feature ? `${SEED_SOURCE_PREFIX} (feature: ${feature})` : SEED_SOURCE_PREFIX,
     enabled: false,
     roles,
-    parallel: { max_concurrent_lanes: Math.min(Math.max(lanes.length, 1), MAX_DEVELOPMENT_LANES) },
+    parallel: { max_concurrent_lanes: DEFAULT_MAX_CONCURRENT_LANES },
     on_unavailable: DEFAULT_ON_UNAVAILABLE
   };
 }
@@ -480,7 +540,7 @@ async function seedExecutionRoles(projectDir, { lanes = [], feature = null, host
   const existing = await readExecutionRoles(projectDir, { hosts: registered });
   const alreadyPresent = () => {
     const declared = existing.roles ? Object.keys(existing.roles.roles) : null;
-    const wanted = [...laneIds.map((lane) => laneRoleKey(lane, 'dev')), 'qa'];
+    const wanted = [...laneIds.map((lane) => laneRoleKey(lane, 'dev')), 'integration_dev', 'qa'];
     return {
       ok: true,
       outcome: 'already_present',
@@ -671,6 +731,7 @@ async function offerExecution(projectDir, { env = process.env, now = Date.now(),
 
 module.exports = {
   DEFAULT_MAX_CONCURRENT_LANES,
+  MAX_CONCURRENT_UNIT_PIPELINES,
   DEFAULT_ON_UNAVAILABLE,
   DEFAULT_SPAWNER_UNIT_TIMEOUT_MS,
   MIN_UNIT_TIMEOUT_MS,
@@ -696,6 +757,7 @@ module.exports = {
   readConfirmation,
   readExecutionRoles,
   resolveLaneRoles,
+  profileFallbackOrder,
   resolveProfileFallbacks,
   rolesDigest,
   seedExecutionRoles,

@@ -188,7 +188,6 @@ function buildAgenticPolicy(options = {}, classification = 'SMALL') {
       'feature_status_done',
       'human_decision_required',
       'gate_blocked',
-      'context_budget_exceeded',
       'cycle_limit_reached',
       'security_or_product_decision_human_gate',
       'feature_close_human_gate'

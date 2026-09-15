@@ -176,20 +176,17 @@ async function executeWithCapacityPolicy({manifest,resolved,input,adapterRegistr
       .replace(/model_resolution_strategy=[^,\n]+/,`model_resolution_strategy=${candidate.model_resolution_strategy}`)
       .replace(/reasoning_effort=[^,\n]+/,`reasoning_effort=${candidate.reasoning_effort||'null'}`);
     const attemptStartedAt = new Date().toISOString();
-    const context_budget = input.getContextBudget ? await input.getContextBudget(candidate) : input.context_budget;
-    const budgetPrompt = context_budget ? `\n\nCONTEXT QUALITY BUDGET: keep this unit below ${context_budget.max_tokens} tokens of active context. This is a quality ceiling even when the model supports a larger window. Read only unit-owned code and selected rules; use targeted excerpts and concise tool output. Save verified progress on disk. If work cannot fit, report the remaining slice and preserve existing changes; never reread all phases or redo completed work.\n` : '';
-    await input.onAttemptStart?.({ attempt: count + 1, host: candidate.host, model: candidate.model, routing_profile: candidate.routing_profile || null, started_at: attemptStartedAt, context_budget: context_budget || null });
+    const context_window = input.getContextWindow ? await input.getContextWindow(candidate) : input.context_window;
+    await input.onAttemptStart?.({ attempt: count + 1, host: candidate.host, model: candidate.model, routing_profile: candidate.routing_profile || null, started_at: attemptStartedAt, context_window: context_window || null });
     let result;
     try {
-      result=context_budget && Math.ceil(Buffer.byteLength(prompt_text + budgetPrompt) / 2) > context_budget.max_tokens * 0.5
-        ? { ok: false, reason: 'context_prompt_over_budget', context_budget }
-        : await adapter.execute({...input,context_budget,prompt_text:prompt_text + budgetPrompt,mode:candidate.mode,model:candidate.model,reasoning_effort:candidate.reasoning_effort,onStructuredEvent:input.createStructuredObserver?.(candidate) || input.onStructuredEvent,
+      result=await adapter.execute({...input,context_window,prompt_text,mode:candidate.mode,model:candidate.model,reasoning_effort:candidate.reasoning_effort,onStructuredEvent:input.createStructuredObserver?.(candidate) || input.onStructuredEvent,
         onUsage: usage => input.onUsage?.(usage, candidate, count + 1)
       });
     } catch (error) {
       result = { ok: false, reason: 'engine_error', error: error.message };
     }
-    const attempt = {attempt:count+1,host:candidate.host,model_requested:candidate.model_requested,model:candidate.model,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,routing_profile:candidate.routing_profile||null,reason:result.reason||null,started_at:attemptStartedAt,finished_at:new Date().toISOString(),usage:result.usage||null,context_budget:result.context_budget||context_budget||null};
+    const attempt = {attempt:count+1,host:candidate.host,model_requested:candidate.model_requested,model:candidate.model,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,routing_profile:candidate.routing_profile||null,reason:result.reason||null,started_at:attemptStartedAt,finished_at:new Date().toISOString(),usage:result.usage||null,context_window:result.context_window||context_window||null};
     history.push(attempt);
     await input.onAttemptResult?.(attempt);
     if(result.ok)return{...result,host:candidate.host,model:candidate.model,model_requested:candidate.model_requested,model_resolution_strategy:candidate.model_resolution_strategy,reasoning_effort:candidate.reasoning_effort,routing_profile:candidate.routing_profile||null,history};

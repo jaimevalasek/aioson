@@ -97,9 +97,12 @@ function scopedRepairEvidence(outcome, paths) {
   return { findings, messages };
 }
 
-// Route a failed consumer to the closest compiled ancestor that owns the
-// reported path. A file can legitimately appear in successive phases; the
-// latest ancestor is the last approved producer of that file.
+// Route a failed consumer to the closest compiled owner of the reported path.
+// Explicit ancestors remain authoritative. In continuous mode, shared checks
+// (typecheck, build, integration suites) may expose a unique earlier or
+// same-wave owner even when the planner omitted a cross-lane edge; the exact
+// compiled path is still the authority and later-wave owners are never pulled
+// backwards.
 function contractRepairTarget(plan, state, consumerId, outcome, continuous = false) {
   const consumer = (plan.units || []).find(unit => unit.id === consumerId);
   if (!consumer) return null;
@@ -108,10 +111,12 @@ function contractRepairTarget(plan, state, consumerId, outcome, continuous = fal
   const ancestors = ancestorsOf(plan, consumerId);
   const targets = [];
   for (const repairPath of paths) {
-    const owners = (plan.units || []).filter(unit => unit.id !== consumerId
+    const compiledOwners = (plan.units || []).filter(unit => unit.id !== consumerId
       && unit.owner === 'lane'
-      && ancestors.has(unit.id)
+      && (Number(unit.wave) || 0) <= (Number(consumer.wave) || 0)
       && unitFiles(unit).has(repairPath.toLowerCase()));
+    const ancestralOwners = compiledOwners.filter(unit => ancestors.has(unit.id));
+    const owners = ancestralOwners.length ? ancestralOwners : continuous ? compiledOwners : [];
     if (!owners.length) return null;
     const latestWave = Math.max(...owners.map(unit => Number(unit.wave) || 0));
     const latest = owners.filter(unit => (Number(unit.wave) || 0) === latestWave);
@@ -121,11 +126,13 @@ function contractRepairTarget(plan, state, consumerId, outcome, continuous = fal
   if (!targets.length || targets.some(target => target.id !== targets[0].id)) return null;
   const target = targets[0];
   const current = state.units[target.id];
-  if (current?.status !== 'passed' || current.qa?.status !== 'passed') return null;
+  const delivered = current?.status === 'passed' && current.qa?.status === 'passed';
+  const recoverable = continuous && ['pending', 'running', 'decision_required', 'passed'].includes(current?.status);
+  if (!delivered && !recoverable) return null;
   const max = plan.lanes?.[target.lane]?.qa?.max_rework_rounds || 0;
   const contractRepairLimit = continuous ? Math.max(2, max) : 2;
   if ((current.contract_repairs || 0) >= contractRepairLimit) return null;
-  const affected = descendantsOf(plan, target.id);
+  const affected = [...new Set([...descendantsOf(plan, target.id), ...descendantsOf(plan, consumerId)])];
   for (const id of affected) {
     if ([target.id, consumerId].includes(id)) continue;
     const status = state.units[id]?.status;
@@ -133,7 +140,7 @@ function contractRepairTarget(plan, state, consumerId, outcome, continuous = fal
   }
   if (!continuous && (current.rework?.rounds || 0) >= max) return null;
   const evidence = scopedRepairEvidence(outcome, paths);
-  return { unit: target.id, max, contract_repair_limit: contractRepairLimit, ...evidence, paths, affected };
+  return { unit: target.id, max, contract_repair_limit: contractRepairLimit, target_status: current.status, ...evidence, paths, affected };
 }
 
 function compactStage(stage) {
@@ -147,29 +154,55 @@ function compactStage(stage) {
   };
 }
 
+function mergeUnique(left = [], right = []) {
+  const seen = new Set();
+  return [...left, ...right].filter(item => {
+    const key = JSON.stringify(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function applyContractRepair(plan, state, consumerId, repair, at = new Date().toISOString()) {
   if (!repair?.unit || !state.units?.[repair.unit]) return false;
   const producer = state.units[repair.unit];
   const consumer = state.units[consumerId];
-  const repairRound = (producer.rework?.rounds || 0) + 1;
-  const history = [...(producer.rework?.history || []), {
-    round: repairRound,
-    findings: repair.findings,
-    dev: compactStage(producer.dev),
-    qa: compactStage(producer.qa),
-    at,
-    source: 'downstream_contract_repair',
-    consumer: consumerId,
-    consumer_report: consumer?.dev?.report || consumer?.qa?.report || null,
-    consumer_evidence: (consumer?.dev?.evidence || consumer?.qa?.evidence || []).slice(0, 12),
-    paths: repair.paths
-  }];
-  producer.rework = { rounds: repairRound, max: repair.max, history };
-  producer.contract_repairs = (producer.contract_repairs || 0) + 1;
+  const previousRepair = producer.retry_context?.dev;
+  const samePendingRepair = producer.status === 'pending'
+    && previousRepair?.reason === 'downstream_contract_repair'
+    && JSON.stringify([...(previousRepair.paths || [])].sort()) === JSON.stringify([...(repair.paths || [])].sort());
+  if (!samePendingRepair) {
+    const repairRound = (producer.rework?.rounds || 0) + 1;
+    const history = [...(producer.rework?.history || []), {
+      round: repairRound,
+      findings: repair.findings,
+      dev: compactStage(producer.dev),
+      qa: compactStage(producer.qa),
+      at,
+      source: 'downstream_contract_repair',
+      consumer: consumerId,
+      consumer_report: consumer?.dev?.report || consumer?.qa?.report || null,
+      consumer_evidence: (consumer?.dev?.evidence || consumer?.qa?.evidence || []).slice(0, 12),
+      paths: repair.paths
+    }];
+    producer.rework = { rounds: repairRound, max: repair.max, history };
+    producer.contract_repairs = (producer.contract_repairs || 0) + 1;
+  }
   producer.retry_context = {
     ...producer.retry_context,
-    dev: { reason: 'downstream_contract_repair', findings: repair.findings, messages: repair.messages, paths: repair.paths }
+    dev: {
+      reason: 'downstream_contract_repair',
+      findings: mergeUnique(samePendingRepair ? previousRepair.findings : [], repair.findings),
+      messages: mergeUnique(samePendingRepair ? previousRepair.messages : [], repair.messages),
+      paths: repair.paths
+    }
   };
+
+  const producerBusy = producer.status === 'running'
+    || producer.dev?.status === 'running'
+    || producer.qa?.status === 'running'
+    || (producer.status === 'passed' && producer.qa?.status === 'pending');
 
   for (const id of repair.affected || descendantsOf(plan, repair.unit)) {
     const unit = state.units[id];
@@ -182,11 +215,13 @@ function applyContractRepair(plan, state, consumerId, repair, at = new Date().to
       paths: repair.paths,
       previous: { status: unit.status, dev: compactStage(unit.dev), qa: compactStage(unit.qa) }
     }];
+    if (id === repair.unit && producerBusy) continue;
     unit.status = 'pending';
     unit.dev = { status: 'pending', invalidated_by: repair.unit };
     unit.qa = { status: 'pending', invalidated_by: repair.unit };
     unit.pending_decision = null;
     if (id !== repair.unit) {
+      unit.repair_dependencies = [...new Set([...(unit.repair_dependencies || []), repair.unit])];
       unit.retry_context = {
         ...unit.retry_context,
         dev: { reason: 'upstream_contract_repair', producer: repair.unit, findings: repair.findings, paths: repair.paths }
@@ -198,7 +233,8 @@ function applyContractRepair(plan, state, consumerId, repair, at = new Date().to
     producer: repair.unit,
     consumer: consumerId,
     paths: repair.paths,
-    affected: repair.affected || descendantsOf(plan, repair.unit)
+    affected: repair.affected || descendantsOf(plan, repair.unit),
+    coalesced: samePendingRepair
   }];
   return true;
 }

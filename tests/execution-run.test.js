@@ -204,13 +204,13 @@ async function fakeBaseline(dir) {
   return { ok: true, baseline: { captured_at: new Date().toISOString(), head: 'fake', dirty_paths: paths.sort(), dirty_hashes: hashes } };
 }
 
-async function setup(t, { roles = ROLES, signatures = ALL_SIGNED, bins = ['codex', 'kimi', 'claude', 'qwen'] } = {}) {
+async function setup(t, { roles = ROLES, signatures = ALL_SIGNED, bins = ['codex', 'kimi', 'claude', 'qwen'], plan = PLAN } = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-execution-run-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   for (const rel of ['.aioson/context', '.aioson/config', '.aioson/agents', 'src/api', 'src/ui', 'tests/api', 'tests/ui']) {
     await fs.mkdir(path.join(dir, ...rel.split('/')), { recursive: true });
   }
-  await fs.writeFile(path.join(dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), PLAN, 'utf8');
+  await fs.writeFile(path.join(dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), plan, 'utf8');
   await fs.writeFile(path.join(dir, '.aioson', 'context', `prd-${SLUG}.md`), PRD, 'utf8');
   await fs.writeFile(path.join(dir, '.aioson', 'config', 'execution-roles.json'), JSON.stringify(roles, null, 2), 'utf8');
   await fs.copyFile(path.join(ROOT, 'template', '.aioson', 'agents', 'dev.md'), path.join(dir, '.aioson', 'agents', 'dev.md'));
@@ -274,45 +274,37 @@ async function readState(ctx) {
 
 // ───────────────────────── preflight ─────────────────────────
 
-test('context ceiling checkpoints work and starts a bounded fresh continuation; every attempt remains in metrics', async t => {
+test('context use above the retired ceiling runs to completion and remains visible in metrics', async t => {
   const ctx = await setup(t);
   let calls = 0;
   const usage = { input_tokens: 90000, uncached_input_tokens: 10000, cache_read_tokens: 80000, cache_write_tokens: 0, output_tokens: 100, complete: true, peak_context_tokens: 90000 };
   const fakes = adapters({ 'dev:phase-1': input => {
     calls++;
-    if (calls === 1) {
-      const notes = input.prompt_text.match(/Progress notes: ([^\n]+)/)[1];
-      const file = path.join(input.cwd, notes);
-      require('node:fs').mkdirSync(path.dirname(file), { recursive: true });
-      require('node:fs').writeFileSync(file, 'Verified createOrder; next add the duplicate-order regression.');
-      return { fail: 'context_budget_exceeded', usage, touch: ['src/api/orders.ts'] };
-    }
-    assert.match(input.prompt_text, /Context continuation: read/);
-    assert.match(input.prompt_text, /PREVIOUS WORK NOTES\nVerified createOrder; next add the duplicate-order regression\./);
-    return { usage: { ...usage, input_tokens: 3000, peak_context_tokens: 3000 } };
+    assert.doesNotMatch(input.prompt_text, /CONTEXT QUALITY BUDGET/);
+    return { usage, touch: ['src/api/orders.ts'] };
   } });
   const result = await run(ctx, { registry: fakes.registry });
   assert.equal(result.status, 'completed');
-  assert.equal(calls, 2);
+  assert.equal(calls, 1);
   const state = await readState(ctx);
-  assert.equal(state.units['phase-1'].continuations.dev, 1);
-  const checkpoint = JSON.parse(await fs.readFile(path.join(ctx.dir, state.units['phase-1'].checkpoints.dev), 'utf8'));
-  assert.equal(checkpoint.reason, 'context_budget_exceeded');
-  assert.match(checkpoint.work_notes, /Verified createOrder/);
-  assert.equal(state.attempts.length, 5);
-  assert.equal(state.attempts.filter(attempt => attempt.reason === 'context_budget_exceeded').length, 1);
+  assert.equal(state.context_limit_enabled, false);
+  assert.equal(state.units['phase-1'].continuations, undefined);
+  assert.equal(state.attempts.length, 4);
+  assert.equal(state.attempts.some(attempt => attempt.reason === 'context_budget_exceeded'), false);
   const ledger = await status(ctx);
-  assert.equal(ledger.metrics.attempts.length, 5);
-  assert.equal(ledger.metrics.usage.measured_attempts, 2);
+  assert.equal(ledger.metrics.attempts.length, 4);
+  assert.equal(ledger.metrics.context.used_tokens, 90000);
+  assert.equal(ledger.metrics.attempts.find(attempt => attempt.unit === 'phase-1' && attempt.stage === 'dev').context.used_tokens, 90000);
+  assert.equal(ledger.metrics.attempts.some(attempt => Object.hasOwn(attempt, 'context_budget') || Object.hasOwn(attempt, 'context_window')), false);
 });
 
-test('no-context-limit persists across resume without rerunning approved units or disabling usage and QA', async t => {
+test('context enforcement stays retired across resume without rerunning approved units or disabling usage and QA', async t => {
   const ctx = await setup(t);
-  const budgets = [];
+  const windows = [];
   let calls = 0;
   const fakes = adapters({ 'dev:phase-1': input => {
     calls++;
-    budgets.push(input.getContextBudget({ host: 'kimi', model: 'kimi-k3' }));
+    windows.push(input.getContextWindow({ host: 'kimi', model: 'kimi-k3' }));
     assert.equal(input.captureUsage, true);
     assert.match(input.prompt_text, /AIOSON BOUNDED WORK CONTINUITY/);
     return calls === 1 ? { fail: 'crash' } : {};
@@ -329,18 +321,17 @@ test('no-context-limit persists across resume without rerunning approved units o
   assert.equal(after.context_limit_enabled, false);
   assert.equal(after.units['phase-1'].qa.status, 'passed');
   assert.equal(fakes.log.filter(e => e.key === 'dev:phase-2').length, 1);
-  assert.deepEqual(await Promise.all(budgets), [null, null]);
+  assert.equal((await Promise.all(windows)).every(window => window && Object.hasOwn(window, 'limit_tokens')), true);
   assert.equal((await status(ctx)).context_limit_enabled, false);
-  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'context-limit': true, 'no-context-limit': true } })).reason, 'conflicting_context_options');
 });
 
-test('repeated context exhaustion stops after the continuation ceiling without losing partial changes', async t => {
+test('legacy context exhaustion from an external adapter is not silently continued', async t => {
   const ctx = await setup(t);
   const fakes = adapters({ 'dev:phase-1': { fail: 'context_budget_exceeded', touch: ['src/api/orders.ts'] } });
   const result = await run(ctx, { registry: fakes.registry });
   assert.equal(result.status, 'decision_required');
-  assert.equal(fakes.log.filter(entry => entry.key === 'dev:phase-1').length, 3);
-  assert.equal((await readState(ctx)).units['phase-1'].continuations.dev, 2);
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:phase-1').length, 1);
+  assert.equal((await readState(ctx)).units['phase-1'].continuations, undefined);
   assert.match(await fs.readFile(path.join(ctx.dir, 'src/api/orders.ts'), 'utf8'), /dev:phase-1/);
 });
 
@@ -386,6 +377,74 @@ test('execution:run --preflight is deterministic: compiled plan fresh, manifest 
 });
 
 // ───────────────────────── the happy path ─────────────────────────
+
+test('a ten-worker pool starts ten dependency-free disjoint units concurrently', async (t) => {
+  const phases = Array.from({ length: 10 }, (_, index) => index + 1);
+  const plan = [
+    '---', 'feature: orders', 'status: approved', '---', '# Implementation Plan — orders', '',
+    '## Capability Delivery Plan',
+    '| CAP | Phase | Files | Verification |',
+    '|---|---|---|---|',
+    ...phases.map(n => `| CAP-orders-api | ${n} | src/api/unit-${n}.ts | npm test -- unit-${n} |`),
+    '',
+    '## Development execution lanes',
+    '| Lane | Host | Model | Exact write paths | Integration owner |',
+    '|---|---|---|---|---|',
+    '| backend | codex | gpt-5.6 | src/api/** | dev |',
+    '',
+    '## Execution Sequence',
+    '| Phase | Wave | Files | Scope | Done when |',
+    '|---|---|---|---|---|',
+    ...phases.map(n => `| ${n} | 1 | src/api/unit-${n}.ts | CAP-orders-api | npm test -- unit-${n} passes |`),
+    ''
+  ].join('\n');
+  const roles = { ...ROLES, parallel: { max_concurrent_lanes: 10 } };
+  const ctx = await setup(t, { roles, plan });
+  const fakes = adapters({}, { delayMs: 80 });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  const devs = fakes.log.filter(entry => entry.key.startsWith('dev:'));
+  assert.equal(devs.length, 10);
+  assert.equal(Math.max(...devs.map(entry => entry.active_at_start)), 10);
+  assert.ok(devs.every(entry => devs.every(other => entry.start < other.end && other.start < entry.end)), 'all ten DEV workers overlap');
+});
+
+test('an active run reloads worker-pool capacity and fills newly opened slots without recompiling', async (t) => {
+  const phases = [1, 2, 3];
+  const plan = [
+    '---', 'feature: orders', 'status: approved', '---', '# Implementation Plan — orders', '',
+    '## Capability Delivery Plan',
+    '| CAP | Phase | Files | Verification |',
+    '|---|---|---|---|',
+    ...phases.map(n => `| CAP-orders-api | ${n} | src/api/live-${n}.ts | npm test -- live-${n} |`),
+    '',
+    '## Development execution lanes',
+    '| Lane | Host | Model | Exact write paths | Integration owner |',
+    '|---|---|---|---|---|',
+    '| backend | codex | gpt-5.6 | src/api/** | dev |',
+    '',
+    '## Execution Sequence',
+    '| Phase | Wave | Files | Scope | Done when |',
+    '|---|---|---|---|---|',
+    ...phases.map(n => `| ${n} | 1 | src/api/live-${n}.ts | CAP-orders-api | npm test -- live-${n} passes |`),
+    ''
+  ].join('\n');
+  const roles = { ...ROLES, parallel: { max_concurrent_lanes: 1 } };
+  const ctx = await setup(t, { roles, plan });
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 1600 } }, { delayMs: 80 });
+  const running = run(ctx, { registry: fakes.registry });
+  while (!fakes.log.some(entry => entry.key === 'dev:phase-1')) await new Promise(resolve => setTimeout(resolve, 10));
+  roles.parallel.max_concurrent_lanes = 3;
+  await fs.writeFile(path.join(ctx.dir, '.aioson/config/execution-roles.json'), JSON.stringify(roles, null, 2));
+  const result = await running;
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  const first = fakes.log.find(entry => entry.key === 'dev:phase-1');
+  for (const id of ['dev:phase-2', 'dev:phase-3']) {
+    const entry = fakes.log.find(candidate => candidate.key === id);
+    assert.ok(entry.start < first.end, `${id} starts through the live capacity increase before phase-1 ends`);
+  }
+  assert.equal((await readState(ctx)).parallel.max_concurrent_lanes, 3);
+});
 
 test('execution:run — lane units of a wave run concurrently as dev→qa pipelines under the concurrency cap; integration units stay with the session DEV; reports, telemetry, ledger and live events all exist', async (t) => {
   const ctx = await setup(t);
@@ -803,7 +862,7 @@ test('CLI: execution:run/decide/status exit codes and arguments; --preflight/--r
   // so the deterministic refusal is a stale plan: the preflight refuses through
   // the binary with exit 1 — and `--preflight .` parsed as a pure boolean.
   await fs.appendFile(path.join(ctx.dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), '\nedited after compile\n');
-  const preflight = spawn(['execution:run', '--preflight', '--no-context-limit', ctx.dir, `--feature=${SLUG}`, '--json']);
+  const preflight = spawn(['execution:run', '--preflight', ctx.dir, `--feature=${SLUG}`, '--json']);
   assert.equal(preflight.status, 1, preflight.stderr);
   const payload = JSON.parse(preflight.stdout);
   assert.equal(payload.reason, 'preflight_failed');
@@ -811,7 +870,7 @@ test('CLI: execution:run/decide/status exit codes and arguments; --preflight/--r
   assert.ok(payload.preflight.checks.some((c) => c.id === 'plan' && c.ok === false && /plan_digest_stale/.test(c.detail)));
 
   const help = spawn(['--help']);
-  assert.match(help.stdout, /aioson execution:run \[path\] --feature=<slug> \[--preflight\] \[--resume\] \[--fresh\] \[--no-context-limit\|--context-limit\] \[--wave=<n>\]/);
+  assert.match(help.stdout, /aioson execution:run \[path\] --feature=<slug> \[--preflight\] \[--resume\] \[--fresh\] \[--wave=<n>\]/);
   assert.match(help.stdout, /aioson execution:decide \[path\] --feature=<slug> --unit=<unit-id> --choice=/);
   assert.match(help.stdout, /aioson execution:status \[path\] --feature=<slug>/);
 });
@@ -848,6 +907,65 @@ test('cross-wave reuse waits for the previous reviewer before starting a writer'
   const reviewer = fakes.log.find(item => item.key === 'qa:phase-2');
   const writer = fakes.log.find(item => item.key === 'dev:phase-3');
   assert.ok(writer.start >= reviewer.end, JSON.stringify({ writer, reviewer }));
+});
+
+test('integration_dev runs one final correcting supervisor and independent QA after all parallel units', async (t) => {
+  const roles = {
+    ...ROLES,
+    roles: {
+      ...ROLES.roles,
+      integration_dev: { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' }
+    }
+  };
+  const ctx = await setup(t, { roles });
+  const fakes = adapters({
+    'dev:integration-supervisor': input => {
+      assert.match(input.prompt_text, /final integration DEV supervisor/i);
+      assert.match(input.prompt_text, /npm test -- orders\.api/);
+      assert.match(input.prompt_text, /phase-3/);
+      return { touch: ['src/app.ts'] };
+    },
+    'qa:integration-supervisor': input => {
+      assert.match(input.prompt_text, /final-integration-supervisor/);
+      assert.match(input.prompt_text, /Complete verification|npm test -- orders\.api/);
+      return {};
+    }
+  });
+  const events = [];
+  const result = await run(ctx, { registry: fakes.registry, events });
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.status, 'completed');
+  assert.equal(result.integration.status, 'passed');
+  assert.equal(result.integration.supervisor_unit, 'integration-supervisor');
+  assert.equal(result.integration.dev.status, 'passed');
+  assert.equal(result.integration.qa.status, 'passed');
+  assert.equal(result.integration.dev.host, 'codex');
+  assert.equal(result.integration.qa.host, 'claude');
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:integration-supervisor').length, 1);
+  assert.equal(fakes.log.filter(entry => entry.key === 'qa:integration-supervisor').length, 1);
+  const lastLaneEnd = Math.max(...fakes.log.filter(entry => !entry.key.includes('integration-supervisor')).map(entry => entry.end));
+  assert.ok(fakes.log.find(entry => entry.key === 'dev:integration-supervisor').start >= lastLaneEnd, 'supervisor starts only after every lane pipeline');
+  assert.ok(events.some(event => event.type === 'integration' && event.status === 'started'));
+  assert.ok(events.some(event => event.type === 'integration' && event.status === 'passed'));
+  const state = await readState(ctx);
+  assert.equal(state.units['integration-supervisor'].qa.status, 'passed');
+  assert.equal(state.units['phase-3'].status, 'passed', 'the supervisor delivers explicitly planned integration-owned work');
+  assert.ok(result.reports.some(report => report.unit === 'integration-supervisor'));
+});
+
+test('adding integration_dev during active lane work enables the final supervisor without recompiling', async (t) => {
+  const roles = JSON.parse(JSON.stringify(ROLES));
+  const ctx = await setup(t, { roles });
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 250 }, 'dev:phase-2': { delay_ms: 250 } });
+  const running = run(ctx, { registry: fakes.registry });
+  while (fakes.log.filter(entry => entry.key.startsWith('dev:phase-')).length < 2) await new Promise(resolve => setTimeout(resolve, 10));
+  roles.roles.integration_dev = { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' };
+  await fs.writeFile(path.join(ctx.dir, '.aioson/config/execution-roles.json'), JSON.stringify(roles, null, 2));
+  const result = await running;
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(result.integration.status, 'passed');
+  assert.equal(fakes.log.filter(entry => entry.key === 'dev:integration-supervisor').length, 1);
+  assert.equal(fakes.log.filter(entry => entry.key === 'qa:integration-supervisor').length, 1);
 });
 
 test('capability verification metadata does not invent a hidden pending integration step', async (t) => {
@@ -1187,70 +1305,48 @@ test('a lease left by a killed run is waited out — the run proceeds and says h
   }
 });
 
-test('a timeout says what the disk saw — still writing (retry with a bigger budget) vs never wrote (fallback/abort); the budget comes from --unit-timeout, the roles file (0 = no limit) or the 1h default, a budget edit never invalidates the run, and "no writes" is measured on its own', async (t) => {
+test('orchestrated execution has no AIOSON context or wall-clock cutoff; legacy time fields are ignored and external timeout evidence stays explicit', async (t) => {
   const ctx = await setup(t);
   const events = [];
   const fakes = adapters({ 'dev:phase-1': { touch: ['src/api/orders.ts'], fail: 'timeout' }, 'dev:phase-2': { silence_ms: 220, fail: 'timeout' } });
-  let result = await run(ctx, { registry: fakes.registry, events, extra: { 'unit-timeout': '600000' }, engine: { stallMs: 1000, unproductiveMs: 80, stallCheckMs: 10 } });
+  let result = await run(ctx, { registry: fakes.registry, events, extra: { 'unit-timeout': '1' }, engine: { timeout: 1, stallMs: 1000, unproductiveMs: 80, stallCheckMs: 10 } });
   assert.equal(result.status, 'decision_required', JSON.stringify(result));
-  const budget = events.find((e) => e.type === 'budget');
-  assert.equal(budget.unit_timeout_ms, 600000);
-  assert.equal(budget.source, 'option');
-  assert.match(formatProgress(budget), /unit budget 10 min \(option\)/);
-  assert.equal(fakes.log.find((e) => e.key === 'dev:phase-1').timeout, 600000, 'the option reaches the adapter');
+  const limits = events.find((e) => e.type === 'limits');
+  assert.deepEqual({ context: limits.context_enforced, time: limits.time_enforced, cycles: limits.max_dev_qa_rework_rounds }, { context: false, time: false, cycles: 5 });
+  assert.match(formatProgress(limits), /context off · time off · QA→DEV at most 5/);
+  assert.equal(fakes.log.find((e) => e.key === 'dev:phase-1').timeout, 0, 'legacy CLI and engine timeout values never reach an orchestrated adapter');
   const state = await readState(ctx);
   const writing = state.units['phase-1'].pending_decision;
   assert.equal(writing.reason, 'timeout');
-  assert.equal(writing.timeout.wrote_during_budget, true);
-  assert.match(writing.detail, /still writing/);
-  assert.match(writing.detail, /--unit-timeout=<ms>, 0 = no limit/);
+  assert.equal(writing.timeout.wrote_during_attempt, true);
+  assert.equal(writing.timeout.source, 'external_host_or_client');
+  assert.match(writing.detail, /external host or client ended this attempt/);
+  assert.match(writing.detail, /AIOSON did not apply a time limit/);
   const silent = state.units['phase-2'].pending_decision;
-  assert.equal(silent.timeout.wrote_during_budget, false);
-  assert.match(silent.detail, /never wrote/);
-  assert.match(silent.detail, /fallback to another host\/model, or abort/);
-  assert.ok(events.some((e) => e.type === 'unit' && e.unit === 'phase-1' && e.status === 'timeout' && /still writing/.test(e.detail)));
-  assert.ok(events.some((e) => e.type === 'decision_required' && e.unit === 'phase-2' && /never wrote/.test(e.detail)));
+  assert.equal(silent.timeout.wrote_during_attempt, false);
+  assert.match(silent.detail, /no file change/);
+  assert.match(silent.detail, /authorized fallback/);
+  assert.ok(events.some((e) => e.type === 'unit' && e.unit === 'phase-1' && e.status === 'timeout' && /external host or client/.test(e.detail)));
+  assert.ok(events.some((e) => e.type === 'decision_required' && e.unit === 'phase-2' && /no file change/.test(e.detail)));
   assert.ok(result.decisions_pending.every((d) => typeof d.detail === 'string' && d.detail.length > 0), 'the ledger carries the measured hint');
-  // The unproductive signal fired on the silent unit before its budget, on the disk alone; the stall detector (1 s) stayed quiet.
+  // Disk activity remains diagnostic even though it never becomes a clock cutoff.
   assert.equal(state.units['phase-2'].dev.unproductive, true);
   assert.equal(state.units['phase-2'].dev.stalled, false);
   assert.ok(events.some((e) => e.type === 'unproductive' && e.unit === 'phase-2' && e.role === 'dev'));
   assert.match(formatProgress(events.find((e) => e.type === 'unproductive' && e.unit === 'phase-2')), /unproductive for \ds — no file change under the unit's files/);
   assert.equal(silent.timeout.measured_on, 'unit_files', 'what the verdict measured is named');
 
-  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': 'soon' } })).reason, 'invalid_unit_timeout');
-  // Above 2^31-1 ms Node clamps a timer to 1 ms: a "very long" budget killed
-  // every unit at once and the decision read "the 833.3 h budget elapsed".
-  // The option has the roles file's 4 h ceiling; 0 stays "no limit".
-  const tooLarge = await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '3000000000' } });
-  assert.equal(tooLarge.ok, false);
-  assert.equal(tooLarge.reason, 'unit_timeout_too_large');
-  assert.equal(tooLarge.max_ms, 4 * 60 * 60 * 1000);
-  assert.match(tooLarge.message, /above the 4 h ceiling \(14400000 ms, the same as execution\.unit_timeout_ms in the roles file\) — use --unit-timeout=0 for no limit/);
-  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '14400001' } })).reason, 'unit_timeout_too_large');
-  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '0', preflight: true } })).status, 'ready', '0 = no limit passes the validation');
-  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': '14400000', preflight: true } })).status, 'ready', 'the ceiling itself is allowed');
+  assert.equal((await run(ctx, { registry: fakes.registry, extra: { 'unit-timeout': 'soon', preflight: true } })).status, 'ready', 'the retired CLI field is ignored instead of configuring a timer');
 
-  // The roles file: 0 = no limit — and editing the budget after compile is NOT roles_changed (the plan binds to what shapes the units).
+  // The retired roles field is accepted for old projects but never controls a process.
   const rolesFile = path.join(ctx.dir, '.aioson', 'config', 'execution-roles.json');
-  await fs.writeFile(rolesFile, JSON.stringify({ ...ROLES, execution: { unit_timeout_ms: 0 } }, null, 2));
+  await fs.writeFile(rolesFile, JSON.stringify({ ...ROLES, execution: { unit_timeout_ms: 5 } }, null, 2));
   const unlimited = [];
   result = await run(ctx, { registry: adapters().registry, events: unlimited, extra: { fresh: true } });
   assert.equal(result.status, 'completed', JSON.stringify(result.preflight || result));
-  const noLimit = unlimited.find((e) => e.type === 'budget');
-  assert.equal(noLimit.unit_timeout_ms, 0);
-  assert.equal(noLimit.source, 'roles');
-  assert.match(formatProgress(noLimit), /unit budget no limit \(roles; each worker runs until it finishes\)/);
+  assert.ok(unlimited.some((e) => e.type === 'limits' && e.time_enforced === false));
   const offer = await runCommand({ args: [ctx.dir], options: { sub: 'offer', feature: SLUG, json: true }, logger, env: ctx.env });
-  assert.equal(offer.execution.unit_timeout_ms, 0);
-
-  await fs.writeFile(rolesFile, JSON.stringify(ROLES, null, 2));
-  const defaults = [];
-  result = await run(ctx, { registry: adapters().registry, events: defaults, extra: { fresh: true } });
-  assert.equal(result.status, 'completed');
-  const fallback = defaults.find((e) => e.type === 'budget');
-  assert.equal(fallback.unit_timeout_ms, 3600000);
-  assert.equal(fallback.source, 'default');
+  assert.deepEqual({ context: offer.execution.context_limit_enabled, time: offer.execution.time_limit_enabled }, { context: false, time: false });
 });
 
 test('preflight legs beyond PATH: a signature without the unattended probe is a warning (check ids unchanged), a probe that blocked fails the host with the re-sign hint, and a host with no unattended flag fails the host', async (t) => {
@@ -1336,7 +1432,7 @@ test('the run is visible from outside its process: the state beats (engine alive
   assert.ok(seen, `a tick saw the implementer's write under its lane paths: ${JSON.stringify(ticks.flatMap((tick) => tick.running || []))}`);
   assert.equal(seen.live.last_write_path, 'src/api/orders.ts');
   assert.ok(seen.live.elapsed_ms >= 0 && typeof seen.live.last_write_age_ms === 'number' && typeof seen.live.last_output_age_ms === 'number', JSON.stringify(seen.live));
-  assert.equal(seen.live.budget_ms, 3600000, 'the live block names the budget the stage runs under');
+  assert.equal(seen.live.budget_ms, null, 'the live block has no AIOSON wall-clock deadline');
   assert.equal(watched.watch.ended, 'completed');
   assert.ok(watched.watch.ticks >= 1);
   assert.equal(watched.watch.interval_ms, 100);
@@ -1351,7 +1447,7 @@ test('the run is visible from outside its process: the state beats (engine alive
   assert.match(formatProgress(started), /follow from any terminal: aioson execution:status \. --feature=orders --watch/);
   const beat = events.find((e) => e.type === 'heartbeat' && e.unit === 'phase-1' && e.role === 'dev' && e.files_changed >= 1);
   assert.ok(beat, JSON.stringify(events.filter((e) => e.type === 'heartbeat')));
-  assert.match(formatProgress(beat), /^wave 1 · phase-1 · dev: \d+ s elapsed · last write \d+ s ago \(src\/api\/orders\.ts\) · 1 file\(s\) · budget 1 h/);
+  assert.match(formatProgress(beat), /^wave 1 · phase-1 · dev: \d+ s elapsed · last write \d+ s ago \(src\/api\/orders\.ts\) · 1 file\(s\)$/);
   const idle = events.find((e) => e.type === 'heartbeat' && e.unit === 'phase-2' && e.role === 'dev');
   assert.ok(idle, 'a stage that wrote nothing still beats');
   assert.match(formatProgress(idle), /^wave 1 · phase-2 · dev: \d+ s elapsed · no file change yet · 0 file\(s\)/);
@@ -1370,7 +1466,7 @@ test('the run is visible from outside its process: the state beats (engine alive
   assert.ok(liveTick, 'a tick caught phase-1 dev running with a heartbeat');
   const lines = renderStatus(liveTick);
   assert.ok(lines.some((line) => /^ {2}engine: alive — heartbeat \d+ s ago \(pid \d+, every \d+ s\)$/.test(line)), lines.join('\n'));
-  assert.ok(lines.some((line) => /^ {2}▶ phase-1 dev codex\/gpt-5\.6 · \d+ s elapsed · (last write \d+ s ago \(src\/api\/orders\.ts\) · 1 file\(s\)|no file change yet · 0 file\(s\)) · budget 1 h/.test(line)), lines.join('\n'));
+  assert.ok(lines.some((line) => /^ {2}▶ phase-1 dev codex\/gpt-5\.6 · \d+ s elapsed · (last write \d+ s ago \(src\/api\/orders\.ts\) · 1 file\(s\)|no file change yet · 0 file\(s\))$/.test(line)), lines.join('\n'));
   // Before the first heartbeat a running stage still renders — elapsed from its start, nothing measured yet.
   const early = ticks.find((tick) => (tick.running || []).some((item) => item.stage === 'dev' && !item.live));
   if (early) assert.ok(renderStatus(early).some((line) => /^ {2}▶ phase-\d dev [a-z]+\/[a-z0-9.-]+ · \d+ s elapsed · no file change yet · 0 file\(s\)$/.test(line)), renderStatus(early).join('\n'));
@@ -1666,8 +1762,9 @@ test('two units of one lane in one wave: the one that never wrote is "never wrot
   const state = await readState(ctx);
   const decision = state.units['phase-2'].pending_decision;
   assert.equal(decision.reason, 'timeout');
-  assert.match(decision.detail, /with no file change under the unit's files — the worker never wrote/);
-  assert.equal(decision.timeout.wrote_during_budget, false);
+  assert.match(decision.detail, /external host or client ended this attempt as timeout with no file change under the unit's files/);
+  assert.match(decision.detail, /AIOSON did not apply a time limit/);
+  assert.equal(decision.timeout.wrote_during_attempt, false);
   assert.equal(decision.timeout.measured_on, 'unit_files');
   assert.equal(decision.timeout.measured, true);
   assert.equal(state.units['phase-2'].dev.activity.files_changed, 0);
@@ -1694,8 +1791,9 @@ test('a measurement that stops at its entry cap gives no verdict: no stalled/unp
   assert.deepEqual(dev.activity, { measured_on: 'unit_files', measured: false, files_changed: null, last_write_at: null, last_write_path: null });
   const decision = state.units['phase-1'].pending_decision;
   assert.equal(decision.timeout.measured, false);
-  assert.equal(decision.timeout.wrote_during_budget, null);
-  assert.match(decision.detail, /the unit's files could not be measured \(the walk stopped at its 1-entry cap\) — no verdict on whether the worker was writing/);
+  assert.equal(decision.timeout.wrote_during_attempt, null);
+  assert.match(decision.detail, /external host or client ended this attempt as timeout; AIOSON has no wall-clock deadline/);
+  assert.match(decision.detail, /the unit's files could not be measured \(the walk stopped at its 1-entry cap\)/);
   assert.equal(events.some((e) => (e.type === 'stalled' || e.type === 'unproductive') && e.unit === 'phase-1'), false);
   const beat = events.find((e) => e.type === 'heartbeat' && e.unit === 'phase-1');
   assert.ok(beat && beat.measured === false && beat.files_changed === null, JSON.stringify(beat));

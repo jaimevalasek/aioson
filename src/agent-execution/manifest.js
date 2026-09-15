@@ -74,7 +74,6 @@ function defaults(feature, host = 'codex', { cycleLimits } = {}) {
         'workflow_complete',
         'human_decision_required',
         'gate_blocked',
-        'context_budget_exceeded',
         'cycle_limit_reached',
         'capacity_unavailable',
         'feature_close_human_gate'

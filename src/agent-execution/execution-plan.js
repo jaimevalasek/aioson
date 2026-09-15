@@ -47,7 +47,7 @@ const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, checkRole
 const { readSignatures, findSignature, signatureState } = require('../lib/host-signature');
 const { buildDevLaneProfile, DEV_KERNEL_RELATIVE_PATH } = require('./dev-lane-profile');
 const { MAX_DEVELOPMENT_LANES } = require('./schema');
-const { readExecutionPolicy, contextBudget } = require('./execution-policy');
+const { readExecutionPolicy, contextWindow } = require('./execution-policy');
 const { resolveExistingInsideRoot } = require('../verification/path-policy');
 const { measureSurfaces, unitCeiling, UNIT_MAX_FILES_ENV, UNIT_MAX_ACS_ENV } = require('../lib/plan-scale');
 const {
@@ -361,7 +361,7 @@ function contextContract({ feature, unit, excerpts, prototype }) {
   ];
   if (excerpts.prd_present) lines.push(`- PRD: ${prdRelative(feature)} — the acceptance criteria of your capabilities are embedded above; open it only for a business rule they cite.`);
   if (unit.read_ranges?.length) {
-    lines.push('- Initial source reads are bounded below (inclusive lines at compile time). Locate the corresponding symbols with focused searches if earlier work moved them. Do not load these files wholesale. Expand only the relevant function and its callers within the context budget; checkpoint remaining work when necessary. These are reading instructions, not narrower write permissions.');
+    lines.push('- Initial source reads are bounded below (inclusive lines at compile time). Locate the corresponding symbols with focused searches if earlier work moved them. Do not load these files wholesale. Expand to the related functions and callers needed to finish and verify the unit. These are reading instructions, not narrower write permissions.');
     for (const range of unit.read_ranges) lines.push(`  - ${range.path}:${range.start}-${range.end}`);
   }
   const surfaces = measureSurfaces(unit.files);
@@ -807,8 +807,7 @@ function compileExecutionPlan({ feature, planContent, prdContent, roles, rules =
     unit.context = context;
     if (policy) {
       const dev = lanes[unit.lane].dev;
-      unit.context.budget = contextBudget(policy, dev.host, dev.model);
-      if (context.prompt_bytes > unit.context.budget.max_tokens * 2) error('unit_prompt_over_budget', `${unit.id}: prompt alone exceeds conservative context budget; split the unit`);
+      unit.context.window = contextWindow(policy, dev.host, dev.model);
     }
     unit.prompt = `${promptsDir}/${unit.id}.md`;
     unit.prompt_digest = sha256(text);
@@ -1087,10 +1086,6 @@ async function compileFeatureExecution(projectDir, featureInput, { env = process
     return { ok: false, reason: 'manifest_invalid', feature, errors: [{ check: 'manifest_invalid', message: `${path.relative(projectDir, loaded.path)} is invalid`, errors: loaded.errors }], warnings: [] };
   }
   const runState = await readRunState(projectDir, feature);
-  const executionState = await readRunState(projectDir, feature, 'execution-state');
-  const contextLimitDisabled = executionState?.feature === feature && typeof executionState.run_id === 'string'
-    && ['running', 'paused', 'decision_required'].includes(executionState.status)
-    && executionState.context_limit_enabled === false;
   const policyRead = await readExecutionPolicy(projectDir);
   if (!policyRead.ok) return { ok: false, reason: 'execution_policy_invalid', feature, errors: policyRead.errors.map(message => ({ check: 'execution_policy_invalid', message })), warnings: [] };
   const compiled = compileExecutionPlan({
@@ -1140,10 +1135,6 @@ async function compileFeatureExecution(projectDir, featureInput, { env = process
     const bytes = unit.context.prompt_bytes + files.reduce((sum, item) => sum + item.bytes, 0) + unit.context.reads.reduce((sum, item) => sum + (item.bytes || 0), 0);
     unit.context.estimated_initial_tokens = Math.ceil(bytes / 2);
     unit.context.estimate_basis = 'utf8_bytes_divided_by_2';
-    if (unit.context.estimated_initial_tokens > unit.context.budget.max_tokens * 0.5) {
-      const finding = { check: 'unit_initial_context_over_budget', unit: unit.id, estimated_tokens: unit.context.estimated_initial_tokens, initial_budget: Math.floor(unit.context.budget.max_tokens * 0.5), message: contextLimitDisabled ? 'Initial read estimate exceeds the quality budget; the active execution explicitly disabled its context limit, so this is advisory. Keep focused reads and all QA checks.' : 'Split the unit or narrow required reads before execution; reserve room for tools and output' };
-      (contextLimitDisabled ? compiled.warnings : compiled.errors).push(finding);
-    }
     compiled.plan.summary.context_bytes_max = Math.max(compiled.plan.summary.context_bytes_max, bytes);
   }
   if (compiled.errors.length) return { ok: false, reason: 'compile_refused', feature, errors: compiled.errors, warnings: compiled.warnings };
@@ -1252,7 +1243,8 @@ async function verifyExecutionPlan(projectDir, featureInput, { env = process.env
     && rolesRead.roles.parallel?.max_concurrent_lanes === plan.parallel?.max_concurrent_lanes
     && rolesRead.roles.on_unavailable === plan.on_unavailable
     && rolesRead.roles.execution?.require_independent_qa !== true;
-  const rolesFresh = rolesRead.present && (rolesRead.digest === plan.source?.roles_digest
+  const runtimeRolesFresh = plan.source?.roles_runtime === true && rolesRead.ok && rolesRead.enabled;
+  const rolesFresh = rolesRead.present && (runtimeRolesFresh || rolesRead.digest === plan.source?.roles_digest
     || (rolesRead.file_digest !== undefined && rolesRead.file_digest === plan.source?.roles_digest)
     || legacyRuntimeCompatible);
   check('execution-plan:roles', rolesFresh, rolesFresh ? null : (rolesRead.present ? 'roles_changed' : rolesRead.reason));
@@ -1311,6 +1303,10 @@ async function verifyExecutionPlan(projectDir, featureInput, { env = process.env
   for (const [laneId, lane] of Object.entries(plan.lanes || {})) {
     const selected = rolesRead.ok && rolesRead.enabled ? resolveLaneRoles(rolesRead.roles, laneId) : null;
     for (const kind of ['dev', 'qa']) {
+      if (runtimeRolesFresh && !selected?.[kind]) {
+        unsigned.push(`${laneId}.${kind} (role missing from the active runtime profile)`);
+        continue;
+      }
       const role = selected?.[kind] || lane[kind];
       if (!role) continue;
       const state = signatureFor(role);

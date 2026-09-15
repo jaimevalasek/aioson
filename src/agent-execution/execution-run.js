@@ -23,17 +23,19 @@
  * idempotently. The run holds the feature's dispatcher lease for its whole
  * life, so a direct `agent:execution:dispatch` cannot interleave with it.
  *
- * Integration units (files outside every lane) are never spawned here: the
- * run ends `completed` with them listed for the session DEV.
+ * When the active profile declares `integration_dev`, one final correcting
+ * DEV supervisor consumes all unit reports and integration work, runs the
+ * complete verification, and is reviewed by the shared QA. Without that
+ * optional role, integration units remain listed for the session DEV.
  */
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { notesRelative, readNotes, continuityPrompt } = require('./execution-notes');
+const { notesRelative, continuityPrompt } = require('./execution-notes');
 const { INVALID_REPORT_REASONS, prepareReportRepair, reportRepairPrompt } = require('./execution-report-repair');
 const { externalRepairPaths, contractRepairTarget, applyContractRepair, repairOutcomeFromState } = require('./execution-contract-repair');
-const { queueRecovery, recoveryPrompt } = require('./execution-recovery');
+const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, recoveryPrompt } = require('./execution-recovery');
 const { readExecutionPlan, verifyExecutionPlan, executionPlanRelative, pathOwns } = require('./execution-plan');
 const { stripInjectionChars, scanInjectionPayloads } = require('../lib/llm-content-sanitizer');
 const { loadManifest, resolveExecutionEntry, assertFeatureSlug } = require('./manifest');
@@ -49,9 +51,9 @@ const {
   fallbackReasonCategory
 } = require('./dispatcher');
 const { safeReportPath } = require('./reports');
-const { contextBudget } = require('./execution-policy');
+const { contextWindow } = require('./execution-policy');
 const { readPriceCatalog, findTariff, estimateCost } = require('./execution-cost');
-const { executionMetrics } = require('./execution-metrics');
+const { attemptContext, executionMetrics } = require('./execution-metrics');
 const { loadModelCatalog } = require('./model-catalog');
 const { createTelemetryBridge } = require('./telemetry-bridge');
 const { buildQaLaneProfile } = require('./qa-lane-profile');
@@ -61,7 +63,7 @@ const { readSignatures, findSignature, signatureState } = require('../lib/host-s
 const { getExecutionCapabilities, resolveSandboxArgs, LANE_WORKER_MODE } = require('../lib/tool-capabilities');
 const { captureCorrectionBaseline } = require('../lib/specialist-correction');
 const { openRuntimeDb, appendExecutionEvent } = require('../runtime-store');
-const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner, DEFAULT_SPAWNER_UNIT_TIMEOUT_MS } = require('../lib/execution-roles');
+const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner } = require('../lib/execution-roles');
 const { wrapRegistryWithSpawner } = require('./adapters/spawner');
 const { currentActivity, observeExecution } = require('./execution-observation');
 const { createExecutionLoopGuard } = require('./execution-loop-guard');
@@ -81,13 +83,10 @@ const LEASE_MS = 30000;
 const DEV_CHOICES = ['retry', 'fallback:<host>/<model>[/<effort>]', 'skip', 'abort'];
 const QA_CHOICES = ['retry', 'fallback:<host>/<model>[/<effort>]', 'skip-qa', 'abort'];
 const MAX_EXCERPT_ITEMS = 20;
-// The per-process budget of one lane unit when nothing sets it. Ten minutes
-// was a command's budget, not a worker's: the first real run killed every
-// unit of its first wave at 10:00 with the files half-written and reported
-// `timeout` as if the worker had failed. One hour reflects a phase at high
-// effort; `execution.unit_timeout_ms: 0` (roles) or `--unit-timeout=0` runs
-// until the worker finishes.
-const DEFAULT_UNIT_TIMEOUT_MS = 60 * 60 * 1000;
+// Orchestrated workers have no AIOSON wall-clock deadline. Progress is bounded
+// by evidence instead: structured loop detection, no-progress recovery and a
+// hard QA→DEV convergence cap. Provider/client process limits remain external.
+const DEFAULT_UNIT_TIMEOUT_MS = 0;
 // How long a run waits for a lease nobody renews before refusing. A killed
 // run leaves a lock with up to LEASE_MS of validity; a live run renews it
 // every LEASE_MS/3 — watching the file for one full LEASE_MS tells the two
@@ -724,7 +723,7 @@ function composeQaPrompt({ profileText, feature, unit, lane, dev, maxFixFiles, m
     '- Unit files (the ONLY files you may correct):',
     ...unit.files.map((file) => `  - ${file}`),
     ...(unit.read_ranges?.length ? [
-      '- Start with these bounded source ranges and the focused diff. Locate moved symbols with searches; expand related functions as needed within the context budget. Do not load large files wholesale. These ranges do not limit what behavior must be reviewed.',
+      '- Start with these bounded source ranges and the focused diff. Locate moved symbols with searches; expand to related functions as needed. Do not load large files wholesale. These ranges do not limit what behavior must be reviewed.',
       ...unit.read_ranges.map(range => `  - ${range.path}:${range.start}-${range.end}`)
     ] : []),
     `- Done when: ${unit.done || '(see plan)'}`,
@@ -745,6 +744,90 @@ function composeQaPrompt({ profileText, feature, unit, lane, dev, maxFixFiles, m
   ].join('\n');
 }
 
+/**
+ * Optional final integration pipeline. It is enabled by declaring
+ * `integration_dev` in the active execution profile. The unit is synthesized
+ * at runtime so old compiled-plan documents remain readable, but it has a
+ * stable id/report contract and is persisted in the ordinary run ledger.
+ */
+function buildIntegrationSupervisor(plan, integrationRole = plan?.integration?.role || null) {
+  if (!plan || !integrationRole) return null;
+  const sourceUnits = plan.units || [];
+  const files = [...new Set(sourceUnits.flatMap(unit => unit.files || []))];
+  const verification = [...new Map((plan.integration.verification || [])
+    .filter(item => item && typeof item.command === 'string' && item.command.trim())
+    .map(item => [`${item.cap || ''}:${item.command}`, item])).values()];
+  const laneQa = Object.values(plan.lanes || {}).map(lane => lane.qa).find(Boolean) || null;
+  const wave = Math.max(0, ...(plan.waves || []).map(item => Number(item.wave) || 0)) + 1;
+  const unit = {
+    id: 'integration-supervisor',
+    phase: 'final-integration-supervisor',
+    phase_number: 'integration',
+    wave,
+    owner: 'supervisor',
+    lane: 'integration',
+    files,
+    read_ranges: [],
+    scope: 'Integrate every approved unit, implement planned integration-owned work, run the complete verification set, and repair cross-unit regressions in their owning files.',
+    done: verification.length > 0
+      ? 'Every integration verification command passes and no critical/high cross-unit finding remains.'
+      : 'The complete project verification passes and no critical/high cross-unit finding remains.',
+    caps: [...new Set(sourceUnits.flatMap(item => item.caps || []))],
+    acs: [...new Set(sourceUnits.flatMap(item => item.acs || []))],
+    verification,
+    depends_on: [],
+    report: `.aioson/context/reports/${plan.feature}/{run_id}/integration-supervisor.json`,
+    qa_report: `.aioson/context/reports/${plan.feature}/{run_id}/integration-supervisor-qa.json`
+  };
+  const lane = {
+    write_paths: files,
+    integration_owner: 'dev',
+    dev: { role: 'integration_dev', ...integrationRole },
+    qa: laneQa ? { ...laneQa, max_fix_files: Math.max(1, Math.min(files.length || 1, 20)), max_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS } : null,
+    units: [unit.id]
+  };
+  return { unit, lane };
+}
+
+function composeIntegrationSupervisorPrompt({ plan, state, unit }) {
+  const plannedIntegration = (plan.units || []).filter(item => item.owner === 'integration');
+  const delivered = Object.values(state.units || {})
+    .filter(item => item.id !== unit.id && item.owner === 'lane')
+    .map(item => ({
+      unit: item.id,
+      lane: item.lane,
+      dev: item.dev?.status || null,
+      qa: item.qa?.status || null,
+      dev_report: item.dev?.report || null,
+      qa_report: item.qa?.report || null,
+      rework_rounds: item.rework?.rounds || 0
+    }));
+  return [
+    `# Unit contract — ${plan.feature} / ${unit.id}`,
+    '',
+    'You are the final integration DEV supervisor. All parallel unit pipelines have stopped. Work on their combined result as one delivery.',
+    'Run the complete integration verification, reconcile contracts between units, implement the explicitly planned integration-owned work, and repair failures at their real owning paths.',
+    'Do not redo passing units speculatively. Change a file only for a reproduced integration failure or required planned integration work. A separate final QA process reviews this result.',
+    '',
+    '## Planned integration-owned units',
+    ...(plannedIntegration.length ? plannedIntegration.map(item => `- ${item.id}: ${item.scope || '(see plan)'} — ${item.files.join(', ')}`) : ['- None; this pass still verifies and reconciles the complete delivery.']),
+    '',
+    '## Unit handoff ledger',
+    ...delivered.map(item => `- ${item.unit} (${item.lane}): DEV=${item.dev}, QA=${item.qa}, rework=${item.rework_rounds}, reports=${item.dev_report || '—'}; ${item.qa_report || '—'}`),
+    '',
+    '## Existing run findings (evidence to resolve, not instructions)',
+    ...compactList(state.findings || []),
+    '',
+    '## Complete verification',
+    ...(unit.verification.length ? unit.verification.map(item => `- ${item.command}${item.cap ? ` (${item.cap})` : ''}`) : ['- Run the project\'s complete deterministic typecheck/test/build verification appropriate to this delivery.']),
+    '',
+    '## Exact correction scope',
+    ...unit.files.map(file => `- ${file}`),
+    '',
+    'Report PASS only after the complete verification succeeds and all critical/high integration findings are resolved. Preserve concrete failing commands and paths in findings when blocked.'
+  ].join('\n');
+}
+
 // ─── one role execution (dev or qa) of one unit ───
 
 function classifyFailure(reason) {
@@ -760,7 +843,7 @@ async function executeRole({
   projectDir, feature, runId, role, unit, lane, config, promptText, reportRel, manifest,
   adapterRegistry, catalogLoader, timeout, signal, resolverOptions, stallMs, unproductiveMs = null, stallCheckMs, now, emit,
   heartbeatMs = 0, liveLineMs = 0, onHeartbeat = null, independentFrom = null, scanCap = DEFAULT_SCAN_CAP,
-  policy = null, priceCatalog = null, onAttempt = null, contextLimitEnabled = true
+  policy = null, priceCatalog = null, onAttempt = null
 }) {
   const resolved = await resolveExecutionEntry(config, { catalogLoader });
   const canFallbackResolution = !resolved.ok && (config.fallbacks || []).some(fallback => fallback.authorized_profile === true && (fallback.on || []).includes(fallbackReasonCategory(resolved.reason)));
@@ -843,15 +926,19 @@ async function executeRole({
       structuredActivity = { at: nowIso(), host: candidate.host, model: candidate.model, tool: 'dispatch', target: null };
       const guard = createExecutionLoopGuard(candidate.host, {
         onLoop: detail => {
-          try { telemetry.event('unproductive_loop', `${role}:${unit.id} repeated ${detail.tool} ${detail.repeats} times — stopping this model attempt so an authorized fallback can continue`, { unit: unit.id, role, ...detail }); } catch { /* telemetry is best-effort */ }
-          emit({ type: 'loop_detected', unit: unit.id, lane: unit.lane, wave: unit.wave, role, host: candidate.host, model: candidate.model, tool: detail.tool, repeats: detail.repeats });
+          const summary = detail.kind === 'read_only_churn'
+            ? `${detail.read_actions} read-only actions without an edit or verification action`
+            : `${detail.repeats} repeated ${detail.tool} requests`;
+          try { telemetry.event('unproductive_loop', `${role}:${unit.id} produced ${summary} — stopping this model attempt so an authorized fallback can continue`, { unit: unit.id, role, ...detail }); } catch { /* telemetry is best-effort */ }
+          emit({ type: 'loop_detected', unit: unit.id, lane: unit.lane, wave: unit.wave, role, host: candidate.host, model: candidate.model, tool: detail.tool, kind: detail.kind, repeats: detail.repeats, read_actions: detail.read_actions });
         }
       });
       return event => {
         const step = event?.event === 'step_update' ? event.step_update : null;
         if (step?.state === 'ACTIVE' && step.step_type === 'tool' && typeof step.tool_name === 'string') {
           const parameters = step.tool_info?.parameters || {};
-          const rawTarget = parameters.TargetFile || parameters.AbsolutePath || parameters.SearchPath || parameters.Query || null;
+          const rawTarget = parameters.TargetFile || parameters.AbsolutePath || parameters.SearchPath || parameters.Query
+            || parameters.CommandLine || parameters.command_line || parameters.Command || parameters.command || null;
           let target = rawTarget == null ? null : stripInjectionChars(String(rawTarget)).slice(0, 240);
           if (target && path.isAbsolute(target)) target = path.relative(projectDir, target).split(path.sep).join('/');
           structuredActivity = { at: nowIso(), host: candidate.host, model: candidate.model, tool: step.tool_name.slice(0, 80), target };
@@ -859,11 +946,10 @@ async function executeRole({
         return guard.observe(event);
       };
     },
-    getContextBudget: async candidate => {
-      if (!contextLimitEnabled) return null;
+    getContextWindow: async candidate => {
       const catalog = candidate.host === 'codex' ? await loadModelCatalog('codex') : null;
       const window = catalog?.models?.find(item => item.slug === candidate.model)?.context_window || findTariff(priceCatalog, candidate.host, candidate.model)?.context_window_tokens;
-      return contextBudget(policy, candidate.host, candidate.model, window);
+      return contextWindow(policy, candidate.host, candidate.model, window);
     },
     onAttemptStart: attempt => onAttempt?.({ ...attempt, id: `${attemptId}:${attempt.attempt}`, role_attempt_id: attemptId, stage: role, unit: unit.id, wave: unit.wave, routing_profile: attempt.routing_profile || config.routing_profile || null, finished_at: null, usage: null }),
     onUsage: (usage, candidate, index) => {
@@ -949,7 +1035,7 @@ async function executeRole({
     history: execution.history || [],
     session_id: execution.session_id || null,
     usage: execution.usage || null,
-    context_budget: execution.context_budget || null,
+    context_window: execution.context_window || null,
     stalled: stall.stalled,
     unproductive: stall.unproductive,
     activity,
@@ -958,21 +1044,20 @@ async function executeRole({
   };
   if (!execution.ok) {
     const reason = execution.reason || 'crash';
-    // A budget that ran out is not one thing: a worker still writing when the
-    // clock killed it needs a bigger budget, not a different model; one that
-    // never wrote is the blocked/looping case. The disk already knows which —
-    // of the unit's own files, and only when the walk saw all of them.
+    // AIOSON does not own a wall-clock deadline. A provider/client may still
+    // report `timeout`; preserve what the disk saw so the operator can tell a
+    // productive external interruption from a blocked/looping attempt.
     let detail = null;
     let timeoutFacts = null;
     if (reason === 'timeout') {
       const wrote = measured ? lastWrite >= startedAtMs : null;
-      timeoutFacts = { budget_ms: timeout || null, measured_on: target.measured_on, measured, wrote_during_budget: wrote, last_write_age_ms: measured && lastWrite > 0 ? Math.max(0, now() - lastWrite) : null };
+      timeoutFacts = { source: 'external_host_or_client', budget_ms: null, measured_on: target.measured_on, measured, wrote_during_attempt: wrote, last_write_age_ms: measured && lastWrite > 0 ? Math.max(0, now() - lastWrite) : null };
       if (!measured) {
-        detail = `the ${describeMs(timeout)} budget elapsed and ${where} could not be measured (${scan ? `the walk stopped at its ${scanCap}-entry cap` : 'the scan failed'}) — no verdict on whether the worker was writing: look at ${where} before choosing between a retry with a larger budget and a fallback`;
+        detail = `the external host or client ended this attempt as timeout; AIOSON has no wall-clock deadline. ${where} could not be measured (${scan ? `the walk stopped at its ${scanCap}-entry cap` : 'the scan failed'}) — inspect the external runtime and the unit files before retrying`;
       } else if (wrote) {
-        detail = `the ${describeMs(timeout)} budget elapsed while the worker was still writing (last change to ${where} ${describeMs(timeoutFacts.last_write_age_ms)} before the kill) — not a worker failure: retry with a larger budget (execution:run --unit-timeout=<ms>, 0 = no limit, or execution.unit_timeout_ms in the roles file)`;
+        detail = `the external host or client ended this attempt as timeout while the worker had written to ${where} (last change ${describeMs(timeoutFacts.last_write_age_ms)} before it ended). AIOSON did not apply a time limit; inspect the external runtime before retrying`;
       } else {
-        detail = `the ${describeMs(timeout)} budget elapsed with no file change under ${where} — the worker never wrote (blocked on a prompt, looping, or only reading): fallback to another host/model, or abort`;
+        detail = `the external host or client ended this attempt as timeout with no file change under ${where}. AIOSON did not apply a time limit; the worker may have been blocked, looping or only reading, so inspect its activity and prefer an authorized fallback over repeating it`;
       }
     }
     try { telemetry.transition('paused', reason); } catch { /* state graph tolerance */ }
@@ -1014,7 +1099,32 @@ async function executeRole({
 
 // ─── run state ───
 
-function newRunState({ feature, plan, planDigest, manifestDigest }) {
+function newRunState({ feature, plan, planDigest, manifestDigest, supervisor = buildIntegrationSupervisor(plan) }) {
+  const unitStates = Object.fromEntries((plan.units || []).map((unit) => [unit.id, {
+    id: unit.id,
+    lane: unit.lane,
+    wave: unit.wave,
+    owner: unit.owner,
+    status: unit.owner === 'lane' ? 'pending' : 'integration',
+    override: {},
+    pending_decision: null,
+    dev: { status: 'pending' },
+    qa: { status: unit.owner === 'lane' ? 'pending' : 'not_applicable' }
+  }]));
+  if (supervisor) {
+    const unit = supervisor.unit;
+    unitStates[unit.id] = {
+      id: unit.id,
+      lane: unit.lane,
+      wave: unit.wave,
+      owner: unit.owner,
+      status: 'pending',
+      override: {},
+      pending_decision: null,
+      dev: { status: 'pending' },
+      qa: { status: 'pending' }
+    };
+  }
   return {
     version: RUN_STATE_VERSION,
     feature,
@@ -1029,21 +1139,14 @@ function newRunState({ feature, plan, planDigest, manifestDigest }) {
     finished_at: null,
     current_wave: null,
     attempts: [],
+    context_limit_enabled: false,
+    time_limit_enabled: false,
+    max_dev_qa_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS,
     policy: plan.policy || null,
     parallel: { max_concurrent_lanes: plan.parallel?.max_concurrent_lanes || 1 },
     on_unavailable: plan.on_unavailable || 'ask',
     waves: (plan.waves || []).map((wave) => ({ wave: wave.wave, status: 'pending', units: wave.units })),
-    units: Object.fromEntries((plan.units || []).map((unit) => [unit.id, {
-      id: unit.id,
-      lane: unit.lane,
-      wave: unit.wave,
-      owner: unit.owner,
-      status: unit.owner === 'lane' ? 'pending' : 'integration',
-      override: {},
-      pending_decision: null,
-      dev: { status: 'pending' },
-      qa: { status: unit.owner === 'lane' ? 'pending' : 'not_applicable' }
-    }])),
+    units: unitStates,
     decisions: [],
     findings: [],
     scope: { measured: null, waves: {} },
@@ -1052,6 +1155,7 @@ function newRunState({ feature, plan, planDigest, manifestDigest }) {
       units: plan.integration?.units || [],
       role: plan.integration?.role || null,
       ...(plan.integration?.verification ? { verification: plan.integration.verification } : {}),
+      ...(supervisor ? { supervisor_unit: supervisor.unit.id } : {}),
       status: 'pending'
     }
   };
@@ -1111,22 +1215,32 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
   const rolesRead = await readExecutionRoles(projectDir);
   const store = await readSignatures({ env });
   const routingWarnings = [];
+  const routeRuntimeRole = (laneId, kind, configured, planned) => {
+    const role = configured || planned;
+    if (!role || !rolesRead.ok || !rolesRead.enabled) return role;
+    const state = signatureState(findSignature(store, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null }), now());
+    if (state === 'valid') return role;
+    const fallback = resolveProfileFallbacks(rolesRead.roles, laneId, kind).find(candidate => signatureState(findSignature(store, { host: candidate.host, model: candidate.model, reasoning_effort: candidate.reasoning_effort || null }), now()) === 'valid');
+    if (!fallback) return role;
+    routingWarnings.push(`primary_signature_fallback: ${laneId}.${kind} ${role.host}/${role.model} (${state}) → profile:${fallback.profile} ${fallback.host}/${fallback.model}`);
+    return fallback;
+  };
   const runtimeLanes = Object.fromEntries(Object.entries(plan?.lanes || {}).map(([laneId, lane]) => {
     const selected = rolesRead.ok && rolesRead.enabled ? resolveLaneRoles(rolesRead.roles, laneId) : null;
-    const route = (kind, configured, planned) => {
-      const role = configured || planned;
-      if (!role || !rolesRead.ok || !rolesRead.enabled) return role;
-      const state = signatureState(findSignature(store, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null }), now());
-      if (state === 'valid') return role;
-      const fallback = resolveProfileFallbacks(rolesRead.roles, laneId, kind).find(candidate => signatureState(findSignature(store, { host: candidate.host, model: candidate.model, reasoning_effort: candidate.reasoning_effort || null }), now()) === 'valid');
-      if (!fallback) return role;
-      routingWarnings.push(`primary_signature_fallback: ${laneId}.${kind} ${role.host}/${role.model} (${state}) → profile:${fallback.profile} ${fallback.host}/${fallback.model}`);
-      return fallback;
-    };
-    const dev = route('dev', selected?.dev, lane.dev);
-    const qa = route('qa', selected?.qa, lane.qa);
+    const dev = routeRuntimeRole(laneId, 'dev', selected?.dev, lane.dev);
+    const qa = routeRuntimeRole(laneId, 'qa', selected?.qa, lane.qa);
     return [laneId, { ...lane, dev, qa: qa ? { ...lane.qa, ...qa } : lane.qa }];
   }));
+  const integrationRole = rolesRead.ok && rolesRead.enabled ? rolesRead.roles.roles?.integration_dev || null : null;
+  const supervisor = buildIntegrationSupervisor(plan, integrationRole);
+  if (supervisor) {
+    const selected = rolesRead.ok && rolesRead.enabled ? resolveLaneRoles(rolesRead.roles, 'integration') : {};
+    runtimeLanes.integration = {
+      ...supervisor.lane,
+      dev: routeRuntimeRole('integration', 'dev', selected.dev, supervisor.lane.dev),
+      qa: { ...supervisor.lane.qa, ...routeRuntimeRole('integration', 'qa', selected.qa, supervisor.lane.qa) }
+    };
+  }
   const hosts = new Set();
   for (const lane of Object.values(runtimeLanes)) {
     if (lane.dev?.host) hosts.add(lane.dev.host);
@@ -1151,10 +1265,13 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
         continue;
       }
       const entry = findSignature(store, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null });
+      const signed = signatureState(entry, now());
       const probe = entry?.unattended?.[LANE_WORKER_MODE] || null;
       const hint = `aioson host:signature . --host=${role.host} --model=${role.model}${role.reasoning_effort ? ` --effort=${role.reasoning_effort}` : ''}`;
-      if (!probe) {
-        warnings.push(`unattended_unverified: ${label} — the signature carries no unattended write probe (signed before the probe existed, or without it); a worker that asks for permission would sit silent until its budget elapses — re-sign: ${hint}`);
+      if (signed !== 'valid') {
+        if (!hostIssues.has(role.host)) hostIssues.set(role.host, `signature_${signed}: ${label} — validate the configured route before dispatch: ${hint}`);
+      } else if (!probe) {
+        warnings.push(`unattended_unverified: ${label} — the signature carries no unattended write probe (signed before the probe existed, or without it); a worker that asks for permission can appear active indefinitely because AIOSON has no time cutoff — re-sign: ${hint}`);
       } else if (probe.state === 'unverified') {
         warnings.push(`unattended_unverified: ${label} — the unattended write probe exited without writing its file (${probe.reason || 'no file written'}); re-sign to re-check: ${hint}`);
       } else if (probe.state !== 'verified' && !hostIssues.has(role.host)) {
@@ -1188,7 +1305,6 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
     }
   }
   const ok = checks.every((item) => item.ok);
-  const configuredTimeout = rolesRead.ok ? rolesRead.roles.execution?.unit_timeout_ms : null;
   return {
     ok,
     feature,
@@ -1199,9 +1315,9 @@ async function preflightExecution(projectDir, featureInput, { env = process.env,
     planDigest: read.exists ? sha256(JSON.stringify(plan)) : null,
     manifest: loaded.exists && loaded.ok ? loaded : null,
     verification: verified,
+    runtimeRoles: rolesRead.ok && rolesRead.enabled ? rolesRead.roles : null,
     spawner,
-    // `0` is "no limit" and must survive here; only null/absent is "unset".
-    unitTimeoutMs: Number.isInteger(configuredTimeout) ? configuredTimeout : null,
+    timeLimitEnabled: false,
     requireIndependentQa: rolesRead.ok ? rolesRead.roles.execution?.require_independent_qa === true : false
   };
 }
@@ -1214,7 +1330,6 @@ async function runExecution({
   resume = false,
   fresh = false,
   step = false,
-  contextLimitEnabled = null,
   untilComplete = null,
   recoveryDelayMs = 3000,
   expectedRunId = null,
@@ -1224,7 +1339,6 @@ async function runExecution({
   catalogLoader,
   env = process.env,
   now = () => Date.now(),
-  timeout = null,
   progress = () => {},
   resolverOptions,
   leaseIntervalMs = Math.floor(LEASE_MS / 3),
@@ -1258,18 +1372,13 @@ async function runExecution({
     return { ok: true, status: 'ready', reason: null, feature, preflight: preflightReport, plan: preflight.plan.summary, follow_command: followCommand(feature), exitCode: 0 };
   }
   const { plan, manifest, planDigest } = preflight;
-  const requireIndependentQa = preflight.requireIndependentQa === true;
+  let supervisor = buildIntegrationSupervisor(plan, preflight.runtimeRoles?.roles?.integration_dev || null);
+  if (supervisor) plan.lanes = { ...plan.lanes, integration: supervisor.lane };
   const stateFile = runStatePath(projectDir, feature);
-  // A spawner in force turns every host adapter into a hand-off to the client;
-  // with humans watching terminals the unit budget defaults to 30 minutes.
+  // A spawner in force turns every host adapter into a hand-off to the client.
   const spawner = preflight.spawner || null;
   const registry = spawner ? wrapRegistryWithSpawner(adapterRegistry, spawner, spawnerOptions) : adapterRegistry;
-  // An explicit engine timeout (the caller's) wins; then the roles file; then the default for the mode.
-  // `0` at any level is "no limit": the adapter arms no timer.
-  const unitTimeout = timeout !== null && timeout !== undefined
-    ? timeout
-    : (preflight.unitTimeoutMs !== null ? preflight.unitTimeoutMs : (spawner ? DEFAULT_SPAWNER_UNIT_TIMEOUT_MS : DEFAULT_UNIT_TIMEOUT_MS));
-  const budgetEvent = { type: 'budget', unit_timeout_ms: unitTimeout, source: timeout !== null && timeout !== undefined ? 'option' : (preflight.unitTimeoutMs !== null ? 'roles' : 'default') };
+  const unitTimeout = DEFAULT_UNIT_TIMEOUT_MS;
 
   const acquired = await acquireLeaseWaiting(projectDir, feature, { maxWaitMs: leaseWaitMs, onWait: (info) => emit({ type: 'lease', status: 'waiting', ...info }) });
   if (!acquired.lease) {
@@ -1350,10 +1459,34 @@ async function runExecution({
     } else if (fresh) {
       state = null;
     }
-    if (!state) state = newRunState({ feature, plan, planDigest, manifestDigest: manifest.digest });
-    // Persist the operational override without changing the approved plan digest.
-    if (typeof contextLimitEnabled === 'boolean') state.context_limit_enabled = contextLimitEnabled;
-    else if (typeof state.context_limit_enabled !== 'boolean') state.context_limit_enabled = true;
+    if (!state) state = newRunState({ feature, plan, planDigest, manifestDigest: manifest.digest, supervisor });
+    // A run created by an older engine can resume into the newly configured
+    // final supervisor without discarding approved unit work. The compiled
+    // plan digest is unchanged because the supervisor is a runtime pipeline
+    // derived from its signed integration_dev role and immutable plan data.
+    if (supervisor && !state.units?.[supervisor.unit.id]) {
+      state.units ||= {};
+      state.units[supervisor.unit.id] = {
+        id: supervisor.unit.id,
+        lane: supervisor.unit.lane,
+        wave: supervisor.unit.wave,
+        owner: supervisor.unit.owner,
+        status: 'pending',
+        override: {},
+        pending_decision: null,
+        dev: { status: 'pending' },
+        qa: { status: 'pending' }
+      };
+      state.integration ||= { owner: 'dev', units: [], role: supervisor.lane.dev, status: 'pending' };
+      state.integration.supervisor_unit = supervisor.unit.id;
+      state.integration.role = supervisor.lane.dev;
+      state.integration.status = 'pending';
+    }
+    // Context-window measurements are telemetry only. Migrate active ledgers
+    // away from the retired quality ceiling without restarting their run.
+    state.context_limit_enabled = false;
+    state.time_limit_enabled = false;
+    state.max_dev_qa_rework_rounds = MAX_DEV_QA_REWORK_ROUNDS;
     if (typeof untilComplete === 'boolean') state.until_complete = untilComplete;
     else if (typeof state.until_complete !== 'boolean') state.until_complete = manifest.manifest?.orchestration?.mode === 'autopilot';
     const continuousRecovery = state.until_complete && !step;
@@ -1361,6 +1494,9 @@ async function runExecution({
       const decision = unit.pending_decision;
       if (decision && queueRecovery(unit, decision.stage, decision, plan.lanes[unit.lane]?.qa?.max_rework_rounds || 0)) {
         state.decisions.push({ unit: unit.id, stage: decision.stage, choice: 'retry', reason_before: decision.reason, source: 'continuous_recovery', at: nowIso() });
+      } else if (decision && devQaCycleLimitReached(unit, decision.stage, decision)) {
+        decision.reason = 'dev_qa_cycle_limit';
+        decision.detail = `QA returned this unit to DEV ${unit.rework?.rounds || 0} times (maximum ${MAX_DEV_QA_REWORK_ROUNDS}). Automatic convergence stopped; inspect the recurring root cause before another explicit retry.`;
       }
     }
     // A killed or crashed executor may have persisted the cross-unit evidence
@@ -1405,14 +1541,26 @@ async function runExecution({
       persistChain = write.catch(() => {});
       return write;
     };
+    const refreshRuntimePolicy = async () => {
+      const current = await readExecutionRoles(projectDir).catch(() => null);
+      if (!current?.ok || !current.enabled) return null;
+      const capacity = current.roles.parallel?.max_concurrent_lanes || 1;
+      const previous = state.parallel?.max_concurrent_lanes || 1;
+      state.parallel = { max_concurrent_lanes: capacity };
+      state.on_unavailable = current.roles.on_unavailable || 'ask';
+      if (previous !== capacity) emit({ type: 'config', status: 'reloaded', key: 'parallel.max_concurrent_lanes', previous, value: capacity });
+      return current.roles;
+    };
+    await refreshRuntimePolicy();
     state.status = 'running';
     state.reason = null;
-    state.spawner = spawner ? { command: spawner.command, args: spawner.args, source: spawner.source, unit_timeout_ms: unitTimeout } : null;
+    state.spawner = spawner ? { command: spawner.command, args: spawner.args, source: spawner.source } : null;
     await persist();
     emit({ type: 'run', status: 'started', run_id: state.run_id, waves: state.waves.length, resumed: Boolean(resume), spawner: spawner ? spawner.command : null, follow: followCommand(feature) });
-    emit(budgetEvent);
+    emit({ type: 'limits', context_enforced: false, time_enforced: false, max_dev_qa_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS });
 
     const planUnits = Object.fromEntries((plan.units || []).map((unit) => [unit.id, unit]));
+    if (supervisor) planUnits[supervisor.unit.id] = supervisor.unit;
     const priceCatalog = (await readPriceCatalog(projectDir)).catalog;
     const recordAttempt = attempt => {
       state.attempts ||= [];
@@ -1440,7 +1588,14 @@ async function runExecution({
     };
 
     const roleConfig = async (unitState, laneId, role) => {
-      const laneEntry = manifest.manifest.development_lanes.lanes[laneId];
+      const laneEntry = manifest.manifest.development_lanes.lanes[laneId] || (laneId === 'integration' ? {
+        enabled: true,
+        mode: 'external',
+        writable_roots: [],
+        write_paths: supervisor?.lane.write_paths || [],
+        fallbacks: [],
+        qa: supervisor?.lane.qa || null
+      } : null);
       const planLane = plan.lanes[laneId];
       const override = unitState.override?.[role] || null;
       let currentRoles;
@@ -1475,6 +1630,7 @@ async function runExecution({
         liveRole = fallback;
         routingProfile = fallback.routing_profile;
       }
+      const requireIndependentQa = currentRoles.roles.execution?.require_independent_qa === true;
       if (role === 'dev') {
         return {
           ...laneEntry,
@@ -1484,7 +1640,8 @@ async function runExecution({
           routing_profile: routingProfile,
           mode: 'external',
           writable_roots: laneEntry.writable_roots || [],
-          fallbacks: override ? [] : [...profileFallbacks, ...(laneEntry.fallbacks || [])]
+          fallbacks: override ? [] : [...profileFallbacks, ...(laneEntry.fallbacks || [])],
+          require_independent_qa: requireIndependentQa
         };
       }
       const qa = laneEntry.qa || planLane.qa;
@@ -1498,7 +1655,8 @@ async function runExecution({
         writable_roots: [],
         fallbacks: override ? [] : [...profileFallbacks, ...(qa.fallbacks || [])],
         write_paths: laneEntry.write_paths,
-        report: qa.report
+        report: qa.report,
+        require_independent_qa: requireIndependentQa
       };
     };
 
@@ -1510,8 +1668,9 @@ async function runExecution({
         findings: outcome.findings?.length ? outcome.findings : observed.findings || [],
         messages: outcome.messages?.length ? outcome.messages : observed.messages || []
       };
-      const repairPaths = autopilot ? externalRepairPaths(plan, unitState.id, repairOutcome) : [];
-      const contractTarget = autopilot ? contractRepairTarget(plan, state, unitState.id, repairOutcome, continuousRecovery) : null;
+      const isSupervisor = unitState.owner === 'supervisor';
+      const repairPaths = autopilot && !isSupervisor ? externalRepairPaths(plan, unitState.id, repairOutcome) : [];
+      const contractTarget = autopilot && !isSupervisor ? contractRepairTarget(plan, state, unitState.id, repairOutcome, continuousRecovery) : null;
       if (contractTarget) {
         const producer = state.units[contractTarget.unit];
         applyContractRepair(plan, state, unitState.id, contractTarget, nowIso());
@@ -1561,8 +1720,11 @@ async function runExecution({
         return;
       }
       let recoveryCircuitOpened = false;
+      const devQaCycleLimit = devQaCycleLimitReached(unitState, stage, outcome);
       if (!crossUnitUnresolved && continuousRecovery) {
-        if (queueRecovery(unitState, stage, outcome, maxRepair)) {
+        if (devQaCycleLimit) {
+          queueRecovery(unitState, stage, outcome, maxRepair);
+        } else if (queueRecovery(unitState, stage, outcome, maxRepair)) {
           emit({ type: 'unit', role: stage, status: 'rework', unit: unitState.id, lane: unitState.lane, wave: unitState.wave, reason: 'continuous_recovery', round: unitState.recovery.attempts });
           await persist();
           // Keep technical retries from spinning at full speed; the lease remains
@@ -1575,7 +1737,7 @@ async function runExecution({
       unitState.pending_decision = {
         stage,
         kind: outcome.kind,
-        reason: crossUnitUnresolved ? 'cross_unit_repair_unresolved' : recoveryCircuitOpened ? 'recovery_no_progress' : outcome.reason || (outcome.verdict ? `verdict_${String(outcome.verdict).toLowerCase()}` : 'unknown'),
+        reason: crossUnitUnresolved ? 'cross_unit_repair_unresolved' : devQaCycleLimit ? 'dev_qa_cycle_limit' : recoveryCircuitOpened ? 'recovery_no_progress' : outcome.reason || (outcome.verdict ? `verdict_${String(outcome.verdict).toLowerCase()}` : 'unknown'),
         host: outcome.host || null,
         model: outcome.model || null,
         reasoning_effort: outcome.reasoning_effort || null,
@@ -1584,6 +1746,8 @@ async function runExecution({
         // vs one that never wrote) — the operator's hint, measured.
         detail: crossUnitUnresolved
           ? `The failed unit named compiled path(s) owned by another unit, but the dependency graph did not resolve one safe producer: ${repairPaths.join(', ')}`
+          : devQaCycleLimit
+            ? `QA returned this unit to DEV ${unitState.rework?.rounds || 0} times (maximum ${MAX_DEV_QA_REWORK_ROUNDS}). Automatic convergence stopped; inspect the recurring root cause before another explicit retry.`
           : recoveryCircuitOpened
             ? `Automatic recovery stopped after ${unitState.recovery.circuit_breaker.consecutive} equivalent failures on the same host/model without a measured file change. Change the routing profile or repair the underlying plan/environment before retrying.`
             : outcome.detail || outcome.error || null,
@@ -1625,7 +1789,18 @@ async function runExecution({
       }
     };
     const sleep = async () => {
-      if (!pendingWake) await new Promise((resolve) => { wake = resolve; });
+      if (!pendingWake) await new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          if (wake === resume) wake = null;
+          resolve();
+        }, 1000);
+        timer.unref?.();
+        const resume = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+        wake = resume;
+      });
       pendingWake = false;
     };
 
@@ -1659,28 +1834,7 @@ async function runExecution({
       const unit = planUnits[unitId];
       const lane = plan.lanes[unit.lane];
       const unitState = state.units[unitId];
-      const commonArgs = { projectDir, feature, runId: state.run_id, unit, lane, manifest, adapterRegistry: registry, catalogLoader, timeout: unitTimeout, signal: monitor.signal, resolverOptions, stallMs, unproductiveMs: unproductiveMs ?? stallMs * 3, stallCheckMs, now, emit, heartbeatMs, liveLineMs, scanCap, policy: plan.policy || null, priceCatalog, onAttempt: recordAttempt, contextLimitEnabled: state.context_limit_enabled };
-      const continueContext = async (stage, outcome) => {
-        if (outcome.reason !== 'context_budget_exceeded') return false;
-        const used = unitState.continuations?.[stage] || 0;
-        const maximum = plan.policy?.context.max_continuations || 0;
-        if (used >= maximum) return false;
-        const relative = `.aioson/context/execution-checkpoints/${feature}/${state.run_id}/${unit.id}-${stage}-${used + 1}.json`;
-        const checkpoint = { version: 1, unit: unit.id, stage, reason: outcome.reason, continuation: used + 1, files: unit.files, last_activity: outcome.activity, usage: outcome.usage, verification: unit.verification, instruction: 'Preserve existing work. Inspect the current unit files and focused diff; verify completed behavior before implementing the remaining slice. Do not replay the previous conversation.' };
-        checkpoint.notes_path = notesRelative(feature, state.run_id, unit.id, stage);
-        checkpoint.work_notes = await readNotes(projectDir, checkpoint.notes_path);
-        const file = path.join(projectDir, relative);
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        await atomicWrite(file, checkpoint);
-        unitState.continuations = { ...unitState.continuations, [stage]: used + 1 };
-        unitState.checkpoints = { ...unitState.checkpoints, [stage]: relative };
-        unitState[stage] = { status: 'pending' };
-        unitState.status = stage === 'dev' ? 'pending' : 'passed';
-        emit({ type: 'context_continuation', unit: unit.id, stage, round: used + 1, checkpoint: relative });
-        await persist();
-        wakeUp();
-        return true;
-      };
+      const commonArgs = { projectDir, feature, runId: state.run_id, unit, lane, manifest, adapterRegistry: registry, catalogLoader, timeout: unitTimeout, signal: monitor.signal, resolverOptions, stallMs, unproductiveMs: unproductiveMs ?? stallMs * 3, stallCheckMs, now, emit, heartbeatMs, liveLineMs, scanCap, policy: plan.policy || null, priceCatalog, onAttempt: recordAttempt };
 
       if (unitState.status === 'pending') {
         let config;
@@ -1701,7 +1855,9 @@ async function runExecution({
         try {
           // The compiled prompt never changes (its digest is verified); what
           // earlier units left for this one enters the runtime prompt only.
-          let promptText = await readPromptInside(projectDir, unit.prompt);
+          let promptText = unit.owner === 'supervisor'
+            ? composeIntegrationSupervisorPrompt({ plan, state, unit })
+            : await readPromptInside(projectDir, unit.prompt);
           if (plan.policy && !step && manifest.manifest.orchestration?.mode === 'autopilot') {
             promptText += '\nAutopilot authorization: the planner has approved this unit and its technical implementation. Resolve ordinary technical choices and repair defects inside the allowed files without requesting confirmation. Preserve existing work, use the declared interfaces and verify the local Done when. If the approved scope or available capacity cannot satisfy the contract, report concrete findings and affected paths; never invent approval, waive QA or change the configured model.\n';
           }
@@ -1737,7 +1893,6 @@ async function runExecution({
           await persist();
           return;
         } else {
-          if (await continueContext('dev', outcome)) return;
           await requireDecision(unitState, 'dev', outcome);
           return;
         }
@@ -1755,6 +1910,7 @@ async function runExecution({
         // Judge ≠ producer holds at dispatch, not only at compile: a decision
         // (or a fallback) that lands the review on the implementer's own
         // host+model is a self-review, refused here whatever route led to it.
+        const requireIndependentQa = config.require_independent_qa === true;
         if (requireIndependentQa && config.host === unitState.dev.host && config.model === unitState.dev.model) {
           await requireDecision(unitState, 'qa', { kind: 'unavailable', reason: 'self_review_blocked', host: config.host, model: config.model });
           return;
@@ -1817,7 +1973,6 @@ async function runExecution({
           return;
         }
         if (['unavailable', 'timeout', 'crashed'].includes(outcome.kind)) {
-          if (await continueContext('qa', outcome)) return;
           await requireDecision(unitState, 'qa', outcome);
           return;
         }
@@ -1890,6 +2045,7 @@ async function runExecution({
       if (!runnable(id)) return false;
       const u = state.units[id];
       if (waveLimit !== null && u.wave > waveLimit) return false;
+      if ((u.repair_dependencies || []).some(dependency => !pipelineDone(state.units[dependency] || {}))) return false;
       const deps = planUnits[id].depends_on || [];
       if (deps.length > 0) return deps.every(gateSatisfied);
       return laneUnitsBefore(u.wave).every((other) => pipelineDone(state.units[other]));
@@ -1972,6 +2128,7 @@ async function runExecution({
     const finished = [];
 
     while (true) {
+      await refreshRuntimePolicy();
       if (!monitor.lost) {
         while (running.size < state.parallel.max_concurrent_lanes) {
           const next = laneIds.find((id) => !running.has(id) && isReady(id) && ![...running.keys()].some(active => {
@@ -2034,6 +2191,89 @@ async function runExecution({
       return { ok: false, status: 'paused', reason: 'units_blocked', feature, run_id: state.run_id, path: runStateRelative(feature), blocked_units: remaining, resume_command: resumeCommand(feature), summary: summarizeState(state, feature), findings: state.findings, exitCode: 1 };
     }
 
+    // `integration_dev` is runtime configuration too. Re-read it at the exact
+    // boundary where the final stage would be dispatched, so adding it while
+    // lanes are running enables the supervisor without recompilation.
+    const finalRuntimeRoles = await refreshRuntimePolicy();
+    const finalIntegrationRole = finalRuntimeRoles?.roles?.integration_dev || null;
+    const liveSupervisor = buildIntegrationSupervisor(plan, finalIntegrationRole);
+    if (liveSupervisor) {
+      supervisor = liveSupervisor;
+      plan.lanes.integration = supervisor.lane;
+      planUnits[supervisor.unit.id] = supervisor.unit;
+      if (!state.units[supervisor.unit.id]) {
+        state.units[supervisor.unit.id] = {
+          id: supervisor.unit.id,
+          lane: supervisor.unit.lane,
+          wave: supervisor.unit.wave,
+          owner: supervisor.unit.owner,
+          status: 'pending',
+          override: {},
+          pending_decision: null,
+          dev: { status: 'pending' },
+          qa: { status: 'pending' }
+        };
+      }
+      state.integration ||= { owner: 'dev', units: plan.integration?.units || [], status: 'pending' };
+      state.integration.supervisor_unit = supervisor.unit.id;
+      state.integration.role = supervisor.lane.dev;
+      if (!['passed', 'skipped'].includes(state.integration.status)) state.integration.status = 'pending';
+    } else if (supervisor && state.units[supervisor.unit.id]?.status === 'pending') {
+      // Preserve the ledger entry, but obey removal before the stage started.
+      state.units[supervisor.unit.id].status = 'skipped';
+      state.units[supervisor.unit.id].dev = { status: 'skipped', reason: 'integration_dev_not_configured' };
+      state.units[supervisor.unit.id].qa = { status: 'skipped', reason: 'integration_dev_not_configured' };
+      if (state.integration) state.integration.status = 'not_configured';
+      supervisor = null;
+    }
+
+    // A configured integration_dev turns the former manual handoff into one
+    // durable final pipeline: DEV supervisor integrates/tests the complete
+    // delivery, then the shared QA independently reviews it. The same report,
+    // recovery, telemetry and five-round QA→DEV controls used by lane units
+    // apply here. It starts only after every dependency-safe lane pipeline is
+    // done, so it can own cross-unit corrections without racing a worker.
+    if (supervisor) {
+      const supervisorState = state.units[supervisor.unit.id];
+      state.integration.status = 'running';
+      emit({ type: 'integration', status: 'started', unit: supervisor.unit.id, files: supervisor.unit.files.length, verification: supervisor.unit.verification.length });
+      await persist();
+      while (supervisorState.status === 'pending' || (supervisorState.status === 'passed' && supervisorState.qa?.status === 'pending')) {
+        await runUnitPipeline(supervisor.unit.id);
+        if (supervisorState.pending_decision || supervisorState.status === 'decision_required') break;
+      }
+      if (supervisorState.pending_decision || supervisorState.status === 'decision_required') {
+        state.integration.status = 'decision_required';
+        state.status = 'decision_required';
+        state.reason = 'decision_pending';
+        await persist();
+        return { ok: false, status: 'decision_required', reason: 'decision_pending', feature, run_id: state.run_id, path: runStateRelative(feature), decisions_pending: pendingDecisions(state, feature), resume_command: resumeCommand(feature), summary: summarizeState(state, feature), findings: state.findings, exitCode: 1 };
+      }
+      const approved = supervisorState.status === 'passed' && supervisorState.qa?.status === 'passed';
+      const explicitlySkipped = supervisorState.status === 'skipped';
+      if (!approved && !explicitlySkipped) {
+        state.integration.status = 'paused';
+        state.status = 'paused';
+        state.reason = 'integration_incomplete';
+        await persist();
+        return { ok: false, status: 'paused', reason: 'integration_incomplete', feature, run_id: state.run_id, path: runStateRelative(feature), resume_command: resumeCommand(feature), summary: summarizeState(state, feature), findings: state.findings, exitCode: 1 };
+      }
+      state.integration.status = approved ? 'passed' : 'skipped';
+      state.integration.dev = supervisorState.dev;
+      state.integration.qa = supervisorState.qa;
+      for (const integrationId of state.integration.units || []) {
+        const integrated = state.units[integrationId];
+        if (!integrated || integrated.owner !== 'integration') continue;
+        integrated.status = approved ? 'passed' : 'skipped';
+        integrated.dev = { status: approved ? 'passed' : 'skipped', supervised_by: supervisor.unit.id, report: supervisorState.dev?.report || null };
+      }
+      for (const wave of state.waves) {
+        if (wave.units.some(id => state.units[id]?.owner === 'integration')) wave.status = approved ? 'completed' : 'integration';
+      }
+      emit({ type: 'integration', status: state.integration.status, unit: supervisor.unit.id, dev_report: supervisorState.dev?.report || null, qa_report: supervisorState.qa?.report || null });
+      await persist();
+    }
+
     // A question nobody could answer mid-run is the integration owner's, as a finding — never a block.
     for (const message of collectMailbox(state)) {
       if (message.kind !== 'question') continue;
@@ -2047,7 +2287,7 @@ async function runExecution({
     // prove; they do not by themselves create a manual integration unit. A
     // run with every planned lane unit approved must not finish while still
     // claiming that an invisible integration step is pending.
-    state.integration.status = state.integration.units.length > 0 ? 'pending' : 'none';
+    if (!supervisor) state.integration.status = state.integration.units.length > 0 ? 'pending' : 'none';
     await persist();
     emit({ type: 'run', status: 'completed', run_id: state.run_id, integration_units: state.integration.units });
     return {
@@ -2060,7 +2300,7 @@ async function runExecution({
       summary: summarizeState(state, feature),
       findings: state.findings,
       integration: state.integration,
-      reports: Object.values(state.units).filter((u) => u.owner === 'lane').map((u) => ({ unit: u.id, dev: u.dev?.report || null, qa: u.qa?.report || null })),
+      reports: Object.values(state.units).filter((u) => u.owner === 'lane' || u.owner === 'supervisor').map((u) => ({ unit: u.id, dev: u.dev?.report || null, qa: u.qa?.report || null })),
       exitCode: 0
     };
   } finally {
@@ -2291,7 +2531,8 @@ function stageRow(stage, now) {
     live: stage.status === 'running' ? currentActivity(stage.live, now) : null,
     activity: stage.activity || null,
     usage: stage.usage || null,
-    context_budget: stage.context_budget || null
+    context_window: stage.context_window || null,
+    context: attemptContext(stage)
   };
 }
 
@@ -2334,6 +2575,7 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     dev: unit.dev ? { status: unit.dev.status, host: unit.dev.host || null, model: unit.dev.model || null, routing_profile: unit.dev.routing_profile || null, verdict: unit.dev.verdict || null, reason: unit.dev.reason || null, report: unit.dev.report || null, findings: (unit.dev.findings || []).length, stalled: Boolean(unit.dev.stalled), session_id: unit.dev.session_id || null, ...stageRow(unit.dev, now) } : null,
     qa: unit.qa ? { status: unit.qa.status, host: unit.qa.host || null, model: unit.qa.model || null, routing_profile: unit.qa.routing_profile || null, verdict: unit.qa.verdict || null, reason: unit.qa.reason || null, report: unit.qa.report || null, findings: (unit.qa.findings || []).length, corrections: (unit.qa.corrections_paths || []).length, corrections_cap_exceeded: Boolean(unit.qa.corrections_cap_exceeded), session_id: unit.qa.session_id || null, ...stageRow(unit.qa, now) } : null,
     pending_decision: unit.pending_decision ? { stage: unit.pending_decision.stage, reason: unit.pending_decision.reason, choices: unit.pending_decision.choices } : null,
+    repair_dependencies: unit.repair_dependencies || [],
     rework: unit.rework ? { rounds: unit.rework.rounds, max: unit.rework.max } : null,
     invalidation: unit.invalidations?.length ? {
       count: unit.invalidations.length,
@@ -2358,7 +2600,9 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     path: runStateRelative(feature),
     compiled: read.exists,
     metrics: executionMetrics(state, now, read.plan),
-    context_limit_enabled: state.context_limit_enabled !== false,
+    context_limit_enabled: false,
+    time_limit_enabled: false,
+    max_dev_qa_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS,
     until_complete: state.until_complete === true,
     run: summarizeState(state, feature),
     engine,
@@ -2379,7 +2623,11 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     resume_command: TERMINAL_STATUSES.includes(state.status) ? null : resumeCommand(feature),
     exitCode: 0
   };
-  result.observation = observeExecution(result, read.plan);
+  const observedSupervisor = buildIntegrationSupervisor(read.plan);
+  const observedPlan = observedSupervisor
+    ? { ...read.plan, lanes: { ...read.plan.lanes, integration: observedSupervisor.lane }, units: [...(read.plan.units || []), observedSupervisor.unit] }
+    : read.plan;
+  result.observation = observeExecution(result, observedPlan);
   return result;
 }
 
@@ -2391,6 +2639,8 @@ module.exports = {
   RUN_STATE_VERSION,
   TERMINAL_STATUSES,
   collectMailbox,
+  buildIntegrationSupervisor,
+  composeIntegrationSupervisorPrompt,
   composeQaPrompt,
   decideExecution,
   diffBaselines,

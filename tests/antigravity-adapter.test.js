@@ -37,6 +37,9 @@ test('Antigravity passes large prompts through stdin and isolates model, effort 
   const built = adapter.build({ ...input, writable_roots: ['C:/path with spaces', '/another/root'] });
   assert.equal(built.ok, true);
   assert.equal(built.executable, 'agy');
+  assert.equal(built.options.windowsHide, true);
+  assert.equal(built.options.shell, false);
+  assert.equal(built.options.stdio, 'pipe');
   assert.equal(typeof built.stdin, 'string');
   assert.equal(JSON.parse(built.stdin).event, 'user');
   assert.equal(JSON.parse(built.stdin).message.content, input.prompt_text);
@@ -54,7 +57,7 @@ test('Antigravity preserves configured-default and unlimited timeout without cla
   const built = adapter.build({ ...input, model: 'configured-default', reasoning_effort: null, timeout: 0 });
   assert.ok(!built.args.includes('--model'));
   assert.ok(!built.args.includes('--effort'));
-  assert.equal(built.args[built.args.indexOf('--print-timeout') + 1], '0ms');
+  assert.equal(built.args[built.args.indexOf('--print-timeout') + 1], '2562047h47m16s', 'AGY interprets 0ms as immediate partial success, so no-limit uses Go\'s maximum duration');
   assert.equal(adapter.build({ ...input, sandbox_mode: 'read-only' }).reason, 'sandbox_mode_unsupported');
   assert.equal(adapter.build({ ...input, mode: 'subagent' }).reason, 'unsupported_capability');
 });

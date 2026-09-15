@@ -240,12 +240,31 @@ test('continuous recovery opens a circuit before an unchanged failure can loop i
   const result = await run(ctx, { registry, extra: { 'bounded-recovery': false } });
   assert.equal(result.status, 'decision_required');
   assert.equal(result.decisions_pending[0].reason, 'recovery_no_progress');
-  assert.equal(calls['dev:phase-2'], 5);
-  assert.equal(calls['qa:phase-2'], 5);
+  assert.equal(calls['dev:phase-2'], 3);
+  assert.equal(calls['qa:phase-2'], 3);
   const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
-  assert.equal(state.units['phase-2'].recovery.attempts, 3);
-  assert.equal(state.units['phase-2'].recovery.circuit_breaker.consecutive, 4);
+  assert.equal(state.units['phase-2'].recovery.attempts, 1);
+  assert.equal(state.units['phase-2'].recovery.circuit_breaker.consecutive, 2);
   assert.match(state.units['phase-2'].pending_decision.detail, /equivalent failures/);
+});
+
+test('continuous recovery never sends one unit through more than five QA to DEV returns', async t => {
+  const ctx = await setup(t, { reworkRounds: 1, autopilot: true });
+  const calls = {};
+  // Distinct evidence avoids the identical-failure circuit so this fixture
+  // reaches the independent QA→DEV convergence cap itself.
+  const defects = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot'];
+  const script = { 'qa:phase-2': n => ({ verdict: 'FAIL', findings: [{ severity: 'high', path: 'src/ui/Orders.tsx', summary: `Distinct unresolved defect ${defects[n - 1]}` }] }) };
+  const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls })]));
+  const result = await run(ctx, { registry, extra: { 'bounded-recovery': false } });
+  assert.equal(result.status, 'decision_required');
+  assert.equal(result.decisions_pending[0].reason, 'dev_qa_cycle_limit');
+  assert.equal(calls['dev:phase-2'], 6, 'initial delivery plus five QA-requested rework rounds');
+  assert.equal(calls['qa:phase-2'], 6);
+  const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
+  assert.equal(state.units['phase-2'].rework.rounds, 5);
+  assert.equal(state.units['phase-2'].recovery.circuit_breaker.max_rounds, 5);
+  assert.match(state.units['phase-2'].pending_decision.detail, /maximum 5/);
 });
 
 test('continuous recovery retries a live lane configuration error on the same stage', () => {
@@ -362,7 +381,7 @@ test('technical retry preserves QA evidence and regression history; capacity and
 test('resume in continuous mode recovers an existing QA decision with prior evidence and preserves approved units', async t => {
   const ctx = await setup(t, { reworkRounds: 1, autopilot: true });
   const calls = {}, prompts = {};
-  const script = { 'qa:phase-2': n => n < 4 ? { verdict: 'FAIL', findings: [{ severity: 'high', summary: 'Persisted undo mismatch' }] } : {} };
+  const script = { 'qa:phase-2': n => n < 3 ? { verdict: 'FAIL', findings: [{ severity: 'high', summary: 'Persisted undo mismatch' }] } : {} };
   const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls, prompts })]));
   assert.equal((await run(ctx, { registry })).status, 'decision_required');
   const before = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
@@ -372,7 +391,7 @@ test('resume in continuous mode recovers an existing QA decision with prior evid
   assert.equal(after.run_id, before.run_id);
   assert.deepEqual(after.units['phase-1'], before.units['phase-1']);
   assert.equal(after.decisions.at(-1).source, 'continuous_recovery');
-  assert.equal(calls['qa:phase-2'], 4);
+  assert.equal(calls['qa:phase-2'], 3);
   assert.match(prompts['dev:phase-2'].at(-1), /Persisted undo mismatch/);
 });
 

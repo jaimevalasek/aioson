@@ -97,7 +97,7 @@ function renderMetrics(status) {
   const counts = obs.counts;
   const metrics = [
     ['DEV + QA aprovados', `${counts.accepted}/${counts.total}`, `${counts.dev_passed} implementada(s) · ${counts.qa_passed} revisada(s)`, 'success'],
-    ['Em execução', `${obs.concurrency.active}/${obs.concurrency.limit ?? '—'}`, 'Unidades simultâneas · DEV → QA', ''],
+    ['Em execução', `${obs.concurrency.active}/${obs.concurrency.limit ?? '—'}`, `${obs.concurrency.ready || 0} pronta(s) · ${obs.concurrency.blocked || 0} aguardando dependências`, ''],
     ['QA reprovado', counts.qa_failed, `${counts.findings} achado(s) registrados`, counts.qa_failed ? 'warning' : ''],
     ['Decisões pendentes', status.decisions_pending?.length || 0, 'Intervenções solicitadas pelo motor', '']
   ];
@@ -260,7 +260,7 @@ function renderRoutingEditor() {
   profile.replaceChildren(...names.map(name => new Option(name, name, false, name === (config.active_profile || 'legacy'))));
   profile.disabled = !config.profiles;
   profile.onchange = () => { config.active_profile = profile.value; markRoutingDirty(); renderRoutingEditor(); };
-  $('routing-parallel').value = config.parallel?.max_concurrent_lanes || 2;
+  $('routing-parallel').value = config.parallel?.max_concurrent_lanes || 10;
   $('routing-profile-tools').hidden = !config.profiles;
   $('routing-profile-name').value = config.active_profile || 'legacy';
   $('delete-profile').disabled = !config.profiles || names.length <= 1;
@@ -407,6 +407,11 @@ async function validateRouting() {
 }
 
 function tokenNumber(value) { return typeof value === 'number' ? value.toLocaleString('pt-BR') : 'Não informado'; }
+function contextText(context) {
+  if (!context) return 'Janela: Não informada · Pico usado: Não informado';
+  const fraction = typeof context.used_fraction === 'number' ? ` · ${(context.used_fraction * 100).toFixed(1).replace('.', ',')}%` : '';
+  return `Janela: ${tokenNumber(context.limit_tokens)} · Pico usado: ${tokenNumber(context.used_tokens)}${fraction}`;
+}
 function costLabel(cost) { return typeof cost?.usd === 'number' ? `$${cost.usd.toFixed(4)}${typeof cost.usd_upper === 'number' ? `–$${cost.usd_upper.toFixed(4)} (faixa estimada)` : cost.complete ? '' : ' (parcial)'}` : 'Não informado'; }
 function inputLabel(usage) { return usage?.input_basis === 'inclusive' ? 'Entrada total (cache incluído)' : 'Entrada reportada (base do harness)'; }
 
@@ -436,7 +441,7 @@ function waveBreakdown(wave) {
   const roles = el('div', 'wave-role-list');
   for (const role of wave.roles || []) {
     const card = el('article', 'wave-role');
-    card.append(el('h3', '', `${role.lane ? human(role.lane) : 'Área não informada'} / ${role.stage ? role.stage.toUpperCase() : 'Etapa não informada'}`), el('p', 'wave-role-model', role.model || 'Modelo não informado'), el('p', 'muted small', `${role.host || 'Harness não informado'} · ${role.attempts} tentativa(s) · ${role.usage.measured_attempts} com uso informado${role.usage.complete ? '' : ' · parcial'}`));
+    card.append(el('h3', '', `${role.lane ? human(role.lane) : 'Área não informada'} / ${role.stage ? role.stage.toUpperCase() : 'Etapa não informada'}`), el('p', 'wave-role-model', role.model || 'Modelo não informado'), el('p', 'muted small', `${role.host || 'Harness não informado'} · ${role.attempts} tentativa(s) · ${role.usage.measured_attempts} com uso informado${role.usage.complete ? '' : ' · parcial'} · ${contextText(role.context)}`));
     const values = el('dl', 'wave-role-values');
     for (const [label, value] of [
       ['Entrada + saída reportadas', tokenNumber(role.total_tokens)], [inputLabel(role.usage), tokenNumber(role.usage.input_tokens)],
@@ -457,7 +462,7 @@ function renderUsage(status) {
   $('usage-note').textContent = metrics
     ? `${metrics.attempts.length} tentativa(s) · ${metrics.usage.measured_attempts} com uso informado. ${metrics.history_complete ? 'Inclui falhas e retrabalho registrados.' : 'Histórico anterior parcial: somente etapas preservadas.'} Custo equivalente via API; não representa cobrança da assinatura. A base da entrada varia por harness; cache fica separado quando a inclusão não pode ser comprovada. Tokens acumulados não medem a janela de contexto.`
     : 'Métricas ainda não disponíveis. Registros antigos podem não informar tokens.';
-  if (status.context_limit_enabled === false) $('usage-note').textContent += ' Corte de contexto do AIOSON desativado nesta execução; limites do harness continuam válidos.';
+  if (metrics) $('usage-note').textContent += ' O AIOSON não aplica corte de contexto; a janela do modelo e o pico observado aparecem nos detalhes quando o harness os informa.';
   if (metrics?.models?.some(model => model.recalculated)) $('usage-note').textContent += ' Codex: estimativa recalculada com tabela oficial OpenAI Standard; tarifas e valores originais preservados. A faixa cobre contexto curto/longo quando faltam dados por chamada; não inclui ferramentas ou outros níveis de serviço.';
   const focusedWave = document.activeElement?.dataset.usageWave;
   $('usage-waves').replaceChildren(...(metrics?.waves || []).flatMap((wave, index) => {
@@ -480,7 +485,7 @@ function renderUsage(status) {
   if (focusedWave) [...$('usage-waves').querySelectorAll('[data-usage-wave]')].find(button => button.dataset.usageWave === focusedWave)?.focus({ preventScroll: true });
   $('usage-models')?.replaceChildren(...(metrics?.models || []).map(model => {
     const item = el('div', 'finding');
-    item.append(el('h3', '', `${model.model} · ${model.host}`), el('p', '', `${model.attempts} tentativas · entrada reportada: ${tokenNumber(model.usage.input_tokens)} · entrada sem cache derivável: ${tokenNumber(model.usage.uncached_input_tokens)} · cache lido: ${tokenNumber(model.usage.cache_read_tokens)} · saída: ${tokenNumber(model.usage.output_tokens)} · ${costLabel(model.cost)}`));
+    item.append(el('h3', '', `${model.model} · ${model.host}`), el('p', '', `${model.attempts} tentativas · entrada reportada: ${tokenNumber(model.usage.input_tokens)} · entrada sem cache derivável: ${tokenNumber(model.usage.uncached_input_tokens)} · cache lido: ${tokenNumber(model.usage.cache_read_tokens)} · saída: ${tokenNumber(model.usage.output_tokens)} · ${contextText(model.context)} · ${costLabel(model.cost)}`));
     const tariff = model.tariff;
     if (tariff) {
       const rate = value => typeof value === 'number' ? `$${(value * 1e6).toFixed(2)}` : 'não informada';
@@ -611,7 +616,7 @@ function render(status) {
   $('subtitle').textContent = status.run ? `RUN ${status.run.run_id.slice(0, 8)} · Início ${new Date(status.run.started_at).toLocaleString('pt-BR')} · Onda ${status.run.current_wave ?? '—'} de ${status.waves.length}` : status.message;
   if (status.until_complete) $('subtitle').textContent += ' · Recuperação automática até aprovação do QA';
   renderMetrics(status); renderRoles(status); renderUsage(status);
-  $('pool').textContent = `${status.observation.concurrency.active} de ${status.observation.concurrency.limit ?? '—'} vagas ocupadas`;
+  $('pool').textContent = `${status.observation.concurrency.active} de ${status.observation.concurrency.limit ?? '—'} workers ativos · ${status.observation.concurrency.ready || 0} prontos · ${status.observation.concurrency.blocked || 0} bloqueados por dependências/conflitos`;
   const waveValue = $('wave').value;
   const waveKey = (status.waves || []).map(wave => wave.wave).join(',');
   if ($('wave').dataset.key !== waveKey) {
@@ -624,8 +629,10 @@ function render(status) {
   $('engine-warning').hidden = !warning;
   $('engine-warning').textContent = warning || '';
   renderUnits(); renderAttention(status);
-  $('integration').hidden = !status.integration?.units?.length;
-  $('integration').textContent = `Integração final: ${status.integration?.units?.join(', ') || ''}. Responsável: DEV supervisor. A conclusão dos processos de unidade não significa que a feature inteira foi aprovada.`;
+  $('integration').hidden = !(status.integration?.units?.length || status.integration?.supervisor_unit);
+  $('integration').textContent = status.integration?.supervisor_unit
+    ? `Supervisor final: ${human(status.integration.supervisor_unit)} · ${human(status.integration.status)}. O DEV de integração testa e corrige o conjunto; o QA independente dá o veredito final.`
+    : `Integração final: ${status.integration?.units?.join(', ') || ''}. Responsável: DEV supervisor. A conclusão dos processos de unidade não significa que a feature inteira foi aprovada.`;
   $('updated').textContent = `Última leitura ${new Date(status.observed_at).toLocaleTimeString('pt-BR')} · Atualização a cada 5 s`;
 }
 
@@ -642,7 +649,7 @@ function openDetail(id) {
     const item = el('details', 'finding');
     item.append(el('summary', '', `${attempt.stage.toUpperCase()} · tentativa ${attempt.attempt || 'anterior'} · ${attempt.host} / ${attempt.model}`));
     item.append(el('p', '', `Entrada: ${tokenNumber(attempt.usage?.input_tokens)} · Cache lido: ${tokenNumber(attempt.usage?.cache_read_tokens)} · Cache criado: ${tokenNumber(attempt.usage?.cache_write_tokens)} · Saída: ${tokenNumber(attempt.usage?.output_tokens)} · ${costLabel(attempt.cost)}`));
-    if (attempt.context_budget) item.append(el('p', '', `Orçamento de contexto: ${tokenNumber(attempt.context_budget.max_tokens)} · Pico informado: ${tokenNumber(attempt.usage?.peak_context_tokens)} · Janela: ${tokenNumber(attempt.context_budget.context_window_tokens)}`));
+    item.append(el('p', '', `Contexto · ${contextText(attempt.context)}`));
     if (attempt.cost?.tariff) item.append(el('p', 'muted small', `Tarifa ${attempt.cost.tariff.provider} / ${attempt.cost.tariff.id} · ${attempt.cost.tariff.fetched_at} · ${attempt.cost.tariff.source}`));
     body.append(item);
   }

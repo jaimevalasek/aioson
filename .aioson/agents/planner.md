@@ -147,7 +147,7 @@ For orchestrated lanes or the compiled harness lane (`.aioson/plans/{slug}/harne
 | 1-frontend | 1 | src/ui/Real.ext, tests/ui/Real.test.ext | CAP-{slug}-ui | ui command passes against IF-001 |
 ```
 
-Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context budgets and continuous DEV → QA recovery.
+Before writing or compiling this table, load `.aioson/docs/planner/orchestrated-execution.md`: mandatory rules for unit ownership, earliest safe waves, dependency evidence, local verification, context telemetry and continuous DEV → QA recovery.
 
 For runtime work (owned prototype or migrations), set `runtime_contract: required`. One phase assigns DEV `.aioson/plans/{slug}/harness-contract.json`, RG-build/RG-migrate/RG-boot/RG-smoke and `aioson harness:check`. Gate C accepts this obligation; DEV/QA/close require the real contract and evidence. See the SDD Planner reference.
 

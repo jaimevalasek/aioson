@@ -153,9 +153,8 @@ function createAdapter(host, buildArgs) {
         let aborted = false;
         let settled = false;
         let forceTimer = null;
-        let contextExceeded = false;
         let structuredAbortReason = null;
-        let contextBudget = input.context_budget;
+        let contextWindow = input.context_window || null;
         const usage = input.captureUsage ? createUsageCollector(host, {
           onUpdate: value => input.onUsage?.(value),
           onEvent: event => {
@@ -165,11 +164,7 @@ function createAdapter(host, buildArgs) {
           },
           onContext: value => {
             input.onContext?.(value);
-            if (contextBudget && value.context_window_tokens) contextBudget = { ...contextBudget, context_window_tokens: value.context_window_tokens, window_source: 'harness', max_tokens: Math.min(contextBudget.max_tokens, Math.floor(value.context_window_tokens * contextBudget.max_fraction)) };
-            if (!contextExceeded && contextBudget && value.tokens >= contextBudget.max_tokens) {
-              contextExceeded = true;
-              stopTree();
-            }
+            if (value.context_window_tokens) contextWindow = { limit_tokens: value.context_window_tokens, source: 'harness' };
           }
         }) : null;
 
@@ -202,8 +197,7 @@ function createAdapter(host, buildArgs) {
           if (settled) return;
           settled = true;
           if (usage) result = { ...result, usage: usage.finish() };
-          if (contextBudget) result = { ...result, context_budget: contextBudget };
-          if (contextExceeded) result = { ...result, ok: false, reason: 'context_budget_exceeded' };
+          if (contextWindow) result = { ...result, context_window: contextWindow };
           if (!result.ok && result.usage) result.usage = { ...result.usage, complete: false };
           if (timer) clearTimeout(timer);
           if (forceTimer) clearTimeout(forceTimer);

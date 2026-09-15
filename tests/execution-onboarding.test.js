@@ -247,7 +247,7 @@ test('execution:seed — the roles file is born disabled, valid, on installed ho
   assert.equal(result.independent_review, true);
 
   const document = JSON.parse(await readRoles(dir));
-  assert.deepEqual(Object.keys(document.roles).sort(), ['backend_dev', 'frontend_dev', 'qa'], 'AC-seed-writes');
+  assert.deepEqual(Object.keys(document.roles).sort(), ['backend_dev', 'frontend_dev', 'integration_dev', 'qa'], 'AC-seed-writes');
   assert.equal(document.enabled, false, 'AC-seed-disabled');
   assert.equal(validateExecutionRoles(document, { hosts: HOSTS }).ok, true, 'AC-seed-valid');
   for (const role of Object.values(document.roles)) {
@@ -258,7 +258,7 @@ test('execution:seed — the roles file is born disabled, valid, on installed ho
   assert.equal(document.roles.backend_dev.host, 'claude');
   assert.equal(document.roles.qa.host, 'codex', 'AC-reviewer-differs: the judge is not the producer');
   assert.equal(document.source, 'aioson-planner (feature: orders)', 'AC-seed-source');
-  assert.deepEqual(document.parallel, { max_concurrent_lanes: 2 });
+  assert.deepEqual(document.parallel, { max_concurrent_lanes: 10 });
   assert.equal(document.on_unavailable, 'ask');
   // Only the root keys the desktop client's reader accepts — a seeded file must open in its panel.
   assert.deepEqual(Object.keys(document).sort(), ['enabled', 'on_unavailable', 'parallel', 'roles', 'source', 'version']);
@@ -285,7 +285,7 @@ test('execution:seed — the roles file is born disabled, valid, on installed ho
   assert.equal(one.roles.backend_dev.host, 'kimi');
   assert.equal(one.roles.qa.host, 'kimi');
   assert.deepEqual(one.hosts.installed, ['kimi']);
-  assert.equal(JSON.parse(await readRoles(single.dir)).parallel.max_concurrent_lanes, 1);
+  assert.equal(JSON.parse(await readRoles(single.dir)).parallel.max_concurrent_lanes, 10);
 });
 
 test('execution:seed refuses with the cause — no installed host (with the install command), a write that fails, missing or malformed lanes; nothing is written (AC-seed-no-host, AC-seed-write-failure)', async (t) => {
@@ -376,6 +376,7 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   assert.deepEqual(result.pending_confirmation, [
     { role: 'backend_dev', host: 'claude', model: DEFAULT_MODEL },
     { role: 'frontend_dev', host: 'claude', model: DEFAULT_MODEL },
+    { role: 'integration_dev', host: 'claude', model: DEFAULT_MODEL },
     { role: 'qa', host: 'codex', model: DEFAULT_MODEL }
   ]);
   assert.equal(result.onboarding.state, 'pending_confirmation');
@@ -387,13 +388,13 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   await edit((document) => { document.roles.backend_dev.model = 'claude-opus-5'; });
   result = await offer(dir, env);
   assert.equal(result.reason, 'defaults_unconfirmed');
-  assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'qa']);
+  assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
 
   // --confirm-defaults records the answer and re-evaluates in the same call: the next blocker is the signature.
   result = await offer(dir, env, { 'confirm-defaults': true });
   assert.equal(result.confirmation.ok, true);
   assert.equal(result.confirmation.path, EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH);
-  assert.deepEqual(result.confirmation.confirmed.map((item) => item.role), ['frontend_dev', 'qa']);
+  assert.deepEqual(result.confirmation.confirmed.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
   assert.equal(result.reason, 'signature_missing');
   assert.equal(result.onboarding.state, 'unsigned');
   assert.equal(result.onboarding.next, 'aioson host:signature . --host=claude --model=claude-opus-5');
@@ -410,10 +411,10 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   await edit((document) => { document.roles.qa.host = 'claude'; });
   result = await offer(dir, env);
   assert.equal(result.reason, 'defaults_unconfirmed');
-  assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'qa']);
+  assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
 
   // AC-offer-silent: every model chosen → no pendency, no confirmation needed.
-  await edit((document) => { document.roles.frontend_dev.model = 'claude-sonnet-5'; document.roles.qa.model = 'gpt-5.6'; });
+  await edit((document) => { document.roles.frontend_dev.model = 'claude-sonnet-5'; document.roles.integration_dev.model = 'claude-opus-5'; document.roles.qa.model = 'gpt-5.6'; });
   result = await offer(dir, env);
   assert.equal(result.reason, 'signature_missing');
   assert.equal(result.pending_confirmation, undefined);

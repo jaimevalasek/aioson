@@ -13,6 +13,9 @@
  *   execution:seed    --lanes      write the roles file for these lanes —
  *                                  disabled, installed hosts, default model;
  *                                  never over an existing one
+ *   execution:profiles:validate    probe every enabled profile route with the
+ *                                  real host harness and report fallback
+ *                                  readiness
  *   execution:compile --feature    planner tables + roles → execution plan,
  *                                  unit prompts, manifest lanes
  *   execution:graph   --feature    the compiled plan drawn as a graph (ascii |
@@ -31,8 +34,7 @@ const {
   seedExecutionRoles,
   confirmDefaultModels,
   describeOnboarding,
-  installedExecutionHosts,
-  MAX_UNIT_TIMEOUT_MS
+  installedExecutionHosts
 } = require('../lib/execution-roles');
 const { listExecutionHosts } = require('../lib/tool-capabilities');
 const { measurePlanScale, resolveExecutionChoice, formatPlanScale, formatRecommendation, formatUnit, formatSplitProposal, proposeSplit, recommendExecution, splitMinFiles, unitCeiling } = require('../lib/plan-scale');
@@ -46,8 +48,9 @@ const {
 const { runExecution, decideExecution, statusExecution, describeMs, describeAge, describeMeasuredOn } = require('../agent-execution/execution-run');
 const { graphExecution, FORMATS: GRAPH_FORMATS } = require('../agent-execution/execution-graph');
 const { renderMonitor } = require('../agent-execution/execution-terminal');
+const { runExecutionProfileValidation } = require('./execution-profile-validation');
 
-const SUBCOMMANDS = ['offer', 'seed', 'compile', 'run', 'decide', 'status', 'graph', 'dashboard', 'prices'];
+const SUBCOMMANDS = ['offer', 'seed', 'profiles:validate', 'compile', 'run', 'decide', 'status', 'graph', 'dashboard', 'prices'];
 const STATUS_FORMATS = ['full', 'line', 'table'];
 const DEFAULT_WATCH_SECONDS = 5;
 
@@ -62,7 +65,7 @@ function describeLive(live, { budget = true } = {}) {
       ? `last write ${describeAge(live.last_write_age_ms)} ago${live.last_write_path ? ` (${live.last_write_path})` : ''}`
       : 'no file change yet');
   const parts = [`${describeAge(live.elapsed_ms)} elapsed`, write, ...(unmeasured ? [] : [`${live.files_changed || 0} file(s)`])];
-  if (budget && live.budget_ms) parts.push(`budget ${describeMs(live.budget_ms)}`);
+  if (budget && live.budget_ms) parts.push(`external deadline ${describeMs(live.budget_ms)}`);
   if (live.stalled) parts.push('stalled');
   if (live.unproductive) parts.push('unproductive');
   return parts.join(' · ');
@@ -84,8 +87,8 @@ function formatProgress(event) {
       return `${where}: stalled for ${Math.round((event.silent_ms || 0) / 1000)}s (no output, no file change under ${describeMeasuredOn(event.measured_on)})`;
     case 'unproductive':
       return `${where}: unproductive for ${Math.round((event.since_ms || 0) / 1000)}s — no file change under ${describeMeasuredOn(event.measured_on)}${event.talkative ? ' while still producing output (a worker blocked on a prompt, looping, or only reading looks exactly like this)' : ''}`;
-    case 'budget':
-      return `unit budget ${describeMs(event.unit_timeout_ms)} (${event.source}${event.unit_timeout_ms === 0 ? '; each worker runs until it finishes' : ''})`;
+    case 'limits':
+      return `AIOSON limits: context off · time off · QA→DEV at most ${event.max_dev_qa_rework_rounds} return(s)`;
     case 'lease':
       return event.status === 'waiting'
         ? `lease: a previous run's lease on this feature expires in ${Math.ceil((event.expires_in_ms || 0) / 1000)}s (${event.path}) — waiting up to ${Math.ceil((event.max_wait_ms || 0) / 1000)}s; a live run renews it, a dead one never does`
@@ -278,7 +281,7 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
       schema_version: 1,
       ...offer,
       // The client seam this engine supports, and whether one is in force here.
-      execution: { spawner_supported: true, spawner: spawner ? { configured: true, source: spawner.source, command: spawner.command, args: spawner.args } : { configured: false, source: null, command: null, args: [] }, unit_timeout_ms: offer.roles?.execution?.unit_timeout_ms ?? null },
+      execution: { spawner_supported: true, spawner: spawner ? { configured: true, source: spawner.source, command: spawner.command, args: spawner.args } : { configured: false, source: null, command: null, args: [] }, context_limit_enabled: false, time_limit_enabled: false },
       hosts: { registered: listExecutionHosts(), installed },
       exitCode: 0
     };
@@ -374,6 +377,19 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
     return { ...result, feature, lanes: result.lanes || lanes.map((lane) => String(lane).trim().toLowerCase()).filter(Boolean), lanes_source: lanesSource, ...(result.ok ? { exitCode: 0 } : {}) };
   }
 
+  if (sub === 'profiles:validate' || sub === 'profiles-validate') {
+    return runExecutionProfileValidation({
+      projectDir,
+      options,
+      logger,
+      env,
+      now,
+      probe: engineOptions.profileProbe,
+      adapterRegistry: engineOptions.adapterRegistry,
+      resolverOptions: engineOptions.resolverOptions
+    });
+  }
+
   if (sub === 'compile') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
     const result = await compileFeatureExecution(projectDir, feature, { env, now, dryRun: options['dry-run'] === true });
@@ -383,7 +399,6 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
 
   if (sub === 'run') {
     if (!feature) return { ok: false, reason: 'feature_required', message: 'Use --feature=<slug>' };
-    if (options['no-context-limit'] && options['context-limit']) return { ok: false, reason: 'conflicting_context_options', message: 'Use either --no-context-limit or --context-limit' };
     if (options['until-complete'] && options['bounded-recovery']) return { ok: false, reason: 'conflicting_recovery_options', message: 'Use either --until-complete or --bounded-recovery' };
     // Live lines: stdout in human mode; stderr in --json mode so the JSON
     // document stays the only thing on stdout while a supervising terminal
@@ -391,37 +406,18 @@ async function runExecutionCommand({ args, options = {}, logger, env = process.e
     const progress = options.json
       ? (event) => process.stderr.write(`[execution] ${formatProgress(event)}\n`)
       : (event) => logger.log(`[execution] ${formatProgress(event)}`);
-    // `--unit-timeout=<ms>`: the per-unit budget for THIS invocation, above the
-    // roles file and the default; `0` = no limit. A budget is a property of the
-    // process, not of the compiled plan, so it never invalidates a run.
-    let timeout = null;
-    if (options['unit-timeout'] !== undefined && options['unit-timeout'] !== true) {
-      const parsed = Number(options['unit-timeout']);
-      if (!Number.isInteger(parsed) || parsed < 0 || (parsed > 0 && parsed < 1000)) {
-        return { ok: false, reason: 'invalid_unit_timeout', message: 'Use --unit-timeout=<ms> (0 = no limit; otherwise at least 1000)' };
-      }
-      // The roles file's ceiling. Above 2^31-1 ms Node clamps a timer to 1 ms
-      // (TimeoutOverflowWarning): a budget meant as "very long" killed every
-      // unit at once and the decision read "the 833.3 h budget elapsed".
-      if (parsed > MAX_UNIT_TIMEOUT_MS) {
-        return { ok: false, reason: 'unit_timeout_too_large', max_ms: MAX_UNIT_TIMEOUT_MS, message: `--unit-timeout=${parsed} is above the ${describeMs(MAX_UNIT_TIMEOUT_MS)} ceiling (${MAX_UNIT_TIMEOUT_MS} ms, the same as execution.unit_timeout_ms in the roles file) — use --unit-timeout=0 for no limit` };
-      }
-      timeout = parsed;
-    }
     const result = await runExecution({
       projectDir,
       feature,
       resume: options.resume === true,
       fresh: options.fresh === true,
       step: options.step === true,
-      contextLimitEnabled: options['no-context-limit'] === true ? false : options['context-limit'] === true ? true : null,
       untilComplete: options['until-complete'] === true ? true : options['bounded-recovery'] === true ? false : null,
       expectedRunId: typeof options['expect-run'] === 'string' ? options['expect-run'] : null,
       preflightOnly: options.preflight === true,
       stopAfterWave: options.wave !== undefined && options.wave !== true ? Number(options.wave) : null,
       env,
       progress,
-      ...(timeout !== null ? { timeout } : {}),
       ...engineOptions
     });
     if (!options.json) logRun(logger, result);

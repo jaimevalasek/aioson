@@ -99,6 +99,7 @@ test('the registry recognizes each host\'s own permission flags (aliases include
 
   assert.deepEqual(resolveLaunchPermission('opencode', { binary: 'agy' }), { mode: 'yolo', host: 'agy', binary: 'agy', args: ['--dangerously-skip-permissions'], source: 'registry', flag: null, warning: null });
   assert.deepEqual(resolveLaunchPermission('codex', { userArgs: ['--sandbox', 'workspace-write'] }), { mode: 'yolo', host: 'codex', binary: 'codex', args: [], source: 'tool_args', flag: '--sandbox', warning: null });
+  assert.deepEqual(resolveLaunchPermission('antigravity'), { mode: 'yolo', host: 'antigravity', binary: 'agy', args: ['--mode', 'accept-edits', '--dangerously-skip-permissions'], source: 'registry', flag: null, warning: null });
   const unknown = resolveLaunchPermission('claude', { binary: 'node' });
   assert.equal(unknown.host, null);
   assert.equal(unknown.mode, 'default');

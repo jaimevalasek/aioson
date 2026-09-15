@@ -387,7 +387,8 @@ function resolveLaunchPermission(tool, { permissionMode = null, binary = null, u
   const mode = explicit ? String(permissionMode).trim().toLowerCase() : DEFAULT_SESSION_PERMISSION_MODE;
   const named = typeof binary === 'string' && binary.trim() ? binary.trim() : null;
   const host = named ? hostForBinary(named) : requested;
-  const result = { mode, host: host && getToolCapabilities(host) ? host : null, binary: named || requested, args: [], source: 'none', flag: null, warning: null };
+  const effectiveBinary = named || getToolCapabilities(requested)?.binary || requested;
+  const result = { mode, host: host && getToolCapabilities(host) ? host : null, binary: effectiveBinary, args: [], source: 'none', flag: null, warning: null };
   if (mode === 'default') return result;
   if (mode !== 'yolo') throw new Error(`permission_mode_unknown:${permissionMode}`);
   if (!host) {

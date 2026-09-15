@@ -10,8 +10,8 @@
 //     asking for approval all night with nothing in the log);
 //   - a host that cannot honor a mode is refused, never run with default power;
 //   - a lane worker runs unattended, always (the provider sandbox was measured
-//     and never ran unattended); `unit_timeout_ms: 0` is "no limit";
-//   - the roles digest the plan binds to ignores the process budget;
+//     and never ran unattended); legacy `unit_timeout_ms` is accepted and ignored;
+//   - the roles digest the plan binds to ignores that retired field;
 //   - a lease nobody renews is waited out, a live one is never deleted;
 //   - "no writes" is measured on its own, however talkative the worker;
 //   - a duplicated canonical section refuses the compile;
@@ -110,7 +110,7 @@ test('a lane worker is unattended, always: the provider sandbox is never an argv
   assert.deepEqual(custom.build(buildInput({ sandbox_mode: 'workspace-write' })).args, ['--custom', '--auto']);
 });
 
-// ───────────────────────── roles: no permission knob, unit_timeout_ms 0, binding digest ─────────────────────────
+// ───────────────────────── roles: no permission knob, legacy timeout ignored, binding digest ─────────────────────────
 
 const ROLES = {
   version: 1,
@@ -125,18 +125,18 @@ const ROLES = {
   on_unavailable: 'ask'
 };
 
-test('execution-roles: there is no per-role permission knob (a lane worker is unattended by contract); unit_timeout_ms accepts 0 as "no limit"', () => {
+test('execution-roles: there is no per-role permission knob or active unit time limit', () => {
   const withMode = validateExecutionRoles({ ...ROLES, roles: { ...ROLES.roles, backend_dev: { ...ROLES.roles.backend_dev, permission_mode: 'sandbox' } } });
   assert.equal(withMode.ok, false);
   assert.match(withMode.errors.find((e) => e.path === '$.roles.backend_dev.permission_mode').message, /unknown field/);
 
-  assert.equal(validateExecutionRoles({ ...ROLES, execution: { unit_timeout_ms: UNLIMITED_UNIT_TIMEOUT_MS } }).ok, true, '0 = no limit');
+  assert.equal(validateExecutionRoles({ ...ROLES, execution: { unit_timeout_ms: UNLIMITED_UNIT_TIMEOUT_MS } }).ok, true, 'the old no-limit value still loads');
   const tooSmall = validateExecutionRoles({ ...ROLES, execution: { unit_timeout_ms: 5 } });
-  assert.match(tooSmall.errors.find((e) => e.path === '$.execution.unit_timeout_ms').message, /0 \(no limit\) or an integer between 60000 and 14400000/);
-  assert.equal(DEFAULT_UNIT_TIMEOUT_MS, 60 * 60 * 1000, 'the default is a worker\'s budget, not a command\'s');
+  assert.equal(tooSmall.ok, true, 'legacy values are ignored instead of arming or blocking a process');
+  assert.equal(DEFAULT_UNIT_TIMEOUT_MS, 0, 'orchestrated workers have no AIOSON wall-clock deadline');
   assert.equal(describeMs(0), 'no limit');
   assert.equal(describeMs(600000), '10 min');
-  assert.equal(describeMs(DEFAULT_UNIT_TIMEOUT_MS), '1 h');
+  assert.equal(describeMs(DEFAULT_UNIT_TIMEOUT_MS), 'no limit');
 });
 
 test('the roles digest binds compile-time policy while live model routing and process budgets remain editable', async (t) => {
@@ -154,7 +154,7 @@ test('the roles digest binds compile-time policy while live model routing and pr
   const budget = await readExecutionRoles(dir);
   assert.equal(budget.digest, base.digest, 'raising or removing the budget, or setting a spawner, never invalidates a compiled plan');
   assert.notEqual(budget.file_digest, base.file_digest);
-  assert.equal(budget.roles.execution.unit_timeout_ms, 0, '0 survives normalization');
+  assert.equal(Object.hasOwn(budget.roles.execution, 'unit_timeout_ms'), false, 'the legacy field is discarded during normalization');
 
   for (const [label, roles] of [
     ['a role model', { ...ROLES, roles: { ...ROLES.roles, qa: { host: 'claude', model: 'claude-opus-5' } } }],

@@ -60,6 +60,38 @@ test('continuous routing accepts a failed note, selects the latest transitive ow
   assert.equal(contractRepairTarget(plan, state, 'journey', outcome, true), null, 'continuous routing also has a repeated contract-repair circuit breaker');
 });
 
+test('continuous routing returns a shared-check failure to its unique compiled owner without a cross-lane edge', () => {
+  const producer = { id: 'render', wave: 3, lane: 'backend', owner: 'lane', files: ['src/domain/renderPlan.ts'], depends_on: [] };
+  const consumer = { id: 'drag-style', wave: 3, lane: 'frontend', owner: 'lane', files: ['src/client/drag.ts'], depends_on: [] };
+  const later = { id: 'publish', wave: 5, lane: 'backend', owner: 'lane', files: ['src/publish.ts'], depends_on: [{ unit: 'render' }] };
+  const plan = { units: [producer, consumer, later], lanes: { backend: { qa: { max_rework_rounds: 3 } } } };
+  const state = { units: {
+    render: { id: 'render', owner: 'lane', status: 'decision_required', dev: { status: 'unavailable', reason: 'unproductive_loop' }, qa: { status: 'pending' }, pending_decision: { reason: 'unproductive_loop' } },
+    'drag-style': { id: 'drag-style', owner: 'lane', status: 'running', dev: { status: 'blocked', report: 'drag.json' }, qa: { status: 'pending' } },
+    publish: { id: 'publish', owner: 'lane', status: 'pending', dev: { status: 'pending' }, qa: { status: 'pending' } }
+  } };
+  const outcome = {
+    kind: 'blocked',
+    findings: [{ path: 'src/domain/renderPlan.ts:417', summary: 'Unexpected token in shared typecheck' }],
+    messages: [{ to: 'orchestrator', kind: 'contract_change', paths: ['src/domain/renderPlan.ts'], text: 'Return the syntax defect to its owner' }]
+  };
+
+  assert.equal(contractRepairTarget(plan, state, 'drag-style', outcome), null, 'bounded mode still requires an explicit dependency');
+  const repair = contractRepairTarget(plan, state, 'drag-style', outcome, true);
+  assert.equal(repair.unit, 'render');
+  assert.equal(repair.target_status, 'decision_required');
+  assert.deepEqual(repair.affected, ['render', 'publish', 'drag-style']);
+  assert.equal(applyContractRepair(plan, state, 'drag-style', repair), true);
+  assert.equal(state.units.render.status, 'pending');
+  assert.equal(state.units.render.pending_decision, null);
+  assert.equal(state.units.render.retry_context.dev.reason, 'downstream_contract_repair');
+  assert.deepEqual(state.units['drag-style'].repair_dependencies, ['render']);
+  assert.deepEqual(state.units.publish.repair_dependencies, ['render']);
+  assert.equal(applyContractRepair(plan, state, 'drag-style', repair), true);
+  assert.equal(state.units.render.contract_repairs, 1, 'the same pending owner repair is coalesced instead of consuming another recovery round');
+  assert.equal(state.contract_repairs.at(-1).coalesced, true);
+});
+
 test('persisted recovery extracts cross-unit evidence from the last rework without trusting prose', () => {
   const unit = { rework: { history: [{
     source: 'continuous_recovery',

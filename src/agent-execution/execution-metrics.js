@@ -3,6 +3,42 @@ const { aggregateUsage } = require('./execution-usage');
 const { officialOpenAiTariff } = require('./openai-prices');
 const { estimateCost } = require('./execution-cost');
 
+const tokenCount = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+
+function attemptContext(attempt = {}) {
+  const legacy = attempt.context_budget || {};
+  const current = attempt.context_window || {};
+  const limit = tokenCount(current.limit_tokens) ?? tokenCount(legacy.context_window_tokens);
+  // Cumulative input is not active context. Report only a peak observed by a
+  // harness; null is more truthful than presenting millions of replay/cache
+  // tokens as a model-window reading.
+  const used = tokenCount(attempt.usage?.peak_context_tokens);
+  const declaredSource = [current.source, legacy.window_source]
+    .find(value => typeof value === 'string' && value && value !== 'unknown');
+  return {
+    limit_tokens: limit,
+    used_tokens: used,
+    used_fraction: limit && used !== null ? used / limit : null,
+    source: declaredSource || attempt.usage?.context_source || 'unknown',
+    complete: limit !== null && used !== null
+  };
+}
+
+function summarizeContext(attempts) {
+  const rows = attempts.map(attemptContext);
+  const limits = [...new Set(rows.map(row => row.limit_tokens).filter(value => value !== null))];
+  const used = rows.map(row => row.used_tokens).filter(value => value !== null);
+  const fractions = rows.map(row => row.used_fraction).filter(value => value !== null);
+  return {
+    limit_tokens: limits.length === 1 ? limits[0] : null,
+    used_tokens: used.length ? Math.max(...used) : null,
+    used_fraction: fractions.length ? Math.max(...fractions) : null,
+    measured_attempts: used.length,
+    total_attempts: rows.length,
+    complete: rows.length > 0 && rows.every(row => row.complete)
+  };
+}
+
 function durationMetrics(attempts, now) {
   const ranges = attempts.map(item => [Date.parse(item.started_at), item.finished_at ? Date.parse(item.finished_at) : now]).filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end) && end >= start).sort((a, b) => a[0] - b[0]);
   let active = 0, end = null;
@@ -19,6 +55,7 @@ function summarizeAttempts(attempts, now = Date.now()) {
     attempts: attempts.length,
     ...durationMetrics(attempts, now),
     usage,
+    context: summarizeContext(attempts),
     total_tokens: typeof usage.input_tokens === 'number' && typeof usage.output_tokens === 'number' ? usage.input_tokens + usage.output_tokens : null,
     cost: { usd: knownCosts.length ? knownCosts.reduce((sum, item) => sum + item.usd, 0) : null, ...(knownCosts.some(item => typeof item.usd_upper === 'number') ? { usd_upper: knownCosts.reduce((sum, item) => sum + (item.usd_upper ?? item.usd), 0) } : {}), complete: attempts.length > 0 && knownCosts.length === attempts.length && costs.every(item => item?.complete), priced_attempts: knownCosts.length, basis: 'equivalent_api_token_estimate' }
   };
@@ -52,7 +89,15 @@ function executionMetrics(state, now = Date.now(), plan = null) {
     if (history.length && row.status !== 'running') continue;
     attempts.push({ id: row.attempt_id || `legacy:${unit.id}:${stage}`, unit: unit.id, wave: unit.wave, stage, host: row.host, model: row.model, started_at: row.started_at, finished_at: row.finished_at, usage: row.usage || null });
   }
-  for (const attempt of attempts) attempt.lane = attempt.lane ?? state.units?.[attempt.unit]?.lane ?? null;
+  for (const attempt of attempts) {
+    attempt.lane = attempt.lane ?? state.units?.[attempt.unit]?.lane ?? null;
+    attempt.context = attemptContext(attempt);
+    // Old ledgers may retain the retired enforcement inputs. They remain
+    // readable for migration, but public reports expose only the actual model
+    // window and its observed peak use.
+    delete attempt.context_budget;
+    delete attempt.context_window;
+  }
   const plannedUnits = new Map((plan?.units || []).map(unit => [unit.id, unit]));
   const models = groupAttempts(attempts, ['host', 'model'], now);
   const waves = (state.waves || []).map(wave => {
@@ -86,4 +131,4 @@ function executionMetrics(state, now = Date.now(), plan = null) {
   return { history_complete: Array.isArray(state.attempts) && state.attempt_history_complete !== false, ...summarizeAttempts(attempts, now), models, waves, attempts };
 }
 
-module.exports = { durationMetrics, summarizeAttempts, executionMetrics };
+module.exports = { attemptContext, durationMetrics, summarizeAttempts, executionMetrics };

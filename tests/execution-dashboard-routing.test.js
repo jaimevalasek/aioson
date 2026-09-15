@@ -49,9 +49,9 @@ test('routing editor exposes cached validation and atomically saves live profile
 
   const structural = JSON.parse(JSON.stringify(saved.data.config));
   structural.parallel.max_concurrent_lanes = 3;
-  const refused = await updateRoutingConfiguration(dir, { expected_digest: saved.data.digest, config: structural }, { env, activeRun: true });
-  assert.equal(refused.code, 409);
-  assert.equal(refused.data.reason, 'active_run_structure');
+  const liveCapacity = await updateRoutingConfiguration(dir, { expected_digest: saved.data.digest, config: structural }, { env, activeRun: true });
+  assert.equal(liveCapacity.code, 200);
+  assert.equal(liveCapacity.data.config.parallel.max_concurrent_lanes, 3, 'the saved worker pool is live runtime configuration');
 });
 
 test('routing validation accepts a signed fallback without saving or starting a model', async t => {

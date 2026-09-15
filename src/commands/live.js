@@ -19,7 +19,7 @@ const {
 const { ensureDir, exists } = require('../utils');
 const { SUPPORTED_PROMPT_TOOLS } = require('../prompt-tool');
 const { isTmuxAvailable, launchTmuxSession, buildSessionName, hasSession, attachSession } = require('../lib/tmux-launcher');
-const { resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
+const { getToolCapabilities, resolveResumeArgs, resolveLaunchPermission } = require('../lib/tool-capabilities');
 const { resolveTargetDir } = require('../lib/project-root');
 
 const LIVE_EVENTS_LIMIT = 10;
@@ -173,6 +173,15 @@ function normalizeLiveTool(value, t) {
   }
   const supported = Array.from(SUPPORTED_PROMPT_TOOLS).join(', ');
   throw new Error(t ? t('live.unsupported_tool', { tool: value, supported }) : `Unsupported live tool: ${value}. Supported: ${supported}`);
+}
+
+// A tool name is a logical host id, not necessarily its executable name.
+// In particular, `antigravity` on Windows resolves to the Electron editor
+// launcher, while the registry deliberately maps that host to the `agy` CLI.
+// Keep an explicit --tool-bin override, otherwise honor the registry.
+function resolveLiveToolBinary(options, tool) {
+  const explicit = typeof options?.['tool-bin'] === 'string' ? options['tool-bin'].trim() : '';
+  return explicit || getToolCapabilities(tool)?.binary || tool;
 }
 
 
@@ -1250,7 +1259,7 @@ async function runLiveStart({ args, options = {}, logger, t }) {
     } catch { /* health check is non-fatal */ }
   }
 
-  const toolBinary = String(options['tool-bin'] || tool).trim();
+  const toolBinary = resolveLiveToolBinary(options, tool);
   const binaryPath = await resolveExecutablePath(toolBinary);
   if (!binaryPath) {
     throw new Error(t('live.tool_binary_not_found', { binary: toolBinary }));
@@ -2311,6 +2320,7 @@ async function runLiveList({ args, options = {}, logger, t }) {
 
 module.exports = {
   buildLaunchArgs,
+  resolveLiveToolBinary,
   runLiveStart,
   runRuntimeEmit,
   runLiveHandoff,
