@@ -97,17 +97,24 @@ function scopedRepairEvidence(outcome, paths) {
   return { findings, messages };
 }
 
+function unitInFlight(unit) {
+  return unit?.status === 'running'
+    || unit?.dev?.status === 'running'
+    || unit?.qa?.status === 'running'
+    || (unit?.status === 'passed' && unit?.qa?.status === 'pending');
+}
+
 // Route a failed consumer to the closest compiled owner of the reported path.
 // Explicit ancestors remain authoritative. In continuous mode, shared checks
 // (typecheck, build, integration suites) may expose a unique earlier or
 // same-wave owner even when the planner omitted a cross-lane edge; the exact
 // compiled path is still the authority and later-wave owners are never pulled
 // backwards.
-function contractRepairTarget(plan, state, consumerId, outcome, continuous = false) {
+function contractRepairResolution(plan, state, consumerId, outcome, continuous = false) {
   const consumer = (plan.units || []).find(unit => unit.id === consumerId);
-  if (!consumer) return null;
+  if (!consumer) return { status: 'unresolved', reason: 'consumer_missing', paths: [] };
   const paths = externalRepairPaths(plan, consumerId, outcome);
-  if (!paths.length) return null;
+  if (!paths.length) return { status: 'not_applicable', reason: 'no_external_paths', paths: [] };
   const ancestors = ancestorsOf(plan, consumerId);
   const targets = [];
   for (const repairPath of paths) {
@@ -117,30 +124,38 @@ function contractRepairTarget(plan, state, consumerId, outcome, continuous = fal
       && unitFiles(unit).has(repairPath.toLowerCase()));
     const ancestralOwners = compiledOwners.filter(unit => ancestors.has(unit.id));
     const owners = ancestralOwners.length ? ancestralOwners : continuous ? compiledOwners : [];
-    if (!owners.length) return null;
+    if (!owners.length) return { status: 'unresolved', reason: 'owner_missing', paths };
     const latestWave = Math.max(...owners.map(unit => Number(unit.wave) || 0));
     const latest = owners.filter(unit => (Number(unit.wave) || 0) === latestWave);
-    if (latest.length !== 1) return null;
+    if (latest.length !== 1) return { status: 'unresolved', reason: 'owner_ambiguous', paths };
     targets.push(latest[0]);
   }
-  if (!targets.length || targets.some(target => target.id !== targets[0].id)) return null;
+  if (!targets.length || targets.some(target => target.id !== targets[0].id)) return { status: 'unresolved', reason: 'multiple_producers', paths };
   const target = targets[0];
   const current = state.units[target.id];
   const delivered = current?.status === 'passed' && current.qa?.status === 'passed';
   const recoverable = continuous && ['pending', 'running', 'decision_required', 'passed'].includes(current?.status);
-  if (!delivered && !recoverable) return null;
+  if (!delivered && !recoverable) return { status: 'unresolved', reason: 'producer_not_recoverable', paths, producer: target.id };
   const max = plan.lanes?.[target.lane]?.qa?.max_rework_rounds || 0;
   const contractRepairLimit = continuous ? Math.max(2, max) : 2;
-  if ((current.contract_repairs || 0) >= contractRepairLimit) return null;
+  if ((current.contract_repairs || 0) >= contractRepairLimit) return { status: 'unresolved', reason: 'contract_repair_limit', paths, producer: target.id };
   const affected = [...new Set([...descendantsOf(plan, target.id), ...descendantsOf(plan, consumerId)])];
+  const evidence = scopedRepairEvidence(outcome, paths);
+  const repair = { unit: target.id, max, contract_repair_limit: contractRepairLimit, target_status: current.status, ...evidence, paths, affected };
+  const blockers = affected.filter(id => id !== consumerId && unitInFlight(state.units[id]));
+  if (continuous && blockers.length > 0) return { status: 'deferred', reason: 'affected_units_running', repair, paths, producer: target.id, blockers };
   for (const id of affected) {
     if ([target.id, consumerId].includes(id)) continue;
     const status = state.units[id]?.status;
-    if (status === 'running' || (!continuous && status === 'passed')) return null;
+    if (status === 'running' || (!continuous && status === 'passed')) return { status: 'unresolved', reason: 'affected_unit_not_reopenable', paths, producer: target.id };
   }
-  if (!continuous && (current.rework?.rounds || 0) >= max) return null;
-  const evidence = scopedRepairEvidence(outcome, paths);
-  return { unit: target.id, max, contract_repair_limit: contractRepairLimit, target_status: current.status, ...evidence, paths, affected };
+  if (!continuous && (current.rework?.rounds || 0) >= max) return { status: 'unresolved', reason: 'rework_limit', paths, producer: target.id };
+  return { status: 'routable', reason: null, repair, paths, producer: target.id, blockers: [] };
+}
+
+function contractRepairTarget(plan, state, consumerId, outcome, continuous = false) {
+  const resolution = contractRepairResolution(plan, state, consumerId, outcome, continuous);
+  return resolution.status === 'routable' ? resolution.repair : null;
 }
 
 function compactStage(stage) {
@@ -164,10 +179,41 @@ function mergeUnique(left = [], right = []) {
   });
 }
 
+function clearDeferredRepair(consumer) {
+  if (!consumer) return;
+  const blockers = new Set(consumer.deferred_contract_repair?.blockers || []);
+  delete consumer.deferred_contract_repair;
+  consumer.repair_dependencies = (consumer.repair_dependencies || []).filter(id => !blockers.has(id));
+}
+
+function deferContractRepair(consumer, stage, resolution, outcome, at = new Date().toISOString()) {
+  if (!consumer || resolution?.status !== 'deferred' || !resolution.repair) return null;
+  const repair = resolution.repair;
+  consumer.deferred_contract_repair = {
+    stage,
+    producer: repair.unit,
+    paths: repair.paths,
+    affected: repair.affected,
+    blockers: resolution.blockers,
+    outcome: {
+      kind: outcome.kind,
+      reason: outcome.reason || 'deferred_contract_repair',
+      findings: repair.findings,
+      messages: repair.messages
+    },
+    queued_at: at
+  };
+  consumer.repair_dependencies = [...new Set([...(consumer.repair_dependencies || []), ...resolution.blockers])];
+  consumer.pending_decision = null;
+  consumer.status = 'pending';
+  return repair;
+}
+
 function applyContractRepair(plan, state, consumerId, repair, at = new Date().toISOString()) {
   if (!repair?.unit || !state.units?.[repair.unit]) return false;
   const producer = state.units[repair.unit];
   const consumer = state.units[consumerId];
+  clearDeferredRepair(consumer);
   const previousRepair = producer.retry_context?.dev;
   const samePendingRepair = producer.status === 'pending'
     && previousRepair?.reason === 'downstream_contract_repair'
@@ -199,10 +245,7 @@ function applyContractRepair(plan, state, consumerId, repair, at = new Date().to
     }
   };
 
-  const producerBusy = producer.status === 'running'
-    || producer.dev?.status === 'running'
-    || producer.qa?.status === 'running'
-    || (producer.status === 'passed' && producer.qa?.status === 'pending');
+  const producerBusy = unitInFlight(producer);
 
   for (const id of repair.affected || descendantsOf(plan, repair.unit)) {
     const unit = state.units[id];
@@ -252,4 +295,48 @@ function repairOutcomeFromState(unit) {
   return null;
 }
 
-module.exports = { externalRepairPaths, scopedRepairEvidence, contractRepairTarget, applyContractRepair, repairOutcomeFromState };
+function reconcileDeferredContractRepairs(plan, state, at = new Date().toISOString()) {
+  const routed = [];
+  const unresolved = [];
+  const waiting = [];
+  let changed = false;
+  for (const planned of plan.units || []) {
+    const consumer = state.units?.[planned.id];
+    const deferred = consumer?.deferred_contract_repair;
+    if (!deferred) continue;
+    const outcome = repairOutcomeFromState(consumer) || deferred.outcome;
+    if (!outcome) {
+      waiting.push({ unit: planned.id, stage: deferred.stage || 'dev', blockers: deferred.blockers || [] });
+      continue;
+    }
+    const resolution = contractRepairResolution(plan, state, planned.id, outcome, true);
+    if (resolution.status === 'deferred') {
+      const previousBlockers = new Set(deferred.blockers || []);
+      const retainedDependencies = (consumer.repair_dependencies || []).filter(id => !previousBlockers.has(id));
+      const nextDependencies = [...new Set([...retainedDependencies, ...resolution.blockers])];
+      if (JSON.stringify(deferred.blockers || []) !== JSON.stringify(resolution.blockers)
+          || JSON.stringify(consumer.repair_dependencies || []) !== JSON.stringify(nextDependencies)) changed = true;
+      consumer.repair_dependencies = nextDependencies;
+      consumer.deferred_contract_repair = { ...deferred, blockers: resolution.blockers };
+      waiting.push({ unit: planned.id, stage: deferred.stage || 'dev', producer: resolution.producer, blockers: resolution.blockers });
+      continue;
+    }
+    if (resolution.status !== 'routable') {
+      const previousBlockers = new Set(deferred.blockers || []);
+      consumer.repair_dependencies = (consumer.repair_dependencies || []).filter(id => !previousBlockers.has(id));
+      delete consumer.deferred_contract_repair;
+      unresolved.push({ unit: planned.id, stage: deferred.stage || 'dev', outcome, resolution });
+      changed = true;
+      continue;
+    }
+    const repair = resolution.repair;
+    if (!applyContractRepair(plan, state, planned.id, repair, at)) continue;
+    state.decisions ||= [];
+    state.decisions.push({ unit: planned.id, stage: deferred.stage || 'dev', choice: 'reroute', target: repair.unit, reason_before: 'affected_units_running', source: 'automatic_contract_repair_deferred', at });
+    routed.push({ unit: planned.id, stage: deferred.stage || 'dev', producer: repair.unit, repair });
+    changed = true;
+  }
+  return { changed, routed, unresolved, waiting };
+}
+
+module.exports = { externalRepairPaths, scopedRepairEvidence, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs };

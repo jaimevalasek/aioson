@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { externalRepairPaths, scopedRepairEvidence, contractRepairTarget, applyContractRepair, repairOutcomeFromState } = require('../src/agent-execution/execution-contract-repair');
+const { externalRepairPaths, scopedRepairEvidence, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs } = require('../src/agent-execution/execution-contract-repair');
 
 test('contract routing refuses unstructured evidence, unrelated paths, exhausted budgets and delivered consumers', () => {
   const producer = { id: 'api', wave: 1, lane: 'backend', owner: 'lane', files: ['src/api.ts'], depends_on: [] };
@@ -90,6 +90,51 @@ test('continuous routing returns a shared-check failure to its unique compiled o
   assert.equal(applyContractRepair(plan, state, 'drag-style', repair), true);
   assert.equal(state.units.render.contract_repairs, 1, 'the same pending owner repair is coalesced instead of consuming another recovery round');
   assert.equal(state.contract_repairs.at(-1).coalesced, true);
+});
+
+test('continuous routing waits for active descendants and then repairs the unique producer automatically', () => {
+  const producer = { id: 'backend-domain', wave: 1, lane: 'backend', owner: 'lane', files: ['src/server/timeline.ts'], depends_on: [] };
+  const active = { id: 'backend-transition', wave: 4, lane: 'backend', owner: 'lane', files: ['src/server/transition.ts'], depends_on: [{ unit: 'backend-domain' }] };
+  const consumer = { id: 'frontend-transition', wave: 5, lane: 'frontend', owner: 'lane', files: ['src/client/transition.ts'], depends_on: [] };
+  const plan = { units: [producer, active, consumer], lanes: { backend: { qa: { max_rework_rounds: 5 } } } };
+  const findings = [{ path: 'src/server/timeline.ts:42', summary: 'Live preview transport is missing' }];
+  const messages = [{ to: 'lane:backend', kind: 'contract_change', paths: ['src/server/timeline.ts'], text: 'Implement the linked timeline preview transport' }];
+  const outcome = { kind: 'blocked', reason: 'contract_missing', findings, messages };
+  const state = { decisions: [], units: {
+    'backend-domain': { id: 'backend-domain', lane: 'backend', owner: 'lane', status: 'passed', dev: { status: 'passed' }, qa: { status: 'passed' } },
+    'backend-transition': { id: 'backend-transition', lane: 'backend', owner: 'lane', status: 'running', dev: { status: 'running' }, qa: { status: 'pending' } },
+    'frontend-transition': { id: 'frontend-transition', lane: 'frontend', owner: 'lane', status: 'running', dev: { status: 'blocked', findings, messages }, qa: { status: 'pending' } }
+  } };
+
+  const resolution = contractRepairResolution(plan, state, 'frontend-transition', outcome, true);
+  assert.equal(resolution.status, 'deferred');
+  assert.equal(resolution.producer, 'backend-domain');
+  assert.deepEqual(resolution.blockers, ['backend-transition']);
+  assert.equal(contractRepairTarget(plan, state, 'frontend-transition', outcome, true), null);
+
+  assert.equal(deferContractRepair(state.units['frontend-transition'], 'dev', resolution, outcome, '2026-09-15T11:59:00.000Z').unit, 'backend-domain');
+  assert.equal(state.units['frontend-transition'].status, 'pending');
+  assert.deepEqual(state.units['frontend-transition'].repair_dependencies, ['backend-transition']);
+  // Another routed repair may invalidate this consumer before its queued
+  // repair is reconciled; the queued structured evidence must still survive.
+  state.units['frontend-transition'].dev = { status: 'pending' };
+  state.units['backend-transition'].status = 'passed';
+  state.units['backend-transition'].dev = { status: 'passed' };
+  state.units['backend-transition'].qa = { status: 'passed' };
+
+  const reconciled = reconcileDeferredContractRepairs(plan, state, '2026-09-15T12:00:00.000Z');
+  assert.deepEqual(reconciled.unresolved, []);
+  assert.deepEqual(reconciled.waiting, []);
+  assert.equal(reconciled.routed[0].producer, 'backend-domain');
+  assert.equal(state.decisions[0].source, 'automatic_contract_repair_deferred');
+  assert.equal(state.units['backend-domain'].contract_repairs, 1);
+  for (const id of ['backend-domain', 'backend-transition', 'frontend-transition']) {
+    assert.equal(state.units[id].status, 'pending');
+    assert.equal(state.units[id].dev.status, 'pending');
+    assert.equal(state.units[id].qa.status, 'pending');
+  }
+  assert.equal(state.units['frontend-transition'].deferred_contract_repair, undefined);
+  assert.deepEqual(state.units['frontend-transition'].repair_dependencies, ['backend-domain']);
 });
 
 test('persisted recovery extracts cross-unit evidence from the last rework without trusting prose', () => {

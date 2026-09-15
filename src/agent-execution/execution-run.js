@@ -34,7 +34,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { notesRelative, continuityPrompt } = require('./execution-notes');
 const { INVALID_REPORT_REASONS, prepareReportRepair, reportRepairPrompt } = require('./execution-report-repair');
-const { externalRepairPaths, contractRepairTarget, applyContractRepair, repairOutcomeFromState } = require('./execution-contract-repair');
+const { externalRepairPaths, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs } = require('./execution-contract-repair');
 const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, recoveryPrompt } = require('./execution-recovery');
 const { readExecutionPlan, verifyExecutionPlan, executionPlanRelative, pathOwns } = require('./execution-plan');
 const { stripInjectionChars, scanInjectionPayloads } = require('../lib/llm-content-sanitizer');
@@ -1763,12 +1763,20 @@ async function runExecution({
       };
       const isSupervisor = unitState.owner === 'supervisor';
       const repairPaths = autopilot && !isSupervisor ? externalRepairPaths(plan, unitState.id, repairOutcome) : [];
-      const contractTarget = autopilot && !isSupervisor ? contractRepairTarget(plan, state, unitState.id, repairOutcome, continuousRecovery) : null;
+      const contractResolution = autopilot && !isSupervisor
+        ? contractRepairResolution(plan, state, unitState.id, repairOutcome, continuousRecovery)
+        : null;
+      const contractTarget = contractResolution?.status === 'routable' ? contractResolution.repair : null;
       if (contractTarget) {
         const producer = state.units[contractTarget.unit];
         applyContractRepair(plan, state, unitState.id, contractTarget, nowIso());
         emit({ type: 'contract_repair', status: 'routed', producer: producer.id, consumer: unitState.id, paths: contractTarget.paths, affected: contractTarget.affected });
         emit({ type: 'unit', role: 'dev', status: 'rework', unit: producer.id, lane: producer.lane, wave: producer.wave, reason: 'downstream_contract_repair', consumer: unitState.id });
+        await persist(); wakeUp(); return;
+      }
+      if (contractResolution?.status === 'deferred') {
+        const deferred = deferContractRepair(unitState, stage, contractResolution, repairOutcome, nowIso());
+        emit({ type: 'contract_repair', status: 'deferred', producer: deferred.unit, consumer: unitState.id, paths: deferred.paths, affected: deferred.affected, blockers: contractResolution.blockers });
         await persist(); wakeUp(); return;
       }
       // Structured evidence that names another compiled unit must never be
@@ -1838,7 +1846,7 @@ async function runExecution({
         // What the disk said at the failure (a timeout that was still writing
         // vs one that never wrote) — the operator's hint, measured.
         detail: crossUnitUnresolved
-          ? `The failed unit named compiled path(s) owned by another unit, but the dependency graph did not resolve one safe producer: ${repairPaths.join(', ')}`
+          ? `The failed unit named compiled path(s) owned by another unit, but automatic routing stopped (${contractResolution?.reason || 'unresolved'}): ${repairPaths.join(', ')}`
           : devQaCycleLimit
             ? `QA returned this unit to DEV ${unitState.rework?.rounds || 0} times (maximum ${MAX_DEV_QA_REWORK_ROUNDS}). Automatic convergence stopped; inspect the recurring root cause before another explicit retry.`
           : recoveryCircuitOpened
@@ -2126,6 +2134,7 @@ async function runExecution({
     const pipelineDone = (u) => u.status === 'skipped' || (u.status === 'passed' && (plan.policy?.qa.require_pass ? ['passed', 'skipped'] : ['passed', 'failed', 'skipped']).includes(u.qa?.status));
     const runnable = (id) => {
       const u = state.units[id];
+      if (u.deferred_contract_repair) return false;
       return u.status === 'pending' || (u.status === 'passed' && u.qa?.status === 'pending');
     };
     const laneUnitsBefore = (wave) => laneIds.filter((id) => state.units[id].wave < wave);
@@ -2225,8 +2234,20 @@ async function runExecution({
     };
     const finished = [];
 
+    const routeDeferredContractRepairs = async () => {
+      const result = reconcileDeferredContractRepairs(plan, state, nowIso());
+      for (const routed of result.routed) {
+        const producer = state.units[routed.producer];
+        emit({ type: 'contract_repair', status: 'routed', producer: producer.id, consumer: routed.unit, paths: routed.repair.paths, affected: routed.repair.affected, deferred: true });
+        emit({ type: 'unit', role: 'dev', status: 'rework', unit: producer.id, lane: producer.lane, wave: producer.wave, reason: 'downstream_contract_repair', consumer: routed.unit });
+      }
+      if (result.changed) await persist();
+      for (const unresolved of result.unresolved) await requireDecision(state.units[unresolved.unit], unresolved.stage, unresolved.outcome);
+    };
+
     while (true) {
       await refreshRuntimePolicy();
+      await routeDeferredContractRepairs();
       if (!monitor.lost) {
         const starting = [];
         while (running.size + starting.length < state.parallel.max_concurrent_lanes) {
@@ -2679,6 +2700,13 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     dev: unit.dev ? { status: unit.dev.status, host: unit.dev.host || null, model: unit.dev.model || null, routing_profile: unit.dev.routing_profile || null, verdict: unit.dev.verdict || null, reason: unit.dev.reason || null, report: unit.dev.report || null, findings: (unit.dev.findings || []).length, stalled: Boolean(unit.dev.stalled), session_id: unit.dev.session_id || null, ...stageRow(unit.dev, now) } : null,
     qa: unit.qa ? { status: unit.qa.status, host: unit.qa.host || null, model: unit.qa.model || null, routing_profile: unit.qa.routing_profile || null, verdict: unit.qa.verdict || null, reason: unit.qa.reason || null, report: unit.qa.report || null, findings: (unit.qa.findings || []).length, corrections: (unit.qa.corrections_paths || []).length, corrections_cap_exceeded: Boolean(unit.qa.corrections_cap_exceeded), session_id: unit.qa.session_id || null, ...stageRow(unit.qa, now) } : null,
     pending_decision: unit.pending_decision ? { stage: unit.pending_decision.stage, reason: unit.pending_decision.reason, choices: unit.pending_decision.choices } : null,
+    deferred_contract_repair: unit.deferred_contract_repair ? {
+      stage: unit.deferred_contract_repair.stage,
+      producer: unit.deferred_contract_repair.producer,
+      paths: unit.deferred_contract_repair.paths,
+      blockers: unit.deferred_contract_repair.blockers,
+      queued_at: unit.deferred_contract_repair.queued_at
+    } : null,
     repair_dependencies: unit.repair_dependencies || [],
     rework: unit.rework ? { rounds: unit.rework.rounds, max: unit.rework.max } : null,
     invalidation: unit.invalidations?.length ? {

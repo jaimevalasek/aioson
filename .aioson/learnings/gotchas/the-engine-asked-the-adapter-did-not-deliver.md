@@ -7,6 +7,7 @@ paths:
   - src/agent-execution/adapters/antigravity.js
   - src/agent-execution/adapters/base.js
   - src/agent-execution/execution-run.js
+  - src/agent-execution/execution-contract-repair.js
   - src/lib/host-signature.js
   - src/agent-execution/execution-plan.js
 discovered_at: 2026-09-03
@@ -38,6 +39,7 @@ status: corrigido no framework
 - Workers orquestrados não têm cutoff de contexto nem prazo de relógio do AIOSON; campos legados de orçamento são ignorados. Janela/pico de contexto, tokens, duração e atividade aparecem somente nos relatórios. O digest de ligação do plano cobre só o que molda as unidades (papéis, paralelismo, `require_independent_qa`) — spawner fica fora; planos antigos seguem frescos.
 - `timeout` diz o que o disco viu (`still writing` → retry com orçamento maior; `never wrote` → fallback/abort) em `pending_decision.detail`.
 - `unproductive` continua medido no disco; além do aviso, o guard estruturado encerra 4 ações estruturadas idênticas ou 24 ações apenas de leitura para liberar fallback, a segunda recuperação equivalente sem mudança medida abre o circuito e uma unidade volta do QA ao DEV no máximo 5 vezes.
+- Reparo cruzado com dono compilado único nunca vira decisão só porque outro descendente ainda está executando: a evidência fica enfileirada no estado, os workers ativos terminam e o produtor mais seus descendentes afetados são reabertos e revistos automaticamente. `cross_unit_repair_unresolved` fica reservado para ownership realmente ausente/ambíguo ou para o guard de reparos esgotado.
 - Lease: run e decide esperam uma lease que ninguém renova (≤35 s, anunciado) e recusam só a que alguém renova, com caminho e tempo restante; nunca apagam o lock.
 - `host:signature` ganha a sonda de escrita não assistida (`unattended.yolo`, `host_not_unattended`); o preflight a lê — assinatura sem sonda é aviso com o comando de re-assinar. A sonda nunca roda o sandbox do provedor (rodá-lo abriu um diálogo de erro do Windows na tela do dono).
 - `execution:compile` recusa heading canônico duplicado (`duplicate_plan_section`); PRD duplicado avisa.
