@@ -66,7 +66,7 @@ const { openRuntimeDb, appendExecutionEvent } = require('../runtime-store');
 const { profileFallbackOrder, readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner } = require('../lib/execution-roles');
 const { wrapRegistryWithSpawner } = require('./adapters/spawner');
 const { currentActivity, observeExecution } = require('./execution-observation');
-const { createExecutionLoopGuard } = require('./execution-loop-guard');
+const { createExecutionLoopGuard, structuredTool } = require('./execution-loop-guard');
 const { runExecutionProfileValidation } = require('../commands/execution-profile-validation');
 
 const DEFAULT_ADAPTERS = {
@@ -935,14 +935,15 @@ async function executeRole({
         }
       });
       return event => {
-        const step = event?.event === 'step_update' ? event.step_update : null;
-        if (step?.state === 'ACTIVE' && step.step_type === 'tool' && typeof step.tool_name === 'string') {
-          const parameters = step.tool_info?.parameters || {};
+        const action = structuredTool(candidate.host, event);
+        if (action) {
+          const parameters = action.parameters || {};
           const rawTarget = parameters.TargetFile || parameters.AbsolutePath || parameters.SearchPath || parameters.Query
-            || parameters.CommandLine || parameters.command_line || parameters.Command || parameters.command || null;
+            || parameters.CommandLine || parameters.command_line || parameters.Command || parameters.command
+            || parameters.filePath || parameters.path || parameters.pattern || null;
           let target = rawTarget == null ? null : stripInjectionChars(String(rawTarget)).slice(0, 240);
           if (target && path.isAbsolute(target)) target = path.relative(projectDir, target).split(path.sep).join('/');
-          structuredActivity = { at: nowIso(), host: candidate.host, model: candidate.model, tool: step.tool_name.slice(0, 80), target };
+          structuredActivity = { at: nowIso(), host: candidate.host, model: candidate.model, tool: action.tool.slice(0, 80), target };
         }
         return guard.observe(event);
       };

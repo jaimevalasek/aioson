@@ -6,7 +6,13 @@ const READ_ONLY_TOOLS = new Set([
   'list_dir',
   'find_by_name',
   'read_resource',
-  'read_url_content'
+  'read_url_content',
+  'read',
+  'grep',
+  'glob',
+  'list',
+  'webfetch',
+  'websearch'
 ]);
 
 function antigravityRead(event) {
@@ -30,12 +36,32 @@ function antigravityTool(event) {
   return {
     tool: step.tool_name,
     read_only: READ_ONLY_TOOLS.has(step.tool_name),
+    parameters,
     fingerprint: `${step.tool_name}:${JSON.stringify(parameters).slice(0, 4000)}`
   };
 }
 
+function opencodeTool(event) {
+  const part = event?.type === 'tool_use' ? event.part : null;
+  const state = part?.state;
+  if (part?.type !== 'tool' || typeof part.tool !== 'string' || state?.status !== 'completed') return null;
+  const parameters = state.input && typeof state.input === 'object' ? state.input : {};
+  return {
+    tool: part.tool,
+    read_only: READ_ONLY_TOOLS.has(part.tool),
+    parameters,
+    fingerprint: `${part.tool}:${JSON.stringify(parameters).slice(0, 4000)}`
+  };
+}
+
+function structuredTool(host, event) {
+  if (host === 'antigravity') return antigravityTool(event);
+  if (host === 'opencode') return opencodeTool(event);
+  return null;
+}
+
 /**
- * Detect exact repeated tool requests in a structured Antigravity session.
+ * Detect exact repeated tool requests in a supported structured session.
  * Model replies and tool completion events are ignored, so the next actual
  * action is compared with the preceding one. A mutating/verification tool
  * resets the read-only investigation streak, but four identical calls to that
@@ -50,8 +76,8 @@ function createExecutionLoopGuard(host, { threshold = 4, readThreshold = 24, onL
   let tripped = false;
   return {
     observe(event) {
-      if (tripped || host !== 'antigravity') return null;
-      const action = antigravityTool(event);
+      if (tripped) return null;
+      const action = structuredTool(host, event);
       if (!action) return null;
       if (action.fingerprint === previous) repeats += 1;
       else { previous = action.fingerprint; repeats = 1; }
@@ -79,4 +105,4 @@ function createExecutionLoopGuard(host, { threshold = 4, readThreshold = 24, onL
   };
 }
 
-module.exports = { READ_ONLY_TOOLS, antigravityRead, antigravityTool, createExecutionLoopGuard };
+module.exports = { READ_ONLY_TOOLS, antigravityRead, antigravityTool, opencodeTool, structuredTool, createExecutionLoopGuard };
