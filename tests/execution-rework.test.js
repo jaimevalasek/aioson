@@ -86,6 +86,7 @@ function fakeAdapter(host, { script = {}, prompts = {}, calls = {} } = {}) {
       prompts[key] = [...(prompts[key] || []), input.prompt_text];
       const behaviour = typeof script[key] === 'function' ? script[key](calls[key]) : (script[key] || {});
       if (behaviour.locked) return { ok: false, reason: 'crash', error: 'database is locked' };
+      if (behaviour.unavailable) return { ok: false, reason: behaviour.unavailable, error: behaviour.error || null };
       await new Promise((resolve) => setTimeout(resolve, 15));
       const report = {
         version: 1,
@@ -142,13 +143,15 @@ async function fakeBaseline(dir) {
   return { ok: true, baseline: { captured_at: new Date().toISOString(), head: 'fake', dirty_paths: paths.sort(), dirty_hashes: hashes } };
 }
 
-async function setup(t, { reworkRounds = null, autopilot = false } = {}) {
+async function setup(t, { reworkRounds = null, autopilot = false, integrationDev = false } = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-execution-rework-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true }).catch(() => {}));
   for (const rel of ['.aioson/context', '.aioson/config', '.aioson/agents', 'src/api', 'src/ui']) await fs.mkdir(path.join(dir, ...rel.split('/')), { recursive: true });
   await fs.writeFile(path.join(dir, '.aioson', 'context', `implementation-plan-${SLUG}.md`), PLAN, 'utf8');
   await fs.writeFile(path.join(dir, '.aioson', 'context', `prd-${SLUG}.md`), PRD, 'utf8');
-  await fs.writeFile(path.join(dir, '.aioson', 'config', 'execution-roles.json'), JSON.stringify(ROLES, null, 2), 'utf8');
+  const roles = JSON.parse(JSON.stringify(ROLES));
+  if (integrationDev) roles.roles.integration_dev = { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'high' };
+  await fs.writeFile(path.join(dir, '.aioson', 'config', 'execution-roles.json'), JSON.stringify(roles, null, 2), 'utf8');
   await fs.copyFile(path.join(ROOT, 'template', '.aioson', 'agents', 'dev.md'), path.join(dir, '.aioson', 'agents', 'dev.md'));
   await fs.copyFile(path.join(ROOT, 'template', '.aioson', 'agents', 'qa.md'), path.join(dir, '.aioson', 'agents', 'qa.md'));
   await fs.writeFile(path.join(dir, 'src', 'app.ts'), 'export const app = 1;\n', 'utf8');
@@ -246,6 +249,22 @@ test('continuous recovery opens a circuit before an unchanged failure can loop i
   assert.equal(state.units['phase-2'].recovery.attempts, 1);
   assert.equal(state.units['phase-2'].recovery.circuit_breaker.consecutive, 2);
   assert.match(state.units['phase-2'].pending_decision.detail, /equivalent failures/);
+});
+
+test('continuous recovery hands an exhausted lane to the configured integration DEV supervisor', async t => {
+  const ctx = await setup(t, { autopilot: true, integrationDev: true });
+  const calls = {}, events = [];
+  const script = { 'dev:phase-2': n => n < 3 ? { unavailable: 'unproductive_loop' } : {} };
+  const registry = Object.fromEntries(['codex', 'kimi', 'claude'].map(host => [host, fakeAdapter(host, { script, calls })]));
+  const result = await run(ctx, { registry, events, extra: { 'bounded-recovery': false } });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.equal(calls['dev:phase-2'], 3, 'the lane gets one recovery, then the distinct supervisor route takes over');
+  assert.ok(events.some(event => event.reason === 'integration_supervisor_takeover'));
+  const state = JSON.parse(await fs.readFile(runStatePath(ctx.dir, SLUG), 'utf8'));
+  assert.equal(state.units['phase-2'].dev.host, 'codex');
+  assert.equal(state.units['phase-2'].supervisor_takeover.status, 'approved');
+  assert.equal(state.units['phase-2'].pending_decision, null);
+  assert.ok(state.decisions.some(decision => decision.source === 'automatic_supervisor_takeover'));
 });
 
 test('continuous recovery never sends one unit through more than five QA to DEV returns', async t => {

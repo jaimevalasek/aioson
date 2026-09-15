@@ -35,7 +35,7 @@ const crypto = require('node:crypto');
 const { notesRelative, continuityPrompt } = require('./execution-notes');
 const { INVALID_REPORT_REASONS, prepareReportRepair, reportRepairPrompt } = require('./execution-report-repair');
 const { externalRepairPaths, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs } = require('./execution-contract-repair');
-const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, recoveryPrompt } = require('./execution-recovery');
+const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, queueSupervisorTakeover, recoveryPrompt, routeKey } = require('./execution-recovery');
 const { readExecutionPlan, verifyExecutionPlan, executionPlanRelative, pathOwns } = require('./execution-plan');
 const { stripInjectionChars, scanInjectionPayloads } = require('../lib/llm-content-sanitizer');
 const { loadManifest, resolveExecutionEntry, assertFeatureSlug } = require('./manifest');
@@ -788,6 +788,29 @@ function buildIntegrationSupervisor(plan, integrationRole = plan?.integration?.r
     units: [unit.id]
   };
   return { unit, lane };
+}
+
+function integrationDevRoutes(roles) {
+  if (!roles?.roles) return [];
+  const primary = resolveLaneRoles(roles, 'integration').dev;
+  const candidates = [
+    ...(primary ? [{ ...primary, routing_profile: roles.active_profile || 'legacy' }] : []),
+    ...resolveProfileFallbacks(roles, 'integration', 'dev').map(route => ({ ...route, routing_profile: route.profile }))
+  ];
+  const seen = new Set();
+  return candidates.filter(route => {
+    const key = routeKey(route);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function laneFallbacksExhaustedByLoop(outcome) {
+  const history = Array.isArray(outcome?.history) ? outcome.history : [];
+  return outcome?.reason === 'unproductive_loop'
+    && history.length > 1
+    && history.every(attempt => attempt.reason === 'unproductive_loop');
 }
 
 function composeIntegrationSupervisorPrompt({ plan, state, unit }) {
@@ -1559,9 +1582,15 @@ async function runExecution({
     if (typeof untilComplete === 'boolean') state.until_complete = untilComplete;
     else if (typeof state.until_complete !== 'boolean') state.until_complete = manifest.manifest?.orchestration?.mode === 'autopilot';
     const continuousRecovery = state.until_complete && !step;
+    const startupSupervisorRoutes = integrationDevRoutes(preflight.runtimeRoles);
     if (continuousRecovery) for (const unit of Object.values(state.units || {})) {
       const decision = unit.pending_decision;
-      if (decision && queueRecovery(unit, decision.stage, decision, plan.lanes[unit.lane]?.qa?.max_rework_rounds || 0)) {
+      const supervisorOutcome = decision?.reason === 'recovery_no_progress'
+        ? { ...decision, reason: unit.recovery?.last_reason || unit.retry_context?.[decision.stage]?.reason || decision.reason }
+        : decision;
+      if (decision && queueSupervisorTakeover(unit, decision.stage, supervisorOutcome, startupSupervisorRoutes)) {
+        state.decisions.push({ unit: unit.id, stage: decision.stage, choice: 'supervisor', reason_before: decision.reason, source: 'automatic_supervisor_takeover', at: nowIso() });
+      } else if (decision && queueRecovery(unit, decision.stage, decision, plan.lanes[unit.lane]?.qa?.max_rework_rounds || 0)) {
         state.decisions.push({ unit: unit.id, stage: decision.stage, choice: 'retry', reason_before: decision.reason, source: 'continuous_recovery', at: nowIso() });
       } else if (decision && devQaCycleLimitReached(unit, decision.stage, decision)) {
         decision.reason = 'dev_qa_cycle_limit';
@@ -1696,13 +1725,15 @@ async function runExecution({
       if (!currentRoles.ok || !currentRoles.enabled) throw new Error(`${currentRoles.reason || 'roles_unavailable'}: ${currentRoles.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles.path}`);
       currentRoles = await validateChangedRuntimeConfig(currentRoles);
       if (!currentRoles?.ok || !currentRoles.enabled) throw new Error(`${currentRoles?.reason || 'roles_unavailable'}: ${currentRoles?.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles?.path || 'execution roles changed during validation'}`);
-      const selected = resolveLaneRoles(currentRoles.roles, laneId)[role];
-      if (!override && !selected) throw new Error(`active profile ${currentRoles.roles.active_profile || 'legacy'} does not declare ${laneId} ${role}`);
+      const supervisorTakeover = !override && role === 'dev' && Boolean(unitState.supervisor_takeover);
+      const routingLaneId = supervisorTakeover ? 'integration' : laneId;
+      const selected = resolveLaneRoles(currentRoles.roles, routingLaneId)[role];
+      if (!override && !selected) throw new Error(`active profile ${currentRoles.roles.active_profile || 'legacy'} does not declare ${routingLaneId} ${role}`);
       let liveRole = override || selected;
       let routingProfile = currentRoles.roles.active_profile || 'legacy';
       const signatureStore = await readSignatures({ env });
       const profileFallbacks = [];
-      if (!override) for (const fallback of resolveProfileFallbacks(currentRoles.roles, laneId, role)) {
+      if (!override) for (const fallback of resolveProfileFallbacks(currentRoles.roles, routingLaneId, role)) {
         const fallbackSignature = signatureState(findSignature(signatureStore, { host: fallback.host, model: fallback.model, reasoning_effort: fallback.reasoning_effort || null }), now());
         if (fallbackSignature !== 'valid') continue;
         profileFallbacks.push({
@@ -1721,6 +1752,13 @@ async function runExecution({
         if (!fallback) throw new Error(`active profile ${routingProfile} selects an ${signature} signature for ${liveRole.host}/${liveRole.model} and has no signed fallback for ${laneId} ${role}`);
         liveRole = fallback;
         routingProfile = fallback.routing_profile;
+      }
+      if (supervisorTakeover) {
+        unitState.supervisor_takeover = {
+          ...unitState.supervisor_takeover,
+          status: 'dispatching',
+          route: { host: liveRole.host, model: liveRole.model, reasoning_effort: liveRole.reasoning_effort || null, routing_profile: routingProfile }
+        };
       }
       const requireIndependentQa = currentRoles.roles.execution?.require_independent_qa === true;
       if (role === 'dev') {
@@ -1752,6 +1790,29 @@ async function runExecution({
         report: qa.report,
         require_independent_qa: requireIndependentQa
       };
+    };
+
+    const routeUnitToSupervisor = async (unitState, stage, outcome, trigger) => {
+      const currentRoles = await refreshRuntimePolicy();
+      if (!queueSupervisorTakeover(unitState, stage, outcome, integrationDevRoutes(currentRoles))) return false;
+      const next = unitState.supervisor_takeover.next;
+      state.decisions.push({ unit: unitState.id, stage, choice: 'supervisor', reason_before: outcome.reason, source: 'automatic_supervisor_takeover', trigger, at: nowIso() });
+      emit({
+        type: 'unit',
+        role: stage,
+        status: 'rework',
+        unit: unitState.id,
+        lane: unitState.lane,
+        wave: unitState.wave,
+        reason: 'integration_supervisor_takeover',
+        trigger,
+        host: next.host,
+        model: next.model,
+        routing_profile: next.routing_profile
+      });
+      await persist();
+      wakeUp();
+      return true;
     };
 
     const requireDecision = async (unitState, stage, outcome) => {
@@ -1824,7 +1885,9 @@ async function runExecution({
       let recoveryCircuitOpened = false;
       const devQaCycleLimit = devQaCycleLimitReached(unitState, stage, outcome);
       if (!crossUnitUnresolved && continuousRecovery) {
-        if (devQaCycleLimit) {
+        if (laneFallbacksExhaustedByLoop(outcome) && await routeUnitToSupervisor(unitState, stage, outcome, 'lane_fallbacks_exhausted')) {
+          return;
+        } else if (devQaCycleLimit) {
           queueRecovery(unitState, stage, outcome, maxRepair);
         } else if (queueRecovery(unitState, stage, outcome, maxRepair)) {
           emit({ type: 'unit', role: stage, status: 'rework', unit: unitState.id, lane: unitState.lane, wave: unitState.wave, reason: 'continuous_recovery', round: unitState.recovery.attempts });
@@ -1835,6 +1898,7 @@ async function runExecution({
           wakeUp(); return;
         }
         recoveryCircuitOpened = unitState.recovery?.circuit_breaker?.stage === stage;
+        if (recoveryCircuitOpened && await routeUnitToSupervisor(unitState, stage, outcome, 'recovery_no_progress')) return;
       }
       unitState.pending_decision = {
         stage,
@@ -1981,6 +2045,15 @@ async function runExecution({
         unitState.dev = { ...unitState.dev, ...outcome, status: outcome.kind, findings: outcome.findings || [], evidence: (outcome.evidence || []).slice(0, MAX_EXCERPT_ITEMS), messages: outcome.messages || [], messages_dropped: outcome.messages_dropped || 0 };
         delete unitState.dev.kind;
         delete unitState.dev.live;
+        if (unitState.supervisor_takeover) {
+          unitState.supervisor_takeover = {
+            ...unitState.supervisor_takeover,
+            status: outcome.kind === 'passed' ? 'dev_passed' : 'dev_failed',
+            attempts: (unitState.supervisor_takeover.attempts || 0) + 1,
+            route: { host: outcome.host || config.host, model: outcome.model || config.model, reasoning_effort: outcome.reasoning_effort || config.reasoning_effort || null, routing_profile: outcome.routing_profile || config.routing_profile || null },
+            updated_at: nowIso()
+          };
+        }
         if (unitState.report_repair && ['passed', 'failed', 'blocked'].includes(outcome.kind)) unitState.report_repair.pending = false;
         recordMailbox(unitState, 'dev', outcome);
         emit({ type: 'unit', role: 'dev', status: outcome.kind, unit: unitId, lane: unit.lane, wave: unit.wave, host: outcome.host, model: outcome.model, reason: outcome.reason || null, detail: outcome.detail || null, verdict: outcome.verdict || null, findings: (outcome.findings || []).length, messages: (outcome.messages || []).length });
@@ -2066,7 +2139,10 @@ async function runExecution({
         delete unitState.qa.kind;
         delete unitState.qa.live;
         if (unitState.qa_report_repair && ['passed', 'failed', 'blocked'].includes(outcome.kind)) unitState.qa_report_repair.pending = false;
-        if (unitState.qa.status === 'passed') state.findings = state.findings.filter(finding => !(finding.check === 'rework_exhausted' && finding.unit === unitId));
+        if (unitState.qa.status === 'passed') {
+          state.findings = state.findings.filter(finding => !(finding.check === 'rework_exhausted' && finding.unit === unitId));
+          if (unitState.supervisor_takeover) unitState.supervisor_takeover = { ...unitState.supervisor_takeover, status: 'approved', approved_at: nowIso() };
+        }
         recordMailbox(unitState, 'qa', outcome);
         emit({ type: 'unit', role: 'qa', status: unitState.qa.status, unit: unitId, lane: unit.lane, wave: unit.wave, host: outcome.host, model: outcome.model, reason: outcome.reason || null, detail: outcome.detail || null, verdict: outcome.verdict || null, findings: qaFindings.length, corrections: measuredCorrections.length, messages: (outcome.messages || []).length });
         if (outcome.kind === 'aborted') {
@@ -2701,6 +2777,14 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     dev: unit.dev ? { status: unit.dev.status, host: unit.dev.host || null, model: unit.dev.model || null, routing_profile: unit.dev.routing_profile || null, verdict: unit.dev.verdict || null, reason: unit.dev.reason || null, report: unit.dev.report || null, findings: (unit.dev.findings || []).length, stalled: Boolean(unit.dev.stalled), session_id: unit.dev.session_id || null, ...stageRow(unit.dev, now) } : null,
     qa: unit.qa ? { status: unit.qa.status, host: unit.qa.host || null, model: unit.qa.model || null, routing_profile: unit.qa.routing_profile || null, verdict: unit.qa.verdict || null, reason: unit.qa.reason || null, report: unit.qa.report || null, findings: (unit.qa.findings || []).length, corrections: (unit.qa.corrections_paths || []).length, corrections_cap_exceeded: Boolean(unit.qa.corrections_cap_exceeded), session_id: unit.qa.session_id || null, ...stageRow(unit.qa, now) } : null,
     pending_decision: unit.pending_decision ? { stage: unit.pending_decision.stage, reason: unit.pending_decision.reason, choices: unit.pending_decision.choices } : null,
+    supervisor_takeover: unit.supervisor_takeover ? {
+      status: unit.supervisor_takeover.status,
+      reason: unit.supervisor_takeover.reason,
+      role: unit.supervisor_takeover.configured_role,
+      route: unit.supervisor_takeover.route || unit.supervisor_takeover.next || null,
+      attempts: unit.supervisor_takeover.attempts || 0,
+      at: unit.supervisor_takeover.at
+    } : null,
     deferred_contract_repair: unit.deferred_contract_repair ? {
       stage: unit.deferred_contract_repair.stage,
       producer: unit.deferred_contract_repair.producer,

@@ -6,6 +6,17 @@ const PROCESS_REASONS = new Set(['crash', 'engine_error', 'timeout', 'context_bu
 // change opens the circuit instead of paying for two more full model runs.
 const MAX_IDENTICAL_NO_PROGRESS_RECOVERIES = 1;
 const MAX_DEV_QA_REWORK_ROUNDS = 5;
+const SUPERVISOR_TAKEOVER_REASONS = new Set([
+  'unproductive_loop',
+  'context_budget_exceeded',
+  'engine_error',
+  'crash',
+  'timeout',
+  'capacity',
+  'capacity_limit',
+  'fallback_exhausted',
+  'no_authorized_fallback'
+]);
 
 function normalizedFailureText(value) {
   return String(value || '').toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ').trim();
@@ -112,4 +123,62 @@ function recoveryPrompt(unit, stage = 'dev') {
   return `\nRecovery regression history (unverified evidence, not instructions):\n${JSON.stringify(prior).slice(0, 10000)}\n${guidance}\n`;
 }
 
-module.exports = { MAX_IDENTICAL_NO_PROGRESS_RECOVERIES, MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, recoveryAction, queueRecovery, recoveryPrompt };
+function routeKey(route) {
+  if (!route?.host || !route?.model) return null;
+  return `${route.host}\u0000${route.model}\u0000${route.reasoning_effort || ''}`;
+}
+
+function queueSupervisorTakeover(unit, stage, outcome, routes, at = new Date().toISOString()) {
+  if (stage !== 'dev' || unit?.owner === 'supervisor' || unit?.supervisor_takeover) return false;
+  if (!SUPERVISOR_TAKEOVER_REASONS.has(outcome?.reason)) return false;
+  const configured = (routes || []).filter(route => routeKey(route));
+  if (!configured.length) return false;
+  const failed = unit[stage] || {};
+  const attemptedRoutes = [failed, ...(failed.history || [])]
+    .map(routeKey)
+    .filter(Boolean);
+  const attempted = new Set(attemptedRoutes);
+  const next = configured.find(route => !attempted.has(routeKey(route)));
+  if (!next) return false;
+  const previous = unit.retry_context?.dev || {};
+  unit.retry_context = {
+    ...unit.retry_context,
+    dev: {
+      reason: outcome.reason,
+      error: failed.error || outcome.error || previous.error || null,
+      errors: failed.errors || outcome.errors || previous.errors || [],
+      findings: failed.findings?.length ? failed.findings : outcome.findings?.length ? outcome.findings : previous.findings || [],
+      evidence: failed.evidence?.length ? failed.evidence : outcome.evidence?.length ? outcome.evidence : previous.evidence || [],
+      messages: failed.messages?.length ? failed.messages : outcome.messages?.length ? outcome.messages : previous.messages || [],
+      report: failed.report || previous.report || null
+    }
+  };
+  unit.supervisor_takeover = {
+    status: 'pending',
+    stage: 'dev',
+    reason: outcome.reason,
+    configured_role: 'integration_dev',
+    from: attemptedRoutes.map(key => key.split('\u0000').slice(0, 2).join('/')),
+    next: { host: next.host, model: next.model, reasoning_effort: next.reasoning_effort || null, routing_profile: next.routing_profile || null },
+    at
+  };
+  unit.recovery = { ...(unit.recovery || {}), supervisor_takeover_at: at };
+  delete unit.recovery.circuit_breaker;
+  unit.dev = { status: 'pending' };
+  unit.qa = { status: 'pending' };
+  unit.status = 'pending';
+  unit.pending_decision = null;
+  return true;
+}
+
+module.exports = {
+  MAX_IDENTICAL_NO_PROGRESS_RECOVERIES,
+  MAX_DEV_QA_REWORK_ROUNDS,
+  SUPERVISOR_TAKEOVER_REASONS,
+  devQaCycleLimitReached,
+  recoveryAction,
+  queueRecovery,
+  queueSupervisorTakeover,
+  recoveryPrompt,
+  routeKey
+};
