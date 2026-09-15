@@ -89,6 +89,8 @@ function formatProgress(event) {
       return `${where}: unproductive for ${Math.round((event.since_ms || 0) / 1000)}s — no file change under ${describeMeasuredOn(event.measured_on)}${event.talkative ? ' while still producing output (a worker blocked on a prompt, looping, or only reading looks exactly like this)' : ''}`;
     case 'limits':
       return `AIOSON limits: context off · time off · QA→DEV at most ${event.max_dev_qa_rework_rounds} return(s)`;
+    case 'profile_validation':
+      return `runtime routes ${event.status}: ${event.profiles}${event.status === 'checking' ? ' — probing new/expired routes if needed' : ` — ${event.probed || 0} probed, ${event.cached || 0} cached${event.reason ? ` (${event.reason})` : ''}`}`;
     case 'lease':
       return event.status === 'waiting'
         ? `lease: a previous run's lease on this feature expires in ${Math.ceil((event.expires_in_ms || 0) / 1000)}s (${event.path}) — waiting up to ${Math.ceil((event.max_wait_ms || 0) / 1000)}s; a live run renews it, a dead one never does`

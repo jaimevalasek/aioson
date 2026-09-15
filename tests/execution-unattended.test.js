@@ -139,7 +139,7 @@ test('execution-roles: there is no per-role permission knob or active unit time 
   assert.equal(describeMs(DEFAULT_UNIT_TIMEOUT_MS), 'no limit');
 });
 
-test('the roles digest binds compile-time policy while live model routing and process budgets remain editable', async (t) => {
+test('the roles digest is a schema marker while all execution routing policy remains live', async (t) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'aioson-roles-digest-'));
   t.after(() => fs.rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   await fs.mkdir(path.join(dir, '.aioson', 'config'), { recursive: true });
@@ -168,7 +168,7 @@ test('the roles digest binds compile-time policy while live model routing and pr
     ['the independent-review rule', { ...ROLES, execution: { require_independent_qa: true } }]
   ]) {
     await write(roles);
-    assert.notEqual((await readExecutionRoles(dir)).digest, base.digest, `${label} shapes the units and changes the binding digest`);
+    assert.equal((await readExecutionRoles(dir)).digest, base.digest, `${label} is reloaded at its dispatch boundary and does not stale the compiled graph`);
   }
 });
 

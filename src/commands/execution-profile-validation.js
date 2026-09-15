@@ -157,7 +157,7 @@ async function runExecutionProfileValidation({
   if (store.unreadable) return { ok: false, reason: 'signature_store_unreadable', path: store.path, message: store.error, exitCode: 1 };
   const statusOnly = options.status === true;
   const routesToProbe = statusOnly ? [] : routes.filter(route => options.refresh === true || signatureState(findSignature(store, route), clock()) !== 'valid');
-  if (!statusOnly) {
+  if (!statusOnly && routesToProbe.length > 0) {
     const probed = await mapConcurrent(routesToProbe, concurrency, async route => {
       try {
         return await probe({

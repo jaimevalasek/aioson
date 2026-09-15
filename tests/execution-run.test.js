@@ -529,7 +529,7 @@ test('execution:run — lane units of a wave run concurrently as dev→qa pipeli
 
   // Live events: the channel that does not depend on the host streaming.
   const kinds = events.map((e) => `${e.type}:${e.status || e.check || ''}`);
-  assert.equal(kinds[0], 'run:started');
+  assert.deepEqual(kinds.slice(0, 3), ['profile_validation:checking', 'profile_validation:ready', 'run:started']);
   assert.ok(kinds.includes('wave:started'));
   assert.ok(kinds.includes('unit:started'));
   assert.ok(kinds.includes('unit:passed'));
@@ -987,6 +987,98 @@ test('capability verification metadata does not invent a hidden pending integrat
   assert.equal(result.integration.status, 'none');
 });
 
+test('an actual run validates a newly saved primary route just in time without rewriting the user configuration', async (t) => {
+  const ctx = await setup(t);
+  const model = 'gpt-6-new-subscription';
+  const saved = {
+    ...ROLES,
+    roles: { ...ROLES.roles, backend_dev: { host: 'codex', model, reasoning_effort: 'high' } }
+  };
+  const rolesFile = path.join(ctx.dir, '.aioson/config/execution-roles.json');
+  await fs.writeFile(rolesFile, JSON.stringify(saved, null, 2), 'utf8');
+  const probes = [];
+  const events = [];
+  const fakes = adapters();
+  const result = await run(ctx, {
+    registry: fakes.registry,
+    events,
+    engine: {
+      profileProbe: async (input) => {
+        probes.push([input.host, input.model, input.reasoning_effort]);
+        return { entry: signed(input.host, input.model, input.reasoning_effort) };
+      }
+    }
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(probes, [['codex', model, 'high']]);
+  assert.deepEqual(fakes.log.filter(entry => entry.key === 'dev:phase-1').map(entry => [entry.host, entry.model]), [['codex', model]]);
+  assert.match(formatProgress(events.find(event => event.type === 'profile_validation' && event.status === 'checking')), /probing new\/expired routes/);
+  assert.ok(events.some(event => event.type === 'profile_validation' && event.status === 'ready' && event.probed === 1));
+  assert.deepEqual(JSON.parse(await fs.readFile(rolesFile, 'utf8')), saved, 'validation records machine evidence, never a replacement model');
+});
+
+test('a route added during active work is validated once before the next dispatch and becomes effective immediately', async (t) => {
+  const roles = JSON.parse(JSON.stringify(ROLES));
+  const ctx = await setup(t, { roles });
+  const model = 'qwen-live-qa';
+  const probes = [];
+  const fakes = adapters({ 'dev:phase-1': { delay_ms: 250 }, 'dev:phase-2': { delay_ms: 250 } });
+  const running = run(ctx, {
+    registry: fakes.registry,
+    engine: {
+      profileProbe: async (input) => {
+        probes.push([input.host, input.model, input.reasoning_effort]);
+        await new Promise(resolve => setTimeout(resolve, 30));
+        return { entry: signed(input.host, input.model, input.reasoning_effort) };
+      }
+    }
+  });
+  while (fakes.log.filter(entry => entry.key.startsWith('dev:phase-')).length < 2) await new Promise(resolve => setTimeout(resolve, 10));
+  roles.roles.qa = { host: 'qwen', model };
+  const rolesFile = path.join(ctx.dir, '.aioson/config/execution-roles.json');
+  await fs.writeFile(rolesFile, JSON.stringify(roles, null, 2), 'utf8');
+  const result = await running;
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(probes, [['qwen', model, null]], 'concurrent lanes share one JIT validation of the same route');
+  const qaCalls = fakes.log.filter(entry => entry.key.startsWith('qa:'));
+  assert.ok(qaCalls.length > 0 && qaCalls.every(entry => entry.host === 'qwen' && entry.model === model));
+  assert.deepEqual(JSON.parse(await fs.readFile(rolesFile, 'utf8')), roles);
+});
+
+test('a failed JIT primary validation uses the saved fallback automatically instead of pausing the run', async (t) => {
+  const ctx = await setup(t);
+  const model = 'qwen-no-capacity';
+  const saved = {
+    version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
+    profiles: {
+      primary: {
+        enabled: true, fallback_use: true, fallback_profiles: ['reserve'],
+        roles: { ...ROLES.roles, backend_dev: { host: 'qwen', model } }
+      },
+      reserve: { enabled: true, fallback_use: false, fallback_profiles: [], roles: ROLES.roles }
+    },
+    parallel: ROLES.parallel, on_unavailable: ROLES.on_unavailable
+  };
+  const rolesFile = path.join(ctx.dir, '.aioson/config/execution-roles.json');
+  await fs.writeFile(rolesFile, JSON.stringify(saved, null, 2), 'utf8');
+  const probes = [];
+  const fakes = adapters();
+  const result = await run(ctx, {
+    registry: fakes.registry,
+    engine: {
+      profileProbe: async (input) => {
+        probes.push([input.host, input.model]);
+        return { entry: { ...signed(input.host, input.model, input.reasoning_effort), status: 'invalid', reason: 'capacity' } };
+      }
+    }
+  });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(probes, [['qwen', model]]);
+  assert.deepEqual(fakes.log.filter(entry => entry.key === 'dev:phase-1').map(entry => [entry.host, entry.model]), [['codex', 'gpt-5.6']]);
+  assert.equal((await readState(ctx)).units['phase-1'].dev.routing_profile, 'reserve');
+  assert.deepEqual(JSON.parse(await fs.readFile(rolesFile, 'utf8')), saved);
+});
+
 test('execution:run reloads active_profile before each new DEV or QA dispatch without restarting the run', async (t) => {
   const profiles = {
     version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
@@ -1033,6 +1125,49 @@ test('profile fallback routes infrastructure failure to the same role in the nex
   assert.equal(state.units['phase-1'].dev.host, 'kimi');
   assert.equal(state.units['phase-1'].dev.routing_profile, 'reserve');
   assert.deepEqual(state.attempts.filter(attempt => attempt.unit === 'phase-1' && attempt.stage === 'dev').map(attempt => [attempt.routing_profile, attempt.reason]), [['primary', 'capacity'], ['reserve', null]]);
+});
+
+test('runtime fallback walks multiple profiles transitively and tries each distinct signed route once', async (t) => {
+  const qwenModel = 'qwen-last-resort';
+  const roles = {
+    version: 1, source: 'test-client', enabled: true, active_profile: 'primary',
+    profiles: {
+      primary: { enabled: true, fallback_use: true, fallback_profiles: ['reserve'], roles: ROLES.roles },
+      reserve: {
+        enabled: true, fallback_use: true, fallback_profiles: ['last_resort'],
+        roles: { ...ROLES.roles, backend_dev: { host: 'kimi', model: 'kimi-k3' } }
+      },
+      last_resort: {
+        enabled: true, fallback_use: false, fallback_profiles: [],
+        roles: { ...ROLES.roles, backend_dev: { host: 'qwen', model: qwenModel } }
+      }
+    },
+    parallel: ROLES.parallel, on_unavailable: ROLES.on_unavailable
+  };
+  const signatures = {
+    ...ALL_SIGNED,
+    [signatureKey('qwen', qwenModel, null)]: signed('qwen', qwenModel, null)
+  };
+  const ctx = await setup(t, { roles, signatures });
+  const fakes = adapters({
+    'dev:phase-1': input => input.model === 'gpt-5.6'
+      ? { fail: 'capacity' }
+      : input.model === 'kimi-k3'
+        ? { fail: 'service_unavailable' }
+        : {}
+  });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(
+    fakes.log.filter(entry => entry.key === 'dev:phase-1').map(entry => [entry.host, entry.model]),
+    [['codex', 'gpt-5.6'], ['kimi', 'kimi-k3'], ['qwen', qwenModel]]
+  );
+  const state = await readState(ctx);
+  assert.equal(state.units['phase-1'].dev.routing_profile, 'last_resort');
+  assert.deepEqual(
+    state.attempts.filter(attempt => attempt.unit === 'phase-1' && attempt.stage === 'dev').map(attempt => [attempt.routing_profile, attempt.reason]),
+    [['primary', 'capacity'], ['reserve', 'service_unavailable'], ['last_resort', null]]
+  );
 });
 
 test('an invalid active signature selects a signed profile fallback before dispatch', async (t) => {

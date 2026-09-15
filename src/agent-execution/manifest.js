@@ -245,7 +245,7 @@ function resolveExecutionTarget(manifest, { agent = 'dev', lane = null } = {}, o
   return manifest.agents?.[agent] ? resolveAgent(manifest, agent, overrides) : null;
 }
 
-async function resolveExecutionEntry(entry, { catalogLoader = loadModelCatalog } = {}) {
+async function resolveExecutionEntry(entry, { catalogLoader = loadModelCatalog, allowHostSignature = false } = {}) {
   const cap = capabilities(entry.host);
   if (entry.reasoning_effort && !cap.reasoning_effort) {
     return {
@@ -260,9 +260,27 @@ async function resolveExecutionEntry(entry, { catalogLoader = loadModelCatalog }
   const catalog = cap.model_catalog
     ? await catalogLoader(entry.host)
     : { available: false, reason: 'unsupported_model_catalog', models: [] };
-  const model = resolveModel(entry.model, catalog);
+  let model = resolveModel(entry.model, catalog);
+  // A fresh host signature is stronger evidence than a stale provider catalog:
+  // it ran this exact literal model/effort through the real CLI on this machine.
+  // Only runtime routing marks an entry this way after reading that evidence;
+  // ordinary manifest resolution remains catalog-driven.
+  if (!model.ok && allowHostSignature === true && entry.signature_validated === true) {
+    model = {
+      ok: true,
+      requested: entry.model,
+      resolved: entry.model,
+      strategy: 'host_signature',
+      supported_efforts: entry.reasoning_effort ? [entry.reasoning_effort] : [],
+      catalog_source: catalog?.source || null,
+      catalog_fetched_at: catalog?.fetched_at || null
+    };
+  }
   if (!model.ok) return { ...entry, ...model, model_requested: entry.model };
-  const effort = validateReasoningEffort(model, entry.reasoning_effort);
+  let effort = validateReasoningEffort(model, entry.reasoning_effort);
+  if (!effort.ok && effort.reason === 'unsupported_reasoning_effort' && allowHostSignature === true && entry.signature_validated === true) {
+    effort = { ok: true, reasoning_effort: entry.reasoning_effort, verification: 'host_signature' };
+  }
   if (!effort.ok) {
     return {
       ...entry,

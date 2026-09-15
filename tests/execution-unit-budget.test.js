@@ -294,7 +294,7 @@ test('execution:seed without --lanes and without a lanes table seeds one lane pe
   assert.deepEqual(result.lanes, ['backend', 'frontend']);
   assert.equal(result.lanes_source, 'surfaces');
   if (result.outcome === 'seeded') {
-    assert.deepEqual(Object.keys(result.roles).sort(), ['backend_dev', 'frontend_dev', 'qa']);
+    assert.deepEqual(Object.keys(result.roles).sort(), ['backend_dev', 'frontend_dev', 'integration_dev', 'qa']);
   } else {
     // A machine without any execution host on PATH: the lanes were still derived from the surfaces.
     assert.equal(result.outcome, 'no_execution_host');

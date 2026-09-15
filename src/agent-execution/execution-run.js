@@ -63,10 +63,11 @@ const { readSignatures, findSignature, signatureState } = require('../lib/host-s
 const { getExecutionCapabilities, resolveSandboxArgs, LANE_WORKER_MODE } = require('../lib/tool-capabilities');
 const { captureCorrectionBaseline } = require('../lib/specialist-correction');
 const { openRuntimeDb, appendExecutionEvent } = require('../runtime-store');
-const { readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner } = require('../lib/execution-roles');
+const { profileFallbackOrder, readExecutionRoles, resolveLaneRoles, resolveProfileFallbacks, resolveSpawner } = require('../lib/execution-roles');
 const { wrapRegistryWithSpawner } = require('./adapters/spawner');
 const { currentActivity, observeExecution } = require('./execution-observation');
 const { createExecutionLoopGuard } = require('./execution-loop-guard');
+const { runExecutionProfileValidation } = require('../commands/execution-profile-validation');
 
 const DEFAULT_ADAPTERS = {
   antigravity: require('./adapters/antigravity'),
@@ -845,7 +846,7 @@ async function executeRole({
   heartbeatMs = 0, liveLineMs = 0, onHeartbeat = null, independentFrom = null, scanCap = DEFAULT_SCAN_CAP,
   policy = null, priceCatalog = null, onAttempt = null
 }) {
-  const resolved = await resolveExecutionEntry(config, { catalogLoader });
+  const resolved = await resolveExecutionEntry(config, { catalogLoader, allowHostSignature: config.signature_validated === true });
   const canFallbackResolution = !resolved.ok && (config.fallbacks || []).some(fallback => fallback.authorized_profile === true && (fallback.on || []).includes(fallbackReasonCategory(resolved.reason)));
   if (!resolved.ok && !canFallbackResolution) return { kind: 'unavailable', reason: resolved.reason, candidates: resolved.candidates || [], host: config.host, model: config.model, reasoning_effort: config.reasoning_effort || null };
   let writableRoots;
@@ -1357,14 +1358,81 @@ async function runExecution({
   scanCap = DEFAULT_SCAN_CAP,
   qaKernelPath,
   gitBaseline = captureCorrectionBaseline,
-  spawnerOptions = {}
+  spawnerOptions = {},
+  profileProbe
 }) {
   const feature = assertFeatureSlug(featureInput);
   const emit = (event) => {
     try { progress({ at: nowIso(), feature, ...event }); } catch { /* progress is best-effort */ }
   };
+  const runtimeProfileOption = (rolesRead) => {
+    const roles = rolesRead?.roles;
+    if (!roles?.profiles || !roles.active_profile) return undefined;
+    return [roles.active_profile, ...profileFallbackOrder(roles)].join(',');
+  };
+  const validateRuntimeProfiles = async (rolesSnapshot) => {
+    let current = rolesSnapshot;
+    let result = null;
+    // A save can land while its previous contents are being probed. Follow the
+    // saved file a few times instead of blessing a digest that was never
+    // checked; a continuously edited file remains a normal preflight/runtime
+    // configuration error, not an unbounded validation loop.
+    for (let pass = 0; pass < 3; pass += 1) {
+      if (!current?.ok || !current.enabled || !current.file_digest) return { roles: current, result, digest: null };
+      const targetDigest = current.file_digest;
+      const profile = runtimeProfileOption(current);
+      emit({ type: 'profile_validation', status: 'checking', profiles: profile || 'legacy' });
+      try {
+        result = await runExecutionProfileValidation({
+          projectDir,
+          options: { json: true, ...(profile ? { profile } : {}) },
+          logger: { log() {}, error() {} },
+          env,
+          now,
+          probe: profileProbe,
+          adapterRegistry,
+          resolverOptions
+        });
+      } catch (error) {
+        // Validation evidence is a routing input, not a new crash surface. The
+        // normal preflight/role selection below can still use an already valid
+        // fallback and otherwise reports that no proven route is available.
+        result = { ok: false, reason: 'profile_validation_failed', message: error.message, exitCode: 1 };
+      }
+      emit({
+        type: 'profile_validation',
+        status: result.routing?.ready === true ? 'ready' : 'unavailable',
+        profiles: profile || 'legacy',
+        probed: result.probed || 0,
+        cached: result.cached || 0,
+        reason: result.reason || null
+      });
+      const latest = await readExecutionRoles(projectDir).catch(() => current);
+      if (latest?.file_digest === targetDigest) return { roles: latest, result, digest: targetDigest };
+      current = latest;
+    }
+    return { roles: current, result, digest: null };
+  };
+  // An actual run proves newly configured routes automatically. `--preflight`
+  // remains a read-only diagnostic; starting work is the authorization to run
+  // the same hermetic signature harness the explicit batch command uses.
+  const initialRoles = await readExecutionRoles(projectDir).catch(() => null);
+  let automaticProfileValidation = null;
+  let initiallyValidatedDigest = null;
+  if (!preflightOnly && initialRoles?.ok && initialRoles.enabled) {
+    const validation = await validateRuntimeProfiles(initialRoles);
+    automaticProfileValidation = validation.result;
+    initiallyValidatedDigest = validation.digest;
+  }
   const preflight = await preflightExecution(projectDir, feature, { env, now, resolverOptions, adapterRegistry });
-  const preflightReport = { ok: preflight.ok, checks: preflight.checks, issues: preflight.issues, warnings: preflight.warnings || [], spawner: preflight.spawner ? { command: preflight.spawner.command, source: preflight.spawner.source } : null };
+  const preflightReport = {
+    ok: preflight.ok,
+    checks: preflight.checks,
+    issues: preflight.issues,
+    warnings: preflight.warnings || [],
+    spawner: preflight.spawner ? { command: preflight.spawner.command, source: preflight.spawner.source } : null,
+    ...(automaticProfileValidation ? { profile_validation: { ok: automaticProfileValidation.ok, reason: automaticProfileValidation.reason, probed: automaticProfileValidation.probed, cached: automaticProfileValidation.cached, routing_ready: automaticProfileValidation.routing?.ready === true } } : {})
+  };
   if (!preflight.ok) {
     return { ok: false, status: 'refused', reason: 'preflight_failed', feature, preflight: preflightReport, exitCode: 1 };
   }
@@ -1587,6 +1655,26 @@ async function runExecution({
       return qaProfiles.get(maxFixFiles);
     };
 
+    let validatedRuntimeConfig = initiallyValidatedDigest;
+    let runtimeValidation = null;
+    const validateChangedRuntimeConfig = async (currentRoles) => {
+      let observed = currentRoles;
+      for (let pass = 0; pass < 3 && observed?.file_digest !== validatedRuntimeConfig; pass += 1) {
+        if (!runtimeValidation) {
+          const task = validateRuntimeProfiles(observed);
+          runtimeValidation = task;
+          void task.finally(() => {
+            if (runtimeValidation === task) runtimeValidation = null;
+          }).catch(() => {});
+        }
+        const validation = await runtimeValidation;
+        if (validation.digest) validatedRuntimeConfig = validation.digest;
+        if (validation.roles?.file_digest === validatedRuntimeConfig) return validation.roles;
+        observed = await readExecutionRoles(projectDir).catch(() => validation.roles || observed);
+      }
+      return observed;
+    };
+
     const roleConfig = async (unitState, laneId, role) => {
       const laneEntry = manifest.manifest.development_lanes.lanes[laneId] || (laneId === 'integration' ? {
         enabled: true,
@@ -1605,6 +1693,8 @@ async function runExecution({
         if (readAttempt < 2) await new Promise(resolve => setTimeout(resolve, 100));
       }
       if (!currentRoles.ok || !currentRoles.enabled) throw new Error(`${currentRoles.reason || 'roles_unavailable'}: ${currentRoles.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles.path}`);
+      currentRoles = await validateChangedRuntimeConfig(currentRoles);
+      if (!currentRoles?.ok || !currentRoles.enabled) throw new Error(`${currentRoles?.reason || 'roles_unavailable'}: ${currentRoles?.errors?.map(item => `${item.path} ${item.message}`).join('; ') || currentRoles?.path || 'execution roles changed during validation'}`);
       const selected = resolveLaneRoles(currentRoles.roles, laneId)[role];
       if (!override && !selected) throw new Error(`active profile ${currentRoles.roles.active_profile || 'legacy'} does not declare ${laneId} ${role}`);
       let liveRole = override || selected;
@@ -1619,6 +1709,7 @@ async function runExecution({
           model: fallback.model,
           reasoning_effort: fallback.reasoning_effort || null,
           routing_profile: fallback.profile,
+          signature_validated: true,
           authorized_profile: true,
           on: ['capacity', 'unavailable']
         });
@@ -1638,6 +1729,7 @@ async function runExecution({
           model: liveRole.model,
           reasoning_effort: liveRole.reasoning_effort || undefined,
           routing_profile: routingProfile,
+          signature_validated: true,
           mode: 'external',
           writable_roots: laneEntry.writable_roots || [],
           fallbacks: override ? [] : [...profileFallbacks, ...(laneEntry.fallbacks || [])],
@@ -1651,6 +1743,7 @@ async function runExecution({
         model: liveRole.model,
         reasoning_effort: liveRole.reasoning_effort || undefined,
         routing_profile: routingProfile,
+        signature_validated: true,
         mode: 'external',
         writable_roots: [],
         fallbacks: override ? [] : [...profileFallbacks, ...(qa.fallbacks || [])],
@@ -2102,7 +2195,7 @@ async function runExecution({
     const running = new Map();
     const startedWaves = new Set();
     const completedWaves = new Set();
-    const launch = async (unitId) => {
+    const launch = async (unitId, sharedBaseline) => {
       const unit = planUnits[unitId];
       const wave = state.waves.find((w) => w.wave === unit.wave);
       if (!startedWaves.has(unit.wave)) {
@@ -2112,7 +2205,12 @@ async function runExecution({
         await persist();
         emit({ type: 'wave', status: 'started', wave: unit.wave, units: wave ? wave.units.filter((id) => state.units[id]?.owner === 'lane' && runnable(id)) : [unitId] });
       }
-      const before = await gitBaseline(projectDir).catch(() => null);
+      // Units admitted in the same scheduler fill share the same instant of
+      // worktree evidence. Capturing it once avoids serial repository scans
+      // delaying worker 10 until worker 1 has already finished.
+      const before = sharedBaseline === undefined
+        ? await gitBaseline(projectDir).catch(() => null)
+        : sharedBaseline;
       windows.set(unitId, { start: ++seq, end: null, before });
       running.set(unitId, runUnitPipeline(unitId).catch(async error => {
         const current = state.units[unitId];
@@ -2130,13 +2228,19 @@ async function runExecution({
     while (true) {
       await refreshRuntimePolicy();
       if (!monitor.lost) {
-        while (running.size < state.parallel.max_concurrent_lanes) {
-          const next = laneIds.find((id) => !running.has(id) && isReady(id) && ![...running.keys()].some(active => {
+        const starting = [];
+        while (running.size + starting.length < state.parallel.max_concurrent_lanes) {
+          const activeIds = [...running.keys(), ...starting];
+          const next = laneIds.find((id) => !running.has(id) && !starting.includes(id) && isReady(id) && !activeIds.some(active => {
             const paths = new Set(planUnits[active].files.map(file => file.toLowerCase()));
             return planUnits[id].files.some(file => paths.has(file.toLowerCase()));
           }));
           if (!next) break;
-          await launch(next);
+          starting.push(next);
+        }
+        if (starting.length > 0) {
+          const sharedBaseline = await gitBaseline(projectDir).catch(() => null);
+          for (const id of starting) await launch(id, sharedBaseline);
         }
       }
       if (running.size === 0) break;

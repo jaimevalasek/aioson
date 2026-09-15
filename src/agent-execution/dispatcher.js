@@ -144,14 +144,14 @@ async function executeWithCapacityPolicy({manifest,resolved,input,adapterRegistr
   const history=[];
   const candidates=[
     {entry:resolved,fallback:null},
-    ...capacitySequence(manifest,resolved).map(item=>{const crossHost=item.host!==resolved.host;const hasEffort=Object.prototype.hasOwnProperty.call(item,'reasoning_effort');return{fallback:item,entry:{...resolved,ok:false,host:item.host,model:item.model,model_requested:undefined,routing_profile:item.routing_profile||null,reasoning_effort:hasEffort?item.reasoning_effort:(crossHost?undefined:resolved.reasoning_effort),...(crossHost?{reasoning_effort_verification:undefined}:{})}};})
+    ...capacitySequence(manifest,resolved).map(item=>{const crossHost=item.host!==resolved.host;const hasEffort=Object.prototype.hasOwnProperty.call(item,'reasoning_effort');return{fallback:item,entry:{...resolved,ok:false,host:item.host,model:item.model,model_requested:undefined,routing_profile:item.routing_profile||null,signature_validated:item.signature_validated===true,reasoning_effort:hasEffort?item.reasoning_effort:(crossHost?undefined:resolved.reasoning_effort),...(crossHost?{reasoning_effort_verification:undefined}:{})}};})
   ];
   let index=0;
   for(let count=0;count<Math.max(manifest.capacity_policy.max_attempts,candidates.length);count++){
     if(input.signal?.aborted)return{ok:false,reason:input.abortReason||'aborted',history};
     let candidate=candidates[index].entry;
     if(!candidate.ok){
-      candidate=await resolveExecutionEntry(candidate,{catalogLoader});
+      candidate=await resolveExecutionEntry(candidate,{catalogLoader,allowHostSignature:candidate.signature_validated===true});
       candidates[index].entry=candidate;
       if(!candidate.ok){
         history.push({attempt:count+1,host:candidate.host,model_requested:candidate.model_requested||candidate.model,model:null,reason:candidate.reason});
