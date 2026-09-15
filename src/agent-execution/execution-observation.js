@@ -65,7 +65,10 @@ function observeExecution(status, plan = null) {
   for (const decision of status.decisions || []) events.push({ ...decision, type: 'decision' });
   events.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const active = new Set(running.map(item => item.unit)).size;
-  const limit = plan?.parallel?.max_concurrent_lanes ?? null;
+  // The compiled plan is only the initial capacity. Active runs persist the
+  // latest live setting after every scheduler pass, so monitoring must prefer
+  // that value or it can display 3/2 while the engine is correctly using 4.
+  const limit = status.parallel?.max_concurrent_lanes ?? plan?.parallel?.max_concurrent_lanes ?? null;
   const ready = waiting.filter(item => item.reason === 'capacity').length;
   const blocked = waiting.length - ready;
   return {

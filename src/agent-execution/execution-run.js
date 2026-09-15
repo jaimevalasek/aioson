@@ -2709,6 +2709,7 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     max_dev_qa_rework_rounds: MAX_DEV_QA_REWORK_ROUNDS,
     until_complete: state.until_complete === true,
     run: summarizeState(state, feature),
+    parallel: state.parallel || read.plan?.parallel || null,
     engine,
     // What is running right now, measured from the disk by the engine's heartbeat.
     running: (state.status === 'running' && engine.alive ? unitRows : [])

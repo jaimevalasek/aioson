@@ -135,6 +135,15 @@ test('read-only observation distinguishes DEV success, QA failure, queue capacit
   assert.deepEqual((await fs.readdir(path.join(ctx.dir, '.aioson'))).sort(), ['context'], 'monitor never creates a runtime database or lock');
 });
 
+test('dashboard concurrency prefers the live worker limit over the compiled plan', async t => {
+  const ctx = await fixture(t);
+  ctx.state.parallel = { max_concurrent_lanes: 4 };
+  await fs.writeFile(ctx.file, JSON.stringify(ctx.state));
+  const status = await snapshot(ctx.dir, 'example');
+  assert.equal(ctx.plan.parallel.max_concurrent_lanes, 2, 'the compiled plan remains unchanged');
+  assert.equal(status.observation.concurrency.limit, 4, 'the live scheduler capacity wins');
+});
+
 test('paused and stale engines do not count interrupted worker records as active processes', async t => {
   const ctx = await fixture(t);
   for (const mode of ['paused', 'stale']) {
