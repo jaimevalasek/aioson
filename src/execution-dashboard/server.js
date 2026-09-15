@@ -115,6 +115,14 @@ async function readReport(projectDir, feature, unitId, stage) {
   return { code: 200, data: JSON.parse(await fs.readFile(resolved.real_path, 'utf8')) };
 }
 
+function presentRecovery(snapshot, recovery = {}) {
+  const stopped = !snapshot.engine?.alive;
+  const actionable = snapshot.run
+    && ['paused', 'decision_required', 'running'].includes(snapshot.run.status)
+    && stopped;
+  return { ...recovery, visible: Boolean(!snapshot.archived && (actionable || (snapshot.run && stopped && recovery.busy))) };
+}
+
 function createExecutionDashboard(projectDir, { port = 4181, feature = null, autoPort = false, recoveryController = null, recoveryPollMs = 5000 } = {}) {
   projectDir = path.resolve(projectDir);
   const assets = new Map();
@@ -188,7 +196,10 @@ function createExecutionDashboard(projectDir, { port = 4181, feature = null, aut
       if (route) {
         const slug = decodeURIComponent(route[1]);
         if (!validateFeatureSlug(slug).ok) { send(res, 400, { error: 'Feature inválida.' }); return; }
-        if (route[2] === 'status') { const data = await snapshot(projectDir, slug); send(res, 200, { ...data, recovery: recovery.status(slug, data) }); return; }
+        if (route[2] === 'status') {
+          const data = await snapshot(projectDir, slug);
+          send(res, 200, { ...data, recovery: presentRecovery(data, recovery.status(slug, data)) }); return;
+        }
         const report = await readReport(projectDir, slug, url.searchParams.get('unit'), url.searchParams.get('stage'));
         send(res, report.code, report.error ? { error: report.error } : report.data); return;
       }
@@ -228,4 +239,4 @@ function createExecutionDashboard(projectDir, { port = 4181, feature = null, aut
   };
 }
 
-module.exports = { createExecutionDashboard, listFeatures, snapshot, readReport };
+module.exports = { createExecutionDashboard, listFeatures, snapshot, readReport, presentRecovery };

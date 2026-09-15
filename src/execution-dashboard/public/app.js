@@ -97,15 +97,18 @@ function renderMetrics(status) {
   const counts = obs.counts;
   const metrics = [
     ['DEV + QA aprovados', `${counts.accepted}/${counts.total}`, `${counts.dev_passed} implementada(s) · ${counts.qa_passed} revisada(s)`, 'success'],
-    ['Em execução', `${obs.concurrency.active}/${obs.concurrency.limit ?? '—'}`, `${obs.concurrency.ready || 0} pronta(s) · ${obs.concurrency.blocked || 0} aguardando dependências`, ''],
+    ['Em execução', `${obs.concurrency.active}/${obs.concurrency.limit ?? '—'}`, `${obs.concurrency.ready || 0} pronta(s) · limite ao vivo configurável`, ''],
     ['QA reprovado', counts.qa_failed, `${counts.findings} achado(s) registrados`, counts.qa_failed ? 'warning' : ''],
     ['Decisões pendentes', status.decisions_pending?.length || 0, 'Intervenções solicitadas pelo motor', '']
   ];
   $('metrics').replaceChildren(...metrics.map(([label, value, note, tone]) => {
-    const node = el(label === 'QA reprovado' || label === 'Decisões pendentes' ? 'button' : 'article', 'metric');
+    const node = el(['Em execução', 'QA reprovado', 'Decisões pendentes'].includes(label) ? 'button' : 'article', 'metric');
     if (node.tagName === 'BUTTON') {
       node.type = 'button';
-      node.onclick = () => { $('attention-title').scrollIntoView({ block: 'start', behavior: 'instant' }); };
+      node.onclick = label === 'Em execução'
+        ? openRoutingEditor
+        : () => { $('attention-title').scrollIntoView({ block: 'start', behavior: 'instant' }); };
+      if (label === 'Em execução') node.setAttribute('aria-label', `Em execução: ${value}. Ajustar limite de workers ao vivo.`);
     }
     node.append(el('div', 'metric-label', label), el('div', `metric-number ${tone}`, value), el('div', 'metric-note', note));
     return node;
@@ -599,14 +602,12 @@ function renderAttention(status) {
 function render(status) {
   const firstSnapshot = !current || current.feature !== status.feature;
   current = status;
-  const actionable = !status.archived && status.run && ['paused', 'decision_required', 'running'].includes(status.run.status) && !status.engine?.alive;
-  const repeated = status.engine?.alive && (status.units || []).some(unit => (unit.rework?.rounds || 0) >= 2 && (unit.dev?.status === 'running' || unit.qa?.status === 'running'));
-  $('recovery-bar').hidden = !(actionable || repeated || recovering || status.recovery?.busy || status.recovery?.phase === 'failed');
-  $('recovery-title').textContent = status.recovery?.phase === 'maintenance' ? 'Correção técnica em andamento pelo supervisor' : repeated ? 'Correções repetidas — entrega ainda não aprovada' : recovering || status.recovery?.busy ? 'Recuperação em andamento' : 'Execução interrompida — precisa de recuperação';
+  $('recovery-bar').hidden = !(recovering || status.recovery?.visible);
+  $('recovery-title').textContent = status.recovery?.phase === 'maintenance' ? 'Correção técnica em andamento pelo supervisor' : recovering || status.recovery?.busy ? 'Recuperação em andamento' : 'Execução interrompida — precisa de recuperação';
   $('recover-run').disabled = !canRecover(status);
-  $('recover-run').textContent = repeated ? 'Correção automática em andamento' : recovering || status.recovery?.busy ? 'Retomada em andamento…' : 'Corrigir e continuar execução';
+  $('recover-run').textContent = recovering || status.recovery?.busy ? 'Retomada em andamento…' : 'Corrigir e continuar execução';
   const localMessage = actionMessage?.feature === status.feature && actionMessage.run_id === status.run?.run_id ? actionMessage.text : null;
-  $('recovery-feedback').textContent = status.recovery?.message || localMessage || (repeated ? 'O motor está repetindo DEV → QA com os achados anteriores. Não está aguardando confirmação; confira a rodada e as evidências de progresso nas unidades.' : 'A execução não terminou. A recuperação preserva o trabalho e as aprovações, reenvia os erros aos modelos configurados e continua com QA.');
+  $('recovery-feedback').textContent = status.recovery?.message || localMessage || 'A execução não terminou. A recuperação preserva o trabalho e as aprovações, reenvia os erros aos modelos configurados e continua com QA.';
   $('empty').hidden = true;
   $('execution').hidden = false;
   $('title').textContent = human(status.feature);

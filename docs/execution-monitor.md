@@ -33,7 +33,9 @@ quando a execução sai de `running`; o painel web acompanha também as retomada
   reprovado não contam como unidade aceita.
 - **Unidades simultâneas** corresponde a `parallel.max_concurrent_lanes`.
   Apesar do nome histórico, esse limite é compartilhado por fluxos de unidade
-  `DEV → QA`. Não reserva uma vaga para backend e outra para frontend.
+  `DEV → QA`. Não reserva uma vaga para backend e outra para frontend. O cartão
+  **Em execução** abre a configuração desse limite (1–10). A alteração é ao vivo:
+  não exige recompilar o plano e vale na próxima passagem do escalonador.
 - **Aguardando vaga** significa que a unidade pode entrar na ordem do plano.
   Dependências e ondas anteriores aparecem como motivos próprios de espera.
 - **Motor sem sinal** usa a idade do heartbeat. A interface preserva o último
@@ -162,4 +164,8 @@ Pátina comunica atividade e sucesso; ouro, marca e decisões; perigo, falhas.
 Os temas Tinta e Porcelana usam fontes do sistema e não dependem de rede.
 
 
-O aviso de recuperação usa borda e botão amarelos destacados. Quando há duas ou mais rodadas de correção, o painel também avisa que a entrega ainda não foi aprovada, mesmo com o motor ativo. Esse aviso não é uma solicitação de confirmação: o ciclo DEV → QA continua automaticamente. Registros de workers interrompidos são preservados para retomada, mas não ocupam vagas na contagem quando o motor está parado.
+O aviso de recuperação usa borda e botão amarelos destacados e aparece somente
+quando o motor está realmente parado. Falhas antigas de uma tentativa de retomada
+e ciclos DEV → QA em andamento não mantêm a tarja na tela. Registros de workers
+interrompidos são preservados para retomada, mas não ocupam vagas na contagem
+quando o motor está parado.

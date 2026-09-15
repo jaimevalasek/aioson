@@ -5,7 +5,16 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createRecoveryController } = require('../src/execution-dashboard/recovery');
-const { createExecutionDashboard } = require('../src/execution-dashboard/server');
+const { createExecutionDashboard, presentRecovery } = require('../src/execution-dashboard/server');
+
+test('recovery banner follows the live engine instead of a stale recovery failure', () => {
+  const run = { run_id: 'run-1', status: 'running' };
+  const failed = { busy: false, phase: 'failed', message: 'Falha antiga.' };
+  assert.equal(presentRecovery({ run, engine: { alive: true } }, failed).visible, false);
+  assert.equal(presentRecovery({ run, engine: { alive: false } }, failed).visible, true);
+  assert.equal(presentRecovery({ run: { ...run, status: 'completed' }, engine: { alive: false } }, failed).visible, false);
+  assert.equal(presentRecovery({ run, engine: { alive: false }, archived: true }, failed).visible, false);
+});
 
 test('recovery uses only retry, binds the run, serializes clicks and waits for remaining decisions', async () => {
   const calls = [], launches = [];
@@ -29,6 +38,7 @@ test('recovery uses only retry, binds the run, serializes clicks and waits for r
   finish(1);
   assert.equal(controller.status('feature', { run: { run_id: 'run-1' } }).busy, false);
   assert.equal(controller.status('feature', { run: { run_id: 'run-1' } }).phase, 'failed');
+  assert.deepEqual(controller.status('feature', { run: { run_id: 'run-1' }, engine: { alive: true } }), { busy: false }, 'a live engine clears a stale finished recovery job');
 });
 
 test('active/finished runs and refused decisions cannot launch a recovery', async () => {

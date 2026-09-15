@@ -64,6 +64,10 @@ function createRecoveryController(projectDir, { status = statusExecution, decide
       if (supervisedMaintenance(projectDir, feature, snapshot)) return { busy: true, phase: 'maintenance', message: 'O supervisor está corrigindo esta execução e preservando as aprovações. A retomada será automática após a correção; nenhuma confirmação é necessária.' };
       const job = jobs.get(feature);
       if (!job || job.run_id !== snapshot.run?.run_id) return { busy: false };
+      if (snapshot.engine?.alive && !job.busy) {
+        jobs.delete(feature);
+        return { busy: false };
+      }
       return job.busy && snapshot.engine?.alive ? { ...job, phase: 'running', message: 'Retomada em execução. Acompanhe as unidades e o QA.' } : { ...job };
     },
     async recover(feature, payload) {
