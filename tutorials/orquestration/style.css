@@ -10,7 +10,7 @@
 .term-list > div { display: grid; grid-template-columns: 110px 1fr; padding: 16px 0; border-bottom: 1px solid var(--linha-2); gap: 18px; }
 .term-list dt { color: var(--ouro); font-weight: 600; }
 .term-list dd { margin: 0; }
-.simulation, .command-builder, .budget-demo { margin: 28px 0; border: 1px solid var(--linha-2); border-radius: var(--radius); padding: 24px; background: var(--superficie); }
+.simulation, .command-builder { margin: 28px 0; border: 1px solid var(--linha-2); border-radius: var(--radius); padding: 24px; background: var(--superficie); }
 .simulation-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--linha-2); }
 #sim-step { color: var(--ouro); font-size: 13px; }
 .sim-controls, .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; }
@@ -40,7 +40,6 @@
 .project-map > div + div { border-left: 1px solid var(--linha-2); }
 .project-map span { font-size: 13px; color: var(--marfim-2); }
 .project-map code { font-size: 12px; }
-.budget-demo output { display: block; margin: 24px 0 12px; color: var(--ouro); font-size: 23px; line-height: 1.5; }
 .command-builder pre { margin-bottom: 8px; }
 .command-builder h3 { margin-top: 30px; }
 #command-validation, #copy-status { font-size: 13px; }
@@ -50,18 +49,17 @@
 .source-links { font-size: 14px; }
 @media (max-width: 800px) { .execution-map { max-width: 520px; } }
 @media (max-width: 560px) {
-  .simulation, .command-builder, .budget-demo { padding: 18px; }
+  .simulation, .command-builder { padding: 18px; }
   .field-grid, .sim-controls, .project-map { grid-template-columns: 1fr; }
   .project-map > div + div { border-left: 0; border-top: 1px solid var(--linha-2); }
   .term-list > div { grid-template-columns: 1fr; gap: 6px; }
   .unit-board li { grid-template-columns: 1fr; }
   .unit-board output { grid-column: 1; grid-row: auto; text-align: left; max-width: none; margin-top: 8px; }
   .header-actions a { display: none; }
-  .budget-demo output { font-size: 20px; }
 }
 @media print {
   .sim-controls, .copy-button, .field-grid, #command-validation, #copy-status { display: none !important; }
-  .execution-map, .simulation, .budget-demo { box-shadow: none; }
+  .execution-map, .simulation { box-shadow: none; }
   .sim-summary { min-height: 0; }
   .command-builder { padding: 0; border: 0; }
 }

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Orquestração no AIOSON explicada para leigos: Planner, Dev, modelos por função, ondas em paralelo, Autopilot e dashboard de cada projeto. Com exemplos interativos e comandos para copiar.">
-  <meta name="reviewed-at" content="2026-09-13">
+  <meta name="description" content="Orquestração no AIOSON explicada para leigos: Planner, DEV supervisor de integração, QA compartilhado, modelos por função, ondas em paralelo, Autopilot e dashboard de cada projeto.">
+  <meta name="reviewed-at" content="2026-09-15">
   <meta name="color-scheme" content="dark light">
   <title>Orquestração no AIOSON — Do plano aos agentes em ação</title>
   <link rel="stylesheet" href="../memories/tokens.css">
@@ -20,7 +20,7 @@
 </header>
 <main id="main">
   <section class="hero" aria-labelledby="hero-title">
-    <div><p class="eyebrow">Guia para leigos · revisado em 13 set 2026</p>
+    <div><p class="eyebrow">Guia para leigos · revisado em 15 set 2026</p>
       <h1 id="hero-title">Um plano.<br>Vários agentes.<br>Você acompanha.</h1>
       <p class="hero-intro">Entenda quem organiza o trabalho, o que pode acontecer em paralelo e como abrir o painel para acompanhar uma funcionalidade do começo à verificação final.</p>
       <div class="hero-actions"><a class="primary-link" href="#basics">Começar do zero ↗</a><a class="text-link" href="#simulation">Ver os agentes em ação →</a></div>
@@ -37,7 +37,7 @@
   <div class="staff" aria-hidden="true"></div>
   <div class="reading-layout">
     <aside class="sidebar"><nav aria-label="Capítulos do tutorial"><p class="machine-label">Neste guia</p><ol>
-      <li><a href="#basics">O que é orquestrar</a></li><li><a href="#roles">Quem faz o quê</a></li><li><a href="#planner">Como nasce o plano</a></li><li><a href="#simulation">Ondas em ação</a></li><li><a href="#capacity">Quantas vagas usar</a></li><li><a href="#models">Agentes, modelos e harnesses</a></li><li><a href="#start">Como começar</a></li><li><a href="#practical">Exemplo completo</a></li><li><a href="#commands">Comandos do seu projeto</a></li><li><a href="#dashboard">Abrindo o dashboard</a></li><li><a href="#states">Como ler o painel</a></li><li><a href="#autopilot">Autopilot e recuperação</a></li><li><a href="#context">Contexto, tempo e tokens</a></li><li><a href="#finish">Quando terminou de verdade</a></li><li><a href="#faq">Dúvidas e outros projetos</a></li>
+      <li><a href="#basics">O que é orquestrar</a></li><li><a href="#roles">Quem faz o quê</a></li><li><a href="#integration">Integração / DEV e QA</a></li><li><a href="#planner">Como nasce o plano</a></li><li><a href="#simulation">Ondas em ação</a></li><li><a href="#capacity">Quantas vagas usar</a></li><li><a href="#models">Agentes, modelos e harnesses</a></li><li><a href="#start">Como começar</a></li><li><a href="#practical">Exemplo completo</a></li><li><a href="#commands">Comandos do seu projeto</a></li><li><a href="#dashboard">Abrindo o dashboard</a></li><li><a href="#states">Como ler o painel</a></li><li><a href="#autopilot">Autopilot e recuperação</a></li><li><a href="#context">Contexto, tempo e tokens</a></li><li><a href="#finish">Quando terminou de verdade</a></li><li><a href="#faq">Dúvidas e outros projetos</a></li>
     </ol></nav></aside>
     <article class="article">
       <section id="basics" aria-labelledby="basics-title">
@@ -63,14 +63,51 @@
         <p>Não é necessário chamar um agente chamado <code>@orchestrator</code> para usar esse caminho. Com o plano orquestrado compilado, o Dev usa <code>execution:run</code>; não precisa disparar cada lane manualmente.</p>
         <p>A jornada completa costuma ser <strong>Product → Sheldon → Planner → Dev → QA</strong>. Briefing e Refiner entram quando a ideia ainda precisa ser organizada. Veja o <a href="../sdd/index.html">tutorial de SDD</a> para essa preparação.</p>
       </section>
+      <section id="integration" aria-labelledby="integration-title">
+        <p class="section-number">03 / Fechamento técnico</p><h2 id="integration-title">O que o “Integração / DEV” faz?</h2>
+        <p><strong><code>integration_dev</code> é um DEV supervisor final, não outro QA.</strong> Quando esse papel existe no perfil ativo, o motor cria automaticamente uma última unidade depois que os pipelines paralelos satisfazem suas condições. Ela recebe o plano, os relatórios DEV/QA, os achados e as mensagens de todas as unidades.</p>
+        <pre><code>Unidades backend/frontend: DEV → QA
+                    ↓
+          Integração / DEV
+                    ↓
+          QA final independente
+                    ↓
+       feature tecnicamente aprovada</code></pre>
+        <ol class="flow-list">
+          <li><strong>Reunir as entregas aprovadas.</strong><p>Lê o ledger completo e usa o código combinado como uma única entrega; não reimplementa unidades aprovadas por suposição.</p></li>
+          <li><strong>Implementar o trabalho de integração.</strong><p>Conclui conexões planejadas entre backend, frontend e demais lanes que não pertenciam com segurança a uma unidade isolada.</p></li>
+          <li><strong>Executar a verificação completa.</strong><p>Roda os comandos de integração do plano — testes, typecheck, build e fluxo real aplicável — em vez de confiar apenas nos testes locais de cada unidade.</p></li>
+          <li><strong>Corrigir falhas cruzadas reproduzidas.</strong><p>Pode alterar os arquivos das unidades quando a integração comprova o defeito no caminho proprietário real. Toda correção fica registrada no relatório do supervisor.</p></li>
+          <li><strong>Entregar para outro julgador.</strong><p>O QA final revisa o estado combinado em processo separado. Se reprovar, os achados voltam ao Integração / DEV; o ciclo QA → DEV tem no máximo cinco retornos.</p></li>
+        </ol>
+        <div class="note"><strong>Ele não aprova o próprio trabalho.</strong> Integração / DEV não inventa decisões de produto, não trata skip como sucesso e não publica a feature. Sem <code>integration_dev</code>, configurações antigas deixam a integração restante para o DEV da sessão; por isso o papel é semeado nas configurações novas.</div>
+        <h3>QA compartilhado ou um QA para cada lane?</h3>
+        <p><strong>Recomendação: mantenha <code>qa</code> compartilhado como padrão.</strong> Não há evidência estável de que um modelo seja “frontend” ou “backend” apenas pelo nome. O contrato da unidade, os arquivos, os testes e as ferramentas disponíveis costumam produzir uma especialização mais concreta do que duplicar papéis.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Quando usar QA compartilhado ou específico"><table><thead><tr><th scope="col">Estratégia</th><th scope="col">Use quando</th><th scope="col">Efeito real</th></tr></thead><tbody>
+          <tr><th scope="row"><code>qa</code> compartilhado</th><td>O mesmo harness consegue executar os testes das lanes e você quer um critério de aceitação consistente.</td><td>Cada unidade ainda recebe um processo QA separado e vários deles podem rodar em paralelo.</td></tr>
+          <tr><th scope="row"><code>frontend_qa</code></th><td>A revisão exige navegador, inspeção visual, acessibilidade ou outra capacidade que o QA comum não possui.</td><td>Substitui <code>qa</code> somente na lane frontend.</td></tr>
+          <tr><th scope="row"><code>backend_qa</code></th><td>A revisão exige banco, segurança, carga ou ferramentas backend específicas, ou precisa de outro provedor por cota.</td><td>Substitui <code>qa</code> somente na lane backend.</td></tr>
+        </tbody></table></div>
+        <p>Outro motivo válido para um override é preservar independência quando o DEV da lane usa o mesmo host/modelo do QA compartilhado. Com <code>execution.require_independent_qa: true</code>, o compilador recusa essa autorrevisão. Separar apenas para “ocupar mais workers” não ajuda: o papel compartilhado já pode gerar vários processos simultâneos.</p>
+        <pre><code>{
+  "roles": {
+    "backend_dev": { "host": "antigravity", "model": "MODELO-BACKEND" },
+    "frontend_dev": { "host": "codex", "model": "MODELO-FRONTEND" },
+    "integration_dev": { "host": "codex", "model": "MODELO-SUPERVISOR" },
+    "qa": { "host": "codex", "model": "MODELO-QA-COMUM" },
+    "frontend_qa": { "host": "claude", "model": "MODELO-COM-BROWSER" }
+  }
+}</code></pre>
+        <p>Nesse exemplo, backend e integração herdam o <code>qa</code> comum; apenas frontend usa o override. Se não existe uma diferença verificável, omita <code>frontend_qa</code> e <code>backend_qa</code>.</p>
+      </section>
       <section id="planner" aria-labelledby="planner-title">
-        <p class="section-number">03 / O plano</p><h2 id="planner-title">O Planner desenha dependências, não apenas uma lista numerada.</h2>
+        <p class="section-number">04 / O plano</p><h2 id="planner-title">O Planner desenha dependências, não apenas uma lista numerada.</h2>
         <p><strong>O Planner é o engenheiro da execução.</strong> Ele procura o maior paralelismo que continue seguro. Seu trabalho não é preencher todas as vagas a qualquer custo: é separar responsabilidades, provar o que pode andar junto e preservar a ordem onde uma entrega depende de outra.</p>
         <p>O plano fica em <code>.aioson/context/implementation-plan-agenda-inteligente.md</code>. Para execução orquestrada, ele contém as lanes e uma tabela <code>Execution Sequence</code>. Cada linha representa uma unidade.</p>
         <ul><li><strong>Files:</strong> os arquivos exatos que ela pode alterar.</li><li><strong>Scope:</strong> a parte do resultado pela qual ela responde.</li><li><strong>Done when:</strong> a verificação que precisa passar naquela unidade.</li><li><strong>Depends on:</strong> quais entregas precisam ficar prontas antes dela.</li><li><strong>Wave:</strong> onde ela entra no agrupamento de execução.</li></ul>
         <p>Se frontend e backend conversam, o plano precisa definir essa conversa: quais dados entram, o que sai e como as falhas aparecem. Esse é o <strong>contrato de interface</strong>. Sem isso, dois agentes podem fazer partes que parecem prontas, mas não funcionam juntas.</p>
         <div class="note"><strong>O teste também tem dono.</strong> Um teste do fluxo completo deve esperar os produtores de backend e frontend. A unidade local verifica sua entrega; a integração verifica a ligação entre as partes.</div>
-        <p>Na compilação, o AIOSON recusa conflitos de arquivos dentro da mesma onda, dependências inválidas e unidades que ultrapassam os limites configurados. O padrão é até 10 arquivos e 6 critérios de aceitação por unidade, além do orçamento de contexto.</p>
+        <p>Na compilação, o AIOSON recusa conflitos de arquivos dentro da mesma onda, dependências inválidas e unidades que ultrapassam os limites configurados. O padrão é até 10 arquivos e 6 critérios de aceitação por unidade; a estimativa inicial de contexto ajuda a avaliar o tamanho, mas não encerra o worker.</p>
         <p><code>Depends on</code> sem sufixo exige a revisão da unidade produtora; <code>(dev)</code> pode liberar o consumidor após a implementação, antes do QA. Essa antecipação precisa fazer sentido no contrato. Planos sem dependências explícitas conservam as barreiras por ondas.</p>
         <h3>O Planner decide tudo sozinho?</h3>
         <p>Ele projeta a estrutura usando o PRD, o código e as regras do projeto. Outras partes do AIOSON conferem e executam essa decisão:</p>
@@ -93,7 +130,7 @@ ONDA 2 — depende de API + tela aprovadas
         <p>A numeração das fases descreve o produto; a onda descreve a oportunidade de execução. Por isso uma parte da fase 3 pode entrar na onda 1 quando for independente, e uma única fase pode ser dividida em várias unidades para backend, frontend ou superfícies diferentes.</p>
       </section>
       <section id="simulation" aria-labelledby="simulation-title">
-        <p class="section-number">04 / Experimente</p><h2 id="simulation-title">A fase 3 não precisa esperar toda a fase 2.</h2>
+        <p class="section-number">05 / Experimente</p><h2 id="simulation-title">A fase 3 não precisa esperar toda a fase 2.</h2>
         <p>Nesta agenda fictícia, API, tela e notificações têm contratos já definidos e arquivos separados. A integração precisa da API e da tela. A conferência final espera integração e notificações.</p>
         <div class="simulation" id="wave-simulation">
           <div class="simulation-heading"><span class="machine-label">Simulação didática · não executa agentes</span><span id="sim-step">Passo 0</span></div>
@@ -103,7 +140,7 @@ ONDA 2 — depende de API + tela aprovadas
             <li data-unit="screen"><span>Fase 1 · frontend · onda 1</span><strong>Construir a tela</strong><small>Contrato da API definido no plano</small><output>Aguardando</output></li>
             <li data-unit="notify"><span>Fase 3 · backend · onda 1</span><strong>Preparar notificações</strong><small>Independente da tela neste exemplo</small><output>Aguardando</output></li>
             <li data-unit="connect"><span>Fase 2 · integração · onda 2</span><strong>Reservar pelo fluxo real</strong><small>Espera API + tela aprovadas</small><output>Aguardando dependências</output></li>
-            <li data-unit="verify"><span>Fase 4 · integração · onda 3</span><strong>Conferir a jornada</strong><small>Espera integração + notificações</small><output>Aguardando dependências</output></li>
+            <li data-unit="verify"><span>Fechamento · Integração / DEV</span><strong>Conferir e corrigir a jornada</strong><small>Espera integração + notificações; depois segue ao QA final</small><output>Aguardando dependências</output></li>
           </ol>
           <p id="sim-summary" class="sim-summary" role="status" aria-live="polite">Com duas vagas, API e tela começam juntas. Quando uma vaga é liberada, notificações pode começar, mesmo sendo parte da fase 3.</p>
           <p class="simulation-caption">Cada passo avança uma etapa ilustrativa de DEV ou QA. Os tempos e as unidades desta demonstração não são os de um projeto real. Sem JavaScript, o exemplo permanece disponível como mapa de dependências.</p>
@@ -111,13 +148,14 @@ ONDA 2 — depende de API + tela aprovadas
         <p><strong>Uma vaga acompanha o fluxo DEV → QA da unidade.</strong> Duas vagas não significam obrigatoriamente “um backend e um frontend”: podem ser dois backends prontos para trabalhar. Se só uma unidade está liberada, a outra vaga pode ficar ociosa corretamente.</p>
         <div id="capacity">
           <h3>Quantas vagas devo configurar?</h3>
-          <p>O campo <code>parallel.max_concurrent_lanes</code> aceita de 1 a 8. O nome é histórico: na execução atual ele limita pipelines de unidades, e cada pipeline percorre DEV → QA. Esse número é um <strong>teto</strong>, não uma ordem para criar processos sem trabalho seguro.</p>
+          <p>O campo <code>parallel.max_concurrent_lanes</code> aceita de 1 a 10. O nome é histórico: na execução atual ele limita pipelines de unidades, e cada pipeline percorre DEV → QA. Esse número é um <strong>teto</strong>, não uma ordem para criar processos sem trabalho seguro.</p>
           <div class="table-wrap" tabindex="0" role="region" aria-label="Recomendação de vagas simultâneas"><table><thead><tr><th scope="col">Vagas</th><th scope="col">Quando usar</th><th scope="col">O que esperar</th></tr></thead><tbody>
             <tr><th scope="row">1</th><td>Diagnóstico ou projeto que não suporta concorrência.</td><td>Execução totalmente serial.</td></tr>
             <tr><th scope="row">2</th><td>Padrão conservador para projetos comuns.</td><td>Bom equilíbrio entre velocidade, revisão e recursos da máquina.</td></tr>
             <tr><th scope="row">3</th><td>Plano com três unidades realmente independentes por onda.</td><td>Boa opção para backend + frontend ou duas unidades da mesma lane com arquivos separados.</td></tr>
             <tr><th scope="row">4</th><td>Projeto grande com testes, serviços e temporários bem isolados.</td><td>Exige mais CPU, memória e capacidade dos provedores.</td></tr>
             <tr><th scope="row">5–6</th><td>Somente quando banco, portas, migrations, builds e caches não colidem.</td><td>Sem isolamento, aumenta falhas e retrabalho em vez de acelerar.</td></tr>
+            <tr><th scope="row">7–10</th><td>Planos grandes, com muitas unidades independentes e provedores preparados para essa concorrência.</td><td>Monitore CPU, memória, cotas e recursos externos; dez vagas não garantem dez unidades prontas.</td></tr>
           </tbody></table></div>
           <pre><code>{
   "parallel": {
@@ -126,18 +164,19 @@ ONDA 2 — depende de API + tela aprovadas
 }</code></pre>
           <p>Se a maior onda tiver três unidades, configurar seis vagas não traz ganho: somente três poderão trabalhar. Da mesma forma, uma onda com uma unidade deixará cinco vagas livres. O Planner deve melhorar a divisão e as dependências quando houver paralelismo seguro; aumentar o número no JSON não transforma uma sequência dependente em trabalho paralelo.</p>
           <div class="note"><strong>Arquivos diferentes ainda podem compartilhar recursos.</strong> Dois agentes podem disputar o mesmo banco de teste, porta, migration, cache de build, servidor ou arquivo gerado. O AIOSON verifica os arquivos declarados, mas o Planner também precisa reconhecer esses efeitos e separar as ondas quando o projeto não oferece isolamento.</div>
-          <p>Defina o teto antes de compilar e iniciar a execução. O perfil ativo pode ser relido entre novos disparos, mas a capacidade pertence ao plano compilado e ao estado do run. Alterar apenas o JSON no meio de uma execução não aumenta as vagas já abertas; use a nova configuração na próxima compilação e no próximo run.</p>
+          <p><strong>A capacidade é uma configuração ao vivo.</strong> Salvar outro valor entre 1 e 10 no painel ou em <code>execution-roles.json</code> faz o agendador reler o teto na próxima passagem, sem recompilar nem reiniciar o run. Processos já iniciados mantêm sua identidade; novas vagas são ocupadas apenas quando existem unidades prontas, arquivos sem conflito e recursos seguros.</p>
         </div>
       </section>
       <section id="models" aria-labelledby="models-title">
-        <p class="section-number">05 / A equipe</p><h2 id="models-title">Agente, modelo e harness são coisas diferentes.</h2>
+        <p class="section-number">06 / A equipe</p><h2 id="models-title">Agente, modelo e harness são coisas diferentes.</h2>
         <p><strong>Agente</strong> é o papel e suas instruções. <strong>Modelo</strong> é a IA escolhida. <strong>Harness</strong> é o programa que executa essa IA com acesso às ferramentas, como Codex, Claude Code ou OpenCode.</p>
         <p>Um identificador como <code>openrouter/meta/muse-spark-1.3-contributor</code> pode ser o modelo configurado no OpenCode. Nesse caso, o harness é <code>opencode</code>, não “Muse”. Isso explica por que um problema do programa OpenCode e um problema do modelo podem ter causas diferentes.</p>
-        <p>Para o CLI <code>agy</code>, o nome do host no arquivo de execução é <code>antigravity</code>. O executável e o host são nomes diferentes: use, por exemplo, <code>"host": "antigravity"</code> e deixe o adaptador chamar <code>agy</code>. O identificador do modelo ainda precisa ser aceito pelo CLI e validado com <code>host:signature</code>.</p>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Papéis configuráveis"><table><thead><tr><th scope="col">Papel no arquivo</th><th scope="col">Para que serve</th></tr></thead><tbody><tr><th scope="row"><code>backend_dev</code></th><td>Modelo que implementa a lane backend.</td></tr><tr><th scope="row"><code>frontend_dev</code></th><td>Modelo que implementa a lane frontend.</td></tr><tr><th scope="row"><code>qa</code></th><td>Revisor usado pelas lanes que herdam essa configuração.</td></tr><tr><th scope="row"><code>parallel.max_concurrent_lanes</code></th><td>Quantidade máxima de unidades simultâneas, apesar do nome histórico do campo.</td></tr></tbody></table></div>
-        <p>As escolhas ficam em <code>.aioson/config/execution-roles.json</code>. O projeto também precisa de hosts instalados, autenticados e compatíveis com execução sem interação. O comando <code>host:signature</code> faz o probe uma vez e grava localmente o estado da combinação <code>host + modelo + esforço</code>: válida, expirada, inválida ou ausente. Cada disparo apenas consulta esse registro; ele não repete a chamada paga. Valide novamente quando trocar a combinação, a assinatura expirar ou o harness mudar.</p>
-        <p>Você pode declarar vários conjuntos em <code>profiles</code> e escolher um com <code>active_profile</code>. O executor relê essa escolha antes de cada novo DEV ou QA; agentes que já começaram terminam com o modelo anterior. Assim, trocar o perfil durante uma onda roteia somente os próximos disparos e o histórico conserva o perfil realmente usado. Um perfil desabilitado, ausente ou inválido não é iniciado. Se o modelo escolhido não tiver uma assinatura válida, o executor usa o primeiro fallback assinado que o perfil autorizou; sem essa alternativa, ele registra o motivo e não dispara o modelo às cegas.</p>
-        <p>O perfil ativo também pode autorizar alternativas com <code>fallback_use</code> e <code>fallback_profiles</code>. A lista é uma ordem: se o mesmo papel falhar por conexão, indisponibilidade, limite, cota/créditos, autenticação ou falha do harness, o motor tenta esse papel no próximo perfil. O perfil global não é alterado e outros agentes continuam independentes. Teste falhando ou QA reprovado volta para correção; não é tratado como falta de provedor. Timeout é avaliado junto com as escritas observadas antes de decidir uma troca, pois um agente pode apenas estar executando uma tarefa longa.</p>
+        <p>Para o CLI <code>agy</code>, o nome do host no arquivo de execução é <code>antigravity</code>. O executável e o host são nomes diferentes: use <code>"host": "antigravity"</code> e o adaptador chamará <code>agy</code> em modo headless. A execução orquestrada não deve abrir o aplicativo gráfico do Antigravity.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Papéis configuráveis"><table><thead><tr><th scope="col">Papel no arquivo</th><th scope="col">Para que serve</th></tr></thead><tbody><tr><th scope="row"><code>backend_dev</code></th><td>Modelo que implementa a lane backend.</td></tr><tr><th scope="row"><code>frontend_dev</code></th><td>Modelo que implementa a lane frontend.</td></tr><tr><th scope="row"><code>integration_dev</code></th><td>DEV supervisor que integra, corrige falhas cruzadas e roda a verificação completa.</td></tr><tr><th scope="row"><code>qa</code></th><td>Revisor compartilhado e QA final por padrão.</td></tr><tr><th scope="row"><code>backend_qa</code> / <code>frontend_qa</code></th><td>Overrides opcionais do QA compartilhado em uma lane específica.</td></tr><tr><th scope="row"><code>parallel.max_concurrent_lanes</code></th><td>Quantidade máxima de unidades simultâneas, apesar do nome histórico do campo.</td></tr></tbody></table></div>
+        <p>As escolhas ficam em <code>.aioson/config/execution-roles.json</code>. O projeto também precisa de hosts instalados, autenticados e compatíveis com execução sem interação. A validação antecipada é um diagnóstico opcional: <code>execution:profiles:validate</code> pode provar o perfil inteiro e <code>host:signature</code> pode testar uma combinação exata.</p>
+        <p><strong>O run valida as rotas just in time.</strong> Antes do preflight e novamente quando a configuração salva muda, o executor testa combinações ausentes, expiradas ou inválidas na cadeia ativa de fallback usando o harness real. Ele nunca troca nem reescreve o modelo escolhido pelo usuário. Se o principal falhar, usa o próximo fallback funcional já autorizado; somente a ausência de qualquer rota configurada utilizável vira uma decisão.</p>
+        <p>Você pode declarar vários conjuntos em <code>profiles</code> e escolher um com <code>active_profile</code>. O executor relê essa escolha antes de cada novo DEV ou QA; agentes que já começaram terminam com o modelo anterior. Assim, trocar o perfil durante uma onda roteia somente os próximos disparos e o histórico conserva o perfil realmente usado.</p>
+        <p>O perfil ativo também pode autorizar alternativas com <code>fallback_use</code> e <code>fallback_profiles</code>. A lista é uma ordem: se o mesmo papel falhar por conexão, indisponibilidade, limite, cota/créditos, autenticação ou falha do harness, o motor tenta esse papel no próximo perfil. O perfil global não é alterado e outros agentes continuam independentes. Teste falhando ou QA reprovado volta para correção; não é tratado como falta de provedor. O AIOSON não encerra um worker porque ele ultrapassou um tempo arbitrário.</p>
         <pre><code>{
   "version": 1,
   "enabled": true,
@@ -148,33 +187,39 @@ ONDA 2 — depende de API + tela aprovadas
       "fallback_use": true,
       "fallback_profiles": ["roles02"],
       "roles": {
-      "backend_dev": { "host": "opencode", "model": "openrouter/meta/muse-spark-1.3-contributor" },
-      "frontend_dev": { "host": "codex", "model": "gpt-5.6-sol", "reasoning_effort": "medium" },
-      "qa": { "host": "codex", "model": "gpt-5.6-sol", "reasoning_effort": "medium" }
-    } },
-    "roles02": { "enabled": true, "roles": {
-      "backend_dev": { "host": "opencode", "model": "OUTRO-MODELO" },
-      "frontend_dev": { "host": "codex", "model": "OUTRO-MODELO", "reasoning_effort": "medium" },
-      "qa": { "host": "codex", "model": "OUTRO-MODELO", "reasoning_effort": "medium" }
-    } }
+        "backend_dev": { "host": "opencode", "model": "openrouter/meta/muse-spark-1.3-contributor" },
+        "frontend_dev": { "host": "codex", "model": "gpt-5.6-sol", "reasoning_effort": "medium" },
+        "integration_dev": { "host": "codex", "model": "gpt-5.6-sol", "reasoning_effort": "high" },
+        "qa": { "host": "codex", "model": "gpt-5.6-sol", "reasoning_effort": "medium" }
+      }
+    },
+    "roles02": {
+      "enabled": true,
+      "roles": {
+        "backend_dev": { "host": "opencode", "model": "OUTRO-MODELO" },
+        "frontend_dev": { "host": "codex", "model": "OUTRO-MODELO", "reasoning_effort": "medium" },
+        "integration_dev": { "host": "codex", "model": "OUTRO-MODELO", "reasoning_effort": "high" },
+        "qa": { "host": "codex", "model": "OUTRO-MODELO", "reasoning_effort": "medium" }
+      }
+    }
   },
   "parallel": { "max_concurrent_lanes": 2 },
   "on_unavailable": "ask"
 }</code></pre>
-        <p>Não existe uma troca silenciosa para outro modelo só porque um agente falhou. Um modelo alternativo, chamado <em>fallback</em>, precisa estar autorizado e validado. A escolha de revisão independente também deve fazer parte da configuração.</p>
+        <p>Não existe troca para uma rota não autorizada. Um modelo alternativo, chamado <em>fallback</em>, precisa estar salvo na cadeia escolhida pelo usuário; o executor pode validá-lo no momento em que precisar dele. A escolha de revisão independente também faz parte da configuração.</p>
       </section>
       <section id="start" aria-labelledby="start-title">
-        <p class="section-number">06 / Primeira execução</p><h2 id="start-title">Da conversa ao comando, em seis passos.</h2>
+        <p class="section-number">07 / Primeira execução</p><h2 id="start-title">Da conversa ao comando, em seis passos.</h2>
         <ol class="flow-list">
           <li><strong>Abra o projeto preparado no seu cliente de IA.</strong><p>O projeto precisa do AIOSON instalado e de um contexto válido. Confirme com <code>aioson context:validate . --json</code>. Se ainda não existe preparação, peça ao <code>@setup</code>.</p></li>
           <li><strong>Defina e aprove o que construir.</strong><p>Product e Sheldon fecham o escopo e a revisão. O Planner transforma isso em plano. “Quero paralelo” não dispensa definir contratos e critérios de aceitação.</p></li>
           <li><strong>Peça a execução orquestrada.</strong><p>Exemplo de pedido ao Planner: “Organize unidades pequenas por dependências reais, com backend, frontend e QA. Use os modelos configurados e coloque cada teste de integração depois dos seus produtores.”</p></li>
-          <li><strong>Configure e valide os papéis.</strong><p><code>aioson execution:offer . --feature=agenda-inteligente</code> mostra se a opção está disponível. Quando faltar configuração, <code>aioson execution:seed . --feature=agenda-inteligente</code> prepara o arquivo <em>desabilitado</em>. Escolha modelos reais com o cliente, habilite a configuração e valide os hosts seguindo a orientação exibida. Rodar seed sozinho não autoriza agentes.</p></li>
+          <li><strong>Configure os papéis.</strong><p><code>aioson execution:offer . --feature=agenda-inteligente</code> mostra se a opção está disponível. Quando faltar configuração, <code>aioson execution:seed . --feature=agenda-inteligente</code> prepara o arquivo <em>desabilitado</em>. Escolha modelos reais, fallbacks e workers, depois habilite a configuração. Rodar seed sozinho não autoriza agentes; a execução prova as rotas salvas quando precisar delas.</p></li>
           <li><strong>Compile e confira a preparação.</strong><p>O Planner normalmente roda <code>execution:compile</code> após aprovar o plano. A compilação produz manifesto, plano executável e prompts das unidades. Depois, <code>execution:run --preflight</code> confere se é possível iniciar; essa checagem não implementa a feature.</p></li>
           <li><strong>Inicie e acompanhe.</strong><p>Peça ao Dev “execute o plano orquestrado aprovado e acompanhe a integração” ou rode <code>execution:run</code>. Abra o dashboard em outro terminal. Se você iniciou diretamente no terminal, mantenha o processo de execução aberto.</p></li>
         </ol>
         <div class="note"><strong>Chamar <code>@dev</code> depende do estado do projeto.</strong> Com um plano orquestrado compilado, ele segue esse caminho. Sem esse plano e sem lanes habilitadas, o Dev pode implementar na própria sessão. A palavra “Dev” sozinha não cria uma equipe paralela.</div>
-        <p>Exemplo de validação de um host que você realmente escolheu: <code>aioson host:signature . --host=codex --model=ID-EXATO-DO-MODELO</code>. Substitua o identificador e informe o esforço quando configurado. Esse comando pode abrir uma sessão de validação no harness.</p>
+        <p>Diagnóstico opcional antes do run: <code>aioson execution:profiles:validate . --json</code>. Para testar somente uma combinação, use <code>aioson host:signature . --host=codex --model=ID-EXATO-DO-MODELO</code> e informe o esforço quando configurado. Esses probes podem abrir uma sessão no harness; não são uma confirmação manual obrigatória para cada rota nova.</p>
       </section>
       <section id="practical" aria-labelledby="practical-title">
         <p class="section-number">Exemplo prático</p><h2 id="practical-title">Quem executa: o agente ou você?</h2>
@@ -197,20 +242,20 @@ aioson context:validate . --json
 aioson execution:offer . --feature=agenda-inteligente
 aioson execution:compile . --feature=agenda-inteligente
 aioson execution:run . --feature=agenda-inteligente --preflight
-aioson execution:run . --feature=agenda-inteligente --until-complete --no-context-limit</code></pre>
+aioson execution:run . --feature=agenda-inteligente --until-complete</code></pre>
         <p>O último comando permanece aberto e executa a implementação. Em um segundo PowerShell:</p>
         <pre><code>cd C:\dev\agenda
 aioson execution:dashboard . --feature=agenda-inteligente</code></pre>
         <p>Se <code>execution:offer</code> informar que ainda não existe configuração, faça uma única vez:</p>
         <pre><code>aioson execution:seed . --feature=agenda-inteligente --lanes=backend,frontend
 # Edite .aioson/config/execution-roles.json, escolha os modelos e defina enabled=true
-aioson host:signature . --host=opencode --model=openrouter/meta/muse-spark-1.3-contributor
-aioson host:signature . --host=codex --model=gpt-5.6-sol --effort=medium
+# Diagnóstico antecipado opcional; o run também valida as rotas just in time
+aioson execution:profiles:validate . --json
 aioson execution:offer . --feature=agenda-inteligente</code></pre>
-        <div class="note"><strong><code>--until-complete</code></strong> mantém a recuperação automática da execução. <strong><code>--no-context-limit</code></strong> desativa o corte adicional do AIOSON, como no exemplo; remova essa opção se preferir o limite de contexto configurado. Os limites próprios do harness continuam existindo.</div>
+        <div class="note"><strong><code>--until-complete</code></strong> mantém a recuperação automática da execução. Workers orquestrados não têm corte adicional de tokens nem de duração imposto pelo AIOSON; os limites próprios do modelo, da assinatura e do harness continuam existindo.</div>
       </section>
       <section id="commands" aria-labelledby="commands-title">
-        <p class="section-number">07 / No terminal</p><h2 id="commands-title">Prepare os comandos do seu projeto.</h2>
+        <p class="section-number">08 / No terminal</p><h2 id="commands-title">Prepare os comandos do seu projeto.</h2>
         <p>O ponto <code>.</code> significa “a pasta em que este terminal está”. Use o identificador da feature, sem espaços, encontrado no plano. O formulário abaixo apenas prepara texto; não roda comandos.</p>
         <noscript><p>JavaScript está desativado: os comandos abaixo permanecem como exemplos fixos. Para personalizar pelos campos, habilite JavaScript; você também pode ajustar o texto ao copiar.</p></noscript>
         <div class="command-builder">
@@ -221,7 +266,7 @@ aioson execution:offer . --feature=agenda-inteligente</code></pre>
 aioson execution:offer . --feature=agenda-inteligente
 aioson execution:compile . --feature=agenda-inteligente
 aioson execution:run . --feature=agenda-inteligente --preflight</code></pre><button type="button" class="copy-button" data-copy="prepare-command" hidden>Copiar preparação</button>
-          <h3>Terminal 1 · iniciar a execução</h3><p>Rode este bloco somente se o agente DEV não tiver iniciado a execução por você.</p><pre><code id="run-command">aioson execution:run . --feature=agenda-inteligente --until-complete --no-context-limit</code></pre><button type="button" class="copy-button" data-copy="run-command" hidden>Copiar execução</button>
+          <h3>Terminal 1 · iniciar a execução</h3><p>Rode este bloco somente se o agente DEV não tiver iniciado a execução por você.</p><pre><code id="run-command">aioson execution:run . --feature=agenda-inteligente --until-complete</code></pre><button type="button" class="copy-button" data-copy="run-command" hidden>Copiar execução</button>
           <h3>Terminal 2 · abrir o painel</h3><pre><code id="dashboard-command">aioson execution:dashboard . --feature=agenda-inteligente</code></pre><button type="button" class="copy-button" data-copy="dashboard-command" hidden>Copiar painel</button>
           <h3>Consulta alternativa · acompanhar pelo terminal</h3><pre><code id="watch-command">aioson execution:status . --feature=agenda-inteligente --watch</code></pre><button type="button" class="copy-button" data-copy="watch-command" hidden>Copiar acompanhamento</button>
           <p id="copy-status" role="status" aria-live="polite"></p>
@@ -229,7 +274,7 @@ aioson execution:run . --feature=agenda-inteligente --preflight</code></pre><but
         <p>O cliente de IA pode manter o executor como tarefa em segundo plano. O dashboard é outro processo: encerrá-lo não interrompe os agentes. Encerrar o processo de execução pode interromper o trabalho; a retomada usa os registros preservados.</p>
       </section>
       <section id="dashboard" aria-labelledby="dashboard-title">
-        <p class="section-number">08 / Seu ponto de acompanhamento</p><h2 id="dashboard-title">Um dashboard para cada projeto.</h2>
+        <p class="section-number">09 / Seu ponto de acompanhamento</p><h2 id="dashboard-title">Um dashboard para cada projeto.</h2>
         <p><strong>Sim, o painel é iniciado apontando para um projeto.</strong> Você pode estar dentro da pasta dele ou informar o caminho. O servidor vem do AIOSON e lê os registros daquele projeto; não é necessário adicionar uma página à aplicação que você está construindo.</p>
         <pre><code>aioson execution:dashboard .</code></pre>
         <p>Sem <code>--feature</code>, use o seletor do painel para escolher uma das funcionalidades encontradas. Com <code>--feature=agenda-inteligente</code>, essa feature é a seleção inicial; isso não transforma o servidor em um painel de todos os projetos.</p>
@@ -241,34 +286,35 @@ aioson execution:run . --feature=agenda-inteligente --preflight</code></pre><but
         <p>Features com registros estruturados de execução no projeto, inclusive planos/estados arquivados em <code>.aioson/context/done/&lt;slug&gt;</code>. Isso permite acompanhar trabalho ativo e consultar features anteriores que conservaram esses registros.</p>
         <p>Um PRD antigo, uma conversa ou uma implementação feita somente por um Dev não vira automaticamente uma execução orquestrada no painel. Também não há um histórico universal de todas as tentativas de todos os projetos. A preservação do plano, do estado e dos relatórios determina o que pode ser mostrado.</p>
         <p>A página atualiza a cada cinco segundos. Fechar uma aba ou encerrar esse servidor não apaga os registros. Para voltar depois, levante o painel novamente no mesmo projeto.</p>
-        <h3>Trocar modelos pelo painel</h3>
-        <p>Em <strong>Quem está construindo</strong>, use <strong>Configurar modelos</strong>. O editor altera o mesmo arquivo <code>.aioson/config/execution-roles.json</code>, mostra sugestões conhecidas com autocomplete e exibe a assinatura de cada combinação. Você pode trocar o perfil ativo, harness, modelo, esforço e habilitar fallback. A unidade que já começou não muda no meio do processo; o próximo DEV ou QA lê a configuração nova.</p>
+        <h3>Trocar modelos e workers pelo painel</h3>
+        <p>Em <strong>Quem está construindo</strong>, use <strong>Configurar modelos e workers</strong>. O editor altera o mesmo arquivo <code>.aioson/config/execution-roles.json</code>, mostra sugestões conhecidas com autocomplete e exibe a assinatura de cada combinação. Você pode trocar o perfil ativo, harness, modelo, esforço, fallback, QA compartilhado ou específico e o teto de 1 a 10 workers. O processo que já começou não muda de identidade; o próximo DEV ou QA e a próxima passagem do agendador leem a configuração nova.</p>
         <p>Use <strong>Duplicar perfil</strong> para criar outra configuração a partir da atual, altere os modelos e salve. O painel também permite renomear e excluir perfis, mantém pelo menos um perfil e remove referências de fallback que ficariam quebradas. Ao excluir, um modal destacado mostra o nome do perfil, qual perfil ficará ativo e quantas referências de fallback serão afetadas. A exclusão acontece primeiro no editor e só chega ao arquivo ao clicar em <strong>Salvar configuração</strong>; cancelar o modal ou o editor mantém o arquivo intacto. Assim, você não precisa copiar blocos manualmente no JSON; a edição direta continua disponível para automação ou revisão avançada.</p>
-        <p>O botão <strong>Validar configuração</strong> confere a estrutura em edição, o perfil ativo, as assinaturas locais de cada combinação e a ordem de fallback. Essa conferência é instantânea e não chama modelos nem consome créditos. Quando falta uma assinatura, o resultado mostra o comando <code>aioson host:signature</code> exato. Esse comando é a validação real, potencialmente demorada e cobrada pelo provedor; execute-o ao adicionar ou mudar <code>host + modelo + esforço</code>, depois use o botão novamente.</p>
-        <p>O editor detecta se o arquivo foi alterado por outro programa antes de salvar e não sobrescreve essa mudança. Durante uma execução ativa, vagas simultâneas e outras opções que moldam o grafo continuam presas ao plano compilado; configure esse valor para a próxima compilação. Salvar não executa automaticamente um probe pago: uma combinação ainda não validada aparece como tal e pode ser validada de forma explícita com <code>host:signature</code>.</p>
+        <p>O botão <strong>Validar configuração</strong> confere a estrutura em edição, o perfil ativo, as assinaturas locais conhecidas e a ordem de fallback sem chamar modelos. Para uma prova antecipada com os harnesses reais, use <code>aioson execution:profiles:validate . --json</code>. Mesmo sem essa etapa, o run valida just in time as rotas necessárias e percorre a cadeia de fallbacks salva.</p>
+        <p>O editor detecta se o arquivo foi alterado por outro programa antes de salvar e não sobrescreve essa mudança. Perfil, modelos, fallbacks, política de QA e vagas simultâneas são fonte de verdade ao vivo: salvar afeta os próximos disparos sem recompilar. O painel continua mostrando a identidade registrada nos processos que já estavam em andamento.</p>
       </section>
       <section id="states" aria-labelledby="states-title">
-        <p class="section-number">09 / Interpretando o progresso</p><h2 id="states-title">Ocupado, aguardando ou precisando de atenção?</h2>
+        <p class="section-number">10 / Interpretando o progresso</p><h2 id="states-title">Ocupado, aguardando ou precisando de atenção?</h2>
         <div class="table-wrap" tabindex="0" role="region" aria-label="Estados do dashboard"><table><thead><tr><th scope="col">O que você vê</th><th scope="col">O que significa</th></tr></thead><tbody>
           <tr><th scope="row">DEV + QA aprovados</th><td>A unidade passou nas duas etapas. É diferente de apenas ter código implementado.</td></tr>
           <tr><th scope="row">Em execução / vagas</th><td>Unidades ocupando a capacidade compartilhada. O QA de uma unidade também participa desse fluxo.</td></tr>
           <tr><th scope="row">Aguardando dependência</th><td>Um produtor ainda precisa entregar ou passar na revisão.</td></tr>
           <tr><th scope="row">Aguardando vaga ou arquivo</th><td>Não há espaço no limite atual, ou outro trabalhador ainda usa um arquivo que precisa ficar protegido.</td></tr>
-          <tr><th scope="row">QA reprovado</th><td>Há achados para corrigir. O executor pode encaminhá-los ao DEV dentro do orçamento de rework.</td></tr>
+          <tr><th scope="row">QA reprovado</th><td>Há achados para corrigir. O executor os encaminha ao DEV, com no máximo cinco retornos QA → DEV por unidade.</td></tr>
           <tr><th scope="row">Decisão pendente</th><td>O executor não encontrou uma continuação automática autorizada, ou esgotou as rodadas no modo limitado. Abra o motivo e o relatório; não significa necessariamente que um modelo ainda esteja trabalhando.</td></tr>
           <tr><th scope="row">Sem atividade recente</th><td>Faltaram escritas recentes nos arquivos medidos. O agente pode estar lendo, pensando ou testando; isoladamente, isso não prova travamento.</td></tr>
           <tr><th scope="row">Motor sem sinal</th><td>Não há confirmação recente de vida do executor. Confira o processo e o estado antes de tentar retomar.</td></tr>
         </tbody></table></div>
         <p>Abra uma unidade para ver fase, escopo, host/modelo, DEV e QA, dependências, relatórios, mensagens e tentativas disponíveis. Use o filtro de onda para reduzir a lista. Os botões das ondas informam quantas unidades existem em cada uma. Em <strong>Tempo e consumo por onda</strong>, abra a onda para conferir quais fases/unidades participaram, seus escopos, arquivos, estados, tentativas, duração e tokens, além da composição por papel e modelo. Um rótulo “onda concluída” em registro legado pode indicar que os processos terminaram mesmo com QA reprovado; confira os vereditos.</p>
-        <p>Com a execução parada, o botão <strong>Corrigir e continuar execução</strong> reenvia os erros e as notas aos modelos configurados e inicia a retomada. Se o QA encontrou um defeito no código, o DEV recebe os achados e faz mais um ciclo de correção seguido de QA. O botão por unidade prepara apenas aquela pendência; as demais precisam ser resolvidas para iniciar. O painel informa quando o executor começou e quando há atividade confirmada. O acompanhamento <code>--watch</code> no terminal termina quando o run deixa de estar em execução; a página web continua acompanhando retomadas.</p>
+        <p>Com a execução realmente parada, o botão <strong>Corrigir e continuar execução</strong> reenvia os erros e as notas aos modelos configurados e inicia a retomada. A faixa de recuperação não deve aparecer só porque houve um achado enquanto o motor continua vivo. Se o QA encontrou um defeito no código, o DEV recebe os achados e faz mais um ciclo de correção seguido de QA. O botão por unidade prepara apenas aquela pendência; as demais precisam ser resolvidas para iniciar. O painel informa quando o executor começou e quando há atividade confirmada. O acompanhamento <code>--watch</code> no terminal termina quando o run deixa de estar em execução; a página web continua acompanhando retomadas.</p>
       </section>
       <section id="autopilot" aria-labelledby="autopilot-title">
-        <p class="section-number">10 / Recuperar sem atropelar</p><h2 id="autopilot-title">Autopilot resolve o que já foi autorizado.</h2>
+        <p class="section-number">11 / Recuperar sem atropelar</p><h2 id="autopilot-title">Autopilot resolve o que já foi autorizado.</h2>
         <p>O plano precisa estar preparado e a autorização de Autopilot registrada. No executor orquestrado, o modo fica no manifesto da feature como <code>orchestration.mode: autopilot</code>. A palavra “paralelo” e o modo Autopilot são escolhas diferentes.</p>
         <p>Nas novas compilações com a política de execução, um FAIL/BLOCKED técnico pode voltar ao implementador com os achados, sem pedir confirmação para cada correção. Depois vem um novo QA. O mesmo modelo e os mesmos limites de arquivos continuam valendo.</p>
         <p>Quando uma unidade comprova que a causa está em um arquivo de outra unidade ancestral, o executor usa a propriedade dos arquivos e as dependências do plano para reabrir o produtor mais recente. As unidades que dependem dele são invalidadas e passam novamente por DEV e QA. Uma mensagem ambígua ou sem um único produtor seguro é interrompida cedo como defeito do plano; ela não deve gerar dezenas de repetições idênticas na unidade consumidora.</p>
-        <p>No Autopilot, o motor continua os ciclos de correção até o QA aprovar. Se você escolher <code>--bounded-recovery</code>, o orçamento limitado passa a valer: o padrão é uma rodada, configurável de zero a três, com prioridade para o valor explícito da lane. Somente nesse modo o esgotamento das rodadas gera uma decisão pendente.</p>
-        <p>Um erro técnico recuperável, como <code>database is locked</code> na inicialização do harness, é repetido com espera curta e contexto do problema. Um processo QA que falhou é repetido como QA; uma reprovação da implementação volta ao DEV responsável. Autenticação ausente, capacidade indisponível e mudanças de escopo continuam precisando de uma solução real.</p>
+        <p>No Autopilot, o motor continua os ciclos de correção até o QA aprovar, mas <strong>uma unidade pode voltar do QA ao DEV no máximo cinco vezes</strong>. A sexta devolução vira <code>dev_qa_cycle_limit</code>, com evidência para diagnóstico. <code>--bounded-recovery</code> continua disponível quando o operador quer uma política ainda mais restrita; ele não cria um limite de tempo.</p>
+        <p>Recuperação contínua também não significa repetir a mesma ação por horas. Quatro ações estruturadas idênticas ou 24 ações apenas de leitura interrompem o modelo atual e tentam um fallback autorizado. Uma segunda falha equivalente sem mudança medida no código abre <code>recovery_no_progress</code>. Um processo QA com erro de infraestrutura é repetido como QA; uma reprovação da implementação volta ao DEV responsável.</p>
+        <p>Falhas de conexão, cota, autenticação ou harness percorrem os fallbacks salvos. Decisões de produto e a ausência de qualquer rota utilizável continuam precisando de uma solução real; o motor não fabrica aprovação nem modelo.</p>
         <h3>Se a execução foi interrompida</h3>
         <pre><code>aioson execution:status . --feature=agenda-inteligente
 aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
@@ -279,12 +325,11 @@ aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
         <details><summary>E os parâmetros --fresh, --step e --wave?</summary><p><code>--fresh</code> inicia outro run e não continua o ledger anterior. Preserve o histórico antes de usá-lo, principalmente após alterar o plano. Não é o botão normal de “destravar”. <code>--step</code> desabilita a recuperação automática DEV de Autopilot nessa ativação; não significa executar exatamente uma unidade. <code>--wave=2</code> limita a execução até a onda 2. Não apague locks manualmente para forçar concorrência.</p></details>
       </section>
       <section id="context" aria-labelledby="context-title">
-        <p class="section-number">11 / Tamanho e consumo</p><h2 id="context-title">Mais contexto disponível não obriga a usar tudo.</h2>
+        <p class="section-number">12 / Tamanho e consumo</p><h2 id="context-title">Contexto e duração são medidos, não usados como cronômetro de corte.</h2>
         <p>Contexto é o que o modelo mantém disponível em uma chamada: instruções, trechos de código, conversa e resultados de ferramentas. Uma unidade pequena e bem delimitada reduz a necessidade de carregar o projeto inteiro.</p>
-        <div class="budget-demo"><label for="model-window">Janela conhecida do modelo, neste exemplo<select id="model-window"><option value="200000">200 mil tokens</option><option value="1000000">1 milhão de tokens</option><option value="128000">128 mil tokens</option><option value="unknown">Janela não informada</option></select></label><output id="budget-output">Teto operacional: 80 mil tokens. Reserva inicial: até 40 mil.</output><p id="budget-detail">O padrão usa o menor valor entre 80 mil e 50% da janela conhecida. Ter 1 milhão disponível não aumenta esse teto padrão.</p></div>
-        <p>A política do projeto fica em <code>.aioson/config/execution-policy.json</code>. Na compilação, uma estimativa por bytes precisa caber em metade do orçamento operacional; a outra metade fica reservada para leituras adicionais, ferramentas e saída. Arquivos grandes podem ter trechos iniciais delimitados por <code>Read ranges</code>.</p>
-        <p>Ao detectar consumo de contexto no limite, o executor pode preservar um checkpoint e abrir outra sessão, conforme o orçamento de continuações. Os agentes mantêm notas curtas de progresso para a próxima sessão saber o que falta. <strong>Essa proteção depende do que o harness informa e pode ser reativa.</strong> Uma estimativa de bytes não mede tokens com exatidão, e uso ausente não comprova que o modelo ficou abaixo do teto.</p>
-        <p>Para executar sem o corte de tokens do AIOSON, acrescente <code>--no-context-limit</code> ao comando <code>execution:run</code>. A escolha fica salva naquela execução, inclusive nas retomadas com <code>--resume</code>; <code>--context-limit</code> reativa o corte. O harness continua com seus limites e compactação próprios. O QA e a medição de consumo continuam funcionando. Uma execução nova volta ao padrão se você não passar a opção.</p>
+        <p><strong>Workers orquestrados não têm limite de tokens nem de tempo de parede imposto pelo AIOSON.</strong> Não é necessário ativar ou desativar um orçamento no comando. Opções antigas de limite são aceitas apenas por compatibilidade e ignoradas. A janela nativa do modelo, a compactação, a assinatura e outros limites do harness continuam existindo.</p>
+        <p>A política do projeto em <code>.aioson/config/execution-policy.json</code> ainda orienta o tamanho das unidades. Na compilação, a estimativa de contexto ajuda o Planner a dividir arquivos e definir <code>Read ranges</code>; ela é uma evidência de dimensionamento, não um gatilho que encerra o worker.</p>
+        <p>O executor registra janela conhecida, pico de contexto, duração, atividade, tokens e custo quando o harness fornece esses dados. Essas medidas aparecem nos relatórios e no dashboard para explicar consumo e diagnosticar tarefas longas; não funcionam como cronômetro de desligamento. Onde o dado não existe, aparece “Não informado”.</p>
         <h3>Tempo de onda e tempo de agentes</h3><p>Dois agentes trabalhando durante dez minutos ao mesmo tempo somam <strong>vinte minutos de agentes</strong>, mas podem terminar em <strong>dez minutos decorridos</strong>. Por isso o painel separa as duas medidas e conserva as tentativas que possuem registros.</p>
         <h3>Entrada, cache e saída</h3><p>Entrada é o material enviado ao modelo; cache identifica partes reutilizadas quando o protocolo informa isso; saída é o que ele produz. Alguns totais de entrada já incluem o cache: somá-lo novamente contaria os mesmos tokens duas vezes. O painel normaliza os formatos que reconhece.</p>
         <p><strong>Tokens acumulados não são a ocupação atual da janela de contexto.</strong> Um run com várias chamadas pode somar muitos tokens sem manter tudo simultaneamente no contexto. Onde o harness ou o histórico não fornece dados, aparece “Não informado”.</p>
@@ -293,16 +338,17 @@ aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
         <p>A estimativa combina uso e preço da identidade exata do modelo quando disponíveis. Ela <strong>não é a fatura da assinatura do harness</strong>. Entrada já inclui cache lido: não some as duas colunas. Os totais acumulam chamadas e tentativas; não medem uma única janela de contexto. Sem detalhe por chamada para distinguir tarifa base de contexto longo, aparece uma faixa estimada. Não há coleta universal de todos os harnesses; registros antigos também podem não conter tokens recuperáveis no painel.</p>
       </section>
       <section id="finish" aria-labelledby="finish-title">
-        <p class="section-number">12 / A entrega</p><h2 id="finish-title">Terminar os agentes é parte da confirmação.</h2>
+        <p class="section-number">13 / A entrega</p><h2 id="finish-title">Terminar os agentes é parte da confirmação.</h2>
         <p>Ao final, o Dev supervisor precisa conferir os achados e a integração, e o QA final precisa validar os critérios da feature no aplicativo real. Testes locais aprovados não substituem essa verificação conjunta.</p>
         <ol class="flow-list"><li><strong>Conferir o ledger.</strong><p>Unidades implementadas e revisadas, decisões e reprovações resolvidas, nenhum skip tratado como aprovação.</p></li><li><strong>Verificar integração e regressões.</strong><p>Rodar os comandos previstos, o build e o fluxo real com dados de teste apropriados. Um servidor antigo aberto pode não representar o código novo.</p></li><li><strong>Corrigir e revisar novamente.</strong><p>Reproduzir o bug, atribuir a correção ao responsável e repetir a verificação que demonstrou a falha. Se a causa é do AIOSON, a correção e a regressão precisam ficar no framework.</p></li><li><strong>Confirmar o resultado com evidência.</strong><p>Relatórios e veredito final devem indicar o que passou e o que ainda falta. Fechamento automático depende da política autorizada; publicação não é autorizada pelo fechamento.</p></li></ol>
         <div class="note"><strong>Para uma execução totalmente automática, a integração precisa estar executável no plano.</strong> Se seus arquivos ficarem fora de todas as lanes, o motor os deixa para o Dev supervisor. Atribuí-los a uma lane configurada, com dependências e verificações completas, permite que essa unidade também seja executada pelo motor.</div>
         <p>Você pode pedir ao Dev: “No final, confira os relatórios, rode a integração e o caminho real, corrija os bugs e peça uma nova revisão. Só confirme a entrega quando as evidências passarem.”</p>
       </section>
       <section id="faq" aria-labelledby="faq-title">
-        <p class="section-number">13 / Para usar de novo</p><h2 id="faq-title">Dúvidas que aparecem na prática.</h2>
+        <p class="section-number">14 / Para usar de novo</p><h2 id="faq-title">Dúvidas que aparecem na prática.</h2>
         <details><summary>Isso funciona em outro projeto?</summary><p>O mecanismo é do AIOSON, não do Creator Studio. Cada projeto precisa do próprio contexto, plano, caminhos, verificações e configuração compatível. Instale/atualize a versão que contém as correções e use <code>aioson update .</code> para atualizar os arquivos gerenciados do projeto quando necessário. Valide, compile e execute naquele projeto. A ferramenta não inventa os contratos específicos da sua aplicação.</p></details>
-        <details><summary>As correções entram em uma execução que já estava rodando?</summary><p>Um processo aberto pode estar usando código carregado anteriormente; plano e política também são registrados na compilação. Atualizar o AIOSON não reescreve nem reinicia todos os runs. Planeje a migração, preserve agentes e histórico, e recompile para uma nova execução quando o plano mudar.</p></details>
+        <details><summary>As correções entram em uma execução que já estava rodando?</summary><p>Configuração de perfil, modelo, fallback, QA e workers é relida ao vivo; um processo já aberto conserva a identidade com que começou. Alterar o código do framework exige retomar ou reiniciar o executor para carregar a versão nova. Quando a estrutura do plano muda, recompile e inicie uma execução apropriada, preservando o histórico anterior.</p></details>
+        <details><summary>Devo criar um QA frontend e outro backend?</summary><p>Comece com <code>qa</code> compartilhado. Use <code>frontend_qa</code> ou <code>backend_qa</code> somente quando houver uma diferença comprovável de ferramenta, isolamento, risco, custo ou cota. O mesmo papel compartilhado já inicia processos independentes por unidade e pode revisar várias delas em paralelo.</p></details>
         <details><summary>Por que só vejo um backend trabalhando?</summary><p>Pode haver apenas uma unidade pronta, uma dependência ainda não aprovada, QA ocupando a outra vaga ou arquivos compartilhados. Confira as dependências e o limite. Um plano com uma unidade por onda e nenhuma dependência explícita é sequencial por construção; o Planner precisa revisar a divisão, não apenas aumentar a quantidade de vagas.</p></details>
         <details><summary>O Planner sempre deve preencher todas as vagas?</summary><p>Não. Ele deve criar o maior paralelismo seguro. Uma vaga livre pode significar que não existe outra unidade pronta, que uma dependência ainda aguarda QA ou que banco, porta, build e outros recursos precisam permanecer exclusivos. O executor usa até o teto configurado; não inventa trabalho para ocupar capacidade.</p></details>
         <details><summary>Se eu configurar seis vagas, minha feature termina três vezes mais rápido?</summary><p>Somente se o plano tiver seis unidades independentes prontas, os harnesses aceitarem essa concorrência e o projeto isolar recursos compartilhados. Se a maior onda tiver três unidades, três é o máximo útil. Mais processos também podem disputar CPU, memória, limites do provedor e ambientes de teste.</p></details>
@@ -311,8 +357,8 @@ aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
         <details><summary>Posso fechar o navegador e voltar depois?</summary><p>Sim. Se o servidor do dashboard continuar aberto, basta voltar à URL. Se ele foi encerrado, rode <code>execution:dashboard</code> novamente e abra a URL atual. Isso não reinicia a implementação.</p></details>
         <details><summary>Autopilot significa que nunca vai parar?</summary><p>O modo contínuo prossegue enquanto existe uma próxima ação segura: repete falhas recuperáveis, devolve reprovações ao DEV e encaminha defeitos de contrato ao produtor correto. Ele não repete indefinidamente uma unidade que aponta para outro dono sem roteamento seguro. Também não consegue criar acesso a uma conta, disponibilizar um modelo ausente ou decidir uma mudança de produto fora do plano. O dashboard pode retomar automaticamente um executor contínuo que ele observou morrer; o comando manual equivalente é <code>--resume</code>.</p></details>
         <details><summary>Como conferir se o plano permite paralelo?</summary><p>Use <code>aioson execution:graph . --feature=agenda-inteligente</code>. O grafo mostra as dependências do plano compilado; o dashboard acrescenta o estado da execução. Peça ao Planner para explicar as dependências que estão deixando uma vaga ociosa.</p></details>
-        <h3>Referências desta edição</h3><p>Este guia descreve o código local revisado em 14/09/2026. A disponibilidade depende da versão instalada; recursos alterados no repositório podem ainda não ter sido publicados no pacote que você usa.</p>
-        <ul class="source-links"><li><a href="../../docs/execution-monitor.md">Monitoramento local: comandos, portas e histórico</a></li><li><a href="../../docs/execution-reliability.md">Política de contexto, recuperação e medição</a></li><li><a href="../../src/commands/execution.js">Comandos de execução no código do AIOSON</a></li><li><a href="../../src/agent-execution/execution-run.js">Motor que agenda DEV → QA</a></li><li><a href="../sdd/index.html">SDD: preparação, Planner, Dev e QA</a></li></ul>
+        <h3>Referências desta edição</h3><p>Este guia descreve o código local revisado em 15/09/2026. A disponibilidade depende da versão instalada; recursos alterados no repositório podem ainda não ter sido publicados no pacote que você usa.</p>
+        <ul class="source-links"><li><a href="../../docs/execution-monitor.md">Monitoramento local: comandos, portas e histórico</a></li><li><a href="../../docs/pt/5-referencia/agent-execution.md">Referência técnica da execução de agentes</a></li><li><a href="../../src/commands/execution.js">Comandos de execução no código do AIOSON</a></li><li><a href="../../src/agent-execution/execution-run.js">Motor que agenda DEV → QA</a></li><li><a href="../sdd/index.html">SDD: preparação, Planner, Dev e QA</a></li></ul>
       </section>
     </article>
   </div>

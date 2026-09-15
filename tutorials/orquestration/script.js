@@ -22,7 +22,7 @@ const definitions = [
   { id: 'screen', name: 'Tela', needs: [] },
   { id: 'notify', name: 'Notificações', needs: [] },
   { id: 'connect', name: 'Integração', needs: ['api', 'screen'] },
-  { id: 'verify', name: 'Jornada final', needs: ['connect', 'notify'] }
+  { id: 'verify', name: 'Integração / DEV + QA final', needs: ['connect', 'notify'] }
 ];
 const capacityInput = document.getElementById('sim-capacity');
 const reworkInput = document.getElementById('sim-rework');
@@ -113,7 +113,7 @@ function updateCommands() {
   const quoted = project === '.' ? '.' : `'${project.replace(/'/g, "''")}'`;
   const command = (verb, suffix = '') => `aioson execution:${verb} ${quoted} --feature=${feature}${suffix}`;
   document.getElementById('prepare-command').textContent = [`aioson context:validate ${quoted} --json`, command('offer'), command('compile'), command('run', ' --preflight')].join('\n');
-  document.getElementById('run-command').textContent = command('run', ' --until-complete --no-context-limit');
+  document.getElementById('run-command').textContent = command('run', ' --until-complete');
   document.getElementById('dashboard-command').textContent = command('dashboard');
   document.getElementById('watch-command').textContent = command('status', ' --watch');
   validation.textContent = 'Comandos para PowerShell. Copiar não executa nem altera o projeto.';
@@ -140,17 +140,6 @@ copyButtons.forEach(button => {
   });
 });
 updateCommands();
-
-const windowInput = document.getElementById('model-window');
-function updateBudget() {
-  const known = windowInput.value !== 'unknown';
-  const budget = known ? Math.min(80000, Number(windowInput.value) * 0.5) : 80000;
-  const format = value => new Intl.NumberFormat('pt-BR').format(value);
-  document.getElementById('budget-output').textContent = `Teto operacional: ${format(budget)} tokens. Reserva inicial: até ${format(budget / 2)}.`;
-  document.getElementById('budget-detail').textContent = known ? 'O menor valor entre 80 mil e 50% da janela conhecida. A reserva inicial deixa espaço para ferramentas, novas leituras e saída; é uma regra de planejamento, não uma medição do modelo.' : 'Sem janela informada, aplica-se o teto absoluto configurado. Não é possível afirmar que ele corresponde a metade da janela real desse modelo.';
-}
-windowInput.addEventListener('change', updateBudget);
-updateBudget();
 
 const links = [...document.querySelectorAll('.sidebar a[href^="#"]')];
 if ('IntersectionObserver' in window) {
