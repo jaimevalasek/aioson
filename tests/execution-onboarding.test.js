@@ -236,7 +236,7 @@ test('execution:offer recommends on the measured scale, never on the lock — th
   assert.match(smallResult.plan.recommendation.reasons[0], /below the 100-file split floor/);
 });
 
-test('execution:seed — the roles file is born disabled, valid, on installed hosts, at the default model, naming the planner; the reviewer differs when a second host exists (AC-seed-*, AC-reviewer-differs)', async (t) => {
+test('execution:seed — the roles file is born multi-profile, disabled, valid, on installed hosts, at the default model, naming the planner; the reviewer differs when a second host exists (AC-seed-*, AC-reviewer-differs)', async (t) => {
   const { dir, env } = await setup(t, { roles: null });
   const result = await seedExecutionRoles(dir, { lanes: ['backend', 'frontend'], feature: SLUG, hosts: HOSTS, env, locate: installedOnly('codex', 'claude') });
   assert.equal(result.ok, true);
@@ -247,21 +247,27 @@ test('execution:seed — the roles file is born disabled, valid, on installed ho
   assert.equal(result.independent_review, true);
 
   const document = JSON.parse(await readRoles(dir));
-  assert.deepEqual(Object.keys(document.roles).sort(), ['backend_dev', 'frontend_dev', 'integration_dev', 'qa'], 'AC-seed-writes');
+  assert.equal(document.active_profile, 'roles01', 'new projects start on the first editable routing profile');
+  assert.deepEqual(Object.keys(document.profiles), ['roles01'], 'the seed uses the multi-profile schema');
+  const seededProfile = document.profiles[document.active_profile];
+  assert.equal(seededProfile.enabled, true);
+  assert.equal(seededProfile.fallback_use, false);
+  assert.deepEqual(seededProfile.fallback_profiles, []);
+  assert.deepEqual(Object.keys(seededProfile.roles).sort(), ['backend_dev', 'frontend_dev', 'integration_dev', 'qa'], 'AC-seed-writes');
   assert.equal(document.enabled, false, 'AC-seed-disabled');
   assert.equal(validateExecutionRoles(document, { hosts: HOSTS }).ok, true, 'AC-seed-valid');
-  for (const role of Object.values(document.roles)) {
+  for (const role of Object.values(seededProfile.roles)) {
     assert.ok(['claude', 'codex'].includes(role.host), 'AC-seed-installed-host: every role points at an installed host');
     assert.equal(role.model, DEFAULT_MODEL, 'AC-seed-default-model');
     assert.equal(role.reasoning_effort, null);
   }
-  assert.equal(document.roles.backend_dev.host, 'claude');
-  assert.equal(document.roles.qa.host, 'codex', 'AC-reviewer-differs: the judge is not the producer');
+  assert.equal(seededProfile.roles.backend_dev.host, 'claude');
+  assert.equal(seededProfile.roles.qa.host, 'codex', 'AC-reviewer-differs: the judge is not the producer');
   assert.equal(document.source, 'aioson-planner (feature: orders)', 'AC-seed-source');
   assert.deepEqual(document.parallel, { max_concurrent_lanes: 10 });
   assert.equal(document.on_unavailable, 'ask');
   // Only the root keys the desktop client's reader accepts — a seeded file must open in its panel.
-  assert.deepEqual(Object.keys(document).sort(), ['enabled', 'on_unavailable', 'parallel', 'roles', 'source', 'version']);
+  assert.deepEqual(Object.keys(document).sort(), ['active_profile', 'enabled', 'on_unavailable', 'parallel', 'profiles', 'source', 'version']);
 
   // AC-seed-disabled through the offer: the seeded file is never available.
   const offered = await offerExecution(dir, { env, hosts: HOSTS });
@@ -385,7 +391,7 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   assert.equal(result.confirmation, undefined);
 
   // AC-offer-partial: one chosen model → the pendency names only what is still at the default.
-  await edit((document) => { document.roles.backend_dev.model = 'claude-opus-5'; });
+  await edit((document) => { document.profiles[document.active_profile].roles.backend_dev.model = 'claude-opus-5'; });
   result = await offer(dir, env);
   assert.equal(result.reason, 'defaults_unconfirmed');
   assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
@@ -408,19 +414,24 @@ test('the offer asks about roles at the default model BEFORE it asks for signatu
   assert.equal(result.pending_confirmation, undefined);
 
   // A role change reopens the question — only for the roles still at the default.
-  await edit((document) => { document.roles.qa.host = 'claude'; });
+  await edit((document) => { document.profiles[document.active_profile].roles.qa.host = 'claude'; });
   result = await offer(dir, env);
   assert.equal(result.reason, 'defaults_unconfirmed');
   assert.deepEqual(result.pending_confirmation.map((item) => item.role), ['frontend_dev', 'integration_dev', 'qa']);
 
   // AC-offer-silent: every model chosen → no pendency, no confirmation needed.
-  await edit((document) => { document.roles.frontend_dev.model = 'claude-sonnet-5'; document.roles.integration_dev.model = 'claude-opus-5'; document.roles.qa.model = 'gpt-5.6'; });
+  await edit((document) => {
+    const roles = document.profiles[document.active_profile].roles;
+    roles.frontend_dev.model = 'claude-sonnet-5';
+    roles.integration_dev.model = 'claude-opus-5';
+    roles.qa.model = 'gpt-5.6';
+  });
   result = await offer(dir, env);
   assert.equal(result.reason, 'signature_missing');
   assert.equal(result.pending_confirmation, undefined);
 
   // The confirmation lives BESIDE the roles file: the roles document itself never gains a key.
-  assert.deepEqual(Object.keys(JSON.parse(await fs.readFile(rolesFile, 'utf8'))).sort(), ['enabled', 'on_unavailable', 'parallel', 'roles', 'source', 'version']);
+  assert.deepEqual(Object.keys(JSON.parse(await fs.readFile(rolesFile, 'utf8'))).sort(), ['active_profile', 'enabled', 'on_unavailable', 'parallel', 'profiles', 'source', 'version']);
 
   // Confirming without a readable roles file is a named refusal.
   const bare = await setup(t, { roles: null });

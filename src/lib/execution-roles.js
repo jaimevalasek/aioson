@@ -6,9 +6,10 @@
  * host/model per role).
  *
  * The framework SEEDS it and never UNLOCKS it: `seedExecutionRoles` (the
- * planner, `aioson execution:seed`) writes one `{lane}_dev` role per lane plus
- * `qa`, each on an execution host installed on this machine at the harness
- * default model, always `enabled: false`, and never touches an existing file.
+ * planner, `aioson execution:seed`) writes a multi-profile document starting
+ * at `roles01`, with one `{lane}_dev` role per lane plus `qa`, each on an
+ * execution host installed on this machine at the harness default model,
+ * always root-disabled, and never touches an existing file.
  * Choosing a model, enabling the file and signing the hosts stay acts of a
  * person (or of the supervising desktop client, which validated each pair with
  * `aioson host:signature`). It never ships in `template/`. Absent, disabled or
@@ -40,6 +41,7 @@ const EXECUTION_ROLES_RELATIVE_PATH = '.aioson/config/execution-roles.json';
 // never inside it: the desktop client's reader refuses unknown root keys.
 const EXECUTION_ROLES_CONFIRMATION_RELATIVE_PATH = '.aioson/config/execution-roles.confirmed.json';
 const SEED_SOURCE_PREFIX = 'aioson-planner';
+const SEEDED_PROFILE_NAME = 'roles01';
 const LANE_ID = /^[a-z][a-z0-9-]*$/;
 const EXECUTION_ROLES_VERSION = 1;
 const ROLE_KEY = /^[a-z][a-z0-9_]*$/;
@@ -493,9 +495,10 @@ async function installedExecutionHosts({ hosts = listExecutionHosts(), env = pro
 }
 
 /**
- * The seeded document: every lane's implementer on the first installed host,
- * the reviewer on the second when there is one (the judge differs from the
- * producer), every model the harness default, and disabled.
+ * The seeded document: a multi-profile configuration whose initial profile
+ * puts every lane's implementer on the first installed host and the reviewer
+ * on the second when there is one (the judge differs from the producer). Every
+ * model uses the harness default, while the root configuration stays disabled.
  */
 function seedRolesDocument({ lanes, feature, installed }) {
   const devHost = installed[0];
@@ -511,7 +514,15 @@ function seedRolesDocument({ lanes, feature, installed }) {
     version: EXECUTION_ROLES_VERSION,
     source: feature ? `${SEED_SOURCE_PREFIX} (feature: ${feature})` : SEED_SOURCE_PREFIX,
     enabled: false,
-    roles,
+    active_profile: SEEDED_PROFILE_NAME,
+    profiles: {
+      [SEEDED_PROFILE_NAME]: {
+        enabled: true,
+        fallback_use: false,
+        fallback_profiles: [],
+        roles
+      }
+    },
     parallel: { max_concurrent_lanes: DEFAULT_MAX_CONCURRENT_LANES },
     on_unavailable: DEFAULT_ON_UNAVAILABLE
   };
@@ -568,6 +579,7 @@ async function seedExecutionRoles(projectDir, { lanes = [], feature = null, host
     };
   }
   const document = seedRolesDocument({ lanes: laneIds, feature, installed });
+  const seededRoles = document.profiles[document.active_profile].roles;
   const validation = validateExecutionRoles(document, { hosts: registered });
   if (!validation.ok) {
     return { ok: false, outcome: 'seed_invalid', path: relative, written: false, errors: validation.errors, message: 'the seeded document does not validate — nothing was written' };
@@ -594,10 +606,11 @@ async function seedExecutionRoles(projectDir, { lanes = [], feature = null, host
     written: true,
     enabled: false,
     source: document.source,
-    roles: document.roles,
+    active_profile: document.active_profile,
+    roles: seededRoles,
     hosts: { registered, installed },
     independent_review: installed.length > 1,
-    message: `${relative} seeded (disabled): ${Object.keys(document.roles).join(', ')} — choose a model per role, enable it, sign the hosts`
+    message: `${relative} seeded (disabled) with profile ${document.active_profile}: ${Object.keys(seededRoles).join(', ')} — choose a model per role, enable it, sign the hosts`
   };
 }
 
