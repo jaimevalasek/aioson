@@ -18,7 +18,7 @@ Alguns recursos opcionais pedem algo a mais:
 
 | Recurso | O que ele precisa |
 |---|---|
-| `scan:project --with-llm` — varredura de codebase existente com apoio de LLM | Um `aioson-models.json` com chave de API de um modelo barato (DeepSeek, OpenAI, Gemini, Groq, Together, Mistral ou Anthropic). Sem isso, o scan roda em modo local. |
+| `scan:project --with-llm` — varredura de codebase existente com apoio de LLM | Um `aioson-models.json` na raiz com chave de API de um modelo barato (DeepSeek, OpenAI, Gemini, Groq, Together, Mistral ou Anthropic). Sem chave, o scan roda em modo local. |
 | `qa:run` / `qa:scan` — QA de navegador | `npm install -g playwright && npx playwright install chromium` |
 | `verify:artifact --kind=visual --runtime` — medição visual em browser | `npm i -D playwright && npx playwright install chromium`. O `aioson doctor` avisa quando falta. |
 | `mcp:init` / `mcp:doctor` | Um cliente compatível com MCP |

@@ -70,6 +70,48 @@ test('routing validation accepts a signed fallback without saving or starting a 
   assert.deepEqual(result.commands, []);
 });
 
+test('routingConfiguration still returns the document and field errors when validation fails', async t => {
+  const dir = await project(t);
+  const broken = JSON.parse(JSON.stringify(ROLES));
+  broken.profiles.primary.roles.backend_dev.host = 'not-a-real-host';
+  await fs.writeFile(path.join(dir, '.aioson/config/execution-roles.json'), JSON.stringify(broken, null, 2));
+  const result = await routingConfiguration(dir);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 422);
+  assert.ok(Array.isArray(result.errors) && result.errors.length > 0);
+  assert.equal(result.config.active_profile, 'primary');
+  assert.ok(result.options.hosts.some(item => item.host === 'not-a-real-host'));
+  assert.ok(result.hint);
+});
+
+test('routingConfiguration refreshes expired signatures for the active profile', async t => {
+  const dir = await project(t);
+  const env = { ...process.env, AIOSON_HOST_SIGNATURES: path.join(dir, 'signatures.json') };
+  const expired = {
+    host: 'codex',
+    model: 'gpt-a',
+    reasoning_effort: 'medium',
+    status: 'valid',
+    checked_at: '2026-01-01T00:00:00.000Z',
+    expires_at: '2026-01-02T00:00:00.000Z'
+  };
+  const fresh = { ...expired, checked_at: '2026-09-16T00:00:00.000Z', expires_at: '2999-01-01T00:00:00.000Z', unattended: { yolo: { state: 'verified' } } };
+  await writeSignatures({ signatures: { [signatureKey('codex', 'gpt-a', 'medium')]: expired } }, { env });
+  let probes = 0;
+  const opened = await routingConfiguration(dir, {
+    env,
+    now: Date.parse('2026-09-16T00:00:00.000Z'),
+    refreshSignatures: true,
+    probe: async () => {
+      probes += 1;
+      return { entry: fresh, path: env.AIOSON_HOST_SIGNATURES };
+    }
+  });
+  assert.equal(probes, 2, 'primary profile declares two distinct codex routes (backend_dev and qa)');
+  assert.equal(opened.ok, true);
+  assert.equal(opened.options.signatures.find(item => item.model === 'gpt-a').state, 'valid');
+});
+
 test('routing HTTP writes require the local action token and validate the complete document', async t => {
   const dir = await project(t);
   const dashboard = createExecutionDashboard(dir, { port: 0 });

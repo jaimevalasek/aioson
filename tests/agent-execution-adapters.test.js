@@ -26,6 +26,39 @@ for (const host of ['opencode', 'claude', 'qwen']) test(`${host} delivers a larg
 });
 test('Codex and Claude pass writable roots with spaces as separate argv',()=>{const root='C:\\dev\\Service With Spaces';const codex=require('../src/agent-execution/adapters/codex').build({mode:'external',model:'configured-default',cwd:process.cwd(),prompt_text:'x',writable_roots:[root]});assert.deepEqual(codex.args,['exec','--skip-git-repo-check','--add-dir',root,'-']);const claude=require('../src/agent-execution/adapters/claude').build({mode:'external',model:'configured-default',cwd:process.cwd(),prompt_text:'x',writable_roots:[root]});assert.deepEqual(claude.args.slice(0,3),['--print','--add-dir',root]);assert.equal(codex.options.shell,false)});
 test('OpenCode blocks additional writable roots without a verified flag',()=>{const r=require('../src/agent-execution/adapters/opencode').build({mode:'external',model:'configured-default',cwd:process.cwd(),prompt_text:'x',writable_roots:['C:\\extra']});assert.equal(r.reason,'host_capability_missing')});
+test('Cursor SDK runner keeps prompt on stdin and maps unattended permission mode', () => {
+  const root = 'C:\\dev\\Service With Spaces';
+  const r = require('../src/agent-execution/adapters/cursor').build({
+    mode: 'external',
+    model: 'composer-2.5',
+    cwd: process.cwd(),
+    prompt_text: 'implement feature',
+    writable_roots: [root],
+    sandbox_mode: 'workspace-write',
+    captureUsage: true
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.options.shell, false);
+  assert.equal(r.stdin, true);
+  assert.equal(r.args.includes('implement feature'), false);
+  assert.equal(r.args.includes('--permission-mode'), true);
+  assert.equal(r.args.includes('yolo'), true);
+  assert.equal(r.args.includes('--model'), true);
+  assert.equal(r.args.includes('composer-2.5'), true);
+  assert.equal(r.args.includes(root), true);
+  assert.equal(r.args.includes('--jsonl'), true);
+});
+test('Cursor blocks reasoning effort when the host registry does not declare it', () => {
+  const r = require('../src/agent-execution/adapters/cursor').build({
+    mode: 'external',
+    model: 'composer-2.5',
+    reasoning_effort: 'high',
+    cwd: process.cwd(),
+    prompt_text: 'x'
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'unsupported_reasoning_effort');
+});
 test('Kimi Code uses non-interactive argv and keeps model, prompt, and writable roots isolated',()=>{const root='C:\\dev\\UI With Spaces';const r=require('../src/agent-execution/adapters/kimi').build({mode:'external',model:'kimi-k3',cwd:process.cwd(),prompt_text:'implement UI; no shell',writable_roots:[root]});assert.equal(r.options.shell,false);assert.deepEqual(r.args,['--model','kimi-k3','--add-dir',root,'--prompt','implement UI; no shell','--output-format','text']);assert.equal(r.stdin,false)});
 test('Kimi and Qwen enforce their provider-native read-only modes',()=>{const kimi=require('../src/agent-execution/adapters/kimi').build({mode:'external',model:'kimi-k3',sandbox_mode:'read-only',cwd:process.cwd(),prompt_text:'x'});assert.deepEqual(kimi.args.slice(0,3),['--plan','--model','kimi-k3']);const qwen=require('../src/agent-execution/adapters/qwen').build({mode:'external',model:'qwen3-coder',sandbox_mode:'read-only',cwd:process.cwd(),prompt_text:'x'});assert.equal(qwen.options.shell,false);assert.deepEqual(qwen.args,['--model','qwen3-coder','--approval-mode','plan','--sandbox','--safe-mode','--output-format','text'])});
 test('caller capability claims cannot enable native Codex subagents',()=>{const a=require('../src/agent-execution/adapters/codex');const r=a.build({mode:'subagent',model:'x',cwd:process.cwd(),prompt_path:'p',capabilities:{native_subagent:true}});assert.equal(r.reason,'unsupported_capability')});

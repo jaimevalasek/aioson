@@ -23,6 +23,8 @@ const {
   readSignatures
 } = require('../lib/host-signature');
 const { TOOL_CAPS, LANE_WORKER_MODE, listExecutionHosts } = require('../lib/tool-capabilities');
+const { resolveTargetDir } = require('../lib/project-root');
+const { applyProjectEnv, mergeProjectEnv } = require('../lib/project-env');
 
 function describe(entry) {
   const effort = entry.reasoning_effort ? ` effort=${entry.reasoning_effort}` : '';
@@ -35,8 +37,10 @@ function describeUnattended(entry) {
   return `unattended write: ${probes.map((probe) => `${probe.state}${probe.reason ? ` (${probe.reason})` : ''}`).join(', ')}`;
 }
 
-async function runHostSignature({ args: _args, options = {}, logger, t: _t, adapterRegistry, resolverOptions, env, home, now } = {}) {
-  const storeOptions = { env: env || process.env, home };
+async function runHostSignature({ args, options = {}, logger, t: _t, adapterRegistry, resolverOptions, env, home, now } = {}) {
+  const projectDir = resolveTargetDir(args);
+  applyProjectEnv(projectDir);
+  const storeOptions = { env: mergeProjectEnv(projectDir, env || process.env), home };
   const clock = typeof now === 'function' ? now : () => Date.now();
 
   if (options.list === true) {

@@ -220,6 +220,26 @@ const TOOL_CAPS = {
   },
   // Keep the legacy interactive `agy` key; execution roles use the product
   // name, but must launch the headless CLI, not the Antigravity editor.
+  cursor: {
+    install_command: 'npm install @cursor/sdk',
+    binary: 'aioson-cursor-runner',
+    supports_resume: false,
+    resume_last: null,
+    supports_session_id: false,
+    resume_session_id: null,
+    supports_session_picker: false,
+    session_picker: null,
+    supports_yolo: true,
+    yolo_args: ['--permission-mode', 'yolo'],
+    permission_flags: ['--permission-mode'],
+    read_only_args: ['--permission-mode', 'read-only'],
+    execution: {
+      additional_workspaces: true,
+      model_catalog: false,
+      reasoning_effort: false,
+      min_node: '22.13.0',
+    },
+  },
   antigravity: {
     install_command: null,
     binary: 'agy',

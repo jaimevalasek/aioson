@@ -42,7 +42,8 @@ test('resolvePermissionModeArgs rejects unknown modes and unknown tools; a sessi
 
 test('the registry is the single host list: kimi, qwen, grok, muse and agy are known with unattended flags', () => {
   const { TOOL_CAPS, listSupportedTools, listExecutionHosts, getExecutionCapabilities } = require('../src/lib/tool-capabilities');
-  assert.deepEqual(listSupportedTools(), ['agy', 'antigravity', 'claude', 'codex', 'grok', 'kimi', 'muse', 'opencode', 'qwen']);
+  assert.deepEqual(listSupportedTools(), ['agy', 'antigravity', 'claude', 'codex', 'cursor', 'grok', 'kimi', 'muse', 'opencode', 'qwen']);
+  assert.deepEqual(resolvePermissionModeArgs('cursor', 'yolo'), ['--permission-mode', 'yolo']);
   assert.equal(TOOL_CAPS.kimi.install_command, 'npm install -g @moonshot-ai/kimi-code');
   assert.equal(TOOL_CAPS.qwen.install_command, 'npm install -g @qwen-code/qwen-code');
   assert.equal(TOOL_CAPS.grok.install_command, 'npm install -g @xai-official/grok');
@@ -60,7 +61,7 @@ test('the registry is the single host list: kimi, qwen, grok, muse and agy are k
 
 test('execution capabilities live in the registry and interactive-only hosts are not dispatchable', () => {
   const { listExecutionHosts, getExecutionCapabilities } = require('../src/lib/tool-capabilities');
-  assert.deepEqual(listExecutionHosts(), ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(listExecutionHosts(), ['antigravity', 'claude', 'codex', 'cursor', 'grok', 'kimi', 'opencode', 'qwen']);
   assert.deepEqual(getExecutionCapabilities('codex'), {
     binary: 'codex',
     install_command: 'npm install -g @openai/codex',
@@ -94,6 +95,7 @@ test('the registry recognizes each host\'s own permission flags (aliases include
   assert.equal(hostForBinary('C:\\Users\\op\\AppData\\Roaming\\npm\\codex.cmd'), 'codex');
   assert.equal(hostForBinary('/usr/local/bin/claude'), 'claude');
   assert.equal(hostForBinary('Grok.EXE'), 'grok');
+  assert.equal(hostForBinary('aioson-cursor-runner'), 'cursor');
   assert.equal(hostForBinary('claude-wrapper'), null);
   assert.equal(hostForBinary(''), null);
 

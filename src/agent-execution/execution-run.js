@@ -33,6 +33,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { notesRelative, continuityPrompt } = require('./execution-notes');
+const { listRootTemporaryArtifacts, cleanupExecutionTemporaryArtifacts } = require('./execution-temporary-artifacts');
 const { INVALID_REPORT_REASONS, prepareReportRepair, reportRepairPrompt } = require('./execution-report-repair');
 const { externalRepairPaths, contractRepairResolution, contractRepairTarget, deferContractRepair, applyContractRepair, repairOutcomeFromState, reconcileDeferredContractRepairs } = require('./execution-contract-repair');
 const { MAX_DEV_QA_REWORK_ROUNDS, devQaCycleLimitReached, queueRecovery, queueSupervisorTakeover, recoveryPrompt, routeKey } = require('./execution-recovery');
@@ -59,7 +60,7 @@ const { createTelemetryBridge } = require('./telemetry-bridge');
 const { buildQaLaneProfile } = require('./qa-lane-profile');
 const { resolveExecutable } = require('./executable-resolver');
 const { REASONING_EFFORTS, effortsForHost } = require('./schema');
-const { readSignatures, findSignature, signatureState } = require('../lib/host-signature');
+const { readSignatures, findSignature, signatureState, ensureHostSignature, probeHostSignature } = require('../lib/host-signature');
 const { getExecutionCapabilities, resolveSandboxArgs, LANE_WORKER_MODE } = require('../lib/tool-capabilities');
 const { captureCorrectionBaseline } = require('../lib/specialist-correction');
 const { openRuntimeDb, appendExecutionEvent } = require('../runtime-store');
@@ -73,6 +74,7 @@ const DEFAULT_ADAPTERS = {
   antigravity: require('./adapters/antigravity'),
   claude: require('./adapters/claude'),
   codex: require('./adapters/codex'),
+  cursor: require('./adapters/cursor'),
   opencode: require('./adapters/opencode'),
   kimi: require('./adapters/kimi'),
   qwen: require('./adapters/qwen'),
@@ -949,6 +951,8 @@ async function executeRole({
     createStructuredObserver: candidate => {
       structuredActivity = { at: nowIso(), host: candidate.host, model: candidate.model, tool: 'dispatch', target: null };
       const guard = createExecutionLoopGuard(candidate.host, {
+        // Cursor lane workers often need more bounded reads before the first edit.
+        readThreshold: candidate.host === 'cursor' ? 48 : 24,
         onLoop: detail => {
           const summary = detail.kind === 'read_only_churn'
             ? `${detail.read_actions} read-only actions without an edit or verification action`
@@ -1551,7 +1555,13 @@ async function runExecution({
     } else if (fresh) {
       state = null;
     }
-    if (!state) state = newRunState({ feature, plan, planDigest, manifestDigest: manifest.digest, supervisor });
+    if (!state) {
+      state = newRunState({ feature, plan, planDigest, manifestDigest: manifest.digest, supervisor });
+      state.temporary_artifacts = {
+        root_baseline: await listRootTemporaryArtifacts(projectDir),
+        cleanup: null
+      };
+    }
     // A run created by an older engine can resume into the newly configured
     // final supervisor without discarding approved unit work. The compiled
     // plan digest is unchanged because the supervisor is a runtime pipeline
@@ -1731,6 +1741,28 @@ async function runExecution({
       if (!override && !selected) throw new Error(`active profile ${currentRoles.roles.active_profile || 'legacy'} does not declare ${routingLaneId} ${role}`);
       let liveRole = override || selected;
       let routingProfile = currentRoles.roles.active_profile || 'legacy';
+      const signatureProbe = profileProbe || probeHostSignature;
+      const ensureOptions = { env, now, adapterRegistry, resolverOptions, probe: signatureProbe };
+      const resolveSignedRoute = async (route, profile) => {
+        const ensured = await ensureHostSignature(
+          { host: route.host, model: route.model, reasoning_effort: route.reasoning_effort || null },
+          ensureOptions
+        );
+        if (ensured.refreshed) {
+          emit({
+            type: 'signature_refresh',
+            status: ensured.state,
+            host: route.host,
+            model: route.model,
+            reasoning_effort: route.reasoning_effort || null,
+            routing_profile: profile,
+            unit: unitState.id,
+            lane: laneId,
+            role
+          });
+        }
+        return ensured.ok ? { host: route.host, model: route.model, reasoning_effort: route.reasoning_effort || null, routing_profile: profile } : null;
+      };
       const signatureStore = await readSignatures({ env });
       const profileFallbacks = [];
       if (!override) for (const fallback of resolveProfileFallbacks(currentRoles.roles, routingLaneId, role)) {
@@ -1746,13 +1778,19 @@ async function runExecution({
           on: ['capacity', 'unavailable']
         });
       }
-      const signature = signatureState(findSignature(signatureStore, { host: liveRole.host, model: liveRole.model, reasoning_effort: liveRole.reasoning_effort || null }), now());
-      if (signature !== 'valid') {
-        const fallback = profileFallbacks.shift();
-        if (!fallback) throw new Error(`active profile ${routingProfile} selects an ${signature} signature for ${liveRole.host}/${liveRole.model} and has no signed fallback for ${laneId} ${role}`);
-        liveRole = fallback;
-        routingProfile = fallback.routing_profile;
+      let resolvedRoute = await resolveSignedRoute(liveRole, routingProfile);
+      if (!resolvedRoute && !override) {
+        for (const fallback of resolveProfileFallbacks(currentRoles.roles, routingLaneId, role)) {
+          resolvedRoute = await resolveSignedRoute(fallback, fallback.profile);
+          if (resolvedRoute) break;
+        }
       }
+      if (!resolvedRoute) {
+        const cached = signatureState(findSignature(signatureStore, { host: liveRole.host, model: liveRole.model, reasoning_effort: liveRole.reasoning_effort || null }), now());
+        throw new Error(`active profile ${routingProfile} selects an ${cached} signature for ${liveRole.host}/${liveRole.model} and has no signed fallback for ${laneId} ${role}`);
+      }
+      liveRole = resolvedRoute;
+      routingProfile = resolvedRoute.routing_profile;
       if (supervisorTakeover) {
         unitState.supervisor_takeover = {
           ...unitState.supervisor_takeover,
@@ -2490,6 +2528,21 @@ async function runExecution({
     // run with every planned lane unit approved must not finish while still
     // claiming that an invisible integration step is pending.
     if (!supervisor) state.integration.status = state.integration.units.length > 0 ? 'pending' : 'none';
+    const artifactCleanup = await cleanupExecutionTemporaryArtifacts(projectDir, {
+      feature,
+      runId: state.run_id,
+      rootBaseline: state.temporary_artifacts?.root_baseline
+    });
+    state.temporary_artifacts ||= { root_baseline: null };
+    state.temporary_artifacts.cleanup = { ...artifactCleanup, at: nowIso() };
+    if (artifactCleanup.failed.length > 0) {
+      state.findings.push({
+        check: 'temporary_artifact_cleanup_failed',
+        severity: 'low',
+        files: artifactCleanup.failed,
+        message: `${artifactCleanup.failed.length} run-owned temporary artifact(s) could not be removed after completion`
+      });
+    }
     await persist();
     emit({ type: 'run', status: 'completed', run_id: state.run_id, integration_units: state.integration.units });
     return {
@@ -2521,7 +2574,16 @@ function parseChoice(choice) {
   return { ok: false, reason: 'invalid_choice', valid: ['retry', 'fallback:<host>/<model>[/<effort>]', 'skip', 'skip-qa', 'abort'] };
 }
 
+function clearStageRoutingOverride(unitState, stage) {
+  if (!unitState?.override?.[stage]) return;
+  const { [stage]: removed, ...rest } = unitState.override;
+  unitState.override = Object.keys(rest).length ? rest : {};
+  return removed;
+}
+
 async function decideExecution({ projectDir, feature: featureInput, unit: unitId, choice, env = process.env, now = () => Date.now(), leaseWaitMs = DEFAULT_LEASE_WAIT_MS, expectedRunId = null }) {
+  const { mergeProjectEnv } = require('../lib/project-env');
+  env = mergeProjectEnv(projectDir, env);
   const feature = assertFeatureSlug(featureInput);
   const stateFile = runStatePath(projectDir, feature);
   const unitKey = String(unitId || '').trim();
@@ -2571,10 +2633,12 @@ async function decideExecution({ projectDir, feature: featureInput, unit: unitId
       if (parsed.reasoning_effort && !caps.reasoning_effort) return { ok: false, reason: 'effort_unsupported_by_host', feature, unit: unitState.id, host: parsed.host };
       if (parsed.reasoning_effort && !REASONING_EFFORTS.includes(parsed.reasoning_effort)) return { ok: false, reason: 'invalid_reasoning_effort', feature, unit: unitState.id };
       if (parsed.reasoning_effort && !effortsForHost(parsed.host).includes(parsed.reasoning_effort)) return { ok: false, reason: 'effort_unsupported_by_host', feature, unit: unitState.id, host: parsed.host, supported: effortsForHost(parsed.host) };
-      const store = await readSignatures({ env });
-      const sig = signatureState(findSignature(store, { host: parsed.host, model: parsed.model, reasoning_effort: parsed.reasoning_effort }), now());
-      if (sig !== 'valid') {
-        return { ok: false, reason: `fallback_signature_${sig}`, feature, unit: unitState.id, host: parsed.host, model: parsed.model, hint: `aioson host:signature . --host=${parsed.host} --model=${parsed.model}${parsed.reasoning_effort ? ` --effort=${parsed.reasoning_effort}` : ''}` };
+      const ensured = await ensureHostSignature(
+        { host: parsed.host, model: parsed.model, reasoning_effort: parsed.reasoning_effort },
+        { env, now, probe: probeHostSignature }
+      );
+      if (!ensured.ok) {
+        return { ok: false, reason: `fallback_signature_${ensured.state}`, feature, unit: unitState.id, host: parsed.host, model: parsed.model, hint: `aioson host:signature . --host=${parsed.host} --model=${parsed.model}${parsed.reasoning_effort ? ` --effort=${parsed.reasoning_effort}` : ''}` };
       }
       // Judge ≠ producer survives recovery: with require_independent_qa on, a
       // fallback that lands this stage on the unit's other stage's host+model
@@ -2606,8 +2670,17 @@ async function decideExecution({ projectDir, feature: featureInput, unit: unitId
     }
     const previous = unitState.pending_decision;
     if (parsed.choice === 'retry') {
+      const clearedOverride = clearStageRoutingOverride(unitState, stage);
+      if (stage === 'dev') {
+        delete unitState.supervisor_takeover;
+        if (unitState.recovery?.circuit_breaker) {
+          const { circuit_breaker: _, ...recoveryRest } = unitState.recovery;
+          unitState.recovery = Object.keys(recoveryRest).length ? recoveryRest : undefined;
+          if (!unitState.recovery) delete unitState.recovery;
+        }
+      }
       const failed = unitState[stage];
-      unitState.retry_context = { ...unitState.retry_context, [repairAcceptance ? 'dev' : stage]: { reason: previous.reason, errors: failed?.errors || [], findings: failed?.findings || [], evidence: failed?.evidence || [], messages: failed?.messages || [] } };
+      unitState.retry_context = { ...unitState.retry_context, [repairAcceptance ? 'dev' : stage]: { reason: previous.reason, errors: failed?.errors || [], findings: failed?.findings || [], evidence: failed?.evidence || [], messages: failed?.messages || [], cleared_override: clearedOverride || null } };
     }
     const decision = { unit: unitState.id, stage, choice: String(choice).trim(), reason_before: previous.reason, at: nowIso() };
     state.decisions.push(decision);
@@ -2777,6 +2850,7 @@ function executionStatusFromState({ feature, stateRead, read, now = Date.now() }
     dev: unit.dev ? { status: unit.dev.status, host: unit.dev.host || null, model: unit.dev.model || null, routing_profile: unit.dev.routing_profile || null, verdict: unit.dev.verdict || null, reason: unit.dev.reason || null, report: unit.dev.report || null, findings: (unit.dev.findings || []).length, stalled: Boolean(unit.dev.stalled), session_id: unit.dev.session_id || null, ...stageRow(unit.dev, now) } : null,
     qa: unit.qa ? { status: unit.qa.status, host: unit.qa.host || null, model: unit.qa.model || null, routing_profile: unit.qa.routing_profile || null, verdict: unit.qa.verdict || null, reason: unit.qa.reason || null, report: unit.qa.report || null, findings: (unit.qa.findings || []).length, corrections: (unit.qa.corrections_paths || []).length, corrections_cap_exceeded: Boolean(unit.qa.corrections_cap_exceeded), session_id: unit.qa.session_id || null, ...stageRow(unit.qa, now) } : null,
     pending_decision: unit.pending_decision ? { stage: unit.pending_decision.stage, reason: unit.pending_decision.reason, choices: unit.pending_decision.choices } : null,
+    routing_override: unit.override?.dev || unit.override?.qa ? { dev: unit.override.dev || null, qa: unit.override.qa || null } : null,
     supervisor_takeover: unit.supervisor_takeover ? {
       status: unit.supervisor_takeover.status,
       reason: unit.supervisor_takeover.reason,

@@ -109,6 +109,17 @@ function antigravityTool(event) {
   };
 }
 
+function cursorTool(event) {
+  if (event?.type !== 'tool_call' || event.status !== 'completed' || typeof event.name !== 'string') return null;
+  const parameters = event.args && typeof event.args === 'object' ? event.args : {};
+  return {
+    tool: event.name,
+    read_only: toolReadOnly(event.name, parameters),
+    parameters,
+    fingerprint: `${event.name}:${JSON.stringify(parameters).slice(0, 4000)}`
+  };
+}
+
 function opencodeTool(event) {
   const part = event?.type === 'tool_use' ? event.part : null;
   const state = part?.state;
@@ -124,6 +135,7 @@ function opencodeTool(event) {
 
 function structuredTool(host, event) {
   if (host === 'antigravity') return antigravityTool(event);
+  if (host === 'cursor') return cursorTool(event);
   if (host === 'opencode') return opencodeTool(event);
   return null;
 }
@@ -173,4 +185,4 @@ function createExecutionLoopGuard(host, { threshold = 4, readThreshold = 24, onL
   };
 }
 
-module.exports = { READ_ONLY_TOOLS, SHELL_TOOLS, shellCommand, scanShellCommand, readOnlyShellCommand, toolReadOnly, antigravityRead, antigravityTool, opencodeTool, structuredTool, createExecutionLoopGuard };
+module.exports = { READ_ONLY_TOOLS, SHELL_TOOLS, shellCommand, scanShellCommand, readOnlyShellCommand, toolReadOnly, antigravityRead, antigravityTool, cursorTool, opencodeTool, structuredTool, createExecutionLoopGuard };

@@ -10,6 +10,7 @@ const { spawn } = require('node:child_process');
 const { createAdapter } = require('../src/agent-execution/adapters/base');
 const {
   DEFAULT_TTL_HOURS,
+  ensureHostSignature,
   listSignatures,
   lookupSignature,
   probeHostSignature,
@@ -66,7 +67,7 @@ function runCli(args, options = {}) {
 }
 
 test('the execution capability matrix is derived from the single host registry, unchanged for every dispatchable host', () => {
-  assert.deepEqual(Object.keys(MATRIX).sort(), ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(Object.keys(MATRIX).sort(), ['antigravity', 'claude', 'codex', 'cursor', 'grok', 'kimi', 'opencode', 'qwen']);
   assert.deepEqual(capabilities('codex'), {
     native_subagent: false,
     fresh_session: false,
@@ -262,7 +263,7 @@ test('host:signature command: --list and --status are read-only verdicts, the pr
   result = await runHostSignature({ args: [], options: { json: true }, logger, env: store.env });
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'host_required');
-  assert.deepEqual(result.hosts, ['antigravity', 'claude', 'codex', 'grok', 'kimi', 'opencode', 'qwen']);
+  assert.deepEqual(result.hosts, ['antigravity', 'claude', 'codex', 'cursor', 'grok', 'kimi', 'opencode', 'qwen']);
 
   result = await runHostSignature({ args: [], options: { host: 'kimi', model: 'kimi-k3', status: true, json: true }, logger, env: store.env });
   assert.equal(result.ok, true);
@@ -319,4 +320,45 @@ test('host:signature is registered in the CLI with JSON output, focused help and
   assert.equal(unknown.code, 1);
   assert.equal(JSON.parse(unknown.stdout).reason, 'unknown_host');
   await assert.rejects(fs.access(store.file), 'a refused probe must not create the store');
+});
+
+test('ensureHostSignature reuses a valid cache and refreshes expired routes before dispatch', async (t) => {
+  const store = await tempStore(t);
+  const fixed = Date.parse('2026-08-25T12:00:00.000Z');
+  const validEntry = {
+    host: 'codex',
+    model: 'gpt-5.6',
+    reasoning_effort: 'medium',
+    status: 'valid',
+    checked_at: new Date(fixed).toISOString(),
+    expires_at: new Date(fixed + DEFAULT_TTL_HOURS * 3600 * 1000).toISOString()
+  };
+  await writeSignatures({ signatures: { [signatureKey('codex', 'gpt-5.6', 'medium')]: validEntry } }, { env: store.env });
+  let probes = 0;
+  const cached = await ensureHostSignature(
+    { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'medium' },
+    { env: store.env, now: () => fixed, probe: async () => { probes += 1; return { entry: validEntry }; } }
+  );
+  assert.equal(cached.ok, true);
+  assert.equal(cached.refreshed, false);
+  assert.equal(probes, 0);
+
+  const expiredEntry = { ...validEntry, expires_at: new Date(fixed - 1000).toISOString() };
+  await writeSignatures({ signatures: { [signatureKey('codex', 'gpt-5.6', 'medium')]: expiredEntry } }, { env: store.env });
+  const renewed = await ensureHostSignature(
+    { host: 'codex', model: 'gpt-5.6', reasoning_effort: 'medium' },
+    {
+      env: store.env,
+      now: () => fixed,
+      probe: async () => {
+        probes += 1;
+        return { entry: { ...validEntry, checked_at: new Date(fixed).toISOString(), expires_at: new Date(fixed + DEFAULT_TTL_HOURS * 3600 * 1000).toISOString() }, path: store.file };
+      }
+    }
+  );
+  assert.equal(renewed.ok, true);
+  assert.equal(renewed.refreshed, true);
+  assert.equal(probes, 1);
+  const lookup = await lookupSignature({ host: 'codex', model: 'gpt-5.6', reasoning_effort: 'medium' }, { env: store.env, now: fixed });
+  assert.equal(lookup.state, 'valid');
 });

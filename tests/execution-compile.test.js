@@ -156,7 +156,7 @@ test('execution-roles: the unlock file is validated strictly — hosts from the 
   const byPath = Object.fromEntries(bad.errors.map((error) => [error.path, error.message]));
   assert.match(byPath['$.version'], /must equal 1/);
   assert.match(byPath['$.enabled'], /boolean/);
-  assert.match(byPath['$.roles.backend_dev.host'], /must be one of antigravity, claude, codex, grok, kimi, opencode, qwen/);
+  assert.match(byPath['$.roles.backend_dev.host'], /must be one of antigravity, claude, codex, cursor, grok, kimi, opencode, qwen/);
   assert.match(byPath['$.roles.frontend_dev.reasoning_effort'], /effort_unsupported_by_host/);
   assert.match(byPath['$.roles.Bad-Key'], /snake_case/);
   assert.match(byPath['$.roles.qa.api_key'], /secret fields are forbidden/);

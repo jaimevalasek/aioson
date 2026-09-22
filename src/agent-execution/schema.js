@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 
-const HOSTS = ['claude', 'codex', 'opencode', 'kimi', 'qwen', 'antigravity'];
+const HOSTS = ['claude', 'codex', 'cursor', 'opencode', 'kimi', 'qwen', 'antigravity'];
 const MODES = ['fresh-session', 'subagent', 'external', 'current-session'];
 const AGENTS = ['dev', 'qa', 'tester', 'pentester', 'validator'];
 const REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];

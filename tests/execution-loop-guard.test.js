@@ -12,6 +12,13 @@ function opencode(tool, input, status = 'completed') {
   return { type: 'tool_use', part: { type: 'tool', tool, state: { status, input } } };
 }
 
+test('Cursor repeated read guard trips on the fourth identical request', () => {
+  const guard = createExecutionLoopGuard('cursor');
+  const event = (name, args) => ({ type: 'tool_call', status: 'completed', name, args });
+  for (let index = 0; index < 3; index++) assert.equal(guard.observe(event('read', { path: 'src/a.ts' })), null);
+  assert.equal(guard.observe(event('read', { path: 'src/a.ts' })), 'unproductive_loop');
+});
+
 test('Antigravity repeated read guard trips on the fourth identical request', () => {
   const loops = [];
   const guard = createExecutionLoopGuard('antigravity', { onLoop: detail => loops.push(detail) });

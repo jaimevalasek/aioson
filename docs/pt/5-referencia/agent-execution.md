@@ -80,7 +80,7 @@ Use faixas somente quando o usuário ou o plano aprovado pedir hosts/modelos dif
 
 O DEV cria o prompt curto de runtime a partir do PRD e do plano aprovados, despacha as faixas habilitadas sequencialmente no worktree compartilhado, confere o diff contra `write_paths`, integra as fronteiras compartilhadas e roda a verificação completa. O relatório vincula a identidade da faixa e seus caminhos declarados.
 
-Os hosts vêm de um registro único (`src/lib/tool-capabilities.js`, exposto por `aioson tool:capabilities --json`): Antigravity, Claude Code, Codex, Grok, Kimi Code, OpenCode e Qwen Code são despacháveis (`listExecutionHosts()`); Muse permanece somente interativo. `antigravity` é o id lógico e sempre resolve pelo registro para o CLI headless `agy` — nunca para `antigravity.cmd`, o launcher Electron do editor. Um host novo precisa de adaptador para manter resolução de executável, capabilities, argumentos, redação e telemetria em modo fail-closed.
+Os hosts vêm de um registro único (`src/lib/tool-capabilities.js`, exposto por `aioson tool:capabilities --json`): Antigravity, Claude Code, Codex, Cursor (`@cursor/sdk`, local, `CURSOR_API_KEY`), Grok, Kimi Code, OpenCode e Qwen Code são despacháveis (`listExecutionHosts()`); Muse permanece somente interativo. `antigravity` é o id lógico e sempre resolve pelo registro para o CLI headless `agy` — nunca para `antigravity.cmd`, o launcher Electron do editor. Um host novo precisa de adaptador para manter resolução de executável, capabilities, argumentos, redação e telemetria em modo fail-closed.
 
 ## Não assistido por política
 

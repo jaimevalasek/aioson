@@ -931,6 +931,20 @@ dialog::backdrop{
 .routing-validation.invalid{
   border-left-color:var(--perigo)
 }
+.routing-validation-errors{
+  margin:10px 0 0;
+  padding-left:18px;
+  color:var(--perigo);
+  font:12px/1.5 var(--voz-maquina)
+}
+.routing-validation-errors li{
+  margin:4px 0;
+  overflow-wrap:anywhere
+}
+.routing-hint{
+  margin-top:8px;
+  overflow-wrap:anywhere
+}
 .routing-validation>p{
   margin:7px 0
 }

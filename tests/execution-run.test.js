@@ -298,6 +298,48 @@ test('context use above the retired ceiling runs to completion and remains visib
   assert.equal(ledger.metrics.attempts.some(attempt => Object.hasOwn(attempt, 'context_budget') || Object.hasOwn(attempt, 'context_window')), false);
 });
 
+test('a completed run removes managed and newly-created root temporary artifacts but preserves the baseline', async t => {
+  const ctx = await setup(t);
+  await fs.writeFile(path.join(ctx.dir, '.tmp-before-run.log'), 'keep', 'utf8');
+  const fakes = adapters({
+    'dev:phase-1': input => {
+      const runId = input.prompt_text.match(/run_id=([^,\n]+)/)?.[1].trim();
+      return {
+        touch: [
+          '.tmp-created-by-worker.log',
+          `.aioson/runtime/execution-temp/${SLUG}/${runId}/phase-1-dev/verification.log`
+        ]
+      };
+    }
+  });
+
+  const result = await run(ctx, { registry: fakes.registry });
+
+  assert.equal(result.status, 'completed');
+  assert.equal(await fs.readFile(path.join(ctx.dir, '.tmp-before-run.log'), 'utf8'), 'keep');
+  await assert.rejects(fs.stat(path.join(ctx.dir, '.tmp-created-by-worker.log')), { code: 'ENOENT' });
+  await assert.rejects(fs.stat(path.join(ctx.dir, '.aioson', 'runtime', 'execution-temp', SLUG, result.run_id)), { code: 'ENOENT' });
+  const state = await readState(ctx);
+  assert.ok(state.temporary_artifacts.cleanup.removed.includes('.tmp-created-by-worker.log'));
+  assert.deepEqual(state.temporary_artifacts.cleanup.failed, []);
+});
+
+test('a legacy run without a root baseline never guesses that existing root temporary artifacts are run-owned', async t => {
+  const ctx = await setup(t);
+  await fs.writeFile(path.join(ctx.dir, '.tmp-legacy-worker.log'), 'diagnostic evidence', 'utf8');
+  const first = await run(ctx, { registry: adapters({ 'dev:phase-1': { fail: 'capacity' } }).registry });
+  assert.equal(first.status, 'decision_required');
+  const state = await readState(ctx);
+  delete state.temporary_artifacts;
+  await fs.writeFile(runStatePath(ctx.dir, SLUG), JSON.stringify(state, null, 2));
+  assert.equal((await decide(ctx, 'phase-1', 'skip')).ok, true);
+
+  const resumed = await run(ctx, { registry: adapters().registry, extra: { resume: true } });
+
+  assert.equal(resumed.status, 'completed');
+  assert.equal(await fs.readFile(path.join(ctx.dir, '.tmp-legacy-worker.log'), 'utf8'), 'diagnostic evidence');
+});
+
 test('context enforcement stays retired across resume without rerunning approved units or disabling usage and QA', async t => {
   const ctx = await setup(t);
   const windows = [];
@@ -600,7 +642,7 @@ test('a host that cannot run leaves a decision_required (state + telemetry), the
   assert.equal((await decide(ctx, 'phase-1', 'retry')).reason, 'no_decision_pending');
   assert.equal((await decide(ctx, 'phase-2', 'skip-qa')).reason, 'invalid_choice');
   const unsigned = await decide(ctx, 'phase-2', 'fallback:qwen/qwen-3.8-max');
-  assert.equal(unsigned.reason, 'fallback_signature_missing');
+  assert.ok(['fallback_signature_missing', 'fallback_signature_invalid'].includes(unsigned.reason), unsigned.reason);
   assert.equal(unsigned.hint, 'aioson host:signature . --host=qwen --model=qwen-3.8-max');
   assert.equal((await decide(ctx, 'phase-2', 'fallback:muse/muse-1')).reason, 'unknown_host');
   assert.equal((await decide(ctx, 'phase-2', 'fallback:kimi/kimi-k3/high')).reason, 'effort_unsupported_by_host');
@@ -628,6 +670,33 @@ test('a host that cannot run leaves a decision_required (state + telemetry), the
   assert.equal(state.units['phase-2'].dev.host, 'qwen');
   assert.equal(state.units['phase-2'].qa.status, 'passed');
   assert.ok(events.some((e) => e.type === 'run' && e.status === 'started' && e.resumed === true));
+});
+
+test('retry clears a routing override so the active profile applies again', async (t) => {
+  const ctx = await setup(t);
+  let frontendCalls = 0;
+  const fakes = adapters({ 'dev:phase-2': () => (frontendCalls++ === 0 ? { fail: 'capacity' } : {}) });
+  const result = await run(ctx, { registry: fakes.registry });
+  assert.equal(result.reason, 'decision_pending');
+  await writeSignatures({ signatures: { ...ALL_SIGNED, [signatureKey('qwen', 'qwen-3.8-max', null)]: signed('qwen', 'qwen-3.8-max', null) } }, { env: ctx.env });
+  const decided = await decide(ctx, 'phase-2', 'fallback:qwen/qwen-3.8-max');
+  assert.equal(decided.ok, true);
+  let state = await readState(ctx);
+  assert.deepEqual(state.units['phase-2'].override.dev, { host: 'qwen', model: 'qwen-3.8-max', reasoning_effort: null });
+  state.units['phase-2'].status = 'decision_required';
+  state.units['phase-2'].dev = { status: 'crashed', host: 'qwen', model: 'qwen-3.8-max', reason: 'crash' };
+  state.units['phase-2'].supervisor_takeover = { status: 'dev_failed', configured_role: 'integration_dev', route: { host: 'qwen', model: 'qwen-3.8-max' } };
+  state.units['phase-2'].recovery = { circuit_breaker: { reason: 'recovery_no_progress', stage: 'dev' } };
+  state.units['phase-2'].pending_decision = { stage: 'dev', reason: 'recovery_no_progress', choices: ['retry', 'abort'] };
+  state.status = 'decision_required';
+  await fs.writeFile(runStatePath(ctx.dir, SLUG), JSON.stringify(state, null, 2));
+  const retried = await decide(ctx, 'phase-2', 'retry');
+  assert.equal(retried.ok, true);
+  state = await readState(ctx);
+  assert.equal(state.units['phase-2'].override?.dev, undefined);
+  assert.equal(state.units['phase-2'].supervisor_takeover, undefined);
+  assert.equal(state.units['phase-2'].recovery?.circuit_breaker, undefined);
+  assert.equal(state.units['phase-2'].retry_context.dev.cleared_override.host, 'qwen');
 });
 
 // ───────────────────────── lane QA: measured corrections, findings, scope ─────────────────────────

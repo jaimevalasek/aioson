@@ -13,6 +13,7 @@ const { readSignatures, findSignature, signatureState } = require('../lib/host-s
 const { validateFeatureSlug, resolveExistingInsideRoot, isInsideRoot } = require('../verification/path-policy');
 const { readHistoricalSnapshot, archivedFeatures } = require('./history');
 const { MAX_CONFIG_BYTES, routingConfiguration, updateRoutingConfiguration, validateRoutingConfiguration } = require('./routing-config');
+const { applyProjectEnv, mergeProjectEnv } = require('../lib/project-env');
 
 const ASSETS = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/tokens.css': ['tokens.css', 'text/css'] };
 const HEADERS = {
@@ -40,6 +41,10 @@ async function readJsonRequest(req, maxBytes) {
   catch { return { error: 'JSON inválido.', code: 400 }; }
 }
 
+function dashboardEnv(projectDir) {
+  return mergeProjectEnv(projectDir, process.env);
+}
+
 async function snapshot(projectDir, feature) {
   const result = await statusExecution({ projectDir, feature });
   if (!result.run && !result.compiled && !result.state_corrupt && !result.state_unreadable) {
@@ -51,7 +56,7 @@ async function snapshot(projectDir, feature) {
   let observedPlan = read.plan;
   const routingFallbacks = [];
   if (rolesRead.ok && rolesRead.enabled && observedPlan) {
-    const signatures = await readSignatures();
+    const signatures = await readSignatures({ env: dashboardEnv(projectDir) });
     const route = (laneId, kind, role) => {
       if (!role) return role;
       const state = signatureState(findSignature(signatures, { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null }));
@@ -68,7 +73,17 @@ async function snapshot(projectDir, feature) {
       return [laneId, { ...lane, dev, qa: qa ? { ...lane.qa, ...qa } : lane.qa }];
     })) };
   }
-  result.routing = { ok: rolesRead.ok, enabled: rolesRead.enabled, active_profile: rolesRead.roles?.active_profile || 'legacy', fallbacks: routingFallbacks, reason: rolesRead.reason, errors: rolesRead.errors };
+  result.routing = {
+    ok: rolesRead.ok,
+    enabled: rolesRead.enabled,
+    active_profile: rolesRead.roles?.active_profile || 'legacy',
+    fallbacks: routingFallbacks,
+    reason: rolesRead.reason,
+    errors: rolesRead.errors || [],
+    error: !rolesRead.ok && rolesRead.errors?.length
+      ? rolesRead.errors.slice(0, 2).map(item => `${item.path}: ${item.message}`).join(' · ')
+      : null
+  };
   result.observation = observeExecution(result, observedPlan);
   return { ...result, observed_at: new Date().toISOString() };
 }
@@ -123,8 +138,19 @@ function presentRecovery(snapshot, recovery = {}) {
   return { ...recovery, visible: Boolean(!snapshot.archived && (actionable || (snapshot.run && stopped && recovery.busy))) };
 }
 
+/** Loopback-only POST actions: token is required; Origin may be absent in some embedded webviews. */
+function allowLocalDashboardAction(req, actionToken) {
+  if (req.headers['x-aioson-action'] !== actionToken) return false;
+  const host = String(req.headers.host || '');
+  if (!/^(127\.0\.0\.1|localhost|\[::1\]):/.test(host)) return false;
+  const origin = req.headers.origin;
+  if (!origin || origin === 'null') return true;
+  return origin === `http://${host}`;
+}
+
 function createExecutionDashboard(projectDir, { port = 4181, feature = null, autoPort = false, recoveryController = null, recoveryPollMs = 5000 } = {}) {
   projectDir = path.resolve(projectDir);
+  applyProjectEnv(projectDir);
   const assets = new Map();
   const recovery = recoveryController || createRecoveryController(projectDir);
   const actionToken = crypto.randomBytes(32).toString('hex');
@@ -152,25 +178,25 @@ function createExecutionDashboard(projectDir, { port = 4181, feature = null, aut
       const url = new URL(req.url, `http://127.0.0.1:${actualPort}`);
       const action = /^\/api\/features\/([^/]+)\/recover$/.exec(url.pathname);
       if (req.method === 'POST' && url.pathname === '/api/routing/validate') {
-        if (req.headers.origin !== `http://${req.headers.host}` || req.headers['x-aioson-action'] !== actionToken) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
+        if (!allowLocalDashboardAction(req, actionToken)) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
         if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) { send(res, 415, { error: 'Use um pedido JSON.' }); return; }
         const body = await readJsonRequest(req, MAX_CONFIG_BYTES + 8192);
         if (body.error) { send(res, body.code, { error: body.error }); return; }
         if (!body.data?.config || typeof body.data.config !== 'object' || Array.isArray(body.data.config)) { send(res, 400, { error: 'Envie a configuração a validar.' }); return; }
-        const result = await validateRoutingConfiguration(body.data.config);
+        const result = await validateRoutingConfiguration(body.data.config, { env: dashboardEnv(projectDir), refreshSignatures: true });
         send(res, result.code, result); return;
       }
       if (req.method === 'POST' && url.pathname === '/api/routing') {
-        if (req.headers.origin !== `http://${req.headers.host}` || req.headers['x-aioson-action'] !== actionToken) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
+        if (!allowLocalDashboardAction(req, actionToken)) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
         if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) { send(res, 415, { error: 'Use um pedido JSON.' }); return; }
         const body = await readJsonRequest(req, MAX_CONFIG_BYTES + 8192);
         if (body.error) { send(res, body.code, { error: body.error }); return; }
         const activeRun = (await listFeatures(projectDir)).some(item => !item.archived && ['running', 'paused', 'decision_required'].includes(item.status));
-        const result = await updateRoutingConfiguration(projectDir, body.data, { activeRun });
+        const result = await updateRoutingConfiguration(projectDir, body.data, { env: dashboardEnv(projectDir), activeRun });
         send(res, result.code, result.data); return;
       }
       if (req.method === 'POST' && action) {
-        if (req.headers.origin !== `http://${req.headers.host}` || req.headers['x-aioson-action'] !== actionToken) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
+        if (!allowLocalDashboardAction(req, actionToken)) { send(res, 403, { error: 'Ação permitida somente pelo painel local.' }); return; }
         if (!/^application\/json(?:;|$)/i.test(req.headers['content-type'] || '')) { send(res, 415, { error: 'Use um pedido JSON.' }); return; }
         const slug = decodeURIComponent(action[1]);
         if (!validateFeatureSlug(slug).ok) { send(res, 400, { error: 'Feature inválida.' }); return; }
@@ -189,8 +215,16 @@ function createExecutionDashboard(projectDir, { port = 4181, feature = null, aut
         send(res, 200, { project: path.basename(projectDir), features: await listFeatures(projectDir), initial_feature: feature, action_token: actionToken }); return;
       }
       if (url.pathname === '/api/routing') {
-        const result = await routingConfiguration(projectDir);
-        send(res, result.code, result.ok ? result : { error: result.error, errors: result.errors || [] }); return;
+        const result = await routingConfiguration(projectDir, { env: dashboardEnv(projectDir), refreshSignatures: true });
+        send(res, result.code, result.ok ? result : {
+          error: result.error,
+          errors: result.errors || [],
+          hint: result.hint || (result.errors?.length ? 'Atualize o AIOSON do painel ou corrija os campos indicados abaixo.' : null),
+          path: result.path || null,
+          digest: result.digest || null,
+          config: result.config || null,
+          options: result.options || null
+        }); return;
       }
       const route = /^\/api\/features\/([^/]+)\/(status|report)$/.exec(url.pathname);
       if (route) {

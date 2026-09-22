@@ -26,7 +26,7 @@ const {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const CONFIG_FILE    = 'aioson-models.json';
+const { readModelsConfig } = require('../lib/models-config');
 const OUTPUT_FILE    = '.aioson/context/discovery.md';
 const SKELETON_FILE  = '.aioson/context/skeleton-system.md';
 const INDEX_FILE     = '.aioson/context/scan-index.md';
@@ -979,6 +979,7 @@ async function runScanProject({ args, options = {}, logger, t }) {
   let providerName = null;
   let providerCfg = null;
   let model = null;
+  let modelsFile = 'aioson-models.json';
 
   if (!options['dry-run']) {
     const gitignoreRulesAdded = await ensureProjectGitignorePolicy(targetDir);
@@ -998,21 +999,15 @@ async function runScanProject({ args, options = {}, logger, t }) {
   if (!llmRequested) {
     logger.log(t('scan_project.local_only'));
   } else if (!options['dry-run']) {
-    const configPath = path.join(targetDir, CONFIG_FILE);
-    if (!(await exists(configPath))) {
-      logger.error(t('scan_project.config_missing', { file: CONFIG_FILE }));
+    const loaded = readModelsConfig(targetDir);
+    if (!loaded.ok) {
+      const key = loaded.error === 'config_missing' ? 'scan_project.config_missing' : 'scan_project.config_invalid';
+      logger.error(t(key, { file: loaded.rel, error: loaded.detail || loaded.error }));
       process.exitCode = 1;
-      return { ok: false, error: 'config_not_found' };
+      return { ok: false, error: loaded.error === 'config_missing' ? 'config_not_found' : 'config_invalid' };
     }
-
-    let config;
-    try {
-      config = JSON.parse(await fs.readFile(configPath, 'utf8'));
-    } catch (err) {
-      logger.error(t('scan_project.config_invalid', { error: err.message }));
-      process.exitCode = 1;
-      return { ok: false, error: 'config_invalid' };
-    }
+    const config = loaded.data;
+    modelsFile = loaded.rel;
 
     providerName = String(options.provider || config.preferred_scan_provider || '');
     const providers = config.providers || {};
@@ -1247,7 +1242,7 @@ async function runScanProject({ args, options = {}, logger, t }) {
     result = await callLLM(providerName, providerCfg, prompt);
   } catch (err) {
     if (err && err.code === 'MISSING_API_KEY') {
-      logger.error(t('scan_project.llm_missing_api_key', { provider: providerName, file: CONFIG_FILE }));
+      logger.error(t('scan_project.llm_missing_api_key', { provider: providerName, file: modelsFile }));
     } else {
       logger.error(t('scan_project.llm_error', { error: err.message }));
     }

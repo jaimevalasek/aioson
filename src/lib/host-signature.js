@@ -61,7 +61,8 @@ function defaultAdapters() {
     opencode: require('../agent-execution/adapters/opencode'),
     kimi: require('../agent-execution/adapters/kimi'),
     qwen: require('../agent-execution/adapters/qwen'),
-    grok: require('../agent-execution/adapters/grok')
+    grok: require('../agent-execution/adapters/grok'),
+    cursor: require('../agent-execution/adapters/cursor')
   };
 }
 
@@ -414,6 +415,79 @@ async function probeHostSignature({
   return persistEntry({ ...common, status: 'valid', reason: null, error: null, auth: 'ok', model_accepted: true }, persistOptions);
 }
 
+/**
+ * Use a cached signature when still valid. Missing or expired routes are
+ * re-probed with the same harness as `host:signature` before dispatch.
+ */
+async function ensureHostSignature({ host, model, reasoning_effort } = {}, {
+  env = process.env,
+  home,
+  now = () => Date.now(),
+  probe = probeHostSignature,
+  adapterRegistry,
+  resolverOptions,
+  ttlHours,
+  timeout,
+  unattendedProbe = true,
+  refreshStates = new Set(['missing', 'expired'])
+} = {}) {
+  const clock = typeof now === 'function' ? now : () => Number(now);
+  const at = clock();
+  const hostId = normalizeHost(host);
+  const modelId = normalizeModel(model);
+  const effort = normalizeEffort(reasoning_effort);
+  const store = await readSignatures({ env, home });
+  const existing = findSignature(store, { host: hostId, model: modelId, reasoning_effort: effort });
+  let state = signatureState(existing, at);
+  if (state === 'valid') {
+    return { ok: true, state, entry: existing, refreshed: false, path: store.path, reason: null };
+  }
+  if (!refreshStates.has(state)) {
+    return { ok: false, state, entry: existing, refreshed: false, path: store.path, reason: existing?.reason || state };
+  }
+  const probed = await probe({
+    host: hostId,
+    model: modelId,
+    reasoning_effort: effort,
+    ttlHours,
+    timeout,
+    unattendedProbe,
+    adapterRegistry,
+    resolverOptions,
+    env,
+    home,
+    now: clock,
+    persist: true
+  });
+  let entry = probed?.entry || null;
+  if (entry?.host && entry?.model) {
+    const latest = await readSignatures({ env, home });
+    if (!latest.unreadable) {
+      latest.signatures[signatureKey(hostId, modelId, effort)] = entry;
+      const file = await writeSignatures(latest, { env, home });
+      entry = latest.signatures[signatureKey(hostId, modelId, effort)];
+      state = signatureState(entry, clock());
+      return {
+        ok: state === 'valid',
+        state,
+        entry,
+        refreshed: true,
+        path: file || probed?.path || store.path,
+        reason: entry?.reason || null
+      };
+    }
+  }
+  state = signatureState(entry, clock());
+  return {
+    ok: state === 'valid',
+    state,
+    entry,
+    refreshed: true,
+    path: probed?.path || store.path,
+    reason: entry?.reason || null
+  };
+}
+
 module.exports = {
   DEFAULT_MODEL,
   DEFAULT_PROBE_TIMEOUT_MS,
@@ -432,6 +506,7 @@ module.exports = {
   normalizeEffort,
   normalizeModel,
   probeHostSignature,
+  ensureHostSignature,
   readSignatures,
   signatureKey,
   signatureState,

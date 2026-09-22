@@ -55,7 +55,11 @@ async function getJSON(url) {
   try {
     const response = await fetch(url, { signal: controller.signal });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Não foi possível atualizar.');
+    if (!response.ok) {
+      const failure = new Error(data.error || 'Não foi possível atualizar.');
+      if (Array.isArray(data.errors)) failure.details = data.errors;
+      throw failure;
+    }
     return data;
   } finally { clearTimeout(timeout); }
 }
@@ -118,7 +122,7 @@ function renderMetrics(status) {
 function renderRoles(status) {
   $('routing-profile').textContent = status.routing?.ok
     ? `Perfil ativo: ${status.routing.active_profile}${status.routing.fallbacks?.length ? ` · ${status.routing.fallbacks.length} fallback(s) pronto(s)` : ''}`
-    : `Configuração inválida: ${status.routing?.reason || 'não disponível'}`;
+    : `Configuração inválida${status.routing?.error ? `: ${status.routing.error}` : status.routing?.reason ? `: ${status.routing.reason}` : ''}`;
   $('roles').replaceChildren(...status.observation.assignments.map(role => {
     const node = el('article', 'role');
     const head = el('div', 'role-head');
@@ -160,6 +164,20 @@ function markRoutingDirty() {
 function routingFeedback(text, failure = false) {
   $('routing-feedback').className = failure ? 'small severity high' : 'small muted';
   $('routing-feedback').textContent = text;
+}
+
+function renderRoutingLoadErrors({ error, errors = [], hint = null } = {}) {
+  const root = $('routing-validation');
+  root.hidden = false;
+  root.className = 'routing-validation invalid';
+  root.replaceChildren();
+  root.append(el('p', 'severity high', error || 'Não foi possível carregar a configuração de roteamento.'));
+  if (hint) root.append(el('p', 'small muted routing-hint', hint));
+  if (errors.length) {
+    const list = el('ul', 'routing-validation-errors');
+    for (const item of errors.slice(0, 12)) list.append(el('li', '', `${item.path}: ${item.message}`));
+    root.append(list);
+  }
 }
 
 function nextProfileName(config) {
@@ -344,17 +362,40 @@ async function openRoutingEditor() {
   $('routing-dialog').showModal();
   $('routing-role-fields').replaceChildren(el('p', 'muted', 'Lendo a configuração do projeto…'));
   $('routing-feedback').textContent = '';
+  $('routing-validation').hidden = true;
+  $('routing-validation').replaceChildren();
   $('save-routing').disabled = true;
+  $('validate-routing').disabled = false;
   try {
-    const data = await getJSON('/api/routing');
+    const response = await fetch('/api/routing');
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (data.config && data.options) {
+        routingEditor = {
+          digest: data.digest,
+          config: JSON.parse(JSON.stringify(data.config)),
+          options: data.options,
+          dirty: false,
+          loadInvalid: true
+        };
+        renderRoutingEditor();
+        renderRoutingLoadErrors(data);
+        routingFeedback('A configuração foi carregada para leitura, mas ainda não pode ser salva até corrigir os erros.', true);
+        $('save-routing').disabled = true;
+        return;
+      }
+      const failure = new Error(data.error || 'Não foi possível carregar a configuração.');
+      failure.details = data.errors;
+      throw failure;
+    }
     routingEditor = { digest: data.digest, config: JSON.parse(JSON.stringify(data.config)), options: data.options, dirty: false };
     renderRoutingEditor();
     $('save-routing').disabled = false;
   } catch (error) {
     routingEditor = null;
     $('routing-role-fields').replaceChildren();
-    $('routing-feedback').className = 'small severity high';
-    $('routing-feedback').textContent = error.message;
+    renderRoutingLoadErrors({ error: error.message, errors: error.details || [] });
+    routingFeedback('Não foi possível abrir o editor de roteamento.', true);
   }
 }
 
@@ -728,7 +769,11 @@ function canRecover(status) {
 }
 
 async function recoverExecution(unit) {
-  if (!canRecover(current)) return;
+  if (!canRecover(current)) {
+    actionMessage = { feature: current?.feature, run_id: current?.run?.run_id, text: 'Recuperação indisponível agora. Atualize o painel ou use o comando CLI exibido acima.' };
+    if (current) render(current);
+    return;
+  }
   const feature = current.feature, runId = current.run.run_id;
   recovering = true;
   actionMessage = { feature, run_id: runId, text: 'Enviando a solicitação de recuperação…' };

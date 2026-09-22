@@ -142,6 +142,9 @@ test('HTTP recovery requires same origin, action token, JSON and bounded payload
   const post = (headers, body = '{"run_id":"run-1"}', suffix = 'example/recover') => fetch(`${base}/api/features/${suffix}`, { method: 'POST', headers, body });
   const valid = { Origin: base, 'Content-Type': 'application/json', 'X-Aioson-Action': token };
   assert.equal((await post({ ...valid, Origin: 'https://attacker.example' })).status, 403);
+  assert.equal((await post({ Origin: base, 'Content-Type': 'application/json', 'X-Aioson-Action': token })).status, 202);
+  assert.equal(calls, 1);
+  calls = 0;
   assert.equal((await post({ ...valid, 'X-Aioson-Action': 'wrong' })).status, 403);
   assert.equal((await post({ ...valid, 'Content-Type': 'text/plain' })).status, 415);
   assert.equal((await post(valid, 'x'.repeat(5000))).status, 413);

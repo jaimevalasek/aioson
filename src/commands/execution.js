@@ -27,6 +27,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { resolveTargetDir } = require('../lib/project-root');
+const { applyProjectEnv, mergeProjectEnv } = require('../lib/project-env');
 const { validateFeatureSlug } = require('../verification/path-policy');
 const {
   offerExecution,
@@ -262,6 +263,8 @@ function logCompile(logger, result) {
 
 async function runExecutionCommand({ args, options = {}, logger, env = process.env, now = Date.now(), engineOptions = {} }) {
   const projectDir = resolveTargetDir(args);
+  applyProjectEnv(projectDir);
+  env = mergeProjectEnv(projectDir, env);
   const sub = String(options.sub || '').trim();
   const featureInput = String(options.feature || options.slug || '').trim();
   let feature = null;

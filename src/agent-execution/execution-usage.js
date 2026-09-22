@@ -31,6 +31,14 @@ function normalizeUsage(host, raw) {
     uncached = input !== null && read !== null && read <= input ? input - read : null;
     output = count(raw.output_tokens);
     reasoning = count(raw.reasoning_output_tokens);
+  } else if (host === 'cursor') {
+    const usage = raw.usage && typeof raw.usage === 'object' ? raw.usage : raw;
+    input = count(usage.inputTokens ?? usage.input_tokens);
+    output = count(usage.outputTokens ?? usage.output_tokens);
+    reasoning = count(usage.reasoningTokens ?? usage.reasoning_tokens);
+    read = count(usage.cacheReadTokens ?? usage.cache_read_tokens);
+    write = count(usage.cacheWriteTokens ?? usage.cache_write_tokens);
+    uncached = input !== null && read !== null && read <= input ? input - read : null;
   } else if (host === 'antigravity') {
     // Published AGY examples disagree on whether cached input is included.
     // Preserve the reported number; never fabricate a billing decomposition.
@@ -94,6 +102,13 @@ function createUsageCollector(host, { onUpdate, onContext, onEvent, maxLineBytes
       const costs = [...entries.values()].map(row => row.reported_cost_usd);
       actualCost = costs.every(value => value !== null) ? costs.reduce((sum, value) => sum + value, 0) : null;
       context(usage.input_tokens, 'harness_step_input');
+    } else if (host === 'cursor') {
+      if (event.type === 'aioson_usage' && event.usage) {
+        const usage = normalizeUsage(host, event.usage);
+        if (usage) terminal = usage;
+      } else if (event.type === 'tool_call' && typeof event.run_id === 'string') {
+        session = event.run_id.slice(0, 200);
+      }
     } else if (host === 'antigravity') {
       if (event.event === 'init' && typeof event.conversation_id === 'string') session = event.conversation_id.slice(0, 200);
       const step = event.step_update;

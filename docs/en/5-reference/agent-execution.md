@@ -80,7 +80,7 @@ Use lanes only when the user or approved plan explicitly asks for different exec
 
 DEV creates the short runtime prompt from the approved PRD and implementation plan, dispatches enabled lanes sequentially in the shared worktree, audits their diffs against `write_paths`, integrates shared boundaries, and runs the full planned verification. Lane reports bind the lane identity and declared paths.
 
-Hosts come from one registry (`src/lib/tool-capabilities.js`, exposed by `aioson tool:capabilities --json`): Antigravity, Claude Code, Codex, Grok, Kimi Code, OpenCode and Qwen Code are dispatchable (`listExecutionHosts()`); Muse remains interactive-only. `antigravity` is the logical host id and always resolves through the registry to the headless `agy` CLI — never the `antigravity.cmd` Electron editor launcher. New hosts require a registered adapter so executable resolution, capabilities, arguments, redaction, and telemetry remain fail-closed.
+Hosts come from one registry (`src/lib/tool-capabilities.js`, exposed by `aioson tool:capabilities --json`): Antigravity, Claude Code, Codex, Cursor (`@cursor/sdk`, local, `CURSOR_API_KEY`), Grok, Kimi Code, OpenCode and Qwen Code are dispatchable (`listExecutionHosts()`); Muse remains interactive-only. `antigravity` is the logical host id and always resolves through the registry to the headless `agy` CLI — never the `antigravity.cmd` Electron editor launcher. New hosts require a registered adapter so executable resolution, capabilities, arguments, redaction, and telemetry remain fail-closed.
 
 ## Unattended by policy
 

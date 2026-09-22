@@ -10,7 +10,7 @@ const {
   profileFallbackOrder,
   validateExecutionRoles
 } = require('../lib/execution-roles');
-const { findSignature, readSignatures, signatureState } = require('../lib/host-signature');
+const { ensureHostSignature, findSignature, readSignatures, signatureKey, signatureState } = require('../lib/host-signature');
 const { listExecutionHosts } = require('../lib/tool-capabilities');
 
 const MAX_CONFIG_BYTES = 64 * 1024;
@@ -44,35 +44,89 @@ function signatureView(store, now) {
   })).filter(entry => entry.host && entry.model);
 }
 
-async function routingConfiguration(projectDir, { env = process.env, now = Date.now() } = {}) {
+async function refreshActiveProfileSignatures(config, { env = process.env, now = Date.now(), probe } = {}) {
+  const profileName = config.profiles ? config.active_profile : 'legacy';
+  const active = config.profiles ? config.profiles[profileName] : { roles: config.roles };
+  const routes = new Map();
+  for (const role of Object.values(active?.roles || {})) {
+    const key = signatureKey(role.host, role.model, role.reasoning_effort || null);
+    if (!routes.has(key)) routes.set(key, role);
+  }
+  for (const role of routes.values()) {
+    await ensureHostSignature(
+      { host: role.host, model: role.model, reasoning_effort: role.reasoning_effort || null },
+      { env, now, probe }
+    );
+  }
+}
+
+async function buildRoutingOptions(config, { env = process.env, now = Date.now() } = {}) {
+  const store = await readSignatures({ env });
+  const signatures = signatureView(store, now);
+  const registered = listExecutionHosts();
+  const hosts = [...registered];
+  for (const map of roleMaps(config)) {
+    for (const role of Object.values(map)) {
+      if (typeof role.host === 'string' && role.host && !hosts.includes(role.host)) hosts.push(role.host);
+    }
+  }
+  const modelSets = Object.fromEntries(hosts.map(host => [host, new Set()]));
+  for (const entry of signatures) if (modelSets[entry.host]) modelSets[entry.host].add(entry.model);
+  for (const map of roleMaps(config)) {
+    for (const role of Object.values(map)) {
+      if (modelSets[role.host] && typeof role.model === 'string') modelSets[role.host].add(role.model);
+    }
+  }
+  const codex = await loadModelCatalog('codex', { env });
+  if (codex.available) for (const model of codex.models.slice(0, 500)) modelSets.codex?.add(model.slug);
+  return {
+    hosts: hosts.map(host => ({ host, efforts: effortsForHost(host) })),
+    models: Object.fromEntries(hosts.map(host => [host, [...modelSets[host]].sort()])),
+    signatures
+  };
+}
+
+function routingFailureHint(errors = []) {
+  const unknownHost = errors.some(item => String(item.message || '').includes('must be one of') || String(item.path || '').endsWith('.host'));
+  if (unknownHost) {
+    return 'Este painel pode estar usando um AIOSON antigo (sem suporte a algum host, ex.: cursor). Reinicie com: node C:\\dev\\aioson\\bin\\aioson.js execution:dashboard . --port=4181';
+  }
+  return 'Corrija os campos abaixo ou valide as assinaturas com aioson host:signature / execution:profiles:validate.';
+}
+
+async function routingConfiguration(projectDir, { env = process.env, now = Date.now(), probe, refreshSignatures = false } = {}) {
   let source;
   try { source = await readRaw(projectDir); }
   catch (error) {
     return { ok: false, code: error.code === 'ENOENT' ? 404 : 422, error: error.code === 'ENOENT' ? `${EXECUTION_ROLES_RELATIVE_PATH} não existe neste projeto.` : `Não foi possível ler a configuração: ${error.message}` };
   }
   const validated = validateExecutionRoles(source.config);
-  if (!validated.ok) return { ok: false, code: 422, error: 'A configuração atual é inválida.', errors: validated.errors, digest: source.digest };
-  const store = await readSignatures({ env });
-  const signatures = signatureView(store, now);
-  const hosts = listExecutionHosts();
-  const modelSets = Object.fromEntries(hosts.map(host => [host, new Set()]));
-  for (const entry of signatures) if (modelSets[entry.host]) modelSets[entry.host].add(entry.model);
-  for (const map of roleMaps(source.config)) for (const role of Object.values(map)) {
-    if (modelSets[role.host] && typeof role.model === 'string') modelSets[role.host].add(role.model);
+  const options = await buildRoutingOptions(source.config, { env, now });
+  if (!validated.ok) {
+    const detail = validated.errors.slice(0, 3).map(item => `${item.path}: ${item.message}`).join(' · ');
+    return {
+      ok: false,
+      code: 422,
+      path: EXECUTION_ROLES_RELATIVE_PATH,
+      error: detail ? `A configuração atual é inválida (${detail}).` : 'A configuração atual é inválida.',
+      errors: validated.errors,
+      digest: source.digest,
+      config: source.config,
+      options,
+      hint: routingFailureHint(validated.errors)
+    };
   }
-  const codex = await loadModelCatalog('codex', { env });
-  if (codex.available) for (const model of codex.models.slice(0, 500)) modelSets.codex?.add(model.slug);
+  if (refreshSignatures) {
+    try { await refreshActiveProfileSignatures(source.config, { env, now, probe }); }
+    catch { /* dashboard reads stay best-effort; dispatch re-probes before each stage */ }
+  }
   return {
     ok: true,
     code: 200,
     path: EXECUTION_ROLES_RELATIVE_PATH,
     digest: source.digest,
     config: source.config,
-    options: {
-      hosts: hosts.map(host => ({ host, efforts: effortsForHost(host) })),
-      models: Object.fromEntries(hosts.map(host => [host, [...modelSets[host]].sort()])),
-      signatures
-    }
+    options: await buildRoutingOptions(source.config, { env, now })
   };
 }
 
@@ -91,10 +145,14 @@ function fallbackRole(profile, roleKey) {
  * same cached host/model/effort evidence consumed before every dispatch, plus
  * the configured profile fallback order.
  */
-async function validateRoutingConfiguration(config, { env = process.env, now = Date.now() } = {}) {
+async function validateRoutingConfiguration(config, { env = process.env, now = Date.now(), probe, refreshSignatures = false } = {}) {
   const validation = validateExecutionRoles(config);
   if (!validation.ok) {
     return { ok: false, code: 422, reason: 'config_invalid', errors: validation.errors, checks: [], commands: [], message: 'A estrutura da configuração é inválida.' };
+  }
+  if (refreshSignatures) {
+    try { await refreshActiveProfileSignatures(config, { env, now, probe }); }
+    catch { /* validation still reports cached evidence when refresh fails */ }
   }
   const store = await readSignatures({ env });
   const profileName = config.profiles ? config.active_profile : 'legacy';
@@ -176,4 +234,4 @@ async function updateRoutingConfiguration(projectDir, payload, { env = process.e
   return { code: result.ok ? 200 : result.code, data: result.ok ? { ...result, message: 'Configuração salva. Novos estágios usarão este roteamento.' } : result };
 }
 
-module.exports = { MAX_CONFIG_BYTES, routingConfiguration, updateRoutingConfiguration, validateRoutingConfiguration };
+module.exports = { MAX_CONFIG_BYTES, buildRoutingOptions, refreshActiveProfileSignatures, routingConfiguration, updateRoutingConfiguration, validateRoutingConfiguration, routingFailureHint };

@@ -6,6 +6,7 @@
 const BOOLEAN_FLAGS = new Set([
   'accept-craft',
   'all', 'force', 'dry-run', 'confirm-defaults', 'no-interactive', 'fix', 'json',
+  'require-pass', 'evidence-only', 'include-source',
   'help', 'version', 'no-launch', 'attach', 'tmux',
   'allow-warnings', 'install-hook', 'uninstall-hook', 'remove-hook',
   'agent-safe', 'agentic', 'headless',
