@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.68.0] - 2026-09-21
+
+- Added the Cursor execution lane with host signature refresh, run-owned temporary-artifact cleanup, dashboard routing, and regression coverage.
+- Added typed Jev judgments and reviews, web discovery and collection, privacy-safe research artifacts, evaluations, and localized CLI coverage.
+- Refreshed the Portuguese tutorial hub with interactive learning surfaces and Feature, Jev, and web research paths.
+
 ## [1.67.0] - 2026-09-14
 
 - Fixed release verification from a clean checkout so source tests read managed skills and task files from the packaged template instead of relying on ignored files from the maintainer workspace.
