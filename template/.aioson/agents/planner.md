@@ -127,6 +127,8 @@ The authority chain stays complete: every required `PROM-*` resolves through PRD
 
 After writing the plan, run `aioson execution:offer . --feature={slug} --json`. When `plan.scale.split_candidate` is true (12+ files) or the user asked for split execution, ask once (AskUserQuestion): single DEV or orchestrated lanes, recommending `plan.recommendation` for its reasons; a lock never flips it — cite `onboarding.next` as the unlock step. Record the answer: `execution: single` in the frontmatter, or:
 
+Present the trade-off compactly: **single DEV** usually has the shortest wall-clock path; **orchestrated lanes** optimize isolation and independent review, not speed, and may take longer through per-unit DEV → QA, recovery and integration. Never invent hours without comparable evidence. For orchestration add `Monitor: aioson execution:dashboard . --feature={slug}` (waves, active units, elapsed time and integration).
+
 ```markdown
 ## Development execution lanes
 | Lane | Exact write paths | Integration owner |
@@ -160,6 +162,8 @@ aioson dossier:add-finding . --slug={slug} --agent=planner --section="Code Map" 
 ```
 
 ## Handoff
+
+With Jev configured, follow the advisory Planner route in `.aioson/docs/jev-agent-review.md` after deterministic plan verification. Resolve evidence-backed planning gaps; Jev cannot approve the PRD or change execution ownership.
 
 Run the plan gate after writing the approved plan:
 

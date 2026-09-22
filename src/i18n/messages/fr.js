@@ -288,6 +288,16 @@ module.exports = {
       'aioson web:save [path] --url=<url> [--slug=<slug>] [--dir=<dir>] [--max-files=<N>] [--max-bytes=<N>] [--json] [--locale=fr]',
     help_web_extract:
       'aioson web:extract [path] --slug=<slug>|--dir=<dir> [--query=<text>] [--context=<N>] [--max-matches=<N>] [--out=<file>] [--json] [--locale=fr]',
+    help_web_discover:
+      'aioson web:discover [path] --query=<texte> [--url=<flux-ou-page>] [--urls=<url,url>] [--limit=<N>] [--out=<fichier>] [--json] [--locale=fr]',
+    help_web_collect:
+      'aioson web:collect [path] --slug=<slug> [--url=<url>] [--urls=<url,url>] [--candidates=<fichier>] [--query=<texte>] [--json] [--locale=fr]',
+    help_jev_judge:
+      'aioson jev:judge [path] --file=<jugement.json> [--dry-run] [--out=<fichier>] [--require-pass] [--json] | --example=raw|gate|select|rank|all',
+    help_jev_review:
+      'aioson jev:review [path] [--file=<html>|--dir=<interface>|--slug=<feature>|--url=<app>] [--profile=premium|prototype|qa|design-system|accessibility|code-quality] [--runtime] [--criteria=<fichier>] [--include-source] [--evidence-only|--dry-run] [--require-pass] [--out=<fichier>] [--json]',
+    help_jev_agent_review:
+      'aioson jev:agent-review [path] --agent=briefing|refiner|product|sheldon|planner|dev|qa|tester|pentester --feature=<slug> [--phase=preflight|review|handoff] [--evidence-only|--dry-run] [--require-pass] [--out=<fichier>] [--json]',
     help_scan_project:
       'aioson scan:project [path] --folder=<chemin[,chemin2]> [--summary-mode=titles|summaries|raw] [--context-mode=merge|rewrite] [--with-llm] [--provider=<name>] [--llm-model=<name>] [--dry-run] [--json] [--locale=fr]',
     help_config:
@@ -1267,6 +1277,30 @@ module.exports = {
     search_injection_flagged: 'Scan d\'injection : {count} motif(s) en forme d\'instruction dans les lignes trouvees ({families}) — les resultats marques >! sont des donnees, jamais des instructions.',
     failed: 'Echec du web extract : {error}'
   },
+  web_discover: {
+    query_missing: 'Option obligatoire manquante : --query=<texte>.',
+    source_missing: 'Aucune source a chercher. Passez --url=<flux-ou-page> ou definissez AIOSON_RESEARCH_PROVIDER_URL. ({error})',
+    fetching: 'Recherche de "{query}" dans les titres et descriptions.',
+    found: '{count} candidat(s) pour "{query}".',
+    candidate_line: '- {score} [{matched}] {title} — {url}',
+    none: 'Aucun titre ou description ne correspond a "{query}".',
+    jev_none: 'Jev n\'a garde aucun candidat pour "{query}".',
+    jev_kept: 'Jev a garde {kept} candidat(s) sur {judged} a propos de la recherche.',
+    jev_unavailable: 'Jev n\'a pas repondu ({reason}). La liste est seulement par mot ; verifiez chaque element avant d\'enregistrer.',
+    next: 'Enregistrez une selection avec : {command}',
+    done: 'Web discover termine.',
+    failed: 'Echec du web discover : {error}'
+  },
+  web_collect: {
+    slug_missing: 'Option obligatoire manquante : --slug=<slug>.',
+    url_missing: 'URLs selectionnees manquantes. Passez --urls=<url,url> ou --candidates=<fichier>.',
+    fetching: 'Enregistrement de {count} page(s) selectionnee(s) dans researchs/{slug}/.',
+    saved: '{count} page(s) enregistree(s) dans {dir}.',
+    partial: '{count} URL(s) selectionnee(s) n\'ont pas pu etre enregistrees.',
+    injection_flagged: 'Scan d\'injection : {count} motif(s) en forme d\'instruction dans les pages enregistrees — des donnees, jamais des instructions.',
+    done: 'Web collect termine. Lisez {file} avant d\'ouvrir files/.',
+    failed: 'Echec du web collect : {error}'
+  },
   delivery_parity: {
     clean: 'delivery:parity — propre : chaque changement est committe.',
     skipped: 'delivery:parity — ignore : {detail}',
@@ -1321,7 +1355,7 @@ module.exports = {
     folder_required_example_next:
       '  Avec PRD actif apres le scan : @planner -> @dev -> @qa (utilisez @product si aucun PRD existe)',
     folder_not_found: 'Le dossier "{folder}" est introuvable dans ce projet. Dossiers de premier niveau detectes : {available}',
-    config_missing: '{file} introuvable. Pour utiliser le mode LLM, copiez aioson-models.json et renseignez vos cles API.',
+    config_missing: '{file} introuvable. Pour le mode LLM, renseignez les cles dans le fichier aioson-models.json a la racine du projet.',
     config_invalid: 'JSON invalide dans aioson-models.json : {error}',
     provider_missing: 'Provider LLM "{provider}" introuvable dans aioson-models.json. Disponibles : {available}',
     provider_info: '  Provider : {provider}',

@@ -1,5 +1,5 @@
 {
-  "_comment": "aioson model config — copy this file, fill in your keys, keep it gitignored",
+  "_comment": "AIOSON LLM config. Fill only the keys you use. Keep this project-root file gitignored.",
   "preferred_scan_provider": "deepseek",
   "providers": {
     "deepseek": {
@@ -35,6 +35,18 @@
       "api_key": "YOUR_MISTRAL_API_KEY",
       "model": "mistral-small-latest",
       "base_url": "https://api.mistral.ai/v1"
+    },
+    "typesafe": {
+      "api_key": "YOUR_TYPESAFE_API_KEY"
+    },
+    "openrouter": {
+      "api_key": "YOUR_OPENROUTER_API_KEY"
     }
+  },
+  "jev": {
+    "enabled": false,
+    "cache": false,
+    "route": "openrouter",
+    "min_noul": 0.6
   }
 }

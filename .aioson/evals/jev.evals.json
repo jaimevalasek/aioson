@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "scenarios": [
+    {
+      "name": "refiner Jev configured semantic review",
+      "agent": "refiner",
+      "mode": "planning",
+      "task": "Jev configured: run jev-review semantic-review for refiner agent-quality decision-support.",
+      "expect": [
+        {
+          "path": ".aioson/docs/jev-agent-review.md",
+          "in": "selected"
+        }
+      ]
+    },
+    {
+      "name": "planner Jev configured semantic review",
+      "agent": "planner",
+      "mode": "planning",
+      "task": "Jev configured: run jev-review semantic-review for planner agent-quality decision-support.",
+      "expect": [
+        {
+          "path": ".aioson/docs/jev-agent-review.md",
+          "in": "selected"
+        }
+      ]
+    }
+  ]
+}

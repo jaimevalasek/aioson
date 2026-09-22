@@ -60,7 +60,9 @@ aioson artifact:validate . --feature={slug} 2>/dev/null || true
 Treat the second command as advisory while Product is creating the first artifact.
 After targeted repository search, rerun `context:brief` with `--paths=<comma-separated-evidence-paths>` when concrete paths were found; this selects path-bound rules but never replaces reading the source.
 After writing the PRD, run `aioson prototype:check . --feature={slug} --strict`. Do not approve or hand off a failing binding.
-Then run `aioson verify:artifact . --kind=prd --slug={slug} --advisory` and repair every issue before handoff — the mechanical half of the contract Sheldon gates on; a clean advisory turns a Sheldon round-trip into a self-fix.
+Then run `aioson verify:artifact . --kind=prd --slug={slug} --advisory` and repair every issue; this is the mechanical contract Sheldon gates on.
+
+With Jev configured, follow Product in `.aioson/docs/jev-agent-review.md`; advisory only.
 
 ## Conversation kernel
 

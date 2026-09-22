@@ -64,6 +64,8 @@ const { runWebMap } = require('./commands/web-map');
 const { runWebScrape } = require('./commands/web-scrape');
 const { runWebSave } = require('./commands/web-save');
 const { runWebExtract } = require('./commands/web-extract');
+const { runWebDiscover } = require('./commands/web-discover');
+const { runWebCollect } = require('./commands/web-collect');
 const { runScanProject } = require('./commands/scan-project');
 const { runSecurityScan } = require('./commands/security-scan');
 const { runSecurityAudit } = require('./commands/security-audit');
@@ -441,6 +443,16 @@ const JSON_SUPPORTED_COMMANDS = new Set([
   'web-save',
   'web:extract',
   'web-extract',
+  'web:discover',
+  'web-discover',
+  'web:collect',
+  'web-collect',
+  'jev:judge',
+  'jev-judge',
+  'jev:review',
+  'jev-review',
+  'jev:agent-review',
+  'jev-agent-review',
   'scan:project',
   'scan-project',
   'security:scan',
@@ -1208,6 +1220,11 @@ function printHelp(t, logger) {
   logHelpLine(t, logger, 'cli.help_web_scrape');
   logHelpLine(t, logger, 'cli.help_web_save');
   logHelpLine(t, logger, 'cli.help_web_extract');
+  logHelpLine(t, logger, 'cli.help_web_discover');
+  logHelpLine(t, logger, 'cli.help_web_collect');
+  logHelpLine(t, logger, 'cli.help_jev_judge');
+  logHelpLine(t, logger, 'cli.help_jev_review');
+  logHelpLine(t, logger, 'cli.help_jev_agent_review');
   logHelpLine(t, logger, 'cli.help_scan_project');
   logHelpLine(t, logger, 'cli.help_config');
   logHelpLine(t, logger, 'cli.help_genome_doctor');
@@ -1679,6 +1696,19 @@ async function main() {
       result = await runWebSave({ args, options, logger: commandLogger, t });
     } else if (command === 'web:extract' || command === 'web-extract') {
       result = await runWebExtract({ args, options, logger: commandLogger, t });
+    } else if (command === 'web:discover' || command === 'web-discover') {
+      result = await runWebDiscover({ args, options, logger: commandLogger, t });
+    } else if (command === 'web:collect' || command === 'web-collect') {
+      result = await runWebCollect({ args, options, logger: commandLogger, t });
+    } else if (command === 'jev:judge' || command === 'jev-judge') {
+      const { runJevJudge } = require('./commands/jev-judge');
+      result = await runJevJudge({ args, options, logger: commandLogger });
+    } else if (command === 'jev:review' || command === 'jev-review') {
+      const { runJevReview } = require('./commands/jev-review');
+      result = await runJevReview({ args, options, logger: commandLogger });
+    } else if (command === 'jev:agent-review' || command === 'jev-agent-review') {
+      const { runJevAgentReview } = require('./commands/jev-agent-review');
+      result = await runJevAgentReview({ args, options, logger: commandLogger });
     } else if (command === 'scan:project' || command === 'scan-project') {
       result = await runScanProject({ args, options, logger: commandLogger, t });
     } else if (command === 'security:scan' || command === 'security-scan') {

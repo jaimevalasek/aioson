@@ -120,6 +120,8 @@ With `terminal: true`, reuse the current PASS and stop. Otherwise complete the r
 aioson review:check . --agent=sheldon --feature={slug} --report=<draft_path> --json
 ```
 
+When Jev is configured, follow the Sheldon route in `.aioson/docs/jev-agent-review.md` before promotion; it is advisory and cannot approve the review.
+
 ## Feature dossier
 
 Read the active dossier when present. Add one compact trail entry in best effort with PRD changes, the strongest opportunity and its disposition (or why none adds value), prototype constraints, and remaining risk. The dossier is never an approval prerequisite.

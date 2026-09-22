@@ -107,7 +107,9 @@ Optional artifacts: `solution-options.md`, `expansion-scout.md`, and focused the
 
 Deterministic preflight: after writing `briefings.md`, run `aioson verify:artifact . --kind=briefing --slug={slug} --advisory`; repair every issue, re-run once, and quote the final verdict line (including any prototype-pending warning) in the handoff message — the refiner starts from a machine-verified state. Promise fidelity to sources stays yours.
 
-For concrete `{slug}`, load `.aioson/skills/process/review-intelligence/SKILL.md` plus only `references/framing.md` when available. Run `aioson review:prepare . --agent=briefing --feature={slug} --artifact=.aioson/briefings/{slug}/briefings.md --json`, complete at most two passes, write `draft_path`, then run `aioson review:check . --agent=briefing --feature={slug} --report=<draft_path> --json`. Exit `2` must be corrected/re-prepared — never suppress it. If the skill or command is unavailable, review manually with the same bound; missing review infrastructure is non-gating.
+For concrete `{slug}`, load review-intelligence plus only `references/framing.md`. Run `aioson review:prepare . --agent=briefing --feature={slug} --artifact=.aioson/briefings/{slug}/briefings.md --json`, complete at most two passes at `draft_path`, then `aioson review:check . --agent=briefing --feature={slug} --report=<draft_path> --json`. Correct exit `2`; never suppress it. If the skill or command is unavailable, review manually within the same bound; missing review infrastructure is non-gating.
+
+Then, if configured, use the advisory Briefing route in `.aioson/docs/jev-agent-review.md`.
 
 ## Rules
 

@@ -338,6 +338,16 @@ module.exports = {
       'aioson web:save [path] --url=<url> [--slug=<slug>] [--dir=<dir>] [--max-files=<N>] [--max-bytes=<N>] [--json] [--locale=pt-BR]',
     help_web_extract:
       'aioson web:extract [path] --slug=<slug>|--dir=<dir> [--query=<text>] [--context=<N>] [--max-matches=<N>] [--out=<file>] [--json] [--locale=pt-BR]',
+    help_web_discover:
+      'aioson web:discover [path] --query=<texto> [--url=<feed-ou-pagina>] [--urls=<url,url>] [--limit=<N>] [--out=<arquivo>] [--json] [--locale=pt-BR]',
+    help_web_collect:
+      'aioson web:collect [path] --slug=<slug> [--url=<url>] [--urls=<url,url>] [--candidates=<arquivo>] [--query=<texto>] [--json] [--locale=pt-BR]',
+    help_jev_judge:
+      'aioson jev:judge [path] --file=<julgamento.json> [--dry-run] [--out=<arquivo>] [--require-pass] [--json] | --example=raw|gate|select|rank|all',
+    help_jev_review:
+      'aioson jev:review [path] [--file=<html>|--dir=<interface>|--slug=<feature>|--url=<app>] [--profile=premium|prototype|qa|design-system|accessibility|code-quality] [--runtime] [--criteria=<arquivo>] [--include-source] [--evidence-only|--dry-run] [--require-pass] [--out=<arquivo>] [--json]',
+    help_jev_agent_review:
+      'aioson jev:agent-review [path] --agent=briefing|refiner|product|sheldon|planner|dev|qa|tester|pentester --feature=<slug> [--phase=preflight|review|handoff] [--evidence-only|--dry-run] [--require-pass] [--out=<arquivo>] [--json]',
     help_scan_project:
       'aioson scan:project [path] --folder=<pasta[,pasta2]> [--summary-mode=titles|summaries|raw] [--context-mode=merge|rewrite] [--with-llm] [--provider=<name>] [--llm-model=<name>] [--dry-run] [--json] [--locale=pt-BR]',
     help_config:
@@ -435,7 +445,7 @@ module.exports = {
     help_runtime_emit:
       'aioson runtime:emit [path] --agent=<nome> [--type=<evento>] [--summary=<texto>] [--title=<texto>] [--refs=<arquivo[,arquivo2]>] [--used-skills=<id[,id2]>] [--plan-step=<id>] [--meta=<json>] [--json] [--locale=pt-BR]',
     help_host_signature:
-      'aioson host:signature [path] --host=antigravity|claude|codex|grok|kimi|opencode|qwen [--model=<id>|configured-default] [--effort=low|medium|high|xhigh|max|ultra] [--ttl=<horas>] [--timeout=<ms>] [--status] [--list] [--json] [--locale=pt-BR]',
+      'aioson host:signature [path] --host=antigravity|claude|codex|cursor|grok|kimi|opencode|qwen [--model=<id>|configured-default] [--effort=low|medium|high|xhigh|max|ultra] [--ttl=<horas>] [--timeout=<ms>] [--status] [--list] [--json] [--locale=pt-BR]',
     help_execution_offer:
       'aioson execution:offer [path] [--feature=<slug>] [--confirm-defaults] [--json] [--locale=pt-BR]',
     help_execution_seed:
@@ -1442,6 +1452,30 @@ module.exports = {
     search_injection_flagged: 'Varredura de injecao: {count} padrao(oes) em forma de instrucao nas linhas encontradas ({families}) — resultados marcados com >! sao dado, nunca instrucao.',
     failed: 'Falha no web extract: {error}'
   },
+  web_discover: {
+    query_missing: 'Opcao obrigatoria ausente: --query=<texto>.',
+    source_missing: 'Nenhuma fonte para buscar. Passe --url=<feed-ou-pagina> ou defina AIOSON_RESEARCH_PROVIDER_URL. ({error})',
+    fetching: 'Procurando "{query}" em titulos e descricoes.',
+    found: '{count} candidato(s) para "{query}".',
+    candidate_line: '- {score} [{matched}] {title} — {url}',
+    none: 'Nenhum titulo ou descricao bateu com "{query}".',
+    jev_none: 'Jev nao manteve nenhum candidato para "{query}".',
+    jev_kept: 'Jev manteve {kept} de {judged} candidato(s) sobre a busca.',
+    jev_unavailable: 'Jev nao respondeu ({reason}). A lista e so por palavra; confira cada item antes de salvar.',
+    next: 'Salve uma selecao com: {command}',
+    done: 'Web discover concluido.',
+    failed: 'Falha no web discover: {error}'
+  },
+  web_collect: {
+    slug_missing: 'Opcao obrigatoria ausente: --slug=<slug>.',
+    url_missing: 'URLs selecionadas ausentes. Passe --urls=<url,url> ou --candidates=<arquivo>.',
+    fetching: 'Salvando {count} pagina(s) selecionada(s) em researchs/{slug}/.',
+    saved: '{count} pagina(s) salva(s) em {dir}.',
+    partial: '{count} URL(s) selecionada(s) nao puderam ser salvas.',
+    injection_flagged: 'Varredura de injecao: {count} padrao(oes) com forma de instrucao nas paginas salvas — dados, nunca instrucoes.',
+    done: 'Web collect concluido. Leia {file} antes de abrir files/.',
+    failed: 'Falha no web collect: {error}'
+  },
   delivery_parity: {
     clean: 'delivery:parity — limpo: toda alteracao esta commitada.',
     skipped: 'delivery:parity — pulado: {detail}',
@@ -1594,7 +1628,7 @@ module.exports = {
     folder_required_example_next:
       '  Com PRD ativo apos o scan: @planner -> @dev -> @qa (use @product primeiro quando nao houver PRD)',
     folder_not_found: 'A pasta "{folder}" nao foi encontrada neste projeto. Pastas de nivel superior detectadas: {available}',
-    config_missing: '{file} nao encontrado. Para usar o modo com LLM, copie aioson-models.json e preencha suas chaves de API.',
+    config_missing: '{file} nao encontrado. Para usar o modo com LLM, preencha as chaves no aioson-models.json da raiz do projeto.',
     config_invalid: 'JSON invalido em aioson-models.json: {error}',
     provider_missing: 'Provider de LLM "{provider}" nao encontrado em aioson-models.json. Disponiveis: {available}',
     provider_info: '  Provider : {provider}',

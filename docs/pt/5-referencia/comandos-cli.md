@@ -158,6 +158,102 @@ O mesmo resolver é usado por `verification:plan`; nomes como `GPT 5.6 Terra`, `
 | `web:scrape` | Extrai conteúdo principal de uma página em markdown, text, html ou links | Quando quer transformar HTML em contexto utilizável para agentes |
 | `web:save` | Espelha uma página com CSS, JS, fontes e imagens em `researchs/{slug}/site/` (referências reescritas para caminhos locais + `manifest.json`) | Quando um site é referência visual/efeitos e o fetch via modelo perderia CSS/JS; alimenta `--from-local` do site-forge |
 | `web:extract` | Destila um site salvo em `extract.md` (fontes, paleta, keyframes, transitions, breakpoints, libs JS) ou busca trechos com `--query` | Quando quer que o modelo leia inteligência de design compacta em vez de HTML/CSS/JS brutos — economia de tokens |
+| `web:discover` | Lê um RSS/Atom, o feed apontado por uma homepage, ou os títulos da própria página, e devolve os itens cujo título ou descrição casa com `--query`. Se `jev.enabled` estiver ativo em `aioson-models.json`, o Jev confirma o assunto antes | Quando quer achar notícias recentes numa fonte conhecida e escolher o que baixar |
+| `web:collect` | Raspa as URLs escolhidas para `researchs/{slug}/summary.md`, `links.json`, `links.md` e `files/` | Quando o discover (ou uma lista) já apontou as páginas que devem entrar no projeto |
+| `jev:judge` | Executa um julgamento Jev descrito em JSON e aplica em código uma decisão `raw`, `gate`, `select` ou `rank` | Quando um comando, agente ou pipeline precisa de decisão semântica tipada sem transformar Jev em gerador de texto |
+| `jev:review` | Coleta padrões de HTML/CSS/JS, reutiliza a telemetria visual estática/runtime e executa um julgamento Jev por perfil | Quando QA, Refiner ou uma automação precisa avaliar coerência, craft, design system, acessibilidade ou qualidade da implementação |
+
+A comparação de `web:discover` é por palavra. A busca `modelos llm` também guarda um texto que só diz "modelos". O `aioson-models.json` da raiz aceita as duas credenciais do Jev; `jev.route` escolhe `openrouter` ou `typesafe`. As variáveis `OPENROUTER_API_KEY` e `TYPESAFE_API_KEY` têm precedência sobre o arquivo.
+
+```json
+"providers": {
+  "openrouter": { "api_key": "YOUR_OPENROUTER_API_KEY" },
+  "typesafe": { "api_key": "YOUR_TYPESAFE_API_KEY" }
+},
+"jev": {
+  "enabled": true,
+  "route": "openrouter",
+  "min_noul": 0.6
+}
+```
+
+O comando testa o Jev antes de filtrar. Se a prova responde, `relevance.trust_candidates` vem `true`. Se a prova falha, a lista por palavra permanece, `trust_candidates` vem `false` e quem está lendo o JSON julga cada item antes do collect.
+
+### Julgamentos reutilizáveis com Jev
+
+`jev:judge` recebe o estado, as perguntas TypeSafe e a política determinística em um arquivo. A chave continua exclusivamente no `aioson-models.json` da raiz ou nas variáveis de ambiente; ela nunca entra no arquivo de julgamento nem na saída.
+
+```bash
+# Ver os quatro contratos de exemplo sem chamar a API
+aioson jev:judge . --example=all --json
+
+# Gerar um exemplo de gate visual para editar
+aioson jev:judge . --example=gate --out=.aioson/context/visual-gate.json
+
+# Validar arquivo e payload sem enviar dados
+aioson jev:judge . --file=.aioson/context/visual-gate.json --dry-run --json
+
+# Executar, salvar evidência e sair com código 2 quando o gate reprovar
+aioson jev:judge . --file=.aioson/context/visual-gate.json \
+  --out=.aioson/context/visual-gate-result.json --require-pass --json
+```
+
+Os modos de `decision.type` são:
+
+- `raw`: devolve as respostas tipadas para outro consumidor decidir.
+- `gate`: combina regras com `mode: "all"` ou `"any"`; aceita `noul`, `score`, `choice`, `confidence` e a probabilidade de uma opção. Operadores: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`.
+- `select`: lê uma pergunta `choice` e só roteia quando `min_confidence` e `min_probability` passam; caso contrário usa `on_uncertain`.
+- `rank`: ordena perguntas independentes por `score`, `noul` ou `confidence`. Cálculo, pesos e efeitos permanecem no código chamador.
+
+O arquivo aceita no máximo 255 perguntas e 512 KiB. `choice` aceita de 2 a 255 opções; `score`, de 2 a 10 níveis ordenados. O runner valida tanto a requisição quanto cada resposta antes de aplicar a política, tenta novamente apenas em falhas transitórias (`429`, `502`, `503`, `524`, `529`) e inclui modelo, uso e número de tentativas no resultado. `--timeout` aceita 1.000–120.000 ms e `--retries`, 0–4.
+
+### Revisão automática de HTML, CSS, JavaScript e layout
+
+`jev:review` prepara o `state` sem exigir que o agente monte JSON manualmente. O comando descobre ou recebe a interface, executa `verify:artifact --kind=visual` sem persistir, extrai padrões do código e combina o veredito determinístico com o julgamento semântico. Um PASS do Jev nunca apaga issues determinísticas.
+
+```bash
+# Descobrir uma interface comum e ver exatamente o que seria avaliado, sem API
+aioson jev:review . --profile=premium --evidence-only --out=.aioson/context/jev-evidence.json --json
+
+# Validar configuração, contrato e payload sem chamar o provedor
+aioson jev:review . --dir=src --profile=design-system --dry-run --json
+
+# Avaliar os fontes e a aplicação realmente renderizada
+aioson jev:review . --dir=src --url=http://localhost:5173 --runtime \
+  --profile=qa --criteria=.aioson/context/prd-minha-feature.md \
+  --out=.aioson/context/jev-review-qa.json --json
+
+# Avaliar o protótipo pertencente ao briefing
+aioson jev:review . --slug=minha-feature --runtime --profile=prototype \
+  --criteria=.aioson/briefings/minha-feature/briefings.md --json
+```
+
+Perfis disponíveis: `premium`, `prototype`, `qa`, `design-system`, `accessibility` e `code-quality`. Os localizadores são `--file`, `--dir`, `--slug` e `--url`; uma URL implica medição runtime. `--criteria=<arquivo>` acrescenta o contrato contra o qual a evidência deve ser julgada. Sem localizador, o comando procura entradas HTML e raízes de interface comuns (`src`, `app`, `pages`, `public`).
+
+Por padrão, o código da interface vira somente métricas derivadas. `--include-source` acrescenta trechos limitados e redigidos de HTML/CSS/JS ao provedor externo; `--criteria=<arquivo>` também envia um trecho redigido desse contrato. O comando não envia pixels de screenshots ao Jev. `--screenshots` continua útil para inspeção humana, mas um resultado Jev nunca deve ser descrito como análise de imagem.
+
+`--require-pass` sai com código `2` quando o gate semântico falha, quando há issue determinística ou quando a telemetria permanece `unverified`. QA e Refiner usam a revisão como crítica complementar por padrão; tornar esse resultado bloqueante exige política explícita do projeto ou do usuário.
+
+### Revisão semântica dos agentes
+
+`jev:agent-review` monta um julgamento tipado para Briefing, Refiner, Product, Sheldon, Planner, Dev, QA, Tester ou Pentester. O comando lê os artefatos canônicos permitidos pelo perfil, coleta resultados de `feature:trace` e `ac:test-audit` e devolve uma rota advisory. Falhas obrigatórias são verificadas antes da compactação e impedem READY. O comando não aprova gates nem fecha features.
+
+```bash
+# Inspecionar o estado e as perguntas sem chamar a API
+aioson jev:agent-review . --agent=sheldon --feature=minha-feature \
+  --phase=review --evidence-only --json
+
+# Executar a revisão e guardar somente respostas, hashes e proveniência
+aioson jev:agent-review . --agent=qa --feature=minha-feature \
+  --phase=review \
+  --out=.aioson/context/features/minha-feature/jev/qa-review.json --json
+```
+
+Fases aceitas: `preflight`, `review` e `handoff`. Um resultado `reviewed` contém `decision.passed`, `decision.action`, `decision.uncertain`, os valores/probabilidades originais e hashes do estado, perguntas e spec. `skipped` significa que o Jev não estava disponível ou não havia artefato; o fluxo determinístico continua normalmente. `--require-pass` só deve ser usado depois de calibração e de uma política explícita que torne aquele perfil bloqueante.
+
+O provedor recebe trechos redigidos dos artefatos canônicos e evidência determinística compacta. O comando não abre automaticamente arquivos-fonte da aplicação; snippets já presentes nos artefatos continuam fazendo parte deles. O perfil Pentester remove evidência bruta, endpoints, caminhos de ataque e credenciais. Resultados normais não persistem o conteúdo enviado; `--evidence-only` e `--dry-run` exibem a spec completa para diagnóstico, portanto suas saídas exigem o mesmo cuidado dos artefatos originais.
+
+Na revisão Jev, `decision.semantic_passed` separa o parecer do modelo de `decision.deterministic`; `effective_action` combina os dois. Relações opcionais por promessa/AC usam `.aioson/context/features/<slug>/jev/evidence.json`, com caminhos, linhas e SHA-256. Fontes fora dos documentos canônicos exigem `--include-source`. Referências antigas ou incompletas impedem prontidão. Consulte `.aioson/docs/jev-agent-review.md` para o contrato e exemplos. Cache de respostas é opt-in com `jev.cache: true`; métricas e avaliação sintética estão documentadas no mesmo protocolo.
 
 ### Genomes e squads
 

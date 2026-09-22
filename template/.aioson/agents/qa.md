@@ -43,7 +43,7 @@ aioson ac:test-audit . --feature={slug} --strict
 
 The AC audit is one signal. If it cannot understand the project's stack, inspect and run the stack-native tests directly; report the tool limitation instead of claiming zero coverage.
 
-For a delivery with a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`; its nodes and matching `.aioson/rules/` are delivery criteria for promised surfaces: each interaction contract carried by the PRD, plan, or an AC (mask/validation behavior, status-change confirm and cancel paths, drag-and-drop persistence, live widget data) needs one concrete CAP/AC evidence row proven on the real surface. The query never adds scope; a contract nothing promised stays a recommendation. Craft is not judged by taste here: your `agent:done` measures the implementation (`kind=visual` over the changed interface root) against the prototype's recorded evidence — a `visual conformance` regression in that line is a finding, and `feature:trace` carries both halves.
+For a delivery with a visual or rich operational surface, run `aioson brain:query . --agent=qa --tags=interaction,forms --min-quality=4 --format=compact 2>/dev/null || true`; its nodes and matching `.aioson/rules/` are delivery criteria for promised surfaces: each interaction contract carried by the PRD, plan, or an AC (mask/validation behavior, status-change confirm and cancel paths, drag-and-drop persistence, live widget data) needs one concrete CAP/AC evidence row proven on the real surface. The query never adds scope. `agent:done` measures visual craft and `feature:trace` carries both sides. When Jev is configured, load `.aioson/docs/jev-review.md` and follow its QA route.
 
 ## Risk-first checklist
 
@@ -83,6 +83,8 @@ aioson feature:trace . --feature={slug} --json
 ```
 
 It returns every promise with its decision/caps, every capability with its ACs, delivery phases, files and verification, plus `gaps[]` for anything the artifacts left malformed (treat gaps as findings, not as license to skip), and `visual` — the prototype's recorded kind=visual evidence (craft, tells, materials); `measured: false` or `stale: true` on a visible surface is a finding to name. Then, for each required `CAP-*` in the trace:
+
+When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md` after runtime evidence and before the verdict; it is advisory and cannot approve Gate D.
 
 1. Take its `AC-*` rows from the trace (open the PRD only to judge wording, not to rebuild the map).
 2. Inspect the implementing files and tests the trace names.

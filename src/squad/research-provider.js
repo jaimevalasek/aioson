@@ -8,6 +8,9 @@ function normalizeCandidate(candidate) {
   return {
     url: String(candidate.url),
     title: candidate.title ? String(candidate.title) : null,
+    description: candidate.description
+      ? String(candidate.description)
+      : (candidate.snippet ? String(candidate.snippet) : null),
     published_at: candidate.published_at || candidate.publishedAt || null,
     primary: candidate.primary,
     independent: candidate.independent

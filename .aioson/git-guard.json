@@ -33,6 +33,41 @@
         "generic_secret_assignment"
       ],
       "reason": "Test fixture writes the YOUR_DEEPSEEK_API_KEY placeholder into a temp aioson-models.json to exercise the missing-key guidance path; it is not a credential."
+    },
+    {
+      "path": "template/aioson-models.json",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Template provider entries contain explicit YOUR_*_API_KEY placeholders; the file instructs users to replace them and is not a credential store."
+    },
+    {
+      "path": "tests/jev-hardening.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Jev privacy tests use named synthetic password and api_key values to prove redaction before transport; they are never real credentials."
+    },
+    {
+      "path": "tests/jev-judge.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Jev CLI tests use a YOUR_OPENROUTER_API_KEY placeholder and a runtime-secret sentinel in an isolated fixture; neither is a credential."
+    },
+    {
+      "path": "tests/jev-relevance.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Jev relevance tests use provider placeholders and synthetic route values to verify config loading and fallback behavior; they are not credentials."
+    },
+    {
+      "path": "tests/jev-review.test.js",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "Jev review tests use a root-config placeholder and synthetic provider setup in temporary projects; they are not credentials."
     }
   ],
   "blockPaths": [

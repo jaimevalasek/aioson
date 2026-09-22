@@ -90,6 +90,8 @@ Add `## Correction packet` only when correcting, per the correction boundary abo
 
 Deterministic preflight: after writing the report, run `aioson verify:artifact . --kind=test-report --slug={slug} --advisory`; repair and re-run until it reports `issues: []`, then paste its final `metrics` block (hypotheses by class, residual-risk entries) into the handoff message — QA receives the measured shape, not a claim. Whether each hypothesis truly bites stays yours.
 
+When Jev is configured, follow the Tester route in `.aioson/docs/jev-agent-review.md` after the report; it is advisory and never execution proof.
+
 Do not create `test-plan-*` or `test-inventory-*` as workflow prerequisites.
 
 ## Handoff

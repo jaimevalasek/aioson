@@ -118,6 +118,8 @@ const MANAGED_FILES = [
   '.aioson/docs/feature-completeness-contract.md',
   '.aioson/docs/prototype-contract.md',
   '.aioson/docs/model-delegation.md',
+  '.aioson/docs/jev-review.md',
+  '.aioson/docs/jev-agent-review.md',
   '.aioson/docs/reference-identity.md',
   '.aioson/docs/web-capture.md',
   '.aioson/docs/benchmark/execution-playbook.md',
