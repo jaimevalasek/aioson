@@ -1,0 +1,247 @@
+/* ============================================================
+   AIOSON Autonomy & Safety Tutorial — Style Sheet
+   Extends Design-DNA v1 (Tinta & Ouro) from ../memories/
+   ============================================================ */
+
+/* Tier cards */
+.tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.tier-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 24px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tier-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--patina);
+}
+
+.tier-card[data-tier="2"]::before { background: var(--ouro); }
+.tier-card[data-tier="3"]::before { background: var(--perigo); }
+
+.tier-num {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--voz-maquina);
+  font-weight: 800;
+  font-size: 16px;
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  color: var(--patina);
+}
+
+.tier-card[data-tier="2"] .tier-num { color: var(--ouro); }
+.tier-card[data-tier="3"] .tier-num { color: var(--perigo); }
+
+.tier-label {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--fumaca);
+}
+
+.tier-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.tier-card > p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.tier-cmds {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--linha);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tier-cmds .label {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--fumaca);
+}
+
+.tier-cmds .cmd {
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--marfim);
+}
+
+/* Harness grid */
+.harness-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.harness-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 20px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.harness-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  color: var(--ouro);
+  font-family: var(--voz-maquina);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.harness-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.harness-card p {
+  font-size: 12px;
+  color: var(--marfim-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.harness-file {
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--ouro);
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linha);
+}
+
+/* Profile cards */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.profile-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.profile-card[data-default="true"] {
+  border-color: var(--ouro);
+}
+
+.profile-card[data-default="true"]::after {
+  content: 'PADRÃO';
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-family: var(--voz-maquina);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ouro) 16%, transparent);
+  color: var(--ouro);
+  border: 1px solid color-mix(in srgb, var(--ouro) 32%, transparent);
+}
+
+.profile-name {
+  font-family: var(--voz-maquina);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.profile-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.profile-card p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.profile-rules {
+  font-size: 12px;
+  color: var(--marfim-2);
+  line-height: 1.7;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-rules li::before {
+  content: '› ';
+  color: var(--ouro);
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .tiers-grid { grid-template-columns: 1fr; }
+  .harness-grid { grid-template-columns: repeat(2, 1fr); }
+  .profile-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .harness-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,48 @@
+main, .reading-layout, .article, .table-wrap, .command-block, pre { max-width: 100%; min-width: 0; }
+.article .table-wrap table { min-width: 0; }
+.web-figure { margin: 0; padding: 26px; border: 1px solid var(--linha-2); border-radius: var(--radius); background: var(--superficie); box-shadow: 0 16px 50px color-mix(in srgb, var(--tinta) 55%, transparent); }
+.web-figure .figure-heading { color: var(--prata, var(--marfim-2)); }
+.article .path-list { list-style: none; margin: 18px 0 0; padding: 0; }
+.path-list li { margin: 0; padding: 12px 0; border-top: 1px solid var(--linha-2); }
+.path-list li:first-child { border-top: 0; }
+.path-list code { display: inline-block; margin-bottom: 4px; }
+.path-list span { display: block; color: var(--marfim-2); font-size: 14px; }
+
+.command-block { position: relative; }
+.command-block pre { margin-top: 0; padding-right: 108px; }
+.copy-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--linha-2);
+  border-radius: 7px;
+  background: var(--superficie-2);
+  color: var(--marfim-2);
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+}
+.copy-button:hover, .copy-button[data-copied="true"] { color: var(--ouro); border-color: var(--ouro); }
+
+.result-card { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--linha-2); border-radius: 9px; background: var(--tinta); }
+.result-card p { margin: 8px 0 0; font-size: 15px; }
+.result-card .machine-label { color: var(--ouro); margin-bottom: 8px; }
+
+@media (max-width: 800px) {
+  .web-figure { max-width: 480px; }
+  .command-block pre { padding-right: 18px; padding-top: 52px; }
+  .site-header { align-items: flex-start; }
+  .header-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+  .header-actions button { flex: 1 1 9rem; min-width: 0; }
+  .hero-actions { flex-direction: column; align-items: flex-start; }
+  h1, .hero-intro { overflow-wrap: anywhere; max-width: 100%; }
+}
+@media (max-width: 520px) {
+  .header-actions { flex-direction: column; align-items: stretch; }
+  .header-actions button { width: 100%; flex: none; }
+  h1 { font-size: 32px; }
+}
+@media print {
+  .copy-button { display: none !important; }
+}

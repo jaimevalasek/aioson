@@ -68,6 +68,20 @@
         "generic_secret_assignment"
       ],
       "reason": "Jev review tests use a root-config placeholder and synthetic provider setup in temporary projects; they are not credentials."
+    },
+    {
+      "path": "tutorials/jev/index.html",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "The Jev tutorial displays YOUR_*_API_KEY placeholders in JSON examples so readers can configure their own provider; no credential is present."
+    },
+    {
+      "path": "tutorials/orquestration/index.html",
+      "rules": [
+        "generic_secret_assignment"
+      ],
+      "reason": "The orchestration tutorial displays the crsr_SUA_CHAVE_AQUI placeholder to explain Cursor environment setup; no credential is present."
     }
   ],
   "blockPaths": [

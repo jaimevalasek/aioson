@@ -1,0 +1,247 @@
+/* ============================================================
+   AIOSON Procedural Brains Tutorial — Style Sheet
+   Extends Design-DNA v1 (Tinta & Ouro) from ../memories/
+   ============================================================ */
+
+/* Node anatomy card */
+.node-anatomy {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 24px;
+  background: var(--superficie);
+  margin: 24px 0;
+}
+
+.node-rows {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 14px 24px;
+}
+
+.node-key {
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ouro);
+}
+
+.node-val {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+}
+
+.node-val code {
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  color: var(--ouro);
+}
+
+/* 3 Brains Cards */
+.brains-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.brain-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.brain-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ouro);
+}
+
+.brain-card[data-tone="patina"]::before { background: var(--patina); }
+.brain-card[data-tone="prata"]::before { background: var(--prata); }
+.brain-card[data-tone="cobre"]::before { background: var(--cobre); }
+
+.brain-id {
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.brain-card[data-tone="patina"] .brain-id { color: var(--patina); }
+.brain-card[data-tone="prata"] .brain-id { color: var(--prata); }
+.brain-card[data-tone="cobre"] .brain-id { color: var(--cobre); }
+
+.brain-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--fumaca);
+}
+
+.brain-meta .nodes {
+  color: var(--ouro);
+  font-weight: 700;
+}
+
+.brain-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 2px 0 0;
+}
+
+.brain-card p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.brain-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.brain-tag {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  color: var(--marfim-2);
+}
+
+.brain-agents {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed var(--linha);
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--fumaca);
+}
+
+.brain-agents strong {
+  color: var(--ouro);
+}
+
+/* Query flow */
+.query-flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--superficie);
+  margin: 28px 0;
+}
+
+.query-step {
+  padding: 18px;
+  border-right: 1px solid var(--linha);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.query-step:last-child {
+  border-right: none;
+}
+
+.query-step-num {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ouro);
+}
+
+.query-step h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.query-step p {
+  font-size: 12px;
+  color: var(--marfim-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Steps list */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.step {
+  display: flex;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  background: var(--superficie);
+}
+
+.step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--voz-maquina);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ouro);
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  flex-shrink: 0;
+}
+
+.step-body h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0 0 4px;
+}
+
+.step-body p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .brains-grid { grid-template-columns: 1fr; }
+  .query-flow { grid-template-columns: 1fr; }
+  .query-step { border-right: none; border-bottom: 1px solid var(--linha); }
+  .query-step:last-child { border-bottom: none; }
+  .node-rows { grid-template-columns: 1fr; }
+}

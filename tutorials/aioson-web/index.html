@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Como usar os comandos aioson web para achar notícias em um site ou feed e salvar só as que interessam na pasta do projeto.">
+  <meta name="aioson-version" content="1.67.0">
+  <meta name="reviewed-at" content="2026-09-21">
+  <meta name="color-scheme" content="dark light">
+  <title>AIOSON Web — Achar e guardar páginas</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="AIOSON — todos os tutoriais"><span class="brand-mark" aria-hidden="true">a.</span><span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">web</span></span></a>
+  <div class="header-actions"><a href="#exemplo">Ver o exemplo</a><button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button><button id="print-page" type="button" hidden>Imprimir / PDF</button></div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">Guia prático · 21 set 2026</p>
+      <h1 id="hero-title">Achar a notícia<br>e guardar no projeto.</h1>
+      <p class="hero-intro">Dois comandos: um procura no título e na descrição de um site ou feed. O outro baixa só as páginas que você escolheu e deixa os arquivos numa pasta do projeto.</p>
+      <div class="hero-actions"><a class="primary-link" href="#ideia">Entender em um minuto <span aria-hidden="true">↗</span></a><a class="text-link" href="#exemplo">Ir direto ao exemplo →</a></div>
+      <div class="edition"><span>AIOSON 1.67.0</span><span>Leitura de cerca de 8 minutos</span><span>Exemplos fictícios</span></div>
+    </div>
+    <figure class="web-figure">
+      <div class="figure-heading"><span class="status-dot" aria-hidden="true"></span> Dois passos</div>
+      <div class="memory-core"><span class="machine-label">1 · web:discover</span><strong>A lista</strong><p>Título, descrição e endereço das páginas que combinam com a busca.</p></div>
+      <div class="connector" aria-hidden="true"></div>
+      <div class="memory-core"><span class="machine-label">2 · web:collect</span><strong>A pasta</strong><p>Texto salvo em <code>researchs/nome/</code>, para o projeto e para o modelo lerem depois.</p></div>
+      <figcaption>O primeiro comando não grava a notícia. Ele só mostra o que vale a pena guardar.</figcaption>
+    </figure>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do guia">
+        <p class="machine-label">Neste guia</p>
+        <ol>
+          <li><a href="#ideia">A ideia</a></li>
+          <li><a href="#exemplo">Exemplo completo</a></li>
+          <li><a href="#pasta">O que fica na pasta</a></li>
+          <li><a href="#outros">Os outros comandos</a></li>
+          <li><a href="#limites">O que não acontece</a></li>
+          <li><a href="#glossario">Palavras e dúvidas</a></li>
+        </ol>
+      </nav>
+      <p class="sidebar-note">Se você só quer copiar os comandos, comece pelo capítulo 2.</p>
+    </aside>
+
+    <article class="article">
+      <section id="ideia" aria-labelledby="ideia-title">
+        <p class="section-number">01 / A ideia</p>
+        <h2 id="ideia-title">É uma banca de jornal, não a internet inteira</h2>
+        <p>Você chega numa banca e pede: “o que saiu sobre inflação?”. A pessoa olha as manchetes e os resumos. O que combina, ela separa. O que não combina, fica na prateleira. Só depois você leva para casa as edições escolhidas.</p>
+        <div class="concept-list">
+          <div><span class="concept-index">01</span><div><h3>Você indica a banca</h3><p>O comando precisa do endereço de um site de notícias ou do feed dele (RSS ou Atom). Ele não abre o Google sozinho e não adivinha qual jornal ler.</p></div></div>
+          <div><span class="concept-index">02</span><div><h3>Ele compara palavras</h3><p>A busca olha o título e a descrição curta. Se a palavra aparece no título, na descrição, ou nos dois, a página entra na lista. Não é uma leitura “que entende o assunto” como uma pessoa.</p></div></div>
+          <div><span class="concept-index">03</span><div><h3>Você escolhe o que guardar</h3><p>A lista volta para você — ou para o modelo de IA, se ele estiver rodando o comando. Quem guarda de fato é o segundo comando, e só nos endereços escolhidos.</p></div></div>
+        </div>
+        <div class="callout"><strong>Uma frase para repetir</strong><p>“Discover mostra o que combina. Collect guarda no projeto.”</p></div>
+      </section>
+
+      <section id="exemplo" aria-labelledby="exemplo-title">
+        <p class="section-number">02 / Na prática</p>
+        <h2 id="exemplo-title">Um exemplo, do começo ao fim</h2>
+        <p>Imagine que você está na pasta do seu projeto e quer notícias sobre inflação no feed de um jornal. O endereço abaixo é de mentira (<code>example</code> não é um site de verdade). Troque pelo feed ou pela página inicial do jornal que você quer ler.</p>
+        <p>O ponto <code>.</code> significa “esta pasta”. Os arquivos nascem aqui, dentro de <code>researchs/</code>.</p>
+
+        <h3>Passo 1 — montar a lista</h3>
+        <div class="command-block">
+          <pre><code>aioson web:discover . --query="inflação" --url=https://noticias.example/rss --json --out=researchs/inflacao/discover.json</code></pre>
+        </div>
+        <p>Em linguagem comum: “nesta pasta, procure inflação nesse feed, responda em JSON e grave a lista em <code>researchs/inflacao/discover.json</code>”.</p>
+        <div class="result-card">
+          <span class="machine-label">O que uma resposta boa parece</span>
+          <p><strong>Inflação recua no mês</strong> — combinou no título. Endereço <code>https://noticias.example/inflacao-recua</code>.</p>
+          <p><strong>Pixel show abre</strong> — a descrição cita inflação, então também entra. O título sozinho não falava do assunto.</p>
+          <p><strong>Campeonato de xadrez</strong> — não entra. Nem o título nem a descrição falam de inflação.</p>
+        </div>
+        <p>A resposta também traz um campo <code>collect.example</code>. É o próximo comando, já escrito, para quem estiver lendo o JSON — inclusive um modelo de IA.</p>
+        <div class="callout"><strong>Por que “pix” não acha “pixel”</strong><p>A comparação é pela palavra inteira. <code>pix</code> não casa com <code>pixel</code>. <code>inflação</code> casa com <code>Inflação</code>, com ou sem acento.</p></div>
+
+        <h3>Passo 2 — guardar só o que interessa</h3>
+        <p>Para salvar uma matéria:</p>
+        <div class="command-block">
+          <pre><code>aioson web:collect . --slug=inflacao --urls=https://noticias.example/inflacao-recua</code></pre>
+        </div>
+        <p>Para salvar duas, separe os endereços por vírgula, sem espaço obrigatório:</p>
+        <div class="command-block">
+          <pre><code>aioson web:collect . --slug=inflacao --urls=https://noticias.example/inflacao-recua,https://noticias.example/economia-digital</code></pre>
+        </div>
+        <p>Para guardar todas as que o discover achou, aponte o arquivo da lista. Isso salva cada candidato daquele arquivo, até 8 páginas:</p>
+        <div class="command-block">
+          <pre><code>aioson web:collect . --slug=inflacao --candidates=researchs/inflacao/discover.json</code></pre>
+        </div>
+        <p><code>--slug</code> é o nome da pasta. Use um nome do assunto, curto, sem espaço: <code>inflacao</code>, <code>eleicoes</code>, <code>safra</code>. O comando tira acentos e caracteres estranhos sozinho.</p>
+        <div class="callout"><strong>Se o comando <code>aioson</code> não existir no seu computador</strong><p>Use <code>npx @jaimevalasek/aioson</code> no lugar de <code>aioson</code>. O resto da linha fica igual.</p></div>
+      </section>
+
+      <section id="pasta" aria-labelledby="pasta-title">
+        <p class="section-number">03 / Onde ler depois</p>
+        <h2 id="pasta-title">Abra o resumo antes do texto inteiro</h2>
+        <p>Depois do collect, a pasta do assunto fica assim:</p>
+        <ul class="path-list">
+          <li><code>researchs/inflacao/summary.md</code><span>O resumo. É o primeiro arquivo para uma pessoa ou para o modelo. Diz o que foi salvo e de onde veio.</span></li>
+          <li><code>researchs/inflacao/links.md</code><span>A lista legível: título, endereço e arquivo de cada matéria.</span></li>
+          <li><code>researchs/inflacao/links.json</code><span>A mesma lista em formato de dados, para outro comando ler.</span></li>
+          <li><code>researchs/inflacao/files/01-inflacao-recua.md</code><span>O texto da página. Um arquivo por matéria.</span></li>
+          <li><code>researchs/inflacao/discover.json</code><span>Só aparece se você usou <code>--out</code> no discover. É a lista, antes de escolher o que guardar.</span></li>
+        </ul>
+        <p>O texto da página é de outra pessoa. O arquivo avisa que ele é <strong>informação, não uma ordem</strong>. Se a página tentar dizer ao modelo o que fazer, isso continua sendo texto da página — não uma instrução sua.</p>
+        <p>Se alguma página falhar, as outras ainda são salvas. O resumo marca isso como <code>has-alternatives</code>. Quando todas entram, o veredito é <code>confirmed</code>.</p>
+      </section>
+
+      <section id="outros" aria-labelledby="outros-title">
+        <p class="section-number">04 / A família web</p>
+        <h2 id="outros-title">Qual comando usar em cada situação</h2>
+        <p>Discover e collect são o caminho de notícia. Os outros quatro servem para outra pergunta.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Comandos web e quando usar">
+          <table>
+            <caption>O que cada comando faz, em uma frase</caption>
+            <thead><tr><th scope="col">Comando</th><th scope="col">Use quando</th><th scope="col">Não use quando</th></tr></thead>
+            <tbody>
+              <tr><th scope="row"><code>web:discover</code></th><td>Você tem um site ou um feed e quer a lista do que combina com uma busca.</td><td>Você já sabe o endereço exato da matéria.</td></tr>
+              <tr><th scope="row"><code>web:collect</code></th><td>Você já escolheu os endereços e quer o texto no projeto.</td><td>Você quer copiar o visual do site, com CSS e imagens.</td></tr>
+              <tr><th scope="row"><code>web:scrape</code></th><td>Você quer ver o texto de uma página agora, na tela, sem criar arquivo.</td><td>Você quer guardar para ler amanhã. Ele não salva em <code>researchs/</code>.</td></tr>
+              <tr><th scope="row"><code>web:map</code></th><td>Você quer a lista de páginas internas de um site, como um mapa.</td><td>Você quer filtrar por assunto. O mapa não recebe uma busca.</td></tr>
+              <tr><th scope="row"><code>web:save</code></th><td>O site é referência de visual: fontes, cores, movimento. Ele espelha os arquivos em <code>researchs/nome/site/</code>.</td><td>Você só quer o texto de uma notícia. Esse comando é pesado de propósito.</td></tr>
+              <tr><th scope="row"><code>web:extract</code></th><td>O site já foi salvo com <code>web:save</code> e você quer um resumo de design, não o HTML cru.</td><td>Você ainda não salvou o site.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Ver o texto de uma página, sem guardar:</p>
+        <div class="command-block">
+          <pre><code>aioson web:scrape . --url=https://noticias.example/inflacao-recua --format=markdown</code></pre>
+        </div>
+        <p>Copiar um site como referência visual:</p>
+        <div class="command-block">
+          <pre><code>aioson web:save . --url=https://estudio.example --slug=estudio</code></pre>
+        </div>
+        <div class="callout"><strong>Não misture os nomes</strong><p><code>web:save</code> e <code>web:collect</code> podem usar a mesma pasta <code>researchs/nome/</code>. Se o nome for o mesmo, o resumo de um substitui o resumo do outro. Para notícia, use o assunto (<code>inflacao</code>). Para visual, use o nome do site (<code>estudio</code>).</p></div>
+      </section>
+
+      <section id="limites" aria-labelledby="limites-title">
+        <p class="section-number">05 / Limites</p>
+        <h2 id="limites-title">O que estes comandos não fazem</h2>
+        <ul class="limits-list">
+          <li><strong>Não pesquisam a internet inteira.</strong> Sem um endereço, o discover só funciona se o projeto tiver um serviço configurado em <code>AIOSON_RESEARCH_PROVIDER_URL</code>. Sem isso, a mensagem pede um <code>--url</code>.</li>
+          <li><strong>Não entendem sinônimo.</strong> “Carro” não acha “automóvel”, a menos que essa palavra também esteja no título ou na descrição.</li>
+          <li><strong>Uma palavra compartilhada não é o assunto.</strong> “modelos llm” também encontra “10 modelos” de fone. Com o Jev ligado em <code>.aioson/config/aioson-models.json</code>, o comando pergunta se a matéria é sobre a busca. Sem resposta do Jev, a lista continua por palavra e quem lê o JSON precisa conferir antes de guardar.</li>
+          <li><strong>Não leem página que só existe depois do JavaScript.</strong> Se a manchete não está no HTML ou no feed, ela não entra na lista.</li>
+          <li><strong>Não abrem endereço da sua própria máquina.</strong> <code>localhost</code> e IPs privados são recusados antes do download. Isso vale para discover e collect.</li>
+          <li><strong>Guardam no máximo 8 páginas por collect</strong> e devolvem no máximo 20 candidatos no discover (<code>--limit</code>, padrão 8).</li>
+          <li><strong>Não publicam o texto de volta na internet.</strong> A pasta é referência local do projeto.</li>
+        </ul>
+      </section>
+
+      <section id="glossario" aria-labelledby="glossario-title">
+        <p class="section-number">06 / Para consultar</p>
+        <h2 id="glossario-title">Palavras que aparecem na tela</h2>
+        <dl class="glossary">
+          <dt>Feed, RSS, Atom</dt><dd>Uma lista pronta do site, com título, resumo, data e link de cada matéria. É o melhor endereço para passar em <code>--url</code>.</dd>
+          <dt>Query</dt><dd>O texto da sua busca. No comando, fica em <code>--query="inflação"</code>.</dd>
+          <dt>Slug</dt><dd>O nome curto da pasta, sem espaço. <code>inflacao</code> vira <code>researchs/inflacao/</code>.</dd>
+          <dt>matched_in</dt><dd>Onde a busca encontrou a palavra: <code>title</code>, <code>description</code> ou os dois.</dd>
+          <dt>score</dt><dd>Um número de relevância. Título pesa mais que descrição. Empate: a data mais nova vem primeiro, se o site informou a data.</dd>
+          <dt>candidates</dt><dd>A lista de páginas que passaram na busca. Ainda não estão salvas.</dd>
+          <dt>JSON</dt><dd>Um texto estruturado, fácil para um programa ou um modelo ler. <code>--json</code> pede essa forma.</dd>
+        </dl>
+        <h3>Dúvidas frequentes</h3>
+        <details><summary>Preciso decorar os dois comandos?</summary><p>Não. O discover, com <code>--json</code>, devolve o comando de collect pronto no campo <code>collect.example</code>. Se um agente estiver na conversa, ele pode ler essa lista e chamar o collect só nos endereços escolhidos.</p></details>
+        <details><summary>E se eu não souber o endereço do feed?</summary><p>Passe a página inicial do jornal em <code>--url</code>. Se ela apontar para um feed, o comando segue esse link. Se não apontar, ele lê os títulos e resumos que já estão no HTML da página.</p></details>
+        <details><summary>Posso ver a ajuda sem rodar nada?</summary><p>Sim. <code>aioson web:discover --help</code> e <code>aioson web:collect --help</code> mostram as opções e não baixam página nenhuma.</p></details>
+        <details><summary>A busca é semântica, como um modelo de IA?</summary><p>Por padrão, não. Ele compara palavras do título e da descrição. Em <code>.aioson/config/aioson-models.json</code> basta preencher <code>jev.api_key</code>. Com a chave, o discover pergunta ao Jev se a matéria é sobre a busca. Com o campo vazio, a lista continua por palavra.</p></details>
+        <details><summary>Onde está a documentação curta dos comandos?</summary><p>Na referência <a href="../../docs/pt/5-referencia/comandos-cli.md">comandos do CLI</a>, na seção Web nativa. Este guia é a versão para quem está começando.</p></details>
+        <p class="source-note">Os endereços <code>noticias.example</code> e <code>estudio.example</code> são de exemplo. Nenhum site real foi consultado para escrever este guia. O comportamento descrito segue <a href="../../src/commands/web-discover.js">web:discover</a> e <a href="../../src/commands/web-collect.js">web:collect</a> neste repositório, versão 1.67.0, em 21 de setembro de 2026.</p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="staff" aria-hidden="true"></div>
+  <p>AIOSON · tutorial web · 21/09/2026</p>
+  <a href="../index.html">Voltar aos tutoriais</a>
+</footer>
+</body>
+</html>

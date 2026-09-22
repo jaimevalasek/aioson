@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tutorial completo e para leigos sobre como criar uma feature no AIOSON: por onde começar (Briefing vs Product), esteira completa de agentes, Spec-Driven Development, técnicas do Planner, Dev Único vs Orquestrado e o modelo Jev para decisões semânticas.">
+  <meta name="reviewed-at" content="2026-09-21">
+  <meta name="aioson-version" content="1.67.0">
+  <meta name="color-scheme" content="dark light">
+  <title>Como Criar uma Feature no AIOSON — Dos Agentes ao Spec-Driven Development</title>
+  <link rel="stylesheet" href="../memories/tokens.css">
+  <link rel="stylesheet" href="../memories/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo principal</a>
+
+<header class="site-header">
+  <a class="brand" href="../index.html" aria-label="AIOSON — todos os tutoriais">
+    <span class="brand-mark" aria-hidden="true">a.</span>
+    <span>AIOSON <span class="brand-divider">/</span> <span class="brand-section">Criação de Features</span></span>
+  </a>
+  <div class="header-actions">
+    <a href="#entry-routes">Por onde começar</a>
+    <a href="#planner">O Plano</a>
+    <a href="#command-builder">Comandos</a>
+    <button id="theme-toggle" type="button" aria-pressed="false" hidden>Tema: Tinta</button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">Guia para Leigos · AIOSON 1.67 · 21 set 2026</p>
+      <h1 id="hero-title">Uma ideia.<br>Uma especificação.<br>Um software de verdade.</h1>
+      <p class="hero-intro">Aprenda a transformar uma necessidade em código pronto e testado no AIOSON. Entenda quando começar no Briefing ou direto no Product, como a equipe de agentes colabora, como o Planner desenha o plano de implementação e como o modelo Jev garante inteligência semântica em cada etapa.</p>
+      <div class="hero-actions">
+        <a class="primary-link" href="#basics">Entender do zero ↗</a>
+        <a class="text-link" href="#route-chooser">Descobrir por onde começar →</a>
+      </div>
+      <div class="edition">
+        <span>Do zero ao código</span>
+        <span>Spec-Driven Development</span>
+        <span>Sem jargão desnecessário</span>
+      </div>
+    </div>
+
+    <figure class="feature-map" aria-labelledby="hero-map-title">
+      <p class="machine-label" id="hero-map-title">As duas portas de entrada e o fechamento técnico</p>
+      <ol>
+        <li>
+          <span>Caminho A · Primeira Vez ou Nova Seção</span>
+          <strong>@briefing → @refiner → Aprovação</strong>
+          <small>Desempacota a ideia, cria protótipo interativo e aprova a direção.</small>
+        </li>
+        <li>
+          <span>Caminho B · Projeto Existente &amp; Evolução</span>
+          <strong>@product → @sheldon</strong>
+          <small>Entrada direta para melhorias e correções: PRD com critérios observáveis.</small>
+        </li>
+        <li>
+          <span>Etapa Final · Engenharia e Verificação</span>
+          <strong>@planner → DEV (Único ou Orquestrado) → @qa</strong>
+          <small>Plano fatiado verticalmente, execução segura e verificação real.</small>
+        </li>
+      </ol>
+      <figcaption>O AIOSON não improvisa código no chat livre: todo trabalho nasce de uma especificação clara (SDD) com critérios que podem ser provados.</figcaption>
+    </figure>
+  </section>
+
+  <div class="staff" aria-hidden="true"></div>
+
+  <div class="reading-layout">
+    <aside class="sidebar">
+      <nav aria-label="Capítulos do guia">
+        <p class="machine-label">Neste tutorial</p>
+        <ol>
+          <li><a href="#basics">O que é uma feature</a></li>
+          <li><a href="#entry-routes">As duas portas de entrada</a></li>
+          <li><a href="#briefing-path">Caminho 1: Briefing &amp; Refiner</a></li>
+          <li><a href="#product-path">Caminho 2: Direto no Product</a></li>
+          <li><a href="#agents">A esteira completa de agentes</a></li>
+          <li><a href="#sheldon">Sheldon: auditoria adversarial</a></li>
+          <li><a href="#planner">Planner: como nasce o plano</a></li>
+          <li><a href="#sdd-conversion">De documentos para SDD</a></li>
+          <li><a href="#dev-topology">DEV Único vs Orquestrado</a></li>
+          <li><a href="#jev">O novo modelo Jev em ação</a></li>
+          <li><a href="#route-chooser">Árvore de decisão interativa</a></li>
+          <li><a href="#topology-calculator">Calculadora: qual DEV usar?</a></li>
+          <li><a href="#command-builder">Gerador de comandos CLI</a></li>
+          <li><a href="#practical-case">Estudo de caso completo</a></li>
+          <li><a href="#faq">Perguntas frequentes</a></li>
+          <li><a href="#references">Referências e tutoriais</a></li>
+        </ol>
+      </nav>
+      <p class="sidebar-note">Você não precisa programar para acompanhar este guia. Use os exemplos práticos e simuladores para escolher o fluxo ideal para o seu projeto.</p>
+    </aside>
+
+    <article class="article">
+      <!-- 01 / O QUE É UMA FEATURE -->
+      <section id="basics" aria-labelledby="basics-title">
+        <p class="section-number">01 / Conceito Fundamental</p>
+        <h2 id="basics-title">Uma feature é uma fatia de valor, não apenas uma linha de código.</h2>
+        <p>No desenvolvimento de software, chamamos de <strong>feature</strong> (ou funcionalidade) qualquer capacidade nova ou melhoria observável que entregamos para quem usa o sistema. Pode ser algo grandioso como <em>“criar um carrinho de compras com cálculo de frete”</em> ou pontual como <em>“permitir cancelar um pedido antes do envio”</em>.</p>
+        <p>Quando pessoas usam assistentes de IA tradicionais no modo “chat comum”, é muito comum pedir: <em>“IA, crie um carrinho de compras para mim”</em>. A IA escreve centenas de linhas de código soltas, alucina arquivos que não existem, quebra rotas do projeto e não cria testes. No AIOSON, fazemos diferente: utilizamos uma <strong>equipe de agentes especializados</strong> governados por especificação.</p>
+
+        <div class="speech-card" id="speech">
+          <p class="machine-label">Fala pronta para leigos · 30 segundos</p>
+          <blockquote>“No AIOSON, criar uma feature é como construir um cômodo novo em uma casa: primeiro entendemos o que você precisa e desenhamos a planta. Depois auditamos se a planta é segura e criamos a lista exata de materiais e etapas. Só então os pedreiros (DEV) entram para construir, e um fiscal independente (QA) confere se as portas abrem e a água corre antes de considerar o trabalho pronto.”</blockquote>
+        </div>
+
+        <h3>Por que dividir o trabalho em agentes?</h3>
+        <p>Pedir para a mesma IA imaginar a ideia, redigir o contrato, programar o código e depois dar nota para o próprio trabalho é uma receita garantida para bugs. O AIOSON divide esse ciclo em papéis complementares:</p>
+        <ul>
+          <li><strong>Quem escuta e acolhe:</strong> <code>@briefing</code> e <code>@refiner</code></li>
+          <li><strong>Quem define os critérios de negócio:</strong> <code>@product</code></li>
+          <li><strong>Quem audita com rigor adversarial:</strong> <code>@sheldon</code></li>
+          <li><strong>Quem desenha o plano de engenharia:</strong> <code>@planner</code></li>
+          <li><strong>Quem implementa o código real:</strong> <code>@dev</code> (único ou em equipe orquestrada)</li>
+          <li><strong>Quem testa e comprova os resultados:</strong> <code>@qa</code></li>
+        </ul>
+      </section>
+
+      <!-- 02 / AS DUAS PORTAS DE ENTRADA -->
+      <section id="entry-routes" aria-labelledby="entry-routes-title">
+        <p class="section-number">02 / A Regra de Ouro da Rota</p>
+        <h2 id="entry-routes-title">Onde começar? Tudo depende do momento do seu projeto.</h2>
+        <p>Uma dúvida muito comum de quem está começando no AIOSON é: <em>“Preciso sempre chamar todos os agentes do começo ao fim?”</em>. A resposta é <strong>não</strong>. Existem duas portas de entrada principais, e uma terceira situação muito importante para projetos que já estão rodando.</p>
+
+        <div class="doors-grid">
+          <div class="door-card" data-highlight="greenfield">
+            <div>
+              <span class="door-tag">Porta 1 · Greenfield</span>
+              <h3>Primeira implementação</h3>
+              <p>O projeto está começando do zero. Não existe código pronto, nem rotas, nem banco de dados. A ideia ainda está aberta e precisa ser lapidada.</p>
+            </div>
+            <div>
+              <div class="door-flow">
+                <strong>Início obrigatório:</strong><br>
+                @briefing → @refiner → Aprovação → @product → @sheldon → @planner → DEV → QA
+              </div>
+            </div>
+          </div>
+
+          <div class="door-card" data-highlight="evolution">
+            <div>
+              <span class="door-tag">Porta 2 · Evolução Contínua</span>
+              <h3>Melhorias e correções</h3>
+              <p>O projeto já existe, tem stack definida e contexto salvo em <code>project.context.md</code>. É um ajuste, filtro novo ou correção de regra de negócio.</p>
+            </div>
+            <div>
+              <div class="door-flow">
+                <strong>Início direto:</strong><br>
+                @product → @sheldon → @planner → DEV → QA
+              </div>
+            </div>
+          </div>
+
+          <div class="door-card" data-highlight="section">
+            <div>
+              <span class="door-tag">Porta 3 · Seção Nova</span>
+              <h3>Nova área ou fluxo incerto</h3>
+              <p>O projeto já existe, mas a feature mexe com uma <strong>nova seção</strong> do app/site ou uma ideia conceitual que você ainda não tem certeza se precisa.</p>
+            </div>
+            <div>
+              <div class="door-flow">
+                <strong>Volta ao Briefing:</strong><br>
+                @briefing → @refiner (protótipo) → @product → @sheldon → @planner → DEV → QA
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Por que voltar ao Briefing se o projeto já existe?</strong>
+          <p>Se você já tem uma loja virtual e quer apenas adicionar um campo “Cupom de Desconto” no checkout, comece no <code>@product</code>. Mas se você quer criar uma seção inteira de <em>“Comunidade de Clientes com Fórum e Gamificação”</em>, isso é uma nova área! Conversar primeiro com o <code>@briefing</code> permite avaliar se o usuário realmente quer isso, e o <code>@refiner</code> pode construir um protótipo visual interativo em HTML para você clicar e validar antes de construir qualquer tabela no banco.</p>
+        </div>
+      </section>
+
+      <!-- 03 / CAMINHO 1: BRIEFING & REFINER -->
+      <section id="briefing-path" aria-labelledby="briefing-path-title">
+        <p class="section-number">03 / Acolhimento e Lapidação</p>
+        <h2 id="briefing-path-title">Caminho 1: Como o Briefing e o Refiner dão vida à ideia.</h2>
+        <p>Quando começamos pelo <code>@briefing</code>, você pode trazer materiais brutos: anotações soltas, áudios transcritos, documentos de pesquisa em <code>plans/{slug}/</code> ou apenas uma conversa no terminal. O Briefing não julga nem tenta programar: o papel dele é a <strong>escuta ativa estruturada</strong>.</p>
+
+        <h3>O que o @briefing faz:</h3>
+        <ol class="flow-list">
+          <li><strong>Identifica o problema real:</strong> Separa o sintoma do problema de raiz.</li>
+          <li><strong>Mapeia fontes e promessas:</strong> Se você disse <em>“precisa funcionar offline”</em>, ele cria uma promessa rastreável <code>PROM-01</code> para garantir que esse pedido nunca seja esquecido.</li>
+          <li><strong>Registra as dúvidas abertas:</strong> O que ainda não foi decidido fica categorizado como dúvida, sem fingir que já temos a resposta.</li>
+          <li><strong>Gera o documento de partida:</strong> Salva tudo em <code>.aioson/briefings/{slug}/briefings.md</code>.</li>
+        </ol>
+
+        <h3>O que o @refiner faz em seguida:</h3>
+        <p>O <code>@refiner</code> pega o rascunho do Briefing e atua como um lapidador de joias. Ele busca ambiguidades, contradições e lacunas de usabilidade:</p>
+        <ul>
+          <li><strong>Interface de revisão no navegador:</strong> O comando <code>aioson briefing:review</code> gera um arquivo <code>review.html</code> para você abrir no navegador, ler as perguntas e responder diretamente.</li>
+          <li><strong>Protótipo visual interativo:</strong> Se a feature tem telas ou botões, o Refiner constrói <code>prototype.html</code> usando o Design DNA do projeto. Você pode abrir no navegador, clicar nas abas e ver como a tela vai se comportar antes de haver qualquer backend!</li>
+          <li><strong>Aprovação humana vinculante:</strong> Quando você estiver satisfeito com as respostas e o visual, você roda o comando oficial de aprovação:
+            <pre><code>aioson briefing:approve . --slug=minha-feature</code></pre>
+          </li>
+        </ul>
+      </section>
+
+      <!-- 04 / CAMINHO 2: DIRETO NO PRODUCT -->
+      <section id="product-path" aria-labelledby="product-path-title">
+        <p class="section-number">04 / Evolução Ágil</p>
+        <h2 id="product-path-title">Caminho 2: Pulando direto para o Product em projetos existentes.</h2>
+        <p>Se o seu projeto já está em produção ou já passou pela primeira fase, fazer briefing para qualquer botão novo seria burocracia inútil. É aqui que entra a rota direta pelo <strong>@product</strong>.</p>
+        <p>O Product não precisa de uma conversa introdutória longa porque ele lê o arquivo <code>.aioson/context/project.context.md</code>, que já contém o stack tecnológico, as convenções de código, as rotas e os testes existentes.</p>
+
+        <h3>A criação do PRD (Product Requirements Document)</h3>
+        <p>O Product cria o arquivo <code>.aioson/context/prd-{slug}.md</code>. Este é o documento mestre que dita o que será construído. Ele se apoia em dois pilares:</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Capacidades e Critérios">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Elemento</th>
+                <th scope="col">O que significa</th>
+                <th scope="col">Exemplo Prático</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row"><code>CAP</code> (Capacidade)</th>
+                <td>Uma ação útil que a pessoa ou o sistema passará a conseguir realizar.</td>
+                <td><code>CAP-01</code>: Aplicar cupom de desconto no carrinho de compras.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>AC</code> (Critério de Aceitação)</th>
+                <td>Uma condição mensurável, objetiva e observável para provar que a capacidade funciona.</td>
+                <td><code>AC-01</code>: Ao digitar um cupom válido de 10%, o subtotal deve abater 10% e exibir a linha de desconto.</td>
+              </tr>
+              <tr>
+                <th scope="row"><code>Out-of-scope</code> (Fora de Escopo)</th>
+                <td>O que deliberadamente NÃO será feito nesta entrega, evitando que o escopo inche.</td>
+                <td>Não inclui sistema de pontos, nem cupons acumulativos nesta versão.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 05 / A ESTEIRA COMPLETA DE AGENTES -->
+      <section id="agents" aria-labelledby="agents-title">
+        <p class="section-number">05 / A Equipe Especializada</p>
+        <h2 id="agents-title">A esteira completa: quem passa o bastão para quem?</h2>
+        <p>No processo completo de ponta a ponta, os agentes formam uma linha de montagem inteligente. Veja o que cada um recebe, o que faz e o documento que entrega:</p>
+
+        <div class="pipeline-track">
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@briefing</span>
+              <span class="step-role">Entendimento</span>
+            </div>
+            <div class="step-body">
+              <strong>Escuta ativa e descoberta</strong>
+              <p>Recebe as dores do usuário, rascunhos e ideias soltas. Mapeia as promessas originais e organiza o contexto inicial.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">.aioson/briefings/{slug}/briefings.md</span>
+                <span class="artifact-chip">plans/{slug}/</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@refiner</span>
+              <span class="step-role">Lapidação &amp; UI</span>
+            </div>
+            <div class="step-body">
+              <strong>Detecção de lacunas e protótipo</strong>
+              <p>Aponta contradições, gera a tela interativa de feedback (<code>review.html</code>) e constrói o protótipo visual (<code>prototype.html</code>). Conduz até a aprovação humana.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">review.html</span>
+                <span class="artifact-chip">prototype.html</span>
+                <span class="artifact-chip">refinement-report.md</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@product</span>
+              <span class="step-role">Especificação</span>
+            </div>
+            <div class="step-body">
+              <strong>Definição do PRD formal</strong>
+              <p>Transforma o briefing ou a necessidade em requisitos claros: capacidades (<code>CAP-*</code>), critérios observáveis (<code>AC-*</code>) e limites de escopo.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">.aioson/context/prd-{slug}.md</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@sheldon</span>
+              <span class="step-role">Auditoria Adversarial</span>
+            </div>
+            <div class="step-body">
+              <strong>Auditoria e blindagem do PRD</strong>
+              <p>Tenta "destruir" o PRD procurando furos lógicos, dependências ocultas e critérios impossíveis de testar. Emite o veredito e hash do Gate B.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">Gate B: design/spec approved</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@planner</span>
+              <span class="step-role">Engenharia</span>
+            </div>
+            <div class="step-body">
+              <strong>Plano de implementação executável</strong>
+              <p>Inspeciona o código real do repositório, fatia a entrega em etapas verticais verificáveis, desenha contratos de interface e prepara as ondas de execução.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">.aioson/context/implementation-plan-{slug}.md</span>
+                <span class="artifact-chip">Gate C: plan approved</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@dev</span>
+              <span class="step-role">Construção Real</span>
+            </div>
+            <div class="step-body">
+              <strong>Implementação de código e testes</strong>
+              <p>Executa o plano fase por fase (ou via motor orquestrado em lanes), alterando apenas os arquivos autorizados e escrevendo testes para cada critério.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">Código em src/</span>
+                <span class="artifact-chip">Testes automatizados</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-agent">
+              <span class="agent-badge">@qa</span>
+              <span class="step-role">Verificação</span>
+            </div>
+            <div class="step-body">
+              <strong>Inspeção independente da entrega</strong>
+              <p>Roda a suíte de testes no ambiente real, valida os fluxos de ponta a ponta e só aprova a feature quando há evidências reproduzíveis de sucesso.</p>
+              <div class="step-artifacts">
+                <span class="artifact-chip">Relatório de QA</span>
+                <span class="artifact-chip">Gate D: execution approved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 / SHELDON: O ADVOGADO DO DIABO -->
+      <section id="sheldon" aria-labelledby="sheldon-title">
+        <p class="section-number">06 / Auditoria e Segurança</p>
+        <h2 id="sheldon-title">Sheldon: por que o PRD precisa de um auditor adversarial?</h2>
+        <p>Na maioria dos times tradicionais, quando o Product Manager entrega um documento de requisitos, os desenvolvedores começam a programar imediatamente. No meio do caminho, descobrem que falta saber o que acontece quando o cartão é recusado, ou que duas regras se contradizem.</p>
+        <p>No AIOSON, <strong>@sheldon</strong> é o revisor crítico que atua antes do código começar. Ele analisa o PRD procurando três defeitos graves:</p>
+        <ol class="flow-list">
+          <li><strong>Ambiguidade:</strong> Termos subjetivos como <em>“o sistema deve ser rápido”</em> são rejeitados pelo Sheldon. Ele exige: <em>“a resposta deve ser entregue em menos de 500ms sob 100 requisições simultâneas”</em>.</li>
+          <li><strong>Rastreabilidade de Promessas:</strong> Ele confere se todas as promessas do Briefing (<code>PROM-*</code>) foram contempladas no PRD ou justificadamente descartadas.</li>
+          <li><strong>Executabilidade Técnica:</strong> Ele avalia se os critérios de aceitação (<code>AC-*</code>) podem ser verificados por testes de código ou inspeção de tela.</li>
+        </ol>
+        <p>Quando Sheldon aprova o PRD, o sistema emite o <strong>Gate B</strong> e gera um hash criptográfico do documento. O Planner e o Dev só têm permissão para trabalhar com um PRD auditado e selado.</p>
+      </section>
+
+      <!-- 07 / PLANNER: COMO NASCE O PLANO -->
+      <section id="planner" aria-labelledby="planner-title">
+        <p class="section-number">07 / A Arte do Planejamento</p>
+        <h2 id="planner-title">Planner: as técnicas e métodos que constroem um plano executável.</h2>
+        <p>O <strong>@planner</strong> não programa o sistema e não inventa regras de negócio. Ele é o <strong>engenheiro da execução</strong>. O trabalho dele é responder: <em>“Dado o repositório real que temos hoje, qual é a rota mais rápida, segura e verificável para chegar ao resultado do PRD?”</em>.</p>
+        <p>O documento gerado fica em <code>.aioson/context/implementation-plan-{slug}.md</code>. Para criar esse plano com excelência, o Planner utiliza seis métodos rigorosos:</p>
+
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Métodos do Planner">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Método do Planner</th>
+                <th scope="col">O que significa na prática</th>
+                <th scope="col">Benefício para o projeto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">1. Inspeção do Repositório Real</th>
+                <td>O Planner lê <code>package.json</code>, examina pastas existentes, identifica rotas ativas e descobre o executor de testes do projeto (<code>node:test</code>, <code>vitest</code>, <code>jest</code>).</td>
+                <td>Evita inventar caminhos falsos ou bibliotecas que o projeto não utiliza.</td>
+              </tr>
+              <tr>
+                <th scope="row">2. Fatiamento Vertical (Vertical Slicing)</th>
+                <td>Em vez de fatiar horizontalmente (ex: "semana 1 só banco, semana 2 só API, semana 3 só tela"), ele fatia verticalmente: cada fase entrega uma fatia completa que já pode ser testada de ponta a ponta.</td>
+                <td>Você pode rodar e testar o sistema já na Fase 1, sem esperar o fim de todo o projeto.</td>
+              </tr>
+              <tr>
+                <th scope="row">3. Ondas (Waves) vs Fases (Phases)</th>
+                <td><strong>Fases</strong> contam a história do produto para as pessoas. <strong>Ondas</strong> definem o que o motor de execução pode rodar em paralelo de forma segura.</td>
+                <td>Unidades de fases diferentes podem rodar juntas na Onda 1 se forem independentes!</td>
+              </tr>
+              <tr>
+                <th scope="row">4. Contratos de Interface Pré-definidos</th>
+                <td>Antes de mandar o backend e o frontend trabalharem, o plano documenta o formato exato dos dados JSON, códigos de sucesso e mensagens de erro.</td>
+                <td>Dois agentes podem trabalhar simultaneamente sem que as partes fiquem incompatíveis.</td>
+              </tr>
+              <tr>
+                <th scope="row">5. Limite Rígido de Unidade (Budget)</th>
+                <td>Cada unidade de trabalho é limitada a no máximo <strong>10 arquivos</strong> e até <strong>6 critérios de aceitação</strong>.</td>
+                <td>Impede que o modelo de IA sofra de sobrecarga de contexto e comece a esquecer instruções.</td>
+              </tr>
+              <tr>
+                <th scope="row">6. Critérios "Done When" com Testes Reais</th>
+                <td>Cada etapa possui comandos exatos de verificação que devem retornar sucesso no terminal.</td>
+                <td>Elimina o "acho que terminei": o agente só avança quando o comando de teste passa.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 08 / DE DOCUMENTOS PARA SDD -->
+      <section id="sdd-conversion" aria-labelledby="sdd-title">
+        <p class="section-number">08 / Spec-Driven Development</p>
+        <h2 id="sdd-title">Como os arquivos .md se transformam em Spec-Driven Development.</h2>
+        <p>No AIOSON, os arquivos Markdown (<code>briefings.md</code>, <code>prd-{slug}.md</code>, <code>implementation-plan-{slug}.md</code>) não são relatórios burocráticos guardados em uma gaveta. Eles são o <strong>código-fonte da especificação</strong>.</p>
+        <p>Isso é o que chamamos de <strong>Spec-Driven Development (SDD)</strong>: o desenvolvimento orientado a especificações formais. A esteira é controlada por portões técnicos automáticos chamados <strong>Gates</strong>:</p>
+
+        <pre><code>Gate A (Requisitos)       → Briefing &amp; Refiner aprovados
+       ↓
+Gate B (Design &amp; PRD)     → PRD auditado e selado por Sheldon
+       ↓
+Gate C (Prontidão)        → Plano do Planner compilado e vinculado (plan:bind)
+       ↓
+Gate D (Execução &amp; QA)    → Código implementado e aprovado pelo QA independente</code></pre>
+
+        <p>Se você alterar o PRD após o plano ter sido criado, o comando <code>aioson plan:bind</code> detecta a discrepância no hash e bloqueia a execução até que o Planner reconcilie o plano com as novas decisões de produto. É essa amarração que impede que o projeto fuja do controle!</p>
+      </section>
+
+      <!-- 09 / DEV ÚNICO VS ORQUESTRADO -->
+      <section id="dev-topology" aria-labelledby="dev-topology-title">
+        <p class="section-number">09 / Topologia de Execução</p>
+        <h2 id="dev-topology-title">DEV Único ou DEV Orquestrado? Como escolher o caminho certo.</h2>
+        <p>Depois que o plano do Planner está aprovado e o <strong>Gate C</strong> está verde, chega o momento da implementação. Aqui surge uma decisão arquitetural crucial: <strong>executar com um único DEV na sessão ou orquestrar múltiplos agentes em paralelo?</strong></p>
+
+        <div class="doors-grid">
+          <div class="door-card" data-highlight="evolution">
+            <div>
+              <span class="door-tag">Caminho Direto</span>
+              <h3>DEV Único (Single DEV)</h3>
+              <p>O agente <code>@dev</code> executa as fases do plano uma por uma, sequencialmente, dentro da mesma conversa com você.</p>
+            </div>
+            <div>
+              <p><strong>Quando é a escolha ideal:</strong></p>
+              <ul>
+                <li>Features classificadas como <code>MICRO</code> ou <code>SMALL</code>.</li>
+                <li>Trabalho que toca em 1 a 4 arquivos acoplados.</li>
+                <li>Projetos que não possuem isolamento de banco de dados ou portas para múltiplos processos simultâneos.</li>
+                <li>Correções cirúrgicas, bugs pontuais e ajustes simples.</li>
+                <li>Menor consumo de tokens e setup zero.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="door-card" data-highlight="greenfield">
+            <div>
+              <span class="door-tag">Caminho de Alta Escala</span>
+              <h3>DEV Orquestrado (Lanes Paralelas)</h3>
+              <p>O motor do AIOSON lê o plano compilado e dispara processos independentes em segundo plano para backend, frontend e supervisor de integração.</p>
+            </div>
+            <div>
+              <p><strong>Quando é a escolha ideal:</strong></p>
+              <ul>
+                <li>Features classificadas como <code>MEDIUM</code> ou <code>LARGE</code>.</li>
+                <li>Trabalho com frentes claramente separadas (ex: API Node.js e tela React).</li>
+                <li>Múltiplas unidades prontas para rodar ao mesmo tempo na Onda 1.</li>
+                <li>Desejo de usar modelos especialistas (ex: Gemini/Antigravity para backend, Claude para frontend, supervisor Codex).</li>
+                <li>Redução drástica do tempo total decorrido (Wall-clock time).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Quer dominar a execução em paralelo?</strong>
+          <p>Para aprender como configurar vagas simultâneas (<code>max_concurrent_lanes</code>), editar o arquivo <code>execution-roles.json</code>, assinar modelos com <code>host:signature</code> e acompanhar as barras de progresso ao vivo no navegador, leia o nosso <a href="../orquestration/index.html">Tutorial Completo de Orquestração e Dashboard</a>.</p>
+        </div>
+      </section>
+
+      <!-- 10 / O NOVO MODELO JEV EM AÇÃO -->
+      <section id="jev" aria-labelledby="jev-title">
+        <p class="section-number">10 / Inteligência Semântica</p>
+        <h2 id="jev-title">O novo modelo Jev: elevando a inteligência na criação da feature.</h2>
+        <p>No AIOSON 1.67, introduzimos uma inovação revolucionária: o <strong>modelo Jev</strong>. Enquanto modelos tradicionais como Claude, GPT ou Gemini são generativos (escrevem textos longos e código), o Jev é um modelo <em>System One</em>: ele é especializado em <strong>julgar, classificar, pontuar e tomar decisões tipadas</strong> sem alucinações.</p>
+        <p>O Jev é acionado nativamente no terminal pelo comando <code>aioson jev:agent-review</code> e pelo runner de decisões <code>aioson jev:judge</code>. Veja como ele potencializa cada etapa da criação da sua feature:</p>
+
+        <div class="jev-cards-grid">
+          <div class="jev-card">
+            <div class="jev-card-header">
+              <span class="jev-stage">No Briefing</span>
+              <span class="jev-mode">profile: framing</span>
+            </div>
+            <h4>Fidelidade às Promessas</h4>
+            <p>O Jev audita o briefing e verifica probabilisticamente se as promessas originais do usuário foram preservadas ou se houve distorção semântica da ideia.</p>
+            <div class="jev-code-snip">aioson jev:agent-review . --agent=briefing --feature=slug</div>
+          </div>
+
+          <div class="jev-card">
+            <div class="jev-card-header">
+              <span class="jev-stage">No Refiner</span>
+              <span class="jev-mode">select: ui_impact</span>
+            </div>
+            <h4>Necessidade de Protótipo</h4>
+            <p>Classifica objetivamente se a feature altera a experiência visual do usuário e se exige um protótipo em <code>prototype.html</code> ou se é puramente lógica interna.</p>
+            <div class="jev-code-snip">aioson jev:agent-review . --agent=refiner --feature=slug</div>
+          </div>
+
+          <div class="jev-card">
+            <div class="jev-card-header">
+              <span class="jev-stage">No Product &amp; Sheldon</span>
+              <span class="jev-mode">profile: product</span>
+            </div>
+            <h4>Objetividade dos Critérios</h4>
+            <p>Julga se os critérios de aceitação (<code>AC-*</code>) são verdadeiramente mensuráveis ou se contêm subjetividades que causariam divergência na hora do teste.</p>
+            <div class="jev-code-snip">aioson jev:agent-review . --agent=product --feature=slug</div>
+          </div>
+
+          <div class="jev-card">
+            <div class="jev-card-header">
+              <span class="jev-stage">No Planner</span>
+              <span class="jev-mode">profile: plan-assurance</span>
+            </div>
+            <h4>Recomendação de Topologia</h4>
+            <p>Analisa o grafo de arquivos do plano e emite uma decisão tipada recomendando se a feature deve ser implementada com <strong>DEV Único ou Orquestrado</strong>!</p>
+            <div class="jev-code-snip">aioson jev:agent-review . --agent=planner --feature=slug</div>
+          </div>
+        </div>
+
+        <p>Para entender como configurar sua chave TypeSafe ou OpenRouter e criar rubricas de julgamento customizadas, confira o <a href="../jev/index.html">Tutorial Dedicado do Jev no AIOSON</a>.</p>
+      </section>
+
+      <!-- 11 / ÁRVORE DE DECISÃO INTERATIVA -->
+      <section id="route-chooser" aria-labelledby="route-chooser-title">
+        <p class="section-number">11 / Simulador Interativo</p>
+        <h2 id="route-chooser-title">Árvore de Decisão: por onde começar a sua feature?</h2>
+        <p>Clique no cenário que melhor descreve o momento atual do seu trabalho para ver a rota exata de agentes recomendada pelo AIOSON:</p>
+
+        <div class="interactive-widget">
+          <div class="widget-header">
+            <h3 class="widget-title">Escolha o seu caso</h3>
+            <span class="machine-label">Simulador de rota de agentes</span>
+          </div>
+
+          <div class="route-selector-buttons" role="group" aria-label="Cenários de feature">
+            <button type="button" class="route-btn" data-route="greenfield" aria-pressed="true">
+              <strong>1. Projeto Novo do Zero</strong><br>
+              <small>Primeira implementação geral</small>
+            </button>
+            <button type="button" class="route-btn" data-route="evolution" aria-pressed="false">
+              <strong>2. Projeto Já Existente</strong><br>
+              <small>Melhoria, ajuste ou correção</small>
+            </button>
+            <button type="button" class="route-btn" data-route="section" aria-pressed="false">
+              <strong>3. Nova Seção / Área</strong><br>
+              <small>Nova experiência ou tela grande</small>
+            </button>
+          </div>
+
+          <div class="route-display" id="route-display-box">
+            <h4 id="route-display-title">Cenário 1 · Projeto Novo do Zero (Greenfield)</h4>
+            <p id="route-display-desc">Carregando orientação...</p>
+            <div class="machine-label" style="margin-top: 14px; font-size: 11px;">Esteira de agentes recomendada:</div>
+            <div class="route-step-chain" id="route-step-nodes">
+              <!-- Nós populados dinamicamente via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 / CALCULADORA: DEV ÚNICO OU ORQUESTRADO? -->
+      <section id="topology-calculator" aria-labelledby="calc-title">
+        <p class="section-number">12 / Diagnóstico Técnico</p>
+        <h2 id="calc-title">Calculadora: devo usar DEV Único ou Orquestrado?</h2>
+        <p>Preencha os dados da sua feature abaixo para receber a recomendação fundamentada do motor AIOSON:</p>
+
+        <div class="interactive-widget">
+          <div class="widget-header">
+            <h3 class="widget-title">Dimensionamento de Execução</h3>
+            <span class="machine-label">Baseado nas heurísticas do plan-scale</span>
+          </div>
+
+          <div class="calc-grid">
+            <div class="calc-field">
+              <label for="calc-files">Quantos arquivos serão tocados ou criados?</label>
+              <select id="calc-files">
+                <option value="small">Poucos (1 a 3 arquivos)</option>
+                <option value="medium">Médio (4 a 8 arquivos)</option>
+                <option value="large">Muitos (9 ou mais arquivos)</option>
+              </select>
+            </div>
+
+            <div class="calc-field">
+              <label for="calc-scope">Quais frentes de código participam?</label>
+              <select id="calc-scope">
+                <option value="single">Apenas uma frente (só backend OU só frontend)</option>
+                <option value="dual">Duas frentes desacopladas (backend API + frontend)</option>
+                <option value="multi">Três ou mais frentes (API + UI + Worker/Serviço)</option>
+              </select>
+            </div>
+
+            <div class="calc-field" style="grid-column: 1 / -1;">
+              <label for="calc-isolation">O ambiente de testes e banco suporta concorrência?</label>
+              <select id="calc-isolation">
+                <option value="isolated">Sim · Ambientes e testes são isolados ou usam mocks independentes</option>
+                <option value="shared">Não · Compartilham o mesmo banco de dados local ou mesma porta de servidor</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="calc-result" id="calc-result-box">
+            <div class="calc-verdict">
+              <span class="calc-badge" id="calc-verdict-badge">Calculando...</span>
+              <strong id="calc-verdict-title" style="font-size: 16px;"></strong>
+            </div>
+            <p id="calc-verdict-text" style="font-size: 14px; margin-bottom: 8px;"></p>
+            <small id="calc-verdict-why" style="display: block; color: var(--marfim-2); font-size: 13px; line-height: 1.6;"></small>
+          </div>
+        </div>
+      </section>
+
+      <!-- 13 / GERADOR DE COMANDOS CLI -->
+      <section id="command-builder" aria-labelledby="cmd-builder-title">
+        <p class="section-number">13 / No Terminal</p>
+        <h2 id="cmd-builder-title">Gerador de Comandos CLI do seu Projeto.</h2>
+        <p>Informe o caminho da pasta do seu projeto e o identificador (slug) da feature para gerar os comandos exatos prontos para copiar e colar no PowerShell:</p>
+
+        <div class="interactive-widget">
+          <div class="command-builder-grid">
+            <div class="calc-field">
+              <label for="project-path">Pasta do Projeto (Caminho ou '.')</label>
+              <input id="project-path" value="." spellcheck="false" autocomplete="off">
+            </div>
+
+            <div class="calc-field">
+              <label for="feature-slug">Identificador da Feature (slug minúsculo)</label>
+              <input id="feature-slug" value="carrinho-compras" spellcheck="false" autocomplete="off">
+            </div>
+
+            <div class="calc-field" style="grid-column: 1 / -1;">
+              <label for="pipeline-mode">Caminho Escolhido</label>
+              <select id="pipeline-mode">
+                <option value="with-briefing">Caminho Completo (Briefing → Refiner → Product → Sheldon → Planner)</option>
+                <option value="direct-product">Caminho Direto de Evolução (Product → Sheldon → Planner)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-title">
+              <span>Etapa 1 · Descoberta &amp; Requisitos</span>
+              <button type="button" class="copy-btn" data-copy="cmd-req">Copiar Bloco</button>
+            </div>
+            <pre><code id="cmd-req"></code></pre>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-title">
+              <span>Etapa 2 · Auditoria Jev &amp; Revisão Sheldon (Gate B)</span>
+              <button type="button" class="copy-btn" data-copy="cmd-audit">Copiar Bloco</button>
+            </div>
+            <pre><code id="cmd-audit"></code></pre>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-title">
+              <span>Etapa 3 · Planejamento pelo Planner &amp; Validação (Gate C)</span>
+              <button type="button" class="copy-btn" data-copy="cmd-plan">Copiar Bloco</button>
+            </div>
+            <pre><code id="cmd-plan"></code></pre>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-title">
+              <span>Etapa 4A · Se você escolheu DEV Único</span>
+              <button type="button" class="copy-btn" data-copy="cmd-single">Copiar Bloco</button>
+            </div>
+            <pre><code id="cmd-single"></code></pre>
+          </div>
+
+          <div class="command-box">
+            <div class="command-box-title">
+              <span>Etapa 4B · Se você escolheu DEV Orquestrado</span>
+              <button type="button" class="copy-btn" data-copy="cmd-orch">Copiar Bloco</button>
+            </div>
+            <pre><code id="cmd-orch"></code></pre>
+          </div>
+
+          <p id="copy-feedback" role="status" aria-live="polite" style="font-size: 13px; color: var(--patina); margin: 8px 0 0; min-height: 20px;"></p>
+        </div>
+      </section>
+
+      <!-- 14 / ESTUDO DE CASO PRÁTICO -->
+      <section id="practical-case" aria-labelledby="practical-title">
+        <p class="section-number">14 / Exemplo Prático</p>
+        <h2 id="practical-title">Estudo de Caso: criando uma notificação por WhatsApp.</h2>
+        <p>Para ver tudo isso funcionando em conjunto, imagine um e-commerce já existente que precisa de uma nova melhoria: <strong>enviar uma notificação de confirmação pelo WhatsApp assim que o pagamento for aprovado</strong>.</p>
+
+        <ol class="flow-list">
+          <li>
+            <strong>Entrada direta pelo @product:</strong>
+            <p>Como a loja já existe e não se trata de uma nova tela visual do app, chamamos diretamente o Product no cliente de IA:</p>
+            <pre><code>@product Crie o PRD da feature notificacao-whatsapp. O objetivo é disparar uma mensagem pelo provedor Z-API quando o webhook de pagamento aprovado for recebido.</code></pre>
+          </li>
+          <li>
+            <strong>Sheldon audita o PRD:</strong>
+            <p>Sheldon lê o documento gerado e questiona: <em>“O que acontece se o WhatsApp do cliente for inválido? A transação deve falhar ou só registrar log?”</em>. O Product ajusta a regra para <em>“registrar log de aviso sem bloquear a compra”</em>. Sheldon aprova o <strong>Gate B</strong>.</p>
+          </li>
+          <li>
+            <strong>O Jev valida a semântica:</strong>
+            <p>Rodamos <code>aioson jev:agent-review . --agent=product --feature=notificacao-whatsapp</code>. O Jev pontua que os critérios de aceitação (<code>AC-01</code> a <code>AC-04</code>) estão 100% mensuráveis e objetivos.</p>
+          </li>
+          <li>
+            <strong>Planner constrói o plano:</strong>
+            <p>O Planner inspeciona o repositório, identifica o arquivo do webhook existente (<code>src/webhooks/payments.js</code>) e cria o plano em <code>implementation-plan-notificacao-whatsapp.md</code> fatiado em 2 etapas:</p>
+            <ul>
+              <li>Fase 1: Cliente de integração do WhatsApp com teste mockado.</li>
+              <li>Fase 2: Conexão do webhook de pagamentos ao cliente de notificação e teste ponta a ponta.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Implementação e QA:</strong>
+            <p>O DEV implementa os arquivos, roda os testes locais, e o QA executa a suíte completa comprovando que mensagens são disparadas e erros de telefone inválido são tratados com elegância.</p>
+          </li>
+        </ol>
+      </section>
+
+      <!-- 15 / PERGUNTAS FREQUENTES (FAQ) -->
+      <section id="faq" aria-labelledby="faq-title">
+        <p class="section-number">15 / Resolução de Dúvidas</p>
+        <h2 id="faq-title">Perguntas Frequentes de Leigos e Criadores.</h2>
+
+        <details>
+          <summary>Preciso saber programar para usar os agentes do AIOSON?</summary>
+          <p>Não. O papel do operador humano no AIOSON é de <strong>direção de produto</strong>: você explica o que o negócio precisa, avalia protótipos visuais, responde dúvidas de regras de negócio no <code>review.html</code> e aprova os gates. Os agentes cuidam da engenharia de código, dos testes automatizados e da infraestrutura.</p>
+        </details>
+
+        <details>
+          <summary>O que é exatamente o "slug" da feature?</summary>
+          <p>O slug é um identificador curto, escrito em letras minúsculas e separado por hífens, sem espaços nem acentos. Por exemplo: <code>carrinho-compras</code>, <code>login-google</code> ou <code>filtro-pedidos</code>. Ele serve para nomear as pastas e arquivos de documentação em <code>.aioson/context/</code>.</p>
+        </details>
+
+        <details>
+          <summary>E se eu mudar de ideia sobre uma regra depois que o plano já foi feito?</summary>
+          <p>Sem problemas! Basta pedir ao <code>@product</code> para atualizar o PRD. Quando o PRD muda, o hash criptográfico do Gate B é renovado, e o <code>@planner</code> automaticamente reavalia o plano para incluir a nova regra antes do DEV começar a codificar.</p>
+        </details>
+
+        <details>
+          <summary>Por que não posso mandar a IA codificar direto sem fazer PRD nem Plano?</summary>
+          <p>Poder você pode, mas os resultados costumam ser frustrantes: a IA começa a alterar arquivos sem padrão, esquece o que você pediu dez mensagens atrás, não escreve testes e quando você pede para consertar um erro, ela quebra outra parte do sistema. O método Spec-Driven Development (SDD) do AIOSON é o que garante que o projeto continue organizado e escalável mesmo com milhares de linhas de código.</p>
+        </details>
+
+        <details>
+          <summary>O modelo Jev substitui o Claude ou o GPT?</summary>
+          <p>Não. Eles trabalham juntos! O Claude, GPT ou Gemini são modelos <em>generativos</em> (criam código e texto). O Jev é um modelo <em>System One</em> de julgamento: ele avalia se o que os outros modelos escreveram tem qualidade, se há ambiguidades e se o plano está seguro. É a combinação perfeita entre quem cria e quem fiscaliza.</p>
+        </details>
+      </section>
+
+      <!-- 16 / REFERÊNCIAS E PRÓXIMOS PASSOS -->
+      <section id="references" aria-labelledby="references-title">
+        <p class="section-number">16 / Próximos Passos</p>
+        <h2 id="references-title">Continue aprofundando o seu conhecimento.</h2>
+        <p>Agora que você já compreende como nasce uma feature no AIOSON, explore os outros tutoriais especializados para dominar cada aspecto do ecossistema:</p>
+
+        <ul class="source-links">
+          <li><a href="../orquestration/index.html"><strong>Tutorial de Orquestração e Dashboard:</strong> Domine a execução paralela com múltiplos modelos e harnesses.</a></li>
+          <li><a href="../sdd/index.html"><strong>Tutorial de Spec-Driven Development:</strong> Aprofunde-se nos fundamentos teóricos do SDD e dos gates A, B, C e D.</a></li>
+          <li><a href="../jev/index.html"><strong>Tutorial do Modelo Jev:</strong> Aprenda a configurar rubricas, modos gate/select/rank e decisões tipadas.</a></li>
+          <li><a href="../living-memory/index.html"><strong>Tutorial de Memória Viva:</strong> Como o AIOSON aprende as preferências do seu projeto com o tempo.</a></li>
+        </ul>
+      </section>
+    </article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <a href="../index.html">← Voltar para o Centro de Tutoriais</a>
+  <span>AIOSON 1.67 · Criação de Features explicada para leigos</span>
+</footer>
+
+</body>
+</html>

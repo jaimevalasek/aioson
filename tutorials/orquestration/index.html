@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Orquestração no AIOSON explicada para leigos: Planner, DEV supervisor de integração, QA compartilhado, modelos por função, ondas em paralelo, Autopilot e dashboard de cada projeto.">
-  <meta name="reviewed-at" content="2026-09-15">
+  <meta name="reviewed-at" content="2026-09-16">
   <meta name="color-scheme" content="dark light">
   <title>Orquestração no AIOSON — Do plano aos agentes em ação</title>
   <link rel="stylesheet" href="../memories/tokens.css">
@@ -20,7 +20,7 @@
 </header>
 <main id="main">
   <section class="hero" aria-labelledby="hero-title">
-    <div><p class="eyebrow">Guia para leigos · revisado em 15 set 2026</p>
+    <div><p class="eyebrow">Guia para leigos · revisado em 16 set 2026</p>
       <h1 id="hero-title">Um plano.<br>Vários agentes.<br>Você acompanha.</h1>
       <p class="hero-intro">Entenda quem organiza o trabalho, o que pode acontecer em paralelo e como abrir o painel para acompanhar uma funcionalidade do começo à verificação final.</p>
       <div class="hero-actions"><a class="primary-link" href="#basics">Começar do zero ↗</a><a class="text-link" href="#simulation">Ver os agentes em ação →</a></div>
@@ -37,7 +37,7 @@
   <div class="staff" aria-hidden="true"></div>
   <div class="reading-layout">
     <aside class="sidebar"><nav aria-label="Capítulos do tutorial"><p class="machine-label">Neste guia</p><ol>
-      <li><a href="#basics">O que é orquestrar</a></li><li><a href="#roles">Quem faz o quê</a></li><li><a href="#integration">Integração / DEV e QA</a></li><li><a href="#planner">Como nasce o plano</a></li><li><a href="#simulation">Ondas em ação</a></li><li><a href="#capacity">Quantas vagas usar</a></li><li><a href="#models">Agentes, modelos e harnesses</a></li><li><a href="#start">Como começar</a></li><li><a href="#practical">Exemplo completo</a></li><li><a href="#commands">Comandos do seu projeto</a></li><li><a href="#dashboard">Abrindo o dashboard</a></li><li><a href="#states">Como ler o painel</a></li><li><a href="#autopilot">Autopilot e recuperação</a></li><li><a href="#context">Contexto, tempo e tokens</a></li><li><a href="#finish">Quando terminou de verdade</a></li><li><a href="#faq">Dúvidas e outros projetos</a></li>
+      <li><a href="#basics">O que é orquestrar</a></li><li><a href="#roles">Quem faz o quê</a></li><li><a href="#integration">Integração / DEV e QA</a></li><li><a href="#planner">Como nasce o plano</a></li><li><a href="#simulation">Ondas em ação</a></li><li><a href="#capacity">Quantas vagas usar</a></li><li><a href="#models">Agentes, modelos e harnesses</a></li><li><a href="#cursor-play-maintenance">Play: Manutenção vs orquestração</a></li><li><a href="#cursor-env">Chave Cursor (.env)</a></li><li><a href="#execution-roles-config">Configurar execution-roles.json</a></li><li><a href="#start">Como começar</a></li><li><a href="#practical">Exemplo completo</a></li><li><a href="#commands">Comandos do seu projeto</a></li><li><a href="#dashboard">Abrindo o dashboard</a></li><li><a href="#states">Como ler o painel</a></li><li><a href="#autopilot">Autopilot e recuperação</a></li><li><a href="#context">Contexto, tempo e tokens</a></li><li><a href="#finish">Quando terminou de verdade</a></li><li><a href="#faq">Dúvidas e outros projetos</a></li>
     </ol></nav></aside>
     <article class="article">
       <section id="basics" aria-labelledby="basics-title">
@@ -172,7 +172,7 @@ ONDA 2 — depende de API + tela aprovadas
         <p><strong>Agente</strong> é o papel e suas instruções. <strong>Modelo</strong> é a IA escolhida. <strong>Harness</strong> é o programa que executa essa IA com acesso às ferramentas, como Codex, Claude Code ou OpenCode.</p>
         <p>Um identificador como <code>openrouter/meta/muse-spark-1.3-contributor</code> pode ser o modelo configurado no OpenCode. Nesse caso, o harness é <code>opencode</code>, não “Muse”. Isso explica por que um problema do programa OpenCode e um problema do modelo podem ter causas diferentes.</p>
         <p>Para o CLI <code>agy</code>, o nome do host no arquivo de execução é <code>antigravity</code>. O executável e o host são nomes diferentes: use <code>"host": "antigravity"</code> e o adaptador chamará <code>agy</code> em modo headless. A execução orquestrada não deve abrir o aplicativo gráfico do Antigravity.</p>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Papéis configuráveis"><table><thead><tr><th scope="col">Papel no arquivo</th><th scope="col">Para que serve</th></tr></thead><tbody><tr><th scope="row"><code>backend_dev</code></th><td>Modelo que implementa a lane backend.</td></tr><tr><th scope="row"><code>frontend_dev</code></th><td>Modelo que implementa a lane frontend.</td></tr><tr><th scope="row"><code>integration_dev</code></th><td>DEV supervisor que integra, corrige falhas cruzadas e roda a verificação completa.</td></tr><tr><th scope="row"><code>qa</code></th><td>Revisor compartilhado e QA final por padrão.</td></tr><tr><th scope="row"><code>backend_qa</code> / <code>frontend_qa</code></th><td>Overrides opcionais do QA compartilhado em uma lane específica.</td></tr><tr><th scope="row"><code>parallel.max_concurrent_lanes</code></th><td>Quantidade máxima de unidades simultâneas, apesar do nome histórico do campo.</td></tr></tbody></table></div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Papéis configuráveis"><table><thead><tr><th scope="col">Papel no arquivo</th><th scope="col">Para que serve</th></tr></thead><tbody><tr><th scope="row"><code>backend_dev</code></th><td>Modelo que implementa a lane backend.</td></tr><tr><th scope="row"><code>frontend_dev</code></th><td>Modelo que implementa a lane frontend.</td></tr><tr><th scope="row"><code>integration_dev</code></th><td>DEV supervisor que integra, corrige falhas cruzadas e roda a verificação completa.</td></tr><tr><th scope="row"><code>qa</code></th><td>Revisor compartilhado e QA final por padrão.</td></tr><tr><th scope="row"><code>backend_qa</code> / <code>frontend_qa</code></th><td>Overrides opcionais do QA compartilhado em uma lane específica.</td></tr><tr><th scope="row"><code>parallel.max_concurrent_lanes</code></th><td>Quantidade máxima de unidades simultâneas, apesar do nome histórico do campo.</td></tr><tr><th scope="row"><code>cursor</code> (host)</th><td>Cursor SDK headless — ex.: <code>composer-2.5</code>, sem <code>reasoning_effort</code>.</td></tr></tbody></table></div>
         <p>As escolhas ficam em <code>.aioson/config/execution-roles.json</code>. O projeto também precisa de hosts instalados, autenticados e compatíveis com execução sem interação. A validação antecipada é um diagnóstico opcional: <code>execution:profiles:validate</code> pode provar o perfil inteiro e <code>host:signature</code> pode testar uma combinação exata.</p>
         <p><strong>O run valida as rotas just in time.</strong> Antes do preflight e novamente quando a configuração salva muda, o executor testa combinações ausentes, expiradas ou inválidas na cadeia ativa de fallback usando o harness real. Ele nunca troca nem reescreve o modelo escolhido pelo usuário. Se o principal falhar, usa o próximo fallback funcional já autorizado; somente a ausência de qualquer rota configurada utilizável vira uma decisão.</p>
         <p>Você pode declarar vários conjuntos em <code>profiles</code> e escolher um com <code>active_profile</code>. O executor relê essa escolha antes de cada novo DEV ou QA; agentes que já começaram terminam com o modelo anterior. Assim, trocar o perfil durante uma onda roteia somente os próximos disparos e o histórico conserva o perfil realmente usado.</p>
@@ -207,6 +207,165 @@ ONDA 2 — depende de API + tela aprovadas
   "on_unavailable": "ask"
 }</code></pre>
         <p>Não existe troca para uma rota não autorizada. Um modelo alternativo, chamado <em>fallback</em>, precisa estar salvo na cadeia escolhida pelo usuário; o executor pode validá-lo no momento em que precisar dele. A escolha de revisão independente também faz parte da configuração.</p>
+        <h3>Composer 2.5, Grok e <code>reasoning_effort</code></h3>
+        <p><strong><code>reasoning_effort</code> só existe onde o harness aceita esse campo.</strong> No JSON ele é opcional: omita a chave ou use <code>null</code> quando o host não suporta. Colocar <code>reasoning_effort</code> num host que não declara suporte faz a validação ou o dispatch falharem de forma explícita — não é ignorado silenciosamente.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Suporte a reasoning_effort por host"><table><thead><tr><th scope="col">Host</th><th scope="col">Harness real</th><th scope="col"><code>reasoning_effort</code></th><th scope="col">Valores aceitos no AIOSON</th><th scope="col">Exemplo de <code>model</code></th></tr></thead><tbody>
+          <tr><th scope="row"><code>cursor</code></th><td>Cursor SDK (<code>@cursor/sdk</code>, local)</td><td><strong>Não</strong></td><td>Omita — profundidade fica no id/variante do modelo Cursor</td><td><code>composer-2.5</code></td></tr>
+          <tr><th scope="row"><code>codex</code></th><td>OpenAI Codex CLI</td><td>Sim</td><td><code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code>, <code>ultra</code></td><td><code>gpt-5.6-sol</code>, <code>gpt-5.6-terra</code></td></tr>
+          <tr><th scope="row"><code>claude</code></th><td>Claude Code CLI</td><td>Sim</td><td><code>low</code> … <code>max</code> (sem <code>ultra</code>)</td><td><code>claude-opus-4-6</code> (id exato do CLI)</td></tr>
+          <tr><th scope="row"><code>grok</code></th><td>xAI Grok CLI (<code>grok</code>)</td><td>Sim</td><td><code>low</code> … <code>ultra</code></td><td>Slug aceito pelo <code>grok</code> instalado — confira com <code>grok --help</code></td></tr>
+          <tr><th scope="row"><code>antigravity</code></th><td>CLI headless <code>agy</code></td><td>Sim</td><td><code>low</code>, <code>medium</code>, <code>high</code></td><td><code>gemini-3.8-flash-high</code></td></tr>
+          <tr><th scope="row"><code>opencode</code>, <code>kimi</code>, <code>qwen</code></th><td>Respectivos CLIs</td><td><strong>Não</strong></td><td>Omita</td><td>Slug do provedor/OpenRouter configurado no harness</td></tr>
+        </tbody></table></div>
+        <p><strong>Composer 2.5 no host <code>cursor</code> (orquestração):</strong> use <code>"host": "cursor"</code> e <code>"model": "composer-2.5"</code> sem <code>reasoning_effort</code>. Auth via <code>CURSOR_API_KEY</code> (recomendado: <code>.env</code> na raiz do projeto — veja <a href="#cursor-env">Chave Cursor (.env)</a>), Node ≥ 22.13 e pacote <code>@cursor/sdk</code> instalado (dependência opcional do AIOSON). Isso não é o chat do IDE — é o runner headless (<code>aioson-cursor-runner</code>) que o motor orquestrado despacha. Para codar na tela de Manutenção do Play, veja <a href="#cursor-play-maintenance">Play: Manutenção vs orquestração</a>.</p>
+        <p><strong>Grok no Cursor vs Grok no CLI:</strong> são caminhos diferentes. No IDE/Cursor SDK, os ids vêm de <code>Cursor.models.list()</code> (podem incluir variantes Grok com nomes próprios da conta). No AIOSON orquestrado via host <code>grok</code>, o modelo é o slug do <strong>Grok CLI</strong> (<code>--model</code> / <code>-m</code>), não o rótulo interno que o Cursor mostra no seletor (ex.: família 4.x). Não copie um id da UI do Cursor para <code>"host": "grok"</code> sem testar com <code>aioson host:signature</code>.</p>
+        <pre><code># Descobrir ids no Cursor SDK (script Node, com CURSOR_API_KEY)
+import { Cursor } from "@cursor/sdk";
+const models = await Cursor.models.list({ apiKey: process.env.CURSOR_API_KEY });
+console.log(models.map(m => ({ id: m.id, params: m.parameters })));
+
+# Provar uma rota Grok CLI
+aioson host:signature . --host=grok --model=&lt;slug-do-grok-cli&gt; --effort=high</code></pre>
+      </section>
+      <section id="cursor-play-maintenance" aria-labelledby="cursor-play-maintenance-title">
+        <p class="section-number">06a / AIOSON Play</p><h2 id="cursor-play-maintenance-title">Manutenção e orquestração usam o Cursor de formas diferentes.</h2>
+        <p>No <strong>AIOSON Play</strong>, o cartão <strong>Cursor CLI</strong> na janela de Manutenção (<em>Continue com seu harness</em> → <strong>Iniciar harness</strong>) abre um terminal interativo com o executável oficial <code>agent</code> — a mesma família do agente Cursor no terminal. Você conversa, escolhe o agente AIOSON (<code>@dev</code>, <code>@product</code>, etc.) e codifica dentro do Play. Esse caminho <strong>não</strong> usa <code>CURSOR_API_KEY</code>: a autenticação é a do Cursor CLI (login da sua conta Cursor no terminal).</p>
+        <p>As <strong>lanes de implementação orquestrada</strong> (<code>execution:run</code>, papéis com <code>"host": "cursor"</code>) são outro caminho: processos headless via <code>@cursor/sdk</code> (<code>aioson-cursor-runner</code>), sem TUI, disparados em paralelo pelo motor. Aí sim é obrigatório <code>CURSOR_API_KEY</code>. O chat do Cursor IDE (janela do editor) também é separado — não substitui nem um dos dois.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Cursor no Play vs orquestração"><table><thead><tr><th scope="col">Onde</th><th scope="col">O que abre</th><th scope="col">Precisa de <code>CURSOR_API_KEY</code>?</th></tr></thead><tbody>
+          <tr><th scope="row">Play → Manutenção → Iniciar harness (Cursor CLI)</th><td>Terminal <code>agent</code> interativo</td><td><strong>Não</strong> — login do Cursor CLI</td></tr>
+          <tr><th scope="row">Orquestração → <code>"host": "cursor"</code></th><td>Runner headless SDK por lane</td><td><strong>Sim</strong></td></tr>
+          <tr><th scope="row">Cursor IDE (editor)</th><td>Chat Composer nativo</td><td><strong>Não</strong> — sessão do app</td></tr>
+        </tbody></table></div>
+        <h3>Pré-requisito · Manutenção (Cursor CLI no Play)</h3>
+        <ol class="flow-list">
+          <li><strong>Instalar o Cursor CLI.</strong><p>No terminal: <code>agent --version</code> deve responder (o Play também mostra <em>PRONTO</em> no cartão). Se não estiver instalado, siga a instalação oficial do Cursor CLI.</p></li>
+          <li><strong>Autenticar uma vez.</strong><p>Rode <code>agent login</code> (ou o fluxo que a sua versão do CLI pedir) no mesmo usuário Windows que abre o Play.</p></li>
+          <li><strong>Iniciar no Play.</strong><p>Manutenção → Cursor CLI → <strong>Iniciar harness</strong>. O Play chama <code>aioson live:start --tool=opencode --tool-bin=agent</code> — nunca o runner headless de orquestração.</p></li>
+        </ol>
+        <h3 id="cursor-env">Configurar <code>CURSOR_API_KEY</code> (somente orquestração)</h3>
+        <p>A chave <strong>não</strong> é o login do IDE nem algo que o Play gera sozinho. É uma API key da sua conta Cursor (<a href="https://cursor.com/dashboard/integrations" rel="noopener">Dashboard → Integrations</a>), no formato <code>cursor_...</code> ou <code>crsr_...</code>. O consumo debita da mesma assinatura Cursor, mas a autenticação é independente do “estar logado no IDE”.</p>
+        <div class="note"><strong>O que <em>não</em> é lugar da chave:</strong> <code>execution-roles.json</code> (só host/modelo), <code>aioson-models.json</code> (providers de scan) e Settings do Play (ainda sem campo). Colocar segredo nesses arquivos falha na validação ou não é lido.</div>
+        <h4>Recomendado · <code>.env</code> na raiz do projeto</h4>
+        <p>O AIOSON lê <code>CURSOR_API_KEY</code> de um arquivo <code>.env</code> na pasta do projeto ao rodar <code>execution:*</code>, <code>host:signature</code>, o monitor e o runner headless. O arquivo <strong>não é criado automaticamente</strong> — você cria uma vez. Projetos AIOSON costumam já ignorar <code>.env</code> no git.</p>
+        <ol class="flow-list">
+          <li><strong>Criar a chave</strong> em Integrations no site do Cursor.</li>
+          <li><strong>Criar o arquivo</strong> na raiz do repositório (mesma pasta que contém <code>.aioson/</code>), por exemplo <code>C:\dev\meu-app\.env</code>.</li>
+          <li><strong>Colocar uma linha só</strong> — sem comando PowerShell, sem colchetes:</li>
+        </ol>
+        <pre><code>CURSOR_API_KEY=crsr_SUA_CHAVE_AQUI</code></pre>
+        <p>Aspas também funcionam: <code>CURSOR_API_KEY="crsr_SUA_CHAVE_AQUI"</code>. Salve o arquivo e reinicie o AIOSON Play se ele já estiver aberto.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Onde fica cada arquivo"><table><thead><tr><th scope="col">Arquivo</th><th scope="col">Caminho típico</th><th scope="col">Conteúdo</th></tr></thead><tbody>
+          <tr><th scope="row"><code>.env</code></th><td>Raiz do projeto (<code>meu-app/.env</code>)</td><td><code>CURSOR_API_KEY=...</code> — <strong>só a chave</strong></td></tr>
+          <tr><th scope="row"><code>execution-roles.json</code></th><td><code>.aioson/config/</code></td><td>Perfis, <code>host</code>, <code>model</code>, workers — <strong>sem API key</strong></td></tr>
+        </tbody></table></div>
+        <h4>Alternativa · variável de ambiente do sistema</h4>
+        <p>Use se preferir uma chave para todos os projetos na máquina. Se <code>.env</code> e o SO tiverem valores diferentes, <strong>o SO vence</strong>.</p>
+        <pre><code># Windows · persistir para o usuário (PowerShell)
+[System.Environment]::SetEnvironmentVariable("CURSOR_API_KEY", "crsr_SUA_CHAVE_AQUI", "User")
+
+# macOS / Linux · ~/.profile ou ~/.zshrc
+export CURSOR_API_KEY="crsr_SUA_CHAVE_AQUI"</code></pre>
+        <p>No diálogo “Nova variável de usuário” do Windows: <strong>Nome</strong> = <code>CURSOR_API_KEY</code>, <strong>Valor</strong> = somente a chave — não cole o comando <code>SetEnvironmentVariable(...)</code> inteiro no campo Valor.</p>
+        <h4>Validar antes do run</h4>
+        <ol class="flow-list">
+          <li><strong>Node ≥ 22.13.</strong> Instale o SDK se necessário: <code>npm install @cursor/sdk</code> (opcional do pacote <code>aioson</code>).</li>
+          <li><strong>Provar a rota</strong> na pasta do projeto:</li>
+        </ol>
+        <pre><code>cd C:\dev\meu-app
+aioson host:signature . --host=cursor --model=composer-2.5
+aioson execution:offer . --json</code></pre>
+        <p>Esperado: <code>host:signature</code> com <code>state: valid</code> e <code>execution:offer</code> com <code>available: true</code> quando o perfil ativo usa <code>cursor</code> e todas as assinaturas estão válidas.</p>
+        <div class="note"><strong>Play · “Configuração atual é inválida” com perfil vazio?</strong> O host <code>cursor</code> exige AIOSON ≥ 1.67 (CLI embarcado no Play recente). Atualize o Play e confirme que <code>host:signature</code> passa — senão o editor de roteamento não carrega os perfis.</div>
+        <div class="note"><strong>Erro <code>CURSOR_API_KEY is required</code> ao clicar <em>Iniciar harness</em> na Manutenção?</strong> Manutenção deve abrir o CLI <code>agent</code> interativo (sem API key). Se pedir a variável, atualize o Play — o roteamento estava usando o runner de orquestração por engano.</div>
+      </section>
+      <section id="execution-roles-config" aria-labelledby="execution-roles-config-title">
+        <p class="section-number">06b / Configuração</p><h2 id="execution-roles-config-title">O arquivo <code>execution-roles.json</code> não nasce no setup nem no update.</h2>
+        <p><strong><code>aioson setup</code> e <code>aioson update</code> não criam nem habilitam a orquestração por modelos.</strong> Isso é intencional: escolher harness, modelo, perfil de fallback e assinar hosts é decisão do dono do projeto. Sem <code>.aioson/config/execution-roles.json</code>, <code>execution:offer</code> responde que a opção ainda não foi destravada — a rota DEV único continua disponível.</p>
+        <h3>Primeira vez · checklist</h3>
+        <ol class="flow-list">
+          <li><strong>Verificar se falta o arquivo.</strong><p><code>aioson execution:offer . --feature=minha-feature --json</code> — procure <code>onboarding.state</code> como <code>not_unlocked</code> ou <code>disabled</code>.</p></li>
+          <li><strong>Semear o template desligado.</strong><p><code>aioson execution:seed . --feature=minha-feature --lanes=backend,frontend</code> (ou deixe o Planner semear ao fechar o plano). O arquivo nasce com <code>"enabled": false</code> e modelos <code>configured-default</code>.</p></li>
+          <li><strong>Escolher modelos reais por papel.</strong><p>Edite <code>.aioson/config/execution-roles.json</code> ou use o dashboard → <strong>Configurar modelos e workers</strong>. Troque cada <code>configured-default</code> por um id válido no harness daquele papel.</p></li>
+          <li><strong>Cursor: chave no <code>.env</code>.</strong><p>Se algum papel usa <code>"host": "cursor"</code>, crie <code>.env</code> na raiz com <code>CURSOR_API_KEY=...</code> antes de assinar — veja <a href="#cursor-env">Chave Cursor (.env)</a>.</p></li>
+          <li><strong>Assinar cada combinação host/modelo[/effort].</strong><p><code>aioson host:signature . --host=codex --model=gpt-5.6-sol --effort=medium</code> (omitir <code>--effort</code> quando o host não usa). Para Cursor: <code>--host=cursor --model=composer-2.5</code>. Repita para backend, frontend, integration e qa.</p></li>
+          <li><strong>Confirmar defaults e ligar.</strong><p><code>aioson execution:offer . --feature=minha-feature --confirm-defaults</code>, depois <code>"enabled": true</code> no JSON (ou salvar pelo painel).</p></li>
+          <li><strong>Validar (opcional) e compilar.</strong><p><code>aioson execution:profiles:validate . --json</code>, então <code>aioson execution:compile . --feature=minha-feature</code>.</p></li>
+        </ol>
+        <div class="note"><strong>Depois de <code>aioson update .</code></strong> o framework atualiza agentes e templates gerenciados, mas <strong>não apaga nem recria</strong> um <code>execution-roles.json</code> que você já configurou. Se o arquivo nunca existiu, o update também não o cria — rode <code>execution:seed</code> uma vez.</div>
+        <h3>Exemplo · perfil só Cursor (Composer 2.5)</h3>
+        <pre><code>{
+  "version": 1,
+  "enabled": true,
+  "active_profile": "cursor-all",
+  "profiles": {
+    "cursor-all": {
+      "enabled": true,
+      "roles": {
+        "backend_dev": { "host": "cursor", "model": "composer-2.5" },
+        "frontend_dev": { "host": "cursor", "model": "composer-2.5" },
+        "integration_dev": { "host": "cursor", "model": "composer-2.5" },
+        "qa": { "host": "cursor", "model": "composer-2.5" }
+      }
+    }
+  },
+  "parallel": { "max_concurrent_lanes": 2 },
+  "on_unavailable": "ask"
+}</code></pre>
+        <h3>Exemplo · misto (Gemini + Codex + Grok CLI)</h3>
+        <pre><code>{
+  "version": 1,
+  "enabled": true,
+  "active_profile": "roles-mixed",
+  "profiles": {
+    "roles-mixed": {
+      "enabled": true,
+      "fallback_use": true,
+      "fallback_profiles": ["roles-cursor"],
+      "roles": {
+        "backend_dev": {
+          "host": "antigravity",
+          "model": "gemini-3.8-flash-high",
+          "reasoning_effort": "high"
+        },
+        "frontend_dev": {
+          "host": "codex",
+          "model": "gpt-5.6-sol",
+          "reasoning_effort": "medium"
+        },
+        "integration_dev": {
+          "host": "codex",
+          "model": "gpt-5.6-terra",
+          "reasoning_effort": "high"
+        },
+        "qa": {
+          "host": "grok",
+          "model": "grok-4",
+          "reasoning_effort": "high"
+        }
+      }
+    },
+    "roles-cursor": {
+      "enabled": true,
+      "roles": {
+        "backend_dev": { "host": "cursor", "model": "composer-2.5" },
+        "frontend_dev": { "host": "cursor", "model": "composer-2.5" },
+        "integration_dev": { "host": "cursor", "model": "composer-2.5" },
+        "qa": { "host": "cursor", "model": "composer-2.5" }
+      }
+    }
+  },
+  "parallel": { "max_concurrent_lanes": 3 },
+  "on_unavailable": "ask"
+}</code></pre>
+        <p>No exemplo acima, <code>grok-4</code> é ilustrativo — substitua pelo slug que o seu <code>grok</code> CLI aceita após <code>host:signature</code>. O perfil <code>roles-cursor</code> só entra se o principal falhar por infraestrutura (cota, auth, indisponibilidade), não por QA reprovado.</p>
+        <h3>Erros comuns</h3>
+        <ul>
+          <li><strong><code>reasoning_effort</code> no host <code>cursor</code> ou <code>opencode</code>:</strong> remova o campo.</li>
+          <li><strong>Id do Cursor no host <code>grok</code>:</strong> use o Grok CLI ou mude o host para <code>cursor</code>.</li>
+          <li><strong><code>enabled: true</code> sem assinatura:</strong> <code>execution:offer</code> fica em <code>unsigned</code>; o run não despacha.</li>
+          <li><strong><code>.env</code> no lugar errado ou com comando PowerShell no valor:</strong> o arquivo deve ficar na <strong>raiz do projeto</strong>, com uma linha <code>CURSOR_API_KEY=crsr_...</code> — não o script <code>SetEnvironmentVariable(...)</code>.</li>
+          <li><strong>Esquecer <code>integration_dev</code>:</strong> integração final volta para o DEV da sessão; o planner semeia esse papel nas configs novas.</li>
+        </ul>
       </section>
       <section id="start" aria-labelledby="start-title">
         <p class="section-number">07 / Primeira execução</p><h2 id="start-title">Da conversa ao comando, em seis passos.</h2>
@@ -214,7 +373,7 @@ ONDA 2 — depende de API + tela aprovadas
           <li><strong>Abra o projeto preparado no seu cliente de IA.</strong><p>O projeto precisa do AIOSON instalado e de um contexto válido. Confirme com <code>aioson context:validate . --json</code>. Se ainda não existe preparação, peça ao <code>@setup</code>.</p></li>
           <li><strong>Defina e aprove o que construir.</strong><p>Product e Sheldon fecham o escopo e a revisão. O Planner transforma isso em plano. “Quero paralelo” não dispensa definir contratos e critérios de aceitação.</p></li>
           <li><strong>Peça a execução orquestrada.</strong><p>Exemplo de pedido ao Planner: “Organize unidades pequenas por dependências reais, com backend, frontend e QA. Use os modelos configurados e coloque cada teste de integração depois dos seus produtores.”</p></li>
-          <li><strong>Configure os papéis.</strong><p><code>aioson execution:offer . --feature=agenda-inteligente</code> mostra se a opção está disponível. Quando faltar configuração, <code>aioson execution:seed . --feature=agenda-inteligente</code> prepara o arquivo <em>desabilitado</em>. Escolha modelos reais, fallbacks e workers, depois habilite a configuração. Rodar seed sozinho não autoriza agentes; a execução prova as rotas salvas quando precisar delas.</p></li>
+          <li><strong>Configure os papéis.</strong><p><code>aioson execution:offer . --feature=agenda-inteligente</code> mostra se a opção está disponível. Quando faltar configuração, <code>aioson execution:seed . --feature=agenda-inteligente</code> prepara o arquivo <em>desabilitado</em>. Escolha modelos reais, fallbacks e workers, depois habilite a configuração. Se usar <code>host: cursor</code>, crie também o <code>.env</code> com a API key (<a href="#cursor-env">detalhes</a>). Passo a passo completo: <a href="#execution-roles-config">Configurar execution-roles.json</a>.</p></li>
           <li><strong>Compile e confira a preparação.</strong><p>O Planner normalmente roda <code>execution:compile</code> após aprovar o plano. A compilação produz manifesto, plano executável e prompts das unidades. Depois, <code>execution:run --preflight</code> confere se é possível iniciar; essa checagem não implementa a feature.</p></li>
           <li><strong>Inicie e acompanhe.</strong><p>Peça ao Dev “execute o plano orquestrado aprovado e acompanhe a integração” ou rode <code>execution:run</code>. Abra o dashboard em outro terminal. Se você iniciou diretamente no terminal, mantenha o processo de execução aberto.</p></li>
         </ol>
@@ -346,6 +505,12 @@ aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
       </section>
       <section id="faq" aria-labelledby="faq-title">
         <p class="section-number">14 / Para usar de novo</p><h2 id="faq-title">Dúvidas que aparecem na prática.</h2>
+        <details><summary>Instalei/atualizei o AIOSON e não achei execution-roles.json</summary><p>Normal. O arquivo não faz parte do template padrão habilitado: rode <code>aioson execution:seed . --feature=&lt;slug&gt; --lanes=backend,frontend</code>, edite os modelos, assine com <code>host:signature</code>, confirme defaults, defina <code>enabled: true</code> e compile. Veja a seção <a href="#execution-roles-config">Configurar execution-roles.json</a>.</p></details>
+        <details><summary>Composer 2.5 aceita reasoning_effort?</summary><p>No host <code>cursor</code>, não — omita <code>reasoning_effort</code>. No host <code>codex</code>, <code>claude</code>, <code>grok</code> ou <code>antigravity</code>, use os valores da tabela na seção <a href="#models">Agentes, modelos e harnesses</a>.</p></details>
+        <details><summary>Onde coloco a <code>CURSOR_API_KEY</code>?</summary><p><strong>Recomendado:</strong> arquivo <code>.env</code> na raiz do projeto (<code>CURSOR_API_KEY=crsr_...</code>). <strong>Alternativa:</strong> variável de ambiente do sistema (<code>CURSOR_API_KEY</code>); se os dois existirem, o SO vence. Não use <code>execution-roles.json</code> nem <code>aioson-models.json</code>. Passo a passo: <a href="#cursor-env">Chave Cursor (.env)</a>.</p></details>
+        <details><summary><code>CURSOR_API_KEY</code> é o login do Cursor / do meu plano?</summary><p>Não é o token da sessão do IDE. É uma API key que você cria em <a href="https://cursor.com/dashboard/integrations">Integrations</a> (<code>cursor_...</code> ou <code>crsr_...</code>). O consumo de modelos conta na mesma conta e assinatura Cursor, mas o Play na Manutenção e o IDE não leem essa variável — só o runner headless das lanes orquestradas.</p></details>
+        <details><summary>Iniciar harness Cursor no Play pede <code>CURSOR_API_KEY</code></summary><p>Manutenção deve abrir o CLI <code>agent</code> interativo (sem API key). Orquestração com <code>"host": "cursor"</code> exige a chave. Se o botão da Manutenção pedir a variável, o roteamento está errado — atualize o Play. Veja <a href="#cursor-play-maintenance">a seção dedicada</a>.</p></details>
+        <details><summary>Qual o nome do Grok 4.x para colocar no JSON?</summary><p>Depende do harness: host <code>grok</code> → slug do Grok CLI (prove com <code>host:signature</code>); host <code>cursor</code> → id retornado por <code>Cursor.models.list()</code> na sua conta. O rótulo da UI do Cursor IDE não é garantido no CLI Grok.</p></details>
         <details><summary>Isso funciona em outro projeto?</summary><p>O mecanismo é do AIOSON, não do Creator Studio. Cada projeto precisa do próprio contexto, plano, caminhos, verificações e configuração compatível. Instale/atualize a versão que contém as correções e use <code>aioson update .</code> para atualizar os arquivos gerenciados do projeto quando necessário. Valide, compile e execute naquele projeto. A ferramenta não inventa os contratos específicos da sua aplicação.</p></details>
         <details><summary>As correções entram em uma execução que já estava rodando?</summary><p>Configuração de perfil, modelo, fallback, QA e workers é relida ao vivo; um processo já aberto conserva a identidade com que começou. Alterar o código do framework exige retomar ou reiniciar o executor para carregar a versão nova. Quando a estrutura do plano muda, recompile e inicie uma execução apropriada, preservando o histórico anterior.</p></details>
         <details><summary>Devo criar um QA frontend e outro backend?</summary><p>Comece com <code>qa</code> compartilhado. Use <code>frontend_qa</code> ou <code>backend_qa</code> somente quando houver uma diferença comprovável de ferramenta, isolamento, risco, custo ou cota. O mesmo papel compartilhado já inicia processos independentes por unidade e pode revisar várias delas em paralelo.</p></details>
@@ -357,7 +522,7 @@ aioson execution:run . --feature=agenda-inteligente --resume</code></pre>
         <details><summary>Posso fechar o navegador e voltar depois?</summary><p>Sim. Se o servidor do dashboard continuar aberto, basta voltar à URL. Se ele foi encerrado, rode <code>execution:dashboard</code> novamente e abra a URL atual. Isso não reinicia a implementação.</p></details>
         <details><summary>Autopilot significa que nunca vai parar?</summary><p>O modo contínuo prossegue enquanto existe uma próxima ação segura: repete falhas recuperáveis, devolve reprovações ao DEV e encaminha defeitos de contrato ao produtor correto. Ele não repete indefinidamente uma unidade que aponta para outro dono sem roteamento seguro. Também não consegue criar acesso a uma conta, disponibilizar um modelo ausente ou decidir uma mudança de produto fora do plano. O dashboard pode retomar automaticamente um executor contínuo que ele observou morrer; o comando manual equivalente é <code>--resume</code>.</p></details>
         <details><summary>Como conferir se o plano permite paralelo?</summary><p>Use <code>aioson execution:graph . --feature=agenda-inteligente</code>. O grafo mostra as dependências do plano compilado; o dashboard acrescenta o estado da execução. Peça ao Planner para explicar as dependências que estão deixando uma vaga ociosa.</p></details>
-        <h3>Referências desta edição</h3><p>Este guia descreve o código local revisado em 15/09/2026. A disponibilidade depende da versão instalada; recursos alterados no repositório podem ainda não ter sido publicados no pacote que você usa.</p>
+        <h3>Referências desta edição</h3><p>Este guia descreve o código local revisado em 16/09/2026 (inclui host <code>cursor</code>, leitura de <code>.env</code> para <code>CURSOR_API_KEY</code> e AIOSON embarcado no Play ≥ 1.67). A disponibilidade depende da versão instalada; recursos alterados no repositório podem ainda não ter sido publicados no pacote que você usa.</p>
         <ul class="source-links"><li><a href="../../docs/execution-monitor.md">Monitoramento local: comandos, portas e histórico</a></li><li><a href="../../docs/pt/5-referencia/agent-execution.md">Referência técnica da execução de agentes</a></li><li><a href="../../src/commands/execution.js">Comandos de execução no código do AIOSON</a></li><li><a href="../../src/agent-execution/execution-run.js">Motor que agenda DEV → QA</a></li><li><a href="../sdd/index.html">SDD: preparação, Planner, Dev e QA</a></li></ul>
       </section>
     </article>

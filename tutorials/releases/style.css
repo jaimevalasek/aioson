@@ -1,0 +1,253 @@
+/* ============================================================
+   AIOSON Releases Hub — Style Sheet
+   Extends Design-DNA v1 (Tinta & Ouro) from ../memories/
+   ============================================================ */
+
+/* Releases hero */
+.releases-hero {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 48px 36px;
+  background: var(--superficie);
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--tinta) 60%, transparent);
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.releases-hero h1 {
+  margin: 16px 0 12px;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--marfim);
+  line-height: 1.1;
+}
+
+.releases-hero p {
+  max-width: 62ch;
+  margin: 0 auto;
+  color: var(--marfim-2);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* Featured release card (v1.67.0) */
+.featured-release {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  border: 1px solid var(--ouro);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--superficie);
+  box-shadow: 0 20px 50px color-mix(in srgb, var(--ouro) 14%, transparent);
+  text-decoration: none;
+  color: inherit;
+  margin: 28px 0;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  position: relative;
+}
+
+.featured-release:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--ouro) 22%, transparent);
+}
+
+.featured-body {
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.featured-version-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ouro);
+  letter-spacing: .05em;
+}
+
+.featured-version-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ouro);
+  box-shadow: 0 0 10px var(--ouro);
+}
+
+.featured-release h3 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--marfim);
+  margin: 4px 0 6px;
+}
+
+.featured-release p {
+  font-size: 14px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 55ch;
+}
+
+.featured-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.featured-tag {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ouro);
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+.featured-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ouro);
+  margin-top: 14px;
+}
+
+.featured-aside {
+  padding: 36px 30px;
+  border-left: 1px solid var(--linha-2);
+  background: var(--tinta-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.featured-aside-label {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--fumaca);
+  margin-bottom: 4px;
+}
+
+.featured-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--linha);
+  font-size: 13px;
+}
+
+.featured-stat:last-of-type {
+  border-bottom: none;
+}
+
+.featured-stat span {
+  color: var(--marfim-2);
+}
+
+.featured-stat strong {
+  font-family: var(--voz-maquina);
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.featured-stat strong.patina { color: var(--patina); }
+.featured-stat strong.prata  { color: var(--prata); }
+
+/* Releases grid */
+.releases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.release-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--superficie);
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 160ms ease, border-color 160ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.release-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ouro);
+}
+
+.release-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--linha-2);
+}
+
+.release-card.gold::before { background: var(--ouro); }
+.release-card.patina::before { background: var(--patina); }
+.release-card.prata::before { background: var(--prata); }
+.release-card.cobre::before { background: var(--cobre); }
+
+.release-version {
+  font-family: var(--voz-maquina);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.release-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.release-card p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.release-meta {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed var(--linha);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--fumaca);
+}
+
+.release-meta strong {
+  color: var(--ouro);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .featured-release { grid-template-columns: 1fr; }
+  .featured-aside { border-left: none; border-top: 1px solid var(--linha-2); }
+}

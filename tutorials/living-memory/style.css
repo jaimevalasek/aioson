@@ -1,0 +1,307 @@
+/* ============================================================
+   AIOSON Living Memory Tutorial — Style Sheet
+   Extends Design-DNA v1 (Tinta & Ouro) from ../memories/
+   ============================================================ */
+
+/* Bootstrap files grid */
+.bootstrap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.bootstrap-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 22px;
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bootstrap-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ouro);
+}
+
+.bootstrap-card[data-tone="patina"]::before { background: var(--patina); }
+.bootstrap-card[data-tone="prata"]::before { background: var(--prata); }
+.bootstrap-card[data-tone="cobre"]::before { background: var(--cobre); }
+
+.bs-filename {
+  font-family: var(--voz-maquina);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ouro);
+}
+
+.bootstrap-card[data-tone="patina"] .bs-filename { color: var(--patina); }
+.bootstrap-card[data-tone="prata"] .bs-filename { color: var(--prata); }
+.bootstrap-card[data-tone="cobre"] .bs-filename { color: var(--cobre); }
+
+.bs-purpose {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--fumaca);
+}
+
+.bootstrap-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 2px 0 0;
+}
+
+.bootstrap-card p {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.bs-meta {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--linha);
+  display: flex;
+  gap: 14px;
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--fumaca);
+}
+
+/* Reflect Pipeline */
+.reflect-pipeline {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--superficie);
+  margin: 28px 0;
+}
+
+.reflect-step {
+  padding: 20px;
+  border-right: 1px solid var(--linha);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reflect-step:last-child {
+  border-right: none;
+}
+
+.reflect-step-num {
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ouro);
+}
+
+.reflect-step-trigger {
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--patina);
+}
+
+.reflect-step h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.reflect-step p {
+  font-size: 12px;
+  color: var(--marfim-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Cmd Grid */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.cmd-card {
+  background: var(--superficie);
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cmd-name {
+  font-family: var(--voz-maquina);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ouro);
+}
+
+.cmd-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin-top: 2px;
+}
+
+.cmd-desc {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.55;
+}
+
+.cmd-tier {
+  display: inline-flex;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  font-family: var(--voz-maquina);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cmd-tier.t1 { color: var(--patina); }
+.cmd-tier.t2 { color: var(--ouro); }
+.cmd-tier.t3 { color: var(--perigo); }
+
+/* Doctor Grid */
+.doctor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.doctor-card {
+  border: 1px solid var(--linha-2);
+  border-radius: var(--radius);
+  padding: 20px;
+  background: var(--superficie);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.doctor-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tinta-2);
+  border: 1px solid var(--linha-2);
+  color: var(--ouro);
+}
+
+.doctor-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.doctor-body h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 0;
+}
+
+.doctor-body p {
+  font-size: 12px;
+  color: var(--marfim-2);
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+
+.doctor-body .check-id {
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  color: var(--ouro);
+  display: block;
+  margin-top: 8px;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 26px;
+  border-left: 2px solid var(--linha-2);
+  margin: 28px 0;
+}
+
+.timeline-entry {
+  position: relative;
+  padding: 0 0 24px 20px;
+}
+
+.timeline-entry:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-entry::before {
+  content: '';
+  position: absolute;
+  left: -33px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ouro);
+  box-shadow: 0 0 0 4px var(--tinta), 0 0 10px color-mix(in srgb, var(--ouro) 50%, transparent);
+}
+
+.timeline-phase {
+  font-family: var(--voz-maquina);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ouro);
+  letter-spacing: .04em;
+}
+
+.timeline-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--marfim);
+  margin: 4px 0;
+}
+
+.timeline-desc {
+  font-size: 13px;
+  color: var(--marfim-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .bootstrap-grid { grid-template-columns: 1fr; }
+  .reflect-pipeline { grid-template-columns: 1fr; }
+  .reflect-step { border-right: none; border-bottom: 1px solid var(--linha); }
+  .reflect-step:last-child { border-bottom: none; }
+  .doctor-grid { grid-template-columns: 1fr; }
+}
