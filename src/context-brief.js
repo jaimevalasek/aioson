@@ -4,6 +4,7 @@ const path = require('node:path');
 const { selectContext } = require('./context-selector');
 const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { withIndex } = require('./context-search');
+const { analyzeTaskVocabulary } = require('./lib/task-vocabulary');
 
 const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev', 'deyvin']);
@@ -543,16 +544,25 @@ function classifyLoads(selection, profile) {
 }
 
 function confidenceFrom({ selection, mustLoad, gaps }) {
-  if (selection.activation_only || gaps.some((gap) => gap.code === 'missing_task')) return 'low';
+  if (selection.activation_only || gaps.some((gap) => gap.code === 'missing_task' || gap.code === 'generic_task')) return 'low';
   if (mustLoad.length === 0) return 'low';
   if (gaps.length > 0) return 'medium';
   return 'high';
 }
 
-function buildGaps({ selection, agent, mode, task, paths, mustLoad }) {
+function buildGaps({ selection, agent, mode, task, paths, mustLoad, taskVocabulary }) {
   const gaps = [];
   if (!String(task || '').trim()) {
     gaps.push({ code: 'missing_task', message: 'No concrete task was provided; package is foundation-only.' });
+  }
+  if (taskVocabulary && taskVocabulary.generic && !selection.activation_only) {
+    const booster = taskVocabulary.augmented_with
+      ? ` Routing was boosted with the PRD title only ("${taskVocabulary.augmented_with}"), which names the feature, not its surfaces.`
+      : '';
+    gaps.push({
+      code: 'generic_task',
+      message: `The task names only workflow words, so rules and docs routed by triggers, task types, aliases or entities (forms, listings, status flows, payments…) could not match.${booster} Rerun with the surfaces this phase builds, in domain words, plus --paths=<files to touch>.`
+    });
   }
   if (selection.activation_only) {
     gaps.push({ code: 'activation_only', message: 'Activation-only context; do not expand into implementation or review work.' });
@@ -645,6 +655,31 @@ async function collectRecall(targetDir, query, selection, options) {
   }
 }
 
+const CONTEXT_DIR = path.join('.aioson', 'context');
+
+// Feature slugs are pointers, never vocabulary: every `prd-{slug}.md` plus the
+// requested and active feature.
+async function knownFeatureSlugs(targetDir, extra) {
+  const slugs = new Set(extra.filter(Boolean).map((slug) => String(slug).trim().toLowerCase()));
+  try {
+    const entries = await require('node:fs/promises').readdir(path.join(targetDir, CONTEXT_DIR));
+    for (const name of entries) {
+      const match = name.match(/^prd-(.+)\.md$/);
+      if (match) slugs.add(match[1].toLowerCase());
+    }
+  } catch { /* no context dir */ }
+  return slugs;
+}
+
+async function readPrdTitle(targetDir, slug) {
+  if (!slug || !/^[a-z0-9][a-z0-9._-]*$/i.test(slug)) return '';
+  const content = await readFileSafe(path.join(targetDir, CONTEXT_DIR, `prd-${slug}.md`));
+  if (!content) return '';
+  const heading = content.replace(/^---[\s\S]*?\n---\r?\n/, '').match(/^#\s+(.+)$/m);
+  if (!heading) return '';
+  return heading[1].replace(/^PRD\s*[—–:-]\s*/i, '').trim().slice(0, 160);
+}
+
 async function buildContextBrief(targetDir, options = {}) {
   const agent = normalizeToken(options.agent || 'dev');
   const mode = options.mode || 'planning';
@@ -656,7 +691,7 @@ async function buildContextBrief(targetDir, options = {}) {
       .map((item) => item.trim())
       .filter(Boolean);
 
-  const selection = await selectContext(targetDir, {
+  const selectOptions = {
     agent,
     mode,
     task,
@@ -664,7 +699,28 @@ async function buildContextBrief(targetDir, options = {}) {
     feature: options.feature || options.slug || '',
     semantic: options.semantic,
     noSemantic: options.noSemantic || options['no-semantic']
+  };
+  let selection = await selectContext(targetDir, selectOptions);
+
+  // A workflow-only task ("implement {slug} from the approved PRD and plan")
+  // routes no domain rule. Measured on 29 real PRDs: the PRD title as extra
+  // vocabulary selects 0-6 rules/docs, all on-feature; the capability map or
+  // the full body select 10-40 (no precision), so the title is the only safe
+  // booster. The gap stays either way — the title names the feature, not the
+  // surfaces a phase builds.
+  const pointerFeature = options.feature || options.slug || selection.active_feature || '';
+  const vocabulary = analyzeTaskVocabulary(task, {
+    featureSlugs: await knownFeatureSlugs(targetDir, [pointerFeature])
   });
+  const taskVocabulary = { generic: vocabulary.generic, content_terms: vocabulary.content_terms, augmented_with: null };
+  if (vocabulary.generic && !selection.activation_only) {
+    const title = await readPrdTitle(targetDir, String(pointerFeature).trim().toLowerCase());
+    if (title) {
+      selection = await selectContext(targetDir, { ...selectOptions, task: `${task} ${title}` });
+      selection.task = task;
+      taskVocabulary.augmented_with = title;
+    }
+  }
 
   const profile = profileForAgent(selection.agent);
   // Skill routers matched on their own declared signals. Advisory pointers:
@@ -690,7 +746,7 @@ async function buildContextBrief(targetDir, options = {}) {
   const constraints = dedupe([...concernConstraints(concerns), ...extracted.constraints, ...structure], 18);
   const forbiddenPatterns = dedupe(extracted.forbidden_patterns, 10);
   const verificationHints = dedupe([...extracted.verification_hints, ...profileHints], 14);
-  const gaps = buildGaps({ selection, agent: selection.agent, mode: selection.mode, task, paths: selection.paths, mustLoad });
+  const gaps = buildGaps({ selection, agent: selection.agent, mode: selection.mode, task, paths: selection.paths, mustLoad, taskVocabulary });
 
   const fallbackUsed = ['context_select'];
   if (selection.semantic && selection.semantic.enabled) fallbackUsed.push('semantic_search');
@@ -730,6 +786,7 @@ async function buildContextBrief(targetDir, options = {}) {
     related,
     selected_count: selection.selected.length,
     semantic: selection.semantic,
+    task_vocabulary: taskVocabulary,
     confidence: confidenceFrom({ selection, mustLoad, gaps }),
     gaps,
     fallback_used: fallbackUsed

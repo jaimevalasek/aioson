@@ -21,7 +21,10 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
       skills: (result.skills || []).map((item) => item.path),
       // Recall is offered too: a doc loaded from `related` is not a routing gap.
       related: (result.related || []).map((item) => item.path).slice(0, 6),
-      confidence: result.confidence
+      confidence: result.confidence,
+      // A workflow-only task routes no domain rule; context:usage and
+      // agent:done count these separately from a real consultation.
+      generic_task: Boolean(result.task_vocabulary && result.task_vocabulary.generic)
     };
     if (featureSlug) payload.feature_slug = String(featureSlug).trim();
     appendContextBriefEvent(handle.db, {

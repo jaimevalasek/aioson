@@ -42,6 +42,12 @@ async function runContextUsageCommand({ args, options = {}, logger }) {
   if (flags.done_without_brief.length > 0) {
     logger.log(`Sessions closed without a brief (kernel mandates context:brief): ${flags.done_without_brief.map((agent) => `@${agent}`).join(', ')} — routed knowledge was reachable but never asked for.`);
   }
+  if (flags.sessions_without_brief && flags.sessions_without_brief.length > 0) {
+    logger.log(`Sessions closed without a brief since the previous close: ${flags.sessions_without_brief.map((entry) => `@${entry.agent} ${entry.without_brief}/${entry.dones}`).join(', ')} — rules and docs for those sessions were never routed.`);
+  }
+  if (flags.generic_brief_sessions && flags.generic_brief_sessions.length > 0) {
+    logger.log(`Sessions whose only brief named workflow words (no domain rule could match): ${flags.generic_brief_sessions.map((entry) => `@${entry.agent} ${entry.generic_only}/${entry.dones}`).join(', ')} — brief with the surfaces being built, in domain words, plus --paths.`);
+  }
   if (flags.loaded_never_selected.length > 0) {
     logger.log('Loaded but never offered by a brief (routing gap — the agent needed it and the selector did not surface it):');
     for (const relPath of flags.loaded_never_selected.slice(0, 10)) {

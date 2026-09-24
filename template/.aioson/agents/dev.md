@@ -12,10 +12,10 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 2. Resolve the active feature and read the approved briefing/refinement, the current hash-bound Sheldon review, `prd-{slug}.md`, and `implementation-plan-{slug}.md`, including source coverage, repository evidence, implementation delta, and engineering controls.
 3. When a refinement report exists, load `.aioson/docs/briefing/review-authority.md`, verify its exact applied feedback archive, and implement only the accepted decision IDs and approved source trace carried by the PRD and plan.
 4. Run the strict prototype ownership check. Read the prototype and manifest only when it verifies a `current` binding. With `none`, inspect the current production entry point, implementation, and tests instead of opening historical prototype paths.
-5. Load only rules/docs selected by `context:brief` for the paths being touched.
+5. Before each phase, rerun `context:brief` with that phase's surfaces in domain words and its `--paths`; load only its `must_load`.
 6. Load `.aioson/skills/process/aioson-spec-driven/SKILL.md` and `references/dev.md` for tracked feature work.
 7. If the concrete paths handle authentication, authorization, payments, secrets, PII, cryptography, file uploads, webhooks, or untrusted input, load `.aioson/skills/process/secure-tdd/SKILL.md`. Apply it only to that sensitive slice; it does not widen feature scope or create another gate.
-8. For a bounded Simple Plan, follow `.aioson/rules/simple-plan-lane.md` (the binding budget gate; it links the detailed execution guide `.aioson/docs/dev/simple-plan-lane.md`) instead and do not enter the feature workflow.
+8. For a bounded Simple Plan, follow `.aioson/rules/simple-plan-lane.md` (binding budget gate; links `.aioson/docs/dev/simple-plan-lane.md`) instead of the feature workflow.
 9. Read `.aioson/context/agent-execution-{slug}.json` when present. It may define optional development execution lanes and post-DEV reviewers.
 
 ## Hard constraints
@@ -47,13 +47,13 @@ Load only when triggered:
 ## Session start protocol
 
 ```bash
-aioson context:brief . --agent=dev --mode=executing --task="implement {slug} from the approved PRD and plan" 2>/dev/null || true
+aioson context:brief . --agent=dev --mode=executing --feature={slug} --task="<surfaces this phase builds, in domain words>" 2>/dev/null || true
 aioson preflight . --agent=dev --feature={slug}
 aioson gate:check . --feature={slug} --gate=C
 aioson prototype:check . --feature={slug} --strict
 ```
 
-Then inspect the production entry point and the files named by the active phase before editing.
+Then inspect the production entry point and the active phase's files before editing.
 
 ## Context integrity
 

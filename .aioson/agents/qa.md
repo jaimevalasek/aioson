@@ -35,7 +35,7 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete defect 
 ## Deterministic preflight
 
 ```bash
-aioson context:brief . --agent=qa --mode=executing --task="verify {slug} against the approved PRD and real application" 2>/dev/null || true
+aioson context:brief . --agent=qa --mode=executing --feature={slug} --task="verify <delivered surfaces, domain words>" 2>/dev/null || true
 aioson preflight . --agent=qa --feature={slug}
 aioson prototype:check . --feature={slug} --strict
 aioson ac:test-audit . --feature={slug} --strict

@@ -18,7 +18,10 @@
  *     confirmed — only when loads are instrumented at all), skills_never_selected
  *     (active registry skills the window never routed: trigger or retirement
  *     candidates), done_without_brief (an agent whose kernel mandates
- *     `context:brief` closed sessions without one).
+ *     `context:brief` closed sessions without one), sessions_without_brief
+ *     (the same, counted per session for agents that brief only sometimes),
+ *     generic_brief_sessions (sessions whose only briefs named workflow words,
+ *     so no domain rule could route).
  *
  * Advisory by contract: no runtime store means "nothing recorded", never an
  * error; the reader opens the database and closes it before returning.
@@ -55,8 +58,10 @@ function isoDaysAgo(days) {
 }
 
 // Brief rows carry the bare agent id, run rows the `@`-prefixed one; one key.
+// A shell that keeps quotes literal (cmd.exe: `--agent='dev'`) stored `'dev'`
+// rows — a separate agent that escaped every brief check.
 function normalizeAgent(value) {
-  const bare = String(value || '').trim().replace(/^@/, '');
+  const bare = String(value || '').trim().replace(/^['"`]+|['"`]+$/g, '').trim().replace(/^@/, '').replace(/^['"`]+|['"`]+$/g, '');
   return bare || null;
 }
 
@@ -125,7 +130,11 @@ async function collectContextUsage(targetDir, options = {}) {
   const artifacts = new Map();
   const agents = new Map();
   const seedArtifact = (relPath) => () => ({ path: relPath, selected: 0, loaded: 0, sections: new Set(), last_selected_at: null, last_loaded_at: null });
-  const seedAgent = (name) => () => ({ agent: name, briefs: 0, loads: 0, dones: 0, last_brief_at: null, last_done_at: null });
+  const seedAgent = (name) => () => ({ agent: name, briefs: 0, generic_briefs: 0, loads: 0, dones: 0, dones_without_brief: 0, dones_with_generic_brief_only: 0, last_brief_at: null, last_done_at: null });
+  // Per-session trajectory: what each agent asked for since its previous
+  // close. A per-agent total hid 150 of 185 dev closes behind 35 briefs.
+  const sinceLastDone = new Map();
+  const SAME_CLOSE_WINDOW_MS = 5 * 60 * 1000;
 
   let briefs = 0;
   let loads = 0;
@@ -147,7 +156,12 @@ async function collectContextUsage(targetDir, options = {}) {
       if (agent) {
         const entry = touch(agents, agent, seedAgent(agent));
         entry.briefs += 1;
+        if (payload.generic_task === true) entry.generic_briefs += 1;
         entry.last_brief_at = row.created_at;
+        const trail = sinceLastDone.get(agent) || { briefed: false, domain: false, lastDoneAt: null };
+        trail.briefed = true;
+        if (payload.generic_task !== true) trail.domain = true;
+        sinceLastDone.set(agent, trail);
       }
       const selections = [
         ['must_load', payload.must_load],
@@ -190,6 +204,17 @@ async function collectContextUsage(targetDir, options = {}) {
       const entry = touch(agents, agent, seedAgent(agent));
       entry.dones += 1;
       entry.last_done_at = row.created_at;
+      const trail = sinceLastDone.get(agent) || { briefed: false, domain: false, lastDoneAt: null };
+      const doneAt = Date.parse(row.created_at);
+      // A tracked close writes agent_done and the engine stage_completed under
+      // different run keys: a second close moments later is the same session.
+      const repeatClose = !trail.briefed && trail.lastDoneAt !== null
+        && Number.isFinite(doneAt) && doneAt - trail.lastDoneAt < SAME_CLOSE_WINDOW_MS;
+      if (!repeatClose) {
+        if (!trail.briefed) entry.dones_without_brief += 1;
+        else if (!trail.domain) entry.dones_with_generic_brief_only += 1;
+      }
+      sinceLastDone.set(agent, { briefed: false, domain: false, lastDoneAt: Number.isFinite(doneAt) ? doneAt : trail.lastDoneAt });
     }
   }
 
@@ -212,6 +237,25 @@ async function collectContextUsage(targetDir, options = {}) {
   for (const entry of agentRows) {
     if (entry.dones === 0 || entry.briefs > 0) continue;
     if (await kernelRequiresBrief(targetDir, entry.agent)) doneWithoutBrief.push(entry.agent);
+  }
+
+  // Partial skips: agents that brief SOME sessions. done_without_brief only
+  // names agents with zero briefs, so a kernel skipped on most closes stayed
+  // invisible. Generic-only: every brief of the session named workflow words
+  // only, so no domain rule could route.
+  const sessionsWithoutBrief = [];
+  const genericBriefSessions = [];
+  // A feature scope drops other features' briefs but keeps every close, so
+  // the per-session trajectory is only honest on the unscoped window.
+  for (const entry of feature ? [] : agentRows) {
+    if (entry.dones === 0) continue;
+    if (!(await kernelRequiresBrief(targetDir, entry.agent))) continue;
+    if (entry.briefs > 0 && entry.dones_without_brief > 0) {
+      sessionsWithoutBrief.push({ agent: entry.agent, dones: entry.dones, without_brief: entry.dones_without_brief });
+    }
+    if (entry.dones_with_generic_brief_only > 0) {
+      genericBriefSessions.push({ agent: entry.agent, dones: entry.dones, generic_only: entry.dones_with_generic_brief_only });
+    }
   }
 
   const caveats = [];
@@ -245,7 +289,9 @@ async function collectContextUsage(targetDir, options = {}) {
       loaded_never_selected: loadedNeverSelected,
       selected_never_loaded: selectedNeverLoaded,
       skills_never_selected: skillsNeverSelected,
-      done_without_brief: doneWithoutBrief
+      done_without_brief: doneWithoutBrief,
+      sessions_without_brief: sessionsWithoutBrief,
+      generic_brief_sessions: genericBriefSessions
     },
     caveats
   };

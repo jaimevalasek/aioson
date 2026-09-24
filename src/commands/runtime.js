@@ -53,8 +53,14 @@ function requireOption(options, key, t) {
   return String(value).trim();
 }
 
+// cmd.exe keeps quotes literal: `--agent='dev'` arrived as `'dev'` and was
+// recorded as a separate agent that no kernel-bound check ever matched.
+function stripWrappingQuotes(value) {
+  return String(value || '').trim().replace(/^['"`]+|['"`]+$/g, '').trim();
+}
+
 function normalizeAgentHandle(value) {
-  const text = String(value || '').trim();
+  const text = stripWrappingQuotes(stripWrappingQuotes(value).replace(/^@/, ''));
   if (!text) return '';
   return text.startsWith('@') ? text : `@${text}`;
 }
@@ -1232,17 +1238,27 @@ async function resolveBriefConsultation({ db, targetDir, agent, session }) {
     ? String(session.startedAt)
     : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   try {
-    const row = db.prepare(
-      "SELECT COUNT(*) AS n FROM execution_events WHERE event_type = 'brief_built' AND agent_name IN (?, ?) AND created_at >= ?"
-    ).get(bare, `@${bare}`, since);
-    const briefs = Number(row && row.n) || 0;
-    return { required: true, state: briefs > 0 ? 'consulted' : 'not_consulted', briefs, since };
+    const rows = db.prepare(
+      "SELECT payload_json FROM execution_events WHERE event_type = 'brief_built' AND agent_name IN (?, ?) AND created_at >= ?"
+    ).all(bare, `@${bare}`, since);
+    const briefs = rows.length;
+    // Every brief of the session named workflow words only: the step ran but
+    // no trigger/task_type/entity-routed rule could match.
+    const genericOnly = briefs > 0 && rows.every((row) => {
+      try { return JSON.parse(row.payload_json || '{}').generic_task === true; } catch { return false; }
+    });
+    const state = briefs === 0 ? 'not_consulted' : (genericOnly ? 'consulted_generic' : 'consulted');
+    return { required: true, state, briefs, since };
   } catch {
     return { required: true, state: 'unknown', briefs: 0, since };
   }
 }
 
 function logBriefConsultationLine(logger, bc) {
+  if (bc && bc.state === 'consulted_generic') {
+    logger.log('agent:done — context:brief consulted with a workflow-only task (advisory): no domain rule routed by triggers, task types or entities could match this session. Brief with the surfaces being built, in domain words, plus --paths=<files touched>.');
+    return;
+  }
   if (!bc || bc.state !== 'not_consulted') return;
   logger.log(`agent:done — context:brief not consulted (advisory): no brief_built event for this agent since ${bc.since}. Routed rules/docs/skills were reachable but never asked for — run \`aioson context:brief . --agent=<agent> --mode=<mode> --task="<task>" --paths=<files>\` before the work; \`aioson context:usage .\` shows the pattern over time.`);
 }
@@ -1262,11 +1278,11 @@ async function resolveDeliveryParity(targetDir) {
 
 async function runAgentDone({ args, options = {}, logger, t }) {
   const targetDir = resolveTargetDir(args);
-  const agentName = String(options.agent || '').trim();
-  if (!agentName) {
+  const agentName = stripWrappingQuotes(options.agent);
+  if (!agentName || agentName === '@') {
     throw new Error('--agent is required');
   }
-  const normalizedAgent = agentName.startsWith('@') ? agentName : `@${agentName}`;
+  const normalizedAgent = normalizeAgentHandle(agentName);
   const summary = String(options.summary || options.message || `${normalizedAgent} session completed`).trim();
   const title = options.title ? String(options.title).trim() : null;
   const status = options.status || 'completed';
