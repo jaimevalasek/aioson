@@ -20,7 +20,8 @@
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'into', 'of', 'on',
   'or', 'the', 'to', 'with', 'its', 'it', 'this', 'that', 'all', 'any', 'per',
-  'against', 'via', 'using', 'according',
+  'against', 'via', 'using', 'according', 'over', 'between', 'within', 'without',
+  'como', 'sem', 'entre', 'sobre',
   'o', 'os', 'as', 'um', 'uma', 'e', 'ou', 'de', 'da', 'das', 'do', 'dos',
   'em', 'na', 'nas', 'no', 'nos', 'com', 'para', 'por', 'pelo', 'pela', 'que',
   'contra', 'conforme', 'segundo'

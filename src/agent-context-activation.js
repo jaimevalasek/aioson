@@ -11,7 +11,11 @@ function compactReason(reason, maxLength = 180) {
 function formatItems(items, limit = Infinity) {
   return (items || []).slice(0, limit).map((item) => {
     const reason = compactReason(item.reason);
-    return reason ? `- ${item.path} — ${reason}` : `- ${item.path}`;
+    const line = reason ? `- ${item.path} — ${reason}` : `- ${item.path}`;
+    // Large optional files carry the line ranges that match the task.
+    if (item.read === 'sections') return `${line} [read only lines ${item.focus.map((entry) => entry.lines).join(', ')} of ${item.lines}]`;
+    if (item.read === 'outline') return `${line} [large: ${item.chars} chars — read by heading, not whole]`;
+    return line;
   });
 }
 

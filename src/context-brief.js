@@ -5,6 +5,7 @@ const { selectContext } = require('./context-selector');
 const { parseFrontmatter, readFileSafe } = require('./preflight-engine');
 const { withIndex } = require('./context-search');
 const { analyzeTaskVocabulary } = require('./lib/task-vocabulary');
+const { focusFile } = require('./lib/section-focus');
 
 const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
 const IMPLEMENTATION_AGENTS = new Set(['dev', 'deyvin']);
@@ -576,6 +577,42 @@ function buildGaps({ selection, agent, mode, task, paths, mustLoad, taskVocabula
   return gaps;
 }
 
+// should_load is optional reading, and it is where the chars were: whole
+// 30-50k-char state files and PRDs offered as bare paths. Every item now
+// carries its size; a large one names the sections that match the task (line
+// ranges to read) or, with no match, a heading outline to choose from.
+// must_load stays whole — rules are binding and small.
+function annotateLoadCost({ mustLoad, shouldLoad, documents, focusTerms }) {
+  const sizeOf = (item) => (documents.get(item.path) || '').length;
+  const mustChars = mustLoad.reduce((sum, item) => sum + sizeOf(item), 0);
+  let fullChars = 0;
+  let focusedChars = 0;
+  const annotated = shouldLoad.map((item) => {
+    const content = documents.get(item.path);
+    if (content === undefined) return item;
+    const focus = focusFile(content, focusTerms);
+    fullChars += focus.chars;
+    if (!focus.large) {
+      focusedChars += focus.chars;
+      return { ...item, chars: focus.chars };
+    }
+    if (focus.focus.length > 0) {
+      focusedChars += focus.focus_chars;
+      return { ...item, chars: focus.chars, lines: focus.lines, read: 'sections', focus: focus.focus };
+    }
+    focusedChars += focus.outline.join(' | ').length;
+    return { ...item, chars: focus.chars, lines: focus.lines, read: 'outline', outline: focus.outline };
+  });
+  return {
+    shouldLoad: annotated,
+    loadBudget: {
+      must_load_chars: mustChars,
+      should_load_chars: fullChars,
+      should_load_focused_chars: focusedChars
+    }
+  };
+}
+
 async function loadSelectedDocuments(targetDir, selected) {
   const documents = new Map();
   for (const item of selected) {
@@ -733,7 +770,12 @@ async function buildContextBrief(targetDir, options = {}) {
   const documents = await loadSelectedDocuments(targetDir, selection.selected || []);
   const stack = inferStack(selection, documents);
   const concerns = inferConcerns(selection, task, profile);
-  const { must_load: mustLoad, should_load: shouldLoad } = classifyLoads(selection, profile);
+  const { must_load: mustLoad, should_load: rawShouldLoad } = classifyLoads(selection, profile);
+  const focusTerms = [
+    ...taskVocabulary.content_terms,
+    ...(taskVocabulary.augmented_with ? analyzeTaskVocabulary(taskVocabulary.augmented_with).content_terms : [])
+  ];
+  const { shouldLoad, loadBudget } = annotateLoadCost({ mustLoad, shouldLoad: rawShouldLoad, documents, focusTerms });
   const mustLoadPaths = new Set(mustLoad.map((item) => item.path));
   const constraintSources = (selection.selected || []).filter((item) => {
     const hard = isHardConstraintDoc(item, documents.get(item.path) || '');
@@ -787,6 +829,7 @@ async function buildContextBrief(targetDir, options = {}) {
     selected_count: selection.selected.length,
     semantic: selection.semantic,
     task_vocabulary: taskVocabulary,
+    load_budget: loadBudget,
     confidence: confidenceFrom({ selection, mustLoad, gaps }),
     gaps,
     fallback_used: fallbackUsed

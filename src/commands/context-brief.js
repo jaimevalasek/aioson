@@ -37,6 +37,17 @@ async function recordBriefEvent(targetDir, result, featureSlug) {
   }
 }
 
+// A large optional file names the lines worth reading, never the whole file.
+function formatReadHint(item) {
+  if (item.read === 'sections') {
+    return [`large (${item.chars} chars) — read only: ${item.focus.map((entry) => `lines ${entry.lines} "${entry.heading}"`).join('; ')}`];
+  }
+  if (item.read === 'outline') {
+    return [`large (${item.chars} chars), no section matches the task — pick from: ${item.outline.join(' | ')}`];
+  }
+  return [];
+}
+
 async function runContextBrief({ args, options = {}, logger }) {
   const targetDir = resolveTargetDir(args);
   const result = await buildContextBrief(targetDir, {
@@ -64,8 +75,15 @@ async function runContextBrief({ args, options = {}, logger }) {
     for (const item of result.must_load) logger.log(`- ${item.path} [${item.surface}] ${item.reason}`);
   }
   if (result.should_load.length > 0) {
-    logger.log('Should load when needed:');
-    for (const item of result.should_load) logger.log(`- ${item.path} [${item.surface}] ${item.reason}`);
+    const budget = result.load_budget;
+    const cost = budget && budget.should_load_chars > 0
+      ? ` (~${budget.should_load_chars} chars whole; ~${budget.should_load_focused_chars} reading only the listed sections)`
+      : '';
+    logger.log(`Should load when needed${cost}:`);
+    for (const item of result.should_load) {
+      logger.log(`- ${item.path} [${item.surface}] ${item.reason}`);
+      for (const line of formatReadHint(item)) logger.log(`    ${line}`);
+    }
   }
   if (result.skills && result.skills.length > 0) {
     logger.log('Matching skills (load per your kernel skill contract):');
