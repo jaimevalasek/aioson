@@ -1,6 +1,6 @@
 ---
-description: "Simple Plan lane for @dev and @deyvin: bounded technical implementation without PRD, with disk-first scope, implementation intelligence, done criteria, verification, and dev-state handoff."
-agents: [dev, deyvin, qa, neo]
+description: "Simple Plan lane for @dev: bounded technical implementation without PRD, with disk-first scope, implementation intelligence, done criteria, verification, and dev-state handoff."
+agents: [dev, qa, neo]
 task_types: [simple-plan, bounded-work]
 triggers: [simple plan, bounded technical work, small fix, refactor, polish, implementation intelligence]
 ---
@@ -48,7 +48,7 @@ If a richer option would change product behavior, UX direction, permissions, dat
 
 Complete this checkpoint before writing the final simple plan and before editing code:
 
-1. Run `aioson context:select . --agent=<dev|deyvin> --mode=planning --task="<task>" --paths="<known paths>"` when available.
+1. Run `aioson context:select . --agent=dev --mode=planning --task="<task>" --paths="<known paths>"` when available.
 2. Read only selected rules/docs and the nearest existing code pattern for the touched area.
 3. Identify framework leverage first: built-in framework APIs, conventions, generators, validation, data access, components, or testing helpers that should be reused before custom code.
 4. Identify data and boundary placement: where queries, query builders, repositories, services, components, handlers, validation, and tests belong in this project.
@@ -73,7 +73,7 @@ Use this structure:
 ---
 slug: {slug}
 status: in_progress
-owner: dev | deyvin
+owner: dev
 created_at: {YYYY-MM-DD}
 updated_at: {YYYY-MM-DD}
 classification: MICRO
@@ -151,6 +151,10 @@ A valid simple plan is not just a TODO list. It must show:
 - `abandoned`: intentionally dropped.
 
 ## Handoff Rules
+
+A change below the lane (at most 2 behavior-bearing files, no decision, a known verification command) needs no plan file: implement it and report the verification that ran.
+
+To resume, read `.aioson/context/dev-state.md`; when it carries `--context=simple-plan`, reopen that plan, check its status and `Session state`, and continue from the recorded next slice.
 
 If a simple plan remains unfinished at session end, keep it as `in_progress` or `paused` and update `.aioson/context/dev-state.md` with `--context=simple-plan`.
 

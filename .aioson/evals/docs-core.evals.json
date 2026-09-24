@@ -285,6 +285,15 @@
       ]
     },
     {
+      "name": "dev scout ambiguous diagnosis",
+      "agent": "dev",
+      "mode": "executing",
+      "task": "The diagnosis is ambiguous and needs a read-only scout to trace the runtime flow across more than five files before I fix it.",
+      "expect": [
+        { "path": ".aioson/docs/dev/scout.md", "in": "selected" }
+      ]
+    },
+    {
       "name": "qa browser walkthrough checkout",
       "agent": "qa",
       "mode": "executing",

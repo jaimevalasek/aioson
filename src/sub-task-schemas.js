@@ -21,7 +21,9 @@
 // V1 parent_agent whitelist is `['deyvin']` only. Engine accepts the param so
 // future multi-agent expansion is a config flip, not a refactor.
 
-const PARENT_AGENT_V1 = ['deyvin'];
+// `deyvin` stays accepted so sub-task records written before @dev took over
+// the scout (the retired pair agent) still validate.
+const PARENT_AGENT_V1 = ['dev', 'deyvin'];
 const STATUS_ENUM = ['success', 'partial', 'no_findings', 'error'];
 const CONFIDENCE_ENUM = ['low', 'medium', 'high'];
 const RELEVANCE_ENUM = ['low', 'medium', 'high'];

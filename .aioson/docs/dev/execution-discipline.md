@@ -145,6 +145,8 @@ If a failing issue survives one attempt:
 
 After 3 failed attempts on the same issue, question the architecture instead of pushing patches blindly.
 
+When the diagnosis itself is ambiguous and needs a survey of more than 5 files or a runtime-flow trace, dispatch a read-only scout: `.aioson/docs/dev/scout.md`.
+
 ## Git worktrees
 
 For SMALL or MEDIUM work, consider `.aioson/skills/static/git-worktrees.md` if the user wants a cleaner parallel workflow.

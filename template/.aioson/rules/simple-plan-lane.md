@@ -3,7 +3,7 @@ name: simple-plan-lane
 description: Lightweight implementation lane for bounded technical work that does not justify a PRD or full workflow, with an implementation intelligence checkpoint before coding.
 priority: 9
 version: 1.0.0
-agents: [dev, deyvin, qa, neo]
+agents: [dev, qa, neo]
 modes: [planning, executing]
 task_types: [simple-plan, bounded-work, refactor]
 load_tier: trigger
@@ -13,7 +13,7 @@ paths: [.aioson/context/simple-plans/**]
 
 # Simple Plan Lane
 
-Use a simple plan when the active request is technical, bounded, and directly verifiable, but too large to keep only in chat.
+Use a simple plan when the active request is technical, bounded, and directly verifiable, but too large to keep only in chat. Below this lane — at most 2 behavior-bearing files, no decision to make, and a known verification command — `@dev` implements directly and reports the verification it ran; no plan file is written.
 
 Canonical artifact:
 
@@ -54,9 +54,8 @@ Before implementation, list expected paths and label them `behavior` or `support
 
 Escalate instead:
 
-- `@product` for product intent, users, UX flows, feature scope, or value decisions.
-- `@analyst` for domain rules, entities, edge cases, or brownfield behavior mapping.
-- `@architect` for cross-module architecture or structural decisions.
+- `@product` for product intent, users, UX flows, feature scope, value decisions, or unresolved domain rules.
+- A tracked feature (`@product` → `@planner`) for cross-module architecture or structural decisions.
 - `@pentester` / `@qa` for sensitive surfaces or formal verification.
 
 If an option would widen behavior, UX, permissions, data sensitivity, architecture, integration scope, or verification ownership, do not implement it as part of the simple plan. Park it under `Useful options considered -> Escalate` and hand off.
@@ -68,7 +67,7 @@ Lifecycle:
 - `draft` -> `in_progress` -> `done`, `paused`, or `abandoned`
 - `paused` means intentionally parked and visible for later review; it must not block new simple plans or features.
 
-When `@dev` or `@deyvin` uses this lane:
+When `@dev` uses this lane:
 
 1. Write the simple plan to disk before implementation.
 2. Include `Context selected`, `Implementation intelligence`, and `Useful options considered` sections.
@@ -76,5 +75,7 @@ When `@dev` or `@deyvin` uses this lane:
 4. Implement in small slices, only including options classified as `include now`.
 5. Run the listed verification.
 6. Update the simple plan status and session state before closing.
+
+Resume: when `dev-state.md` carries `--context=simple-plan`, reopen that plan's recorded status and next slice and continue from there.
 
 Detailed guide: `.aioson/docs/dev/simple-plan-lane.md`.

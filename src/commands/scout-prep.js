@@ -1,6 +1,6 @@
 'use strict';
 
-// aioson scout:prep [.] --question="..." --scope-paths="..." --parent-agent=deyvin \
+// aioson scout:prep [.] --question="..." --scope-paths="..." --parent-agent=dev \
 //   --parent-session-id=<id> --parent-session-excerpt="..." [--feature-slug=<slug>] \
 //   [--max-files-in-scope=<n>] [--scope-exclude="..."]
 //
