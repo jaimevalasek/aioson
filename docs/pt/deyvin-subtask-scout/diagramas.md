@@ -5,7 +5,7 @@
 ## Fluxo completo de despacho
 
 ```
-Usuário pergunta ao @deyvin algo que dispara rubrica linha 111
+Usuário pergunta ao @dev algo que dispara o scout
 (survey de >5 arquivos ou rastreamento de fluxo de runtime)
          │
          ▼
@@ -43,15 +43,15 @@ Usuário pergunta ao @deyvin algo que dispara rubrica linha 111
            ▼                               ▼
 ┌──────────────────────────┐   ┌───────────────────────────────┐
 │ aioson scout:commit      │   │ retry_remaining > 0?          │
-│ ────────────────────     │   │  sim → @deyvin re-prompta     │
+│ ────────────────────     │   │  sim → @dev re-prompta        │
 │ persiste scout JSON      │   │  não → retry_exhausted        │
 │ decrementa cap           │   │         status: "error"       │
-│ emite telemetria         │   │         @deyvin informa user  │
+│ emite telemetria         │   │         @dev informa user     │
 └──────────┬───────────────┘   └───────────────────────────────┘
            │
            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ @deyvin lê findings, confidence, recommendation              │
+│ @dev lê findings, confidence, recommendation                 │
 │ dobra na resposta ao usuário                                 │
 │                                                              │
 │ contexto pai cresceu: ~500 tokens (relatório)               │

@@ -18,10 +18,10 @@ These artifacts are AIOSON's exclusive responsibility:
 | Artifact | Owner | Reason |
 |----------|-------|--------|
 | `prd-{slug}.md` | @product | Product decisions require human + agent deliberation |
-| `requirements-{slug}.md` | @analyst | Business rules require structured discovery |
-| `spec-{slug}.md` | @analyst / @dev | Feature memory and phase gates are AIOSON's execution state |
-| `architecture.md` | @architect | Architecture decisions require full project context |
-| `design-doc*.md` | @architect / @discovery-design-doc | Scope decisions are AIOSON artifacts |
+| `requirements-{slug}.md` | @product | Business rules require structured discovery |
+| `spec-{slug}.md` | @product / @dev | Feature memory and phase gates are AIOSON's execution state |
+| `architecture.md` | @planner | Architecture decisions require full project context |
+| `design-doc*.md` | @planner | Scope decisions are AIOSON artifacts |
 | `implementation-plan*.md` | @dev / @orchestrator | Execution sequencing belongs to AIOSON |
 | `.aioson/constitution.md` | User | Never externally modified |
 | `.aioson/rules/` | User / @dev | Project conventions are internal |
@@ -51,7 +51,7 @@ When SDLC Genius comments on a PR:
 1. **Check if the comment is already covered by AIOSON artifacts** — if `requirements-{slug}.md` or `spec-{slug}.md` already addresses the point, SDLC Genius is confirming what AIOSON decided
 2. **If the comment contradicts a spec decision** — do not change the code; flag the contradiction to the user for a spec update
 3. **If the comment is about language-level quality** (naming, type safety, unused imports) — act directly without spec update
-4. **If the comment suggests a new requirement** — this is a spec change; route to @product or @analyst, not directly to @dev
+4. **If the comment suggests a new requirement** — this is a spec change; route to @product, not directly to @dev
 
 ---
 

@@ -3,6 +3,8 @@
 > **Esta doc foi substituída.**
 > Os cenários foram reorganizados em receitas individuais com diálogos reais em [`../3-receitas/README.md`](../3-receitas/README.md).
 > Conteúdo abaixo preservado para referência histórica.
+>
+> **Agentes aposentados:** `@analyst`, `@architect`, `@ux-ui`, `@pm` e `@discovery-design-doc` não existem mais. Os exemplos abaixo já usam quem absorveu esse trabalho: regras de domínio → `@product`; decisões de arquitetura, descoberta do repositório e sequenciamento → `@planner`; direção visual → `@refiner`/protótipo e decisões de interação → `@product`; auditoria de acessibilidade → `@qa`. Nomes de artefatos (`discovery.md`, `architecture.md`, `ui-spec.md`) refletem a versão arquivada.
 
 ---
 
@@ -78,9 +80,9 @@ Preciso de uma landing page com:
 
 ### Por que MICRO?
 
-Não precisa de @analyst (domínio simples), não precisa de @architect (estrutura trivial), não precisa de @qa (sem lógica crítica a testar). O @dev tem contexto suficiente para entregar direto.
+Não precisa de rodada de domínio no @product (domínio simples), não precisa de @planner (estrutura trivial), não precisa de @qa (sem lógica crítica a testar). O @dev tem contexto suficiente para entregar direto (Simple Plan).
 
-> Se até num projeto MICRO o pedido vier muito vago, você ainda pode encaixar `@discovery-design-doc` antes do `@dev`. Isso é exceção útil, não fluxo padrão.
+> Se até num projeto MICRO o pedido vier muito vago, você ainda pode encaixar `@product` antes do `@dev`. Isso é exceção útil, não fluxo padrão.
 
 ---
 
@@ -124,7 +126,7 @@ Contexto carregado:
 - Framework: Laravel 11 (instalado ✓)
 - Classificação: SMALL
 
-Plano: @setup → @product → @analyst → @architect → @dev → @qa
+Plano: @setup → @product → @sheldon → @planner → @dev → @qa
 
 Próximo passo: /product
 Objetivo: gerar o PRD base antes de mapear pacientes, médicos, agendamentos e regras de negócio.
@@ -158,11 +160,9 @@ Se sim, ele sintetiza o conteúdo e gera o PRD formal. Você pode deletar o arqu
 - escopo inicial do MVP
 - perguntas em aberto
 
-### Passo 5: @analyst — Descoberta do domínio
+### Passo 5: @product — Regras de domínio
 
-```
-/aioson:agent:analyst
-```
+Na mesma sessão do `@product` (ou numa nova ativação), o agente aprofunda o domínio.
 
 **O agente faz suas 6 perguntas:**
 
@@ -199,7 +199,7 @@ Se sim, ele sintetiza o conteúdo e gera o PRD formal. Você pode deletar o arqu
 ```
 *Você responde:* Dados de saúde dos pacientes (LGPD)
 
-**O @analyst entrega** `.aioson/context/discovery.md`:
+**O @product registra as regras de domínio** (na versão arquivada, em `.aioson/context/discovery.md`):
 ```markdown
 ## Entidades principais
 
@@ -225,29 +225,29 @@ Se sim, ele sintetiza o conteúdo e gera o PRD formal. Você pode deletar o arqu
 - Conflito de horários: critical path, requer lock otimista
 ```
 
-### Onde `@discovery-design-doc` entraria neste cenário
+### Quando o recorte ainda está vago
 
-Se antes do `@analyst` você ainda não souber bem:
+Se antes das regras de domínio você ainda não souber bem:
 - o recorte do MVP
 - o que fica fora de escopo
 - quais módulos atuais serão afetados
 - ou se a API já está pronta para implementação
 
-vale inserir:
+vale começar pelo briefing e deixar o `@planner` mapear o código existente:
 
 ```text
-@setup -> @discovery-design-doc -> @analyst -> @architect -> @dev
+@setup -> @briefing -> @refiner -> @product -> @sheldon -> @planner -> @dev
 ```
 
 Isso ajuda especialmente quando o projeto já existe e a clínica quer adicionar uma feature grande sem sair codando cedo demais.
 
-### Passo 5: @architect — Estrutura do projeto
+### Passo 6: @planner — Estrutura do projeto
 
 ```
-/aioson:agent:architect
+/aioson:agent:planner
 ```
 
-**O @architect lê o discovery e entrega** `.aioson/context/architecture.md`:
+**O @planner lê as regras de domínio e registra as decisões de arquitetura** (na versão arquivada, em `.aioson/context/architecture.md`):
 
 ```
 Classificação: SMALL → estrutura Laravel padrão, sem sub-pastas excessivas
@@ -284,7 +284,7 @@ tests/Feature/AppointmentTest.php
 - N+1: Eager loading em todos os índices (with('doctor.user', 'patient.user'))
 - Timezone: UTC no banco, conversão na camada de apresentação
 
-### Passo 6: @dev — Implementação com TDD Gate
+### Passo 7: @dev — Implementação com TDD Gate
 
 ```
 /aioson:agent:dev
@@ -354,7 +354,7 @@ class CreateAppointmentAction
 
 Roda o teste → **passa** (GREEN). Commit. Próximo passo.
 
-### Passo 7: @qa — Testes
+### Passo 8: @qa — Testes
 
 ```
 /aioson:agent:qa
@@ -403,14 +403,14 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 **O agente confirma o plano MEDIUM completo:**
 ```
 Plano de execução:
-1. /product   → PRD base vivo
-2. /analyst   → discovery e modelagem de domínio
-3. /architect → estrutura de pastas Next.js MEDIUM + decisões técnicas
-4. /ux-ui     → UI/UX, sistema de design e componentes
-5. /pm        → priorização e critérios de aceite no PRD vivo
-6. /orchestrator → lanes de desenvolvimento paralelo
-7. /dev       → implementação por lane
-8. /qa        → revisão e testes
+1. /product   → PRD base vivo + regras de domínio e decisões de interação
+2. /sheldon   → revisão e enriquecimento do PRD
+3. /planner   → estrutura Next.js MEDIUM, decisões técnicas, fases e critérios de aceite
+4. /orchestrator → lanes de desenvolvimento paralelo
+5. /dev       → implementação por lane
+6. /qa        → revisão, testes e acessibilidade
+
+(Direção visual: protótipo aprovado via /briefing → /refiner antes do /product.)
 
 Próximo: /product
 ```
@@ -423,15 +423,15 @@ Próximo: /product
 
 **O @product gera o PRD base** com visão, problema, usuários, MVP inicial e direção visual.
 
-### Passo 4: @analyst
+### Passo 4: @product — Regras de domínio
 
-O analista descobre:
+O @product aprofunda o domínio:
 - **Entidades:** Organization, Project, Task, User, Invoice, Subscription
 - **Multi-tenancy:** Cada organização é isolada (Row-Level Security)
 - **Integrações:** Stripe (billing), GitHub (integração de commits), Slack (notificações), S3 (uploads)
 - **Regras:** Plano free = máx 3 projetos, Plano pro = ilimitado; cobrança proporcional por membro
 
-### Passo 5: @architect
+### Passo 5: @planner — Decisões de arquitetura
 
 Para MEDIUM com Next.js App Router:
 
@@ -460,10 +460,12 @@ src/
   types/
 ```
 
-### Passo 6: UI/UX (`@ux-ui`)
+### Direção visual (`@refiner` + protótipo)
+
+A direção visual é definida antes do PRD, no protótipo aprovado via `@briefing` → `@refiner`; as decisões de interação ficam com o `@product`.
 
 ```
-/aioson:agent:ux-ui
+/aioson:agent:refiner
 
 Precisamos de:
 - Dashboard principal com lista de projetos
@@ -472,19 +474,15 @@ Precisamos de:
 - Página de configurações de billing
 ```
 
-**O agente UI/UX (`@ux-ui`) entrega** `.aioson/context/ui-spec.md`:
+**O protótipo aprovado define** (na versão arquivada, em `.aioson/context/ui-spec.md`):
 - Tokens: primary=#6366F1, gray scale, radius-md=8px
 - Componentes: ProjectCard, TaskCard, KanbanBoard, Sidebar, BillingModal
 - Estados: loading skeleton, empty state, error state para cada componente
-- Acessibilidade: foco visível, ARIA labels em boards interativos
+- Acessibilidade: foco visível, ARIA labels em boards interativos (auditados depois pelo `@qa`)
 
-### Passo 7: @pm
+### Passo 6: @planner — Sequenciamento
 
-```
-/aioson:agent:pm
-```
-
-**O @pm enriquece** `.aioson/context/prd.md` preservando visão, usuários e identidade visual. O foco passa a ser priorização, fases e critérios de aceite compactos:
+**O @planner organiza** priorização, fases e critérios de aceite compactos, preservando visão, usuários e identidade visual do PRD:
 
 ```markdown
 ## Escopo do MVP
@@ -512,7 +510,7 @@ Precisamos de:
 | AC-04 | Conta free respeita limite de projetos |
 ```
 
-### Passo 8: @orchestrator
+### Passo 7: @orchestrator
 
 ```
 /aioson:agent:orchestrator
@@ -594,9 +592,9 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 
 > **Nota:** Se Hardhat e Next.js coexistem no mesmo diretório, o AIOSON detecta automaticamente como **monorepo** e exibe um aviso de configuração.
 
-### Passo 2: @analyst
+### Passo 2: @product — Regras de domínio
 
-O analista identifica:
+O @product identifica:
 - **Buyer:** compra NFTs via marketplace
 - **Creator:** lista NFTs com royalty configurado
 - **Marketplace:** cobra fee sobre cada venda
@@ -613,7 +611,7 @@ O analista identifica:
 - RN02: Reentrancy guard em todas as funções de pagamento
 - RN03: Withdraw pattern para pagamentos (nunca push)
 
-### Passo 3: @architect
+### Passo 3: @planner — Decisões de arquitetura
 
 **Estrutura monorepo:**
 ```
@@ -747,7 +745,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 Framework detectado: Node.js (package.json ✓)
 Projeto: Restaurante API (SMALL)
 
-Plano: @setup → @product → @analyst → @architect → @dev → @qa
+Plano: @setup → @product → @sheldon → @planner → @dev → @qa
 Próximo: /product
 ```
 
@@ -759,10 +757,10 @@ Próximo: /product
 
 **O @product gera o PRD base** com visão, usuários, escopo do MVP e fora do escopo.
 
-### Passo 4: @analyst
+### Passo 4: @product — Regras de domínio
 
 ```
-/aioson:agent:analyst
+/aioson:agent:product
 ```
 
 *Você responde às perguntas:*
@@ -775,7 +773,7 @@ Próximo: /product
   - Mesa só pode ter 1 pedido aberto por vez
 - **Integrações:** WhatsApp (aviso ao garçom quando prato fica pronto), impressora fiscal
 
-**O @analyst entrega** `.aioson/context/discovery.md`:
+**O @product registra as regras de domínio** (na versão arquivada, em `.aioson/context/discovery.md`):
 
 ```markdown
 ## Entidades principais
@@ -798,13 +796,13 @@ Próximo: /product
 - Impressora fiscal — payload no fechamento do pedido
 ```
 
-### Passo 4: @architect
+### Passo 5: @planner — Decisões de arquitetura
 
 ```
-/aioson:agent:architect
+/aioson:agent:planner
 ```
 
-**O @architect entrega** `.aioson/context/architecture.md`:
+**O @planner registra as decisões de arquitetura** (na versão arquivada, em `.aioson/context/architecture.md`):
 
 ```
 Classificação: SMALL → estrutura Fastify por domínio
@@ -841,7 +839,7 @@ test/
 - Validação: Fastify JSON Schema (não Zod — evitar overhead)
 - ORM: Prisma (type-safe, migrations automáticas)
 
-### Passo 5: @dev
+### Passo 6: @dev
 
 ```
 /aioson:agent:dev
@@ -914,7 +912,7 @@ module.exports = async function orderRoutes(fastify) {
 };
 ```
 
-### Passo 6: @qa
+### Passo 7: @qa
 
 ```
 /aioson:agent:qa
@@ -960,7 +958,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 Framework detectado: Rails (config/application.rb ✓)
 Versão: Rails 7.x
 
-Plano: @setup → @product → @analyst → @architect → @dev → @qa
+Plano: @setup → @product → @sheldon → @planner → @dev → @qa
 Próximo: /product
 ```
 
@@ -972,7 +970,7 @@ Próximo: /product
 
 **O @product gera o PRD base** com visão, usuários, escopo do MVP e fora do escopo.
 
-### Passo 4: @analyst
+### Passo 4: @product — Regras de domínio
 
 *Você responde às perguntas:*
 
@@ -984,7 +982,7 @@ Próximo: /product
   - Membros recebem e-mail ao serem atribuídos a uma tarefa
 - **Integrações:** ActionMailer (e-mails de notificação)
 
-**O @analyst entrega** `.aioson/context/discovery.md`:
+**O @product registra as regras de domínio** (na versão arquivada, em `.aioson/context/discovery.md`):
 
 ```markdown
 ## Entidades
@@ -1002,9 +1000,9 @@ Próximo: /product
 - RN03: E-mail via ActionMailer ao atribuir tarefa
 ```
 
-### Passo 4: @architect
+### Passo 5: @planner — Decisões de arquitetura
 
-**O @architect entrega:**
+**O @planner registra as decisões de arquitetura:**
 
 ```
 Classificação: SMALL → estrutura Rails padrão com concerns
@@ -1043,7 +1041,7 @@ test/models/, test/controllers/
 - Auth: `has_secure_password` + `before_action :require_login`
 - Drag-and-drop: Stimulus + Sortable.js (sem React)
 
-### Passo 5: @dev
+### Passo 6: @dev
 
 ```
 /aioson:agent:dev
@@ -1108,7 +1106,7 @@ export default class extends Controller {
 }
 ```
 
-### Passo 6: @qa
+### Passo 7: @qa
 
 ```
 /aioson:agent:qa
@@ -1232,7 +1230,7 @@ class Product(ProductBase):
 ```
 
 **Por que MICRO?**
-Domínio único (Produto), sem autenticação, sem integrações externas. O @dev tem contexto suficiente para implementar sem @analyst ou @architect.
+Domínio único (Produto), sem autenticação, sem integrações externas. O @dev tem contexto suficiente para implementar sem @planner (Simple Plan).
 
 ---
 
@@ -1242,7 +1240,7 @@ Domínio único (Produto), sem autenticação, sem integrações externas. O @de
 
 Se você forneceu informações incompletas, pode simplesmente reativar:
 ```
-/aioson:agent:analyst
+/aioson:agent:product
 
 Preciso adicionar uma informação: o sistema também vai ter integração com Mercado Pago
 ```
@@ -1251,8 +1249,8 @@ O agente vai incorporar a nova informação antes de gerar a entrega final.
 
 ### Quando pular um agente
 
-- Em projetos **MICRO**, pule @analyst, @architect e @qa — vá direto ao @dev.
-- Se o projeto não tem interface visual, pode pular @ux-ui mesmo em projetos SMALL.
+- Em projetos **MICRO**, pule @planner e @qa — vá direto ao @dev (Simple Plan).
+- Se o projeto não tem interface visual, pode pular o protótipo (@briefing → @refiner) mesmo em projetos SMALL.
 - Se o projeto MEDIUM tem módulos pouco interdependentes, pode pular @orchestrator e usar @dev sequencialmente.
 
 ### Mudança de contexto
@@ -1262,7 +1260,7 @@ Se durante o desenvolvimento o projeto crescer e mudar de SMALL para MEDIUM:
 npx @jaimevalasek/aioson setup:context . --defaults --classification=MEDIUM
 ```
 
-Então ative @pm e @orchestrator antes de continuar com @dev.
+Então ative @planner e @orchestrator antes de continuar com @dev.
 
 ### Verificar estado atual
 

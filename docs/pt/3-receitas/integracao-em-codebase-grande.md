@@ -180,7 +180,7 @@ Você > @sheldon
 
 > **A surpresa:** agentes lendo o cache detectam inconsistências (como o `fraud_score` órfão) que você só acharia relendo tudo manualmente.
 >
-> **Consultoria pontual:** se sobrar uma dúvida nomeada de domínio ou de fronteira técnica, chame `@analyst` ou `@architect` para *aquela* pergunta. O parecer volta ao PRD ou ao plano — não é uma etapa da esteira.
+> **Dúvida pontual:** uma dúvida nomeada de domínio vai para o `@product` (regras no PRD); uma de fronteira técnica é decisão de arquitetura do `@planner`, registrada no plano — nenhuma delas é uma etapa extra da esteira.
 
 ---
 

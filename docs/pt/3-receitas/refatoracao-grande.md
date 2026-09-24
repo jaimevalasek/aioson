@@ -240,7 +240,7 @@ Você > @qa
 | Characterization tests falhando antes de refatorar | Sinal de que o ambiente de teste não está configurado. Verifique mocks de Stripe/SendGrid. |
 | `@sheldon` não achou riscos | Diga explicitamente: "Analise acoplamentos e dependências ocultas". Ele vai mais fundo. |
 | `@dev` mudou a interface pública por engano | O spec.md diz explicitamente "não mudar interface". Mostre para `@dev`. |
-| QA→Dev ciclo não convergiu em 2 iterações | Ative `@deyvin` para debug manual em pair. |
+| QA→Dev ciclo não convergiu em 2 iterações | Ative `@dev` para debug manual em pares, com sub-task scout se o diagnóstico for amplo. |
 
 ---
 

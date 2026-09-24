@@ -25,7 +25,7 @@ Ele não implementa, não produz artefatos. Só orienta e roteia.
 ## Quando NÃO invocar
 
 - Você sabe exatamente qual agente precisa e está prontos os artefatos — vá direto.
-- Quer implementar continuidade — `@deyvin` é o caminho.
+- Quer implementar continuidade — `@dev` é o caminho.
 - Quer ver o mapa estático de agentes — `1-entender/mapa-do-ecossistema.md` já faz isso.
 
 ## Diálogo típico
@@ -43,11 +43,11 @@ Você > @neo
        ✓ product — PRD criado (4 capacidades CAP-*)
        ✓ sheldon — PRD selado, PASS vinculado ao hash
        ✓ planner — plano vertical em 6 etapas, Gate C aprovado
-       → dev — EM ANDAMENTO (retomar com @deyvin)
+       → dev — EM ANDAMENTO (retomar com @dev)
        · qa — pendente (Gate D)
        · tester / pentester — só depois do PASS, se habilitados
 
-       Recomendação: @deyvin para retomar a implementação.
+       Recomendação: @dev para retomar a implementação.
        Alternativas: @sheldon (revisar spec antes), @pentester (audit antecipado).
 
        O que prefere?
@@ -62,7 +62,7 @@ Nenhuma. `@neo` é somente leitura — ele não escreve artefatos.
 Nesta ordem:
 
 1. `.aioson/context/project-pulse.md` — estado global e última atividade.
-2. `.aioson/context/dev-state.md` — se @dev ou @deyvin tinham sessão ativa.
+2. `.aioson/context/dev-state.md` — se @dev tinha sessão ativa.
 3. `.aioson/context/project.context.md` — classificação e stack.
 4. `.aioson/context/features.md` e specs das features ativas.
 5. Arquivos de presença (`prd.md`, `discovery.md`, `architecture.md`) para inferir qual fase do workflow está completa.
@@ -93,5 +93,5 @@ Em Mai/2026 (commit `5fbbef3`), o @neo recebeu um catálogo completo do ecossist
 ## Próximo passo
 
 - Ver o ecossistema completo → [Mapa do ecossistema](../1-entender/mapa-do-ecossistema.md)
-- Retomar implementação → [@deyvin](./deyvin.md)
+- Retomar implementação → [@dev](./dev.md)
 - Entender project-pulse → [@setup](./setup.md)

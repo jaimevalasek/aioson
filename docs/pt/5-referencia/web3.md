@@ -121,9 +121,9 @@ meu-dapp/
 
 ## Agentes em projetos Web3
 
-### @analyst — o que mapear
+### @product — regras de domínio a mapear
 
-Para dApps, o @analyst vai focar em:
+Para dApps, o @product vai mapear no PRD:
 - **Atores on-chain vs off-chain:** quem chama qual função do contrato?
 - **Entidades do contrato:** structs, mappings, events
 - **Regras de negócio críticas:** limites, access control, tokenomics
@@ -149,7 +149,7 @@ Para dApps, o @analyst vai focar em:
 - Front-running em transações de swap grandes
 ```
 
-### @architect — estrutura para cada chain
+### @planner — estrutura para cada chain
 
 **Ethereum (Hardhat):**
 ```
@@ -300,7 +300,7 @@ Para usar uma skill, referencie no seu AI IDE:
 **Projeto:** Protocolo de vault: usuário deposita ETH, recebe yield de estratégias DeFi.
 **Stack:** Foundry (contratos) + Next.js + wagmi + RainbowKit (frontend).
 
-#### @analyst identifica:
+#### @product identifica:
 
 ```markdown
 ## Atores
@@ -322,7 +322,7 @@ Para usar uma skill, referencie no seu AI IDE:
 - RN04: Slippage máximo configurável pelo admin
 ```
 
-#### @architect estrutura:
+#### @planner estrutura:
 
 ```
 contracts/
@@ -439,7 +439,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
   --lang=pt-BR
 ```
 
-#### @analyst identifica:
+#### @product identifica:
 
 ```markdown
 ## Atores
@@ -458,7 +458,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
 - RN03: Reward_rate só alterável pelo admin
 ```
 
-#### @architect estrutura:
+#### @planner estrutura:
 
 ```
 programs/
@@ -606,7 +606,7 @@ npx @jaimevalasek/aioson setup:context . --defaults \
   --lang=pt-BR
 ```
 
-#### @analyst identifica:
+#### @product identifica:
 
 ```markdown
 ## Projeto: Bulletin Board Privado
@@ -635,7 +635,7 @@ sem revelar quem é o dono publicamente.
 - RN03: Identidade do poster nunca é exposta on-chain
 ```
 
-#### @architect estrutura:
+#### @planner estrutura:
 
 ```
 midnight-board/

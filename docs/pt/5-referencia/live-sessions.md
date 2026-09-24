@@ -41,7 +41,7 @@ aioson live:start . --agent=dev --tool=claude
 aioson live:start . --agent=dev --tool=claude --tmux
 
 # Sem lançar o cliente AI (apenas cria o envelope de sessão)
-aioson live:start . --agent=deyvin --tool=claude --no-launch
+aioson live:start . --agent=dev --tool=claude --no-launch
 
 # Retomar uma sessão existente
 aioson live:start . --agent=dev --tool=claude --resume

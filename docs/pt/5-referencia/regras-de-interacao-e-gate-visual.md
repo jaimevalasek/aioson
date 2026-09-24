@@ -69,13 +69,13 @@ Uma regra de interação não vale só na hora de codar. Cada uma nomeia, no pr�
 ```text
 @briefing            → registra o contrato como promessa ou pergunta classificada
       ▼
-@product / @ux-ui    → a spec nomeia formato, máscara, transição, widget e decisão servida
+@product             → a spec nomeia formato, máscara, transição, widget e decisão servida
       ▼
 @refiner    → o protótipo demonstra o contrato funcionando sobre estado mock
   / @benchmark          (input sem máscara, botão destrutivo sem modal, kanban só de clique
                          e home sem valor são achados bloqueantes)
       ▼
-@dev / @deyvin       → implementa contra a mutação real, usando os utilitários do projeto
+@dev                 → implementa contra a mutação real, usando os utilitários do projeto
       ▼
 @qa                  → prova cada contrato prometido na superfície real, com uma linha
                        de evidência CAP/AC; falha vira FAIL, não observação de estilo

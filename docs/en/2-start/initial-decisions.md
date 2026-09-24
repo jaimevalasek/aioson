@@ -35,7 +35,7 @@ optional @briefing → optional @refiner → @product
 → @sheldon → @planner → @dev → @qa
 ```
 
-Classification changes the detail of the PRD and plan, the implementation budget, and the risk-proportional QA review. It does not insert Analyst, Architect, Orchestrator, Pentester, or other specialists into the default route.
+Classification changes the detail of the PRD and plan, the implementation budget, and the risk-proportional QA review. It does not insert Orchestrator, Pentester, or other specialists into the default route.
 
 #### MICRO — the lightest version of the canonical chain
 
@@ -56,7 +56,7 @@ Classification changes the detail of the PRD and plan, the implementation budget
 - `@product` owns the PRD; `@sheldon` may enrich that same PRD in place.
 - `@planner` owns the single vertical implementation plan.
 - `@dev` implements and integrates the plan; `@qa` reviews all feature ACs, focused regression, and a production-path smoke.
-- `@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, and `@discovery-design-doc` are explicit consultants, not default stages.
+- Domain rules and interaction decisions live in the PRD, architecture decisions and code mapping in the plan, and scope drift is checked by `@qa` — there are no separate consultant stages.
 
 **Typical examples:**
 - SaaS app for a single persona
@@ -83,7 +83,7 @@ Classification changes the detail of the PRD and plan, the implementation budget
 
 | Situation | Suggestion |
 |---|---|
-| Personal project, but with one heavy external integration | SMALL — request `@architect` only if a concrete boundary decision remains unresolved |
+| Personal project, but with one heavy external integration | SMALL — `@planner` records the boundary decision in the plan's Architecture Decisions |
 | Score 1, but I know it will grow | Start MICRO. Can promote later with `@setup` |
 | Score 4, but the team is just me | MEDIUM anyway. Complex rules benefit from deeper PRD, plan, and QA evidence |
 | Score 2, but greenfield and I want careful design | SMALL + provide reference images for `interface-design` up front |
@@ -111,7 +111,7 @@ You can mark **more than one** in the wizard — they coexist in the same projec
 
 ### Development (default)
 
-Includes the 29 official agents (product, analyst, dev, qa, etc.; `@pair` is alias of `@deyvin`). Sufficient for 95% of projects.
+Includes the 29 official agents (product, planner, dev, qa, etc.). Sufficient for 95% of projects.
 
 ### Development + Squads
 
@@ -148,7 +148,7 @@ npx @jaimevalasek/aioson squad:scaffold . --slug=compliance --name="Compliance" 
 > **The route: `interface-design` + your own reference images.** The template ships exactly one design skill — the `interface-design` engine. Instead of inheriting a fixed preset's identical look, you provide reference images (identity/brand and, optionally, component structure); the `reference-identity-extract` skill converts them **once** into a text `identity.md` that the engine applies to everything downstream (prototype and build). There is no question to answer: `design_skill: "interface-design"` is written into `project.context.md` from the start and no agent asks you to choose or confirm a design skill — only a skill this project forged (`@site-forge` or `@design-hybrid-forge`) replaces the engine, when you name it. Reference images are optional: with none, the engine still runs, deciding on its own (origin mode).
 
 **Skipping** the images is a valid option. You can:
-- Provide them later with `@setup`/`@ux-ui` — same route, always with explicit confirmation
+- Provide them later with `@setup`/`@refiner` — same route, always with explicit confirmation
 - Clone a real site's design with `@site-forge`
 - Create a hybrid from two of your own forged skills with `@design-hybrid-forge`
 

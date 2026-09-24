@@ -44,7 +44,7 @@ Estrutura:
 
 **Carregamento condicional:** O agente `@dev` carrega apenas as skills que correspondem ao valor de `framework` em `project.context.md`. Exemplo: se `framework=Laravel`, carrega `laravel-conventions.md` e opcionalmente `tall-stack-patterns.md` se o stack for TALL.
 
-**Process skills** são carregadas pelos agentes de spec (`@product`, `@analyst`, `@architect`, `@sheldon`, `@dev`, `@deyvin`) no início de sessões de especificação, requirements e design — nunca todas de uma vez. Cada agente carrega o `SKILL.md` central e depois apenas o arquivo de `references/` relevante para sua fase atual.
+**Process skills** são carregadas pelos agentes de spec (`@product`, `@planner`, `@sheldon`, `@dev`) no início de sessões de especificação, requirements e design — nunca todas de uma vez. Cada agente carrega o `SKILL.md` central e depois apenas o arquivo de `references/` relevante para sua fase atual.
 
 ### Skills instaladas (`.aioson/installed-skills/`)
 
@@ -157,11 +157,11 @@ A skill `interface-design` é um **motor**: antes de desenhar, ela resolve a aut
 
 Em **modo conformidade**, a skill não decide direção de novo — ela transfere a direção já aprovada: lê o protótipo e sua `## Visual direction`, extrai os tokens e a anatomia de componentes reais já expressos ali, e mapeia cada região para o componente correspondente na biblioteca do projeto. Um desvio só é válido se já estiver registrado no PRD como desvio aprovado.
 
-O `identity.md` é extraído **uma única vez** das suas imagens de referência pela skill de processo `reference-identity-extract`, e todo consumidor do motor (`@dev`, `@deyvin`, `@ux-ui`, protótipos) herda essa resolução — ele é *input* paramétrico do motor, não um segundo design skill. O arquivo legado `.interface-design/system.md` (memória de design por projeto) foi superado pelo registro de identidade sob `.aioson/`: duas camadas de continuidade visual eram livres para divergir.
+O `identity.md` é extraído **uma única vez** das suas imagens de referência pela skill de processo `reference-identity-extract`, e todo consumidor do motor (`@dev`, protótipos do `@refiner`) herda essa resolução — ele é *input* paramétrico do motor, não um segundo design skill. O arquivo legado `.interface-design/system.md` (memória de design por projeto) foi superado pelo registro de identidade sob `.aioson/`: duas camadas de continuidade visual eram livres para divergir.
 
 ### Quando `design_skill` está em branco
 
-Em branco significa o motor: nenhum agente pergunta qual design skill usar — `@setup`, `@product` e `@ux-ui` não oferecem menu, e o `setup:context` já grava `design_skill: "interface-design"`. O `@refiner` adota `interface-design` em modo origem e declara isso gravando `design_skill: interface-design (default)` no `prototype-manifest.md`.
+Em branco significa o motor: nenhum agente pergunta qual design skill usar — `@setup` e `@product` não oferecem menu, e o `setup:context` já grava `design_skill: "interface-design"`. O `@refiner` adota `interface-design` em modo origem e declara isso gravando `design_skill: interface-design (default)` no `prototype-manifest.md`.
 
 Se o `design_skill` nomeia uma skill forjada pelo projeto (saída do `@site-forge` ou do `@design-hybrid-forge`), só aquela skill é usada. Imagens de referência continuam opcionais; quando você fornece, a rota de identidade acima vale.
 
@@ -214,7 +214,7 @@ A skill central de metodologia do AIOSON. Cobre:
     └── maintenance-and-state.md      ← como escrever spec e checkpoints úteis
 ```
 
-**Carregamento:** Os agentes `@product`, `@analyst`, `@architect`, `@sheldon`, `@dev` e `@deyvin` verificam automaticamente se esta skill está disponível e carregam `SKILL.md` + apenas o arquivo de `references/` relevante para a fase atual. Nunca carregam a pasta inteira de uma vez.
+**Carregamento:** Os agentes `@product`, `@planner`, `@sheldon` e `@dev` verificam automaticamente se esta skill está disponível e carregam `SKILL.md` + apenas o arquivo de `references/` relevante para a fase atual. Nunca carregam a pasta inteira de uma vez.
 
 ### `design-hybrid-forge`
 

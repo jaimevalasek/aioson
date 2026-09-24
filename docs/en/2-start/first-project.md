@@ -276,7 +276,7 @@ It tells you who's next.
 | Problem | Solution |
 |---|---|
 | The agent "forgot" the context | Check `cat .aioson/context/project.context.md`. If fields are missing, run `@setup` again. |
-| I want to resume an interrupted feature | Run `@deyvin` — it reads `dev-state.md` and continues. |
+| I want to resume an interrupted feature | Run `@dev` — a bare activation reads `dev-state.md` and continues. |
 | Not sure if MICRO is the right classification | Ask `@neo` — it explains the calculation and proportional depth. |
 | Install failed | `npx @jaimevalasek/aioson doctor` — diagnoses and suggests a fix. |
 | I want to add Codex later | `npx @jaimevalasek/aioson install --reconfigure`. |

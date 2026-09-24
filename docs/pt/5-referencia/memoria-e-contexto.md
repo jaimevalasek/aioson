@@ -63,10 +63,7 @@ São os artefatos que os agentes criam ao longo do workflow. São a "memória of
 | `project.context.md` | `@setup` | Stack, classificação, idioma, framework |
 | `project-pulse.md` | todos (atualizado a cada sessão) | Estado global vivo do projeto |
 | `prd-{slug}.md` | `@product`, selado pelo `@sheldon` | Capacidades `CAP-*`, ACs, fora-de-escopo |
-| `implementation-plan-{slug}.md` | `@planner` | Etapas verticais, arquivos, checks |
-| `architecture.md` | `@architect` (consultoria opt-in) | Decisões técnicas de uma dúvida nomeada |
-| `design-doc-{slug}.md` | `@ux-ui` (consultoria opt-in) | Specs de componentes, design tokens |
-| `tasks.md` | `@pm` (consultoria opt-in) | Backlog, user stories |
+| `implementation-plan-{slug}.md` | `@planner` | Etapas verticais, arquivos, checks, Architecture Decisions e sequenciamento |
 | `dev-state.md` | `@dev` | O que foi implementado, status |
 | `qa-report-{slug}.md` | `@qa` | Veredito, evidência executável e smoke pelo caminho real |
 | `test-report-{slug}.md` | `@tester` (opt-in) | Cobertura adicional, correções limitadas e riscos residuais |
@@ -284,11 +281,11 @@ A saída traz a linha **Boundary**: *"carregue só os arquivos selecionados até
 
 ### Fast path de ativação (agentes de entrada)
 
-Ativar um agente "seco" — `@briefing`, `@product`, `@sheldon`, `@analyst`, `@copywriter` (e `@deyvin`) sem nomear feature/tarefa — carrega **só o contexto de fundação** (`project.context.md` + `project-pulse.md`, mais o registro/listagem que o agente precisa para o menu), apresenta as opções de início e para. Nada de PRDs, dossiers, regras ou skills antes de você dizer o que fazer.
+Ativar um agente "seco" — `@briefing`, `@product`, `@sheldon`, `@copywriter` (e `@dev`, que mantém o contexto enxuto de continuidade) sem nomear feature/tarefa — carrega **só o contexto de fundação** (`project.context.md` + `project-pulse.md`, mais o registro/listagem que o agente precisa para o menu), apresenta as opções de início e para. Nada de PRDs, dossiers, regras ou skills antes de você dizer o que fazer.
 
 ### Guarda de ativação (agentes de meio de fluxo)
 
-`@architect`, `@ux-ui`, `@pm`, `@qa`, `@orchestrator`, `@scope-check` e `@discovery-design-doc` ganharam uma **guarda de ativação**: ativados sem slug de feature, leem só a fundação, reportam o estágio atual do workflow, perguntam qual feature trabalhar e param. Os artefatos pesados (specs, requirements, arquitetura) entram só na etapa que os usa.
+`@planner`, `@qa` e `@orchestrator` ganharam uma **guarda de ativação**: ativados sem slug de feature, leem só a fundação, reportam o estágio atual do workflow, perguntam qual feature trabalhar e param. Os artefatos pesados (specs, requirements, arquitetura) entram só na etapa que os usa.
 
 ### Regras e docs roteáveis pelo seletor
 
@@ -387,8 +384,8 @@ $ aioson context:pack . --agent=dev --goal="retomar checkout-stripe" --module=sr
 # 3. Abre cliente AI com o pacote já montado
 $ claude .
 
-Você > @deyvin
-@deyvin > [lê context-pack.md e dev-state.md]
+Você > @dev
+@dev > [lê context-pack.md e dev-state.md]
   Encontrei onde paramos: src/checkout/payment.js — a integração
   com o webhook do Stripe estava 80% feita. Continuando...
 ```

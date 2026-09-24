@@ -84,7 +84,7 @@ Além dos arquivos acima, esse modo gera ou atualiza:
 Importante:
 
 - `scan:project` nunca gera `architecture.md`
-- `architecture.md` continua vindo depois com `@architect`
+- as decisões de arquitetura continuam vindo depois com `@planner`
 
 ## Merge x rewrite
 
@@ -182,15 +182,15 @@ Na prática, ele tenta selecionar só o que a tarefa precisa, por exemplo:
 
 ```bash
 aioson scan:project . --folder=src,app
-aioson context:pack . --agent=analyst --goal="consolidar discovery brownfield" --module=src
+aioson context:pack . --agent=planner --goal="consolidar discovery brownfield" --module=src
 ```
 
 Depois:
 
 1. Abra Codex, Claude Code ou OpenCode.
-2. Rode `@analyst`.
+2. Rode `@planner` (descoberta do repositório e mapa do código).
 3. Use os arquivos de scan ou o `context-pack.md` para escrever `discovery.md`.
-4. Depois passe para `@architect`.
+4. Registre as decisões de arquitetura com o mesmo `@planner`.
 5. Só então vá para `@dev`.
 
 ### Brownfield com API no AIOSON
@@ -202,8 +202,8 @@ aioson context:pack . --agent=dev --goal="implementar ajuste no caption editor" 
 
 Depois:
 
-1. Revise `discovery.md` com `@analyst` se necessário.
-2. Gere `architecture.md` com `@architect`.
+1. Revise as regras de domínio com `@product` se necessário.
+2. Registre as decisões de arquitetura com `@planner`.
 3. Monte um `context:pack` para a tarefa atual.
 4. Trabalhe com `@dev`.
 

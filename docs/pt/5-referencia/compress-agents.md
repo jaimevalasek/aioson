@@ -73,7 +73,7 @@ Preview — mode: structural
 
 Agents:
   ~ dev.md: 14.5KB → 9.2KB  (−37%)
-  ~ analyst.md: 14.2KB → 9.8KB  (−31%)
+  ~ product.md: 14.2KB → 9.8KB  (−31%)
   ~ setup.md: 19.4KB → 11.3KB  (−42%)
   · committer.md: 8.6KB — already compact, skipped
 
@@ -97,7 +97,7 @@ Compress — mode: structural
 
 Agents:
   ✓ dev.md: 14.5KB → 9.2KB  (−37%) ← backup saved
-  ✓ analyst.md: 14.2KB → 9.8KB  (−31%) ← backup saved
+  ✓ product.md: 14.2KB → 9.8KB  (−31%) ← backup saved
   ✓ setup.md: 19.4KB → 11.3KB  (−42%) ← backup saved
   · committer.md: 8.6KB — already compact, skipped
 
@@ -121,10 +121,10 @@ O arquivo original é salvo automaticamente como `dev.original.md` antes de qual
 aioson compress:agents . --agent=dev
 
 # Múltiplos agentes
-aioson compress:agents . --agent=dev,analyst,product
+aioson compress:agents . --agent=dev,planner,product
 
 # Preview dos mesmos
-aioson compress:agents . --agent=dev,analyst,product --dry-run
+aioson compress:agents . --agent=dev,planner,product --dry-run
 ```
 
 ---
@@ -191,7 +191,7 @@ O restore lê o arquivo `.original.md`, sobrescreve o comprimido e remove o back
 
 ```
   Restored: dev.md
-  Restored: analyst.md
+  Restored: product.md
 
 Restored 2 file(s). Backup files removed.
 ```

@@ -105,7 +105,7 @@ Quando a zona é `warning` ou `critical`, um evento `context_budget_warning` ou 
 
    ✓ dev              [████████░░░░░░░░░░░░] 42%  42000/100000
    ⚠ qa               [█████████████████░░░] 85%  85000/100000
-   ! analyst          [████████████████████] 97%  97000/100000
+   ! planner          [████████████████████] 97%  97000/100000
 
   Thresholds: warning=85%  critical=95%
   Updated: 2026-03-30T14:23:00.000Z

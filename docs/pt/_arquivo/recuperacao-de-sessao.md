@@ -40,7 +40,7 @@ aioson recovery:generate [path] [opções]
 aioson recovery:generate .
 
 # Gerar com contexto da sessão
-aioson recovery:generate . --goal="implementar busca FTS5" --agent="deyvin"
+aioson recovery:generate . --goal="implementar busca FTS5" --agent="dev"
 
 # Retornar JSON para scripts
 aioson recovery:generate . --json
@@ -91,7 +91,7 @@ O arquivo é salvo em `.aioson/context/recovery-context.md`.
 implementar busca FTS5 e cache de contexto
 
 ## Active Agent
-deyvin
+dev
 
 ## Modified Files
 - src/context-search.js

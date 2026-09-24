@@ -36,7 +36,7 @@ aioson briefing:approve
      @dev → @qa
 ```
 
-MICRO, SMALL, and MEDIUM follow this same route. Classification changes the depth and budget of each stage. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check remain available as explicitly requested consultants; Tester, Pentester, and Validator are opt-in reviewers.
+MICRO, SMALL, and MEDIUM follow this same route. Classification changes the depth and budget of each stage. Domain rules live in the PRD, architecture decisions in the plan, and scope drift is checked by QA; Tester, Pentester, and Validator are opt-in reviewers.
 
 ---
 
@@ -222,7 +222,7 @@ The rest of the flow is the same: approve via CLI → `@product`.
 
 - Simple and clear feature with no ambiguity — go straight to `@product`.
 - You already have a ready PRD — go to `@planner`; use `@sheldon` only when you want another enrichment pass.
-- It is a continuation of an already started feature — use `@deyvin`.
+- It is a continuation of an already started feature — use `@dev` (a bare activation resumes it).
 
 ---
 

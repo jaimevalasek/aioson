@@ -40,9 +40,6 @@ projeto/
     │   ├── qa-report-{slug}.md      ← @qa (Gate D)
     │   ├── test-report-{slug}.md    ← @tester
     │   ├── security-findings-*.json ← @pentester
-    │   ├── architecture.md          ← @architect (consultoria opt-in, só se pedida)
-    │   ├── design-doc-{slug}.md     ← @ux-ui (consultoria opt-in, só se pedida)
-    │   ├── tasks.md                ← @pm (consultoria opt-in, só se pedida)
     │   ├── features.md             ← registro de features (status por slug)
     │   └── parallel/               ← @orchestrator (lanes paralelas)
     │       ├── lane-backend.md
@@ -89,16 +86,14 @@ Veja [Plans externos para @product](../3-receitas/plans-externos-para-product.md
 | `prd-{slug}.md` | `@product`, revisado e selado in-place obrigatoriamente por `@sheldon` | `@planner`, `@dev`, `@qa` |
 | `implementation-plan-{slug}.md` | `@planner` | `@dev`, `@qa` |
 | `requirements-{slug}.md` | especialista, somente quando pedido | memória consultiva |
-| `architecture.md` / ADR | `@architect` quando o projeto/decisão pedir | `@planner`, `@dev` |
-| `design-doc.md` | `@ux-ui` ou `@discovery-design-doc`, quando solicitado | `@planner`, `@dev` |
-| `tasks.md` | `@pm`, quando solicitado | Product/Planner |
+| `architecture.md` / ADR (legado) | decisões novas vão para as Architecture Decisions do plano do `@planner`; arquivos existentes continuam lidos como memória consultiva | `@planner`, `@dev` |
 | `features.md` | qualquer agente | todos (status por slug) |
 
 ### Artefatos de execução
 
 | Arquivo | Criado por | Consumido por |
 |---|---|---|
-| `dev-state.md` | `@dev` (ao pausar/fechar) | `@deyvin` (retomada), `@dev` |
+| `dev-state.md` | `@dev` (ao pausar/fechar) | `@dev` (retomada e continuidade) |
 | `qa-report-{slug}.md` | `@qa` | `@validator`, `@tester` |
 | `test-report-{slug}.md` | `@tester` | `@qa` (validação independente da cobertura/correção) |
 | `security-findings-{slug}.json` | `@pentester` | `@dev` (correção), `@qa` (regressão) |
@@ -193,33 +188,9 @@ Estado corrente atualizado pelo `@dev`:
 
 ---
 
-## `tasks.md` — o backlog do `@pm`
+## `tasks.md` — legado
 
-Criado pelo `@pm` (somente em MEDIUM). Formato:
-
-```markdown
-# Tasks — {feature-slug}
-
-## Epic 1: Subscription Model
-
-### US-01: Criar plano de assinatura
-**Como** admin, **quero** criar planos (mensal/anual), **para** oferecer opções ao cliente.
-
-**ACs:**
-- [ ] POST /plans retorna 201 com id, name, price, interval
-- [ ] Validação: price > 0, interval in ["monthly", "annual"]
-- [ ] Duplicate name retorna 422
-
-**Story points:** 3
-**Dependências:** nenhuma
-
----
-
-### US-02: Assinar plano
-**Como** cliente...
-```
-
-O `@orchestrator` lê `tasks.md` para identificar dependências e criar lanes paralelas.
+O antigo `@pm` foi absorvido pelo `@planner`: sequenciamento, dependências e rollout vivem agora na **Execution Sequence** do `implementation-plan-{slug}.md` (com a coluna `Wave`), que é o que o `@orchestrator` e a Lane B usam para montar lanes paralelas. Nenhum agente gera `tasks.md` novo; um arquivo existente continua sendo apenas memória consultiva.
 
 ---
 

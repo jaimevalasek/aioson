@@ -68,7 +68,7 @@ Sua saída anterior falhou na validação:
 Reexecute e produza JSON válido conforme o schema.
 ```
 
-Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falhar, o scout fica com `status: "error"` e `@deyvin` precisa lidar manualmente (handoff ou resposta direta).
+Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falhar, o scout fica com `status: "error"` e `@dev` precisa lidar manualmente (handoff ou resposta direta).
 
 ---
 
@@ -81,7 +81,7 @@ Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falh
 **O que fazer:**
 
 1. O scout foi persistido com `status: "error"` em `.aioson/runtime/scouts/{id}.json`.
-2. `@deyvin` informa o usuário e oferece handoff para `/aioson:agent:architect` ou resposta direta com o que já sabe.
+2. `@dev` informa o usuário e oferece encaminhar a pergunta ao `@planner` (decisão de fronteira) ou resposta direta com o que já sabe.
 3. Para aumentar os retries: `{ "max_retries_on_malformed_json": 2 }` no config (raramente necessário — se acontece frequentemente, o prompt template precisa de ajuste).
 
 ---
@@ -92,7 +92,7 @@ Você tem 1 retry (`max_retries_on_malformed_json=1`). Se o segundo também falh
 
 **O que acontece:** `scout:prep` retorna normalmente, mas o harness emite `harness_unsupported` ao tentar despachar o sub-agente.
 
-**Solução:** use o fallback CLI-less embutido no `deyvin.md`. A seção "Sub-task scout invocation — CLI-less fallback" descreve como construir o prompt manualmente e usar o Agent tool diretamente no Claude Code, ou como adaptar para o harness disponível.
+**Solução:** use o contrato CLI-less de `.aioson/docs/dev/scout.md`. A seção "CLI-less contract" descreve como construir o prompt manualmente e usar o Agent tool diretamente no Claude Code, ou como adaptar para o harness disponível.
 
 O fallback produz o mesmo relatório JSON, mas sem caps, telemetria ou archivamento automático.
 

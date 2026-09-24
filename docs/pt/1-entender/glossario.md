@@ -219,7 +219,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 **A esteira principal:** `@briefing → @refiner → @product → @sheldon → @planner → @dev → @qa → @tester → @pentester`. Ela é a mesma em MICRO, SMALL e MEDIUM; a classificação muda profundidade e orçamento, não a ordem. O encadeamento automático vai de Product até QA (Gate D); Tester e Pentester são o endurecimento pós-veredito, habilitados por feature.
 
-**A rota curta:** para uma mudança bounded, o **Simple Plan** vai direto ao `@deyvin` (escopo → plano curto → implementação → verificação) e nunca vira feature rastreada silenciosamente.
+**A rota curta:** para uma mudança bounded, o **Simple Plan** vai direto ao `@dev` (escopo → plano curto → implementação → verificação) e nunca vira feature rastreada silenciosamente.
 
 **Comando central:** `aioson workflow:next .` — mostra qual agente é o próximo.
 
@@ -283,7 +283,7 @@ Termos em ordem alfabética. Cada um tem **definição curta** + **exemplo concr
 
 ## Simple Plan
 
-**Definição:** a rota curta. Quando a mudança é bounded — um resultado observável, reusando fronteiras existentes, sem decisão aberta de produto, arquitetura ou segurança — o AIOSON pula a esteira e vai direto ao `@deyvin`: escopo → plano curto → implementação → verificação.
+**Definição:** a rota curta. Quando a mudança é bounded — um resultado observável, reusando fronteiras existentes, sem decisão aberta de produto, arquitetura ou segurança — o AIOSON pula a esteira e vai direto ao `@dev`: escopo → plano curto → implementação → verificação.
 
 **Limite típico:** até 5 arquivos de comportamento, 8 caminhos no total, 2 módulos existentes. Se o escopo estourar, a rota escala para a esteira em vez de inflar em silêncio.
 

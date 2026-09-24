@@ -10,6 +10,7 @@ O PRD registra:
 
 - problema, usuários e resultado observável;
 - capacidades e exclusões;
+- regras de domínio (antes trabalho do `@analyst`) e decisões de interação que o protótipo não resolveu (antes parecer do `@ux-ui`);
 - encaixe de cada capacidade no comportamento e código atuais;
 - critérios de aceitação concretos;
 - riscos e decisões de produto;

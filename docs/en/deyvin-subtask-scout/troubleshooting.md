@@ -68,7 +68,7 @@ Your previous output failed validation:
 Re-run and produce valid JSON per the schema.
 ```
 
-You have 1 retry (`max_retries_on_malformed_json=1`). If the second attempt also fails, the scout persists with `status: "error"` and `@deyvin` must handle it manually (handoff or direct answer).
+You have 1 retry (`max_retries_on_malformed_json=1`). If the second attempt also fails, the scout persists with `status: "error"` and `@dev` must handle it manually (handoff or direct answer).
 
 ---
 
@@ -81,7 +81,7 @@ You have 1 retry (`max_retries_on_malformed_json=1`). If the second attempt also
 **What to do:**
 
 1. The scout was persisted with `status: "error"` at `.aioson/runtime/scouts/{id}.json`.
-2. `@deyvin` informs the user and offers handoff to `/aioson:agent:architect` or a direct best-effort answer.
+2. `@dev` informs the user and offers to route the question to `@planner` (recorded in the plan) or a direct best-effort answer.
 3. To increase retries: `{ "max_retries_on_malformed_json": 2 }` in config (rarely needed — if it happens frequently, the prompt template needs tightening).
 
 ---
@@ -92,7 +92,7 @@ You have 1 retry (`max_retries_on_malformed_json=1`). If the second attempt also
 
 **What happens:** `scout:prep` returns normally, but the harness emits `harness_unsupported` when trying to dispatch the sub-agent.
 
-**Solution:** use the CLI-less fallback embedded in `deyvin.md`. The "Sub-task scout invocation — CLI-less fallback" section describes how to build the prompt manually and dispatch it via the Claude Code Agent tool, or adapt it for the available harness.
+**Solution:** use the CLI-less contract in `.aioson/docs/dev/scout.md` (loaded by `@dev`). It describes how to build the prompt manually and dispatch it via the Claude Code Agent tool, or adapt it for the available harness.
 
 The fallback produces the same JSON report, but without caps, SQLite telemetry, or automatic archival.
 

@@ -1,15 +1,15 @@
 # O que é o Sub-task Scout
 
-> O scout fecha o item explicitamente adiado na feature `deyvin-density` (2026-05-11). A rubrica do `@deyvin` na linha 111 dizia: "diagnóstico ambíguo; precisa de survey de >5 arquivos ou rastreamento de fluxo de runtime → Despachar sub-task scout (adiado para `deyvin-subtask-scout`; até então: parar e perguntar ao usuário)." Agora tem primitiva.
+> O scout fecha o item explicitamente adiado na feature `deyvin-density` (2026-05-11), quando ele ainda pertencia ao agora aposentado `@deyvin`. A rubrica dizia: "diagnóstico ambíguo; precisa de survey de >5 arquivos ou rastreamento de fluxo de runtime → Despachar sub-task scout (adiado para `deyvin-subtask-scout`; até então: parar e perguntar ao usuário)." Agora tem primitiva, e ela é do `@dev` (`.aioson/docs/dev/scout.md`).
 
 ---
 
 ## O problema
 
-Sem o scout, `@deyvin` tinha duas opções ruins quando uma pergunta precisava inspecionar muitos arquivos:
+Sem o scout, o agente de implementação tinha duas opções ruins quando uma pergunta precisava inspecionar muitos arquivos:
 
 1. **Ler tudo inline** — queima ≥10k tokens no contexto pai, polui a memória de trabalho do agente e força o próximo turno a competir com conteúdo de survey obsoleto.
-2. **Fazer handoff para `/aioson:agent:architect` ou pausar** — ultrapassa a necessidade real (a maioria dos surveys não precisa de decisões arquiteturais) e quebra o fluxo da conversa com uma troca completa de agente.
+2. **Fazer handoff para `@planner` ou pausar** — ultrapassa a necessidade real (a maioria dos surveys não precisa de decisões de fronteira) e quebra o fluxo da conversa com uma troca completa de agente.
 
 O scout resolve isso: o agente pai mantém o contexto limpo e recebe um relatório estruturado de ~500 tokens em vez dos arquivos brutos.
 
@@ -20,7 +20,7 @@ O scout resolve isso: o agente pai mantém o contexto limpo e recebe um relatór
 ### Ciclo de vida completo
 
 ```
-@deyvin detecta rubrica linha 111
+@dev detecta diagnóstico ambíguo (>5 arquivos ou fluxo de runtime)
          │
          ▼
 aioson scout:prep --question="..." --scope-paths="a.js,b.js" ...
@@ -30,7 +30,7 @@ aioson scout:prep --question="..." --scope-paths="a.js,b.js" ...
   └─ retorna { id, prompt, output_path, cap_remaining }
          │
          ▼
-@deyvin chama harness.sub-agent(prompt)
+@dev chama harness.sub-agent(prompt)
   └─ sub-agente roda em contexto ISOLADO
   └─ ferramentas permitidas: [Read, Grep]
   └─ ferramentas proibidas: [Bash, Edit, Write]   ← Nautilus pattern
@@ -40,7 +40,7 @@ aioson scout:prep --question="..." --scope-paths="a.js,b.js" ...
 aioson scout:validate --input=<output_path>
   └─ valida JSON contra OUTPUT_SCHEMA
   └─ PASS → continua
-  └─ FAIL → incrementa retry; @deyvin re-prompta (máx 1 retry)
+  └─ FAIL → incrementa retry; @dev re-prompta (máx 1 retry)
          │
          ▼
 aioson scout:commit --input=<output_path>
@@ -49,7 +49,7 @@ aioson scout:commit --input=<output_path>
   └─ emite telemetria action=committed
          │
          ▼
-@deyvin lê findings, confidence, recommendation
+@dev lê findings, confidence, recommendation
   └─ dobra na resposta ao usuário
   └─ contexto pai cresceu ~500 tokens (só o relatório)
      em vez de ~10k+ (os arquivos inspecionados)
@@ -59,7 +59,7 @@ aioson scout:commit --input=<output_path>
 
 Campo | Tipo | O que é
 `id` | string | Identificador único do scout (`scout-{slug}-{data}-{rand6}`)
-`parent_agent` | string | Agente que despachou (`"deyvin"` em V1)
+`parent_agent` | string | Agente que despachou (`"dev"`; `"deyvin"` ainda é aceito como legado)
 `parent_session_id` | string | ID da sessão pai (para rastreabilidade de caps)
 `parent_session_excerpt` | string (50-1000 chars) | **Obrigatório.** Por que o scout foi despachado — essencial para cold-load por agentes futuros
 `feature_slug` | string \| null | Feature em andamento, se houver
@@ -83,7 +83,7 @@ Módulo puro `src/sub-task-engine.js`: template de prompt, validadores JSON hand
 Três verbos CLI (`scout:prep`, `scout:validate`, `scout:commit`) + estado com file-lock em `src/sub-task-state.js`. Template de config `template/.aioson/config/scout-engine.json` (vazio `{}`; defaults ativos). Sandbox path check: `scope_paths` fora do root do projeto são rejeitados.
 
 ### Fase 3 — `wiring-and-lifecycle`
-- `deyvin.md` (workspace + template byte-identical, 13611 bytes, abaixo do limite de 15360): nova seção "Sub-task scout invocation" com caminho CLI + fallback CLI-less por harness (Claude Code Agent tool, Codex MultiAgentV2/OpenCode com mensagem `harness_unsupported`)
+- prompt do agente (na época `deyvin.md`; hoje `.aioson/docs/dev/scout.md`, carregado pelo `@dev`): seção de invocação do scout com caminho CLI + fallback CLI-less por harness (Claude Code Agent tool, Codex MultiAgentV2/OpenCode com mensagem `harness_unsupported`)
 - `feature:close`: hook de arquivamento copia scouts com `feature_slug` correspondente para `.aioson/context/features/{slug}/scouts/`, appenda bullet no dossier
 - `memory:summary`: linha "Scouts dispatched: N (top topics: ...)" sempre presente — visível em cold-load de agente
 - `doctor`: check advisory `scouts_directory_pruning` (scouts órfãos >90d); `--fix` apaga; scouts com `feature_slug` **nunca** são podados

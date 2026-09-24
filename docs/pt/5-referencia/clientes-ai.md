@@ -24,19 +24,14 @@ Também funciona em qualquer IDE com terminal: VS Code, Google Antigravity, Curs
 
 O Claude Code lê `CLAUDE.md` automaticamente ao iniciar. Os agentes do AIOSON ficam em `.claude/commands/aioson/` — isso cria o namespace `/aioson/*` no autocomplete.
 
-O nome humano do agente é **UI/UX**, mas o comando continua sendo `/aioson/ux-ui`.
-
 ### Ativando agentes
 
 Digite `/` para abrir o autocomplete e depois `aioson/`:
 
 ```
 /aioson/setup
-/aioson/analyst
-/aioson/architect
-/aioson/deyvin
-/aioson/ux-ui
-/aioson/pm
+/aioson/product
+/aioson/planner
 /aioson/dev
 /aioson/qa
 /aioson/orchestrator
@@ -55,14 +50,9 @@ Digite `/` para abrir o autocomplete e depois `aioson/`:
 > O agente @dev recebe o argumento como contexto extra e começa a implementação em steps atômicos.
 
 ```
-/aioson/deyvin veja o que fizemos ontem e vamos continuar
+/aioson/dev veja o que fizemos ontem e vamos continuar
 ```
-> O agente @deyvin prioriza memoria + runtime + rules/docs antes de olhar Git e segue em modo companheiro tecnico.
-
-Alias compativel:
-```text
-/aioson/pair
-```
+> Ativado sem feature nomeada, o @dev carrega só o contexto enxuto de continuidade (memoria + runtime + dev-state) antes de olhar Git e retoma de onde parou.
 
 ```
 /aioson/qa
@@ -96,7 +86,7 @@ ative o @dev para implementar o módulo de autenticação
 ```
 
 ```
-use @architect para desenhar a estrutura de pastas do projeto
+use @planner para desenhar a estrutura de pastas do projeto
 ```
 
 ```
@@ -116,13 +106,13 @@ aioson workflow:next . --tool=codex
 ou, para handoff direto rastreado:
 
 ```bash
-aioson agent:prompt deyvin . --tool=codex
+aioson agent:prompt dev . --tool=codex
 ```
 
 Se quiser que o proprio AIOSON abra e supervisione uma sessao viva do cliente externo, use:
 
 ```bash
-aioson live:start . --tool=codex --agent=deyvin --no-launch
+aioson live:start . --tool=codex --agent=dev --no-launch
 ```
 
 Dentro dessa sessao viva, o agente passa a usar `runtime:emit`, `live:handoff`, `live:status` e `live:close` para manter o dashboard e os arquivos de sessao sincronizados.
@@ -145,12 +135,12 @@ use @dev to implement user registration with email verification, atomic steps
 
 **Continuar sessao anterior:**
 ```
-use @deyvin to review the latest runtime/tasks, tell me where we stopped, and continue with me
+use @dev to review the latest runtime/tasks, tell me where we stopped, and continue with me
 ```
 
-**Revisar plano:**
+**Revisar PRD:**
 ```
-use @analyst to analyze the requirements in prd.md and identify gaps
+use @sheldon to review prd.md and identify gaps
 ```
 
 **Orquestrar sessão:**
@@ -173,7 +163,7 @@ Quando você menciona `@setup`, o Codex lê o arquivo correspondente e segue tod
 ### Dicas para Codex
 
 - **Seja explícito**: `use @dev` funciona melhor que apenas "implemente"
-- **Para continuidade**: `use @deyvin` funciona melhor que "ve o que fizemos ontem"
+- **Para continuidade**: `use @dev` funciona melhor que "ve o que fizemos ontem"
 - **Para rastreamento no dashboard**: prefira `aioson workflow:next . --tool=codex` ou `aioson agent:prompt <agente> . --tool=codex` antes de colar o prompt no Codex
 - **Passe contexto**: `use @dev to implement X — read spec.md first`
 - **Comece sempre com @setup** se `project.context.md` não existir
@@ -202,7 +192,7 @@ Independente de qual CLI você usa, todos leem os mesmos arquivos:
   context/
     project.context.md   ← gerado pelo @setup, lido por todos
     spec.md              ← documento vivo, atualizado pelo @orchestrator
-    runtime/aios.sqlite  ← tasks, runs e logs consultados pelo @deyvin e pelo dashboard
+    runtime/aios.sqlite  ← tasks, runs e logs consultados pelo @dev e pelo dashboard
 ```
 
 Você pode começar um projeto com Claude Code, continuar com Codex no dia seguinte, e o contexto persiste — todos os agentes leem o mesmo `project.context.md`.

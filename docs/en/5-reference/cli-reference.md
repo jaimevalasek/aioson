@@ -252,12 +252,12 @@ Print the activation prompt for a specific agent, ready to paste into any AI CLI
 ```bash
 aioson agent:prompt setup
 aioson agent:prompt setup --tool=codex
-aioson agent:prompt ux-ui --tool=claude
+aioson agent:prompt planner --tool=claude
 aioson agent:prompt dev --tool=opencode --json
 ```
 
 **Arguments:**
-- `<agent>` — agent id: `setup`, `product`, `analyst`, `scope-check`, `architect`, `ux-ui`, `pm`, `dev`, `qa`, `orchestrator`.
+- `<agent>` — agent id: `setup`, `briefing`, `refiner`, `product`, `sheldon`, `planner`, `dev`, `qa`, `orchestrator`, and the other shipped agents. Retired ids (`deyvin`, `analyst`, `architect`, `pm`, `ux-ui`, `scope-check`, `discovery-design-doc`) still resolve to the absorbing agent.
 
 **Options:**
 - `--tool=codex|claude|opencode` — formats the prompt for the target CLI. Default: `codex`.
@@ -266,8 +266,8 @@ aioson agent:prompt dev --tool=opencode --json
 **When to use:** if you're using an AI CLI that doesn't support `/aioson:agent:setup` slash commands, run this to get the exact text to paste into the chat.
 
 ```bash
-# Copy the prompt for @analyst in OpenCode
-aioson agent:prompt analyst --tool=opencode
+# Copy the prompt for @planner in OpenCode
+aioson agent:prompt planner --tool=opencode
 # → paste the output into OpenCode
 ```
 
@@ -307,7 +307,7 @@ Notes:
 
 Briefing and Refiner precede Product when raw sources need framing; visual scope must leave an approved owned prototype. Sheldon always enriches and hash-bind approves the PRD between Product and Planner.
 
-Consultants (`@analyst`, `@architect`, `@pm`, `@ux-ui`, `@scope-check`, `@discovery-design-doc`, `@orchestrator`) are explicitly requested and never inserted by classification. Tester, Pentester, and Validator are disabled by default.
+`@orchestrator` is explicitly requested and never inserted by classification; the former consultants were retired into Product, Planner, Refiner, and QA. Tester, Pentester, and Validator are disabled by default.
 
 **Feature development workflow (after initial setup):**
 
@@ -453,7 +453,7 @@ Advance the active workflow, complete the current stage, trigger a controlled de
 aioson workflow:next
 aioson workflow:next ./my-project --tool=codex
 aioson workflow:next ./my-project --complete
-aioson workflow:next ./my-project --agent=ux-ui
+aioson workflow:next ./my-project --agent=pentester
 aioson workflow:next ./my-project --skip=dev
 ```
 
@@ -461,7 +461,7 @@ aioson workflow:next ./my-project --skip=dev
 - initializes `.aioson/context/workflow.state.json` if it does not exist
 - infers the current project stage from canonical artifacts such as `project.context.md`, `prd-{slug}.md`, `implementation-plan-{slug}.md`, and `qa-report-{slug}.md`
 - follows the canonical sequence; classification adjusts proportional work inside a stage rather than changing stage order
-- supports detours such as `--agent=ux-ui`, then returns to the saved next stage automatically
+- supports detours such as `--agent=pentester`, then returns to the saved next stage automatically
 - allows skipping ahead only until `@dev`; it never allows skipping past `@dev`
 
 **Notes:**
@@ -775,7 +775,7 @@ Prepare a sub-task scout: validate inputs, check caps, and generate the standard
 aioson scout:prep \
   --question="Why does workflow:next inherit stale completion records?" \
   --scope-paths="src/commands/workflow-next.js,src/handoff-contract.js" \
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="User reported state inheritance bug; inspect loadOrCreateState" \
   --feature-slug=current-feature \
@@ -785,7 +785,7 @@ aioson scout:prep \
 **Options:**
 - `--question="<text>"` — **required**. The question the sub-agent must answer.
 - `--scope-paths="<paths>"` — **required**. Comma-separated files/dirs. Directories expand 1 level.
-- `--parent-agent=<name>` — **required**. In V1, only `"deyvin"` accepted.
+- `--parent-agent=<name>` — **required**. Use `"dev"` (the legacy `"deyvin"` is still accepted).
 - `--parent-session-id=<id>` — **required**. Session ID for cap tracking.
 - `--parent-session-excerpt="<text>"` — **required** (50-1000 chars). Why the scout was dispatched — cold-load comprehension field; blocked if absent.
 - `--feature-slug=<slug>` — associate with feature for archival on `feature:close`.
@@ -1040,7 +1040,7 @@ aioson spec:analyze . --feature=checkout --strict --json
 6. **Feature capability closure** — validates Product Capability Map → requirements lens matrix → repository leverage → delivery plan, including conditional operational decisions; any missing required link = error.
 7. **Parallel-wave consistency** — same-wave phases that share Primary files = warning.
 
-An `error` flips `ok: false` (exit 1 in `--json`). `@scope-check` runs `spec:analyze` in preflight: errors are blockers, warnings are pre-computed drift evidence. When the plan carries a `Wave` column, it also runs the `wave_file_overlap` check (same-wave phases sharing Primary files = warning; plans without a `Wave` column skip it).
+An `error` flips `ok: false` (exit 1 in `--json`). `@qa`'s scope-drift review runs `spec:analyze`: errors are blockers, warnings are pre-computed drift evidence. When the plan carries a `Wave` column, it also runs the `wave_file_overlap` check (same-wave phases sharing Primary files = warning; plans without a `Wave` column skip it).
 
 See [Executable verification](./executable-verification.md) for the full theme.
 

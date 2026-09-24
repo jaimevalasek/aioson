@@ -153,7 +153,7 @@ Você > @sheldon
 
 A partir daí o fluxo é o mesmo do [primeiro-projeto.md](./primeiro-projeto.md): `@planner → @dev → @qa`, e depois `@tester`/`@pentester` se quiser endurecer.
 
-> **Precisa de uma consultoria pontual?** Se sobrar uma dúvida nomeada — "quais entidades existem mesmo?", "monolito ou serviço separado para o refund?" — chame `@analyst` ou `@architect` para *aquela* pergunta. O parecer volta para o PRD ou para o plano. Eles não são etapas da esteira e não criam documento obrigatório.
+> **Sobrou uma dúvida nomeada?** "Quais entidades existem mesmo?" é pergunta para o `@product` (regras de domínio no PRD); "monolito ou serviço separado para o refund?" é decisão de arquitetura do `@planner`, registrada no próprio plano. Não há consultoria separada nem documento obrigatório extra.
 
 ---
 

@@ -341,7 +341,7 @@ Daqui a três meses, alguém (você ou outra IA) pode abrir esse projeto e enten
 
 Volte para o passo 4 — a esteira é um ciclo. Toda feature rastreada segue `@briefing → @refiner → @product → @sheldon → @planner → @dev → @qa → @tester → @pentester`; MICRO, SMALL e MEDIUM mudam a profundidade, não a ordem. O `@setup` não precisa rodar de novo (já tem o contexto).
 
-**E se for só um ajuste pequeno?** Não puxe a esteira inteira. Chame o `@deyvin`: ele confirma que a mudança cabe numa frase, registra um plano mínimo, implementa a menor fatia útil e fecha com o check combinado. Se o escopo crescer no meio, ele escala para a esteira em vez de inflar em silêncio.
+**E se for só um ajuste pequeno?** Não puxe a esteira inteira. Chame o `@dev`: ele confirma que a mudança cabe numa frase, registra um plano mínimo, implementa a menor fatia útil e fecha com o check combinado. Se o escopo crescer no meio, ele escala para a esteira em vez de inflar em silêncio.
 
 Se você se perder no meio, lembre:
 
@@ -358,7 +358,7 @@ Ele te diz quem é o próximo.
 | Problema | Solução |
 |---|---|
 | O agente "esqueceu" o contexto | Confira `cat .aioson/context/project.context.md`. Se faltar campos, rode `@setup` de novo. |
-| Quero retomar uma feature interrompida | Rode `@deyvin` — ele lê `dev-state.md` e continua. |
+| Quero retomar uma feature interrompida | Rode `@dev` — ele lê `dev-state.md` e continua. |
 | Não sei se a classificação certa é SMALL | Pergunte ao `@neo` — ele explica o cálculo. |
 | Falhou ao instalar | `npx @jaimevalasek/aioson doctor` — diagnostica e sugere fix. |
 | Quero adicionar Codex depois | `npx @jaimevalasek/aioson install --reconfigure`. |

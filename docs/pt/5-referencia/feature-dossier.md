@@ -84,16 +84,16 @@ Você > @dev
 # Sessão 2 (dia seguinte)
 Você > @neo
 @neo > Dossier checkout-stripe: @dev terminou stripe-handler, falta integrar com routes.
-      Próximo: continuar com @deyvin ou retomar @dev.
+      Próximo: retomar com @dev.
 
 Você > aioson dossier:show . --slug=checkout-stripe
 > Status: in_progress | Agente atual: @dev | Último checkpoint: stripe-handler done
 > Artefatos: spec.md ✓ | dev-state.md ✓ | codemap.json ✓
 > Pesquisas indexadas: 0
 
-Você > @deyvin
-@deyvin > Retomando checkout-stripe. Lendo dossier e dev-state...
-         Último ponto: stripe-handler implementado, rota de webhook pendente.
+Você > @dev
+@dev > Retomando checkout-stripe. Lendo dossier e dev-state...
+      Último ponto: stripe-handler implementado, rota de webhook pendente.
 ```
 
 ## Saídas em disco
@@ -111,11 +111,11 @@ O `dossier.json` referencia artefatos via `artifact_uris` — caminhos relativos
 ## Quando NÃO usar
 
 - Features de um único comando, sem continuidade esperada. Um MICRO de 30 minutos não precisa de dossier.
-- Você vai usar `@deyvin` para retomar e ele já lê `dev-state.md` diretamente. Para esses casos o dossier é opcional.
+- Você vai usar `@dev` para retomar e ele já lê `dev-state.md` diretamente. Para esses casos o dossier é opcional.
 - Quando o projeto usa o `runner-system` com fases automáticas — o runner gerencia o ciclo e cria os artefatos necessários.
 
 ## Próximo passo
 
 - [Agent-chain continuity](./agent-chain-continuity.md) — como dossier, handoff-protocol e dev-resume trabalham juntos
 - [Feature Archive](./feature-archive.md) — o que acontece quando a feature é fechada
-- [Ficha do @deyvin](../4-agentes/deyvin.md) — agente de retomada que lê o dossier
+- [Ficha do @dev](../4-agentes/dev.md) — agente que retoma a feature lendo o dossier

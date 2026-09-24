@@ -1,7 +1,7 @@
 # [Arquivado] Guia do Engenheiro: Pair Programming com IA
 
 > **Doc histórica — sem substituto direto.**
-> Para o fluxo atual de pair programming e continuidade, veja [`../4-agentes/deyvin.md`](../4-agentes/deyvin.md) e [`../2-comecar/projeto-existente.md`](../2-comecar/projeto-existente.md).
+> Para o fluxo atual de pair programming e continuidade, veja [`../4-agentes/dev.md`](../4-agentes/dev.md) (o antigo `@deyvin` foi aposentado em `@dev`) e [`../2-comecar/projeto-existente.md`](../2-comecar/projeto-existente.md).
 > Conteúdo abaixo preservado para referência histórica.
 
 ---
@@ -153,7 +153,7 @@ Use isso antes de pedir implementação de qualquer feature:
 [ ] O padrão está alinhado com o architecture.md?
 ```
 
-Se você não consegue responder todas, pergunte ao @analyst antes de ir para @dev.
+Se você não consegue responder todas, pergunte ao @product (regras de domínio) ou ao @planner (arquitetura) antes de ir para @dev.
 
 ---
 

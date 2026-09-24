@@ -12,7 +12,7 @@ You were implementing the Stripe checkout feature. You spent three hours with `@
 
 This is the **prompt-monolith problem**: all memory lives in the conversation, which is temporary.
 
-The **Feature Dossier** (agent-chain continuity system, implemented in 8 phases between Mar–May 2026) solves this. Each feature has a folder with persistent artifacts. When you resume, `@deyvin` reads the dossier and continues where it left off — without interviewing you about what was already done.
+The **Feature Dossier** (agent-chain continuity system, implemented in 8 phases between Mar–May 2026) solves this. Each feature has a folder with persistent artifacts. When you resume, a bare `@dev` activation reads the dossier and continues where it left off — without interviewing you about what was already done.
 
 ---
 
@@ -85,8 +85,7 @@ last_updated: 2026-05-06T14:32:00Z
 ## Agent Trail
 [what each agent did]
 @product: spec created on 2026-05-05
-@analyst: Payment, Order mapped
-@architect: Stripe Checkout chosen, structure defined
+@planner: Payment, Order mapped; Stripe Checkout chosen, structure defined
 @dev: 3/5 plan steps completed
 ```
 
@@ -94,15 +93,15 @@ last_updated: 2026-05-06T14:32:00Z
 
 ## Resuming a feature — real flow
 
-### New session, agent `@deyvin`
+### New session, agent `@dev`
 
 ```
-You > @deyvin
+You > @dev
 
-@deyvin > Reading project-pulse.md... feature checkout-stripe in progress.
+@dev > Reading project-pulse.md... feature checkout-stripe in progress.
            Reading dossier.md...
 
-@deyvin > Here is where you left off:
+@dev > Here is where you left off:
 
            FEATURE: checkout-stripe
            Status: in_progress (80%)
@@ -124,7 +123,7 @@ You > @deyvin
            Do you want to continue implementing the 2 pending steps?
 You > Yes, start with the webhook.
 
-@deyvin > [implements src/routes/webhooks.js]
+@dev > [implements src/routes/webhooks.js]
            Webhook handler created. Testing with stripe-cli...
            Event payment_intent.succeeded received ✓
            Dossier updated: webhooks marked as done.
@@ -137,7 +136,7 @@ You > Yes, start with the webhook.
 The dossier has **drift detection**: if the code changed since the last agent update, it detects the divergence before continuing.
 
 ```
-@deyvin > Checking for drift...
+@dev > Checking for drift...
            File: src/services/stripe.js
            Last known version: created by @dev on 2026-05-05
            Current state: modified outside the agent (1 function added)
@@ -182,7 +181,7 @@ Auditing checkout-stripe...
 ✗ src/routes/webhooks.js listed as pending but file exists on disk
 
   Possible inconsistency: file created but dossier not updated.
-  Recommendation: run @deyvin to sync the status.
+  Recommendation: run @dev to sync the status.
 ```
 
 ---
@@ -196,7 +195,7 @@ npx @jaimevalasek/aioson dossier:show --slug=checkout-stripe
 ```
 FEATURE: checkout-stripe
 Status: in_progress
-Agents: @product, @sheldon, @planner, @dev, @deyvin
+Agents: @product, @sheldon, @planner, @dev
 Progress: 4/5 steps done (80%)
 Files: 5 (3 created, 2 pending)
 Research: 1 (stripe webhooks)
@@ -233,7 +232,7 @@ Beyond the dossier, `@dev` maintains `.aioson/context/dev-state.md` — a more g
 
 ## Operational memory between agents
 
-Before handoff or close, DEV may also receive a Neural Chain impact queue in its activation context. This is operational memory between implementation sessions: the source change, suspected target, confidence, owner, status, lease, and resolution evidence live in SQLite. DEV or Deyvin claims each `NC-*` item before inspection and records either a fix or an evidence-backed no-change/false-positive result. The Markdown file under `.aioson/context/noises/{feature}.md` is only a projection and disappears when no actionable work remains.
+Before handoff or close, DEV may also receive a Neural Chain impact queue in its activation context. This is operational memory between implementation sessions: the source change, suspected target, confidence, owner, status, lease, and resolution evidence live in SQLite. DEV claims each `NC-*` item before inspection and records either a fix or an evidence-backed no-change/false-positive result. The Markdown file under `.aioson/context/noises/{feature}.md` is only a projection and disappears when no actionable work remains.
 
 This complements the dossier: the dossier remembers feature intent and progress; Neural Chain remembers causal follow-up work discovered from code relationships.
 
@@ -276,7 +275,7 @@ This creates an auditable history of all features — useful for onboarding new 
 
 - Feature you finish in one 1-hour session — unnecessary overhead.
 - MICRO project with a single feature — `project.context.md` and `dev-state.md` are enough.
-- Quick code exploration — use `@deyvin` directly without initializing a dossier.
+- Quick code exploration — use a bare `@dev` activation directly without initializing a dossier.
 
 For tracked features, the dossier is useful non-blocking memory at every classification. It enriches the PRD, plan, implementation, and QA review without adding a mandatory workflow stage.
 
@@ -289,7 +288,7 @@ For tracked features, the dossier is useful non-blocking memory at every classif
 | Multiple parallel features | One dossier per feature slug. `project-pulse.md` shows which is active. |
 | Team with multiple devs | Commit the dossiers to Git. Each dev sees the state of all features. |
 | Feature resumed by a different agent | Any agent reads the dossier. The agent trail is recorded. |
-| Session dropped without saving `dev-state.md` | `@deyvin` uses the dossier + git diff to reconstruct the state. |
+| Session dropped without saving `dev-state.md` | `@dev` uses the dossier + git diff to reconstruct the state. |
 
 ---
 
@@ -297,10 +296,10 @@ For tracked features, the dossier is useful non-blocking memory at every classif
 
 | Problem | Solution |
 |---|---|
-| `@deyvin` didn't find the dossier | Run `dossier:show --slug=X` to confirm it exists. If not, `dossier:init`. |
+| `@dev` didn't find the dossier | Run `dossier:show --slug=X` to confirm it exists. If not, `dossier:init`. |
 | Dossier is out of sync with the code | `dossier:audit` detects inconsistencies and guides correction. |
 | `dev-state.md` was overwritten | Git has the history. The dossier has the agent trail. |
-| Drift detection fired incorrectly | Tell `@deyvin`: "the file was modified intentionally, update the codemap". |
+| Drift detection fired incorrectly | Tell `@dev`: "the file was modified intentionally, update the codemap". |
 
 ---
 

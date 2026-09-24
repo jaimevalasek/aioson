@@ -8,7 +8,7 @@ O autopilot remove confirmações mecânicas de handoff, mas preserva decisões 
 [fontes opcionais → Briefing → Refiner → aprovação] → Product → Sheldon → Planner → DEV → QA → fechamento humano
 ```
 
-Briefing e Refiner são opcionais quando o usuário já possui direção de produto aprovada. Quando o Briefing é usado, o Refiner e a aprovação fecham essa entrada antes do Product. Sheldon é a revisão independente obrigatória do PRD. Analyst, Architect, Discovery Design Doc, PM, Scope Check e UX/UI continuam disponíveis como consultores, mas a classificação não os insere na rota e eles não criam pacotes obrigatórios de artefatos.
+Briefing e Refiner são opcionais quando o usuário já possui direção de produto aprovada. Quando o Briefing é usado, o Refiner e a aprovação fecham essa entrada antes do Product. Sheldon é a revisão independente obrigatória do PRD. Os antigos consultores foram absorvidos pelo ciclo principal: regras de domínio no Product; decisões de arquitetura, descoberta do repositório e sequenciamento no Planner; direção visual no Refiner/protótipo; revisão de escopo no QA. A classificação não cria pacotes obrigatórios de artefatos.
 
 MICRO, SMALL e MEDIUM usam a mesma rota. A classificação altera profundidade, cobertura de risco e orçamento de implementação — não a quantidade de agentes de especificação.
 
@@ -46,7 +46,7 @@ Quando Tester/Pentester encontra um defeito determinístico que preserva comport
 
 Essas correções baseadas em evidência não abrem confirmação mecânica no Autopilot. O fluxo pausa apenas para decisão material, limite esgotado ou ação externa/destrutiva sem autorização.
 
-O vínculo de protótipo também é resolvido sem confirmação mecânica: somente o protótipo e manifesto da pasta do slug ativo podem ser `current`; um artefato ausente, cruzado ou pertencente a uma feature fechada vira `none`, é citado como referência histórica excluída e o repositório passa a ser o baseline. Product, Sheldon, Planner, DEV/Deyvin e QA mostram essa resolução no chat. O Autopilot só pausa se o usuário quiser promover o protótipo histórico a nova autoridade de produto.
+O vínculo de protótipo também é resolvido sem confirmação mecânica: somente o protótipo e manifesto da pasta do slug ativo podem ser `current`; um artefato ausente, cruzado ou pertencente a uma feature fechada vira `none`, é citado como referência histórica excluída e o repositório passa a ser o baseline. Product, Sheldon, Planner, DEV e QA mostram essa resolução no chat. O Autopilot só pausa se o usuário quiser promover o protótipo histórico a nova autoridade de produto.
 
 ## Condições de parada
 

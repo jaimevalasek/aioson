@@ -92,7 +92,7 @@ Os campos críticos:
 
 ## O agente reflete
 
-O agente lê o manifest na próxima sessão (ou na mesma, se for o caso). Cada agent.md (dev, qa, deyvin) tem uma seção "Memory reflection" com a instrução:
+O agente lê o manifest na próxima sessão (ou na mesma, se for o caso). Cada agent.md (dev, qa) tem uma seção "Memory reflection" com a instrução:
 
 > Se `.aioson/runtime/reflect-prompt.json` existir no início do seu turno, antes de qualquer outra ação: leia, edite os `targets` em `bootstrap/*.md` (preservando frontmatter, atualizando `generated_at`, sem escrever fora de `allowed_paths`), depois `aioson memory:reflect-commit . --agent=<você> --output=<path>` com `{ "files": { "<rel>": "<content>" } }`. Pule silenciosamente se não houver manifest.
 
@@ -146,7 +146,7 @@ $ cat .aioson/runtime/reflect-prompt.json | jq .heuristic_verdict
 $ cat .aioson/runtime/reflect-prompt.json | jq .targets
 ["how-it-works.md", "what-it-does.md", "current-state.md"]
 
-# 4. Próxima sessão de dev/qa/deyvin lê o manifest e edita os 3 arquivos.
+# 4. Próxima sessão de dev/qa lê o manifest e edita os 3 arquivos.
 #    O agente prepara o output JSON e commita:
 
 $ cat > /tmp/reflect-output.json <<EOF

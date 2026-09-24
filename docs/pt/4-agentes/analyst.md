@@ -1,38 +1,6 @@
-# @analyst — Consultoria de domínio
+# @analyst (aposentado)
 
-> **Para quem é:** quem tem uma dúvida concreta sobre entidades, regras de negócio ou fluxos existentes.
+> Este agente foi aposentado; o trabalho dele agora vive em [@product](./product.md).
 
-> ⚠️ **Não é uma etapa da esteira.** O domínio entra pelo cache do `@discover` e é confrontado com o código real pelo `@sheldon`. O `@analyst` é um desvio opt-in para uma pergunta nomeada. Ver [a esteira principal](../1-entender/mapa-do-ecossistema.md#a-esteira-principal).
-
-## Para que serve
-
-`@analyst` investiga o domínio e o codebase para responder uma pergunta delimitada: quais entidades já existem, quais regras estão implícitas e onde um novo comportamento se conecta.
-
-Ele não é um estágio automático de MICRO, SMALL ou MEDIUM. Também não precisa produzir um `requirements-{slug}.md` separado para toda feature.
-
-## Quando invocar
-
-- O PRD depende de uma regra de negócio que o codebase ainda não esclareceu.
-- Uma feature toca entidades existentes e há risco de duplicação ou conflito.
-- Product, Sheldon ou Planner pede uma análise de domínio específica.
-- Um novo colaborador precisa de um mapa consultivo do domínio.
-
-## Como o resultado entra no fluxo
-
-O parecer atualiza o artefato dono da decisão:
-
-- escopo ou AC → PRD;
-- sequência/impacto de implementação → plano;
-- detalhe local de código → notas do DEV.
-
-O parecer pode ser salvo como memória auxiliar, mas não cria um gate canônico.
-
-## Handoff típico
-
-- **Vem de:** pedido explícito de Product, Sheldon, Planner, DEV ou usuário.
-- **Vai para:** o dono do artefato que fez a pergunta.
-
-## Veja também
-
-- [Ficha do @product](./product.md)
-- [Ficha do @planner](./planner.md)
+- **Regras de domínio, entidades e fluxos:** o `@product` registra as regras de domínio diretamente no `prd-{slug}.md`, que o `@sheldon` revisa.
+- **Leitura do sistema existente:** o [@planner](./planner.md) inspeciona o repositório antes de planejar.

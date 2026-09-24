@@ -36,7 +36,7 @@ A esteira é a mesma nos três níveis:
 
 Briefing e Refiner são a entrada de fonte crua — opcionais quando a direção já está clara, mas se iniciados precisam ser concluídos e aprovados (escopo visual exige o protótipo aprovado). Sheldon é a revisão independente obrigatória do mesmo PRD. QA é o Gate D; Tester e Pentester são o endurecimento que vem depois, habilitados por feature. A classificação regula profundidade, orçamento de arquivos, cobertura de risco e quantidade de evidência — não cria outra cadeia de agentes.
 
-Para uma mudança bounded, a rota curta (**Simple Plan**, via `@deyvin`) existe em qualquer classificação e não passa pela esteira.
+Para uma mudança bounded, a rota curta (**Simple Plan**, via `@dev`) existe em qualquer classificação e não passa pela esteira.
 
 #### MICRO
 
@@ -110,7 +110,7 @@ Você pode marcar **mais de um** no wizard — eles convivem no mesmo projeto.
 
 ### Development (padrão)
 
-Inclui os 34 agentes oficiais — a esteira inteira (briefing, refiner, product, sheldon, planner, dev, qa, tester, pentester), o boot e roteamento (setup, neo), a continuidade (deyvin, committer, discover) e as consultorias opt-in. Suficiente para 95% dos projetos.
+Inclui os 29 agentes oficiais — a esteira inteira (briefing, refiner, product, sheldon, planner, dev, qa, tester, pentester), o boot e roteamento (setup, neo), a entrega (committer, discover) e os especialistas opt-in. Suficiente para 95% dos projetos.
 
 ### Development + Squads
 
@@ -147,7 +147,7 @@ npx @jaimevalasek/aioson squad:scaffold compliance
 > **A rota: `interface-design` + suas imagens de referência.** O template embarca exatamente uma design skill — o motor `interface-design`. Em vez de herdar o visual idêntico de um preset fixo, você fornece imagens de referência (identidade/marca e, opcionalmente, estrutura de componentes); a skill `reference-identity-extract` as converte **uma única vez** num `identity.md` de texto que o motor aplica em tudo que vier depois (protótipo e build). Não há pergunta: `design_skill: "interface-design"` já nasce no `project.context.md` e nenhum agente pede para escolher ou confirmar uma design skill — só uma skill forjada pelo próprio projeto (`@site-forge` ou `@design-hybrid-forge`) substitui o motor, quando você a nomeia. Imagens são opcionais: sem nenhuma, o motor roda mesmo assim, decidindo sozinho (modo origem).
 
 **Pular** as imagens é uma opção legítima. Você pode:
-- Fornecer depois com `@setup`/`@ux-ui` — mesma rota, sempre com confirmação explícita
+- Fornecer depois com `@setup`/`@refiner` — mesma rota, sempre com confirmação explícita
 - Clonar o design de um site real com `@site-forge`
 - Criar um híbrido a partir de duas skills que você já forjou com `@design-hybrid-forge`
 

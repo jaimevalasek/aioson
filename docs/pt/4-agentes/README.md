@@ -2,7 +2,7 @@
 
 > Índice dos agentes públicos, com situação de uso e saída esperada.
 > Cada agente tem sua ficha — clique no nome para detalhes.
-> `@pair` é alias de `@deyvin` e não possui ficha separada.
+> Agentes aposentados (`@deyvin`/`@pair`, `@architect`, `@discovery-design-doc`, `@pm`, `@analyst`, `@ux-ui`, `@scope-check`) foram absorvidos pela esteira principal — veja [Agentes aposentados](#agentes-aposentados).
 
 > **As colunas "Quando invocar" descrevem capacidades, não a ordem obrigatória.**
 
@@ -20,17 +20,17 @@ Esta é a cadeia que constrói feature, em ciclo. MICRO, SMALL e MEDIUM percorre
 |---|---|---|---|
 | 1 | [@briefing](./briefing.md) | Transforma fontes cruas em briefing pré-PRD, com fontes preservadas e promessas `PROM-*` numeradas | `briefing.md` |
 | 2 | [@refiner](./refiner.md) | Audita as lacunas em achados estruturados e monta o protótipo navegável que você aprova. O CLI renderiza a revisão (`briefing:review`) e aplica o feedback confirmado (`briefing:apply-feedback`) | `prototype.html`, `refinement-findings.json`, `review.html`, `refinement-report.md` |
-| 3 | [@product](./product.md) | Define capacidades `CAP-*`, critérios observáveis e o que fica explicitamente fora | `prd-{slug}.md` |
+| 3 | [@product](./product.md) | Define capacidades `CAP-*`, critérios observáveis, regras de domínio, decisões de interação e o que fica explicitamente fora | `prd-{slug}.md` |
 | 4 | [@sheldon](./sheldon.md) | Confronta o PRD com fonte, protótipo e repositório; corrige no próprio arquivo e sela | o mesmo `prd-{slug}.md` + PASS vinculado ao hash |
-| 5 | [@planner](./planner.md) | Transforma o PRD selado em etapas verticais com arquivos exatos e check por etapa | `implementation-plan-{slug}.md` |
-| 6 | [@dev](./dev.md) | Implementa etapa por etapa pela rota real de produção | código + `dev-state.md` |
-| 7 | [@qa](./qa.md) | Veredito independente contra o PRD, com evidência — **este é o Gate D** | `qa-report-{slug}.md` |
+| 5 | [@planner](./planner.md) | Descobre o repositório (mapa de código), registra decisões de arquitetura e transforma o PRD selado em etapas verticais sequenciadas com arquivos exatos e check por etapa | `implementation-plan-{slug}.md` |
+| 6 | [@dev](./dev.md) | Implementa etapa por etapa pela rota real de produção; também dono do Simple Plan, correções pequenas, continuidade de sessão e sub-task scout | código + `dev-state.md` |
+| 7 | [@qa](./qa.md) | Veredito independente contra o PRD, com evidência, scope drift e auditoria de acessibilidade — **este é o Gate D** | `qa-report-{slug}.md` |
 | 8 | [@tester](./tester.md) | Cobertura que protege o comportamento já aprovado: regressão, borda, defeito reproduzido | `test-report-{slug}.md` |
 | 9 | [@pentester](./pentester.md) | Sonda a superfície como adversário autorizado, corrige e re-sonda | `security-findings-*.json` |
 
 **Onde o automático para.** O encadeamento automático (Autopilot) vai de `@product` até `@qa`. Briefing e Refiner são a entrada de fonte crua — opcionais quando a direção já está clara, mas se iniciados precisam ser concluídos e aprovados; escopo visual exige o protótipo aprovado antes do Product. `@tester` e `@pentester` são o endurecimento pós-veredito, habilitados por feature, e **não concedem o Gate D**. `feature:close` e publicação são sempre seus. Veja [Autopilot Handoff](../5-referencia/autopilot-handoff.md).
 
-**A rota curta.** Para uma mudança bounded, o Simple Plan vai direto ao [@deyvin](./deyvin.md) — escopo, plano curto, implementação, verificação — sem passar pela esteira, e escala para ela se o escopo crescer.
+**A rota curta.** Para uma mudança bounded, o Simple Plan vai direto ao [@dev](./dev.md) — escopo, plano curto, implementação, verificação — sem passar pela esteira, e escala para ela se o escopo crescer.
 
 ---
 
@@ -40,14 +40,8 @@ Estes agentes **não são etapas da esteira**. Você os chama para uma dúvida n
 
 | Agente | Para qual dúvida nomeada | Saída principal |
 |---|---|---|
-| [@analyst](./analyst.md) | Quais entidades, regras e fluxos já existem no domínio | análise no PRD ou artefato consultivo |
-| [@architect](./architect.md) | Qual opção de estrutura, integração ou fronteira técnica escolher | registro da decisão ou parecer |
-| [@ux-ui](./ux-ui.md) | Uma decisão de interação que o protótipo aprovado não resolveu | parecer; `design-doc.md` só se você pedir o entregável |
-| [@pm](./pm.md) | Prioridade, dependência ou ordem de rollout; não substitui `@planner` | parecer ou backlog consultivo |
-| [@scope-check](./scope-check.md) | "O que foi entregue confere com o que foi pedido?" | `scope-check.md` |
 | [@orchestrator](./orchestrator.md) | Coordenação de execução genuinamente paralela ou cross-cutting | coordenação e handoffs |
 | [@validator](./validator.md) | Verificação binária extra contra o contrato de sucesso, depois do QA | veredicto do harness |
-| [@discovery-design-doc](./discovery-design-doc.md) | Discovery + design doc, quando isso é o objetivo em si | `design-doc*.md` + `readiness*.md` |
 | [@forge-run](./forge-run.md) | Lane B: compila e roda o workflow de verificação executável de uma feature MEDIUM com contrato `verification` | `forge-run.workflow.js` |
 | [@shakedown](./shakedown.md) | "O que está faltando que ninguém pensou em pedir?" — caminhada pós-entrega cega para a spec | `shakedown-{slug}.md` (punch list) |
 
@@ -59,10 +53,24 @@ Estes agentes **não são etapas da esteira**. Você os chama para uma dúvida n
 |---|---|---|---|
 | [@setup](./setup.md) | Onboarding: detecta stack, classifica projeto | Sempre primeiro num projeto novo | `project.context.md` |
 | [@neo](./neo.md) | Roteador: diz qual agente é o próximo | Quando você está perdido | Orientação verbal |
-| [@deyvin](./deyvin.md) | Pair-programming, continuidade de sessão e a rota curta (Simple Plan) | Retomar feature interrompida ou fazer uma mudança pequena | continuação do trabalho |
-| [@pair](./deyvin.md) | Alias de `@deyvin` | — | — |
 | [@committer](./committer.md) | Gera mensagem de commit profissional | Após implementar, antes de commitar | mensagem de commit |
 | [@discover](./discover.md) | Constrói cache semântico do projeto | Onboarding em codebase grande | `.aioson/context/bootstrap/` |
+
+---
+
+## Agentes aposentados
+
+Estes agentes foram absorvidos pela esteira principal. Os ids antigos ainda resolvem na CLI (por exemplo, `--agent=deyvin` age como `dev`) e `aioson update` remove os arquivos antigos dos projetos.
+
+| Agente antigo | Onde o trabalho vive agora |
+|---|---|
+| `@deyvin` / `@pair` | [@dev](./dev.md) — Simple Plan, correções pequenas, continuidade de sessão, sub-task scout |
+| `@architect` | [@planner](./planner.md) — decisões de arquitetura no plano |
+| `@discovery-design-doc` | [@planner](./planner.md) — descoberta do repositório e mapa de código |
+| `@pm` | [@planner](./planner.md) — sequenciamento e rollout |
+| `@analyst` | [@product](./product.md) — regras de domínio |
+| `@ux-ui` | [@refiner](./refiner.md)/protótipo (direção visual), [@product](./product.md) (interação), [@qa](./qa.md) (acessibilidade), [@dev](./dev.md) (entrega de sites) |
+| `@scope-check` | [@qa](./qa.md) — scope drift, mais o gate automático do `workflow:next` |
 
 ---
 

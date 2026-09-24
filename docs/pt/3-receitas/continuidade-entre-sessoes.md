@@ -12,7 +12,7 @@ Você estava implementando a feature de checkout com Stripe. Passou três horas 
 
 Isso é o problema do **prompt-monolito**: toda a memória fica na conversa, que é temporária.
 
-O **Feature Dossier** (sistema de agent-chain continuity, implementado em 8 fases entre Mar–Mai/2026) resolve isso. Cada feature tem uma pasta com artefatos persistentes. Quando você retoma, o `@deyvin` lê o dossier e continua de onde parou — sem entrevistar você sobre o que já foi feito.
+O **Feature Dossier** (sistema de agent-chain continuity, implementado em 8 fases entre Mar–Mai/2026) resolve isso. Cada feature tem uma pasta com artefatos persistentes. Quando você retoma, o `@dev` lê o dossier e continua de onde parou — sem entrevistar você sobre o que já foi feito.
 
 ---
 
@@ -94,15 +94,15 @@ last_updated: 2026-05-06T14:32:00Z
 
 ## Retomando uma feature — fluxo real
 
-### Sessão nova, agente `@deyvin`
+### Sessão nova, agente `@dev`
 
 ```
-Você > @deyvin
+Você > @dev
 
-@deyvin > Lendo project-pulse.md... feature checkout-stripe em andamento.
+@dev > Lendo project-pulse.md... feature checkout-stripe em andamento.
            Lendo dossier.md...
 
-@deyvin > Aqui está onde você parou:
+@dev > Aqui está onde você parou:
 
            FEATURE: checkout-stripe
            Status: in_progress (80%)
@@ -124,7 +124,7 @@ Você > @deyvin
            Quer continuar implementando os 2 passos pendentes?
 Você > Sim, comece pelo webhook.
 
-@deyvin > [implementa src/routes/webhooks.js]
+@dev > [implementa src/routes/webhooks.js]
            Webhook handler criado. Testando com stripe-cli...
            Evento payment_intent.succeeded recebido ✓
            Dossier atualizado: webhooks marcado como concluído.
@@ -137,7 +137,7 @@ Você > Sim, comece pelo webhook.
 O dossier tem **drift detection**: se o código mudou desde o último registro do agente, ele detecta a divergência antes de continuar.
 
 ```
-@deyvin > Verificando drift...
+@dev > Verificando drift...
            Arquivo: src/services/stripe.js
            Última versão conhecida: criado por @dev em 2026-05-05
            Estado atual: modificado fora do agente (1 função adicionada)
@@ -182,7 +182,7 @@ Auditando checkout-stripe...
 ✗ src/routes/webhooks.js listado como pendente mas arquivo existe no disco
 
   Possível inconsistência: arquivo criado mas dossier não atualizado.
-  Recomendação: rode @deyvin para sincronizar o status.
+  Recomendação: rode @dev para sincronizar o status.
 ```
 
 ---
@@ -196,7 +196,7 @@ npx @jaimevalasek/aioson dossier:show --slug=checkout-stripe
 ```
 FEATURE: checkout-stripe
 Status: in_progress
-Agentes: @product, @sheldon, @planner, @dev, @deyvin
+Agentes: @product, @sheldon, @planner, @dev
 Progresso: 4/5 etapas concluídas (80%)
 Arquivos: 5 (3 criados, 2 pendentes)
 Pesquisas: 1 (stripe webhooks)
@@ -233,7 +233,7 @@ Além do dossier, o `@dev` mantém `.aioson/context/dev-state.md` — um snapsho
 
 ## Memória operacional entre agentes
 
-Antes do handoff ou fechamento, o DEV também pode receber uma fila de impactos do Neural Chain no contexto de ativação. Essa é a memória operacional entre sessões de implementação: mudança de origem, alvo suspeito, confiança, responsável, status, lease e evidência de resolução ficam no SQLite. DEV ou Deyvin faz claim de cada item `NC-*` antes de inspecionar e registra tanto uma correção quanto uma conclusão fundamentada de que nenhuma mudança era necessária ou de que a correlação era falso positivo.
+Antes do handoff ou fechamento, o DEV também pode receber uma fila de impactos do Neural Chain no contexto de ativação. Essa é a memória operacional entre sessões de implementação: mudança de origem, alvo suspeito, confiança, responsável, status, lease e evidência de resolução ficam no SQLite. DEV faz claim de cada item `NC-*` antes de inspecionar e registra tanto uma correção quanto uma conclusão fundamentada de que nenhuma mudança era necessária ou de que a correlação era falso positivo.
 
 O Markdown em `.aioson/context/noises/{feature}.md` é somente uma projeção humana e desaparece quando não há trabalho acionável. Ele complementa o dossier: o dossier preserva intenção e progresso da feature; o Neural Chain preserva trabalho causal descoberto pelas relações entre arquivos.
 
@@ -276,7 +276,7 @@ Isso cria um histórico auditável de todas as features — útil para onboardin
 
 - Feature de 1 hora que você termina na mesma sessão — overhead desnecessário.
 - Projeto MICRO com uma única feature — o `project.context.md` e o `dev-state.md` já bastam.
-- Exploração rápida de código — use `@deyvin` direto sem inicializar dossier.
+- Exploração rápida de código — use `@dev` direto sem inicializar dossier.
 
 Para features rastreadas, o dossiê é memória auxiliar recomendada em qualquer classificação. Ele não adiciona estágios nem substitui PRD, plano ou relatório QA.
 
@@ -289,7 +289,7 @@ Para features rastreadas, o dossiê é memória auxiliar recomendada em qualquer
 | Múltiplas features paralelas | Um dossier por feature slug. O `project-pulse.md` mostra qual está ativa. |
 | Time com vários devs | Commitam os dossiês no Git. Cada dev vê o estado de todas as features. |
 | Feature retomada por agente diferente | Qualquer agente lê o dossier. O trail de agentes fica registrado. |
-| Sessão caiu sem salvar `dev-state.md` | `@deyvin` usa o dossier + git diff para reconstituir o estado. |
+| Sessão caiu sem salvar `dev-state.md` | `@dev` usa o dossier + git diff para reconstituir o estado. |
 
 ---
 
@@ -297,10 +297,10 @@ Para features rastreadas, o dossiê é memória auxiliar recomendada em qualquer
 
 | Problema | Solução |
 |---|---|
-| `@deyvin` não encontrou o dossier | Rode `dossier:show --slug=X` para confirmar que existe. Se não, `dossier:init`. |
+| `@dev` não encontrou o dossier | Rode `dossier:show --slug=X` para confirmar que existe. Se não, `dossier:init`. |
 | Dossier desatualizado com o código | `dossier:audit` detecta inconsistências e orienta correção. |
 | `dev-state.md` foi sobrescrito | O Git tem o histórico. O dossier tem o trail de agentes. |
-| Drift detection disparou erro incorreto | Diga ao `@deyvin`: "o arquivo foi modificado intencionalmente, atualize o codemap". |
+| Drift detection disparou erro incorreto | Diga ao `@dev`: "o arquivo foi modificado intencionalmente, atualize o codemap". |
 
 ---
 

@@ -32,7 +32,7 @@ A esteira principal é sempre a mesma, e cada fase só entrega quando tem prova:
 
 Fora da esteira ficam os consultores que você chama quando precisa: **Analyst** (o que já existe no terreno), **Architect** (qual estrutura escolher), **UX-UI** (uma decisão de interação que o protótipo não resolveu). Eles respondem uma pergunta nomeada e vão embora — não são etapas obrigatórias.
 
-E ainda tem o **Deyvin**, o empreiteiro que retoma a obra quando você volta de viagem: lê o que está confirmado, marca o que é só inferência, e segue um passo pequeno de cada vez sem você precisar re-explicar nada. Para mudanças pequenas, ele resolve sozinho pela rota curta. No fim, o **Committer** escreve a ata da reforma (mensagem de commit).
+E o próprio **Dev** também é o empreiteiro que retoma a obra quando você volta de viagem: lê o que está confirmado, marca o que é só inferência, e segue um passo pequeno de cada vez sem você precisar re-explicar nada. Para mudanças pequenas, ele resolve sozinho pela rota curta. No fim, o **Committer** escreve a ata da reforma (mensagem de commit).
 
 Cada um sabe quando entrar, quando sair, e que documento entregar para o próximo. Você fala com qualquer um deles digitando `@nome` no seu cliente AI.
 
@@ -93,7 +93,7 @@ Os agentes são *prompts*, não plugins. Eles vivem em arquivos `.md` e o client
 - **Você quer experimentar livremente** uma ideia em 5 minutos. AIOSON pede setup primeiro.
 - **Você não vai abrir o projeto de novo.** O valor está justamente em sessões repetidas.
 
-Para esses casos, o próprio AIOSON tem um caminho leve — o **Simple Plan**, em que o `@deyvin` confirma o escopo, registra um plano mínimo, implementa a menor fatia útil e fecha com a verificação combinada. Sem PRD, sem esteira. Se o escopo crescer no meio, a rota escala sozinha para a esteira completa. Mas se nem o Simple Plan for adequado, não force.
+Para esses casos, o próprio AIOSON tem um caminho leve — o **Simple Plan**, em que o `@dev` confirma o escopo, registra um plano mínimo, implementa a menor fatia útil e fecha com a verificação combinada. Sem PRD, sem esteira. Se o escopo crescer no meio, a rota escala sozinha para a esteira completa. Mas se nem o Simple Plan for adequado, não force.
 
 ## Próximo passo
 

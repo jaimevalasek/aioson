@@ -98,7 +98,7 @@ Os modos `guarded` e `headless` tratam warnings como bloqueio. `trusted` aceita 
 
 ## Handoff típico
 
-- **Vem de:** `@dev`, `@deyvin`, ou qualquer momento pós-implementação.
+- **Vem de:** `@dev` ou qualquer momento pós-implementação.
 - **Vai para:** nenhum — é terminal no fluxo de commit. Próximo passo é você: `git push` ou PR.
 
 ## Sobre o formato da mensagem

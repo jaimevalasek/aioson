@@ -84,7 +84,7 @@ Um único `implementation-plan-{slug}.md`, lido a partir do PRD selado, do prot�
 | Feature MICRO | `project.context.md` + `prd-{slug}.md` + `implementation-plan-{slug}.md` |
 | Feature SMALL/MEDIUM | `project.context.md` + `prd-{slug}.md` selado + `implementation-plan-{slug}.md` |
 | Feature com escopo visual | os anteriores + o protótipo aprovado e sua `## Visual direction` |
-| Simple Plan (rota curta) | `project.context.md` + o plano mínimo registrado pelo `@deyvin` |
+| Simple Plan (rota curta) | `project.context.md` + o plano mínimo registrado pelo `@dev` |
 
 Além disso, o DEV lê o briefing/refinamento aprovado e a revisão corrente do Sheldon para checar cobertura de fontes e delta de implementação.
 
@@ -125,7 +125,7 @@ Regras duras — sem exceções:
 
 Product mantém o único `prd-{slug}.md`; Sheldon pode enriquecê-lo in-place; Planner cria o único `implementation-plan-{slug}.md`. Esses dois artefatos aprovados são suficientes para o handoff ao DEV.
 
-Analyst, Architect, PM, UX/UI e Discovery Design Doc são consultorias explícitas. Quando um parecer muda escopo ou ACs, ele volta ao PRD; quando muda sequência, arquivos ou checks, volta ao plano. A ausência de requirements/spec/design/readiness separados não bloqueia a implementação.
+Não há consultorias paralelas: regras de domínio e decisões de interação vivem no PRD (Product); decisões de arquitetura, descoberta e sequenciamento vivem no plano (Planner); a direção visual vive no protótipo (Refiner). Quando algo muda escopo ou ACs, volta ao PRD; quando muda sequência, arquivos ou checks, volta ao plano. A ausência de requirements/spec/design/readiness separados não bloqueia a implementação.
 
 ---
 
@@ -159,11 +159,11 @@ Quando o `@sheldon` autora o `harness-contract.json`, ele escreve um comando `ve
 
 ### Coluna `Wave` no plano de implementação
 
-A tabela **Execution Sequence** gerada pelo `@pm` ganha a coluna `Wave`. Fases na mesma Wave são disjuntas em arquivos e sem dependência entre si — paralelizáveis via subagentes/worktrees isolados; waves executam em ordem crescente. A marcação é conservadora: mesma Wave só quando os Primary files não se sobrepõem **e** nenhuma fase consome a saída da outra; na dúvida, sequencial. É essa coluna que a Lane B usa para montar os `parallel()` do workflow compilado.
+A tabela **Execution Sequence** gerada pelo `@planner` ganha a coluna `Wave`. Fases na mesma Wave são disjuntas em arquivos e sem dependência entre si — paralelizáveis via subagentes/worktrees isolados; waves executam em ordem crescente. A marcação é conservadora: mesma Wave só quando os Primary files não se sobrepõem **e** nenhuma fase consome a saída da outra; na dúvida, sequencial. É essa coluna que a Lane B usa para montar os `parallel()` do workflow compilado.
 
 ### spec:analyze como passe de consistência pré-execução
 
-Antes do gate de execução, o `@scope-check` roda `aioson spec:analyze --feature={slug}` — o irmão de **conteúdo** do `artifact:validate`. Enquanto `artifact:validate` checa a presença da cadeia, `spec:analyze` checa a consistência cruzada entre os artefatos: rastreabilidade REQ/AC, staleness (upstream modificado após downstream gerado), readiness, sanidade do contrato, vínculo AC→contrato e `wave_file_overlap`. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`: errors são blockers roteados ao agente dono; warnings viram evidência de drift pré-computada.
+Antes do gate de execução roda `aioson spec:analyze --feature={slug}` — o irmão de **conteúdo** do `artifact:validate`. Enquanto `artifact:validate` checa a presença da cadeia, `spec:analyze` checa a consistência cruzada entre os artefatos: rastreabilidade REQ/AC, staleness (upstream modificado após downstream gerado), readiness, sanidade do contrato, vínculo AC→contrato e `wave_file_overlap`. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`: errors são blockers roteados ao agente dono (`@sheldon` ou `@planner`); warnings viram evidência de drift pré-computada para a revisão de escopo do `@qa`.
 
 ### forge-run.workflow.js como artefato de saída compilado
 

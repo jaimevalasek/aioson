@@ -368,7 +368,7 @@ A rastreabilidade tem **guarda anti-ruído**: plano em prosa que não cita ids n
 
 **Severidades e exit code:** `error` vira `ok:false` (exit 1 em `--json`) para scripting de gate; `warning` = drift provável; `info` = dívida. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`.
 
-**Quem roda:** o `@scope-check` chama no preflight — errors são blockers roteados ao agente dono; warnings viram evidência de drift pré-computada para confirmar ou descartar.
+**Quem roda:** o `@planner` antes do gate de execução e o `@qa` na revisão de escopo (`--stage=dev`) — errors são blockers roteados ao agente dono; warnings viram evidência de drift pré-computada para confirmar ou descartar.
 
 ```bash
 # Consistência cruzada antes do gate de execução
@@ -604,8 +604,8 @@ A **Lane B** é uma lane de execução compilada, opt-in, para features MEDIUM. 
 | Recusa | Agente dono |
 |---|---|
 | Contrato inválido/ausente, zero critério executável | `@sheldon` |
-| Plano sem coluna Wave, `wave_file_overlap` (warning na análise, **erro aqui**) | `@pm` |
-| Errors do `spec:analyze`, readiness | `@discovery-design-doc` |
+| Plano sem coluna Wave, `wave_file_overlap` (warning na análise, **erro aqui**) | `@planner` |
+| Errors do `spec:analyze`, readiness | `@planner` |
 
 O código gerado respeita o contrato do runtime: meta literal puro, JS plano, sem `Date.now`/`Math.random`/`new Date`, texto de artefatos via `JSON.stringify` (seguro contra injeção). O script **nunca** roda `feature:close`/publish.
 

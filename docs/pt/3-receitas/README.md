@@ -18,7 +18,7 @@ A esteira completa é sempre a mesma — o que muda é por onde você entra nela
 | **[Feature completa com revisão do @sheldon](./feature-completa-com-sheldon.md)** | Você tem uma direção de produto clara | Direto no PRD: `@product → @sheldon → @planner → @dev → @qa` |
 | [Plans externos para @product](./plans-externos-para-product.md) | Você já planejou em outro chat (ChatGPT, Claude.io Web) | `@product` lendo `/plans/` |
 
-> **E para uma mudança pequena?** Não puxe a esteira. Chame `@deyvin` — a rota curta (Simple Plan) confirma o escopo, registra um plano mínimo, implementa e verifica. Ver [Continuidade entre sessões](./continuidade-entre-sessoes.md).
+> **E para uma mudança pequena?** Não puxe a esteira. Chame `@dev` — a rota curta (Simple Plan) confirma o escopo, registra um plano mínimo, implementa e verifica. Ver [Continuidade entre sessões](./continuidade-entre-sessoes.md).
 
 ## Receitas por cenário
 
@@ -32,6 +32,6 @@ A esteira completa é sempre a mesma — o que muda é por onde você entra nela
 | [Publicar no aioson.com](./publicar-no-aioson-com.md) | Distribuir squad, skill ou genome | system:package, system:publish |
 | [Clonar design de site](./clonar-design-de-site.md) | Extrair visual de site ou combinar dois estilos | @site-forge, @design-hybrid-forge |
 | [Exploração visual e arena entre modelos](./arena-de-exploracao-visual.md) | Testar redesigns, prints e variantes antes do Briefing | @refiner, @briefing |
-| [Continuidade entre sessões](./continuidade-entre-sessoes.md) | Retomar feature após sessão encerrada | @deyvin, dossier, dev-state |
+| [Continuidade entre sessões](./continuidade-entre-sessoes.md) | Retomar feature após sessão encerrada | @dev, dossier, dev-state |
 
 Volte ao portal principal: [docs/pt/README.md](../README.md)

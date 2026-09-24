@@ -1,6 +1,6 @@
-# Deyvin Sub-Task Scout — English guide
+# Dev Sub-Task Scout — English guide
 
-> **Sub-task scout** is `@deyvin`'s structured diagnostic primitive. When a question requires inspecting more than 5 files or tracing a runtime flow, the agent doesn't read everything inline (burning parent context) — it dispatches a scout. The scout runs in isolated context, inspects the scope, and returns a JSON report with findings, confidence, and recommendation. The agent reads the report (~500 tokens) instead of the files (~10k+ tokens).
+> **Sub-task scout** is `@dev`'s structured diagnostic primitive. When a question requires inspecting more than 5 files or tracing a runtime flow, the agent doesn't read everything inline (burning parent context) — it dispatches a scout. The scout runs in isolated context, inspects the scope, and returns a JSON report with findings, confidence, and recommendation. The agent reads the report (~500 tokens) instead of the files (~10k+ tokens).
 
 This folder documents the full feature — 3 phases, 3 CLI verbs, 1 advisory check in doctor.
 
@@ -10,7 +10,7 @@ This folder documents the full feature — 3 phases, 3 CLI verbs, 1 advisory che
 
 - **Preserve parent agent context** — surveys of >5 files enter the parent context as a compact report, not raw file contents.
 - **Diagnostic traceability** — scouts are persisted in `.aioson/runtime/scouts/` and (after `feature:close`) archived to `.aioson/context/features/{slug}/scouts/`.
-- **CLI-less fallback** — `deyvin.md` carries a manual scout template for environments without the `aioson` binary.
+- **CLI-less fallback** — `.aioson/docs/dev/scout.md` carries the manual scout contract `@dev` follows in environments without the `aioson` binary.
 - **Cap discipline** — configurable limits prevent sub-task explosion: `max_scouts_per_session=3`, `max_files_in_scope=20`.
 
 ---
@@ -21,17 +21,17 @@ This folder documents the full feature — 3 phases, 3 CLI verbs, 1 advisory che
 - Harness with sub-agent support: Claude Code (Agent tool) or Codex (MultiAgentV2)
 - `.aioson/config/scout-engine.json` in the project (copied automatically by the installer as `{}`, defaults active)
 
-> **OpenCode:** emit `harness_unsupported` and automatically fall back to `deyvin.md`'s CLI-less inline flow. Full harness parity is V2.
+> **OpenCode:** emit `harness_unsupported` and automatically fall back to the CLI-less contract in `.aioson/docs/dev/scout.md`. Full harness parity is V2.
 
 ---
 
 ## Reading guide
 
-### I want to understand what changed in @deyvin (10 min)
+### I want to understand the scout in @dev (10 min)
 1. [What is the sub-task scout](./sub-task-scout.md) — the problem, 3 phases, full lifecycle
 2. [Diagrams](./diagrams.md) — ASCII flow: `scout:prep` → sub-agent → `scout:validate` → `scout:commit`
 
-### I want to see @deyvin using a scout
+### I want to see @dev using a scout
 3. [How to use](./how-to-use.md) — happy path, invalid JSON recovery, cap exceeded
 
 ### I want to configure or understand the limits
@@ -46,7 +46,7 @@ This folder documents the full feature — 3 phases, 3 CLI verbs, 1 advisory che
 
 | Command | What it does | Tier | Doc |
 |---|---|---|---|
-| `aioson scout:prep --question="..." --scope-paths="..." --parent-agent=deyvin --parent-session-id=<id>` | Validates inputs, applies caps, generates standardized prompt for sub-agent | tier-1 silent | [CLI reference](./cli-commands.md) |
+| `aioson scout:prep --question="..." --scope-paths="..." --parent-agent=dev --parent-session-id=<id>` | Validates inputs, applies caps, generates standardized prompt for sub-agent | tier-1 silent | [CLI reference](./cli-commands.md) |
 | `aioson scout:validate --input=<path>` | Validates the JSON returned by the sub-agent against the output schema | tier-1 silent | [CLI reference](./cli-commands.md) |
 | `aioson scout:commit --input=<path>` | Persists the validated report, emits telemetry, decrements cap | tier-1 silent | [CLI reference](./cli-commands.md) |
 | `aioson doctor .` | Includes the `scouts_directory_pruning` advisory (orphaned scouts >90d) | tier-1 silent | [Troubleshooting](./troubleshooting.md) |
@@ -94,13 +94,13 @@ Override example:
 
 ## Status
 
-The `deyvin-subtask-scout` feature was delivered in 3 phases:
+The scout was delivered in 3 phases as the `deyvin-subtask-scout` feature, when it belonged to the now-retired `@deyvin` agent; it moved to `@dev` when `@deyvin` was folded into it:
 
 | Phase | Slug | Delivery | Status |
 |---|---|---|---|
 | 1 | `core-engine` | `src/sub-task-engine.js` + schemas + hand-rolled validator | PASS |
 | 2 | `cli-verbs` | `scout:prep` + `scout:validate` + `scout:commit` + state with file-lock | PASS |
-| 3 | `wiring-and-lifecycle` | `deyvin.md` updated (CLI + CLI-less), archival in `feature:close`, `memory:summary` row, doctor advisory | PASS |
+| 3 | `wiring-and-lifecycle` | agent prompt updated (CLI + CLI-less; now `.aioson/docs/dev/scout.md`), archival in `feature:close`, `memory:summary` row, doctor advisory | PASS |
 
 80 deterministic tests passing. QA approved.
 

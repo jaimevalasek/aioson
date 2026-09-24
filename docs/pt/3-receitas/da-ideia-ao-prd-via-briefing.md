@@ -217,7 +217,7 @@ O resto do fluxo é igual: aprovar via CLI → `@product`.
 
 - Feature simples e clara: MICRO, sem ambiguidade — vá direto para `@product`.
 - Já tem um PRD anterior enriquecido — use `@sheldon` para refinar.
-- É uma continuação de feature já iniciada — use `@deyvin`.
+- É uma continuação de feature já iniciada — use `@dev`.
 
 ---
 

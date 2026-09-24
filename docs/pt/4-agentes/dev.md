@@ -8,6 +8,16 @@
 
 Um resultado já especificado, sem decisão aberta de produto/arquitetura/segurança, pode ir diretamente ao DEV quando cabe no orçamento: até 5 arquivos de comportamento, 8 paths totais e 2 módulos existentes.
 
+Abaixo disso existe a correção direta: até 2 arquivos de comportamento, nenhuma decisão aberta e verificação conhecida — DEV corrige sem criar arquivo de plano.
+
+### Retomada e continuidade
+
+DEV absorveu o antigo `@deyvin`/`@pair`. Uma ativação simples de `@dev` carrega o contexto enxuto de continuidade; para retomar um Simple Plan, DEV lê o `dev-state` com `--context=simple-plan`, e a recuperação de sessão segue `.aioson/docs/dev/continuity-recovery.md`. Sessões live/diretas seguem `.aioson/docs/dev/runtime-handoffs.md`; entrega de sites, `.aioson/docs/dev/site-delivery.md`.
+
+### Sub-task scout
+
+Quando um diagnóstico ambíguo exige varrer mais de 5 arquivos ou rastrear um fluxo de runtime, DEV dispara um scout somente leitura com `aioson scout:prep --parent-agent=dev` (no máximo 3 scouts por sessão e 20 arquivos por escopo). Veja [Sub-task scout do @dev](../deyvin-subtask-scout/README.md).
+
 ### Feature rastreada
 
 Para MICRO, SMALL e MEDIUM, DEV recebe:
@@ -27,7 +37,7 @@ Se o trabalho ultrapassar o orçamento aprovado, DEV mostra o antes/depois da es
 
 O bloco de qualidade visual/anti-slop não vive mais no kernel do agente: é um doc roteado, `.aioson/docs/dev/visual-implementation.md`, carregado apenas quando a fase toca interface, protótipo ou estado visual — trabalho não visual nunca paga esse custo de contexto.
 
-Quando carregado, DEV resolve a autoridade visual nesta ordem, parando no primeiro acerto: o vínculo `identity`/`identity_status` do PRD → o protótipo aprovado (`prototype_status: current`) e sua `## Visual direction` → a `design_skill` selecionada do projeto → a linguagem de componentes já existente no repositório. Uma decisão visual genuinamente não resolvida é pergunta de produto para `@product` — DEV e `@deyvin` não encaminham mais para `@ux-ui`, que é um desvio opt-in e não faz parte da cadeia padrão de implementação.
+Quando carregado, DEV resolve a autoridade visual nesta ordem, parando no primeiro acerto: o vínculo `identity`/`identity_status` do PRD → o protótipo aprovado (`prototype_status: current`) e sua `## Visual direction` → a `design_skill` selecionada do projeto → a linguagem de componentes já existente no repositório. Uma decisão visual genuinamente não resolvida é pergunta de produto para `@product` — DEV não encaminha para um especialista de UI (o antigo `@ux-ui` foi aposentado; a direção visual vive no `@refiner`/protótipo e as decisões de interação no `@product`).
 
 Com um protótipo aprovado em vigor, a skill de design roda em **modo conformidade**: transfere a direção aprovada em vez de decidi-la de novo, mapeando cada região para um componente real da biblioteca do projeto.
 
@@ -35,7 +45,7 @@ Com um protótipo aprovado em vigor, a skill de design roda em **modo conformida
 
 Em stacks compilados, "rodar o build" não é um comando barato: um `cargo` padrão sobe um `rustc` por core lógico, e build scripts `*-sys` ainda somam `cl.exe`/`link.exe`/MSBuild por cima. Disparar isso por slice, em shells de background ou em worktrees paralelos, esgota a memória da máquina do operador.
 
-As convenções de stack (`.aioson/docs/dev/stack-conventions.md`, carregadas por `@dev` e `@deyvin` em tarefas de implementação) tratam build como recurso **serializado e limitado**:
+As convenções de stack (`.aioson/docs/dev/stack-conventions.md`, carregadas pelo `@dev` em tarefas de implementação) tratam build como recurso **serializado e limitado**:
 
 - valide slices com `cargo check` (ou `cargo clippy`); `cargo build` só quando um binário executável é realmente necessário;
 - rode testes com escopo (`cargo test -p <crate> <filtro>`); a suíte completa roda uma vez, no gate de entrega, não a cada slice;

@@ -12,7 +12,7 @@
 
 O plano conecta `CAP → encaixe no sistema atual → AC → delta de implementação → fase vertical → arquivos esperados → check executável → evidência pelo caminho de produção`.
 
-Ele não reescreve o PRD e não cria requisitos, arquitetura ou readiness paralelos. Quando falta uma decisão de produto, devolve ao dono do PRD; quando uma decisão técnica exige consultoria, pode recomendar `@architect` explicitamente.
+Ele não reescreve o PRD e não cria requisitos, arquitetura ou readiness paralelos. Quando falta uma decisão de produto, devolve ao dono do PRD. As decisões técnicas são dele: absorveu o antigo `@architect` (decisões de arquitetura no plano), o `@discovery-design-doc` (descoberta do repositório e mapa de código) e o `@pm` (sequenciamento e rollout).
 
 Além do delta por arquivo, o Planner registra em `## Engineering Controls` somente controles acionados por evidência: compatibilidade, mudança/recuperação de dados, autorização, validação, concorrência/idempotência, falhas/retry, observabilidade, desempenho, acessibilidade/localização ou dependências. Conhecimento do modelo gera hipóteses; o PRD e o código decidem o que entra no plano.
 

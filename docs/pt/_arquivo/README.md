@@ -14,7 +14,7 @@ Bem-vindo à documentação em português do AIOSON — um framework leve de age
 | [Início Rápido](./inicio-rapido.md) | Instale, configure e comece em menos de 10 minutos |
 | [Comandos CLI](./comandos-cli.md) | Referência em português dos comandos do `aioson`, com descrição, exemplos e usos práticos |
 | [Memória e Contexto](./memoria-contexto.md) | Guia prático dos arquivos de memória, descoberta, índices e pacotes mínimos de contexto |
-| [Deyvin](./deyvin.md) | Guia do agente de continuidade e pair programming do AIOSON |
+| [Deyvin](./deyvin.md) | Agente aposentado — continuidade, Simple Plan e scout agora vivem em `@dev` |
 | [Cenários de Uso](./cenarios.md) | Exemplos completos e práticos para projetos MICRO, SMALL e MEDIUM |
 | [Guia de Agentes](./agentes.md) | Quando usar cada agente e o que ele entrega |
 | [Hardening do Motor](./motor-hardening.md) | Gates técnicos, auto-cura, test briefing e hardening autônomo do workflow |
@@ -73,12 +73,11 @@ Fluxo recomendado:
 - se existir `spec.md`, o scan local também deriva `spec-current.md` e `spec-history.md`
 - depois rode novamente com `--with-llm` para gerar ou atualizar `discovery.md` e `skeleton-system.md`
 - quando quiser mandar só o contexto mínimo para uma tarefa, use `context:pack`
-- quando quiser entender como o `@deyvin` trabalha, leia [Deyvin](./deyvin.md)
-- quando quiser continuar uma sessao, corrigir um recorte pequeno ou trabalhar em modo companheiro tecnico, use `@deyvin`
-- `@discovery-design-doc` quando o escopo ainda estiver vago ou a feature for grande
-- `@analyst` / `@architect` / `@dev` conforme a clareza e o tipo do trabalho
+- quando quiser continuar uma sessao ou corrigir um recorte pequeno, use `@dev` (o antigo `@deyvin` foi aposentado; veja [Deyvin](./deyvin.md))
+- `@briefing` / `@product` quando o escopo ainda estiver vago ou a feature for grande
+- `@product` / `@planner` / `@dev` conforme a clareza e o tipo do trabalho
 
-Esse passo de `discovery-design-doc` e recomendado, nao obrigatorio.
+Esse passo de briefing e recomendado, nao obrigatorio.
 
 ## Brownfield sem duvida
 
@@ -105,7 +104,7 @@ O que cada etapa entrega:
 
 - `scan:project` sem `--with-llm`: gera `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`, `memory-index.md`, `module-<pasta>.md` e, quando houver `spec.md`, também `spec-current.md` + `spec-history.md`
 - `scan:project` com `--with-llm`: gera ou atualiza `discovery.md` e `skeleton-system.md`
-- `scan:project` nunca gera `architecture.md`; esse arquivo vem depois com `@architect`
+- `scan:project` nunca gera `architecture.md`; as decisoes de arquitetura vem depois com `@planner`
 - `context:pack`: gera `.aioson/context/context-pack.md` com o pacote mínimo recomendado para a tarefa atual
 
 Sem API LLM no `aioson`, ainda existe um caminho valido:
@@ -113,14 +112,14 @@ Sem API LLM no `aioson`, ainda existe um caminho valido:
 - rode `scan:project . --folder=...` para gerar os mapas locais
 - rode `context:pack` se quiser entregar menos contexto e gastar menos tokens
 - abra Codex, Claude Code ou outro cliente de IA
-- ative `@analyst`
-- o `@analyst` pode usar `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md` e `scan-aioson.md` para escrever `discovery.md`
+- ative `@planner` (descoberta do repositorio e mapa do codigo)
+- o `@planner` pode usar `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md` e `scan-aioson.md` para escrever `discovery.md`
 - se o cliente permitir escolher modelo, prefira um modelo rapido/barato nessa etapa
 
 Fluxo recomendado depois do scanner em projeto SMALL brownfield:
 
-- `@analyst` para consolidar ou revisar a descoberta do sistema e do escopo atual
-- `@architect` para transformar essa descoberta em `architecture.md`
+- `@product` para consolidar as regras de dominio e o escopo atual
+- `@planner` para revisar a descoberta do sistema e registrar as decisoes de arquitetura
 - `@dev` somente depois da memoria estar pronta
 
 Regra importante sobre atualizacao:

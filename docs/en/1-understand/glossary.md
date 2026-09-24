@@ -42,7 +42,7 @@ Terms in alphabetical order. Each entry has a **short definition** + **concrete 
 
 **Examples:**
 - `.aioson/context/project.context.md` — project context (created by `@setup`)
-- `.aioson/context/features/<slug>/spec.md` — feature spec (created by `@product`/`@analyst`)
+- `.aioson/context/features/<slug>/spec.md` — feature spec (created by `@product`)
 - `.aioson/context/dossier/<slug>/` — feature dossier (created by the agent chain)
 
 **Why it matters:** Article III of the Constitution says important work leaves an artifact. Without an artifact, the work "didn't happen" officially.
@@ -199,7 +199,7 @@ All three use Product → Sheldon → Planner → DEV → QA after setup.
 
 ## Pipeline / Workflow
 
-**Definition:** the canonical tracked-feature sequence: optional raw-source Briefing → Refiner → user approval, then Product → Sheldon → Planner → DEV → QA. Classification changes depth and budget, not the sequence. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check are explicit consultants; Tester, Pentester, and Validator are opt-in reviewers.
+**Definition:** the canonical tracked-feature sequence: optional raw-source Briefing → Refiner → user approval, then Product → Sheldon → Planner → DEV → QA. Classification changes depth and budget, not the sequence. Domain rules live in the PRD, architecture decisions in the plan, and scope drift is checked by QA; Tester, Pentester, and Validator are opt-in reviewers.
 
 **Central command:** `aioson workflow:next .` — shows which agent is next.
 

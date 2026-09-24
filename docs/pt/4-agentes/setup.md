@@ -24,7 +24,7 @@ Em projetos existentes, o `@setup` detecta o framework automaticamente (Laravel,
 ## Quando NÃO invocar
 
 - Se o `project.context.md` já existe e está válido — `@neo` te confirma isso.
-- Se você quer simplesmente continuar uma feature — use `@deyvin`.
+- Se você quer simplesmente continuar uma feature — use `@dev`.
 - Se quer mudar só o design skill — edite `design_skill:` diretamente no `project.context.md`.
 
 ## Diálogo típico

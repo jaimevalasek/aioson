@@ -213,7 +213,7 @@ Cria o diretório vazio. Dossiês são populados pelos agentes (`@product`, `@de
 
    Ausência de eventos = hook não rodou. Verifique se você está chamando `workflow:next --complete=<agente>` ou `agent:done`.
 
-3. **Agente não está lendo `reflect-prompt.json`?** A seção "Memory reflection" em `dev.md`/`qa.md`/`deyvin.md` instrui ele. Se o agente que você está usando é custom (`.aioson/my-agents/`), adicione a seção lá também.
+3. **Agente não está lendo `reflect-prompt.json`?** A seção "Memory reflection" em `dev.md`/`qa.md` instrui ele. Se o agente que você está usando é custom (`.aioson/my-agents/`), adicione a seção lá também.
 
 4. **Bootstrap não existe?** Reflexão pula silenciosamente quando `bootstrap/` não está presente — rode `/aioson:agent:discover` primeiro.
 

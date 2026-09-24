@@ -62,18 +62,18 @@ Nem toda mudança merece a esteira inteira. Quando a intenção já está clara 
 
 | # | Fase | Agente | Prova de que terminou |
 |---|---|---|---|
-| 1 | **Escopo** | `@deyvin` | Escopo pequeno confirmado: sem decisão de produto, arquitetura ou segurança em aberto |
-| 2 | **Plano curto** | `@deyvin` | Plano mínimo em disco: delta exato, checks escolhidos, rota reversível |
-| 3 | **Implementação** | `@deyvin` | Menor fatia útil implementada, escopo não inflou |
-| 4 | **Verificação** | `@deyvin` + `@qa` | Check final registrado — se o escopo crescer, a rota escala para a esteira completa |
+| 1 | **Escopo** | `@dev` | Escopo pequeno confirmado: sem decisão de produto, arquitetura ou segurança em aberto |
+| 2 | **Plano curto** | `@dev` | Plano mínimo em disco: delta exato, checks escolhidos, rota reversível |
+| 3 | **Implementação** | `@dev` | Menor fatia útil implementada, escopo não inflou |
+| 4 | **Verificação** | `@dev` + `@qa` | Check final registrado — se o escopo crescer, a rota escala para a esteira completa |
 
-Simple Plan termina no Dev e não vira feature rastreada silenciosamente.
+Simple Plan termina no Dev e não vira feature rastreada silenciosamente. Abaixo dele, uma correção direta (até 2 arquivos de comportamento, sem decisão aberta, verificação conhecida) nem cria arquivo de plano.
 
 ### Os desvios opt-in
 
-`@analyst`, `@architect`, `@ux-ui`, `@pm`, `@scope-check`, `@discovery-design-doc`, `@orchestrator` e `@validator` **não são etapas da esteira**. São consultorias para uma dúvida nomeada e concreta — você pede, eles respondem, o parecer volta para o PRD ou para o plano. Nenhum deles cria um documento obrigatório ou um gate extra.
+`@orchestrator`, `@validator`, `@forge-run` e `@shakedown` **não são etapas da esteira**. São consultorias para uma dúvida nomeada e concreta — você pede, eles respondem, o parecer volta para o PRD ou para o plano. Nenhum deles cria um documento obrigatório ou um gate extra.
 
-> Se você viu um tutorial antigo do AIOSON com `@product → @analyst → @architect → @dev`, ele está desatualizado. O domínio e a arquitetura hoje são resolvidos dentro do PRD (`@product` + `@sheldon`) e do plano (`@planner`); o visual é resolvido pelo protótipo aprovado no Refiner e pela identidade do projeto. Os especialistas continuam existindo — só deixaram de ser obrigatórios.
+> Se você viu um tutorial antigo do AIOSON com `@product → @analyst → @architect → @dev`, ele está desatualizado. Esses agentes foram aposentados e absorvidos pela esteira: `@analyst` → `@product` (regras de domínio); `@architect`, `@discovery-design-doc` e `@pm` → `@planner` (decisões de arquitetura, mapa de código, sequenciamento); `@ux-ui` → `@refiner`/protótipo (visual), `@product` (interação), `@qa` (acessibilidade) e `@dev` (entrega de sites); `@scope-check` → `@qa` e o gate de scope drift do `workflow:next`; `@deyvin`/`@pair` → `@dev`.
 
 ---
 
@@ -92,11 +92,11 @@ Simple Plan termina no Dev e não vira feature rastreada silenciosamente.
 |---|---|---|
 | **`@briefing`** | Transforma fontes cruas em briefing pré-PRD, com promessas rastreáveis | `briefing.md` |
 | **`@refiner`** | Audita lacunas e monta o protótipo navegável para você aprovar | `prototype.html`, `refinement-report.md` |
-| **`@product`** | Define capacidades, ACs e o que fica fora | `prd-{slug}.md` |
+| **`@product`** | Define capacidades, ACs, regras de domínio, decisões de interação e o que fica fora | `prd-{slug}.md` |
 | **`@sheldon`** | Confronta o PRD com fonte, protótipo e repositório; corrige e sela | `prd-{slug}.md` selado |
-| **`@planner`** | Corta a entrega em etapas verticais verificáveis | `implementation-plan-{slug}.md` |
-| **`@dev`** | Implementa etapa por etapa pela rota real do produto | Código + `dev-state.md` |
-| **`@qa`** | Veredito independente contra o PRD, com evidência | `qa-report-{slug}.md` |
+| **`@planner`** | Mapeia o repositório, registra decisões de arquitetura e corta a entrega em etapas verticais sequenciadas | `implementation-plan-{slug}.md` |
+| **`@dev`** | Implementa etapa por etapa pela rota real do produto; também Simple Plan, correções pequenas, continuidade e sub-task scout | Código + `dev-state.md` |
+| **`@qa`** | Veredito independente contra o PRD, com evidência, scope drift e acessibilidade | `qa-report-{slug}.md` |
 | **`@tester`** | Cobertura que protege o comportamento já aprovado | `test-report-{slug}.md` + testes stack-native |
 | **`@pentester`** | Sonda a superfície como adversário autorizado, corrige e re-sonda | `security-findings-*.json` |
 
@@ -104,21 +104,14 @@ Simple Plan termina no Dev e não vira feature rastreada silenciosamente.
 
 | Agente | Para qual dúvida nomeada |
 |---|---|
-| **`@analyst`** | Quais entidades e regras já existem no domínio |
-| **`@architect`** | Qual opção de estrutura, integração ou fronteira técnica escolher |
-| **`@ux-ui`** | Uma decisão de interação que o protótipo aprovado não resolveu |
-| **`@pm`** | Prioridade, dependência ou ordem de rollout |
-| **`@scope-check`** | "O que foi entregue confere com o que foi pedido?" |
 | **`@orchestrator`** | Coordenação de execução genuinamente paralela ou cross-cutting |
 | **`@validator`** | Verificação binária extra contra o contrato de sucesso |
-| **`@discovery-design-doc`** | Discovery + design doc, quando isso é o objetivo em si |
 | **`@shakedown`** | "O que está faltando que ninguém pensou em pedir?" — pente-fino pós-entrega, cego para a spec na primeira passada |
 
 ### 4. Continuidade e entrega
 
 | Agente | O que faz | Quando invocar |
 |---|---|---|
-| **`@deyvin`** (alias `@pair`) | Pair-programming continuity-first — recupera estado com `confirmed/inferred`, trabalha em batches pequenos validados, scope gate automático (recusa greenfield e devolve para `@product`) | Retomar feature em curso após crash, debugar slice pequena, rodar o Simple Plan |
 | **`@committer`** | Gera mensagens de commit profissionais | Antes de commitar |
 | **`@discover`** | Constrói cache semântico do projeto: produz `bootstrap/` (estruturado por tipo de artefato, para agentes lerem) **e** `brains/` (Zettelkasten para cross-referência) | Onboarding rápido em codebase grande |
 
@@ -208,7 +201,7 @@ Você no Claude Code:
   com a feature "checkout-stripe" em andamento. O @dev terminou ontem.
 > Próximo passo natural: @qa para o veredito independente da feature.
 > Depois do PASS, se quiser endurecer: @tester (cobertura) ou @pentester (segurança).
-> Se quiser retomar uma fatia pequena antes: @deyvin.
+> Se quiser retomar uma fatia pequena antes: @dev.
 ```
 
 ---

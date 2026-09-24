@@ -41,6 +41,10 @@ A consulta **nunca adiciona escopo**: um contrato que nada prometeu continua sen
 
 Detalhes das quatro regras: [Regras de interação e gate visual](../5-referencia/regras-de-interacao-e-gate-visual.md).
 
+## Scope drift e acessibilidade
+
+QA absorveu o antigo `@scope-check`: confere se o entregue bate com o prometido (`.aioson/docs/qa/scope-drift.md`), além do gate de scope drift que o `workflow:next` roda sempre. Em superfícies com UI, QA também faz a auditoria de acessibilidade (`.aioson/docs/qa/accessibility-audit.md`), antes submodo do `@ux-ui`.
+
 ## Especialistas opt-in
 
 Tester, Pentester e Validator começam desligados em todas as classificações. Podem ser recomendados quando:

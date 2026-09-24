@@ -315,4 +315,4 @@ Os textos e imagens extraídos são apenas para estruturar o clone durante o des
 ## Quando não usar
 
 - o site tem proteção pesada (SPA autenticada, bot protection agressivo)
-- você quer criar a estrutura do zero com total liberdade → use `/aioson:agent:deyvin` ou `/aioson:agent:dev`
+- você quer criar a estrutura do zero com total liberdade → use `/aioson:agent:dev`

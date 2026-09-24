@@ -27,7 +27,7 @@ aioson scout:prep [path]
 |---|---|---|
 | `--question="<texto>"` | sim | Pergunta que o sub-agente deve responder |
 | `--scope-paths="<paths>"` | sim (ou `--scope-globs`¹) | Arquivos e diretórios a inspecionar, separados por vírgula. Diretórios expandem 1 nível |
-| `--parent-agent=<nome>` | sim | Agente que despacha. Em V1, apenas `"deyvin"` é aceito |
+| `--parent-agent=<nome>` | sim | Agente que despacha: `"dev"` (o valor legado `"deyvin"` ainda é aceito) |
 | `--parent-session-id=<id>` | sim | ID da sessão pai — usado para rastrear caps por sessão |
 | `--parent-session-excerpt="<texto>"` | sim | Por que o scout foi despachado (50-1000 chars). Bloqueado se ausente — é o campo de cold-load comprehension |
 | `--feature-slug=<slug>` | não | Feature associada (para arquivamento automático no `feature:close`) |
@@ -58,7 +58,7 @@ aioson scout:prep [path]
 aioson scout:prep \
   --question="Onde o featureSlug anterior não é limpo no workflow:next?" \
   --scope-paths="src/commands/workflow-next.js,src/handoff-contract.js" \
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="Usuário perguntou sobre bug de herança de state; inspeção de loadOrCreateState necessária" \
   --json
@@ -118,7 +118,7 @@ aioson scout:validate [path] --input=<caminho-do-json> [--json]
 ```json
 {
   "id": "scout-{slug?}-{data}-{rand6}",
-  "parent_agent": "deyvin",
+  "parent_agent": "dev",
   "parent_session_id": "sess-abc123",
   "parent_session_excerpt": "...",
   "feature_slug": null,

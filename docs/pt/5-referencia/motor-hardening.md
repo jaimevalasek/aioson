@@ -205,7 +205,7 @@ Estes são os contratos da esteira. Cada linha corresponde a uma fase de `@brief
 | `@tester` | `test-report-{slug}.md` | — (não concede D) |
 | `@pentester` | `security-findings-*.json` | — (não concede D) |
 
-> **Nenhum documento de requirements, spec, design, readiness, conformance ou harness é pré-requisito canônico.** `requirements-{slug}.md`, `architecture.md`, `ui-spec.md` e `design-doc-{slug}.md` continuam sendo *reconhecidos* pelo seletor de contexto quando existem, mas são saídas opcionais de consultoria — a ausência deles não bloqueia estágio nenhum. As consultorias (`@analyst`, `@architect`, `@ux-ui`, `@pm`) não têm contrato de handoff porque não são estágios.
+> **Nenhum documento de requirements, spec, design, readiness, conformance ou harness é pré-requisito canônico.** `requirements-{slug}.md`, `architecture.md`, `ui-spec.md` e `design-doc-{slug}.md` continuam sendo *reconhecidos* pelo seletor de contexto quando existem, mas são saídas opcionais de consultoria — a ausência deles não bloqueia estágio nenhum. Os antigos consultores (`@analyst`, `@architect`, `@ux-ui`, `@pm`) foram absorvidos pelo ciclo principal (`@product`, `@planner`, `@refiner`) e não existem mais como estágios próprios.
 
 ---
 

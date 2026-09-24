@@ -635,7 +635,7 @@ Um agente scaffold (Level 1) precisa de enriquecimento para chegar a Level 3. Aq
 
 ### Agentes customizados vs agentes oficiais
 
-- Agentes oficiais (`@dev`, `@product`, `@analyst`, etc.) seguem o workflow do AIOSON
+- Agentes oficiais (`@dev`, `@product`, `@planner`, etc.) seguem o workflow do AIOSON
 - Agentes customizados não participam do workflow oficial — são chamados diretamente
 - Agentes de squad são coordenados pelo `@orquestrador` da própria squad
 

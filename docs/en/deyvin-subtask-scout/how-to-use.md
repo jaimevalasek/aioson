@@ -1,14 +1,14 @@
 # How to use the Sub-task Scout
 
-> Concrete examples. `@deyvin` uses the scout automatically when rubric line 111 fires. This page shows what happens under the hood and how to intervene when needed.
+> Concrete examples. `@dev` uses the scout when a diagnosis is ambiguous and needs a survey of more than 5 files or a runtime trace. This page shows what happens under the hood and how to intervene when needed.
 
 ---
 
 ## 1. Happy path — successful scout
 
-Scenario: the user asks `@deyvin` why `workflow:next` sometimes inherits completion records from a previous feature.
+Scenario: the user asks `@dev` why `workflow:next` sometimes inherits completion records from a previous feature.
 
-`@deyvin` identifies that the answer requires inspecting multiple files and dispatches a scout:
+`@dev` identifies that the answer requires inspecting multiple files and dispatches a scout:
 
 **Step 1 — Prepare the scout**
 
@@ -16,7 +16,7 @@ Scenario: the user asks `@deyvin` why `workflow:next` sometimes inherits complet
 aioson scout:prep \
   --question="Why does workflow:next inherit completion records from previous features?" \
   --scope-paths="src/commands/workflow-next.js,src/handoff-contract.js" \
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="User reported bug where workflow:next inherits previous featureSlug on new handoffs; need to inspect loadOrCreateState and handoff-contract to identify where the old featureSlug is not cleared" \
   --feature-slug=current-feature
@@ -36,7 +36,7 @@ Output (`--json`):
 
 **Step 2 — Call the sub-agent**
 
-`@deyvin` uses the harness's sub-agent capability (Claude Code `Agent` tool or Codex sub-agent) with the returned `prompt`. The sub-agent runs in isolated context, uses only `Read` and `Grep`, and writes the result to `output_path`.
+`@dev` uses the harness's sub-agent capability (Claude Code `Agent` tool or Codex sub-agent) with the returned `prompt`. The sub-agent runs in isolated context, uses only `Read` and `Grep`, and writes the result to `output_path`.
 
 **Step 3 — Validate**
 
@@ -54,9 +54,9 @@ aioson scout:commit --input=.aioson/runtime/scouts/scout-current-feature-2026-05
 
 Scout persisted, cap decremented (2→1), telemetry emitted.
 
-**Step 5 — @deyvin reads and responds**
+**Step 5 — @dev reads and responds**
 
-`@deyvin` reads `findings`, `confidence`, and `recommendation` from the JSON and folds the answer into the user-facing reply. Parent context grew ~500 tokens instead of ~10k+.
+`@dev` reads `findings`, `confidence`, and `recommendation` from the JSON and folds the answer into the user-facing reply. Parent context grew ~500 tokens instead of ~10k+.
 
 ---
 
@@ -85,7 +85,7 @@ Output:
 }
 ```
 
-`@deyvin` re-prompts the sub-agent with the explicit validation failures. On second attempt, if PASS → commit. If FAIL again → `retry_exhausted`:
+`@dev` re-prompts the sub-agent with the explicit validation failures. On second attempt, if PASS → commit. If FAIL again → `retry_exhausted`:
 
 ```json
 {
@@ -95,7 +95,7 @@ Output:
 }
 ```
 
-Scout persists with `status: "error"`. `@deyvin` informs the user and offers manual handoff to `/aioson:agent:architect` if needed.
+Scout persists with `status: "error"`. `@dev` informs the user and offers to record the open question in the plan and route it to `@planner` if needed.
 
 ---
 
@@ -104,7 +104,7 @@ Scout persists with `status: "error"`. `@deyvin` informs the user and offers man
 The agent tries to dispatch a 4th scout in the same session, but the default is 3:
 
 ```bash
-aioson scout:prep --question="..." --scope-paths="..." --parent-agent=deyvin --parent-session-id=sess-abc123 --parent-session-excerpt="..."
+aioson scout:prep --question="..." --scope-paths="..." --parent-agent=dev --parent-session-id=sess-abc123 --parent-session-excerpt="..."
 # exit 2
 ```
 
@@ -121,7 +121,7 @@ Output:
 }
 ```
 
-`@deyvin` surfaces the message and asks the user how to proceed: usually handoff to `/aioson:agent:architect` if scouts keep multiplying.
+`@dev` surfaces the message and asks the user how to proceed: a question that still needs more is a boundary decision — record it in the plan and route it to `@planner`.
 
 To increase the limit in the project:
 
@@ -138,7 +138,7 @@ To increase the limit in the project:
 aioson scout:prep \
   --question="..." \
   --scope-paths="src/"  # directory with 30+ files
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="..."
 # exit 2
@@ -188,7 +188,7 @@ ls .aioson/runtime/scouts/
 
 ## 6. Using the CLI-less fallback (no `aioson` installed)
 
-In environments without the `aioson` binary (e.g., plain Claude Code without CLI configured), `@deyvin` uses the inline template from its prompt. The "Sub-task scout invocation — CLI-less fallback" section in `deyvin.md` describes how to build the prompt manually and inject it into the sub-agent via Agent tool.
+In environments without the `aioson` binary (e.g., plain Claude Code without CLI configured), `@dev` follows the CLI-less contract in `.aioson/docs/dev/scout.md` (loaded by `@dev`), which describes how to build the prompt manually and inject it into the sub-agent via the Agent tool.
 
 The fallback produces the same JSON report, but without:
 - Cap validation

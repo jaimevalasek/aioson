@@ -11,11 +11,11 @@
 
 ## Para que serve
 
-A lane padrão de verificação executável (`@scope-check` → `@dev` → `@qa` → `@validator`) continua **inalterada** e é o caminho recomendado. O `@forge-run` é uma **segunda lane (Lane B), opcional e aditiva**: ele compila os artefatos de uma feature MEDIUM num único **workflow versionável** e roda o ciclo inteiro de verificação determinística de ponta a ponta.
+A lane padrão de verificação executável (`@dev` → `@qa` → `@validator`, com o gate de scope drift do `workflow:next`) continua **inalterada** e é o caminho recomendado. O `@forge-run` é uma **segunda lane (Lane B), opcional e aditiva**: ele compila os artefatos de uma feature MEDIUM num único **workflow versionável** e roda o ciclo inteiro de verificação determinística de ponta a ponta.
 
 Em vez de avançar etapa a etapa manualmente, `@forge-run` gera `.aioson/plans/{slug}/forge-run.workflow.js` — um script de dynamic workflow do Claude Code — e o executa via runtime de workflows. A estrutura compilada reflete o roadmap de verificação executável:
 
-- **`parallel()` por Wave** — fases na mesma wave são disjuntas em arquivos e rodam em paralelo (ver coluna `Wave` do [@pm](./pm.md)).
+- **`parallel()` por Wave** — fases na mesma wave são disjuntas em arquivos e rodam em paralelo (ver coluna `Wave` da `## Execution Sequence` do [@planner](./planner.md)).
 - **Loop determinístico sobre `harness:check`** — limitado pelo `error_streak_limit` do governor; fixes são sequenciais.
 - **Revisão adversarial de 3 lentes** — para os critérios que não têm `verification` (e portanto não podem ser checados mecanicamente).
 - **Validador em contexto fresco** — fecha pelo ciclo `apply-validation` (ver [@validator](./validator.md)).
@@ -27,7 +27,7 @@ Em vez de avançar etapa a etapa manualmente, `@forge-run` gera `.aioson/plans/{
 ## Quando invocar
 
 - Feature **MEDIUM** com `harness-contract.json` contendo `verification` por critério (autorado pelo [@sheldon](./sheldon.md)).
-- Plano de implementação com a coluna `Wave` preenchida (produzido pelo [@pm](./pm.md)).
+- Plano de implementação com a coluna `Wave` preenchida (produzido pelo [@planner](./planner.md)).
 - `aioson spec:analyze` limpo (sem `errors`) — pré-condição do gate de execução.
 - Quando você quer rodar todo o ciclo de verificação executável como um único workflow reproduzível e versionável.
 
@@ -137,7 +137,7 @@ aioson forge:compile . --feature={slug} --json
 
 ## Handoff típico
 
-- **Vem de:** entrada opt-in pelo usuário (Lane B); pressupõe `@sheldon`, `@pm` e `@scope-check`/`spec:analyze` já concluídos.
+- **Vem de:** entrada opt-in pelo usuário (Lane B); pressupõe `@sheldon`, `@planner` e `spec:analyze` já concluídos.
 - **PASS:** recomenda que o **humano** rode `aioson feature:close` manualmente.
 - **FAIL:** volta ao `@dev` pela **lane normal** para corrigir e re-verificar.
 
@@ -145,6 +145,6 @@ aioson forge:compile . --feature={slug} --json
 
 ## Próximo passo
 
-- [Ficha do @pm](./pm.md) — produz a coluna `Wave` que vira `parallel()` no workflow
+- [Ficha do @planner](./planner.md) — produz a coluna `Wave` que vira `parallel()` no workflow
 - [Ficha do @sheldon](./sheldon.md) — autora o campo `verification` por critério
 - [Ficha do @validator](./validator.md) — o validador fresh-context que fecha o ciclo

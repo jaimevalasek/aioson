@@ -358,8 +358,8 @@ plans/landing-principal/                      ← fontes cruas e imagens de refe
 | O `@dev` implementou diferente do protótipo | Confira `prototype_status: current` no PRD. Se estiver vazio ou `stale`, o vínculo se perdeu — rode o `@refiner` para reaprovar. |
 | A página saiu com cara de template | Provavelmente rodou sem identidade. Confira se `identity.md` existe e está vinculado no PRD; se não, rode a extração a partir das suas imagens de referência. |
 | Copy gerado está genérico | Abra `copy-landing-principal.md` e adicione dados reais (preços, nome do fundador). Reative o `@copywriter` pedindo "refine a seção Hero com esses dados". |
-| Sobrou uma dúvida de interação que o protótipo não resolveu | Chame `@ux-ui` para *aquela* pergunta específica. Ele é um desvio opt-in, não uma etapa da esteira. |
-| `next build` com erros de tipo TS | Rode `@deyvin` — ele lê `dev-state.md` e resolve o erro em pair. |
+| Sobrou uma dúvida de interação que o protótipo não resolveu | É decisão de produto: leve ao `@product` para registrar no PRD (a direção visual continua no `@refiner`/protótipo). |
+| `next build` com erros de tipo TS | Rode `@dev` — ele lê `dev-state.md` e resolve o erro como correção pequena. |
 
 ---
 

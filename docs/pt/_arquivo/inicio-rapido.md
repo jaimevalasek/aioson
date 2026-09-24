@@ -124,10 +124,10 @@ npx @jaimevalasek/aioson scan:project . --folder=src --with-llm --provider=opena
 Se você nao usa API LLM no `aioson`, o caminho manual tambem funciona:
 
 1. Rode `scan:project . --folder=src`
-2. Opcional: rode `context:pack . --agent=analyst --goal="consolidar discovery brownfield" --module=src`
+2. Opcional: rode `context:pack . --agent=planner --goal="consolidar discovery brownfield" --module=src`
 3. Abra seu Codex, Claude Code ou cliente equivalente
-4. Execute `@analyst`
-5. O `@analyst` usa os arquivos de scan para gerar `discovery.md`
+4. Execute `@planner`
+5. O `@planner` usa os arquivos de scan para mapear o repositório (discovery / mapa do código)
 
 Quando voce quiser montar um pacote minimo de contexto para uma tarefa especifica, use:
 
@@ -176,7 +176,7 @@ O agente `@setup` detecta o framework, faz as perguntas e gera o `project.contex
 
 > Cada CLI tem uma forma diferente de invocar agentes. Consulte o [Guia de CLIs de IA](../5-referencia/clientes-ai.md) para exemplos detalhados de Claude Code, Codex e OpenCode.
 
-Se voce estiver entrando num projeto ja existente e quiser um companheiro tecnico para retomar uma sessao, diagnosticar algo pequeno ou implementar aos poucos, pode chamar `@deyvin` depois que o contexto minimo estiver pronto.
+Se voce estiver entrando num projeto ja existente e quiser um companheiro tecnico para retomar uma sessao, diagnosticar algo pequeno ou implementar aos poucos, pode chamar `@dev` depois que o contexto minimo estiver pronto (o antigo `@deyvin` foi aposentado em `@dev`).
 
 ---
 
@@ -185,8 +185,8 @@ Se voce estiver entrando num projeto ja existente e quiser um companheiro tecnic
 | Tamanho do projeto | Sequência de agentes |
 |---|---|
 | **MICRO** — 0–1 ponto | `@setup → @dev` |
-| **SMALL** — 2–3 pontos | `@setup → @product → [@sheldon] → @analyst → @architect → @dev → @qa → [@tester]` |
-| **MEDIUM** — 4–6 pontos | `@setup → @product → [@sheldon] → @analyst → @architect → @ux-ui → @pm → @orchestrator → @dev → @qa → [@tester]` |
+| **SMALL** — 2–3 pontos | `@setup → @product → [@sheldon] → @planner → @dev → @qa → [@tester]` |
+| **MEDIUM** — 4–6 pontos | `@setup → @product → [@sheldon] → @planner → @orchestrator → @dev → @qa → [@tester]` |
 
 `[@sheldon]` — opcional, recomendado para validar e enriquecer o PRD antes de codar.
 `[@tester]` — opcional, para cobertura sistemática quando o `@dev` implementou sem testes adequados.
@@ -209,7 +209,7 @@ Esses arquivos de kickoff **não são versionados por padrão** (estão no `.git
 Se a demanda ainda estiver vaga, se a feature for grande ou se houver risco alto de retrabalho, use:
 
 ```text
-@setup -> @discovery-design-doc -> proximo agente recomendado
+@setup -> @briefing -> @refiner -> @product
 ```
 
 Exemplos:
@@ -217,7 +217,7 @@ Exemplos:
 - feature grande em sistema existente
 - integrações sensíveis como billing, webhooks, Stripe ou permissões
 
-Esse passo de `@discovery-design-doc` é **recomendado quando agrega clareza**, não obrigatório.
+Esse passo de `@briefing` é **recomendado quando agrega clareza**, não obrigatório.
 Se o pedido já estiver claro e pequeno, siga o fluxo normal.
 
 ### Atalho de continuidade
@@ -225,7 +225,7 @@ Se o pedido já estiver claro e pequeno, siga o fluxo normal.
 Quando o projeto ja tem memoria suficiente e voce quer retomar trabalho sem abrir uma feature nova:
 
 ```text
-@deyvin -> pequeno lote -> validar -> seguir ou fazer handoff
+@dev -> pequeno lote -> validar -> seguir ou fazer handoff
 ```
 
 Exemplos:

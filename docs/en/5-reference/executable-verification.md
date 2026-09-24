@@ -10,7 +10,7 @@
 
 ## The idea in one paragraph
 
-AIOSON's canonical authorities are one Sheldon-reviewed PRD, one implementation plan, and one QA verdict. The executable-verification commands are optional evidence that can make selected criteria deterministic or compile an explicitly configured harness workflow. They do not create mandatory specification artifacts or workflow gates. The default route remains Product → Sheldon → Planner → DEV → QA at every classification. Scope Check and Validator are opt-in specialists.
+AIOSON's canonical authorities are one Sheldon-reviewed PRD, one implementation plan, and one QA verdict. The executable-verification commands are optional evidence that can make selected criteria deterministic or compile an explicitly configured harness workflow. They do not create mandatory specification artifacts or workflow gates. The default route remains Product → Sheldon → Planner → DEV → QA at every classification. QA's scope-drift review uses them as evidence; Validator is an opt-in specialist.
 
 The theme ships in five phases.
 
@@ -97,7 +97,7 @@ It runs five deterministic checks:
 4. **Harness-contract sanity** — schema errors = error; executable-coverage = info.
 5. **AC→contract linkage** = info.
 
-An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. The command remains available as deterministic drift evidence when the approved plan or an explicitly requested Scope Check calls for it; it does not add a workflow stage.
+An `error` flips `ok: false` (exit 1 in `--json`). Results persist to `spec-analyze-{slug}.json`. The command remains available as deterministic drift evidence when the approved plan or QA's scope-drift review calls for it; it does not add a workflow stage.
 
 See [`spec:analyze`](./cli-reference.md#specanalyze) in the CLI reference.
 
@@ -162,4 +162,4 @@ The optional compiled path may consume the same plan and verification evidence, 
 
 - [CLI reference](./cli-reference.md) — `harness:check`, `harness:validate`, `spec:analyze`, `forge:compile`
 - [@forge-run agent card](../4-agents/forge-run.md) — the opt-in Lane B entry point
-- [Agents index](../4-agents/README.md) — `@sheldon`, `@pm`, `@scope-check`, `@validator`
+- [Agents index](../4-agents/README.md) — `@sheldon`, `@planner`, `@qa`, `@validator`

@@ -69,7 +69,7 @@ Cada etapa existe para impedir que uma decisão cara seja tomada cedo demais, co
 
 Esteira completa: `@briefing → @refiner → @product → @sheldon → @planner → @dev → @qa → @tester → @pentester`.
 
-O bloco `@briefing → @refiner → aprovação` é **opcional**: se a feature já está clara, comece direto no `@product`. Mas se você começar, precisa terminar — um briefing pela metade não vira PRD, e escopo visual exige o protótipo aprovado. MICRO, SMALL e MEDIUM percorrem a mesma esteira; a classificação muda profundidade e orçamento, não a ordem. As consultorias (`@analyst`, `@architect`, `@ux-ui`, `@pm`) **não são etapas** — entram sob pedido explícito, para uma dúvida nomeada. E para uma mudança pequena existe a rota curta, o Simple Plan via `@deyvin`.
+O bloco `@briefing → @refiner → aprovação` é **opcional**: se a feature já está clara, comece direto no `@product`. Mas se você começar, precisa terminar — um briefing pela metade não vira PRD, e escopo visual exige o protótipo aprovado. MICRO, SMALL e MEDIUM percorrem a mesma esteira; a classificação muda profundidade e orçamento, não a ordem. Domínio, arquitetura, sequenciamento e interação são resolvidos dentro da esteira (`@product` e `@planner`); os antigos consultores (`@analyst`, `@architect`, `@ux-ui`, `@pm`) foram aposentados. E para uma mudança pequena existe a rota curta, o Simple Plan via `@dev`.
 
 ### Exemplo curto de ponta a ponta
 
@@ -225,7 +225,7 @@ Comece por aqui se você nunca usou. São 15 minutos.
 - [Autopilot e handoffs](./5-referencia/autopilot-handoff.md)
 - [Execução de agentes](./5-referencia/agent-execution.md) — faixas por host/modelo, fallback explícito, telemetria
 - [Feature dossier](./5-referencia/feature-dossier.md) · [Live sessions](./5-referencia/live-sessions.md)
-- [Deyvin Sub-Task Scout](./deyvin-subtask-scout/README.md)
+- [Sub-Task Scout do @dev](./deyvin-subtask-scout/README.md)
 
 **Squads e design**
 

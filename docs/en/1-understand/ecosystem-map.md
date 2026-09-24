@@ -30,10 +30,6 @@
         │  Product → Sheldon                   │
         │          → Planner → Dev → QA        │
         │                                      │
-        │  Explicit consultants:               │
-        │  Analyst · Architect · PM · UX-UI    │
-        │  Scope-Check · Discovery-Design-Doc  │
-        │                                      │
         │  Opt-in reviewers:                   │
         │  Validator · Tester · Pentester      │
         └──────────────────────────────────────┘
@@ -42,7 +38,7 @@
         ┌──────────────────────────────────────┐
         │        CONTINUITY & DELIVERY         │
         │                                      │
-        │  Deyvin (pair) · Committer (git)     │
+        │  Committer (git)                     │
         │  Discover (semantic cache)           │
         │                                      │
         └──────────────────────────────────────┘
@@ -80,16 +76,12 @@ After one-time setup, every tracked feature uses:
 
 | Agent | What it does | Main output |
 |---|---|---|
-| **`@product`** | Defines vision, scope, capabilities, exclusions, and ACs | `prd-{slug}.md` |
+| **`@product`** | Defines vision, scope, capabilities, exclusions, ACs, domain rules, and interaction decisions | `prd-{slug}.md` |
 | **`@sheldon`** | Optional critical PRD enrichment; updates the same Product-owned PRD | enriched `prd-{slug}.md` |
-| **`@planner`** | Converts the approved PRD into one vertical executable plan | `implementation-plan-{slug}.md` |
-| **`@analyst`** | Explicit consultant for domain discovery and brownfield mapping | findings applied to PRD/plan |
-| **`@architect`** | Explicit consultant for a named technical boundary or decision | decision evidence applied to PRD/plan |
-| **`@ux-ui`** | Explicit consultant for interaction or visual-design decisions | design evidence |
-| **`@pm`** | Explicit consultant for backlog and user-story questions | backlog evidence |
+| **`@planner`** | Converts the approved PRD into one vertical executable plan, including Architecture Decisions, repo discovery/code map, and sequencing/rollout | `implementation-plan-{slug}.md` |
 | **`@orchestrator`** | Opt-in coordination specialist; not a default workflow stage | coordination evidence |
-| **`@dev`** | Implements the plan, optionally dispatches configured development lanes, and owns final integration | code + `dev-state.md` |
-| **`@qa`** | Runs a proportional, bounded final review and records PASS/FAIL | `qa-report-{slug}.md` |
+| **`@dev`** | Implements the plan, optionally dispatches configured development lanes, and owns final integration; also owns Simple Plan, below-lane direct fixes, and continuity recovery | code + `dev-state.md` |
+| **`@qa`** | Runs a proportional, bounded final review (including scope drift and accessibility audit) and records PASS/FAIL | `qa-report-{slug}.md` |
 | **`@validator`** | Opt-in binary contract verification in a fresh context | validator evidence |
 | **`@tester`** | Opt-in systematic test engineering for legacy/brownfield coverage | `test-inventory.md`, coverage tier |
 | **`@pentester`** | Opt-in adversarial security review | `security-findings-*.json` |
@@ -98,7 +90,7 @@ After one-time setup, every tracked feature uses:
 
 | Agent | What it does | When to invoke |
 |---|---|---|
-| **`@deyvin`** (alias `@pair`) | Continuity-first pair programming — recovers state with `confirmed/inferred`, works in small validated batches, automatic scope gate (refuses greenfield and hands back to `@product`) | Resuming a feature after a crash, debugging a small slice, pairing on a known task |
+| **`@dev`** (continuity) | A bare `@dev` activation recovers state with `confirmed/inferred`, works in small validated batches, and dispatches read-only sub-task scouts for wide diagnoses | Resuming a feature after a crash, debugging a small slice, a below-lane direct fix |
 | **`@committer`** | Generates professional commit messages | Before committing |
 | **`@discover`** | Builds a semantic cache of the project: produces `bootstrap/` (structured by artifact type, for agents to read) **and** `brains/` (Zettelkasten for cross-reference) | Fast onboarding on a large codebase |
 
@@ -115,7 +107,6 @@ After one-time setup, every tracked feature uses:
 | **`@design-hybrid-forge`** | Combines two design skills into a hybrid |
 | **`@orache`** | Domain investigation and strategic research |
 | **`@copywriter`** | Conversion copy for landing pages, emails |
-| **`@discovery-design-doc`** | Explicit standalone discovery/design consultation; findings enrich canonical artifacts |
 
 ---
 
@@ -182,7 +173,7 @@ You in Claude Code:
   with the "checkout-stripe" feature in progress. @dev finished yesterday.
 > Natural next step: @qa to write tests for the feature.
 > If you explicitly want extra security coverage: enable and run @pentester.
-> If you want to pair first: @deyvin.
+> If you want to resume or pair first: @dev.
 ```
 
 ---

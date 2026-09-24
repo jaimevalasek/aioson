@@ -68,18 +68,17 @@ You > [resolve product decisions]
 
 Sheldon does not create requirements, design-doc, readiness, conformance, or harness documents as mandatory prerequisites. It preserves Product ownership and updates the same PRD in place.
 
-When you need a named specialist decision, request it explicitly:
+Specialist decisions stay inside the main cycle:
 
-| Consultant | Use it for |
+| Need | Owner |
 |---|---|
-| `@analyst` | A concrete brownfield/domain question |
-| `@architect` | A material boundary, integration, security, or operability decision |
-| `@discovery-design-doc` | A standalone discovery/design investigation |
-| `@pm` | Backlog or user-story consultation |
-| `@ux-ui` | A formal interaction or visual-design decision |
-| `@scope-check` | A bounded intent/plan/delivery drift review |
+| A concrete brownfield/domain question or business rule | `@product` (domain rules in the PRD) |
+| A material boundary, integration, security, or operability decision | `@planner` (Architecture Decisions rows) |
+| A discovery/code-map investigation or sequencing/rollout | `@planner` |
+| A formal interaction decision | `@product`; visual direction via `@refiner` and an approved prototype |
+| An intent/plan/delivery drift review | `@qa`, plus the engine's always-on scope drift gate in `workflow:next` |
 
-Their findings feed the PRD or implementation plan. They do not become default stages or create blocking artifact packages.
+None of these adds a stage or creates a blocking artifact package.
 
 ---
 

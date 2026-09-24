@@ -2,9 +2,9 @@
 
 > **Versão tabular alternativa (legado).** Para fichas individuais detalhadas com diálogos, saídas em disco e handoff, veja [`4-agentes/README.md`](./4-agentes/README.md).
 
-> ⚠️ **A ordem de agentes mostrada nesta página está desatualizada.** A esteira atual é `@briefing → @refiner → @product → @sheldon → @planner → @dev → @qa → @tester → @pentester`, e `@analyst`/`@architect`/`@ux-ui` são consultorias opt-in, não etapas. Use [4-agentes/README.md](./4-agentes/README.md) e o [Mapa do ecossistema](./1-entender/mapa-do-ecossistema.md#a-esteira-principal) como referência.
+> ⚠️ **A ordem de agentes mostrada nesta página está desatualizada.** A esteira atual é `@briefing → @refiner → @product → @sheldon → @planner → @dev → @qa → @tester → @pentester`. Use [4-agentes/README.md](./4-agentes/README.md) e o [Mapa do ecossistema](./1-entender/mapa-do-ecossistema.md#a-esteira-principal) como referência.
 
-> `@pair` é alias de `@deyvin` e não possui ficha separada.
+> **Agentes aposentados:** `@deyvin` (e o alias `@pair`) viraram parte do `@dev`; `@architect`, `@discovery-design-doc` e `@pm` viraram parte do `@planner`; `@analyst` virou parte do `@product`; `@ux-ui` foi dividido entre `@refiner`/protótipo (direção visual), `@product` (decisões de interação), `@qa` (auditoria de acessibilidade) e `@dev` (entrega de sites); `@scope-check` virou parte do `@qa` e do gate de scope drift do `workflow:next`. Os ids antigos ainda resolvem na CLI.
 
 > Quando usar cada agente, o que ele entrega e como ativá-lo.
 
@@ -16,19 +16,12 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 
 ```
 @setup        ← sempre o primeiro
-@product      ← gera o PRD base vivo e roteia o fluxo
-@deyvin       ← companheiro tecnico para continuidade e pequenas implementacoes
-@discovery-design-doc ← quando precisa clarear escopo e gerar design doc vivo
-@analyst      ← consultoria de domínio sob pedido
-@scope-check  ← valida alinhamento antes de codar ou depois de fix relevante
-@architect    ← consultoria técnica sob pedido
-@ux-ui        ← UI/UX sob pedido
-@pm           ← consultoria de backlog sob pedido
+@product      ← gera o PRD base vivo, regras de domínio e decisões de interação
 @orchestrator ← coordenação sob pedido
 @pentester    ← revisão adversarial opt-in
-@planner      ← cria o único plano de implementação
-@dev          ← sempre o último antes do QA
-@qa           ← revisão final proporcional
+@planner      ← descobre o repositório, decide arquitetura e cria o único plano
+@dev          ← implementa; também Simple Plan, correções pequenas e continuidade
+@qa           ← revisão final proporcional, scope drift e acessibilidade
 @tester       ← engenharia de testes opt-in
 @squad        ← cria squads especializados no projeto
 @genome       ← cria genomes de domínio reutilizáveis
@@ -52,24 +45,24 @@ O AIOSON tem agentes oficiais de projeto e também pode criar agentes de squad. 
 
 > Para o fluxo completo de `@squad` e `@genome`, veja também [Squad e Genome](./4-agentes/squad.md).
 > Para criar agentes customizados (my-agents e squad agents), veja [Agentes Customizados](./4-agentes/squad.md).
-> Para uma explicação focada no agente de continuidade, veja também [Deyvin](./4-agentes/deyvin.md).
+> Para continuidade de sessão, correções pequenas e o sub-task scout, veja [@dev](./4-agentes/dev.md).
 
 ## Fluxo brownfield apos scan
 
 Quando o projeto ja existe e voce roda `scan:project`, o handoff correto agora e:
 
 ```text
-scan:project -> @analyst -> @scope-check -> @dev (ou @architect quando o full-merged opt-in do SMALL estiver ativo)
+scan:project -> @product -> @sheldon -> @planner -> @dev -> @qa
 ```
 
-> Fluxo atual: `[fontes em plans/{slug} -> @briefing -> @refiner -> aprovação] -> @product -> @sheldon -> @planner -> @dev -> @qa`. MICRO, SMALL e MEDIUM mudam profundidade, não a cadeia. `@analyst`, `@architect`, `@pm`, `@orchestrator` e outros especialistas entram somente sob pedido explícito.
+> Fluxo atual: `[fontes em plans/{slug} -> @briefing -> @refiner -> aprovação] -> @product -> @sheldon -> @planner -> @dev -> @qa`. MICRO, SMALL e MEDIUM mudam profundidade, não a cadeia. `@orchestrator` e outros especialistas entram somente sob pedido explícito.
 
 Regras do fluxo:
 - os artefatos locais do scan (`scan-index.md`, `scan-folders.md`, `scan-<pasta>.md`, `scan-aioson.md`) servem como mapas brutos do codigo
 - `discovery.md` continua sendo a memoria comprimida que os agentes usam para entender o sistema sem reler tudo
-- esse `discovery.md` pode ser gerado por `scan:project --with-llm` ou pelo `@analyst` usando os artefatos locais do scan
-- `@architect`, `@ux-ui`, `@pm`, `@qa` e o fluxo de `@dev` nao devem pular direto dos mapas brutos para a execucao quando a tarefa depende do comportamento atual do sistema
-- para continuidade de sessao, pequenas correcoes e implementacoes guiadas, `@deyvin` pode entrar depois que a memoria minima estiver pronta
+- esse `discovery.md` pode ser gerado por `scan:project --with-llm` ou pelo `@discover` usando os artefatos locais do scan
+- `@planner` inspeciona o repositório real antes de planejar; `@qa` e o fluxo de `@dev` nao devem pular direto dos mapas brutos para a execucao quando a tarefa depende do comportamento atual do sistema
+- para continuidade de sessao, pequenas correcoes e implementacoes guiadas, `@dev` pode entrar direto depois que a memoria minima estiver pronta
 
 ---
 
@@ -82,7 +75,7 @@ Regras do fluxo:
 - Confirma stack, classificação e idioma
 - Define o plano de execução (quais agentes serão usados)
 - Orienta o desenvolvedor sobre os próximos passos
-- Recomenda `@discovery-design-doc` quando houver ambiguidade, feature grande ou risco alto, mas sem tornar isso obrigatório
+- Recomenda `@briefing` quando houver ambiguidade, feature grande ou risco alto, mas sem tornar isso obrigatório
 
 **Como ativar:**
 ```
@@ -104,8 +97,8 @@ Regras do fluxo:
 
 **Regra importante:**
 - `@setup` continua sendo o primeiro agente
-- `@discovery-design-doc` entra como recomendação contextual, não como etapa obrigatória
-- se o pedido já estiver claro e pequeno, o fluxo pode seguir direto para `@dev`, `@analyst` ou `@architect`
+- `@briefing` entra como recomendação contextual, não como etapa obrigatória
+- se o pedido já estiver claro e pequeno, o fluxo pode seguir direto para `@dev` (Simple Plan ou correção direta)
 - se o usuário pedir o painel local do AIOSON, o fluxo correto agora é:
   - abrir o app do dashboard já instalado no computador
   - clicar em criar/adicionar projeto
@@ -124,7 +117,8 @@ Regras do fluxo:
 - detecta sinais visuais cedo e preserva a intenção no PRD
 - faz classificação preliminar do escopo
 - aponta o próximo agente do fluxo
-- em brownfield, usa `discovery.md` quando já existir e trata os artefatos locais do scan apenas como orientação estrutural, nunca como substituto do `@analyst`
+- em brownfield, usa `discovery.md` quando já existir e trata os artefatos locais do scan apenas como orientação estrutural, nunca como substituto da leitura do sistema atual
+- registra as regras de domínio (antes trabalho do `@analyst`) e as decisões de interação da UI
 
 **Documentos de kickoff (plans/ e prds/ na raiz):**
 
@@ -153,252 +147,29 @@ O `@product` detecta esses arquivos automaticamente e pergunta se deve usá-los 
 - métricas de sucesso
 - perguntas em aberto
 - identidade visual inicial, quando houver sinal suficiente
-- `## Specify depth` (projetos SMALL e MEDIUM) — classificação aplicada, profundidade de spec escolhida e lista de ambiguidades que devem ser resolvidas antes que `@analyst` avance
+- `## Specify depth` (projetos SMALL e MEDIUM) — classificação aplicada, profundidade de spec escolhida e lista de ambiguidades que devem ser resolvidas antes que `@sheldon` e `@planner` avancem
 
 > Se o pedido mencionar explicitamente um command center premium, control tower ou painel operacional denso, o `@product` deve registrar essa intenção na seção de identidade visual do PRD — a `interface-design` resolve pela direção **Premium Dark Platform** (ou por `identity.md`, quando houver imagens de referência); nunca aponte uma skill fixa de catálogo.
 
 ---
 
-## @deyvin
+## @planner
 
-**Quando usar:** Quando voce quer continuar uma sessao anterior, entender o que foi feito por ultimo, corrigir uma tarefa pequena, investigar um bug ou implementar em modo colaborativo.
+**Quando usar:** Depois do `@sheldon`, quando o PRD está aprovado e revisado. Em qualquer classificação.
 
 **O que faz:**
-- atua como um companheiro tecnico de continuidade
-- le primeiro a memoria do projeto e o runtime antes de ir ao Git
-- verifica sempre `.aioson/rules/` e os docs apontados por essas rules
-- resume o que ja esta confirmado sobre o estado atual
-- pergunta o que voce quer fazer agora
-- toca passos pequenos de implementacao, correcao e validacao
-- encaminha para `@product`, `@discovery-design-doc`, `@analyst`, `@architect`, `@ux-ui`, `@dev` ou `@qa` quando a tarefa sair do modo pair
-
-**Ordem mental de contexto do `@deyvin`:**
-1. `project.context.md`
-2. `.aioson/rules/`
-3. `.aioson/docs/`
-4. `context-pack.md` quando existir e combinar com a tarefa
-5. `memory-index.md`
-6. `spec-current.md` + `spec-history.md`
-7. `spec.md`
-8. `features.md` e artefatos da feature em andamento, se houver
-9. `skeleton-system.md`, `discovery.md`, `architecture.md`
-10. runtime SQLite
-11. Git como fallback
+- inspeciona o repositório (descoberta e mapa de código: entry point de produção, módulos reutilizáveis, convenções, test runner)
+- classifica cada path de entrega como `reuse`, `modify`, `create` ou `retire`
+- registra as decisões de arquitetura necessárias (linhas de Architecture Decisions no próprio plano, com rationale)
+- define sequenciamento, fases verticais e rollout/recuperação quando a mudança deixa estado persistente
+- absorveu o trabalho dos antigos `@architect`, `@discovery-design-doc` e `@pm`
 
 **Como ativar:**
 ```
-/aioson:agent:deyvin
+/aioson:agent:planner
 ```
 
-Alias compativel:
-```text
-/aioson:agent:pair
-```
-
-**Exemplos bons de uso:**
-```text
-@deyvin ve o que fizemos ontem e vamos continuar
-@deyvin revisa as ultimas tasks do runtime e me diga onde paramos
-@deyvin vamos corrigir esse bug pequeno juntos
-@deyvin leia as rules ativas, veja os docs relacionados e ajuste esse fluxo
-```
-
-**Entrega esperada:**
-- resumo curto do ultimo contexto confirmado
-- proximo passo pequeno e objetivo
-- implementacao/correcao em lote pequeno
-- atualizacao de `spec.md` ou `spec-{slug}.md` quando fizer sentido
-
-**Regra importante:**
-- `@deyvin` nao substitui discovery, produto ou arquitetura formal
-- quando a demanda cresce demais ou fica vaga, ele deve fazer handoff em vez de fingir que tudo cabe numa sessao de continuidade
-- se o pedido abrir projeto novo, greenfield, feature grande, escopo contraditorio ou misturar produto + UX + implementacao, o `@deyvin` deve fazer handoff imediato e nao comecar a codar
-- se voce quiser uma explicacao mais direta e focada no uso dele, consulte [Deyvin](./4-agentes/deyvin.md)
-
----
-
-## @analyst
-
-**Quando usar:** Projetos SMALL e MEDIUM, antes de @architect.
-
-**O que faz:**
-- Fase 1 (Discovery): Faz 6 perguntas de descoberta para entender o domínio
-- Fase 2 (Modelagem): Mapeia entidades, atributos e regras de negócio
-- Fase 3 (Análise): Produz tabela de entidades com campos e tipos
-- Identifica integrações externas e riscos
-- Em modo feature, passa a consumir `design-doc.md` e `readiness.md` quando já existirem
-- Usa skills e documentos sob demanda para evitar reabrir discovery desnecessária
-- em brownfield, pode gerar `discovery.md` diretamente a partir de `scan-index.md`, `scan-folders.md`, `scan-<pasta>.md` e `scan-aioson.md`, mesmo sem API configurada no `aioson`
-
-**Como ativar:**
-```
-/aioson:agent:analyst
-```
-
-**Exemplo de perguntas que ele faz:**
-```
-1. Quem são os usuários e quais são seus objetivos principais?
-2. Qual é o fluxo principal que gera valor para o negócio?
-3. Existe algum processo manual hoje que este sistema vai substituir?
-4. Quais são as regras de negócio mais críticas?
-5. Há integrações com sistemas externos?
-6. Quais dados são mais sensíveis ou críticos?
-```
-
-**Entrega:** Arquivo `.aioson/context/discovery.md` com:
-- Mapa de entidades e atributos
-- Tabela de campos com tipo e restrições
-- Integrações mapeadas
-- Riscos identificados
-- Referências visuais (wireframes, links)
-
-Em **modo feature**, entrega adicionalmente:
-- `requirements-{slug}.md` — regras de negócio com IDs rastreáveis (`REQ-{slug}-N`) e acceptance criteria verificáveis por QA (`AC-{slug}-N`)
-- `spec-{slug}.md` — esqueleto de memória da feature, com `phase_gates` no frontmatter para que `@dev` e `@deyvin` saibam quais fases já foram aprovadas
-
----
-
-## @discovery-design-doc
-
-**Quando usar:** Quando a demanda ainda está vaga, quando você quer um `design-doc.md` vivo antes de implementar, ou quando precisa medir se o contexto já está pronto para planejamento/execução.
-
-**O que faz:**
-- transforma briefing bruto em problema claro
-- identifica o que já está definido e o que ainda falta
-- produz `.aioson/context/design-doc.md`
-- produz `.aioson/context/readiness.md`
-- detecta `modo projeto` ou `modo feature`
-- recomenda skills e documentos sob demanda para a próxima etapa
-- recomenda o próximo agente ou documento do fluxo
-
-**Como ativar:**
-```
-/aioson:agent:discovery-design-doc
-```
-
-**Entrega:**
-- `design-doc.md` com objetivo, escopo, fora de escopo, módulos afetados, integrações, riscos, decisões e critérios de aceite
-- `readiness.md` com score objetivo por dimensão, nível de prontidão e próximo passo recomendado
-
-**Quando preferir este agente ao @analyst:**
-- quando o problema ainda está ambíguo
-- quando você precisa de um documento vivo de decisão antes de modelar tudo
-- quando a dúvida principal é escopo e prontidão, não modelagem profunda de entidades
-- quando o projeto já existe e você quer planejar uma feature grande sem sair codando cedo demais
-
-**Quando preferir @analyst:**
-- quando o problema principal é domínio, entidades, regras de negócio e modelagem de dados
-
----
-
-## @architect
-
-**Quando usar:** Após @analyst, em projetos SMALL e MEDIUM.
-
-**O que faz:**
-- Escolhe a estrutura de pastas proporcional ao tamanho do projeto
-- Documenta decisões técnicas (banco de dados, autenticação, etc.)
-- Define padrões de código para o time
-- Usa `design-doc.md` como documento de decisão do escopo atual
-- Respeita `readiness.md`; se a prontidão ainda estiver baixa, devolve bloqueios em vez de fingir certeza
-- só deve arquitetar em cima de `discovery.md`; se houver apenas artefatos brutos de scan, o passo correto ainda é `@analyst` antes
-
-**Como ativar:**
-```
-/aioson:agent:architect
-```
-
-**Estruturas que ele propõe (exemplo Laravel SMALL):**
-```
-app/
-  Actions/          ← lógica de negócio
-  Http/Controllers/ ← apenas orquestração
-  Models/
-  Policies/
-resources/views/
-database/migrations/
-tests/
-```
-
-**Entrega:** Arquivo `.aioson/context/architecture.md` com:
-- Estrutura de pastas (proporcional ao tamanho)
-- Stack definitiva
-- Decisões técnicas documentadas com **rationale** — não só o que foi decidido, mas por que aquela escolha reduz risco de debug e manutenção futura
-- Padrões de código
-- **Gate B** — sinal explícito de aprovação ao final do arquivo (`@dev` só pode iniciar implementação após este gate)
-
----
-
-## @ux-ui
-
-**Quando usar:** Quando o projeto tem interfaces (web apps, landing pages com formulários). SMALL e MEDIUM.
-
-**O que faz:**
-- Recebe constraints do @architect (componentes-chave, paleta)
-- Lê o PRD antes de decidir a direção visual
-- Define hierarquia visual e padrões de UI
-- Especifica componentes reutilizáveis
-- Cria guia de acessibilidade
-- Decide dark/light e direção visual de forma autônoma quando o contexto já for suficiente
-- Só pergunta preferência estética quando a ambiguidade realmente mudar a solução
-- Aplica a direção Premium Dark Platform da `interface-design` apenas quando houver pedido explícito de interface operacional premium, ou o que já estiver registrado no PRD
-- em brownfield, usa `discovery.md` como memória comprimida do sistema; se esse arquivo ainda não existir e o trabalho depender do comportamento atual da aplicação, o próximo passo correto é `@analyst`
-
-**Como ativar o agente UI/UX:**
-```
-/aioson:agent:ux-ui
-```
-
-**Submodos disponíveis:**
-```
-/aioson:agent:ux-ui research       → pesquisa visual e hipóteses de direção
-/aioson:agent:ux-ui audit          → auditoria com inventário, achados por severidade e plano de consolidação
-/aioson:agent:ux-ui tokens         → contrato formal de design tokens (primitivos, semânticos, escalas)
-/aioson:agent:ux-ui component-map  → mapeamento de componentes (Atomic Design), gap analysis
-/aioson:agent:ux-ui a11y           → auditoria WCAG focada, integração com @qa
-```
-
-**Entrega principal:** Arquivo `.aioson/context/ui-spec.md` com:
-- Sistema de design (tokens, cores, tipografia)
-- Componentes principais e estados
-- Fluxos de navegação
-- Checklist de acessibilidade
-- Enriquecimento da seção `Identidade visual` do PRD, sem reescrever visão, problema ou usuários
-
-**Entregas dos submodos** (opcionais, em `.aioson/context/`):
-- `ui-research.md` — benchmarking visual e direções
-- `ui-audit.md` — inventário + achados + plano de consolidação
-- `ui-tokens.md` — contrato de tokens com posse (`:root` vs `[data-theme]`)
-- `ui-component-map.md` — catálogo de componentes com variantes e estados
-- `ui-a11y.md` — relatório WCAG com checks automatizados e manuais
-
-> Se o usuário disser para o agente seguir sozinho, o comportamento esperado é decidir a direção visual com base no contexto do produto e continuar sem abrir questionário de estilo.
-
----
-
-## @pm
-
-**Quando usar:** Apenas projetos MEDIUM. Ative após @architect e @ux-ui.
-
-**O que faz:**
-- Enriquece o PRD vivo com priorização e corte por fase
-- Define ordem de entrega sem apagar a intenção original de produto
-- Adiciona critérios de aceite compactos quando isso trouxer clareza para execução e QA
-- Preserva identidade visual, visão, problema, usuários e demais seções já existentes
-- usa `discovery.md` e `architecture.md` como base; não deve priorizar diretamente a partir de mapas brutos de scan
-
-**Como ativar:**
-```
-/aioson:agent:pm
-```
-
-**Regra de ouro do @pm:** O documento deve ter no máximo 2 páginas. Se passar disso, corte funcionalidades do MVP.
-
-**Entrega:** Atualização do `.aioson/context/prd.md` com:
-- priorização final do MVP
-- plano de entrega por fase
-- critérios de aceite compactos
-- preservação das seções existentes do PRD base
+**Entrega:** um único artefato `.aioson/context/implementation-plan-{slug}.md` com evidência do repositório, delta de implementação, controles de engenharia, fases verticais e sequência de execução. Não cria `architecture.md`, `design-doc.md`, `readiness.md` nem backlog separado.
 
 ---
 
@@ -513,12 +284,13 @@ Depois disso, ela passa a ser parte real do pacote local da squad e deve ser con
 **Quando usar:** Sempre — é o agente que escreve o código.
 
 **O que faz:**
-- Lê o contexto, `design-doc.md`, `readiness.md`, discovery, arquitetura e (se existir) `ui-spec`
-- Implementa os módulos na ordem correta
-- Segue as convenções definidas pelo @architect
-- Registra decisões em `shared-decisions.md` (MEDIUM)
+- Lê o contexto, o PRD revisado pelo `@sheldon` e o `implementation-plan-{slug}.md`
+- Implementa as fases verticais na ordem do plano
+- Segue as convenções e decisões de arquitetura registradas pelo `@planner`
 - Carrega skills e docs detalhados sob demanda, em vez de inflar contexto inteiro
-- Não deve seguir para implementação quando `readiness.md` ainda apontar falta de discovery ou de arquitetura
+- Executa Simple Plan (trabalho técnico delimitado fora do fluxo de feature) e correções diretas abaixo da lane (até 2 arquivos de comportamento, sem decisão pendente e com verificação conhecida — sem arquivo de plano)
+- Retoma sessões (`dev-state --context=simple-plan`, recuperação de continuidade) — papel que antes era do `@deyvin`/`@pair`
+- Dispara o sub-task scout somente leitura (`aioson scout:prep --parent-agent=dev`; até 3 scouts por sessão e 20 arquivos por escopo) quando o diagnóstico exige varrer muitos arquivos
 
 **Como ativar:**
 ```
@@ -558,7 +330,7 @@ Se o usuário pedir para pular o teste, o `@dev` resiste, explica, e só cede ap
 - N+1 prevenido com eager loading
 - Events + Listeners para side effects
 
-**Entrega:** Código implementado seguindo os padrões definidos pelo @architect, para qualquer stack.
+**Entrega:** Código implementado seguindo o plano do `@planner`, para qualquer stack.
 
 ---
 
@@ -571,7 +343,9 @@ Se o usuário pedir para pular o teste, o `@dev` resiste, explica, e só cede ap
 - Escreve testes para achados Critical e High
 - Identifica casos de borda não cobertos
 - Valida se os critérios de aceite foram atendidos
-- usa `discovery.md` como fonte de regras e relacionamentos; se só existirem artefatos de scan, o fluxo correto ainda passa por `@analyst`
+- usa o PRD e o plano como fonte de regras e relacionamentos
+- verifica scope drift entre o prometido e o entregue (antes papel do `@scope-check`)
+- faz auditoria de acessibilidade quando há UI (antes submodo `a11y` do `@ux-ui`)
 
 **Como ativar:**
 ```
@@ -990,4 +764,4 @@ A classificação muda detalhe, orçamento e cobertura de risco. Sheldon é a re
 - [Fluxo de artefatos entre agentes](./5-referencia/fluxo-artefatos.md) — o que cada agente produz, o que @dev lê de fato e como o plano do Sheldon chega à implementação
 - [Cenários completos com exemplos práticos](./3-receitas/README.md)
 - [Início rápido](./2-comecar/primeiro-projeto.md)
-- [Guia do engenheiro: pair programming com IA](./4-agentes/deyvin.md)
+- [@dev: implementação, continuidade e sub-task scout](./4-agentes/dev.md)

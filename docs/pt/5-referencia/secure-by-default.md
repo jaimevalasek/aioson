@@ -9,7 +9,7 @@
 
 ## Para que serve
 
-Segurança costuma ser tratada como etapa opcional — "a gente adiciona autenticação depois". O AIOSON inverte isso: o baseline de segurança é o estado padrão. Cada agente técnico (`@analyst`, `@architect`, `@dev`, `@qa`) carrega as regras automaticamente. Você não precisa pedir.
+Segurança costuma ser tratada como etapa opcional — "a gente adiciona autenticação depois". O AIOSON inverte isso: o baseline de segurança é o estado padrão. Cada agente técnico (`@product`, `@planner`, `@dev`, `@qa`) carrega as regras automaticamente. Você não precisa pedir.
 
 Isso é o **Artigo VII da Constitution: Zero Trust by Default**. Controles de segurança têm IDs estáveis (`SEC-SBD-01..08`) para que specs, QA reports e security-findings possam referenciá-los sem ambiguidade.
 

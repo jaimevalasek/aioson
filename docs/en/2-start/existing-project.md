@@ -95,7 +95,7 @@ You > Yes — discount policy by customer tier, commission rules
 @setup > Since you already have running code, I recommend:
         - Run @discover to build the semantic cache
         - Start the feature with @product
-        - Request @analyst only if a named domain question remains unresolved
+        - Let @product capture domain rules and @planner map the code as the feature needs
 ```
 
 ---
@@ -118,22 +118,9 @@ This step is **optional for small projects**, but critical in medium and large c
 
 ---
 
-## Step 5 — Optional: ask `@analyst` a concrete domain question
+## Step 5 — Domain and codebase questions stay in the main cycle
 
-The semantic cache is already available to Product, Sheldon, Planner, DEV, and QA. Use Analyst only when a specific brownfield question needs a dedicated investigation; it is not a prerequisite for MEDIUM features.
-
-```
-You > @analyst
-
-@analyst > [reads scan + @discover cache]
-        Identified:
-        - Customer, Supplier, Order, OrderItem, Payment, Discount, Commission
-        - Auth via NextAuth
-        - Active Stripe webhook
-        - Tier table in customer.tier (free|pro|enterprise)
-@analyst > Findings saved as non-blocking feature evidence.
-@analyst > Product or Planner can now apply these findings to the canonical artifact.
-```
+The semantic cache is already available to Product, Sheldon, Planner, DEV, and QA. There is no separate discovery stage: `@product` records the domain rules a feature depends on (entities, states, business rules), and `@planner` does the repo discovery and code map for the plan.
 
 > **Why this matters:** when you create the next feature with `@product`, it will already come with **context**. The agent knows Customer already exists and won't suggest creating it again.
 
@@ -153,7 +140,7 @@ You > [...]
 @product > PRD saved to prd-order-cancellation.md. Next: @sheldon for the mandatory independent review.
 ```
 
-From there, the canonical flow applies at MEDIUM depth: `@product → @sheldon → @planner → @dev → @qa`. Product owns one PRD, Sheldon independently reviews and seals it, Planner owns one implementation plan, and QA writes one evidence-backed verdict. Analyst, Architect, Discovery Design Doc, PM, UX/UI, and Scope Check can enrich those artifacts when explicitly requested, but they do not become stages. See [Full feature with mandatory @sheldon review](../3-recipes/full-feature-with-sheldon.md) for the walkthrough.
+From there, the canonical flow applies at MEDIUM depth: `@product → @sheldon → @planner → @dev → @qa`. Product owns one PRD, Sheldon independently reviews and seals it, Planner owns one implementation plan, and QA writes one evidence-backed verdict. Domain rules live in the PRD, architecture decisions and code mapping live in the plan, and scope drift is checked by QA and the engine's scope drift gate. See [Full feature with mandatory @sheldon review](../3-recipes/full-feature-with-sheldon.md) for the walkthrough.
 
 ---
 

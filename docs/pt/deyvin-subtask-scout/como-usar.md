@@ -1,14 +1,14 @@
 # Como usar o Sub-task Scout
 
-> Exemplos concretos. O `@deyvin` usa o scout automaticamente quando a rubrica linha 111 dispara. Esta página mostra o que acontece por baixo e como intervir quando necessário.
+> Exemplos concretos. O `@dev` usa o scout automaticamente quando um diagnóstico ambíguo exige varrer mais de 5 arquivos ou rastrear um fluxo de runtime (`.aioson/docs/dev/scout.md`). Esta página mostra o que acontece por baixo e como intervir quando necessário.
 
 ---
 
 ## 1. Fluxo happy-path — scout bem-sucedido
 
-Cenário: o usuário pergunta ao `@deyvin` por que o `workflow:next` às vezes herda registros de conclusão de uma feature anterior.
+Cenário: o usuário pergunta ao `@dev` por que o `workflow:next` às vezes herda registros de conclusão de uma feature anterior.
 
-`@deyvin` identifica que a resposta exige inspeção de vários arquivos e despacha um scout:
+`@dev` identifica que a resposta exige inspeção de vários arquivos e despacha um scout:
 
 **Passo 1 — Preparar o scout**
 
@@ -16,7 +16,7 @@ Cenário: o usuário pergunta ao `@deyvin` por que o `workflow:next` às vezes h
 aioson scout:prep \
   --question="Por que workflow:next herda completion records de features anteriores?" \
   --scope-paths="src/commands/workflow-next.js,src/handoff-contract.js" \
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="Usuário perguntou sobre bug de herança de estado no workflow:next; precisa inspecionar lógica de loadOrCreateState e handoff-contract para identificar onde o featureSlug anterior não é limpo" \
   --feature-slug=current-feature
@@ -36,7 +36,7 @@ Saída (`--json`):
 
 **Passo 2 — Chamar o sub-agente**
 
-`@deyvin` usa a capacidade de sub-agente do harness (Claude Code `Agent` tool ou Codex sub-agent) com o `prompt` retornado. O sub-agente roda em contexto isolado, usa apenas `Read` e `Grep`, e escreve o resultado em `output_path`.
+`@dev` usa a capacidade de sub-agente do harness (Claude Code `Agent` tool ou Codex sub-agent) com o `prompt` retornado. O sub-agente roda em contexto isolado, usa apenas `Read` e `Grep`, e escreve o resultado em `output_path`.
 
 **Passo 3 — Validar**
 
@@ -54,9 +54,9 @@ aioson scout:commit --input=.aioson/runtime/scouts/scout-current-feature-2026-05
 
 Scout persistido, cap decrementado (2→1), telemetria emitida.
 
-**Passo 5 — @deyvin lê e responde**
+**Passo 5 — @dev lê e responde**
 
-`@deyvin` lê `findings`, `confidence`, e `recommendation` do JSON e dobra a resposta na conversa com o usuário. Contexto pai cresceu ~500 tokens em vez de ~10k+.
+`@dev` lê `findings`, `confidence`, e `recommendation` do JSON e dobra a resposta na conversa com o usuário. Contexto pai cresceu ~500 tokens em vez de ~10k+.
 
 ---
 
@@ -85,7 +85,7 @@ Saída:
 }
 ```
 
-`@deyvin` re-prompta o sub-agente com as falhas de validação explícitas. Na segunda tentativa, se PASS → commit. Se FAIL novamente → `retry_exhausted`:
+`@dev` re-prompta o sub-agente com as falhas de validação explícitas. Na segunda tentativa, se PASS → commit. Se FAIL novamente → `retry_exhausted`:
 
 ```json
 {
@@ -95,7 +95,7 @@ Saída:
 }
 ```
 
-Scout persiste com `status: "error"`. `@deyvin` informa o usuário e oferece handoff manual para `/aioson:agent:architect` se necessário.
+Scout persiste com `status: "error"`. `@dev` informa o usuário e, se a pergunta for de fronteira, registra no plano e encaminha ao `@planner`.
 
 ---
 
@@ -104,7 +104,7 @@ Scout persiste com `status: "error"`. `@deyvin` informa o usuário e oferece han
 O agente despachará um 4º scout na mesma sessão, mas o default é 3:
 
 ```bash
-aioson scout:prep --question="..." --scope-paths="..." --parent-agent=deyvin --parent-session-id=sess-abc123 --parent-session-excerpt="..."
+aioson scout:prep --question="..." --scope-paths="..." --parent-agent=dev --parent-session-id=sess-abc123 --parent-session-excerpt="..."
 # exit 2
 ```
 
@@ -121,7 +121,7 @@ Saída:
 }
 ```
 
-`@deyvin` superfície a mensagem e pergunta ao usuário como prosseguir: normalmente handoff para `/aioson:agent:architect` se os surveys continuarem se multiplicando.
+`@dev` superfície a mensagem e pergunta ao usuário como prosseguir: normalmente a pergunta vira decisão de fronteira, registrada no plano e encaminhada ao `@planner`, se os surveys continuarem se multiplicando.
 
 Para aumentar o limite no projeto:
 
@@ -138,7 +138,7 @@ Para aumentar o limite no projeto:
 aioson scout:prep \
   --question="..." \
   --scope-paths="src/" \  # diretório com 30+ arquivos
-  --parent-agent=deyvin \
+  --parent-agent=dev \
   --parent-session-id=sess-abc123 \
   --parent-session-excerpt="..."
 # exit 2
@@ -188,7 +188,7 @@ ls .aioson/runtime/scouts/
 
 ## 6. Usar o fallback CLI-less (sem `aioson` instalado)
 
-Em ambientes sem o binário `aioson` (ex: Claude Code puro sem CLI configurado), `@deyvin` usa o template inline do seu prompt. A seção "Sub-task scout invocation — CLI-less fallback" no `deyvin.md` descreve como construir o prompt manualmente e injetar no sub-agente via Agent tool.
+Em ambientes sem o binário `aioson` (ex: Claude Code puro sem CLI configurado), `@dev` usa o contrato CLI-less. A seção "CLI-less contract" de `.aioson/docs/dev/scout.md` descreve como construir o prompt manualmente e injetar no sub-agente via Agent tool.
 
 O fallback produz o mesmo relatório JSON, mas sem:
 - Validação de caps

@@ -170,7 +170,7 @@ aioson feature:archive . --feature=checkout --json
 | Agente | Comportamento |
 |--------|--------------|
 | `@qa` | Registra PASS e recomenda o fechamento; o usuário autoriza `feature:close`, cujo archive cascateia automaticamente |
-| `@dev`, `@analyst`, `@architect`, `@tester`, `@pm`, `@ux-ui` | Sem mudança — já operavam apenas na feature ativa |
+| `@dev`, `@planner`, `@tester` | Sem mudança — já operavam apenas na feature ativa |
 | `@product` | Sem mudança — vê apenas `prd.md` e `prd-{slug}.md` ativos |
 | `@briefing` | Lê `done/MANIFEST.md` para evitar duplicar briefings de features já entregues |
 | `@neo` | Lê `done/MANIFEST.md` para contexto geral do projeto |

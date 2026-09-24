@@ -299,14 +299,14 @@ Na revisão Jev, `decision.semantic_passed` separa o parecer do modelo de `decis
 | `runtime:fail` | Finaliza uma execução com falha | Quando a run falhou |
 | `runtime:status` | Mostra snapshot do runtime | Quando quer uma visão atual das runs |
 | `runtime:log` | Logger stateful de uma linha para agentes oficiais | Quando quer registrar eventos sem orquestrar vários comandos |
-| `runtime:session:start` | Abre ou reutiliza uma sessao direta de agente oficial | Quando quer manter uma sessao viva entre varias tarefas do `@deyvin` ou outro agente direto |
+| `runtime:session:start` | Abre ou reutiliza uma sessao direta de agente oficial | Quando quer manter uma sessao viva entre varias tarefas do `@dev` ou outro agente direto |
 | `runtime:session:log` | Adiciona um passo concluido na sessao direta ativa | Quando quer registrar cada tarefa concluida durante a sessao |
 | `runtime:session:finish` | Encerra a sessao direta ativa | Quando terminou a sessao ou vai fazer handoff |
 | `runtime:session:status` | Mostra o estado da sessao direta e os ultimos eventos | Quando quer saber se a sessao ainda esta aberta ou acompanhar com `--watch` |
 | `live:start` | Abre uma sessao viva rastreada para qualquer harness do registro (Codex, Claude, OpenCode, Kimi, Qwen, Grok, Muse, Antigravity); por padrão a sessão roda sem pedir permissão (`--permission-mode=yolo`, o flag registrado do host — `--permission-mode=default` para ter prompts) | Quando quer iniciar o cliente externo a partir do AIOSON e manter status, agente ativo e logs no dashboard |
 | `runtime:emit` | Registra eventos compactos da sessão viva atual; aceita `--worker-status`, `--verdict`, `--token-count`, `--progress-pct` | Quando quer marcar tarefa concluída, milestone, block ou step de plano sem abrir uma sessão paralela |
 | `live:status` | Mostra o estado da sessao viva e do processo filho | Quando quer acompanhar `active_agent`, progresso do plano e se o cliente ainda esta vivo |
-| `live:handoff` | Transfere a mesma sessao viva para outro agente AIOSON | Quando o agente atual precisa passar a continuidade para `@product`, `@architect`, `@dev` ou outro agente |
+| `live:handoff` | Transfere a mesma sessao viva para outro agente AIOSON | Quando o agente atual precisa passar a continuidade para `@product`, `@planner`, `@dev` ou outro agente |
 | `live:close` | Fecha a sessao viva e gera `summary.md` | Quando terminou a sessao externa e quer consolidar o historico compacto + verbose |
 | `runtime:backup` | Faz backup incremental do SQLite para S3 ou HTTP do cliente | Quando quer persistir dados de runtime na nuvem do cliente |
 | `runtime:restore` | Restaura dados de runtime a partir de um backup remoto | Quando quer recuperar dados em outra máquina ou após perda |
@@ -547,7 +547,7 @@ aioson verify:artifact . --kind=visual --slug=pedidos --advisory --runtime
 
 Acrescenta o que só existe depois do layout, a 1280px e 360px: overflow horizontal, texto cortado, elementos empurrados para fora da tela, tap targets abaixo de 44px e contraste WCAG computado de verdade (primeiro plano translúcido é composto contra o ancestral opaco mais próximo).
 
-Nos fluxos visuais roteados do framework (protótipo do `@refiner`, front-end implementado pelo `@dev`/`@deyvin`) o `--runtime` faz parte da invocação padrão, não é um extra. Playwright continua sendo dependência opcional: quando falta, a execução informa que não aconteceu em vez de degradar para um "passou", e esse resultado deve ser registrado ao declarar o trabalho visual concluído. `aioson doctor` mostra se ele está disponível na sua máquina.
+Nos fluxos visuais roteados do framework (protótipo do `@refiner`, front-end implementado pelo `@dev`) o `--runtime` faz parte da invocação padrão, não é um extra. Playwright continua sendo dependência opcional: quando falta, a execução informa que não aconteceu em vez de degradar para um "passou", e esse resultado deve ser registrado ao declarar o trabalho visual concluído. `aioson doctor` mostra se ele está disponível na sua máquina.
 
 `--screenshots` grava uma captura da primeira dobra por rota e por largura em `.aioson/context/features/{slug}/visual-screenshots/` (`--screenshots=full` guarda a página inteira; `--screenshot-dir=<pasta>` aponta outra pasta, que nunca é limpa). Nada na pasta padrão é removido antes de o browser medir; depois, uma execução com `--slug` sobre a matriz inteira remove as capturas que não produziu, enquanto uma execução estreitada por `--route`/`--routes` (e toda execução sem slug) substitui só as suas. Uma execução `--no-persist` não grava captura ali (use `--screenshot-dir` para uma de diagnóstico). A evidência registra o que a pasta contém (`metrics.runtime.screenshot_capture`: pasta, modo, contagem, bytes) e um achado de dobra nomeia a captura que o mostra. As capturas são diagnóstico regenerável, não evidência: ficam fora do git pela política do instalador, o `feature:archive` as descarta ao fechar a feature e `evidence:prune` as remove. Uma medição estática posterior sobre os mesmos bytes (o auto-disparo do `agent:done` incluído) carrega a seção `runtime` adiante em vez de apagá-la; se o protótipo mudou, o aviso `runtime evidence dropped` pede o `--runtime` de novo.
 
@@ -681,11 +681,11 @@ Veja [Referência CLI — Active Learning Loop](../active-learning-loop/comandos
 
 ### Sub-task Scout
 
-Comandos do [Deyvin Sub-Task Scout](../deyvin-subtask-scout/README.md): diagnóstico estruturado com sub-agente isolado.
+Comandos do [Sub-Task Scout](../deyvin-subtask-scout/README.md) do `@dev`: diagnóstico estruturado com sub-agente isolado e somente leitura.
 
 | Comando | O que faz | Quando usar |
 |---|---|---|
-| `scout:prep --question="..." --scope-paths="..." --parent-agent=deyvin --parent-session-id=<id> --parent-session-excerpt="..."` | Valida inputs, checa caps, gera prompt para sub-agente; retorna `{ id, prompt, output_path, cap_remaining }` | Quando `@deyvin` dispara rubrica linha 111 (survey >5 arquivos) |
+| `scout:prep --question="..." --scope-paths="..." --parent-agent=dev --parent-session-id=<id> --parent-session-excerpt="..."` | Valida inputs, checa caps, gera prompt para sub-agente; retorna `{ id, prompt, output_path, cap_remaining }` | Quando o `@dev` precisa de um survey read-only (>5 arquivos) |
 | `scout:validate --input=<path>` | Valida JSON retornado pelo sub-agente contra output schema; rastreia retries | Após sub-agente escrever o relatório em `output_path` |
 | `scout:commit --input=<path>` | Persiste relatório validado, decrementa cap, emite telemetria | Após `scout:validate` retornar exit 0 |
 
@@ -861,7 +861,7 @@ Importante:
 
 ```bash
 aioson locale:apply . --lang=pt-BR
-aioson locale:diff ux-ui --lang=pt-BR
+aioson locale:diff product --lang=pt-BR
 ```
 
 - `locale:apply` muda o idioma dos agentes do AIOSON
@@ -930,7 +930,7 @@ Resumo sem dúvida:
 
 ```bash
 aioson agents . --lang=pt-BR
-aioson agent:prompt architect . --tool=codex
+aioson agent:prompt planner . --tool=codex
 ```
 
 Use `agents` para ver quem existe e `agent:prompt` quando o cliente de IA nao entende `/aioson:agent:setup`, `@dev` ou slash commands, ou quando voce quer um handoff direto rastreado no runtime antes de continuar em outro cliente.
@@ -1049,7 +1049,7 @@ aioson scan:project . --folder=src,app --with-llm --provider=openai --context-mo
 ```bash
 aioson workflow:next .
 aioson workflow:next . --complete
-aioson workflow:next . --agent=ux-ui
+aioson workflow:next . --agent=dev
 aioson workflow:next . --skip=dev
 ```
 
@@ -1309,7 +1309,7 @@ Use para preparar o SQLite de runtime e puxar arquivos de `output/` para o índi
 
 ```bash
 aioson runtime:task:start . --task=task-001 --title="Landing page do produto" --squad=marketing --by=orchestrator
-aioson runtime:start . --run=run-001 --task=task-001 --agent=ux-ui --title="Criacao da UI"
+aioson runtime:start . --run=run-001 --task=task-001 --agent=dev --title="Criacao da UI"
 aioson runtime:update . --run=run-001 --message="Hero e secoes principais definidos"
 aioson runtime:finish . --run=run-001 --summary="UI pronta para handoff" --output=output/marketing/landing/index.html
 aioson runtime:task:finish . --task=task-001 --goal="Landing entregue"
@@ -1320,11 +1320,11 @@ Use esse fluxo quando você quer rastreamento explícito de task, run, progresso
 ### 21. Manter uma sessao direta rastreada no terminal
 
 ```bash
-aioson runtime:session:start . --agent=deyvin --title="Sessao de continuidade"
-aioson runtime:session:log . --agent=deyvin --message="Corrigi validacao do modal de estoque"
-aioson runtime:session:log . --agent=deyvin --message="Ajustei feedback visual de erro no formulario"
-aioson runtime:session:status . --agent=deyvin --watch=2
-aioson runtime:session:finish . --agent=deyvin --summary="Sessao encerrada com correcoes no estoque"
+aioson runtime:session:start . --agent=dev --title="Sessao de continuidade"
+aioson runtime:session:log . --agent=dev --message="Corrigi validacao do modal de estoque"
+aioson runtime:session:log . --agent=dev --message="Ajustei feedback visual de erro no formulario"
+aioson runtime:session:status . --agent=dev --watch=2
+aioson runtime:session:finish . --agent=dev --summary="Sessao encerrada com correcoes no estoque"
 ```
 
 Use esse fluxo quando voce quer deixar uma sessao direta viva entre varios pedidos ao mesmo agente e ver no dashboard se ela ainda esta aberta, quais passos ja foram registrados e quando foi encerrada. Rode `runtime:session:status --watch=2` em outro terminal se quiser acompanhar ao vivo.
@@ -1332,11 +1332,11 @@ Use esse fluxo quando voce quer deixar uma sessao direta viva entre varios pedid
 ### 22. Abrir uma sessao viva rastreada em cliente externo
 
 ```bash
-aioson live:start . --tool=codex --agent=deyvin --plan=plan.md --no-launch
-aioson runtime:emit . --agent=deyvin --type=task_started --title="Corrigir modal de estoque"
-aioson runtime:emit . --agent=deyvin --type=plan_checkpoint --plan-step=RF-01 --summary="Launcher entregue"
-aioson runtime:emit . --agent=deyvin --type=task_completed --summary="Corrigi o modal de estoque" --refs="src/app.js,src/styles.css"
-aioson live:handoff . --agent=deyvin --to=product --reason="Escopo exige decisao de produto"
+aioson live:start . --tool=codex --agent=dev --plan=plan.md --no-launch
+aioson runtime:emit . --agent=dev --type=task_started --title="Corrigir modal de estoque"
+aioson runtime:emit . --agent=dev --type=plan_checkpoint --plan-step=RF-01 --summary="Launcher entregue"
+aioson runtime:emit . --agent=dev --type=task_completed --summary="Corrigi o modal de estoque" --refs="src/app.js,src/styles.css"
+aioson live:handoff . --agent=dev --to=product --reason="Escopo exige decisao de produto"
 aioson live:status . --agent=product --watch=2
 aioson live:close . --agent=product --summary="Sessao encerrada com handoff e resumo final"
 ```
@@ -1352,8 +1352,8 @@ Use esse fluxo quando voce quer iniciar Codex, Claude ou OpenCode por fora do cl
 ### 23. Registrar eventos rápidos com `runtime:log`
 
 ```bash
-aioson runtime:log . --agent=ux-ui --message="Comecei a revisar a landing"
-aioson runtime:log . --agent=ux-ui --message="Entreguei a UI final" --finish --status=completed --summary="Tela pronta"
+aioson runtime:log . --agent=dev --message="Comecei a revisar a landing"
+aioson runtime:log . --agent=dev --message="Entreguei a UI final" --finish --status=completed --summary="Tela pronta"
 ```
 
 Use quando quer um logger stateful de uma linha, sem precisar chamar manualmente `task:start`, `start`, `update` e `finish`.
@@ -1518,7 +1518,7 @@ Execute `spec:sync` logo após cada sessão do `@dev` para manter o dashboard at
 aioson spec:checkpoint . --feature=checkout
 
 # Para um agente diferente de dev
-aioson spec:checkpoint . --feature=checkout --agent=architect
+aioson spec:checkpoint . --feature=checkout --agent=planner
 ```
 
 Saída:
@@ -1628,7 +1628,7 @@ aioson runtime:emit . --agent=dev \
 aioson runtime:emit . --agent=dev \
   --type=task_blocked \
   --worker-status=blocked \
-  --summary="Aguardando schema de pagamentos do @architect"
+  --summary="Aguardando schema de pagamentos do @planner"
 ```
 
 ### 37. Intra-bus de squad
@@ -1828,12 +1828,12 @@ File                                         Type          Size     Tokens      
 ──────────────────────────────────────────────────────────────────────
 template/.aioson/agents/squad.md             orchestrator  65.0KB   ~16,641 tok ✗ hard
 template/.aioson/agents/dev.md               generalist    38.4KB   ~9,832 tok  ⚠ target
-template/.aioson/agents/ux-ui.md             generalist    33.6KB   ~8,614 tok  ⚠ target
-template/.aioson/agents/deyvin.md            generalist    14.2KB   ~3,633 tok  ✓ ok
+template/.aioson/agents/planner.md           generalist    33.6KB   ~8,614 tok  ⚠ target
+template/.aioson/agents/qa.md                generalist    14.2KB   ~3,633 tok  ✓ ok
 
 On-demand candidates (move to .aioson/docs/ to save tokens):
   template/.aioson/agents/dev.md              save ~2,100 tok  (4 sections)
-  template/.aioson/agents/ux-ui.md            save ~1,400 tok  (3 sections)
+  template/.aioson/agents/planner.md          save ~1,400 tok  (3 sections)
 ```
 
 #### Breakdown por seção (verbose)
@@ -1875,7 +1875,7 @@ Escreve `.aioson/docs/agent-audit.md` com tabela completa, lista de candidatos o
 |------|------|--------|
 | Auto-loaded (`CLAUDE.md`, `AGENTS.md`) | 3.500 chars | 4.000 chars |
 | Orquestrador (`orchestrator`, `squad`) | 12.000 chars | 20.000 chars |
-| Generalista (`dev`, `architect`, `sheldon`, etc.) | 15.000 chars | 40.000 chars |
+| Generalista (`dev`, `planner`, `sheldon`, etc.) | 15.000 chars | 40.000 chars |
 | Focado (todos os demais) | 8.000 chars | 16.000 chars |
 
 **Seções automaticamente detectadas como candidatas a on-demand:** convenções, folder structure, stack, laravel, next.js, debugging, worktree, animação, output contract, exemplos, templates e outras seções raramente necessárias no início da sessão.
@@ -2438,7 +2438,7 @@ aioson spec:analyze . --feature=checkout
 aioson spec:analyze . --feature=checkout --json
 ```
 
-Checagens: rastreabilidade REQ/AC (ids declarados nunca usados downstream = gap; ids usados sem declaração = órfão/drift), staleness (upstream modificado após downstream gerado), readiness (`blocked` = error, `ready_with_warnings` = info), sanidade do contrato e vínculo AC→contrato, mais `wave_file_overlap` (fases da mesma Wave com Primary files sobrepostos). Severidades: **error** vira `ok:false`/exit 1; **warning** = drift provável; **info** = dívida. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`. O `@scope-check` roda no preflight: errors são blockers, warnings viram evidência de drift pré-computada.
+Checagens: rastreabilidade REQ/AC (ids declarados nunca usados downstream = gap; ids usados sem declaração = órfão/drift), staleness (upstream modificado após downstream gerado), readiness (`blocked` = error, `ready_with_warnings` = info), sanidade do contrato e vínculo AC→contrato, mais `wave_file_overlap` (fases da mesma Wave com Primary files sobrepostos). Severidades: **error** vira `ok:false`/exit 1; **warning** = drift provável; **info** = dívida. Persiste `spec-analyze-{slug}.json` em `.aioson/context/`. Errors são blockers roteados ao `@planner` antes do gate de execução; warnings viram evidência de drift pré-computada para a revisão de escopo do `@qa`.
 
 ---
 
@@ -2454,7 +2454,7 @@ aioson forge:compile . --feature=checkout
 aioson forge:compile . --feature=checkout --json
 ```
 
-Gera `.aioson/plans/{slug}/forge-run.workflow.js`: um `parallel()` por Wave (devs em arquivos disjuntos) → loop de convergência no `harness:check` (fixes sequenciais, limitado pelo `error_streak_limit` do governor + guarda de orçamento) → revisão adversarial de 3 lentes para critérios binários **sem** `verification` → estágio de validador fresh-context fechando pelo ciclo normal `harness:validate` → `apply-validation`. Preflights duros recusam compilar (contrato inválido/ausente, zero critério executável, plano sem coluna Wave, errors do `spec:analyze`, `wave_file_overlap`) e nomeiam o agente dono (`@sheldon`, `@pm`, `@discovery-design-doc`). O script gerado **nunca** roda `feature:close`/publish.
+Gera `.aioson/plans/{slug}/forge-run.workflow.js`: um `parallel()` por Wave (devs em arquivos disjuntos) → loop de convergência no `harness:check` (fixes sequenciais, limitado pelo `error_streak_limit` do governor + guarda de orçamento) → revisão adversarial de 3 lentes para critérios binários **sem** `verification` → estágio de validador fresh-context fechando pelo ciclo normal `harness:validate` → `apply-validation`. Preflights duros recusam compilar (contrato inválido/ausente, zero critério executável, plano sem coluna Wave, errors do `spec:analyze`, `wave_file_overlap`) e nomeiam o agente dono (`@sheldon` ou `@planner`). O script gerado **nunca** roda `feature:close`/publish.
 
 ---
 

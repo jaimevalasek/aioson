@@ -69,7 +69,7 @@ O SDD escala a profundidade, não o número de documentos nem a cadeia:
 - DEV implementa e integra.
 - QA emite o único veredito final.
 
-`@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, `@ux-ui` e `@orchestrator` continuam disponíveis como consultores explícitos. Seus pareceres podem enriquecer PRD ou plano, mas não são gates canônicos.
+Os antigos consultores foram absorvidos pelo ciclo principal: regras de domínio no `@product`; arquitetura, descoberta do repositório e sequenciamento no `@planner`; direção visual no `@refiner`/protótipo; revisão de escopo e acessibilidade no `@qa`. O `@orchestrator` continua disponível para execução paralela, sem ser gate canônico.
 
 ## Profundidade por classificação
 
@@ -90,7 +90,7 @@ Gates determinísticos controlam o avanço sem exigir documentos duplicados:
 |---|---|---|
 | **Runtime smoke** | Build + migrations (em DB real) + boot + Core happy-path no stack real. Uma feature com backend/DB não fecha sem passar. `tsc` + testes unitários é o piso, não o "done". | `@qa` (Gate D) |
 | **Plan-integrity** | O único plano referencia capacidades/ACs do PRD, fases verticais, arquivos esperados e checks executáveis. | `@planner` |
-| **Scope-drift** | `spec:analyze` pode detectar drift real; `@scope-check` continua disponível como revisão explícita. | CLI / `@scope-check` |
+| **Scope-drift** | `spec:analyze` detecta drift real; o gate de scope drift do `workflow:next` roda sempre e o `@qa` revisa o escopo entregue. | CLI / `@qa` |
 | **Product-to-plan handoff** | PRD tem ACs concretos, `product_scope: approved` e `prd_ready: approved` antes de planejamento significativo. | `@product` / `@sheldon` |
 
 Gate C = plano de implementação aprovado antes de implementação significativa.

@@ -4,7 +4,7 @@
 
 ## O que mudou?
 
-Antes da v1.7.3, a governança de código dependia de um único arquivo `design-doc.md` gerado pelo `@discovery-design-doc`. Se esse arquivo não existisse, os agentes não tinham regras estruturais para seguir.
+Antes da v1.7.3, a governança de código dependia de um único arquivo `design-doc.md` gerado pelo antigo `@discovery-design-doc` (hoje absorvido pelo `@planner`). Se esse arquivo não existisse, os agentes não tinham regras estruturais para seguir.
 
 Agora, o AIOSON distribui **5 arquivos de best-practice** em `.aioson/design-docs/` durante o `install`/`init`:
 
@@ -20,7 +20,7 @@ Agora, o AIOSON distribui **5 arquivos de best-practice** em `.aioson/design-doc
 
 1. **Instalação automática**: ao rodar `aioson install` ou `aioson init`, os 5 arquivos são copiados para `.aioson/design-docs/`.
 2. **Descoberta determinística**: `aioson preflight . --agent=<agente>` lista os `.aioson/design-docs/*.md` aplicáveis em `design_governance`.
-3. **Carregamento eficiente**: `@dev`, `@deyvin`, `@architect`, `@analyst`, `@pm`, `@product` e `@sheldon` carregam os arquivos listados quando a tarefa envolve estrutura, nomenclatura, reuso, componentização ou tamanho de arquivo.
+3. **Carregamento eficiente**: `@dev`, `@planner`, `@product` e `@sheldon` carregam os arquivos listados quando a tarefa envolve estrutura, nomenclatura, reuso, componentização ou tamanho de arquivo.
 4. **Hard constraints**: os arquivos carregados são tratados como restrições duras — o agente deve segui-las, não sugerir ignorá-las.
 5. **Extensível**: você pode adicionar novos arquivos `.md` em `.aioson/design-docs/`; com `agents: []` ou sem `agents`, eles aparecem para todos os agentes.
 
@@ -29,7 +29,7 @@ Agora, o AIOSON distribui **5 arquivos de best-practice** em `.aioson/design-doc
 | Artefato | Propósito | Quem cria | Quando muda |
 |---|---|---|---|
 | **PRD** (`prd.md`) | Visão, escopo, usuários, métricas | `@product` | Quando o produto evolui |
-| **design-doc** (`design-doc.md`) | Decisões de escopo, módulos, riscos, readiness | `@discovery-design-doc` | Por feature ou refactoring grande |
+| **design-doc** (`design-doc.md`) | Decisões de escopo, módulos, riscos, readiness | `@planner` (hoje nas Architecture Decisions do plano; `design-doc.md` é legado) | Por feature ou refactoring grande |
 | **Governança** (`.aioson/design-docs/*.md`) | Regras estruturais duras que aplicam-se a todo código | Distribuído pelo framework | Quando o time decide mudar convenções |
 
 > **Regra de ouro**: O PRD diz *o quê* construir. O design-doc diz *como* organizar a entrega. A governança diz *como* o código deve ser estruturado para ser mantido.

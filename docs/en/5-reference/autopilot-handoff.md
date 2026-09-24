@@ -8,7 +8,7 @@ Autopilot removes mechanical handoff confirmations while preserving genuine user
 [optional raw-source Briefing → Refiner → user approval] → Product → Sheldon → Planner → DEV → QA → human close
 ```
 
-Briefing and Refiner are pre-product intake when raw sources need framing. Sheldon is the mandatory independent hash-bound PRD review. Analyst, Architect, Discovery Design Doc, PM, Scope Check, and UX/UI remain callable consultants, but classification does not insert them into the route and they do not create mandatory artifact packages.
+Briefing and Refiner are pre-product intake when raw sources need framing. Sheldon is the mandatory independent hash-bound PRD review. The former consultants (Analyst, Architect, Discovery Design Doc, PM, Scope Check, UX/UI) were retired into Product, Planner, Refiner, and QA; their CLI ids still resolve to the absorbing agent, and none of them adds a stage or a mandatory artifact package.
 
 MICRO, SMALL, and MEDIUM use the same route. Classification changes depth, risk coverage, and implementation budget—not the number of specification agents.
 

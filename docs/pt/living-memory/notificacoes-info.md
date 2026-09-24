@@ -66,7 +66,7 @@ Saída:
 ⚠ [bootstrap] Bootstrap stale há 35 dias — recomendo /discover
 ```
 
-Disparado pelo Step 0 dos agentes (dev, qa, deyvin) quando `aioson memory:status` reporta cobertura < 4 ou stale > 30d.
+Disparado pelo Step 0 dos agentes (dev, qa) quando `aioson memory:status` reporta cobertura < 4 ou stale > 30d.
 
 ### Tier 3 — push manual
 

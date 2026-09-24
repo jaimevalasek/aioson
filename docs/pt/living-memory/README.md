@@ -8,7 +8,7 @@ Esta pasta é a porta de entrada para entender e usar a feature. Ela é dividida
 
 ## Para que serve
 
-- **Acelerar agentes** — quando `@dev`, `@qa` ou `@deyvin` começam uma sessão, eles leem o `bootstrap/` em vez de varrer o código. Menos contexto consumido, mais sessão útil.
+- **Acelerar agentes** — quando `@dev` ou `@qa` começam uma sessão, eles leem o `bootstrap/` em vez de varrer o código. Menos contexto consumido, mais sessão útil.
 - **Manter o resumo fiel** — toda sessão que mexe em rotas, models, PRDs ou volume alto de código atualiza `bootstrap/*.md` antes do próximo agente entrar. Sem intervenção humana.
 - **Dar autonomia controlada** — o agente pode rodar comandos read-only (tier 1) sem perguntar, comandos de memória interna (tier 2) com notificação, e nunca pode disparar operações irreversíveis (tier 3) sozinho.
 - **Diagnosticar o estado da memória** — `aioson doctor` reporta cobertura de bootstrap, drift de permissões, slashes ausentes e version mismatch com hints acionáveis.

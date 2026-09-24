@@ -19,7 +19,7 @@ O `@discover` resolve isso de vez: ele lê o projeto uma vez, extrai as informa�
 - Primeira vez rodando AIOSON num projeto existente com código.
 - Após mudanças estruturais significativas no codebase (novos módulos, refatoração grande).
 - Quando um agente se perde ou dá respostas imprecisas por falta de contexto.
-- `@neo` ou `@deyvin` sinalizam que o cache está desatualizado.
+- `@neo` ou `@dev` sinalizam que o cache está desatualizado.
 
 ## Quando NÃO invocar
 
@@ -106,7 +106,7 @@ Uma ativação com `--help` (`/discover --help`) imprime um resumo rápido — o
 ## Handoff típico
 
 - **Vem de:** `@setup` (primeira vez) ou qualquer ponto quando o cache está stale.
-- **Vai para:** `@product`, `@sheldon`, `@dev`, `@deyvin` — qualquer agente que precise entender o sistema.
+- **Vai para:** `@product`, `@sheldon`, `@planner`, `@dev` — qualquer agente que precise entender o sistema.
 
 ## Diferença entre @discover e scan:project
 

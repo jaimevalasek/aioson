@@ -128,4 +128,4 @@ dossier arquivado em .aioson/context/done/
 
 - [Feature Dossier](./feature-dossier.md) — comandos detalhados do dossier
 - [Live Sessions](./live-sessions.md) — como registrar milestones de continuidade no dashboard
-- [Ficha do @deyvin](../4-agentes/deyvin.md) — o agente de retomada que consome esses artefatos
+- [Ficha do @dev](../4-agentes/dev.md) — o agente que retoma a feature e consome esses artefatos

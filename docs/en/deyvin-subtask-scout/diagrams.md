@@ -5,7 +5,7 @@
 ## Full dispatch flow
 
 ```
-User asks @deyvin something that triggers rubric line 111
+User asks @dev something whose diagnosis is ambiguous
 (survey of >5 files or runtime flow tracing)
          │
          ▼
@@ -43,15 +43,15 @@ User asks @deyvin something that triggers rubric line 111
            ▼                               ▼
 ┌──────────────────────────┐   ┌───────────────────────────────┐
 │ aioson scout:commit      │   │ retry_remaining > 0?          │
-│ ────────────────────     │   │  yes → @deyvin re-prompts     │
+│ ────────────────────     │   │  yes → @dev re-prompts        │
 │ persists scout JSON      │   │  no → retry_exhausted         │
 │ decrements cap           │   │        status: "error"        │
-│ emits telemetry          │   │        @deyvin informs user   │
+│ emits telemetry          │   │        @dev informs user      │
 └──────────┬───────────────┘   └───────────────────────────────┘
            │
            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ @deyvin reads findings, confidence, recommendation           │
+│ @dev reads findings, confidence, recommendation              │
 │ folds into user-facing reply                                 │
 │                                                              │
 │ parent context grew: ~500 tokens (report)                   │

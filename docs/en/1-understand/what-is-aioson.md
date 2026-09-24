@@ -21,12 +21,9 @@ Imagine you want to build a house.
 - **Briefing** listens to your raw idea (the "napkin sketch") and hands back a structured briefing — with risks and open questions — *before* it becomes a project.
 - **Product** understands what you want to build and why — and writes the PRD.
 - **Sheldon** independently enriches and hash-bind approves Product's PRD in place before planning.
-- **Planner** turns the approved PRD into one vertical implementation plan.
-- **Analyst** discovers what already exists in the codebase and what's missing when explicitly requested.
-- **Architect** resolves a named technical boundary or decision when explicitly requested.
-- **UX-UI** designs how the end user will live there.
-- **Dev** builds.
-- **Deyvin** is the site foreman who picks up the job when you return from a trip: reads what's confirmed, flags what's inferred, and proceeds one small step at a time without you having to re-explain anything.
+- **Planner** turns the approved PRD into one vertical implementation plan — mapping what already exists in the codebase and recording the technical decisions it needs.
+- **Refiner** (with an approved prototype) settles how the end user will live there before Product writes the PRD.
+- **Dev** builds — and is also the site foreman who picks up the job when you return from a trip: reads what's confirmed, flags what's inferred, and proceeds one small step at a time without you having to re-explain anything.
 - **QA** inspects.
 - **Pentester** can test the locks when an explicit security review is enabled.
 - **Committer** writes the meeting minutes (commit message).
