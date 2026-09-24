@@ -14,35 +14,148 @@ function getTerser() {
   return _terser;
 }
 
-// Protege JS compilado no publish --build com minificação e mangling conservador.
-// Evita dependências de ofuscação que ampliam a superfície de supply chain e não
-// renomeia símbolos de top level para preservar require/exports e bundles.
-// Falha num arquivo → devolve o compilado original (não derruba o publish).
 // Detecta JS já minificado (bundle de frontend tipo vite/webpack): linhas muito
-// longas e poucas quebras. Não vale re-ofuscar — incha o pacote, pode quebrar o
-// React e o ganho é baixo (já está minificado). O alvo de valor é o backend (tsc,
-// código legível), esse sim é ofuscado.
+// longas e poucas quebras. Não vale re-minificar — incha o pacote, pode quebrar o
+// React e o ganho é baixo. O alvo de valor é o backend (tsc/vite --ssr, código
+// legível).
 function looksMinified(code) {
   const newlines = (code.match(/\n/g) || []).length;
   const avgLineLen = code.length / (newlines + 1);
   return code.length > 30000 && avgLineLen > 200;
 }
 
-async function obfuscateJs(code) {
-  if (looksMinified(code)) return code; // já minificado → mantém como está
-  try {
-    const result = await getTerser().minify(code, {
-      compress: false,
-      mangle: true,
-      toplevel: false,
-      format: {
-        comments: false
-      }
-    });
-    return result.code || code;
-  } catch {
-    return code;
+// Bundle de servidor já minificado (vite --ssr com minify) cita builtins do Node;
+// bundle de frontend não. No nível `max` só o primeiro é ofuscado.
+function looksServerSide(code) {
+  return /\bfrom\s*["']node:|\brequire\(\s*["']node:|\bimport\(\s*["']node:/.test(code);
+}
+
+// Top level só é renomeado em módulo: num script solto os nomes de topo são
+// globais e outro arquivo pode depender deles. Em ESM os exports mantêm o nome
+// público; em CommonJS `require`/`module.exports` são livres e não são tocados.
+function detectModuleKind(code) {
+  if (/^\s*(?:import\s*[\w{*'"]|export\s)/m.test(code)) return 'esm';
+  if (/\brequire\s*\(|\bmodule\.exports\b|\bexports\.\w/.test(code)) return 'cjs';
+  return 'script';
+}
+
+// Níveis de proteção do --build (system.json `build_protection` ou
+// `--protection=`):
+// - standard: terser com compressão e mangling inclusive de top level em módulos.
+//   Nomes de classe ficam (erros e `instanceof` por nome dependem deles).
+// - max: standard + javascript-obfuscator (strings cifradas em rc4, fluxo de
+//   controle achatado). O ofuscador NÃO é dependência do CLI — cada release
+//   trouxe risco de supply chain a todo usuário do aioson. Ele é carregado do
+//   node_modules do app, com versão exata declarada no package.json do app.
+const PROTECTION_LEVELS = ['standard', 'max'];
+const OBFUSCATOR_PACKAGE = 'javascript-obfuscator';
+const MAX_OBFUSCATION_OPTIONS = Object.freeze({
+  compact: true,
+  controlFlowFlattening: true,
+  controlFlowFlatteningThreshold: 0.5,
+  deadCodeInjection: false,
+  debugProtection: false,
+  disableConsoleOutput: false,
+  identifierNamesGenerator: 'hexadecimal',
+  numbersToExpressions: true,
+  renameGlobals: false,
+  selfDefending: false,
+  simplify: true,
+  sourceMap: false,
+  splitStrings: true,
+  splitStringsChunkLength: 8,
+  stringArray: true,
+  stringArrayCallsTransform: true,
+  stringArrayEncoding: ['rc4'],
+  stringArrayIndexShift: true,
+  stringArrayRotate: true,
+  stringArrayShuffle: true,
+  stringArrayThreshold: 1,
+  stringArrayWrappersCount: 2,
+  stringArrayWrappersType: 'function',
+  transformObjectKeys: false,
+  unicodeEscapeSequence: false
+});
+
+async function minifyForRuntime(code) {
+  const kind = detectModuleKind(code);
+  const result = await getTerser().minify(code, {
+    module: kind === 'esm',
+    toplevel: kind !== 'script',
+    compress: { passes: 2 },
+    mangle: { keep_classnames: true },
+    keep_classnames: true,
+    format: { comments: false }
+  });
+  if (!result.code) throw new Error('terser returned no code');
+  return result.code;
+}
+
+// Devolve `{ code, protected, failed }`. Falha num arquivo devolve o compilado
+// original com `failed` — o chamador decide se isso derruba o publish.
+async function protectJs(code, { level = 'standard', obfuscator = null } = {}) {
+  const minified = looksMinified(code);
+  if (minified && !(level === 'max' && looksServerSide(code))) {
+    return { code, protected: false, failed: false };
   }
+  try {
+    let out = minified ? code : await minifyForRuntime(code);
+    if (level === 'max') {
+      out = obfuscator.obfuscate(out, MAX_OBFUSCATION_OPTIONS).getObfuscatedCode();
+    }
+    return { code: out, protected: true, failed: false };
+  } catch {
+    return { code, protected: false, failed: true };
+  }
+}
+
+async function obfuscateJs(code, protection) {
+  return (await protectJs(code, protection)).code;
+}
+
+function resolveProtectionLevel(options, manifest, t) {
+  const raw = options.protection !== undefined ? options.protection : manifest && manifest.build_protection;
+  if (raw === undefined || raw === null) return 'standard';
+  const level = String(raw).trim().toLowerCase();
+  if (!PROTECTION_LEVELS.includes(level)) {
+    throw new Error(t('system.error_protection_level', { value: String(raw), levels: PROTECTION_LEVELS.join(', ') }));
+  }
+  return level;
+}
+
+// Carrega o ofuscador do próprio app: versão exata no package.json e módulo
+// resolvido dentro do node_modules do app (nunca de uma pasta-pai).
+function loadAppObfuscator(dir, t) {
+  const appDir = path.resolve(dir);
+  const missing = () => new Error(t('system.error_obfuscator_missing', { pkg: OBFUSCATOR_PACKAGE }));
+  let pkg;
+  try {
+    pkg = JSON.parse(require('node:fs').readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+  } catch {
+    throw missing();
+  }
+  const declared = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) }[OBFUSCATOR_PACKAGE];
+  if (!declared) throw missing();
+  if (!/^\d+\.\d+\.\d+$/.test(String(declared).trim())) {
+    throw new Error(t('system.error_obfuscator_unpinned', { pkg: OBFUSCATOR_PACKAGE, version: String(declared) }));
+  }
+  const appRequire = require('node:module').createRequire(path.join(appDir, 'package.json'));
+  let resolved;
+  try {
+    resolved = appRequire.resolve(OBFUSCATOR_PACKAGE);
+  } catch {
+    throw missing();
+  }
+  const norm = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+  let appModules = path.join(appDir, 'node_modules') + path.sep;
+  try {
+    appModules = require('node:fs').realpathSync(path.join(appDir, 'node_modules')) + path.sep;
+  } catch { /* sem node_modules → resolve acima já falhou ou veio de fora */ }
+  if (!norm(path.resolve(resolved)).startsWith(norm(appModules))) throw missing();
+  const mod = appRequire(OBFUSCATOR_PACKAGE);
+  const api = mod && typeof mod.obfuscate === 'function' ? mod : mod && mod.default;
+  if (!api || typeof api.obfuscate !== 'function') throw missing();
+  return api;
 }
 
 // TypeScript de runtime — `server/**/*.ts` que o app executa direto com `tsx`
@@ -63,7 +176,7 @@ function getTypeStripper() {
   }
 }
 
-async function protectRuntimeTypeScript(code) {
+async function protectRuntimeTypeScript(code, protection) {
   const strip = getTypeStripper();
   if (!strip) return null;
   // O strip emite um ExperimentalWarning na primeira chamada — ruído no log do
@@ -82,7 +195,8 @@ async function protectRuntimeTypeScript(code) {
   } finally {
     process.emitWarning = emitWarning;
   }
-  return obfuscateJs(stripped);
+  const result = await protectJs(stripped, protection);
+  return result.failed ? null : result.code;
 }
 
 // Fonte de runtime que ficaria legível no pacote é um erro de publish, não um
@@ -91,6 +205,11 @@ async function protectRuntimeTypeScript(code) {
 function rawSourceError(rawSource, options, t) {
   if (!rawSource.length || options['allow-raw-source']) return null;
   return new Error(t('system.error_raw_source', { count: rawSource.length, files: rawSource.join(', ') }));
+}
+
+function unprotectedJsError(unprotectedJs, level, options, t) {
+  if (level !== 'max' || !unprotectedJs.length || options['allow-raw-source']) return null;
+  return new Error(t('system.error_unprotected_js', { count: unprotectedJs.length, files: unprotectedJs.join(', ') }));
 }
 
 function startEntryError(files, t) {
@@ -374,7 +493,7 @@ async function storeGet(url, token) {
  * Collect all eligible source files under `dir`.
  * Returns { relativePath: content } — only text files with allowed extensions.
  */
-async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set() } = {}) {
+async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set(), protection = { level: 'standard', obfuscator: null } } = {}) {
   const files = {};
   let totalBytes = 0;
   const errors = [];
@@ -397,6 +516,8 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
   let limitHit = false;
   const rawSource = [];  // TS de runtime que NÃO deu pra proteger (viajaria legível)
   let protectedTs = 0;   // TS de runtime protegido (tipos removidos + mangling)
+  let protectedJs = 0;   // JS minificado/ofuscado pelo nível de proteção
+  const unprotectedJs = []; // JS que a proteção não conseguiu processar (viaja como veio do build)
 
   // Processa UM arquivo (checa skip/ignore/extensão/tamanho, lê, ofusca se build,
   // grava). Usado pelo walk e pelos includes pontuais do `.aioson` (que podem ser
@@ -438,7 +559,7 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
       let content = await fs.readFile(fullPath, 'utf8');
       if (isRuntimeServerSource) {
         // Mesmo caminho `.ts`, sem tipos/comentários e com locais renomeados.
-        const protectedCode = await protectRuntimeTypeScript(content);
+        const protectedCode = await protectRuntimeTypeScript(content, protection);
         if (protectedCode == null) {
           rawSource.push(relPath);
         } else {
@@ -450,7 +571,10 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
         (ext === '.js' || ext === '.mjs' || ext === '.cjs') &&
         !RUNTIME_CONFIG_RE.test(entryName) // não ofuscar config lida pelo vite
       ) {
-        content = await obfuscateJs(content);
+        const result = await protectJs(content, protection);
+        content = result.code;
+        if (result.protected) protectedJs += 1;
+        if (result.failed) unprotectedJs.push(relPath);
       }
       if (buildMode && (ext === '.js' || ext === '.mjs' || ext === '.cjs' || ext === '.css')) {
         content = stripSourceMapComments(content);
@@ -515,7 +639,7 @@ async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set
   }
 
   await walk(dir, '');
-  return { files, totalBytes, errors, rawSource, protectedTs };
+  return { files, totalBytes, errors, rawSource, protectedTs, protectedJs, unprotectedJs };
 }
 
 /**
@@ -684,6 +808,13 @@ async function runSystemPublish({ args, options, logger, t }) {
     await syncPackageVersions(dir, manifest.version, logger);
   }
 
+  // Nível e ofuscador resolvidos antes do build: `max` sem ofuscador falha cedo.
+  const protection = { level: 'standard', obfuscator: null };
+  if (buildMode) {
+    protection.level = resolveProtectionLevel(options, manifest, t);
+    if (protection.level === 'max') protection.obfuscator = loadAppObfuscator(dir, t);
+  }
+
   if (buildMode) {
     const buildCmd = manifest.build_command || 'npm run build';
     logger.log(`Building: ${buildCmd}`);
@@ -699,7 +830,8 @@ async function runSystemPublish({ args, options, logger, t }) {
   }
 
   const outputDirs = readBuildOutputDirs(manifest);
-  const { files, totalBytes, errors, rawSource, protectedTs } = await collectSystemFiles(dir, { buildMode, outputDirs });
+  const { files, totalBytes, errors, rawSource, protectedTs, protectedJs, unprotectedJs } =
+    await collectSystemFiles(dir, { buildMode, outputDirs, protection });
 
   if (errors.length > 0) {
     for (const e of errors) logger.log(`  [WARN] ${e}`);
@@ -710,8 +842,17 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (buildMode && protectedTs > 0) {
     logger.log(t('system.publish_protected_ts', { count: protectedTs }));
   }
+  if (buildMode) {
+    logger.log(t('system.publish_protection', { level: protection.level, count: protectedJs }));
+  }
   // Fonte de runtime legível no pacote derruba o publish (o dry-run só lista).
   const rawError = buildMode ? rawSourceError(rawSource, options, t) : null;
+  // JS que a proteção não processou: no `max` derruba o publish; no `standard`
+  // viaja como saiu do build e fica registrado no log.
+  const unprotectedError = buildMode ? unprotectedJsError(unprotectedJs, protection.level, options, t) : null;
+  if (buildMode && unprotectedJs.length > 0 && !unprotectedError) {
+    logger.log(`  [WARN] ${t('system.warn_unprotected_js', { count: unprotectedJs.length, files: unprotectedJs.join(', ') })}`);
+  }
 
   // Basic integrity checks
   if (!files['system.json']) {
@@ -761,9 +902,14 @@ async function runSystemPublish({ args, options, logger, t }) {
     for (const f of Object.keys(files).sort()) logger.log(`  ${f}`);
     if (rawError) logger.log(`  [WARN] ${rawError.message}`);
     if (startError) logger.log(`  [WARN] ${startError.message}`);
-    return { ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails, rawSource, protectedTs };
+    if (unprotectedError) logger.log(`  [WARN] ${unprotectedError.message}`);
+    return {
+      ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails,
+      rawSource, protectedTs, protectionLevel: protection.level, protectedJs, unprotectedJs
+    };
   }
   if (rawError) throw rawError;
+  if (unprotectedError) throw unprotectedError;
   if (startError) throw startError;
   // `--allow-raw-source` é uma decisão, não um silêncio: os arquivos que
   // viajam legíveis são nomeados no log e registrados no resultado do publish
@@ -808,7 +954,10 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (response && response.quarantined) {
     logger.log(t('system.publish_quarantined'));
   }
-  return { ok: true, manifest, fileCount, totalBytes, visibility, paid, response, protectedTs, rawSource };
+  return {
+    ok: true, manifest, fileCount, totalBytes, visibility, paid, response, protectedTs, rawSource,
+    protectionLevel: protection.level, protectedJs, unprotectedJs
+  };
 }
 
 // ── system:list ─────────────────────────────────────────────────────────────
@@ -916,6 +1065,11 @@ async function runSystemInstall({ args, options, logger, t }) {
 module.exports = {
   looksMinified,
   obfuscateJs,
+  protectJs,
+  resolveProtectionLevel,
+  loadAppObfuscator,
+  unprotectedJsError,
+  MAX_OBFUSCATION_OPTIONS,
   protectRuntimeTypeScript,
   rawSourceError,
   readBuildOutputDirs,

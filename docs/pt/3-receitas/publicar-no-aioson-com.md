@@ -199,14 +199,31 @@ npx @jaimevalasek/aioson system:publish --slug=legal-compliance --type=squad --b
 
 O `--build`:
 1. Roda o `build_command` do `system.json` (default `npm run build`) e embarca só a saída (`dist/`, `build/`, `out/`, `.next/`) — `src/` fica de fora. Saída em outra pasta (ex.: `vite build --ssr --outDir dist-server`) é declarada no `system.json`: `"build_output_dirs": ["dist-server"]`
-1. Confere o script `start` do `package.json`: o Play roda `npm start` em pacote buildado, então o publish falha se não houver `start` ou se ele chamar (`node arquivo.js`) um arquivo que não viajou
-2. TypeScript de runtime (`server/**/*.ts`, executado direto por `tsx`) viaja sob o mesmo caminho, mas com tipos e comentários removidos e locais renomeados. Exige Node >= 22.13; se algum arquivo não puder ser protegido, o publish falha listando-o (`--allow-raw-source` publica assim mesmo)
-3. Aplica terser (mangling) em todo `.js/.mjs/.cjs` legível; sourcemaps e os comentários `sourceMappingURL` que apontam para eles, `.d.ts`, testes, `reports/`, config de assistentes de IA e pastas de CI/editor ficam de fora
-4. Gera o pacote final em formato ZIP
+2. Confere o script `start` do `package.json`: o Play roda `npm start` em pacote buildado, então o publish falha se não houver `start` ou se ele chamar (`node arquivo.js`) um arquivo que não viajou
+3. TypeScript de runtime (`server/**/*.ts`, executado direto por `tsx`) viaja sob o mesmo caminho, mas com tipos e comentários removidos e locais renomeados. Exige Node >= 22.13; se algum arquivo não puder ser protegido, o publish falha listando-o (`--allow-raw-source` publica assim mesmo)
+4. Protege todo `.js/.mjs/.cjs` legível conforme o nível de proteção (abaixo); sourcemaps e os comentários `sourceMappingURL` que apontam para eles, `.d.ts`, testes, `reports/`, config de assistentes de IA e pastas de CI/editor ficam de fora
+5. Gera o pacote final em formato ZIP
 
 Confira o que viaja antes de publicar: `system:publish . --build --dry-run` roda o build e lista todos os arquivos do pacote sem enviar nada.
 
-Útil para proteger lógica proprietária em squads e skills distribuídos via aioson.com. Mangling dificulta a leitura; não é criptografia — lógica que precisa ficar secreta de verdade fica num servidor seu, não no pacote.
+### Níveis de proteção
+
+O nível vem de `--protection=<nível>` ou de `"build_protection"` no `system.json`; sem nenhum dos dois, vale `standard`.
+
+| Nível | O que faz | Custo |
+|---|---|---|
+| `standard` | Terser com compressão e renome de todos os nomes internos, inclusive os de topo de módulos ESM e CommonJS. Nomes de classe e de exports ficam | Nenhum em runtime; o pacote encolhe |
+| `max` | `standard` + `javascript-obfuscator`: strings cifradas (rc4) num array embaralhado e fluxo de controle achatado. Vale para JS legível e para bundles de servidor já minificados (os que importam `node:`); bundles de frontend ficam como o Vite gerou | JS afetado fica mais lento (até ~2× nos trechos achatados) e maior |
+
+O `max` **não** vem com o CLI: o ofuscador é carregado do `node_modules` do próprio app, com versão exata no `package.json`. Isso mantém a dependência (e o risco de supply chain) só na máquina de quem publica:
+
+```bash
+npm install --save-dev --save-exact --ignore-scripts javascript-obfuscator
+```
+
+Sem o pacote, ou com versão em faixa (`^5.8.0`), o `--build --protection=max` falha antes do build. Arquivo que o ofuscador recusar derruba o publish no `max` (`--allow-raw-source` publica como o build gerou); no `standard` ele só aparece como aviso.
+
+Útil para proteger lógica proprietária em squads e skills distribuídos via aioson.com. Nenhum nível é criptografia: dificulta a leitura e a cópia, mas lógica que precisa ficar secreta de verdade fica num servidor seu, não no pacote.
 
 ---
 

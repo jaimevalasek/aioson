@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 - `system:publish --build` ships build output declared in `system.json` `build_output_dirs` (such as `dist-server/`) even when gitignored, strips `sourceMappingURL` comments from every JS/CSS file, and fails when `package.json` has no `start` script or `start` calls a file missing from the package.
+- `system:publish --build` gains protection levels (`--protection=` or `system.json` `build_protection`): `standard` now compresses and renames top-level names in ESM/CommonJS modules, and `max` adds `javascript-obfuscator` (rc4 string array, control-flow flattening) loaded from the app's own `node_modules` at an exact pinned version, so the CLI keeps no obfuscator dependency.
 
 ## [1.68.0] - 2026-09-21
 

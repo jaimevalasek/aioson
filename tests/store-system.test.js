@@ -11,6 +11,10 @@ const {
   obfuscateJs,
   protectRuntimeTypeScript,
   rawSourceError,
+  resolveProtectionLevel,
+  loadAppObfuscator,
+  unprotectedJsError,
+  MAX_OBFUSCATION_OPTIONS,
   readBuildOutputDirs,
   startEntryProblems,
   stripSourceMapComments
@@ -183,11 +187,115 @@ test('start entry check flags a missing start script and entries that did not sh
   assert.deepEqual(startEntryProblems({ 'package.json': pkg({ start: 'vite preview' }) }), { missingScript: false, missing: [] });
 });
 
-test('build protection uses the existing Terser boundary without the vulnerable obfuscator chain', async () => {
-  const source = 'function add(first, second) { return first + second; }\nmodule.exports = add;\n';
-  const protectedSource = await obfuscateJs(source);
+function runCommonJs(code) {
+  const module = { exports: {} };
+  new Function('module', 'exports', code)(module, module.exports);
+  return module.exports;
+}
 
-  assert.equal(typeof protectedSource, 'string');
-  assert.equal(protectedSource.length < source.length, true);
-  assert.match(protectedSource, /module\.exports/);
+const fakeObfuscator = {
+  obfuscate: (code, options) => ({ getObfuscatedCode: () => `/*obfuscated:${options.stringArrayEncoding}*/${code}` })
+};
+
+test('standard protection renames top-level names in modules and keeps runtime behavior', async () => {
+  const cjs = 'function addNumbers(first, second) { return first + second; }\nmodule.exports = addNumbers;\n';
+  const protectedCjs = await obfuscateJs(cjs);
+  assert.doesNotMatch(protectedCjs, /addNumbers/);
+  assert.match(protectedCjs, /module\.exports/);
+  assert.equal(runCommonJs(protectedCjs)(2, 3), 5);
+
+  const esm = 'function secretPricing(value) { return value * 2; }\nexport function price(value) { return secretPricing(value); }\n';
+  const protectedEsm = await obfuscateJs(esm);
+  assert.doesNotMatch(protectedEsm, /secretPricing/);
+  assert.match(protectedEsm, /export/);
+  assert.match(protectedEsm, /price/);
+
+  const script = 'function globalHelper() { return 1; }\n';
+  assert.match(await obfuscateJs(script), /globalHelper/);
+
+  const errorClass = 'class LicenseError extends Error {}\nmodule.exports = LicenseError;\n';
+  assert.equal(runCommonJs(await obfuscateJs(errorClass)).name, 'LicenseError');
+});
+
+test('max protection runs the app obfuscator on readable JS and server bundles, never on frontend bundles', async (ctx) => {
+  const frontendBundle = `${'var a=1;'.repeat(5000)}\n`;
+  const serverBundle = `import{join as j}from"node:path";${'var b=1;'.repeat(5000)}\n`;
+  const dir = await makeApp(ctx, {
+    'dist/assets/index.js': frontendBundle,
+    'dist-server/index.js': serverBundle,
+    'server/app.js': 'function hidden() { return 1; }\nmodule.exports = hidden;\n'
+  });
+
+  const { files, protectedJs, unprotectedJs } = await collectSystemFiles(dir, {
+    buildMode: true,
+    outputDirs: new Set(['dist-server']),
+    protection: { level: 'max', obfuscator: fakeObfuscator }
+  });
+
+  assert.equal(files['dist/assets/index.js'], frontendBundle);
+  assert.match(files['dist-server/index.js'], /^\/\*obfuscated:rc4\*\//);
+  assert.match(files['server/app.js'], /^\/\*obfuscated:rc4\*\//);
+  assert.doesNotMatch(files['server/app.js'], /hidden/);
+  assert.equal(protectedJs, 2);
+  assert.deepEqual(unprotectedJs, []);
+});
+
+test('files the obfuscator rejects are reported and block max publishes unless explicitly allowed', async (ctx) => {
+  const dir = await makeApp(ctx, { 'server/app.js': 'module.exports = 1;\n' });
+  const broken = { obfuscate: () => { throw new Error('boom'); } };
+
+  const { files, unprotectedJs } = await collectSystemFiles(dir, {
+    buildMode: true,
+    protection: { level: 'max', obfuscator: broken }
+  });
+
+  assert.deepEqual(unprotectedJs, ['server/app.js']);
+  assert.equal(files['server/app.js'], 'module.exports = 1;\n');
+  assert.match(unprotectedJsError(unprotectedJs, 'max', {}, t).message, /system\.error_unprotected_js/);
+  assert.equal(unprotectedJsError(unprotectedJs, 'max', { 'allow-raw-source': true }, t), null);
+  assert.equal(unprotectedJsError(unprotectedJs, 'standard', {}, t), null);
+});
+
+test('protection level comes from --protection, then system.json build_protection, then standard', () => {
+  assert.equal(resolveProtectionLevel({}, {}, t), 'standard');
+  assert.equal(resolveProtectionLevel({}, { build_protection: 'MAX' }, t), 'max');
+  assert.equal(resolveProtectionLevel({ protection: 'standard' }, { build_protection: 'max' }, t), 'standard');
+  assert.throws(() => resolveProtectionLevel({ protection: 'ultra' }, {}, t), /system\.error_protection_level/);
+  assert.throws(() => resolveProtectionLevel({ protection: true }, {}, t), /system\.error_protection_level/);
+});
+
+test('the obfuscator is loaded only from the app, pinned to an exact version', async (ctx) => {
+  const fakeModule = 'module.exports = { obfuscate: (code) => ({ getObfuscatedCode: () => "obf:" + code }) };';
+
+  const undeclared = await makeApp(ctx, { 'package.json': '{"name":"x"}' });
+  assert.throws(() => loadAppObfuscator(undeclared, t), /system\.error_obfuscator_missing/);
+
+  const unpinned = await makeApp(ctx, {
+    'package.json': '{"name":"x","devDependencies":{"javascript-obfuscator":"^5.8.0"}}',
+    'node_modules/javascript-obfuscator/package.json': '{"name":"javascript-obfuscator","main":"index.js"}',
+    'node_modules/javascript-obfuscator/index.js': fakeModule
+  });
+  assert.throws(() => loadAppObfuscator(unpinned, t), /system\.error_obfuscator_unpinned/);
+
+  const notInstalled = await makeApp(ctx, {
+    'package.json': '{"name":"x","devDependencies":{"javascript-obfuscator":"5.8.0"}}'
+  });
+  assert.throws(() => loadAppObfuscator(notInstalled, t), /system\.error_obfuscator_missing/);
+
+  const pinned = await makeApp(ctx, {
+    'package.json': '{"name":"x","devDependencies":{"javascript-obfuscator":"5.8.0"}}',
+    'node_modules/javascript-obfuscator/package.json': '{"name":"javascript-obfuscator","main":"index.js"}',
+    'node_modules/javascript-obfuscator/index.js': fakeModule
+  });
+  const api = loadAppObfuscator(pinned, t);
+  assert.equal(api.obfuscate('x').getObfuscatedCode(), 'obf:x');
+});
+
+test('max obfuscation options keep runtime-safe switches off', () => {
+  assert.equal(MAX_OBFUSCATION_OPTIONS.renameGlobals, false);
+  assert.equal(MAX_OBFUSCATION_OPTIONS.selfDefending, false);
+  assert.equal(MAX_OBFUSCATION_OPTIONS.debugProtection, false);
+  assert.equal(MAX_OBFUSCATION_OPTIONS.transformObjectKeys, false);
+  assert.equal(MAX_OBFUSCATION_OPTIONS.sourceMap, false);
+  assert.equal(Object.isFrozen(MAX_OBFUSCATION_OPTIONS), true);
 });

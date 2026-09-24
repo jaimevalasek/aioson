@@ -22,7 +22,8 @@ aioson system:publish [dir] [opções]
 | `--paid` | Marca como pago (requer plano Jedi) |
 | `--invite="email1,email2,..."` | Emails autorizados a instalar quando privado |
 | `--build` | Roda o `build_command` e publica só a saída: `src/` fica de fora, `.js` passa por terser, `server/**/*.ts` (runtime via `tsx`) viaja sem tipos/comentários e com locais renomeados (Node >= 22.13). Pastas de saída fora de `dist/build/out/.next` entram por `"build_output_dirs"` no `system.json`. Falha se algum fonte de runtime ficaria legível, se o `package.json` não tiver `start` ou se o `start` chamar arquivo que não viajou |
-| `--allow-raw-source` | Com `--build`: publica mesmo com arquivos `.ts` de runtime que não puderam ser protegidos (decisão explícita do dono) |
+| `--protection=standard\|max` | Com `--build`: nível de proteção do JS (default `standard`, ou `"build_protection"` no `system.json`). `max` adiciona `javascript-obfuscator`, carregado do `node_modules` do app com versão exata (`npm i -D -E --ignore-scripts javascript-obfuscator`) |
+| `--allow-raw-source` | Com `--build`: publica mesmo com arquivos `.ts` de runtime que não puderam ser protegidos, ou JS que o nível `max` não conseguiu ofuscar (decisão explícita do dono) |
 | `--dry-run` | Valida, roda o build (se `--build`) e lista todos os arquivos do pacote, sem publicar |
 
 ### Emails autorizados (privates)
