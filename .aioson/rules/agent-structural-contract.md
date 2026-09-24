@@ -124,32 +124,11 @@ Agent files must reference CLI commands with correct flag names. When adding a n
 2. Use `--flag=value` syntax (not positional arguments) for clarity.
 3. Never guess flags — verify against the source.
 
-Known correct signatures (reference table):
-
-| Command | Correct flags |
-|---|---|
-| `gate:approve` | `--feature=<slug> --gate=<A\|B\|C\|D>` |
-| `gate:check` | `--feature=<slug> --gate=<A\|B\|C\|D>` |
-| `pulse:update` | `--agent=<name> --feature=<slug> --action="<summary>" --next="<recommendation>"` |
-| `op:capture` | `--signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<name>` |
-| `brain:query` | `--tags=<csv> --min-quality=<n> --format=<compact\|json\|ids>` |
-| `artifact:validate` | `--feature=<slug>` (NOT `--spec=<file>`) |
-| `dossier:audit` | `--check=<template-parity\|coverage>` (NOT `--slug=<slug>`) |
-| `dossier:add-finding` | `--slug=<slug> --agent=<name> --section="<section>" --content="<text>"` |
-| `dossier:add-codemap` | `--slug=<slug> --file=<path> --role=<role> --coupling=<low\|medium\|high> --added-by=<agent>` |
-| `dossier:link-rule` | `--slug=<slug> --rule=<path> --reason="<text>"` |
-| `runtime:emit` | `--agent=<name> --type=<milestone\|gate_check> --summary="<text>"` |
-| `memory:search` | `--query="<text>"` |
-| `context:search` | `[path] --query="<text>" --agent=<name> --mode=<mode> --task="<text>" --paths=<csv> --intent=<csv>` |
-| `context:brief` | `[path] --agent=<name> --mode=<planning\|executing> --task="<text>" --paths=<csv> [--no-recall]` |
-| `context:index` | `[path] --force` |
-| `preflight` | `--agent=<name> --feature=<slug>` |
-| `dev:state:write` | `--feature=<slug> --phase=<n> --next="<description>" --context=<tokens>`; supports `simple-plan` |
-| `pentester:report` | `[path] --feature=<slug> [--json]` |
+Verify every flag against `aioson <command> --help` or `src/commands/<command>.js` before writing it; a flag table in prose drifts from the code.
 
 ## 7. Template-workspace parity
 
-Agent files in `template/.aioson/agents/` are the canonical source. Workspace files in `.aioson/agents/` are copies synced via `npm run sync:agents`.
+In the aioson framework repository only: agent files in `template/.aioson/agents/` are the canonical source. Workspace files in `.aioson/agents/` are copies synced via `npm run sync:agents`.
 
 Rules:
 - Edits MUST be made in `template/` first, then synced to workspace.

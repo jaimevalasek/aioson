@@ -105,7 +105,7 @@ Once all inputs confirmed, proceed to Step 0.
 
 Run all checks BEFORE Phase 1. Block on critical failures.
 
-### 0.1 Browser MCP check (CRITICAL)
+### 0.1 Browser MCP check (blocking)
 
 Attempt minimal navigation to detect available browser MCP. Preference order:
 1. Playwright MCP (`@playwright/mcp`) — preferred
@@ -125,7 +125,7 @@ and interaction testing. Configure one of:
   Option B — Puppeteer MCP:
     npx @modelcontextprotocol/server-puppeteer
 
-Add it to your Claude Code MCP settings and re-activate /site-forge.
+Add it to your agent client's MCP configuration and re-activate /site-forge.
 ```
 Do not proceed past Step 0 if no browser MCP is available.
 
@@ -160,7 +160,7 @@ To create a new hybrid skill: /design-hybrid-forge
 
 **Mode B / D:** Skill forged during Phase 3B — none needed now.
 
-### 0.3 Output directory detection (Modes A, B, C, E)
+### 0.4 Output directory detection (Modes A, B, C, E)
 
 Check for existing Next.js project: `package.json` with `"next"` in dependencies, or `next.config.*` present.
 
@@ -170,7 +170,7 @@ Check for existing Next.js project: `package.json` with `"next"` in dependencies
 
 **Mode D:** Skip — no Next.js project needed.
 
-### 0.4 Research directories
+### 0.5 Research directories
 
 Create before Phase 1:
 - `docs/research/<hostname>/`
@@ -226,23 +226,9 @@ Load each phase doc at phase entry — not all at once.
 /site-forge <url> --skill-only          → Mode D
 /site-forge <url> <skill> --blend       → Mode E (50/50 default)
 /site-forge <url> <skill> --blend=70    → Mode E (70% site / 30% skill)
-
-"clone this site with [skill]"          → Mode A
-"make a copy of [url] with [skill]"     → Mode A
-"rebuild [url] using [skill]"           → Mode A
-"[url] in the style of [skill]"         → Mode A
-"clone [url] and extract its design system" → Mode B
-"clone [url] without a skill"           → Mode B
-"copy [url] as-is"                      → Mode B
-"extract the design from [url] as a skill" → Mode D
-"create a skill from [url]"             → Mode D
-"I want only the skill from [url]"      → Mode D
-"clone [url] and mix it with [skill]"   → Mode E
-"blend [url] with [skill] 50/50"        → Mode E
-"I only want images and content from [url] to use with [skill]" -> Mode C
-"I want to create a skill from [url]"       -> Mode D
-"I want to clone [url] and blend it with [skill]" -> Mode E
 ```
+
+Natural-language requests map by intent: restyle with a named skill → A; faithful copy / extract its design system → B; content or images only into a skill → C; skill only, no build → D; mix or blend with a skill → E.
 
 **Flags:**
 ```
@@ -288,7 +274,7 @@ Expected structure (from `aioson web:save`, SaveWebZip, HTTrack, `wget --mirror`
 
 Copy assets from `<path>/fonts/`, `<path>/media/`, `<path>/images/` directly to `public/` — no download needed.
 
-**Recommended:** use `--from-local` for static extraction + browser MCP only for Phase 1.5.4 scroll recording. This is an automatic decision rule, not a note: when Phase 1 hits bot detection or any stylesheet fetch fails, save the site with `aioson web:save . --url=<url> --slug=<slug>` (writes the expected structure to `researchs/<slug>/site/`) and switch to `--from-local` instead of silently degrading extraction.
+**Recommended:** use `--from-local` for static extraction + browser MCP only for Phase 1.5.4 scroll recording. When Phase 1 hits bot detection or any stylesheet fetch fails, save the site with `aioson web:save . --url=<url> --slug=<slug>` (writes the expected structure to `researchs/<slug>/site/`) and switch to `--from-local` instead of silently degrading extraction.
 
 Capture-route options, budgets, fallbacks, and reading discipline live in `.aioson/docs/web-capture.md` — load it before the first fetch. After saving, `aioson web:extract . --slug=<slug>` writes `researchs/<slug>/extract.md`, the deterministic version of Phases 1.2/1.3/1.5.1/1.5.2/1.5.5; read it first and open raw CSS/JS only through `--query=<text>` follow-ups.
 

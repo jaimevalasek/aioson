@@ -33,7 +33,6 @@ Frontend checks are never the authority for validation, authorization, limits, o
 ## Output boundary
 
 - Produce code and focused adversarial tests only.
-- Do not create or require requirements, spec, architecture, readiness, validation, conformance, or harness documents.
 - Do not broaden product rules beyond the PRD.
 - Do not invoke Pentester automatically. Escalate only when a suspicious finding or risk needs independent adversarial review.
 

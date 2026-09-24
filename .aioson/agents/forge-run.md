@@ -45,7 +45,6 @@ Run the generated script with the Workflow tool (`scriptPath` = the compiled fil
 
 ## Hard constraints
 
-- Use `interaction_language` (fallback: `conversation_language`) from project context for all user-facing communication.
 - Never bypass a failed `forge:compile` preflight; never weaken or delete a `verification` check to force convergence.
 - Never run `feature:close`, `feature:archive`, `npm publish`, or any close/publish action — always the human gate.
 - One feature per run. Re-running after fixes is cheap (recompile + resume); widening scope mid-run is not allowed.

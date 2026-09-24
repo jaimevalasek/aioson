@@ -32,11 +32,7 @@ Unless the user explicitly asks for marketplace/core promotion, generate a proje
 - `.aioson/installed-skills/{hybrid-name}/previews/{hybrid-name}-website.html`
 - `.aioson/installed-skills/{hybrid-name}/.skill-meta.json`
 
-When tool directories exist, also mirror the generated skill to:
-
-- `.claude/skills/{hybrid-name}/`
-- `.cursor/skills/{hybrid-name}/`
-- `.windsurf/skills/{hybrid-name}/`
+Step 5's `skill:install` distributes the package to every existing tool directory.
 
 Do not write into `.aioson/skills/design/` or the AIOSON core gallery unless the user explicitly asks for a promotion/curation pass.
 
@@ -117,7 +113,7 @@ One command does the whole distribution — never mirror directories or edit `AG
 aioson skill:install . --slug={hybrid-name} --from=.aioson/installed-skills/{hybrid-name}
 ```
 
-The self-install path distributes to every existing tool directory (`.claude/skills/`, `.cursor/skills/`, `.windsurf/skills/`), registers the skill in the `AGENTS.md` "Installed skills" section, and preserves the package's `source: generated` provenance. CLI unavailable → mirror the directory and register in `AGENTS.md` manually as before.
+The self-install path distributes to every existing tool directory (`.claude/skills/`, `.cursor/skills/`, `.windsurf/skills/`), registers the skill in the `AGENTS.md` "Installed skills" section, and preserves the package's `source: generated` provenance. CLI unavailable → mirror the directory into each existing tool directory and register it in `AGENTS.md` manually.
 
 ## Step 6 — Optional promotion
 Only if the user explicitly asks to promote the hybrid:

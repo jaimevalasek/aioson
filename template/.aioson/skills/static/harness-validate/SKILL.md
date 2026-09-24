@@ -1,6 +1,6 @@
 ---
 name: harness-validate
-description: Harness-driven validation — the implementer (@dev) closes every cycle with an impartial validator review (@validator) against harness-contract.json before delivery counts as complete. Use on MEDIUM projects or wherever a harness contract exists.
+description: Harness-driven validation — the implementer (@dev) closes every cycle with an impartial validator review (@validator) against harness-contract.json before delivery counts as complete. Use only when the feature's approved plan already declares a harness contract; never create one by project size.
 agents: [dev, deyvin, validator]
 task_types: [harness-validation]
 triggers: [harness, harness-contract, validator review, validacao por contrato]
@@ -8,9 +8,9 @@ triggers: [harness, harness-contract, validator review, validacao por contrato]
 
 # Skill: Harness-Driven Validation
 
-> **Use:** Implementation and contract validation (Nautilus pattern).
+> **Use:** Implementation and contract validation.
 > **Agents:** @dev, @validator.
-> **Context:** MEDIUM projects or projects with an existing `harness-contract.json`.
+> **Context:** features whose approved plan declares a harness contract.
 
 ## Mission
 Ensure the implementer cycle (@dev) closes with impartial validator review (@validator) before any delivery is considered complete.
@@ -18,7 +18,7 @@ Ensure the implementer cycle (@dev) closes with impartial validator review (@val
 ## @dev Workflow (Harness-Aware)
 
 ### 1. Task Start
-Before writing the first file of a feature, check whether the Harness is initialized:
+If the approved plan declares a harness and `.aioson/plans/<slug>/harness-contract.json` is missing, create the stub:
 
 ```bash
 aioson harness:init . --slug=<feature-slug>

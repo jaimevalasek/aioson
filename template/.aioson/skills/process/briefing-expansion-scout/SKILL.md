@@ -1,6 +1,6 @@
 ---
 name: briefing-expansion-scout
-description: "Briefing process skill for early feature expansion and operational surface scouting. Use in @briefing or @refiner when an idea may have a rich surface and the user wants to explore whether it is worth pursuing before PRD: tools, workflows, generators, dashboards, editors, collaboration, automation, templates, media outputs, workspace/board/card systems, operational CRUD, or Trello/CRM/Kanban-like systems."
+description: "Briefing process skill for exploring whether an early idea is worth pursuing before PRD. Use in @briefing or @refiner when the user asks to explore or pressure-test an idea, or when the idea implies a rich operational surface (multiple managed objects, repeated workflows, management or generation surfaces)."
 agents: [briefing, refiner]
 task_types: [feature-expansion, briefing]
 triggers: [expansion scout, rich surface, explore idea, pressure-test idea, expandir ideia, explorar possibilidades]

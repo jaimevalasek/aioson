@@ -41,24 +41,9 @@ Runs **after `@setup`** for the first time. Can be re-run at any point to refres
 | 8 | Tests | Expected behavior, edge cases, domain rules |
 | 9 | Existing `.aioson/context/bootstrap/*.md` | Previous knowledge (for refresh mode) |
 
-### Route file locations (check what exists for this stack)
+### Route and model locations
 
-- `routes/` (Laravel, Node, Rails)
-- `app/Http/routes.php`
-- `config/routes.rb`
-- `src/routes/` (Next.js, Express)
-- `pages/api/` (Next.js pages router)
-- `app/api/` (Next.js app router)
-- Any file matching `*route*` or `*router*`
-
-### Model/entity locations
-
-- `app/Models/` (Laravel)
-- `app/models/` (Rails)
-- `src/models/` or `src/entities/` (Node)
-- `prisma/schema.prisma`
-- `database/migrations/`
-- Any file matching `*model*` or `*entity*`
+Locate route and model/entity/schema files by the detected stack's conventions (and any `*route*`/`*router*`/`*model*`/`*entity*` files); prefer `discovery.md`/`skeleton-system.md` when `scan:project` already mapped them.
 
 ## Mode detection
 
@@ -231,7 +216,7 @@ Before declaring the cache refreshed, prove all four files landed — not just t
 aioson verify:artifact . --kind=bootstrap
 ```
 
-`MUST exist` is only true if it's checked: the gate confirms `what-is` / `what-it-does` / `how-it-works` / `current-state` all exist with real `generated_by` + `confidence` frontmatter and no placeholder. If one is missing or a stub, write it and re-run until it passes.
+The gate confirms `what-is` / `what-it-does` / `how-it-works` / `current-state` all exist with real `generated_by` + `confidence` frontmatter and no placeholder. If one is missing or a stub, write it and re-run until it passes.
 
 ## Observability
 

@@ -51,7 +51,7 @@ const KERNEL_CEILINGS = {
   'profiler-enricher.md': 8000,
   'profiler-forge.md': 8000,
   // generalists (agent:audit target 15000) — site-forge ratcheted
-  'site-forge.md': 15872,
+  'site-forge.md': 15104,
   'setup.md': 15000,
   'ux-ui.md': 15000,
   'architect.md': 15000,
@@ -59,11 +59,11 @@ const KERNEL_CEILINGS = {
   'squad.md': 10752,
   'orchestrator.md': 12000,
   // focused (target 8000) — ratcheted where already over
-  'committer.md': 12288,
+  'committer.md': 11008,
   'validator.md': 11520,
   'design-hybrid-forge.md': 11520,
-  'profiler-researcher.md': 9984,
-  'discover.md': 9472,
+  'profiler-researcher.md': 9216,
+  'discover.md': 9216,
   'tester.md': 9472
 };
 const DEFAULT_KERNEL_CEILING = 8000;

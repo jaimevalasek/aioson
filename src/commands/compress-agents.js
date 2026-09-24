@@ -181,11 +181,7 @@ function compressStructural(text) {
 // LLM compression — calls Anthropic Messages API via fetch
 // ---------------------------------------------------------------------------
 
-const MODEL_MAP = {
-  haiku:  'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-6',
-  opus:   'claude-opus-4-6',
-};
+const { MODEL_MAP } = require('../runner/cascade');
 
 const LLM_SYSTEM = `You are a markdown compression expert specializing in AI agent instruction files.
 
@@ -218,7 +214,7 @@ async function compressWithLLM(text, apiKey, model) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 8192,
+      max_tokens: 32000,
       system: LLM_SYSTEM,
       messages: [{ role: 'user', content: text }],
     }),
@@ -230,7 +226,12 @@ async function compressWithLLM(text, apiKey, model) {
   }
 
   const data = await resp.json();
-  return data.content[0].text;
+  // Current models think by default: read text blocks by type, never content[0].
+  if (data.stop_reason === 'refusal') throw new Error('model declined the request (refusal)');
+  if (data.stop_reason === 'max_tokens') throw new Error('output truncated at max_tokens');
+  const out = (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+  if (!out.trim()) throw new Error('empty model output');
+  return out;
 }
 
 // ---------------------------------------------------------------------------

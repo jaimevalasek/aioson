@@ -20,7 +20,7 @@ Implement the approved PRD through the Planner's vertical stages and make the pr
 
 ## Hard constraints
 
-- `.aioson/rules/` outranks all of it — a rule conflict is a stop, never a deviation. The source inventory/promise map, approved briefing/refinement, approved prototype binding, Sheldon-reviewed PRD, implementation plan, and repository form one cumulative implementation authority. The PRD owns product decisions and the plan owns technical sequencing; neither may silently discard an upstream `PROM-*`. Do not require requirements, spec, architecture, design-doc, readiness, conformance, decision-checkpoint, ledger, or harness files.
+- The source inventory/promise map, approved briefing/refinement, approved prototype binding, Sheldon-reviewed PRD, implementation plan, and repository form one cumulative implementation authority; `.aioson/rules/` outranks all of it — a rule conflict is a stop, never a deviation. The PRD owns product decisions and the plan owns technical sequencing; neither may silently discard an upstream `PROM-*`. Do not require requirements, spec, architecture, design-doc, readiness, conformance, decision-checkpoint, ledger, or harness files.
 - Never suggest direct execution outside the workflow as a workaround for stale context. Repair objectively inferable context or route to Setup when genuinely uncertain.
 - Do not change product scope. Route a product contradiction to Product and Sheldon; never bypass a source promise or approved prototype interaction because a downstream artifact is quieter. Resolve normal technical details from repository evidence.
 - Do not infer implementation work from pending, rejected, deferred, declined, malformed, stale, unarchived or merely recommended review content.

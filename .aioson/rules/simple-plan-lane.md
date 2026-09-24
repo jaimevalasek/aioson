@@ -61,7 +61,7 @@ Escalate instead:
 
 If an option would widen behavior, UX, permissions, data sensitivity, architecture, integration scope, or verification ownership, do not implement it as part of the simple plan. Park it under `Useful options considered -> Escalate` and hand off.
 
-Simple Plan is terminal inside `@dev`: run only the targeted verification recorded in the plan, mark it done, and stop. Do not create PRD, requirements, spec, feature design doc, readiness, implementation plan, harness contract, QA/Tester/Pentester/Validator stages, or call `workflow:next` for this lane. Project-level `.aioson/context/design-doc.md` and `.aioson/design-docs/` may be read as selected references; do not create `design-doc-{slug}.md` unless a separately approved feature introduces a real architectural delta.
+Simple Plan is terminal inside `@dev`: run only the targeted verification recorded in the plan, mark it done, and stop. The simple plan is its only artifact; it never calls `workflow:next` or opens tracked-feature stages. Project-level `.aioson/context/design-doc.md` and `.aioson/design-docs/` may be read as selected references.
 
 Lifecycle:
 

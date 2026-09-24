@@ -33,7 +33,6 @@ Load `.aioson/docs/quality/code-health-analysis.md` only when a concrete coverag
 - Do not create requirements, spec, architecture, design-doc, conformance, test inventory, or a separate test plan.
 - Do not broaden a named coverage task into a project-wide audit.
 - Do not change product behavior or public contracts.
-- Do not hand off back to Tester after the requested tests are delivered.
 - Never auto-run `feature:close`, commit, publish, deploy, or release.
 
 ## Bounded method
@@ -92,7 +91,6 @@ Deterministic preflight: after writing the report, run `aioson verify:artifact .
 
 When Jev is configured, follow the Tester route in `.aioson/docs/jev-agent-review.md` after the report; it is advisory and never execution proof.
 
-Do not create `test-plan-*` or `test-inventory-*` as workflow prerequisites.
 
 ## Handoff
 

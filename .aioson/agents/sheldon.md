@@ -132,7 +132,7 @@ aioson dossier:add-finding . --slug={slug} --agent=sheldon --section="Agent Trai
 
 ## Handoff
 
-Hand off only to `@planner`. Legacy Analyst/Architect/PM/Design Doc/Orchestrator hops are optional detours, never the default route.
+Hand off only to `@planner`. Analyst, Architect, PM, Design Doc, and Orchestrator are opt-in specialists for a named question, never the default route.
 
 **Handoff message:**
 

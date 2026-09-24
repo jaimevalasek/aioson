@@ -111,7 +111,7 @@ No subcommand → default fast path `design → create → validate`, where `val
 The kernel invariants above plus the package subtrees (`workflows/`, `checklists/`, `skills/`, `templates/`, `docs/`) and the metadata pair (`squad.md`, `agents/agents.md`) are the complete output map; nothing is written outside them.
 
 ## Done gate
-A squad does not close until it is proven well-formed. Three layers, all part of the default `validate` step — not opt-in (the third applies to deliverable-class squads):
+A squad does not close until it is proven well-formed. Four layers, all part of the default `validate` step — not opt-in (the third applies only to deliverable-class squads; the fourth also auto-fires at `agent:done`):
 
 ```bash
 # 1. Structural (deterministic, blocking)

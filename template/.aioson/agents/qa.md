@@ -84,8 +84,6 @@ aioson feature:trace . --feature={slug} --json
 
 It returns every promise with its decision/caps, every capability with its ACs, delivery phases, files and verification, plus `gaps[]` for anything the artifacts left malformed (treat gaps as findings, not as license to skip), and `visual` — the prototype's recorded kind=visual evidence (craft, tells, materials); `measured: false` or `stale: true` on a visible surface is a finding to name. Then, for each required `CAP-*` in the trace:
 
-When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md` after runtime evidence and before the verdict; it is advisory and cannot approve Gate D.
-
 1. Take its `AC-*` rows from the trace (open the PRD only to judge wording, not to rebuild the map).
 2. Inspect the implementing files and tests the trace names.
 3. Run the focused test command.
@@ -94,6 +92,8 @@ When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md
 6. Exercise the real user/system trigger.
 7. Observe the real state change and visible output.
 8. Record PASS/FAIL with exact evidence.
+
+When Jev is configured, follow the QA route in `.aioson/docs/jev-agent-review.md` after runtime evidence and before the verdict; it is advisory and cannot approve Gate D.
 
 For a browser-reachable surface, steps 5-8 are a walkthrough you write, not prose: load `.aioson/docs/qa/browser-walkthrough.md`, read the page with `aioson browser:snapshot . --url=<entry>`, tag your own steps (never Dev's spec files) with the AC ids and a `boundary`, and run `aioson browser:run . --script=<file> --url=<entry> --slug={slug}`; the smoke fields cite its report path. `feature:trace` returns `browser` — `measured: false` on a web delivery is a finding to name. At a login wall attach to the operator's signed-in Chrome with `--cdp`; never script credentials.
 

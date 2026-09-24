@@ -368,10 +368,15 @@ async function callAnthropic(apiKey, model, prompt) {
   const text = await httpPost(
     'https://api.anthropic.com/v1/messages',
     { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    { model, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] }
+    { model, max_tokens: 32000, messages: [{ role: 'user', content: prompt }] }
   );
   const data = JSON.parse(text);
-  const content = data && data.content && data.content[0] ? data.content[0].text : undefined;
+  if (data && data.stop_reason === 'refusal') throw new Error('Anthropic model declined the request (refusal)');
+  if (data && data.stop_reason === 'max_tokens') throw new Error('Anthropic output truncated at max_tokens');
+  // Read text blocks by type: a thinking block may come first on current models.
+  const content = Array.isArray(data && data.content)
+    ? data.content.filter((b) => b.type === 'text').map((b) => b.text).join('')
+    : undefined;
   if (typeof content !== 'string') {
     throw new Error(`Unexpected Anthropic response shape: ${String(text).slice(0, 300)}`);
   }

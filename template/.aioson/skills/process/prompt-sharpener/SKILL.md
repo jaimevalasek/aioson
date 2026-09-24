@@ -1,6 +1,6 @@
 ---
 name: prompt-sharpener
-description: Rewrite or review agent prompts, skills, PRDs, plans, handoffs, and other instruction-heavy markdown so they produce stronger reasoning with less dead context. Use when Codex is asked to improve AIOSON agents or skills, make prompts more intelligent, reduce prompt bloat without losing contracts, create sharper instructions, or turn vague guidance into evidence-driven decision behavior.
+description: Review or rewrite agent prompts, skills, routers, PRDs, plans, and handoffs so they carry contracts and reasons instead of dead context. Use when asked to audit, sharpen, or de-bloat instruction-heavy AIOSON artifacts without losing contracts.
 task_types: [prompt-engineering]
 triggers: [prompt audit, sharpen prompt, improve agent prompt, prompt bloat, melhorar prompt, afiar prompt]
 ---
@@ -9,14 +9,14 @@ triggers: [prompt audit, sharpen prompt, improve agent prompt, prompt bloat, mel
 
 Make the instruction create behavior, not just describe work.
 
-The goal is not brevity. The goal is leverage: fewer passive lists, more operational pressure, clearer evidence rules, and sharper stopping conditions.
+The goal is not brevity. The goal is leverage: fewer passive lists, clearer evidence rules, explicit reasons, and sharp stopping conditions.
 
 ## Workflow
 
 1. Identify the job the prompt must force.
 2. Preserve non-negotiable contracts: language boundary, workflow routing, file outputs, security limits, telemetry, schemas, and ownership.
 3. Delete or move boilerplate that does not change behavior.
-4. Replace passive instructions with pressure rules:
+4. Replace passive instructions with decision rules, each carrying its reason:
    - "Do not advance while..."
    - "If X is knowable from artifacts, inspect them."
    - "Ask one question only when no artifact can answer it."
@@ -41,7 +41,7 @@ Use these questions before accepting a rewrite:
 
 ### Make posture explicit
 
-Define the agent's stance in one hard sentence.
+Define the agent's stance in one plain sentence, with the reason it matters.
 
 Examples:
 

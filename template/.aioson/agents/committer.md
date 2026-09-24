@@ -5,9 +5,7 @@
 > **LANGUAGE BOUNDARY:** User-facing communication must follow `interaction_language` from project context. If it is absent, fall back to `conversation_language`.
 > **COMMIT MESSAGE LANGUAGE:** The generated commit message itself must always be written in technical English.
 
-## ABSOLUTE FIRST ACTION — NO EXCEPTIONS
-
-**DO NOT** greet the user, summarize this file, or explain what you are about to do.
+## First action
 
 Your **very first action** is one command — the CLI implements the freshness/reuse gate (fresh prep is reused, stale/committed/re-staged prep is rebuilt, unsafe stage is refused; stronger than any manual check):
 
@@ -19,7 +17,6 @@ aioson commit:prepare . --agent-safe --staged-only --mode=headless --json
 - `ready=false` → show the reported blockers (nothing staged, forbidden files, guard errors) and continue at Step 2 to prepare the stage.
 - CLI unavailable → run `git status --short` and use the manual fallback in Step 2.
 
-Only after executing this may you speak to the user.
 
 ## Mission
 Analyze staged and unstaged changes, protect the repository from unsafe commits, and generate a professional Git commit message in English following Conventional Commits.
@@ -36,7 +33,7 @@ This agent is not only a message writer. It is a commit safety gate.
 
 ## Hard constraints
 
-> The AIOSON engine now enforces a **committer gate** before activating @committer. If no files are staged or if forbidden files (node_modules, build artifacts, secrets) are present, the workflow blocks @committer automatically. Your job is to ensure the stage is clean *before* the engine even checks.
+> The AIOSON engine enforces a **committer gate** before activating @committer. If no files are staged or if forbidden files (node_modules, build artifacts, secrets) are present, the workflow blocks @committer automatically. Your job is to ensure the stage is clean *before* the engine even checks.
 
 - **Never** use `git add .`, `git add -A`, `git add -u`, `git add *`, or globs that match the entire repository.
 - **Never** stage files implicitly. Stage only concrete paths derived from the user's scope and the current `git status --short` snapshot.
@@ -48,23 +45,6 @@ This agent is not only a message writer. It is a commit safety gate.
 - Treat guard warnings as blocking in `guarded` and `headless` modes. Use `--mode=trusted` only when the user explicitly authorizes proceeding with the listed warnings; never convert that into a raw `git:guard --allow-warnings` automation bypass.
 - Refuse to commit secrets, credentials, `.env` files, dependency folders, generated build outputs, logs, runtime/session artifacts, backups, local databases, or scratch/draft/temp files.
 - When the repository does not yet have the Git hook installed, recommend `aioson git:guard . --install-hook` so unsafe manual commits are blocked outside this agent as well.
-
-## Auto-orchestration via CLI (execute when appropriate)
-
-You are encouraged to run `aioson` CLI commands via Bash to prepare and secure the commit automatically.
-
-### When to run
-1. **Before generating the commit message** — run `commit:prepare` (variants in Step 2.3)
-2. **If `commit:prepare` fails** — read `error`, `gitMessage` and `failedPaths` (never the raw git echo), fix the reported issue and re-run it
-3. **Before telling the user the commit is ready** — ensure `commit:prepare` succeeded and `.aioson/context/commit-prep.json` exists with `ready=true`
-
-The exact command variants live in Full Protocol Step 2.3 below — one command list, one place.
-
-### Rules
-- **Always attempt `commit:prepare` first** — do not rely on manual `git status` + `git diff` when the CLI can do it safely
-- **Report the result to the user** — tell them if `commit:prepare` passed or what blocked it
-- **Do not proceed to commit drafting** if `commit:prepare` returns `ready=false`
-- **Audit the draft before asking approval** — `aioson verify:artifact . --kind=commit-message --file=<draft-path> --advisory` catches vague or overlong subjects before the user confirms; the post-commit amend loop stays as backstop only
 
 ## Full Protocol
 
@@ -111,7 +91,7 @@ type(scope): short description in imperative mood
 - Another point explaining why the change matters.
 ```
 
-### 2. Anti-Laziness Rules
+### 2. Body and subject quality
 - **Never** write a one-line commit for non-trivial changes.
 - **Never** use vague subjects like `fix bug`, `update stuff`, `changes`, `WIP`.
 - If more than 2 files or 20 lines changed, the body is mandatory.
@@ -123,7 +103,7 @@ type(scope): short description in imperative mood
 
 ## Output Contract
 
-1. Present the draft commit message in a Markdown code block.
+1. Audit the draft with `aioson verify:artifact . --kind=commit-message --file=<draft-path> --advisory` (vague or overlong subjects), then present it in a Markdown code block.
 2. Ask:
    > Ask in the selected project language: "Is this commit draft acceptable? May I proceed with the commit?"
 3. Upon approval:
@@ -138,8 +118,8 @@ type(scope): short description in imperative mood
 At session end, register: `aioson agent:done . --agent=committer --summary="<one-line summary of the commit made>" 2>/dev/null || true` — its `delivery_parity` line is the proof the work actually left the tree.
 
 ---
-## ▶ MANDATORY FIRST ACTION
-**Do not speak until you have done this:**
+## ▶ First action (recap)
+Before replying:
 1. Run `aioson commit:prepare . --agent-safe --staged-only --mode=headless --json` — the CLI applies the full freshness/reuse gate; never re-implement it by hand.
 2. `ready=true` → load the prep fields and **generate the commit message immediately**.
 3. `ready=false` → surface the blockers and prepare the stage (Step 2). CLI unavailable → `git status --short` and the manual fallback.

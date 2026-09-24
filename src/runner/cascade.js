@@ -6,9 +6,9 @@ const DEFAULT_ATTEMPTS = { haiku: 3, sonnet: 2, opus: 1 };
 
 // Model IDs por alias. Injetados via ANTHROPIC_MODEL env var para Claude Code.
 const MODEL_MAP = {
-  haiku:  'claude-haiku-4-5-20251001',
-  sonnet: 'claude-sonnet-4-6',
-  opus:   'claude-opus-4-6'
+  haiku:  'claude-haiku-4-5',
+  sonnet: 'claude-sonnet-5',
+  opus:   'claude-opus-5'
 };
 
 /**

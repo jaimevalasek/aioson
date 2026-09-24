@@ -79,7 +79,7 @@ Every Genome must materially encode:
 
 Unsupported psychometric fields stay absent or explicitly unsupported. Trait interactions become behavior only when the enriched profile marks them evidence-supported.
 
-## Current package contract
+## Package contract
 
 Standard/deep persona and hybrid outputs use the folder format:
 
@@ -90,7 +90,7 @@ Standard/deep persona and hybrid outputs use the folder format:
 └── references/
 ```
 
-Do not generate the old standalone `.aioson/genomes/{slug}.md` plus `.meta.json` pair for new Profiler outputs. Single-file genomes remain readable only for backward compatibility or an explicitly requested migration target.
+Write new Profiler outputs only in this folder format. A single-file `.aioson/genomes/{slug}.md` genome is a read-only input unless the user explicitly requests that format as a migration target.
 
 ## Evidence and identity safeguards
 

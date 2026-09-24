@@ -1,20 +1,19 @@
 ---
-description: "AIOSON inception repair — turn a consumer-project bad experience into a framework fix here, so no project using aioson ever hits it again"
+description: "AIOSON inception repair — turn a consumer-project bad experience into a framework fix here. Use when the user brings a bug, quality failure, or bad-experience report (report file, screenshot, or plain account) from a project that uses aioson, even without typing /improve."
 ---
 
 # /improve — AIOSON inception repair loop
 
-$ARGUMENTS is the incident: a report path inside a consumer project (e.g. `C:/dev/playapps/<app>/researchs/<slug>/relatorio.md`), a screenshot path, or a plain-language account of what went wrong in a project that USES aioson. With no arguments, ask for the incident and stop.
+$ARGUMENTS is the incident: a report path inside a consumer project (e.g. `C:/dev/playapps/<app>/researchs/<slug>/relatorio.md`), a screenshot path, or a plain-language account of what went wrong in a project that uses aioson. With no arguments, ask for the incident and stop.
 
 ## Framing — read this as the contract
 
-This repository IS the aioson framework (the npm package plus `template/`). Consumer projects are where failures are FELT; they are never where the fix lands. The deliverable is always a framework change here — agents, skills, brains, docs, rules, CLI, gates — that makes the same class of failure impossible or machine-visible in EVERY project, plus the consumer-side steps to pick it up (`aioson update`, re-run). A patch applied only to the consumer project is a failed outcome of this command.
+This repository is the aioson framework (the npm package plus `template/`). Consumer projects are where failures are felt; they are never where the fix lands. The deliverable is always a framework change here — agents, skills, brains, docs, rules, CLI, gates — that makes the same class of failure impossible or machine-visible in every project, plus the consumer-side steps to pick it up (`aioson update`, re-run). A patch applied only to the consumer project is a failed outcome of this command.
 
-Worked precedents of this exact loop: the supervised-briefing 3-complaint report → 2b794ad0 (first-open tour, differentiator fold check, composition decided in every mode, kind=visual auto-fire) and the em-dash complaint → b72d3b42 (`em_dash_prose` telemetry + brain node vq-019).
 
 ## The loop
 
-1. **Measure the incident.** Read the report/print; open the concrete artifacts in the consumer tree (prototype, manifest, telemetry, logs) READ-ONLY and reduce the complaint to reproducible facts: counts, diffs, or a live read-only run of this tree's CLI against the consumer artifact (`node bin/aioson.js <cmd> <consumer-root> ...` — always with `--no-persist` on `verify:artifact`: a measurement that writes the consumer's `.aioson/context/` report or the operator's palette registry is not read-only). A complaint you cannot measure yet is one you cannot prove fixed.
+1. **Measure the incident.** Read the report/print; open the concrete artifacts in the consumer tree (prototype, manifest, telemetry, logs) read-only and reduce the complaint to reproducible facts: counts, diffs, or a live read-only run of this tree's CLI against the consumer artifact (`node bin/aioson.js <cmd> <consumer-root> ...` — always with `--no-persist` on `verify:artifact`: a measurement that writes the consumer's `.aioson/context/` report or the operator's palette registry is not read-only). A complaint you cannot measure yet is one you cannot prove fixed.
 2. **Find where the framework let it pass.** The signature question: *why did every gate stay green?* Classify the escape and say which it is:
    - **misfire** — the intelligence existed but never ran (wiring / auto-fire gap);
    - **uncovered surface** — no check existed for this axis at all;

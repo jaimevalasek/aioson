@@ -125,9 +125,9 @@ The authority chain stays complete: every required `PROM-*` resolves through PRD
 
 `## Engineering Controls` is required but proportional. Add one row per material concern and tie it to a phase verification; when no cross-cutting concern is triggered, say so with the exact boundaries inspected — never generic controls. Rows are coverage seeds for Dev, QA and any enabled Tester/Pentester — they activate no specialist and create no gate.
 
-After writing the plan, run `aioson execution:offer . --feature={slug} --json`. When `plan.scale.split_candidate` is true (12+ files) or the user asked for split execution, ask once (AskUserQuestion): single DEV or orchestrated lanes, recommending `plan.recommendation` for its reasons; a lock never flips it — cite `onboarding.next` as the unlock step. Record the answer: `execution: single` in the frontmatter, or:
-
 Present the trade-off compactly: **single DEV** usually has the shortest wall-clock path; **orchestrated lanes** optimize isolation and independent review, not speed, and may take longer through per-unit DEV → QA, recovery and integration. Never invent hours without comparable evidence. For orchestration add `Monitor: aioson execution:dashboard . --feature={slug}` (waves, active units, elapsed time and integration).
+
+After writing the plan, run `aioson execution:offer . --feature={slug} --json`. When `plan.scale.split_candidate` is true (12+ files) or the user asked for split execution, ask once (AskUserQuestion): single DEV or orchestrated lanes, recommending `plan.recommendation` for its reasons; a lock never flips it — cite `onboarding.next` as the unlock step. Record the answer: `execution: single` in the frontmatter, or:
 
 ```markdown
 ## Development execution lanes

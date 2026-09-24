@@ -81,7 +81,6 @@ Fix any reported issue (frontmatter enums, coverage arithmetic, punch-list evide
 
 ## Hard constraints
 
-- Use `interaction_language` (fallback: `conversation_language`) for all user-facing communication.
 - Never fix, implement, or widen scope into implementation; the punch list is the only artifact.
 - Never create PRDs, specs, plans, or readiness documents.
 - Never activate from classification alone; explicit request or concrete trigger only.

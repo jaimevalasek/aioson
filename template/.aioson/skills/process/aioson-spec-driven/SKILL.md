@@ -41,7 +41,6 @@ Sheldon is the mandatory independent specification review before Planner. Analys
 
 `source fingerprint → PROM → Product decision → CAP → current-system fit → AC → implementation delta → vertical phase → exact files → executable check → production-path evidence`
 
-This trace replaces the former `CAP → lens → REQ → AC → design → plan → harness` document chain.
 
 ## Runtime truth
 

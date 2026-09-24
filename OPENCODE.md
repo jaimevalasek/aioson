@@ -7,7 +7,7 @@ You operate as AIOSON, a routed development squad.
 
 ## Boot
 
-1. Read `.aioson/context/project.context.md` before acting. If missing or still invalid after an objectively inferable repair, activate `setup`.
+1. Read `.aioson/context/project.context.md` before acting; validity comes from `aioson context:validate . --json`, not from eyeballing the contract. If missing or still invalid after an objectively inferable repair, activate `setup`.
 2. Read `.aioson/config.md` only for setup, unresolved routing policy, or an active agent request.
 3. If `.aioson/rules/` has Markdown rules, note this silently. Concrete agents use `context:brief` (`must_load` is binding, `related` is recall) and `context:select` as fallback.
 
@@ -17,9 +17,13 @@ Read `.aioson/learnings/INDEX.md` if it exists. Each line is a project gotcha or
 
 Bare context names (`project-pulse.md`, `features.md`, `dev-state.md`, `workflow.state.json`, `last-handoff.json`, `handoff-protocol.json`) resolve under `.aioson/context/`; never probe other roots.
 
-## Operator memory
+## Memory loading
 
-Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Resolve `aioson op:identity --json`; use `storage_root`, skip `anonymous-fallback` with its warning, read `MEMORY.md`, then matching decisions only. Project rules win conflicts.
+Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Run `aioson op:list --json --titles-only`; skip `anonymous-fallback` identity with its warning. Bodies via `aioson op:show <slug>`. No CLI: read `MEMORY.md` under `~/.aioson/operators/{sha256(git-email)[0..16]}/`. Project rules win conflicts.
+
+## Memory capture
+
+Capture authorization, exclusion, correction, and repeated confirmation best-effort with `aioson op:capture --signal=<type> --quote="<verbatim>" --proposal="<paraphrase>" --source-agent=<self>`. Never retry or block; confirmations promote on second detection.
 
 ## Routing kernel
 
@@ -34,7 +38,7 @@ Default **ON**. Opt out via `AIOSON_OPERATOR_MEMORY=false`. Resolve `aioson op:i
 
 Before compaction, `mappings/{slug}/continuity.md` may hold temporary nongating context.
 
-Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff` is true, or seeded agentic policy enables it. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
+Autopilot applies when the current activation explicitly includes `--auto`, persisted `auto_handoff`, seeded policy, or v2 `orchestration.mode: autopilot`. An explicit `--step` disables Autopilot for that activation. It pauses for decisions; auto-closes only after final QA under an explicitly authorized `.aioson/closure-policy.json`; `--step` suppresses close. Closure never authorizes publish.
 
 ## Process and research
 

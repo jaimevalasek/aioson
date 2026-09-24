@@ -21,7 +21,7 @@ const path = require('node:path');
 const CLI_RUNNERS = {
   claude: {
     bin: 'claude',
-    buildArgs: (prompt) => ['--print', '--model', 'claude-haiku-4-5-20251001', prompt],
+    buildArgs: (prompt) => ['--print', '--model', 'claude-haiku-4-5', prompt],
     parseOutput: (stdout) => stdout.trim()
   },
   codex: {
@@ -111,9 +111,7 @@ ${criteria}
 Provide your review in 3 sections:
 - **Strengths**: what works well
 - **Issues**: specific problems found (if any)
-- **Recommendations**: concrete improvements (max 3)
-
-Keep total response under 400 words.`;
+- **Recommendations**: concrete improvements (max 3)`;
 }
 
 /**
