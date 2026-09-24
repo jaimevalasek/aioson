@@ -10,7 +10,10 @@ const {
   createZipBuffer,
   obfuscateJs,
   protectRuntimeTypeScript,
-  rawSourceError
+  rawSourceError,
+  readBuildOutputDirs,
+  startEntryProblems,
+  stripSourceMapComments
 } = require('../src/commands/store-system');
 
 const canStripTypes = typeof require('node:module').stripTypeScriptTypes === 'function';
@@ -128,6 +131,56 @@ test('store packaging uses the supported Archiver v8 API and produces a ZIP buff
 
   assert.equal(archive.subarray(0, 2).toString('ascii'), 'PK');
   assert.equal(archive.length > 50, true);
+});
+
+test('declared build output dirs ship even when gitignored; unsafe entries are dropped', async (ctx) => {
+  const dir = await makeApp(ctx, {
+    '.gitignore': 'dist-server/\n',
+    'dist-server/index.js': 'export const answer = 42;\n',
+    'dist-server/migrations/001.sql': 'create table t (id int);',
+    'package.json': '{"name":"x"}'
+  });
+
+  const outputDirs = readBuildOutputDirs({ build_output_dirs: ['./dist-server/', '../escape', 'C:/abs', '/root', 7] });
+  assert.deepEqual([...outputDirs], ['dist-server']);
+
+  const declared = await collectSystemFiles(dir, { buildMode: true, outputDirs });
+  assert.equal(typeof declared.files['dist-server/index.js'], 'string');
+  assert.equal(typeof declared.files['dist-server/migrations/001.sql'], 'string');
+
+  const undeclared = await collectSystemFiles(dir, { buildMode: true });
+  assert.equal(undeclared.files['dist-server/index.js'], undefined);
+});
+
+test('build packages drop sourceMappingURL comments from JS and CSS, minified bundles included', async (ctx) => {
+  const minifiedBundle = `${'var a=1;'.repeat(5000)}\n//# sourceMappingURL=index-abc.js.map\n`;
+  const dir = await makeApp(ctx, {
+    'dist/assets/index.js': minifiedBundle,
+    'dist/assets/index.css': 'body{color:red}\n/*# sourceMappingURL=index.css.map */\n'
+  });
+
+  const { files } = await collectSystemFiles(dir, { buildMode: true });
+  assert.doesNotMatch(files['dist/assets/index.js'], /sourceMappingURL/);
+  assert.doesNotMatch(files['dist/assets/index.css'], /sourceMappingURL/);
+  assert.equal(stripSourceMapComments('const x = 1;\n//@ sourceMappingURL=x.map'), 'const x = 1;\n');
+});
+
+test('start entry check flags a missing start script and entries that did not ship', () => {
+  const pkg = (scripts) => JSON.stringify({ scripts });
+
+  assert.deepEqual(startEntryProblems({ 'package.json': pkg({}) }), { missingScript: true, missing: [] });
+  assert.deepEqual(
+    startEntryProblems({ 'package.json': pkg({ start: 'node --enable-source-maps dist-server/index.js' }) }),
+    { missingScript: false, missing: ['dist-server/index.js'] }
+  );
+  assert.deepEqual(
+    startEntryProblems({
+      'package.json': pkg({ start: 'node ./scripts/start.mjs && vite preview' }),
+      'scripts/start.mjs': 'export {}'
+    }),
+    { missingScript: false, missing: [] }
+  );
+  assert.deepEqual(startEntryProblems({ 'package.json': pkg({ start: 'vite preview' }) }), { missingScript: false, missing: [] });
 });
 
 test('build protection uses the existing Terser boundary without the vulnerable obfuscator chain', async () => {

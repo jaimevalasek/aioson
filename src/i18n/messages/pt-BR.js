@@ -1998,6 +1998,8 @@ module.exports = {
     publish_quarantined: 'Nota: primeiro app publico desta conta — foi criado como DRAFT (em revisao) e so aparece para voce no aioson-play ate ser aprovado.',
     error_raw_source: '{count} arquivo(s) TypeScript de runtime viajariam legiveis: {files}. Proteger exige Node >= 22.13 (module.stripTypeScriptTypes) e sintaxe que ele aceite (sem JSX). Use --allow-raw-source para publicar assim mesmo.',
     warn_raw_source_published: '--allow-raw-source: {count} arquivo(s) TypeScript de runtime estao viajando legiveis neste publish: {files}',
+    error_start_script_missing: 'package.json sem script "start". O AIOSON Play roda `npm start` em pacote buildado (sem src/), entao o app instalaria e nunca subiria.',
+    error_start_entry_missing: 'O script "start" aponta para arquivo(s) fora do pacote: {files}. Se o build grava numa pasta fora de dist/build/out/.next, declare-a em "build_output_dirs" no system.json.',
 
     list_remote_empty: 'Nenhum sistema publicado ainda.',
     list_remote_header: '{count} sistema(s) publicado(s):',

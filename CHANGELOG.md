@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- `system:publish --build` ships build output declared in `system.json` `build_output_dirs` (such as `dist-server/`) even when gitignored, strips `sourceMappingURL` comments from every JS/CSS file, and fails when `package.json` has no `start` script or `start` calls a file missing from the package.
+
 ## [1.68.0] - 2026-09-21
 
 - Added the Cursor execution lane with host signature refresh, run-owned temporary-artifact cleanup, dashboard routing, and regression coverage.

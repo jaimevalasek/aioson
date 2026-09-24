@@ -93,6 +93,13 @@ function rawSourceError(rawSource, options, t) {
   return new Error(t('system.error_raw_source', { count: rawSource.length, files: rawSource.join(', ') }));
 }
 
+function startEntryError(files, t) {
+  const { missingScript, missing } = startEntryProblems(files);
+  if (missingScript) return new Error(t('system.error_start_script_missing'));
+  if (missing.length) return new Error(t('system.error_start_entry_missing', { files: missing.join(', ') }));
+  return null;
+}
+
 async function createZipBuffer(files) {
   const { ZipArchive } = await import('archiver');
   const { PassThrough } = require('stream');
@@ -226,6 +233,52 @@ async function readAiosonIncludes(aiosonDir) {
 // instalado não teria o que rodar.
 const BUILD_OUTPUT_DIRS = new Set(['dist', 'build', 'out', '.next']);
 
+// Saída de build fora dos nomes padrão (ex.: `vite build --ssr --outDir
+// dist-server`) é declarada no system.json: `"build_output_dirs": ["dist-server"]`.
+// Sem a declaração, a pasta gitignored era descartada e o app instalado subia
+// sem backend. Caminhos relativos à raiz do app; entradas inseguras são ignoradas.
+function readBuildOutputDirs(manifest) {
+  const list = Array.isArray(manifest && manifest.build_output_dirs) ? manifest.build_output_dirs : [];
+  const dirs = new Set();
+  for (let entry of list) {
+    if (typeof entry !== 'string') continue;
+    entry = entry.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '').trim();
+    if (!entry || entry.startsWith('/') || /^[a-z]:/i.test(entry) || entry.split('/').includes('..')) continue;
+    dirs.add(entry);
+  }
+  return dirs;
+}
+
+// `//# sourceMappingURL=` aponta pro `.map` (que não viaja) e denuncia o nome do
+// fonte original. Sai de todo JS/CSS do --build, inclusive bundles já minificados.
+function stripSourceMapComments(code) {
+  return code
+    .replace(/^[ \t]*\/\/[#@][ \t]*sourceMappingURL=.*$/gm, '')
+    .replace(/\/\*[#@][ \t]*sourceMappingURL=[^*]*\*\//g, '');
+}
+
+// O Play roda `npm start` quando o pacote não tem `src/` (app buildado). Um
+// pacote --build sem `start`, ou com `start` apontando pra arquivo que não
+// viajou, instala e não sobe. Só confere arquivos citados diretamente depois de
+// `node`/`tsx`; scripts que resolvem o entry por conta própria não são seguidos.
+function startEntryProblems(files) {
+  let pkg;
+  try {
+    pkg = JSON.parse(files['package.json'] || '{}');
+  } catch {
+    return { missingScript: false, missing: [] };
+  }
+  const start = pkg && pkg.scripts && pkg.scripts.start;
+  if (typeof start !== 'string' || !start.trim()) return { missingScript: true, missing: [] };
+  const missing = [];
+  const entryRe = /(?:^|[\s;&|])(?:node|tsx)(?:\s+-{1,2}[^\s]+)*\s+([^\s;&|'"]+\.[cm]?[jt]s)\b/g;
+  for (const match of start.matchAll(entryRe)) {
+    const entry = match[1].replace(/\\/g, '/').replace(/^\.\//, '');
+    if (!files[entry]) missing.push(entry);
+  }
+  return { missingScript: false, missing };
+}
+
 // Testes / mocks NUNCA vão no pacote — são peso morto em runtime (e ainda
 // inflavam o pacote ao serem ofuscados). O check é INCONDICIONAL: pega também os
 // testes COMPILADOS dentro do `dist/` (que viajam mesmo com `src/` excluído).
@@ -321,7 +374,7 @@ async function storeGet(url, token) {
  * Collect all eligible source files under `dir`.
  * Returns { relativePath: content } — only text files with allowed extensions.
  */
-async function collectSystemFiles(dir, { buildMode = false } = {}) {
+async function collectSystemFiles(dir, { buildMode = false, outputDirs = new Set() } = {}) {
   const files = {};
   let totalBytes = 0;
   const errors = [];
@@ -399,6 +452,9 @@ async function collectSystemFiles(dir, { buildMode = false } = {}) {
       ) {
         content = await obfuscateJs(content);
       }
+      if (buildMode && (ext === '.js' || ext === '.mjs' || ext === '.cjs' || ext === '.css')) {
+        content = stripSourceMapComments(content);
+      }
       files[relPath] = content;
     } catch {
       // binary or unreadable — skip silently
@@ -440,7 +496,7 @@ async function collectSystemFiles(dir, { buildMode = false } = {}) {
         // Saída do build (--build): viaja mesmo gitignored. forceInclude bypassa
         // o filtro de .gitignore; o filtro de extensão + minify continuam (sourcemaps
         // `.map` ficam de fora por não estarem nas extensões permitidas → não vaza fonte).
-        if (buildMode && !forceInclude && BUILD_OUTPUT_DIRS.has(entry.name)) {
+        if (buildMode && !forceInclude && (BUILD_OUTPUT_DIRS.has(entry.name) || outputDirs.has(relPath))) {
           await walk(fullPath, relPath, true);
           continue;
         }
@@ -642,7 +698,8 @@ async function runSystemPublish({ args, options, logger, t }) {
     logger.log(t('system.package_collecting_files'));
   }
 
-  const { files, totalBytes, errors, rawSource, protectedTs } = await collectSystemFiles(dir, { buildMode });
+  const outputDirs = readBuildOutputDirs(manifest);
+  const { files, totalBytes, errors, rawSource, protectedTs } = await collectSystemFiles(dir, { buildMode, outputDirs });
 
   if (errors.length > 0) {
     for (const e of errors) logger.log(`  [WARN] ${e}`);
@@ -663,6 +720,8 @@ async function runSystemPublish({ args, options, logger, t }) {
   if (!files['package.json']) {
     throw new Error(t('system.error_missing_package_json'));
   }
+  // Pacote --build que não sobe no Play também derruba o publish (o dry-run só lista).
+  const startError = buildMode ? startEntryError(files, t) : null;
 
   const visibility = options.private ? 'private' : 'public';
   const paid = Boolean(options.paid);
@@ -701,9 +760,11 @@ async function runSystemPublish({ args, options, logger, t }) {
     logger.log(t('system.publish_dry_run_files', { count: fileCount }));
     for (const f of Object.keys(files).sort()) logger.log(`  ${f}`);
     if (rawError) logger.log(`  [WARN] ${rawError.message}`);
+    if (startError) logger.log(`  [WARN] ${startError.message}`);
     return { ok: true, dryRun: true, manifest, fileCount, totalBytes, visibility, authorizedEmails, rawSource, protectedTs };
   }
   if (rawError) throw rawError;
+  if (startError) throw startError;
   // `--allow-raw-source` é uma decisão, não um silêncio: os arquivos que
   // viajam legíveis são nomeados no log e registrados no resultado do publish
   // real — antes só o dry-run/abort registrava.
@@ -857,6 +918,9 @@ module.exports = {
   obfuscateJs,
   protectRuntimeTypeScript,
   rawSourceError,
+  readBuildOutputDirs,
+  stripSourceMapComments,
+  startEntryProblems,
   createZipBuffer,
   collectSystemFiles,
   runSystemPackage,

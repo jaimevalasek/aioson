@@ -198,9 +198,10 @@ npx @jaimevalasek/aioson system:publish --slug=legal-compliance --type=squad --b
 ```
 
 O `--build`:
-1. Roda o `build_command` do `system.json` (default `npm run build`) e embarca só a saída (`dist/`, `build/`, `out/`, `.next/`) — `src/` fica de fora
+1. Roda o `build_command` do `system.json` (default `npm run build`) e embarca só a saída (`dist/`, `build/`, `out/`, `.next/`) — `src/` fica de fora. Saída em outra pasta (ex.: `vite build --ssr --outDir dist-server`) é declarada no `system.json`: `"build_output_dirs": ["dist-server"]`
+1. Confere o script `start` do `package.json`: o Play roda `npm start` em pacote buildado, então o publish falha se não houver `start` ou se ele chamar (`node arquivo.js`) um arquivo que não viajou
 2. TypeScript de runtime (`server/**/*.ts`, executado direto por `tsx`) viaja sob o mesmo caminho, mas com tipos e comentários removidos e locais renomeados. Exige Node >= 22.13; se algum arquivo não puder ser protegido, o publish falha listando-o (`--allow-raw-source` publica assim mesmo)
-3. Aplica terser (mangling) em todo `.js/.mjs/.cjs` legível; sourcemaps, `.d.ts`, testes, `reports/`, config de assistentes de IA e pastas de CI/editor ficam de fora
+3. Aplica terser (mangling) em todo `.js/.mjs/.cjs` legível; sourcemaps e os comentários `sourceMappingURL` que apontam para eles, `.d.ts`, testes, `reports/`, config de assistentes de IA e pastas de CI/editor ficam de fora
 4. Gera o pacote final em formato ZIP
 
 Confira o que viaja antes de publicar: `system:publish . --build --dry-run` roda o build e lista todos os arquivos do pacote sem enviar nada.
