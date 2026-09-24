@@ -8,10 +8,6 @@ const CHAIN_AGENTS = Object.freeze([
   'product',
   'sheldon',
   'planner',
-  'analyst',
-  'architect',
-  'ux-ui',
-  'pm',
   'orchestrator',
   'dev',
   'qa'

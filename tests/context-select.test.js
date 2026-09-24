@@ -84,7 +84,7 @@ test('context:select keeps governance out of planning when no trigger fires', as
     await writeFile(dir, '.aioson/design-docs/folder-structure.md', [
       '---',
       'description: "Folder structure"',
-      'agents: [dev, deyvin, architect]',
+      'agents: [dev, planner]',
       'modes: [planning, executing]',
       'task_types: [implementation-architecture, file-creation]',
       'load_tier: trigger',
@@ -95,7 +95,7 @@ test('context:select keeps governance out of planning when no trigger fires', as
     ].join('\n'));
 
     const result = await selectContext(dir, {
-      agent: 'deyvin',
+      agent: 'dev',
       mode: 'planning',
       task: 'summarize current status'
     });
@@ -141,7 +141,7 @@ test('context:select keeps implementation-only foundation out of product plannin
   }
 });
 
-test('context:select keeps active feature specs out of deyvin activation-only planning', async () => {
+test('context:select gives dev (which absorbed deyvin) its continuity files on activation and continuation', async () => {
   const dir = await makeTmpDir();
   try {
     await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
@@ -151,27 +151,31 @@ test('context:select keeps active feature specs out of deyvin activation-only pl
     await writeFile(dir, '.aioson/context/spec-checkout.md', '---\nfeature: checkout\n---\n# Spec');
     await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
 
-    const activation = await selectContext(dir, {
-      agent: 'deyvin',
-      mode: 'planning',
-      task: 'agent activation without concrete task'
-    });
-    const activationSelected = activation.selected.map((item) => item.path);
-    assert.equal(activation.activation_only, true);
-    assert.ok(activationSelected.includes('.aioson/context/project.context.md'));
-    assert.ok(activationSelected.includes('.aioson/context/project-pulse.md'));
-    assert.ok(activationSelected.includes('.aioson/context/dev-state.md'));
-    assert.equal(activationSelected.includes('.aioson/context/memory-index.md'), false);
-    assert.equal(activationSelected.includes('.aioson/context/spec-checkout.md'), false);
-    assert.equal(activationSelected.includes('.aioson/context/features/checkout/dossier.md'), false);
+    // dev owns continuity: a bare activation reads where work stopped and
+    // keeps the active feature's spec and dossier out until a task arrives.
+    for (const agent of ['dev', 'deyvin']) {
+      const activation = await selectContext(dir, {
+        agent,
+        mode: 'planning',
+        task: 'agent activation without concrete task'
+      });
+      const activationSelected = activation.selected.map((item) => item.path);
+      assert.equal(activation.activation_only, true, agent);
+      assert.ok(activationSelected.includes('.aioson/context/project.context.md'), agent);
+      assert.ok(activationSelected.includes('.aioson/context/project-pulse.md'), agent);
+      assert.ok(activationSelected.includes('.aioson/context/dev-state.md'), agent);
+      assert.equal(activationSelected.includes('.aioson/context/spec-checkout.md'), false, agent);
+      assert.equal(activationSelected.includes('.aioson/context/features/checkout/dossier.md'), false, agent);
+    }
 
     const continuation = await selectContext(dir, {
-      agent: 'deyvin',
+      agent: 'dev',
       mode: 'planning',
       task: 'continue checkout implementation'
     });
     const continuationSelected = continuation.selected.map((item) => item.path);
     assert.equal(continuation.activation_only, false);
+    assert.ok(continuationSelected.includes('.aioson/context/dev-state.md'));
     assert.ok(continuationSelected.includes('.aioson/context/spec-checkout.md'));
     assert.ok(continuationSelected.includes('.aioson/context/features/checkout/dossier.md'));
   } finally {
@@ -245,7 +249,7 @@ test('context:select restricts product activation-only planning to foundation co
   }
 });
 
-test('context:select restricts sheldon and analyst activation-only planning to foundation context', async () => {
+test('context:select restricts sheldon and planner activation-only planning to foundation context', async () => {
   const dir = await makeTmpDir();
   try {
     await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
@@ -254,7 +258,9 @@ test('context:select restricts sheldon and analyst activation-only planning to f
     await writeFile(dir, '.aioson/context/prd-checkout.md', '---\nfeature: checkout\n---\n# PRD');
     await writeFile(dir, '.aioson/context/features/checkout/dossier.md', '---\nfeature: checkout\n---\n# Dossier');
 
-    for (const agent of ['sheldon', 'analyst', 'architect', 'ux-ui', 'pm', 'qa', 'orchestrator', 'scope-check', 'discovery-design-doc']) {
+    // analyst/ux-ui were retired into product, architect/pm/discovery-design-doc
+    // into planner, scope-check into qa: the absorbers carry the restriction.
+    for (const agent of ['sheldon', 'planner', 'qa', 'orchestrator']) {
       const activation = await selectContext(dir, {
         agent,
         mode: 'planning',
@@ -287,7 +293,7 @@ test('context:select loads governance for executing file creation paths', async 
     await writeFile(dir, '.aioson/design-docs/folder-structure.md', [
       '---',
       'description: "Folder structure"',
-      'agents: [dev, deyvin, architect]',
+      'agents: [dev, planner]',
       'modes: [planning, executing]',
       'task_types: [implementation-architecture, file-creation]',
       'load_tier: trigger',
@@ -299,7 +305,7 @@ test('context:select loads governance for executing file creation paths', async 
     await writeFile(dir, '.aioson/design-docs/naming.md', [
       '---',
       'description: "Naming conventions"',
-      'agents: [dev, deyvin, architect]',
+      'agents: [dev, planner]',
       'modes: [planning, executing]',
       'task_types: [file-creation, naming]',
       'load_tier: trigger',
@@ -324,14 +330,14 @@ test('context:select loads governance for executing file creation paths', async 
   }
 });
 
-test('context:select loads governance for architect implementation planning', async () => {
+test('context:select loads governance for planner implementation planning', async () => {
   const dir = await makeTmpDir();
   try {
     await writeFile(dir, '.aioson/context/project.context.md', '---\nframework: Node.js\n---\n# Project');
     await writeFile(dir, '.aioson/design-docs/componentization.md', [
       '---',
       'description: "Componentization"',
-      'agents: [dev, deyvin, architect]',
+      'agents: [dev, planner]',
       'modes: [planning, executing]',
       'task_types: [implementation-architecture, module-boundary]',
       'load_tier: trigger',
@@ -342,7 +348,7 @@ test('context:select loads governance for architect implementation planning', as
     ].join('\n'));
 
     const result = await selectContext(dir, {
-      agent: 'architect',
+      agent: 'planner',
       mode: 'planning',
       task: 'design implementation architecture and module boundaries',
       paths: 'src/lib/context.js'
@@ -523,7 +529,7 @@ test('context:select semantic search loads eligible rules by body content withou
       '---',
       'name: implementation-style',
       'description: "General implementation style"',
-      'agents: [dev, deyvin]',
+      'agents: [dev]',
       'modes: [executing]',
       'load_tier: trigger',
       '---',
@@ -579,7 +585,7 @@ test('context:select loads implementation structure rules for Laravel data-acces
     await writeFile(dir, '.aioson/rules/implementation-structure-and-data-access.md', await fs.readFile(path.join(__dirname, '..', 'template/.aioson/rules/implementation-structure-and-data-access.md'), 'utf8'));
 
     const result = await selectContext(dir, {
-      agent: 'deyvin',
+      agent: 'dev',
       mode: 'executing',
       task: 'componentizar feature Laravel e evitar query builder exposto no controller',
       paths: 'app/Http/Controllers/CheckoutController.php,app/Services/CheckoutService.php'

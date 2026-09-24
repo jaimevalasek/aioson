@@ -974,7 +974,7 @@ module.exports = {
     note_framework_not_installed:
       'Framework ainda nao esta instalado; conclua a instalacao da stack antes de @dev.',
     note_dapp_context:
-      'Contexto dApp detectado; inclua skills Web3 durante @architect e @dev.',
+      'Contexto dApp detectado; inclua skills Web3 durante @planner e @dev.',
     note_micro_scope:
       'Mantenha o escopo de implementacao minimo e evite agentes opcionais.',
     note_product_optional:

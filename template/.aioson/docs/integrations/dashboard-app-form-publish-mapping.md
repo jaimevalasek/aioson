@@ -1,7 +1,7 @@
 ---
 description: "Mapping between the aioson.com dashboard app edit form and aioson system:publish --build listing fields."
 scope: "global"
-agents: [dev, architect, product, qa]
+agents: [dev, planner, product, qa]
 triggers: [system publish, marketplace app, dashboard app form, integrations, app listing]
 ---
 

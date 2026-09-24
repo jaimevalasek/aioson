@@ -73,8 +73,8 @@ Avoid:
 Every unresolved problem needs an owner:
 
 - product intent wrong -> `@product` or `@sheldon`
-- requirements drift -> `@product` / `@sheldon` for PRD intent, `@dev` for implementation drift; `@analyst` only for an explicitly requested, named domain question
-- technical path unclear -> `@architect` or `@discovery-design-doc`
+- requirements drift -> `@product` / `@sheldon` for PRD intent, `@dev` for implementation drift
+- technical path unclear -> `@planner`
 - implementation drift -> `@dev`
 - verification uncertain -> `@qa` or `@tester`
 - security finding -> `@pentester` detects, `@dev` fixes, `@qa` accepts

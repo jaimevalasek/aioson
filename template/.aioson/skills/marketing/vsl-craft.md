@@ -381,5 +381,5 @@ When writing a VSL script, the @copywriter agent should load:
 VSL script saves to: `.aioson/context/vsl-script-{slug}.md`
 VSL page spec saves to: `.aioson/context/vsl-page-{slug}.md` (if page design is needed)
 
-If invoked from @ux-ui: return the page spec for visual implementation.
+If invoked from @refiner or @dev: return the page spec for visual implementation.
 If invoked from a squad: save to the squad's output directory.

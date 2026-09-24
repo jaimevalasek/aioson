@@ -14,7 +14,7 @@ Rules **override** agent default conventions. Use them for project-specific stan
 ---
 name: rule-name
 description: One-line description of what this rule enforces
-agents: [dev, architect]   # omit to apply to ALL agents
+agents: [dev, planner]      # omit to apply to ALL agents
 priority: 10               # optional: higher = loaded first (default: 0)
 version: 1.0.0
 modes: [planning, executing]              # optional: restrict to a context:select mode

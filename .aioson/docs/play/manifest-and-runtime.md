@@ -1,7 +1,7 @@
 ---
 description: "AIOSON Play app manifest, runtime, package manager, scripts, ports, endpoint declaration, split-stack, and compatibility contract."
 scope: "global"
-agents: [dev, deyvin, architect, qa, tester]
+agents: [dev, planner, qa, tester]
 task_types: [aioson-play-app, runtime, manifest]
 triggers: [manifest.json, Play runtime, PORT, pnpm, ProductBridge, /api/aioson-play, requires_services]
 ---

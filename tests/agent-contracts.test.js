@@ -150,13 +150,12 @@ test('prototype intent is preserved through Product, Sheldon, Planner, Dev, and 
 });
 
 test('prototype authority is feature-owned, explicit, and visible across the delivery chain', async () => {
-  const [product, sheldon, planner, dev, qa, deyvin, contract, forge] = await Promise.all([
+  const [product, sheldon, planner, dev, qa, contract, forge] = await Promise.all([
     read('.aioson/agents/product.md'),
     read('.aioson/agents/sheldon.md'),
     read('.aioson/agents/planner.md'),
     read('.aioson/agents/dev.md'),
     read('.aioson/agents/qa.md'),
-    read('.aioson/agents/deyvin.md'),
     read('.aioson/docs/prototype-contract.md'),
     read('.aioson/skills/process/prototype-forge/SKILL.md')
   ]);
@@ -165,12 +164,12 @@ test('prototype authority is feature-owned, explicit, and visible across the del
   assert.match(product, /prototype_status: none/);
   assert.match(product, /Prototype binding: current/);
   assert.match(product, /never select a prototype by globbing other feature folders/i);
-  for (const content of [sheldon, planner, dev, qa, deyvin]) {
+  // deyvin was retired into dev, which carries the pair-work prototype check.
+  for (const content of [sheldon, planner, dev, qa]) {
     assert.match(content, /prototype:check \. --feature=\{slug\} --strict/);
     assert.match(content, /closed feature|feature closes|historical/i);
   }
   assert.match(dev, /inspect the current production entry point, implementation, and tests/i);
-  assert.match(deyvin, /inspect code\/tests|production code\/tests/i);
   assert.match(contract, /Prototype authority is feature-owned, never global/i);
   assert.match(contract, /excluded historical references/i);
   assert.match(forge, /feature: \{slug\}/);

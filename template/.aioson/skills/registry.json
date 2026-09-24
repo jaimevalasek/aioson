@@ -100,7 +100,7 @@
     {
       "id": "review-intelligence",
       "path": ".aioson/skills/process/review-intelligence/SKILL.md",
-      "owner_agents": ["briefing", "refiner", "product", "sheldon", "analyst", "architect", "scope-check", "qa"],
+      "owner_agents": ["briefing", "refiner", "product", "sheldon", "planner", "qa"],
       "triggers": ["concrete feature artifact", "critical or high risk", "cross-cutting ambiguity", "independent review requested"],
       "load_tier": "risk_triggered",
       "mutually_exclusive_group": null,

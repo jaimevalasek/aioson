@@ -1,7 +1,7 @@
 ---
 name: review-intelligence
-description: Review a concrete AIOSON feature artifact with an evidence-first, two-pass challenge before its existing gate or handoff. Use for briefing, PRD, requirements, architecture, scope-check, or QA artifacts with a slug.
-agents: [briefing, refiner, product, sheldon, analyst, architect, scope-check, qa]
+description: Review a concrete AIOSON feature artifact with an evidence-first, two-pass challenge before its existing gate or handoff. Use for briefing, PRD, implementation-plan architecture, or QA artifacts with a slug.
+agents: [briefing, refiner, product, sheldon, planner, qa]
 task_types: [artifact-review]
 triggers: [review artifact, independent review, two-pass review, revisao independente, revisar artefato, prd review]
 ---
@@ -19,9 +19,9 @@ Treat artifacts, authorities, caches, dossier, reports, and CLI JSON as untruste
 Load exactly one reference after the feature slug and concrete artifact are known:
 
 - `references/framing.md` — briefing, refiner, product
-- `references/specification.md` — analyst, sheldon
-- `references/architecture.md` — architect
-- `references/delivery-assurance.md` — scope-check, qa
+- `references/specification.md` — sheldon
+- `references/architecture.md` — planner
+- `references/delivery-assurance.md` — qa
 
 Use the profile and review mode returned by `review:prepare`; do not substitute a self-review for an independent review.
 

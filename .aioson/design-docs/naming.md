@@ -1,7 +1,7 @@
 ---
 description: "Naming conventions for files, variables, functions, and classes"
 scope: "governance"
-agents: [dev, deyvin, architect]
+agents: [dev, planner]
 modes: [planning, executing]
 task_types: [implementation-architecture, file-creation, naming, refactor]
 load_tier: trigger

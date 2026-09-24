@@ -13,7 +13,8 @@ const {
 const { runTechnicalGate } = require('../src/workflow-gates');
 const {
   validateHandoffContract,
-  getCanonicalArtifactsForAgent
+  getCanonicalArtifactsForAgent,
+  CONTRACTS
 } = require('../src/handoff-contract');
 const { buildTestBriefing } = require('../src/test-briefing');
 const { buildPathGuardBlock } = require('../src/path-guard');
@@ -151,28 +152,24 @@ describe('workflow engine hardening', () => {
     assert.equal(check.missing.some((m) => /design-doc|readiness/.test(m)), false);
   });
 
-  it('optional repository discovery owns no canonical feature artifact', async () => {
+  it('retired repository discovery owns no canonical feature artifact contract', async () => {
     const dir = await setupProject({ classification: 'SMALL' });
 
+    // discovery-design-doc is retired into @planner: it has no handoff
+    // contract of its own, so there is nothing canonical to resolve.
     const artifacts = await getCanonicalArtifactsForAgent(
       '@discovery-design-doc',
       dir,
       { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
     );
 
-    assert.deepEqual(artifacts, []);
+    assert.equal(artifacts, null);
   });
 
-  it('optional repository discovery owns no global fallback artifacts', async () => {
-    const dir = await setupProject({ classification: 'SMALL' });
-
-    const artifacts = await getCanonicalArtifactsForAgent(
-      '@discovery-design-doc',
-      dir,
-      { mode: 'feature', featureSlug: 'checkout', classification: 'SMALL' }
-    );
-
-    assert.deepEqual(artifacts, []);
+  it('retired agents own no handoff contracts (no global fallback artifacts)', () => {
+    for (const retired of ['discovery-design-doc', 'analyst', 'architect', 'pm', 'ux-ui', 'scope-check', 'deyvin', 'pair']) {
+      assert.equal(Object.prototype.hasOwnProperty.call(CONTRACTS, retired), false, `${retired} must not own a contract`);
+    }
   });
 
   it('test briefing extracts mock helpers and ui strings', async () => {

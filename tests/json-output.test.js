@@ -173,8 +173,12 @@ test('agents --json returns structured payload without human logs', async () => 
   assert.equal(typeof parsed.count, 'number');
   assert.equal(Array.isArray(parsed.agents), true);
   assert.equal(typeof parsed.locale, 'string');
-  const uxAgent = parsed.agents.find((agent) => agent.id === 'ux-ui');
-  assert.equal(uxAgent.displayName, 'UI/UX');
+  const productAgent = parsed.agents.find((agent) => agent.id === 'product');
+  assert.equal(productAgent.displayName, 'Product');
+  // Retired agents are folded into their absorbers and no longer listed.
+  for (const retired of ['ux-ui', 'analyst', 'architect', 'pm', 'deyvin', 'pair', 'scope-check', 'discovery-design-doc']) {
+    assert.equal(parsed.agents.some((agent) => agent.id === retired), false, `${retired} must not be listed`);
+  }
 });
 
 test('agent:prompt --json returns structured payload without human logs', async () => {

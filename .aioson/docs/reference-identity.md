@@ -1,6 +1,6 @@
 ---
 description: "Reference-image-driven visual identity — how user-provided reference images become a text identity.md the interface-design engine applies. Covers exploration, briefing, and brand scopes, the extraction skill, verification, and no-vision fallback."
-agents: [setup, refiner, ux-ui]
+agents: [setup, refiner]
 task_types: [design, configuration, verification]
 triggers: [identity.md, reference image, visual identity, reference-identity-extract, kind=identity, brand reference, design_skill interface-design]
 ---
@@ -62,8 +62,8 @@ the `interface-design` token families plus its Phase-1 anti-sameness anchors. Au
 - **`@setup`** — never asks about the visual system: `design_skill: interface-design` is written by the
   CLI (a blank value resolves to the same engine) and only a project-forged skill (site-forge or hybrid
   output) the owner names replaces it. Reference images enter through the briefing/refiner route above.
-- **`@ux-ui`** — Step 0 loads `identity.md` as the **identity input** the single interface-design engine
-  applies. It is **not** a second design skill: exactly one design skill is loaded, and `identity.md`
+- **`@refiner`** (prototype) and **`@dev`** (implementation) — load `identity.md` as the **identity input**
+  the single interface-design engine applies. It is **not** a second design skill: exactly one design skill is loaded, and `identity.md`
   parameterizes it. This does not weaken the ONE-SKILL-ONLY rule.
 
 ## The gate

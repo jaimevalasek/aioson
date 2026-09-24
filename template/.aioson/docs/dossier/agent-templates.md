@@ -1,6 +1,6 @@
 ---
-description: "Templates concretos por agente da cadeia (9 chain agents) para escrita no dossier via dossier:add-finding, dossier:add-codemap, dossier:link-rule e dossier:add-research. Bumped Phase 4 (agent-chain-continuity): @sheldon override (Why → Agent Trail + Research Index); novos templates para @ux-ui, @pm, @orchestrator; convenção DRIFT: para @dev."
-agents: [product, analyst, sheldon, architect, pm, dev, qa, tester, briefing]
+description: "Templates concretos por agente da cadeia para escrita no dossier via dossier:add-finding, dossier:add-codemap, dossier:link-rule e dossier:add-research. Bumped Phase 4 (agent-chain-continuity): @sheldon override (Why → Agent Trail + Research Index); templates para @planner e @orchestrator; convenção DRIFT: para @dev."
+agents: [product, sheldon, planner, dev, qa, tester, briefing]
 task_types: [dossier]
 triggers: [dossier, agent trail, add finding]
 ---
@@ -51,41 +51,20 @@ aioson dossier:add-research . --slug={slug} \
   --why-relevant="{≤200 chars: how this research connects to the feature}"
 ```
 
-## @analyst
-
-**Sections:** `Agent Trail` + `Rules & Design-Docs aplicáveis` + `Research Index` (when consulted).
-
-```
-aioson dossier:add-finding . --slug={slug} --agent=analyst --section="Agent Trail" \
-  --content="Requirements mapeados. Edge cases: {n}. Pendências para @architect: {items}."
-```
-
-**Link applicable rules:**
-```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/rules/{rule-file}.md \
-  --reason="{why this rule applies to this feature}"
-```
-
-**Register any research consulted during analysis:**
-```
-aioson dossier:add-research . --slug={slug} --research-slug={research-slug} \
-  --agent=analyst --verdict=confirmed --why-relevant="..."
-```
-
-## @architect
+## @planner
 
 **Sections:** `Agent Trail` + `Code Map` + `Rules & Design-Docs aplicáveis` + `Research Index`.
 
 ```
-aioson dossier:add-finding . --slug={slug} --agent=architect --section="Agent Trail" \
-  --content="Arquitetura definida. Decisões chave: {decisions}. Gate B: pendente aprovação."
+aioson dossier:add-finding . --slug={slug} --agent=planner --section="Agent Trail" \
+  --content="Plano definido. Decisões de arquitetura: {decisions}. Gate C: pendente aprovação."
 ```
 
 **Register architecture files in Code Map:**
 ```
 aioson dossier:add-codemap . --slug={slug} \
   --file=src/{module}/{file}.js --lines={start}-{end} \
-  --role=core-module --coupling=high --added-by=architect
+  --role=core-module --coupling=high --added-by=planner
 ```
 
 **Link design-docs:**
@@ -94,34 +73,10 @@ aioson dossier:link-rule . --slug={slug} --rule=.aioson/design-docs/{doc}.md \
   --reason="{why this design-doc governs this feature}"
 ```
 
-**Register research consulted during architecture work:**
+**Register research consulted during planning:**
 ```
 aioson dossier:add-research . --slug={slug} --research-slug={research-slug} \
-  --agent=architect --verdict={confirmed|has-alternatives|outdated|deprecated} --why-relevant="..."
-```
-
-## @ux-ui
-
-**Sections:** `Agent Trail` + (optional) `Code Map` if mockups reference specific components.
-
-```
-aioson dossier:add-finding . --slug={slug} --agent=ux-ui --section="Agent Trail" \
-  --content="UI spec concluída. Telas: {n}. Design skill: {skill}."
-```
-
-**Link design skill or rules:**
-```
-aioson dossier:link-rule . --slug={slug} --rule=.aioson/skills/design/{skill}.md \
-  --reason="UI built against this design system"
-```
-
-## @pm
-
-**Section:** `Agent Trail` (post task breakdown).
-
-```
-aioson dossier:add-finding . --slug={slug} --agent=pm --section="Agent Trail" \
-  --content="Plano refinado. Stories: {n}. Lanes: {n}. Prioridade: {priority}."
+  --agent=planner --verdict={confirmed|has-alternatives|outdated|deprecated} --why-relevant="..."
 ```
 
 ## @orchestrator
@@ -186,7 +141,7 @@ aioson revision:open . --slug={slug} \
 Example:
 ```
 aioson revision:open . --slug=feature-x \
-  --requested-by=analyst \
+  --requested-by=sheldon \
   --target=product \
   --target-artifact=.aioson/context/prd-feature-x.md \
   --reason="PRD assumes synchronous integration but the existing order module uses Redis pub/sub. The integration pattern must be clarified before entities can be mapped." \

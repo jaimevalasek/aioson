@@ -1,7 +1,7 @@
 ---
 name: browser-walkthrough
 description: Drive the real application in a real browser with a replayable walkthrough script — accessibility-tree-first location, act-then-verify, boundary proof, per-AC/PROM evidence the gates read
-agents: [qa, tester, shakedown, refiner, dev, deyvin, pentester, benchmark]
+agents: [qa, tester, shakedown, refiner, dev, pentester, benchmark]
 priority: 10
 version: 1.0.0
 modes: [executing]

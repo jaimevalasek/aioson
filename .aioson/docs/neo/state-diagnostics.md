@@ -50,7 +50,7 @@ If two authoritative signals conflict, recommend the owner that can repair the s
 The authoritative state is `chain_work_items` in `.aioson/runtime/aios.sqlite`; `.aioson/context/noises/{feature}.md` is its human-readable projection. Legacy timestamped noise files are imported by `aioson chain:reconcile .`.
 
 - Report actionable items by feature, status, owner, and pending count.
-- Recommend `@dev` for new work or `@deyvin` when resuming active implementation; they claim items atomically before touching targets.
+- Recommend `@dev` for new work or when resuming active implementation; they claim items atomically before touching targets.
 - An item means “inspect this causal relationship,” not “edit this file.” `verified_no_change`, `false_positive`, and `obsolete` are valid evidence-backed resolutions.
 - Do not route an item already claimed by another run. Expired claims return to the queue automatically.
 - Unrelated work is not globally blocked. The queue remains visible implementation debt until resolved or explicitly made obsolete.

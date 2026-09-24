@@ -135,7 +135,7 @@ test('no shipped kernel, routed doc, skill or task asks the owner to choose, con
   assert.match(legacy, /Superseded \(2026-09-01\)/);
 });
 
-test('the active setup, product, ux-ui and dev surfaces state the default instead of a question', () => {
+test('the active setup, product and dev surfaces state the default instead of a question', () => {
   const read = (rel) => fs.readFileSync(path.join(TEMPLATE, rel), 'utf8');
   const setup = read('agents/setup.md');
   assert.match(setup, /visual system is never a setup question/i);
@@ -159,10 +159,10 @@ test('the active setup, product, ux-ui and dev surfaces state the default instea
   const playbook = read('docs/product/conversation-playbook.md');
   assert.match(playbook, /never a product question/);
 
-  const gate = read('docs/ux-ui/design-gate.md');
-  assert.match(gate, /resolve the design skill without asking/);
-  assert.match(gate, /there is no menu/);
-  assert.doesNotMatch(gate, /task_types: \[[^\]]*design-skill-selection/);
+  // ux-ui (and its docs/ux-ui/design-gate.md) was retired into product; the
+  // no-menu statement now lives in config.md, and no design gate doc survives.
+  assert.equal(fs.existsSync(path.join(TEMPLATE, 'docs', 'ux-ui', 'design-gate.md')), false);
+  assert.match(config, /there is no menu/);
 
   const dev = read('docs/dev/stack-conventions.md');
   assert.match(dev, /blank or `interface-design` → load `\.aioson\/skills\/design\/interface-design\/SKILL\.md`/);

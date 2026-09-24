@@ -6,16 +6,8 @@ const MANAGED_FILES = [
   'OPENCODE.md',
   '.aioson/config.md',
   '.aioson/agents/setup.md',
-  '.aioson/agents/discovery-design-doc.md',
   '.aioson/agents/discover.md',
-  '.aioson/agents/analyst.md',
-  '.aioson/agents/scope-check.md',
-  '.aioson/agents/architect.md',
-  '.aioson/agents/ux-ui.md',
   '.aioson/agents/product.md',
-  '.aioson/agents/deyvin.md',
-  '.aioson/agents/pair.md',
-  '.aioson/agents/pm.md',
   '.aioson/agents/sheldon.md',
   '.aioson/agents/planner.md',
   '.aioson/agents/dev.md',
@@ -129,10 +121,6 @@ const MANAGED_FILES = [
   '.aioson/docs/product/research-loop.md',
   '.aioson/docs/product/quality-lens.md',
   '.aioson/docs/product/prd-contract.md',
-  '.aioson/docs/deyvin/continuity-recovery.md',
-  '.aioson/docs/deyvin/pair-execution.md',
-  '.aioson/docs/deyvin/runtime-handoffs.md',
-  '.aioson/docs/deyvin/debugging-escalation.md',
   '.aioson/docs/feature-continuity-mapping.md',
   '.aioson/docs/handoff-persistence.md',
   '.aioson/docs/integrations/dashboard-app-form-publish-mapping.md',
@@ -152,10 +140,15 @@ const MANAGED_FILES = [
   '.aioson/docs/dev/execution-discipline.md',
   '.aioson/docs/dev/simple-plan-lane.md',
   '.aioson/docs/dev/scout.md',
+  '.aioson/docs/dev/continuity-recovery.md',
+  '.aioson/docs/dev/runtime-handoffs.md',
+  '.aioson/docs/dev/site-delivery.md',
   '.aioson/docs/quality/code-health-analysis.md',
   '.aioson/docs/quality/code-size-limits.md',
   '.aioson/docs/quality/coupling-limits.md',
   '.aioson/docs/qa/browser-walkthrough.md',
+  '.aioson/docs/qa/accessibility-audit.md',
+  '.aioson/docs/qa/scope-drift.md',
   '.aioson/skills/process/decision-presentation/SKILL.md',
   '.aioson/skills/process/decision-presentation/references/jargon-map.en.yaml',
   '.aioson/skills/process/decision-presentation/references/jargon-map.pt-BR.yaml',
@@ -267,10 +260,7 @@ const REQUIRED_FILES = [
   '.claude/commands/aioson/agent/quality.md',
   '.aioson/config.md',
   '.aioson/agents/setup.md',
-  '.aioson/agents/discovery-design-doc.md',
   '.aioson/agents/discover.md',
-  '.aioson/agents/analyst.md',
-  '.aioson/agents/ux-ui.md',
   '.aioson/agents/planner.md',
   '.aioson/agents/dev.md',
   '.aioson/context/.gitkeep'
@@ -301,15 +291,6 @@ const AGENT_DEFINITIONS = [
     output: '.aioson/context/project.context.md'
   },
   {
-    id: 'discovery-design-doc',
-    displayName: 'Discovery/Design Doc',
-    description: 'Optional repository-surface discovery for a named implementation unknown',
-    command: '@discovery-design-doc',
-    path: '.aioson/agents/discovery-design-doc.md',
-    dependsOn: ['.aioson/context/project.context.md'],
-    output: 'bounded repository evidence + optional dossier code-map entry'
-  },
-  {
     id: 'discover',
     displayName: 'Discover',
     description: 'Semantic knowledge discovery and bootstrap cache generation',
@@ -324,79 +305,11 @@ const AGENT_DEFINITIONS = [
     description: 'Product vision, PRD and feature scoping',
     command: '@product',
     path: '.aioson/agents/product.md',
+    // Retired agents folded into @product: their ids resolve here (CLI flags,
+    // rules frontmatter, dossier authors) and `aioson update` removes their files.
+    retiredIds: ['analyst', 'ux-ui'],
     dependsOn: ['.aioson/context/project.context.md'],
     output: '.aioson/context/prd.md or .aioson/context/prd-{slug}.md (single product authority)'
-  },
-  {
-    id: 'deyvin',
-    displayName: 'Deyvin',
-    description: 'Pair programming partner for continuity sessions',
-    command: '@deyvin',
-    path: '.aioson/agents/deyvin.md',
-    aliases: ['pair'],
-    dependsOn: ['.aioson/context/project.context.md'],
-    output: 'small code changes + continuity notes + runtime logs/tasks'
-  },
-  {
-    id: 'analyst',
-    displayName: 'Analyst',
-    description: 'Optional evidence-backed analysis of a named ambiguity (all sizes)',
-    command: '@analyst',
-    path: '.aioson/agents/analyst.md',
-    dependsOn: ['.aioson/context/project.context.md'],
-    output: 'bounded recommendation to Product or Planner + optional dossier entry'
-  },
-  {
-    id: 'scope-check',
-    displayName: 'Scope Check',
-    description: 'Optional evidence-based review of a named scope-drift concern',
-    command: '@scope-check',
-    path: '.aioson/agents/scope-check.md',
-    dependsOn: [
-      '.aioson/context/project.context.md',
-      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
-    ],
-    output: 'bounded alignment verdict + optional dossier entry'
-  },
-  {
-    id: 'architect',
-    displayName: 'Architect',
-    description: 'Optional repository-grounded answer to a named technical boundary (all sizes)',
-    command: '@architect',
-    path: '.aioson/agents/architect.md',
-    dependsOn: [
-      '.aioson/context/project.context.md',
-      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
-    ],
-    output: 'bounded technical decision to Planner or Dev + optional dossier entry'
-  },
-  {
-    id: 'ux-ui',
-    displayName: 'UI/UX',
-    description: 'Optional prototype-grounded interaction decision (all sizes)',
-    command: '@ux-ui',
-    path: '.aioson/agents/ux-ui.md',
-    dependsOn: [
-      '.aioson/context/project.context.md',
-      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
-    ],
-    output: 'bounded interaction decision to Product or Planner + optional dossier entry'
-  },
-  {
-    id: 'pm',
-    displayName: 'PM',
-    description: 'Optional prioritization, dependency, and rollout advisor (all sizes)',
-    command: '@pm',
-    path: '.aioson/agents/pm.md',
-    dependsOn: [
-      '.aioson/context/project.context.md',
-      '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
-      '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md (when present)'
-    ],
-    output: 'bounded recommendation to Product or Planner + optional dossier entry'
   },
   {
     id: 'dev',
@@ -404,6 +317,9 @@ const AGENT_DEFINITIONS = [
     description: 'Feature implementation (any stack)',
     command: '@dev',
     path: '.aioson/agents/dev.md',
+    // Retired agents folded into @dev: their ids resolve here (CLI flags,
+    // rules frontmatter, dossier authors) and `aioson update` removes their files.
+    retiredIds: ['deyvin', 'pair'],
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
@@ -440,6 +356,9 @@ const AGENT_DEFINITIONS = [
     description: 'Proportional delivery review with bounded focused verification (all sizes)',
     command: '@qa',
     path: '.aioson/agents/qa.md',
+    // Retired agents folded into @qa: their ids resolve here (CLI flags,
+    // rules frontmatter, dossier authors) and `aioson update` removes their files.
+    retiredIds: ['scope-check'],
     dependsOn: [
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',
       '.aioson/context/implementation-plan.md or .aioson/context/implementation-plan-{slug}.md'
@@ -603,6 +522,9 @@ const AGENT_DEFINITIONS = [
     description: 'Executable vertical implementation planning from the approved PRD',
     command: '@planner',
     path: '.aioson/agents/planner.md',
+    // Retired agents folded into @planner: their ids resolve here (CLI flags,
+    // rules frontmatter, dossier authors) and `aioson update` removes their files.
+    retiredIds: ['architect', 'discovery-design-doc', 'pm'],
     dependsOn: [
       '.aioson/context/project.context.md',
       '.aioson/context/prd.md or .aioson/context/prd-{slug}.md',

@@ -100,7 +100,7 @@ Setup owns project context, not feature delivery. If the user supplies an implem
 - never offer direct execution as a setup shortcut;
 - if an unresolved context choice blocks safe routing, keep the workflow waiting for that choice rather than bypassing it.
 
-The canonical next feature stage is `@product`; it later routes through mandatory `@sheldon`, then `@planner`, `@dev`, and `@qa`. `@ux-ui` is an explicit detour only when a concrete visual decision remains open.
+The canonical next feature stage is `@product`; it later routes through mandatory `@sheldon`, then `@planner`, `@dev`, and `@qa`. An open visual direction goes to `@refiner` (prototype) first.
 
 ## Done gate
 

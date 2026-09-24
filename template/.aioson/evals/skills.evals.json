@@ -38,7 +38,7 @@
     },
     {
       "name": "prompt sharpener reaches an operator session improving an agent prompt",
-      "agent": "deyvin",
+      "agent": "dev",
       "mode": "planning",
       "task": "fazer um prompt audit do agente dev e reduzir prompt bloat sem perder os contratos",
       "expect": [{ "path": ".aioson/skills/process/prompt-sharpener/SKILL.md", "in": "skills" }]
@@ -124,8 +124,8 @@
       "expect": [{ "path": ".aioson/skills/static/harness-validate/SKILL.md", "in": "skills" }]
     },
     {
-      "name": "interface-design engine reaches ux-ui on visual direction work",
-      "agent": "ux-ui",
+      "name": "interface-design engine reaches refiner on visual direction work",
+      "agent": "refiner",
       "mode": "planning",
       "task": "escolher a direcao visual e o sistema de tokens para a nova landing page do produto",
       "expect": [{ "path": ".aioson/skills/design/interface-design/SKILL.md", "in": "skills" }]

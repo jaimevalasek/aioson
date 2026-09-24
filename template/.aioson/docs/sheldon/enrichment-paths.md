@@ -40,4 +40,4 @@ When the feature dossier exists, append one compact best-effort entry containing
 
 ## Handoff
 
-When the PRD is coherent, set `sheldon_review: approved` and return directly to `@planner`. If a truly blocking product decision remains, return it to Product or the user as one bounded question. Never route by default through Analyst, Architect, PM, Design Doc, Scope Check, or Orchestrator.
+When the PRD is coherent, set `sheldon_review: approved` and return directly to `@planner`. If a truly blocking product decision remains, return it to Product or the user as one bounded question. Never route by default through Orchestrator or any other opt-in specialist; technical discovery belongs to `@planner`.

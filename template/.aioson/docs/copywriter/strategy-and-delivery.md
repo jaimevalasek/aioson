@@ -56,4 +56,4 @@ Before saving:
 
 Use the paths in `modes-and-outputs.md`. Include concise frontmatter or a header noting audience evidence, structure, central belief, voice/genome, research status, and congruence status. Do not dump internal chain-of-thought.
 
-Completion summary lists artifacts actually written, sections, validation, primary CTA, and recommended next owner (UX/UI, Dev, or QA). Never list hypothetical artifacts as written.
+Completion summary lists artifacts actually written, sections, validation, primary CTA, and recommended next owner (Refiner, Dev, or QA). Never list hypothetical artifacts as written.

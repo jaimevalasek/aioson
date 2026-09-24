@@ -17,7 +17,7 @@ Unlike `rules/` (which enforce conventions), docs explain **how something works*
 ---
 description: "Short description of what this doc covers — used by agents to decide relevance"
 scope: "global"       # or a feature slug if doc is scoped to one area
-agents: []            # empty = any agent may load; or restrict: [dev, architect]
+agents: []            # empty = any agent may load; or restrict: [dev, planner]
 ---
 ```
 

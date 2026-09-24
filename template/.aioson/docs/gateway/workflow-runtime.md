@@ -51,7 +51,7 @@ Use the current tool name (`codex`, `claude`, or supported equivalent):
 ```bash
 aioson workflow:next . --expect-feature=<slug> --tool=<tool>
 aioson agent:prompt <agent> . --tool=<tool>
-aioson live:start . --tool=<tool> --agent=deyvin --no-launch
+aioson live:start . --tool=<tool> --agent=dev --no-launch
 ```
 
 Inside a live session:

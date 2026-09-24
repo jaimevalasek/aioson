@@ -10,10 +10,10 @@ const { featureDir, dossierPath, parseSections, parseFrontmatter } = require('./
 // Maps canonical artifact filenames to the agent that typically produces them.
 const ARTIFACT_AGENTS = {
   [`prd`]: 'product',
-  [`spec`]: 'architect',
+  [`spec`]: 'planner',
   [`sheldon-enrichment`]: 'sheldon',
-  [`requirements`]: 'analyst',
-  [`architecture`]: 'architect'
+  [`requirements`]: 'product',
+  [`architecture`]: 'planner'
 };
 
 async function fileExists(p) {
@@ -217,10 +217,10 @@ function buildAgentTrail(artifacts, fallbackTimestamp) {
   };
   add('prd', 'product');
   add('prdGlobal', 'product');
-  add('requirements', 'analyst');
+  add('requirements', 'product');
   add('sheldonEnrichment', 'sheldon');
-  add('architecture', 'architect');
-  add('spec', 'architect');
+  add('architecture', 'planner');
+  add('spec', 'planner');
   return trail;
 }
 

@@ -1,7 +1,7 @@
 ---
 name: prototype-contract
 description: "How an approved prototype binds the PRD, the plan, implementation and validation — what it proves, what it never proves, and how each stage cites it."
-agents: [product, sheldon, planner, dev, qa, ux-ui, tester, validator]
+agents: [product, sheldon, planner, dev, qa, tester, validator]
 modes: [planning, executing]
 task_types: [prd, implementation-plan, implementation, validation]
 load_tier: trigger
@@ -17,7 +17,7 @@ Prototype authority is feature-owned, never global. A prototype is binding only 
 - the prototype and manifest use the exact feature-owned paths under `.aioson/briefings/{slug}/`;
 - the manifest declares `feature: {slug}`.
 
-An artifact under another briefing folder belongs to that other feature even when its feature is closed. It is historical evidence, not a candidate that Product, Planner, Dev, Deyvin, or QA may silently reactivate.
+An artifact under another briefing folder belongs to that other feature even when its feature is closed. It is historical evidence, not a candidate that Product, Planner, Dev, or QA may silently reactivate.
 
 ## PRD pointer
 
@@ -77,7 +77,7 @@ status: draft
 - Product resolves the binding from the exact matching folder before writing the PRD. A cross-feature or closed-feature prototype is excluded automatically when the user did not explicitly request a new feature-owned prototype.
 - Sheldon independently checks the same ownership before enriching interactions into ACs.
 - Planner maps only a verified current binding to vertical phases. With `prototype_status: none`, it plans from PRD plus inspected repository behavior.
-- Dev and Deyvin run the ownership check before using a prototype. With no binding prototype, they inspect the current production path and tests to correct approved behavior; they do not resurrect a closed feature's visual artifact.
+- Dev runs the ownership check before using a prototype. With no binding prototype, it inspects the current production path and tests to correct approved behavior; they do not resurrect a closed feature's visual artifact.
 - QA launches the normal application and proves the binding interactions end to end, or records that the feature explicitly has no prototype.
 
 Optional specialists consume the same pointer. They do not create a parallel prototype specification.

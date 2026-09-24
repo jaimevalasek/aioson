@@ -98,7 +98,7 @@ Record deferred, blocked, or not-applicable items with an owner and rationale.
 
 ## Handoff Notes
 
-Notes for @scope-check, @qa, or a clean auditor. This ledger is evidence, not proof.
+Notes for @qa or a clean auditor. This ledger is evidence, not proof.
 
 ## Machine Ledger
 

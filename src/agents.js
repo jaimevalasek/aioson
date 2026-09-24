@@ -14,6 +14,7 @@ function getAgentDefinition(name) {
   return AGENT_DEFINITIONS.find((agent) => {
     if (agent.id === normalized) return true;
     if (Array.isArray(agent.aliases) && agent.aliases.includes(normalized)) return true;
+    if (Array.isArray(agent.retiredIds) && agent.retiredIds.includes(normalized)) return true;
     return Array.isArray(agent.legacyIds) && agent.legacyIds.includes(normalized);
   }) || null;
 }
@@ -36,19 +37,33 @@ function mapToCanonical(field) {
 // rename is declared once (constants.js) and honored everywhere an agent id
 // is compared: CLI flags, rules/docs frontmatter, brains, dossier authors.
 // Drives the `aioson update` cleanup of the files the old name left behind.
-const LEGACY_AGENT_IDS = mapToCanonical('legacyIds');
+const RENAMED_AGENT_IDS = mapToCanonical('legacyIds');
 
-// Live aliases keep their own stub file (`pair.md` → @deyvin); they are the
+// Retired agent id → the main-cycle agent that absorbed its work. Unlike a
+// rename, a retired id is NOT the same workflow stage: flags and ownership
+// fields resolve to the absorber, but persisted workflow progress naming a
+// retired stage is dropped (see workflow-next), never credited to it.
+const RETIRED_AGENT_IDS = mapToCanonical('retiredIds');
+
+// Every id whose files `aioson update` removes: renames and retirements.
+const LEGACY_AGENT_IDS = Object.freeze({ ...RENAMED_AGENT_IDS, ...RETIRED_AGENT_IDS });
+
+// Live aliases keep their own stub file; they are the
 // same agent for every comparison but are never treated as debris.
 const ALIAS_AGENT_IDS = mapToCanonical('aliases');
 
 // Canonical id for any spelling of a known agent (`@briefing-refiner`,
-// `Briefing-Refiner`, `refiner`, `pair`); unknown names come back normalized
+// `Briefing-Refiner`, `refiner`, retired `deyvin`); unknown names come back normalized
 // but untouched, so squad/custom agent ids are never rewritten.
 function canonicalAgentId(name) {
   const normalized = normalizeAgentName(name);
   if (!normalized) return normalized;
   return LEGACY_AGENT_IDS[normalized] || ALIAS_AGENT_IDS[normalized] || normalized;
+}
+
+// True when `name` is a retired agent id (its work now lives in another agent).
+function isRetiredAgentId(name) {
+  return Object.prototype.hasOwnProperty.call(RETIRED_AGENT_IDS, normalizeAgentName(name));
 }
 
 // True when `candidate` names the same agent as `agent`, alias-aware.
@@ -139,6 +154,8 @@ function buildAgentPrompt(agent, tool, options = {}) {
 
 module.exports = {
   LEGACY_AGENT_IDS,
+  RETIRED_AGENT_IDS,
+  isRetiredAgentId,
   normalizeAgentName,
   canonicalAgentId,
   isSameAgent,

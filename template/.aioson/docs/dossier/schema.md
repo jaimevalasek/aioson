@@ -1,6 +1,6 @@
 ---
 description: "Feature dossier schema (canônico v1.0 + v1.1 Phase 3 + v1.2 Research Index) e handoff-protocol artifact_uris v2. Lido por src/dossier/schema.js e src/session-handoff.js — toda mudança aqui exige bump de schema_version."
-agents: [product, analyst, sheldon, architect, pm, dev, qa, tester, briefing]
+agents: [product, sheldon, planner, dev, qa, tester, briefing]
 task_types: [dossier]
 triggers: [dossier schema, dossier structure]
 ---
@@ -200,9 +200,9 @@ prd | requirements | spec | plan | dossier | code | test | manifest | conformanc
 ```json
 {
   "version": "1.0",
-  "protocol_id": "hnd-product-analyst-1715098200000",
+  "protocol_id": "hnd-product-sheldon-1715098200000",
   "from": { "agent_id": "product", "capability_transferred": "define_product_scope" },
-  "to": { "agent_id": "analyst", "capability_required": "analyze_requirements" },
+  "to": { "agent_id": "sheldon", "capability_required": "review_product_scope" },
   "artifact_uris": [
     {
       "path": ".aioson/context/prd-agent-chain-continuity.md",

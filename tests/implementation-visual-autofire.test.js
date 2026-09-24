@@ -280,13 +280,15 @@ test('implementation conformance carries the graded prototype floor and names an
 
 test('site-forge carries the visual rider over its deliverable, and the engine installs under every profile', () => {
   assert.deepEqual(AGENT_ARTIFACT_KIND['site-forge'].also, [{ kind: 'visual', needs: 'dir' }]);
-  for (const agent of ['dev', 'qa', 'deyvin']) {
+  for (const agent of ['dev', 'qa']) {
     const m = AGENT_ARTIFACT_KIND[agent];
     assert.equal(m.kind, 'visual');
     assert.equal(m.interfaceDir, true);
     assert.equal(m.conformance, true);
     assert.equal(m.featureSlugged, true);
   }
+  // deyvin was retired into dev: its done-gate entry is gone with it.
+  assert.equal(Object.prototype.hasOwnProperty.call(AGENT_ARTIFACT_KIND, 'deyvin'), false);
   assert.equal(DESIGN_ENGINE_ID, 'interface-design');
   assert.equal(shouldIncludeForProfile('.aioson/skills/design/interface-design/SKILL.md', DEFAULT_PROFILE), true, 'the engine is not a preset');
   assert.equal(shouldIncludeForProfile('.aioson/skills/design/interface-design/references/aesthetic-registers.md', { ...DEFAULT_PROFILE, design: 'none' }), true);

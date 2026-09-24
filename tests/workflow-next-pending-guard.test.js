@@ -28,17 +28,17 @@ async function writeManifest(dir, slug, frontmatter = {}, body = '') {
   return manifestPath;
 }
 
-test('AC-F3-01 hard error: pending-architect-decisions blocks with actionable message', async () => {
+test('AC-F3-01 hard error: pending-architect-decisions blocks and routes to the absorbing @planner', async () => {
   const dir = await makeTempProject('demo-feature');
   await writeManifest(dir, 'demo-feature', { status: 'pending-architect-decisions' });
   await assert.rejects(
     () => assertManifestNotPending(dir, 'demo-feature', false),
     (err) => {
       assert.equal(err.code, 'WORKFLOW_NEXT_PENDING_DECISIONS');
-      assert.equal(err.pendingState, 'architect');
+      assert.equal(err.pendingState, 'planner');
       assert.equal(err.knownState, true);
       assert.match(err.message, /Gate blocked/);
-      assert.match(err.message, /Próximo agente recomendado: @architect/);
+      assert.match(err.message, /Próximo agente recomendado: @planner/);
       assert.match(err.message, /Use --force para override/);
       return true;
     }
@@ -59,7 +59,7 @@ test('AC-F3-02 regex match: pending-pm-decisions blocks', async () => {
   await writeManifest(dir, 'demo-feature', { status: 'pending-pm-decisions' });
   await assert.rejects(
     () => assertManifestNotPending(dir, 'demo-feature', false),
-    (err) => err.pendingState === 'pm' && err.knownState === true
+    (err) => err.pendingState === 'planner' && err.knownState === true
   );
 });
 
@@ -72,7 +72,7 @@ test('AC-F3-02 unknown captured group: still blocks but flagged as unrecognized'
       assert.equal(err.pendingState, 'pizza');
       assert.equal(err.knownState, false);
       assert.match(err.message, /Estado desconhecido 'pizza'/);
-      assert.match(err.message, /whitelist atual: @architect, @product, @pm, @qa/);
+      assert.match(err.message, /whitelist atual: @planner, @product, @qa/);
       return true;
     }
   );
@@ -167,5 +167,5 @@ test('manifest without status field: silent skip', async () => {
 });
 
 test('whitelist constant is exported and matches DD-02 canonical set', () => {
-  assert.deepEqual([...PENDING_STATE_WHITELIST].sort(), ['architect', 'pm', 'product', 'qa']);
+  assert.deepEqual([...PENDING_STATE_WHITELIST].sort(), ['planner', 'product', 'qa']);
 });

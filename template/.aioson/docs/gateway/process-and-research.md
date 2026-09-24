@@ -21,7 +21,7 @@ For tracked features, load `.aioson/docs/feature-completeness-contract.md` and c
 
 `source file fingerprint → PROM → Product decision → CAP → current-system fit → AC → implementation delta → vertical phase → exact files → executable check → production-path evidence`.
 
-Product, Sheldon, Planner, Dev, and QA load `.aioson/skills/process/aioson-spec-driven/SKILL.md` plus only their role reference at phase start. Optional specialists load it only for a concrete detour. Bare Deyvin activation-only recovery does not.
+Product, Sheldon, Planner, Dev, and QA load `.aioson/skills/process/aioson-spec-driven/SKILL.md` plus only their role reference at phase start. Optional specialists load it only for a concrete detour.
 
 ## Process-skill routing
 

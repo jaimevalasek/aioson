@@ -19,7 +19,7 @@ Bare context names resolve under `.aioson/context/`; never probe other roots.
 
 ## Routing kernel
 
-- Explicit `@agent` loads `.aioson/agents/{agent}.md` immediately; `@pair` aliases `@deyvin`. Do not display it.
+- Explicit `@agent` loads `.aioson/agents/{agent}.md` immediately. Do not display it.
 - Without an explicit agent, load `.aioson/docs/gateway/agent-routing.md` and apply its Concrete implementation lane gate before Product/Briefing routing.
 - Load `.aioson/docs/gateway/workflow-runtime.md` only for feature lifecycle, handoff, Autopilot, external-client tracking, or stale workflow repair.
 - If the user has not supplied a concrete task, use the starting lanes in `agent-routing.md` and stop for selection.

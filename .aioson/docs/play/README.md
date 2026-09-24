@@ -1,7 +1,7 @@
 ---
 description: "Entry point for AIOSON agents implementing apps compatible with AIOSON Play runtime, integrations, data bindings, LLM connections, auth, services, ports, and local testing."
 scope: "global"
-agents: [dev, deyvin, architect, analyst, qa, tester, product, sheldon]
+agents: [dev, planner, qa, tester, product, sheldon]
 task_types: [aioson-play-app, app-compatibility, integration]
 triggers: [AIOSON Play, Play runtime, app compatible with Play, Play integrations, data bindings, ProductBridge]
 ---

@@ -1,6 +1,6 @@
 ---
 description: Compatibility, migration, and doctor-check details for decision-presentation
-agents: [neo, setup, product, dev, deyvin, pentester]
+agents: [neo, setup, product, dev, pentester]
 task_types: [decision-compliance, profile-migration, jargon-diagnostics]
 triggers: [jargon leak, beginner migration, force_profile, decision doctor]
 ---
@@ -15,7 +15,7 @@ The current skill is prompt guidance and does not intercept output at runtime. `
 
 ## Jargon doctor
 
-`jargon_leak_detection` checks creator-profile events from Neo, Setup, Product, Dev, Deyvin, and Pentester against the selected jargon map. Success is zero leaks. A failure is advisory (`warning`) and does not make the whole doctor report fail.
+`jargon_leak_detection` checks creator-profile events from Neo, Setup, Product, Dev, and Pentester against the selected jargon map. Success is zero leaks. A failure is advisory (`warning`) and does not make the whole doctor report fail.
 
 Developer and team profiles are outside this check. Missing maps should be reported as unavailable coverage, not as a user-output failure.
 
@@ -35,4 +35,4 @@ Effective defaults remain:
 
 ## Historical rollout boundary
 
-The original rollout explicitly named Neo, Setup, Product, Dev, Deyvin, and Pentester. Other interactive agents may adopt the skill when their kernel requires it; the doctor scope stays unchanged until its executable contract and tests are deliberately expanded.
+The original rollout explicitly named Neo, Setup, Product, Dev, and Pentester. Other interactive agents may adopt the skill when their kernel requires it; the doctor scope stays unchanged until its executable contract and tests are deliberately expanded.

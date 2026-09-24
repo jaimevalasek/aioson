@@ -47,7 +47,7 @@ test('live session commands return structured JSON payloads with plan progress a
     '--tool=codex',
     '--tool-bin=node',
     '--agent=deyvin',
-    '--title=Sessao viva do deyvin',
+    '--title=Sessao viva do dev',
     '--plan=plan.md',
     '--no-launch',
     '--json'
@@ -55,14 +55,15 @@ test('live session commands return structured JSON payloads with plan progress a
   assert.equal(start.code, 0);
   const startParsed = JSON.parse(start.stdout);
   assert.equal(startParsed.ok, true);
-  assert.equal(startParsed.agent, '@deyvin');
+  // --agent=deyvin is a retired id: it canonicalizes to @dev.
+  assert.equal(startParsed.agent, '@dev');
   assert.equal(startParsed.tool, 'codex');
   assert.equal(startParsed.reused, false);
 
   const taskStarted = await runCli([
     'runtime:emit',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--type=task_started',
     '--title=Corrigir modal de estoque',
     '--json'
@@ -75,7 +76,7 @@ test('live session commands return structured JSON payloads with plan progress a
   const checkpoint = await runCli([
     'runtime:emit',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--type=plan_checkpoint',
     '--plan-step=RF-01',
     '--summary=Launcher entregue',
@@ -89,7 +90,7 @@ test('live session commands return structured JSON payloads with plan progress a
   const taskCompleted = await runCli([
     'runtime:emit',
     dir,
-    '--agent=@deyvin',
+    '--agent=@dev',
     '--type=task_completed',
     '--summary=Corrigi o modal de estoque',
     '--refs=src/app.js,src/styles.css',
@@ -103,7 +104,7 @@ test('live session commands return structured JSON payloads with plan progress a
   const handoff = await runCli([
     'live:handoff',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--to=product',
     '--reason=Escopo exige decisao de produto',
     '--json'
@@ -111,7 +112,7 @@ test('live session commands return structured JSON payloads with plan progress a
   assert.equal(handoff.code, 0);
   const handoffParsed = JSON.parse(handoff.stdout);
   assert.equal(handoffParsed.ok, true);
-  assert.equal(handoffParsed.agent, '@deyvin');
+  assert.equal(handoffParsed.agent, '@dev');
   assert.equal(handoffParsed.nextAgent, '@product');
 
   const statusOpen = await runCli([

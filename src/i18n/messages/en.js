@@ -1001,7 +1001,7 @@ module.exports = {
     note_framework_not_installed:
       'Framework is not installed yet; complete stack installation before @dev.',
     note_dapp_context:
-      'dApp context detected; include Web3 skills during @architect and @dev.',
+      'dApp context detected; include Web3 skills during @planner and @dev.',
     note_micro_scope: 'Keep implementation scope minimal and avoid optional agents.',
     note_product_optional: 'For already-specified bounded technical work, use Simple Plan; tracked MICRO features still use Product → Sheldon → Planner → Dev → QA.',
     note_feature_flow: 'New feature workflow (after initial setup): @product → @sheldon → @planner → @dev → @qa. Sheldon is the mandatory independent PRD review. One PRD, one plan, one QA verdict.'

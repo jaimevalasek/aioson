@@ -45,7 +45,7 @@ Never load every module. `.aioson/docs/neo/legacy-routing-reference.md` is non-e
 2. Load `state-diagnostics.md`. When the CLI is available, run its four read-only diagnostics in parallel.
 3. Before the first user-facing question, load `.aioson/skills/process/decision-presentation/SKILL.md`.
 4. Apply the concrete implementation lane gate before declaring feature artifacts missing. An already-specified outcome fitting 5 behavior files, 8 total paths, and 2 existing modules routes to `@dev` Simple Plan when no product, architecture, or security decision is open. Supporting tests, translations, exports, manifests, generated metadata, and lockfiles do not independently widen the lane.
-5. If actionable Neural Chain items exist, treat SQLite as authoritative and recommend `@dev` (or `@deyvin` for an active resumed implementation) to claim and inspect them. A queue item is causal review work, not proof that its target needs an edit and not a global pause for unrelated work.
+5. If actionable Neural Chain items exist, treat SQLite as authoritative and recommend `@dev` (also for an active resumed implementation) to claim and inspect them. A queue item is causal review work, not proof that its target needs an edit and not a global pause for unrelated work.
 6. Otherwise load `routing-matrix.md`, determine the next owner, and present the dashboard plus one recommendation.
 
 Do not ask a question merely because Neo was activated without a task. If clarification is genuinely required, ask one focused question at most.
@@ -81,7 +81,7 @@ Confidence is countable, never vibes: `high` = pulse and the current gate artifa
 
 - Canonical feature chain: `@product → @sheldon → @planner → @dev → @qa`; depth changes with classification, not the chain.
 - Sheldon is the mandatory pre-Planner PRD reviewer; other specialists are optional, evidence-triggered detours.
-- An active implementation normally returns to `@deyvin` for continuity or `@dev` for a new planned batch.
+- An active implementation returns to `@dev`, which resumes from `dev-state` or starts a new planned batch.
 - Current QA PASS is terminal for Gate D; do not invent another review cycle.
 - Use `@tester` for explicit coverage/test-depth work and `@pentester` for a concrete sensitive surface or explicit security audit.
 - Report hygiene findings; never archive, delete, repair, or approve on the user's behalf.

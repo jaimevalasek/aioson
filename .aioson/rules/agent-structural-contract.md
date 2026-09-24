@@ -141,5 +141,5 @@ When an agent file violates this contract:
 
 1. **During @qa Gate D:** flag as a Medium finding with `recommended_owner: dev`.
 2. **During @sheldon review:** repair the existing PRD or flag the prompt itself; do not create an enrichment artifact.
-3. **During @deyvin pair session:** fix inline if the touched file is already in scope.
+3. **During a @dev below-lane fix or Simple Plan:** fix inline if the touched file is already in scope.
 4. **Never block a feature** for structural violations alone — document and fix as follow-up.

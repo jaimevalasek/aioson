@@ -1,7 +1,7 @@
 ---
 name: secure-tdd
 description: Process skill for focused adversarial TDD when the active PRD/plan or concrete evidence identifies a sensitive attack surface.
-agents: [dev, deyvin, tester, pentester]
+agents: [dev, tester, pentester]
 task_types: [security, sensitive-surface]
 triggers: [authentication, authorization, login, password, payment, checkout, secrets, upload, webhook, untrusted input, autenticacao, autorizacao, pagamento, senha]
 paths: ["**/auth/**", "**/login/**", "**/payment*/**", "**/checkout/**", "**/upload*/**", "**/webhook*/**"]

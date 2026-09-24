@@ -3,9 +3,10 @@
 const { openRuntimeDb } = require('./runtime-store');
 const { reconcileNoiseState } = require('./neural-chain-noise-projection');
 const { listWorkItems, normalizeAgent } = require('./neural-chain-work-items');
+const { canonicalAgentId } = require('./agents');
 const { loadManifest, resolveChainWorkPolicy } = require('./agent-execution/manifest');
 
-const CHAIN_EXECUTOR_AGENTS = new Set(['dev', 'deyvin', 'pair', 'tester', 'pentester']);
+const CHAIN_EXECUTOR_AGENTS = new Set(['dev', 'tester', 'pentester']);
 const CHAIN_OBSERVER_AGENTS = new Set(['qa']);
 
 function cleanPromptText(value) {
@@ -37,7 +38,8 @@ async function buildChainActivationContext(targetDir, {
   featureSlug = null,
   limit = 8
 } = {}) {
-  const requestedAgent = String(agent || '').trim().toLowerCase().replace(/^@/, '');
+  // Retired ids (`deyvin`, `pair`) resolve to the agent that absorbed them.
+  const requestedAgent = canonicalAgentId(agent);
   const isExecutor = CHAIN_EXECUTOR_AGENTS.has(requestedAgent);
   const isObserver = CHAIN_OBSERVER_AGENTS.has(requestedAgent);
   if (!isExecutor && !isObserver) return '';

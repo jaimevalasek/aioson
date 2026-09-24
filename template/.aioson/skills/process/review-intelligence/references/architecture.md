@@ -1,6 +1,6 @@
 # Architecture review
 
-Use for `architect` after a concrete feature slug and design artifact exist. This is a self-review before the existing design gate or handoff.
+Use for `planner` after a concrete feature slug and its implementation plan exist. This is a self-review of the plan's architecture decisions before Gate C or handoff.
 
 ## Pass 1 — design integrity
 

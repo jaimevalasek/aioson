@@ -209,7 +209,7 @@ async function runContextHealth({ args, options = {}, logger }) {
     } catch { /* skip unreadable files */ }
   }
 
-  // bootstrap/*.md is the per-activation memory layer: dev/qa/architect/deyvin
+  // bootstrap/*.md is the per-activation memory layer: dev/qa/planner
   // read it on every session start, so it dominates the real activation cost.
   // It lives in a subdir, so the top-level scan above missed it entirely —
   // include it here so the heaviest layer is visible, not hidden (P0 of the

@@ -834,7 +834,7 @@ async function runFeatureClose({ args, options = {}, logger }) {
     ? await readFeatureClassification(targetDir, slug)
     : null;
 
-  // 3.5. Archive scouts attached to this feature (deyvin-subtask-scout).
+  // 3.5. Archive scouts attached to this feature (sub-task scout).
   // Copies `.aioson/runtime/scouts/{id}.json` matching feature_slug to
   // `.aioson/context/features/{slug}/scouts/{id}.json`, auto-appends to
   // dossier, emits telemetry. Idempotent on re-close.

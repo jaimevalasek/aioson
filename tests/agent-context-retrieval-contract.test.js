@@ -7,20 +7,16 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', 'template', '.aioson', 'agents');
 
+// deyvin, analyst, architect, ux-ui, pm and scope-check were retired into the
+// main cycle (dev, product, planner, qa); their absorbers carry the gate.
 const REQUIRED_AGENTS = [
   'briefing',
   'refiner',
   'product',
   'sheldon',
   'planner',
-  'deyvin',
-  'analyst',
-  'architect',
-  'ux-ui',
-  'pm',
   'orchestrator',
   'dev',
-  'scope-check',
   'qa',
   'tester',
   'pentester',

@@ -6,7 +6,7 @@
  * Usage:
  *   aioson compress:agents .                        # compress all agents (structural)
  *   aioson compress:agents . --agent=dev            # compress specific agent
- *   aioson compress:agents . --agent=dev,analyst    # compress multiple agents
+ *   aioson compress:agents . --agent=dev,planner    # compress multiple agents
  *   aioson compress:agents . --rules                # also compress .aioson/rules/
  *   aioson compress:agents . --dry-run              # preview savings without writing
  *   aioson compress:agents . --llm                  # LLM-assisted (needs ANTHROPIC_API_KEY)

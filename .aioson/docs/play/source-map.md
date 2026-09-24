@@ -1,7 +1,7 @@
 ---
 description: "Map from AIOSON Play app compatibility topics to canonical source docs in the aioson-play repository."
 scope: "global"
-agents: [dev, deyvin, architect, analyst, qa, tester, product, sheldon, pentester]
+agents: [dev, planner, qa, tester, product, sheldon, pentester]
 task_types: [aioson-play-app, source-map, integration]
 triggers: [AIOSON Play source docs, canonical Play docs, integration docs, ProductBridge, data bindings]
 ---

@@ -7,15 +7,10 @@ const { isCanonicalAgent } = require('./dossier/schema');
 
 const MANIFESTS_RELATIVE_DIR = '.aioson/agents/manifests';
 const ALLOWED_AUTONOMY_MODES = new Set(['guarded', 'trusted', 'headless']);
-// Canonical scope-check modes. Kept in sync with SCOPE_CHECK_MODES in
-// src/commands/workflow-next.js and src/commands/agents.js — this is the read
-// path that validates the manifest's declared check_modes so the field cannot
-// silently drift to a mode the router does not understand.
-const ALLOWED_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 
 // SF-project-16: every field that influences autonomy is validated on read.
-// Unknown fields are passed through (forward-compat), but autonomy_modes and
-// check_modes are filtered to their allowed sets. Non-canonical agent ids are
+// Unknown fields are passed through (forward-compat), but autonomy_modes is
+// filtered to its allowed set. Non-canonical agent ids are
 // refused before the file is even opened.
 function sanitizeManifest(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -24,10 +19,6 @@ function sanitizeManifest(raw) {
     const filtered = raw.autonomy_modes
       .filter((mode) => typeof mode === 'string' && ALLOWED_AUTONOMY_MODES.has(mode));
     out.autonomy_modes = filtered;
-  }
-  if (Array.isArray(raw.check_modes)) {
-    out.check_modes = raw.check_modes
-      .filter((mode) => typeof mode === 'string' && ALLOWED_CHECK_MODES.has(mode));
   }
   return out;
 }
@@ -88,7 +79,6 @@ function buildAgentCapabilitySummary(manifest, tool) {
 module.exports = {
   MANIFESTS_RELATIVE_DIR,
   ALLOWED_AUTONOMY_MODES,
-  ALLOWED_CHECK_MODES,
   readAgentManifest,
   resolveAgentCapabilities,
   supportsTool,

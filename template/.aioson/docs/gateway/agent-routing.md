@@ -12,8 +12,7 @@ Load only when no agent is already active or routing is genuinely ambiguous.
 
 Offer these lanes and stop:
 
-- Dev Simple Plan for a bounded technical change or refactor.
-- Deyvin for continuity, pair debugging, or one small validated slice with known context.
+- Dev Simple Plan for a bounded technical change or refactor, resuming unfinished work, or debugging one known-context fix.
 - Help for beginner questions about how AIOSON works, its terms, agents, workflows, or commands.
 - Briefing for an early idea not yet ready for PRD commitment.
 - Refiner for an existing briefing that needs review.
@@ -56,24 +55,24 @@ Named activation loads `.aioson/agents/{slug}.md` immediately. Main routes:
 | Learn AIOSON / understand terms and commands | `help` |
 | Early idea / existing briefing | `briefing` / `refiner` |
 | Product scope / PRD enrichment / plan | `product` / `sheldon` / `planner` |
-| Implement / pair continuity / test / acceptance | `dev` / `deyvin` / `tester` / `qa` |
+| Implement or resume / test / acceptance | `dev` / `tester` / `qa` |
 | Post-delivery completeness walkthrough ("pente fino") | `shakedown` |
 | Engineering quality / static analysis / test effectiveness / eval pipeline | `quality` (optional assessment; QA keeps acceptance) |
-| Security / architecture / analysis / UI | `pentester` / `architect` / `analyst` / `ux-ui` |
-| Status/router / coordination / scope conformance | `neo` / `orchestrator` / `scope-check` |
+| Security | `pentester` |
+| Status/router / coordination | `neo` / `orchestrator` |
 | Squad / domain investigation / genome | `squad` / `orache` / `genome` |
 | Persona pipeline | `profiler-researcher` / `profiler-enricher` / `profiler-forge` |
 | Copy / commit / project discovery | `copywriter` / `committer` / `discover` |
 | Design hybrid / site forge / compiled harness | `design-hybrid-forge` / `site-forge` / `forge-run` |
 | Frozen-prompt benchmark build | `benchmark` |
 
-Other canonical files include `discovery-design-doc`, `pm`, and `validator`. `pair` is a compatibility alias for `deyvin`. Read `.aioson/docs/agent-help.md` only when options/examples are needed.
+Other canonical files include `validator`. Read `.aioson/docs/agent-help.md` only when options/examples are needed.
 
 ## Boundaries
 
 - Setup, Product, Planner, Dev, and QA remain inside the canonical workflow.
 - Help is read-only education. It explains the system and may name one safe next action; when routing depends on live project state, it recommends Neo and stops.
-- Deyvin may act directly only for existing known context and a small validated slice. New projects/features, greenfield work, broad redesign, vague/contradictory scope, or mixed product+UX+implementation route away before code.
+- Dev may act directly only for existing known context below the Simple Plan lane: at most 2 behavior files, no open decision, a known verification command, and no plan file. New projects/features, greenfield work, broad redesign, vague/contradictory scope, or mixed product+UX+implementation route away before code.
 - Specialists are opt-in for a named unresolved decision; they do not create mandatory document hops.
 - Dev Simple Plan ends in Dev after proportional validation; it does not silently become a tracked feature.
 - Never bypass missing/invalid project context; route to Setup.

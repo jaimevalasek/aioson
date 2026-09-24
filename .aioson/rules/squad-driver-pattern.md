@@ -3,7 +3,7 @@ name: squad-driver-pattern
 description: Territory boundaries and integration pattern for AIOSON squads — separates squad definitions (owned by @squad) from application driver code (owned by @dev)
 priority: 9
 version: 1.0.0
-agents: [dev, sheldon, pm, qa, architect]
+agents: [dev, sheldon, planner, qa]
 modes: [planning, executing]
 task_types: [squad-integration, driver]
 load_tier: trigger
@@ -34,8 +34,7 @@ Layer 2 — Driver (owned by @dev)
 |---|---|---|
 | `@squad` | `.aioson/squads/` | Application code (`src/`, `app/`, etc.) |
 | `@dev` | Application code | `.aioson/squads/` |
-| `@pm` | Implementation plan | Either layer |
-| `@architect` | `architecture.md` | Squad files or agent code |
+| `@planner` | Implementation plan | Either layer |
 
 ## Correct integration pattern
 
@@ -65,14 +64,13 @@ class GreetingService {
 
 **`@product` / `@sheldon`:** describe squad behavior and objective in PRDs — never literal prompts. Prompts are `@squad` territory.
 
-**Optional `@analyst` / `@architect`:** when asked one concrete squad-driver question, return this boundary to Product, Planner, Dev, or the dossier; do not create `architecture.md`:
+**`@planner`:** record this boundary in the implementation plan; do not create `architecture.md`:
 ```
 SquadRunner — loads definitions from .aioson/squads/ and executes via LLM API
   dependencies: fs (read .md), llm-client (model call)
   no domain logic — only orchestrates loading and execution
 ```
-
-**Optional `@pm`:** advise Planner on priority or release sequencing without creating a second implementation plan:
+Sequence the phases in the same plan, never a second one:
 - Squad phases → `executor: @squad`
 - Driver phases → `executor: @dev` with task "create SquadRunner that loads `.aioson/squads/{slug}/`"
 

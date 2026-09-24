@@ -54,10 +54,10 @@ test('continuity and prompt repair cannot invent a default Analyst gate', async 
     'template/.aioson/skills/process/prompt-sharpener/SKILL.md'
   ), 'utf8');
   for (const base of ['template/.aioson', '.aioson']) {
-    const recovery = await fs.readFile(path.join(projectRoot, base, 'docs/deyvin/continuity-recovery.md'), 'utf8');
+    const recovery = await fs.readFile(path.join(projectRoot, base, 'docs/dev/continuity-recovery.md'), 'utf8');
     assert.doesNotMatch(recovery, /discovery\.md[^\n]*missing[^\n]*stop and hand off/);
     assert.match(recovery, /missing `discovery\.md` is not a gate/);
-    assert.match(recovery, /@analyst[^\n]*explicitly requested/);
+    assert.doesNotMatch(recovery, /@analyst/);
     assert.doesNotMatch(sharpener, /requirements drift -> `@analyst`/);
     assert.match(sharpener, /requirements drift -> `@product`/);
   }

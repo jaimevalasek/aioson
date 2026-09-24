@@ -12,8 +12,12 @@ test('AUTOPILOT_HANDOFF_STAGES inclui o ciclo de review pós-dev', () => {
     assert.equal(AUTOPILOT_HANDOFF_STAGES.has(stage), true, `${stage} deve estar encadeado no autopilot`);
   }
   // e mantém o segmento pré-dev existente
-  for (const stage of ['analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm']) {
+  for (const stage of ['product', 'sheldon', 'planner', 'orchestrator']) {
     assert.equal(AUTOPILOT_HANDOFF_STAGES.has(stage), true, `${stage} (pré-dev) preservado`);
+  }
+  // agentes aposentados foram absorvidos pelo ciclo principal e não são estágios próprios
+  for (const retired of ['analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm', 'ux-ui', 'deyvin', 'pair']) {
+    assert.equal(AUTOPILOT_HANDOFF_STAGES.has(retired), false, `${retired} aposentado não é estágio do autopilot`);
   }
 });
 

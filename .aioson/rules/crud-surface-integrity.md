@@ -27,6 +27,6 @@ Born from real defects that passed a green QA. A CRUD surface (list + create + e
 ## Applies to
 
 - @product / @briefing: specs for CRUD surfaces state the create-edit parity contract and name any field that is immutable after creation, with the reason.
-- @dev / @deyvin: implementation keys rows by persisted ID, wires every editable field through form → submit → schema → persistence, and enforces required/unique in the domain schema, not only in markup.
+- @dev: implementation keys rows by persisted ID, wires every editable field through form → submit → schema → persistence, and enforces required/unique in the domain schema, not only in markup.
 - @qa: delivery evidence for a CRUD surface includes the form-driving test — create, edit a specific row, assert the right record changed. A green page-smoke alone is a FAIL, not a pass.
 - @tester: test plans cover row identity under list reorder, per-field create-edit parity, and empty-string bypass of optional-but-validated fields; runs start from a reset test database.

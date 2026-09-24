@@ -1,7 +1,7 @@
 ---
 description: "DRY principles, reuse hierarchy, and composition patterns"
 scope: "governance"
-agents: [dev, deyvin, architect]
+agents: [dev, planner]
 modes: [planning, executing]
 task_types: [implementation-architecture, file-creation, refactor, reuse]
 load_tier: trigger

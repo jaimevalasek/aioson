@@ -5,9 +5,9 @@ const { canonicalAgentId } = require('../agents');
 const SCHEMA_VERSION = '1.2';
 const SUPPORTED_SCHEMA_VERSIONS = Object.freeze(new Set(['1.0', '1.1', '1.2']));
 
+// Retired ids (e.g. `architect`) still validate: canonicalAgentId maps them
+// to the agent that absorbed their work.
 const CANONICAL_AGENT_IDS = Object.freeze(new Set([
-  'analyst',
-  'architect',
   'briefing',
   'refiner',
   'committer',
@@ -15,17 +15,13 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'cypher',
   'design-hybrid-forge',
   'dev',
-  'deyvin',
   'discover',
-  'discovery-design-doc',
   'genome',
   'neo',
   'orache',
   'orchestrator',
-  'pair',
   'pentester',
   'planner',
-  'pm',
   'product',
   'profiler-enricher',
   'profiler-forge',
@@ -34,10 +30,8 @@ const CANONICAL_AGENT_IDS = Object.freeze(new Set([
   'setup',
   'sheldon',
   'site-forge',
-  'scope-check',
   'squad',
   'tester',
-  'ux-ui',
   'validator'
 ]));
 

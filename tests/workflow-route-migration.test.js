@@ -81,23 +81,38 @@ test('project-mode legacy defaults gain Product, Sheldon and Planner as well', a
   assert.deepEqual(result.state.completed, ['setup', 'product']);
 });
 
-test('an explicit configured specialist route survives a restore', async (t) => {
-  const sequence = ['product', 'analyst', 'sheldon', 'planner', 'dev', 'qa'];
-  const { root } = await fixture(t, { archived: true, sequence, next: 'sheldon' });
+test('an explicit configured route keeps its live stages and drops a retired one', async (t) => {
+  const sequence = ['product', 'orchestrator', 'analyst', 'sheldon', 'planner', 'dev', 'qa'];
+  const { root } = await fixture(t, { archived: true, sequence, current: 'orchestrator', next: 'sheldon' });
   await write(root, '.aioson/context/workflow.config.json', { version: 1, feature: { SMALL: sequence } });
   const result = await loadOrCreateState(root, { persist: false });
-  assert.deepEqual(result.state.sequence, sequence);
-  assert.equal(result.state.current, 'analyst');
+  assert.deepEqual(result.state.sequence, ['product', 'orchestrator', 'sheldon', 'planner', 'dev', 'qa']);
+  assert.equal(result.state.current, 'orchestrator');
 });
 
-test('an explicitly active Analyst detour survives migration and returns to a canonical stage', async (t) => {
+test('an active detour to a retired agent ends and resumes the canonical route', async (t) => {
   const detour = { active: true, agent: 'analyst', returnTo: 'architect' };
   const { root } = await fixture(t, { archived: true, detour });
   const result = await loadOrCreateState(root, { persist: false });
   assert.deepEqual(result.state.sequence, CANONICAL);
-  assert.equal(result.state.current, 'analyst');
-  assert.equal(result.state.detour.active, true);
-  assert.equal(result.state.detour.returnTo, 'sheldon');
+  assert.equal(result.state.current, null);
+  assert.equal(result.state.detour, null);
+  assert.equal(result.state.next, 'sheldon');
+  assert.deepEqual(result.state.completed, ['product']);
+});
+
+test('a completed retired stage is never credited to the agent that absorbed it', async (t) => {
+  const { root } = await fixture(t, {
+    sequence: ['product', 'architect', 'sheldon', 'planner', 'dev', 'qa'],
+    completed: ['product', 'architect'], current: null, next: 'sheldon'
+  });
+  await write(root, '.aioson/context/workflow.config.json', {
+    version: 1, feature: { SMALL: ['product', 'architect', 'sheldon', 'planner', 'dev', 'qa'] }
+  });
+  const result = await loadOrCreateState(root, { persist: false });
+  assert.deepEqual(result.state.completed, ['product']);
+  assert.equal(result.state.completed.includes('planner'), false);
+  assert.equal(result.state.next, 'sheldon');
 });
 
 test('a newly required Planner cannot be silently skipped by legacy Dev completion', async (t) => {

@@ -3,6 +3,7 @@
 const { normalizePolicy } = require('./result');
 
 function ownerRoute(owner) {
+  // A retired `scope-check` owner meant a scope decision, which Product owns.
   if (owner === 'product' || owner === 'scope-check') return 'product';
   if (owner === 'sheldon') return 'sheldon';
   if (owner === 'qa' || owner === 'tester') return 'qa';
@@ -21,7 +22,7 @@ function routeForFinding(finding) {
   if (finding.kind === 'security_constraint' || route === 'pentester') {
     return { verdict: 'NEEDS_SECURITY_REVIEW', route: 'pentester' };
   }
-  return { verdict: 'NEEDS_DEV_FIX', route: route === 'deyvin' ? 'deyvin' : 'dev' };
+  return { verdict: 'NEEDS_DEV_FIX', route: 'dev' };
 }
 
 function isBlockingFinding(finding, policy) {

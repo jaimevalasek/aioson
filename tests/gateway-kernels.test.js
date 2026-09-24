@@ -94,7 +94,7 @@ test('routed modules retain lane budgets, workflow gates, skill evidence, and re
   assert.match(routing, /Persisted workflow state is evidence about prior work, not proof that the current request belongs to it/);
   assert.match(routing, /workflow:next --expect-feature=<active-slug>/);
   assert.match(routing, /unrelated bounded implementation[\s\S]*Dev Simple Plan without calling `workflow:next`/);
-  assert.match(routing, /Deyvin may act directly only for existing known context/i);
+  assert.match(routing, /Dev may act directly only for existing known context/i);
   assert.match(workflow, /current request has been bound to the active feature/);
   assert.match(workflow, /workflow:next --expect-feature=<slug>/);
   assert.match(workflow, /Product → Sheldon → Planner → Dev → QA/);

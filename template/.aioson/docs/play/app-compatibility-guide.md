@@ -1,7 +1,7 @@
 ---
 description: "Operational checklist and implementation path for making an app compatible with AIOSON Play."
 scope: "global"
-agents: [dev, deyvin, architect, analyst, qa, tester, product, sheldon]
+agents: [dev, planner, qa, tester, product, sheldon]
 task_types: [aioson-play-app, app-compatibility, implementation]
 triggers: [AIOSON Play, compatible app, app manifest, /api/aioson-play, Play draft, Play install]
 ---

@@ -96,13 +96,14 @@ test('runtime direct session commands return structured JSON payloads', async ()
   assert.equal(start.code, 0);
   const startParsed = JSON.parse(start.stdout);
   assert.equal(startParsed.ok, true);
-  assert.equal(startParsed.agent, '@deyvin');
+  // deyvin is a retired id: the session is canonicalized under @dev.
+  assert.equal(startParsed.agent, '@dev');
   assert.equal(startParsed.open, true);
 
   const log = await runCli([
     'runtime:session:log',
     dir,
-    '--agent=@deyvin',
+    '--agent=@dev',
     '--message=Corrigi o fluxo de entrada de estoque',
     '--json'
   ]);
@@ -111,7 +112,7 @@ test('runtime direct session commands return structured JSON payloads', async ()
   assert.equal(logParsed.ok, true);
   assert.equal(logParsed.runKey, startParsed.runKey);
 
-  const statusOpen = await runCli(['runtime:session:status', dir, '--agent=deyvin', '--json']);
+  const statusOpen = await runCli(['runtime:session:status', dir, '--agent=dev', '--json']);
   assert.equal(statusOpen.code, 0);
   const statusOpenParsed = JSON.parse(statusOpen.stdout);
   assert.equal(statusOpenParsed.ok, true);
@@ -121,7 +122,7 @@ test('runtime direct session commands return structured JSON payloads', async ()
   const finish = await runCli([
     'runtime:session:finish',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--summary=Sessao encerrada',
     '--json'
   ]);
@@ -130,7 +131,7 @@ test('runtime direct session commands return structured JSON payloads', async ()
   assert.equal(finishParsed.ok, true);
   assert.equal(finishParsed.finished, true);
 
-  const statusClosed = await runCli(['runtime:session:status', dir, '--agent=@deyvin', '--json']);
+  const statusClosed = await runCli(['runtime:session:status', dir, '--agent=@dev', '--json']);
   assert.equal(statusClosed.code, 0);
   const statusClosedParsed = JSON.parse(statusClosed.stdout);
   assert.equal(statusClosedParsed.ok, true);
@@ -185,8 +186,8 @@ test('runtime status JSON exposes live sessions, micro-tasks, and handoffs', asy
     dir,
     '--tool=codex',
     '--tool-bin=node',
-    '--agent=deyvin',
-    '--title=Sessao viva do deyvin',
+    '--agent=dev',
+    '--title=Sessao viva do dev',
     '--plan=plan.md',
     '--no-launch',
     '--json'
@@ -197,7 +198,7 @@ test('runtime status JSON exposes live sessions, micro-tasks, and handoffs', asy
   await runCli([
     'runtime:emit',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--type=task_started',
     '--title=Corrigir modal de estoque',
     '--json'
@@ -205,7 +206,7 @@ test('runtime status JSON exposes live sessions, micro-tasks, and handoffs', asy
   await runCli([
     'runtime:emit',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--type=plan_checkpoint',
     '--plan-step=RF-01',
     '--summary=Launcher entregue',
@@ -214,7 +215,7 @@ test('runtime status JSON exposes live sessions, micro-tasks, and handoffs', asy
   await runCli([
     'runtime:emit',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--type=task_completed',
     '--summary=Corrigi o modal de estoque',
     '--json'
@@ -222,7 +223,7 @@ test('runtime status JSON exposes live sessions, micro-tasks, and handoffs', asy
   await runCli([
     'live:handoff',
     dir,
-    '--agent=deyvin',
+    '--agent=dev',
     '--to=product',
     '--reason=Escopo exige decisao de produto',
     '--json'

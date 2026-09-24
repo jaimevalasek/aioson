@@ -89,7 +89,7 @@ Present:
 - contradictions and gaps;
 - exact report path and registration status.
 
-From Squad, return to `@squad`. Standalone, offer the report as input to `@squad design --investigation=<report-path>`. Do not force Analyst/Architect when squad creation is the stated goal.
+From Squad, return to `@squad`. Standalone, offer the report as input to `@squad design --investigation=<report-path>`. Do not force Product/Planner when squad creation is the stated goal.
 
 ## Reusable asset suggestions
 

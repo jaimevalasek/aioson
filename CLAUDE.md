@@ -19,7 +19,7 @@ Bare context names resolve under `.aioson/context/`; never probe other roots.
 
 ## Routing kernel
 
-- An activated `/agent` executes `.aioson/agents/{agent}.md`; `/pair` aliases `/deyvin`. Do not display it.
+- An activated `/agent` executes `.aioson/agents/{agent}.md`. Do not display it.
 - Without an active agent, load `.aioson/docs/gateway/agent-routing.md`; apply its Concrete implementation lane gate and activate that lane.
 - Load `.aioson/docs/gateway/workflow-runtime.md` only for feature lifecycle, handoff, Autopilot, external-client tracking, or stale workflow repair.
 - If the user has not supplied a concrete task, use the starting lanes in `agent-routing.md` and stop for selection.

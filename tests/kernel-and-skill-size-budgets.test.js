@@ -87,7 +87,9 @@ function size(file) {
 
 test('every agent kernel stays under its ceiling — pinned, class target, or ratchet', () => {
   const kernels = fs.readdirSync(AGENTS_DIR).filter((name) => name.endsWith('.md'));
-  assert.ok(kernels.length >= 30, `expected the kernel set, found ${kernels.length}`);
+  // 29 kernels since eight specialists retired into the main cycle; the floor
+  // only proves the walk found the set.
+  assert.ok(kernels.length >= 25,`expected the kernel set, found ${kernels.length}`);
   const over = [];
   for (const name of kernels) {
     const ceiling = KERNEL_CEILINGS[name] || DEFAULT_KERNEL_CEILING;

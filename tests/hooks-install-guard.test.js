@@ -50,7 +50,9 @@ test('buildClaudeHooks bakes the requested agent into the guard command', () => 
 test('normalizeHookAgentName accepts known agents, aliases, and kebab-case custom agents', () => {
   assert.equal(normalizeHookAgentName('@QA'), 'qa');
   assert.equal(normalizeHookAgentName('/dev'), 'dev');
-  assert.equal(normalizeHookAgentName('@pair'), 'deyvin');
+  // pair/deyvin are retired ids folded into @dev.
+  assert.equal(normalizeHookAgentName('@pair'), 'dev');
+  assert.equal(normalizeHookAgentName('deyvin'), 'dev');
   assert.equal(normalizeHookAgentName('custom-agent-2'), 'custom-agent-2');
 });
 

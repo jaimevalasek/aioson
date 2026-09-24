@@ -215,75 +215,21 @@
       ]
     },
     {
-      "name": "uxui-accessibility-audit-keyboard",
-      "agent": "ux-ui",
+      "name": "qa-accessibility-audit-keyboard",
+      "agent": "qa",
       "mode": "executing",
       "task": "Run an accessibility scan focused on keyboard navigation for this checkout form.",
       "expect": [
-        { "path": ".aioson/docs/ux-ui/accessibility-audit.md", "in": "selected" }
+        { "path": ".aioson/docs/qa/accessibility-audit.md", "in": "selected" }
       ]
     },
     {
-      "name": "uxui-audit-mode-existing-ui",
-      "agent": "ux-ui",
-      "mode": "planning",
-      "task": "Precisamos planejar um audit completo da existing UI desse dashboard antes do redesign.",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/audit-mode.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-component-map-inventory",
-      "agent": "ux-ui",
-      "mode": "planning",
-      "task": "We need the full component inventory, including the duplicate components across this dashboard.",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/component-map.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-design-execution-rebuild",
-      "agent": "ux-ui",
-      "mode": "executing",
-      "task": "Devemos fazer o refine-spec dessa tela ou partir pro rebuild UI antes de escrever o novo spec?",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/design-execution.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-design-gate-visual-direction",
-      "agent": "ux-ui",
-      "mode": "planning",
-      "task": "We still have style ambiguity here that must be settled before the visual direction of this web_app is chosen.",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/design-gate.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-research-mode-benchmark",
-      "agent": "ux-ui",
-      "mode": "planning",
-      "task": "Precisamos rodar um benchmark visual dos competitor UI antes de propor a direção do produto.",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/research-mode.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-site-delivery-landing-page",
-      "agent": "ux-ui",
+      "name": "dev-site-delivery-landing-page",
+      "agent": "dev",
       "mode": "executing",
       "task": "Let's build the full landing page in index.html with a strong hero for this campaign.",
       "expect": [
-        { "path": ".aioson/docs/ux-ui/site-delivery.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "uxui-token-contract-design-tokens",
-      "agent": "ux-ui",
-      "mode": "executing",
-      "task": "We need to extract the design tokens for color and spacing into one consistent visual system.",
-      "expect": [
-        { "path": ".aioson/docs/ux-ui/token-contract.md", "in": "selected" }
+        { "path": ".aioson/docs/dev/site-delivery.md", "in": "selected" }
       ]
     },
     {
@@ -347,15 +293,6 @@
       "task": "We need two more intake questions added for the new customer-support squad we're building.",
       "absent": [
         { "path": ".aioson/docs/squad/quality-lens.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "negative-uxui-audit-mode-absent",
-      "agent": "ux-ui",
-      "mode": "executing",
-      "task": "We're building a brand-new landing page for the launch from scratch, nothing to compare against.",
-      "absent": [
-        { "path": ".aioson/docs/ux-ui/audit-mode.md", "in": "selected" }
       ]
     },
     {

@@ -1,7 +1,7 @@
 ---
 name: model-delegation-contract
 description: "Explicit user-requested model delegation across Claude Code, Codex, OpenCode, Kimi, Qwen, and external CLI fallbacks."
-agents: [refiner, briefing, product, ux-ui, dev, qa]
+agents: [refiner, briefing, product, dev, qa]
 task_types: [research, image-research, critique, verification, model-delegation]
 triggers: [use model, using model, usando o modelo, another model, outro modelo, subagent, sub-agent, subagente]
 ---

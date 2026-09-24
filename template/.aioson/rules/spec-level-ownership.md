@@ -3,7 +3,7 @@ name: spec-level-ownership
 description: spec.md is project-level, spec-{slug}.md is feature-level — the two levels never mix
 priority: 9
 version: 1.1.0
-agents: [dev, qa, pm, sheldon]
+agents: [dev, qa, planner, sheldon]
 modes: [planning, executing]
 task_types: [spec-write, spec-update]
 load_tier: trigger

@@ -6,7 +6,7 @@ const os = require('node:os');
 const { ensureDir, nowStamp } = require('./utils');
 
 const DOC_CREATING_AGENTS = new Set([
-  'product', 'sheldon', 'planner', 'analyst', 'architect', 'ux-ui'
+  'product', 'sheldon', 'planner'
 ]);
 
 function isDocCreatingAgent(agentName) {

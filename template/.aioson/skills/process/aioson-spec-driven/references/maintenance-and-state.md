@@ -7,7 +7,7 @@
 It is not just an implementation log. It is the **living memory** of a feature across all sessions, agents, and tools.
 
 A well-written `spec-{slug}.md` allows:
-- @deyvin to resume from the last checkpoint without re-reading the entire spec pack
+- @dev to resume from the last checkpoint without re-reading the entire spec pack
 - @qa to know what was decided and what was deferred
 - A future developer (or AI) to understand *why* the code was written the way it was
 
@@ -18,7 +18,7 @@ A poorly written `spec-{slug}.md` forces every new session to rediscover what wa
 ```yaml
 phase_gates:
   requirements: approved      # requirements are locked — no new scope without PRD change
-  design: approved            # architecture is locked — no structural changes without @architect
+  design: approved            # architecture is locked — no structural changes without a revised @planner plan
   plan: approved              # execution sequence is locked — @dev follows plan, not instinct
 ```
 
@@ -33,7 +33,7 @@ Examples:
 - `auth: login and register complete, password reset pending — next: implement ResetPassword action`
 - `api: GET /products and POST /products done — next: implement PATCH /products/{id}`
 
-This one line is what @deyvin reads first. Make it actionable.
+This one line is what @dev reads first on resume. Make it actionable.
 
 ## What to write in pending_review
 
@@ -59,7 +59,7 @@ The reason is what makes the decision useful in 6 months.
 
 ## spec_version field
 
-- Seeded at `1` by @analyst when creating the skeleton
+- Seeded at `1` by the agent that creates the skeleton
 - Incremented by any agent that modifies the spec body (entities, decisions, edge cases — NOT just `last_checkpoint` or `pending_review`)
 - @dev checks at session start: if version changed since last `dev-state.md` update, read the spec diff before continuing
 - @qa checks at review: if version doesn't match what @dev reported, flag as potential drift
@@ -87,13 +87,10 @@ Next: {clear instruction for next agent or next session}
 | @product | `prd.md` or `prd-{slug}.md` |
 | @sheldon | the same `prd.md` or `prd-{slug}.md` |
 | @planner | `implementation-plan-{slug}.md` |
-| @analyst | `discovery.md` or `requirements-{slug}.md` |
-| @architect | `architecture.md` |
-| @dev | `dev-state.md` (already does this) |
-| @deyvin | `dev-state.md` or the active Simple Plan |
+| @dev | `dev-state.md` or the active Simple Plan |
 | @qa | QA report file |
 
-## How @deyvin should use this file
+## How @dev should use this file on resume
 
 1. Read the plan status and `dev-state.md` checkpoint first
 2. Resume the next incomplete plan phase, not the documentation chain

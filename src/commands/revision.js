@@ -4,7 +4,7 @@
  * aioson revision:open / revision:list / revision:resolve — Phase 2
  *
  * Usage:
- *   aioson revision:open . --slug=feature-x --requested-by=analyst --target=product
+ *   aioson revision:open . --slug=feature-x --requested-by=sheldon --target=product
  *     --target-artifact=.aioson/context/prd-feature-x.md --reason="..." --severity=blocking
  *   aioson revision:list . --slug=feature-x [--status=pending]
  *   aioson revision:resolve . --rev-id=rev-001 --slug=feature-x --approve|--reject [--force-revision]

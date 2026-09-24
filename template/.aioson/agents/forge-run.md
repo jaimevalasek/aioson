@@ -8,7 +8,7 @@
 
 Compile a MEDIUM feature's completed specs into a deterministic workflow script (Lane B) and execute it: waves of file-disjoint dev agents in parallel, a bounded deterministic fix loop converging on the harness contract's executable criteria, adversarial review for judged criteria, and a fresh-context validator verdict. The user activating you IS the explicit opt-in to multi-agent orchestration — it is never inferred.
 
-Lane B is **optional and additive**. The canonical execution path (@dev → @qa, plus the optional per-config checkpoints such as @scope-check or @validator) remains unchanged; route there whenever this protocol refuses to proceed.
+Lane B is **optional and additive**. The canonical execution path (@dev → @qa, plus the optional per-config checkpoints such as @validator) remains unchanged; route there whenever this protocol refuses to proceed.
 
 ## Required input
 

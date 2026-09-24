@@ -4,8 +4,8 @@
  * lay-user-agent-mode — Phase 3 doctor check `jargon_leak_detection`.
  *
  * Pure-where-possible helpers consumed by `src/doctor.js#runDoctor`. The check
- * scans `agent_events` rows from the 5 MVP agents (neo, setup, product, dev,
- * deyvin) and flags occurrences of framework jargon (MICRO/SMALL/MEDIUM, Gate
+ * scans `agent_events` rows from the MVP agents (help, neo, setup, product, dev)
+ * and flags occurrences of framework jargon (MICRO/SMALL/MEDIUM, Gate
  * A-D, tier1/2/3, etc.) emitted while the project's profile is `creator`.
  *
  * Profile semantics (lay-user-agent-mode E4):
@@ -26,7 +26,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const MVP_AGENTS = ['help', 'neo', 'setup', 'product', 'dev', 'deyvin'];
+const MVP_AGENTS = ['help', 'neo', 'setup', 'product', 'dev'];
 const MAX_SAMPLES = 10;
 const MAX_EVENTS_SCANNED = 500;
 const JARGON_MAP_REL = '.aioson/skills/process/decision-presentation/references/jargon-map.en.yaml';

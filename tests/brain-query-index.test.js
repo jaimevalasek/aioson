@@ -112,15 +112,15 @@ test('the index prints one line per node with the first sentence, at a fraction 
   }
 });
 
-test('dev and deyvin read the visual-quality lens as an index; the refiner (origination) keeps the full statements', async () => {
+test('dev reads the visual-quality lens as an index; the refiner (origination) keeps the full statements', async () => {
   const root = path.resolve(__dirname, '..', 'template', '.aioson');
-  const [dev, deyvin, refiner] = await Promise.all([
+  const [dev, refiner] = await Promise.all([
     fs.readFile(path.join(root, 'docs', 'dev', 'visual-implementation.md'), 'utf8'),
-    fs.readFile(path.join(root, 'agents', 'deyvin.md'), 'utf8'),
     fs.readFile(path.join(root, 'agents', 'refiner.md'), 'utf8')
   ]);
   assert.match(dev, /brain:query \. --agent=dev --tags=visual-quality,layout --min-quality=4 --format=index/);
   assert.match(dev, /--id=<id> --format=compact/);
-  assert.match(deyvin, /brain:query \. --agent=deyvin --tags=visual-quality,layout --min-quality=4 --format=index/);
+  // deyvin was retired into dev: its kernel is gone and dev owns the index read.
+  await assert.rejects(fs.access(path.join(root, 'agents', 'deyvin.md')));
   assert.match(refiner, /brain:query \. --agent=refiner --tags=visual-quality,layout --min-quality=4 --format=compact/);
 });

@@ -47,8 +47,8 @@ const SEED_TITLE = 'Design Governance — Code Organization Rules';
 const SEED_HEADING = '# Design Doc — Code Organization';
 
 // The contract lines the seed asserted (English and pt-BR). No agent kernel
-// honours them: dev/deyvin load governance through `context:brief`, and
-// @discovery-design-doc no longer writes a design document.
+// honours them: dev loads governance through `context:brief`, and no agent
+// writes a project-level design document.
 const SEED_CONTRACT_LINES = [
   /must load it before any implementation/i,
   /carregado obrigatoriamente por `?@dev`?/i,

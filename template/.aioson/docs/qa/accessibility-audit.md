@@ -1,15 +1,15 @@
 ---
-description: "UI/UX accessibility audit mode — WCAG-focused scan, remediation format, and QA handoff guidance for UI accessibility issues."
-agents: [ux-ui]
+description: "QA accessibility audit — WCAG-focused scan of a UI surface, remediation format, and the accessibility section of the QA report."
+agents: [qa]
 modes: [planning, executing]
 task_types: [accessibility, a11y, wcag, ui-audit]
 load_tier: trigger
 triggers: [a11y, accessibility, WCAG, screen reader, keyboard navigation, contrast]
 ---
 
-# UX/UI Accessibility Audit
+# QA Accessibility Audit
 
-Activate via `@ux-ui a11y`.
+Load when the delivery has a UI surface and accessibility is in scope for acceptance.
 
 ## Step 1 — Scan
 
@@ -48,9 +48,9 @@ Use this structure:
 - [Specific accessibility decision that is correct]
 ```
 
-## Step 3 — QA integration
+## Step 3 — QA report
 
-If `@qa` is the next workflow agent, add an `## Accessibility` section with:
+Add an `## Accessibility` section to the QA report with:
 - automated checks to add to the test suite
 - manual checks that still require human verification
 

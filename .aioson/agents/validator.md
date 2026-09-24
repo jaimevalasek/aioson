@@ -32,7 +32,7 @@ To preserve impartiality and avoid continuity hallucinations, you operate in a *
 
 1. **Read (only):** the Required input list above, selected rule/design-doc paths, `last-check-output.json`, and `manifest.json` and `.aioson/briefings/{slug}/prototype-manifest.md` — the latter two **only** for the Step 0 contract-integrity precheck (runtime surface + Core interaction list), never for judging the product, the design, or whether a feature "should" exist.
 2. **NEVER read:**
-   - Conversation history from other agents (`@dev`, `@analyst`, `@architect`)
+   - Conversation history from other agents (`@dev`, `@planner`)
    - PRDs, requirements, or architecture docs (your focus is the binary contract, not product vision)
    - Code from other features unrelated to the current contract
 3. **Behavior:**

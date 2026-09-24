@@ -161,16 +161,16 @@ test('AC-T5-08 diffAgentFile reports missing file on either side', () => {
 
 test('AC-T5-06 regression guard: 981a8fd-style diff (header + content) is caught', async () => {
   const dir = await makeTempProject();
-  const workspacePm = `## Mission
-PM owns implementation-plan for MEDIUM.
+  const workspacePlanner = `## Mission
+Planner owns implementation-plan for MEDIUM.
 
 ## MEDIUM implementation plan (mandatory output for MEDIUM)
-For MEDIUM features, @pm MUST produce implementation-plan-{slug}.md
+For MEDIUM features, @planner MUST produce implementation-plan-{slug}.md
 `;
-  const templatePm = `## Mission
-PM does not silently produce plans.
+  const templatePlanner = `## Mission
+Planner does not silently produce plans.
 `;
-  await writeAgentPair(dir, 'pm', workspacePm, templatePm);
+  await writeAgentPair(dir, 'planner', workspacePlanner, templatePlanner);
   // Pre-publish off → severity should be 'warning'. Off is set here, never
   // inherited: the Release workflow exports AIOSON_PREPUBLISH=true for the
   // whole gate, `npm run ci` included, and this assertion failed every release.
@@ -192,7 +192,7 @@ PM does not silently produce plans.
 
 test('AC-T5-02 mode detection: AIOSON_PREPUBLISH=true → severity becomes error', async () => {
   const dir = await makeTempProject();
-  await writeAgentPair(dir, 'pm', '## A\ndifferent', '## A\nsame');
+  await writeAgentPair(dir, 'planner', '## A\ndifferent', '## A\nsame');
   const before = process.env.AIOSON_PREPUBLISH;
   process.env.AIOSON_PREPUBLISH = 'true';
   try {
@@ -207,7 +207,7 @@ test('AC-T5-02 mode detection: AIOSON_PREPUBLISH=true → severity becomes error
 
 test('AC-T5-08 missing template file detection: workspace exists, template absent', async () => {
   const dir = await makeTempProject();
-  await writeAgentPair(dir, 'pm', '## Mission\nwhatever', null);
+  await writeAgentPair(dir, 'planner', '## Mission\nwhatever', null);
   const issues = checkSemanticParity(dir);
   const missing = issues.find((i) => i.kind === 'missing_file');
   assert.ok(missing);
@@ -218,14 +218,14 @@ test('AC-T5-08 missing template file detection: workspace exists, template absen
 test('checkSemanticParity returns empty array when workspace and template are identical', async () => {
   const dir = await makeTempProject();
   const content = '## Mission\nSame.\n## Hard constraints\nAlso same.';
-  await writeAgentPair(dir, 'pm', content, content);
+  await writeAgentPair(dir, 'planner', content, content);
   const issues = checkSemanticParity(dir);
   assert.deepEqual(issues, []);
 });
 
 test('checkSemanticParity returns empty when both sides absent for an agent', async () => {
   const dir = await makeTempProject();
-  // pm.md does not exist in either side — should be skipped, not reported
+  // planner.md does not exist in either side — should be skipped, not reported
   const issues = checkSemanticParity(dir);
   // Other CHAIN_AGENTS files also missing, but the helper returns [] when both sides absent.
   // So overall length should be 0 here.

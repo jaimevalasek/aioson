@@ -1,6 +1,6 @@
 ---
 description: "Lean DEV phase loop — continuous implementation, focused checks, one post-DEV QA."
-agents: [dev, deyvin]
+agents: [dev]
 task_types: [implementation, verification]
 triggers: [phase loop, auto-continue phases, implementation checkpoints]
 ---

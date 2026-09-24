@@ -2,7 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { getAgentDefinition, resolveInstructionPath, buildAgentPrompt } = require('../agents');
+const { getAgentDefinition, resolveInstructionPath, buildAgentPrompt, canonicalAgentId, isRetiredAgentId } = require('../agents');
 const { normalizeInteractionLanguage } = require('../locales');
 const { validateProjectContextFile, getInteractionLanguage } = require('../context');
 const { exists, ensureDir } = require('../utils');
@@ -27,20 +27,12 @@ const { buildAgentContextActivation } = require('../agent-context-activation');
 const dossierBootstrap = require('../dossier/dossier-bootstrap');
 const dossierStore = require('../dossier/store');
 const { emitDossierEvent } = require('../lib/dossier-telemetry');
-const { parseVerificationReport } = require('../verification/report-parser');
-const { applyPolicy } = require('../verification/policy-engine');
-const { normalizePolicy } = require('../verification/result');
 const {
   evaluateContractIntegrityGate,
   formatContractIntegrityGateError
 } = require('../harness/contract-integrity-gate');
 const { runSpecAnalyze } = require('./spec-analyze');
-const {
-  validateFeatureSlug,
-  featureContextDir,
-  verificationRunsDir,
-  relativeFromRoot
-} = require('../verification/path-policy');
+const { validateFeatureSlug } = require('../verification/path-policy');
 const {
   FEATURE_WORKFLOW_BY_CLASSIFICATION,
   copyWorkflowMap
@@ -49,7 +41,6 @@ const { reviewStatus } = require('../review-intelligence/engine');
 const { validateCurrentSheldonReview } = require('../lib/sheldon-review');
 const { inspectTemplateVersion } = require('../template-version-status');
 const { resolveTargetDir } = require('../lib/project-root');
-const { isUsableDesignDocFile } = require('../lib/design-doc-seed');
 
 const { resolveActiveFeature } = require('./feature-current');
 const { featureStateArchivePath, hasWorkflowProgress, readArchivedFeatureState, archiveFeatureState, bindingMovedEvent, describeBindingRegistry } = require('../lib/workflow-binding');
@@ -57,7 +48,6 @@ const { featureStateArchivePath, hasWorkflowProgress, readArchivedFeatureState, 
 const STATE_RELATIVE_PATH = '.aioson/context/workflow.state.json';
 const CONFIG_RELATIVE_PATH = '.aioson/context/workflow.config.json';
 const EVENTS_RELATIVE_PATH = '.aioson/context/workflow.events.jsonl';
-const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
 
 const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = copyWorkflowMap(
   FEATURE_WORKFLOW_BY_CLASSIFICATION
@@ -73,7 +63,6 @@ const DEFAULT_FEATURE_WORKFLOW_BY_CLASSIFICATION = copyWorkflowMap(
 //      before feature:close (human gate).
 const AUTOPILOT_HANDOFF_STAGES = new Set([
   'product', 'sheldon', 'planner', 'orchestrator',
-  'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'pm',
   'dev', 'qa', 'tester', 'pentester', 'validator'
 ]);
 
@@ -139,7 +128,7 @@ function assertExpectedFeature(state, options = {}, binding = null) {
 function ensureSheldonBeforePlanner(sequence) {
   const normalized = (Array.isArray(sequence) ? sequence : [])
     .map(normalizeAgentName)
-    .filter(Boolean);
+    .filter((stage) => stage && !isRetiredAgentId(stage));
   const productIndex = normalized.indexOf('product');
   const plannerIndex = normalized.indexOf('planner');
   if (productIndex === -1 || plannerIndex === -1 || plannerIndex < productIndex) return normalized;
@@ -180,32 +169,6 @@ function parseFeaturesMarkdown(markdown) {
     }))
     .filter((row) => row.slug && row.slug !== 'slug')
     .filter((row) => !/^-+$/ .test(row.slug));
-}
-
-function normalizeScopeCheckMode(input) {
-  const mode = String(input || '').trim().toLowerCase();
-  return SCOPE_CHECK_MODES.has(mode) ? mode : null;
-}
-
-function getScopeCheckModeOption(options = {}) {
-  return normalizeScopeCheckMode(
-    options.scopeMode ||
-    options['scope-mode'] ||
-    options.checkMode ||
-    options['check-mode'] ||
-    options.mode
-  );
-}
-
-function resolveVerificationPolicy(options = {}, state = {}) {
-  const explicit = options.verificationPolicy ||
-    options['verification-policy'] ||
-    options.verification_policy ||
-    options.policy;
-  if (explicit) return normalizePolicy(explicit) || 'standard';
-  // Classification controls the expected depth of an explicit plan, not which
-  // review tools run. Strict verification must be requested or risk-triggered.
-  return 'standard';
 }
 
 function chooseActiveFeature(features, preferredSlug = null) {
@@ -456,12 +419,6 @@ function getSequenceForMode(config, mode, classification) {
 async function validateStageArtifacts(targetDir, state, stage) {
   const base = path.join(targetDir, '.aioson/context');
   const slug = state.featureSlug;
-  const anyExists = async (candidates) => {
-    for (const candidate of candidates) {
-      if (await exists(candidate)) return true;
-    }
-    return false;
-  };
   const hasApprovedFrontmatter = async (filePath, field = 'status') => {
     const content = await fs.readFile(filePath, 'utf8').catch(() => '');
     if (!content) return false;
@@ -481,53 +438,6 @@ async function validateStageArtifacts(targetDir, state, stage) {
       return (await exists(prdFeature)) || (await exists(prdFix));
     }
     return await exists(path.join(base, 'prd.md'));
-  }
-
-  if (stage === 'analyst') {
-    if (state.mode === 'feature' && slug) {
-      const requirements = path.join(base, `requirements-${slug}.md`);
-      const spec = path.join(base, `spec-${slug}.md`);
-      return (await exists(requirements)) && (await exists(spec));
-    }
-    return await exists(path.join(base, 'discovery.md'));
-  }
-
-  if (stage === 'scope-check') {
-    if (state.mode === 'feature' && slug) {
-      return await exists(path.join(base, `scope-check-${slug}.md`));
-    }
-    return await exists(path.join(base, 'scope-check.md'));
-  }
-
-  if (stage === 'architect') {
-    return await exists(path.join(base, 'architecture.md'));
-  }
-
-  if (stage === 'ux-ui') {
-    return await exists(path.join(base, 'ui-spec.md'));
-  }
-
-  if (stage === 'discovery-design-doc') {
-    const designDocCandidates = slug
-      ? [path.join(base, `design-doc-${slug}.md`), path.join(base, 'design-doc.md')]
-      : [path.join(base, 'design-doc.md')];
-    const readinessCandidates = slug
-      ? [path.join(base, `readiness-${slug}.md`), path.join(base, 'readiness.md')]
-      : [path.join(base, 'readiness.md')];
-    // The slug-less design-doc.md may be the retired installer seed (the
-    // framework's own code layout) — never a feature design document.
-    const anyUsableDesignDoc = async (candidates) => {
-      for (const candidate of candidates) {
-        if (await isUsableDesignDocFile(candidate)) return true;
-      }
-      return false;
-    };
-    return (await anyUsableDesignDoc(designDocCandidates)) && (await anyExists(readinessCandidates));
-  }
-
-  if (stage === 'pm') {
-    // PM is a bounded advisory detour. It owns no canonical artifact.
-    return true;
   }
 
   if (stage === 'planner') {
@@ -585,6 +495,25 @@ function buildStatePayload(input) {
 function findNextFromSequence(sequence, completed, skipped) {
   const done = new Set([...(completed || []), ...(skipped || [])].map(normalizeAgentName));
   return sequence.find((stage) => !done.has(normalizeAgentName(stage))) || null;
+}
+
+// Retired agents (their work now lives in a main-cycle agent) are dropped from
+// persisted progress rather than mapped: a completed `architect` detour is not
+// evidence that `planner` ran. An active detour to a retired agent ends and the
+// workflow resumes where the detour was going; reconcile infers the rest.
+function dropRetiredStages(state) {
+  if (!state || typeof state !== 'object') return state;
+  const keep = (list) => (Array.isArray(list) ? list.filter((stage) => !isRetiredAgentId(stage)) : list);
+  const next = { ...state, sequence: keep(state.sequence), completed: keep(state.completed), skipped: keep(state.skipped) };
+  if (next.detour && next.detour.active && isRetiredAgentId(next.detour.agent)) {
+    const returnTo = isRetiredAgentId(next.detour.returnTo) ? null : next.detour.returnTo || null;
+    next.detour = null;
+    next.current = null;
+    next.next = returnTo;
+  }
+  if (isRetiredAgentId(next.current)) next.current = null;
+  if (isRetiredAgentId(next.next)) next.next = null;
+  return next;
 }
 
 function reconcileWorkflowState(state) {
@@ -677,15 +606,9 @@ function reconcileWorkflowState(state) {
 }
 
 function isInferableStage(stage) {
-  // discovery-design-doc is inferable from its design-doc + readiness artifacts
-  // (it has both a validateStageArtifacts branch and a handoff contract). Without
-  // it, MEDIUM sequences — where scope-check sits AFTER discovery-design-doc —
-  // could never infer scope-check as completed during stale-state recovery.
-  // pm is inferable from implementation-plan-{slug}.md for the same reason:
-  // it sits before scope-check in the MEDIUM feature sequence.
   // Sheldon and Planner are inferable from the in-place PRD review marker and
-  // approved implementation plan. Legacy spec authorities remain inferable.
-  return ['setup', 'product', 'planner', 'analyst', 'scope-check', 'architect', 'discovery-design-doc', 'ux-ui', 'pm', 'sheldon', 'orchestrator'].includes(
+  // approved implementation plan.
+  return ['setup', 'product', 'planner', 'sheldon', 'orchestrator'].includes(
     normalizeAgentName(stage)
   );
 }
@@ -867,6 +790,10 @@ async function loadOrCreateState(targetDir, options = {}) {
   }
 
   if (existing && typeof existing === 'object' && Array.isArray(existing.sequence)) {
+    // A delivered workflow is history and keeps its original stage names.
+    const deliveredAsSaved = !existing.detour?.active
+      && (existing.completed || []).map(normalizeAgentName).includes(normalizeAgentName(existing.sequence.at(-1)));
+    if (!deliveredAsSaved) existing = dropRetiredStages(existing);
     const currentSequence = existing.sequence.map(normalizeAgentName);
     // A saved sequence is derived state, not a standing request for specialists.
     // Rebase live AND restored progress onto today's defaults or the owner's
@@ -1352,9 +1279,8 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
         throw new Error(errMsg);
       }
 
-      // ── Scope drift gate (absorbs @scope-check's deterministic spec:analyze) ──
-      // scope-check is no longer a default stage; this is the drift check a
-      // dev/qa completion keeps. It used to run only when a LEGACY artifact
+      // ── Scope drift gate (the deterministic spec:analyze pass) ──
+      // This is the drift check every dev/qa completion runs. It used to run only when a LEGACY artifact
       // (spec-/design-doc-/readiness-{slug}.md) existed — artifacts every
       // canonical kernel forbids — so in the PRD → plan route it never fired and
       // no gate ever compared the delivered code with the plan. It now runs for
@@ -1401,7 +1327,7 @@ async function finalizeCurrentStage(targetDir, config, state, stageName) {
           };
           if (blocking.length > 0) {
             const errs = blocking.map((f) => `  - ${f.check}: ${f.message}`).join('\n');
-            const driftMsg = `[Scope Drift Gate] @${normalizedStage} blocked — spec:analyze found ${blocking.length} drift error(s):\n${errs}\nResolve the drift (or run @scope-check) before completing this stage.`;
+            const driftMsg = `[Scope Drift Gate] @${normalizedStage} blocked — spec:analyze found ${blocking.length} drift error(s):\n${errs}\nResolve the drift (classification: .aioson/docs/qa/scope-drift.md) before completing this stage.`;
             await logError(targetDir, normalizedStage, driftMsg, 'scope-drift');
             throw new Error(driftMsg);
           }
@@ -1759,62 +1685,6 @@ function normalizeContextDependency(relPath) {
 }
 
 async function resolveStageDependencies(targetDir, state, stageName, agent) {
-  if (stageName === 'scope-check') {
-    const contextDir = path.join(targetDir, '.aioson', 'context');
-    const slug = state.featureSlug;
-    const candidates = [
-      'project.context.md',
-      'features.md',
-      slug ? `prd-${slug}.md` : 'prd.md',
-      slug ? `requirements-${slug}.md` : 'discovery.md',
-      slug ? `spec-${slug}.md` : 'spec.md',
-      slug ? `sheldon-enrichment-${slug}.md` : 'sheldon-enrichment.md',
-      'architecture.md',
-      slug ? `design-doc-${slug}.md` : null,
-      slug ? `readiness-${slug}.md` : null,
-      'design-doc.md',
-      'readiness.md',
-      'ui-spec.md',
-      slug ? `implementation-plan-${slug}.md` : 'implementation-plan.md',
-      slug ? `features/${slug}/implementation-ledger.md` : null,
-      slug ? `features/${slug}/verification-report.md` : null,
-      'dev-state.md',
-      'last-handoff.json',
-      'project-pulse.md'
-    ].filter(Boolean);
-    const existing = [];
-    for (const candidate of candidates) {
-      if (await exists(path.join(contextDir, candidate))) {
-        existing.push(normalizeContextDependency(candidate));
-      }
-    }
-    return existing.length > 0 ? existing : agent.dependsOn;
-  }
-
-  if (stageName === 'discovery-design-doc') {
-    const contextDir = path.join(targetDir, '.aioson', 'context');
-    const slug = state.featureSlug;
-    const candidates = [
-      'project.context.md',
-      slug ? `prd-${slug}.md` : 'prd.md',
-      slug ? `requirements-${slug}.md` : 'discovery.md',
-      slug ? `spec-${slug}.md` : 'spec.md',
-      'architecture.md',
-      slug ? `design-doc-${slug}.md` : null,
-      slug ? `readiness-${slug}.md` : null,
-      'design-doc.md',
-      'readiness.md',
-      'project-map.md'
-    ].filter(Boolean);
-    const existing = [];
-    for (const candidate of candidates) {
-      if (await exists(path.join(contextDir, candidate))) {
-        existing.push(normalizeContextDependency(candidate));
-      }
-    }
-    return existing.length > 0 ? existing : agent.dependsOn;
-  }
-
   if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) {
     return agent.dependsOn;
   }
@@ -1842,8 +1712,6 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
     `readiness-${slug}.md`,
     'design-doc.md',
     'readiness.md',
-    `scope-check-${slug}.md`,
-    'scope-check.md',
     `implementation-plan-${slug}.md`
   ];
   const existing = [];
@@ -1855,181 +1723,7 @@ async function resolveStageDependencies(targetDir, state, stageName, agent) {
   return existing.length > 0 ? existing : agent.dependsOn;
 }
 
-function inferScopeCheckMode(state, requestedMode = null) {
-  if (requestedMode) return requestedMode;
-  const completed = Array.isArray(state.completed) ? state.completed.map(normalizeAgentName) : [];
-  const current = normalizeAgentName(state.current || state.next);
-  if (completed.includes('dev')) return 'post-dev';
-  if (completed.includes('qa') || completed.includes('tester') || completed.includes('pentester')) return 'post-fix';
-  if (current === 'scope-check') return 'pre-dev';
-  return 'pre-dev';
-}
-
-function buildScopeCheckActivationContext(state, mode) {
-  const resolvedMode = inferScopeCheckMode(state, mode);
-  const lines = [
-    `Scope-check mode: ${resolvedMode}`,
-    `Workflow mode: ${state.mode || 'unknown'}`,
-    `Classification: ${state.classification || 'unknown'}`
-  ];
-  if (state.featureSlug) lines.push(`Feature slug: ${state.featureSlug}`);
-  if (resolvedMode === 'pre-dev') {
-    lines.push('Compare user intent against planning artifacts before implementation.');
-  } else if (resolvedMode === 'post-dev') {
-    lines.push('Compare the approved scope-check/design artifacts against the actual implementation diff and changed files before QA.');
-  } else if (resolvedMode === 'post-fix') {
-    lines.push('Compare approved scope, QA/tester/pentester findings, and the correction diff; confirm the fix did not change product intent.');
-  } else if (resolvedMode === 'final') {
-    lines.push('Reconcile intent, plan, delivered behavior, and remaining exclusions before close/commit/release.');
-  }
-  return lines.join('\n');
-}
-
-function routeLabel(route) {
-  return route ? `@${normalizeAgentName(route)}` : '@qa';
-}
-
-function workflowGuidanceForVerification(verdict, route, normalReturnTo) {
-  if (verdict === 'PASS') {
-    return `PASS: keep normal workflow ownership (${routeLabel(normalReturnTo || route)}), then continue diff/scope review.`;
-  }
-  if (verdict === 'NEEDS_DEV_FIX') {
-    return 'NEEDS_DEV_FIX: do not approve clean post-dev scope; route concrete file:line findings to @dev.';
-  }
-  if (verdict === 'NEEDS_SCOPE_DECISION') {
-    return `NEEDS_SCOPE_DECISION: route to ${routeLabel(route)}; do not patch product scope locally.`;
-  }
-  if (verdict === 'NEEDS_QA_RECHECK') {
-    return 'NEEDS_QA_RECHECK: route to @qa after scope alignment is clear.';
-  }
-  if (verdict === 'NEEDS_SECURITY_REVIEW') {
-    return 'NEEDS_SECURITY_REVIEW: preserve the security review owner and route to @pentester.';
-  }
-  return `INCONCLUSIVE: route to the owner of missing evidence (${routeLabel(route)}) when strict verification applies.`;
-}
-
-async function findImplementationVerificationReport(targetDir, slug) {
-  const slugResult = validateFeatureSlug(slug);
-  if (!slugResult.ok) return null;
-
-  const latestPath = path.join(featureContextDir(targetDir, slug), 'verification-report.md');
-  if (await exists(latestPath)) {
-    return {
-      absolutePath: latestPath,
-      relativePath: relativeFromRoot(targetDir, latestPath),
-      source: 'latest'
-    };
-  }
-
-  const runsDir = verificationRunsDir(targetDir, slug);
-  let entries = [];
-  try {
-    entries = await fs.readdir(runsDir);
-  } catch {
-    return null;
-  }
-  const reportName = entries
-    .filter((entry) => /-report\.md$/i.test(entry))
-    .sort()
-    .pop();
-  if (!reportName) return null;
-
-  const reportPath = path.join(runsDir, reportName);
-  return {
-    absolutePath: reportPath,
-    relativePath: relativeFromRoot(targetDir, reportPath),
-    source: 'verification-runs'
-  };
-}
-
-async function buildImplementationVerificationBriefing(targetDir, state, scopeCheckMode, policy) {
-  const mode = inferScopeCheckMode(state, scopeCheckMode);
-  if (
-    state.mode !== 'feature' ||
-    !state.featureSlug ||
-    !['post-dev', 'post-fix', 'final'].includes(mode)
-  ) {
-    return null;
-  }
-
-  const slug = state.featureSlug;
-  const latestPath = `.aioson/context/features/${slug}/verification-report.md`;
-  const reportRef = await findImplementationVerificationReport(targetDir, slug);
-  const lines = [
-    '## Implementation verification briefing',
-    `Policy: ${policy}`,
-    `Expected latest report: ${latestPath}`,
-    'Workflow note: this briefing only validates local report artifacts; it never runs `--tool` or any external auditor.'
-  ];
-
-  if (!reportRef) {
-    lines.push('Report status: missing');
-    if (state.classification === 'MICRO') {
-      lines.push('MICRO: missing report is not a workflow blocker by default; record residual risk only when the dev handoff relied on verification.');
-    } else if (policy === 'strict') {
-      lines.push('Strict policy guidance: do not issue final clean scope approval until @dev produces a valid report or documents an explicit N/A rationale.');
-    } else {
-      lines.push('Guidance: absence is advisory unless the feature policy or dev handoff made verification strict.');
-    }
-    return {
-      status: 'missing',
-      mode,
-      policy,
-      report_path: null,
-      verdict: 'INCONCLUSIVE',
-      recommended_route: state.classification === 'MICRO' ? state.next || 'qa' : 'dev',
-      briefing: lines.join('\n')
-    };
-  }
-
-  lines.push(`Report path: ${reportRef.relativePath}`);
-  lines.push(`Validate command: aioson verify:implementation . --feature=${slug} --check-report=${reportRef.relativePath} --policy=${policy} --json`);
-
-  const parsed = await parseVerificationReport(targetDir, slug, reportRef.relativePath, policy);
-  if (!parsed.ok) {
-    lines.push(`Report status: invalid (${parsed.reason})`);
-    lines.push('Guidance: treat this as INCONCLUSIVE local evidence; do not treat auditor prose as PASS.');
-    return {
-      status: 'invalid',
-      mode,
-      policy,
-      report_path: reportRef.relativePath,
-      verdict: 'INCONCLUSIVE',
-      recommended_route: 'qa',
-      reason: parsed.reason,
-      briefing: lines.join('\n')
-    };
-  }
-
-  const policyResult = applyPolicy(parsed.report, policy);
-  lines.push('Report status: schema-valid');
-  lines.push(`Report verdict: ${parsed.report.verdict}`);
-  lines.push(`Policy verdict: ${policyResult.verdict}`);
-  lines.push(`Policy route: ${routeLabel(policyResult.recommended_route)}`);
-  lines.push(`Blocking findings: ${policyResult.blocking_findings_count || 0}`);
-  lines.push(`Guidance: ${workflowGuidanceForVerification(policyResult.verdict, policyResult.recommended_route, state.next)}`);
-  lines.push('Scope-check still must inspect the diff and approved plan; a PASS report is not final approval.');
-
-  return {
-    status: 'valid',
-    mode,
-    policy,
-    report_path: reportRef.relativePath,
-    report_source: reportRef.source,
-    verdict: policyResult.verdict,
-    auditor_verdict: parsed.report.verdict,
-    recommended_route: policyResult.recommended_route,
-    blocking_findings_count: policyResult.blocking_findings_count || 0,
-    reason: policyResult.reason,
-    briefing: lines.join('\n')
-  };
-}
-
-function buildStageActivationContext(state, stageName, dependencies, scopeCheckMode = null) {
-  if (stageName === 'scope-check') {
-    return buildScopeCheckActivationContext(state, scopeCheckMode);
-  }
-
+function buildStageActivationContext(state, stageName, dependencies) {
   if (stageName !== 'dev' || state.mode !== 'feature' || !state.featureSlug) return '';
   return [
     `Feature slug: ${state.featureSlug}`,
@@ -2263,8 +1957,6 @@ async function activateStage(
   tool,
   explicitAgent = null,
   requestedMode = null,
-  scopeCheckMode = null,
-  verificationPolicy = 'standard',
   autopilotOptions = {}
 ) {
   const stageName = normalizeAgentName(explicitAgent || state.current || state.next);
@@ -2310,7 +2002,7 @@ async function activateStage(
 
   // ── Path Guard Injection for implementation agents ────────────────────────
   let pathGuardBlock = '';
-  if (['dev', 'architect', 'ux-ui', 'pentester', 'qa', 'tester', 'committer'].includes(stageName)) {
+  if (['dev', 'pentester', 'qa', 'tester', 'committer'].includes(stageName)) {
     try {
       pathGuardBlock = await buildPathGuardBlock(targetDir);
     } catch {
@@ -2356,9 +2048,6 @@ async function activateStage(
 
   const instructionPath = await resolveExistingInstructionPath(targetDir, agent, locale);
   const dependencies = await resolveStageDependencies(targetDir, state, stageName, agent);
-  const verificationBriefing = stageName === 'scope-check'
-    ? await buildImplementationVerificationBriefing(targetDir, state, scopeCheckMode, verificationPolicy)
-    : null;
   const stageContextTasks = {
     setup: 'repair and validate project context',
     product: 'define the active feature PRD and current-system fit',
@@ -2383,9 +2072,8 @@ async function activateStage(
   });
   const executionActivationContext = await buildExecutionActivationContext(targetDir, state, stageName);
   const activationContext = [
-    buildStageActivationContext(state, stageName, dependencies, scopeCheckMode),
+    buildStageActivationContext(state, stageName, dependencies),
     executionActivationContext,
-    verificationBriefing && verificationBriefing.briefing,
     generatedContext,
     chainActivationContext
   ].filter(Boolean).join('\n\n');
@@ -2431,20 +2119,7 @@ async function activateStage(
     agent: stageName,
     instructionPath,
     prompt,
-    effectiveMode,
-    verification: verificationBriefing
-      ? {
-          status: verificationBriefing.status,
-          mode: verificationBriefing.mode,
-          policy: verificationBriefing.policy,
-          report_path: verificationBriefing.report_path,
-          verdict: verificationBriefing.verdict,
-          auditor_verdict: verificationBriefing.auditor_verdict || null,
-          recommended_route: verificationBriefing.recommended_route,
-          blocking_findings_count: verificationBriefing.blocking_findings_count || 0,
-          reason: verificationBriefing.reason || null
-        }
-      : null
+    effectiveMode
   };
 }
 
@@ -2455,7 +2130,8 @@ async function activateStage(
  * `pending-<X>-decisions`, throws a hard error recommending the agent that
  * resolves those decisions. `--force` overrides.
  *
- * Whitelist (DD-02): known agents are [architect, product, pm, qa]. Unknown
+ * Whitelist (DD-02): known agents are [planner, product, qa]; retired owners
+ * (architect, pm) resolve to the agent that absorbed them. Unknown
  * captured groups still block but are flagged as unrecognized so typos don't
  * silently route to nonexistent agents.
  *
@@ -2467,7 +2143,7 @@ async function activateStage(
  * @param {boolean} force      When true, skip the check (--force override).
  * @returns {Promise<void>}    Resolves silently when no pending decisions block; throws otherwise.
  */
-const PENDING_STATE_WHITELIST = ['architect', 'product', 'pm', 'qa'];
+const PENDING_STATE_WHITELIST = ['planner', 'product', 'qa'];
 
 async function assertManifestNotPending(targetDir, slug, force) {
   if (force) return; // AC-F3-03 — explicit override.
@@ -2502,7 +2178,7 @@ async function assertManifestNotPending(targetDir, slug, force) {
   if (!status) return; // No status field → nothing to assert.
   const match = String(status).match(/^pending-(.+)-decisions$/);
   if (!match) return; // AC-F3-02 — only pending-*-decisions pattern blocks.
-  const captured = match[1].toLowerCase();
+  const captured = canonicalAgentId(match[1].toLowerCase());
   const known = PENDING_STATE_WHITELIST.includes(captured);
   const recommendation = known
     ? `Próximo agente recomendado: @${captured}.`
@@ -2614,8 +2290,6 @@ async function runWorkflowNext({ args, options, logger, t }) {
             tool,
             failedStage,
             options.mode || null,
-            null,
-            resolveVerificationPolicy(options, state),
             options
           );
           const healingPrompt = buildHealingPrompt(
@@ -2772,10 +2446,7 @@ async function runWorkflowNext({ args, options, logger, t }) {
     requestedAgent = 'validator';
   }
 
-  const activationAgent = normalizeAgentName(requestedAgent || state.current || state.next);
-  const scopeCheckMode = activationAgent === 'scope-check' ? getScopeCheckModeOption(options) : null;
-  const requestedAutonomyMode = scopeCheckMode && activationAgent === 'scope-check' ? null : options.mode || null;
-  const verificationPolicy = resolveVerificationPolicy(options, state);
+  const requestedAutonomyMode = options.mode || null;
   const activation = await activateStage(
     targetDir,
     state,
@@ -2783,8 +2454,6 @@ async function runWorkflowNext({ args, options, logger, t }) {
     tool,
     requestedAgent,
     requestedAutonomyMode,
-    scopeCheckMode,
-    verificationPolicy,
     options
   );
   state = activation.state;

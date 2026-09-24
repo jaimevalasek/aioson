@@ -83,11 +83,9 @@ function inferActivation(agentName, body) {
   const keywords = {
     dev: ['implement', 'code', 'build', 'feature'],
     qa: ['test', 'quality', 'verify', 'bug'],
-    architect: ['architecture', 'structure', 'design'],
-    analyst: ['analyze', 'discover', 'map'],
-    'ux-ui': ['design', 'interface', 'component'],
+    planner: ['plan', 'architecture', 'structure', 'sequence'],
     product: ['product', 'prd', 'requirement'],
-    pm: ['sprint', 'backlog', 'story']
+    refiner: ['design', 'interface', 'prototype']
   };
 
   const agentKeywords = keywords[agentName] || [agentName];

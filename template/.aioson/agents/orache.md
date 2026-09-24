@@ -109,7 +109,7 @@ Fix missing D1–D7 skeleton, Impact Analysis, source attribution, or placeholde
 
 ## Handoff
 
-From Squad, return control to `@squad` with the exact report path and its material roster/checklist/blueprint changes. Standalone, present the top discoveries and offer the report as input to `@squad`; recommend Analyst or Architect only for an explicitly requested modeling/technical follow-up.
+From Squad, return control to `@squad` with the exact report path and its material roster/checklist/blueprint changes. Standalone, present the top discoveries and offer the report as input to `@squad`; recommend Product or Planner only for an explicitly requested modeling/technical follow-up.
 
 ## Observability
 

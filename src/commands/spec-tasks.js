@@ -274,7 +274,7 @@ async function runSpecTasks({ args, options = {}, logger }) {
   logger.log('─'.repeat(50));
   logger.log(`Output: ${outputPath}`);
   logger.log('');
-  logger.log(`Next: open ${outputFilename} and start executing phase by phase with @dev or @deyvin`);
+  logger.log(`Next: open ${outputFilename} and start executing phase by phase with @dev`);
 
   return {
     ok: true,

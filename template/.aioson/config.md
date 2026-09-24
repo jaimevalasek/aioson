@@ -15,11 +15,9 @@ MICRO, SMALL, and MEDIUM use the same feature agents and the same three-artifact
 
 Canonical artifacts are exactly: one PRD from `@product`, mandatorily reviewed/enriched in place by `@sheldon`, one `implementation-plan-{slug}.md` from `@planner`, and one `qa-report-{slug}.md` from `@qa`. Raw source packs under `plans/{slug}/`, Briefing, Refiner, and an approved owned prototype are cumulative pre-product inputs when used. Requirements/spec/design/readiness/conformance/harness documents are never canonical prerequisites.
 
-The lightweight feature dossier, selected project knowledge, and all specialists are intelligence available to every classification. `@sheldon` is the mandatory pre-Planner PRD reviewer. `@analyst`, `@architect`, `@pm`, `@discovery-design-doc`, `@scope-check`, `@ux-ui`, and `@orchestrator` remain opt-in for a concrete unresolved question. `@tester`, `@pentester`, and `@validator` run only when the approved plan, the risk surface, QA findings, or the user explicitly trigger them. None is a classification-driven gate. The normal runtime smoke uses the real application and real production path; a separate harness is optional.
+The lightweight feature dossier, selected project knowledge, and all specialists are intelligence available to every classification. `@sheldon` is the mandatory pre-Planner PRD reviewer. `@orchestrator` remains opt-in for a concrete unresolved question. `@tester`, `@pentester`, and `@validator` run only when the approved plan, the risk surface, QA findings, or the user explicitly trigger them. None is a classification-driven gate. The normal runtime smoke uses the real application and real production path; a separate harness is optional.
 
-Optional alignment checkpoints:
-- After `@dev`: `@scope-check --scope-mode=post-dev` when the implementation changed planned behavior, touched unexpected files, or skipped approved scope.
-- After `@qa`, `@tester`, or `@pentester` corrections: `@scope-check --scope-mode=post-fix` when fixes changed behavior or product scope.
+Scope alignment: the engine's always-on scope drift gate in `workflow:next` checks delivery at dev/qa completion. When `@dev`, `@qa`, `@tester`, or `@pentester` corrections changed planned behavior, touched unexpected files, or skipped approved scope, `@qa` classifies the drift (`.aioson/docs/qa/scope-drift.md`).
 
 Optional test engineering (activate after @dev when coverage is insufficient):
 - `@quality` — optional engineering assessment for products or AIOSON itself: static analysis, test effectiveness, benchmarks and evaluations. Produces evidence and a remediation backlog; QA retains acceptance and implementing agents retain responsibility for correctness.
@@ -95,8 +93,8 @@ Optional Web3 context fields (recommended for `project_type=dapp`):
 
 ## Visual system gate
 - `design_skill` defaults to `interface-design`; blank means the same engine. No agent asks which design skill to use — there is no menu.
-- `@site-forge` and `@design-hybrid-forge` register a project-forged skill by name when the user forges one; `@setup`, `@product`, and `@ux-ui` never offer or confirm a choice.
-- `@dev`, `@deyvin`, `@ux-ui`, and `@refiner` consume the value as the single visual system (`identity.md` is its input, never a second system); they never swap, mix, or invent one.
+- `@site-forge` and `@design-hybrid-forge` register a project-forged skill by name when the user forges one; `@setup` and `@product` never offer or confirm a choice.
+- `@dev` and `@refiner` consume the value as the single visual system (`identity.md` is its input, never a second system); they never swap, mix, or invent one.
 - `@refiner` records `design_skill: interface-design (default)` in the prototype manifest when the field is blank.
 
 ## Runtime lifecycle
@@ -192,7 +190,7 @@ Project-specific rules that override agent defaults. Each file must have YAML fr
 
 ```markdown
 ---
-agents: [dev, architect]   # empty [] = universal rule loaded by all agents
+agents: [dev, planner]   # empty [] = universal rule loaded by all agents
 ---
 
 # Database conventions
@@ -241,13 +239,13 @@ Default governance files:
 
 ### Optional design docs (`.aioson/context/design-doc.md`)
 
-Design docs are opt-in decision records for a genuinely unresolved technical boundary, written by the project team when a named decision deserves a standing record. Nothing installs one and no agent produces one by default: the installer used to seed this path with the framework's own code layout (retired — `aioson doctor` names a leftover copy and `--fix` deletes a verbatim one), and `@architect` / `@discovery-design-doc` return conclusions to the Planner instead of writing documents. Per-feature decisions live in the PRD's decision sections, the plan's ADR section and `aioson decision:add`; this file is never a SMALL or MEDIUM prerequisite.
+Design docs are opt-in decision records for a genuinely unresolved technical boundary, written by the project team when a named decision deserves a standing record. Nothing installs one and no agent produces one by default: the installer used to seed this path with the framework's own code layout (retired — `aioson doctor` names a leftover copy and `--fix` deletes a verbatim one), and the Planner records boundary decisions in the plan instead of a separate document. Per-feature decisions live in the PRD's decision sections, the plan's ADR section and `aioson decision:add`; this file is never a SMALL or MEDIUM prerequisite.
 
 ```markdown
 ---
 description: "Billing module — Stripe integration with metered pricing"
 scope: "billing"
-agents: [dev, architect]   # empty [] = all agents load it
+agents: [dev, planner]   # empty [] = all agents load it
 ---
 ```
 
@@ -257,7 +255,7 @@ agents: [dev, architect]   # empty [] = all agents load it
 |---|---|---|---|
 | **Produced by** | `@product`, enriched in place by `@sheldon` | Installer + project team | Project team, opt-in (no agent writes it by default) |
 | **Focus** | What and why — vision, users, problem, features | Structural code quality rules | How — technical flows, decisions, risks, slices |
-| **Audience** | All agents | Agents doing structural planning or implementation | Technical agents (dev, architect, qa) |
+| **Audience** | All agents | Agents doing structural planning or implementation | Technical agents (planner, dev, qa) |
 | **Lifecycle** | One feature authority, refined in place | Stable, edited when conventions change | Living only while its named decision remains relevant |
 | **When to create** | Every substantive project/feature | Installed by default | Only for a named unresolved technical decision |
 
@@ -269,9 +267,9 @@ Semantic knowledge cache that gives agents instant understanding of the system w
 
 | File | Content | Loaded by |
 |------|---------|-----------|
-| `what-is.md` | System identity, users, value proposition | `@product`, `@analyst` |
-| `how-it-works.md` | Architecture, modules, data flow, integrations | `@dev`, `@architect` |
-| `what-it-does.md` | Features, business rules, user workflows | `@product`, `@analyst` |
+| `what-is.md` | System identity, users, value proposition | `@product` |
+| `how-it-works.md` | Architecture, modules, data flow, integrations | `@dev`, `@planner` |
+| `what-it-does.md` | Features, business rules, user workflows | `@product` |
 | `current-state.md` | Implementation status, tech debt, recent changes | `@dev`, `@qa` |
 
 **When to use:** run `@discover` once after setup, and re-run when significant changes accumulate. Agents read bootstrap files at session start for instant context.
@@ -401,8 +399,8 @@ Recommended targets:
 | File type | Target | Notes |
 |-----------|--------|-------|
 | `CLAUDE.md` / `AGENTS.md` | ≤ 3,500 chars | Auto-loaded — hard truncation applies |
-| Focused agents (analyst, qa, tester) | ≤ 8,000 chars | Keep lean |
-| Generalist agents (dev, architect) | ≤ 15,000 chars | Move optional sections to `.aioson/docs/` |
+| Focused agents (qa, tester) | ≤ 8,000 chars | Keep lean |
+| Generalist agents (dev, planner) | ≤ 15,000 chars | Move optional sections to `.aioson/docs/` |
 | Orchestrator agents (orchestrator, squad) | ≤ 12,000 chars | Move boilerplate to `.aioson/rules/` |
 
 When an agent file exceeds its target:

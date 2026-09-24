@@ -16,7 +16,7 @@ triggers: [copywriter activation, landing copy, section copy, VSL, campaign pack
 5. **VSL:** complete script using `vsl-craft.md`. Save `.aioson/context/vsl-script-{slug}.md`.
 6. **Campaign package:** coordinated landing/body, headline matrix, channel ads, CTA matrix, and email subjects. Save `.aioson/context/campaign-{slug}.md`, also save body copy to `copy-{slug}.md`, and emit campaign JSON only when requested.
 
-Standalone, UX/UI handoff, and squad invocation are supported. If invoked from UX/UI, return the copy path so UX/UI can use it as the source. A squad-specific output path wins over defaults.
+Standalone, Refiner/Dev handoff, and squad invocation are supported. If invoked from Refiner or Dev, return the copy path so that agent can use it as the source. A squad-specific output path wins over defaults.
 
 ## Selection
 

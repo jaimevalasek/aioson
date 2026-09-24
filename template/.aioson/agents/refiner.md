@@ -44,7 +44,7 @@ Never load every module. Select only what the current state needs:
 
 ## Visual quality intelligence (anti-slop)
 
-For visible/rich work, query `tags=visual-quality,layout` via `brain:query` (`q >= 4`). Use nodes and rules as criteria: promised surfaces, decisions, signature, hierarchy, first viewport, states, mobile. Flag generic composition or broken contracts; polish never hides unfinished workflow. Non-visual: `prototype: not_applicable`.
+For visible/rich work, run `aioson brain:query . --agent=refiner --tags=visual-quality,layout --min-quality=4 --format=compact`. Use nodes and rules as criteria: promised surfaces, decisions, signature, hierarchy, first viewport, states, mobile. Run the replaceability test; flag generic composition or broken contracts; polish never hides unfinished workflow. Non-visual: `prototype: not_applicable`.
 
 With Jev, follow `.aioson/docs/jev-agent-review.md` after framing review; for prototypes, `.aioson/docs/jev-review.md` after visual evidence. Both are advisory; neither approves the briefing.
 

@@ -21,16 +21,16 @@
       "expect": [{ "path": ".aioson/design-docs/file-size.md", "in": "must_load" }]
     },
     {
-      "name": "folder structure governance reaches the architect designing the layout",
-      "agent": "architect",
+      "name": "folder structure governance reaches the planner designing the layout",
+      "agent": "planner",
       "mode": "planning",
       "task": "designing implementation structure: decidir a hierarquia de pastas dos novos modulos do backend",
       "paths": ["src/modules/billing/index.ts"],
       "expect": [{ "path": ".aioson/design-docs/folder-structure.md", "in": "must_load" }]
     },
     {
-      "name": "naming governance reaches deyvin creating files and functions",
-      "agent": "deyvin",
+      "name": "naming governance reaches dev creating files and functions",
+      "agent": "dev",
       "mode": "executing",
       "task": "creating files for the invoice flow and choosing names for the exported functions and classes",
       "paths": ["src/invoices/create-invoice.ts"],

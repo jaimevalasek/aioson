@@ -240,48 +240,21 @@
       ]
     },
     {
-      "name": "deyvin continuity recovery after gap",
-      "agent": "deyvin",
+      "name": "dev continuity recovery after gap",
+      "agent": "dev",
       "mode": "planning",
       "task": "Picking this session back up after a gap; need continuity recovery to reconstruct recent work before touching anything.",
       "expect": [
-        { "path": ".aioson/docs/deyvin/continuity-recovery.md", "in": "selected" }
+        { "path": ".aioson/docs/dev/continuity-recovery.md", "in": "selected" }
       ]
     },
     {
-      "name": "deyvin failing test bug diagnosis",
-      "agent": "deyvin",
-      "mode": "executing",
-      "task": "This failing test won't budge after one fix attempt; time for proper bug diagnosis instead of guessing again.",
-      "expect": [
-        { "path": ".aioson/docs/deyvin/debugging-escalation.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "deyvin pair execution small slice",
-      "agent": "deyvin",
-      "mode": "executing",
-      "task": "Vamos numa pair execution tranquila, implementando uma small slice de cada vez e validando antes de seguir.",
-      "expect": [
-        { "path": ".aioson/docs/deyvin/pair-execution.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "deyvin live session runtime handoff",
-      "agent": "deyvin",
+      "name": "dev live session runtime handoff",
+      "agent": "dev",
       "mode": "planning",
       "task": "I'm in a live session started via live:start; need the runtime handoff rules before emitting milestones for this tracked session.",
       "expect": [
-        { "path": ".aioson/docs/deyvin/runtime-handoffs.md", "in": "selected" }
-      ]
-    },
-    {
-      "name": "deyvin scout fallback no cli",
-      "agent": "deyvin",
-      "mode": "executing",
-      "task": "O aioson CLI não está disponível aqui, preciso montar manualmente o scout fallback para essa sub-tarefa de investigação.",
-      "expect": [
-        { "path": ".aioson/docs/deyvin/scout-fallback.md", "in": "selected" }
+        { "path": ".aioson/docs/dev/runtime-handoffs.md", "in": "selected" }
       ]
     },
     {
@@ -314,7 +287,7 @@
     },
     {
       "name": "quality code health improvement lens",
-      "agent": "deyvin",
+      "agent": "qa",
       "mode": "planning",
       "task": "Before shipping this refactor I want a code health pass, coverage gaps and regression risk, using the shared improvement lens.",
       "expect": [
@@ -334,7 +307,7 @@
     },
     {
       "name": "framework layers project knowledge",
-      "agent": "deyvin",
+      "agent": "dev",
       "mode": "planning",
       "task": "Quero entender os 'framework layers' do AIOSON, docs, rules e aprendizados, antes de mexer neste projeto.",
       "expect": [
@@ -451,8 +424,8 @@
       ]
     },
     {
-      "name": "deyvin compact continuity handoff",
-      "agent": "deyvin",
+      "name": "dev compact continuity handoff",
+      "agent": "dev",
       "mode": "planning",
       "task": "Antes de rodar /compact nesta sessão longa da feature, preciso persistir o handoff e registrar a continuidade para não perder contexto.",
       "expect": [

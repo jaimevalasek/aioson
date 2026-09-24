@@ -13,8 +13,8 @@
  * Budget thresholds (from config.md guidelines):
  *   Auto-loaded files (CLAUDE.md, AGENTS.md): 3,500 chars recommended / 4,000 hard
  *   Agent files (read manually):
- *     focused agents  (analyst, qa, tester):   8,000 chars
- *     generalist agents (dev, architect):      15,000 chars
+ *     focused agents  (qa, tester, committer): 8,000 chars
+ *     generalist agents (dev, planner):        15,000 chars
  *     orchestrator agents (orchestrator, squad): 12,000 chars
  *
  * Usage:
@@ -40,7 +40,7 @@ const CHARS_PER_TOKEN = 4;
 const AGENT_TYPES = [
   { type: 'auto-loaded',   slugs: ['CLAUDE', 'AGENTS'],                    target: 3500, hard: 4000 },
   { type: 'orchestrator',  slugs: ['orchestrator', 'squad'],                target: 12000, hard: 20000 },
-  { type: 'generalist',    slugs: ['dev', 'architect', 'deyvin', 'sheldon', 'planner', 'setup', 'product', 'ux-ui', 'site-forge'], target: 15000, hard: 40000 },
+  { type: 'generalist',    slugs: ['dev', 'sheldon', 'planner', 'setup', 'product', 'site-forge'], target: 15000, hard: 40000 },
   { type: 'focused',       slugs: [],                                       target: 8000,  hard: 16000 } // default
 ];
 

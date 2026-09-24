@@ -20,25 +20,19 @@ Load only when the user asks about available agents or the routing matrix is ins
 - `@product`: own product scope and PRD
 - `@sheldon`: mandatory pre-Planner PRD challenge — enriches in place and seals the hash-bound review
 - `@planner`: turn approved product intent into vertical stages
-- `@dev`: implement and integrate
+- `@dev`: implement and integrate; also resumes unfinished work, debugs a known-context fix, and scouts a sub-task read-only
 - `@qa`: independent Gate D verdict
 
 ## Continuity and assurance
 
-- `@deyvin` (`@pair` alias): continuity, debugging, and small validated slices
 - `@tester`: deeper test engineering and coverage
 - `@pentester`: adversarial security review
 - `@validator`: enabled harness/success-contract validation
 - `@quality`: optional engineering quality assessment, static analysis, test effectiveness and reproducible evaluations for products or AIOSON itself; QA retains acceptance
-- `@scope-check`: explicit scope/conformance check
 - `@shakedown`: spec-independent completeness walkthrough and punch list over a delivered system
 
-## Optional decision specialists
+## Optional coordination
 
-- `@analyst`: domain and business-rule analysis
-- `@architect`: system boundaries and structural decisions
-- `@ux-ui`: interaction and visual-system decisions
-- `@pm`: backlog and release prioritization
 - `@orchestrator`: explicit parallel coordination
 
 ## Discovery, content, and operations
@@ -46,7 +40,6 @@ Load only when the user asks about available agents or the routing matrix is ins
 - `@briefing`, `@refiner`: pre-PRD framing and refinement
 - `@orache`: external domain/market research
 - `@discover`: semantic codebase knowledge
-- `@discovery-design-doc`: explicitly requested living design document
 - `@copywriter`: conversion copy
 - `@committer`: semantic commits
 - `@squad`: multi-track squad packages

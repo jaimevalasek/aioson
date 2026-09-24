@@ -72,14 +72,15 @@ test('refiner wires the reference-image intake (byte-parity)', async () => {
   }
 });
 
-test('ux-ui Step 0 frames identity.md as an INPUT without weakening ONE SKILL ONLY (byte-parity)', async () => {
-  const agent = await parityTracked('.aioson/agents/ux-ui.md');
-  // the original guard must survive verbatim
-  assert.equal(agent.includes('ABSOLUTE RULE — ONE SKILL ONLY'), true);
-  // and the new sub-point must frame identity.md as data the single engine consumes
-  assert.equal(agent.includes('INPUT to the one skill'), true);
-  assert.equal(agent.includes('parameterizes it'), true);
-  assert.equal(agent.includes('not a design system of its own'), true);
+test('identity.md is framed as an INPUT to the one design engine without weakening ONE SKILL ONLY (byte-parity)', async () => {
+  // ux-ui (which used to carry this framing in its Step 0) was retired into
+  // product; the framing now lives once, in the shared reference-identity doc.
+  await assert.rejects(fs.access(path.join(ROOT, 'template', '.aioson', 'agents', 'ux-ui.md')));
+  const doc = await parityTracked('.aioson/docs/reference-identity.md');
+  assert.equal(doc.includes('identity input'), true);
+  assert.equal(doc.includes('not** a second design skill'), true);
+  assert.equal(doc.includes('parameterizes it'), true);
+  assert.equal(doc.includes('ONE-SKILL-ONLY rule'), true);
 });
 
 test('setup names the interface-design default and the reference-images route without asking (byte-parity)', async () => {

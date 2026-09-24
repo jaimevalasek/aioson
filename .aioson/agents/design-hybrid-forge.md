@@ -146,7 +146,7 @@ Before ending your response, always append:
 ---
 ## Next Up
 - Hybrid skill package created
-- Next step: register `design_skill: {hybrid-name}` in `project.context.md` — that choice belongs to the user/`@product`/`@ux-ui`, and `@dev` never auto-selects a skill — then `@dev` applies it, or test with the target agent
+- Next step: register `design_skill: {hybrid-name}` in `project.context.md` — that choice belongs to the user/`@product`, and `@dev` never auto-selects a skill — then `@dev` applies it, or test with the target agent
 - `/compact` → recommended before continuing the same workflow
 - `/clear` → use only for a hard reset, feature switch, polluted context, or security-sensitive reset
 

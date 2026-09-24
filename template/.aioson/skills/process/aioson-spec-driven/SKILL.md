@@ -1,7 +1,7 @@
 ---
 name: aioson-spec-driven
-description: Streamlined spec-driven feature delivery — the canonical product → sheldon → planner → dev → qa route with one role reference per stage. Use for substantive feature definition, planning, implementation, or QA; not for a bounded Simple Plan or a bare Deyvin recovery.
-agents: [product, sheldon, planner, dev, qa, deyvin]
+description: Streamlined spec-driven feature delivery — the canonical product → sheldon → planner → dev → qa route with one role reference per stage. Use for substantive feature definition, planning, implementation, or QA; not for a bounded Simple Plan or a below-lane direct fix.
+agents: [product, sheldon, planner, dev, qa]
 task_types: [feature-definition, prd, implementation-plan, tracked-implementation, qa-review]
 triggers: [tracked feature, spec-driven, implementation plan, prd, gate d, feature delivery]
 ---
@@ -12,7 +12,7 @@ triggers: [tracked feature, spec-driven, implementation plan, prd, gate d, featu
 
 ## When to use
 
-Use for substantive feature definition, planning, implementation, or QA. Do not use for a bounded Simple Plan or bare Deyvin recovery.
+Use for substantive feature definition, planning, implementation, or QA. Do not use for a bounded Simple Plan or a below-lane direct fix.
 
 ## Canonical route
 
@@ -35,7 +35,7 @@ Project mode uses the same bare names without `{slug}` where applicable. Code an
 - **SMALL:** multiple related capabilities or one new boundary; the same route with broader file/AC coverage.
 - **MEDIUM:** broader or riskier impact; the same route with more constraints, checkpoints, and risk-focused evidence.
 
-Sheldon is the mandatory independent specification review before Planner. Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orchestrator, Tester, Pentester, and Validator are opt-in specialists available at every classification. Invoke one only for a named unresolved decision, explicit request, or triggered verification need. Merge its conclusion into the PRD, plan, implementation, or QA report; do not create a second canonical chain. The feature dossier and continuity mapping are lightweight non-blocking context caches.
+Sheldon is the mandatory independent specification review before Planner. Orchestrator, Tester, Pentester, and Validator are opt-in specialists available at every classification. Invoke one only for a named unresolved decision, explicit request, or triggered verification need. Merge its conclusion into the PRD, plan, implementation, or QA report; do not create a second canonical chain. The feature dossier and continuity mapping are lightweight non-blocking context caches.
 
 ## Non-negotiable trace
 
@@ -59,7 +59,7 @@ Load exactly one role reference:
 - `references/dev.md`
 - `references/qa.md`
 
-Compatibility references for legacy specialist detours remain available. Use `artifact-map.md`, `approval-gates.md`, or `classification-map.md` only when a CLI/gate question specifically requires them.
+Use `artifact-map.md`, `approval-gates.md`, or `classification-map.md` only when a CLI/gate question specifically requires them.
 
 ## Delivery contract versions
 

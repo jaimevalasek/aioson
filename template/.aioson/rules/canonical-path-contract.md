@@ -30,10 +30,10 @@ Every agent that creates or writes files MUST resolve the target path using this
 |---|---|---|
 | Operational feature plan (phased) | `.aioson/context/implementation-plan-{slug}.md` | `@planner` |
 | PRD | `.aioson/context/prd-{slug}.md` | `@product` |
-| Legacy specialist requirements | `.aioson/context/requirements-{slug}.md` | `@analyst` (opt-in only) |
-| Project architecture baseline | `.aioson/context/architecture.md` | `@architect` (opt-in only) |
+| Legacy specialist requirements | `.aioson/context/requirements-{slug}.md` | Compatibility only |
+| Project architecture baseline | `.aioson/context/architecture.md` | Compatibility only (`@planner` reads it when present) |
 | Legacy feature spec | `.aioson/context/spec-{slug}.md` | Compatibility only |
-| Simple implementation plan | `.aioson/context/simple-plans/{slug}.md` | `@dev` / `@deyvin` |
+| Simple implementation plan | `.aioson/context/simple-plans/{slug}.md` | `@dev` |
 | QA report | `.aioson/context/qa-report-{slug}.md` | `@qa` |
 
 ## Violation behaviors
@@ -54,4 +54,4 @@ Every agent that creates or writes files MUST resolve the target path using this
 
 ## Simple plan distinction
 
-`simple-plans/{slug}.md` is not a PRD, not a Sheldon phased plan, and not a MEDIUM implementation plan. It is a lightweight implementation artifact for bounded technical work that `@dev` or `@deyvin` can execute directly under `.aioson/rules/simple-plan-lane.md`.
+`simple-plans/{slug}.md` is not a PRD, not a Sheldon phased plan, and not a MEDIUM implementation plan. It is a lightweight implementation artifact for bounded technical work that `@dev` can execute directly under `.aioson/rules/simple-plan-lane.md`.

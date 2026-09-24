@@ -1,7 +1,7 @@
 ---
 description: "When and how to extract components, modules, and abstractions"
 scope: "governance"
-agents: [dev, deyvin, architect]
+agents: [dev, planner]
 modes: [planning, executing]
 task_types: [implementation-architecture, module-boundary, refactor, extraction]
 load_tier: trigger

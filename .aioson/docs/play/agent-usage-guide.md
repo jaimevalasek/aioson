@@ -1,7 +1,7 @@
 ---
 description: "How AIOSON agents should decide when and how to apply AIOSON Play app compatibility docs during product, architecture, implementation, QA, and review work."
 scope: "global"
-agents: [dev, deyvin, architect, analyst, qa, tester, product, sheldon]
+agents: [dev, planner, qa, tester, product, sheldon]
 task_types: [aioson-play-app, app-compatibility, integration]
 triggers: [AIOSON Play, Play app, Play-compatible app, Play integrations, ProductBridge, data_bindings]
 ---

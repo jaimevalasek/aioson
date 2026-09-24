@@ -345,7 +345,7 @@ async function runSpecAnalyze({ args, options = {}, logger }) {
         findings.push({
           severity: 'error',
           check: 'readiness_blocked',
-          message: `${path.basename(artifact.path)} declares readiness: blocked — resolve with @discovery-design-doc before the execution gate`,
+          message: `${path.basename(artifact.path)} declares readiness: blocked — resolve it with @planner before the execution gate`,
           artifacts: [key]
         });
       } else if (readiness === 'ready_with_warnings') {

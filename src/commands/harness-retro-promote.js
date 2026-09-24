@@ -141,7 +141,7 @@ function buildRuleContent(candidate, { dossierRelPath, generatedAt, ruleName }) 
     '---',
     `name: ${ruleName}`,
     `description: ${yamlString(`Prevent recurring implementation verification issue: ${title}`)}`,
-    'agents: [dev, deyvin, scope-check, qa]',
+    'agents: [dev, qa]',
     'priority: 6',
     'version: 1.0.0',
     'modes: [planning, executing, reviewing]',

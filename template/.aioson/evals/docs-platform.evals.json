@@ -290,7 +290,7 @@
     },
     {
       "name": "deciding when the Play docs apply during architecture work reaches the agent usage guide",
-      "agent": "architect",
+      "agent": "planner",
       "mode": "planning",
       "task": "deciding when to apply the Play app docs during this architecture review, given the Play integrations involved",
       "expect": [{ "path": ".aioson/docs/play/agent-usage-guide.md", "in": "selected" }]
@@ -325,7 +325,7 @@
     },
     {
       "name": "finding the canonical Play source doc reaches the source map",
-      "agent": "architect",
+      "agent": "planner",
       "mode": "planning",
       "task": "trying to find the canonical Play docs to confirm the integration docs before implementing this feature",
       "expect": [{ "path": ".aioson/docs/play/source-map.md", "in": "selected" }]

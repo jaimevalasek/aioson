@@ -61,7 +61,6 @@ const AGENT_ARTIFACT_KIND = {
   // a memory the agent had to keep.
   dev: { kind: 'visual', needs: 'dir', featureSlugged: true, interfaceDir: true, conformance: true },
   qa: { kind: 'visual', needs: 'dir', featureSlugged: true, interfaceDir: true, conformance: true },
-  deyvin: { kind: 'visual', needs: 'dir', featureSlugged: true, interfaceDir: true, conformance: true },
   // The refiner's session end proves BOTH halves of its output: the review
   // surface AND the prototype's measured craft. `skipIfMissing` keeps the
   // visual gate quiet for genuinely non-visual features (no prototype.html).

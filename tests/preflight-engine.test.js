@@ -357,7 +357,7 @@ test('detectClassification: falls back to project context when feature artifacts
 // ── discoverRules ─────────────────────────────────────────────────────────────
 
 test('parseAgentList: parses inline YAML arrays', () => {
-  assert.deepEqual(parseAgentList('[dev, architect]'), ['dev', 'architect']);
+  assert.deepEqual(parseAgentList('[dev, planner]'), ['dev', 'planner']);
   assert.deepEqual(parseAgentList('[]'), []);
   assert.deepEqual(parseAgentList(undefined), null);
 });
@@ -365,8 +365,16 @@ test('parseAgentList: parses inline YAML arrays', () => {
 test('appliesToAgent: treats missing agents and empty agents as universal', () => {
   assert.equal(appliesToAgent({}, 'dev'), true);
   assert.equal(appliesToAgent({ agents: '[]' }, 'dev'), true);
+  assert.equal(appliesToAgent({ agents: '[planner]' }, 'dev'), false);
+  assert.equal(appliesToAgent({ agents: '[dev, planner]' }, 'dev'), true);
+});
+
+test('appliesToAgent: client rules tagged with a retired agent id apply to its absorber', () => {
+  assert.equal(appliesToAgent({ agents: '[deyvin]' }, 'dev'), true);
+  assert.equal(appliesToAgent({ agents: '[architect]' }, 'planner'), true);
+  assert.equal(appliesToAgent({ agents: '[scope-check]' }, 'qa'), true);
+  assert.equal(appliesToAgent({ agents: '[analyst]' }, 'product'), true);
   assert.equal(appliesToAgent({ agents: '[architect]' }, 'dev'), false);
-  assert.equal(appliesToAgent({ agents: '[dev, architect]' }, 'dev'), true);
 });
 
 test('discoverRules: returns empty array when rules dir missing', async () => {
@@ -422,7 +430,7 @@ test('discoverDesignDocs: filters agent-specific governance docs', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/design-docs/dev-only.md',
     '---\nagents: [dev]\n---\n# Dev only');
-  const result = await discoverDesignDocs(tmpDir, 'architect');
+  const result = await discoverDesignDocs(tmpDir, 'planner');
   assert.deepEqual(result, []);
 });
 
@@ -513,17 +521,18 @@ test('evaluateReadiness: legacy design-doc artifacts are not Dev prerequisites',
   assert.equal(result.blockers.some((b) => /design-doc|readiness/.test(b)), false);
 });
 
-test('evaluateReadiness: analyst can proceed with warning for unframed feature discovery', () => {
+test('evaluateReadiness: product (absorbed analyst) proceeds on unframed feature discovery', () => {
   const artifacts = {
     project_context: { exists: true },
     spec: { exists: false },
     prd: { exists: false },
     requirements: { exists: false }
   };
-  const result = evaluateReadiness(artifacts, {}, 'SMALL', 'analyst', { exists: false }, 'code-tab-ide-ux');
-  assert.equal(result.status, 'READY_WITH_WARNINGS');
+  // @product authors the PRD, so a missing PRD neither blocks nor warns it.
+  const result = evaluateReadiness(artifacts, {}, 'SMALL', 'product', { exists: false }, 'code-tab-ide-ux');
+  assert.equal(result.status, 'READY');
   assert.equal(result.blockers.length, 0);
-  assert.ok(result.warnings.some((w) => w.includes('PRD missing')));
+  assert.equal(result.warnings.length, 0);
 });
 
 // ── extractSpecVersion / extractLastCheckpoint ────────────────────────────────

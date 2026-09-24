@@ -1,7 +1,7 @@
 ---
 name: monetary-values
 description: All monetary values must be stored as integer cents, never as floats
-agents: [dev, architect, qa]
+agents: [dev, planner, qa]
 priority: 5
 version: 1.0.0
 modes: [planning, executing]

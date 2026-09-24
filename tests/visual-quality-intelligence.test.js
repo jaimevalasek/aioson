@@ -13,16 +13,18 @@ const TEMPLATE_ROOT = path.join(ROOT, 'template');
 const WORKSPACE_ROOT = ROOT;
 // benchmark left this set when it became the traversal orchestrator: the
 // building (and the visual-quality lens with it) belongs to refiner/dev.
-const AGENTS = ['dev', 'deyvin', 'refiner'];
+// deyvin was retired into dev, so dev is the only implementation reader.
+const AGENTS = ['dev', 'refiner'];
 // Product/Sheldon consume the same brain through the spec-quality lens only: the PRD
 // authority must not inherit layout nodes it has no right to decide.
 const SPEC_AGENTS = ['product', 'sheldon'];
-// @ux-ui decides interaction on the prototype and @ui-specialist is the one
-// squad-generated executor the framework itself names (squad-create Step 2.5):
-// both BUILD what people see, so both carry the layout lens by name — a squad
-// designer under any other name reaches the same nodes through the tag-only
-// query its visual-quality block issues.
-const VISUAL_AGENTS = ['ux-ui', 'ui-specialist'];
+// @ui-specialist is the one squad-generated executor the framework itself names
+// (squad-create Step 2.5): it BUILDS what people see, so it carries the layout
+// lens by name — a squad designer under any other name reaches the same nodes
+// through the tag-only query its visual-quality block issues. @ux-ui was retired
+// into @product, which stays on the spec-quality lens only.
+const VISUAL_AGENTS = ['ui-specialist'];
+const RETIRED_AGENTS = ['deyvin', 'pair', 'ux-ui', 'analyst', 'architect', 'pm', 'scope-check', 'discovery-design-doc'];
 // Briefing originates through the spec-quality lens; QA verifies delivery through
 // the interaction lens. Neither may inherit the layout nodes. Order mirrors the
 // on-disk index array exactly.
@@ -44,6 +46,9 @@ test('the layout lens stays exactly with the implementation-oriented agents', as
     const entry = index.brains.find((brain) => brain.id === 'design/visual-quality');
 
     assert.ok(entry, `visual quality brain missing from ${root}`);
+    for (const retired of RETIRED_AGENTS) {
+      assert.ok(!entry.agents.includes(retired), `retired agent ${retired} still indexed for the visual-quality brain in ${root}`);
+    }
     assert.deepEqual(entry.agents, INDEXED_AGENTS);
     assert.equal(entry.nodes, 30);
     assert.equal(entry.path, BRAIN_RELATIVE_PATH);
@@ -293,7 +298,7 @@ test('the routed visual-implementation doc carries the criteria dev no longer in
   assert.match(template, /replaceability test/i);
   assert.match(template, /identity/i);
   // The routing frontmatter is what makes the doc reachable at all.
-  assert.match(template, /^agents: \[dev, deyvin, qa, ux-ui, site-forge\]$/m);
+  assert.match(template, /^agents: \[dev, qa, site-forge\]$/m);
   assert.match(template, /^load_tier: trigger$/m);
   // A project rule must outrank the brain, or a client design system cannot win.
   // The statement itself lives in one place — brain node vq-000 — so it cannot drift.
@@ -312,7 +317,7 @@ test('the effect and asset vocabulary is framework-level, routed, and honest abo
   // Routing frontmatter is what makes it reachable at all; without load_tier it
   // would either never load or load for every non-visual feature.
   assert.match(template, /^load_tier: trigger$/m);
-  assert.match(template, /^agents: \[dev, deyvin, refiner, ux-ui, site-forge\]$/m);
+  assert.match(template, /^agents: \[dev, refiner, site-forge\]$/m);
 
   // The two contracts that make an effect shippable rather than merely pretty.
   assert.match(template, /prefers-reduced-motion/);

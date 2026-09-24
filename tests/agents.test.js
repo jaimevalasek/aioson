@@ -20,27 +20,34 @@ test('getAgentDefinition resolves known agent', () => {
   assert.equal(agent.id, 'setup');
 });
 
-test('getAgentDefinition resolves ux-ui agent', () => {
-  const agent = getAgentDefinition('ux-ui');
-  assert.equal(Boolean(agent), true);
-  assert.equal(agent.id, 'ux-ui');
-  assert.equal(agent.displayName, 'UI/UX');
-  assert.equal(agent.output.includes('bounded interaction decision'), true);
+test('getAgentDefinition resolves retired ux-ui/analyst ids to product', () => {
+  for (const retired of ['ux-ui', 'analyst']) {
+    const agent = getAgentDefinition(retired);
+    assert.equal(Boolean(agent), true);
+    assert.equal(agent.id, 'product');
+    assert.equal(agent.command, '@product');
+  }
 });
 
-test('getAgentDefinition resolves deyvin agent', () => {
+test('getAgentDefinition resolves retired deyvin id to dev', () => {
   const agent = getAgentDefinition('deyvin');
   assert.equal(Boolean(agent), true);
-  assert.equal(agent.id, 'deyvin');
-  assert.equal(agent.displayName, 'Deyvin');
-  assert.equal(agent.output.includes('continuity'), true);
+  assert.equal(agent.id, 'dev');
+  assert.equal(agent.command, '@dev');
 });
 
-test('getAgentDefinition keeps pair as a compatibility alias', () => {
+test('getAgentDefinition keeps pair as a compatibility alias of dev', () => {
   const agent = getAgentDefinition('pair');
   assert.equal(Boolean(agent), true);
-  assert.equal(agent.id, 'deyvin');
-  assert.equal(agent.command, '@deyvin');
+  assert.equal(agent.id, 'dev');
+  assert.equal(agent.command, '@dev');
+});
+
+test('getAgentDefinition resolves retired planning ids to planner and scope-check to qa', () => {
+  for (const retired of ['architect', 'pm', 'discovery-design-doc']) {
+    assert.equal(getAgentDefinition(retired).id, 'planner');
+  }
+  assert.equal(getAgentDefinition('scope-check').id, 'qa');
 });
 
 test('getAgentDefinition resolves profiler-forge agent', () => {
@@ -67,13 +74,13 @@ test('buildAgentPrompt includes target output', () => {
     capabilitySummary: 'Declared capabilities: analyze_requirements (analyze).'
   });
   assert.equal(prompt.includes(agent.output), true);
-  assert.equal(prompt.includes('.aioson/agents/analyst.md'), true);
+  assert.equal(prompt.includes('.aioson/agents/product.md'), true);
   assert.equal(prompt.includes('Autonomy Contract'), true);
   assert.equal(prompt.includes('Autonomy mode:** trusted'), true);
   assert.equal(prompt.includes('analyze_requirements'), true);
   assert.equal(prompt.includes('AIOSON Runtime boundary'), true);
   assert.equal(prompt.includes('All user-facing communication must be in pt-BR.'), true);
-  assert.equal(prompt.includes('--agent=@analyst'), false);
+  assert.equal(prompt.includes('--agent=@product'), false);
   assert.equal(prompt.includes('aioson agent:prompt'), true);
 });
 

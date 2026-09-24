@@ -1,10 +1,9 @@
 # Specification review
 
-Use for `analyst` and `sheldon` after a concrete feature slug and artifact exist.
+Use for `sheldon` after a concrete feature slug and artifact exist.
 
 ## Review stance
 
-- `analyst`: self-review requirements before Gate A or handoff.
 - `sheldon`: independently review/enrich the PRD or specification; verify coverage rather than echoing intent.
 - Treat approved product scope as authority. Do not silently enlarge it while closing specification gaps.
 
@@ -27,4 +26,4 @@ Imagine implementation, QA, operations, support, migration, and future extension
 
 ## Escalation
 
-Resolve technical facts from the repository and targeted research. Route architecture choices to `architect` and test strategy to `qa` unless they change product behavior. Ask the user only for a user-owned scope or trade-off decision; include the recommended resolution and the consequence of deferral.
+Resolve technical facts from the repository and targeted research. Route architecture choices to `planner` and test strategy to `qa` unless they change product behavior. Ask the user only for a user-owned scope or trade-off decision; include the recommended resolution and the consequence of deferral.

@@ -38,20 +38,11 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 ## @dev
 
 - **What:** implements the reviewed PRD through the approved implementation plan — code, migrations, interfaces, and stack-native tests on the production path.
-- **When:** implementation entry point, resume after a break, or QA corrections.
+- **When:** implementation entry point, Simple Plan work, resume after a break (including a `--context=simple-plan` dev-state), a below-lane known-context fix (≤2 behavior files, no open decision, known verification — no plan file), or QA corrections.
 - **Options:** `--auto` (arm autopilot for this activation: implementation + review cycle), `--step` (override an always-autopilot project and stop at the manual `@qa` handoff for this activation).
-- **Typical:** `/dev --auto`, `/dev` (follows the seeded scheme/flag), `/dev continue feature checkout`.
+- **Typical:** `/dev --auto`, `/dev` (follows the seeded scheme/flag), `/dev continue feature checkout`, `/dev debug the failing upload test`.
 - **Produces:** the working implementation + tests and `dev-state.md` checkpoints; it does not create another specification.
 - **Next:** `@qa` (hub of the post-dev review cycle).
-
-## @deyvin
-
-- **What:** continuity-first pair programming — recovers recent context, works in small validated slices. Alias: `/pair`.
-- **When:** resuming known work, debugging together, a bounded fix on existing context.
-- **Options:** none. Hard boundary: new project/feature, broad redesign, or mixed product+UX+implementation scope → hands off immediately, never codes first.
-- **Typical:** `/deyvin continue yesterday's fix`, `/pair debug the failing upload test`.
-- **Produces:** the validated slice + session continuity records.
-- **Next:** the proper workflow agent when scope expands (`@product`/`@dev`).
 
 ## @discover
 
@@ -87,7 +78,7 @@ Consumed by the `## Help (--help)` section of each agent kernel: a standalone `-
 - **Options:** `quick` (D1/D2/D5), `targeted`, or `full`; it reuses matching registered investigation reports within seven days and may read relevant technical cache entries.
 - **Typical:** `/orache investigate the B2B onboarding-tools market`.
 - **Produces:** a verified, registered report under `squad-searches/` with evidence ledger and concrete squad impacts.
-- **Next:** `@squad`; Analyst/Architect only for an explicitly requested modeling/technical follow-up.
+- **Next:** `@squad`; `@product`/`@planner` only for an explicitly requested modeling/technical follow-up.
 
 ## @orchestrator
 

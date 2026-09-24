@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const Database = require('better-sqlite3');
+const { canonicalAgentId } = require('./agents');
 const {
   parseFrontmatter,
   parseAgentList,
@@ -48,7 +49,7 @@ const SEMANTIC_STOP_WORDS = new Set([
   'sobre', 'entre', 'cada', 'mesmo', 'mesma', 'toda', 'todas',
   'muito', 'mais', 'menos', 'pode', 'deve', 'quando', 'onde', 'tambem', 'porque',
   'ainda', 'aqui',
-  'agent', 'agente', 'agents', 'aioson', 'dev', 'deyvin', 'architect',
+  'agent', 'agente', 'agents', 'aioson', 'dev',
   'feature', 'funcionalidade', 'task', 'tarefa', 'work', 'trabalho',
   'create', 'criar', 'fazer', 'implementar', 'implement', 'implementation',
   'nova', 'novo', 'new', 'ajuste', 'change', 'update',
@@ -130,21 +131,15 @@ const FOUNDATION_ACTIVATION_AGENTS = [
   'briefing',
   'product',
   'sheldon',
-  'analyst',
-  'architect',
-  'ux-ui',
-  'pm',
+  'planner',
   'qa',
-  'orchestrator',
-  'scope-check',
-  'discovery-design-doc'
+  'orchestrator'
 ];
 
+// @dev owns continuity: a bare activation reads where work stopped (dev-state)
+// and summarizes; feature specs load once a concrete task arrives.
 const ACTIVATION_ONLY_CONTEXT_PATHS_BY_AGENT = new Map([
-  [
-    'deyvin',
-    new Set([...FOUNDATION_ACTIVATION_PATHS, '.aioson/context/dev-state.md'])
-  ],
+  ['dev', new Set([...FOUNDATION_ACTIVATION_PATHS, '.aioson/context/dev-state.md'])],
   ...FOUNDATION_ACTIVATION_AGENTS.map((agent) => [agent, FOUNDATION_ACTIVATION_PATHS])
 ]);
 
@@ -154,8 +149,7 @@ const UNIVERSAL_ALWAYS_CONTEXT_BASENAMES = new Set([
 ]);
 
 const AGENT_ALWAYS_CONTEXT_BASENAMES = new Map([
-  ['dev', new Set(['dev-state.md', 'memory-index.md'])],
-  ['deyvin', new Set(['dev-state.md', 'memory-index.md'])]
+  ['dev', new Set(['dev-state.md', 'memory-index.md'])]
 ]);
 
 function normalizeSlashes(value) {
@@ -856,7 +850,8 @@ function scoreCandidate(candidate, context) {
 }
 
 async function selectContext(targetDir, options = {}) {
-  const agent = normalizeToken(options.agent || 'dev');
+  // Retired ids (`deyvin`, `architect`) select as the agent that absorbed them.
+  const agent = canonicalAgentId(normalizeToken(options.agent || 'dev'));
   const mode = modeFromOptions(options.mode);
   const task = String(options.task || options.goal || '').trim();
   const paths = splitOptionList(options.paths || options.path).map(normalizeSlashes);

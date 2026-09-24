@@ -92,7 +92,7 @@ The honest way to switch this off for a project is the rule file itself — edit
 
 ## Scope-drift gate (`spec:analyze --stage`)
 
-Not configurable, always on in the tracked `@dev`/`@qa` done-gate, for the canonical PRD → plan artifacts as well as the legacy ones. It runs `aioson spec:analyze . --feature={slug} --stage=dev|qa` — the same command `@scope-check` reads — and tiers the result honestly:
+Not configurable, always on in the tracked `@dev`/`@qa` done-gate, for the canonical PRD → plan artifacts as well as the legacy ones. It runs `aioson spec:analyze . --feature={slug} --stage=dev|qa` — the same command `@qa` reads for scope-drift classification — and tiers the result honestly:
 
 - **blocks** on what the completing stage owns or what is broken beyond doubt: a planned file that does not exist, a retired file still present, an invalid `harness-contract.json`, a readiness declared blocked;
 - **surfaces, never blocks** the code-vs-plan drift: `plan_path_untouched` (a planned `create`/`modify`/`retire` path with no change since the feature began) and `delivery_outside_plan` (a delivered file no plan row declares — tests, lockfiles, build output and everything the installer writes are support, not drift — `.aioson/` plus its siblings outside it: `.claude/`, `.codex/`, `.opencode/`, `.agents/`, `agents/_shared/` and the root instruction files; a harness contract's `allowed_files` sanctions more). The plan may have over-declared, and the file outside it may be the right fix: the gate demands that the difference be **seen and recorded** (a delivery row or an approved deviation), not that it not exist. Advisories ride the workflow result, a guard event, and `.aioson/context/spec-analyze-{slug}.json`;

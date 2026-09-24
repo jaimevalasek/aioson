@@ -85,10 +85,10 @@ test('structural contract §6: dossier:add-finding commands carry --slug and --a
 });
 
 // §2 — every agent registers session completion via `agent:done`. neo is a pure
-// router that produces no artifacts and pair is a thin alias that inherits
-// deyvin's observability — both are documented exceptions.
-test('structural contract §2: every agent emits agent:done (except router/alias)', () => {
-  const EXEMPT = new Set(['neo.md', 'pair.md']);
+// router that produces no artifacts — the documented exception (the pair alias
+// was retired with deyvin into dev).
+test('structural contract §2: every agent emits agent:done (except router)', () => {
+  const EXEMPT = new Set(['neo.md']);
   const missing = [];
 
   for (const file of agentFiles()) {
@@ -103,9 +103,9 @@ test('structural contract §2: every agent emits agent:done (except router/alias
 });
 
 // §2 — every agent declares what it reads before acting via a `## Required input`
-// heading. pair is a thin alias of deyvin and inherits its input declaration.
-test('structural contract §2: every agent declares ## Required input (except alias)', () => {
-  const EXEMPT = new Set(['pair.md']);
+// heading (no alias exemption: pair was retired with deyvin into dev).
+test('structural contract §2: every agent declares ## Required input', () => {
+  const EXEMPT = new Set();
   const missing = [];
 
   for (const file of agentFiles()) {
@@ -119,8 +119,8 @@ test('structural contract §2: every agent declares ## Required input (except al
   assert.deepEqual(missing, [], `agents missing ## Required input:\n${missing.join('\n')}`);
 });
 
-test('structural contract §2: every agent declares ## Hard constraints (except alias)', () => {
-  const EXEMPT = new Set(['pair.md']);
+test('structural contract §2: every agent declares ## Hard constraints', () => {
+  const EXEMPT = new Set();
   const missing = [];
 
   for (const file of agentFiles()) {
@@ -195,7 +195,8 @@ test('structural contract §3: agent:done is the last observability command', ()
 // §4 — workflow agents that own a handoff (contract §2 handoff list) must
 // recommend `/compact` before the next same-feature agent activation.
 test('structural contract §4: handoff agents recommend /compact', () => {
-  const HANDOFF = ['briefing.md', 'product.md', 'sheldon.md', 'analyst.md', 'architect.md', 'pm.md', 'orchestrator.md'];
+  // analyst was retired into product, architect/pm into planner.
+  const HANDOFF = ['briefing.md', 'product.md', 'sheldon.md', 'planner.md', 'orchestrator.md'];
   const missing = [];
 
   for (const file of HANDOFF) {

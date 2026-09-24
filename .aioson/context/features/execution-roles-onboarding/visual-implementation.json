@@ -36,7 +36,7 @@
     }
   ],
   "metrics": {
-    "declarations": 8330,
+    "declarations": 8329,
     "token_adherence_pct": 38,
     "tokenized_values": 1086,
     "literal_values": 1756,
@@ -498,5 +498,5 @@
     }
   },
   "exitCode": 0,
-  "measured_at": "2026-09-24T20:05:18.829Z"
+  "measured_at": "2026-09-24T20:57:57.809Z"
 }

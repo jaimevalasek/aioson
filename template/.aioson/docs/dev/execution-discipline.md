@@ -1,6 +1,6 @@
 ---
 description: "Dev execution discipline — semantic commits, learnings, task tracking, planning, atomic execution, verification gates, skeleton updates, and debugging."
-agents: [dev, deyvin]
+agents: [dev]
 task_types: [implementation, execution]
 triggers: [implementing slices, execution discipline, commit cadence]
 ---

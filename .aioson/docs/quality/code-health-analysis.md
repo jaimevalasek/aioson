@@ -1,8 +1,8 @@
 ---
-description: "Code-health / improvement analysis playbook — coverage gaps, test sufficiency, regression need, execution-chain tracing, performance hotspots, componentization/maintainability. Shared on-demand lens for @tester/@qa/@pentester/@architect/@sheldon/@deyvin. Load only when the trigger fires; do not inline."
+description: "Code-health / improvement analysis playbook — coverage gaps, test sufficiency, regression need, execution-chain tracing, performance hotspots, componentization/maintainability. Shared on-demand lens for @tester/@qa/@pentester/@planner/@sheldon/@dev. Load only when the trigger fires; do not inline."
 task_types: [quality, analysis]
 triggers: [code health, improvement lens, regression]
-agents: [quality, tester, qa, pentester, architect, sheldon, deyvin]
+agents: [quality, tester, qa, pentester, planner, sheldon]
 ---
 
 # Code-Health Analysis
@@ -50,8 +50,8 @@ critical-path coverage) from **nice-to-have** (cosmetic refactors). Drop specula
 ### 4. Operate (opera)
 Produce an actionable result within the active agent's scope. Analysis agents recommend a precise
 change and verification; they do not write tests or implementation. `@tester` owns assigned test
-work; `@dev` owns authorized implementation. `@architect` advises only on a demonstrated structural
-question, within the approved artifact contract.
+work; `@dev` owns authorized implementation. `@planner` settles a demonstrated structural question
+in the implementation plan, within the approved artifact contract.
 
 ### 5. Test
 Run the verification command; add a test only when the active role owns that work. For a regression
@@ -67,11 +67,11 @@ Re-measure against the goal from step 1. If not improved, iterate or revert. Rec
 |---|---|---|
 | @quality | reproducible measurement, assertion effectiveness, baseline/eval integrity | quality review with evidence and remediation backlog |
 | @tester | coverage, test sufficiency, regression | writes the missing tests (line/branch/property) |
-| @qa | risk-first triage; routes coverage→@tester, perf/structure→@architect | findings in the QA report |
+| @qa | risk-first triage; routes coverage→@tester, perf/structure→@planner | findings in the QA report |
 | @pentester | execution-chain, attack surface (perf/componentization light) | threat-surface + chain findings |
-| @architect | componentization, maintainability, performance (structural) | bounded recommendations in the approved artifact |
+| @planner | componentization, maintainability, performance (structural) | bounded decisions in the implementation plan |
 | @sheldon | facets relevant to the unresolved PRD risk | in-place PRD enrichment |
-| @deyvin | quick lens on a slice during a pair session | inline suggestions; escalate if broad |
+| @dev | quick lens on a slice during a below-lane fix or Simple Plan | inline suggestions; escalate if broad |
 
 ## Trigger (when to load this doc)
 Load when the task is: "is this well-tested / does it need more tests?", "should we add a regression

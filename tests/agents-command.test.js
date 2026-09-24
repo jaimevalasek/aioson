@@ -87,7 +87,7 @@ test('agent:prompt bootstraps direct runtime handoff for non-workflow agents', a
   await assert.doesNotReject(() => fs.access(path.join(dir, 'aioson-logs')));
 });
 
-test('agent:prompt keeps deyvin as a direct official agent outside workflow routing', async () => {
+test('agent:prompt folds retired deyvin into @dev and lets the workflow route it', async () => {
   const dir = await makeTempDir();
   await writeProjectContext(dir, 'SMALL');
   const { t } = createTranslator('en');
@@ -100,21 +100,24 @@ test('agent:prompt keeps deyvin as a direct official agent outside workflow rout
     t
   });
 
+  // deyvin is retired into @dev; @dev is a workflow stage, so a fresh SMALL
+  // project routes the request to the workflow's current stage (@product).
   assert.equal(result.ok, true);
-  assert.equal(result.agent, 'deyvin');
-  assert.equal(result.requestedAgent, 'deyvin');
-  assert.equal(result.routed, false);
+  assert.equal(result.requestedAgent, 'dev');
+  assert.notEqual(result.agent, 'deyvin');
+  assert.equal(result.agent, 'product');
+  assert.equal(result.routed, true);
   assert.equal(Boolean(result.runtime), true);
   assert.equal(result.effectiveMode, 'guarded');
 
   const runtime = await openRuntimeDb(dir, { mustExist: true });
   try {
-    const run = runtime.db.prepare("SELECT agent_name, agent_kind, source, status FROM agent_runs ORDER BY updated_at DESC LIMIT 1").get();
+    const run = runtime.db.prepare("SELECT agent_name, agent_kind, source FROM agent_runs ORDER BY updated_at DESC LIMIT 1").get();
 
-    assert.equal(run.agent_name, '@deyvin');
+    assert.notEqual(run.agent_name, '@deyvin');
+    assert.equal(run.agent_name, '@product');
     assert.equal(run.agent_kind, 'official');
-    assert.equal(run.source, 'direct');
-    assert.equal(run.status, 'queued');
+    assert.equal(run.source, 'workflow');
   } finally {
     runtime.db.close();
   }

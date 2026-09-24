@@ -62,7 +62,7 @@ async function runWorkflowHeal({ args, options, logger, t }) {
     return { ok: false, reason: 'missing_stage' };
   }
 
-  const allowedStages = ['dev', 'qa', 'tester', 'architect', 'ux-ui'];
+  const allowedStages = ['dev', 'qa', 'tester'];
   if (!allowedStages.includes(stage)) {
     logger.error(`Stage @${stage} is not supported for healing. Allowed: ${allowedStages.join(', ')}`);
     return { ok: false, reason: 'unsupported_stage' };

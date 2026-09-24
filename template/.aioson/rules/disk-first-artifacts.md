@@ -22,7 +22,7 @@ Every artifact an agent promises to hand off MUST exist on disk before session e
 | `@planner` | Vertical implementation plan | `.aioson/context/implementation-plan-{slug}.md` |
 | `@dev` | Working production code and stack-native tests | Project source/test paths; update `dev-state.md` when used |
 | `@qa` | QA verdict and executable evidence | `.aioson/context/qa-report-{slug}.md` |
-| `@dev` / `@deyvin` | Simple Plan, only for the bounded Simple Plan lane | `.aioson/context/simple-plans/{slug}.md` |
+| `@dev` | Simple Plan, only for the bounded Simple Plan lane | `.aioson/context/simple-plans/{slug}.md` |
 
 `features.md`, `project-pulse.md`, workflow state, and the feature dossier are indexes/state, not extra specification layers. Optional specialists write a supporting artifact only when their explicit invocation requires one; that artifact never becomes a default prerequisite.
 

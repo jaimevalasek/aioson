@@ -2,7 +2,7 @@
 description: "Measured size limits for files and functions — the modularization floor rules:check enforces. Advisory by default (a pause to think); a project rule binding the same checkers makes it law."
 task_types: [implementation, refactor, extraction, file-size, quality]
 triggers: [large file, over 500 lines, split file, extract module, file size, long function, function length, function size, god object, modularization]
-agents: [dev, deyvin, qa, architect, validator]
+agents: [dev, qa, planner, validator]
 paths: [src/**, app/**, lib/**, packages/**, services/**]
 load_tier: trigger
 enforcement: [file-size, function-size]

@@ -1,7 +1,7 @@
 ---
 name: visual-implementation
 description: Visual authority resolution and anti-slop implementation criteria for user-facing interfaces, prototypes, and visual states
-agents: [dev, deyvin, qa, ux-ui, site-forge]
+agents: [dev, qa, site-forge]
 priority: 10
 version: 1.0.0
 modes: [planning, executing]

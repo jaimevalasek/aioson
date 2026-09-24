@@ -28,7 +28,7 @@ Before building or specifying any form, read the project's `.aioson/rules/` and 
 ## Applies to
 
 - @briefing: a briefing whose surface collects structured data names the mask/validation contract as a promise or classified open question, never leaving field formats to be discovered at implementation.
-- @dev / @deyvin: implementation uses the project's mask/validation utilities; do not hand-roll a second formatting layer when one exists.
+- @dev: implementation uses the project's mask/validation utilities; do not hand-roll a second formatting layer when one exists.
 - @refiner / @benchmark: prototypes and benchmark builds must demonstrate masks and inline validation actually working in mock state — static unmasked inputs in a form surface are a blocking finding, not polish.
-- @product / @ux-ui: field lists in specs name the format and mask for each structured field.
+- @product: field lists in specs name the format and mask for each structured field.
 - @qa: delivery evidence exercises each structured field with valid and malformed input on the real surface; a field that accepts input its mask/validation contract rejects is a FAIL.

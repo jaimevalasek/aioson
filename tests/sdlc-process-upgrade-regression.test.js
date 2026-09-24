@@ -206,7 +206,18 @@ test('Product finalize triggers are phrases, never a bare number', async () => {
   assert.deepEqual(phrases.filter((phrase) => /^\d+$/.test(phrase.trim())), []);
 });
 
-test('PM never owns the canonical implementation plan by classification', () => {
+test('only planner owns the canonical implementation plan (retired pm has no contract)', () => {
   const { CONTRACTS } = require('../src/handoff-contract');
-  assert.deepEqual(CONTRACTS.pm.artifacts, []);
+  // pm was retired into planner: no advisor stage may carry a handoff contract.
+  assert.equal(Object.prototype.hasOwnProperty.call(CONTRACTS, 'pm'), false);
+  const state = { mode: 'feature', featureSlug: 'demo' };
+  const planOwners = Object.entries(CONTRACTS)
+    .filter(([, contract]) => {
+      const artifacts = typeof contract.artifacts === 'function'
+        ? contract.artifacts('.', state)
+        : contract.artifacts;
+      return artifacts.some((artifact) => artifact.includes('implementation-plan'));
+    })
+    .map(([id]) => id);
+  assert.deepEqual(planOwners, ['planner']);
 });

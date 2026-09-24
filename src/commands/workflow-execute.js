@@ -58,11 +58,6 @@ const STEP_META = {
   product: { description: 'Generate PRD', gate_before: null, gate_after: null },
   sheldon: { description: 'Challenge and approve the PRD in place', gate_before: null, gate_after: null },
   planner: { description: 'Create executable vertical implementation stages', gate_before: null, gate_after: 'C' },
-  analyst: { description: 'Map requirements + spec', gate_before: null, gate_after: 'A' },
-  architect: { description: 'Architecture design', gate_before: 'A', gate_after: 'B' },
-  'discovery-design-doc': { description: 'Prepare design-doc and readiness contract', gate_before: 'B', gate_after: null },
-  'ux-ui': { description: 'UI/UX design', gate_before: 'A', gate_after: 'B', optional: true },
-  pm: { description: 'Backlog + PM plan', gate_before: 'B', gate_after: 'C' },
   orchestrator: { description: 'Coordinate execution lanes', gate_before: 'C', gate_after: null },
   dev: { description: 'Implementation', gate_before: null, gate_after: 'C' },
   qa: { description: 'QA + feature closure', gate_before: 'C', gate_after: 'D' },
@@ -77,8 +72,8 @@ const GATE_NAMES = {
 };
 
 const GATE_RESPONSIBLE_AGENT = {
-  A: '@product (legacy alias: @analyst)',
-  B: '@product (legacy alias: @architect)',
+  A: '@product',
+  B: '@product',
   C: '@planner',
   D: '@qa'
 };
@@ -217,7 +212,7 @@ function buildAgenticPolicy(options = {}, classification = 'SMALL') {
         read_only: true,
         max_per_session: 3,
         max_files_in_scope: 20,
-        allowed_parent_agents: ['deyvin', 'dev', 'product', 'briefing', 'orache']
+        allowed_parent_agents: ['dev', 'product', 'briefing', 'orache']
       },
       research: {
         enabled: true,
@@ -289,10 +284,6 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
         && String(artifacts.prd.frontmatter?.product_scope || '').toLowerCase() === 'approved'
         && String(artifacts.prd.frontmatter?.prd_ready || '').toLowerCase() === 'approved'
       );
-    } else if (normalized === 'analyst') {
-      inferred = Boolean(artifacts.requirements && artifacts.requirements.exists && gates.requirements === 'approved');
-    } else if (normalized === 'architect') {
-      inferred = Boolean(artifacts.architecture && artifacts.architecture.exists && gates.design === 'approved');
     } else if (normalized === 'sheldon') {
       inferred = Boolean(
         artifacts.prd && artifacts.prd.exists
@@ -311,8 +302,6 @@ function inferCompletedStagesFromArtifacts(sequence, artifacts, gates) {
         gates.design === 'approved' &&
         gates.plan === 'approved'
       );
-    } else if (normalized === 'pm') {
-      inferred = Boolean(artifacts.implementation_plan && artifacts.implementation_plan.exists && gates.plan === 'approved');
     } else if (normalized === 'qa') {
       inferred = gates.execution === 'approved';
     } else {

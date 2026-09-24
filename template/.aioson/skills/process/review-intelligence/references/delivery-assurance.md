@@ -1,6 +1,6 @@
 # Delivery assurance review
 
-Use for `scope-check` and `qa` after a concrete feature slug and review artifact exist. Both perform independent review; do not rely on the implementing agent's self-assessment as proof.
+Use for `qa` after a concrete feature slug and review artifact exist. QA performs independent review, including scope-drift classification (`.aioson/docs/qa/scope-drift.md`); do not rely on the implementing agent's self-assessment as proof.
 
 ## Pass 1 — independent evidence
 
@@ -22,4 +22,4 @@ Exercise or reason from evidence about first use, empty state, invalid input, un
 
 Every unresolved finding needs impact, evidence, recommendation, confidence, owner, and residual risk. Use `decision_required` only for a genuine owner choice and `blocked` only for an open blocking finding. A valid actionable report remains valuable evidence and must not be discarded.
 
-Run the existing QA/scope-check gates exactly as already defined. Review intelligence supplements those gates; it neither approves Gate D nor changes workflow state automatically. Ask the user only when their authorization or product decision is indispensable, and include the recommended course with alternatives.
+Run the existing QA gates and the engine's drift gate exactly as already defined. Review intelligence supplements those gates; it neither approves Gate D nor changes workflow state automatically. Ask the user only when their authorization or product decision is indispensable, and include the recommended course with alternatives.

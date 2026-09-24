@@ -43,7 +43,7 @@ It deliberately contains one PRD, one implementation plan, and one QA verdict. C
 - Dev implements and integrates those phases and controls through the production path.
 - QA independently proves the real application behavior and revalidates any bounded specialist-authored correction.
 
-Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, Orchestrator, Tester, Pentester, and Validator remain available to every classification as opt-in detours. Use one for a named uncertainty or triggered review, then merge the conclusion into a canonical artifact. Tester/Pentester may apply only their bounded, evidence-backed corrections and must return final acceptance to QA. The lightweight feature dossier and continuity mapping are non-blocking context caches, not extra deliverables.
+Orchestrator, Tester, Pentester, and Validator remain available to every classification as opt-in detours. Use one for a named uncertainty or triggered review, then merge the conclusion into a canonical artifact. Tester/Pentester may apply only their bounded, evidence-backed corrections and must return final acceptance to QA. The lightweight feature dossier and continuity mapping are non-blocking context caches, not extra deliverables.
 
 ## Compatibility
 

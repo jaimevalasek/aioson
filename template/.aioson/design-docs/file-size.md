@@ -1,7 +1,7 @@
 ---
 description: "File size guidelines, alert thresholds, and split strategies"
 scope: "governance"
-agents: [dev, deyvin, architect]
+agents: [dev, planner]
 modes: [planning, executing]
 task_types: [implementation, refactor, extraction, file-size]
 load_tier: trigger

@@ -18,7 +18,7 @@ Score each prompt on five dimensions:
 
 Prioritize prompts that:
 
-- are used early in workflow (`product`, `analyst`, `sheldon`, `scope-check`);
+- are used early in workflow (`briefing`, `product`, `sheldon`, `planner`);
 - decide routing (`neo`, `orchestrator`, `qa`);
 - touch high-risk behavior (`dev`, `pentester`, `tester`);
 - exceed their file-size target;

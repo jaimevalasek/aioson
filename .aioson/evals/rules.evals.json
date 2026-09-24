@@ -63,7 +63,7 @@
     },
     {
       "name": "monetary-values-billing-cents",
-      "agent": "architect",
+      "agent": "planner",
       "mode": "planning",
       "task": "Reviewing the subscription billing flow to confirm the amount fields avoid floating-point rounding errors.",
       "expect": [
@@ -81,7 +81,7 @@
     },
     {
       "name": "implementation-structure-controller-split",
-      "agent": "architect",
+      "agent": "planner",
       "mode": "planning",
       "task": "Splitting the bloated OrderController into a service layer and repository so persistence stays out of the route handler.",
       "paths": ["src/controllers/OrderController.js"],
@@ -119,7 +119,7 @@
     },
     {
       "name": "simple-plan-rename-button",
-      "agent": "deyvin",
+      "agent": "dev",
       "mode": "planning",
       "task": "Writing a lightweight implementation plan for renaming the checkout button before making the bounded code change.",
       "paths": [".aioson/context/simple-plans/rename-checkout-button.md"],
@@ -139,7 +139,7 @@
     },
     {
       "name": "squad-driver-greeting-service",
-      "agent": "architect",
+      "agent": "planner",
       "mode": "planning",
       "task": "Explaining the boundary between the greeting service driver and the squad agent definition it loads at runtime.",
       "paths": ["src/services/greetingService.js"],

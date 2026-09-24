@@ -1,7 +1,7 @@
 ---
 name: harness-validate
 description: Harness-driven validation — the implementer (@dev) closes every cycle with an impartial validator review (@validator) against harness-contract.json before delivery counts as complete. Use only when the feature's approved plan already declares a harness contract; never create one by project size.
-agents: [dev, deyvin, validator]
+agents: [dev, validator]
 task_types: [harness-validation]
 triggers: [harness, harness-contract, validator review, validacao por contrato]
 ---

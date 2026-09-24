@@ -191,7 +191,8 @@ test('harness:retro-promote applies selected candidate to rules and marks learni
   assert.match(result.items[0].target_path, /^\.aioson\/rules\/retro-/);
 
   const rule = await readFile(root, result.items[0].target_path);
-  assert.match(rule, /agents: \[dev, deyvin, scope-check, qa\]/);
+  // deyvin and scope-check are retired into dev and qa; the rule targets only live agents.
+  assert.match(rule, /agents: \[dev, qa\]/);
   assert.match(rule, /load_tier: trigger/);
   assert.match(rule, /Bounded Evidence/);
   assert.doesNotMatch(rule, /RAW-AUDITOR-EVIDENCE-SHOULD-NOT-LEAK/);

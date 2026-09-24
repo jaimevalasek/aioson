@@ -3,7 +3,7 @@ name: aioson-context-boundary
 description: .aioson/context/ is Markdown-first with explicit machine-readable workflow exceptions
 priority: 10
 version: 2.0.0
-agents: [product, sheldon, planner, dev, qa, analyst, architect, ux-ui, pm]
+agents: [product, sheldon, planner, dev, qa]
 modes: [executing]
 task_types: [artifact-write, file-creation]
 load_tier: trigger

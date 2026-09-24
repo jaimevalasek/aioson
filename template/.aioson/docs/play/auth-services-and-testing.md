@@ -1,7 +1,7 @@
 ---
 description: "AIOSON Play auth, cloud owner token, local operator auth, Play Services, requires_services, dev-link, symlink installs, and smoke testing."
 scope: "global"
-agents: [dev, deyvin, architect, qa, tester, pentester]
+agents: [dev, planner, qa, tester, pentester]
 task_types: [aioson-play-app, auth, service-integration, testing]
 triggers: [aioson-auth, AIOSON_COM_TOKEN, requires_services, service.json, dev-link, Play Services, smoke test]
 ---

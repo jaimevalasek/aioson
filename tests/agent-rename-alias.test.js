@@ -28,8 +28,9 @@ const BIN = path.join(ROOT, 'bin', 'aioson.js');
 
 test('refiner is the canonical id; briefing-refiner is only a legacy id', () => {
   assert.equal(LEGACY_AGENT_IDS['briefing-refiner'], 'refiner');
-  // `pair` is a live alias with its own stub, never a legacy id to clean up.
-  assert.equal(LEGACY_AGENT_IDS.pair, undefined);
+  // Retired agents resolve to the agent that absorbed them.
+  assert.equal(LEGACY_AGENT_IDS.pair, 'dev');
+  assert.equal(LEGACY_AGENT_IDS.architect, 'planner');
   assert.equal(getAgentDefinition('briefing-refiner').id, 'refiner');
   assert.equal(getAgentDefinition('@Briefing-Refiner').id, 'refiner');
   assert.equal(AGENT_DEFINITIONS.some((a) => a.id === 'briefing-refiner'), false);
@@ -41,7 +42,8 @@ test('canonicalAgentId rewrites known aliases and leaves custom ids alone', () =
   assert.equal(canonicalAgentId('briefing-refiner'), 'refiner');
   assert.equal(canonicalAgentId('@briefing-refiner'), 'refiner');
   assert.equal(canonicalAgentId('refiner'), 'refiner');
-  assert.equal(canonicalAgentId('pair'), 'deyvin');
+  assert.equal(canonicalAgentId('pair'), 'dev');
+  assert.equal(canonicalAgentId('scope-check'), 'qa');
   assert.equal(canonicalAgentId('my-squad-specialist'), 'my-squad-specialist');
   assert.equal(canonicalAgentId(''), '');
   assert.equal(isSameAgent('briefing-refiner', '@refiner'), true);

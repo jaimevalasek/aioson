@@ -41,7 +41,7 @@ async function shippedProject() {
 
 const paths = (list) => (list || []).map((item) => item.path);
 
-test('the effects vocabulary reaches the refiner building a prototype, and the dev/deyvin implementing the hero', async () => {
+test('the effects vocabulary reaches the refiner building a prototype, and the dev implementing the hero', async () => {
   const dir = await shippedProject();
   try {
     const task = 'build the landing prototype hero: display typography at 120px, a radial wash glow background with ambient drift, glass nav, entrance reveals, premium dark cinematic register';
@@ -55,7 +55,7 @@ test('the effects vocabulary reaches the refiner building a prototype, and the d
     assert.equal(must.includes('.aioson/rules/status-flow-drag-and-drop.md'), false, must.join(', '));
     assert.equal(must.includes('.aioson/rules/management-home-widgets.md'), false, must.join(', '));
 
-    for (const agent of ['dev', 'deyvin']) {
+    for (const agent of ['dev']) {
       const brief = await buildContextBrief(dir, { agent, mode: 'executing', task: 'implement the hero section with a glow background, grain texture and an entrance reveal animation', paths: 'src/components/Hero.tsx' });
       const docs = [...paths(brief.must_load), ...paths(brief.should_load)];
       assert.ok(docs.includes('.aioson/docs/design/visual-effects.md'), `${agent}: ${docs.join(', ')}`);

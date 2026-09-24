@@ -2,7 +2,7 @@
 description: "Measured coupling limits — internal fan-out per module and import cycles, the boundaries rules:check enforces. Advisory by default (a pause to think); a project rule binding the same checkers makes it law."
 task_types: [implementation, refactor, extraction, architecture, quality]
 triggers: [coupling, fan-out, import cycle, circular dependency, circular import, dependency cycle, too many imports, decouple, module boundary, tangled modules, god module]
-agents: [dev, deyvin, qa, architect, validator]
+agents: [dev, qa, planner, validator]
 paths: [src/**, app/**, lib/**, packages/**, services/**]
 load_tier: trigger
 enforcement: [module-fan-out, import-cycle]

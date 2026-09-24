@@ -419,11 +419,12 @@ test('custom workflow configuration remains an explicit opt-in escape hatch', as
   const root = await tmp();
   await write(root, '.aioson/context/workflow.config.json', JSON.stringify({
     version: 1,
-    feature: { SMALL: ['product', 'architect', 'planner', 'dev', 'qa'] }
+    feature: { SMALL: ['product', 'orchestrator', 'architect', 'planner', 'dev', 'qa'] }
   }));
   const loaded = await readWorkflowConfig(root);
   assert.equal(loaded.exists, true);
-  assert.deepEqual(loaded.config.feature.SMALL, ['product', 'architect', 'sheldon', 'planner', 'dev', 'qa']);
+  // a retired stage in a custom route is dropped; the live custom stage stays
+  assert.deepEqual(loaded.config.feature.SMALL, ['product', 'orchestrator', 'sheldon', 'planner', 'dev', 'qa']);
 });
 
 test('workflow skip cannot bypass Dev', () => {

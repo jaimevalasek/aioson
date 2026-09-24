@@ -1,7 +1,7 @@
 'use strict';
 
-// Migration: remove the stale files an agent rename leaves behind in a
-// consumer project.
+// Migration: remove the stale files an agent rename or retirement leaves
+// behind in a consumer project.
 //
 // Why: `aioson update` copies the template's CURRENT files but never deletes
 // the ones a previous template shipped. After `briefing-refiner` became
@@ -28,7 +28,31 @@ const TEMPLATE_DIR = path.join(ROOT_DIR, 'template');
 // Every place a per-agent file is materialized by id.
 const AGENT_FILE_PATTERNS = Object.freeze([
   '.aioson/agents/{id}.md',
+  '.aioson/agents/manifests/{id}.manifest.json',
   '.claude/commands/aioson/agent/{id}.md'
+]);
+
+// Framework-owned docs that only a retired agent loaded. `update` overwrites
+// managed docs without preserving edits, so removing them is the same
+// ownership rule; the two continuity docs now ship under docs/dev/.
+const RETIRED_FILES = Object.freeze([
+  '.aioson/docs/deyvin/continuity-recovery.md',
+  '.aioson/docs/deyvin/debugging-escalation.md',
+  '.aioson/docs/deyvin/pair-execution.md',
+  '.aioson/docs/deyvin/runtime-handoffs.md',
+  '.aioson/docs/deyvin/scout-fallback.md',
+  '.aioson/docs/ux-ui/accessibility-audit.md',
+  '.aioson/docs/ux-ui/audit-mode.md',
+  '.aioson/docs/ux-ui/component-map.md',
+  '.aioson/docs/ux-ui/design-execution.md',
+  '.aioson/docs/ux-ui/design-gate.md',
+  '.aioson/docs/ux-ui/research-mode.md',
+  '.aioson/docs/ux-ui/site-delivery.md',
+  '.aioson/docs/ux-ui/token-contract.md',
+  '.aioson/skills/process/aioson-spec-driven/references/analyst.md',
+  '.aioson/skills/process/aioson-spec-driven/references/architect.md',
+  '.aioson/skills/process/aioson-spec-driven/references/deyvin.md',
+  '.aioson/skills/process/aioson-spec-driven/references/pm.md'
 ]);
 
 async function exists(filePath) {
@@ -48,7 +72,10 @@ function legacyAgentFiles() {
         legacy,
         canonical,
         legacyRel: pattern.replace('{id}', legacy),
-        canonicalRel: pattern.replace('{id}', canonical)
+        // A manifest is optional per agent: its guard is the canonical kernel.
+        canonicalRel: pattern.includes('manifests/')
+          ? AGENT_FILE_PATTERNS[0].replace('{id}', canonical)
+          : pattern.replace('{id}', canonical)
       });
     }
   }
@@ -69,11 +96,21 @@ async function migrateAgentRename(targetDir, options = {}) {
     await fs.unlink(legacyAbs);
     removed.push(entry.legacyRel);
   }
+  for (const rel of RETIRED_FILES) {
+    if (await exists(path.join(templateDir, rel))) continue;
+    const abs = path.join(targetDir, rel);
+    if (!(await exists(abs))) continue;
+    await fs.unlink(abs);
+    removed.push(rel);
+    // Drop the folder once it is empty (docs/deyvin/, docs/ux-ui/).
+    await fs.rmdir(path.dirname(abs)).catch(() => {});
+  }
   return { changed: removed.length > 0, removed };
 }
 
 module.exports = {
   AGENT_FILE_PATTERNS,
+  RETIRED_FILES,
   legacyAgentFiles,
   migrateAgentRename
 };

@@ -151,7 +151,7 @@ aioson dossier:add-finding . --slug={slug} --agent=product --section="Agent Trai
 ## Handoff
 
 - Hand off to `@sheldon` when the PRD is complete — every classification; depth changes, route shape does not. Sheldon runs one bounded independent two-pass review in place, then Planner.
-- Never route the default chain to Analyst, Architect, PM, UX/UI, Discovery Design Doc, Scope Check, or Orchestrator. They are opt-in specialists for a named unresolved decision.
+- Never route the default chain to Orchestrator; it is opt-in for a named unresolved decision.
 
 **Handoff message:**
 

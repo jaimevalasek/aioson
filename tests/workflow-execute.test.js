@@ -916,16 +916,18 @@ test('workflow:execute: parallel_guard is null when no --lane is provided', asyn
 
 // ── AC-SDLC-08: gate-blocked message format (gate:approve + responsible agent) ─
 
-// Note: the default MEDIUM feature sequence includes design, scope-check, dev, pentester, and qa.
+// Note: retired stages (analyst, architect, scope-check, ...) no longer appear in any sequence.
 // Some tests use custom workflow.config.json to isolate a specific gate.
 // These tests use a custom workflow.config.json to include the relevant agent in the sequence,
 // or use 'qa' (which has gate_before='C' and IS in the default feature sequence).
 
-test('workflow:execute: blocked step message includes gate:approve command (Gate A → architect custom sequence)', async () => {
+test('workflow:execute: retired stages in a custom sequence are dropped and the blocked step message includes gate:approve', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
   await writeFile(tmpDir, '.aioson/context/prd-feat.md', '# PRD');
-  // Custom workflow.config.json includes architect so Gate A blocking is visible
+  // A legacy custom workflow.config.json still names the retired analyst and
+  // architect stages; they are folded into the main cycle and dropped, so no
+  // step owns Gate A/B anymore. qa (gate_before='C') is the blocked step.
   await writeFile(
     tmpDir,
     '.aioson/context/workflow.config.json',
@@ -936,7 +938,6 @@ test('workflow:execute: blocked step message includes gate:approve command (Gate
       }
     }, null, 2)
   );
-  // No requirements → Gate A (requirements) not approved → architect blocked
 
   const result = await runWorkflowExecute({
     args: [tmpDir],
@@ -945,19 +946,25 @@ test('workflow:execute: blocked step message includes gate:approve command (Gate
   });
 
   assert.equal(result.ok, true);
-  const architectStep = result.steps.find((s) => s.agent === 'architect');
-  assert.ok(architectStep, 'architect step must exist in custom sequence');
-  assert.equal(architectStep.status, 'blocked', 'architect must be blocked without Gate A');
-  assert.ok(architectStep.predicted_blockers.length > 0, 'architect must have predicted blockers');
+  for (const retired of ['analyst', 'architect']) {
+    assert.equal(result.steps.some((s) => s.agent === retired), false, `${retired} step must be dropped`);
+  }
+  const allBlockers = result.steps.flatMap((s) => s.predicted_blockers || []);
+  assert.equal(allBlockers.some((msg) => /--gate=[AB]\b/.test(msg)), false, 'no live step is gated on A/B');
 
-  const blockerMsg = architectStep.predicted_blockers[0];
+  const qaStep = result.steps.find((s) => s.agent === 'qa');
+  assert.ok(qaStep, 'qa step must exist in custom sequence');
+  assert.equal(qaStep.status, 'blocked', 'qa must be blocked without Gate C');
+  assert.ok(qaStep.predicted_blockers.length > 0, 'qa must have predicted blockers');
+
+  const blockerMsg = qaStep.predicted_blockers[0];
   assert.ok(
     blockerMsg.includes('gate:approve'),
     `blocker message must include gate:approve command, got: ${blockerMsg}`
   );
   assert.ok(
-    blockerMsg.includes('--gate=A'),
-    `blocker message must include --gate=A, got: ${blockerMsg}`
+    blockerMsg.includes('--gate=C'),
+    `blocker message must include --gate=C, got: ${blockerMsg}`
   );
   assert.ok(
     blockerMsg.toLowerCase().includes('responsible'),
@@ -972,7 +979,7 @@ test('workflow:execute: blocked step message includes feature slug in gate:appro
   await writeFile(
     tmpDir,
     '.aioson/context/workflow.config.json',
-    JSON.stringify({ version: 1, feature: { SMALL: ['product', 'analyst', 'architect', 'dev', 'qa'] } }, null, 2)
+    JSON.stringify({ version: 1, feature: { SMALL: ['product', 'dev', 'qa'] } }, null, 2)
   );
 
   const result = await runWorkflowExecute({
@@ -982,10 +989,10 @@ test('workflow:execute: blocked step message includes feature slug in gate:appro
   });
 
   assert.equal(result.ok, true);
-  const architectStep = result.steps.find((s) => s.agent === 'architect');
-  assert.ok(architectStep && architectStep.predicted_blockers.length > 0, 'architect must be blocked and have blockers');
+  const qaStep = result.steps.find((s) => s.agent === 'qa');
+  assert.ok(qaStep && qaStep.predicted_blockers.length > 0, 'qa must be blocked and have blockers');
 
-  const blockerMsg = architectStep.predicted_blockers[0];
+  const blockerMsg = qaStep.predicted_blockers[0];
   assert.ok(
     blockerMsg.includes("--feature='my-feature'"),
     `blocker must include feature slug in gate:approve command, got: ${blockerMsg}`

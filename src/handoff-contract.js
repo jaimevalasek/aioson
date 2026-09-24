@@ -59,36 +59,6 @@ const CONTRACTS = {
     gates: [],
     contextUpdates: ['.aioson/context/project-pulse.md']
   },
-  analyst: {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
-  'scope-check': {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
-  architect: {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
-  'discovery-design-doc': {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
-  'ux-ui': {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
-  pm: {
-    artifacts: [],
-    gates: [],
-    contextUpdates: ['.aioson/context/project-pulse.md']
-  },
   orchestrator: {
     artifacts: [],
     gates: [],

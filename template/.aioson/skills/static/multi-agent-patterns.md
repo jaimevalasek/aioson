@@ -8,7 +8,7 @@
 |---|---|---|
 | Product authority | `@product` followed by mandatory independent `@sheldon` review | One implementation-ready, hash-bound reviewed PRD |
 | Delivery planner | `@planner` | One vertical implementation plan |
-| Generator | `@dev` or `@deyvin` | Working code and stack-native tests |
+| Generator | `@dev` | Working code and stack-native tests |
 | Evaluator | `@qa` | One QA report with production-path evidence |
 
 ```text

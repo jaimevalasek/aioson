@@ -1337,7 +1337,7 @@ function printAgentHelp(agentName, jsonMode, logger, t) {
     return;
   }
 
-  // Single resolver: ids, live aliases (`pair`) and legacy ids (`briefing-refiner`).
+  // Single resolver: ids, renamed ids (`briefing-refiner`) and retired ids (`deyvin`).
   const agent = getAgentDefinition(agentName);
 
   if (!agent) {

@@ -47,7 +47,9 @@ function validateInputs(featureSlug, agent, { agentRequired = true } = {}) {
   const feature = validateFeatureSlug(featureSlug);
   if (!feature.ok) throw engineError(feature.reason, { feature_slug: featureSlug || null });
   if (!agentRequired) return { feature_slug: feature.feature_slug };
-  const normalizedAgent = String(agent || '').trim().toLowerCase();
+  // Retired ids resolve to the agent that absorbed their review profile.
+  const { canonicalAgentId } = require('../agents');
+  const normalizedAgent = canonicalAgentId(String(agent || '').trim().toLowerCase());
   if (!normalizedAgent) throw engineError('missing_agent');
   if (!REVIEW_AGENTS.includes(normalizedAgent)) {
     throw engineError('invalid_agent', { agent: normalizedAgent, allowed_agents: REVIEW_AGENTS });

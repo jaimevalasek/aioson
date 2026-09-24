@@ -29,6 +29,6 @@ Any control that changes an entity's lifecycle status (approve, reject, cancel, 
 ## Applies to
 
 - @briefing: a briefing whose flows change status or destroy data records the confirmation contract as a promise or classified open question.
-- @dev / @deyvin: wire the modal to the real mutation; the action must not fire before confirmation resolves.
+- @dev: wire the modal to the real mutation; the action must not fire before confirmation resolves.
 - @refiner / @benchmark: prototypes and benchmark builds show the modal working against mock state; an unconfirmed destructive button is a blocking finding.
 - @qa: every status-changing or destructive control has a test path through confirm and through cancel.

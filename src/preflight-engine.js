@@ -567,8 +567,8 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
   if (artifacts.project_context.exists) pkg.push(artifacts.project_context.path);
 
   if (slug) {
-    const prdConsumers = ['sheldon', 'planner', 'analyst', 'architect', 'ux-ui', 'discovery-design-doc', 'pm', 'scope-check', 'orchestrator', 'dev', 'deyvin', 'qa', 'tester', 'pentester', 'validator'];
-    const planConsumers = ['analyst', 'architect', 'ux-ui', 'discovery-design-doc', 'pm', 'scope-check', 'orchestrator', 'dev', 'deyvin', 'qa', 'tester', 'pentester', 'validator'];
+    const prdConsumers = ['sheldon', 'planner', 'orchestrator', 'dev', 'qa', 'tester', 'pentester', 'validator'];
+    const planConsumers = ['orchestrator', 'dev', 'qa', 'tester', 'pentester', 'validator'];
 
     if (prdConsumers.includes(agent) && artifacts.prd.exists) pkg.push(artifacts.prd.path);
     if (planConsumers.includes(agent) && artifacts.implementation_plan.exists) {
@@ -576,7 +576,7 @@ function buildContextPackage(agent, slug, classification, artifacts, devState, m
     }
     // Older manifests remain readable only as explicit compatibility context
     // for an already-running Dev continuation. They are never prerequisites.
-    if (manifest && manifest.exists && manifest.is_active && (agent === 'dev' || agent === 'deyvin')) {
+    if (manifest && manifest.exists && manifest.is_active && agent === 'dev') {
       pkg.push(manifest.path + ' [legacy optional context]');
       if (manifest.next_pending_phase && manifest.next_pending_phase.file) {
         pkg.push(path.join(path.dirname(manifest.path), manifest.next_pending_phase.file).split(path.sep).join('/') + ' [legacy current phase]');
@@ -708,27 +708,6 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
     }
   }
 
-  if (agent === 'analyst') {
-    if (slug && !artifacts.prd.exists) {
-      warnings.push('PRD missing — Analyst can answer only the named evidence question; Product owns feature scope');
-    }
-  }
-
-  if (agent === 'architect') {
-    if (!artifacts.prd.exists) warnings.push('PRD missing — Architect can answer only the named technical question; Product owns feature scope');
-    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — Planner owns executable technical decisions');
-  }
-
-  if (agent === 'pm') {
-    if (!artifacts.prd.exists) warnings.push('PRD missing — PM can advise only on the named question; Product owns feature scope');
-    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — Planner owns sequencing and Gate C');
-  }
-
-  if (agent === 'discovery-design-doc') {
-    if (!artifacts.prd.exists) warnings.push('PRD missing — repository discovery will be limited to the named surface');
-    if (!(artifacts.implementation_plan || {}).exists) warnings.push('implementation plan missing — return discovered paths to Planner');
-  }
-
   if (agent === 'orchestrator') {
     const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };
     if (!artifacts.prd.exists) {
@@ -744,7 +723,7 @@ function evaluateReadiness(artifacts, phaseGates, classification, agent, devStat
     }
   }
 
-  if (agent === 'dev' || agent === 'deyvin') {
+  if (agent === 'dev') {
     if (slug && !artifacts.prd.exists) blockers.push('prd file missing');
     if (classification) {
       const implementationPlan = artifacts.implementation_plan || { exists: false, frontmatter: {} };

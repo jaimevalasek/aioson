@@ -243,7 +243,7 @@ Run this checklist after writing tests, before declaring Phase 4 done. Each smel
 ### 4.6 Mock Overdose
 **Symptom**: more than ~50% of test setup is mocks; the test verifies the mock, not the system.
 **Detection**: count mock invocations vs system invocations in setup.
-**Fix**: write an integration test instead. If integration is too slow/complex, the abstraction is wrong — escalate to `@architect`.
+**Fix**: write an integration test instead. If integration is too slow/complex, the abstraction is wrong — escalate to `@planner` for a revised plan.
 
 ### 4.7 Tools
 

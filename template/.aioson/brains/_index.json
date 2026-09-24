@@ -14,7 +14,7 @@
     },
     {
       "id": "dev/patterns",
-      "agents": ["dev", "deyvin", "pair", "qa", "tester", "shakedown"],
+      "agents": ["dev", "qa", "tester", "shakedown"],
       "tags": ["security", "shell", "injection", "git", "commit", "context", "bootstrap", "cache", "editing", "tooling", "process", "verification", "discipline", "node", "child-process", "build", "resources", "rust", "browser", "qa", "evidence", "smoke", "web-capture", "mailbox", "untrusted"],
       "desc": "Implementation patterns @dev defaults to — security, shell discipline, git mechanics, editing hygiene, validated-slice loop, build-resource caps, browser-walkthrough evidence over prose, captured third-party text as data",
       "path": ".aioson/brains/dev/patterns.brain.json",
@@ -23,7 +23,7 @@
     },
     {
       "id": "design/visual-quality",
-      "agents": ["briefing", "dev", "deyvin", "refiner", "product", "sheldon", "qa", "ux-ui", "ui-specialist"],
+      "agents": ["briefing", "dev", "refiner", "product", "sheldon", "qa", "ui-specialist"],
       "tags": ["visual-quality", "anti-slop", "ui", "ux", "layout", "prototype", "responsive", "interface", "design", "copy", "typography", "spec-quality", "prd", "specification", "forms", "interaction", "motion"],
       "desc": "Visual quality patterns that prevent generic AI-looking layouts while preserving intentional, domain-specific design, including form, confirmation, drag-and-drop, and dashboard interaction contracts plus verified animation/mask implementation gotchas; the spec-quality nodes carry the same test upstream to the PRD",
       "path": ".aioson/brains/design/visual-quality.brain.json",
@@ -32,7 +32,7 @@
     },
     {
       "id": "sheldon/architecture-decisions",
-      "agents": ["sheldon", "architect"],
+      "agents": ["sheldon", "planner"],
       "tags": ["aioson", "template", "agents", "sync", "sdd", "classification", "process", "validator", "sandbox", "impartiality", "discovery", "architecture", "ordering", "cli", "integration", "telemetry"],
       "desc": "Architecture and process decisions @sheldon defaults to — workspace/template parity, classification gates, validator sandbox, discovery-before-architecture, CLI-first integration",
       "path": ".aioson/brains/sheldon/architecture-decisions.brain.json",

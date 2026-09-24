@@ -1,7 +1,7 @@
 ---
 description: "How AIOSON Play apps should consume LLM connections, app-owned databases, Data Bindings, Global Connectors, MCPI, REST connectors, MCP tools, and ProductBridge."
 scope: "global"
-agents: [dev, deyvin, architect, analyst, qa, tester]
+agents: [dev, planner, qa, tester]
 task_types: [aioson-play-app, data-integration, llm-integration]
 triggers: [LLM connections, DATABASE_URL, data_bindings, Global Connectors, MCPI, MCP tools, ProductBridge]
 ---

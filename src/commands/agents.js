@@ -29,48 +29,10 @@ const WORKFLOW_AGENT_IDS = new Set([
   'product',
   'sheldon',
   'planner',
-  'analyst',
-  'scope-check',
-  'architect',
-  'ux-ui',
-  'pm',
   'orchestrator',
   'dev',
   'qa'
 ]);
-const SCOPE_CHECK_MODES = new Set(['pre-dev', 'post-dev', 'post-fix', 'final']);
-
-function normalizeScopeCheckMode(input) {
-  const mode = String(input || '').trim().toLowerCase();
-  return SCOPE_CHECK_MODES.has(mode) ? mode : null;
-}
-
-function getScopeCheckModeOption(options = {}) {
-  return normalizeScopeCheckMode(
-    options.scopeMode ||
-    options['scope-mode'] ||
-    options.checkMode ||
-    options['check-mode'] ||
-    options.mode
-  );
-}
-
-function buildScopeCheckActivationContext(options = {}) {
-  const mode = getScopeCheckModeOption(options) || 'pre-dev';
-  const lines = [`Scope-check mode: ${mode}.`];
-  const featureSlug = String(options.feature || options.slug || '').trim();
-  if (featureSlug) lines.push(`Feature slug: ${featureSlug}.`);
-  if (mode === 'pre-dev') {
-    lines.push('Compare user intent against planning artifacts before implementation.');
-  } else if (mode === 'post-dev') {
-    lines.push('Compare the approved planning artifacts against the actual implementation diff and changed files before QA.');
-  } else if (mode === 'post-fix') {
-    lines.push('Compare approved scope, QA/tester/pentester findings, and correction diff; confirm the fix did not change product intent.');
-  } else if (mode === 'final') {
-    lines.push('Reconcile intent, plan, delivered behavior, and remaining exclusions before close/commit/release.');
-  }
-  return lines.join('\n');
-}
 
 function buildTesterActivationContext(options = {}) {
   // Lets `agent:prompt tester --feature=<slug>` pin the slug into the prompt.
@@ -244,8 +206,6 @@ async function runAgentPrompt({ args, options, logger, t }) {
     if (promptAgent.id === 'pentester') {
       pentesterTargetMode = normalizePentesterTargetMode(options.mode);
       activationContext = buildPentesterActivationContext(options, t);
-    } else if (promptAgent.id === 'scope-check') {
-      activationContext = buildScopeCheckActivationContext(options);
     } else if (promptAgent.id === 'tester') {
       activationContext = buildTesterActivationContext(options);
     } else if (promptAgent.id === 'sheldon') {
@@ -270,7 +230,7 @@ async function runAgentPrompt({ args, options, logger, t }) {
       tool,
       agentId: promptAgent.id,
       manifest,
-      requestedMode: promptAgent.id === 'scope-check' && getScopeCheckModeOption(options) ? null : options.mode || null
+      requestedMode: options.mode || null
     });
     // Direct handoffs carry the autopilot exception too — without it the
     // injected scope boundary instructs a manual stop and overrides the agent

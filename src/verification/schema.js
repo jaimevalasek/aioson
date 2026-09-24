@@ -27,16 +27,20 @@ const CLAIM_KINDS = new Set([
 
 const OWNERS = new Set([
   'dev',
-  'deyvin',
   'product',
   'sheldon',
-  'architect',
-  'ux-ui',
+  'planner',
   'qa',
   'tester',
-  'pentester',
-  'scope-check'
+  'pentester'
 ]);
+
+// Reports written before an agent retired may name it; it resolves to the
+// agent that absorbed its work.
+function isOwner(value) {
+  const { canonicalAgentId } = require('../agents');
+  return typeof value === 'string' && OWNERS.has(canonicalAgentId(value));
+}
 
 const VERDICTS = new Set([
   'PASS',
@@ -104,7 +108,7 @@ function validateClaims(rootDir, claims, errors) {
     if (!claim.id) errors.push({ field: `claims[${index}].id`, reason: 'missing' });
     if (!claim.summary) errors.push({ field: `claims[${index}].summary`, reason: 'missing' });
     if (!CLAIM_KINDS.has(claim.kind)) errors.push({ field: `claims[${index}].kind`, reason: 'invalid' });
-    if (!OWNERS.has(claim.owner)) errors.push({ field: `claims[${index}].owner`, reason: 'invalid' });
+    if (!isOwner(claim.owner)) errors.push({ field: `claims[${index}].owner`, reason: 'invalid' });
     if (!CLAIM_STATUSES.has(claim.status)) errors.push({ field: `claims[${index}].status`, reason: 'invalid' });
     if (claim.capability_ids !== undefined) {
       if (!Array.isArray(claim.capability_ids)) {
@@ -203,9 +207,9 @@ function validateFindings(findings, errors) {
     if (!finding.id) errors.push({ field: `findings[${index}].id`, reason: 'missing' });
     if (!FINDING_STATUSES.has(finding.status)) errors.push({ field: `findings[${index}].status`, reason: 'invalid' });
     if (!SEVERITIES.has(finding.severity)) errors.push({ field: `findings[${index}].severity`, reason: 'invalid' });
-    if (!OWNERS.has(finding.owner)) errors.push({ field: `findings[${index}].owner`, reason: 'invalid' });
+    if (!isOwner(finding.owner)) errors.push({ field: `findings[${index}].owner`, reason: 'invalid' });
     if (finding.kind && !CLAIM_KINDS.has(finding.kind)) errors.push({ field: `findings[${index}].kind`, reason: 'invalid' });
-    if (finding.recommended_route && !OWNERS.has(finding.recommended_route)) {
+    if (finding.recommended_route && !isOwner(finding.recommended_route)) {
       errors.push({ field: `findings[${index}].recommended_route`, reason: 'invalid' });
     }
   }
@@ -228,7 +232,7 @@ function validateVerificationReport(report, { slug, requestedPolicy }) {
   if (!VERDICTS.has(report.verdict)) {
     errors.push({ field: 'verdict', reason: 'invalid' });
   }
-  if (report.recommended_route && !OWNERS.has(report.recommended_route)) {
+  if (report.recommended_route && !isOwner(report.recommended_route)) {
     errors.push({ field: 'recommended_route', reason: 'invalid' });
   }
   validateReportCommands(report.commands_run, errors);

@@ -52,18 +52,18 @@ function validPacket(overrides = {}) {
     schema_version: 'review-packet/v1',
     packet_id: `sha256:${SHA_A}`,
     feature_slug: SLUG,
-    agent: 'architect',
+    agent: 'planner',
     profile: 'architecture',
     review_mode: 'self_review',
     artifact: {
-      path: `.aioson/context/design-doc-${SLUG}.md`,
+      path: `.aioson/context/implementation-plan-${SLUG}.md`,
       sha256: SHA_B,
       bytes: 120
     },
     authorities: [
       {
-        kind: 'requirements',
-        path: `.aioson/context/requirements-${SLUG}.md`,
+        kind: 'prd',
+        path: `.aioson/context/prd-${SLUG}.md`,
         sha256: SHA_A,
         bytes: 80
       }
@@ -105,11 +105,11 @@ function validReport(overrides = {}) {
     schema_version: 'review-report/v1',
     packet_id: `sha256:${SHA_A}`,
     feature_slug: SLUG,
-    agent: 'architect',
+    agent: 'planner',
     profile: 'architecture',
     review_mode: 'self_review',
     artifact: {
-      path: `.aioson/context/design-doc-${SLUG}.md`,
+      path: `.aioson/context/implementation-plan-${SLUG}.md`,
       sha256: SHA_B
     },
     passes_completed: 2,
@@ -139,9 +139,7 @@ test('profile registry preserves the approved agent, profile, mode and default m
     'refiner': ['framing', 'independent_review', '.aioson/briefings/review-intelligence/briefings.md'],
     product: ['framing', 'self_review', '.aioson/context/prd-review-intelligence.md'],
     sheldon: ['specification', 'independent_review', '.aioson/context/prd-review-intelligence.md'],
-    analyst: ['specification', 'self_review', '.aioson/context/requirements-review-intelligence.md'],
-    architect: ['architecture', 'self_review', '.aioson/context/design-doc-review-intelligence.md'],
-    'scope-check': ['delivery-assurance', 'independent_review', '.aioson/context/scope-check-review-intelligence.md'],
+    planner: ['architecture', 'self_review', '.aioson/context/implementation-plan-review-intelligence.md'],
     qa: ['delivery-assurance', 'independent_review', '.aioson/context/qa-report-review-intelligence.md']
   };
 
@@ -155,10 +153,13 @@ test('profile registry preserves the approved agent, profile, mode and default m
     assert.match(resolved.reference_path, new RegExp(`${profile}\\.md$`));
   }
   assert.equal(getReviewProfile('unknown-agent'), null);
-  assert.deepEqual(resolveProfilePaths('scope-check', SLUG).default_artifacts, [
-    '.aioson/context/scope-check-review-intelligence.md',
-    '.aioson/context/implementation-plan-review-intelligence.md'
-  ]);
+  // Retired review owners resolve to their absorbers' profiles.
+  assert.equal(getReviewProfile('architect').agent, 'planner');
+  assert.equal(getReviewProfile('analyst').agent, 'product');
+  assert.equal(getReviewProfile('scope-check').agent, 'qa');
+  for (const agent of REVIEW_AGENTS) {
+    assert.equal(resolveProfilePaths(agent, SLUG).default_artifacts.length, 1, `${agent}: exactly one default artifact`);
+  }
   for (const agent of REVIEW_AGENTS) {
     const dossier = resolveProfilePaths(agent, SLUG).authority_candidates.find((item) => item.kind === 'dossier');
     assert.equal(dossier?.freshness, 'soft', `${agent}: dossier must remain non-invalidating context`);
@@ -403,7 +404,7 @@ test('secure reads and immutable writes reject path swaps after containment vali
 // AC-RI-006 AC-RI-013 AC-RI-018
 test('immutable writes are atomic, idempotent and content-addressed paths stay canonical', async (t) => {
   const root = await makeProject(t);
-  const packetPath = packetRelativePath(SLUG, 'architect', `sha256:${SHA_A}`);
+  const packetPath = packetRelativePath(SLUG, 'planner', `sha256:${SHA_A}`);
   const first = await atomicWriteImmutable(root, packetPath, '{"packet":true}\n');
   const second = await atomicWriteImmutable(root, packetPath, '{"packet":true}\n');
   assert.equal(first.created, true);
@@ -415,15 +416,15 @@ test('immutable writes are atomic, idempotent and content-addressed paths stay c
     (error) => error.reason === 'immutable_conflict'
   );
   assert.equal(await fs.readFile(path.join(root, packetPath), 'utf8'), '{"packet":true}\n');
-  assert.equal(draftRelativePath(SLUG, 'architect', SHA_A).includes('\\'), false);
-  assert.equal(reportRelativePath(SLUG, 'architect', SHA_A, SHA_B).includes('\\'), false);
+  assert.equal(draftRelativePath(SLUG, 'planner', SHA_A).includes('\\'), false);
+  assert.equal(reportRelativePath(SLUG, 'planner', SHA_A, SHA_B).includes('\\'), false);
   assert.throws(() => packetRelativePath(SLUG, '../agent', SHA_A), (error) => error.reason === 'invalid_agent');
 });
 
 // AC-RI-013
 test('failed rename leaves no canonical file or temporary artifact', async (t) => {
   const root = await makeProject(t);
-  const target = packetRelativePath(SLUG, 'architect', SHA_A);
+  const target = packetRelativePath(SLUG, 'planner', SHA_A);
   await assert.rejects(
     atomicWriteImmutable(root, target, '{"packet":true}\n', {
       nonce: 'forced-failure',

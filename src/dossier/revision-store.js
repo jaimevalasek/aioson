@@ -17,10 +17,7 @@ const VALID_STATUSES = new Set(['pending', 'approved', 'rejected', 'resolved']);
 // Which workflow gate each agent "owns" (for anti-loop counter)
 const GATE_BY_AGENT = {
   product: 'requirements',
-  analyst: 'requirements',
-  architect: 'design',
-  'ux-ui': 'design',
-  pm: 'plan',
+  planner: 'plan',
   dev: 'plan',
   qa: 'execution'
 };

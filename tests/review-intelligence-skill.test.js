@@ -144,9 +144,13 @@ test('explicit briefing hooks remain bounded while Sheldon owns mandatory delive
     assert.match(content, /missing review infrastructure/i);
   }
 
-  for (const agent of ['product', 'sheldon', 'analyst', 'architect', 'scope-check', 'qa']) {
+  for (const agent of ['product', 'sheldon', 'planner', 'qa']) {
     const content = await readAt(TEMPLATE_ROOT, `agents/${agent}.md`);
     assert.ok((content.match(/## Review intelligence checkpoint/g) || []).length <= 1, `${agent}: duplicate review hook`);
+  }
+  // Retired review owners (analyst, architect, scope-check) ship no kernel.
+  for (const retired of ['analyst', 'architect', 'scope-check']) {
+    await assert.rejects(() => fs.access(path.join(TEMPLATE_ROOT, 'agents', `${retired}.md`)), { code: 'ENOENT' });
   }
   const qa = await readAt(TEMPLATE_ROOT, 'agents/qa.md');
   assert.match(qa, /Load another review-intelligence profile only when/);

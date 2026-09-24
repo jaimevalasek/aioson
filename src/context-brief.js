@@ -7,12 +7,12 @@ const { withIndex } = require('./context-search');
 const { analyzeTaskVocabulary } = require('./lib/task-vocabulary');
 const { focusFile } = require('./lib/section-focus');
 
-const CODE_AGENTS = new Set(['dev', 'deyvin', 'qa', 'tester', 'pentester']);
-const IMPLEMENTATION_AGENTS = new Set(['dev', 'deyvin']);
+const CODE_AGENTS = new Set(['dev', 'qa', 'tester', 'pentester']);
+const IMPLEMENTATION_AGENTS = new Set(['dev']);
 const REVIEW_AGENTS = new Set(['qa', 'tester']);
 // Roles that name things — or approve the names someone else will write.
 const NAMING_ROLES = new Set([
-  'implementation', 'pair-implementation', 'implementation-planning',
+  'implementation', 'implementation-planning',
   'architecture', 'quality-review', 'test-design'
 ]);
 
@@ -32,11 +32,6 @@ const FRAMEWORK_SKILL_TOKENS = new Set([
 const AGENT_PROFILES = {
   dev: {
     role: 'implementation',
-    mustSurfaces: new Set(['rules', 'design_governance']),
-    shouldSurfaces: new Set(['docs', 'bootstrap', 'context', 'feature_dossier'])
-  },
-  deyvin: {
-    role: 'pair-implementation',
     mustSurfaces: new Set(['rules', 'design_governance']),
     shouldSurfaces: new Set(['docs', 'bootstrap', 'context', 'feature_dossier'])
   },
@@ -74,11 +69,6 @@ const AGENT_PROFILES = {
     role: 'implementation-planning',
     mustSurfaces: new Set(['rules', 'design_governance']),
     shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap'])
-  },
-  architect: {
-    role: 'architecture',
-    mustSurfaces: new Set(['rules', 'design_governance']),
-    shouldSurfaces: new Set(['docs', 'context', 'feature_dossier', 'bootstrap'])
   }
 };
 
@@ -99,12 +89,6 @@ const PROFILE_HINTS = {
     'Use should_load paths when a decision is ambiguous or the touched path overlaps their reason.',
     'Use a prototype only after its active-feature owner is verified; with explicit none, inspect the current production code and tests.',
     'After implementation, verify the diff against verification_hints before marking the slice done.'
-  ],
-  'pair-implementation': [
-    'Load must_load paths before code inspection or editing.',
-    'For tracked work, reject another or closed feature\'s prototype and state whether the binding is current or none.',
-    'Keep the slice small enough to verify in one loop.',
-    'Escalate when the package shows missing paths, missing feature context, or architecture uncertainty.'
   ],
   'quality-review': [
     'Treat loaded rules and constraints as review criteria.',
@@ -202,7 +186,7 @@ function inferOperation(agent, mode, task) {
   if (agent === 'sheldon' || text.includes('prd') || text.includes('enrich')) return 'prd-enrichment';
   if (agent === 'tester' || text.includes('test')) return 'test-design';
   if (agent === 'qa' || text.includes('review')) return 'quality-review';
-  if (agent === 'architect' || text.includes('architecture')) return 'architecture';
+  if (text.includes('architecture')) return 'architecture';
   if (mode === 'executing' || text.includes('implement') || text.includes('refactor')) return 'implementation';
   return 'planning';
 }

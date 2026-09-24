@@ -67,18 +67,18 @@ test('preflight: mode is feature when prd exists', async () => {
   assert.equal(result.feature_slug, 'checkout');
 });
 
-test('preflight: analyst feature without PRD is unframed_feature and not blocked', async () => {
+test('preflight: product feature without PRD is unframed_feature and not blocked', async () => {
   const tmpDir = await makeTmpDir();
   await writeFile(tmpDir, '.aioson/context/project.context.md', '---\nclassification: SMALL\n---');
   const result = await runPreflight({
     args: [tmpDir],
-    options: { json: true, agent: 'analyst', feature: 'code-tab-ide-ux' },
+    options: { json: true, agent: 'product', feature: 'code-tab-ide-ux' },
     logger: makeLogger()
   });
+  // analyst is retired into @product, which authors the PRD itself.
   assert.equal(result.mode, 'unframed_feature');
-  assert.equal(result.readiness, 'READY_WITH_WARNINGS');
+  assert.equal(result.readiness, 'READY');
   assert.equal(result.readiness_blockers.length, 0);
-  assert.ok(result.readiness_warnings.some((w) => w.includes('PRD missing')));
 });
 
 test('preflight: detects classification from project.context.md', async () => {
