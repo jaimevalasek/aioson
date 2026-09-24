@@ -73,3 +73,15 @@ integrations/*
 !.aioson/installed-skills/
 !.aioson/installed-skills/**
 # AIOSON — shared agent scratch caches (local-only)
+# AIOSON — regenerable browser evidence (captures and walkthrough snapshots; the reports beside them stay tracked)
+.aioson/context/visual-screenshots/
+.aioson/context/features/*/visual-screenshots/
+.aioson/context/done/*/dossier/visual-screenshots/
+.aioson/context/done/*/briefings/visual-screenshots/
+.aioson/briefings/*/visual-screenshots/
+.aioson/context/browser/*/
+.aioson/context/features/*/browser/*/
+.aioson/context/done/*/dossier/browser/*/
+.aioson/context/done/*/briefings/browser/*/
+.aioson/briefings/*/browser/*/
+aios-qa-screenshots/

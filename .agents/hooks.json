@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "aioson live:start \"$PWD\" --agent='dev' --tool=antigravity --no-launch 2>/dev/null || true"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aioson hooks:emit \"$PWD\" --agent='dev' --source='antigravity' 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aioson hooks:emit \"$PWD\" --agent='dev' --source='antigravity' 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Task|TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "aioson hooks:emit \"$PWD\" --agent='dev' --source='antigravity' 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": "aioson agent:done \"$PWD\" --agent='dev' --summary='Session ended via dev hook' 2>/dev/null || true"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "aioson agent:done \"$PWD\" --agent='dev' --summary='Session ended via dev hook' 2>/dev/null || true"
+      }
+    ]
+  }
+}

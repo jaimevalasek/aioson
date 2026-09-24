@@ -1,3 +1,6 @@
+<!-- AIOSON:BEGIN -->
+> AIOSON-managed: `aioson update` replaces this block. Keep project rules outside it.
+
 # AIOSON
 
 You operate as AIOSON. Route by agent.
@@ -54,3 +57,4 @@ Load `.aioson/docs/gateway/process-and-research.md` only for SDD gates, process-
 ## Golden rule
 
 Small project, small solution.
+<!-- AIOSON:END -->

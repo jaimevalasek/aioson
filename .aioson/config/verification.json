@@ -4,43 +4,93 @@
   "agents": {
     "qa": {
       "enabled": true,
-      "triggers": ["end-of-feature"],
+      "triggers": [
+        "end-of-feature"
+      ],
       "dispatch": {
-        "claude": { "mode": "native", "model": "sonnet-4.6" },
-        "codex": { "mode": "native", "model": "configured-default" },
-        "opencode": { "mode": "native", "model": "configured-default" }
+        "claude": {
+          "mode": "native",
+          "model": "sonnet-4.6"
+        },
+        "codex": {
+          "mode": "native",
+          "model": "configured-default"
+        },
+        "opencode": {
+          "mode": "native",
+          "model": "configured-default"
+        }
       },
       "report": "qa-report-{slug}.md"
     },
     "tester": {
       "enabled": false,
-      "triggers": ["end-of-feature"],
+      "triggers": [
+        "end-of-feature"
+      ],
       "dispatch": {
-        "claude": { "mode": "native", "model": "sonnet-4.6" },
-        "codex": { "mode": "native", "model": "configured-default" },
-        "opencode": { "mode": "native", "model": "configured-default" }
+        "claude": {
+          "mode": "native",
+          "model": "sonnet-4.6"
+        },
+        "codex": {
+          "mode": "native",
+          "model": "configured-default"
+        },
+        "opencode": {
+          "mode": "native",
+          "model": "configured-default"
+        }
       },
       "report": "test-report-{slug}.md"
     },
     "pentester": {
       "enabled": false,
-      "triggers": ["sensitive-surface", "end-of-feature"],
+      "triggers": [
+        "sensitive-surface",
+        "end-of-feature"
+      ],
       "dispatch": {
-        "claude": { "mode": "native", "model": "opus-4.8" },
-        "codex": { "mode": "native", "model": "configured-default" },
-        "opencode": { "mode": "native", "model": "configured-default" }
+        "claude": {
+          "mode": "native",
+          "model": "opus-4.8"
+        },
+        "codex": {
+          "mode": "native",
+          "model": "configured-default"
+        },
+        "opencode": {
+          "mode": "native",
+          "model": "configured-default"
+        }
       },
       "report": "security-findings-{slug}.json"
     },
     "validator": {
       "enabled": false,
-      "triggers": ["end-of-feature"],
+      "triggers": [
+        "end-of-feature"
+      ],
       "dispatch": {
-        "claude": { "mode": "native", "model": "opus-4.8" },
-        "codex": { "mode": "native", "model": "configured-default" },
-        "opencode": { "mode": "native", "model": "configured-default" }
+        "claude": {
+          "mode": "native",
+          "model": "opus-4.8"
+        },
+        "codex": {
+          "mode": "native",
+          "model": "configured-default"
+        },
+        "opencode": {
+          "mode": "native",
+          "model": "configured-default"
+        }
       },
-      "cross_check": { "enabled": false, "mode": "external", "tool": "codex", "model": "configured-default" },
+      "cross_check": {
+        "enabled": false,
+        "mode": "external",
+        "tool": "codex",
+        "model": "configured-default"
+      },
       "report": "validator-report-{slug}.json"
     }
   },

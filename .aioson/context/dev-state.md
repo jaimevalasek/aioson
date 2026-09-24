@@ -1,26 +1,26 @@
 ---
-last_updated: 2026-09-13
-active_feature: wave-usage-breakdown
+last_updated: 2026-09-21
+active_feature: aioson-web-tutorial
 active_phase: 1
-next_step: "Completed — wave accordion and live browser verification delivered"
-status: done
+next_step: "Completed — lay tutorial for web:discover and web:collect"
+status: in_progress
 ---
 
 # Dev State
 
-**Feature:** wave-usage-breakdown
-**Status:** done
-**Next step:** Completed — wave accordion and live browser verification delivered
+**Feature:** aioson-web-tutorial
+**Status:** in_progress
+**Next step:** Completed — lay tutorial for web:discover and web:collect
 
 ## Context package
 
 1. project.context.md
-2. simple-plans/wave-usage-breakdown.md
+2. simple-plans/aioson-web-tutorial.md
 
 ## History
 
-- 2026-09-11: phase 1 — Escrever tutorial SDD e exemplo sintetico com fontes atuais
-- 2026-09-11: phase 1 — Completed — no pending step
-- 2026-09-13: phase 1 — Completed — tutorial and targeted verification delivered
-- 2026-09-13: phase 1 — Implement wave usage grouping and accordion
-- 2026-09-13: phase 1 — Completed — wave accordion and live browser verification delivered
+- 2026-09-17: phase 1 — Completed — managed temporary artifact lifecycle implemented and verified
+- 2026-09-17: phase 1 — Verify compact execution choice and dashboard guidance
+- 2026-09-17: phase 1 — Completed — Planner explains duration trade-off and execution dashboard monitoring
+- 2026-09-21: phase 1 — Completed — web:discover matches feed or homepage titles and descriptions; web:collect saves the selection under researchs/{slug}
+- 2026-09-21: phase 1 — Completed — lay tutorial for web:discover and web:collect
